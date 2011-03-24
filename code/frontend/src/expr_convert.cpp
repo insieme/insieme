@@ -275,48 +275,6 @@ namespace conversion {
 	VLOG(1) << "\t" << *expr;
 
 
-/*
- * creates a function call from a list of expressions, useful for implementing the semantics of ++ or -- or comma
- * separated expressions in the IR
- */
-core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, core::TypePtr retTy) const {
-
-    // only a wrapper any more, i don't wanna change Simone's stuff - Klaus
-    return builder.createCallExpr(body, retTy);
-/*
-	// keeps the list variables used in the body
-	insieme::frontend::analysis::VarRefFinder args(body);
-
-	core::Lambda::CaptureList capture;
-	core::TypeList captureListType;
-
-	core::CaptureInitExpr::Values values;
-	std::for_each(args.begin(), args.end(),
-		[ &capture, &captureListType, &builder, &body, &values ] (const core::ExpressionPtr& curr) {
-			assert(curr->getNodeType() == core::NT_Variable);
-			const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
-			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
-			capture.push_back( parmVar );
-			captureListType.push_back( bodyVar->getType() );
-			values.push_back( bodyVar );
-			// we have to replace the variable of the body with the newly created parmVar
-			body = core::static_pointer_cast<const core::Statement>(
-					core::transform::replaceAll(builder.getNodeManager(), body, bodyVar, parmVar, true )
-			);
-		}
-	);
-
-	// build the type of the function
-	core::FunctionTypePtr&& funcTy = builder.functionType( captureListType, core::TypeList(), retTy );
-
-	// build the expression body
-	core::ExpressionPtr&& retExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), body );
-	if ( !values.empty() ) {
-		retExpr = builder.captureInitExpr(retExpr, values);
-	}
-	return retExpr;*/
-}
-
 //---------------------------------------------------------------------------------------------------------------------
 //										CLANG EXPRESSION CONVERTER
 //---------------------------------------------------------------------------------------------------------------------
@@ -783,7 +741,7 @@ public:
 			core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs,
 					(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs)) )
 				);
-			core::ExpressionPtr&& lambdaExpr = convFact.createCallExpr(body, rhs->getType());
+			core::ExpressionPtr&& lambdaExpr = builder.createCallExpr(body, rhs->getType());
 			// create a CallExpression
 			return builder.callExpr(lambdaExpr, ExpressionList());
 		}
@@ -922,7 +880,7 @@ public:
 			}
 			// lazy evaluation of RHS
 			exprTy = gen.getBool();
-			rhs = convFact.createCallExpr(builder.returnStmt(rhs), gen.getBool());
+			rhs = builder.createCallExpr(builder.returnStmt(rhs), gen.getBool());
 		}
 
 		if( !isAssignment ) {
@@ -1102,8 +1060,8 @@ public:
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, gen.getIfThenElse(),
 				condExpr,	// Condition
-				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy ), // True
-				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy ) // False
+				builder.createCallExpr( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy ), // True
+				builder.createCallExpr( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy ) // False
 		);
 
 		// handle eventual pragmas attached to the Clang node

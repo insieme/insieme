@@ -80,7 +80,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"[v1, v2]fun[ref<int<4>> v3, ref<int<4>> v4](){ (( *v4)+1); return (( *v3)-1);}()"
+	"bind()->fun(ref<int<4>> v3, ref<int<4>> v4){ (( *v4)+1); return (( *v3)-1);}(v1, v2)()"
 	(a+1, b-1);
 }
 
@@ -160,7 +160,7 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"ite(CAST<bool>(( *v1)), [v1]fun[ref<int<4>> v4]()return (( *v4)+1), [v1]fun[ref<int<4>> v2]()return (( *v2)-1))"
+	"ite(CAST<bool>(( *v1)), bind()->fun(ref<int<4>> v4)return (( *v4)+1)(v1), bind()->fun(ref<int<4>> v2)return (( *v2)-1)(v1))"
 	a ? a+1 : a-1;
 
 	#pragma test \

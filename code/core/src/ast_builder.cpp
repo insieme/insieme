@@ -77,6 +77,43 @@ namespace {
 		return res;
 	}
 
+	/**
+	 * Returns the list of variables referenced within an expression.
+	 * This class is used when a code block needs to be transformed into a function
+	 */
+	struct VarRefFinder: public ASTVisitor<bool> {
+
+	    VarRefFinder() : core::ASTVisitor<bool>(false) { }
+
+	    bool visitVariable(const core::VariablePtr& varExpr) {
+	    	usedVars.insert(varExpr);
+	    	return false;
+	    }
+
+	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return false; }
+
+	    bool visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
+	        declaredVars.insert( declStmt->getVariable() );
+	        return true;
+	    }
+
+	    bool visitNode(const NodePtr& node) { return true; }
+
+	    utils::set::PointerSet<VariablePtr> declaredVars;
+	    utils::set::PointerSet<VariablePtr> usedVars;
+	};
+
+	utils::set::PointerSet<VariablePtr> getRechingVariables(const core::NodePtr& root) {
+		VarRefFinder visitor;
+		visitAllPrunable(root, visitor);
+
+		utils::set::PointerSet<VariablePtr> nonDecls;
+		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),
+				visitor.declaredVars.begin(), visitor.declaredVars.end(), std::inserter(nonDecls, nonDecls.begin()));
+
+		return nonDecls;
+	}
+
 }
 
 ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints, bool main) {
@@ -309,21 +346,24 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 }
 
 core::ExpressionPtr ASTBuilder::createCallExpr(StatementPtr body, TypePtr retTy) const {
-    // keeps the list variables used in the body
-    VarRefFinder args(body);
+    // Find the variables which are used in the body and not declared
+	utils::set::PointerSet<VariablePtr>&& args = getRechingVariables(body);
 
-    core::Lambda::CaptureList capture;
-    core::TypeList captureListType;
+    core::TypeList argsType;
+    core::Lambda::ParamList params;
+    vector<ExpressionPtr> bindArgs;
 
-    core::CaptureInitExpr::Values values;
-    std::for_each(args.begin(), args.end(),
-        [ &/*capture, &captureListType, &builder, &body, &values*/ ] (const core::ExpressionPtr& curr) {
+    std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
             assert(curr->getNodeType() == core::NT_Variable);
+
             const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
-            core::VariablePtr&& parmVar = this->variable( bodyVar->getType() );
-            capture.push_back( parmVar );
-            captureListType.push_back( bodyVar->getType() );
-            values.push_back( bodyVar );
+            core::TypePtr&& varType = bodyVar->getType();
+
+            // we create a new variable to replace the captured variable
+            core::VariablePtr&& parmVar = this->variable( varType );
+            argsType.push_back( varType );
+            bindArgs.push_back(curr);
+            params.push_back( parmVar );
             // we have to replace the variable of the body with the newly created parmVar
             body = core::static_pointer_cast<const core::Statement>(
                     core::transform::replaceAll(this->getNodeManager(), body, bodyVar, parmVar, true )
@@ -331,15 +371,12 @@ core::ExpressionPtr ASTBuilder::createCallExpr(StatementPtr body, TypePtr retTy)
         }
     );
 
-    // build the type of the function
-    core::FunctionTypePtr&& funcTy = this->functionType( captureListType, TypeList(), retTy );
+    core::FunctionTypePtr&& funcType = functionType( argsType, retTy );
 
     // build the expression body
-    core::ExpressionPtr&& retExpr = this->lambdaExpr( funcTy, capture, Lambda::ParamList(), body );
-    if ( !values.empty() ) {
-        retExpr = this->captureInitExpr(retExpr, values);
-    }
-    return retExpr;
+    return bindExpr(std::vector<VariablePtr>(),
+    				callExpr(retTy, lambdaExpr(funcType , body, core::Lambda::CaptureList(), params ), bindArgs)
+    			);
 }
 
 // ---------------------------- Utilities ---------------------------------------
