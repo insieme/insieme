@@ -479,8 +479,7 @@ public:
 			const core::ASTBuilder& builder = convFact.builder;
 
 			core::FunctionTypePtr funcTy =
-					core::static_pointer_cast<const core::FunctionType>(
-							convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+				core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 			// collects the type of each argument of the expression
 			ExpressionList args;
@@ -557,14 +556,13 @@ public:
 			 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 			 * list needs to be initialized with the value of global variable in the current scope
 			 */
-			core::CaptureInitExpr::Values values;
 			if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
 				/*
 				 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 				 * current context
 				 */
 				assert(ctx.globalVar && "No global definitions forwarded to this point");
-				values.push_back( ctx.globalVar );
+				packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 			}
 
 			/*
@@ -580,9 +578,9 @@ public:
 					 * connected components are called, the introduced mu variable has to be used instead.
 					 */
 					convFact.currTU = oldTU;
-					core::ExpressionPtr&& callee = values.empty() ?
-							static_cast<core::ExpressionPtr>(fit->second):builder.captureInitExpr(fit->second, values);
-					return builder.callExpr( funcTy->getReturnType(), callee, packedArgs );
+					return builder.callExpr(
+							funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second), packedArgs
+						);
 				}
 			}
 
@@ -590,9 +588,10 @@ public:
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 				if ( fit != ctx.lambdaExprCache.end() ) {
 					convFact.currTU = oldTU;
-					core::ExpressionPtr&& callee = values.empty() ?
-							static_cast<core::ExpressionPtr>(fit->second) : builder.captureInitExpr(fit->second, values);
-					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
+					core::ExpressionPtr&& irNode =
+							builder.callExpr(funcTy->getReturnType(),
+									static_cast<core::ExpressionPtr>(fit->second), packedArgs
+								);
 					// handle eventual pragmas attached to the Clang node
 					core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
 					return annotatedNode;
@@ -604,10 +603,6 @@ public:
 					core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(definition) );
 			convFact.currTU = oldTU;
 
-			// initialize the capture list
-			if ( !values.empty() ) {
-				lambdaExpr = builder.captureInitExpr(lambdaExpr, values);
-			}
 			core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
 			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
@@ -1298,6 +1293,21 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	return retExpr;
 }
 
+namespace {
+
+core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
+						 	 	 	 	 	   const core::TypePtr& globals,
+						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
+
+	std::vector<core::TypePtr> argTypes(funcType->getArgumentTypes());
+	// function is receiving a reference to the global struct as the first argument
+	argTypes.insert( argTypes.begin(), builder.refType(globals) );
+	return builder.functionType( argTypes, funcType->getReturnType() );
+
+}
+
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1355,12 +1365,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					if ( this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end() ) {
 						core::FunctionTypePtr funcType =
 							core::static_pointer_cast<const core::FunctionType>( this->convertType(GET_TYPE_PTR(fd)) );
+						// In the case the function is receiving the global variables the signature needs to be
+						// modified by allowing the global struct to be passed as an argument
 						if ( this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end() ) {
-							funcType = this->builder.functionType(
-								toVector<core::TypePtr>( this->builder.refType(this->ctx.globalStruct.first )),
-								funcType->getArgumentTypes(),
-								funcType->getReturnType()
-							);
+							funcType = addGlobalsToFunctionType(this->builder, this->ctx.globalStruct.first, funcType);
 						}
 						core::VariablePtr&& var = this->builder.variable( funcType );
 						this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
@@ -1379,24 +1387,23 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	vector<core::VariablePtr> params;
+	/*
+	 * before resolving the body we have to set the currGlobalVar accordingly depending if this function will use the
+	 * global struct or not
+	 */
+	core::VariablePtr parentGlobalVar = ctx.globalVar;
+	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
+		// declare a new variable that will be used to hold a reference to the global data stucture
+		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
+		params.push_back( var );
+		ctx.globalVar = var;
+	}
+
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[ &params, this ] (ParmVarDecl* currParam) {
 			params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
 		}
 	);
-
-	/*
-	 * before resolving the body we have to set the currGlobalVar accordingly depending if this function will use the
-	 * global struct or not
-	 */
-	core::Lambda::CaptureList captureList;
-	core::VariablePtr parentGlobalVar = ctx.globalVar;
-	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
-		// declare a new variable that will be used to hold a reference to the global data stucture
-		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
-		captureList.push_back( var );
-		ctx.globalVar = var;
-	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
 	assert(!ctx.isResolvingRecFuncBody && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
@@ -1465,15 +1472,14 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// if this function gets the globals in the capture list we have to create a different type
 	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
-		funcType = builder.functionType(toVector<core::TypePtr>(builder.refType(ctx.globalStruct.first)),
-				funcType->getArgumentTypes(), funcType->getReturnType());
+		addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 	}
 
 	// reset old global var
 	ctx.globalVar = parentGlobalVar;
 
 	if ( components.empty() ) {
-		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
+		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, params, body);
 		// attach name annotation to the lambda
 		retLambdaExpr->getLambda()->addAnnotation(
 			std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() )
@@ -1485,7 +1491,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
         return attachFuncAnnotations(retLambdaExpr, funcDecl);
 	}
 
-	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, captureList, params, body );
+	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
 	// attach name annotation to the lambda
 	retLambdaNode->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
 	// this is a recurive function call
