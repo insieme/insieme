@@ -310,6 +310,132 @@ TEST(IRParser, StatementTests) {
 //    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 }
 
+TEST(IRParser, OperationTests) {
+    NodeManager manager;
+    IRParser parser(manager);
+    ASTBuilder builder(manager);
+
+    // binary operations
+
+    auto assignment = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<uint<4>>:a = 7)"));
+    EXPECT_EQ(manager.basic.getRefAssign(), assignment->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getUInt4()), assignment->getArgument(0)->getType());
+    EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(7)), assignment->getArgument(1));
+
+    auto add = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<int<4>>:a + uint<4>:b)"));
+    EXPECT_EQ(manager.basic.getSignedIntAdd(), add->getFunctionExpr());
+    EXPECT_EQ(manager.basic.getInt4(), add->getArgument(0)->getType());
+    EXPECT_EQ(manager.basic.getInt4(), add->getArgument(1)->getType());
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntAdd(), builder.intLit(0), builder.intLit(1)),
+        parser.parseExpression("(0 + 1)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getDouble(), manager.basic.getRealSub(), builder.literal("42.0", manager.basic.getDouble()),
+        builder.literal("41.0", manager.basic.getDouble())),
+        parser.parseExpression("(42.0 - 41.0)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUInt4(), manager.basic.getUnsignedIntMul(),
+        builder.literal("7", manager.basic.getUInt4()), builder.castExpr(manager.basic.getUInt4(), builder.literal("6", manager.basic.getInt4()))),
+        parser.parseExpression("(lit<uint<4>, 7> * lit<int<4>, 6> )"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealDiv(), builder.literal("5", manager.basic.getFloat()), builder.literal("9.6", manager.basic.getFloat())),
+        parser.parseExpression("(lit<real<4>, 5> / lit<real<4>, 9.6>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntMod(), builder.literal("53452", manager.basic.getInt2()),
+        builder.literal("32", manager.basic.getInt2())),
+        parser.parseExpression("(lit<int<2>, 53452> % lit<int<2>, 32>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntAnd(), builder.literal("255", manager.basic.getInt8()),
+        builder.literal("7", manager.basic.getInt8())),
+        parser.parseExpression("(lit<int<8>, 255> & lit<int<8>, 7>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntOr(), builder.literal("255", manager.basic.getUInt2()),
+        builder.literal("169", manager.basic.getUInt2())),
+        parser.parseExpression("(lit<uint<2>, 255> | lit<uint<2>, 169>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntLShift(), builder.literal("3456", manager.basic.getInt4()),
+        builder.literal("1", manager.basic.getInt4())),
+        parser.parseExpression("(lit<int<4>, 3456> << lit<int<4>, 1>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUnsignedIntRShift(), builder.literal("546", manager.basic.getUInt4()),
+        builder.literal("8", manager.basic.getInt4())),
+        parser.parseExpression("(lit<uint<4>, 546> >> lit<int<4>, 8>)"));
+
+    // unary operations
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getUInt2(), manager.basic.getUnsignedIntNot(), builder.literal("231", manager.basic.getUInt2())),
+        parser.parseExpression("( ~ lit<uint<2>, 231>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getInt4(), manager.basic.getSignedIntAdd(), builder.literal("0", manager.basic.getInt4()),
+        builder.literal("100", manager.basic.getInt4())),
+        parser.parseExpression("( +100 )"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getInt8(), manager.basic.getSignedIntSub(), builder.literal("0", manager.basic.getInt8()),
+        builder.literal("100", manager.basic.getInt8())),
+        parser.parseExpression("( -lit<int<8>, 100>)"));
+
+    auto builtPreInc = builder.callExpr(manager.basic.getUInt8(), manager.basic.getUnsignedIntPreInc(),
+        builder.variable(builder.refType(manager.basic.getUInt8())));
+    auto parsedPreInc = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ++ ref<uint<8>>:pri )"));
+    EXPECT_EQ(builtPreInc->getFunctionExpr(), parsedPreInc->getFunctionExpr());
+    EXPECT_EQ(builtPreInc->getArgument(0)->getType(), parsedPreInc->getArgument(0)->getType());
+
+    auto parsedPostInc = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<int<4>>:poi++ )"));
+    EXPECT_EQ(manager.basic.getSignedIntPostInc(), parsedPostInc->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getInt4()), parsedPostInc->getArgument(0)->getType());
+
+    auto parsedPreDec = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( --ref<int<2>>:prd )"));
+    EXPECT_EQ(manager.basic.getSignedIntPreDec(), parsedPreDec->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getInt2()), parsedPreDec->getArgument(0)->getType());
+
+    auto parsedPostDec = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("(ref<uint<16>>:pod -- )"));
+    EXPECT_EQ(manager.basic.getUnsignedIntPostDec(), parsedPostDec->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getUInt16()), parsedPostDec->getArgument(0)->getType());
+
+    // logical operations
+    CaptureInitExpr::Values lazyCaptInits;
+    std::vector<VariablePtr> lazyArgs;
+    std::vector<TypePtr> argTypes;
+
+    auto builtAnd = builder.callExpr(manager.basic.getBool(), manager.basic.getBoolLAnd(), builder.literal("true", manager.basic.getBool()),
+        builder.captureInitExpr(builder.lambdaExpr(builder.functionType(argTypes, manager.basic.getBool()), lazyArgs,
+                builder.returnStmt(builder.literal("true", manager.basic.getBool()))), lazyCaptInits));
+    auto parsedAnd = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("(lit<bool, true> && lit<bool, true> )"));
+    EXPECT_EQ(builtAnd->getFunctionExpr(), parsedAnd->getFunctionExpr());
+    EXPECT_EQ(builtAnd->getArgument(0), parsedAnd->getArgument(0));
+    EXPECT_EQ(builtAnd->getArgument(1)->getType(), parsedAnd->getArgument(1)->getType());
+
+    auto parsedOr = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("(lit<bool, false> || lit<bool, true> )"));
+    EXPECT_EQ(manager.basic.getBoolLOr(), parsedOr->getFunctionExpr());
+    EXPECT_EQ(builder.literal(manager.basic.getBool(), "false"), parsedOr->getArgument(0));
+    EXPECT_EQ(builtAnd->getArgument(1)->getType(), parsedAnd->getArgument(1)->getType());
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getBoolLNot(), builder.literal("false", manager.basic.getBool())),
+        parser.parseExpression("(! lit<bool, false> )"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getBoolEq(), builder.literal("false", manager.basic.getBool()), builder.literal("true", manager.basic.getBool())),
+        parser.parseExpression("(false == true )"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getCharNe(), builder.literal("a", manager.basic.getChar()), builder.literal("b", manager.basic.getChar())),
+        parser.parseExpression("('a' != 'b')"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntLt(), builder.literal("5", manager.basic.getInt4()), builder.literal("7", manager.basic.getInt4())),
+        parser.parseExpression("(5<7)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealLe(), builder.literal("5.3", manager.basic.getDouble()),
+            builder.literal("7.7", manager.basic.getDouble())),
+        parser.parseExpression("(5.3 <= 7.7)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealGt(), builder.literal("1234.0", manager.basic.getFloat()),
+            builder.literal("78.9", manager.basic.getFloat())),
+        parser.parseExpression("(lit<real<4>, 1234.0> > lit<real<4>, 78.9>)"));
+
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealGe(), builder.literal("5.3", manager.basic.getDouble()),
+            builder.castExpr(manager.basic.getDouble(), builder.literal("3", manager.basic.getUInt2()))),
+        parser.parseExpression("(5.3 >= lit<uint<2>, 3>)"));
+
+}
+
 TEST(IRParser, ProgramTest) {
     NodeManager manager;
     IRParser parser(manager);

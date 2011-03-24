@@ -67,11 +67,11 @@ class Expression : public Statement {
 	template<typename PT>
 	friend void basicExprTests(PT, const TypePtr&, const Node::ChildList& children = Node::ChildList());
 
-protected:	
+protected:
 
 	/** The type of the expression. */
 	const TypePtr type;
-	
+
 	Expression(NodeType nodeType, const TypePtr& type, const std::size_t& hashCode);
 
 	virtual bool equals(const Node& stmt) const;
@@ -430,12 +430,12 @@ public:
 	 * @return a reference to the stream
 	 */
 	virtual std::ostream& printTo(std::ostream& out) const;
-	
+
 	/**
 	 * Obtains the variable used within the recursive definition for modeling this lambda.
 	 */
 	const VariablePtr& getVariable() const { return variable; }
-	
+
 	/**
 	 * The (potential) recursive definition of this lambda.
 	 */
@@ -466,6 +466,90 @@ public:
 	 */
 	bool isRecursive() const { return recursive; }
 };
+
+/**
+ * A bind expression allows to take a function, fix some of its parameters, reordering others and produce
+ * a new function which may than be called or forwarded to another call. Unlike static lambda structures, this
+ * bindings are evaluated during runtime.
+ */
+class BindExpr : public Expression {
+
+	/**
+	 * The list of parameters accepted by the resulting function.
+	 */
+	const vector<VariablePtr> parameters;
+
+	/**
+	 * The call representing the function and the parameters binding.
+	 */
+	const CallExprPtr call;
+
+	/**
+	 * Creates a new instance of this type of node based on the given parameters. The resulting
+	 * value will be a function exposing the given parameters and if evaluated, the corresponding
+	 * call with the bound values will be processed.
+	 *
+	 * @param parameters the parameters of the resulting function
+	 * @param call the call including the bound and unbound parameters
+	 */
+	BindExpr(const vector<VariablePtr>& parameters, const CallExprPtr& call);
+
+	/**
+	 * Creates a clone of this node.
+	 */
+	virtual BindExpr* createCopyUsing(NodeMapping& mapper) const;
+
+	/**
+	 * Obtains a list of all sub-nodes referenced by this node.
+	 */
+	virtual OptionChildList getChildNodes() const;
+
+	/**
+	 * Compares this expression with the given expression. If they
+	 * are equivalent (though potentially not identical), true will be returned. Otherwise
+	 * the result will be false.
+	 *
+	 * @param expr the expression to be compared to.
+	 * @return true if equivalent, false otherwise
+	 */
+	virtual bool equalsExpr(const Expression& expr) const;
+
+public:
+
+	/**
+	 * A factory method for obtaining a bind expression node instance maintained by the given
+	 * node manager.
+	 *
+	 * @param manager the manager which should be maintaining the new instance
+	 * @param parameters the parameters of the resulting function
+	 * @param call the call including the bound and unbound parameters
+	 */
+	static BindExprPtr get(NodeManager& manager, const vector<VariablePtr>& parameters, const CallExprPtr& call);
+
+	/**
+	 * Prints a readable representation of this instance to the given output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return the same stream reference which has been passed as an argument
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const;
+
+	/**
+	 * Obtains the parameters accepted by this bind expression.
+	 */
+	const vector<VariablePtr>& getParameters() const {
+		return parameters;
+	}
+
+	/**
+	 * Obtains the call expression defining the function and its bound parameters defining
+	 * the resulting function value.
+	 */
+	const CallExprPtr& getCall() const {
+		return call;
+	}
+};
+
 
 class CaptureInitExpr : public Expression {
 
@@ -649,12 +733,12 @@ private:
 	JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecs);
 
 	virtual JobExpr* createCopyUsing(NodeMapping& mapper) const;
-	
+
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
 	virtual OptionChildList getChildNodes() const;
-	
+
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
@@ -678,12 +762,12 @@ class CallExpr : public Expression {
 	CallExpr(const TypePtr& type, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 private:
 	virtual CallExpr* createCopyUsing(NodeMapping& mapper) const;
-	
+
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
 	virtual OptionChildList getChildNodes() const;
-	
+
 public:
 	class ArgumentOutOfRangeException : public std::exception {
 		virtual const char* what() const throw() {
@@ -697,8 +781,6 @@ public:
 	const ExpressionPtr& getArgument(size_t pos) const;
 	const vector<ExpressionPtr>& getArguments() const { return arguments; }
 
-	// TODO: re-add with proper type inferencing of return type
-	// static CallExprPtr get(NodeManager& manager, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 	static CallExprPtr get(NodeManager& manager, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments);
 };
 
@@ -707,7 +789,7 @@ class CastExpr : public Expression {
 
 	CastExpr(const TypePtr& type, const ExpressionPtr& subExpression);
 	virtual CastExpr* createCopyUsing(NodeMapping& mapper) const;
-	
+
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
@@ -738,7 +820,7 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getSubExpression() const { return subExpression; }
-	
+
 	const IdentifierPtr& getMemberName() const { return member; }
 
 	static MemberAccessExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const IdentifierPtr& member);
@@ -761,7 +843,7 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getSubExpression() const { return subExpression; }
-	
+
 	const unsigned getIndex() const { return index; }
 
 	static TupleProjectionExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned index);
@@ -788,7 +870,7 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 	static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression);
 	static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned id);
-	
+
 
 	const ExpressionPtr& getSubExpression() const { return subExpression; }
 	const unsigned int getID() const { return id; }

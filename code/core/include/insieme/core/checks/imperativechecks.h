@@ -47,23 +47,13 @@ enum {
 	EC_IMPERATIVE_ILLEGAL_VARIABLE_REUSE
 };
 
-/**
- * A small macro to simplify the definition of checks.
- *
- * @param Name the name of the new check (without the tailing Check)
- * @param NodeType the type the check should be applied on
- */
-#define SIMPLE_CHECK(Name, NodeType, visitTypes) \
-	class Name ## Check : public ASTCheck { \
-		public: \
-		Name ## Check() : ASTCheck(visitTypes) {}; \
-		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
-	}
+// defines macros for generating CHECK declarations
+#include "insieme/core/checks/check_macros.inc"
 
 /**
  * This check verifies that variables are only used within their scope.
  */
-SIMPLE_CHECK(UndeclaredVariable, Node, false);
+SIMPLE_CHECK(UndeclaredVariable, LambdaDefinition, false);
 
 /**
  * This check verifies whether the same variable is used within more than one situation.
@@ -74,7 +64,6 @@ SIMPLE_CHECK(DeclaredOnce, Node, false);
 
 
 // TODO: add another test verifying that every variable is only defined once
-
 
 
 #undef SIMPLE_CHECK

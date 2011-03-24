@@ -34,91 +34,45 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/transform/pattern/structure.h"
 
-#include <ctime>
-#include <memory>
+namespace insieme {
+namespace transform {
+namespace pattern {
 
-#include <boost/functional/hash.hpp>
 
-#include "insieme/utils/set_utils.h"
+	std::ostream& Tree::printTo(std::ostream& out) const {
+		// print symbol if present
+		if (symbol) out << symbol;
 
-//using boost::unordered_set;
-using namespace insieme::utils::set;
+		// add sub-trees
+		if (!subTrees.empty()) {
+			out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
+		}
 
-typedef std::unordered_set<int, boost::hash<int>> Set;
-//typedef std::unordered_set<int> Set;
-//typedef boost::unordered_set<int> Set;
+		// in case neither a symbol nor subtrees are given
+		if (!symbol && subTrees.empty()) {
+			out << "()";
+		}
+		return out;
+	}
 
-TEST(SetUtilsTest, toSet) {
+	bool Tree::operator==(const Tree& other) const {
+		if (this == &other) {
+			return true;
+		}
+		return symbol == other.symbol && equals(subTrees, other.subTrees, equal_target<TreePtr>());
+	}
 
-	Set set = toSet<Set>(1,3,4,2,1);
 
-	Set ref;
-	ref.insert(1);
-	ref.insert(3);
-	ref.insert(4);
-	ref.insert(2);
-	ref.insert(1);
+	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
+		return tree.printTo(out);
+	}
 
-	EXPECT_EQ(4, set.size());
-	EXPECT_EQ(4, ref.size());
-	EXPECT_EQ(set, ref);
-}
+	std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
+		return out << *tree;
+	}
 
-TEST(SetUtilsTest, Merge) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(3);
-
-	Set merged = merge(setA,setB);
-
-	Set setRef;
-	setRef.insert(1);
-	setRef.insert(2);
-	setRef.insert(3);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, merged );
-}
-
-TEST(SetUtilsTest, Intersect) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(1);
-
-	Set res = intersect(setA,setB);
-
-	Set setRef;
-	setRef.insert(1);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
-}
-
-TEST(SetUtilsTest, Difference) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(1);
-
-	Set res = difference(setA,setB);
-
-	Set setRef;
-	setRef.insert(2);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
-}
-
+} // end namespace pattern
+} // end namespace transform
+} // end namespace insieme

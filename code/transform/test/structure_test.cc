@@ -36,89 +36,32 @@
 
 #include <gtest/gtest.h>
 
-#include <ctime>
-#include <memory>
+#include "insieme/transform/pattern/structure.h"
 
-#include <boost/functional/hash.hpp>
+namespace insieme {
+namespace transform {
+namespace pattern {
 
-#include "insieme/utils/set_utils.h"
+	TEST(Tree, Basic) {
 
-//using boost::unordered_set;
-using namespace insieme::utils::set;
+		TreePtr tree = makeTree();
+		EXPECT_EQ("()", toString(tree));
 
-typedef std::unordered_set<int, boost::hash<int>> Set;
-//typedef std::unordered_set<int> Set;
-//typedef boost::unordered_set<int> Set;
+		tree = makeTree(tree, tree, tree);
+		EXPECT_EQ("((),(),())", toString(tree));
 
-TEST(SetUtilsTest, toSet) {
+		tree = makeTree(tree, makeTree());
+		EXPECT_EQ("(((),(),()),())", toString(tree));
 
-	Set set = toSet<Set>(1,3,4,2,1);
+		tree = makeTree('a');
+		EXPECT_EQ("a", toString(tree));
 
-	Set ref;
-	ref.insert(1);
-	ref.insert(3);
-	ref.insert(4);
-	ref.insert(2);
-	ref.insert(1);
+		tree = makeTree(tree, makeTree('b'), makeTree());
+		EXPECT_EQ("(a,b,())", toString(tree));
 
-	EXPECT_EQ(4, set.size());
-	EXPECT_EQ(4, ref.size());
-	EXPECT_EQ(set, ref);
-}
+	}
 
-TEST(SetUtilsTest, Merge) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(3);
-
-	Set merged = merge(setA,setB);
-
-	Set setRef;
-	setRef.insert(1);
-	setRef.insert(2);
-	setRef.insert(3);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, merged );
-}
-
-TEST(SetUtilsTest, Intersect) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(1);
-
-	Set res = intersect(setA,setB);
-
-	Set setRef;
-	setRef.insert(1);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
-}
-
-TEST(SetUtilsTest, Difference) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(1);
-
-	Set res = difference(setA,setB);
-
-	Set setRef;
-	setRef.insert(2);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
-}
+} // end namespace pattern
+} // end namespace transform
+} // end namespace insieme
 

@@ -163,10 +163,10 @@ int main(int argc, char** argv) {
 			if(!CommandLineOptions::CFG.empty()) {
 				insieme::utils::Timer timer("Build.CFG");
 				std::fstream dotFile(CommandLineOptions::CFG.c_str(), std::fstream::out | std::fstream::trunc);
-				analysis::CFGPtr graph = analysis::CFG::buildCFG(program);
+				analysis::CFGPtr graph = analysis::CFG::buildCFG<analysis::OneStmtPerBasicBlock>(program);
 				timer.stop();
-				dotFile << *graph;
 				LOG(INFO) << timer;
+				dotFile << *graph;
 			}
 
 			// perform checks

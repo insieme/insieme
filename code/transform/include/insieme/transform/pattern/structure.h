@@ -34,91 +34,51 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include <ctime>
+#include <ostream>
 #include <memory>
 
-#include <boost/functional/hash.hpp>
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/string_utils.h"
 
-#include "insieme/utils/set_utils.h"
+namespace insieme {
+namespace transform {
+namespace pattern {
 
-//using boost::unordered_set;
-using namespace insieme::utils::set;
 
-typedef std::unordered_set<int, boost::hash<int>> Set;
-//typedef std::unordered_set<int> Set;
-//typedef boost::unordered_set<int> Set;
+	class Tree;
+	typedef std::shared_ptr<Tree> TreePtr;
 
-TEST(SetUtilsTest, toSet) {
 
-	Set set = toSet<Set>(1,3,4,2,1);
+	class Tree {
+		const char symbol;
+		const std::vector<TreePtr> subTrees;
+	public:
+		template<typename... Args>
+		Tree(char symbol, Args && ... args) : symbol(symbol), subTrees(toVector<TreePtr>(args...)) {}
 
-	Set ref;
-	ref.insert(1);
-	ref.insert(3);
-	ref.insert(4);
-	ref.insert(2);
-	ref.insert(1);
+		std::ostream& printTo(std::ostream& out) const;
+		bool operator==(const Tree& other) const;
 
-	EXPECT_EQ(4, set.size());
-	EXPECT_EQ(4, ref.size());
-	EXPECT_EQ(set, ref);
-}
+		const std::vector<TreePtr> getSubTrees() const { return subTrees; }
+		const char getSymbol() const { return symbol; }
+	};
 
-TEST(SetUtilsTest, Merge) {
+	template<typename... Args>
+	TreePtr makeTree(const Args & ... args ) {
+		return std::make_shared<Tree>(0, args...);
+	}
 
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
+	template<typename... Args>
+	TreePtr makeTree(char symbol, const Args & ... args ) {
+		return std::make_shared<Tree>(symbol, args...);
+	}
 
-	Set setB;
-	setB.insert(3);
+	std::ostream& operator<<(std::ostream& out, const Tree& tree);
 
-	Set merged = merge(setA,setB);
+	std::ostream& operator<<(std::ostream& out, const TreePtr& tree);
 
-	Set setRef;
-	setRef.insert(1);
-	setRef.insert(2);
-	setRef.insert(3);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, merged );
-}
-
-TEST(SetUtilsTest, Intersect) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(1);
-
-	Set res = intersect(setA,setB);
-
-	Set setRef;
-	setRef.insert(1);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
-}
-
-TEST(SetUtilsTest, Difference) {
-
-	Set setA;
-	setA.insert(1);
-	setA.insert(2);
-
-	Set setB;
-	setB.insert(1);
-
-	Set res = difference(setA,setB);
-
-	Set setRef;
-	setRef.insert(2);
-
-	// NOTE: assumes that == is implemented (optional in std)
-	EXPECT_EQ ( setRef, res );
-}
-
+} // end namespace pattern
+} // end namespace transform
+} // end namespace insieme

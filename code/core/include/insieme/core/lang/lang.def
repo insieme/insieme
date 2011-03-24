@@ -160,7 +160,8 @@ OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
 
 // Arithmetic operations ----------------------------------------------------------------------------------------------
 
-GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod)
+GROUP(IntArithOp, SignedIntAdd, SignedIntSub, SignedIntMul, SignedIntDiv, SignedIntMod, SignedIntPreInc,
+        SignedIntPreInc, SignedIntPostInc, SignedIntPreDec, SignedIntPostDec)
 
 OPERATION(SignedInt, Add,  "int.add", "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Sub,  "int.sub", "(int<#a>,int<#a>) -> int<#a>")
@@ -173,7 +174,8 @@ OPERATION(SignedInt, PostInc, "int.postInc", "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PreDec,  "int.preDec",  "(ref<int<#a>>) -> int<#a>")
 OPERATION(SignedInt, PostDec, "int.postDec", "(ref<int<#a>>) -> int<#a>")
 
-GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod)
+GROUP(UIntArithOp, UnsignedIntAdd, UnsignedIntSub, UnsignedIntMul, UnsignedIntDiv, UnsignedIntMod,
+        UnsignedIntPreInc, UnsignedIntPostInc, UnsignedIntPreDec, UnsignedIntPostDec)
 
 OPERATION(UnsignedInt, Add,  "uint.add", "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Sub,  "uint.sub", "(uint<#a>,uint<#a>) -> uint<#a>")
@@ -240,7 +242,7 @@ GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
 
 GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
 
-OPERATION(SignedInt, Not,    "int.not",    "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, Not,    "int.not",    "(int<#a>) -> int<#a>")
 OPERATION(SignedInt, And,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Or,     "int.or",     "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Xor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
@@ -249,7 +251,7 @@ OPERATION(SignedInt, RShift, "int.rshift", "(int<#a>,int<#a>) -> int<#a>")
 
 GROUP(BitwiseUIntOp, UnsignedIntNot, UnsignedIntAnd, UnsignedIntOr, UnsignedIntXor, UnsignedIntLShift, UnsignedIntRShift)
 
-OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>,uint<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")

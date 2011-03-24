@@ -45,8 +45,17 @@ namespace core {
 
 	// ----------------------- Variable Integer Type Parameter ------------------------
 
+	namespace {
+		inline std::size_t hashVariableParam(char symbol) {
+			size_t seed = 0;
+			boost::hash_combine(seed, HS_VariableIntTypeParam);
+			boost::hash_combine(seed, symbol);
+			return seed;
+		}
+	}
+
 	VariableIntTypeParam::VariableIntTypeParam(char symbol)
-		: IntTypeParam(NT_VariableIntTypeParam, symbol), symbol(symbol) {}
+		: IntTypeParam(NT_VariableIntTypeParam, hashVariableParam(symbol)), symbol(symbol) {}
 
 	VariableIntTypeParamPtr VariableIntTypeParam::get(NodeManager& manager, char symbol) {
 		return manager.get(VariableIntTypeParam(symbol));
@@ -77,9 +86,17 @@ namespace core {
 
 	// ----------------------- Concrete Integer Type Parameter ------------------------
 
+	namespace {
+		inline std::size_t hashConcreteParam(std::size_t value) {
+			size_t seed = 0;
+			boost::hash_combine(seed, HS_ConcreteIntTypeParam);
+			boost::hash_combine(seed, value);
+			return seed;
+		}
+	}
 
 	ConcreteIntTypeParam::ConcreteIntTypeParam(std::size_t value)
-		: IntTypeParam(NT_ConcreteIntTypeParam, value), value(value) {}
+		: IntTypeParam(NT_ConcreteIntTypeParam, hashConcreteParam(value)), value(value) {}
 
 	ConcreteIntTypeParamPtr ConcreteIntTypeParam::get(NodeManager& manager, std::size_t value) {
 		return manager.get(ConcreteIntTypeParam(value));
@@ -116,8 +133,16 @@ namespace core {
 
 	// ----------------------- Infinite Integer Type Parameter ------------------------
 
+	namespace {
+		inline std::size_t hashInfiniteParam() {
+			size_t seed = 0;
+			boost::hash_combine(seed, HS_InfiniteIntTypeParam);
+			return seed;
+		}
+	}
+
 	InfiniteIntTypeParam::InfiniteIntTypeParam()
-		: IntTypeParam(NT_InfiniteIntTypeParam, std::numeric_limits<std::size_t>::max()) {}
+		: IntTypeParam(NT_InfiniteIntTypeParam, hashInfiniteParam()) {}
 
 	InfiniteIntTypeParamPtr InfiniteIntTypeParam::get(NodeManager& manager) {
 		return manager.get(InfiniteIntTypeParam());

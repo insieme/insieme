@@ -37,6 +37,7 @@
 #include "insieme/core/parser/expression_parse_part.h"
 #include "insieme/core/parser/expression_parse.h"
 #include "insieme/core/parser/statement_parse.h"
+#include "insieme/core/parser/operator_parse.h"
 #include "insieme/core/parser/type_parse.h"
 #include "insieme/core/expressions.h"
 #include "insieme/core/lang/basic.h"
@@ -77,10 +78,23 @@ LiteralPtr buildDoubleLiteral(NodeManager& nodeMan, int integer, vector<char> fr
     return build.literal(nodeMan.basic.getDouble(), toString(integer) + "." + toString(join("", fraction)));
 }
 
-LiteralPtr builtIntLiteral(NodeManager& nodeMan, int val) {
+LiteralPtr buildIntLiteral(NodeManager& nodeMan, int val) {
     ASTBuilder build(nodeMan);
     return build.intLit(val);
 }
+
+LiteralPtr buildTrueLiteral(NodeManager& nodeMan) {
+    ASTBuilder build(nodeMan);
+
+    return build.literal("true", nodeMan.basic.getBool());
+}
+
+LiteralPtr buildFalseLiteral(NodeManager& nodeMan) {
+    ASTBuilder build(nodeMan);
+
+    return build.literal("false", nodeMan.basic.getBool());
+}
+
 
 CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, ExpressionList arguments) {
     //TODO determine return type by inference (arguments may be empty!)
@@ -139,10 +153,11 @@ string buildString(string s) {
 }
 
 ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stmtGrammar)
-    : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), /*exprGpart(new ExpressionGrammarPart(nodeMan, this)),*/ varTab(nodeMan) {
+    : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), varTab(nodeMan) {
 
  //   typeG = new TypeGrammar(nodeMan);
     exprGpart = new ExpressionGrammarPart(nodeMan, this);
+    opG = new OperatorGrammar(nodeMan, this);
     if(stmtGrammar == NULL) {
         stmtG = new StatementGrammar(nodeMan);
         deleteStmtG = true;
@@ -277,12 +292,17 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
           |qi::char_('2')|qi::char_('3')|qi::char_('4')
           |qi::char_('5')|qi::char_('6')|qi::char_('7')
           |qi::char_('8')|qi::char_('9')) )                         [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1, qi::_2) ];
+
+    boolExpr =
+        qi::lit("true")                                             [ qi::_val = ph::bind(&buildTrueLiteral, nManRef) ]
+        | qi::lit("false")                                          [ qi::_val = ph::bind(&buildFalseLiteral, nManRef) ];
     // --------------------------------------------------------------------------------------
 
 
 
     expressionRule =
         lambdaExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | boolExpr                                                    [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | captureInitExpr                                             [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | callExpr                                                    [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | literalExpr                                                 [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
@@ -299,8 +319,9 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
       | markerExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | variableExpr                                                [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | doubleExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
-//      | intExpr                                                     [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ];
-      | qi::int_                                                    [ qi::_val = ph::bind(&builtIntLiteral, nManRef, qi::_1) ];
+//      | qi::bool_                                                   [ qi::_val = ph::bind(&builtBoolLiteral, nManRef, qi::_1) ]
+      | opG->operatorRule                                           [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | qi::int_                                                    [ qi::_val = ph::bind(&buildIntLiteral, nManRef, qi::_1) ];
 //      | qi::double_                                                 [ qi::_val = ph::bind(&buildDoubleLiteral, nManRef, qi::_1) ];
 
     // --------------------------------------------------------------------------------------
@@ -331,6 +352,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 ExpressionGrammar::~ExpressionGrammar() {
     delete typeG;
     delete exprGpart;
+    delete opG;
     if(deleteStmtG)
         delete stmtG;
 }

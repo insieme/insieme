@@ -52,6 +52,8 @@ namespace checks {
 // the actual implementation of the undeclared variable check
 namespace {
 
+	using std::vector;
+
 	typedef boost::unordered_set<VariablePtr, hash_target<VariablePtr>, equal_target<VariablePtr>> VariableSet;
 
 	/**
@@ -62,7 +64,7 @@ namespace {
 		/**
 		 * The set of currently declared variables.
 		 */
-		VariableSet& declaredVariables;
+		VariableSet declaredVariables;
 
 		/**
 		 * The address of nodes referencing undeclared variables.
@@ -104,8 +106,14 @@ namespace {
 		 * are removed from the defined set after the block.
 		 */
 		void visitCompoundStmt(const CompoundStmtAddress& cur) {
-			// TODO: handle start/end of scope ...
+			// copy current scope
+			VariableSet currentScope = declaredVariables;
+
+			// check compound stmts (new scope) ...
 			visitNode(cur);
+
+			// reset current scope
+			declaredVariables = currentScope;
 		}
 
 		/**
@@ -113,8 +121,35 @@ namespace {
 		 * to an alternative scope.
 		 */
 		void visitJobExpr(const JobExprAddress& cur) {
-			// only check initialization expressions of job
-			handleNewScope(cur);
+
+			// backup current scope
+			VariableSet currentScope = declaredVariables;
+
+			// check scope of all local declarations
+			VariableSet localVars;
+			std::size_t numDecls = cur->getLocalDecls().size();
+			for (std::size_t i=0; i<numDecls; i++) {
+				DeclarationStmtAddress decl = static_address_cast<const DeclarationStmt>(cur.getAddressOfChild(i+1));
+
+				// check variables within local variable initialization
+				visit(decl.getAddressOfChild(1));
+
+				// ... and collect local variables
+				localVars.insert(decl->getVariable());
+			}
+
+			// add local variables to set of declared variables ..
+			declaredVariables.insert(localVars.begin(), localVars.end());
+
+			// .. and check job branches specifications
+			std::size_t numChildren = cur->getChildList().size();
+			for (std::size_t i=1+numDecls; i<numChildren; i++) {
+				// check scopes within current child
+				visit(cur.getAddressOfChild(i));
+			}
+
+			// restore context scope
+			declaredVariables = currentScope;
 		}
 
 		/**
@@ -123,6 +158,39 @@ namespace {
 		 */
 		void visitLambdaExpr(const LambdaExprAddress& cur) {
 			// nothing to do => terminal state
+		}
+
+		/**
+		 * Checks the special variable scope rules within a bind expression. The function
+		 * for which arguments should be bound as well as non-parameter arguments to the
+		 * resulting call have to be part of the local scope.
+		 */
+		void visitBindExpr(const BindExprAddress& cur) {
+			// get list of parameters
+			const vector<VariablePtr>& params = cur->getParameters();
+
+			// check call expressions
+			const CallExprAddress call =
+					static_address_cast<const CallExpr>(cur.getAddressOfChild(params.size()));
+
+			// start with function
+			visit(call.getAddressOfChild(1));
+
+			// check parameters
+			std::size_t numArgs = call->getArguments().size();
+			for (std::size_t i=0; i<numArgs; i++) {
+				const ExpressionAddress cur =
+						static_address_cast<const Expression>(call.getAddressOfChild(i+2));
+
+				// check whether variable is a bind-parameter
+				if (cur->getNodeType() == NT_Variable
+					&& contains(params, static_pointer_cast<const Variable>(cur.getAddressedNode()))) {
+					continue;
+				}
+
+				// check whether all variables of the expression are within the current scope
+				visit(cur);
+			}
 		}
 
 		/**
@@ -139,26 +207,6 @@ namespace {
 			for (int i=0, e=node->getChildList().size(); i<e; i++) {
 				visit(node.getAddressOfChild(i));
 			}
-		}
-
-	private:
-
-		/**
-		 * Takes the given node and checks all the initialization expressions within
-		 * its child list.
-		 */
-		void handleNewScope(const NodeAddress& cur) {
-			// get immediate declaration child nodes of the given node
-			for (int i=0, e=cur->getChildList().size(); i<e; i++) {
-				NodeAddress child = cur.getAddressOfChild(i);
-				if (child->getNodeType() == NT_DeclarationStmt) {
-					// check initialization expression ...
-					visit(cur.getAddressOfChild(1));
-				}
-			}
-
-			// TODO: determine which scope the initializer of a job-branch function should have!
-
 		}
 
 	};
@@ -187,81 +235,44 @@ namespace {
 		return res;
 	}
 
-	OptionalMessageList checkLambdaDefinition(const LambdaDefinitionAddress& lambdaDef) {
-
-		OptionalMessageList res;
-
-		VariableSet recFunctions;
-		for_each(lambdaDef->getDefinitions(), [&recFunctions](const std::pair<VariablePtr, LambdaPtr>& cur) {
-			recFunctions.insert(cur.first);
-		});
-
-		int offset = 0;
-		for_each(lambdaDef->getDefinitions(), [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
-
-			// assemble set of defined variables
-			VariableSet declared;
-
-			// add recursive function variables
-			declared.insert(recFunctions.begin(), recFunctions.end());
-
-			// extend set of defined variables => captured variables
-			auto captureList = cur.second->getCaptureList();
-			declared.insert(captureList.begin(), captureList.end());
-
-			// add parameters
-			auto paramList = cur.second->getParameterList();
-			declared.insert(paramList.begin(), paramList.end());
-
-			// run check on body ...
-			VarDeclarationCheck check(declared);
-
-			// trigger check
-			addAll(res, conductCheck(check, lambdaDef.getAddressOfChild(offset+1)));
-			offset += 2;
-		});
-
-		return res;
-	}
-
-	OptionalMessageList checkJob(const JobExprAddress& cur) {
-		// assemble set of defined variables
-//		VariableSet declared;
-//		for_each(cur->getLocalDecls(), [&declared](const DeclarationStmtPtr& cur) {
-//			declared.insert(cur->getVariable());
-//		});
-//
-//		// run check
-//		VarDeclarationCheck check(declared);
-//		return conductCheck(check);
-
-		// TODO: fix the scope - rules of jobs ...
-		//  - the local shared list - init expressions are part of the outer scope
-		//  - private capture list of functions are intermediate scope
-		//  - functions forming the bodies have their own scope
-
-		return OptionalMessageList();
-	}
-
-
 }
 
 
-OptionalMessageList UndeclaredVariableCheck::visitNode(const NodeAddress& address) {
-
-	// to check: are all variables used within constructs declared properly
-	// - variable scopes: functions, jobs; declarations are only valid after their specification
+OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaDefinitionAddress& lambdaDef) {
 
 	OptionalMessageList res;
 
-	switch(address->getNodeType()) {
-	case NT_LambdaDefinition:
-		return checkLambdaDefinition(static_address_cast<const LambdaDefinition>(address));
-//	case NT_JobExpr:
-//		return checkJob(static_address_cast<const JobExpr>(address));
-	default:
-		return res;
-	}
+	VariableSet recFunctions;
+	for_each(lambdaDef->getDefinitions(), [&recFunctions](const std::pair<VariablePtr, LambdaPtr>& cur) {
+		recFunctions.insert(cur.first);
+	});
+
+	int offset = 0;
+	for_each(lambdaDef->getDefinitions(), [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
+
+		// assemble set of defined variables
+		VariableSet declared;
+
+		// add recursive function variables
+		declared.insert(recFunctions.begin(), recFunctions.end());
+
+		// extend set of defined variables => captured variables
+		auto captureList = cur.second->getCaptureList();
+		declared.insert(captureList.begin(), captureList.end());
+
+		// add parameters
+		auto paramList = cur.second->getParameterList();
+		declared.insert(paramList.begin(), paramList.end());
+
+		// run check on body ...
+		VarDeclarationCheck check(declared);
+
+		// trigger check
+		addAll(res, conductCheck(check, lambdaDef.getAddressOfChild(offset+1)));
+		offset += 2;
+	});
+
+	return res;
 }
 
 

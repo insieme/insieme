@@ -92,7 +92,7 @@ public:
 			annotations << xmlConverter.irToDomAnnotation (*(iter->second), doc);
 		}
 	}
-
+	
 	void visitGenericType(const GenericTypePtr& cur) {
 		XmlElement genType("genType", doc);
 		genType << XmlElement::Attribute("id", GET_ID(cur))
@@ -118,29 +118,41 @@ public:
 		if (!intParam.empty()){
 			XmlElement intTypeParams("intTypeParams", doc);
 			genType << intTypeParams;
-
-			for(IntParamList::const_iterator iter = intParam.begin(), end = intParam.end(); iter != end; ++iter) {
-				XmlElement intTypeParam("intTypeParam", doc);
-				intTypeParams << intTypeParam;
-
-				// FIXME: this is a quick-fix - int type param should be treated like all other nodes
-				switch ((*iter)->getNodeType()) {
-				case NT_VariableIntTypeParam:
-					intTypeParam << (XmlElement("variable", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const VariableIntTypeParam>(*iter)->getSymbol())));
-					break;
-				case NT_ConcreteIntTypeParam:
-					intTypeParam << (XmlElement("concrete", doc) << XmlElement::Attribute("value", numeric_cast<string>(static_pointer_cast<const ConcreteIntTypeParam>(*iter)->getValue())));
-					break;
-				case NT_InfiniteIntTypeParam:
-					intTypeParam << XmlElement("infinite", doc);
-					break;
-				default:
-					assert(false && "Invalid integer parameter type");
-					break;
-				}
-			}
+			for_each(intParam.begin(), intParam.end(), [ this, &intTypeParams ](const IntTypeParamPtr& curr) { this->append(intTypeParams, curr, "intTypeParamPtr"); });
 		}
 		visitAnnotations(cur->getAnnotations(), genType);
+	}
+	
+	void visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& cur) {
+		XmlElement concreteIntTypeParam("concreteIntTypeParam", doc);
+		concreteIntTypeParam << XmlElement::Attribute("id", GET_ID(cur));
+		rootElem << concreteIntTypeParam;
+		
+		XmlElement concrete("concrete", doc);
+		concrete << XmlElement::Attribute("value", numeric_cast<std::string>(cur->getValue()));
+		concreteIntTypeParam << concrete;
+		visitAnnotations(cur->getAnnotations(), concreteIntTypeParam);
+	}
+	
+	void visitVariableIntTypeParam(const VariableIntTypeParamPtr& cur) {
+		XmlElement variableIntTypeParam("variableIntTypeParam", doc);
+		variableIntTypeParam << XmlElement::Attribute("id", GET_ID(cur));
+		rootElem << variableIntTypeParam;
+		
+		XmlElement variable("variable", doc);
+		variable << XmlElement::Attribute("value", numeric_cast<std::string>(cur->getSymbol()));
+		variableIntTypeParam << variable;
+		visitAnnotations(cur->getAnnotations(), variableIntTypeParam);
+	}
+	
+	void visitInfiniteIntTypeParam(const InfiniteIntTypeParamPtr& cur) {
+		XmlElement infiniteIntTypeParam("infiniteIntTypeParam", doc);
+		infiniteIntTypeParam << XmlElement::Attribute("id", GET_ID(cur));
+		rootElem << infiniteIntTypeParam;
+		
+		XmlElement infinite("infinite", doc);
+		infiniteIntTypeParam << infinite;
+		visitAnnotations(cur->getAnnotations(), infiniteIntTypeParam);
 	}
 
 	void visitFunctionType(const FunctionTypePtr& cur) {
@@ -177,10 +189,7 @@ public:
 		std::for_each(entriesVec.begin(), entriesVec.end(),
 			[this, &entries](const NamedCompositeType::Entry& curr) {
 				XmlElement entry("entry", this->doc);
-				XmlElement id("id", this->doc);
-				id.setText((curr.first)->getName());
-				entry << id;
-
+				this->append(entry, curr.first, "identifierPtr");
 				this->append(entry, curr.second, "typePtr");
 				entries << entry;
 			}
@@ -380,11 +389,7 @@ public:
 			[this, &members](const StructExpr::Member& curr) {
 				XmlElement member("member", this->doc);
 				members << member;
-
-				XmlElement id("id", this->doc);
-				id.setText(curr.first->getName());
-				member << id;
-
+				this->append(member, curr.first, "identifierPtr");
 				this->append(member, curr.second, "expressionPtr");
 			}
 		);
@@ -401,15 +406,14 @@ public:
 		append(type, cur->getType(), "typePtr");
 		unionExpr << type;
 		
+		XmlElement memberName("memberName", doc);
+		append(memberName, cur->getMemberName(), "identifierPtr");
+		unionExpr << memberName;
+		
 		XmlElement member("member", doc);
-		unionExpr << member;
-		
-		XmlElement id("id", doc);
-		id.setText(cur->getMemberName()->getName());
-		member << id;
-		
 		append(member, cur->getMember(), "expressionPtr");
-		
+		unionExpr << member;
+
 		visitAnnotations(cur->getAnnotations(), unionExpr);	
 	}
 
@@ -474,7 +478,7 @@ public:
 	void visitVariable(const VariablePtr& cur) {
 		XmlElement variable("variable", doc);
 		variable << XmlElement::Attribute("id", GET_ID(cur))
-				 << XmlElement::Attribute("identifier", numeric_cast<std::string>(cur->getId()));
+				 << XmlElement::Attribute("varId", numeric_cast<std::string>(cur->getId()));
 		rootElem << variable;
 
 		XmlElement type("type", doc);
@@ -551,7 +555,7 @@ public:
 		rootElem << program;
 		
 		appendList(program,
-			std::vector<ExpressionPtr>(cur->getEntryPoints().begin(), cur->getEntryPoints().end()) , // FIXME: this copy can be avoided
+			std::vector<ExpressionPtr>(cur->getEntryPoints().begin(), cur->getEntryPoints().end()) ,
 			"expressions", "expressionPtr");
 		visitAnnotations(cur->getAnnotations(), program);
 	}
@@ -607,7 +611,7 @@ public:
 		memberAccessExpr << subExpression;
 		
 		XmlElement memberName("memberName",doc);
-		memberName.setText(cur->getMemberName()->getName());
+		append(memberName, cur->getMemberName(), "identifierPtr");
 		memberAccessExpr << memberName;
 
 		visitAnnotations(cur->getAnnotations(), memberAccessExpr);
@@ -652,7 +656,7 @@ public:
 	void visitMarkerStmt(const MarkerStmtPtr& cur) {
 		XmlElement markerStmt("markerStmt", doc);
 		markerStmt << XmlElement::Attribute("id", GET_ID(cur))
-				 << XmlElement::Attribute("identifier", numeric_cast<std::string>(cur->getID()));
+				 << XmlElement::Attribute("markId", numeric_cast<std::string>(cur->getID()));
 		rootElem << markerStmt;
 
 		XmlElement subStatement("subStatement", doc);
@@ -665,7 +669,7 @@ public:
 	void visitMarkerExpr(const MarkerExprPtr& cur) {
 		XmlElement markerExpr("markerExpr", doc);
 		markerExpr << XmlElement::Attribute("id", GET_ID(cur))
-				 << XmlElement::Attribute("identifier", numeric_cast<std::string>(cur->getID()));
+				 << XmlElement::Attribute("markId", numeric_cast<std::string>(cur->getID()));
 		rootElem << markerExpr;
 
 		XmlElement subExpression("subExpression", doc);
@@ -673,6 +677,14 @@ public:
 		markerExpr << subExpression;
 
 		visitAnnotations(cur->getAnnotations(), markerExpr);
+	}
+	
+	void visitIdentifier(const IdentifierPtr& cur) {
+		XmlElement identifier("identifier", doc);
+		identifier << XmlElement::Attribute("id", GET_ID(cur))
+				   << XmlElement::Attribute("name", cur->getName());
+		rootElem << identifier;
+		visitAnnotations(cur->getAnnotations(), identifier);
 	}
 };
 

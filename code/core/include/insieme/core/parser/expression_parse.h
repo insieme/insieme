@@ -53,6 +53,7 @@ typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 struct TypeGrammar;
 struct ExpressionGrammarPart;
 struct StatementGrammar;
+struct OperatorGrammar;
 
 // helper function to be able to use std::make_pair along with ph::push_back
 template<typename T, typename U>
@@ -76,6 +77,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
     TypeGrammar *typeG; // pointer for weak coupling
     ExpressionGrammarPart *exprGpart;
     StatementGrammar* stmtG;
+    OperatorGrammar* opG;
     VariableTable varTab;
     bool deleteStmtG;
 
@@ -118,6 +120,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
     qi::rule<ParseIt, MarkerExprPtr(), qi::space_type> markerExpr;
 
     qi::rule<ParseIt, LiteralPtr(), qi::space_type> doubleExpr;
+    qi::rule<ParseIt, LiteralPtr(), qi::space_type> boolExpr;
 
     // --------------------------------------------------------------------------------------
 };

@@ -145,21 +145,9 @@ public:
 		vector<IntTypeParamPtr> intTypeParams;
 		XmlElementPtr&& intParam = elem.getFirstChildByName("intTypeParams");
 		if (intParam){
-			XmlElementList&& intPar = intParam->getChildrenByName("intTypeParam");
-			for(XmlElementList::const_iterator iter = intPar.begin(), end = intPar.end(); iter != end; ++iter) {
-				if (iter->getChildrenByName("variable").size() != 0){
-					intTypeParams.push_back(
-							VariableIntTypeParam::get(mgr, (iter->getFirstChildByName("variable"))->getAttr("value")[0])
-					);
-					continue;
-				}
-				if (iter->getChildrenByName("concrete").size() != 0){
-					intTypeParams.push_back(
-							ConcreteIntTypeParam::get(mgr, numeric_cast<int>((iter->getFirstChildByName("concrete"))->getAttr("value")))
-					);
-					continue;
-				}
-				intTypeParams.push_back(InfiniteIntTypeParam::get(mgr));
+			XmlElementList&& types = intParam->getChildrenByName("intTypeParamPtr");
+			for(auto iter = types.begin(), end = types.end(); iter != end; ++iter) {
+				intTypeParams.push_back( createNode<IntTypeParam>(*iter) );
 			}
 		}
 		string&& name = elem.getAttr("familyName");
@@ -168,6 +156,20 @@ public:
 		if (name == "channel") 	return createIrNode<ChannelType>(elem, typeParams[0], intTypeParams[0]);
 		if (name == "ref")		return createIrNode<RefType>(elem, typeParams[0]);
 		return createIrNode<GenericType>(elem, name, typeParams, intTypeParams, baseType);
+	}
+	
+	NodePtr handle_concreteIntTypeParam(const XmlElement& elem) {
+		const unsigned value = numeric_cast<unsigned>(elem.getFirstChildByName("concrete")->getAttr("value"));
+		return createIrNode<ConcreteIntTypeParam>(elem, value);
+	}
+	
+	NodePtr handle_variableIntTypeParam(const XmlElement& elem) {
+		const char value = elem.getFirstChildByName("variable")->getAttr("value")[0];
+		return createIrNode<VariableIntTypeParam>(elem, value);
+	}
+	
+	NodePtr handle_infiniteIntTypeParam(const XmlElement& elem) {
+		return createIrNode<InfiniteIntTypeParam>(elem);
 	}
 
 	NodePtr handle_functionType(const XmlElement& elem) {
@@ -190,7 +192,7 @@ private:
 		NamedCompositeType::Entries entryVec;
 		XmlElementList&& entries = elem.getFirstChildByName("entries")->getChildrenByName("entry");
 		for(auto iter = entries.begin(), end = entries.end(); iter != end; ++iter) {
-			IdentifierPtr&& ident = Identifier::get(mgr, iter->getFirstChildByName("id")->getText());
+			IdentifierPtr&& ident = createNode<Identifier>(*iter, "identifierPtr");
 			TypePtr&& el = createNode<Type>(*iter, "typePtr");
 			entryVec.push_back( NamedCompositeType::Entry(ident, el) );
 		}
@@ -310,7 +312,7 @@ public:
 
 		StructExpr::Members membVec;
 		for(auto iter = membs.begin(), end = membs.end(); iter != end; ++iter) {
-			IdentifierPtr&& ident = Identifier::get(mgr, iter->getFirstChildByName("id")->getText());
+			IdentifierPtr&& ident = createNode<Identifier>(*iter, "identifierPtr");
 			ExpressionPtr&& expr = createNode<Expression>(*iter, "expressionPtr");
 			membVec.push_back( StructExpr::Member(ident, expr) );
 		}
@@ -319,7 +321,7 @@ public:
 
 	NodePtr handle_unionExpr(const XmlElement& elem) {
 		UnionTypePtr&& typeT = createNode<UnionType>(elem, "type", "typePtr");
-		IdentifierPtr&& ident = Identifier::get(mgr, elem.getFirstChildByName("member")->getFirstChildByName("id")->getText());
+		IdentifierPtr&& ident = createNode<Identifier>(elem, "memberName", "identifierPtr");
 		ExpressionPtr&& expr = createNode<Expression>(elem, "member", "expressionPtr");
 
 		return createIrNode<UnionExpr>(elem, typeT, ident, expr);
@@ -366,7 +368,7 @@ public:
 
 	NodePtr handle_variable(const XmlElement& elem) {
 		TypePtr&& typeT = createNode<Type>(elem, "type", "typePtr");
-		return createIrNode<Variable>(elem, typeT, numeric_cast<int>(elem.getAttr("identifier")));
+		return createIrNode<Variable>(elem, typeT, numeric_cast<int>(elem.getAttr("varId")));
 	}
 
 	NodePtr handle_jobExpr(const XmlElement& elem) {
@@ -444,7 +446,7 @@ public:
 	
 	NodePtr handle_memberAccessExpr(const XmlElement& elem) {
 		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
-		IdentifierPtr&& ident = Identifier::get(mgr, elem.getFirstChildByName("memberName")->getText());
+		IdentifierPtr&& ident = createNode<Identifier>(elem, "memberName", "identifierPtr");
 		return createIrNode<MemberAccessExpr>(elem, expr, ident);
 	}
 	
@@ -456,12 +458,16 @@ public:
 	
 	NodePtr handle_markerStmt(const XmlElement& elem) {
 		StatementPtr&& subStatement = createNode<Statement>(elem, "subStatement", "statementPtr");
-		return createIrNode<MarkerStmt>(elem, subStatement, numeric_cast<int>(elem.getAttr("identifier")));
+		return createIrNode<MarkerStmt>(elem, subStatement, numeric_cast<int>(elem.getAttr("markId")));
 	}
 	
 	NodePtr handle_markerExpr(const XmlElement& elem) {
 		ExpressionPtr&& subExpression = createNode<Expression>(elem, "subExpression", "expressionPtr");
-		return createIrNode<MarkerExpr>(elem, subExpression, numeric_cast<int>(elem.getAttr("identifier")));
+		return createIrNode<MarkerExpr>(elem, subExpression, numeric_cast<int>(elem.getAttr("markId")));
+	}
+	
+	NodePtr handle_identifier(const XmlElement& elem) {
+		return createIrNode<Identifier>(elem, elem.getAttr("name"));
 	}
 
 	NodePtr handle_program(const XmlElement& elem) {
@@ -499,14 +505,14 @@ public:
 
 		// different types of nodes
 		string&& nodeName = elem.getName();
-		DISPATCH(genType)			DISPATCH(functionType)		DISPATCH(unionType)			DISPATCH(structType)			DISPATCH(tupleType)
-		DISPATCH(typeVariable)		DISPATCH(recType)			DISPATCH(recTypeDefinition)	DISPATCH(literal)				DISPATCH(returnStmt)
-		DISPATCH(forStmt)			DISPATCH(ifStmt)			DISPATCH(switchStmt)		DISPATCH(whileStmt)				DISPATCH(breakStmt)
+		DISPATCH(genType)			DISPATCH(functionType)		DISPATCH(unionType)			DISPATCH(structType)			DISPATCH(concreteIntTypeParam)
+		DISPATCH(typeVariable)		DISPATCH(recType)			DISPATCH(recTypeDefinition)	DISPATCH(literal)				DISPATCH(variableIntTypeParam)
+		DISPATCH(forStmt)			DISPATCH(ifStmt)			DISPATCH(switchStmt)		DISPATCH(whileStmt)				DISPATCH(infiniteIntTypeParam)
 		DISPATCH(continueStmt)		DISPATCH(compoundStmt)		DISPATCH(declarationStmt)	DISPATCH(structExpr)			DISPATCH(unionExpr)
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
 		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(captureInitExpr)	DISPATCH(tupleProjectionExpr)	DISPATCH(markerStmt)
-		DISPATCH(markerExpr)
+		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(returnStmt)		DISPATCH(breakStmt)				DISPATCH(identifier)
 		assert(false && "XML node not handled!");
 	}
 

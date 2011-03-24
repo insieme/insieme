@@ -84,6 +84,8 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 		case insieme::core::NT_MarkerExpr:   { hash_combine(seed, static_pointer_cast<const MarkerExpr>(cur)->getID()); break; }
 		case insieme::core::NT_MarkerStmt:   { hash_combine(seed, static_pointer_cast<const MarkerStmt>(cur)->getID()); break; }
 		case insieme::core::NT_Program:      { boost::hash_combine(seed, static_pointer_cast<const Program>(cur)->isMain()); break; };
+		case insieme::core::NT_VariableIntTypeParam: { boost::hash_combine(seed, static_pointer_cast<const VariableIntTypeParam>(cur)->getSymbol()); break; };
+		case insieme::core::NT_ConcreteIntTypeParam: { boost::hash_combine(seed, static_pointer_cast<const ConcreteIntTypeParam>(cur)->getValue()); break; };
 		default: {}
 	}
 }
@@ -91,9 +93,9 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 hash_t computeHashChildOnly(const NodePtr& cur) {
 
 	// handle int-type parameters extra
-	if (IntTypeParamPtr param = dynamic_pointer_cast<const IntTypeParam>(cur)) {
-		return param->hash();
-	}
+//	if (IntTypeParamPtr param = dynamic_pointer_cast<const IntTypeParam>(cur)) {
+//		return param->hash();
+//	}
 
 	hash_t seed = 0;
 	hash_node(seed, cur);
@@ -117,6 +119,11 @@ Node::ChildList toList(const vector<T>& list) {
 	return res;
 }
 
+bool equalChildLists(const Node::ChildList& listA, const Node::ChildList& listB) {
+	return equals(listA, listB, equal_target<insieme::core::NodePtr>());
+}
+
+
 template<typename NP>
 void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()) {
 
@@ -127,7 +134,7 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	// ------------ Node Ptr based tests -------------
 
 	// check children
-	EXPECT_TRUE ( equals(children, node->getChildList(), equal_target<insieme::core::NodePtr>()) );
+	EXPECT_PRED2(equalChildLists, children, node->getChildList());
 
 	// ------------ Annotation Tests -------------
 
