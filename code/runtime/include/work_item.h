@@ -36,39 +36,37 @@
 
 #pragma once
 
-#include "irt_inttypes.h"
-
-#include "id_generation.h"
+#include "declarations.h"
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(irt_work_item_id);
+IRT_MAKE_ID_TYPE(irt_work_item);
 
-typedef struct _irt_work_item_range {
+struct _irt_work_item_range {
 	int64 begin, end, step;
-} irt_work_item_range;
+};
 
-typedef struct _irt_work_item {
+struct _irt_work_item {
 	irt_work_item_id id;
 	irt_work_item_range range;
-	irt_implementation_id impl_id;
+	irt_wi_implementation_id impl_id;
 	size_t num_groups;
 	irt_work_group_id* work_groups;
 	unsigned priority; // ?
 	irt_lw_data_item *parameters;
-} irt_work_item;
+};
 
 
 /* ------------------------------ operations ----- */
 
-irt_errcode irt_wi_create(irt_work_item** out_wi);
-irt_errcode irt_wi_destroy(irt_work_item* wi);
+irt_work_item* irt_wi_create();
+void irt_wi_destroy(irt_work_item* wi);
 
-irt_errcode irt_wi_enqueue(irt_work_item* wi);
-irt_errcode irt_wi_enqueue_remote(irt_work_item* wi, irt_worker* worker);
+void irt_wi_enqueue(irt_work_item* wi);
+void irt_wi_enqueue_other(irt_work_item* wi, irt_worker* worker);
 
-irt_errcode irt_wi_yield();
+void irt_wi_yield();
 
-irt_errcode irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
-irt_errcode irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);
-irt_errcode irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis);
+void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
+void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);
+void irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis);

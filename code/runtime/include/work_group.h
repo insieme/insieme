@@ -36,34 +36,32 @@
 
 #pragma once
 
-#include "irt_inttypes.h"
-
-#include "id_generation.h"
+#include "declarations.h"
 
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(irt_work_group);
 
-typedef struct _irt_work_group {
+struct _irt_work_group {
 	irt_work_group_id id;
 	bool distributed;			// starts at false, set to true if part of the group is not on the same shared memory node
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
 	uint32 local_member_count;
-} irt_work_group;
+};
 
 
 /* ------------------------------ operations ----- */
 
-irt_errcode irt_wg_create(irt_work_group** out_wg);
-irt_errcode irt_wg_destroy(irt_work_group* wg);
+irt_work_group* irt_wg_create();
+void irt_wg_destroy(irt_work_group* wg);
 
-irt_errcode irt_wg_join(irt_work_group* wg);
-irt_errcode irt_wg_leave(irt_work_group* wg);
+void irt_wg_join(irt_work_group* wg);
+void irt_wg_leave(irt_work_group* wg);
 
-irt_errcode irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
-irt_errcode irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
+void irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
+void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
 
-irt_errcode irt_wg_barrier(irt_work_group* wg, irt_barrier_id barrier);
-irt_errcode irt_wg_distribute(irt_work_group* wg, irt_distribute_id dist /*, ???*/);
+void irt_wg_barrier(irt_work_group* wg, irt_barrier_id barrier);
+void irt_wg_distribute(irt_work_group* wg, irt_distribute_id dist /*, ???*/);
 
