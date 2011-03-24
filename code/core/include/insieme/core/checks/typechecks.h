@@ -38,7 +38,6 @@
 
 #include "insieme/core/checks/ir_checks.h"
 
-
 namespace insieme {
 namespace core {
 namespace checks {
@@ -72,18 +71,8 @@ enum {
 	EC_TYPE_INVALID_IDENTIFIER,
 };
 
-/**
- * A small macro to simplify the definition of AST checks.
- *
- * @param Name the name of the new check (without the tailing Check)
- * @param NodeType the type the check should be applied on
- */
-#define SIMPLE_CHECK(Name, NodeType, visitTypes) \
-	class Name ## Check : public ASTCheck { \
-		public: \
-		Name ## Check() : ASTCheck(visitTypes) {}; \
-		OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
-	}
+// defines macros for generating CHECK declarations
+#include "insieme/core/checks/check_macros.inc"
 
 SIMPLE_CHECK(Keyword, GenericType, true);
 

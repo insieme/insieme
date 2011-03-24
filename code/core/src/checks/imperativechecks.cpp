@@ -170,7 +170,7 @@ namespace {
 			const vector<VariablePtr>& params = cur->getParameters();
 
 			// check call expressions
-			const CallExprAddress& call =
+			const CallExprAddress call =
 					static_address_cast<const CallExpr>(cur.getAddressOfChild(params.size()));
 
 			// start with function
@@ -179,7 +179,7 @@ namespace {
 			// check parameters
 			std::size_t numArgs = call->getArguments().size();
 			for (std::size_t i=0; i<numArgs; i++) {
-				const ExpressionAddress& cur =
+				const ExpressionAddress cur =
 						static_address_cast<const Expression>(call.getAddressOfChild(i+2));
 
 				// check whether variable is a bind-parameter
@@ -235,81 +235,44 @@ namespace {
 		return res;
 	}
 
-	OptionalMessageList checkLambdaDefinition(const LambdaDefinitionAddress& lambdaDef) {
-
-		OptionalMessageList res;
-
-		VariableSet recFunctions;
-		for_each(lambdaDef->getDefinitions(), [&recFunctions](const std::pair<VariablePtr, LambdaPtr>& cur) {
-			recFunctions.insert(cur.first);
-		});
-
-		int offset = 0;
-		for_each(lambdaDef->getDefinitions(), [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
-
-			// assemble set of defined variables
-			VariableSet declared;
-
-			// add recursive function variables
-			declared.insert(recFunctions.begin(), recFunctions.end());
-
-			// extend set of defined variables => captured variables
-			auto captureList = cur.second->getCaptureList();
-			declared.insert(captureList.begin(), captureList.end());
-
-			// add parameters
-			auto paramList = cur.second->getParameterList();
-			declared.insert(paramList.begin(), paramList.end());
-
-			// run check on body ...
-			VarDeclarationCheck check(declared);
-
-			// trigger check
-			addAll(res, conductCheck(check, lambdaDef.getAddressOfChild(offset+1)));
-			offset += 2;
-		});
-
-		return res;
-	}
-
-	OptionalMessageList checkJob(const JobExprAddress& cur) {
-		// assemble set of defined variables
-//		VariableSet declared;
-//		for_each(cur->getLocalDecls(), [&declared](const DeclarationStmtPtr& cur) {
-//			declared.insert(cur->getVariable());
-//		});
-//
-//		// run check
-//		VarDeclarationCheck check(declared);
-//		return conductCheck(check);
-
-		// TODO: fix the scope - rules of jobs ...
-		//  - the local shared list - init expressions are part of the outer scope
-		//  - private capture list of functions are intermediate scope
-		//  - functions forming the bodies have their own scope
-
-		return OptionalMessageList();
-	}
-
-
 }
 
 
-OptionalMessageList UndeclaredVariableCheck::visitNode(const NodeAddress& address) {
-
-	// to check: are all variables used within constructs declared properly
-	// - variable scopes: functions, jobs; declarations are only valid after their specification
+OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaDefinitionAddress& lambdaDef) {
 
 	OptionalMessageList res;
 
-	switch(address->getNodeType()) {
-	case NT_LambdaDefinition:
-		return checkLambdaDefinition(static_address_cast<const LambdaDefinition>(address));
-//	case NT_JobExpr:
-//		return checkJob(static_address_cast<const JobExpr>(address));
-	default:
-		return res;
-	}
+	VariableSet recFunctions;
+	for_each(lambdaDef->getDefinitions(), [&recFunctions](const std::pair<VariablePtr, LambdaPtr>& cur) {
+		recFunctions.insert(cur.first);
+	});
+
+	int offset = 0;
+	for_each(lambdaDef->getDefinitions(), [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
+
+		// assemble set of defined variables
+		VariableSet declared;
+
+		// add recursive function variables
+		declared.insert(recFunctions.begin(), recFunctions.end());
+
+		// extend set of defined variables => captured variables
+		auto captureList = cur.second->getCaptureList();
+		declared.insert(captureList.begin(), captureList.end());
+
+		// add parameters
+		auto paramList = cur.second->getParameterList();
+		declared.insert(paramList.begin(), paramList.end());
+
+		// run check on body ...
+		VarDeclarationCheck check(declared);
+
+		// trigger check
+		addAll(res, conductCheck(check, lambdaDef.getAddressOfChild(offset+1)));
+		offset += 2;
+	});
+
+	return res;
 }
 
 
