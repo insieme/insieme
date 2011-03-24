@@ -282,7 +282,7 @@ TEST(IRParser, StatementTests) {
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
 //    std::cout << printer::PrettyPrinter(tmp) << std::endl;
-/*
+
     // pointwise operator implementation with simple means
     auto vectorPointwise = parser.parseStatement("{\
         fun [](('elem, 'elem) -> 'res:fct) -> (vector<'elem, #l>, vector<'elem, #l>) -> vector<'res, #l>  { \
@@ -316,6 +316,11 @@ TEST(IRParser, OperationTests) {
     ASTBuilder builder(manager);
 
     // binary operations
+
+    auto assignment = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<uint<4>>:a = 7)"));
+    EXPECT_EQ(manager.basic.getRefAssign(), assignment->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.basic.getUInt4()), assignment->getArgument(0)->getType());
+    EXPECT_EQ(builder.castExpr(manager.basic.getUInt4(), builder.intLit(7)), assignment->getArgument(1));
 
     auto add = dynamic_pointer_cast<const CallExpr>(parser.parseExpression("( ref<int<4>>:a + uint<4>:b)"));
     EXPECT_EQ(manager.basic.getSignedIntAdd(), add->getFunctionExpr());
@@ -404,27 +409,30 @@ TEST(IRParser, OperationTests) {
     EXPECT_EQ(manager.basic.getBoolLOr(), parsedOr->getFunctionExpr());
     EXPECT_EQ(builder.literal(manager.basic.getBool(), "false"), parsedOr->getArgument(0));
     EXPECT_EQ(builtAnd->getArgument(1)->getType(), parsedAnd->getArgument(1)->getType());
-/*
+
     EXPECT_EQ(builder.callExpr(manager.basic.getBoolLNot(), builder.literal("false", manager.basic.getBool())),
         parser.parseExpression("(! lit<bool, false> )"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getBoolEq(), builder.literal("false", manager.basic.getBool()), builder.literal("false", manager.basic.getBool())),
-        parser.parseExpression("(lit<bool, false> == lit<bool, false> )"));
+    EXPECT_EQ(builder.callExpr(manager.basic.getBoolEq(), builder.literal("false", manager.basic.getBool()), builder.literal("true", manager.basic.getBool())),
+        parser.parseExpression("(false == true )"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getBoolNe(), builder.literal("false", manager.basic.getBool()), builder.literal("true", manager.basic.getBool())),
-        parser.parseExpression("(false != true )"));
+    EXPECT_EQ(builder.callExpr(manager.basic.getCharNe(), builder.literal("a", manager.basic.getChar()), builder.literal("b", manager.basic.getChar())),
+        parser.parseExpression("('a' != 'b')"));
 
+    EXPECT_EQ(builder.callExpr(manager.basic.getSignedIntLt(), builder.literal("5", manager.basic.getInt4()), builder.literal("7", manager.basic.getInt4())),
+        parser.parseExpression("(5<7)"));
 
-    EXPECT_EQ(builder.callExpr(manager.basic.getBoolLt(), builder.literal("true", manager.basic.getBool()), builder.literal("false", manager.basic.getBool())),
-        parser.parseExpression("(false < true )"));
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealLe(), builder.literal("5.3", manager.basic.getDouble()),
+            builder.literal("7.7", manager.basic.getDouble())),
+        parser.parseExpression("(5.3 <= 7.7)"));
 
-    /*
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Lt;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Le;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Gt;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Ge;
-*/
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealGt(), builder.literal("1234.0", manager.basic.getFloat()),
+            builder.literal("78.9", manager.basic.getFloat())),
+        parser.parseExpression("(lit<real<4>, 1234.0> > lit<real<4>, 78.9>)"));
 
+    EXPECT_EQ(builder.callExpr(manager.basic.getRealGe(), builder.literal("5.3", manager.basic.getDouble()),
+            builder.castExpr(manager.basic.getDouble(), builder.literal("3", manager.basic.getUInt2()))),
+        parser.parseExpression("(5.3 >= lit<uint<2>, 3>)"));
 
 }
 

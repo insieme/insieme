@@ -120,6 +120,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
     qi::rule<ParseIt, MarkerExprPtr(), qi::space_type> markerExpr;
 
     qi::rule<ParseIt, LiteralPtr(), qi::space_type> doubleExpr;
+    qi::rule<ParseIt, LiteralPtr(), qi::space_type> boolExpr;
 
     // --------------------------------------------------------------------------------------
 };
