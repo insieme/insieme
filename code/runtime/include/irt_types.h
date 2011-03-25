@@ -36,46 +36,26 @@
 
 #pragma once
 
-#include "irt_inttypes.h"
-#include "id_generation.h"
+#include "declarations.h"
 
-/* ------------------------------ data items ----- */
+/* ------------------------------ data structures ----- */
 
-IRT_DECLARE_ID_TYPE(irt_data_item);
-typedef enum _irt_data_mode irt_data_mode;
-typedef struct _irt_data_range irt_data_range;
-typedef struct _irt_data_block irt_data_block;
-typedef struct _irt_data_item irt_data_item;
+enum _irt_type_kind {
+	IRT_T_BOOL,
+	IRT_T_INT1, IRT_T_INT2, IRT_T_INT4, IRT_T_INT8,
+	IRT_T_UINT1, IRT_T_UINT2, IRT_T_UINT4, IRT_T_UINT8,
+	IRT_T_FLOAT2, IRT_T_FLOAT4, IRT_T_FLOAT8,
+	IRT_T_STRUCT = 0xFF00,								// complex type start
+	IRT_T_UNION, IRT_T_FUNC, IRT_T_BASIC
+};
 
-typedef struct _irt_lw_data_item irt_lw_data_item;
+struct _irt_type {
+	irt_type_kind kind;
+	uint32 bytes;
+	uint32 num_components; // 0 for basic types
+	irt_type_id *components; // num_components entries
+};
 
-/* ------------------------------ types ----- */
+/* ------------------------------ operations ----- */
 
-typedef uint32 irt_type_id;
-typedef enum _irt_type_kind irt_type_kind;
-typedef struct _irt_type irt_type;
-
-/* ------------------------------ work groups ----- */
-
-IRT_DECLARE_ID_TYPE(irt_work_group);
-typedef uint32 irt_barrier_id;
-typedef uint32 irt_distribute_id;
-typedef struct irt_work_group;
-
-/* ------------------------------ work items ----- */
-
-IRT_DECLARE_ID_TYPE(irt_work_item);
-typedef struct _irt_work_item_range irt_work_item_range;
-typedef struct _irt_work_item irt_work_item;
-
-/* ------------------------------ work item implementations ----- */
-
-typedef uint32 irt_wi_implementation_id;
-typedef struct _irt_wi_di_requirement irt_wi_di_requirement;
-typedef struct _irt_wi_implementation irt_wi_implementation;
-
-
-
-
-
-
+uint32 irt_get_type_bytes(irt_context* context, irt_type_id type_id);

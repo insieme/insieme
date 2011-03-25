@@ -36,14 +36,20 @@
 
 #pragma once
 
+#define IRT_DECLARE_ID_TYPE(__type) \
+typedef struct _##__type##_id __type##_id;
+
 #define IRT_MAKE_ID_TYPE(__type) \
-typedef union _##__type##_id { \
-	uint64 id; \
-	struct { \
-		uint16 node; \
-		uint16 thread; \
-		uint32 index; \
+struct _##__type; \
+struct _##__type##_id { \
+	union { \
+		uint64 id; \
+		struct { \
+			uint16 node; \
+			uint16 thread; \
+			uint32 index; \
+		}; \
 	}; \
-	__type* cached; \
-} ##__type##_id;
+	struct _##__type* cached; \
+};
 

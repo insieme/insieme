@@ -37,45 +37,22 @@
 #pragma once
 
 #include "irt_inttypes.h"
+
 #include "id_generation.h"
 
-/* ------------------------------ data items ----- */
+/* ------------------------------ data structures ----- */
 
-IRT_DECLARE_ID_TYPE(irt_data_item);
-typedef enum _irt_data_mode irt_data_mode;
-typedef struct _irt_data_range irt_data_range;
-typedef struct _irt_data_block irt_data_block;
-typedef struct _irt_data_item irt_data_item;
+IRT_MAKE_ID_TYPE(irt_channel);
 
-typedef struct _irt_lw_data_item irt_lw_data_item;
-
-/* ------------------------------ types ----- */
-
-typedef uint32 irt_type_id;
-typedef enum _irt_type_kind irt_type_kind;
-typedef struct _irt_type irt_type;
-
-/* ------------------------------ work groups ----- */
-
-IRT_DECLARE_ID_TYPE(irt_work_group);
-typedef uint32 irt_barrier_id;
-typedef uint32 irt_distribute_id;
-typedef struct irt_work_group;
-
-/* ------------------------------ work items ----- */
-
-IRT_DECLARE_ID_TYPE(irt_work_item);
-typedef struct _irt_work_item_range irt_work_item_range;
-typedef struct _irt_work_item irt_work_item;
-
-/* ------------------------------ work item implementations ----- */
-
-typedef uint32 irt_wi_implementation_id;
-typedef struct _irt_wi_di_requirement irt_wi_di_requirement;
-typedef struct _irt_wi_implementation irt_wi_implementation;
+typedef struct _irt_channel {
+	irt_channel_id id;
+	// TODO
+} irt_channel;
 
 
+/* ------------------------------ operations ----- */
 
+irt_channel* irt_channel_create();
+void irt_channel_destroy(irt_channel* wi);
 
-
-
+// TODO send recieve test probe try

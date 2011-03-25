@@ -36,32 +36,55 @@
 
 #pragma once
 
-#include "irt_inttypes.h"
-
-#include "id_generation.h"
+#include "declarations.h"
 
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(irt_data_item);
 
-typedef struct _irt_data_item {
+enum _irt_data_mode {
+	READ_ONLY,
+	WRITE_ONLY,
+	WRITE_FIRST,
+	READ_WRITE
+};
+
+struct _irt_data_range {
+	int64 begin, end, step;
+};
+
+struct _irt_data_block {
+	uint32 use_count;
+	//irt_hw_id location;
+	void* data;
+};
+
+struct _irt_data_item {
 	irt_data_item_id id;
-	irt_type_id type_id; 
+	uint32 use_count;
+	irt_type_id type_id;
 	uint32 dimensions;
-	uint64 *sizes;				// should be stored after this position
- } irt_data_item;
+	irt_data_mode mode;
+	// range and sizes have as many entries as data_item has dimensions
+	uint64 *sizes;
+	irt_data_range* range;
+	// can be NULL if data item is abstract
+	irt_data_block* data_block;
+ };
 
 
 /* ------------------------------ operations ----- */
 
-irt_errcode irt_di_create(irt_type_id tid, uint32 dimensions, uint64* sizes, irt_data_item** out_di);
-irt_errcode irt_di_destroy(irt_data_item* di);
+irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, uint64* sizes);
+irt_data_item* irt_di_create_sub(irt_data_item_id parent, irt_data_range range);
+void* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
+void irt_di_destroy(irt_data_item* di);
 
 
 /* ============================== light weight data item ===== */
 
 // size of an actual lw_data_item: sizeof(irt_type_id) + size of the irt_type referenced by type_id
-typedef struct _irt_lw_data_item {
+struct _irt_lw_data_item {
 	irt_type_id type_id;
 	// actual content will be stored here
-} irt_lw_data_item;
+};

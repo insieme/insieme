@@ -318,7 +318,7 @@ public:
 	 * @param retTy the return type of the generated lambda expression
 	 * @return A call expression of a lambda enclosing the body
 	 */
-	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
+	// core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {

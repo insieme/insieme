@@ -36,46 +36,27 @@
 
 #pragma once
 
-#include "irt_inttypes.h"
-#include "id_generation.h"
+#include "declarations.h"
 
-/* ------------------------------ data items ----- */
+/* ------------------------------ data structures ----- */
 
-IRT_DECLARE_ID_TYPE(irt_data_item);
-typedef enum _irt_data_mode irt_data_mode;
-typedef struct _irt_data_range irt_data_range;
-typedef struct _irt_data_block irt_data_block;
-typedef struct _irt_data_item irt_data_item;
+struct _irt_wi_di_requirement {
+	irt_data_item_id di_id;
+	irt_data_range range;
+};
 
-typedef struct _irt_lw_data_item irt_lw_data_item;
+typedef void wi_implementation_func(irt_work_item*);
+typedef void wi_di_req_func(irt_work_item*, irt_wi_di_requirement*);
+typedef void wi_channel_req_func(irt_work_item*, irt_channel*);
 
-/* ------------------------------ types ----- */
+struct _irt_wi_implementation {
+	wi_implementation_func* implementation;
+	uint32 num_required_data_items;
+	wi_di_req_func* data_requirements;
+	uint32 num_required_channels;
+	wi_channel_req_func* channel_requirements;
+};
 
-typedef uint32 irt_type_id;
-typedef enum _irt_type_kind irt_type_kind;
-typedef struct _irt_type irt_type;
-
-/* ------------------------------ work groups ----- */
-
-IRT_DECLARE_ID_TYPE(irt_work_group);
-typedef uint32 irt_barrier_id;
-typedef uint32 irt_distribute_id;
-typedef struct irt_work_group;
-
-/* ------------------------------ work items ----- */
-
-IRT_DECLARE_ID_TYPE(irt_work_item);
-typedef struct _irt_work_item_range irt_work_item_range;
-typedef struct _irt_work_item irt_work_item;
-
-/* ------------------------------ work item implementations ----- */
-
-typedef uint32 irt_wi_implementation_id;
-typedef struct _irt_wi_di_requirement irt_wi_di_requirement;
-typedef struct _irt_wi_implementation irt_wi_implementation;
-
-
-
-
+/* ------------------------------ operations ----- */
 
 
