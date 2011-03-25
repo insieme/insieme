@@ -62,6 +62,7 @@ namespace simple_backend {
 		public:
 
 			// TODO: change those values ... STACK => DIRECT, HEAP => INDIRECT
+			// TODO: change those to directly or indirectly dereferenced
 			enum MemoryLocation {
 				NONE, 	/* < in case the variable is not referencing a memory cell */
 				STACK, 	/* < the variable references a memory cell on the stack */

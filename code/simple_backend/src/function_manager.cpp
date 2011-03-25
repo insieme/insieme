@@ -68,12 +68,12 @@ void FunctionManager::appendFunctionParameter(const CodeFragmentPtr& fragment, c
 	// register ref-based variable within the variable manager
 	if (param->getType()->getNodeType() == NT_RefType) {
 		VariableManager::VariableInfo info;
-		info.location = VariableManager::STACK;
+		info.location = VariableManager::HEAP;
 		(cc.getVariableManager()).addInfo(param, info);
 	}
 
 	// format parameter using type manager
-	fragment << (cc.getTypeManager()).formatParamter(fragment, param->getType(), (cc.getNameManager()).getVarName(param), true);
+	fragment << (cc.getTypeManager()).formatParamter(fragment, param->getType(), (cc.getNameManager()).getVarName(param), false);
 }
 
 string FunctionManager::getFunctionName(const CodeFragmentPtr& context, const core::LiteralPtr& external) {

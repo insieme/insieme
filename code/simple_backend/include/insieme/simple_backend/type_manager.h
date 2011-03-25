@@ -67,10 +67,21 @@ public:
 	 * A pair consisting of a type name and its definition is forming an entry.
 	 */
 	struct Entry {
+
+		// a named used for types that are not supported by the simple backend
+		static const string UNSUPPORTED;
+
+		// the C-name of this type if used for declaring a new variable of this type
 		string lValueName;
+		// the C-name of this type when being passed as an argument or returned as a value
 		string rValueName;
+
+		// the pattern to be used for declaring variables of this type - %s will replaced with the variable name
 		string declPattern;
+		// the pattern to be used for defining a parameters of this type - %s will replaced with the variable name
 		string paramPattern;
+
+		// the code fragment which might define this type
 		CodeFragmentPtr definition;
 
 		Entry() : lValueName(), rValueName(), declPattern(), paramPattern(), definition() { }

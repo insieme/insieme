@@ -155,7 +155,7 @@ namespace simple_backend {
 	void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		auto var = ptr->getVariable();
 
-		// investigate initialization to determine whether variable is a pointer / skalar
+		// investigate initialization to determine whether variable is a pointer / scalar
 		VariableManager& varManager = cc.getVariableManager();
 		VariableManager::VariableInfo info;
 		info.location = VariableManager::NONE;
@@ -597,7 +597,7 @@ namespace simple_backend {
 	void StmtConverter::visitCastExpr(const CastExprPtr& ptr) {
 		const CodeFragmentPtr& code = currentCodeFragment;
 
-		code << "((" << cc.getTypeManager().getTypeName(code, ptr->getType()) << ")(";
+		code << "((" << cc.getTypeManager().getTypeName(code, ptr->getType(),true) << ")(";
 		visit(ptr->getSubExpression());
 		code << "))";
 	}
