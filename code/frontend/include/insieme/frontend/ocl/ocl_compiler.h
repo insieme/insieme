@@ -65,6 +65,14 @@ namespace {
                                     types.push_back((var)->getType()); \
                                     var = tmp; }
 
+// store a the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
+#define ADD_ARG(vec, var, types) { core::VariablePtr tmp = builder.variable((var)->getType()); \
+                                    vec.first.push_back(var); \
+                                    vec.second.push_back(tmp); \
+                                    types.push_back((var)->getType()); \
+                                    var = tmp; }
+
+
 // generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
 #define SHARE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
                           vec.push_back(builder.declarationStmt((var), initVal)); \
@@ -110,6 +118,9 @@ public:
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList types);
+
+    //returns a vector containing declarations with fresh initializations of all needed ocl-variables
+    void appendArguments(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& captureList, OCL_SCOPE scope, core::TypeList& aTypes);
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
     void appendShared(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);

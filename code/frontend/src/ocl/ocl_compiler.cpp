@@ -86,6 +86,19 @@ void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL
         CAPTURE(captureList, localRange, cTypes);
 }
 
+void KernelData::appendArguments(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& arguments, OCL_SCOPE scope,
+        core::TypeList& aTypes){
+
+    if(globalRangeUsed)
+        ADD_ARG(arguments, globalRange, aTypes);
+
+    if(numGroupsUsed || scope == OCL_GLOBAL_JOB)
+        ADD_ARG(arguments, numGroups, aTypes);
+
+    if(localRangeUsed || scope != OCL_LOCAL_PAR)
+        ADD_ARG(arguments, localRange, aTypes);
+}
+
 void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE scope) {
 
     if(globalRangeUsed)
@@ -666,7 +679,54 @@ private:
     }
 
     // creates new variables for all variables in the input vector and stores them in the output vector
-    // The elements of the input vector are stored as initialization values in map inits for the new variables
+    // The elements of the input vector are stored as initialization values in vector inits for the new variables
+    void createArgList(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& outVec, std::vector<core::VariablePtr>& inVec,
+        core::TypeList& types) {
+        for_each(inVec, [&](core::VariablePtr& in) {
+/*            outVec.first.push_back(in);
+            in = builder.variable((in)->getType());
+            outVec.second.push_back(in);
+
+            types.push_back(in->getType());*/
+            core::VariablePtr tmp = builder.variable(in->getType());
+
+            // capture a newly generated variable and initialize the one in in in it
+            outVec.first.push_back(in);
+            outVec.second.push_back(tmp);
+
+            // store the new variable in in
+            in = tmp;
+            types.push_back(in->getType());
+        });
+    }
+
+    void createArgList(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& outVec, std::vector<core::DeclarationStmtPtr>& inVec,
+        core::TypeList& types) {
+        for_each(inVec, [&](core::DeclarationStmtPtr& in) {
+            core::DeclarationStmtPtr tmp = builder.declarationStmt(in->getVariable()->getType(), in->getInitialization());
+
+            // capture a newly generated variable and initialize the one in in in it
+            outVec.first.push_back(in->getVariable());
+            outVec.second.push_back(tmp->getVariable());
+
+            // store the new variable in in
+            in = tmp;
+            types.push_back(in->getVariable()->getType());
+        });
+    }
+
+    void initArgInList(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& outVec, std::vector<core::DeclarationStmtPtr>& inVec,
+        core::TypeList& types) {
+        for_each(inVec, [&](core::DeclarationStmtPtr& in) {
+            // capture a newly generated variable and initialize the one in (*I) in it
+            outVec.first.push_back(in->getVariable());
+            outVec.second.push_back(in->getInitialization());
+
+            types.push_back(in->getVariable()->getType());
+        });
+    }
+
+
     void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::VariablePtr>& inVec, core::TypeList& types) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             core::VariablePtr tmp = builder.variable((*I)->getType());
@@ -721,7 +781,6 @@ private:
     }
 
 
-    // TODO make body ref
     core::ExpressionPtr genCaptueInits(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
             constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {
         // capture all arguments
@@ -747,6 +806,35 @@ private:
         core::FunctionTypePtr lpfType = builder.functionType(funCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
 
         return builder.lambdaExpr(lpfType, body, funCaptures, core::Lambda::ParamList());
+    }
+
+    core::ExpressionPtr genBindExpr(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
+            constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {
+        // define and init all arguments
+
+        std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> > arguments;
+        core::TypeList argTypes;
+
+        createArgList(arguments, constantArgs, argTypes);
+        createArgList(arguments, globalArgs, argTypes);
+        createArgList(arguments, localArgs, argTypes);
+        createArgList(arguments, privateArgs, argTypes);
+
+        // in-body local variables
+        if(scope == OCL_LOCAL_JOB /*|| scope == OCL_LOCAL_PAR*/)
+            createArgList(arguments, kernelMapper.getLocalDeclarations(), argTypes);
+        // in-body pointers to global variables, map to a new variable at local scope
+        if(scope == OCL_LOCAL_JOB)
+            createArgList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
+        else // map the existing variable to it's init expression
+            initArgInList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
+
+        kd.appendArguments(arguments, scope, argTypes);
+
+        core::FunctionTypePtr funType = builder.functionType(argTypes, builder.getNodeManager().basic.getUnit());
+
+
+        return builder.bindExpr(std::vector<core::VariablePtr>(), builder.callExpr(builder.lambdaExpr(funType, arguments.first, body), arguments.second));
     }
 
 public:
@@ -901,7 +989,7 @@ public:
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
-                    core::ExpressionPtr localParFct = genCaptueInits(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
+                    core::ExpressionPtr localParFct = genBindExpr(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
 
                     core::JobExpr::LocalDecls localJobShared;
 
@@ -941,7 +1029,7 @@ public:
 
 
                     // build expression to be used as body of global job
-                    core::ExpressionPtr globalParFct = genCaptueInits(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
+                    core::ExpressionPtr globalParFct = genBindExpr(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
                             privateArgs);
 
                     // catch all arguments which are shared in global range
