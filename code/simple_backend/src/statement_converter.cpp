@@ -507,6 +507,12 @@ namespace simple_backend {
 				return;
 			}
 
+			case NT_BindExpr: {
+				// a closure is to be invoked
+				code << " ... code to invoke a closure ... ";
+				return;
+			}
+
 			default :
 				code << "<?>Unhandled Type of Call Target</?>";
 		}
@@ -567,6 +573,13 @@ namespace simple_backend {
 		currentCodeFragment << "})))";
 	}
 
+
+	void StmtConverter::visitBindExpr(const core::BindExprPtr& ptr) {
+
+		// TODO: implement the creation of the corresponding closure on the stack
+		currentCodeFragment << "<here you will find a bind>";
+
+	}
 
 
 	void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
