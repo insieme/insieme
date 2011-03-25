@@ -74,16 +74,17 @@ core::CallExprPtr KernelData::calcIdidx2(core::VariablePtr& threadId, core::Vari
                threadId, vecAccess(boundaries, two));
 }
 
-void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
+void KernelData::appendArguments(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& arguments, OCL_SCOPE scope,
+        core::TypeList& aTypes){
 
     if(globalRangeUsed)
-        CAPTURE(captureList, globalRange, cTypes);
+        ADD_ARG(arguments, globalRange, aTypes);
 
     if(numGroupsUsed || scope == OCL_GLOBAL_JOB)
-        CAPTURE(captureList, numGroups, cTypes);
+        ADD_ARG(arguments, numGroups, aTypes);
 
     if(localRangeUsed || scope != OCL_LOCAL_PAR)
-        CAPTURE(captureList, localRange, cTypes);
+        ADD_ARG(arguments, localRange, aTypes);
 }
 
 void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE scope) {
@@ -169,32 +170,35 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
 
     std::vector<core::StatementPtr> stmts;
 
-    // capture needed ranges and add variables as needed
-    core::ASTBuilder::CaptureInits capture;
+    // add ranges and variables as needed
+    ArgList args;
+    ADD_PARAM(args, idxVar, idx);
+
     switch(opl) {
     case OPL_GLOBAL :
         localRangeUsed = true;
         numGroupsUsed = true;
-        capture[bfgo] = numGroups;
-        capture[boundaries] = localRange;
+        ADD_PARAM(args, bfgo, numGroups);
+        ADD_PARAM(args, boundaries, localRange);
         stmts.push_back(localDecl);
         stmts.push_back(groupDecl);
         break;
     case OPL_GROUP :
         numGroupsUsed = true;
-        capture[boundaries] = numGroups;
+        ADD_PARAM(args, boundaries, numGroups);
         stmts.push_back(groupDecl);
         break;
     case OPL_LOCAL :
         localRangeUsed = true;
-        capture[boundaries] = localRange;
+        ADD_PARAM(args, boundaries, localRange);
         stmts.push_back(localDecl);
     }
 
     stmts.push_back(swtch);
 
     // set the argument for the get__id function
-    return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), builder.compoundStmt(stmts), capture, toVector(idxVar)), idx);
+    return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), builder.compoundStmt(stmts), /*TODO empty capture list to avoid ambiguousity
+    shall be removed after captureInitExpr is not there any more and will hopefully work*/core::ASTBuilder::CaptureInits(), args.first), args.second);
 }
 
 
@@ -458,10 +462,10 @@ public:
             return call;//element->substitute(builder.getNodeManager(), *this);
         }
 
-        if(element->getNodeType() == core::NodeType::NT_LambdaExpr || element->getNodeType() == core::NodeType::NT_CaptureInitExpr) {
-            core::CaptureInitExprPtr cie = core::dynamic_pointer_cast<const core::CaptureInitExpr>(element);
-            core::LambdaExprPtr fun = cie ? // if we are in a capture init expression we get the lambda out of it
-                    core::dynamic_pointer_cast<const core::LambdaExpr>(cie->getLambda()) :
+        if(element->getNodeType() == core::NodeType::NT_LambdaExpr || element->getNodeType() == core::NodeType::NT_BindExpr) {
+            core::BindExprPtr bind = core::dynamic_pointer_cast<const core::BindExpr>(element);
+            core::LambdaExprPtr fun = bind ? // if we are in a bind expression we get the lambda out of it
+                    core::dynamic_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr()) : //TODO to be tested
                     core::dynamic_pointer_cast<const core::LambdaExpr>(element); // else we are in a lambda expession;
 
             // create a new KernelMapper to check if we need to capture a range variable and pass them if nececarry
@@ -472,30 +476,31 @@ public:
             core::StatementPtr newBody = core::dynamic_pointer_cast<const core::Statement>(fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper));
 
             // store capture list of function (if existent)
-            core::ASTBuilder::CaptureList funCaptures = fun->getCaptureList();;
-            core::CaptureInitExpr::Values funCaptInits;
-            if(cie) funCaptInits = cie->getValues();
+            ArgList args;
+            if(bind) {
+                args.first = bind->getParameters();
+                args.second = bind->getCall()->getArguments();
+            }
 
             // add needed variables to the capture list
             if(lambdaData.globalRangeUsed) {
                 kd.globalRangeUsed = true;
-                funCaptures.push_back(lambdaData.globalRange);
-                funCaptInits.push_back(kd.globalRange);
+                ADD_PARAM(args, lambdaData.globalRange, kd.globalRange);
             }
             if(lambdaData.numGroupsUsed){
                 kd.numGroupsUsed = true;
-                funCaptures.push_back(lambdaData.numGroups);
-                funCaptInits.push_back(kd.numGroups);
+                ADD_PARAM(args, lambdaData.numGroups, kd.numGroups);
             }
             if(lambdaData.localRangeUsed) {
                 kd.localRangeUsed = true;
-                funCaptures.push_back(lambdaData.localRange);
-                funCaptInits.push_back(kd.localRange);
+                ADD_PARAM(args, lambdaData.localRange, kd.localRange);
             }
             core::TypePtr retTy = dynamic_pointer_cast<const core::FunctionType>(fun->getType())->getReturnType();
 
-            return builder.captureInitExpr(builder.lambdaExpr(retTy, newBody, funCaptures, fun->getParameterList()), funCaptInits);
+            //TODO remove capture init list
+            core::ASTBuilder::CaptureList fu;
 
+            return builder.bindExpr(fun->getParameterList(), builder.callExpr(builder.lambdaExpr(retTy, newBody, fu, args.first), args.second));
         }
 
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
@@ -666,87 +671,82 @@ private:
     }
 
     // creates new variables for all variables in the input vector and stores them in the output vector
-    // The elements of the input vector are stored as initialization values in map inits for the new variables
-    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::VariablePtr>& inVec, core::TypeList& types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            core::VariablePtr tmp = builder.variable((*I)->getType());
+    // The elements of the input vector are stored as initialization values in vector inits for the new variables
+    void createArgList(ArgList& outVec, std::vector<core::VariablePtr>& inVec,
+        core::TypeList& types) {
+        for_each(inVec, [&](core::VariablePtr& in) {
+/*            outVec.first.push_back(in);
+            in = builder.variable((in)->getType());
+            outVec.second.push_back(in);
 
-            outVec[(*I)] = tmp;
-            types.push_back((*I)->getType());
+            types.push_back(in->getType());*/
+            core::VariablePtr tmp = builder.variable(in->getType());
 
-            *I = tmp;
-        }
+            // capture a newly generated variable and initialize the one in in in it
+            outVec.first.push_back(in);
+            outVec.second.push_back(tmp);
+
+            // store the new variable in in
+            in = tmp;
+            types.push_back(in->getType());
+        });
     }
 
-    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::TypeList& types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            core::DeclarationStmtPtr tmp = builder.declarationStmt((*I)->getVariable()->getType(), (*I)->getInitialization());
+    void createArgList(ArgList& outVec, std::vector<core::DeclarationStmtPtr>& inVec,
+        core::TypeList& types) {
+        for_each(inVec, [&](core::DeclarationStmtPtr& in) {
+            core::DeclarationStmtPtr tmp = builder.declarationStmt(in->getVariable()->getType(), in->getInitialization());
 
+            // capture a newly generated variable and initialize the one in in in it
+            outVec.first.push_back(in->getVariable());
+            outVec.second.push_back(tmp->getVariable());
+
+            // store the new variable in in
+            in = tmp;
+            types.push_back(in->getVariable()->getType());
+        });
+    }
+
+    void initArgInList(ArgList& outVec, std::vector<core::DeclarationStmtPtr>& inVec,
+        core::TypeList& types) {
+        for_each(inVec, [&](core::DeclarationStmtPtr& in) {
             // capture a newly generated variable and initialize the one in (*I) in it
-            outVec[(*I)->getVariable()] = tmp->getVariable();
-            types.push_back((*I)->getVariable()->getType());
+            outVec.first.push_back(in->getVariable());
+            outVec.second.push_back(in->getInitialization());
 
-            // store the new variable where (*I) was
-            *I = tmp;
-        }
-    }
-
-    void initCaptureInList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::TypeList& types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            // capture a newly generated variable and initialize the one in (*I) in it
-            outVec[(*I)->getVariable()] = (*I)->getInitialization();
-            types.push_back((*I)->getVariable()->getType());
-        }
-    }
-
-    void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Values inits,
-            core::TypeList types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back((*I)->getVariable());
-            types.push_back((*I)->getVariable()->getType());
-
-            *I = builder.declarationStmt(((*I)->getVariable())->getType(), (*I)->getInitialization());
-
-            inits.push_back((*I)->getVariable());
-        }
-    }
-
-    // appends the variables of declared in inVec to outVec and stores the initializations int inits
-    void appendToCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Values inits) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back((*I)->getVariable());
-
-            inits.push_back((*I)->getVariable());
-        }
+            types.push_back(in->getVariable()->getType());
+        });
     }
 
 
-    // TODO make body ref
-    core::ExpressionPtr genCaptueInits(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
+
+    core::ExpressionPtr genBindExpr(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
             constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {
-        // capture all arguments
-        core::ASTBuilder::CaptureInits funCaptures;
-        core::TypeList funCtypes;
+        // define and init all arguments
 
-        createCaptureList(funCaptures, constantArgs, funCtypes);
-        createCaptureList(funCaptures, globalArgs, funCtypes);
-        createCaptureList(funCaptures, localArgs, funCtypes);
-        createCaptureList(funCaptures, privateArgs, funCtypes);
+        ArgList arguments;
+        core::TypeList argTypes;
+
+        createArgList(arguments, constantArgs, argTypes);
+        createArgList(arguments, globalArgs, argTypes);
+        createArgList(arguments, localArgs, argTypes);
+        createArgList(arguments, privateArgs, argTypes);
+
         // in-body local variables
         if(scope == OCL_LOCAL_JOB /*|| scope == OCL_LOCAL_PAR*/)
-            createCaptureList(funCaptures, kernelMapper.getLocalDeclarations(), funCtypes);
+            createArgList(arguments, kernelMapper.getLocalDeclarations(), argTypes);
         // in-body pointers to global variables, map to a new variable at local scope
         if(scope == OCL_LOCAL_JOB)
-            createCaptureList(funCaptures, kernelMapper.getGlobalDeclarations(), funCtypes);
+            createArgList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
         else // map the existing variable to it's init expression
-            initCaptureInList(funCaptures, kernelMapper.getGlobalDeclarations(), funCtypes);
+            initArgInList(arguments, kernelMapper.getGlobalDeclarations(), argTypes);
 
-        // catch loop boundaries
-        kd.appendCaptures(funCaptures, scope, funCtypes);
+        kd.appendArguments(arguments, scope, argTypes);
 
-        core::FunctionTypePtr lpfType = builder.functionType(funCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
+        core::FunctionTypePtr funType = builder.functionType(argTypes, builder.getNodeManager().basic.getUnit());
 
-        return builder.lambdaExpr(lpfType, body, funCaptures, core::Lambda::ParamList());
+
+        return builder.bindExpr(std::vector<core::VariablePtr>(), builder.callExpr(builder.lambdaExpr(funType, arguments.first, body), arguments.second));
     }
 
 public:
@@ -901,7 +901,7 @@ public:
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
-                    core::ExpressionPtr localParFct = genCaptueInits(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
+                    core::ExpressionPtr localParFct = genBindExpr(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
 
                     core::JobExpr::LocalDecls localJobShared;
 
@@ -941,7 +941,7 @@ public:
 
 
                     // build expression to be used as body of global job
-                    core::ExpressionPtr globalParFct = genCaptueInits(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
+                    core::ExpressionPtr globalParFct = genBindExpr(globalParBody, OCL_GLOBAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs,
                             privateArgs);
 
                     // catch all arguments which are shared in global range
