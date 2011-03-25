@@ -74,18 +74,6 @@ core::CallExprPtr KernelData::calcIdidx2(core::VariablePtr& threadId, core::Vari
                threadId, vecAccess(boundaries, two));
 }
 
-void KernelData::appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList cTypes){
-
-    if(globalRangeUsed)
-        CAPTURE(captureList, globalRange, cTypes);
-
-    if(numGroupsUsed || scope == OCL_GLOBAL_JOB)
-        CAPTURE(captureList, numGroups, cTypes);
-
-    if(localRangeUsed || scope != OCL_LOCAL_PAR)
-        CAPTURE(captureList, localRange, cTypes);
-}
-
 void KernelData::appendArguments(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& arguments, OCL_SCOPE scope,
         core::TypeList& aTypes){
 
@@ -727,86 +715,6 @@ private:
     }
 
 
-    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::VariablePtr>& inVec, core::TypeList& types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            core::VariablePtr tmp = builder.variable((*I)->getType());
-
-            outVec[(*I)] = tmp;
-            types.push_back((*I)->getType());
-
-            *I = tmp;
-        }
-    }
-
-    void createCaptureList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::TypeList& types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            core::DeclarationStmtPtr tmp = builder.declarationStmt((*I)->getVariable()->getType(), (*I)->getInitialization());
-
-            // capture a newly generated variable and initialize the one in (*I) in it
-            outVec[(*I)->getVariable()] = tmp->getVariable();
-            types.push_back((*I)->getVariable()->getType());
-
-            // store the new variable where (*I) was
-            *I = tmp;
-        }
-    }
-
-    void initCaptureInList(core::ASTBuilder::CaptureInits& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::TypeList& types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            // capture a newly generated variable and initialize the one in (*I) in it
-            outVec[(*I)->getVariable()] = (*I)->getInitialization();
-            types.push_back((*I)->getVariable()->getType());
-        }
-    }
-
-    void createCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Values inits,
-            core::TypeList types) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back((*I)->getVariable());
-            types.push_back((*I)->getVariable()->getType());
-
-            *I = builder.declarationStmt(((*I)->getVariable())->getType(), (*I)->getInitialization());
-
-            inits.push_back((*I)->getVariable());
-        }
-    }
-
-    // appends the variables of declared in inVec to outVec and stores the initializations int inits
-    void appendToCaptureList(core::Lambda::CaptureList& outVec, std::vector<core::DeclarationStmtPtr>& inVec, core::CaptureInitExpr::Values inits) {
-        for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
-            outVec.push_back((*I)->getVariable());
-
-            inits.push_back((*I)->getVariable());
-        }
-    }
-
-
-    core::ExpressionPtr genCaptueInits(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
-            constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {
-        // capture all arguments
-        core::ASTBuilder::CaptureInits funCaptures;
-        core::TypeList funCtypes;
-
-        createCaptureList(funCaptures, constantArgs, funCtypes);
-        createCaptureList(funCaptures, globalArgs, funCtypes);
-        createCaptureList(funCaptures, localArgs, funCtypes);
-        createCaptureList(funCaptures, privateArgs, funCtypes);
-        // in-body local variables
-        if(scope == OCL_LOCAL_JOB /*|| scope == OCL_LOCAL_PAR*/)
-            createCaptureList(funCaptures, kernelMapper.getLocalDeclarations(), funCtypes);
-        // in-body pointers to global variables, map to a new variable at local scope
-        if(scope == OCL_LOCAL_JOB)
-            createCaptureList(funCaptures, kernelMapper.getGlobalDeclarations(), funCtypes);
-        else // map the existing variable to it's init expression
-            initCaptureInList(funCaptures, kernelMapper.getGlobalDeclarations(), funCtypes);
-
-        // catch loop boundaries
-        kd.appendCaptures(funCaptures, scope, funCtypes);
-
-        core::FunctionTypePtr lpfType = builder.functionType(funCtypes, core::TypeList(), builder.getNodeManager().basic.getUnit());
-
-        return builder.lambdaExpr(lpfType, body, funCaptures, core::Lambda::ParamList());
-    }
 
     core::ExpressionPtr genBindExpr(core::StatementPtr& body, OCL_SCOPE scope, KernelMapper& kernelMapper, KernelData& kd, std::vector<core::VariablePtr>&
             constantArgs, std::vector<core::VariablePtr>& globalArgs, std::vector<core::VariablePtr>& localArgs, std::vector<core::VariablePtr>& privateArgs) {

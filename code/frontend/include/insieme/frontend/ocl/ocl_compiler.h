@@ -60,12 +60,6 @@ namespace {
                                      builder.literal(toString(idx), builder.getNodeManager().basic.getUInt4() ))))
 
 // store a the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
-#define CAPTURE(vec, var, types) { core::VariablePtr tmp = builder.variable((var)->getType()); \
-                                    vec[var] = tmp; \
-                                    types.push_back((var)->getType()); \
-                                    var = tmp; }
-
-// store a the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
 #define ADD_ARG(vec, var, types) { core::VariablePtr tmp = builder.variable((var)->getType()); \
                                     vec.first.push_back(var); \
                                     vec.second.push_back(tmp); \
@@ -117,13 +111,10 @@ public:
     core::CallExprPtr calcIdidx2(core::VariablePtr& threadId, core::VariablePtr& boundaries);
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList types);
+    void appendArguments(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& argList, OCL_SCOPE scope, core::TypeList& aTypes);
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendArguments(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& captureList, OCL_SCOPE scope, core::TypeList& aTypes);
-
-    //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendShared(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);
+    void appendShared(std::vector<core::DeclarationStmtPtr>& sharingList, OCL_SCOPE scope);
 
     //returns a call expression accessing the wished range at index idx and sets the appropriate Used flag
     core::CallExprPtr accessRange(OCL_PAR_LEVEL level, core::ExpressionPtr idx);
