@@ -272,7 +272,7 @@ namespace conversion {
 
 #define END_LOG_EXPR_CONVERSION(expr) \
 	VLOG(1) << "Converted into IR expression: "; \
-	VLOG(1) << "\t" << *expr;
+	VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )";
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -475,8 +475,11 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
-			const core::ASTBuilder& builder = convFact.builder;
+		const core::ASTBuilder& builder = convFact.builder;
+
+		if ( callExpr->getDirectCallee() ) {
+
+			FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee());
 
 			core::FunctionTypePtr funcTy =
 				core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
@@ -607,6 +610,36 @@ public:
 			// handle eventual pragmas attached to the Clang node
 			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
 			return annotatedNode;
+		}
+		if ( callExpr->getCallee() ) {
+			core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
+			const core::TypePtr& subTy = funcPtr->getType();
+			if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
+				const core::TypePtr& subVecTy =
+						core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
+
+				funcPtr = builder.callExpr( subVecTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
+			}
+
+			ExpressionList args;
+			core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( funcPtr->getType() );
+			for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
+				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+				if ( argId < funcTy->getArgumentTypes().size() &&
+						funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType ) {
+					if ( arg->getType()->getNodeType() != core::NT_RefType ) {
+						if ( builder.getBasicGenerator().isString(arg->getType()) ) {
+							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
+						} else {
+							arg = builder.refVar(arg);
+						}
+					}
+				} else {
+					arg = convFact.tryDeref(arg);
+				}
+				args.push_back( arg );
+			}
+			return  builder.callExpr( funcPtr, args );
 		}
 		assert(false && "Call expression not referring a function");
 	}
@@ -1183,15 +1216,21 @@ public:
 	core::ExpressionPtr VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		START_LOG_EXPR_CONVERSION(declRef);
 		// check whether this is a reference to a variable
+		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
-			core::ExpressionPtr&& retExpr = convFact.lookUpVariable(varDecl);
-			// handle eventual pragmas attached to the Clang node
-			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, declRef, convFact);
-			END_LOG_EXPR_CONVERSION(retExpr);
-			return annotatedNode;
+			retExpr = convFact.lookUpVariable( varDecl );
+		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
+			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
+		} else {
+			// todo: C++ check whether this is a reference to a class field, or method (function).
+			assert(false && "DeclRefExpr not supported!");
 		}
-		// todo: C++ check whether this is a reference to a class field, or method (function).
-		assert(false && "DeclRefExpr not supported!");
+
+		// handle eventual pragmas attached to the Clang node
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, declRef, convFact);
+		END_LOG_EXPR_CONVERSION(retExpr);
+
+		return annotatedNode;
 	}
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1299,9 +1338,13 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 						 	 	 	 	 	   const core::TypePtr& globals,
 						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
 
-	std::vector<core::TypePtr> argTypes(funcType->getArgumentTypes());
+	const std::vector<core::TypePtr>& oldArgs = funcType->getArgumentTypes();
+
+	std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
+
+	std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin()+1);
 	// function is receiving a reference to the global struct as the first argument
-	argTypes.insert( argTypes.begin(), builder.refType(globals) );
+	argTypes[0] = builder.refType(globals);
 	return builder.functionType( argTypes, funcType->getReturnType() );
 
 }
@@ -1459,9 +1502,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		const core::CompoundStmtPtr& compStmt = core::static_pointer_cast<const core::CompoundStmt>(body);
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
-		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx.globalVar, builder.refNew( ctx.globalStruct.second )) );
-		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
+		const StatementList& oldStmts = compStmt->getStatements();
+
+		std::vector<core::StatementPtr> stmts(oldStmts.size()+1);
+		stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew( ctx.globalStruct.second ));
+		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin()+1);
+
 		body = builder.compoundStmt(stmts);
 	}
 

@@ -43,33 +43,14 @@ int func(int k) {
 }
 
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_0 //
-// Abstract prototype for lambdas of type __insieme_funType_type_0
-struct __insieme_funType_type_0 { 
-    void(*fun)(void*);
-};
-
-// Type safe function for invoking lambdas of type __insieme_funType_type_0
-void call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda) {  lambda->fun(lambda); }
-
-// start code fragment :: Definitions for function type: __insieme_funType_type_1 //
-// Abstract prototype for lambdas of type __insieme_funType_type_1
-struct __insieme_funType_type_1 { 
-    void(*fun)(void*);
-    struct __insieme_globals* p0;
-};
-
 // start code fragment :: Definition of func2 //
-void func2(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_18 = ((struct __insieme_funType_type_1*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
+void func2(struct __insieme_globals var_18) {
 	{
 		{
 			for(int var_19 = (((int)(0))-10); var_19 < ((((int)(0))-0)+1); var_19 += 1) {
 				printf("k=%d\n", (((int)(0))-(var_19)));
 			};
-			((*(&((*var_18).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
+			((*(&((var_18).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 		};
 	}
 }
@@ -114,7 +95,7 @@ int main(int argc, char** argv) {
 		};
 		{
 			((a) = 1);
-			while((((a)<10)&&((a)>0))) {
+			while((((a)<10)&&<?>Unhandled Type of Call Target</?>)) {
 				{
 					printf("a=%d\n", (a));
 				};
@@ -129,7 +110,7 @@ int main(int argc, char** argv) {
 		};
 		printf("a=%d\n", (a));
 		func((a));
-		func2(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0,var_1}))));
+		func2(var_1);
 	}
 }
 

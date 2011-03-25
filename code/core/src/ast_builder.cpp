@@ -353,6 +353,8 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     core::Lambda::ParamList params;
     vector<ExpressionPtr> callArgs;
 
+    utils::map::PointerMap<VariablePtr, VariablePtr> replVariableMap;
+
     std::for_each(args.begin(), args.end(), [ & ] (const core::ExpressionPtr& curr) {
             assert(curr->getNodeType() == core::NT_Variable);
 
@@ -364,12 +366,17 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
             argsType.push_back( varType );
             callArgs.push_back(curr);
             params.push_back( parmVar );
-            // we have to replace the variable of the body with the newly created parmVar
-            body = core::static_pointer_cast<const core::Statement>(
-                    core::transform::replaceAll(this->getNodeManager(), body, bodyVar, parmVar, true )
-            );
+
+            replVariableMap.insert( std::make_pair(bodyVar, parmVar) );
         }
     );
+
+    // Replace the variables in the body with the input parameters which have been created
+    if ( !replVariableMap.empty() ) {
+    	body = core::static_pointer_cast<const core::Statement>(
+    			core::transform::replaceVars(manager, body, replVariableMap, true)
+    		);
+    }
 
     core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy ), params, body );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);

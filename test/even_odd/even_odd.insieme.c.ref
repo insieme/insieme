@@ -21,7 +21,7 @@ int odd(unsigned int);
 // start code fragment :: Definition of even //
 int even(unsigned int x) {
 	{
-		return (((x==((unsigned int)(0))))?(1):(odd((x-((unsigned int)(1))))));;
+		return (((x==((unsigned int)(0))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>));;
 	}
 }
 
@@ -29,7 +29,7 @@ int even(unsigned int x) {
 // start code fragment :: Definition of odd //
 int odd(unsigned int x) {
 	{
-		return (((x==((unsigned int)(0))))?(0):(even((x-((unsigned int)(1))))));;
+		return (((x==((unsigned int)(0))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>));;
 	}
 }
 
@@ -39,8 +39,8 @@ int main(int argc, char** argv) {
 	{
 		int x = 10;
 		printf("x=%d\n", (x));
-		printf("even(x)=%s\n", ((((bool)(even(((unsigned int)((x)))))))?("true"):("false")));
-		printf("odd(x)=%s\n", ((((bool)(odd(((unsigned int)((x)))))))?("true"):("false")));
+		printf("even(x)=%s\n", ((((bool)(even(((unsigned int)((x)))))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>)));
+		printf("odd(x)=%s\n", ((((bool)(odd(((unsigned int)((x)))))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>)));
 		return 0;;
 	}
 }

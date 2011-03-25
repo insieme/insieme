@@ -26,8 +26,8 @@ int main() {
 		((*(&((*var_1).b))) = 0);
 		((*(&((*var_1).a))) = 1);
 		((*(&((*var_1).b))) = 2);
-		printf("Min: %d\n", ((((*(&((*var_1).a)))<(*(&((*var_1).b)))))?((*(&((*var_1).a)))):((*(&((*var_1).b))))));
-		printf("Max: %d\n", ((((*(&((*var_1).a)))>(*(&((*var_1).b)))))?((*(&((*var_1).a)))):((*(&((*var_1).b))))));
+		printf("Min: %d\n", ((((*(&((*var_1).a)))<(*(&((*var_1).b)))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>)));
+		printf("Max: %d\n", ((((*(&((*var_1).a)))>(*(&((*var_1).b)))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>)));
 	}
 }
 

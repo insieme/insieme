@@ -172,7 +172,7 @@ core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr)
 /* Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
  * 	-> OpenCL address spaces
  */
-core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* varDecl) const {
+core::AnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDecl* varDecl) const {
     if ( !varDecl->hasAttrs() ) {
     	return core::AnnotationPtr();
     }
@@ -247,11 +247,11 @@ core::AnnotationPtr ConversionFactory::convertAttribute(const clang::VarDecl* va
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //													Lookup Variable
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varDecl) {
+core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* valDecl) {
 	/*
 	 * Lookup the map of declared variable to see if the current varDecl is already associated with an IR entity
 	 */
-	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(varDecl);
+	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(valDecl);
 	if ( fit != ctx.varDeclMap.end() ) {
 		// variable found in the map
 		return fit->second;
@@ -263,10 +263,10 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	 *
 	 * Conversion of the variable type
 	 */
-	QualType&& varTy = varDecl->getType();
+	QualType&& varTy = valDecl->getType();
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 	if( !(varTy.isConstQualified() ||
-			(isa<const clang::ParmVarDecl>(varDecl) &&
+			(isa<const clang::ParmVarDecl>(valDecl) &&
 					irType->getNodeType() != core::NT_VectorType && irType->getNodeType() != core::NT_ArrayType)
 		) ) {
 		// if the variable is not const, or a function parameter or an array type we enclose it in a ref type
@@ -278,7 +278,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	 * defined in the global data structure so we don't have to create an IR variable but access (via the memberAccess
 	 * operation) the relative member of the global data structure.
 	 */
-	if ( varDecl->hasGlobalStorage() ) {
+	const clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(valDecl);
+	if ( varDecl && varDecl->hasGlobalStorage() ) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
@@ -302,13 +303,13 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::VarDecl* varD
 	 * the IR variable and insert it into the map for future lookups
 	 */
 	core::VariablePtr&& var = builder.variable( irType );
-	ctx.varDeclMap.insert( std::make_pair(varDecl, var) );
+	ctx.varDeclMap.insert( std::make_pair(valDecl, var) );
 
 	// Add the C name of this variable as annotation
-	var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(varDecl->getNameAsString()) );
+	var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(valDecl->getNameAsString()) );
 
 	// Add OpenCL attributes
-	core::AnnotationPtr&& attr = convertAttribute(varDecl);
+	core::AnnotationPtr&& attr = convertAttribute(valDecl);
 	if (attr) {
 		var->addAnnotation(attr);
 	}

@@ -299,6 +299,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 		CFG::VertexTy&& src = cfg->addBlock( forBlock );
 
 		appendPendingBlock();  // append any pending block before we fork the CFG for inserting the for stmt
+		currBlock = NULL;
+
 		CFG::VertexTy sink = succ;
 
 		// increment expression
@@ -363,6 +365,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 		visit( whileStmt->getCondition() );
 	}
 
+	void visitCastExpr(const CastExprPtr& castExpr) {
+		return visit(castExpr->getSubExpression());
+	}
+
 	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
 		cfg::Block* switchBlock = new cfg::Block;
 		switchBlock->terminator() = cfg::Element(switchStmt);
@@ -407,10 +413,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void visitCompoundStmt(const CompoundStmtPtr& compStmt);
 
-	void visitCaptureInitExpr(const CaptureInitExprPtr& captExpr) {
-		visit( captExpr->getLambda() );
-	}
-
 	void visitCallExpr(const CallExprPtr& callExpr) {
 		// if the call expression is calling a lambda the body of the lambda is processed and the sub graph is built
 		if ( callExpr->getFunctionExpr()->getNodeType() == NT_LambdaExpr ) {
@@ -432,6 +434,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 			// we interconnect the two blocks so that if we want to have intra-procedural analysis we can jump
 			// directly to the return block without visiting the body of the function
 			call->returnBlock() = ret;
+			call->appendElement( cfg::Element(callExpr) );
+
 			ret->callBlock() = call;
 
 			CFG::VertexTy&& callVertex = cfg->addBlock( call );
@@ -445,9 +449,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 			succ = callVertex;
 			currBlock = NULL;
 
-		} else if ( callExpr->getFunctionExpr()->getNodeType() == NT_CaptureInitExpr ) {
-			visit( callExpr->getFunctionExpr() );
-			return;
 		} else {
 			// we are in the multistmt per block mode we should not append and create a new block here
 			appendPendingBlock(); // FIXME
@@ -473,7 +474,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 			// in the case the argument is a call expression, we need to allocate a separate block in order to
 			// perform the inter-procedural function call
-			if ( curr->getNodeType() == NT_CallExpr || curr->getNodeType() == NT_CaptureInitExpr ) {
+			if ( curr->getNodeType() == NT_CallExpr || curr->getNodeType() == NT_CaptureInitExpr || curr->getNodeType() == NT_CastExpr ) {
 				this->createBlock();
 				this->visit(curr);
 				this->appendPendingBlock();
@@ -612,7 +613,7 @@ void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode
 	std::vector<cfg::Edge> edges;
 
 	OutEdgeIterator ei, ei_end;
-	boost:tie(ei, ei_end) = boost::out_edges(oldNode, graph);
+	boost::tie(ei, ei_end) = boost::out_edges(oldNode, graph);
 
 	std::for_each( ei, ei_end, [this, &edges](const EdgeTy& curr) {
 		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
@@ -621,6 +622,7 @@ void CFG::replaceNode(const CFG::VertexTy& oldNode, const CFG::VertexTy& newNode
 
 	assert(dest.size() == edges.size() && "Number of outgoing edges and children of the node should be the same");
 
+	boost::clear_in_edges(oldNode, graph);
 	boost::clear_out_edges(oldNode, graph);
 	remove_vertex(oldNode, graph);
 
@@ -652,6 +654,7 @@ CFG::~CFG() {
 
 namespace std {
 
+// Prints the CFG in a DOT fromat
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 	using namespace insieme::analysis;
 
@@ -665,6 +668,23 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 	return out;
 }
 
+namespace {
+// print IR nodes to a string and removes eventual new lines and leading spaces
+std::string getPrettyPrinted(const NodePtr& node) {
+	std::ostringstream ss;
+	ss << printer::PrettyPrinter(node, printer::PrettyPrinter::OPTIONS_DETAIL | 1 << 5);
+
+	// Remove new lines and leading spaces
+	std::vector<char> res;
+	std::string prettyPrint = ss.str();
+	for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
+		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' ')))
+			res.push_back(*it);
+
+	return std::string(res.begin(), res.end());
+}
+} // end anonymous namespace
+
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block& block) {
 	switch ( block.type() ) {
 	case cfg::Block::DEFAULT:
@@ -676,15 +696,13 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 			out << num++ << ": ";
 			switch(curr.getType()) {
 			case cfg::Element::None:
-				out << printer::PrettyPrinter( curr, 10001 );
+				out << getPrettyPrinted( curr );
 				break;
 			case cfg::Element::CtrlCond:
-				out << printer::PrettyPrinter( curr, 10001 ) << " <CTRL>";
+				out << getPrettyPrinted( curr ) << " <CTRL>";
 				break;
 			case cfg::Element::LoopInit: {
-				out << printer::PrettyPrinter(
-						static_pointer_cast<const ForStmt>(curr)->getDeclaration(), 10001
-					) << " <LOOP_INIT>";
+				out << getPrettyPrinted( static_pointer_cast<const ForStmt>(curr)->getDeclaration() ) << " <LOOP_INIT>";
 				break;
 			}
 			case cfg::Element::LoopIncrement: {

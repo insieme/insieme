@@ -8,7 +8,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
             composite.ref.elem(v4, age, uint<4>) := 101;
         }());
         return fun(struct<name:vector<char,30>,age:uint<4>> v6){
-            return v6.AP(age)>=10&&[v6]fun[struct<name:vector<char,30>,age:uint<4>> v7]()return v7.AP(age)<20;
+            return v6.AP(age)>=10&&bind()->fun(struct<name:vector<char,30>,age:uint<4>> v7)return v7.AP(age)<20(v6);
         }(v3);
     }
 
@@ -25,7 +25,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
             (composite.ref.elem(v4, age, uint<4>) := CAST<uint<4>>(101));
         }()));
         return fun(struct<name:vector<char,30>,age:uint<4>> v6){
-            return ((v6.AP(age)>=CAST<uint<4>>(10))&&[v6]fun[struct<name:vector<char,30>,age:uint<4>> v7]()return (v7.AP(age)<CAST<uint<4>>(20)));
+            return ((v6.AP(age)>=CAST<uint<4>>(10))&&bind()->fun(struct<name:vector<char,30>,age:uint<4>> v7)return (v7.AP(age)<CAST<uint<4>>(20))(v6));
         }(( *v3));
     }
 
