@@ -45,6 +45,8 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
+typedef std::pair<core::ASTBuilder::ParamList, std::vector<core::ExpressionPtr> > ArgList;
+
 namespace {
 
 // shortcut
@@ -58,6 +60,11 @@ namespace {
 #define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(), \
                                      toVector<core::ExpressionPtr>(arr, builder.castExpr(BASIC.getUInt4(), \
                                      builder.literal(toString(idx), builder.getNodeManager().basic.getUInt4() ))))
+
+// adding arguments and their value to the ArgList
+#define ADD_PARAM(list, arg, val) { list.first.push_back(arg); \
+                                    list.second.push_back(val); }
+
 
 // store a the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
 #define ADD_ARG(vec, var, types) { core::VariablePtr tmp = builder.variable((var)->getType()); \
