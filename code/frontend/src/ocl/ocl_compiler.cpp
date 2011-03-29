@@ -936,7 +936,8 @@ public:
                     std::vector<core::StatementPtr> gobalBodyStmts;
                     gobalBodyStmts.push_back(localPar);
                     expr.clear();
-                    gobalBodyStmts.push_back(builder.callExpr(BASIC.getMergeAll(), expr));
+                    core::CallExprPtr merge = builder.callExpr(BASIC.getMergeAll(), expr);
+                    gobalBodyStmts.push_back(merge);
                     core::StatementPtr globalParBody = builder.compoundStmt(gobalBodyStmts);
 
 
@@ -1001,6 +1002,7 @@ public:
                     //core::DeclarationStmtPtr groupThreadGroup = builder.declarationStmt(kd.groupTg, globalPar); inlined, see next line, created only if needed
 
                     newBodyStmts.push_back(globalPar);
+                    newBodyStmts.push_back(merge);
 
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 

@@ -67,12 +67,12 @@ ProgramGrammar::ProgramGrammar(NodeManager& nodeMan) : ProgramGrammar::base_type
 
 
     program =
-        ( qi::lit("main") >> ':' >> exprG->expressionRule )        [ qi::_val = ph::bind(&mainProgramHelp, nManRef, qi::_1) ]
-        | ( *exprG->expressionRule                                 [ ph::push_back(qi::_a, qi::_1) ]
-          )                                                   [ qi::_val = ph::bind(&Program::create, nManRef, qi::_a, false) ];
+        ( qi::lit("main") >> ':' >> exprG->expressionRule )         [ qi::_val = ph::bind(&mainProgramHelp, nManRef, qi::_1) ]
+        | ( *exprG->expressionRule                                  [ ph::push_back(qi::_a, qi::_1) ]
+          )                                                         [ qi::_val = ph::bind(&Program::create, nManRef, qi::_a, false) ];
 
     programRule =
-        program                                                    [ qi::_val = ph::construct<ProgramPtr>(qi::_1) ];
+        program                                                     [ qi::_val = ph::construct<ProgramPtr>(qi::_1) ];
 
 
 //    BOOST_SPIRIT_DEBUG_NODE(programRule);

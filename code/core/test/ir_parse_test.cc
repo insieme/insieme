@@ -134,30 +134,42 @@ TEST(IRParser, ExpressionTests) {
     // lambda using definition
 // TODO add statement to test once it is there
     auto lambda = dynamic_pointer_cast<const LambdaExpr>( parser.parseExpression(
-        "fun [uint<2>, real<4>](real<8>)->int<4>:lambda in { [uint<2>, real<4>](real<8>)->int<4>:lambda = [uint<2>:c1, real<4>:c2](real<8>:p)->int<4> {\
+        "fun (real<8>)->int<4>:lambda in { (real<8>)->int<4>:lambda = (real<8>:p)->int<4> {\
             { break; } } }"));
     EXPECT_TRUE(lambda != 0);
-    EXPECT_EQ( lambda->getCaptureList().size(), 2u );
-    EXPECT_EQ( lambda->getParameterList().size(), 1u);
+    EXPECT_EQ(1u, lambda->getParameterList().size());
     EXPECT_FALSE( lambda->isRecursive() );
-    EXPECT_TRUE( lambda->getLambda()->isCapturing() );
-    EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(toVector(manager.basic.getUInt2(), manager.basic.getFloat()),
+//    EXPECT_TRUE( lambda->getLambda()->isCapturing() );
+    EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(//toVector(manager.basic.getUInt2(), manager.basic.getFloat()),
             toVector(manager.basic.getDouble()), manager.basic.getInt4()) );
     EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
 
     // captureInitExpr
-    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
+/*    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
             lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }"));
     EXPECT_TRUE(captureInit != 0);
-
+*/
 	// jobExpr
     vector<std::pair<ExpressionPtr, ExpressionPtr> > guardedStmts;
-
+/*
     auto parsedJob = dynamic_pointer_cast<const JobExpr>(parser.parseExpression("job< (op<MinRange>(lit<uint<4>, 2>)) >[decl int<4>:var = 42]{ \
             default: [ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
             lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }}"));
     EXPECT_TRUE(parsedJob != 0);
     EXPECT_EQ(builder.callExpr(manager.basic.getLiteral("MinRange"), builder.uintLit(2)), parsedJob->getThreadNumRange());
+*/
+
+    // bindExpr
+    auto parsedBind1 = dynamic_pointer_cast<const BindExpr>(parser.parseExpression("bind(uint<8>:unbound){ \
+        (op<array.subscript.1D>(array<'a,1>:arr, unbound)) }"));
+    EXPECT_EQ(1u, parsedBind1->getParameters().size());
+    EXPECT_EQ(manager.basic.getArraySubscript1D(), parsedBind1->getCall()->getFunctionExpr());
+
+    auto parsedBind2 = dynamic_pointer_cast<const BindExpr>(parser.parseExpression("bind(real<8>:unbound){ (fun (real<8>, int<4>)->int<4>:lambda in { \
+            (real<8>, int<4>)->int<4>:lambda = (real<8>:p, int<4>:q)->int<4> {\
+            { unbound; return q; } } }(unbound, 0)) }"));
+    EXPECT_EQ(1u, parsedBind1->getParameters().size());
+    EXPECT_EQ(2u, parsedBind1->getCall()->getArguments().size());
 
 	// tupleExpr
     std::vector<ExpressionPtr> exprVec;
@@ -282,7 +294,7 @@ TEST(IRParser, StatementTests) {
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
 //    std::cout << printer::PrettyPrinter(tmp) << std::endl;
-
+/*
     // pointwise operator implementation with simple means
     auto vectorPointwise = parser.parseStatement("{\
         fun [](('elem, 'elem) -> 'res:fct) -> (vector<'elem, #l>, vector<'elem, #l>) -> vector<'res, #l>  { \
@@ -393,7 +405,7 @@ TEST(IRParser, OperationTests) {
     EXPECT_EQ(builder.refType(manager.basic.getUInt16()), parsedPostDec->getArgument(0)->getType());
 
     // logical operations
-    CaptureInitExpr::Values lazyCaptInits;
+    /* TODO change to bind! CaptureInitExpr::Values lazyCaptInits;
     std::vector<VariablePtr> lazyArgs;
     std::vector<TypePtr> argTypes;
 
@@ -409,7 +421,7 @@ TEST(IRParser, OperationTests) {
     EXPECT_EQ(manager.basic.getBoolLOr(), parsedOr->getFunctionExpr());
     EXPECT_EQ(builder.literal(manager.basic.getBool(), "false"), parsedOr->getArgument(0));
     EXPECT_EQ(builtAnd->getArgument(1)->getType(), parsedAnd->getArgument(1)->getType());
-
+*/
     EXPECT_EQ(builder.callExpr(manager.basic.getBoolLNot(), builder.literal("false", manager.basic.getBool())),
         parser.parseExpression("(! lit<bool, false> )"));
 
@@ -442,20 +454,22 @@ TEST(IRParser, ProgramTest) {
     ASTBuilder builder(manager);
 
     // program with main
-    ProgramPtr mainProg = parser.parseProgram("main: [ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
-            mainfct in { [uint<2>, real<4>]()->int<4>:mainfct = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }");
+/*    ProgramPtr mainProg = parser.parseProgram("main: fun ()->int<4>:\
+            mainfct in { ()->int<4>:mainfct = ()->int<4>{ return 0; } }");*/
+    ProgramPtr mainProg = parser.parseProgram("main: fun []()->int<4>:\
+            mainfct in { []()->int<4>:mainfct = ()->int<4>{ continue } }");
 
     EXPECT_TRUE(mainProg->isMain());
     EXPECT_FALSE(mainProg->hasAnnotations());
     EXPECT_EQ(1u, mainProg->getEntryPoints().size());
-
+/*
     // multiple entry points
     ProgramPtr mep = parser.parseProgram("fun [uint<2>](real<8>)->int<4>:f1 in { [uint<2>](real<8>)->int<4>:f1 = [uint<2>:c1](real<8>:p)->int<4> {\
             { return 0; } } } fun []()->unit:f2 in{[]()->unit:f2=[]()->unit {{ break; }}}");
 
     EXPECT_FALSE(mep->isMain());
     EXPECT_FALSE(mep->hasAnnotations());
-    EXPECT_EQ(2u, mep->getEntryPoints().size());
+    EXPECT_EQ(2u, mep->getEntryPoints().size());*/
 }
 
 TEST(IRParser, InteractiveTest) {

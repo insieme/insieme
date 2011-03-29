@@ -156,10 +156,10 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
     : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), varTab(nodeMan) {
 
  //   typeG = new TypeGrammar(nodeMan);
-    exprGpart = new ExpressionGrammarPart(nodeMan, this);
+    exprGpart = new ExpressionGrammarPart(nodeMan, this, typeG);
     opG = new OperatorGrammar(nodeMan, this);
     if(stmtGrammar == NULL) {
-        stmtG = new StatementGrammar(nodeMan);
+        stmtG = new StatementGrammar(nodeMan, this, typeG);
         deleteStmtG = true;
     }
     else {
@@ -217,7 +217,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
           | callExpr                                                [ qi::_a = qi::_1 ]
          )*/
          expressionRule >> '(' >> -(expressionRule                  [ ph::push_back(qi::_b, qi::_1) ]
-          % ',') >> ')' >> ')')                                           [ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_b) ];
+          % ',') >> ')' >> ')')                                     [ qi::_val = ph::bind(&buildCallExpr, nManRef, qi::_1, qi::_b) ];
 
     castExpr = exprGpart->castExpr;
 //        ( qi::lit("CAST<") >> typeG->typeRule
@@ -225,9 +225,9 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 
     // --------------------------------------------------------------------------------------
 
-    lambda =
-        ( qi::lit("[") >> -(variableExpr                            [ ph::push_back(qi::_a, qi::_1) ]
-          % ',') >> ']' >> '(' >> -(variableExpr                    [ ph::push_back(qi::_b, qi::_1) ]
+    lambda = //TODO remove capture init list
+        ( -(qi::lit("[") >> (variableExpr                           [ ph::push_back(qi::_a, qi::_1) ]
+          % ',') >> ']') >> '(' >> -(variableExpr                   [ ph::push_back(qi::_b, qi::_1) ]
           % ',') >> ')' >> qi::lit("->")
         >> typeG->typeRule >> '{' >> stmtG->statementRule
         >> '}')                                                     [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_3, qi::_a, qi::_b, qi::_4 )];
@@ -241,10 +241,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
         lambdaDef)                                                  [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1, qi::_2) ]
         | ( qi::lit("fun")  >> lambda )                             [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1 ) ];
 
-    captureInitExpr = exprGpart->captureInitExpr;
-//        ( qi::lit("[") >> +( expressionRule                         [ ph::push_back(qi::_a, qi::_1) ]
-//          % ',') >> ']' >> expressionRule)                          [ qi::_val = ph::bind(&CaptureInitExpr::get, nManRef, qi::_2, qi::_a ) ];
-
+    bindExpr = exprGpart->bindExpr;
 
     jobExpr =
         ( qi::lit("job<") >> expressionRule >> '>' >> '['
@@ -302,8 +299,8 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 
     expressionRule =
         lambdaExpr                                                  [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
+      | bindExpr                                                    [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | boolExpr                                                    [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
-      | captureInitExpr                                             [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | callExpr                                                    [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | literalExpr                                                 [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
       | opExpr                                                      [ qi::_val = ph::construct<ExpressionPtr>(qi::_1) ]
