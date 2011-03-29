@@ -103,23 +103,19 @@ CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, Exp
 }
 
 
-LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& captureList, const VariableList& params, const StatementPtr& body ) {
+LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& params, const StatementPtr& body ) {
     // build a stmtExpr bc the builder cannot at the moment
     ASTBuilder build(nodeMan);
 //    vector<StatementPtr> stmts;
-    vector<TypePtr> captureTypes;
     vector<TypePtr> paramTypes;
 
     // construct function type
-    for_each(captureList, [&](const VariablePtr var) {
-        captureTypes.push_back(var->getType());
-    });
     for_each(params, [&](const VariablePtr var) {
         paramTypes.push_back(var->getType());
     });
 
 //    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));
-    return build.lambda(build.functionType(captureTypes, paramTypes, retType), captureList, params, body);
+    return build.lambda(build.functionType(paramTypes, retType), params, body);
 }
 
 JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
@@ -226,11 +222,10 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
     // --------------------------------------------------------------------------------------
 
     lambda = //TODO remove capture init list
-        ( -(qi::lit("[") >> (variableExpr                           [ ph::push_back(qi::_a, qi::_1) ]
-          % ',') >> ']') >> '(' >> -(variableExpr                   [ ph::push_back(qi::_b, qi::_1) ]
+        ( '(' >> -(variableExpr                                     [ ph::push_back(qi::_a, qi::_1) ]
           % ',') >> ')' >> qi::lit("->")
         >> typeG->typeRule >> '{' >> stmtG->statementRule
-        >> '}')                                                     [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_3, qi::_a, qi::_b, qi::_4 )];
+        >> '}')                                                     [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_2, qi::_a, qi::_3 )];
 
     lambdaDef =
         ( qi::lit("{") >> +((funVarExpr >> '=' >> lambda)           [ ph::insert(qi::_a, ph::bind(&makePair<VariablePtr, LambdaPtr>, qi::_1, qi::_2)) ]
