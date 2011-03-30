@@ -53,6 +53,9 @@ struct OperatorGrammar : public qi::grammar<ParseIt, CallExprPtr(), qi::space_ty
     OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGram);
     ~OperatorGrammar();
 
+    const boost::phoenix::actor<boost::phoenix::reference<insieme::core::NodeManager> >&& nManRef;
+    NodeManager& nodeMan;
+
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> assignment;
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> addition;
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> subtraction;
@@ -93,6 +96,47 @@ struct OperatorGrammar : public qi::grammar<ParseIt, CallExprPtr(), qi::space_ty
     // --------------------------------------------------------------------------------------
 
     qi::rule<ParseIt, CallExprPtr(), qi::space_type> operatorRule;
+
+    // member functions applying the rules
+    virtual qi::rule<ParseIt, CallExprPtr(), qi::space_type> getAssignment();
+    #define get(op) virtual qi::rule<ParseIt, CallExprPtr(), qi::space_type> get##op ();
+    get(Add)
+    get(Sub)
+    get(Mul)
+    get(Div)
+    get(Mod)
+    get(And)
+    get(Or)
+    get(Xor)
+    get(LShift)
+    get(RShift)
+    get(Not)
+    get(Plus)
+    get(Minus)
+    get(PreInc)
+    get(PostInc)
+    get(PreDec)
+    get(PostDec)
+    get(LAnd)
+    get(LOr)
+    get(LNot)
+    get(Eq)
+    get(Ne)
+    get(Lt)
+    get(Le)
+    get(Gt)
+    get(Ge)
+    #undef get
+
+    // member functions providing the rules
+    virtual CallExprPtr getAssignmentHelper(ExpressionPtr a, ExpressionPtr b);
+    virtual CallExprPtr getBinaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
+    virtual CallExprPtr getInt4OpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
+    virtual CallExprPtr getUnaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a);
+    virtual CallExprPtr getSignOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr b);
+    virtual CallExprPtr getInplaceOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr a);
+    virtual CallExprPtr getLazyOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
+    virtual CallExprPtr getBoolOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
 
 };
 
