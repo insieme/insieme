@@ -197,8 +197,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     stmts.push_back(swtch);
 
     // set the argument for the get__id function
-    return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), builder.compoundStmt(stmts), /*TODO empty capture list to avoid ambiguousity
-    shall be removed after captureInitExpr is not there any more and will hopefully work*/core::ASTBuilder::CaptureInits(), args.first), args.second);
+    return builder.callExpr(BASIC.getUInt4(), builder.lambdaExpr(BASIC.getUInt4(), builder.compoundStmt(stmts),  args.first), args.second);
 }
 
 
@@ -497,10 +496,7 @@ public:
             }
             core::TypePtr retTy = dynamic_pointer_cast<const core::FunctionType>(fun->getType())->getReturnType();
 
-            //TODO remove capture init list
-            core::ASTBuilder::CaptureList fu;
-
-            return builder.bindExpr(fun->getParameterList(), builder.callExpr(builder.lambdaExpr(retTy, newBody, fu, args.first), args.second));
+            return builder.bindExpr(fun->getParameterList(), builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second));
         }
 
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
@@ -544,7 +540,7 @@ public:
                         case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
                             core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getUndefined(),
                                  BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
-                             // store the variable in list, initialized with zero, will be declared in global capture init list
+                             // store the variable in list, initialized with zero, will be declared in global variable list
                              globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
                              if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)

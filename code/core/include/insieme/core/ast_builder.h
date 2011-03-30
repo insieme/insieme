@@ -146,11 +146,11 @@ public:
 	LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParamList& params = ParamList()) const;
 	LambdaExprPtr lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params = ParamList()) const;
 	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params = ParamList()) const;
-	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures = CaptureList(), const ParamList& params = ParamList()) const;
+	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures, const ParamList& params) const;
 
 	// Direct lambda with capture initialization
 	CaptureInitExprPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
-	CaptureInitExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
+	CaptureInitExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const;
 
 	// Creation of thread number ranges
 	CallExprPtr getThreadNumRange(unsigned min) const;
