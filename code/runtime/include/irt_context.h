@@ -47,12 +47,12 @@
 
 IRT_MAKE_ID_TYPE(irt_context);
 
-typedef struct _irt_context {
+struct _irt_context {
 	irt_context_id id;
 	irt_client_app_id client_app;
 	irt_type* type_table;
 	irt_wi_implementation** impl_table;
-} irt_context;
+};
 
 
 /* ------------------------------ operations ----- */

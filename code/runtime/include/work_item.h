@@ -50,9 +50,9 @@ struct _irt_work_item {
 	irt_work_item_id id;
 	irt_work_item_range range;
 	irt_wi_implementation_id impl_id;
-	size_t num_groups;
+	uint32 num_groups;
 	irt_work_group_id* work_groups;
-	unsigned priority; // ?
+	uint32 priority; // ?
 	irt_lw_data_item *parameters;
 };
 
