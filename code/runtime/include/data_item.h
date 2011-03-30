@@ -43,10 +43,10 @@
 IRT_MAKE_ID_TYPE(irt_data_item);
 
 enum _irt_data_mode {
-	READ_ONLY,
-	WRITE_ONLY,
-	WRITE_FIRST,
-	READ_WRITE
+	IRT_DMODE_READ_ONLY,
+	IRT_DMODE_WRITE_ONLY,
+	IRT_DMODE_WRITE_FIRST,
+	IRT_DMODE_READ_WRITE
 };
 
 struct _irt_data_range {

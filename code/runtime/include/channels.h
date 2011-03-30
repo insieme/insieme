@@ -44,10 +44,10 @@
 
 IRT_MAKE_ID_TYPE(irt_channel);
 
-typedef struct _irt_channel {
+struct _irt_channel {
 	irt_channel_id id;
 	// TODO
-} irt_channel;
+};
 
 
 /* ------------------------------ operations ----- */

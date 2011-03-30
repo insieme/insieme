@@ -34,20 +34,14 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "data_item.h"
 
-#include "declarations.h"
+int main() {
 
-/* ------------------------------ data structures ----- */
+	irt_data_item di;
+	di.mode = IRT_DMODE_READ_ONLY;
 
-IRT_MAKE_ID_TYPE(irt_client_app);
-
-struct _irt_client_app {
-	irt_client_app_id id;
-	size_t pid;
-};
-
-
-/* ------------------------------ operations ----- */
+	return di.mode;
+}
 
 

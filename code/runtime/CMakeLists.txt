@@ -10,6 +10,7 @@ file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
 file(GLOB_RECURSE insieme_runtime_incs 	include/*.h )
 
 # list all include paths
+include_directories(include/)
 
 # Build the runtime library
 add_library(insieme_runtime ${LINKING_TYPE} ${insieme_runtime_srcs} ${insieme_runtime_incs} )
@@ -17,7 +18,8 @@ add_library(insieme_runtime ${LINKING_TYPE} ${insieme_runtime_srcs} ${insieme_ru
 
 # enable tests for this project
 find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
+
+include_directories(include/ ${GTEST_INCLUDE_DIRS})
 
 file(GLOB test_cases test/*.c)
 foreach (case_file ${test_cases})
