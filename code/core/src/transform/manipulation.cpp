@@ -207,6 +207,7 @@ namespace {
 		bool successful;
 
 		utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements;
+		utils::set::PointerSet<VariablePtr> replacedOnce;
 
 	public:
 
@@ -219,18 +220,32 @@ namespace {
 			}
 
 			if (ptr->getNodeType() != NT_Variable) {
+				if (ptr->getNodeType() == NT_LambdaExpr) {
+					// entering new scope => ignore this
+					return ptr;
+				}
 				return ptr->substitute(ptr->getNodeManager(), *this);
 			}
 
 			const VariablePtr& var = static_pointer_cast<const Variable>(ptr);
+
+			// check whether variable has been already encountered
+			if (replacedOnce.find(var) != replacedOnce.end()) {
+				// variable may only be replaced once!
+				successful = false;
+				return ptr;
+			}
+
 			auto pos = replacements.find(var);
 			if (pos != replacements.end()) {
 				ExpressionPtr res = pos->second;
-				replacements.erase(var);
+
+				// to ensure a single evaluation!
+				replacedOnce.insert(var);
 				return res;
 			}
 
-			successful = false;
+			// no modification required
 			return ptr;
 		}
 
@@ -238,6 +253,50 @@ namespace {
 			return successful;
 		}
 	};
+
+
+
+
+	ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
+
+		// extract bind and call expression
+		assert(call->getFunctionExpr()->getNodeType() == NT_BindExpr && "Illegal argument!");
+		BindExprPtr bind = static_pointer_cast<const BindExpr>(call->getFunctionExpr());
+
+		// process call recursively
+		CallExprPtr innerCall = bind->getCall();
+		ExpressionPtr inlined = tryInlineToExpr(manager, innerCall);
+		if (innerCall == inlined) {
+			// in-lining was not successful
+			return call;
+		}
+
+
+		// check for matching argument number
+		auto parameter = bind->getParameters();
+		auto arguments = call->getArguments();
+		if (parameter.size() != arguments.size()) {
+			return call;
+		}
+
+		// substituted call arguments with bind parameters
+		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
+
+		replacements.insert(
+				make_paired_iterator(parameter.begin(), arguments.begin()),
+				make_paired_iterator(parameter.end(), arguments.end())
+		);
+
+		// substitute variables within body
+		InlineSubstituter substituter(replacements);
+		ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, inlined));
+
+		// check result
+		if (substituter.wasSuccessful()) {
+			return res;
+		}
+		return call;
+	}
 
 }
 
@@ -253,6 +312,11 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 	if (target->getNodeType() == NT_CaptureInitExpr) {
 		capture = static_pointer_cast<const CaptureInitExpr>(target);
 		target = capture->getLambda();
+	}
+
+	// check for bind expression ...
+	if (target->getNodeType() == NT_BindExpr) {
+		return tryInlineBindToExpr(manager, call);
 	}
 
 	// check for lambda ...

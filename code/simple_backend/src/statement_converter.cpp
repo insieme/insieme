@@ -155,7 +155,7 @@ namespace simple_backend {
 	void StmtConverter::visitDeclarationStmt(const DeclarationStmtPtr& ptr) {
 		auto var = ptr->getVariable();
 
-		// investigate initialization to determine whether variable is a pointer / skalar
+		// investigate initialization to determine whether variable is a pointer / scalar
 		VariableManager& varManager = cc.getVariableManager();
 		VariableManager::VariableInfo info;
 		info.location = VariableManager::NONE;
@@ -507,6 +507,12 @@ namespace simple_backend {
 				return;
 			}
 
+			case NT_BindExpr: {
+				// a closure is to be invoked
+				code << " ... code to invoke a closure ... ";
+				return;
+			}
+
 			default :
 				code << "<?>Unhandled Type of Call Target</?>";
 		}
@@ -568,6 +574,13 @@ namespace simple_backend {
 	}
 
 
+	void StmtConverter::visitBindExpr(const core::BindExprPtr& ptr) {
+
+		// TODO: implement the creation of the corresponding closure on the stack
+		currentCodeFragment << "<here you will find a bind>";
+
+	}
+
 
 	void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
 		// just print literal
@@ -584,7 +597,7 @@ namespace simple_backend {
 	void StmtConverter::visitCastExpr(const CastExprPtr& ptr) {
 		const CodeFragmentPtr& code = currentCodeFragment;
 
-		code << "((" << cc.getTypeManager().getTypeName(code, ptr->getType()) << ")(";
+		code << "((" << cc.getTypeManager().getTypeName(code, ptr->getType(),true) << ")(";
 		visit(ptr->getSubExpression());
 		code << "))";
 	}

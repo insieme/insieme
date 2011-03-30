@@ -166,7 +166,10 @@ int main(int argc, char** argv) {
 				analysis::CFGPtr graph = analysis::CFG::buildCFG<analysis::OneStmtPerBasicBlock>(program);
 				timer.stop();
 				LOG(INFO) << timer;
+				timer = insieme::utils::Timer("Visit.CFG");
 				dotFile << *graph;
+				timer.stop();
+				LOG(INFO) << timer;
 			}
 
 			// perform checks
@@ -329,6 +332,7 @@ int main(int argc, char** argv) {
 
 	} catch (fe::ClangParsingError& e) {
 		cerr << "Error while parsing input file: " << e.what() << endl;
+		exit(1);
 	}
 }
 

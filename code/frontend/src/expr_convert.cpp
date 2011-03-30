@@ -272,50 +272,8 @@ namespace conversion {
 
 #define END_LOG_EXPR_CONVERSION(expr) \
 	VLOG(1) << "Converted into IR expression: "; \
-	VLOG(1) << "\t" << *expr;
+	VLOG(1) << "\t" << *expr << " type:( " << *expr->getType() << " )";
 
-
-/*
- * creates a function call from a list of expressions, useful for implementing the semantics of ++ or -- or comma
- * separated expressions in the IR
- */
-core::ExpressionPtr ConversionFactory::createCallExpr(core::StatementPtr body, core::TypePtr retTy) const {
-
-    // only a wrapper any more, i don't wanna change Simone's stuff - Klaus
-    return builder.createCallExpr(body, retTy);
-/*
-	// keeps the list variables used in the body
-	insieme::frontend::analysis::VarRefFinder args(body);
-
-	core::Lambda::CaptureList capture;
-	core::TypeList captureListType;
-
-	core::CaptureInitExpr::Values values;
-	std::for_each(args.begin(), args.end(),
-		[ &capture, &captureListType, &builder, &body, &values ] (const core::ExpressionPtr& curr) {
-			assert(curr->getNodeType() == core::NT_Variable);
-			const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
-			core::VariablePtr&& parmVar = builder.variable( bodyVar->getType() );
-			capture.push_back( parmVar );
-			captureListType.push_back( bodyVar->getType() );
-			values.push_back( bodyVar );
-			// we have to replace the variable of the body with the newly created parmVar
-			body = core::static_pointer_cast<const core::Statement>(
-					core::transform::replaceAll(builder.getNodeManager(), body, bodyVar, parmVar, true )
-			);
-		}
-	);
-
-	// build the type of the function
-	core::FunctionTypePtr&& funcTy = builder.functionType( captureListType, core::TypeList(), retTy );
-
-	// build the expression body
-	core::ExpressionPtr&& retExpr = builder.lambdaExpr( funcTy, capture, core::Lambda::ParamList(), body );
-	if ( !values.empty() ) {
-		retExpr = builder.captureInitExpr(retExpr, values);
-	}
-	return retExpr;*/
-}
 
 //---------------------------------------------------------------------------------------------------------------------
 //										CLANG EXPRESSION CONVERTER
@@ -517,12 +475,14 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
-			const core::ASTBuilder& builder = convFact.builder;
+		const core::ASTBuilder& builder = convFact.builder;
+
+		if ( callExpr->getDirectCallee() ) {
+
+			FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee());
 
 			core::FunctionTypePtr funcTy =
-					core::static_pointer_cast<const core::FunctionType>(
-							convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+				core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 			// collects the type of each argument of the expression
 			ExpressionList args;
@@ -599,14 +559,13 @@ public:
 			 * We find a definition, we lookup if this variable needs to access the globals, in that case the capture
 			 * list needs to be initialized with the value of global variable in the current scope
 			 */
-			core::CaptureInitExpr::Values values;
 			if ( ctx.globalFuncMap.find(definition) != ctx.globalFuncMap.end() ) {
 				/*
 				 * we expect to have a the currGlobalVar set to the value of the var keeping global definitions in the
 				 * current context
 				 */
 				assert(ctx.globalVar && "No global definitions forwarded to this point");
-				values.push_back( ctx.globalVar );
+				packedArgs.insert(packedArgs.begin(), ctx.globalVar);
 			}
 
 			/*
@@ -622,9 +581,9 @@ public:
 					 * connected components are called, the introduced mu variable has to be used instead.
 					 */
 					convFact.currTU = oldTU;
-					core::ExpressionPtr&& callee = values.empty() ?
-							static_cast<core::ExpressionPtr>(fit->second):builder.captureInitExpr(fit->second, values);
-					return builder.callExpr( funcTy->getReturnType(), callee, packedArgs );
+					return builder.callExpr(
+							funcTy->getReturnType(), static_cast<core::ExpressionPtr>(fit->second), packedArgs
+						);
 				}
 			}
 
@@ -632,9 +591,10 @@ public:
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(definition);
 				if ( fit != ctx.lambdaExprCache.end() ) {
 					convFact.currTU = oldTU;
-					core::ExpressionPtr&& callee = values.empty() ?
-							static_cast<core::ExpressionPtr>(fit->second) : builder.captureInitExpr(fit->second, values);
-					core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), callee, packedArgs);
+					core::ExpressionPtr&& irNode =
+							builder.callExpr(funcTy->getReturnType(),
+									static_cast<core::ExpressionPtr>(fit->second), packedArgs
+								);
 					// handle eventual pragmas attached to the Clang node
 					core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
 					return annotatedNode;
@@ -646,14 +606,40 @@ public:
 					core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(definition) );
 			convFact.currTU = oldTU;
 
-			// initialize the capture list
-			if ( !values.empty() ) {
-				lambdaExpr = builder.captureInitExpr(lambdaExpr, values);
-			}
 			core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 			// handle eventual pragmas attached to the Clang node
 			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
 			return annotatedNode;
+		}
+		if ( callExpr->getCallee() ) {
+			core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
+			const core::TypePtr& subTy = funcPtr->getType();
+			if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
+				const core::TypePtr& subVecTy =
+						core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
+
+				funcPtr = builder.callExpr( subVecTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
+			}
+
+			ExpressionList args;
+			core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( funcPtr->getType() );
+			for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
+				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+				if ( argId < funcTy->getArgumentTypes().size() &&
+						funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType ) {
+					if ( arg->getType()->getNodeType() != core::NT_RefType ) {
+						if ( builder.getBasicGenerator().isString(arg->getType()) ) {
+							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
+						} else {
+							arg = builder.refVar(arg);
+						}
+					}
+				} else {
+					arg = convFact.tryDeref(arg);
+				}
+				args.push_back( arg );
+			}
+			return  builder.callExpr( funcPtr, args );
 		}
 		assert(false && "Call expression not referring a function");
 	}
@@ -783,9 +769,7 @@ public:
 			core::CompoundStmtPtr&& body = builder.compoundStmt(toVector<core::StatementPtr>(lhs,
 					(gen.isUnit(rhs->getType()) ? static_cast<core::StatementPtr>(rhs) : builder.returnStmt(rhs)) )
 				);
-			core::ExpressionPtr&& lambdaExpr = convFact.createCallExpr(body, rhs->getType());
-			// create a CallExpression
-			return builder.callExpr(lambdaExpr, ExpressionList());
+			return builder.createCallExprFromBody(body, rhs->getType());
 		}
 
 		// the type of this expression is the type of the LHS expression
@@ -922,7 +906,7 @@ public:
 			}
 			// lazy evaluation of RHS
 			exprTy = gen.getBool();
-			rhs = convFact.createCallExpr(builder.returnStmt(rhs), gen.getBool());
+			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
 
 		if( !isAssignment ) {
@@ -1102,8 +1086,8 @@ public:
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, gen.getIfThenElse(),
 				condExpr,	// Condition
-				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy ), // True
-				convFact.createCallExpr( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy ) // False
+				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy, true ), // True
+				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy, true ) // False
 		);
 
 		// handle eventual pragmas attached to the Clang node
@@ -1232,15 +1216,21 @@ public:
 	core::ExpressionPtr VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		START_LOG_EXPR_CONVERSION(declRef);
 		// check whether this is a reference to a variable
+		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
-			core::ExpressionPtr&& retExpr = convFact.lookUpVariable(varDecl);
-			// handle eventual pragmas attached to the Clang node
-			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, declRef, convFact);
-			END_LOG_EXPR_CONVERSION(retExpr);
-			return annotatedNode;
+			retExpr = convFact.lookUpVariable( varDecl );
+		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
+			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
+		} else {
+			// todo: C++ check whether this is a reference to a class field, or method (function).
+			assert(false && "DeclRefExpr not supported!");
 		}
-		// todo: C++ check whether this is a reference to a class field, or method (function).
-		assert(false && "DeclRefExpr not supported!");
+
+		// handle eventual pragmas attached to the Clang node
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, declRef, convFact);
+		END_LOG_EXPR_CONVERSION(retExpr);
+
+		return annotatedNode;
 	}
 
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1342,6 +1332,25 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	return retExpr;
 }
 
+namespace {
+
+core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
+						 	 	 	 	 	   const core::TypePtr& globals,
+						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
+
+	const std::vector<core::TypePtr>& oldArgs = funcType->getArgumentTypes();
+
+	std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
+
+	std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin()+1);
+	// function is receiving a reference to the global struct as the first argument
+	argTypes[0] = builder.refType(globals);
+	return builder.functionType( argTypes, funcType->getReturnType() );
+
+}
+
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1399,12 +1408,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					if ( this->ctx.recVarExprMap.find(fd) == this->ctx.recVarExprMap.end() ) {
 						core::FunctionTypePtr funcType =
 							core::static_pointer_cast<const core::FunctionType>( this->convertType(GET_TYPE_PTR(fd)) );
+						// In the case the function is receiving the global variables the signature needs to be
+						// modified by allowing the global struct to be passed as an argument
 						if ( this->ctx.globalFuncMap.find(fd) != this->ctx.globalFuncMap.end() ) {
-							funcType = this->builder.functionType(
-								toVector<core::TypePtr>( this->builder.refType(this->ctx.globalStruct.first )),
-								funcType->getArgumentTypes(),
-								funcType->getReturnType()
-							);
+							funcType = addGlobalsToFunctionType(this->builder, this->ctx.globalStruct.first, funcType);
 						}
 						core::VariablePtr&& var = this->builder.variable( funcType );
 						this->ctx.recVarExprMap.insert( std::make_pair(fd, var ) );
@@ -1423,24 +1430,23 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 	vector<core::VariablePtr> params;
+	/*
+	 * before resolving the body we have to set the currGlobalVar accordingly depending if this function will use the
+	 * global struct or not
+	 */
+	core::VariablePtr parentGlobalVar = ctx.globalVar;
+	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
+		// declare a new variable that will be used to hold a reference to the global data stucture
+		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
+		params.push_back( var );
+		ctx.globalVar = var;
+	}
+
 	std::for_each(funcDecl->param_begin(), funcDecl->param_end(),
 		[ &params, this ] (ParmVarDecl* currParam) {
 			params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
 		}
 	);
-
-	/*
-	 * before resolving the body we have to set the currGlobalVar accordingly depending if this function will use the
-	 * global struct or not
-	 */
-	core::Lambda::CaptureList captureList;
-	core::VariablePtr parentGlobalVar = ctx.globalVar;
-	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
-		// declare a new variable that will be used to hold a reference to the global data stucture
-		core::VariablePtr&& var = builder.variable( builder.refType(ctx.globalStruct.first) );
-		captureList.push_back( var );
-		ctx.globalVar = var;
-	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
 	assert(!ctx.isResolvingRecFuncBody && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
@@ -1496,9 +1502,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		const core::CompoundStmtPtr& compStmt = core::static_pointer_cast<const core::CompoundStmt>(body);
 		assert(ctx.globalVar && ctx.globalStruct.second);
 
-		std::vector<core::StatementPtr> stmts;
-		stmts.push_back( builder.declarationStmt(ctx.globalVar, builder.refNew( ctx.globalStruct.second )) );
-		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
+		const StatementList& oldStmts = compStmt->getStatements();
+
+		std::vector<core::StatementPtr> stmts(oldStmts.size()+1);
+		stmts[0] = builder.declarationStmt(ctx.globalVar, builder.refNew( ctx.globalStruct.second ));
+		std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), stmts.begin()+1);
+
 		body = builder.compoundStmt(stmts);
 	}
 
@@ -1509,15 +1518,14 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// if this function gets the globals in the capture list we have to create a different type
 	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
-		funcType = builder.functionType(toVector<core::TypePtr>(builder.refType(ctx.globalStruct.first)),
-				funcType->getArgumentTypes(), funcType->getReturnType());
+		addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 	}
 
 	// reset old global var
 	ctx.globalVar = parentGlobalVar;
 
 	if ( components.empty() ) {
-		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, captureList, params, body);
+		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, params, body);
 		// attach name annotation to the lambda
 		retLambdaExpr->getLambda()->addAnnotation(
 			std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() )
@@ -1529,7 +1537,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
         return attachFuncAnnotations(retLambdaExpr, funcDecl);
 	}
 
-	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, captureList, params, body );
+	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
 	// attach name annotation to the lambda
 	retLambdaNode->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
 	// this is a recurive function call

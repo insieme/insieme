@@ -126,12 +126,10 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 		% ',' ) >> ')' )											[ qi::_val = ph::bind(&TupleType::get, nManRef, qi::_a) ];
 
 	functionType =
-		( -( qi::lit("[") >> -( typeRule							[ ph::push_back(qi::_a, qi::_1) ]
-		% ',' ) >> ']' ) >>
-		qi::lit("(") >> -( typeRule									[ ph::push_back(qi::_b, qi::_1) ]
+		( qi::lit("(") >> -( typeRule                               [ ph::push_back(qi::_a, qi::_1) ]
 		% ',' ) >> ')' >> 
-		qi::lit("->") >> typeRule									[ qi::_c = qi::_1 ]
-		)															[ qi::_val = ph::bind(&FunctionType::get, nManRef, qi::_a, qi::_b, qi::_c) ];
+		qi::lit("->") >> typeRule									[ qi::_b = qi::_1 ]
+		)															[ qi::_val = ph::bind(&FunctionType::get, nManRef, qi::_a, qi::_b) ];
 
 
 	structType =

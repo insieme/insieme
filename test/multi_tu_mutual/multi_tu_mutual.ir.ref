@@ -4,20 +4,20 @@
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf(string.as.char.pointer("even(%d)?: %s\n"), varlist.pack((12, ite(recFun v3 {
             v3 = fun(uint<4> v5){
-                return ite(v5==0, fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6(v7-1));
+                return ite(v5==0, bind()->fun()return 1(), bind()->fun(uint<4> v6, ((uint<4>)->int<4>) v7)return v7(v6-1)(v5, v4));
             };
             v4 = fun(uint<4> v10){
-                return ite(v10==0, fun()return 0, [v3, v10]fun[((uint<4>)->int<4>) v11, uint<4> v12]()return v11(v12-1));
+                return ite(v10==0, bind()->fun()return 0(), bind()->fun(((uint<4>)->int<4>) v11, uint<4> v12)return v11(v12-1)(v3, v10));
             };
-        }(12), fun()return "true", fun()return "false"))));
+        }(12), bind()->fun()return "true"(), bind()->fun()return "false"()))));
         printf(string.as.char.pointer("odd(%d)?: %s\n"), varlist.pack((12, ite(recFun v4 {
             v3 = fun(uint<4> v5){
-                return ite(v5==0, fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6(v7-1));
+                return ite(v5==0, bind()->fun()return 1(), bind()->fun(uint<4> v6, ((uint<4>)->int<4>) v7)return v7(v6-1)(v5, v4));
             };
             v4 = fun(uint<4> v10){
-                return ite(v10==0, fun()return 0, [v3, v10]fun[((uint<4>)->int<4>) v11, uint<4> v12]()return v11(v12-1));
+                return ite(v10==0, bind()->fun()return 0(), bind()->fun(((uint<4>)->int<4>) v11, uint<4> v12)return v11(v12-1)(v3, v10));
             };
-        }(12), fun()return "true", fun()return "false"))));
+        }(12), bind()->fun()return "true"(), bind()->fun()return "false"()))));
     }
 
 
@@ -29,19 +29,19 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf(string.as.char.pointer("even(%d)?: %s\n"), varlist.pack((12, ite(CAST<bool>(recFun v3 {
             v3 = fun(uint<4> v5){
-                return ite((v5==CAST<uint<4>>(0)), fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6((v7-CAST<uint<4>>(1))));
+                return ite((v5==CAST<uint<4>>(0)), bind()->fun()return 1(), bind()->fun(uint<4> v6, ((uint<4>)->int<4>) v7)return v7((v6-CAST<uint<4>>(1)))(v5, v4));
             };
             v4 = fun(uint<4> v10){
-                return ite((v10==CAST<uint<4>>(0)), fun()return 0, [v3, v10]fun[((uint<4>)->int<4>) v11, uint<4> v12]()return v11((v12-CAST<uint<4>>(1))));
+                return ite((v10==CAST<uint<4>>(0)), bind()->fun()return 0(), bind()->fun(((uint<4>)->int<4>) v11, uint<4> v12)return v11((v12-CAST<uint<4>>(1)))(v3, v10));
             };
-        }(CAST<uint<4>>(12))), fun()return "true", fun()return "false"))));
+        }(CAST<uint<4>>(12))), bind()->fun()return "true"(), bind()->fun()return "false"()))));
         printf(string.as.char.pointer("odd(%d)?: %s\n"), varlist.pack((12, ite(CAST<bool>(recFun v4 {
             v3 = fun(uint<4> v5){
-                return ite((v5==CAST<uint<4>>(0)), fun()return 1, [v4, v5]fun[((uint<4>)->int<4>) v6, uint<4> v7]()return v6((v7-CAST<uint<4>>(1))));
+                return ite((v5==CAST<uint<4>>(0)), bind()->fun()return 1(), bind()->fun(uint<4> v6, ((uint<4>)->int<4>) v7)return v7((v6-CAST<uint<4>>(1)))(v5, v4));
             };
             v4 = fun(uint<4> v10){
-                return ite((v10==CAST<uint<4>>(0)), fun()return 0, [v3, v10]fun[((uint<4>)->int<4>) v11, uint<4> v12]()return v11((v12-CAST<uint<4>>(1))));
+                return ite((v10==CAST<uint<4>>(0)), bind()->fun()return 0(), bind()->fun(((uint<4>)->int<4>) v11, uint<4> v12)return v11((v12-CAST<uint<4>>(1)))(v3, v10));
             };
-        }(CAST<uint<4>>(12))), fun()return "true", fun()return "false"))));
+        }(CAST<uint<4>>(12))), bind()->fun()return "true"(), bind()->fun()return "false"()))));
     }
 

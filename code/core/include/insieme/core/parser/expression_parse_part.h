@@ -55,11 +55,10 @@ struct ExpressionGrammar;
 struct StatementGrammar;
 
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, ExpressionPtr(), qi::space_type> {
-    TypeGrammar *typeG; // pointer for weak coupling
     ExpressionGrammar* exprG;
-//    VariableTable varTab;
+    TypeGrammar *typeG; // pointer for weak coupling
 
-    ExpressionGrammarPart(NodeManager& nodeMan, ExpressionGrammar* exprGram);
+    ExpressionGrammarPart(NodeManager& nodeMan, ExpressionGrammar* exprGram, TypeGrammar* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing
@@ -77,7 +76,8 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, ExpressionPtr(), qi::
     qi::rule<ParseIt, LiteralPtr(), qi::space_type> charLiteral;
 
     // --------------------------------------------------------------------------------------
-    qi::rule<ParseIt, CaptureInitExprPtr(), qi::locals<std::vector<ExpressionPtr> >, qi::space_type> captureInitExpr;
+
+    qi::rule<ParseIt, BindExprPtr(), qi::locals<VariableList, ExpressionList>, qi::space_type> bindExpr;
 
     qi::rule<ParseIt, TupleExprPtr(), qi::locals<ExpressionList>, qi::space_type> tupleExpr;
     qi::rule<ParseIt, VectorExprPtr(), qi::locals<VectorTypePtr, ExpressionList>, qi::space_type> vectorExpr;

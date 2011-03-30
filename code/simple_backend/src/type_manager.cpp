@@ -47,6 +47,9 @@ namespace simple_backend {
 
 using namespace insieme::core;
 
+
+const string TypeManager::Entry::UNSUPPORTED = "/* unsupported */";
+
 TypeManager::Entry toEntry(string name) {
 	return TypeManager::Entry(name, name, name + " %s", name + " %s", CodeFragmentPtr());
 }
@@ -304,23 +307,26 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 
 	// handle simple vector of pointers
-	if (ptr->getElementType()->getNodeType() == NT_ArrayType) {
-		const Entry& elementType = resolveType(ptr->getElementType());
-		string prefix = elementType.rValueName;
-		string postfix = "[" + toString(ptr->getSize()) + "]";
-
-		// return entry
-		return Entry(
-				prefix + "" + postfix,
-				prefix + "" + postfix,
-				prefix + " %s" + postfix,
-				prefix + " %s" + postfix,
-				elementType.definition
-		);
-	}
+//	if (ptr->getElementType()->getNodeType() == NT_ArrayType) {
+//		const Entry& elementType = resolveType(ptr->getElementType());
+//		string prefix = elementType.rValueName;
+//		string postfix = "[" + toString(ptr->getSize()) + "]";
+//
+//		// return entry
+//		return Entry(
+//				prefix + "" + postfix,
+//				prefix + "" + postfix,
+//				prefix + " %s" + postfix,
+//				prefix + " %s" + postfix,
+//				elementType.definition
+//		);
+//	}
 
 	// default handling
-	return resolveRefOrVectorOrArrayType(ptr);
+	TypeManager::Entry res = resolveRefOrVectorOrArrayType(ptr);
+	res.rValueName = Entry::UNSUPPORTED;
+	res.paramPattern = Entry::UNSUPPORTED;
+	return res;
 }
 
 TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
@@ -334,7 +340,10 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 		return toEntry("void*");
 	}
 
-	return resolveRefOrVectorOrArrayType(ptr);
+	TypeManager::Entry res = resolveRefOrVectorOrArrayType(ptr);
+	res.rValueName = Entry::UNSUPPORTED;
+	res.paramPattern = Entry::UNSUPPORTED;
+	return res;
 }
 
 
@@ -367,12 +376,6 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 
 		type = arrayType->getElementType();
 		kind = type->getNodeType();
-
-//		// discard embedded reference type
-//		if (kind == NT_RefType) {
-//			type = static_pointer_cast<const RefType>(type)->getElementType();
-//			kind = type->getNodeType();
-//		}
 	}
 
 	// count vectors
@@ -386,12 +389,6 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 
 		type = vectorType->getElementType();
 		kind = type->getNodeType();
-
-//		// discard embedded reference type
-//		if (kind == NT_RefType) {
-//			type = static_pointer_cast<const RefType>(type)->getElementType();
-//			kind = type->getNodeType();
-//		}
 	}
 
 	// consider case where arrays are embedded within vectors
@@ -414,28 +411,8 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 	}
 	// check for a mixed node
 	assert(kind != NT_VectorType && kind != NT_RefType && kind != NT_ArrayType && "Mixed array/vector/ref mode not supported yet!");
-//	if (kind == NT_VectorType || kind == NT_RefType) {
-//		// mixed mode ... just finish counting and use stars
-//		while (kind == NT_VectorType || kind==NT_ArrayType || kind == NT_RefType) {
-//			refCount++;
-//			type = static_pointer_cast<const SingleElementType>(type)->getElementType();
-//			kind = type->getNodeType();
-//		}
-//
-//		// sum up references
-//		refCount += arrayCount + vectorCount;
-//
-//		// reset array and vector counts (if mixed, everything is done via ref)
-//		arrayCount = 0;
-//		vectorCount = 0;
-//
-//		// make an assertion on the result
-//		assert(refCount > 0 && "RefCount should be larger than 0!");
-//	}
-
 
 	// reduce number of references if declaring a C array (implicit in C)
-//	refCount -= (decl && kind != NT_VectorType)?1:0;
 
 	// reduce ref-count by 1 (since outermost is implicit in C) - except for pure vectors
 	refCount -= (ptr->getNodeType() != NT_VectorType)?1:0;
@@ -447,9 +424,6 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 	// create type declaration
 	Entry elementType = resolveType(type);
 	string prefix = elementType.lValueName;
-//	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
-//		prefix += "(";
-//	}
 	bool requiresInnerParenthesis = !vectorOfArrays && (refCount + arrayCount > 0) && vectorCount > 0;
 	if (requiresInnerParenthesis) {
 		prefix += "(";
@@ -460,14 +434,9 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 	for (int i=0; i<arrayCount; i++) {
 		prefix += "*";
 	}
-//	if (vectorCount > 0 && (refCount > 0 || arrayCount > 0)) {
-//		postfix = ")" + postfix;
-//	}
 	if (requiresInnerParenthesis) {
 		postfix = ")" + postfix;
 	}
-//	postfix =  postfix + "\t/*" + toString(*ptr) + format(" => refCount=%d, arrayCount=%d, vectorCount=%d */", refCount, arrayCount, vectorCount);
-	//return prefix + " " + name + postfix;
 	if (ptr->getNodeType() == NT_VectorType || ptr->getNodeType() == NT_ArrayType) {
 		// special treatement for C vectors
 		return Entry(
@@ -489,6 +458,17 @@ TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePt
 				elementType.definition
 		);
 	}
+
+	if (arrayCount > 0) {
+		return Entry(
+				prefix + "" + postfix,
+				prefix + "" + postfix,
+				prefix + " %s" + postfix,
+				prefix + " %s" + postfix,
+				elementType.definition
+		);
+	}
+
 	return Entry(
 			prefix + "" + postfix,
 			prefix + "*" + postfix,

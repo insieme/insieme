@@ -103,11 +103,11 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
     qi::rule<ParseIt, LiteralPtr(), qi::space_type> charLiteral;
 
     // --------------------------------------------------------------------------------------
-    qi::rule<ParseIt, LambdaPtr(), qi::locals<VariableList, VariableList>, qi::space_type> lambda;
+    qi::rule<ParseIt, LambdaPtr(), qi::locals<VariableList>, qi::space_type> lambda;
     qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<Definitions>, qi::space_type> lambdaDef;
     qi::rule<ParseIt, LambdaExprPtr(), qi::space_type> lambdaExpr;
 
-    qi::rule<ParseIt, CaptureInitExprPtr(), qi::space_type> captureInitExpr;
+    qi::rule<ParseIt, BindExprPtr(), qi::space_type> bindExpr;
 
     qi::rule<ParseIt, JobExprPtr(), qi::locals<vector<DeclarationStmtPtr>, GuardedStmts>, qi::space_type> jobExpr;
     qi::rule<ParseIt, TupleExprPtr(), qi::space_type> tupleExpr;

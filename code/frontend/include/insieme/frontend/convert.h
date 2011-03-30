@@ -86,7 +86,7 @@ class ConversionFactory : public boost::noncopyable {
 		// 						Recursive Function resolution
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Maps Clang variable declarations (VarDecls and ParmVarDecls) to IR variables.
-		typedef std::map<const clang::VarDecl*, core::VariablePtr> VarDeclMap;
+		typedef std::map<const clang::ValueDecl*, core::VariablePtr> VarDeclMap;
 		VarDeclMap varDeclMap;
 
 		// Stores the generated IR for function declarations
@@ -212,7 +212,7 @@ class ConversionFactory : public boost::noncopyable {
      * IR with the same generated Variable and in the case of access to global variables, a reference
      * to a member of the global data structure is returned.
      */
-	core::ExpressionPtr lookUpVariable(const clang::VarDecl* varDecl);
+	core::ExpressionPtr lookUpVariable(const clang::ValueDecl* valDecl);
 	core::ExpressionPtr convertInitializerList(const clang::InitListExpr* initList, const core::TypePtr& type) const;
 
 	/**
@@ -300,7 +300,7 @@ public:
 	 * @param varDecl clang Variable declaration AST node
 	 * @return IR annotation
 	 */
-	core::AnnotationPtr convertAttribute(const clang::VarDecl* varDecl) const;
+	core::AnnotationPtr convertAttribute(const clang::ValueDecl* valDecl) const;
 
 	/**
 	 * Utility function which tries to apply the deref operation. If the input expression is not a of ref type
@@ -318,7 +318,7 @@ public:
 	 * @param retTy the return type of the generated lambda expression
 	 * @return A call expression of a lambda enclosing the body
 	 */
-	core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
+	// core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {

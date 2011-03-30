@@ -14,30 +14,11 @@ struct __insieme_globals {
     int a[10];
 };
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_0 //
-// Abstract prototype for lambdas of type __insieme_funType_type_0
-struct __insieme_funType_type_0 { 
-    void(*fun)(void*);
-};
-
-// Type safe function for invoking lambdas of type __insieme_funType_type_0
-void call__insieme_funType_type_0(struct __insieme_funType_type_0* lambda) {  lambda->fun(lambda); }
-
-// start code fragment :: Definitions for function type: __insieme_funType_type_1 //
-// Abstract prototype for lambdas of type __insieme_funType_type_1
-struct __insieme_funType_type_1 { 
-    void(*fun)(void*);
-    struct __insieme_globals* p0;
-};
-
 // start code fragment :: Definition of init //
-void init(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_4 = ((struct __insieme_funType_type_1*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
+void init(struct __insieme_globals var_4) {
 	{
 		for(int i = 0; i < 10; i += 1) {
-			((((((*var_4).a))[((unsigned int)((i)))])) = (i));
+			((((((var_4).a))[((unsigned int)((i)))])) = (i));
 		};
 	}
 }
@@ -46,31 +27,12 @@ void init(void* _capture) {
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definitions for function type: __insieme_funType_type_2 //
-// Abstract prototype for lambdas of type __insieme_funType_type_2
-struct __insieme_funType_type_2 { 
-    int(*fun)(void*);
-};
-
-// Type safe function for invoking lambdas of type __insieme_funType_type_2
-int call__insieme_funType_type_2(struct __insieme_funType_type_2* lambda) { return lambda->fun(lambda); }
-
-// start code fragment :: Definitions for function type: __insieme_funType_type_3 //
-// Abstract prototype for lambdas of type __insieme_funType_type_3
-struct __insieme_funType_type_3 { 
-    int(*fun)(void*);
-    struct __insieme_globals* p0;
-};
-
 // start code fragment :: Definition of sum //
-int sum(void* _capture) {
-	// --------- Captured Stuff - Begin -------------
-	struct __insieme_globals* var_7 = ((struct __insieme_funType_type_3*)_capture)->p0;
-	// --------- Captured Stuff -  End  -------------
+int sum(struct __insieme_globals var_7) {
 	{
 		int res = 0;
 		for(int i = 0; i < 10; i += 1) {
-			((res) = ((res)+(((((*var_7).a))[((unsigned int)((i)))]))));
+			((res) = ((res)+(((((var_7).a))[((unsigned int)((i)))]))));
 		};
 		return (res);;
 	}
@@ -81,8 +43,8 @@ int sum(void* _capture) {
 int main(int argc, char** argv) {
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		init(((struct __insieme_funType_type_0*)(&((struct __insieme_funType_type_1){0,var_1}))));
-		printf("sum=%d\n", sum(((struct __insieme_funType_type_2*)(&((struct __insieme_funType_type_3){0,var_1})))));
+		init(var_1);
+		printf("sum=%d\n", sum(var_1));
 	}
 }
 

@@ -152,7 +152,7 @@ namespace formatting {
 
 				// check whether input variable needs to be dereferenced
 				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
-				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::HEAP;
+				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
 
 				if (insertDeref) {
 					OUT("((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");

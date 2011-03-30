@@ -84,10 +84,18 @@ SwitchStmtPtr switchHelp(NodeManager& nodeMan, const ExpressionPtr& switchExpr, 
     return SwitchStmt::get(nodeMan, switchExpr, cases);
 }
 
-StatementGrammar::StatementGrammar(NodeManager& nodeMan)
-    : StatementGrammar::base_type(statementRule), typeG(new TypeGrammar(nodeMan))/*, exprG(new ExpressionGrammar(nodeMan))*/ {
+StatementGrammar::StatementGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGram, TypeGrammar* typeGram)
+    : StatementGrammar::base_type(statementRule)/*, typeG(new TypeGrammar(nodeMan)), exprG(new ExpressionGrammar(nodeMan))*/ {
 
-    exprG = new ExpressionGrammar(nodeMan, this);
+    if(typeGram == NULL) {
+        exprG = new ExpressionGrammar(nodeMan, this);
+        typeG = new TypeGrammar(nodeMan);
+        deleteFields = true;
+    } else {
+        exprG = exprGram;
+        typeG = typeGram;
+        deleteFields = false;
+    }
 
     auto nManRef = ph::ref(nodeMan);
     auto basicRef = ph::ref(nodeMan.basic);
@@ -167,8 +175,10 @@ StatementGrammar::StatementGrammar(NodeManager& nodeMan)
 }
 
 StatementGrammar::~StatementGrammar() {
-    delete exprG;
-    delete typeG;
+    if(deleteFields) {
+        delete exprG;
+        delete typeG;
+    }
 }
 
 } // namespace parse

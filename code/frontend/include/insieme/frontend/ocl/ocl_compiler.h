@@ -45,6 +45,8 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
+typedef std::pair<core::ASTBuilder::ParamList, std::vector<core::ExpressionPtr> > ArgList;
+
 namespace {
 
 // shortcut
@@ -59,11 +61,18 @@ namespace {
                                      toVector<core::ExpressionPtr>(arr, builder.castExpr(BASIC.getUInt4(), \
                                      builder.literal(toString(idx), builder.getNodeManager().basic.getUInt4() ))))
 
+// adding arguments and their value to the ArgList
+#define ADD_PARAM(list, arg, val) { list.first.push_back(arg); \
+                                    list.second.push_back(val); }
+
+
 // store a the variable var in vector vec and overvrites var with a new variable. The mapping from the old to the new one is store in list
-#define CAPTURE(vec, var, types) { core::VariablePtr tmp = builder.variable((var)->getType()); \
-                                    vec[var] = tmp; \
+#define ADD_ARG(vec, var, types) { core::VariablePtr tmp = builder.variable((var)->getType()); \
+                                    vec.first.push_back(var); \
+                                    vec.second.push_back(tmp); \
                                     types.push_back((var)->getType()); \
                                     var = tmp; }
+
 
 // generates a declaration of variable var which initialized with a new variable and stored in vector vec. The new variable is stored in var
 #define SHARE(vec, var) { const core::VariablePtr initVal = builder.variable((var)->getType()); \
@@ -109,10 +118,10 @@ public:
     core::CallExprPtr calcIdidx2(core::VariablePtr& threadId, core::VariablePtr& boundaries);
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendCaptures(core::ASTBuilder::CaptureInits& captureList, OCL_SCOPE scope, core::TypeList types);
+    void appendArguments(std::pair<std::vector<core::VariablePtr>, std::vector<core::ExpressionPtr> >& argList, OCL_SCOPE scope, core::TypeList& aTypes);
 
     //returns a vector containing declarations with fresh initializations of all needed ocl-variables
-    void appendShared(std::vector<core::DeclarationStmtPtr>& captureList, OCL_SCOPE scope);
+    void appendShared(std::vector<core::DeclarationStmtPtr>& sharingList, OCL_SCOPE scope);
 
     //returns a call expression accessing the wished range at index idx and sets the appropriate Used flag
     core::CallExprPtr accessRange(OCL_PAR_LEVEL level, core::ExpressionPtr idx);

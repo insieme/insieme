@@ -447,7 +447,6 @@ struct RetBlock: public Block {
 
 	const CallBlock* callBlock() const { return call; }
 	CallBlock*& callBlock() { return call; }
-
 private:
 	CallBlock* call;
 };

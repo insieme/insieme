@@ -71,11 +71,11 @@ public:
 	 */
 	NameManager() : num(0) { }
 
-	string getName(const core::NodePtr& ptr, const string& fragment = "");
+	virtual string getName(const core::NodePtr& ptr, const string& fragment = "");
 
-	void setName(const core::NodePtr& ptr, const string& name);
+	virtual void setName(const core::NodePtr& ptr, const string& name);
 
-	string getVarName(const core::VariablePtr& var);
+	virtual string getVarName(const core::VariablePtr& var);
 };
 
 } // end: namespace simple_backend

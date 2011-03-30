@@ -53,7 +53,7 @@ struct TypeGrammar : public qi::grammar<ParseIt, TypePtr(), qi::space_type> {
 	qi::rule<ParseIt, IntTypeParamPtr(), qi::space_type> intTypeParam;
 
 	// nonterminal rules with skip parsing
-	qi::rule<ParseIt, FunctionTypePtr(), qi::locals<vector<TypePtr>, vector<TypePtr>, TypePtr>, qi::space_type> functionType;
+	qi::rule<ParseIt, FunctionTypePtr(), qi::locals<vector<TypePtr>, TypePtr>, qi::space_type> functionType;
 	qi::rule<ParseIt, TypePtr(), qi::space_type> typeVariable;
 	qi::rule<ParseIt, RefTypePtr(), qi::space_type> refType;
 	qi::rule<ParseIt, ChannelTypePtr(), qi::space_type> channelType;

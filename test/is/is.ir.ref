@@ -42,12 +42,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         printf(string.as.char.pointer("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n"), varlist.pack(()));
         printf(string.as.char.pointer(" Size:  %d  (class %c)\n"), varlist.pack((int.lshift(1, 20), 'W')));
         printf(string.as.char.pointer(" Iterations:   %d\n"), varlist.pack((10)));
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v13](int<4> v12){
-            array.ref.elem.1D(composite.ref.elem(v13, elapsed, vector<real<8>,64>), v12) := 0.0;
-        }(0);
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v17](real<8> v15, real<8> v16){
-            decl ref<real<8>> v22 =  var(v15);
-            decl ref<real<8>> v23 =  var(v16);
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v12, int<4> v13){
+            array.ref.elem.1D(composite.ref.elem(v12, elapsed, vector<real<8>,64>), v13) := 0.0;
+        }(v1, 0);
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v15, real<8> v16, real<8> v17){
+            decl ref<real<8>> v22 =  var(v16);
+            decl ref<real<8>> v23 =  var(v17);
             {
                 decl ref<real<8>> v18 =  var(0.0);
                 decl ref<int<4>> v19 =  var(0);
@@ -56,7 +56,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 v21 := int.lshift(1, 16)/4;
                 {
                     for(decl ref<int<4>> v41 =  var(0) .. int.lshift(1, 20) : 1) {
-                        v18 := [v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                        v18 := fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 =  var(0.0);
                             decl ref<real<8>> v28 =  var(0.0);
                             decl ref<real<8>> v29 =  var(0.0);
@@ -68,46 +68,46 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 =  var(0.0);
                             decl ref<int<4>> v36 =  var(0);
                             decl ref<int<4>> v37 =  var(0);
-                            if(composite.ref.elem(v26, KS, int<4>)==0) {
-                                composite.ref.elem(v26, R23, real<8>) := 1.0;
-                                composite.ref.elem(v26, R46, real<8>) := 1.0;
-                                composite.ref.elem(v26, T23, real<8>) := 1.0;
-                                composite.ref.elem(v26, T46, real<8>) := 1.0;
+                            if(composite.ref.elem(v24, KS, int<4>)==0) {
+                                composite.ref.elem(v24, R23, real<8>) := 1.0;
+                                composite.ref.elem(v24, R46, real<8>) := 1.0;
+                                composite.ref.elem(v24, T23, real<8>) := 1.0;
+                                composite.ref.elem(v24, T46, real<8>) := 1.0;
                                 {
                                     for(decl ref<int<4>> v38 =  var(1) .. 23+1 : 1) {
-                                        composite.ref.elem(v26, R23, real<8>) := 0.50*composite.ref.elem(v26, R23, real<8>);
-                                        composite.ref.elem(v26, T23, real<8>) := 2.0*composite.ref.elem(v26, T23, real<8>);
+                                        composite.ref.elem(v24, R23, real<8>) := 0.50*composite.ref.elem(v24, R23, real<8>);
+                                        composite.ref.elem(v24, T23, real<8>) := 2.0*composite.ref.elem(v24, T23, real<8>);
                                     };
                                     v36 := 1+ceil(23+1-1/1)*1;
                                 };
                                 {
                                     for(decl ref<int<4>> v39 =  var(1) .. 46+1 : 1) {
-                                        composite.ref.elem(v26, R46, real<8>) := 0.50*composite.ref.elem(v26, R46, real<8>);
-                                        composite.ref.elem(v26, T46, real<8>) := 2.0*composite.ref.elem(v26, T46, real<8>);
+                                        composite.ref.elem(v24, R46, real<8>) := 0.50*composite.ref.elem(v24, R46, real<8>);
+                                        composite.ref.elem(v24, T46, real<8>) := 2.0*composite.ref.elem(v24, T46, real<8>);
                                     };
                                     v36 := 1+ceil(46+1-1/1)*1;
                                 };
-                                composite.ref.elem(v26, KS, int<4>) := 1;
+                                composite.ref.elem(v24, KS, int<4>) := 1;
                             } else { };
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v25, 0);
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v26, 0);
                             v37 := v27;
                             v31 := v37;
-                            v32 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v26, T23, real<8>)*v31;
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v24, 0);
+                            v32 := array.ref.elem.1D(v26, 0)-composite.ref.elem(v24, T23, real<8>)*v31;
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v25, 0);
                             v37 := v27;
                             v33 := v37;
-                            v34 := array.ref.elem.1D(v24, 0)-composite.ref.elem(v26, T23, real<8>)*v33;
+                            v34 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v24, T23, real<8>)*v33;
                             v27 := v31*v34+v32*v33;
-                            v37 := composite.ref.elem(v26, R23, real<8>)*v27;
+                            v37 := composite.ref.elem(v24, R23, real<8>)*v27;
                             v28 := v37;
-                            v35 := v27-composite.ref.elem(v26, T23, real<8>)*v28;
-                            v29 := composite.ref.elem(v26, T23, real<8>)*v35+v32*v34;
-                            v37 := composite.ref.elem(v26, R46, real<8>)*v29;
+                            v35 := v27-composite.ref.elem(v24, T23, real<8>)*v28;
+                            v29 := composite.ref.elem(v24, T23, real<8>)*v35+v32*v34;
+                            v37 := composite.ref.elem(v24, R46, real<8>)*v29;
                             v30 := v37;
-                            array.ref.elem.1D(v24, 0) := v29-composite.ref.elem(v26, T46, real<8>)*v30;
-                            return composite.ref.elem(v26, R46, real<8>)*array.ref.elem.1D(v24, 0);
-                        }(scalar.to.vector(v22), scalar.to.vector(v23));
-                        v18 := v18+[v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                            array.ref.elem.1D(v25, 0) := v29-composite.ref.elem(v24, T46, real<8>)*v30;
+                            return composite.ref.elem(v24, R46, real<8>)*array.ref.elem.1D(v25, 0);
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23));
+                        v18 := v18+fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 =  var(0.0);
                             decl ref<real<8>> v28 =  var(0.0);
                             decl ref<real<8>> v29 =  var(0.0);
@@ -119,46 +119,46 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 =  var(0.0);
                             decl ref<int<4>> v36 =  var(0);
                             decl ref<int<4>> v37 =  var(0);
-                            if(composite.ref.elem(v26, KS, int<4>)==0) {
-                                composite.ref.elem(v26, R23, real<8>) := 1.0;
-                                composite.ref.elem(v26, R46, real<8>) := 1.0;
-                                composite.ref.elem(v26, T23, real<8>) := 1.0;
-                                composite.ref.elem(v26, T46, real<8>) := 1.0;
+                            if(composite.ref.elem(v24, KS, int<4>)==0) {
+                                composite.ref.elem(v24, R23, real<8>) := 1.0;
+                                composite.ref.elem(v24, R46, real<8>) := 1.0;
+                                composite.ref.elem(v24, T23, real<8>) := 1.0;
+                                composite.ref.elem(v24, T46, real<8>) := 1.0;
                                 {
                                     for(decl ref<int<4>> v38 =  var(1) .. 23+1 : 1) {
-                                        composite.ref.elem(v26, R23, real<8>) := 0.50*composite.ref.elem(v26, R23, real<8>);
-                                        composite.ref.elem(v26, T23, real<8>) := 2.0*composite.ref.elem(v26, T23, real<8>);
+                                        composite.ref.elem(v24, R23, real<8>) := 0.50*composite.ref.elem(v24, R23, real<8>);
+                                        composite.ref.elem(v24, T23, real<8>) := 2.0*composite.ref.elem(v24, T23, real<8>);
                                     };
                                     v36 := 1+ceil(23+1-1/1)*1;
                                 };
                                 {
                                     for(decl ref<int<4>> v39 =  var(1) .. 46+1 : 1) {
-                                        composite.ref.elem(v26, R46, real<8>) := 0.50*composite.ref.elem(v26, R46, real<8>);
-                                        composite.ref.elem(v26, T46, real<8>) := 2.0*composite.ref.elem(v26, T46, real<8>);
+                                        composite.ref.elem(v24, R46, real<8>) := 0.50*composite.ref.elem(v24, R46, real<8>);
+                                        composite.ref.elem(v24, T46, real<8>) := 2.0*composite.ref.elem(v24, T46, real<8>);
                                     };
                                     v36 := 1+ceil(46+1-1/1)*1;
                                 };
-                                composite.ref.elem(v26, KS, int<4>) := 1;
+                                composite.ref.elem(v24, KS, int<4>) := 1;
                             } else { };
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v25, 0);
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v26, 0);
                             v37 := v27;
                             v31 := v37;
-                            v32 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v26, T23, real<8>)*v31;
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v24, 0);
+                            v32 := array.ref.elem.1D(v26, 0)-composite.ref.elem(v24, T23, real<8>)*v31;
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v25, 0);
                             v37 := v27;
                             v33 := v37;
-                            v34 := array.ref.elem.1D(v24, 0)-composite.ref.elem(v26, T23, real<8>)*v33;
+                            v34 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v24, T23, real<8>)*v33;
                             v27 := v31*v34+v32*v33;
-                            v37 := composite.ref.elem(v26, R23, real<8>)*v27;
+                            v37 := composite.ref.elem(v24, R23, real<8>)*v27;
                             v28 := v37;
-                            v35 := v27-composite.ref.elem(v26, T23, real<8>)*v28;
-                            v29 := composite.ref.elem(v26, T23, real<8>)*v35+v32*v34;
-                            v37 := composite.ref.elem(v26, R46, real<8>)*v29;
+                            v35 := v27-composite.ref.elem(v24, T23, real<8>)*v28;
+                            v29 := composite.ref.elem(v24, T23, real<8>)*v35+v32*v34;
+                            v37 := composite.ref.elem(v24, R46, real<8>)*v29;
                             v30 := v37;
-                            array.ref.elem.1D(v24, 0) := v29-composite.ref.elem(v26, T46, real<8>)*v30;
-                            return composite.ref.elem(v26, R46, real<8>)*array.ref.elem.1D(v24, 0);
-                        }(scalar.to.vector(v22), scalar.to.vector(v23));
-                        v18 := v18+[v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                            array.ref.elem.1D(v25, 0) := v29-composite.ref.elem(v24, T46, real<8>)*v30;
+                            return composite.ref.elem(v24, R46, real<8>)*array.ref.elem.1D(v25, 0);
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23));
+                        v18 := v18+fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 =  var(0.0);
                             decl ref<real<8>> v28 =  var(0.0);
                             decl ref<real<8>> v29 =  var(0.0);
@@ -170,46 +170,46 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 =  var(0.0);
                             decl ref<int<4>> v36 =  var(0);
                             decl ref<int<4>> v37 =  var(0);
-                            if(composite.ref.elem(v26, KS, int<4>)==0) {
-                                composite.ref.elem(v26, R23, real<8>) := 1.0;
-                                composite.ref.elem(v26, R46, real<8>) := 1.0;
-                                composite.ref.elem(v26, T23, real<8>) := 1.0;
-                                composite.ref.elem(v26, T46, real<8>) := 1.0;
+                            if(composite.ref.elem(v24, KS, int<4>)==0) {
+                                composite.ref.elem(v24, R23, real<8>) := 1.0;
+                                composite.ref.elem(v24, R46, real<8>) := 1.0;
+                                composite.ref.elem(v24, T23, real<8>) := 1.0;
+                                composite.ref.elem(v24, T46, real<8>) := 1.0;
                                 {
                                     for(decl ref<int<4>> v38 =  var(1) .. 23+1 : 1) {
-                                        composite.ref.elem(v26, R23, real<8>) := 0.50*composite.ref.elem(v26, R23, real<8>);
-                                        composite.ref.elem(v26, T23, real<8>) := 2.0*composite.ref.elem(v26, T23, real<8>);
+                                        composite.ref.elem(v24, R23, real<8>) := 0.50*composite.ref.elem(v24, R23, real<8>);
+                                        composite.ref.elem(v24, T23, real<8>) := 2.0*composite.ref.elem(v24, T23, real<8>);
                                     };
                                     v36 := 1+ceil(23+1-1/1)*1;
                                 };
                                 {
                                     for(decl ref<int<4>> v39 =  var(1) .. 46+1 : 1) {
-                                        composite.ref.elem(v26, R46, real<8>) := 0.50*composite.ref.elem(v26, R46, real<8>);
-                                        composite.ref.elem(v26, T46, real<8>) := 2.0*composite.ref.elem(v26, T46, real<8>);
+                                        composite.ref.elem(v24, R46, real<8>) := 0.50*composite.ref.elem(v24, R46, real<8>);
+                                        composite.ref.elem(v24, T46, real<8>) := 2.0*composite.ref.elem(v24, T46, real<8>);
                                     };
                                     v36 := 1+ceil(46+1-1/1)*1;
                                 };
-                                composite.ref.elem(v26, KS, int<4>) := 1;
+                                composite.ref.elem(v24, KS, int<4>) := 1;
                             } else { };
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v25, 0);
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v26, 0);
                             v37 := v27;
                             v31 := v37;
-                            v32 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v26, T23, real<8>)*v31;
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v24, 0);
+                            v32 := array.ref.elem.1D(v26, 0)-composite.ref.elem(v24, T23, real<8>)*v31;
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v25, 0);
                             v37 := v27;
                             v33 := v37;
-                            v34 := array.ref.elem.1D(v24, 0)-composite.ref.elem(v26, T23, real<8>)*v33;
+                            v34 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v24, T23, real<8>)*v33;
                             v27 := v31*v34+v32*v33;
-                            v37 := composite.ref.elem(v26, R23, real<8>)*v27;
+                            v37 := composite.ref.elem(v24, R23, real<8>)*v27;
                             v28 := v37;
-                            v35 := v27-composite.ref.elem(v26, T23, real<8>)*v28;
-                            v29 := composite.ref.elem(v26, T23, real<8>)*v35+v32*v34;
-                            v37 := composite.ref.elem(v26, R46, real<8>)*v29;
+                            v35 := v27-composite.ref.elem(v24, T23, real<8>)*v28;
+                            v29 := composite.ref.elem(v24, T23, real<8>)*v35+v32*v34;
+                            v37 := composite.ref.elem(v24, R46, real<8>)*v29;
                             v30 := v37;
-                            array.ref.elem.1D(v24, 0) := v29-composite.ref.elem(v26, T46, real<8>)*v30;
-                            return composite.ref.elem(v26, R46, real<8>)*array.ref.elem.1D(v24, 0);
-                        }(scalar.to.vector(v22), scalar.to.vector(v23));
-                        v18 := v18+[v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                            array.ref.elem.1D(v25, 0) := v29-composite.ref.elem(v24, T46, real<8>)*v30;
+                            return composite.ref.elem(v24, R46, real<8>)*array.ref.elem.1D(v25, 0);
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23));
+                        v18 := v18+fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 =  var(0.0);
                             decl ref<real<8>> v28 =  var(0.0);
                             decl ref<real<8>> v29 =  var(0.0);
@@ -221,52 +221,52 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 =  var(0.0);
                             decl ref<int<4>> v36 =  var(0);
                             decl ref<int<4>> v37 =  var(0);
-                            if(composite.ref.elem(v26, KS, int<4>)==0) {
-                                composite.ref.elem(v26, R23, real<8>) := 1.0;
-                                composite.ref.elem(v26, R46, real<8>) := 1.0;
-                                composite.ref.elem(v26, T23, real<8>) := 1.0;
-                                composite.ref.elem(v26, T46, real<8>) := 1.0;
+                            if(composite.ref.elem(v24, KS, int<4>)==0) {
+                                composite.ref.elem(v24, R23, real<8>) := 1.0;
+                                composite.ref.elem(v24, R46, real<8>) := 1.0;
+                                composite.ref.elem(v24, T23, real<8>) := 1.0;
+                                composite.ref.elem(v24, T46, real<8>) := 1.0;
                                 {
                                     for(decl ref<int<4>> v38 =  var(1) .. 23+1 : 1) {
-                                        composite.ref.elem(v26, R23, real<8>) := 0.50*composite.ref.elem(v26, R23, real<8>);
-                                        composite.ref.elem(v26, T23, real<8>) := 2.0*composite.ref.elem(v26, T23, real<8>);
+                                        composite.ref.elem(v24, R23, real<8>) := 0.50*composite.ref.elem(v24, R23, real<8>);
+                                        composite.ref.elem(v24, T23, real<8>) := 2.0*composite.ref.elem(v24, T23, real<8>);
                                     };
                                     v36 := 1+ceil(23+1-1/1)*1;
                                 };
                                 {
                                     for(decl ref<int<4>> v39 =  var(1) .. 46+1 : 1) {
-                                        composite.ref.elem(v26, R46, real<8>) := 0.50*composite.ref.elem(v26, R46, real<8>);
-                                        composite.ref.elem(v26, T46, real<8>) := 2.0*composite.ref.elem(v26, T46, real<8>);
+                                        composite.ref.elem(v24, R46, real<8>) := 0.50*composite.ref.elem(v24, R46, real<8>);
+                                        composite.ref.elem(v24, T46, real<8>) := 2.0*composite.ref.elem(v24, T46, real<8>);
                                     };
                                     v36 := 1+ceil(46+1-1/1)*1;
                                 };
-                                composite.ref.elem(v26, KS, int<4>) := 1;
+                                composite.ref.elem(v24, KS, int<4>) := 1;
                             } else { };
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v25, 0);
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v26, 0);
                             v37 := v27;
                             v31 := v37;
-                            v32 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v26, T23, real<8>)*v31;
-                            v27 := composite.ref.elem(v26, R23, real<8>)*array.ref.elem.1D(v24, 0);
+                            v32 := array.ref.elem.1D(v26, 0)-composite.ref.elem(v24, T23, real<8>)*v31;
+                            v27 := composite.ref.elem(v24, R23, real<8>)*array.ref.elem.1D(v25, 0);
                             v37 := v27;
                             v33 := v37;
-                            v34 := array.ref.elem.1D(v24, 0)-composite.ref.elem(v26, T23, real<8>)*v33;
+                            v34 := array.ref.elem.1D(v25, 0)-composite.ref.elem(v24, T23, real<8>)*v33;
                             v27 := v31*v34+v32*v33;
-                            v37 := composite.ref.elem(v26, R23, real<8>)*v27;
+                            v37 := composite.ref.elem(v24, R23, real<8>)*v27;
                             v28 := v37;
-                            v35 := v27-composite.ref.elem(v26, T23, real<8>)*v28;
-                            v29 := composite.ref.elem(v26, T23, real<8>)*v35+v32*v34;
-                            v37 := composite.ref.elem(v26, R46, real<8>)*v29;
+                            v35 := v27-composite.ref.elem(v24, T23, real<8>)*v28;
+                            v29 := composite.ref.elem(v24, T23, real<8>)*v35+v32*v34;
+                            v37 := composite.ref.elem(v24, R46, real<8>)*v29;
                             v30 := v37;
-                            array.ref.elem.1D(v24, 0) := v29-composite.ref.elem(v26, T46, real<8>)*v30;
-                            return composite.ref.elem(v26, R46, real<8>)*array.ref.elem.1D(v24, 0);
-                        }(scalar.to.vector(v22), scalar.to.vector(v23));
-                        array.ref.elem.1D(composite.ref.elem(v17, key_array, vector<int<4>,1048576>), v41) := v21*v18;
+                            array.ref.elem.1D(v25, 0) := v29-composite.ref.elem(v24, T46, real<8>)*v30;
+                            return composite.ref.elem(v24, R46, real<8>)*array.ref.elem.1D(v25, 0);
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23));
+                        array.ref.elem.1D(composite.ref.elem(v15, key_array, vector<int<4>,1048576>), v41) := v21*v18;
                     };
                     v19 := 0+ceil(int.lshift(1, 20)-0/1)*1;
                 };
             };
-        }(314159265.00, 1220703125.00);
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v44](int<4> v43){
+        }(v1, 314159265.00, 1220703125.00);
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v43, int<4> v44){
             decl ref<int<4>> v45 =  var(0);
             decl ref<int<4>> v46 =  var(0);
             decl ref<int<4>> v47 =  var(0);
@@ -278,17 +278,17 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             decl ref<int<4>> v53 =  var(0);
             decl ref<vector<int<4>,65536>> v54 =  var(undefined(vector<int<4>,65536>));
             {
-                array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), v43) := v43;
-                array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), v43+10) := int.lshift(1, 16)-v43;
+                array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), v44) := v44;
+                array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), v44+10) := int.lshift(1, 16)-v44;
                 {
                     for(decl ref<int<4>> v55 =  var(0) .. 5 : 1) 
-                        array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), v55) := array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), array.ref.elem.1D(composite.ref.elem(v44, test_index_array, vector<int<4>,5>), v55))
+                        array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), v55) := array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), array.ref.elem.1D(composite.ref.elem(v43, test_index_array, vector<int<4>,5>), v55))
                     ;
                     v45 := 0+ceil(5-0/1)*1;
                 };
                 {
                     for(decl ref<int<4>> v56 =  var(0) .. int.lshift(1, 16) : 1) 
-                        array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v56) := 0
+                        array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v56) := 0
                     ;
                     v45 := 0+ceil(int.lshift(1, 16)-0/1)*1;
                 };
@@ -301,8 +301,8 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             };
             {
                 for(decl ref<int<4>> v58 =  var(0) .. int.lshift(1, 20) : 1) {
-                    array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), v58) := array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), v58);
-                    int.postInc(array.ref.elem.1D(v54, array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), v58)));
+                    array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), v58) := array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), v58);
+                    int.postInc(array.ref.elem.1D(v54, array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), v58)));
                 };
                 v45 := 0+ceil(int.lshift(1, 20)-0/1)*1;
             };
@@ -315,7 +315,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             {
                 {
                     for(decl ref<int<4>> v60 =  var(0) .. int.lshift(1, 16) : 1) 
-                        array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v60) := array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v60)+array.ref.elem.1D(v54, v60)
+                        array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v60) := array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v60)+array.ref.elem.1D(v54, v60)
                     ;
                     v45 := 0+ceil(int.lshift(1, 16)-0/1)*1;
                 };
@@ -323,54 +323,54 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             {
                 {
                     for(decl ref<int<4>> v68 =  var(0) .. 5 : 1) {
-                        v47 := array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), v68);
-                        if(0<=v47&&[v47]fun[ref<int<4>> v66]()return v66<=int.lshift(1, 20)-1) {
+                        v47 := array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), v68);
+                        if(0<=v47&&bind()->fun(ref<int<4>> v66)return v66<=int.lshift(1, 20)-1(v47)) {
                             decl int<4> v61 = 'W';
                             switch(v61) {
                                 case 'S': if(v68<=2) {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 case 'W': if(v68<2) {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43-2)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44-2)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 case 'A': if(v68<=2) {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43-1)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44-1)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43-1)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44-1)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
-                                case 'B': if(v68==1||[v68]fun[ref<int<4>> v62]()return v62==2||[v68]fun[ref<int<4>> v64]()return v64==4) {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                case 'B': if(v68==1||bind()->fun(ref<int<4>> v62)return v62==2(v68)||bind()->fun(ref<int<4>> v64)return v64==4(v68)) {
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 case 'C': if(v68<=2) {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 default: { }
                             };
@@ -378,27 +378,27 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     };
                     v45 := 0+ceil(5-0/1)*1;
                 };
-                if(v43==10) composite.ref.elem(v44, key_buff_ptr_global, array<int<4>,1>) := composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>) else { };
+                if(v44==10) composite.ref.elem(v43, key_buff_ptr_global, array<int<4>,1>) := composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>) else { };
             };
-        }(1);
+        }(v1, 1);
         composite.ref.elem(v1, passed_verification, int<4>) := 0;
         if('W'!='S') printf(string.as.char.pointer("\n   iteration\n"), varlist.pack(())) else { };
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v71](int<4> v70){
-            array.ref.elem.1D(composite.ref.elem(v71, start, vector<real<8>,64>), v70) := [v71]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72](){
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v70, int<4> v71){
+            array.ref.elem.1D(composite.ref.elem(v70, start, vector<real<8>,64>), v71) := fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72){
                 decl ref<real<8>> v73 =  var(0.0);
-                [v72]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v75](ref<array<real<8>,1>> v74){
+                fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v74, ref<array<real<8>,1>> v75){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v76 =  var(undefined(struct<tv_sec:int<8>,tv_usec:int<8>>));
                     gettimeofday(scalar.to.vector(v76), null);
-                    if(composite.ref.elem(v75, sec, int<4>)<0) composite.ref.elem(v75, sec, int<4>) := composite.ref.elem(v76, tv_sec, int<8>) else { };
-                    array.ref.elem.1D(v74, 0) := composite.ref.elem(v76, tv_sec, int<8>)-composite.ref.elem(v75, sec, int<4>)+1.0e-6*composite.ref.elem(v76, tv_usec, int<8>);
-                }(scalar.to.vector(v73));
+                    if(composite.ref.elem(v74, sec, int<4>)<0) composite.ref.elem(v74, sec, int<4>) := composite.ref.elem(v76, tv_sec, int<8>) else { };
+                    array.ref.elem.1D(v75, 0) := composite.ref.elem(v76, tv_sec, int<8>)-composite.ref.elem(v74, sec, int<4>)+1.0e-6*composite.ref.elem(v76, tv_usec, int<8>);
+                }(v72, scalar.to.vector(v73));
                 return v73;
-            }();
-        }(0);
+            }(v70);
+        }(v1, 0);
         {
             for(decl ref<int<4>> v80 =  var(1) .. 10+1 : 1) {
                 if('W'!='S') printf(string.as.char.pointer("        %d\n"), varlist.pack((v80))) else { };
-                [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v44](int<4> v43){
+                fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v43, int<4> v44){
                     decl ref<int<4>> v45 =  var(0);
                     decl ref<int<4>> v46 =  var(0);
                     decl ref<int<4>> v47 =  var(0);
@@ -410,17 +410,17 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     decl ref<int<4>> v53 =  var(0);
                     decl ref<vector<int<4>,65536>> v54 =  var(undefined(vector<int<4>,65536>));
                     {
-                        array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), v43) := v43;
-                        array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), v43+10) := int.lshift(1, 16)-v43;
+                        array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), v44) := v44;
+                        array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), v44+10) := int.lshift(1, 16)-v44;
                         {
                             for(decl ref<int<4>> v55 =  var(0) .. 5 : 1) 
-                                array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), v55) := array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), array.ref.elem.1D(composite.ref.elem(v44, test_index_array, vector<int<4>,5>), v55))
+                                array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), v55) := array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), array.ref.elem.1D(composite.ref.elem(v43, test_index_array, vector<int<4>,5>), v55))
                             ;
                             v45 := 0+ceil(5-0/1)*1;
                         };
                         {
                             for(decl ref<int<4>> v56 =  var(0) .. int.lshift(1, 16) : 1) 
-                                array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v56) := 0
+                                array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v56) := 0
                             ;
                             v45 := 0+ceil(int.lshift(1, 16)-0/1)*1;
                         };
@@ -433,8 +433,8 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     };
                     {
                         for(decl ref<int<4>> v58 =  var(0) .. int.lshift(1, 20) : 1) {
-                            array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), v58) := array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), v58);
-                            int.postInc(array.ref.elem.1D(v54, array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), v58)));
+                            array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), v58) := array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), v58);
+                            int.postInc(array.ref.elem.1D(v54, array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), v58)));
                         };
                         v45 := 0+ceil(int.lshift(1, 20)-0/1)*1;
                     };
@@ -447,7 +447,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     {
                         {
                             for(decl ref<int<4>> v60 =  var(0) .. int.lshift(1, 16) : 1) 
-                                array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v60) := array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v60)+array.ref.elem.1D(v54, v60)
+                                array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v60) := array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v60)+array.ref.elem.1D(v54, v60)
                             ;
                             v45 := 0+ceil(int.lshift(1, 16)-0/1)*1;
                         };
@@ -455,54 +455,54 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     {
                         {
                             for(decl ref<int<4>> v68 =  var(0) .. 5 : 1) {
-                                v47 := array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), v68);
-                                if(0<=v47&&[v47]fun[ref<int<4>> v66]()return v66<=int.lshift(1, 20)-1) {
+                                v47 := array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), v68);
+                                if(0<=v47&&bind()->fun(ref<int<4>> v66)return v66<=int.lshift(1, 20)-1(v47)) {
                                     decl int<4> v61 = 'W';
                                     switch(v61) {
                                         case 'S': if(v68<=2) {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         case 'W': if(v68<2) {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43-2)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44-2)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         case 'A': if(v68<=2) {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43-1)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44-1)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43-1)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44-1)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
-                                        case 'B': if(v68==1||[v68]fun[ref<int<4>> v62]()return v62==2||[v68]fun[ref<int<4>> v64]()return v64==4) {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                        case 'B': if(v68==1||bind()->fun(ref<int<4>> v62)return v62==2(v68)||bind()->fun(ref<int<4>> v64)return v64==4(v68)) {
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         case 'C': if(v68<=2) {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)+v43)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)+v44)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), v68)-v43)) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, v68)));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), v47-1), array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), v68)-v44)) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, v68)));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         default: { }
                                     };
@@ -510,32 +510,32 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             };
                             v45 := 0+ceil(5-0/1)*1;
                         };
-                        if(v43==10) composite.ref.elem(v44, key_buff_ptr_global, array<int<4>,1>) := composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>) else { };
+                        if(v44==10) composite.ref.elem(v43, key_buff_ptr_global, array<int<4>,1>) := composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>) else { };
                     };
-                }(v80);
+                }(v1, v80);
             };
             v5 := 1+ceil(10+1-1/1)*1;
         };
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v82](int<4> v81){
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v81, int<4> v82){
             decl ref<real<8>> v83 =  var(0.0);
             decl ref<real<8>> v84 =  var(0.0);
-            v84 := [v82]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72](){
+            v84 := fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72){
                 decl ref<real<8>> v73 =  var(0.0);
-                [v72]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v75](ref<array<real<8>,1>> v74){
+                fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v74, ref<array<real<8>,1>> v75){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v76 =  var(undefined(struct<tv_sec:int<8>,tv_usec:int<8>>));
                     gettimeofday(scalar.to.vector(v76), null);
-                    if(composite.ref.elem(v75, sec, int<4>)<0) composite.ref.elem(v75, sec, int<4>) := composite.ref.elem(v76, tv_sec, int<8>) else { };
-                    array.ref.elem.1D(v74, 0) := composite.ref.elem(v76, tv_sec, int<8>)-composite.ref.elem(v75, sec, int<4>)+1.0e-6*composite.ref.elem(v76, tv_usec, int<8>);
-                }(scalar.to.vector(v73));
+                    if(composite.ref.elem(v74, sec, int<4>)<0) composite.ref.elem(v74, sec, int<4>) := composite.ref.elem(v76, tv_sec, int<8>) else { };
+                    array.ref.elem.1D(v75, 0) := composite.ref.elem(v76, tv_sec, int<8>)-composite.ref.elem(v74, sec, int<4>)+1.0e-6*composite.ref.elem(v76, tv_usec, int<8>);
+                }(v72, scalar.to.vector(v73));
                 return v73;
-            }();
-            v83 := v84-array.ref.elem.1D(composite.ref.elem(v82, start, vector<real<8>,64>), v81);
-            array.ref.elem.1D(composite.ref.elem(v82, elapsed, vector<real<8>,64>), v81) := array.ref.elem.1D(composite.ref.elem(v82, elapsed, vector<real<8>,64>), v81)+v83;
-        }(0);
-        v8 := [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v87](int<4> v86){
-            return array.ref.elem.1D(composite.ref.elem(v87, elapsed, vector<real<8>,64>), v86);
-        }(0);
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v89](){
+            }(v81);
+            v83 := v84-array.ref.elem.1D(composite.ref.elem(v81, start, vector<real<8>,64>), v82);
+            array.ref.elem.1D(composite.ref.elem(v81, elapsed, vector<real<8>,64>), v82) := array.ref.elem.1D(composite.ref.elem(v81, elapsed, vector<real<8>,64>), v82)+v83;
+        }(v1, 0);
+        v8 := fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v86, int<4> v87){
+            return array.ref.elem.1D(composite.ref.elem(v86, elapsed, vector<real<8>,64>), v87);
+        }(v1, 0);
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v89){
             decl ref<int<4>> v90 =  var(0);
             decl ref<int<4>> v91 =  var(0);
             decl ref<int<4>> v92 =  var(0);
@@ -557,13 +557,13 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             if(int.ne(v91, 0)) {
                 printf(string.as.char.pointer("Full_verify: number of keys out of sort: %d\n"), varlist.pack((v91)));
             } else int.postInc(composite.ref.elem(v89, passed_verification, int<4>));
-        }();
+        }(v1);
         if(int.ne(composite.ref.elem(v1, passed_verification, int<4>), 5*10+1)) composite.ref.elem(v1, passed_verification, int<4>) := 0 else { };
         fun(ref<array<char,1>> v98, char v99, int<4> v100, int<4> v101, int<4> v102, int<4> v103, int<4> v104, real<8> v105, real<8> v106, ref<array<char,1>> v107, int<4> v108, ref<array<char,1>> v109, ref<array<char,1>> v110, ref<array<char,1>> v111, ref<array<char,1>> v112, ref<array<char,1>> v113, ref<array<char,1>> v114, ref<array<char,1>> v115, ref<array<char,1>> v116, ref<array<char,1>> v117){
             decl ref<array<char,1>> v118 =  var("1000");
             printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v98)));
             printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((v99)));
-            if(v101==0&&[v102]fun[int<4> v119]()return v119==0) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v100))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v100, v101, v102)));
+            if(v101==0&&bind()->fun(int<4> v119)return v119==0(v102)) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v100))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v100, v101, v102)));
             printf(string.as.char.pointer(" Iterations      =             %12d\n"), varlist.pack((v103)));
             printf(string.as.char.pointer(" Threads         =             %12d\n"), varlist.pack((v104)));
             printf(string.as.char.pointer(" Time in seconds =             %12.2f\n"), varlist.pack((0.0)));
@@ -630,12 +630,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         printf(string.as.char.pointer("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n"), varlist.pack(()));
         printf(string.as.char.pointer(" Size:  %d  (class %c)\n"), varlist.pack((int.lshift(1, 20), 'W')));
         printf(string.as.char.pointer(" Iterations:   %d\n"), varlist.pack((10)));
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v13](int<4> v12){
-            (array.ref.elem.1D(composite.ref.elem(v13, elapsed, vector<real<8>,64>), CAST<uint<4>>(v12)) := 0.0);
-        }(0);
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v17](real<8> v15, real<8> v16){
-            decl ref<real<8>> v22 = ( var(v15));
-            decl ref<real<8>> v23 = ( var(v16));
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v12, int<4> v13){
+            (array.ref.elem.1D(composite.ref.elem(v12, elapsed, vector<real<8>,64>), CAST<uint<4>>(v13)) := 0.0);
+        }(v1, 0);
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v15, real<8> v16, real<8> v17){
+            decl ref<real<8>> v22 = ( var(v16));
+            decl ref<real<8>> v23 = ( var(v17));
             {
                 decl ref<real<8>> v18 = ( var(0.0));
                 decl ref<int<4>> v19 = ( var(0));
@@ -644,7 +644,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 (v21 := (int.lshift(1, 16)/4));
                 {
                     for(decl ref<int<4>> v41 = ( var(0)) .. int.lshift(1, 20) : 1) {
-                        (v18 := [v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                        (v18 := fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 = ( var(0.0));
                             decl ref<real<8>> v28 = ( var(0.0));
                             decl ref<real<8>> v29 = ( var(0.0));
@@ -656,46 +656,46 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 = ( var(0.0));
                             decl ref<int<4>> v36 = ( var(0));
                             decl ref<int<4>> v37 = ( var(0));
-                            if((( *composite.ref.elem(v26, KS, int<4>))==0)) {
-                                (composite.ref.elem(v26, R23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, R46, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T46, real<8>) := 1.0);
+                            if((( *composite.ref.elem(v24, KS, int<4>))==0)) {
+                                (composite.ref.elem(v24, R23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, R46, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T46, real<8>) := 1.0);
                                 {
                                     for(decl ref<int<4>> v38 = ( var(1)) .. (23+1) : 1) {
-                                        (composite.ref.elem(v26, R23, real<8>) := (0.50*( *composite.ref.elem(v26, R23, real<8>))));
-                                        (composite.ref.elem(v26, T23, real<8>) := (2.0*( *composite.ref.elem(v26, T23, real<8>))));
+                                        (composite.ref.elem(v24, R23, real<8>) := (0.50*( *composite.ref.elem(v24, R23, real<8>))));
+                                        (composite.ref.elem(v24, T23, real<8>) := (2.0*( *composite.ref.elem(v24, T23, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((23+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
                                 {
                                     for(decl ref<int<4>> v39 = ( var(1)) .. (46+1) : 1) {
-                                        (composite.ref.elem(v26, R46, real<8>) := (0.50*( *composite.ref.elem(v26, R46, real<8>))));
-                                        (composite.ref.elem(v26, T46, real<8>) := (2.0*( *composite.ref.elem(v26, T46, real<8>))));
+                                        (composite.ref.elem(v24, R46, real<8>) := (0.50*( *composite.ref.elem(v24, R46, real<8>))));
+                                        (composite.ref.elem(v24, T46, real<8>) := (2.0*( *composite.ref.elem(v24, T46, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((46+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
-                                (composite.ref.elem(v26, KS, int<4>) := 1);
+                                (composite.ref.elem(v24, KS, int<4>) := 1);
                             } else { };
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v26, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v31 := CAST<real<8>>(( *v37)));
-                            (v32 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v31))));
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v24, 0))));
+                            (v32 := (( *array.ref.elem.1D(v26, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v31))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v33 := CAST<real<8>>(( *v37)));
-                            (v34 := (( *array.ref.elem.1D(v24, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v33))));
+                            (v34 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v33))));
                             (v27 := ((( *v31)*( *v34))+(( *v32)*( *v33))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R23, real<8>))*( *v27))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R23, real<8>))*( *v27))));
                             (v28 := CAST<real<8>>(( *v37)));
-                            (v35 := (( *v27)-(( *composite.ref.elem(v26, T23, real<8>))*( *v28))));
-                            (v29 := ((( *composite.ref.elem(v26, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R46, real<8>))*( *v29))));
+                            (v35 := (( *v27)-(( *composite.ref.elem(v24, T23, real<8>))*( *v28))));
+                            (v29 := ((( *composite.ref.elem(v24, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R46, real<8>))*( *v29))));
                             (v30 := CAST<real<8>>(( *v37)));
-                            (array.ref.elem.1D(v24, 0) := (( *v29)-(( *composite.ref.elem(v26, T46, real<8>))*( *v30))));
-                            return (( *composite.ref.elem(v26, R46, real<8>))*( *array.ref.elem.1D(v24, 0)));
-                        }(scalar.to.vector(v22), scalar.to.vector(v23)));
-                        (v18 := (( *v18)+[v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                            (array.ref.elem.1D(v25, 0) := (( *v29)-(( *composite.ref.elem(v24, T46, real<8>))*( *v30))));
+                            return (( *composite.ref.elem(v24, R46, real<8>))*( *array.ref.elem.1D(v25, 0)));
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23)));
+                        (v18 := (( *v18)+fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 = ( var(0.0));
                             decl ref<real<8>> v28 = ( var(0.0));
                             decl ref<real<8>> v29 = ( var(0.0));
@@ -707,46 +707,46 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 = ( var(0.0));
                             decl ref<int<4>> v36 = ( var(0));
                             decl ref<int<4>> v37 = ( var(0));
-                            if((( *composite.ref.elem(v26, KS, int<4>))==0)) {
-                                (composite.ref.elem(v26, R23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, R46, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T46, real<8>) := 1.0);
+                            if((( *composite.ref.elem(v24, KS, int<4>))==0)) {
+                                (composite.ref.elem(v24, R23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, R46, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T46, real<8>) := 1.0);
                                 {
                                     for(decl ref<int<4>> v38 = ( var(1)) .. (23+1) : 1) {
-                                        (composite.ref.elem(v26, R23, real<8>) := (0.50*( *composite.ref.elem(v26, R23, real<8>))));
-                                        (composite.ref.elem(v26, T23, real<8>) := (2.0*( *composite.ref.elem(v26, T23, real<8>))));
+                                        (composite.ref.elem(v24, R23, real<8>) := (0.50*( *composite.ref.elem(v24, R23, real<8>))));
+                                        (composite.ref.elem(v24, T23, real<8>) := (2.0*( *composite.ref.elem(v24, T23, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((23+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
                                 {
                                     for(decl ref<int<4>> v39 = ( var(1)) .. (46+1) : 1) {
-                                        (composite.ref.elem(v26, R46, real<8>) := (0.50*( *composite.ref.elem(v26, R46, real<8>))));
-                                        (composite.ref.elem(v26, T46, real<8>) := (2.0*( *composite.ref.elem(v26, T46, real<8>))));
+                                        (composite.ref.elem(v24, R46, real<8>) := (0.50*( *composite.ref.elem(v24, R46, real<8>))));
+                                        (composite.ref.elem(v24, T46, real<8>) := (2.0*( *composite.ref.elem(v24, T46, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((46+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
-                                (composite.ref.elem(v26, KS, int<4>) := 1);
+                                (composite.ref.elem(v24, KS, int<4>) := 1);
                             } else { };
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v26, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v31 := CAST<real<8>>(( *v37)));
-                            (v32 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v31))));
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v24, 0))));
+                            (v32 := (( *array.ref.elem.1D(v26, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v31))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v33 := CAST<real<8>>(( *v37)));
-                            (v34 := (( *array.ref.elem.1D(v24, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v33))));
+                            (v34 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v33))));
                             (v27 := ((( *v31)*( *v34))+(( *v32)*( *v33))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R23, real<8>))*( *v27))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R23, real<8>))*( *v27))));
                             (v28 := CAST<real<8>>(( *v37)));
-                            (v35 := (( *v27)-(( *composite.ref.elem(v26, T23, real<8>))*( *v28))));
-                            (v29 := ((( *composite.ref.elem(v26, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R46, real<8>))*( *v29))));
+                            (v35 := (( *v27)-(( *composite.ref.elem(v24, T23, real<8>))*( *v28))));
+                            (v29 := ((( *composite.ref.elem(v24, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R46, real<8>))*( *v29))));
                             (v30 := CAST<real<8>>(( *v37)));
-                            (array.ref.elem.1D(v24, 0) := (( *v29)-(( *composite.ref.elem(v26, T46, real<8>))*( *v30))));
-                            return (( *composite.ref.elem(v26, R46, real<8>))*( *array.ref.elem.1D(v24, 0)));
-                        }(scalar.to.vector(v22), scalar.to.vector(v23))));
-                        (v18 := (( *v18)+[v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                            (array.ref.elem.1D(v25, 0) := (( *v29)-(( *composite.ref.elem(v24, T46, real<8>))*( *v30))));
+                            return (( *composite.ref.elem(v24, R46, real<8>))*( *array.ref.elem.1D(v25, 0)));
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23))));
+                        (v18 := (( *v18)+fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 = ( var(0.0));
                             decl ref<real<8>> v28 = ( var(0.0));
                             decl ref<real<8>> v29 = ( var(0.0));
@@ -758,46 +758,46 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 = ( var(0.0));
                             decl ref<int<4>> v36 = ( var(0));
                             decl ref<int<4>> v37 = ( var(0));
-                            if((( *composite.ref.elem(v26, KS, int<4>))==0)) {
-                                (composite.ref.elem(v26, R23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, R46, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T46, real<8>) := 1.0);
+                            if((( *composite.ref.elem(v24, KS, int<4>))==0)) {
+                                (composite.ref.elem(v24, R23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, R46, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T46, real<8>) := 1.0);
                                 {
                                     for(decl ref<int<4>> v38 = ( var(1)) .. (23+1) : 1) {
-                                        (composite.ref.elem(v26, R23, real<8>) := (0.50*( *composite.ref.elem(v26, R23, real<8>))));
-                                        (composite.ref.elem(v26, T23, real<8>) := (2.0*( *composite.ref.elem(v26, T23, real<8>))));
+                                        (composite.ref.elem(v24, R23, real<8>) := (0.50*( *composite.ref.elem(v24, R23, real<8>))));
+                                        (composite.ref.elem(v24, T23, real<8>) := (2.0*( *composite.ref.elem(v24, T23, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((23+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
                                 {
                                     for(decl ref<int<4>> v39 = ( var(1)) .. (46+1) : 1) {
-                                        (composite.ref.elem(v26, R46, real<8>) := (0.50*( *composite.ref.elem(v26, R46, real<8>))));
-                                        (composite.ref.elem(v26, T46, real<8>) := (2.0*( *composite.ref.elem(v26, T46, real<8>))));
+                                        (composite.ref.elem(v24, R46, real<8>) := (0.50*( *composite.ref.elem(v24, R46, real<8>))));
+                                        (composite.ref.elem(v24, T46, real<8>) := (2.0*( *composite.ref.elem(v24, T46, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((46+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
-                                (composite.ref.elem(v26, KS, int<4>) := 1);
+                                (composite.ref.elem(v24, KS, int<4>) := 1);
                             } else { };
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v26, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v31 := CAST<real<8>>(( *v37)));
-                            (v32 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v31))));
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v24, 0))));
+                            (v32 := (( *array.ref.elem.1D(v26, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v31))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v33 := CAST<real<8>>(( *v37)));
-                            (v34 := (( *array.ref.elem.1D(v24, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v33))));
+                            (v34 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v33))));
                             (v27 := ((( *v31)*( *v34))+(( *v32)*( *v33))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R23, real<8>))*( *v27))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R23, real<8>))*( *v27))));
                             (v28 := CAST<real<8>>(( *v37)));
-                            (v35 := (( *v27)-(( *composite.ref.elem(v26, T23, real<8>))*( *v28))));
-                            (v29 := ((( *composite.ref.elem(v26, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R46, real<8>))*( *v29))));
+                            (v35 := (( *v27)-(( *composite.ref.elem(v24, T23, real<8>))*( *v28))));
+                            (v29 := ((( *composite.ref.elem(v24, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R46, real<8>))*( *v29))));
                             (v30 := CAST<real<8>>(( *v37)));
-                            (array.ref.elem.1D(v24, 0) := (( *v29)-(( *composite.ref.elem(v26, T46, real<8>))*( *v30))));
-                            return (( *composite.ref.elem(v26, R46, real<8>))*( *array.ref.elem.1D(v24, 0)));
-                        }(scalar.to.vector(v22), scalar.to.vector(v23))));
-                        (v18 := (( *v18)+[v17]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v26](ref<array<real<8>,1>> v24, ref<array<real<8>,1>> v25){
+                            (array.ref.elem.1D(v25, 0) := (( *v29)-(( *composite.ref.elem(v24, T46, real<8>))*( *v30))));
+                            return (( *composite.ref.elem(v24, R46, real<8>))*( *array.ref.elem.1D(v25, 0)));
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23))));
+                        (v18 := (( *v18)+fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v24, ref<array<real<8>,1>> v25, ref<array<real<8>,1>> v26){
                             decl ref<real<8>> v27 = ( var(0.0));
                             decl ref<real<8>> v28 = ( var(0.0));
                             decl ref<real<8>> v29 = ( var(0.0));
@@ -809,52 +809,52 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             decl ref<real<8>> v35 = ( var(0.0));
                             decl ref<int<4>> v36 = ( var(0));
                             decl ref<int<4>> v37 = ( var(0));
-                            if((( *composite.ref.elem(v26, KS, int<4>))==0)) {
-                                (composite.ref.elem(v26, R23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, R46, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T23, real<8>) := 1.0);
-                                (composite.ref.elem(v26, T46, real<8>) := 1.0);
+                            if((( *composite.ref.elem(v24, KS, int<4>))==0)) {
+                                (composite.ref.elem(v24, R23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, R46, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T23, real<8>) := 1.0);
+                                (composite.ref.elem(v24, T46, real<8>) := 1.0);
                                 {
                                     for(decl ref<int<4>> v38 = ( var(1)) .. (23+1) : 1) {
-                                        (composite.ref.elem(v26, R23, real<8>) := (0.50*( *composite.ref.elem(v26, R23, real<8>))));
-                                        (composite.ref.elem(v26, T23, real<8>) := (2.0*( *composite.ref.elem(v26, T23, real<8>))));
+                                        (composite.ref.elem(v24, R23, real<8>) := (0.50*( *composite.ref.elem(v24, R23, real<8>))));
+                                        (composite.ref.elem(v24, T23, real<8>) := (2.0*( *composite.ref.elem(v24, T23, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((23+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
                                 {
                                     for(decl ref<int<4>> v39 = ( var(1)) .. (46+1) : 1) {
-                                        (composite.ref.elem(v26, R46, real<8>) := (0.50*( *composite.ref.elem(v26, R46, real<8>))));
-                                        (composite.ref.elem(v26, T46, real<8>) := (2.0*( *composite.ref.elem(v26, T46, real<8>))));
+                                        (composite.ref.elem(v24, R46, real<8>) := (0.50*( *composite.ref.elem(v24, R46, real<8>))));
+                                        (composite.ref.elem(v24, T46, real<8>) := (2.0*( *composite.ref.elem(v24, T46, real<8>))));
                                     };
                                     (v36 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((46+1)-1))/CAST<real<8>>(1))))*1)));
                                 };
-                                (composite.ref.elem(v26, KS, int<4>) := 1);
+                                (composite.ref.elem(v24, KS, int<4>) := 1);
                             } else { };
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v26, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v31 := CAST<real<8>>(( *v37)));
-                            (v32 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v31))));
-                            (v27 := (( *composite.ref.elem(v26, R23, real<8>))*( *array.ref.elem.1D(v24, 0))));
+                            (v32 := (( *array.ref.elem.1D(v26, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v31))));
+                            (v27 := (( *composite.ref.elem(v24, R23, real<8>))*( *array.ref.elem.1D(v25, 0))));
                             (v37 := CAST<int<4>>(( *v27)));
                             (v33 := CAST<real<8>>(( *v37)));
-                            (v34 := (( *array.ref.elem.1D(v24, 0))-(( *composite.ref.elem(v26, T23, real<8>))*( *v33))));
+                            (v34 := (( *array.ref.elem.1D(v25, 0))-(( *composite.ref.elem(v24, T23, real<8>))*( *v33))));
                             (v27 := ((( *v31)*( *v34))+(( *v32)*( *v33))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R23, real<8>))*( *v27))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R23, real<8>))*( *v27))));
                             (v28 := CAST<real<8>>(( *v37)));
-                            (v35 := (( *v27)-(( *composite.ref.elem(v26, T23, real<8>))*( *v28))));
-                            (v29 := ((( *composite.ref.elem(v26, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
-                            (v37 := CAST<int<4>>((( *composite.ref.elem(v26, R46, real<8>))*( *v29))));
+                            (v35 := (( *v27)-(( *composite.ref.elem(v24, T23, real<8>))*( *v28))));
+                            (v29 := ((( *composite.ref.elem(v24, T23, real<8>))*( *v35))+(( *v32)*( *v34))));
+                            (v37 := CAST<int<4>>((( *composite.ref.elem(v24, R46, real<8>))*( *v29))));
                             (v30 := CAST<real<8>>(( *v37)));
-                            (array.ref.elem.1D(v24, 0) := (( *v29)-(( *composite.ref.elem(v26, T46, real<8>))*( *v30))));
-                            return (( *composite.ref.elem(v26, R46, real<8>))*( *array.ref.elem.1D(v24, 0)));
-                        }(scalar.to.vector(v22), scalar.to.vector(v23))));
-                        (array.ref.elem.1D(composite.ref.elem(v17, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *v41))) := CAST<int<4>>((CAST<real<8>>(( *v21))*( *v18))));
+                            (array.ref.elem.1D(v25, 0) := (( *v29)-(( *composite.ref.elem(v24, T46, real<8>))*( *v30))));
+                            return (( *composite.ref.elem(v24, R46, real<8>))*( *array.ref.elem.1D(v25, 0)));
+                        }(v15, scalar.to.vector(v22), scalar.to.vector(v23))));
+                        (array.ref.elem.1D(composite.ref.elem(v15, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *v41))) := CAST<int<4>>((CAST<real<8>>(( *v21))*( *v18))));
                     };
                     (v19 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
                 };
             };
-        }(314159265.00, 1220703125.00);
-        <m id=1>[v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v44](int<4> v43){
+        }(v1, 314159265.00, 1220703125.00);
+        <m id=1>fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v43, int<4> v44){
             decl ref<int<4>> v45 = ( var(0));
             decl ref<int<4>> v46 = ( var(0));
             decl ref<int<4>> v47 = ( var(0));
@@ -866,17 +866,17 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             decl ref<int<4>> v53 = ( var(0));
             decl ref<vector<int<4>,65536>> v54 = ( var(undefined(vector<int<4>,65536>)));
             <m id=1>{
-                (array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>(v43)) := v43);
-                (array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>((v43+10))) := (int.lshift(1, 16)-v43));
+                (array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>(v44)) := v44);
+                (array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>((v44+10))) := (int.lshift(1, 16)-v44));
                 {
                     for(decl ref<int<4>> v55 = ( var(0)) .. 5 : 1) 
-                        (array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v55))) := ( *array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v44, test_index_array, vector<int<4>,5>), CAST<uint<4>>(( *v55))))))))
+                        (array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v55))) := ( *array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v43, test_index_array, vector<int<4>,5>), CAST<uint<4>>(( *v55))))))))
                     ;
                     (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
                 };
                 {
                     for(decl ref<int<4>> v56 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                        (array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v56))) := 0)
+                        (array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v56))) := 0)
                     ;
                     (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                 };
@@ -889,8 +889,8 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             };
             {
                 <m id=3>for(decl ref<int<4>> v58 = ( var(0)) .. int.lshift(1, 20) : 1) {
-                    (array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58))) := ( *array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))));
-                    int.postInc(array.ref.elem.1D(v54, CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))))));
+                    (array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58))) := ( *array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))));
+                    int.postInc(array.ref.elem.1D(v54, CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))))));
                 }</m>;
                 (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
             };
@@ -903,7 +903,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             <m id=4>{
                 {
                     for(decl ref<int<4>> v60 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                        (array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))) := (( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))))+( *array.ref.elem.1D(v54, CAST<uint<4>>(( *v60))))))
+                        (array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))) := (( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))))+( *array.ref.elem.1D(v54, CAST<uint<4>>(( *v60))))))
                     ;
                     (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                 };
@@ -911,54 +911,54 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             <m id=5>{
                 {
                     for(decl ref<int<4>> v68 = ( var(0)) .. 5 : 1) {
-                        (v47 := ( *array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v68)))));
-                        if(((0<=( *v47))&&[v47]fun[ref<int<4>> v66]()return (( *v66)<=(int.lshift(1, 20)-1)))) {
+                        (v47 := ( *array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v68)))));
+                        if(((0<=( *v47))&&bind()->fun(ref<int<4>> v66)return (( *v66)<=(int.lshift(1, 20)-1))(v47))) {
                             decl int<4> v61 = CAST<int<4>>('W');
                             switch(v61) {
                                 case 'S': if((( *v68)<=2)) {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v43))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v44))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 case 'W': if((( *v68)<2)) {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v43-2)))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v44-2)))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 case 'A': if((( *v68)<=2)) {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v43-1)))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v44-1)))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-(v43-1)))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-(v44-1)))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
-                                case 'B': if((((( *v68)==1)||[v68]fun[ref<int<4>> v62]()return (( *v62)==2))||[v68]fun[ref<int<4>> v64]()return (( *v64)==4))) {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v43))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                case 'B': if((((( *v68)==1)||bind()->fun(ref<int<4>> v62)return (( *v62)==2)(v68))||bind()->fun(ref<int<4>> v64)return (( *v64)==4)(v68))) {
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v44))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 case 'C': if((( *v68)<=2)) {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v43))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v44))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 } else {
-                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                    } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                    if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                        printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                    } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                 }
                                 default: { }
                             };
@@ -966,27 +966,27 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     };
                     (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
                 };
-                if((v43==10)) (composite.ref.elem(v44, key_buff_ptr_global, array<int<4>,1>) := ( *composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>))) else { };
+                if((v44==10)) (composite.ref.elem(v43, key_buff_ptr_global, array<int<4>,1>) := ( *composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>))) else { };
             }</m>;
-        }(1)</m>;
+        }(v1, 1)</m>;
         (composite.ref.elem(v1, passed_verification, int<4>) := 0);
         if(('W'!='S')) printf(string.as.char.pointer("\n   iteration\n"), varlist.pack(())) else { };
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v71](int<4> v70){
-            (array.ref.elem.1D(composite.ref.elem(v71, start, vector<real<8>,64>), CAST<uint<4>>(v70)) := [v71]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72](){
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v70, int<4> v71){
+            (array.ref.elem.1D(composite.ref.elem(v70, start, vector<real<8>,64>), CAST<uint<4>>(v71)) := fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72){
                 decl ref<real<8>> v73 = ( var(0.0));
-                [v72]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v75](ref<array<real<8>,1>> v74){
+                fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v74, ref<array<real<8>,1>> v75){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v76 = ( var(undefined(struct<tv_sec:int<8>,tv_usec:int<8>>)));
                     gettimeofday(scalar.to.vector(v76), null);
-                    if((( *composite.ref.elem(v75, sec, int<4>))<0)) (composite.ref.elem(v75, sec, int<4>) := CAST<int<4>>(( *composite.ref.elem(v76, tv_sec, int<8>)))) else { };
-                    (array.ref.elem.1D(v74, 0) := (CAST<real<8>>((( *composite.ref.elem(v76, tv_sec, int<8>))-CAST<int<8>>(( *composite.ref.elem(v75, sec, int<4>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v76, tv_usec, int<8>))))));
-                }(scalar.to.vector(v73));
+                    if((( *composite.ref.elem(v74, sec, int<4>))<0)) (composite.ref.elem(v74, sec, int<4>) := CAST<int<4>>(( *composite.ref.elem(v76, tv_sec, int<8>)))) else { };
+                    (array.ref.elem.1D(v75, 0) := (CAST<real<8>>((( *composite.ref.elem(v76, tv_sec, int<8>))-CAST<int<8>>(( *composite.ref.elem(v74, sec, int<4>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v76, tv_usec, int<8>))))));
+                }(v72, scalar.to.vector(v73));
                 return ( *v73);
-            }());
-        }(0);
+            }(v70));
+        }(v1, 0);
         {
             <m id=7>for(decl ref<int<4>> v80 = ( var(1)) .. (10+1) : 1) {
                 <m id=6>if(('W'!='S')) printf(string.as.char.pointer("        %d\n"), varlist.pack((( *v80)))) else { }</m>;
-                [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v44](int<4> v43){
+                fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v43, int<4> v44){
                     decl ref<int<4>> v45 = ( var(0));
                     decl ref<int<4>> v46 = ( var(0));
                     decl ref<int<4>> v47 = ( var(0));
@@ -998,17 +998,17 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     decl ref<int<4>> v53 = ( var(0));
                     decl ref<vector<int<4>,65536>> v54 = ( var(undefined(vector<int<4>,65536>)));
                     <m id=1>{
-                        (array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>(v43)) := v43);
-                        (array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>((v43+10))) := (int.lshift(1, 16)-v43));
+                        (array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>(v44)) := v44);
+                        (array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>((v44+10))) := (int.lshift(1, 16)-v44));
                         {
                             for(decl ref<int<4>> v55 = ( var(0)) .. 5 : 1) 
-                                (array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v55))) := ( *array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v44, test_index_array, vector<int<4>,5>), CAST<uint<4>>(( *v55))))))))
+                                (array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v55))) := ( *array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v43, test_index_array, vector<int<4>,5>), CAST<uint<4>>(( *v55))))))))
                             ;
                             (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
                         };
                         {
                             for(decl ref<int<4>> v56 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                                (array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v56))) := 0)
+                                (array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v56))) := 0)
                             ;
                             (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                         };
@@ -1021,8 +1021,8 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     };
                     {
                         <m id=3>for(decl ref<int<4>> v58 = ( var(0)) .. int.lshift(1, 20) : 1) {
-                            (array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58))) := ( *array.ref.elem.1D(composite.ref.elem(v44, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))));
-                            int.postInc(array.ref.elem.1D(v54, CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))))));
+                            (array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58))) := ( *array.ref.elem.1D(composite.ref.elem(v43, key_array, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))));
+                            int.postInc(array.ref.elem.1D(v54, CAST<uint<4>>(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff2, vector<int<4>,1048576>), CAST<uint<4>>(( *v58)))))));
                         }</m>;
                         (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
                     };
@@ -1035,7 +1035,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     <m id=4>{
                         {
                             for(decl ref<int<4>> v60 = ( var(0)) .. int.lshift(1, 16) : 1) 
-                                (array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))) := (( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))))+( *array.ref.elem.1D(v54, CAST<uint<4>>(( *v60))))))
+                                (array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))) := (( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>(( *v60))))+( *array.ref.elem.1D(v54, CAST<uint<4>>(( *v60))))))
                             ;
                             (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                         };
@@ -1043,54 +1043,54 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                     <m id=5>{
                         {
                             for(decl ref<int<4>> v68 = ( var(0)) .. 5 : 1) {
-                                (v47 := ( *array.ref.elem.1D(composite.ref.elem(v44, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v68)))));
-                                if(((0<=( *v47))&&[v47]fun[ref<int<4>> v66]()return (( *v66)<=(int.lshift(1, 20)-1)))) {
+                                (v47 := ( *array.ref.elem.1D(composite.ref.elem(v43, partial_verify_vals, vector<int<4>,5>), CAST<uint<4>>(( *v68)))));
+                                if(((0<=( *v47))&&bind()->fun(ref<int<4>> v66)return (( *v66)<=(int.lshift(1, 20)-1))(v47))) {
                                     decl int<4> v61 = CAST<int<4>>('W');
                                     switch(v61) {
                                         case 'S': if((( *v68)<=2)) {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v43))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v44))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         case 'W': if((( *v68)<2)) {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v43-2)))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v44-2)))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         case 'A': if((( *v68)<=2)) {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v43-1)))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+(v44-1)))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-(v43-1)))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-(v44-1)))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
-                                        case 'B': if((((( *v68)==1)||[v68]fun[ref<int<4>> v62]()return (( *v62)==2))||[v68]fun[ref<int<4>> v64]()return (( *v64)==4))) {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v43))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                        case 'B': if((((( *v68)==1)||bind()->fun(ref<int<4>> v62)return (( *v62)==2)(v68))||bind()->fun(ref<int<4>> v64)return (( *v64)==4)(v68))) {
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v44))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         case 'C': if((( *v68)<=2)) {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v43))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))+v44))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         } else {
-                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v44, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v43))) {
-                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v43, ( *v68))));
-                                            } else int.postInc(composite.ref.elem(v44, passed_verification, int<4>));
+                                            if(int.ne(( *array.ref.elem.1D(composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>), CAST<uint<4>>((( *v47)-1)))), (( *array.ref.elem.1D(composite.ref.elem(v43, test_rank_array, vector<int<4>,5>), CAST<uint<4>>(( *v68))))-v44))) {
+                                                printf(string.as.char.pointer("Failed partial verification: iteration %d, test key %d\n"), varlist.pack((v44, ( *v68))));
+                                            } else int.postInc(composite.ref.elem(v43, passed_verification, int<4>));
                                         }
                                         default: { }
                                     };
@@ -1098,32 +1098,32 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             };
                             (v45 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
                         };
-                        if((v43==10)) (composite.ref.elem(v44, key_buff_ptr_global, array<int<4>,1>) := ( *composite.ref.elem(v44, key_buff1, vector<int<4>,1048576>))) else { };
+                        if((v44==10)) (composite.ref.elem(v43, key_buff_ptr_global, array<int<4>,1>) := ( *composite.ref.elem(v43, key_buff1, vector<int<4>,1048576>))) else { };
                     }</m>;
-                }(( *v80));
+                }(v1, ( *v80));
             }</m>;
             (v5 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((10+1)-1))/CAST<real<8>>(1))))*1)));
         };
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v82](int<4> v81){
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v81, int<4> v82){
             decl ref<real<8>> v83 = ( var(0.0));
             decl ref<real<8>> v84 = ( var(0.0));
-            (v84 := [v82]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72](){
+            (v84 := fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v72){
                 decl ref<real<8>> v73 = ( var(0.0));
-                [v72]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v75](ref<array<real<8>,1>> v74){
+                fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v74, ref<array<real<8>,1>> v75){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v76 = ( var(undefined(struct<tv_sec:int<8>,tv_usec:int<8>>)));
                     gettimeofday(scalar.to.vector(v76), null);
-                    if((( *composite.ref.elem(v75, sec, int<4>))<0)) (composite.ref.elem(v75, sec, int<4>) := CAST<int<4>>(( *composite.ref.elem(v76, tv_sec, int<8>)))) else { };
-                    (array.ref.elem.1D(v74, 0) := (CAST<real<8>>((( *composite.ref.elem(v76, tv_sec, int<8>))-CAST<int<8>>(( *composite.ref.elem(v75, sec, int<4>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v76, tv_usec, int<8>))))));
-                }(scalar.to.vector(v73));
+                    if((( *composite.ref.elem(v74, sec, int<4>))<0)) (composite.ref.elem(v74, sec, int<4>) := CAST<int<4>>(( *composite.ref.elem(v76, tv_sec, int<8>)))) else { };
+                    (array.ref.elem.1D(v75, 0) := (CAST<real<8>>((( *composite.ref.elem(v76, tv_sec, int<8>))-CAST<int<8>>(( *composite.ref.elem(v74, sec, int<4>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v76, tv_usec, int<8>))))));
+                }(v72, scalar.to.vector(v73));
                 return ( *v73);
-            }());
-            (v83 := (( *v84)-( *array.ref.elem.1D(composite.ref.elem(v82, start, vector<real<8>,64>), CAST<uint<4>>(v81)))));
-            (array.ref.elem.1D(composite.ref.elem(v82, elapsed, vector<real<8>,64>), CAST<uint<4>>(v81)) := (( *array.ref.elem.1D(composite.ref.elem(v82, elapsed, vector<real<8>,64>), CAST<uint<4>>(v81)))+( *v83)));
-        }(0);
-        (v8 := CAST<real<8>>([v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v87](int<4> v86){
-            return ( *array.ref.elem.1D(composite.ref.elem(v87, elapsed, vector<real<8>,64>), CAST<uint<4>>(v86)));
-        }(0)));
-        [v1]fun[ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v89](){
+            }(v81));
+            (v83 := (( *v84)-( *array.ref.elem.1D(composite.ref.elem(v81, start, vector<real<8>,64>), CAST<uint<4>>(v82)))));
+            (array.ref.elem.1D(composite.ref.elem(v81, elapsed, vector<real<8>,64>), CAST<uint<4>>(v82)) := (( *array.ref.elem.1D(composite.ref.elem(v81, elapsed, vector<real<8>,64>), CAST<uint<4>>(v82)))+( *v83)));
+        }(v1, 0);
+        (v8 := CAST<real<8>>(fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v86, int<4> v87){
+            return ( *array.ref.elem.1D(composite.ref.elem(v86, elapsed, vector<real<8>,64>), CAST<uint<4>>(v87)));
+        }(v1, 0)));
+        fun(ref<struct<elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>,KS:int<4>,R23:real<8>,R46:real<8>,T23:real<8>,T46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>>> v89){
             decl ref<int<4>> v90 = ( var(0));
             decl ref<int<4>> v91 = ( var(0));
             decl ref<int<4>> v92 = ( var(0));
@@ -1145,13 +1145,13 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             if(int.ne(( *v91), 0)) {
                 printf(string.as.char.pointer("Full_verify: number of keys out of sort: %d\n"), varlist.pack((( *v91))));
             } else int.postInc(composite.ref.elem(v89, passed_verification, int<4>));
-        }();
+        }(v1);
         if(int.ne(( *composite.ref.elem(v1, passed_verification, int<4>)), ((5*10)+1))) (composite.ref.elem(v1, passed_verification, int<4>) := 0) else { };
         fun(ref<array<char,1>> v98, char v99, int<4> v100, int<4> v101, int<4> v102, int<4> v103, int<4> v104, real<8> v105, real<8> v106, ref<array<char,1>> v107, int<4> v108, ref<array<char,1>> v109, ref<array<char,1>> v110, ref<array<char,1>> v111, ref<array<char,1>> v112, ref<array<char,1>> v113, ref<array<char,1>> v114, ref<array<char,1>> v115, ref<array<char,1>> v116, ref<array<char,1>> v117){
             decl ref<array<char,1>> v118 = ( var("1000"));
             printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((( *v98))));
             printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((CAST<int<4>>(v99))));
-            if(((v101==0)&&[v102]fun[int<4> v119]()return (v119==0))) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v100))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v100, v101, v102)));
+            if(((v101==0)&&bind()->fun(int<4> v119)return (v119==0)(v102))) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v100))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v100, v101, v102)));
             printf(string.as.char.pointer(" Iterations      =             %12d\n"), varlist.pack((v103)));
             printf(string.as.char.pointer(" Threads         =             %12d\n"), varlist.pack((v104)));
             printf(string.as.char.pointer(" Time in seconds =             %12.2f\n"), varlist.pack((0.0)));

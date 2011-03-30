@@ -4,22 +4,22 @@
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         decl ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v1 =  new(struct{count:=0, a:=vector.init.uniform(0, 50), reset_count:=1});
         for(decl ref<int<4>> v12 =  var(0) .. 10 : 1) {
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v5](int<4> v4){
-                int.postInc(array.ref.elem.1D(composite.ref.elem(v5, a, vector<int<4>,50>), v4));
-                composite.ref.elem(v5, count, int<4>) := composite.ref.elem(v5, count, int<4>)+v4;
-                return composite.ref.elem(v5, count, int<4>);
-            }(2))));
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v8](int<4> v7){
-                int.postDec(array.ref.elem.1D(composite.ref.elem(v8, a, vector<int<4>,50>), v7));
-                composite.ref.elem(v8, count, int<4>) := composite.ref.elem(v8, count, int<4>)-v7;
-                return composite.ref.elem(v8, count, int<4>);
-            }(1))));
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v4, int<4> v5){
+                int.postInc(array.ref.elem.1D(composite.ref.elem(v4, a, vector<int<4>,50>), v5));
+                composite.ref.elem(v4, count, int<4>) := composite.ref.elem(v4, count, int<4>)+v5;
+                return composite.ref.elem(v4, count, int<4>);
+            }(v1, 2))));
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v7, int<4> v8){
+                int.postDec(array.ref.elem.1D(composite.ref.elem(v7, a, vector<int<4>,50>), v8));
+                composite.ref.elem(v7, count, int<4>) := composite.ref.elem(v7, count, int<4>)-v8;
+                return composite.ref.elem(v7, count, int<4>);
+            }(v1, 1))));
             if(v12==5) {
-                [v1]fun[ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v10](){
+                fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v10){
                     composite.ref.elem(v10, count, int<4>) := 0;
                     composite.ref.elem(v10, reset_count, int<4>) := composite.ref.elem(v10, reset_count, int<4>)+1;
                     return composite.ref.elem(v10, count, int<4>);
-                }();
+                }(v1);
             } else { };
         };
         return 0;
@@ -34,22 +34,22 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         decl ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v1 = ( new(struct{count:=0, a:=vector.init.uniform(0, 50), reset_count:=1}));
         for(decl ref<int<4>> v12 = ( var(0)) .. 10 : 1) {
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v5](int<4> v4){
-                int.postInc(array.ref.elem.1D(composite.ref.elem(v5, a, vector<int<4>,50>), CAST<uint<4>>(v4)));
-                (composite.ref.elem(v5, count, int<4>) := (( *composite.ref.elem(v5, count, int<4>))+v4));
-                return ( *composite.ref.elem(v5, count, int<4>));
-            }(2))));
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack(([v1]fun[ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v8](int<4> v7){
-                int.postDec(array.ref.elem.1D(composite.ref.elem(v8, a, vector<int<4>,50>), CAST<uint<4>>(v7)));
-                (composite.ref.elem(v8, count, int<4>) := (( *composite.ref.elem(v8, count, int<4>))-v7));
-                return ( *composite.ref.elem(v8, count, int<4>));
-            }(1))));
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v4, int<4> v5){
+                int.postInc(array.ref.elem.1D(composite.ref.elem(v4, a, vector<int<4>,50>), CAST<uint<4>>(v5)));
+                (composite.ref.elem(v4, count, int<4>) := (( *composite.ref.elem(v4, count, int<4>))+v5));
+                return ( *composite.ref.elem(v4, count, int<4>));
+            }(v1, 2))));
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v7, int<4> v8){
+                int.postDec(array.ref.elem.1D(composite.ref.elem(v7, a, vector<int<4>,50>), CAST<uint<4>>(v8)));
+                (composite.ref.elem(v7, count, int<4>) := (( *composite.ref.elem(v7, count, int<4>))-v8));
+                return ( *composite.ref.elem(v7, count, int<4>));
+            }(v1, 1))));
             if((( *v12)==5)) {
-                [v1]fun[ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v10](){
+                fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v10){
                     (composite.ref.elem(v10, count, int<4>) := 0);
                     (composite.ref.elem(v10, reset_count, int<4>) := (( *composite.ref.elem(v10, reset_count, int<4>))+1));
                     return ( *composite.ref.elem(v10, count, int<4>));
-                }();
+                }(v1);
             } else { };
         };
         return 0;
