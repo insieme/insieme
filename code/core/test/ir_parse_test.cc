@@ -297,32 +297,29 @@ TEST(IRParser, StatementTests) {
     // pointwise operator implementation with simple means
     auto vectorPointwise = parser.parseStatement("\
         fun (('elem, 'elem) -> 'res:fct) -> (vector<'elem, #l>, vector<'elem, #l>) -> vector<'res, #l>  { \
-            return bind(vector<'elem, #l>:ba, vector<'elem,#l>:bb) {\
+            return bind(vector<'elem, #l>:ba, vector<'elem,#l>:bb) { \
                ( fun (vector<'elem, #l>:a, vector<'elem,#l>:b, ('elem, 'elem) -> 'res:fct2) -> vector<'res, #l>{ { \
                    decl ref<vector<'res, #l> >:result = (op<ref.var>((op<undefined>(lit<type<vector<'res, #l> >, arbitraryText>)))); \
                    for(decl int<4>:i = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
-                        (op<ref.assign>((op<array.ref.elem.1D>(result, i)), (fct2((op<vector.subscript>(a, i)), (op<vector.subscript>(b, i))))) );\
+                        (op<ref.assign>((op<array.ref.elem.1D>(result, i)), (fct2((op<vector.subscript>(a, i)), (op<vector.subscript>(b, i))))) ); \
                    return (op<ref.deref>(result)); \
-               } } (ba, bb, fct) ) } \
-        }");/*\
-                   decl ref<vector<'res, #l> >:result = (op<ref.var>((op<undefined>(lit<type<vector<'res, #l> >, arbitraryText>)))); \
-                   for(decl int<4>:i = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
-                        (op<ref.assign>((op<array.ref.elem.1D>(result, i)), (fct2((op<vector.subscript>(a, i)), (op<vector.subscript>(b, i))))) );\
-                   return (op<ref.deref>(result)); \
-        fun [](('elem) -> 'res:fct3) -> (vector<elem, #l>) -> vector<'res, #l> { \
-            return[ fct3 ] fun[('elem) -> 'res:fct4](vector<'elem, #l>:a2) -> vector<'res, #l>{ { \
-                decl ref<vector<'res, 'l> >:result2 = (op<ref.var>((op<undefined>(lit<type<vector<'res, #l> >, arbitraryText>)))); \
-                for(decl int<4>:i2 = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
-                    (op<ref.assign>((op<array.ref.elem.1D>(result2, i2)), (fct3((op<vector.subscript>(a2, i2)) ))));\
-                return (op<ref.deref>(result2));\
-            } }\
-        }; } ");
+               } } (ba, bb, fct) ) \
+            } \
+        }");/*\*/
 
-  ");
+    auto vectorPointwiseUnary = parser.parseStatement("\
+        fun (('elem) -> 'res:fct3) -> (vector<elem, #l>) -> vector<'res, #l> { \
+            return bind(vector<'elem, #l>:ba2) { \
+                ( fun(vector<'elem, #l>:a2, ('elem) -> 'res:fct4) -> vector<'res, #l>{ { \
+                    decl ref<vector<'res, 'l> >:result2 = (op<ref.var>((op<undefined>(lit<type<vector<'res, #l> >, arbitraryText>)))); \
+                    for(decl int<4>:i2 = 0 .. (op<int.type.param.to.int>(lit<intTypeParam, l>)) : 1) \
+                        (op<ref.assign>((op<array.ref.elem.1D>(result2, i2)), (fct4((op<vector.subscript>(a2, i2)) )))); \
+                    return (op<ref.deref>(result2)); \
+                } } (ba2, fct3) ) \
+            } \
+        }");// } ");
 
-    auto vectorPointwiseUnary = parser.parseStatement("
 
- */
 //    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 }
 
