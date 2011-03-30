@@ -34,20 +34,17 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "data_item.h"
+#include "work_item.h"
 
-#include "declarations.h"
+int main() {
 
-/* ------------------------------ data structures ----- */
+	irt_data_item di;
+	di.dimensions = 1;
+	irt_work_item wi;
+	wi.impl_id = 1;
 
-IRT_MAKE_ID_TYPE(irt_client_app);
-
-struct _irt_client_app {
-	irt_client_app_id id;
-	size_t pid;
-};
-
-
-/* ------------------------------ operations ----- */
+	return di.dimensions - wi.impl_id;
+}
 
 

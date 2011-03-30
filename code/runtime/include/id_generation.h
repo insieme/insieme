@@ -48,8 +48,8 @@ struct _##__type##_id { \
 			uint16 node; \
 			uint16 thread; \
 			uint32 index; \
-		}; \
-	}; \
+		} components; \
+	} value; \
 	struct _##__type* cached; \
 };
 
