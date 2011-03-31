@@ -73,7 +73,7 @@ void FunctionManager::appendFunctionParameter(const CodeFragmentPtr& fragment, c
 	}
 
 	// format parameter using type manager
-	fragment << (cc.getTypeManager()).formatParamter(fragment, param->getType(), (cc.getNameManager()).getVarName(param), false);
+	fragment << (cc.getTypeManager()).formatParamter(fragment, param->getType(), (cc.getNameManager()).getName(param), false);
 }
 
 string FunctionManager::getFunctionName(const CodeFragmentPtr& context, const core::LiteralPtr& external) {
@@ -254,8 +254,8 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 
 		// get name of struct from type manager
 		TypeManager::FunctionTypeEntry functionTypeEntry = typeManager.getFunctionTypeDetails(funType);
-		function->addDependency(functionTypeEntry.functorAndCaller);
-		string structName = functionTypeEntry.functorName;
+		function->addDependency(functionTypeEntry.definitions);
+		string structName = functionTypeEntry.closureName;
 
 		int i = 0;
 		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
@@ -265,7 +265,7 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 			varManager.addInfo(var, info);
 
 			// standard handling
-			function << typeManager.formatParamter(function, var->getType(), nameManager.getVarName(var), false);
+			function << typeManager.formatParamter(function, var->getType(), nameManager.getName(var), false);
 			function << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
 
 		});

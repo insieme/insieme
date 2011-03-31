@@ -42,7 +42,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(irt_channel);
+IRT_MAKE_ID_TYPE(channel);
 
 struct _irt_channel {
 	irt_channel_id id;

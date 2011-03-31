@@ -50,6 +50,11 @@ typedef void wi_di_req_func(irt_work_item*, irt_wi_di_requirement*);
 typedef void wi_channel_req_func(irt_work_item*, irt_channel*);
 
 struct _irt_wi_implementation {
+	uint32 num_variants;
+	irt_wi_implementation_variant* variants;
+};
+
+struct _irt_wi_implementation_variant {
 	wi_implementation_func* implementation;
 	uint32 num_required_data_items;
 	wi_di_req_func* data_requirements;

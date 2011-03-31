@@ -174,6 +174,17 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	endif()
 endif()
 
+# enable C99 support within gcc
+if (CMAKE_COMPILER_IS_GNUC)
+	include(CheckCCompilerFlag)
+  check_c_compiler_flag( -std=c99 C99_Support )
+	if(C99_Support)
+		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+	else()
+		message( "WARNING: --std=c99 not supported by your compiler!" )
+	endif()
+endif()
+
 # enable warnings
 if(MSVC) 
 	add_definitions( /W4 )

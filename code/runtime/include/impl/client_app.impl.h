@@ -36,28 +36,29 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "client_app.h"
 
-/* ------------------------------ data structures ----- */
+#include "utils/hoisting.h"
+#include "impl/error_handling.impl.h"
 
-IRT_MAKE_ID_TYPE(client_app);
 
-#define IRT_APP_INIT_CONTEXT_NAME "insieme_init_context"
-#define IRT_APP_CLEANUP_CONTEXT_NAME "insieme_cleanup_context"
+irt_client_app* irt_client_app_create(const char* library_file_name) {
+	irt_client_app *app = (irt_client_app*)malloc(sizeof(irt_client_app));
+	app->id = irt_generate_client_app_id();
+	app->library = dlopen_unique(library_file_name, RTLD_NOW);
+	if(app->library == NULL) {
+		irt_throw_string_error(IRT_ERR_IO, "Could not load library %s\nError: %s\n", library_file_name, dlerror());
+	} else {
+		app->init_context = (init_context_fun*)dlsym(app->library, IRT_APP_INIT_CONTEXT_NAME);
+		app->cleanup_context = (cleanup_context_fun*)dlsym(app->library, IRT_APP_CLEANUP_CONTEXT_NAME);
+		if(app->init_context == NULL || app->cleanup_context == NULL) {
+			irt_throw_string_error(IRT_ERR_APP, "Insieme entry point and/or init function not found in library %s\nError: %s\n", library_file_name, dlerror());
+		}
+	}
+	return app;
+}
 
-typedef void (init_context_fun)(irt_context* context);
-typedef void (cleanup_context_fun)(irt_context* context);
-
-struct _irt_client_app {
-	irt_client_app_id id;
-	size_t pid;
-	void *library;
-	init_context_fun *init_context;
-	cleanup_context_fun *cleanup_context;
-};
-
-/* ------------------------------ operations ----- */
-
-irt_client_app* irt_client_app_create(const char* library_file_name);
-void irt_client_app_destroy(irt_client_app* app);
-
+void irt_client_app_destroy(irt_client_app* app) {
+	dlclose(app->library);
+	free(app);
+}

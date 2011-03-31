@@ -193,7 +193,7 @@ namespace simple_backend {
 
 		// standard handling
 		const CodeFragmentPtr& code = currentCodeFragment;
-		string varName = cc.getNameManager().getVarName(var);
+		string varName = cc.getNameManager().getName(var);
 		code << cc.getTypeManager().formatParamter(code, var->getType(), varName, !isAllocatedOnHEAP);
 
 		// check whether there is an initialization
@@ -294,7 +294,7 @@ namespace simple_backend {
 
 		const CodeFragmentPtr& code = currentCodeFragment;
 
-		string ident = cc.getNameManager().getVarName(var);
+		string ident = cc.getNameManager().getName(var);
 		code << "for(";
 		visit(decl);
 		code << "; " << ident << " < ";
@@ -454,7 +454,7 @@ namespace simple_backend {
 			{
 
 				TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
-				code->addDependency(details.functorAndCaller);
+				code->addDependency(details.definitions);
 
 				// use call wrapper
 				code << details.callerName;
@@ -472,7 +472,7 @@ namespace simple_backend {
 			{
 
 				TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
-				code->addDependency(details.functorAndCaller);
+				code->addDependency(details.definitions);
 
 				// check whether it is a direct initialization / call situation
 				bool directCall = false;
@@ -528,18 +528,18 @@ namespace simple_backend {
 		// resolve resulting type of expression
 		FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
 		TypeManager::FunctionTypeEntry resDetails = cc.getTypeManager().getFunctionTypeDetails(resType);
-		currentCodeFragment->addDependency(resDetails.functorAndCaller);
+		currentCodeFragment->addDependency(resDetails.definitions);
 
 		// resolve type of sub-expression
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
 		TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
-		currentCodeFragment->addDependency(details.functorAndCaller);
+		currentCodeFragment->addDependency(details.definitions);
 
 		// create surrounding cast
-		currentCodeFragment << "((" << resDetails.functorName << "*)";
+		currentCodeFragment << "((" << resDetails.closureName << "*)";
 
 		// create struct including values
-		currentCodeFragment << "(&((" << details.functorName << ")";
+		currentCodeFragment << "(&((" << details.closureName << ")";
 		currentCodeFragment << "{";
 
 		// add function reference
@@ -552,7 +552,7 @@ namespace simple_backend {
 
 		// add size of struct
 		// NOTE: disabled since not used anywhere
-		// currentCodeFragment << ", sizeof(" << details.functorName << ")";
+		// currentCodeFragment << ", sizeof(" << details.closureName << ")";
 
 		// add captured parameters
 		for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
@@ -624,7 +624,7 @@ namespace simple_backend {
 			deref = false;
 		}
 
-		code << ((deref)?"&":"") << cc.getNameManager().getVarName(ptr);
+		code << ((deref)?"&":"") << cc.getNameManager().getName(ptr);
 	}
 
 	void StmtConverter::visitMemberAccessExpr(const MemberAccessExprPtr& ptr) {

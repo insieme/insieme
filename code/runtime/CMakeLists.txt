@@ -29,6 +29,7 @@ foreach (case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} insieme_runtime)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
+	target_link_libraries(ut_${case_name} dl)
 	
 	add_unit_test(${case_name})
 endforeach(case_file)

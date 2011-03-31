@@ -36,28 +36,16 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "irt_context.h"
 
-/* ------------------------------ data structures ----- */
+irt_context* irt_context_create(irt_client_app* app) {
+	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
+	context->id = irt_generate_context_id();
+	context->client_app = app;
+	context->client_app->init_context(context);
+	return context;
+}
 
-IRT_MAKE_ID_TYPE(client_app);
-
-#define IRT_APP_INIT_CONTEXT_NAME "insieme_init_context"
-#define IRT_APP_CLEANUP_CONTEXT_NAME "insieme_cleanup_context"
-
-typedef void (init_context_fun)(irt_context* context);
-typedef void (cleanup_context_fun)(irt_context* context);
-
-struct _irt_client_app {
-	irt_client_app_id id;
-	size_t pid;
-	void *library;
-	init_context_fun *init_context;
-	cleanup_context_fun *cleanup_context;
-};
-
-/* ------------------------------ operations ----- */
-
-irt_client_app* irt_client_app_create(const char* library_file_name);
-void irt_client_app_destroy(irt_client_app* app);
-
+void irt_context_destroy(irt_context* context) {
+	free(context);
+}

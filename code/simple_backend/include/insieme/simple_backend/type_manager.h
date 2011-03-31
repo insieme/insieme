@@ -84,7 +84,9 @@ public:
 		// the code fragment which might define this type
 		CodeFragmentPtr definition;
 
-		Entry() : lValueName(), rValueName(), declPattern(), paramPattern(), definition() { }
+		Entry() : lValueName(UNSUPPORTED), rValueName(UNSUPPORTED), declPattern(UNSUPPORTED), paramPattern(UNSUPPORTED), definition() { }
+		Entry(const string& lName, const string& rName, const string& declPattern, const string& paramPattern)
+					: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),  definition() { }
 		Entry(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodeFragmentPtr& definition)
 			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),  definition(definition) { }
 	};
@@ -93,13 +95,26 @@ public:
 	 * The information stored regarding each function type.
 	 */
 	struct FunctionTypeEntry {
-		string functorName;
-		string callerName;
-		CodeFragmentPtr functorAndCaller;
+
+		/**
+		 * The (super-) type of any closure representing a function of this type.
+		 */
+		const string closureName;
+
+		/**
+		 * The name of the function which can be used to invoke closures of the corresponding function type.
+		 */
+		const string callerName;
+
+		/**
+		 * The code fragment containing the definition of the closure and the caller.
+		 */
+		const CodeFragmentPtr definitions;
 
 		FunctionTypeEntry() { }
-		FunctionTypeEntry(const string& functorName, const string& callerName, const CodeFragmentPtr& functorAndCaller)
-			: functorName(functorName), callerName(callerName), functorAndCaller(functorAndCaller) { }
+
+		FunctionTypeEntry(const string& closureName, const string& callerName, const CodeFragmentPtr& definitions)
+			: closureName(closureName), callerName(callerName), definitions(definitions) { }
 	};
 
 private:
