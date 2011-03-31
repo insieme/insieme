@@ -307,7 +307,7 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	if (ptr->getElementType()->getNodeType() == NT_RefType) {
 		lvalue = lvalue + "*";
 	}
-	return Entry(lvalue, rvalue, lvalue + " %s", rvalue + " %s");
+	return Entry(lvalue, rvalue, lvalue + " %s", rvalue + " %s", subType.definition);
 
 //	TODO: if
 //	return resolveRefOrVectorOrArrayType(ptr);
@@ -324,6 +324,7 @@ TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 
 	// look up element type info
 	const Entry& elementTypeInfo = resolveType(ptr->getElementType());
+	code->addDependency(elementTypeInfo.definition);
 
 	// add struct definition
 	code << "struct " << name << " { \n";
@@ -372,6 +373,7 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 
 	// look up element type info
 	const Entry& elementTypeInfo = resolveType(ptr->getElementType());
+	code->addDependency(elementTypeInfo.definition);
 
 	// add array-struct definition
 	code << "struct " << name << " { \n";

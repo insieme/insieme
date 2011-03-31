@@ -104,7 +104,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	TypeManager& typeManager = cc.getTypeManager();
 	protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
 	protoType << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
-		out << typeManager.getTypeName(protoType, cur, true);
+		out << typeManager.getTypeName(protoType, cur, false);
 	});
 	protoType << ");\n";
 

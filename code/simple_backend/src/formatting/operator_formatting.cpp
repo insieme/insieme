@@ -138,7 +138,7 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(res, basic.getArraySubscript1D(), false, {
 				bool isRef = call->getType()->getNodeType() == NT_RefType;
 				if (isRef) OUT("&(");
-				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
+				VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]");
 				if (isRef) OUT(")");
 		});
 
@@ -155,9 +155,9 @@ namespace formatting {
 				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
 
 				if (insertDeref) {
-					OUT("((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
+					OUT("((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
 				} else {
-					OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
+					OUT("("); VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]"); OUT(")");
 				}
 		});
 

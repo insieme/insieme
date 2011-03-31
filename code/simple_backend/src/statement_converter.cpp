@@ -138,8 +138,103 @@ namespace simple_backend {
 		getCurrentCodeFragment() << "<?>" << toString(*node) << "</?>";
 	}
 
-	void StmtConverter::visitProgram(const ProgramPtr&) {
-		assert(0 && "ConvertVisitor should never encounter program node");
+	namespace {
+		bool isMainProgram(const ProgramPtr& program) {
+			if (program->isMain()) {
+				return true;
+			}
+
+			if (program->getEntryPoints().size() != static_cast<unsigned>(1)) {
+				return false;
+			}
+
+			// construct the type of the main
+			core::ASTBuilder builder(program->getNodeManager());
+			const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+			// type:   (int<4>, ref<array<array<char,1>,1>>) -> int<4>
+			ConcreteIntTypeParamPtr one = builder.concreteIntTypeParam(1);
+			vector<TypePtr> params = toVector<TypePtr>(basic.getInt4(),
+					builder.refType(builder.arrayType(builder.arrayType(basic.getChar(), one), one)));
+
+			FunctionTypePtr funPtr = builder.functionType(params, basic.getInt4());
+
+			// check type
+			return program->getEntryPoints()[0]->getType() == funPtr;
+		}
+
+	}
+
+
+	void StmtConverter::visitProgram(const ProgramPtr& program) {
+
+		// TODO: remove second clause when frontend is fixed ...
+
+		// check whether program is a main program
+		if (program->isMain() || isMainProgram(program)) {
+
+			// create main program + argument wrapper
+
+			CodeFragmentPtr code = CodeFragment::createNew("main function");
+
+			// create procedure header
+			code << "int main(int __argc, char** __argv) {" << CodeBuffer::indR << "\n";
+
+
+			// add argument conversion
+			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
+
+			// declare parameter
+			const VariablePtr& argc = main->getParameterList()[0];
+			const VariablePtr& argv = main->getParameterList()[1];
+
+			VariableManager::VariableInfo info;
+			info.location = VariableManager::HEAP;
+			cc.getVariableManager().addInfo(argc, info);
+			cc.getVariableManager().addInfo(argv, info);
+
+			cc.getNameManager().setName(argc, "argc");
+			cc.getNameManager().setName(argv, "argv");
+
+			const RefTypePtr argvType = static_pointer_cast<const RefType>(main->getParameterList()[1]->getType());
+			const ArrayTypePtr aaCharType = static_pointer_cast<const ArrayType>(argvType->getElementType());
+			const ArrayTypePtr aCharType = static_pointer_cast<const ArrayType>(aaCharType->getElementType());
+
+			string charArrayArrayName = cc.getTypeManager().getTypeName(code, aaCharType, true);
+			string charArrayName = cc.getTypeManager().getTypeName(code, aCharType, true);
+
+			code << "int argc = __argc;\n";
+			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){{argc},alloca(sizeof(" << charArrayName << ") * argc)};\n";
+
+			// initialize argument vector data structure
+			code << "for(int __i=0; __i<argc; __i++) {" << CodeBuffer::indR << "\n";
+			code << "argv.data[__i] = (" + charArrayName + "){{strlen(__argv[__i])+1}, __argv[__i]};" << CodeBuffer::indL;
+			code << "\n}\n";
+
+			// add body
+			code << "\n// ---- begin of actual code body ----\n";
+
+			convert(main->getBody(), code);
+
+			code << "\n// ----  end of actual code body  ----\n";
+
+			// complete procedure
+			code << CodeBuffer::indL << "\n";
+			code << "}\n\n";
+
+			// make current code fragment depending on the main function
+			getCurrentCodeFragment()->addDependency(code);
+
+		} else {
+
+			// TODO: add wrapper for external access
+
+			// handle individual entry points
+			for_each(program->getEntryPoints(), [&](const ExpressionPtr& cur) {
+				// add entry point
+				this->convert(cur);
+			});
+		}
 	}
 
 	////////////////////////////////////////////////////////////////////////// Statements
