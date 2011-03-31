@@ -36,20 +36,36 @@
 
 #pragma once
 
+#include "globals.h"
+
+#include <pthread.h>
+
 #define IRT_DECLARE_ID_TYPE(__type) \
-typedef struct _##__type##_id __type##_id;
+typedef struct _irt_##__type##_id irt_##__type##_id;
 
 #define IRT_MAKE_ID_TYPE(__type) \
-struct _##__type; \
-struct _##__type##_id { \
+struct _irt_##__type; \
+struct _irt_##__type##_id { \
 	union { \
-		uint64 id; \
+		uint64 full; \
 		struct { \
 			uint16 node; \
 			uint16 thread; \
 			uint32 index; \
 		} components; \
 	} value; \
-	struct _##__type* cached; \
-};
+	struct _irt_##__type* cached; \
+}; \
+inline irt_##__type##_id irt_generate_##__type##_id() { \
+	/* The hack below is necessary to maintain minimal dependencies. \
+	This way, id_generation.h does not need to know about workers */ \
+	uint64* worker_ptr = (uint64*)pthread_getspecific(irt_g_worker_key); \
+	irt_##__type##_id id; \
+	id.value.full = *worker_ptr; \
+	/* access the generator index which is 128 bits after the start of the worker struct */ \
+	id.value.components.index = (*(uint32*)(worker_ptr+2))++; \
+	id.cached = NULL; \
+	return id; \
+}
+
 

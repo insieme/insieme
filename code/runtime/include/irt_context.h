@@ -36,26 +36,21 @@
 
 #pragma once
 
-#include "irt_inttypes.h"
-
-#include "id_generation.h"
-
-#include "irt_types.h"
-#include "wi_implementation.h"
+#include "declarations.h"
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(irt_context);
+IRT_MAKE_ID_TYPE(context);
 
 struct _irt_context {
 	irt_context_id id;
-	irt_client_app_id client_app;
+	irt_client_app* client_app;
 	irt_type* type_table;
-	irt_wi_implementation** impl_table;
+	irt_wi_implementation* impl_table;
 };
 
 
 /* ------------------------------ operations ----- */
 
-irt_context* irt_context_create();
+irt_context* irt_context_create(irt_client_app* app);
 void irt_context_destroy(irt_context* context);

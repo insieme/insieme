@@ -39,31 +39,36 @@
 #include "irt_inttypes.h"
 #include "id_generation.h"
 
-// Alphabetical lexicographic order
+// Declarations of insieme runtime types in alphabetical lexicographic order
 
 /* ------------------------------ channels ----- */
 
-IRT_DECLARE_ID_TYPE(irt_channel);
+IRT_DECLARE_ID_TYPE(channel);
 typedef struct _irt_channel irt_channel;
 
 /* ------------------------------ client app ----- */
 
-IRT_DECLARE_ID_TYPE(irt_client_app);
+IRT_DECLARE_ID_TYPE(client_app);
 typedef struct _irt_client_app irt_client_app;
 
 /* ------------------------------ context ----- */
 
-IRT_DECLARE_ID_TYPE(irt_context);
+IRT_DECLARE_ID_TYPE(context);
 typedef struct _irt_context irt_context;
 
 /* ------------------------------ data items ----- */
 
-IRT_DECLARE_ID_TYPE(irt_data_item);
+IRT_DECLARE_ID_TYPE(data_item);
 typedef enum _irt_data_mode irt_data_mode;
 typedef struct _irt_data_range irt_data_range;
 typedef struct _irt_data_block irt_data_block;
 typedef struct _irt_data_item irt_data_item;
 typedef struct _irt_lw_data_item irt_lw_data_item;
+
+/* ------------------------------ error handling ----- */
+
+typedef enum _irt_errcode irt_errcode;
+typedef struct _irt_error irt_error;
 
 /* ------------------------------ types ----- */
 
@@ -73,14 +78,14 @@ typedef struct _irt_type irt_type;
 
 /* ------------------------------ work groups ----- */
 
-IRT_DECLARE_ID_TYPE(irt_work_group);
+IRT_DECLARE_ID_TYPE(work_group);
 typedef uint32 irt_barrier_id;
 typedef uint32 irt_distribute_id;
 typedef struct _irt_work_group irt_work_group;
 
 /* ------------------------------ work items ----- */
 
-IRT_DECLARE_ID_TYPE(irt_work_item);
+IRT_DECLARE_ID_TYPE(work_item);
 typedef struct _irt_work_item_range irt_work_item_range;
 typedef struct _irt_work_item irt_work_item;
 
@@ -89,13 +94,13 @@ typedef struct _irt_work_item irt_work_item;
 typedef uint32 irt_wi_implementation_id;
 typedef struct _irt_wi_di_requirement irt_wi_di_requirement;
 typedef struct _irt_wi_implementation irt_wi_implementation;
+typedef struct _irt_wi_implementation_variant irt_wi_implementation_variant;
 
 /* ------------------------------ worker ----- */
 
-IRT_DECLARE_ID_TYPE(irt_worker);
+IRT_DECLARE_ID_TYPE(worker);
 typedef uint64 irt_affinity_mask;
 typedef struct _irt_worker irt_worker;
-
 
 
 

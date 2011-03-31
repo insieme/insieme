@@ -36,28 +36,20 @@
 
 #pragma once
 
-#include "declarations.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <dlfcn.h>
 
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(client_app);
-
-#define IRT_APP_INIT_CONTEXT_NAME "insieme_init_context"
-#define IRT_APP_CLEANUP_CONTEXT_NAME "insieme_cleanup_context"
-
-typedef void (init_context_fun)(irt_context* context);
-typedef void (cleanup_context_fun)(irt_context* context);
-
-struct _irt_client_app {
-	irt_client_app_id id;
-	size_t pid;
-	void *library;
-	init_context_fun *init_context;
-	cleanup_context_fun *cleanup_context;
-};
-
-/* ------------------------------ operations ----- */
-
-irt_client_app* irt_client_app_create(const char* library_file_name);
-void irt_client_app_destroy(irt_client_app* app);
+#define DLOPEN_UNIQUE_BUFFSIZE 256
+void* dlopen_unique(const char* filename, int flag) {
+	static unsigned count = 0;
+	char uniquename[DLOPEN_UNIQUE_BUFFSIZE];
+	unsigned cc = count++; // TODO should use atomic op for thread safety
+	assert(snprintf(uniquename, DLOPEN_UNIQUE_BUFFSIZE, "%s.%d", filename, cc) < DLOPEN_UNIQUE_BUFFSIZE);
+	char command[DLOPEN_UNIQUE_BUFFSIZE];
+	assert(snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename) < DLOPEN_UNIQUE_BUFFSIZE);
+	assert(system(command) == 0);
+	return dlopen(uniquename, flag);
+}
 

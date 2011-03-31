@@ -40,7 +40,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(irt_work_item);
+IRT_MAKE_ID_TYPE(work_item);
 
 struct _irt_work_item_range {
 	int64 begin, end, step;
@@ -59,7 +59,7 @@ struct _irt_work_item {
 
 /* ------------------------------ operations ----- */
 
-irt_work_item* irt_wi_create();
+irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id);
 void irt_wi_destroy(irt_work_item* wi);
 
 void irt_wi_enqueue(irt_work_item* wi);

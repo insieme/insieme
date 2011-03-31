@@ -36,15 +36,22 @@
 
 #include "data_item.h"
 #include "work_item.h"
+#include "worker.h"
 
-int main() {
+#include "utils/hoisting.h"
+#include "impl/client_app.impl.h"
+#include "impl/irt_context.impl.h"
 
-	irt_data_item di;
-	di.dimensions = 1;
-	irt_work_item wi;
-	wi.impl_id = 1;
+int main(int argc, char** argv) {
+	if(argc!=2) {
+		printf("usage: runtime [libname]\n");
+		return -1;
+	}
 
-	return di.dimensions - wi.impl_id;
+	irt_client_app* client_app = irt_client_app_create(argv[1]);
+	irt_context* prog_context = irt_context_create(client_app);
+
+	return 0;
 }
 
 
