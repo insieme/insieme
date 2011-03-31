@@ -476,9 +476,16 @@ public:
 
             // store capture list of function (if existent)
             ArgList args;
+            core::Lambda::ParamList bindArgs;;
+
             if(bind) {
-                args.first = bind->getParameters();
+                args.first = fun->getParameterList();
                 args.second = bind->getCall()->getArguments();
+                bindArgs = bind->getParameters();
+            } else {
+                core::VariablePtr tmpVar = builder.variable(fun->getParameterList().at(0)->getType());
+                ADD_PARAM(args, fun->getParameterList().at(0), tmpVar);
+                bindArgs.push_back(tmpVar);
             }
 
             // add needed variables to the capture list
@@ -496,7 +503,7 @@ public:
             }
             core::TypePtr retTy = dynamic_pointer_cast<const core::FunctionType>(fun->getType())->getReturnType();
 
-            return builder.bindExpr(fun->getParameterList(), builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second));
+            return builder.bindExpr(bindArgs, builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second));
         }
 
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
