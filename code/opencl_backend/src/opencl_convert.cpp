@@ -228,7 +228,8 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const DeclarationStmtPtr& dcl = dynamic_pointer_cast<const DeclarationStmt>(bodyCompoundStmt.front());
 				addBuiltinAnnotation(builder, qualifierMap, dcl->getVariable(), "get_num_groups");
 				
-				const CallExprPtr& globalParallel = dynamic_pointer_cast<const CallExpr>(bodyCompoundStmt.back());
+				// TODO: fix the [1] with the pattern matching
+				const CallExprPtr& globalParallel = dynamic_pointer_cast<const CallExpr>(bodyCompoundStmt[1]);
 				
 				const vector<ExpressionPtr>& globalExpr = globalParallel->getArguments();
 				
@@ -246,18 +247,17 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					// Add global qualifier
 					addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::GLOBAL);
 				});
+
+				const BindExprPtr& globalBind =  dynamic_pointer_cast<const BindExpr>(globalJob->getDefaultStmt());
 				
-				const CaptureInitExprPtr& globalCapture =  dynamic_pointer_cast<const CaptureInitExpr>(globalJob->getDefaultStmt());
+				const CallExprPtr& globalCall = globalBind->getCall();
+				const vector<ExpressionPtr> globalOldValues = globalCall->getArguments();
+				const LambdaExprPtr& globalParFct = dynamic_pointer_cast<const LambdaExpr>(globalCall->getFunctionExpr());
 				
-				const std::vector<ExpressionPtr>& globalNewValues = globalCapture->getValues();			
-				
-				const LambdaExprPtr& globalParFct = dynamic_pointer_cast<const LambdaExpr>(globalCapture->getLambda());
-				
-				const std::vector<VariablePtr>& globalOldValues = globalParFct->getCaptureList();
-				
-				// check for local variables
-				auto&& iter2 = globalNewValues.begin();
-				for (auto&& iter = globalOldValues.begin(); iter != globalOldValues.end(); ++iter, ++iter2){
+				const std::vector<VariablePtr>& globalNewValues = globalParFct->getParameterList();
+
+				auto&& iter2 = globalOldValues.begin();
+				for (auto&& iter = globalNewValues.begin(); iter != globalNewValues.end(); ++iter, ++iter2){
 					unsigned newName = (*iter)->getId();
 					unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
 
@@ -279,7 +279,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				// declarations that we want to add to the body of the function
 				vector<DeclarationStmtPtr> newBodyDecls;
-				
+
 				for_each(localJobDecls, [&](const DeclarationStmtPtr& curDecl) {
 					unsigned newName = (curDecl->getVariable())->getId(); 
 					if (dynamic_pointer_cast<const Variable>(curDecl->getInitialization())){
@@ -299,22 +299,30 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					}
 				});
 				
-				const CaptureInitExprPtr& localCapture =  dynamic_pointer_cast<const CaptureInitExpr>(localJob->getDefaultStmt());
-				
-				const std::vector<ExpressionPtr>& localNewValues = localCapture->getValues();
-				
-				const LambdaExprPtr& localParFct = dynamic_pointer_cast<const LambdaExpr>(localCapture->getLambda());
-				
-				const std::vector<VariablePtr>& localOldValues = localParFct->getCaptureList();
-				
-				iter2 = localNewValues.begin();
-				for (auto&& iter = localOldValues.begin(); iter != localOldValues.end(); ++iter, ++iter2){
+				const BindExprPtr& localBind =  dynamic_pointer_cast<const BindExpr>(localJob->getDefaultStmt());
+
+				const CallExprPtr& localCall = localBind->getCall();
+				const vector<ExpressionPtr> localOldValues = localCall->getArguments();
+				const LambdaExprPtr& localParFct = dynamic_pointer_cast<const LambdaExpr>(localCall->getFunctionExpr());
+
+				const std::vector<VariablePtr>& localNewValues = localParFct->getParameterList();
+
+				iter2 = localOldValues.begin();
+				for (auto&& iter = localNewValues.begin(); iter != localNewValues.end(); ++iter, ++iter2){
 					unsigned newName = (*iter)->getId(); 
 					unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
+					LOG(INFO) << newName << " " << oldName << '\n'; 
 					backwardVarNameMap.insert(std::make_pair(newName, oldName));
 					forwardVarNameMap.insert(std::make_pair(oldName, newName));
 					qualifierMap.insert(std::make_pair(newName, *iter));
 				}
+				// PRINT
+				/*LOG(INFO) << "Qui ci arrivo" << std::endl;
+				for (varNameMapType::const_iterator it = forwardVarNameMap.begin(); it != end; ++it)
+				{
+					std::cout << it->first << " -> " << it->second<< '\n';
+				}
+				*/
 				
 				Lambda::ParamList newParams;
 				for (uint i = 0; i < oldParams.size()-2; i++){

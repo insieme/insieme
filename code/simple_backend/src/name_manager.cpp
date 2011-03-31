@@ -99,10 +99,6 @@ void NameManager::setName(const core::NodePtr& ptr, const string& name) {
 	assert(res.second && "Tried to alter name after first assignment!");
 }
 
-string NameManager::getVarName(const VariablePtr& var) {
-	return getName(var);
-}
-
 
 } // end: namespace simple_backend
 } // end: namespace insieme

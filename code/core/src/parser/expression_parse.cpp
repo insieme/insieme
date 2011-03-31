@@ -153,7 +153,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stm
 
  //   typeG = new TypeGrammar(nodeMan);
     exprGpart = new ExpressionGrammarPart(nodeMan, this, typeG);
-    opG = new OperatorGrammar(nodeMan, this);
+    opG = new OperatorGrammar<CallExprPtr>(nodeMan, this);
     if(stmtGrammar == NULL) {
         stmtG = new StatementGrammar(nodeMan, this, typeG);
         deleteStmtG = true;

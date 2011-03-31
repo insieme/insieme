@@ -47,52 +47,97 @@ namespace parse {
 // FW Declaration
 struct ExpressionGrammar;
 
-struct OperatorGrammar : public qi::grammar<ParseIt, CallExprPtr(), qi::space_type> {
+template <typename T>
+struct OperatorGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     ExpressionGrammar* exprG;
     lang::BasicGenerator* generator;
     OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGram);
     ~OperatorGrammar();
 
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> assignment;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> addition;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> subtraction;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> multiplication;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> division;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> modulo;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> and_;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> or_;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> xor_;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lShift;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> rShift;
+    const boost::phoenix::actor<boost::phoenix::reference<insieme::core::NodeManager> >&& nManRef;
+    NodeManager& nodeMan;
+
+    qi::rule<ParseIt, T(), qi::space_type> assignment;
+    qi::rule<ParseIt, T(), qi::space_type> addition;
+    qi::rule<ParseIt, T(), qi::space_type> subtraction;
+    qi::rule<ParseIt, T(), qi::space_type> multiplication;
+    qi::rule<ParseIt, T(), qi::space_type> division;
+    qi::rule<ParseIt, T(), qi::space_type> modulo;
+    qi::rule<ParseIt, T(), qi::space_type> and_;
+    qi::rule<ParseIt, T(), qi::space_type> or_;
+    qi::rule<ParseIt, T(), qi::space_type> xor_;
+    qi::rule<ParseIt, T(), qi::space_type> lShift;
+    qi::rule<ParseIt, T(), qi::space_type> rShift;
 
     // --------------------------------------------------------------------------------------
 
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> not_;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> plus;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> minus;
+    qi::rule<ParseIt, T(), qi::space_type> not_;
+    qi::rule<ParseIt, T(), qi::space_type> plus;
+    qi::rule<ParseIt, T(), qi::space_type> minus;
 
     // --------------------------------------------------------------------------------------
 
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> preInc;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> postInc;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> preDec;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> postDec;
+    qi::rule<ParseIt, T(), qi::space_type> preInc;
+    qi::rule<ParseIt, T(), qi::space_type> postInc;
+    qi::rule<ParseIt, T(), qi::space_type> preDec;
+    qi::rule<ParseIt, T(), qi::space_type> postDec;
 
     // --------------------------------------------------------------------------------------
 
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lAnd;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lOr;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> lNot;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Eq;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Ne;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Lt;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Le;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Gt;
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> Ge;
+    qi::rule<ParseIt, T(), qi::space_type> lAnd;
+    qi::rule<ParseIt, T(), qi::space_type> lOr;
+    qi::rule<ParseIt, T(), qi::space_type> lNot;
+    qi::rule<ParseIt, T(), qi::space_type> Eq;
+    qi::rule<ParseIt, T(), qi::space_type> Ne;
+    qi::rule<ParseIt, T(), qi::space_type> Lt;
+    qi::rule<ParseIt, T(), qi::space_type> Le;
+    qi::rule<ParseIt, T(), qi::space_type> Gt;
+    qi::rule<ParseIt, T(), qi::space_type> Ge;
 
     // --------------------------------------------------------------------------------------
 
-    qi::rule<ParseIt, CallExprPtr(), qi::space_type> operatorRule;
+    qi::rule<ParseIt, T(), qi::space_type> operatorRule;
+
+    // member functions providing the rules
+    virtual qi::rule<ParseIt, T(), qi::space_type> getAssignment();
+    #define get(op) virtual qi::rule<ParseIt, T(), qi::space_type> get##op ();
+    get(Add)
+    get(Sub)
+    get(Mul)
+    get(Div)
+    get(Mod)
+    get(And)
+    get(Or)
+    get(Xor)
+    get(LShift)
+    get(RShift)
+    get(Not)
+    get(Plus)
+    get(Minus)
+    get(PreInc)
+    get(PostInc)
+    get(PreDec)
+    get(PostDec)
+    get(LAnd)
+    get(LOr)
+    get(LNot)
+    get(Eq)
+    get(Ne)
+    get(Lt)
+    get(Le)
+    get(Gt)
+    get(Ge)
+    #undef get
+
+    // member functions creating the Objects
+    virtual T getAssignmentHelper(ExpressionPtr a, ExpressionPtr b);
+    virtual T getBinaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
+    virtual T getInt4OpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
+    virtual T getUnaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a);
+    virtual T getSignOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr b);
+    virtual T getInplaceOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr a);
+    virtual T getLazyOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
+    virtual T getBoolOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
 
 };
 
