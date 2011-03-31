@@ -38,11 +38,25 @@
 
 #include "irt_inttypes.h"
 
+#include <signal.h>
+
+#define IRT_SIG_ERR SIGUSR1
+
 /* ------------------------------ data structures ----- */
 
-#define irt_errcode uint32;
+enum _irt_errcode {
+	IRT_ERR_IO,
+	IRT_ERR_INIT,
+	IRT_ERR_APP
+};
+
+struct _irt_error {
+	irt_errcode errcode;
+	uint32 additional_bytes;
+};
+
 
 /* ------------------------------ operations ----- */
 
-#define IRT_ERRCHECK(_arg) _arg
-
+void irt_throw_string_error(irt_errcode code, const char* message, ...);
+void irt_throw_generic_error(irt_error* error);

@@ -40,7 +40,7 @@
 
 /* ------------------------------ data structures ----- */
 
-IRT_MAKE_ID_TYPE(irt_data_item);
+IRT_MAKE_ID_TYPE(data_item);
 
 enum _irt_data_mode {
 	IRT_DMODE_READ_ONLY,
@@ -61,13 +61,12 @@ struct _irt_data_block {
 
 struct _irt_data_item {
 	irt_data_item_id id;
-	uint32 use_count;
 	irt_type_id type_id;
-	uint32 dimensions;
-	irt_data_mode mode;
-	// range and sizes have as many entries as data_item has dimensions
-	uint64 *sizes;
-	irt_data_range* range;
+	uint16 use_count;
+	uint16 dimensions;
+	//irt_data_mode mode;
+	// ranges has as many entries as data_item has dimensions
+	irt_data_range* ranges;
 	// can be NULL if data item is abstract
 	irt_data_block* data_block;
  };
@@ -75,7 +74,7 @@ struct _irt_data_item {
 
 /* ------------------------------ operations ----- */
 
-irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, uint64* sizes);
+irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges);
 irt_data_item* irt_di_create_sub(irt_data_item_id parent, irt_data_range range);
 void* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
 void irt_di_destroy(irt_data_item* di);

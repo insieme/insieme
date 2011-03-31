@@ -363,6 +363,8 @@ OperatorGrammar<T>::~OperatorGrammar() {
 
 // Explicit Template Instantiation
 template struct OperatorGrammar< CallExprPtr >;
+template struct OperatorGrammar< ExpressionPtr >;
+template struct OperatorGrammar< NodePtr >;
 
 
 } // namespace parse

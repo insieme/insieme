@@ -52,7 +52,6 @@ typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 // FW Declaration
 struct TypeGrammar;
 struct ExpressionGrammar;
-struct StatementGrammar;
 
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, ExpressionPtr(), qi::space_type> {
     ExpressionGrammar* exprG;

@@ -52,9 +52,8 @@ typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 // FW Declaration
 struct TypeGrammar;
 struct ExpressionGrammarPart;
-struct StatementGrammar;
-template<typename T>
-struct OperatorGrammar;
+template<typename T> struct StatementGrammar;
+template<typename T> struct OperatorGrammar;
 
 // helper function to be able to use std::make_pair along with ph::push_back
 template<typename T, typename U>
@@ -77,12 +76,12 @@ public:
 struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::space_type> {
     TypeGrammar *typeG; // pointer for weak coupling
     ExpressionGrammarPart *exprGpart;
-    StatementGrammar* stmtG;
-    OperatorGrammar<CallExprPtr>* opG;
+    StatementGrammar<StatementPtr>* stmtG;
+    OperatorGrammar<ExpressionPtr>* opG;
     VariableTable varTab;
     bool deleteStmtG;
 
-    ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stmtGrammar = NULL);
+    ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<StatementPtr>* stmtGrammar = NULL);
     ~ExpressionGrammar();
 
     // terminal rules, no skip parsing
@@ -110,7 +109,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, ExpressionPtr(), qi::spac
 
     qi::rule<ParseIt, BindExprPtr(), qi::space_type> bindExpr;
 
-    qi::rule<ParseIt, JobExprPtr(), qi::locals<vector<DeclarationStmtPtr>, GuardedStmts>, qi::space_type> jobExpr;
+    qi::rule<ParseIt, JobExprPtr(), qi::locals<vector<StatementPtr>, GuardedStmts>, qi::space_type> jobExpr;
     qi::rule<ParseIt, TupleExprPtr(), qi::space_type> tupleExpr;
     qi::rule<ParseIt, VectorExprPtr(), qi::space_type> vectorExpr;
     qi::rule<ParseIt, StructExprPtr(), qi::space_type> structExpr;

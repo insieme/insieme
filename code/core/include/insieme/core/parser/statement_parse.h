@@ -45,31 +45,61 @@ namespace parse {
 
 typedef vector<StatementPtr> Stmts;
 typedef vector<std::pair<ExpressionPtr, StatementPtr> > Cases;
+#define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
 struct TypeGrammar;
 struct ExpressionGrammar;
 
-struct StatementGrammar : public qi::grammar<ParseIt, StatementPtr(), qi::space_type> {
+template<typename T>
+struct StatementGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     TypeGrammar *typeG;        // pointer for weak coupling
     ExpressionGrammar *exprG;  // pointer for weak coupling
     bool deleteFields;         // flag which determines if exprG has been passed as an argument to the constructor or created inside it
 
+    NodeManager& nodeMan;
+
     StatementGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGram = NULL, TypeGrammar* typeGram = NULL);
     ~StatementGrammar();
 
-    qi::rule<ParseIt, StatementPtr(), qi::space_type> statementRule;
-    qi::rule<ParseIt, BreakStmtPtr(), qi::space_type> breakStmt;
-    qi::rule<ParseIt, ContinueStmtPtr(), qi::space_type> continueStmt;
-    qi::rule<ParseIt, ReturnStmtPtr(), qi::space_type> returnStmt;
-    qi::rule<ParseIt, CompoundStmtPtr(), qi::locals<Stmts>,  qi::space_type> compoundStmt;
-    qi::rule<ParseIt, DeclarationStmtPtr(), qi::space_type> declarationStmt;
-    qi::rule<ParseIt, WhileStmtPtr(), qi::space_type> whileStmt;
-    qi::rule<ParseIt, ForStmtPtr(), qi::space_type> forStmt;
-    qi::rule<ParseIt, IfStmtPtr(), qi::space_type> ifStmt;
-    qi::rule<ParseIt, SwitchStmtPtr(), qi::locals<Cases>, qi::space_type> switchStmt;
-    qi::rule<ParseIt, MarkerStmtPtr(), qi::space_type> markerStmt;
+    qi::rule<ParseIt, T(), qi::space_type> statementRule;
+    qi::rule<ParseIt, T(), qi::space_type> breakStmt;
+    qi::rule<ParseIt, T(), qi::space_type> continueStmt;
+    qi::rule<ParseIt, T(), qi::space_type> returnStmt;
+    qi::rule<ParseIt, T(), qi::locals<Stmts>,  qi::space_type> compoundStmt;
+    qi::rule<ParseIt, T(), qi::space_type> declarationStmt;
+    qi::rule<ParseIt, T(), qi::space_type> whileStmt;
+    qi::rule<ParseIt, T(), qi::space_type> forStmt;
+    qi::rule<ParseIt, T(), qi::space_type> ifStmt;
+    qi::rule<ParseIt, T(), qi::locals<Cases>, qi::space_type> switchStmt;
+    qi::rule<ParseIt, T(), qi::space_type> markerStmt;
 
+    // member functions applying the rules
+    virtual qi::rule<ParseIt, T(), qi::locals<Stmts>,  qi::space_type> getCompound();
+    virtual qi::rule<ParseIt, T(), qi::locals<Cases>, qi::space_type> getSwitch();
+    #define get(op) virtual Rule get##op ();
+    get(Break)
+    get(Continue)
+    get(Return)
+    get(Declaration)
+    get(While)
+    get(For)
+    get(If)
+    get(Marker)
+    #undef get
+
+    // member functions providing the rules
+    virtual BreakStmtPtr breakHelp();
+    virtual ContinueStmtPtr continueHelp();
+    virtual ReturnStmtPtr returnHelp(ExpressionPtr ret);
+
+    virtual DeclarationStmtPtr declarationHelp(VariablePtr var, ExpressionPtr initExpr);
+    virtual CompoundStmtPtr compoundHelp(Stmts stmts);
+    virtual WhileStmtPtr whileHelp(ExpressionPtr condition, StatementPtr body);
+    virtual ForStmtPtr forHelp(StatementPtr loopVar, ExpressionPtr end, ExpressionPtr step, StatementPtr body);
+    virtual IfStmtPtr ifHelp(const ExpressionPtr& condition, const StatementPtr& body, const boost::optional<StatementPtr>& elseBody);
+    virtual SwitchStmtPtr switchHelp(const ExpressionPtr& switchExpr, const Cases& cases, const boost::optional<StatementPtr>& defaultCase);
+    virtual MarkerStmtPtr markerHelp(const StatementPtr& subStmt, const unsigned int id);
 };
 
 }

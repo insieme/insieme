@@ -43,11 +43,6 @@ namespace insieme {
 namespace core {
 namespace parse {
 
-// FW Declaration
-struct TypeGrammar;
-struct ExpressionGrammar;
-struct StatementGrammar;
-
 struct ProgramGrammar : public qi::grammar<ParseIt, ProgramPtr(), qi::space_type> {
     ExpressionGrammar *exprG;   // pointer for weak coupling
 

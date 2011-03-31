@@ -119,7 +119,7 @@ LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const Va
 }
 
 JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
-        const GuardedStmts guardedStmts, const vector<DeclarationStmtPtr>& localDecls) {
+        const GuardedStmts guardedStmts, const vector<StatementPtr>& localDeclStmts) {
 
     if(!dynamic_pointer_cast<const LambdaExpr>(defaultStmt) && !dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)) {
         throw ParseException();
@@ -128,6 +128,14 @@ JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, co
     for_each(guardedStmts, [&](std::pair<ExpressionPtr, ExpressionPtr> guardedStmt) {
         //TODO add check for guard
         if(!dynamic_pointer_cast<const LambdaExpr>(guardedStmt.second) && !dynamic_pointer_cast<const CaptureInitExpr>(guardedStmt.second))
+            throw ParseException();
+    });
+
+    vector<DeclarationStmtPtr> localDecls;
+    for_each(localDeclStmts, [&](StatementPtr decl) {
+        if(DeclarationStmtPtr d = dynamic_pointer_cast<const DeclarationStmt>(decl))
+            localDecls.push_back(d);
+        else
             throw ParseException();
     });
 
@@ -148,14 +156,14 @@ string buildString(string s) {
     return s;
 }
 
-ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar* stmtGrammar)
+ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<StatementPtr>* stmtGrammar)
     : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), varTab(nodeMan) {
 
  //   typeG = new TypeGrammar(nodeMan);
     exprGpart = new ExpressionGrammarPart(nodeMan, this, typeG);
-    opG = new OperatorGrammar<CallExprPtr>(nodeMan, this);
+    opG = new OperatorGrammar<ExpressionPtr>(nodeMan, this);
     if(stmtGrammar == NULL) {
-        stmtG = new StatementGrammar(nodeMan, this, typeG);
+        stmtG = new StatementGrammar<StatementPtr>(nodeMan, this, typeG);
         deleteStmtG = true;
     }
     else {
