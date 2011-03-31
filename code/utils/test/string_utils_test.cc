@@ -36,6 +36,8 @@
 
 #include <gtest/gtest.h>
 
+#include <sstream>
+
 #include "insieme/utils/string_utils.h"
 
 
@@ -51,3 +53,10 @@ TEST(StringUtilsTest, toString) {
 	EXPECT_EQ (toString('c'), "c");
 }
 
+TEST(StringUtilsTest, times) {
+	EXPECT_EQ("", toString(times("x", 0)));
+	EXPECT_EQ("x", toString(times("x", 1)));
+	EXPECT_EQ("xx", toString(times("x", 2)));
+	EXPECT_EQ("xxx", toString(times("x", 3)));
+	EXPECT_EQ("x,x,x", toString(times("x", 3, ",")));
+}

@@ -118,3 +118,34 @@ void functionalJoin(SeparatorFunc seperatorFunc, Container container, Printer pr
 		});
 	}
 }
+
+template<typename Element, typename Printer>
+struct Multiplier {
+
+	const Element& element;
+	const unsigned times;
+	const Printer& printer;
+	const string& separator;
+
+	Multiplier(const Element& element, unsigned times, const Printer& printer, const string& separator) :
+		element(element), times(times), printer(printer), separator(separator) {};
+};
+
+template<typename Element, typename Printer>
+std::ostream& operator<<(std::ostream& out, const Multiplier<Element, Printer>& multiplier) {
+	if (multiplier.times > 0) {
+		multiplier.printer(out, multiplier.element);
+	}
+	for (unsigned i = 1; i<multiplier.times; i++) {
+		out << multiplier.separator;
+		multiplier.printer(out, multiplier.element);
+	}
+
+	return out;
+}
+
+template<typename Element, typename Printer = print<id<Element>>>
+Multiplier<Element, Printer> times(const Element& element, unsigned times, const string& separator = "", const Printer& printer = Printer()) {
+	return Multiplier<Element, Printer>(element, times, printer, separator);
+}
+
