@@ -84,7 +84,7 @@ namespace simple_backend {
 
 		// including this header will result into problems on a 32 bit system
 		//  - reason: memset / memcpy uses size_t, which is fixed to 64 bit within insieme
-		//res.push_back("#include <string.h>");
+		res.push_back("#include <string.h>");
 
 		// add runtime header
 		res.push_back("#include <runtime.h>");
@@ -179,7 +179,7 @@ namespace simple_backend {
 
 			// create procedure header
 			code << "int main(int __argc, char** __argv) {" << CodeBuffer::indR << "\n";
-
+			code << "\n// encapsulating arguments within Insieme Types ...\n";
 
 			// add argument conversion
 			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
@@ -204,11 +204,11 @@ namespace simple_backend {
 			string charArrayName = cc.getTypeManager().getTypeName(code, aCharType, true);
 
 			code << "int argc = __argc;\n";
-			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){{argc},alloca(sizeof(" << charArrayName << ") * argc)};\n";
+			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc), {argc}};\n";
 
 			// initialize argument vector data structure
-			code << "for(int __i=0; __i<argc; __i++) {" << CodeBuffer::indR << "\n";
-			code << "argv.data[__i] = (" + charArrayName + "){{strlen(__argv[__i])+1}, __argv[__i]};" << CodeBuffer::indL;
+			code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
+			code << "argv.data[i] = (" + charArrayName + "){__argv[i],{strlen(__argv[i])+1}};" << CodeBuffer::indL;
 			code << "\n}\n";
 
 			// add body
@@ -479,6 +479,28 @@ namespace simple_backend {
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
 		assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
 
+		TypeManager& typeManager = cc.getTypeManager();
+		auto parameterExternalizer = [&](const ExpressionPtr& ep) {
+
+			// obtain externalizing pattern
+			const string& pattern = typeManager.getTypeInfo(code, ep->getType()).externalizingPattern;
+
+			// check pattern - is there some change necessary?
+			if (pattern == "%s") {
+				// no extra treatment required
+				this->visit(ep);
+				return;
+			}
+
+			// use a dummy code fragment to dump code
+			CodeFragmentPtr fragment = CodeFragment::createNew("");
+			this->convert(ep, fragment);
+			code << format(pattern.c_str(), fragment->getCodeBuffer().toString().c_str());
+
+			// propagate dependencies
+			code->addDependencies(fragment->getDependencies());
+		};
+
 		// special built in function handling
 		if(auto literalFun = dynamic_pointer_cast<const Literal>(funExp)) {
 
@@ -488,7 +510,7 @@ namespace simple_backend {
 				if (args.size() == 1) { // should actually be implicit if all checks are satisfied
 					if (TupleExprPtr arguments = dynamic_pointer_cast<const TupleExpr>(args[0])) {
 						// print elements of the tuple directly ...
-						functionalJoin([&]{ code << ", "; }, arguments->getExpressions(), [&](const ExpressionPtr& ep) { this->visit(ep); });
+						functionalJoin([&]{ code << ", "; }, arguments->getExpressions(), parameterExternalizer);
 
 						// in case there is no argument => print 0
 						if (arguments->getExpressions().empty()) {
@@ -499,7 +521,7 @@ namespace simple_backend {
 					}
 				}
 
-				functionalJoin([&]{ code << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+				functionalJoin([&]{ code << ", "; }, args, parameterExternalizer);
 				return;
 			}
 
@@ -526,7 +548,9 @@ namespace simple_backend {
 			case NT_Literal: {
 				code << cc.getFunctionManager().getFunctionName(code, static_pointer_cast<const Literal>(funExp));
 				code << "(";
-				functionalJoin([&]{ code << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+
+				// externalize (convert to C equivalents) arguments before passing them to the call
+				functionalJoin([&]{ code << ", "; }, args, parameterExternalizer);
 				code << ")";
 				return;
 			}
@@ -548,7 +572,7 @@ namespace simple_backend {
 			case NT_CallExpr:
 			{
 
-				TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
+				TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
 				code->addDependency(details.definitions);
 
 				// use call wrapper
@@ -566,7 +590,7 @@ namespace simple_backend {
 			case NT_CaptureInitExpr:
 			{
 
-				TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
+				TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
 				code->addDependency(details.definitions);
 
 				// check whether it is a direct initialization / call situation
@@ -622,12 +646,12 @@ namespace simple_backend {
 
 		// resolve resulting type of expression
 		FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
-		TypeManager::FunctionTypeEntry resDetails = cc.getTypeManager().getFunctionTypeDetails(resType);
+		TypeManager::FunctionTypeInfo resDetails = cc.getTypeManager().getFunctionTypeInfo(resType);
 		currentCodeFragment->addDependency(resDetails.definitions);
 
 		// resolve type of sub-expression
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
-		TypeManager::FunctionTypeEntry details = cc.getTypeManager().getFunctionTypeDetails(funType);
+		TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
 		currentCodeFragment->addDependency(details.definitions);
 
 		// create surrounding cast
@@ -678,8 +702,21 @@ namespace simple_backend {
 
 
 	void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
-		// just print literal
-		currentCodeFragment << ptr->getValue();
+
+		// there is only a special treatment for strings
+		if (ptr->getType() != ptr->getNodeManager().basic.getString()) {
+			// standard: just print literal
+			currentCodeFragment << ptr->getValue();
+			return;
+		}
+
+		// convert a string into an array
+		NodeManager& manager = ptr->getNodeManager();
+		ASTBuilder builder(manager);
+		TypePtr type = builder.arrayType(manager.basic.getChar());
+
+		unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
+		currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << ", {" << len << "}})";
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {

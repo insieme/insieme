@@ -977,7 +977,7 @@ BindExprPtr BindExpr::get(NodeManager& manager, const vector<VariablePtr>& param
 }
 
 std::ostream& BindExpr::printTo(std::ostream& out) const {
-	return out << "bind(" << join(",", parameters, print<deref<VariablePtr>>()) << ")->" << *call;
+	return out << "bind(" << join(",", parameters, print<deref<VariablePtr>>()) << "){" << *call << "}";
 }
 
 

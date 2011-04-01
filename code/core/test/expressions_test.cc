@@ -301,31 +301,31 @@ TEST(ExpressionsTest, BindExpr) {
 
 
 	BindExprPtr empty = builder.bindExpr(toVector<VariablePtr>(), callA);
-	EXPECT_EQ("bind()->f()", toString(*empty));
+	EXPECT_EQ("bind(){f()}", toString(*empty));
 	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes)), *(empty->getType()));
 
 	BindExprPtr B1 = builder.bindExpr(toVector<VariablePtr>(), callB1);
-	EXPECT_EQ("bind()->g(12)", toString(*B1));
+	EXPECT_EQ("bind(){g(12)}", toString(*B1));
 	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes)), *(B1->getType()));
 
 	BindExprPtr B2 = builder.bindExpr(toVector<VariablePtr>(captureVar1), callB2);
-	EXPECT_EQ("bind(v1)->g(v1)", toString(*B2));
+	EXPECT_EQ("bind(v1){g(v1)}", toString(*B2));
 	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes)), *(B2->getType()));
 
 	BindExprPtr C1 = builder.bindExpr(toVector<VariablePtr>(), callC1);
-	EXPECT_EQ("bind()->h(12, 14)", toString(*C1));
+	EXPECT_EQ("bind(){h(12, 14)}", toString(*C1));
 	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(), typeRes)), *(C1->getType()));
 
 	BindExprPtr C2 = builder.bindExpr(toVector<VariablePtr>(captureVar1), callC2);
-	EXPECT_EQ("bind(v1)->h(12, v1)", toString(*C2));
+	EXPECT_EQ("bind(v1){h(12, v1)}", toString(*C2));
 	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes)), *(C2->getType()));
 
 	BindExprPtr C3 = builder.bindExpr(toVector<VariablePtr>(captureVar2), callC3);
-	EXPECT_EQ("bind(v2)->h(v2, 14)", toString(*C3));
+	EXPECT_EQ("bind(v2){h(v2, 14)}", toString(*C3));
 	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA), typeRes)), *(C3->getType()));
 
 	BindExprPtr C4 = builder.bindExpr(toVector<VariablePtr>(captureVar1,captureVar2), callC4);
-	EXPECT_EQ("bind(v1,v2)->h(v2, v1)", toString(*C4));
+	EXPECT_EQ("bind(v1,v2){h(v2, v1)}", toString(*C4));
 	EXPECT_EQ(*(builder.functionType(toVector<TypePtr>(typeA,typeA), typeRes)), *(C4->getType()));
 
 

@@ -64,9 +64,9 @@ class TypeManager {
 public:
 
 	/**
-	 * A pair consisting of a type name and its definition is forming an entry.
+	 * A structure including all the information maintained per type.
 	 */
-	struct Entry {
+	struct TypeInfo {
 
 		// a named used for types that are not supported by the simple backend
 		static const string UNSUPPORTED;
@@ -81,20 +81,40 @@ public:
 		// the pattern to be used for defining a parameters of this type - %s will replaced with the variable name
 		string paramPattern;
 
+		// the name of the type when being passed to some external function
+		string externName;
+		// the pattern to be used to define a parameter of this type for some external function
+		string externPattern;
+		// a pattern to be used when passing a value of the internal type to an external function
+		string externalizingPattern;
+
 		// the code fragment which might define this type
 		CodeFragmentPtr definition;
 
-		Entry() : lValueName(UNSUPPORTED), rValueName(UNSUPPORTED), declPattern(UNSUPPORTED), paramPattern(UNSUPPORTED), definition() { }
-		Entry(const string& lName, const string& rName, const string& declPattern, const string& paramPattern)
-					: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),  definition() { }
-		Entry(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodeFragmentPtr& definition)
-			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),  definition(definition) { }
+		TypeInfo()
+			: lValueName(UNSUPPORTED), rValueName(UNSUPPORTED), declPattern(UNSUPPORTED), paramPattern(UNSUPPORTED),
+				externName(UNSUPPORTED), externPattern(UNSUPPORTED), externalizingPattern(UNSUPPORTED), definition() { }
+
+		TypeInfo(const string& lName, const string& rName, const string& declPattern, const string& paramPattern)
+			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
+			  externName(rName), externPattern(paramPattern), externalizingPattern("%s"), definition() { }
+
+		TypeInfo(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodeFragmentPtr& definition)
+			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
+			  externName(rName), externPattern(paramPattern), externalizingPattern("%s"), definition(definition) { }
+
+		TypeInfo(
+				const string& lName, const string& rName, const string& declPattern, const string& paramPattern,
+				const string& externName, const string& externPattern, const string& externalizingPattern,
+				const CodeFragmentPtr& definition)
+			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
+			  externName(externName), externPattern(externPattern), externalizingPattern(externalizingPattern), definition(definition) { }
 	};
 
 	/**
-	 * The information stored regarding each function type.
+	 * A struct maintaining extra-information regarding function types.
 	 */
-	struct FunctionTypeEntry {
+	struct FunctionTypeInfo {
 
 		/**
 		 * The (super-) type of any closure representing a function of this type.
@@ -111,9 +131,9 @@ public:
 		 */
 		const CodeFragmentPtr definitions;
 
-		FunctionTypeEntry() { }
+		FunctionTypeInfo() { }
 
-		FunctionTypeEntry(const string& closureName, const string& callerName, const CodeFragmentPtr& definitions)
+		FunctionTypeInfo(const string& closureName, const string& callerName, const CodeFragmentPtr& definitions)
 			: closureName(closureName), callerName(callerName), definitions(definitions) { }
 	};
 
@@ -122,12 +142,12 @@ private:
 	/**
 	 * A map linking IR types to type definitions.
 	 */
-	utils::map::PointerMap<core::TypePtr, Entry> typeDefinitions;
+	utils::map::PointerMap<core::TypePtr, TypeInfo> typeDefinitions;
 
 	/**
 	 * A map linking a function type to the constructs defined for this type within C.
 	 */
-	utils::map::PointerMap<core::FunctionTypePtr, FunctionTypeEntry> functionTypeDefinitions;
+	utils::map::PointerMap<core::FunctionTypePtr, FunctionTypeInfo> functionTypeDefinitions;
 
 public:
 
@@ -156,7 +176,7 @@ public:
 	 * @param type the type to be resolved
 	 * @return the entry summarizing the information required for representing the given type within C
 	 */
-	const Entry getTypeEntry(const CodeFragmentPtr& context, const core::TypePtr& type);
+	const TypeInfo getTypeInfo(const CodeFragmentPtr& context, const core::TypePtr& type);
 
 	/**
 	 * Formats the a parameter with the given type and name within the given context. This might be used
@@ -176,27 +196,27 @@ public:
 	 * @param functionType the function type to be looked for
 	 * @return a collection of information regarding the code generated for the given type
 	 */
-	FunctionTypeEntry getFunctionTypeDetails(const core::FunctionTypePtr& functionType);
+	FunctionTypeInfo getFunctionTypeInfo(const core::FunctionTypePtr& functionType);
 
 private:
 
-	Entry resolveType(const core::TypePtr& ptr);
+	TypeInfo resolveType(const core::TypePtr& ptr);
 
-	Entry resolveGenericType(const core::GenericTypePtr& ptr);
-	Entry resolveStructType(const core::StructTypePtr& ptr);
-	Entry resolveUnionType(const core::UnionTypePtr& ptr);
-	Entry resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, string prefix);
+	TypeInfo resolveGenericType(const core::GenericTypePtr& ptr);
+	TypeInfo resolveStructType(const core::StructTypePtr& ptr);
+	TypeInfo resolveUnionType(const core::UnionTypePtr& ptr);
+	TypeInfo resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, string prefix);
 
-	Entry resolveFunctionType(const core::FunctionTypePtr& ptr);
+	TypeInfo resolveFunctionType(const core::FunctionTypePtr& ptr);
 
-	Entry resolveArrayType(const core::ArrayTypePtr& ptr);
-	Entry resolveVectorType(const core::VectorTypePtr& ptr);
-	Entry resolveChannelType(const core::ChannelTypePtr& ptr);
-	Entry resolveRefType(const core::RefTypePtr& ptr);
+	TypeInfo resolveArrayType(const core::ArrayTypePtr& ptr);
+	TypeInfo resolveVectorType(const core::VectorTypePtr& ptr);
+	TypeInfo resolveChannelType(const core::ChannelTypePtr& ptr);
+	TypeInfo resolveRefType(const core::RefTypePtr& ptr);
 
-	Entry resolveRefOrVectorOrArrayType(const core::TypePtr& ptr);
+	TypeInfo resolveRefOrVectorOrArrayType(const core::TypePtr& ptr);
 
-	Entry resolveRecType(const core::RecTypePtr& ptr);
+	TypeInfo resolveRecType(const core::RecTypePtr& ptr);
 	void resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr);
 };
 

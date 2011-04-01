@@ -70,6 +70,13 @@ void CodeFragment::addDependency(const CodeFragmentPtr& dep) {
 	}
 }
 
+void CodeFragment::addDependencies(const std::vector<CodeFragmentPtr>& fragments) {
+	// just add all dependencies
+	for_each(fragments, [&](const CodeFragmentPtr& cur) {
+		this->addDependency(cur);
+	});
+}
+
 
 namespace depResolve {
 

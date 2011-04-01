@@ -456,8 +456,9 @@ namespace {
 		PRINT(BindExpr, {
 				out << "bind(" << join(", ", node->getParameters(),[&](std::ostream& out, const ExpressionPtr& cur) {
 					this->visit(cur);
-				}) << ")->";
+				}) << "){";
 				visit(node->getCall());
+				out << "}";
 		});
 
 		PRINT(CaptureInitExpr, {

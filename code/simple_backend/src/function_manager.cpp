@@ -104,7 +104,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	TypeManager& typeManager = cc.getTypeManager();
 	protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
 	protoType << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
-		out << typeManager.getTypeName(protoType, cur, false);
+		out << typeManager.getTypeInfo(protoType, cur).externName;
 	});
 	protoType << ");\n";
 
@@ -253,9 +253,9 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 		function << "// --------- Captured Stuff - Begin -------------\n";
 
 		// get name of struct from type manager
-		TypeManager::FunctionTypeEntry functionTypeEntry = typeManager.getFunctionTypeDetails(funType);
-		function->addDependency(functionTypeEntry.definitions);
-		string structName = functionTypeEntry.closureName;
+		TypeManager::FunctionTypeInfo functionTypeInfo = typeManager.getFunctionTypeInfo(funType);
+		function->addDependency(functionTypeInfo.definitions);
+		string structName = functionTypeInfo.closureName;
 
 		int i = 0;
 		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {

@@ -67,37 +67,37 @@ TEST(TypeManager, Basic) {
 	SimpleNameManager nameManager;
 	TypeManager typeManager(nameManager);
 
-	TypeManager::Entry entry;
+	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
 
 
 	core::TypePtr type = basic.getInt4();
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("int", entry.lValueName);
-	EXPECT_EQ("int", entry.rValueName);
-	EXPECT_EQ("int %s", entry.declPattern);
-	EXPECT_EQ("int %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("int", info.lValueName);
+	EXPECT_EQ("int", info.rValueName);
+	EXPECT_EQ("int %s", info.declPattern);
+	EXPECT_EQ("int %s", info.paramPattern);
 
 	type = basic.getInt8();
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("long", entry.lValueName);
-	EXPECT_EQ("long", entry.rValueName);
-	EXPECT_EQ("long %s", entry.declPattern);
-	EXPECT_EQ("long %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("long", info.lValueName);
+	EXPECT_EQ("long", info.rValueName);
+	EXPECT_EQ("long %s", info.declPattern);
+	EXPECT_EQ("long %s", info.paramPattern);
 
 	type = basic.getFloat();
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("float", entry.lValueName);
-	EXPECT_EQ("float", entry.rValueName);
-	EXPECT_EQ("float %s", entry.declPattern);
-	EXPECT_EQ("float %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("float", info.lValueName);
+	EXPECT_EQ("float", info.rValueName);
+	EXPECT_EQ("float %s", info.declPattern);
+	EXPECT_EQ("float %s", info.paramPattern);
 
 	type = basic.getDouble();
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("double", entry.lValueName);
-	EXPECT_EQ("double", entry.rValueName);
-	EXPECT_EQ("double %s", entry.declPattern);
-	EXPECT_EQ("double %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("double", info.lValueName);
+	EXPECT_EQ("double", info.rValueName);
+	EXPECT_EQ("double %s", info.declPattern);
+	EXPECT_EQ("double %s", info.paramPattern);
 }
 
 TEST(TypeManager, StructTypes) {
@@ -108,28 +108,28 @@ TEST(TypeManager, StructTypes) {
 	SimpleNameManager nameManager;
 	TypeManager typeManager(nameManager);
 
-	TypeManager::Entry entry;
+	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
 
 	core::TypePtr type = builder.structType(core::NamedCompositeType::Entries());
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name %s", entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("struct name", info.lValueName);
+	EXPECT_EQ("struct name", info.rValueName);
+	EXPECT_EQ("struct name %s", info.declPattern);
+	EXPECT_EQ("struct name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
 
 	// members should not have an effect on the types
 	type = builder.structType(toVector<core::NamedCompositeType::Entry>(std::make_pair(builder.identifier("a"), basic.getInt4())));
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name %s", entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "int a;");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("struct name", info.lValueName);
+	EXPECT_EQ("struct name", info.rValueName);
+	EXPECT_EQ("struct name %s", info.declPattern);
+	EXPECT_EQ("struct name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "int a;");
 
 }
 
@@ -142,76 +142,76 @@ TEST(TypeManager, RefTypes) {
 	SimpleNameManager nameManager;
 	TypeManager typeManager(nameManager);
 
-	TypeManager::Entry entry;
+	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
 
 
 	core::TypePtr type = builder.refType(basic.getInt4());
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("int", entry.lValueName);
-	EXPECT_EQ("int*", entry.rValueName);
-	EXPECT_EQ("int %s", entry.declPattern);
-	EXPECT_EQ("int* %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("int", info.lValueName);
+	EXPECT_EQ("int*", info.rValueName);
+	EXPECT_EQ("int %s", info.declPattern);
+	EXPECT_EQ("int* %s", info.paramPattern);
 
 	type = builder.refType(basic.getInt8());
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("long", entry.lValueName);
-	EXPECT_EQ("long*", entry.rValueName);
-	EXPECT_EQ("long %s", entry.declPattern);
-	EXPECT_EQ("long* %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("long", info.lValueName);
+	EXPECT_EQ("long*", info.rValueName);
+	EXPECT_EQ("long %s", info.declPattern);
+	EXPECT_EQ("long* %s", info.paramPattern);
 
 	type = builder.refType(basic.getFloat());
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("float", entry.lValueName);
-	EXPECT_EQ("float*", entry.rValueName);
-	EXPECT_EQ("float %s", entry.declPattern);
-	EXPECT_EQ("float* %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("float", info.lValueName);
+	EXPECT_EQ("float*", info.rValueName);
+	EXPECT_EQ("float %s", info.declPattern);
+	EXPECT_EQ("float* %s", info.paramPattern);
 
 	type = builder.refType(builder.structType(core::NamedCompositeType::Entries()));
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name*", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name* %s", entry.paramPattern);
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("struct name", info.lValueName);
+	EXPECT_EQ("struct name*", info.rValueName);
+	EXPECT_EQ("struct name %s", info.declPattern);
+	EXPECT_EQ("struct name* %s", info.paramPattern);
 
 	core::ConcreteIntTypeParamPtr size = builder.concreteIntTypeParam(4);
 	core::ConcreteIntTypeParamPtr size2 = builder.concreteIntTypeParam(2);
 
 	// ref/array combination
 	type = builder.refType(builder.arrayType(basic.getInt4()));
-	entry = typeManager.getTypeEntry(fragment, type);
+	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("ref<array<int<4>,1>>", toString(*type));
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name*", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name* %s", entry.paramPattern);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name*", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name* %s", info.paramPattern);
 
 	// ref/array - multidimensional
 	type = builder.refType(builder.arrayType(basic.getInt4(), size2));
-	entry = typeManager.getTypeEntry(fragment, type);
+	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("ref<array<int<4>,2>>", toString(*type));
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name*", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name* %s", entry.paramPattern);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name*", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name* %s", info.paramPattern);
 
 	// ref/vector combination
 	type = builder.refType(builder.vectorType(basic.getInt4(), size));
-	entry = typeManager.getTypeEntry(fragment, type);
+	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("ref<vector<int<4>,4>>", toString(*type));
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name*", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name* %s", entry.paramPattern);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name*", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name* %s", info.paramPattern);
 
 	// ref/vector - multidimensional
 	type = builder.refType(builder.vectorType(builder.vectorType(basic.getInt4(), size2), size));
-	entry = typeManager.getTypeEntry(fragment, type);
+	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("ref<vector<vector<int<4>,2>,4>>", toString(*type));
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name*", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name* %s", entry.paramPattern);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name*", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name* %s", info.paramPattern);
 
 }
 
@@ -223,53 +223,53 @@ TEST(TypeManager, ArrayTypes) {
 	SimpleNameManager nameManager;
 	TypeManager typeManager(nameManager);
 
-	TypeManager::Entry entry;
+	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
 
 
 	core::TypePtr type = builder.arrayType(basic.getInt4());
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "unsigned size[1];");
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "int* data;");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[1];");
+	EXPECT_PRED2(containsSubString, toString(info.definition), "int* data;");
 
 	type = builder.arrayType(basic.getInt8());
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "unsigned size[1];");
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "long* data;");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[1];");
+	EXPECT_PRED2(containsSubString, toString(info.definition), "long* data;");
 
 	type = builder.arrayType(builder.structType(core::NamedCompositeType::Entries()));
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "unsigned size[1];");
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "struct name* data;");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[1];");
+	EXPECT_PRED2(containsSubString, toString(info.definition), "name* data;");
 
 	type = builder.arrayType(basic.getInt8(), builder.concreteIntTypeParam(2));
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ(TypeManager::Entry::UNSUPPORTED, entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "unsigned size[2];");
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "long** data;");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[2];");
+	EXPECT_PRED2(containsSubString, toString(info.definition), "long** data;");
 }
 
 TEST(TypeManager, VectorTypes) {
@@ -280,52 +280,52 @@ TEST(TypeManager, VectorTypes) {
 	SimpleNameManager nameManager;
 	TypeManager typeManager(nameManager);
 
-	TypeManager::Entry entry;
+	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
 
 	core::ConcreteIntTypeParamPtr size = builder.concreteIntTypeParam(4);
 	core::ConcreteIntTypeParamPtr size2 = builder.concreteIntTypeParam(84);
 
 	core::TypePtr type = builder.vectorType(basic.getInt4(), size);
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name %s", entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "int data[4];");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "int data[4];");
 
 	type = builder.vectorType(basic.getInt8(), size);
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name %s", entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "long data[4];");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "long data[4];");
 
 	type = builder.vectorType(builder.structType(core::NamedCompositeType::Entries()), size);
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name %s", entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "struct name data[4];");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "name data[4];");
 
 
 	type = builder.vectorType(type, size2);
-	entry = typeManager.getTypeEntry(fragment, type);
-	EXPECT_EQ("struct name", entry.lValueName);
-	EXPECT_EQ("struct name", entry.rValueName);
-	EXPECT_EQ("struct name %s", entry.declPattern);
-	EXPECT_EQ("struct name %s", entry.paramPattern);
-	EXPECT_TRUE((bool)entry.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), entry.definition));
-	EXPECT_PRED2(containsSubString, toString(entry.definition), "struct name data[84];");
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(containsSubString, toString(info.definition), "name data[84];");
 
 }
 
@@ -337,7 +337,7 @@ TEST(TypeManager, FunctionTypes) {
 	SimpleNameManager nameManager;
 	TypeManager typeManager(nameManager);
 
-	TypeManager::Entry entry;
+	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
 
 	core::ConcreteIntTypeParamPtr size = builder.concreteIntTypeParam(4);
@@ -350,14 +350,14 @@ TEST(TypeManager, FunctionTypes) {
 	core::FunctionTypePtr type;
 
 	type = builder.functionType(toVector(typeA, typeB), typeC);
-	entry = typeManager.getTypeEntry(fragment, type);
+	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
-	EXPECT_EQ("struct name*", entry.lValueName);
-	EXPECT_EQ("struct name*", entry.rValueName);
-	EXPECT_EQ("struct name* %s", entry.declPattern);
-	EXPECT_EQ("struct name* %s", entry.paramPattern);
+	EXPECT_EQ("struct name*", info.lValueName);
+	EXPECT_EQ("struct name*", info.rValueName);
+	EXPECT_EQ("struct name* %s", info.declPattern);
+	EXPECT_EQ("struct name* %s", info.paramPattern);
 
-	TypeManager::FunctionTypeEntry details = typeManager.getFunctionTypeDetails(type);
+	TypeManager::FunctionTypeInfo details = typeManager.getFunctionTypeInfo(type);
 	EXPECT_EQ("struct name", details.closureName);
 	EXPECT_EQ("test_call_name", details.callerName);
 	EXPECT_TRUE(::contains(fragment->getDependencies(), details.definitions));

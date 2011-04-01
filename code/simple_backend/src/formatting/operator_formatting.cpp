@@ -270,7 +270,7 @@ namespace formatting {
 
 
 		// string conversion
-		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { VISIT_ARG(0); });
+		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { VISIT_ARG(0); OUT(".data"); });
 
 
 		ADD_FORMATTER(res, basic.getIfThenElse(), {
