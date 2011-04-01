@@ -195,11 +195,18 @@ namespace simple_backend {
 			static CodeFragmentPtr createNewDummy(const std::string& name);
 
 			/**
-			 * Adds a dependency to the given fragment.
+			 * Adds a dependency to this fragment.
 			 *
-			 * @param dep the code fragment to be depending on
+			 * @param fragment the code fragment to be depending on
 			 */
-			void addDependency(const CodeFragmentPtr& dep);
+			void addDependency(const CodeFragmentPtr& fragment);
+
+			/**
+			 * Adds a list of dependencies to this fragment.
+			 *
+			 * @param fragments the list of fragments to be depending on
+			 */
+			void addDependencies(const std::vector<CodeFragmentPtr>& fragments);
 
 			/**
 			 * Obtains list of all code fragments this fragment is depending on.
