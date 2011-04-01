@@ -77,11 +77,11 @@ namespace formatting {
 		#include "insieme/simple_backend/formatting/formats_begin.inc"
 
 		ADD_FORMATTER(res, basic.getRefDeref(), {
-				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
-				// to not add a dereferning operator to arrays and vectory => implicite within C
-				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+//				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
+				// do not add a dereferning operator to arrays and vectory => implicite within C
+//				if (!(type == NT_ArrayType || type == NT_VectorType)) {
 					OUT("*");
-				}
+//				}
 				VISIT_ARG(0);
 		});
 
@@ -99,7 +99,18 @@ namespace formatting {
 
 		ADD_FORMATTER(res, basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
 
-		ADD_FORMATTER(res, basic.getScalarToVector(), { VISIT_ARG(0); });
+		ADD_FORMATTER(res, basic.getScalarToArray(), {
+				// get name of resulting type
+				TypeManager& typeManager = CONTEXT.getTypeManager();
+
+				const TypePtr& type = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
+				const string& name = typeManager.getTypeInfo(CODE, type).lValueName;
+				OUT("&((");
+				OUT(name);
+				OUT("){");
+				VISIT_ARG(0);
+				OUT(",{1}})");
+		});
 
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
 
@@ -144,21 +155,21 @@ namespace formatting {
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefElem1D(), false, {
 
-				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
-				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
-				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
+//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
+//				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
+//				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
 					OUT("&");
-				}
+//				}
 
 				// check whether input variable needs to be dereferenced
-				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
-				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
-
-				if (insertDeref) {
+//				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
+//				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
+//
+//				if (insertDeref) {
 					OUT("((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
-				} else {
-					OUT("("); VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]"); OUT(")");
-				}
+//				} else {
+//					OUT("("); VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]"); OUT(")");
+//				}
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {

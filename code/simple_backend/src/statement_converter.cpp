@@ -189,7 +189,7 @@ namespace simple_backend {
 			const VariablePtr& argv = main->getParameterList()[1];
 
 			VariableManager::VariableInfo info;
-			info.location = VariableManager::HEAP;
+			info.location = VariableManager::STACK;
 			cc.getVariableManager().addInfo(argc, info);
 			cc.getVariableManager().addInfo(argv, info);
 
@@ -468,6 +468,31 @@ namespace simple_backend {
 		currentCodeFragment << funManager.getFunctionName(currentCodeFragment, ptr);
 	}
 
+	namespace {
+
+		void addArgumentList(StmtConverter& converter, const CodeFragmentPtr& code,
+				const core::TypeList& parameterTypes, const core::ExpressionList& arguments, bool externCall) {
+
+			// check same number of arguments - TODO: re-enable when frontend is fixed
+			// assert(parameterTypes.size() == arguments.size() && "Invalid parameter/argument combination!");
+
+			// TODO: remove this
+			if (parameterTypes.size() != arguments.size()) {
+				// default handling
+				functionalJoin([&]{ code << ", "; }, arguments, [&](const ExpressionPtr& ep) { converter.convert(ep, code); });
+				return;
+			}
+
+			// TODO: implicit conversion between vector / array (also within references)
+			// TODO: externalizing when calling external function
+
+			// OLD VERSION:
+			functionalJoin([&]{ code << ", "; }, arguments, [&](const ExpressionPtr& ep) { converter.convert(ep, code); });
+		}
+
+	}
+
+
 	void StmtConverter::visitCallExpr(const CallExprPtr& ptr) {
 
 		// shorter name for member variable
@@ -478,6 +503,7 @@ namespace simple_backend {
 
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
 		assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
+		const TypeList& params = funType->getArgumentTypes();
 
 		TypeManager& typeManager = cc.getTypeManager();
 		auto parameterExternalizer = [&](const ExpressionPtr& ep) {
@@ -550,6 +576,7 @@ namespace simple_backend {
 				code << "(";
 
 				// externalize (convert to C equivalents) arguments before passing them to the call
+				//addArgumentList(*this, code, params, args, true);
 				functionalJoin([&]{ code << ", "; }, args, parameterExternalizer);
 				code << ")";
 				return;
@@ -563,7 +590,7 @@ namespace simple_backend {
 				visit(funExp);
 				if (!args.empty()) {
 					code << ", ";
-					functionalJoin([&]{ code << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+					addArgumentList(*this, code, params, args, false);
 				}
 				code << ")";
 				return;
@@ -581,7 +608,7 @@ namespace simple_backend {
 				visit(funExp);
 				if (!args.empty()) {
 					code << ", ";
-					functionalJoin([&]{ code << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+					addArgumentList(*this, code, params, args, false);
 				}
 				code << ")";
 				return;
@@ -611,17 +638,18 @@ namespace simple_backend {
 				visitCaptureInitExprInternal(initExpr, directCall);
 				if (!args.empty()) {
 					code << ", ";
-					functionalJoin([&]{ code << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+					addArgumentList(*this, code, params, args, false);
 				}
 				code << ")";
 				return;
 			}
 
 			case NT_LambdaExpr: {
+
 				// function (without capture list) is directly provided => simply invoke
 				code << cc.getFunctionManager().getFunctionName(code, static_pointer_cast<const LambdaExpr>(funExp));
 				code << "(";
-				functionalJoin([&]{ code << ", "; }, args, [&](const ExpressionPtr& ep) { this->visit(ep); });
+				addArgumentList(*this, code, params, args, false);
 				code << ")";
 				return;
 			}
@@ -740,10 +768,10 @@ namespace simple_backend {
 		bool deref = true;
 		if (const RefTypePtr& refType = dynamic_pointer_cast<const RefType>(ptr->getType())) {
 			TypePtr elementType = refType->getElementType();
-			NodeType nodeType = elementType->getNodeType();
-			if (nodeType == NT_VectorType || nodeType == NT_ArrayType) {
-				deref = false;
-			}
+//			NodeType nodeType = elementType->getNodeType();
+//			if (nodeType == NT_VectorType || nodeType == NT_ArrayType) {
+//				deref = false;
+//			}
 
 			// for local captured variables and HEAP data
 			if (deref && cc.getVariableManager().getInfo(ptr).location == VariableManager::HEAP) {

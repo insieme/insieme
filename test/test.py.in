@@ -8,7 +8,7 @@ LDFLAGS_RES = "-lm -lpthread -g -linsieme_simple_backend_runtime -L${CMAKE_BINAR
 CC = "gcc"
 runOcl = 0
 printErr = 0
-printOutput = 0
+verbose = 0
 
 class bcolors:
     HEADER = '\033[95m'
@@ -38,7 +38,7 @@ def run_cmd(cmd):
 	elapsed = time.time() - start
 	sys.stderr.write(" [{0:.4f} secs]\n".format(elapsed) )
 
-	if printOutput:
+	if verbose:
 		sys.stderr.write(bcolors.DEBUG)
         	sys.stderr.write("@------------------ start output --------------------\n")
 		sys.stderr.write("Executed command: " + cmd + "\n")
@@ -240,6 +240,8 @@ def run_test_case(test_case_name):
 def main():
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
 
+	abortOnFail = False;
+
 	#check for opencl flag
 	for arg in sys.argv[1:] :
 		if(arg == "--runOpenCL") :
@@ -255,8 +257,13 @@ def main():
 				os.system( "rm -f ${CMAKE_CURRENT_SOURCE_DIR}/test/{0}/*.ref".format(test) )
 			sys.argv.remove(arg)
 		if(arg == "--verbose") :
-			global printOutput
-			printOutput = 1
+			global verbose
+			global INSIEMEC
+			verbose = 1
+			INSIEMEC = INSIEMEC + " -S"
+			sys.argv.remove(arg)
+		if(arg == "--abortOnFail") :
+			abortOnFail = True
 			sys.argv.remove(arg)
 
 	tests = []
@@ -270,14 +277,23 @@ def main():
 		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
 		tests.sort() # sort the test cases by name
 			
-	failed = filter(lambda x: run_test_case(x), tests)
+	passed = []
+	failed = []
+	for cur in tests :
+		if len(failed) == 0 or (not abortOnFail) :
+			if run_test_case(cur) :
+				failed.append(cur)
+			else :
+				passed.append(cur)
+
+	# failed = filter(lambda x: run_test_case(x), tests)
 	
 	# print summary
 	sys.stderr.write("###############################\n")
 	sys.stderr.write("#          Summary            #\n")
 	sys.stderr.write("#-----------------------------#\n")
-	sys.stderr.write("# Total number of tests: {0:4} #\n".format( len(tests) ))
-	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(len(tests) - len(failed)))
+	sys.stderr.write("# Total number of tests: {0:4} #\n".format( len(passed) + len(failed) ))
+	sys.stderr.write("# -> SUCCEEDED: {0:13} #\n".format(len(passed)))
 	sys.stderr.write("# -> FAILED:    {0:13} #\n".format(len(failed)))
 
 	for test in failed:

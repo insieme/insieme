@@ -994,7 +994,7 @@ public:
 			core::ExpressionPtr&& expr = wrapVariable(unOp->getSubExpr());
 			assert(expr->getType()->getNodeType() == core::NT_RefType);
 
-			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToVector(),  expr );
+			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  expr );
 			break;
 		}
 		// *a
