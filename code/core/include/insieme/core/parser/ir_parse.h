@@ -62,9 +62,18 @@ public:
 };
 
 class ParseException : std::exception {
+    string err;
+
 	const char* what() const throw() {
-		return "IR Parsing failed";
+		return ("IR Parsing failed\n" + err).c_str();
 	}
+
+public:
+    ParseException() : err("") {}
+
+    ParseException(string errMsg) : err(errMsg) {}
+
+    ~ParseException() throw() {}
 };
 
 /** A helper function for parsing an IR type declaration.
