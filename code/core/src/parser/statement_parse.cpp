@@ -60,38 +60,41 @@ namespace ph = boost::phoenix;
 typedef StatementPtr StmtTmplt;
 
 template<class StmtTmplt>
-BreakStmtPtr StatementGrammar<StmtTmplt>::breakHelp() {
+StmtTmplt StatementGrammar<StmtTmplt>::breakHelp() {
     return BreakStmt::get(nodeMan);
 }
 
 template<class StmtTmplt>
-ContinueStmtPtr StatementGrammar<StmtTmplt>::continueHelp() {
+StmtTmplt StatementGrammar<StmtTmplt>::continueHelp() {
     return ContinueStmt::get(nodeMan);
 }
 
 template<class StmtTmplt>
-ReturnStmtPtr StatementGrammar<StmtTmplt>::returnHelp(ExpressionPtr ret) {
+StmtTmplt StatementGrammar<StmtTmplt>::returnHelp(ExpressionPtr ret) {
     return ReturnStmt::get(nodeMan, ret);
 }
 
 
 template<class StmtTmplt>
-DeclarationStmtPtr StatementGrammar<StmtTmplt>::declarationHelp(VariablePtr var, ExpressionPtr initExpr) {
-    return DeclarationStmt::get(nodeMan, var, initExpr);
+StmtTmplt StatementGrammar<StmtTmplt>::declarationHelp(ExpressionPtr varExpr, ExpressionPtr initExpr) {
+    if(VariablePtr var = dynamic_pointer_cast<const Variable>(varExpr))
+        return DeclarationStmt::get(nodeMan, var, initExpr);
+
+    throw ParseException();
 }
 
 template<class StmtTmplt>
-CompoundStmtPtr StatementGrammar<StmtTmplt>::compoundHelp(Stmts stmts) {
+StmtTmplt StatementGrammar<StmtTmplt>::compoundHelp(Stmts stmts) {
     return CompoundStmt::get(nodeMan, stmts);
 }
 
 template<class StmtTmplt>
-WhileStmtPtr StatementGrammar<StmtTmplt>::whileHelp(ExpressionPtr condition, StatementPtr body) {
+StmtTmplt StatementGrammar<StmtTmplt>::whileHelp(ExpressionPtr condition, StatementPtr body) {
     return WhileStmt::get(nodeMan, condition, body);
 }
 
 template<class StmtTmplt>
-ForStmtPtr StatementGrammar<StmtTmplt>::forHelp(StatementPtr loopVarStmt, ExpressionPtr end, ExpressionPtr step, StatementPtr body) {
+StmtTmplt StatementGrammar<StmtTmplt>::forHelp(StatementPtr loopVarStmt, ExpressionPtr end, ExpressionPtr step, StatementPtr body) {
     ASTBuilder builder(nodeMan);
     if(DeclarationStmtPtr loopVar = dynamic_pointer_cast<const DeclarationStmt>(loopVarStmt))
         return ForStmt::get(nodeMan, loopVar, body, end, step);
@@ -100,7 +103,7 @@ ForStmtPtr StatementGrammar<StmtTmplt>::forHelp(StatementPtr loopVarStmt, Expres
 }
 
 template<class StmtTmplt>
-IfStmtPtr StatementGrammar<StmtTmplt>::ifHelp(const ExpressionPtr& condition, const StatementPtr& body, const boost::optional<StatementPtr>& elseBody) {
+StmtTmplt StatementGrammar<StmtTmplt>::ifHelp(const ExpressionPtr& condition, const StatementPtr& body, const boost::optional<StatementPtr>& elseBody) {
     if(elseBody)
         return IfStmt::get(nodeMan, condition, body, *elseBody);
 
@@ -109,7 +112,7 @@ IfStmtPtr StatementGrammar<StmtTmplt>::ifHelp(const ExpressionPtr& condition, co
 }
 
 template<class StmtTmplt>
-SwitchStmtPtr StatementGrammar<StmtTmplt>::switchHelp(const ExpressionPtr& switchExpr, const Cases& cases, const boost::optional<StatementPtr>& defaultCase) {
+StmtTmplt StatementGrammar<StmtTmplt>::switchHelp(const ExpressionPtr& switchExpr, const Cases& cases, const boost::optional<StatementPtr>& defaultCase) {
     if(defaultCase)
         return SwitchStmt::get(nodeMan, switchExpr, cases, *defaultCase);
 
@@ -117,7 +120,7 @@ SwitchStmtPtr StatementGrammar<StmtTmplt>::switchHelp(const ExpressionPtr& switc
 }
 
 template<class StmtTmplt>
-MarkerStmtPtr StatementGrammar<StmtTmplt>::markerHelp(const StatementPtr& subStmt, const unsigned int id) {
+StmtTmplt StatementGrammar<StmtTmplt>::markerHelp(const StatementPtr& subStmt, const unsigned int id) {
     return MarkerStmt::get(nodeMan, subStmt, id);
 }
 

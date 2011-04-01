@@ -89,17 +89,17 @@ struct StatementGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     #undef get
 
     // member functions providing the rules
-    virtual BreakStmtPtr breakHelp();
-    virtual ContinueStmtPtr continueHelp();
-    virtual ReturnStmtPtr returnHelp(ExpressionPtr ret);
+    virtual T breakHelp();
+    virtual T continueHelp();
+    virtual T returnHelp(ExpressionPtr ret);
 
-    virtual DeclarationStmtPtr declarationHelp(VariablePtr var, ExpressionPtr initExpr);
-    virtual CompoundStmtPtr compoundHelp(Stmts stmts);
-    virtual WhileStmtPtr whileHelp(ExpressionPtr condition, StatementPtr body);
-    virtual ForStmtPtr forHelp(StatementPtr loopVar, ExpressionPtr end, ExpressionPtr step, StatementPtr body);
-    virtual IfStmtPtr ifHelp(const ExpressionPtr& condition, const StatementPtr& body, const boost::optional<StatementPtr>& elseBody);
-    virtual SwitchStmtPtr switchHelp(const ExpressionPtr& switchExpr, const Cases& cases, const boost::optional<StatementPtr>& defaultCase);
-    virtual MarkerStmtPtr markerHelp(const StatementPtr& subStmt, const unsigned int id);
+    virtual T declarationHelp(ExpressionPtr varExpr, ExpressionPtr initExpr);
+    virtual T compoundHelp(Stmts stmts);
+    virtual T whileHelp(ExpressionPtr condition, StatementPtr body);
+    virtual T forHelp(StatementPtr loopVar, ExpressionPtr end, ExpressionPtr step, StatementPtr body);
+    virtual T ifHelp(const ExpressionPtr& condition, const StatementPtr& body, const boost::optional<StatementPtr>& elseBody);
+    virtual T switchHelp(const ExpressionPtr& switchExpr, const Cases& cases, const boost::optional<StatementPtr>& defaultCase);
+    virtual T markerHelp(const StatementPtr& subStmt, const unsigned int id);
 };
 
 }

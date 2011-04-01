@@ -103,40 +103,79 @@ CallExprPtr buildCallExpr(NodeManager& nodeMan, const ExpressionPtr& callee, Exp
 }
 
 
-LambdaPtr lambdaGetHelper(NodeManager& nodeMan, const TypePtr& retType, const VariableList& params, const StatementPtr& body ) {
+LambdaPtr lambdaHelp(NodeManager& nodeMan, const TypePtr& retType, const ExpressionList& paramsExpr, const StatementPtr& body ) {
     // build a stmtExpr bc the builder cannot at the moment
     ASTBuilder build(nodeMan);
-//    vector<StatementPtr> stmts;
+    vector<VariablePtr> params;
     vector<TypePtr> paramTypes;
 
+    // TODO make cast faster
     // construct function type
-    for_each(params, [&](const VariablePtr var) {
-        paramTypes.push_back(var->getType());
+    for_each(paramsExpr, [&](const ExpressionPtr paramExpr) {
+        if(VariablePtr var = dynamic_pointer_cast<const Variable>(paramExpr)) {
+            paramTypes.push_back(var->getType());
+            params.push_back(var);
+        } else
+            throw ParseException();
     });
 
 //    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));
     return build.lambda(build.functionType(paramTypes, retType), params, body);
 }
 
+LambdaDefinitionPtr lambdaDefHelp(NodeManager& nodeMan, vector<ExpressionPtr> funVarExpr, vector<LambdaPtr> lambdaExpr ) {
+    //TODO make conversion faster
+    std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > defs;
+
+    if(funVarExpr.size() != lambdaExpr.size())
+        throw ParseException("LambdaDefinition has illegal form\n");
+
+    auto J = lambdaExpr.begin();
+    for(auto I = funVarExpr.begin(); I != funVarExpr.end(); ++I, ++J) {
+        if(VariablePtr def = dynamic_pointer_cast<const Variable>(*I) )
+            defs[def] = *J;
+        else
+            throw ParseException("LambdaDefinitions must be of form '{' funVarExpr '=' lambda '}'");
+    }
+
+    return LambdaDefinition::get(nodeMan, defs);
+}
+
+LambdaExprPtr lambdaExprHelp(NodeManager& nodeMan, ExpressionPtr& variableExpr, LambdaDefinitionPtr& def) {
+//    if(LambdaDefinitionPtr def = dynamic_pointer_cast<const LambdaDefinition>(defExpr) ) {
+        if(VariablePtr variable = dynamic_pointer_cast<const Variable>(variableExpr)) {
+            return LambdaExpr::get(nodeMan, variable, def);
+        }
+        else
+            throw ParseException("LambdaExpr must be of type 'fun in' LambdaDefinition OR 'fun' Lambda");
+//    }
+//    throw ParseException();
+}
+
+LambdaExprPtr lambdaExprHelp(NodeManager& nodeMan, LambdaPtr& lambda) {
+    return LambdaExpr::get(nodeMan, lambda);
+}
+
 JobExprPtr jobHelp(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
         const GuardedStmts guardedStmts, const vector<StatementPtr>& localDeclStmts) {
 
-    if(!dynamic_pointer_cast<const LambdaExpr>(defaultStmt) && !dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)) {
-        throw ParseException();
+    if(!dynamic_pointer_cast<const LambdaExpr>(defaultStmt) && !dynamic_pointer_cast<const BindExpr>(defaultStmt)) {
+        throw ParseException("Default expression of job must be a LambdaExpr or BindExpr");
     }
 
-    for_each(guardedStmts, [&](std::pair<ExpressionPtr, ExpressionPtr> guardedStmt) {
+    for_each(guardedStmts, [](std::pair<ExpressionPtr, ExpressionPtr> guardedStmt) {
         //TODO add check for guard
         if(!dynamic_pointer_cast<const LambdaExpr>(guardedStmt.second) && !dynamic_pointer_cast<const CaptureInitExpr>(guardedStmt.second))
             throw ParseException();
     });
 
     vector<DeclarationStmtPtr> localDecls;
+    // TODO make cast more efficient
     for_each(localDeclStmts, [&](StatementPtr decl) {
         if(DeclarationStmtPtr d = dynamic_pointer_cast<const DeclarationStmt>(decl))
             localDecls.push_back(d);
         else
-            throw ParseException();
+            throw ParseException("JobExpr has illegal form");
     });
 
     return JobExpr::get(manager, threadNumRange, defaultStmt, guardedStmts, localDecls);
@@ -160,7 +199,7 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<Stat
     : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar(nodeMan)), varTab(nodeMan) {
 
  //   typeG = new TypeGrammar(nodeMan);
-    exprGpart = new ExpressionGrammarPart(nodeMan, this, typeG);
+    exprGpart = new ExpressionGrammarPart<ExpressionPtr>(nodeMan, this, typeG);
     opG = new OperatorGrammar<ExpressionPtr>(nodeMan, this);
     if(stmtGrammar == NULL) {
         stmtG = new StatementGrammar<StatementPtr>(nodeMan, this, typeG);
@@ -233,16 +272,16 @@ ExpressionGrammar::ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<Stat
         ( '(' >> -(variableExpr                                     [ ph::push_back(qi::_a, qi::_1) ]
           % ',') >> ')' >> qi::lit("->")
         >> typeG->typeRule >> '{' >> stmtG->statementRule
-        >> '}')                                                     [ qi::_val = ph::bind(&lambdaGetHelper, nManRef, qi::_2, qi::_a, qi::_3 )];
+        >> '}')                                                     [ qi::_val = ph::bind(&lambdaHelp, nManRef, qi::_2, qi::_a, qi::_3 )];
 
-    lambdaDef =
-        ( qi::lit("{") >> +((funVarExpr >> '=' >> lambda)           [ ph::insert(qi::_a, ph::bind(&makePair<VariablePtr, LambdaPtr>, qi::_1, qi::_2)) ]
-          % ',') >> '}')                                            [ qi::_val = ph::bind(&LambdaDefinition::get, nManRef, qi::_a) ];
+    lambdaDef = // [ ph::insert(qi::_a, ph::bind(&makePair<ExpressionPtr, LambdaPtr>, qi::_1, qi::_2)) ]
+        ( qi::lit("{") >> +((funVarExpr >> '=' >> lambda)           [ ph::push_back(qi::_a, qi::_1), ph::push_back(qi::_b, qi::_2)]
+          % ',') >> '}')                                            [ qi::_val = ph::bind(&lambdaDefHelp, nManRef, qi::_a, qi::_b) ];
 
     lambdaExpr =
         ( qi::lit("fun")  >> funVarExpr >> qi::lit("in") >>
-        lambdaDef)                                                  [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1, qi::_2) ]
-        | ( qi::lit("fun")  >> lambda )                             [ qi::_val = ph::bind(&LambdaExpr::get, nManRef, qi::_1 ) ];
+        lambdaDef)                                                  [ qi::_val = ph::bind(&lambdaExprHelp, nManRef, qi::_1, qi::_2) ]
+        | ( qi::lit("fun")  >> lambda )                             [ qi::_val = ph::bind(&lambdaExprHelp, nManRef, qi::_1 ) ];
 
     bindExpr = exprGpart->bindExpr;
 
