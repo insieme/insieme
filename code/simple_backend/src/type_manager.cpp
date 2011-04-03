@@ -308,13 +308,20 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 		lvalue = lvalue + "*";
 	}
 
+	// special handling of references to vectors and arrays
 	string externalName = subType.externName;
 	auto nodeType = ptr->getElementType()->getNodeType();
 	if (nodeType != NT_ArrayType && nodeType != NT_VectorType) {
 		 externalName = externalName + "*";
 	}
+
+	string externalization = "((" + externalName + ")(%s))";
+	if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
+		externalization = "((" + externalName + ")((*%s).data))";
+	}
+
 	return TypeManager::TypeInfo(lvalue, rvalue, lvalue + " %s", rvalue + " %s",
-			externalName, externalName + " %s", "((" + externalName + ")(%s))", subType.definition);
+			externalName, externalName + " %s", externalization, subType.definition);
 
 //	TODO: if
 //	return resolveRefOrVectorOrArrayType(ptr);

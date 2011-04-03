@@ -39,6 +39,12 @@
  */
 
 /**
+ * A macro obtaining a reference to the handled function call to be handled by the formatter.
+ */
+#define CALL call
+
+
+/**
  * A macro obtaining a reference to the stmt converter using the formatter.
  */
 #define STMT_CONVERTER converter

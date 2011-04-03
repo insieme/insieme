@@ -97,7 +97,22 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), false); });
 		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), true); });
 
-		ADD_FORMATTER(res, basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, basic.getRefDelete(), {
+
+				const TypePtr& type = ARG(0)->getType();
+				assert(type->getNodeType() == NT_RefType && "Cannot free a non-ref type!");
+
+				OUT("free((*");
+				VISIT_ARG(0);
+				OUT(")");
+
+				const TypePtr& elementType = static_pointer_cast<const RefType>(type)->getElementType();
+				auto elementNodeType = elementType->getNodeType();
+				if (elementNodeType == NT_ArrayType) {
+					OUT(".data");
+				}
+				OUT(")");
+		});
 
 		ADD_FORMATTER(res, basic.getScalarToArray(), {
 				// get name of resulting type
@@ -113,6 +128,11 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
+
+
+				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+
+				OUT("((" + typeName + "){");
 
 				// test whether the size is fixed to 1
 				if (ARG(1)->getNodeType() == NT_Literal && static_pointer_cast<const Literal>(ARG(1))->getValue() == "1") {
@@ -144,6 +164,10 @@ namespace formatting {
 					VISIT_ARG(1);
 					OUT(")");
 				}
+
+				OUT(",{");
+				VISIT_ARG(1);
+				OUT("}})");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArraySubscript1D(), false, {
@@ -193,7 +217,7 @@ namespace formatting {
 
 		// struct operations
 		ADD_FORMATTER(res, basic.getCompositeRefElem(), {
-				NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
+				// NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
 				//if (!(type == NT_ArrayType || type == NT_VectorType)) {
 					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
 				//}
@@ -281,7 +305,7 @@ namespace formatting {
 
 
 		// string conversion
-		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { VISIT_ARG(0); OUT(".data"); });
+		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { OUT("&("); VISIT_ARG(0); OUT(")"); });
 
 
 		ADD_FORMATTER(res, basic.getIfThenElse(), {
