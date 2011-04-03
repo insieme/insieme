@@ -84,7 +84,8 @@ namespace simple_backend {
 
 		// including this header will result into problems on a 32 bit system
 		//  - reason: memset / memcpy uses size_t, which is fixed to 64 bit within insieme
-		res.push_back("#include <string.h>");
+		//  - conflicting type for strcpy operation
+		//res.push_back("#include <string.h>");
 
 		// add runtime header
 		res.push_back("#include <runtime.h>");
@@ -206,10 +207,20 @@ namespace simple_backend {
 			code << "int argc = __argc;\n";
 			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc), {argc}};\n";
 
+			// create a literal for the strlen function
+			ASTBuilder builder(cc.getNodeManager());
+			FunctionTypePtr strLenType = builder.functionType(
+					toVector<TypePtr>(builder.refType(aCharType)),
+					builder.getBasicGenerator().getUInt8());
+
+			LiteralPtr strlen = builder.literal(strLenType, "strlen");
+			string strlenName = cc.getFunctionManager().getFunctionName(code, strlen);
+
 			// initialize argument vector data structure
 			code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
-			code << "argv.data[i] = (" + charArrayName + "){__argv[i],{strlen(__argv[i])+1}};" << CodeBuffer::indL;
+			code << "argv.data[i] = (" << charArrayName << "){__argv[i],{" << strlenName << "(__argv[i])+1}};" << CodeBuffer::indL;
 			code << "\n}\n";
+
 
 			// add body
 			code << "\n// ---- begin of actual code body ----\n";

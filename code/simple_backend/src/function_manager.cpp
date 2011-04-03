@@ -102,7 +102,8 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	const string& name = literal->getValue();
 	CodeFragmentPtr protoType = CodeFragment::createNew("Prototype for external function: " + name + " ... type: " + literal->getType()->toString());
 	TypeManager& typeManager = cc.getTypeManager();
-	protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
+	protoType << typeManager.getTypeInfo(protoType, type->getReturnType()).externName << " " << name << "(";
+	//protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
 	protoType << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
 		out << typeManager.getTypeInfo(protoType, cur).externName;
 	});

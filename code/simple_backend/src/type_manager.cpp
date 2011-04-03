@@ -309,7 +309,8 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	}
 
 	string externalName = subType.externName;
-	if (ptr->getElementType()->getNodeType() != NT_ArrayType) {
+	auto nodeType = ptr->getElementType()->getNodeType();
+	if (nodeType != NT_ArrayType && nodeType != NT_VectorType) {
 		 externalName = externalName + "*";
 	}
 	return TypeManager::TypeInfo(lvalue, rvalue, lvalue + " %s", rvalue + " %s",
@@ -337,8 +338,10 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	code << "    " << elementTypeInfo.lValueName << " data[" << toString(*ptr->getSize()) << "];\n";
 	code << "} " << name << ";\n";
 
-	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s", code);
-
+	// construct type info including external type representation (as a pointer)
+	string externalName = elementTypeInfo.externName + "*";
+	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
+			externalName, externalName + " %s", "(%s).data", code);
 
 //	TODO: remove if vector-is-a-struct works out!
 //	// default handling
