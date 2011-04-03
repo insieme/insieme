@@ -752,10 +752,10 @@ namespace simple_backend {
 		// convert a string into an array
 		NodeManager& manager = ptr->getNodeManager();
 		ASTBuilder builder(manager);
-		TypePtr type = builder.arrayType(manager.basic.getChar());
-
 		unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
-		currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << ", {" << len << "}})";
+		TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
+
+		currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {

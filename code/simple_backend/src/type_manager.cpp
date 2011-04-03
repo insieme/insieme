@@ -169,7 +169,11 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 		return toTypeInfo(ptr->toString());
 	}
 	if(basic.isString(ptr)) {
-		return toTypeInfo("string");
+		// strings are internally managed as vectors of a certain size
+		return TypeManager::TypeInfo(
+				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
+				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
+				"char*", "char* %s", "(%s).data");
 	}
 	if(basic.isChar(ptr)) {
 		return toTypeInfo("char");

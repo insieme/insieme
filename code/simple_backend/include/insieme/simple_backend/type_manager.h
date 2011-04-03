@@ -105,6 +105,12 @@ public:
 
 		TypeInfo(
 				const string& lName, const string& rName, const string& declPattern, const string& paramPattern,
+				const string& externName, const string& externPattern, const string& externalizingPattern)
+			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
+			  externName(externName), externPattern(externPattern), externalizingPattern(externalizingPattern) { }
+
+		TypeInfo(
+				const string& lName, const string& rName, const string& declPattern, const string& paramPattern,
 				const string& externName, const string& externPattern, const string& externalizingPattern,
 				const CodeFragmentPtr& definition)
 			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),

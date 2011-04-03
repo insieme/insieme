@@ -309,11 +309,57 @@ namespace formatting {
 
 
 		ADD_FORMATTER(res, basic.getIfThenElse(), {
-				OUT("("); VISIT_ARG(0); OUT(")?(");
-				STMT_CONVERTER.convert(evalLazy(ARG(1)));
-				OUT("):(");
-				STMT_CONVERTER.convert(evalLazy(ARG(2)));
-				OUT(")");
+
+				// TODO: remove this and handle it in a common place for all calls
+				ExpressionPtr ifValue = evalLazy(ARG(1));
+				ExpressionPtr elseValue = evalLazy(ARG(2));
+
+				TypePtr typeA = ifValue->getType();
+				TypePtr typeB = elseValue->getType();
+
+				ASTBuilder builder(typeA->getNodeManager());
+				const lang::BasicGenerator& basic = builder.getBasicGenerator();
+				const TypePtr& stringType = basic.getString();
+				if (typeA == stringType) {
+					typeA = builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(12346));
+				}
+				if (typeB == stringType) {
+					typeB = builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(123467));
+				}
+
+				std::cout << toString(ifValue->getType()) << "=>" << toString(typeA) << std::endl;
+				std::cout << toString(elseValue->getType()) << "=>" << toString(typeB) << std::endl;
+				std::cout << std::endl;
+
+				bool done = false;
+				if (typeA != typeB && typeA->getNodeType() == NT_VectorType && typeB->getNodeType() == NT_VectorType) {
+					const VectorTypePtr& vectorA = static_pointer_cast<const VectorType>(typeA);
+					const VectorTypePtr& vectorB = static_pointer_cast<const VectorType>(typeB);
+
+					if (vectorA->getElementType() == vectorB->getElementType() &&
+						vectorA->getSize() != vectorB->getSize()) {
+
+						ArrayTypePtr arrayType = builder.arrayType(vectorA->getElementType());
+
+						string arrayTypeName = CONTEXT.getTypeManager().getTypeName(CODE, arrayType);
+
+						// implicite conversion from vector to string
+						OUT("("); VISIT_ARG(0); OUT(")?(");
+						OUT("(("); OUT(arrayTypeName); OUT("){"); STMT_CONVERTER.convert(ifValue); OUT(".data, {1}})");
+						OUT("):(");
+						OUT("(("); OUT(arrayTypeName); OUT("){"); STMT_CONVERTER.convert(elseValue); OUT(".data, {1}})");
+						OUT(")");
+						done = true;
+					}
+				}
+
+				if (!done) {
+					OUT("("); VISIT_ARG(0); OUT(")?(");
+					STMT_CONVERTER.convert(ifValue);
+					OUT("):(");
+					STMT_CONVERTER.convert(elseValue);
+					OUT(")");
+				}
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getSizeof(), false, {
