@@ -194,9 +194,9 @@ namespace formatting {
 		// struct operations
 		ADD_FORMATTER(res, basic.getCompositeRefElem(), {
 				NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
-				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+				//if (!(type == NT_ArrayType || type == NT_VectorType)) {
 					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
-				}
+				//}
 				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
 		});
 		ADD_FORMATTER(res, basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
