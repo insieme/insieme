@@ -38,6 +38,7 @@
 
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/statement_converter.h"
+#include "insieme/simple_backend/code_management.h"
 
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
@@ -60,90 +61,59 @@ using namespace utils::log;
 
 		/**
 		 * A special list of headers to be included. This fragment will always be printed
-		 * before every other fragment.
+		 * before the fragment representing the actual target code.
 		 */
-		std::vector<string> headers;
+		const std::vector<string> headers;
 
 		/**
-		 * A map of code fragments this converted code is consisting of.
+		 * The code fragment covering the actual target code.
 		 */
-		utils::map::PointerMap<core::ExpressionPtr, CodeFragmentPtr> codeFragments;
+		const CodeFragmentPtr code;
 
 	public:
 
 		/**
 		 * A constructor for this class.
 		 */
-		ConvertedCode(const core::ProgramPtr& source) : TargetCode(source) { }
+		ConvertedCode(const core::ProgramPtr& source, const std::vector<string>& headers, const CodeFragmentPtr& code)
+			: TargetCode(source), headers(headers), code(code) { }
 
 		/**
 		 * This method allows to print the result to an output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
 
-		/**
-		 * Adds a header line to the generated code.
-		 */
-		void addHeaderLine(const string& line) {
-			headers.push_back(line);
-		}
-
-		/**
-		 * Adds a code fragment to the internally maintained list of fragments.
-		 *
-		 * @param source the source for this particular fragment
-		 * @param fragment the the target code fragment to be stored
-		 */
-		void addFragment(const core::ExpressionPtr& source, CodeFragmentPtr& fragment) {
-			codeFragments.insert(std::make_pair(source, fragment));
-		}
-
 	};
 
 
-std::ostream& ConvertedCode::printTo(std::ostream& out) const {
+	std::ostream& ConvertedCode::printTo(std::ostream& out) const {
 
-	// print some general header information ...
-	out << "// --- Generated Inspire Code ---\n";
+		// print some general header information ...
+		out << "// --- Generated Inspire Code ---\n";
 
-	// print headers
-	for_each(headers, [&](const string& cur) {
-		out << cur << std::endl;
-	});
+		// print headers
+		for_each(headers, [&](const string& cur) {
+			out << cur << std::endl;
+		});
 
-	// add code for entry points
-	for_each(getSource()->getEntryPoints(), [&](const insieme::core::ExpressionPtr& ep) {
-		out << "// --- Entry Point ---\n";
-		assert(this->codeFragments.find(ep) != this->codeFragments.end());
-		::operator<<(out, this->codeFragments.find(ep)->second);
-	});
-	return out;
-}
+		// add the program code
+		return ::operator<<(out, this->code);
+	}
 
-TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
+	TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
 
-	ConvertedCode* converted = new ConvertedCode(prog);
+		// obtain headers
+		std::vector<string> headers = stmtConverter->getHeaderDefinitions();
 
-	// add headers
-	auto headerList = stmtConverter->getHeaderDefinitions();
-	for_each(headerList, [&](const string& cur) {
-		converted->addHeaderLine(cur);
-	});
-
-	// convert the individual entry points
-	for_each(prog->getEntryPoints(), [&converted, this](const ExpressionPtr& ep) {
-
-		// create a fresh code fragment
-		CodeFragmentPtr fragment = CodeFragment::createNewDummy("Full Program");
+		// create a code fragment covering entire program
+		CodeFragmentPtr code = CodeFragment::createNewDummy("Full Program");
 
 		// convert code
-		getStmtConverter().convert(ep, fragment);
+		getStmtConverter().convert(prog, code);
 
-		// register fragment
-		converted->addFragment(ep, fragment);
-	});
-	return TargetCodePtr(converted);
-}
+		// create resulting, converted code
+		return std::make_shared<ConvertedCode>(prog, headers, code);
+	}
 
 
 }

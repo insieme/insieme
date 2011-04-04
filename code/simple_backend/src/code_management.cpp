@@ -51,7 +51,7 @@ const CodeBuffer::IndL CodeBuffer::indL = CodeBuffer::IndL();
 std::string CodeBuffer::toString() {
 	// defuglify code
 	std::string retval = ss.str();
-	boost::replace_all(retval, "*&", "");
+	//boost::replace_all(retval, "*&", "");
 	return retval;
 }
 
@@ -65,7 +65,16 @@ CodeFragmentPtr CodeFragment::createNewDummy(const std::string& name) {
 }
 
 void CodeFragment::addDependency(const CodeFragmentPtr& dep) {
-	dependencies.push_back(dep);
+	if (dep) { // only add if it is not a null pointer
+		dependencies.push_back(dep);
+	}
+}
+
+void CodeFragment::addDependencies(const std::vector<CodeFragmentPtr>& fragments) {
+	// just add all dependencies
+	for_each(fragments, [&](const CodeFragmentPtr& cur) {
+		this->addDependency(cur);
+	});
 }
 
 

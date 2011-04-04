@@ -193,34 +193,34 @@ TEST(UndeclaredVariableCheck, BindExpr) {
 
 	StatementPtr cur;
 	cur = builder.compoundStmt(bind00);
-	EXPECT_EQ("{bind()->f();}", toString(*cur));
+	EXPECT_EQ("{bind(){f()};}", toString(*cur));
 	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
 
 	cur = builder.compoundStmt(bind01);
-	EXPECT_EQ("{bind()->f(12);}", toString(*cur));
+	EXPECT_EQ("{bind(){f(12)};}", toString(*cur));
 	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
 
 	cur = builder.compoundStmt(bind11a);
-	EXPECT_EQ("{bind(v1)->f(v1);}", toString(*cur));
+	EXPECT_EQ("{bind(v1){f(v1)};}", toString(*cur));
 	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
 
 	cur = builder.compoundStmt(bind11b);
-	EXPECT_EQ("{bind(v1)->f(v2);}", toString(*cur));
+	EXPECT_EQ("{bind(v1){f(v2)};}", toString(*cur));
 	EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
 	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur),scopeChecker), varB);
 
 	cur = builder.compoundStmt(bind11c);
-	EXPECT_EQ("{bind(v1)->f(f(v1));}", toString(*cur));
+	EXPECT_EQ("{bind(v1){f(f(v1))};}", toString(*cur));
 	EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
 	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur),scopeChecker), varA);
 
 	cur = builder.compoundStmt(bind21);
-	EXPECT_EQ("{bind(v1)->f(v1, v2);}", toString(*cur));
+	EXPECT_EQ("{bind(v1){f(v1, v2)};}", toString(*cur));
 	EXPECT_FALSE(check(wrap(cur), scopeChecker).empty());
 	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(cur),scopeChecker), varB);
 
 	cur = builder.compoundStmt(declB, bind21);
-	EXPECT_EQ("{A v2 = X; bind(v1)->f(v1, v2);}", toString(*cur));
+	EXPECT_EQ("{A v2 = X; bind(v1){f(v1, v2)};}", toString(*cur));
 	EXPECT_TRUE(check(wrap(cur), scopeChecker).empty());
 
 }

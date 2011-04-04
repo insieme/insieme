@@ -48,6 +48,10 @@ namespace simple_backend {
 
 using namespace insieme::core;
 
+
+
+
+
 string NameManager::getName( const NodePtr& ptr, const string& fragment) {
 
 	// test whether a name has already been picked
@@ -69,7 +73,7 @@ string NameManager::getName( const NodePtr& ptr, const string& fragment) {
 
 	// generate a new name string
 	std::stringstream name;
-	name << string("__insieme_");
+	name << prefix;
 	if (!fragment.empty()) {
 		name << fragment << "_";
 	}

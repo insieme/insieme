@@ -77,11 +77,11 @@ namespace formatting {
 		#include "insieme/simple_backend/formatting/formats_begin.inc"
 
 		ADD_FORMATTER(res, basic.getRefDeref(), {
-				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
-				// to not add a dereferning operator to arrays and vectory => implicite within C
-				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+//				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
+				// do not add a dereferning operator to arrays and vectory => implicite within C
+//				if (!(type == NT_ArrayType || type == NT_VectorType)) {
 					OUT("*");
-				}
+//				}
 				VISIT_ARG(0);
 		});
 
@@ -97,11 +97,42 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), false); });
 		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), true); });
 
-		ADD_FORMATTER(res, basic.getRefDelete(), { OUT(" free("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, basic.getRefDelete(), {
 
-		ADD_FORMATTER(res, basic.getScalarToVector(), { VISIT_ARG(0); });
+				const TypePtr& type = ARG(0)->getType();
+				assert(type->getNodeType() == NT_RefType && "Cannot free a non-ref type!");
+
+				OUT("free((*");
+				VISIT_ARG(0);
+				OUT(")");
+
+				const TypePtr& elementType = static_pointer_cast<const RefType>(type)->getElementType();
+				auto elementNodeType = elementType->getNodeType();
+				if (elementNodeType == NT_ArrayType) {
+					OUT(".data");
+				}
+				OUT(")");
+		});
+
+		ADD_FORMATTER(res, basic.getScalarToArray(), {
+				// get name of resulting type
+				TypeManager& typeManager = CONTEXT.getTypeManager();
+
+				const TypePtr& type = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
+				const string& name = typeManager.getTypeInfo(CODE, type).lValueName;
+				OUT("&((");
+				OUT(name);
+				OUT("){");
+				VISIT_ARG(0);
+				OUT(",{1}})");
+		});
 
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
+
+
+				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+
+				OUT("((" + typeName + "){");
 
 				// test whether the size is fixed to 1
 				if (ARG(1)->getNodeType() == NT_Literal && static_pointer_cast<const Literal>(ARG(1))->getValue() == "1") {
@@ -133,32 +164,36 @@ namespace formatting {
 					VISIT_ARG(1);
 					OUT(")");
 				}
+
+				OUT(",{");
+				VISIT_ARG(1);
+				OUT("}})");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArraySubscript1D(), false, {
 				bool isRef = call->getType()->getNodeType() == NT_RefType;
 				if (isRef) OUT("&(");
-				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
+				VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]");
 				if (isRef) OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefElem1D(), false, {
 
-				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
-				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
-				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
+//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
+//				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
+//				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
 					OUT("&");
-				}
+//				}
 
 				// check whether input variable needs to be dereferenced
-				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
-				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
-
-				if (insertDeref) {
-					OUT("((*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]"); OUT(")");
-				} else {
-					OUT("("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
-				}
+//				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
+//				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
+//
+//				if (insertDeref) {
+					OUT("((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
+//				} else {
+//					OUT("("); VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]"); OUT(")");
+//				}
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {
@@ -182,10 +217,10 @@ namespace formatting {
 
 		// struct operations
 		ADD_FORMATTER(res, basic.getCompositeRefElem(), {
-				NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
-				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+				// NodeType type = static_pointer_cast<const RefType>(call->getType())->getElementType()->getNodeType();
+				//if (!(type == NT_ArrayType || type == NT_VectorType)) {
 					OUT("&"); // for all other types, the address operator is needed (for arrays and vectors implicite)
-				}
+				//}
 				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
 		});
 		ADD_FORMATTER(res, basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
@@ -270,15 +305,61 @@ namespace formatting {
 
 
 		// string conversion
-		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { VISIT_ARG(0); });
+		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { OUT("&("); VISIT_ARG(0); OUT(")"); });
 
 
 		ADD_FORMATTER(res, basic.getIfThenElse(), {
-				OUT("("); VISIT_ARG(0); OUT(")?(");
-				STMT_CONVERTER.convert(evalLazy(ARG(1)));
-				OUT("):(");
-				STMT_CONVERTER.convert(evalLazy(ARG(2)));
-				OUT(")");
+
+				// TODO: remove this and handle it in a common place for all calls
+				ExpressionPtr ifValue = evalLazy(ARG(1));
+				ExpressionPtr elseValue = evalLazy(ARG(2));
+
+				TypePtr typeA = ifValue->getType();
+				TypePtr typeB = elseValue->getType();
+
+				ASTBuilder builder(typeA->getNodeManager());
+				const lang::BasicGenerator& basic = builder.getBasicGenerator();
+				const TypePtr& stringType = basic.getString();
+				if (typeA == stringType) {
+					typeA = builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(12346));
+				}
+				if (typeB == stringType) {
+					typeB = builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(123467));
+				}
+
+				std::cout << toString(ifValue->getType()) << "=>" << toString(typeA) << std::endl;
+				std::cout << toString(elseValue->getType()) << "=>" << toString(typeB) << std::endl;
+				std::cout << std::endl;
+
+				bool done = false;
+				if (typeA != typeB && typeA->getNodeType() == NT_VectorType && typeB->getNodeType() == NT_VectorType) {
+					const VectorTypePtr& vectorA = static_pointer_cast<const VectorType>(typeA);
+					const VectorTypePtr& vectorB = static_pointer_cast<const VectorType>(typeB);
+
+					if (vectorA->getElementType() == vectorB->getElementType() &&
+						vectorA->getSize() != vectorB->getSize()) {
+
+						ArrayTypePtr arrayType = builder.arrayType(vectorA->getElementType());
+
+						string arrayTypeName = CONTEXT.getTypeManager().getTypeName(CODE, arrayType);
+
+						// implicite conversion from vector to string
+						OUT("("); VISIT_ARG(0); OUT(")?(");
+						OUT("(("); OUT(arrayTypeName); OUT("){"); STMT_CONVERTER.convert(ifValue); OUT(".data, {1}})");
+						OUT("):(");
+						OUT("(("); OUT(arrayTypeName); OUT("){"); STMT_CONVERTER.convert(elseValue); OUT(".data, {1}})");
+						OUT(")");
+						done = true;
+					}
+				}
+
+				if (!done) {
+					OUT("("); VISIT_ARG(0); OUT(")?(");
+					STMT_CONVERTER.convert(ifValue);
+					OUT("):(");
+					STMT_CONVERTER.convert(elseValue);
+					OUT(")");
+				}
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getSizeof(), false, {

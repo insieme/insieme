@@ -994,7 +994,7 @@ public:
 			core::ExpressionPtr&& expr = wrapVariable(unOp->getSubExpr());
 			assert(expr->getType()->getNodeType() == core::NT_RefType);
 
-			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToVector(),  expr );
+			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  expr );
 			break;
 		}
 		// *a
@@ -1518,7 +1518,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// if this function gets the globals in the capture list we have to create a different type
 	if ( !isEntryPoint && ctx.globalFuncMap.find(funcDecl) != ctx.globalFuncMap.end() ) {
 		// declare a new variable that will be used to hold a reference to the global data stucture
-		addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
+		funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 	}
 
 	// reset old global var

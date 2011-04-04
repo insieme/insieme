@@ -48,47 +48,47 @@ namespace simple_backend {
 using namespace insieme::core;
 
 
-const string TypeManager::Entry::UNSUPPORTED = "/* unsupported */";
+const string TypeManager::TypeInfo::UNSUPPORTED = "/* unsupported */";
 
-TypeManager::Entry toEntry(string name) {
-	return TypeManager::Entry(name, name, name + " %s", name + " %s", CodeFragmentPtr());
+TypeManager::TypeInfo toTypeInfo(string name) {
+	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s", CodeFragmentPtr());
 }
 
 string TypeManager::formatParamter(const CodeFragmentPtr& context, const TypePtr& paramType, const string& name, bool decl) {
 
-	// obtain type entry
-	const Entry& entry = getTypeEntry(context, paramType);
+	// obtain type info
+	const TypeInfo& info = getTypeInfo(context, paramType);
 
 	// format parameter
-	return format((decl)?entry.declPattern.c_str():entry.paramPattern.c_str(), name.c_str());
+	return format((decl)?info.declPattern.c_str():info.paramPattern.c_str(), name.c_str());
 }
 
-const TypeManager::Entry TypeManager::getTypeEntry(const CodeFragmentPtr& context, const core::TypePtr& type) {
+const TypeManager::TypeInfo TypeManager::getTypeInfo(const CodeFragmentPtr& context, const core::TypePtr& type) {
 
 	// resolve given type
-	const TypeManager::Entry& entry = resolveType(type);
+	const TypeManager::TypeInfo& info = resolveType(type);
 
 	// => add code dependency to definition (if necessary)
-	if (entry.definition) {
-		context->addDependency(entry.definition);
+	if (info.definition) {
+		context->addDependency(info.definition);
 	}
 
 	// return the obtained entry
-	return entry;
+	return info;
 }
 
 string TypeManager::getTypeName(const CodeFragmentPtr& context, const core::TypePtr& type, bool decl) {
 
 	// obtain type entry
-	TypeManager::Entry entry = getTypeEntry(context, type);
+	TypeManager::TypeInfo info = getTypeInfo(context, type);
 
 	// return C name of type
-	return (decl)?entry.lValueName:entry.rValueName;
+	return (decl)?info.lValueName:info.rValueName;
 }
 
 
 
-TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
+TypeManager::TypeInfo TypeManager::resolveType(const core::TypePtr& type) {
 
 	// look up definition
 	auto pos = typeDefinitions.find(type);
@@ -98,7 +98,7 @@ TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
 	}
 
 	// resolve type
-	Entry res;
+	TypeInfo res;
 	switch(type->getNodeType()) {
 	case NT_FunctionType:
 		res = resolveFunctionType(static_pointer_cast<const FunctionType>(type)); break;
@@ -119,7 +119,7 @@ TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
 //	case NT_ChannelType:
 	default:
 		// return unsupported type
-		res = toEntry(format("<?>%s</?>", toString(*type).c_str()));
+		res = toTypeInfo(format("<?>%s</?>", toString(*type).c_str()));
 		//assert(false && "Unsupported IR type encountered!");
 	}
 
@@ -128,77 +128,81 @@ TypeManager::Entry TypeManager::resolveType(const core::TypePtr& type) {
 	return res;
 }
 
-TypeManager::Entry TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
 	// TODO: handle basic types using a map
 
 	// check some primitive types
 	if(basic.isUnit(ptr)) {
-		return toEntry("void");
+		return toTypeInfo("void");
 	}
 	if(basic.isInt(ptr)) {
 		string qualifier = basic.isUnsignedInt(ptr) ? "unsigned " : "";
 		auto intParm = ptr->getIntTypeParameter().front();
 		if(intParm->getNodeType() == NT_ConcreteIntTypeParam) {
 			switch(static_pointer_cast<const ConcreteIntTypeParam>(intParm)->getValue()) {
-				case 1: return toEntry(qualifier + "char");
-				case 2: return toEntry(qualifier + "short");
-				case 4: return toEntry(qualifier + "int");
-				case 8: return toEntry(qualifier + "long"); // long long ?
-				default: return toEntry(ptr->toString());
+				case 1: return toTypeInfo(qualifier + "char");
+				case 2: return toTypeInfo(qualifier + "short");
+				case 4: return toTypeInfo(qualifier + "int");
+				case 8: return toTypeInfo(qualifier + "long"); // long long ?
+				default: return toTypeInfo(ptr->toString());
 			}
 		}
 		// TODO Warn?
-		return toEntry(ptr->toString());
+		return toTypeInfo(ptr->toString());
 	}
 	if(basic.isBool(ptr)) {
-		return toEntry("bool");
+		return toTypeInfo("bool");
 	}
 	if(basic.isReal(ptr)) {
 		auto intParm = ptr->getIntTypeParameter().front();
 		if(intParm->getNodeType() == NT_ConcreteIntTypeParam) {
 			switch(static_pointer_cast<const ConcreteIntTypeParam>(intParm)->getValue()) {
-				case 4: return toEntry("float");
-				case 8: return toEntry("double");
-				case 16: return toEntry("long double");
-				default: return toEntry(ptr->toString());
+				case 4: return toTypeInfo("float");
+				case 8: return toTypeInfo("double");
+				case 16: return toTypeInfo("long double");
+				default: return toTypeInfo(ptr->toString());
 			}
 		}
 		// TODO Warn?
-		return toEntry(ptr->toString());
+		return toTypeInfo(ptr->toString());
 	}
 	if(basic.isString(ptr)) {
-		return toEntry("string");
+		// strings are internally managed as vectors of a certain size
+		return TypeManager::TypeInfo(
+				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
+				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
+				"char*", "char* %s", "(%s).data");
 	}
 	if(basic.isChar(ptr)) {
-		return toEntry("char");
+		return toTypeInfo("char");
 	}
 	if(basic.isVarList(ptr)) {
-		return toEntry("...");
+		return toTypeInfo("...");
 	}
 	if(basic.isJob(ptr)) {
-		return toEntry("isbr_Job*");
+		return toTypeInfo("isbr_Job*");
 	}
 	if(basic.isThreadGroup(ptr)) {
-		return toEntry("isbr_ThreadGroup");
+		return toTypeInfo("isbr_ThreadGroup");
 	}
 
 	//assert(0 && "Unhandled generic type.");
-	return toEntry(string("[[unhandled_simple_type: ") + ptr->toString() + "]]");
+	return toTypeInfo(string("[[unhandled_simple_type: ") + ptr->toString() + "]]");
 }
 
-TypeManager::Entry TypeManager::resolveFunctionType(const FunctionTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveFunctionType(const FunctionTypePtr& ptr) {
 
 	// lookup function definition
-	FunctionTypeEntry entry = getFunctionTypeDetails(ptr);
+	FunctionTypeInfo info = getFunctionTypeInfo(ptr);
 
 	// assemble name and dependency
-	string typeName = entry.closureName + "*";
-	return TypeManager::Entry(typeName, typeName, typeName + " %s", typeName + " %s", entry.definitions);
+	string typeName = info.closureName + "*";
+	return TypeManager::TypeInfo(typeName, typeName, typeName + " %s", typeName + " %s", info.definitions);
 }
 
-TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::FunctionTypePtr& functionType) {
+TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::FunctionTypePtr& functionType) {
 
 	// use cached information
 	auto pos = functionTypeDefinitions.find(functionType);
@@ -276,13 +280,13 @@ TypeManager::FunctionTypeEntry TypeManager::getFunctionTypeDetails(const core::F
 	}
 
 	// create, register and return entry
-	FunctionTypeEntry entry(functorName, callerName, functorAndCaller);
-	functionTypeDefinitions.insert(std::make_pair(functionType, entry));
-	return entry;
+	FunctionTypeInfo info(functorName, callerName, functorAndCaller);
+	functionTypeDefinitions.insert(std::make_pair(functionType, info));
+	return info;
 }
 
 
-TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
 	// special handling for void* type
@@ -290,31 +294,45 @@ TypeManager::Entry TypeManager::resolveRefType(const RefTypePtr& ptr) {
 		if ((arrayType->getElementType()->getNodeType() == NT_TypeVariable)
 				|| (basic.isRefAlpha(arrayType->getElementType()))) {
 
-			return toEntry("void*");
+			return toTypeInfo("void*");
 		}
 	}
 	if (ptr->getElementType()->getNodeType() == NT_TypeVariable) {
-		return toEntry("void*");
+		return toTypeInfo("void*");
 	}
 	if(basic.isRefAlpha(ptr)) {
-		return toEntry("void*");
+		return toTypeInfo("void*");
 	}
 
 	// establish reference type with one additional level of indirection
-	Entry subType = resolveType(ptr->getElementType());
+	TypeInfo subType = resolveType(ptr->getElementType());
 	string lvalue = subType.lValueName;
 	string rvalue = subType.lValueName + "*";
 	if (ptr->getElementType()->getNodeType() == NT_RefType) {
 		lvalue = lvalue + "*";
 	}
-	return Entry(lvalue, rvalue, lvalue + " %s", rvalue + " %s");
+
+	// special handling of references to vectors and arrays
+	string externalName = subType.externName;
+	auto nodeType = ptr->getElementType()->getNodeType();
+	if (nodeType != NT_ArrayType && nodeType != NT_VectorType) {
+		 externalName = externalName + "*";
+	}
+
+	string externalization = "((" + externalName + ")(%s))";
+	if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
+		externalization = "((" + externalName + ")((*%s).data))";
+	}
+
+	return TypeManager::TypeInfo(lvalue, rvalue, lvalue + " %s", rvalue + " %s",
+			externalName, externalName + " %s", externalization, subType.definition);
 
 //	TODO: if
 //	return resolveRefOrVectorOrArrayType(ptr);
 }
 
 
-TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 
 	// fetch name for the vector type
 	string name = nameGenerator.getName(ptr);
@@ -323,33 +341,36 @@ TypeManager::Entry TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	CodeFragmentPtr code = CodeFragment::createNew("vector_type_declaration of " + name + " <=> " + toString(*ptr));
 
 	// look up element type info
-	const Entry& elementTypeInfo = resolveType(ptr->getElementType());
+	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
+	code->addDependency(elementTypeInfo.definition);
 
 	// add struct definition
-	code << "struct " << name << " { \n";
+	code << "typedef struct _" << name << " { \n";
 	code << "    " << elementTypeInfo.lValueName << " data[" << toString(*ptr->getSize()) << "];\n";
-	code << "};\n";
+	code << "} " << name << ";\n";
 
-	string typeName = "struct " + name;
-	return TypeManager::Entry(typeName, typeName, typeName + " %s", typeName + " %s", code);
+	// construct type info including external type representation (as a pointer)
+	string externalName = elementTypeInfo.externName + "*";
+	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
+			externalName, externalName + " %s", "(%s).data", code);
 
 //	TODO: remove if vector-is-a-struct works out!
 //	// default handling
-//	TypeManager::Entry res = resolveRefOrVectorOrArrayType(ptr);
+//	TypeManager::TypeInfo res = resolveRefOrVectorOrArrayType(ptr);
 //	res.rValueName = Entry::UNSUPPORTED;
 //	res.paramPattern = Entry::UNSUPPORTED;
 //	return res;
 }
 
-TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	auto& basic = ptr->getNodeManager().basic;
 
 	// special handling for void* type (array<ref<'a>,1> and array<'a,1>)
 	if (ptr->getElementType()->getNodeType() == NT_TypeVariable) {
-		return toEntry("void*");
+		return toTypeInfo("void*");
 	}
 	if(basic.isRefAlpha(ptr->getElementType())) {
-		return toEntry("void*");
+		return toTypeInfo("void*");
 	}
 
 	// obtain dimension of array
@@ -357,7 +378,7 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	const IntTypeParamPtr& dimPtr = ptr->getDimension();
 	if (dimPtr->getNodeType() != NT_ConcreteIntTypeParam) {
 		// non-concrete array types are not supported
-		return Entry();
+		return TypeInfo();
 	} else {
 		dim = static_pointer_cast<const ConcreteIntTypeParam>(dimPtr)->getValue();
 	}
@@ -371,26 +392,28 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	CodeFragmentPtr code = CodeFragment::createNew("array_type_declaration of " + name + " <=> " + toString(*ptr));
 
 	// look up element type info
-	const Entry& elementTypeInfo = resolveType(ptr->getElementType());
+	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
+	code->addDependency(elementTypeInfo.definition);
 
 	// add array-struct definition
-	code << "struct " << name << " { \n";
-	code << "    " << "unsigned size[" << dim << "];\n";
+	code << "typedef struct _" << name << " { \n";
 	code << "    " << elementTypeInfo.lValueName << times("*", dim) << " data;\n";
-	code << "};\n";
+	code << "    " << "unsigned size[" << dim << "];\n";
+	code << "} " + name + ";\n";
 
-	string typeName = "struct " + name;
-	return TypeManager::Entry(typeName, Entry::UNSUPPORTED, typeName + " %s", Entry::UNSUPPORTED, code);
+	string externalName = elementTypeInfo.externName + toString(times("*", dim));
+	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
+			externalName, externalName + " %s", "(%s).data", code);
 
 // 	// TODO: remove if array construction works out
-//	TypeManager::Entry res = resolveRefOrVectorOrArrayType(ptr);
+//	TypeManager::TypeInfo res = resolveRefOrVectorOrArrayType(ptr);
 //	res.rValueName = Entry::UNSUPPORTED;
 //	res.paramPattern = Entry::UNSUPPORTED;
 //	return res;
 }
 
 
-//TypeManager::Entry TypeManager::resolveRefOrVectorOrArrayType(const core::TypePtr& ptr) {
+//TypeManager::TypeInfo TypeManager::resolveRefOrVectorOrArrayType(const core::TypePtr& ptr) {
 //
 //	// make sure the passed type is correct
 //	TypePtr type = ptr;
@@ -413,7 +436,7 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 //		// check type of dimension
 //		IntTypeParamPtr dim = arrayType->getDimension();
 //		if (dim->getNodeType() != NT_ConcreteIntTypeParam) {
-//			return toEntry("[[ Unsupported generic array types ]]");
+//			return toTypeInfo("[[ Unsupported generic array types ]]");
 //		}
 //		arrayCount += static_pointer_cast<const ConcreteIntTypeParam>(dim)->getValue();
 //
@@ -444,7 +467,7 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 //			// check type of dimension
 //			IntTypeParamPtr dim = arrayType->getDimension();
 //			if (dim->getNodeType() != NT_ConcreteIntTypeParam) {
-//				return toEntry("[[ Unsupported generic array types ]]");
+//				return toTypeInfo("[[ Unsupported generic array types ]]");
 //			}
 //			arrayCount += static_pointer_cast<const ConcreteIntTypeParam>(dim)->getValue();
 //
@@ -521,7 +544,7 @@ TypeManager::Entry TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 //	);
 //}
 
-TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
+TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
 
 	// fetch name for composed type
 	string name = nameGenerator.getName(ptr, "userdefined_type");
@@ -537,20 +560,20 @@ TypeManager::Entry TypeManager::resolveNamedCompositType(const NamedCompositeTyp
 	code << "};\n";
 
 	string typeName = prefix + " " + name;
-	return TypeManager::Entry(typeName, typeName, typeName + " %s", typeName + " %s", code);
+	return TypeManager::TypeInfo(typeName, typeName, typeName + " %s", typeName + " %s", code);
 }
 
-TypeManager::Entry TypeManager::resolveUnionType(const UnionTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveUnionType(const UnionTypePtr& ptr) {
 	return resolveNamedCompositType(ptr, "union");
 }
 
-TypeManager::Entry TypeManager::resolveStructType(const StructTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveStructType(const StructTypePtr& ptr) {
 	return resolveNamedCompositType(ptr, "struct");
 }
 
 
 
-TypeManager::Entry TypeManager::resolveRecType(const core::RecTypePtr& ptr) {
+TypeManager::TypeInfo TypeManager::resolveRecType(const core::RecTypePtr& ptr) {
 
 	// resolve recursive type definition
 	resolveRecTypeDefinition(ptr->getDefinition());
@@ -587,7 +610,7 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name);
 		prototype << name << ";\n";
 
-		this->typeDefinitions.insert(std::make_pair(type, Entry(name, name, name + " %s", name + " %s", prototype)));
+		this->typeDefinitions.insert(std::make_pair(type, TypeInfo(name, name, name + " %s", name + " %s", prototype)));
 
 		group->addDependency(prototype);
 	});
