@@ -46,6 +46,14 @@
 #include <string.h>
 
 
+char *irt_errcode_strings[] = {
+	"IRT_ERR_NONE",
+	"IRT_ERR_IO",
+	"IRT_ERR_INIT",
+	"IRT_ERR_APP"
+};
+
+
 void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 	va_list args;
 	va_start(args, message);
@@ -53,7 +61,7 @@ void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
 	va_end(args);
 
-	irt_error *err = (irt_error*)malloc(sizeof(irt_errcode) + additional_bytes);
+	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
 	err->errcode = code;
 	err->additional_bytes = additional_bytes;
 	strncpy(((char*)err)+sizeof(irt_error), message, additional_bytes);
@@ -66,4 +74,14 @@ void irt_throw_generic_error(irt_error* error) {
 		exit(-1);
 	}
 	raise(IRT_SIG_ERR);
+}
+
+const char* irt_errcode_string(irt_errcode code) {
+	return irt_errcode_strings[code];
+}
+
+void irt_print_error_info(FILE* target, irt_error* error) {
+	if(error->additional_bytes) {
+		fprintf(target, "%s", (char*)error+sizeof(irt_error));
+	}
 }

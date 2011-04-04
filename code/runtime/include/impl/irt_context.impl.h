@@ -47,5 +47,6 @@ irt_context* irt_context_create(irt_client_app* app) {
 }
 
 void irt_context_destroy(irt_context* context) {
+	context->client_app->cleanup_context(context);
 	free(context);
 }

@@ -34,9 +34,11 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "work_item.h"
+#include "impl/client_app.impl.h"
+#include "impl/irt_context.impl.h"
 
-#include <pthread.h>
+int main() {
 
-extern pthread_key_t irt_g_error_key;
-extern pthread_key_t irt_g_worker_key;
+	return 0;
+}

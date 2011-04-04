@@ -36,15 +36,17 @@
 
 #pragma once
 
-#include "irt_inttypes.h"
+#include "declarations.h"
 
 #include <signal.h>
+#include <stdio.h>
 
 #define IRT_SIG_ERR SIGUSR1
 
 /* ------------------------------ data structures ----- */
 
 enum _irt_errcode {
+	IRT_ERR_NONE,
 	IRT_ERR_IO,
 	IRT_ERR_INIT,
 	IRT_ERR_APP
@@ -60,3 +62,6 @@ struct _irt_error {
 
 void irt_throw_string_error(irt_errcode code, const char* message, ...);
 void irt_throw_generic_error(irt_error* error);
+
+const char* irt_errcode_string(irt_errcode code);
+void irt_print_error_info(FILE* target, irt_error* error);

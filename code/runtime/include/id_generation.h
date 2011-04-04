@@ -56,7 +56,7 @@ struct _irt_##__type##_id { \
 	} value; \
 	struct _irt_##__type* cached; \
 }; \
-inline irt_##__type##_id irt_generate_##__type##_id() { \
+static inline irt_##__type##_id irt_generate_##__type##_id() { \
 	/* The hack below is necessary to maintain minimal dependencies. \
 	This way, id_generation.h does not need to know about workers */ \
 	uint64* worker_ptr = (uint64*)pthread_getspecific(irt_g_worker_key); \

@@ -34,19 +34,41 @@
  * regarding third party software licenses.
  */
 
-#include "data_item.h"
-#include "work_item.h"
-#include "worker.h"
+#include "declarations.h"
 
-#include "utils/hoisting.h"
 #include "impl/client_app.impl.h"
 #include "impl/irt_context.impl.h"
+#include "impl/error_handling.impl.h"
+
+
+// error handling
+void irt_error_handler(int signal) {
+	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
+	fprintf(stderr, "Insieme Runtime Error recieved: %s\n", irt_errcode_string(error->errcode));
+	fprintf(stderr, "Additional information:\n");
+	irt_print_error_info(stderr, error);
+	exit(-error->errcode);
+}
+
+// globals
+pthread_key_t irt_g_error_key;
+pthread_key_t irt_g_worker_key;
+
+void irt_init_globals() {
+	assert(pthread_key_create(&irt_g_error_key, NULL) == 0);
+	assert(pthread_key_create(&irt_g_worker_key, NULL) == 0);
+}
 
 int main(int argc, char** argv) {
 	if(argc!=2) {
 		printf("usage: runtime [libname]\n");
 		return -1;
 	}
+
+	// initialize error signal handler
+	signal(IRT_SIG_ERR, &irt_error_handler);
+	// initialize globals
+	irt_init_globals();
 
 	irt_client_app* client_app = irt_client_app_create(argv[1]);
 	irt_context* prog_context = irt_context_create(client_app);
