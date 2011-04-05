@@ -175,6 +175,11 @@ ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::markerExprHelp(const Express
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
 template<typename T>
+Rule ExpressionGrammarPart<T>::getCharLiteral() {
+    return ( qi::lit("'") >> qi::char_ >> "'")                      [ qi::_val = ph::bind(&ExpressionGrammarPart::charLiteralHelp, this, qi::_1) ];
+}
+
+template<typename T>
 qi::rule<ParseIt, string()> ExpressionGrammarPart<T>::getLiteralString() {
     return *(qi::char_ - ">");
 }
@@ -191,18 +196,81 @@ Rule ExpressionGrammarPart<T>::getOpExpr() {
 }
 
 template<typename T>
-qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> ExpressionGrammarPart<T>::getBindExpr() {
-    return ( qi::lit("bind") >> '(' >> -( variableExpr              [ ph::push_back(qi::_a, qi::_1) ]
-        % ',') >> ')' >> '{' >> exprG->callExpr >> '}' )            [ qi::_val = ph::bind(&ExpressionGrammarPart::bindExprHelp, this, qi::_a, qi::_2) ];
-
+Rule ExpressionGrammarPart<T>::getVariableExpr() {
+    return ( typeG->typeRule >> ':' >> typeG->identifier )          [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ]
+        | typeG->identifier                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1) ];
 }
 
 template<typename T>
-ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar* exprGram, TypeGrammar* typeGram)
+Rule ExpressionGrammarPart<T>::getFunVarExpr() {
+    return ( typeG->functionType >> ':' >> typeG->identifier )      [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ];
+}
+
+template<typename T>
+Rule ExpressionGrammarPart<T>::getCastExpr() {
+    return ( qi::lit("CAST<") >> typeG->typeRule
+        >> '>' >> '(' >> exprG->expressionRule >> ')' )             [ qi::_val = ph::bind(&ExpressionGrammarPart::castHelp, this, qi::_1, qi::_2) ];
+}
+
+template<typename T>
+qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> ExpressionGrammarPart<T>::getBindExpr() {
+    return ( qi::lit("bind") >> '(' >> -( variableExpr              [ ph::push_back(qi::_a, qi::_1) ]
+        % ',') >> ')' >> '{' >> exprG->callExpr >> '}' )            [ qi::_val = ph::bind(&ExpressionGrammarPart::bindExprHelp, this, qi::_a, qi::_2) ];
+}
+
+template<typename T>
+qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> ExpressionGrammarPart<T>::getTupleExpr() {
+    return ( qi::lit("tuple") >> '[' >> -(exprG->expressionRule     [ ph::push_back(qi::_a, qi::_1) ]
+        % ',') >> ']' )                                             [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleHelp, this, qi::_a) ];
+}
+
+template<typename T>
+qi::rule<ParseIt, T(), qi::locals<TypePtr, ExpressionList>, qi::space_type> ExpressionGrammarPart<T>::getVectorExpr() {
+    auto nManRef = ph::ref(nodeMan); // TODO get rid of nManRef
+    return ( qi::lit("vector") >> '<' >>
+        (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2 ) ]
+        >> '>' >> '(' >> -(exprG->expressionRule                    [ ph::push_back(qi::_b, qi::_1) ]
+          % ',') >> ')' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::vectorHelp, this, qi::_a, qi::_b ) ];
+}
+
+template<typename T>
+qi::rule<ParseIt, T(), qi::locals<Members>, qi::space_type> ExpressionGrammarPart<T>::getStructExpr() {
+    return ( qi::lit("struct") >> '{' >> -(
+        (typeG->identifier >> ':' >> exprG->expressionRule )        [ ph::push_back(qi::_a, ph::bind(&makePair<IdentifierPtr, ExpressionPtr>, qi::_1, qi::_2 )) ]
+          % ',') >> '}' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::structHelp, this, qi::_a ) ];
+}
+
+template<typename T>
+Rule ExpressionGrammarPart<T>::getUnionExpr() {
+    return ( qi::lit("union") >> '<' >> typeG->typeRule >> '>'
+        >> '{' >> typeG->identifier >> ':'
+        >> exprG->expressionRule >> '}' )                           [ qi::_val = ph::bind(&ExpressionGrammarPart::unionHelp, this, qi::_1, qi::_2, qi::_3) ];
+}
+
+template<typename T>
+Rule ExpressionGrammarPart<T>::getMemberAccessExpr() {
+    return ( '(' >> exprG->expressionRule >> qi::lit(").")
+        >> typeG->identifier )                                      [ qi::_val = ph::bind(&ExpressionGrammarPart::memberAccessHelp, this, qi::_1, qi::_2) ];
+}
+
+template<typename T>
+Rule ExpressionGrammarPart<T>::getTupleProjectionExpr() {
+    return ( '(' >> exprG->expressionRule >> qi::lit(").")
+        >> qi::ulong_long )                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleProjectionHelp, this, qi::_1, qi::_2) ];
+}
+
+template<typename T>
+Rule ExpressionGrammarPart<T>::getMarkerExpr() {
+    return ( '<' >> qi::lit("me") >> qi::lit("id") >> '='
+        >> qi::ulong_long >> '>' >> exprG->expressionRule >> '<'
+        >> '/' >> qi::lit("me") >> '>')                             [ qi::_val = ph::bind(&ExpressionGrammarPart::markerExprHelp, this, qi::_2, qi::_1) ];
+}
+
+template<typename T>
+ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar* typeGram)
     : ExpressionGrammarPart::base_type(expressionPart), exprG(exprGram), typeG(typeGram), nodeMan(nMan) {
 //    typeG = new TypeGrammar(nodeMan);
 
-    auto nManRef = ph::ref(nodeMan);
     auto basicRef = ph::ref(nodeMan.basic);
 
     auto intTypeRef = ph::cref(nodeMan.basic.getInt4());
@@ -222,8 +290,7 @@ ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGra
     // Fixed by adding parserGet to Literal, TODO should probably just remove one of the gets in Literal
 
     // literals --------------------------------------------------------------------------------------------------------------------------
-    charLiteral =
-            ( qi::lit("'") >> qi::char_ >> "'")                      [ qi::_val = ph::bind(&ExpressionGrammarPart::charLiteralHelp, this, qi::_1) ];
+    charLiteral = getCharLiteral();
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
@@ -231,17 +298,12 @@ ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGra
 
     opExpr = getOpExpr();
 
-    variableExpr =
-        ( typeG->typeRule >> ':' >> typeG->identifier )             [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ]
-        | typeG->identifier                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1) ];
+    variableExpr = getVariableExpr();
 
     // specialized type to ensure type safety
-    funVarExpr =
-        ( typeG->functionType >> ':' >> typeG->identifier )         [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ];
+    funVarExpr = getFunVarExpr();
 
-    castExpr = //exprGpart->castExpr;
-        ( qi::lit("CAST<") >> typeG->typeRule
-        >> '>' >> '(' >> exprG->expressionRule >> ')' )             [ qi::_val = ph::bind(&ExpressionGrammarPart::castHelp, this, qi::_1, qi::_2) ];
+    castExpr = getCastExpr();
 
     // --------------------------------------------------------------------------------------
 
@@ -249,38 +311,19 @@ ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGra
         ( qi::lit("bind") >> '(' >> -( variableExpr                 [ ph::push_back(qi::_a, qi::_1) ]
           % ',') >> ')' >> '{' >> exprG->callExpr >> '}' )          [ qi::_val = ph::bind(&ExpressionGrammarPart::bindExprHelp, this, qi::_a, qi::_2) ];
 */
-    tupleExpr =
-        ( qi::lit("tuple") >> '[' >> -(exprG->expressionRule        [ ph::push_back(qi::_a, qi::_1) ]
-          % ',') >> ']' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleHelp, this, qi::_a) ];
+    tupleExpr = getTupleExpr();
 
-    vectorExpr =
-        ( qi::lit("vector") >> '<' >>
-        (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2 ) ]
-        >> '>' >> '(' >> -(exprG->expressionRule                    [ ph::push_back(qi::_b, qi::_1) ]
-          % ',') >> ')' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::vectorHelp, this, qi::_a, qi::_b ) ];
+    vectorExpr = getVectorExpr();
 
-    structExpr =
-        ( qi::lit("struct") >> '{' >> -(
-          (typeG->identifier >> ':' >> exprG->expressionRule )      [ ph::push_back(qi::_a, ph::bind(&makePair<IdentifierPtr, ExpressionPtr>, qi::_1, qi::_2 )) ]
-          % ',') >> '}' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::structHelp, this, qi::_a ) ];
+    structExpr = getStructExpr();
 
-    unionExpr =
-        ( qi::lit("union") >> '<' >> typeG->typeRule >> '>'
-        >> '{' >> typeG->identifier >> ':'
-        >> exprG->expressionRule >> '}' )                           [ qi::_val = ph::bind(&ExpressionGrammarPart::unionHelp, this, qi::_1, qi::_2, qi::_3) ];
+    unionExpr = getUnionExpr();
 
-    memberAccessExpr = //exprGpart->memberAccessExpr;
-        ( '(' >> exprG->expressionRule >> qi::lit(").")
-        >> typeG->identifier )                                      [ qi::_val = ph::bind(&ExpressionGrammarPart::memberAccessHelp, this, qi::_1, qi::_2) ];
+    memberAccessExpr = getMemberAccessExpr();
 
-    tupleProjectionExpr = //exprGpart->tupleProjectionExpr;
-        ( '(' >> exprG->expressionRule >> qi::lit(").")
-        >> qi::ulong_long )                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleProjectionHelp, this, qi::_1, qi::_2) ];
+    tupleProjectionExpr = getTupleProjectionExpr();
 
-    markerExpr =
-        ( '<' >> qi::lit("me") >> qi::lit("id") >> '='
-        >> qi::ulong_long >> '>' >> exprG->expressionRule >> '<'
-        >> '/' >> qi::lit("me") >> '>')                             [ qi::_val = ph::bind(&ExpressionGrammarPart::markerExprHelp, this, qi::_2, qi::_1) ];
+    markerExpr = getMarkerExpr();
 
     // --------------------------------------------------------------------------------------
 //    BOOST_SPIRIT_DEBUG_NODE(literalString);

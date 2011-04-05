@@ -52,16 +52,16 @@ typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 
 // FW Declaration
 struct TypeGrammar;
-struct ExpressionGrammar;
+template<typename T> struct ExpressionGrammar;
 
 template<typename T>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
-    ExpressionGrammar* exprG;
+    ExpressionGrammar<T>* exprG;
     TypeGrammar *typeG; // pointer for weak coupling
 
     NodeManager& nodeMan;
 
-    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar* exprGram, TypeGrammar* typeGram);
+    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing
@@ -98,13 +98,20 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> 
     // member functions applying the rules
     virtual qi::rule<ParseIt, string()> getLiteralString();
     virtual qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> getBindExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> getTupleExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<TypePtr, ExpressionList>, qi::space_type> getVectorExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<Members>, qi::space_type> getStructExpr();
     #define get(op) virtual Rule get##op ();
-    get(LiteralExpr);
-    get(OpExpr);
-/*    get(VariableExpr);
-    get(FunVarExpr);
-    get(CastExpr);
-    get(CharLiteral);*/
+    get(LiteralExpr)
+    get(OpExpr)
+    get(VariableExpr)
+    get(FunVarExpr)
+    get(CastExpr)
+    get(CharLiteral)
+    get(UnionExpr)
+    get(MemberAccessExpr)
+    get(TupleProjectionExpr)
+    get(MarkerExpr)
     #undef get
 
     // member functions providing the rules

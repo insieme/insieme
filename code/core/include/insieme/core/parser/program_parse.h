@@ -44,7 +44,7 @@ namespace core {
 namespace parse {
 
 struct ProgramGrammar : public qi::grammar<ParseIt, ProgramPtr(), qi::space_type> {
-    ExpressionGrammar *exprG;   // pointer for weak coupling
+    ExpressionGrammar<ExpressionPtr> *exprG;   // pointer for weak coupling
 
     ProgramGrammar(NodeManager& nodeMan);
     ~ProgramGrammar();

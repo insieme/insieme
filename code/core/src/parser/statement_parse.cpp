@@ -190,11 +190,11 @@ Rule StatementGrammar<T>::getMarker() {
 
 
 template<typename T>
-StatementGrammar<T>::StatementGrammar(NodeManager& nMan, ExpressionGrammar* exprGram, TypeGrammar* typeGram)
+StatementGrammar<T>::StatementGrammar(NodeManager& nMan, ExpressionGrammar<ExpressionPtr>* exprGram, TypeGrammar* typeGram)
     : StatementGrammar<T>::base_type(statementRule), nodeMan(nMan) {
 
     if(typeGram == NULL) {
-        exprG = new ExpressionGrammar(nodeMan, this);
+        exprG = new ExpressionGrammar<ExpressionPtr>(nodeMan, this);
         typeG = new TypeGrammar(nodeMan);
         deleteFields = true;
     } else {
@@ -203,8 +203,6 @@ StatementGrammar<T>::StatementGrammar(NodeManager& nMan, ExpressionGrammar* expr
         deleteFields = false;
     }
 ASTBuilder builder(nodeMan);
-    auto nManRef = ph::ref(nodeMan);
-    auto basicRef = ph::ref(nodeMan.basic);
 
     // RULES --------------------------------------------------------------------------------------------------------------
 

@@ -93,7 +93,7 @@ TypePtr IRParser::parseType(const std::string& input) {
 
 ExpressionPtr IRParser::parseExpression(const std::string& input) {
 	ExpressionPtr result;
-	ExpressionGrammar exprGrammar(nodeMan);
+	ExpressionGrammar<ExpressionPtr> exprGrammar(nodeMan);
 	auto startIt = input.cbegin(), endIt = input.cend();
 	bool parse_result = qi::phrase_parse(startIt, endIt, exprGrammar, qi::space, result);
 	parse_result = parse_result && (startIt == endIt);

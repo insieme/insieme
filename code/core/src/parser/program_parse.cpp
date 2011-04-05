@@ -60,7 +60,7 @@ ProgramPtr mainProgramHelp(NodeManager& nodeMan, const ExpressionPtr& mainProg) 
 }
 
 ProgramGrammar::ProgramGrammar(NodeManager& nodeMan) : ProgramGrammar::base_type(programRule),
-        exprG(new ExpressionGrammar(nodeMan)) {
+        exprG(new ExpressionGrammar<ExpressionPtr>(nodeMan)) {
 
     auto nManRef = ph::ref(nodeMan);
     auto basicRef = ph::ref(nodeMan.basic);
