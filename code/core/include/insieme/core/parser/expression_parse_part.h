@@ -51,17 +51,17 @@ typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
-struct TypeGrammar;
+template<typename V> struct TypeGrammar;
 template<typename T> struct ExpressionGrammar;
 
 template<typename T>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
     ExpressionGrammar<T>* exprG;
-    TypeGrammar *typeG; // pointer for weak coupling
+    TypeGrammar<TypePtr> *typeG; // pointer for weak coupling
 
     NodeManager& nodeMan;
 
-    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar* typeGram);
+    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar<TypePtr>* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing
@@ -114,6 +114,7 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> 
     get(MarkerExpr)
     #undef get
 
+private:
     // member functions providing the rules
     virtual T charLiteralHelp(char val);
     virtual T literalHelp(const TypePtr& typeExpr, const string& name);

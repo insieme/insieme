@@ -52,7 +52,7 @@ typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
-struct TypeGrammar;
+template<typename V> struct TypeGrammar;
 template<typename T> struct ExpressionGrammarPart;
 template<typename T> struct StatementGrammar;
 template<typename T> struct OperatorGrammar;
@@ -78,7 +78,7 @@ public:
 
 template<typename T>
 struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
-    TypeGrammar *typeG; // pointer for weak coupling
+    TypeGrammar<TypePtr> *typeG; // pointer for weak coupling
     ExpressionGrammarPart<T> *exprGpart;
     StatementGrammar<StatementPtr>* stmtG;
     OperatorGrammar<T>* opG;
@@ -157,6 +157,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     get(BoolExpr)
     #undef get
 
+private:
     // member functions providing the rules
     virtual T doubleLiteralHelp(int integer, vector<char> fraction);
     virtual T intLiteralHelp(int val);

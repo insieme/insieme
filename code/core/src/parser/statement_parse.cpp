@@ -190,12 +190,12 @@ Rule StatementGrammar<T>::getMarker() {
 
 
 template<typename T>
-StatementGrammar<T>::StatementGrammar(NodeManager& nMan, ExpressionGrammar<ExpressionPtr>* exprGram, TypeGrammar* typeGram)
+StatementGrammar<T>::StatementGrammar(NodeManager& nMan, ExpressionGrammar<ExpressionPtr>* exprGram, TypeGrammar<TypePtr>* typeGram)
     : StatementGrammar<T>::base_type(statementRule), nodeMan(nMan) {
 
     if(typeGram == NULL) {
         exprG = new ExpressionGrammar<ExpressionPtr>(nodeMan, this);
-        typeG = new TypeGrammar(nodeMan);
+        typeG = new TypeGrammar<TypePtr>(nodeMan);
         deleteFields = true;
     } else {
         exprG = exprGram;

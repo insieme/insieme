@@ -83,7 +83,7 @@ IRParser::IRParser(NodeManager& nodeMan) : nodeMan(nodeMan) {
 
 TypePtr IRParser::parseType(const std::string& input) {
 	TypePtr result;
-	TypeGrammar typeGrammar(nodeMan);
+	TypeGrammar<TypePtr> typeGrammar(nodeMan);
 	auto startIt = input.cbegin(), endIt = input.cend();
 	bool parse_result = qi::phrase_parse(startIt, endIt, typeGrammar, qi::space, result);
 	parse_result = parse_result && (startIt == endIt);

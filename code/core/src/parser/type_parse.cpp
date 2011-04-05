@@ -60,16 +60,87 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-namespace {
-	IdentifierPtr makeId(NodeManager& manager, char start, const vector<char>& tail) {
-		return Identifier::get(manager, string(&start, &start+1) + string(tail.begin(), tail.end()));
-	}
+template<typename T>
+IdentifierPtr TypeGrammar<T>::identifierHelp(char start, const vector<char>& tail) {
+    return Identifier::get(nodeMan, string(&start, &start+1) + string(tail.begin(), tail.end()));
+}
 //	IdentifierPtr makePrefixId(NodeManager& manager, char start, const IdentifierPtr& ident) {
 //		return Identifier::get(manager, string(&start, &start+1) + ident->getName());
 //	}
+
+template<typename T>
+T TypeGrammar<T>::typeVarLabelHelp(const IdentifierPtr& id) {
+    return TypeVariable::getFromId(nodeMan, id);
 }
 
-TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule) {
+template<typename T>
+IntTypeParamPtr TypeGrammar<T>::intTypeParamLabelHelp(const char symbol) {
+    return VariableIntTypeParam::get(nodeMan, symbol);
+}
+
+template<typename T>
+void TypeGrammar<T>::typeVariableHelp(const T& type) {
+    boost::phoenix::actor<boost::phoenix::composite<boost::phoenix::detail::construct_eval<insieme::core::Pointer<const insieme::core::Type> >, boost::fusion::vector<boost::phoenix::value<insieme::core::Pointer<const insieme::core::Type> >, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_> > > x = ph::construct<T>(type);
+}
+
+template<typename T>
+IntTypeParamPtr TypeGrammar<T>::concreteTypeParamHelp(const size_t value) {
+    return ConcreteIntTypeParam::get(nodeMan, value);
+}
+
+template<typename T>
+IntTypeParamPtr TypeGrammar<T>::infiniteTypeParamHelp() {
+    return InfiniteIntTypeParam::get(nodeMan);
+}
+
+template<typename T>
+T TypeGrammar<T>::arrayTypeHelp(const T& type, const IntTypeParamPtr& nDims) {
+    return ArrayType::get(nodeMan, type, nDims);
+}
+
+template<typename T>
+T TypeGrammar<T>::vectorTypeHelp(const T& type, const IntTypeParamPtr& nElems) {
+    return VectorType::get(nodeMan, type, nElems);
+}
+
+template<typename T>
+T TypeGrammar<T>::refTypeHelp(const T& type) {
+    return RefType::get(nodeMan, type);
+}
+
+template<typename T>
+T TypeGrammar<T>::channelTypeHelp(const T& type, const IntTypeParamPtr& size) {
+    return ChannelType::get(nodeMan, type, size);
+}
+
+template<typename T>
+T TypeGrammar<T>::genericTypeHelp(const IdentifierPtr& name, const vector<T>& typeParams, const vector<IntTypeParamPtr>& intTypeParams, const T& baseType) {
+    return GenericType::getFromID(nodeMan, name, typeParams, intTypeParams, baseType);
+}
+
+template<typename T>
+T TypeGrammar<T>::tupleTypeHelp(const vector<T>& types) {
+    return TupleType::get(nodeMan, types);
+}
+
+template<typename T>
+T TypeGrammar<T>::functionTypeHelp(const vector<T>& argTypes, const T& retType) {
+    return FunctionType::get(nodeMan, argTypes, retType);
+}
+
+template<typename T>
+T TypeGrammar<T>::structTypeHelp(const vector<std::pair<IdentifierPtr,T> >& entries) {
+    return StructType::get(nodeMan, entries);
+}
+
+template<typename T>
+T TypeGrammar<T>::unionTypeHelp(const vector<std::pair<IdentifierPtr,T> >& entries) {
+    return UnionType::get(nodeMan, entries);
+}
+
+
+template<typename T>
+TypeGrammar<T>::TypeGrammar(NodeManager& nMan) : TypeGrammar::base_type(typeRule), nodeMan(nMan) {
 
 	auto nManRef = ph::ref(nodeMan);
 
@@ -78,13 +149,13 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 	// terminals, no skip parser
 
 	identifier = 
-		( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )				[ qi::_val = ph::bind(&makeId, nManRef, qi::_1, qi::_2) ];
+		( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )				[ qi::_val = ph::bind(&TypeGrammar<T>::identifierHelp, this, qi::_1, qi::_2) ];
 	
 	typeVarLabel =
-		( qi::char_('\'') >> identifier )							[ qi::_val = ph::bind(&TypeVariable::getFromId, nManRef, qi::_2) ];
+		( qi::char_('\'') >> identifier )							[ qi::_val = ph::bind(&TypeGrammar<T>::typeVarLabelHelp, this, qi::_2) ];
 
 	intTypeParamLabel = 
-		( qi::char_('#') >> qi::char_ )								[ qi::_val = ph::bind(&VariableIntTypeParam::get, nManRef, qi::_2) ];
+		( qi::char_('#') >> qi::char_ )								[ qi::_val = ph::bind(&TypeGrammar<T>::intTypeParamLabelHelp, this, qi::_2) ];
 
 	// nonterminals, skip parser
 
@@ -93,25 +164,25 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 		| typeVarLabel												[ qi::_val = ph::construct<TypePtr>(qi::_1) ];
 
 	intTypeParam =
-		qi::uint_													[ qi::_val = ph::bind(&ConcreteIntTypeParam::get, nManRef, qi::_1) ]
-		| qi::lit("#inf")											[ qi::_val = ph::bind(&InfiniteIntTypeParam::get, nManRef) ]
+		qi::uint_													[ qi::_val = ph::bind(&TypeGrammar<T>::concreteTypeParamHelp, this, qi::_1) ]
+		| qi::lit("#inf")											[ qi::_val = ph::bind(&TypeGrammar<T>::infiniteTypeParamHelp, this) ]
 		| intTypeParamLabel											[ qi::_val = qi::_1 ];
 
 	arrayType =
 		( qi::lit("array<") >> typeRule								[ qi::_a = qi::_1 ]
 		>> ',' >> intTypeParam										[ qi::_b = qi::_1 ] 
-		>> '>' )													[ qi::_val = ph::bind(&ArrayType::get, nManRef, qi::_a, qi::_b) ];
+		>> '>' )													[ qi::_val = ph::bind(&TypeGrammar<T>::arrayTypeHelp, this, qi::_a, qi::_b) ];
 
 	vectorType =
 		( qi::lit("vector<") >> typeRule 
-		>> ',' >> intTypeParam >> '>' )								[ qi::_val = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2) ];
+		>> ',' >> intTypeParam >> '>' )								[ qi::_val = ph::bind(&TypeGrammar<T>::vectorTypeHelp, this, qi::_1, qi::_2) ];
 
 	refType =
-		( qi::lit("ref<") >> typeRule >> '>' )						[ qi::_val = ph::bind(&RefType::get, nManRef, qi::_1) ];
+		( qi::lit("ref<") >> typeRule >> '>' )						[ qi::_val = ph::bind(&TypeGrammar<T>::refTypeHelp, this, qi::_1) ];
 
 	channelType =
 		( qi::lit("channel<") >> typeRule 
-		>> ',' >> intTypeParam >> '>' )								[ qi::_val = ph::bind(&ChannelType::get, nManRef, qi::_1, qi::_2) ];
+		>> ',' >> intTypeParam >> '>' )								[ qi::_val = ph::bind(&TypeGrammar<T>::channelTypeHelp, this, qi::_1, qi::_2) ];
 
 	genericType =
 		( identifier												[ qi::_a = qi::_1 ]
@@ -119,26 +190,26 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 		% ',' )
 		>> -qi::char_(',') >> -( intTypeParam						[ ph::push_back(qi::_c, qi::_1) ]
 		% ',' )
-		>> '>') )													[ qi::_val = ph::bind(&GenericType::getFromID, nManRef, qi::_a, qi::_b, qi::_c, TypePtr()) ];
+		>> '>') )													[ qi::_val = ph::bind(&TypeGrammar<T>::genericTypeHelp, this, qi::_a, qi::_b, qi::_c, TypePtr()) ];
 
 	tupleType =
 		( qi::char_('(') >> -( typeRule								[ ph::push_back(qi::_a, qi::_1) ]
-		% ',' ) >> ')' )											[ qi::_val = ph::bind(&TupleType::get, nManRef, qi::_a) ];
+		% ',' ) >> ')' )											[ qi::_val = ph::bind(&TypeGrammar<T>::tupleTypeHelp, this, qi::_a) ];
 
 	functionType =
 		( qi::lit("(") >> -( typeRule                               [ ph::push_back(qi::_a, qi::_1) ]
 		% ',' ) >> ')' >> 
 		qi::lit("->") >> typeRule									[ qi::_b = qi::_1 ]
-		)															[ qi::_val = ph::bind(&FunctionType::get, nManRef, qi::_a, qi::_b) ];
+		)															[ qi::_val = ph::bind(&TypeGrammar<T>::functionTypeHelp, this, qi::_a, qi::_b) ];
 
 
 	structType =
 		( qi::lit("struct<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<IdentifierPtr,TypePtr>>(qi::_1, qi::_2)) ]
-		% ',' ) >> '>' )											[ qi::_val = ph::bind(&StructType::get, nManRef, qi::_a) ];
+		% ',' ) >> '>' )											[ qi::_val = ph::bind(&TypeGrammar<T>::structTypeHelp, this, qi::_a) ];
 
 	unionType =
 		( qi::lit("union<") >> (( identifier >> ':' >> typeRule )	[ ph::push_back(qi::_a, ph::construct<std::pair<IdentifierPtr,TypePtr>>(qi::_1, qi::_2)) ]
-		% ',' ) >> '>' )											[ qi::_val = ph::bind(&UnionType::get, nManRef, qi::_a) ];
+		% ',' ) >> '>' )											[ qi::_val = ph::bind(&TypeGrammar<T>::unionTypeHelp, this, qi::_a) ];
 
 	typeRule = 
 		functionType												[ qi::_val = ph::construct<TypePtr>(qi::_1) ]
@@ -170,6 +241,9 @@ TypeGrammar::TypeGrammar(NodeManager& nodeMan) : TypeGrammar::base_type(typeRule
 	//BOOST_SPIRIT_DEBUG_NODE(genericType);
 	//BOOST_SPIRIT_DEBUG_NODE(typeRule);
 }
+
+// explicit template instantiation
+template struct TypeGrammar<TypePtr>;
 
 } // namespace parse 
 } // namespace core

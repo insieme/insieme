@@ -267,9 +267,8 @@ Rule ExpressionGrammarPart<T>::getMarkerExpr() {
 }
 
 template<typename T>
-ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar* typeGram)
+ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar<TypePtr>* typeGram)
     : ExpressionGrammarPart::base_type(expressionPart), exprG(exprGram), typeG(typeGram), nodeMan(nMan) {
-//    typeG = new TypeGrammar(nodeMan);
 
     auto basicRef = ph::ref(nodeMan.basic);
 
