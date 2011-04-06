@@ -364,7 +364,7 @@ ExpressionGrammar<T, U, V, W, X>::ExpressionGrammar(NodeManager& nMan, Statement
     : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar<V, W, X>(nMan)), varTab(nMan), nodeMan(nMan) {
 
  //   typeG = new TypeGrammar(nodeMan);
-    exprGpart = new ExpressionGrammarPart<ExpressionPtr>(nodeMan, this, typeG);
+    exprGpart = new ExpressionGrammarPart<T, U, V, W, X>(nodeMan, this, typeG);
     opG = new OperatorGrammar<ExpressionPtr>(nodeMan, this);
     if(stmtGrammar == NULL) {
         stmtG = new StatementGrammar<U>(nodeMan, this, typeG);

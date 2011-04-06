@@ -48,8 +48,8 @@ namespace parse {
 
 // FW Declaration
 template<typename T, typename U, typename V> struct TypeGrammar;
-template<typename T> struct ExpressionGrammarPart;
-template<typename T, typename U, typename V, typename W, typename X> struct StatementGrammar;
+template<typename T, typename U, typename V, typename W, typename X> struct ExpressionGrammarPart;
+template<typename U, typename T, typename V, typename W, typename X> struct StatementGrammar;
 template<typename T> struct OperatorGrammar;
 
 // helper function to be able to use std::make_pair along with ph::push_back
@@ -73,7 +73,7 @@ class VariableTable {
 template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr>
 struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     TypeGrammar<V, W, X> *typeG; // pointer for weak coupling
-    ExpressionGrammarPart<T> *exprGpart;
+    ExpressionGrammarPart<T, U, V, W, X> *exprGpart;
     StatementGrammar<U, T, V, W, X>* stmtG;
     OperatorGrammar<T>* opG;
     VariableTable varTab;
