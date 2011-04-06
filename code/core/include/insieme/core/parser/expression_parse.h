@@ -44,17 +44,12 @@ namespace insieme {
 namespace core {
 namespace parse {
 
-typedef std::vector<std::pair<ExpressionPtr, ExpressionPtr> > GuardedStmts;
-typedef vector<VariablePtr> VariableList;
-typedef vector<ExpressionPtr> ExpressionList;
-typedef std::map<ExpressionPtr, LambdaPtr, compare_target<ExpressionPtr> > Defs;
-typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
 template<typename T, typename U, typename V> struct TypeGrammar;
 template<typename T> struct ExpressionGrammarPart;
-template<typename T> struct StatementGrammar;
+template<typename T, typename U, typename V, typename W, typename X> struct StatementGrammar;
 template<typename T> struct OperatorGrammar;
 
 // helper function to be able to use std::make_pair along with ph::push_back
@@ -65,28 +60,27 @@ std::pair<T, U> makePair (T first, U second) {
 
 /* moved to ir_parse.h
 class VariableTable {
-    NodeManager& nodeMan;
-    utils::map::PointerMap<IdentifierPtr, VariablePtr> table;
-
-public:
-    VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
-
-    VariablePtr get(const TypePtr& typ, const IdentifierPtr& id);
-    VariablePtr lookup(const IdentifierPtr& id);
+...
 };
 */
 
-template<typename T>
+// Parser usage
+// T = ExpressionPtr
+// U = StatementPtr
+// V = TypePtr
+// W = IntTypeParamPtr
+// X = IdentifierPtr
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr>
 struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
-    TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> *typeG; // pointer for weak coupling
+    TypeGrammar<V, W, X> *typeG; // pointer for weak coupling
     ExpressionGrammarPart<T> *exprGpart;
-    StatementGrammar<StatementPtr>* stmtG;
+    StatementGrammar<U, T, V, W, X>* stmtG;
     OperatorGrammar<T>* opG;
     VariableTable varTab;
     NodeManager& nodeMan;
     bool deleteStmtG;
 
-    ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<StatementPtr>* stmtGrammar = NULL);
+    ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<U, T, V, W, X>* stmtGrammar = NULL);
     ~ExpressionGrammar();
 
     // terminal rules, no skip parsing
@@ -98,7 +92,7 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     qi::rule<ParseIt, T(), qi::space_type> variableExpr;
     qi::rule<ParseIt, T(), qi::space_type> funVarExpr;
 
-    qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> callExpr;
+    qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> callExpr;
     qi::rule<ParseIt, T(), qi::space_type> castExpr;
 
     qi::rule<ParseIt, T(), qi::space_type> expressionRule;
@@ -107,13 +101,13 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     qi::rule<ParseIt, T(), qi::space_type> charLiteral;
 
     // --------------------------------------------------------------------------------------
-    qi::rule<ParseIt, LambdaPtr(), qi::locals<ExpressionList>, qi::space_type> lambda;
+    qi::rule<ParseIt, LambdaPtr(), qi::locals<vector<T> >, qi::space_type> lambda;
     qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<vector<ExpressionPtr>, vector<LambdaPtr> >, qi::space_type> lambdaDef;
     qi::rule<ParseIt, T(), qi::space_type> lambdaExpr;
 
     qi::rule<ParseIt, T(), qi::space_type> bindExpr;
 
-    qi::rule<ParseIt, T(), qi::locals<vector<StatementPtr>, GuardedStmts>, qi::space_type> jobExpr;
+    qi::rule<ParseIt, T(), qi::locals<vector<U>, vector<std::pair<T, T> > >, qi::space_type> jobExpr;
     qi::rule<ParseIt, T(), qi::space_type> tupleExpr;
     qi::rule<ParseIt, T(), qi::space_type> vectorExpr;
     qi::rule<ParseIt, T(), qi::space_type> structExpr;
@@ -131,10 +125,10 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 
     // member functions applying the rules
     virtual qi::rule<ParseIt, string()> getLiteralString();
-    virtual qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> getCallExpr();
-    virtual qi::rule<ParseIt, LambdaPtr(), qi::locals<ExpressionList>, qi::space_type> getLambda();
+    virtual qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> getCallExpr();
+    virtual qi::rule<ParseIt, LambdaPtr(), qi::locals<vector<T> >, qi::space_type> getLambda();
     virtual qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<vector<ExpressionPtr>, vector<LambdaPtr> >, qi::space_type> getLambdaDef();
-    virtual qi::rule<ParseIt, T(), qi::locals<vector<StatementPtr>, GuardedStmts>, qi::space_type> getJobExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<vector<U>, vector<std::pair<T, T> > >, qi::space_type> getJobExpr();
     #define get(op) virtual Rule get##op ();
     get(LiteralExpr)
     get(CharLiteral)
@@ -161,12 +155,12 @@ private:
     // member functions providing the rules
     virtual T doubleLiteralHelp(int integer, vector<char> fraction);
     virtual T intLiteralHelp(int val);
-    virtual LambdaPtr lambdaHelp(const TypePtr& retType, const ExpressionList& paramsExpr, const StatementPtr& body);
-    virtual LambdaDefinitionPtr lambdaDefHelp(const ExpressionList& funVarExpr, vector<LambdaPtr>& lambdaExpr );
+    virtual LambdaPtr lambdaHelp(const V& retType, const vector<T>& paramsExpr, const U& body);
+    virtual LambdaDefinitionPtr lambdaDefHelp(const vector<T>& funVarExpr, vector<LambdaPtr>& lambdaExpr );
     virtual T lambdaExprHelp(T& variableExpr, LambdaDefinitionPtr& def);
     virtual T lambdaExprHelp(LambdaPtr& lambda);
-    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const GuardedStmts guardedStmts, const vector<StatementPtr>& localDeclStmts);
-    virtual T callExprHelp(const T& callee, ExpressionList& arguments);
+    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const vector<std::pair<T, T> >  guardedStmts, const vector<U>& localDeclStmts);
+    virtual T callExprHelp(const T& callee, vector<T>& arguments);
     virtual T boolLiteralHelp(const bool flag);
 };
 

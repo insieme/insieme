@@ -117,7 +117,7 @@ ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::castHelp(const TypePtr& type
 
 template<class ExpressionPtr>
 ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::bindExprHelp(const ExpressionList& paramsExpr, ExpressionPtr& callExpr) {
-    VariableList params;
+    vector<VariablePtr> params;
 
     //TODO make cast more efficient
     for_each(paramsExpr, [&](ExpressionPtr paramExpr) {
@@ -148,7 +148,7 @@ ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::vectorHelp(const TypePtr& ge
 }
 
 template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::structHelp(const Members& elements) {
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::structHelp(const vector<std::pair<IdentifierPtr, ExpressionPtr> >& elements) {
     return StructExpr::get(nodeMan, elements);
 }
 
@@ -234,7 +234,7 @@ qi::rule<ParseIt, T(), qi::locals<TypePtr, ExpressionList>, qi::space_type> Expr
 }
 
 template<typename T>
-qi::rule<ParseIt, T(), qi::locals<Members>, qi::space_type> ExpressionGrammarPart<T>::getStructExpr() {
+qi::rule<ParseIt, T(), qi::locals<vector<std::pair<IdentifierPtr, T> >>, qi::space_type> ExpressionGrammarPart<T>::getStructExpr() {
     return ( qi::lit("struct") >> '{' >> -(
         (typeG->identifier >> ':' >> exprG->expressionRule )        [ ph::push_back(qi::_a, ph::bind(&makePair<IdentifierPtr, ExpressionPtr>, qi::_1, qi::_2 )) ]
           % ',') >> '}' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::structHelp, this, qi::_a ) ];
@@ -267,7 +267,7 @@ Rule ExpressionGrammarPart<T>::getMarkerExpr() {
 }
 
 template<typename T>
-ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>* typeGram)
+ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>* exprGram, TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>* typeGram)
     : ExpressionGrammarPart::base_type(expressionPart), exprG(exprGram), typeG(typeGram), nodeMan(nMan) {
 
     auto basicRef = ph::ref(nodeMan.basic);

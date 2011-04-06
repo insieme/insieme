@@ -44,24 +44,20 @@ namespace insieme {
 namespace core {
 namespace parse {
 
-typedef std::vector<std::pair<ExpressionPtr, ExpressionPtr> > GuardedStmts;
-typedef vector<VariablePtr> VariableList;
-typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > Definitions;
-typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
 template<typename T, typename U, typename V> struct TypeGrammar;
-template<typename T> struct ExpressionGrammar;
+template<typename T, typename U, typename V, typename W, typename X> struct ExpressionGrammar;
 
 template<typename T>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
-    ExpressionGrammar<T>* exprG;
+    ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>* exprG;
     TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> *typeG; // pointer for weak coupling
 
     NodeManager& nodeMan;
 
-    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>* typeGram);
+    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>* exprGram, TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing
@@ -84,7 +80,7 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> 
 
     qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> tupleExpr;
     qi::rule<ParseIt, T(), qi::locals<TypePtr, ExpressionList>, qi::space_type> vectorExpr;
-    qi::rule<ParseIt, T(), qi::locals<Members>, qi::space_type> structExpr;
+    qi::rule<ParseIt, T(), qi::locals<vector<std::pair<IdentifierPtr, T> >>, qi::space_type> structExpr;
     qi::rule<ParseIt, T(), qi::space_type> unionExpr;
 
     qi::rule<ParseIt, T(), qi::space_type> memberAccessExpr;
@@ -100,7 +96,7 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> 
     virtual qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> getBindExpr();
     virtual qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> getTupleExpr();
     virtual qi::rule<ParseIt, T(), qi::locals<TypePtr, ExpressionList>, qi::space_type> getVectorExpr();
-    virtual qi::rule<ParseIt, T(), qi::locals<Members>, qi::space_type> getStructExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<vector<std::pair<IdentifierPtr, T> > >, qi::space_type> getStructExpr();
     #define get(op) virtual Rule get##op ();
     get(LiteralExpr)
     get(OpExpr)
@@ -125,7 +121,7 @@ private:
     virtual T bindExprHelp(const ExpressionList& paramsExpr, T& callExpr);
     virtual T tupleHelp(const ExpressionList& elements);
     virtual T vectorHelp(const TypePtr& type, const ExpressionList& elements);
-    virtual T structHelp(const Members& elements);
+    virtual T structHelp(const vector<std::pair<IdentifierPtr, T> >& elements);
     virtual T unionHelp(const TypePtr& type, const IdentifierPtr& memberName, const T& member);
     virtual T memberAccessHelp(const T& subExpr, const IdentifierPtr& member);
     virtual T tupleProjectionHelp(const T& subExpr, const unsigned idx);
