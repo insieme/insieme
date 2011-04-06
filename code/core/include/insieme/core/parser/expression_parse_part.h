@@ -51,17 +51,17 @@ typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
-template<typename V> struct TypeGrammar;
+template<typename T, typename U, typename V> struct TypeGrammar;
 template<typename T> struct ExpressionGrammar;
 
 template<typename T>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
     ExpressionGrammar<T>* exprG;
-    TypeGrammar<TypePtr> *typeG; // pointer for weak coupling
+    TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> *typeG; // pointer for weak coupling
 
     NodeManager& nodeMan;
 
-    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar<TypePtr>* typeGram);
+    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T>* exprGram, TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing

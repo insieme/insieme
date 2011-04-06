@@ -44,8 +44,11 @@ namespace parse {
 
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
-
-template <typename T>
+// parser usage:
+// T = TypePtr
+// U = IntTypeParamPtr
+// V = IdentifierPtr
+template <typename T, typename U, typename V>
 struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 	
 	TypeGrammar(NodeManager& nMan);
@@ -53,10 +56,10 @@ struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 	NodeManager& nodeMan;
 
 	// terminal rules, no skip parsing
-	qi::rule<ParseIt, IdentifierPtr()> identifier;
+	qi::rule<ParseIt, V()> identifier;
 	qi::rule<ParseIt, T()> typeVarLabel;
-	qi::rule<ParseIt, IntTypeParamPtr()> intTypeParamLabel;
-	qi::rule<ParseIt, IntTypeParamPtr(), qi::space_type> intTypeParam;
+	qi::rule<ParseIt, U()> intTypeParamLabel;
+	qi::rule<ParseIt, U(), qi::space_type> intTypeParam;
 
 	// nonterminal rules with skip parsing
 	qi::rule<ParseIt, T(), qi::locals<vector<T>, T>, qi::space_type> functionType;
@@ -64,49 +67,49 @@ struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 	qi::rule<ParseIt, T(), qi::space_type> refType;
 	qi::rule<ParseIt, T(), qi::space_type> channelType;
 	qi::rule<ParseIt, T(), qi::space_type> vectorType;
-	qi::rule<ParseIt, T(), qi::locals<T, IntTypeParamPtr>, qi::space_type> arrayType;
+	qi::rule<ParseIt, T(), qi::locals<T, U>, qi::space_type> arrayType;
 	qi::rule<ParseIt, T(), qi::locals<vector<T>>, qi::space_type> tupleType;
-	qi::rule<ParseIt, T(), qi::locals<StructType::Entries>, qi::space_type> structType;
-	qi::rule<ParseIt, T(), qi::locals<UnionType::Entries>, qi::space_type> unionType;
-	qi::rule<ParseIt, T(), qi::locals<IdentifierPtr, vector<T>, vector<IntTypeParamPtr>>, qi::space_type> genericType;
+	qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> structType;
+	qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> unionType;
+	qi::rule<ParseIt, T(), qi::locals<V, vector<T>, vector<U>>, qi::space_type> genericType;
 	qi::rule<ParseIt, T(), qi::space_type> typeRule;
 
     // member functions applying the rules
     #define get(op) virtual Rule get##op ();
-	qi::rule<ParseIt, IdentifierPtr()>  getIdentifier();
+	qi::rule<ParseIt, V()>  getIdentifier();
 	qi::rule<ParseIt, T()> getTypeVarLabel();
-	qi::rule<ParseIt, IntTypeParamPtr()> getIntTypeParamLabel();
-	qi::rule<ParseIt, IntTypeParamPtr(), qi::space_type> getIntTypeParam();
+	qi::rule<ParseIt, U()> getIntTypeParamLabel();
+	qi::rule<ParseIt, U(), qi::space_type> getIntTypeParam();
     qi::rule<ParseIt, T(), qi::locals<vector<T>, T>, qi::space_type> getFunctionType();
     get(TypeVariable)
     get(RefType)
     get(ChannelType)
     get(VectorType)
-    qi::rule<ParseIt, T(), qi::locals<T, IntTypeParamPtr>, qi::space_type> getArrayType();
+    qi::rule<ParseIt, T(), qi::locals<T, U>, qi::space_type> getArrayType();
     qi::rule<ParseIt, T(), qi::locals<vector<T>>, qi::space_type> getTupleType();
-    qi::rule<ParseIt, T(), qi::locals<StructType::Entries>, qi::space_type> getStructType();
-    qi::rule<ParseIt, T(), qi::locals<UnionType::Entries>, qi::space_type> getUnionType();
-    qi::rule<ParseIt, T(), qi::locals<IdentifierPtr, vector<T>, vector<IntTypeParamPtr>>, qi::space_type> getGenericType();
+    qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> getStructType();
+    qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> getUnionType();
+    qi::rule<ParseIt, T(), qi::locals<IdentifierPtr, vector<T>, vector<U>>, qi::space_type> getGenericType();
     get(TypeRule)
     #undef get
 
-private:
+protected:
     // member functions providing the rules
-	virtual IdentifierPtr identifierHelp(char start, const vector<char>& tail);
-	virtual T typeVarLabelHelp(const IdentifierPtr& id);
-	virtual IntTypeParamPtr intTypeParamLabelHelp(const char symbol);
-	virtual void typeVariableHelp(const T& type);
-	virtual IntTypeParamPtr concreteTypeParamHelp(const size_t value);
-	virtual IntTypeParamPtr infiniteTypeParamHelp();
-	virtual T arrayTypeHelp(const T& type, const IntTypeParamPtr& nDims);
-	virtual T vectorTypeHelp(const T& type, const IntTypeParamPtr& nElems);
+	virtual V identifierHelp(char start, const vector<char>& tail);
+	virtual T typeVarLabelHelp(const V& id);
+	virtual U intTypeParamLabelHelp(const char symbol);
+	virtual T typeVariableHelp(const T& type);
+	virtual U concreteTypeParamHelp(const size_t value);
+	virtual U infiniteTypeParamHelp();
+	virtual T arrayTypeHelp(const T& type, const U& nDims);
+	virtual T vectorTypeHelp(const T& type, const U& nElems);
 	virtual T refTypeHelp(const T& type);
-	virtual T channelTypeHelp(const T& type, const IntTypeParamPtr& size);
-	virtual T genericTypeHelp(const IdentifierPtr& name, const vector<T>& typeParams, const vector<IntTypeParamPtr>& intTypeParams, const T& baseType);
+	virtual T channelTypeHelp(const T& type, const U& size);
+	virtual T genericTypeHelp(const V& name, const vector<T>& typeParams, const vector<U>& intTypeParams, const T& baseType);
     virtual T tupleTypeHelp(const vector<T>& type);
     virtual T functionTypeHelp(const vector<T>& argTypes, const T& retType);
-    virtual T structTypeHelp(const vector<std::pair<IdentifierPtr,T> >& entries);
-    virtual T unionTypeHelp(const vector<std::pair<IdentifierPtr,T> >& entries);
+    virtual T structTypeHelp(const vector<std::pair<V,T> >& entries);
+    virtual T unionTypeHelp(const vector<std::pair<V,T> >& entries);
 };
 
 }

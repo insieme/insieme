@@ -83,7 +83,7 @@ IRParser::IRParser(NodeManager& nodeMan) : nodeMan(nodeMan) {
 
 TypePtr IRParser::parseType(const std::string& input) {
 	TypePtr result;
-	TypeGrammar<TypePtr> typeGrammar(nodeMan);
+	TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> typeGrammar(nodeMan);
 	auto startIt = input.cbegin(), endIt = input.cend();
 	bool parse_result = qi::phrase_parse(startIt, endIt, typeGrammar, qi::space, result);
 	parse_result = parse_result && (startIt == endIt);
@@ -113,7 +113,7 @@ StatementPtr IRParser::parseStatement(const std::string& input) {
 
 ProgramPtr IRParser::parseProgram(const std::string& input) {
     ProgramPtr result;
-    ProgramGrammar progGrammar(nodeMan);
+    ProgramGrammar<ProgramPtr, ExpressionPtr> progGrammar(nodeMan);
     auto startIt = input.cbegin(), endIt = input.cend();
     bool parse_result = qi::phrase_parse(startIt, endIt, progGrammar, qi::space, result);
     parse_result = parse_result && (startIt == endIt);

@@ -361,7 +361,7 @@ Rule ExpressionGrammar<T>::getExpressionRule() {
 
 template<typename T>
 ExpressionGrammar<T>::ExpressionGrammar(NodeManager& nMan, StatementGrammar<StatementPtr>* stmtGrammar)
-    : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar<TypePtr>(nMan)), varTab(nMan), nodeMan(nMan) {
+    : ExpressionGrammar::base_type(expressionRule), typeG(new TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>(nMan)), varTab(nMan), nodeMan(nMan) {
 
  //   typeG = new TypeGrammar(nodeMan);
     exprGpart = new ExpressionGrammarPart<ExpressionPtr>(nodeMan, this, typeG);

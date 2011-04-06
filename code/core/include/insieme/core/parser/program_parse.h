@@ -43,14 +43,29 @@ namespace insieme {
 namespace core {
 namespace parse {
 
+// parser usage:
+// T = ProgramPtr
+// U = ExpressionPtr
+template <typename T, typename U>
 struct ProgramGrammar : public qi::grammar<ParseIt, ProgramPtr(), qi::space_type> {
-    ExpressionGrammar<ExpressionPtr> *exprG;   // pointer for weak coupling
+    ExpressionGrammar<U> *exprG;   // pointer for weak coupling
 
-    ProgramGrammar(NodeManager& nodeMan);
+    NodeManager& nodeMan;
+
+    ProgramGrammar(NodeManager& nMan);
     ~ProgramGrammar();
 
-    qi::rule<ParseIt, ProgramPtr(), qi::space_type> programRule;
-    qi::rule<ParseIt, ProgramPtr(), qi::locals<vector<ExpressionPtr> >, qi::space_type> program;
+    qi::rule<ParseIt, T(), qi::space_type> programRule;
+    qi::rule<ParseIt, T(), qi::locals<vector<U> >, qi::space_type> program;
+
+    // member functions applying the rules
+    qi::rule<ParseIt, T(), qi::locals<vector<U> >, qi::space_type> getProgram();
+    qi::rule<ParseIt, T(), qi::space_type> getProgramRule();
+
+protected:
+    // member functions providing the rules
+    T mainProgramHelp(const U& mainProg);
+    T programHelp(const vector<U>& progs);
 
 };
 

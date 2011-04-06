@@ -48,18 +48,18 @@ typedef vector<std::pair<ExpressionPtr, StatementPtr> > Cases;
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
-template<typename V> struct TypeGrammar;
+template<typename T, typename U, typename V> struct TypeGrammar;
 template<typename U> struct ExpressionGrammar;
 
 template<typename T>
 struct StatementGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
-    TypeGrammar<TypePtr> *typeG;        // pointer for weak coupling
+    TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> *typeG;        // pointer for weak coupling
     ExpressionGrammar<ExpressionPtr> *exprG;  // pointer for weak coupling
     bool deleteFields;         // flag which determines if exprG has been passed as an argument to the constructor or created inside it
 
     NodeManager& nodeMan;
 
-    StatementGrammar(NodeManager& nodeMan, ExpressionGrammar<ExpressionPtr>* exprGram = NULL, TypeGrammar<TypePtr>* typeGram = NULL);
+    StatementGrammar(NodeManager& nodeMan, ExpressionGrammar<ExpressionPtr>* exprGram = NULL, TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>* typeGram = NULL);
     ~StatementGrammar();
 
     qi::rule<ParseIt, T(), qi::space_type> statementRule;
