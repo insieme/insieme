@@ -42,6 +42,9 @@ namespace insieme {
 namespace core {
 namespace parse {
 
+#define Rule qi::rule<ParseIt, T(), qi::space_type>
+
+
 template <typename T>
 struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 	
@@ -70,6 +73,21 @@ struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 
     // member functions applying the rules
     #define get(op) virtual Rule get##op ();
+	qi::rule<ParseIt, IdentifierPtr()>  getIdentifier();
+	qi::rule<ParseIt, T()> getTypeVarLabel();
+	qi::rule<ParseIt, IntTypeParamPtr()> getIntTypeParamLabel();
+	qi::rule<ParseIt, IntTypeParamPtr(), qi::space_type> getIntTypeParam();
+    qi::rule<ParseIt, T(), qi::locals<vector<T>, T>, qi::space_type> getFunctionType();
+    get(TypeVariable)
+    get(RefType)
+    get(ChannelType)
+    get(VectorType)
+    qi::rule<ParseIt, T(), qi::locals<T, IntTypeParamPtr>, qi::space_type> getArrayType();
+    qi::rule<ParseIt, T(), qi::locals<vector<T>>, qi::space_type> getTupleType();
+    qi::rule<ParseIt, T(), qi::locals<StructType::Entries>, qi::space_type> getStructType();
+    qi::rule<ParseIt, T(), qi::locals<UnionType::Entries>, qi::space_type> getUnionType();
+    qi::rule<ParseIt, T(), qi::locals<IdentifierPtr, vector<T>, vector<IntTypeParamPtr>>, qi::space_type> getGenericType();
+    get(TypeRule)
     #undef get
 
 private:
