@@ -89,7 +89,7 @@ struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     qi::rule<ParseIt, T(), qi::locals<vector<T>>, qi::space_type> getTupleType();
     qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> getStructType();
     qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> getUnionType();
-    qi::rule<ParseIt, T(), qi::locals<IdentifierPtr, vector<T>, vector<U>>, qi::space_type> getGenericType();
+    qi::rule<ParseIt, T(), qi::locals<V, vector<T>, vector<U>>, qi::space_type> getGenericType();
     get(TypeRule)
     #undef get
 

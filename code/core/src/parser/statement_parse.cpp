@@ -55,45 +55,47 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::breakHelp() {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::breakHelp() {
     return BreakStmt::get(nodeMan);
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::continueHelp() {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::continueHelp() {
     return ContinueStmt::get(nodeMan);
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::returnHelp(ExpressionPtr ret) {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        returnHelp(const ExpressionPtr& ret) {
     return ReturnStmt::get(nodeMan, ret);
 }
 
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::
-    declarationHelp(ExpressionPtr varExpr, ExpressionPtr initExpr) {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        declarationHelp(const ExpressionPtr& varExpr, const ExpressionPtr& initExpr) {
     if(VariablePtr var = dynamic_pointer_cast<const Variable>(varExpr))
         return DeclarationStmt::get(nodeMan, var, initExpr);
 
     throw ParseException();
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::compoundHelp(vector<StatementPtr>  stmts) {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        compoundHelp(const vector<StatementPtr>&  stmts) {
     return CompoundStmt::get(nodeMan, stmts);
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::
-    whileHelp(ExpressionPtr condition, StatementPtr body) {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+    whileHelp(const ExpressionPtr& condition, const StatementPtr& body) {
     return WhileStmt::get(nodeMan, condition, body);
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::
-    forHelp(StatementPtr loopVarStmt, ExpressionPtr end, ExpressionPtr step, StatementPtr body) {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+    forHelp(const StatementPtr& loopVarStmt, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) {
     ASTBuilder builder(nodeMan);
     if(DeclarationStmtPtr loopVar = dynamic_pointer_cast<const DeclarationStmt>(loopVarStmt))
         return ForStmt::get(nodeMan, loopVar, body, end, step);
@@ -101,8 +103,8 @@ StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParam
     throw ParseException();
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
     ifHelp(const ExpressionPtr& condition, const StatementPtr& body, const boost::optional<StatementPtr>& elseBody) {
     if(elseBody)
         return IfStmt::get(nodeMan, condition, body, *elseBody);
@@ -111,92 +113,98 @@ StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParam
 
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::
-    switchHelp(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr> >& cases, const boost::optional<StatementPtr>& defaultCase) {
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+    switchHelp(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr> >& cases, const boost::optional<StatementPtr>& defaultCase){
     if(defaultCase)
         return SwitchStmt::get(nodeMan, switchExpr, cases, *defaultCase);
 
     return SwitchStmt::get(nodeMan, switchExpr, cases);
 }
 
-template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>::
+template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
     markerHelp(const StatementPtr& subStmt, const unsigned int id) {
     return MarkerStmt::get(nodeMan, subStmt, id);
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getBreak(){
-    return qi::lit("break")                                         [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::breakHelp, this) ];
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getBreak(){
+    return qi::lit("break")                                         [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::breakHelp, this) ];
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getContinue(){
-    return qi::lit("continue")                                      [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::continueHelp, this) ];
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getContinue(){
+    return qi::lit("continue")                                      [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::continueHelp, this) ];
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getReturn() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getReturn() {
     ASTBuilder builder(nodeMan);
-    return (qi::lit("return") >> qi::lit("unit"))                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::returnHelp, this, builder.getBasicGenerator().getUnitConstant()) ]
-         | (qi::lit("return") >> exprG->expressionRule)             [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::returnHelp, this, qi::_1) ];
+    return (qi::lit("return") >> qi::lit("unit"))                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::returnHelp, this,
+                builder.getBasicGenerator().getUnitConstant()) ]
+         | (qi::lit("return") >> exprG->expressionRule)             [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::returnHelp, this, qi::_1) ];
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getDeclaration() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getDeclaration() {
     return (qi::lit("decl") >> exprG->variableExpr >> '='
-        >> exprG->expressionRule )                                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::declarationHelp, this, qi::_1, qi::_2) ];
+        >> exprG->expressionRule )                                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::declarationHelp, this,
+                qi::_1, qi::_2) ];
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-qi::rule<ParseIt, T(), qi::locals<vector<T> >,  qi::space_type> StatementGrammar<T, U, V, W, X>::getCompound() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+qi::rule<ParseIt, T(), qi::locals<vector<T> >,  qi::space_type> StatementGrammar<T, U, V, W, X, Y, Z>::getCompound() {
     return ('{' >> *( statementRule >> ';' )                        [ ph::push_back(qi::_a, qi::_1) ]
-        >> '}' )                                                    [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::compoundHelp, this, qi::_a) ];
+        >> '}' )                                                    [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::compoundHelp, this, qi::_a) ];
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getWhile() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getWhile() {
     return (qi::lit("while") >> '(' >> exprG->expressionRule
-        >> ')' >> statementRule )                                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::whileHelp, this, qi::_1, qi::_2) ];
+        >> ')' >> statementRule )                                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::whileHelp, this,
+                                                                        qi::_1, qi::_2) ];
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getFor() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getFor() {
     return (qi::lit("for") >> '(' >> declarationStmt >> qi::lit("..")
         >> exprG->expressionRule >> ':' >> exprG->expressionRule
-        >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::forHelp, this, qi::_1, qi::_2, qi::_3, qi::_4) ];
+        >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::forHelp, this,
+                qi::_1, qi::_2, qi::_3, qi::_4) ];
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getIf() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getIf() {
     return (qi::lit("if") >> '(' >> exprG->expressionRule >> ')'
         >> statementRule
-          >>  -(qi::lit("else") >> statementRule))                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::ifHelp, this, qi::_1, qi::_2, qi::_3) ];
+          >>  -(qi::lit("else") >> statementRule))                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::ifHelp, this,
+                                                                        qi::_1, qi::_2, qi::_3) ];
 
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-qi::rule<ParseIt, T(), qi::locals<vector<std::pair<U, T> > >, qi::space_type> StatementGrammar<T, U, V, W, X>::getSwitch() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+qi::rule<ParseIt, T(), qi::locals<vector<std::pair<U, T> > >, qi::space_type> StatementGrammar<T, U, V, W, X, Y, Z>::getSwitch() {
     return (qi::lit("switch") >> '(' >> exprG->expressionRule >> ')'
         >> '{' >> *(qi::lit("case") >> exprG->expressionRule
           >> ':' >> statementRule)                                  [ ph::push_back(qi::_a, ph::bind(&makePair<ExpressionPtr, StatementPtr>, qi::_1, qi::_2)) ]
-        >> -( qi::lit("default") >> ':' >> statementRule) >> '}' )  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X>::switchHelp, this, qi::_1, qi::_a, qi::_3) ];
+        >> -( qi::lit("default") >> ':' >> statementRule) >> '}' )  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::switchHelp, this,
+                                                                        qi::_1, qi::_a, qi::_3) ];
 }
-template<typename T, typename U, typename V, typename W, typename X>
-Rule StatementGrammar<T, U, V, W, X>::getMarker() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule StatementGrammar<T, U, V, W, X, Y, Z>::getMarker() {
     return ('<' >> qi::lit("ms") >> qi::lit("id") >> '='
         >> qi::ulong_long >> '>' >> statementRule >> '<'
         >> '/' >> qi::lit("ms") >> '>')                             [ qi::_val = ph::bind(&StatementGrammar::markerHelp, this, qi::_2, qi::_1) ];
 }
 
 
-template<typename T, typename U, typename V, typename W, typename X>
-StatementGrammar<T, U, V, W, X>::StatementGrammar(NodeManager& nMan, ExpressionGrammar<U, T, V, W, X>* exprGram, TypeGrammar<V, W, X>* typeGram)
-    : StatementGrammar<T, U, V, W, X>::base_type(statementRule), nodeMan(nMan) {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+StatementGrammar<T, U, V, W, X, Y, Z>::StatementGrammar(NodeManager& nMan, ExpressionGrammar<U, T, V, W, X, Y, Z>* exprGram, TypeGrammar<V, W, X>* typeGram)
+    : StatementGrammar<T, U, V, W, X, Y, Z>::base_type(statementRule), nodeMan(nMan) {
 
     if(typeGram == NULL) {
-        exprG = new ExpressionGrammar<U, T, V, W, X>(nodeMan, this);
+        exprG = new ExpressionGrammar<U, T, V, W, X, LambdaPtr, LambdaDefinitionPtr>(nodeMan, this);
         typeG = new TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>(nodeMan);
         deleteFields = true;
     } else {
@@ -255,8 +263,8 @@ ASTBuilder builder(nodeMan);
 //    BOOST_SPIRIT_DEBUG_NODE(markerStmt);
 }
 
-template<typename T, typename U, typename V, typename W, typename X>
-StatementGrammar<T, U, V, W, X>::~StatementGrammar() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+StatementGrammar<T, U, V, W, X, Y, Z>::~StatementGrammar() {
     if(deleteFields) {
         delete exprG;
         delete typeG;
@@ -264,7 +272,7 @@ StatementGrammar<T, U, V, W, X>::~StatementGrammar() {
 }
 
 // Explicit Template Instantiation
-template struct StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>;
+template struct StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
 
 } // namespace parse
 } // namespace core

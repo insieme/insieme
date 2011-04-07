@@ -48,16 +48,17 @@ namespace parse {
 
 // FW Declaration
 template<typename V, typename W, typename X> struct TypeGrammar;
-template<typename T, typename U, typename V, typename W, typename X> struct ExpressionGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammar;
 
-template<typename T, typename U, typename V, typename W, typename X>
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
-    ExpressionGrammar<T, U, V, W, X>* exprG;
+    ExpressionGrammar<T, U, V, W, X, Y, Z>* exprG;
     TypeGrammar<V, W, X> *typeG; // pointer for weak coupling
 
     NodeManager& nodeMan;
 
-    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, U, V, W, X>* exprGram, TypeGrammar<V, W, X>* typeGram);
+    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, U, V, W, X, Y, Z>* exprGram, TypeGrammar<V, W, X>* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing
@@ -118,9 +119,9 @@ private:
     virtual T variableHelp(const V& type, const X& id);
     virtual T variableHelp(const X& id);
     virtual T castHelp(const V& type, const T& subExpr);
-    virtual T bindExprHelp(const vector<T> & paramsExpr, T& callExpr);
-    virtual T tupleHelp(const vector<T> & elements);
-    virtual T vectorHelp(const V& type, const vector<T> & elements);
+    virtual T bindExprHelp(const vector<T>& paramsExpr, T& callExpr);
+    virtual T tupleHelp(const vector<T>& elements);
+    virtual T vectorHelp(const V& type, const vector<T>& elements);
     virtual T structHelp(const vector<std::pair<X, T> >& elements);
     virtual T unionHelp(const V& type, const X& memberName, const T& member);
     virtual T memberAccessHelp(const T& subExpr, const X& member);

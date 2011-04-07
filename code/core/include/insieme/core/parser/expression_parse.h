@@ -48,9 +48,9 @@ namespace parse {
 
 // FW Declaration
 template<typename T, typename U, typename V> struct TypeGrammar;
-template<typename T, typename U, typename V, typename W, typename X> struct ExpressionGrammarPart;
-template<typename U, typename T, typename V, typename W, typename X> struct StatementGrammar;
-template<typename T> struct OperatorGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammarPart;
+template<typename U, typename T, typename V, typename W, typename X, typename Y, typename Z> struct StatementGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct OperatorGrammar;
 
 // helper function to be able to use std::make_pair along with ph::push_back
 template<typename T, typename U>
@@ -70,17 +70,20 @@ class VariableTable {
 // V = TypePtr
 // W = IntTypeParamPtr
 // X = IdentifierPtr
-template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr>
+// Y = Lambda
+// Z = LambdaDef
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     TypeGrammar<V, W, X> *typeG; // pointer for weak coupling
-    ExpressionGrammarPart<T, U, V, W, X> *exprGpart;
-    StatementGrammar<U, T, V, W, X>* stmtG;
-    OperatorGrammar<T>* opG;
+    ExpressionGrammarPart<T, U, V, W, X, Y, Z> *exprGpart;
+    StatementGrammar<U, T, V, W, X, Y, Z>* stmtG;
+    OperatorGrammar<T, U, V, W, X, Y, Z>* opG;
     VariableTable varTab;
     NodeManager& nodeMan;
     bool deleteStmtG;
 
-    ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<U, T, V, W, X>* stmtGrammar = NULL);
+    ExpressionGrammar(NodeManager& nodeMan, StatementGrammar<U, T, V, W, X, Y, Z>* stmtGrammar = NULL);
     ~ExpressionGrammar();
 
     // terminal rules, no skip parsing
@@ -101,8 +104,8 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     qi::rule<ParseIt, T(), qi::space_type> charLiteral;
 
     // --------------------------------------------------------------------------------------
-    qi::rule<ParseIt, LambdaPtr(), qi::locals<vector<T> >, qi::space_type> lambda;
-    qi::rule<ParseIt, LambdaDefinitionPtr(), qi::locals<vector<ExpressionPtr>, vector<LambdaPtr> >, qi::space_type> lambdaDef;
+    qi::rule<ParseIt, Y(), qi::locals<vector<T> >, qi::space_type> lambda;
+    qi::rule<ParseIt, Z(), qi::locals<vector<T>, vector<Y> >, qi::space_type> lambdaDef;
     qi::rule<ParseIt, T(), qi::space_type> lambdaExpr;
 
     qi::rule<ParseIt, T(), qi::space_type> bindExpr;
@@ -153,13 +156,13 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 
 private:
     // member functions providing the rules
-    virtual T doubleLiteralHelp(int integer, vector<char> fraction);
-    virtual T intLiteralHelp(int val);
-    virtual LambdaPtr lambdaHelp(const V& retType, const vector<T>& paramsExpr, const U& body);
-    virtual LambdaDefinitionPtr lambdaDefHelp(const vector<T>& funVarExpr, vector<LambdaPtr>& lambdaExpr );
-    virtual T lambdaExprHelp(T& variableExpr, LambdaDefinitionPtr& def);
-    virtual T lambdaExprHelp(LambdaPtr& lambda);
-    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const vector<std::pair<T, T> >  guardedStmts, const vector<U>& localDeclStmts);
+    virtual T doubleLiteralHelp(const int integer, const vector<char>& fraction);
+    virtual T intLiteralHelp(const int val);
+    virtual Y lambdaHelp(const V& retType, const vector<T>& paramsExpr, const U& body);
+    virtual Z lambdaDefHelp(const vector<T>& funVarExpr, const vector<Y>& lambdaExpr );
+    virtual T lambdaExprHelp(const T& variableExpr, const Z& def);
+    virtual T lambdaExprHelp(const Y& lambda);
+    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const vector<std::pair<T, T> >&  guardedStmts, const vector<U>& localDeclStmts);
     virtual T callExprHelp(const T& callee, vector<T>& arguments);
     virtual T boolLiteralHelp(const bool flag);
 };
