@@ -365,7 +365,7 @@ ExpressionGrammar<T, U, V, W, X, Y, Z>::ExpressionGrammar(NodeManager& nMan, Sta
 
  //   typeG = new TypeGrammar(nodeMan);
     exprGpart = new ExpressionGrammarPart<T, U, V, W, X, Y, Z>(nodeMan, this, typeG);
-    opG = new OperatorGrammar<ExpressionPtr>(nodeMan, this);
+    opG = new OperatorGrammar<T, U, V, W, X, Y, Z>(nodeMan, this);
     if(stmtGrammar == NULL) {
         stmtG = new StatementGrammar<U>(nodeMan, this, typeG);
         deleteStmtG = true;
