@@ -46,26 +46,27 @@ namespace parse {
 // parser usage:
 // T = ProgramPtr
 // U = ExpressionPtr
-template <typename T, typename U>
-struct ProgramGrammar : public qi::grammar<ParseIt, ProgramPtr(), qi::space_type> {
-    ExpressionGrammar<U> *exprG;   // pointer for weak coupling
+template <typename P = ProgramPtr, typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
+struct ProgramGrammar : public qi::grammar<ParseIt, P(), qi::space_type> {
+    ExpressionGrammar<T, U, V, W, X, Y, Z> *exprG;   // pointer for weak coupling
 
     NodeManager& nodeMan;
 
     ProgramGrammar(NodeManager& nMan);
     ~ProgramGrammar();
 
-    qi::rule<ParseIt, T(), qi::space_type> programRule;
-    qi::rule<ParseIt, T(), qi::locals<vector<U> >, qi::space_type> program;
+    qi::rule<ParseIt, P(), qi::space_type> programRule;
+    qi::rule<ParseIt, P(), qi::locals<vector<T> >, qi::space_type> program;
 
     // member functions applying the rules
-    qi::rule<ParseIt, T(), qi::locals<vector<U> >, qi::space_type> getProgram();
-    qi::rule<ParseIt, T(), qi::space_type> getProgramRule();
+    qi::rule<ParseIt, P(), qi::locals<vector<T> >, qi::space_type> getProgram();
+    qi::rule<ParseIt, P(), qi::space_type> getProgramRule();
 
 protected:
     // member functions providing the rules
-    T mainProgramHelp(const U& mainProg);
-    T programHelp(const vector<U>& progs);
+    P mainProgramHelp(const T& mainProg);
+    P programHelp(const vector<T>& progs);
 
 };
 

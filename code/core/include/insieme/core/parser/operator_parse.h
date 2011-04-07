@@ -45,13 +45,13 @@ namespace core {
 namespace parse {
 
 // FW Declaration
-template<typename T, typename U, typename V, typename W, typename X> struct ExpressionGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammar;
 
 template <typename T>
 struct OperatorGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
-    ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>* exprG;
+    ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>* exprG;
     lang::BasicGenerator* generator;
-    OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>* exprGram);
+    OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>* exprGram);
     ~OperatorGrammar();
 
     const boost::phoenix::actor<boost::phoenix::reference<insieme::core::NodeManager> >&& nManRef;

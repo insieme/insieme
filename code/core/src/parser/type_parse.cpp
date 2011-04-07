@@ -219,7 +219,7 @@ qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> Ty
 }
 
 template<typename T, typename U, typename V>
-qi::rule<ParseIt, T(), qi::locals<IdentifierPtr, vector<T>, vector<U>>, qi::space_type> TypeGrammar<T, U, V>::getGenericType() {
+qi::rule<ParseIt, T(), qi::locals<V, vector<T>, vector<U>>, qi::space_type> TypeGrammar<T, U, V>::getGenericType() {
     return ( identifier                                             [ qi::_a = qi::_1 ]
         >> -( '<' >> -( typeVariable                                [ ph::push_back(qi::_b, qi::_1) ]
         % ',' )

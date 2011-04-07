@@ -48,16 +48,17 @@ namespace parse {
 
 // FW Declaration
 template<typename V, typename W, typename X> struct TypeGrammar;
-template<typename T, typename U, typename V, typename W, typename X> struct ExpressionGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammar;
 
-template<typename T, typename U, typename V, typename W, typename X>
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
-    ExpressionGrammar<T, U, V, W, X>* exprG;
+    ExpressionGrammar<T, U, V, W, X, Y, Z>* exprG;
     TypeGrammar<V, W, X> *typeG; // pointer for weak coupling
 
     NodeManager& nodeMan;
 
-    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, U, V, W, X>* exprGram, TypeGrammar<V, W, X>* typeGram);
+    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, U, V, W, X, Y, Z>* exprGram, TypeGrammar<V, W, X>* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing

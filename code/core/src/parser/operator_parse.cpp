@@ -256,7 +256,7 @@ qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T>::getAssignment() {
 }
 
 template<typename T>
-OperatorGrammar<T>::OperatorGrammar(NodeManager& nMan, ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>* exprGram)
+OperatorGrammar<T>::OperatorGrammar(NodeManager& nMan, ExpressionGrammar<T, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>* exprGram)
     : OperatorGrammar::base_type(operatorRule), exprG(exprGram), generator(new lang::BasicGenerator(nMan)), nManRef(ph::ref(nMan)), nodeMan(nMan) {
 
 //    nManRef = ph::ref(nodeMan);

@@ -47,7 +47,7 @@ namespace parse {
 
 // FW Declaration
 template<typename T, typename U, typename V> struct TypeGrammar;
-template<typename T, typename U, typename V, typename W, typename X> struct ExpressionGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammar;
 
 // Parser usage
 // T = StatementPtr
@@ -55,15 +55,16 @@ template<typename T, typename U, typename V, typename W, typename X> struct Expr
 // V = TypePtr
 // W = IntTypeParamPtr
 // X = IdentifierPtr
-template<typename T = StatementPtr, typename U = ExpressionPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr>
+template<typename T = StatementPtr, typename U = ExpressionPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct StatementGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> *typeG;        // pointer for weak coupling
-    ExpressionGrammar<U, T, V, W, X> *exprG;  // pointer for weak coupling
+    ExpressionGrammar<U, T, V, W, X, Y, Z> *exprG;  // pointer for weak coupling
     bool deleteFields;         // flag which determines if exprG has been passed as an argument to the constructor or created inside it
 
     NodeManager& nodeMan;
 
-    StatementGrammar(NodeManager& nodeMan, ExpressionGrammar<U, T, V, W, X>* exprGram = NULL, TypeGrammar<V, W, X>* typeGram = NULL);
+    StatementGrammar(NodeManager& nodeMan, ExpressionGrammar<U, T, V, W, X, Y, Z>* exprGram = NULL, TypeGrammar<V, W, X>* typeGram = NULL);
     ~StatementGrammar();
 
     qi::rule<ParseIt, T(), qi::space_type> statementRule;
