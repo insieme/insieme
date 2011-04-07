@@ -39,6 +39,8 @@
 #include <boost/unordered_map.hpp>
 
 #include "insieme/core/type_utils.h"
+
+#include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_visitor.h"
 
 #include "insieme/utils/container_utils.h"
@@ -431,7 +433,7 @@ namespace {
 			}
 
 			// => check family of generic type
-			if (typeOfA == NT_GenericType) {
+			if (dynamic_pointer_cast<const GenericType>(a)) {
 				GenericTypePtr genericTypeA = static_pointer_cast<const GenericType>(a);
 				GenericTypePtr genericTypeB = static_pointer_cast<const GenericType>(b);
 
@@ -744,6 +746,241 @@ TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
 }
 
 
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    SubTyping
+// -------------------------------------------------------------------------------------------------------------------------
+
+namespace {
+
+	const TypeSet getSuperTypes(const TypePtr& type) {
+		return type->getNodeManager().getBasicGenerator().getDirectSuperTypesOf(type);
+	}
+
+	const TypeSet getSubTypes(const TypePtr& type) {
+		return type->getNodeManager().getBasicGenerator().getDirectSubTypesOf(type);
+	}
+
+	template<typename Extractor>
+	inline TypeSet getAllFor(const TypeSet& set, const Extractor& src) {
+		TypeSet res;
+		for_each(set, [&](const TypePtr& cur) {
+			utils::set::insertAll(res, src(cur));
+		});
+		return res;
+	}
+
+	bool isSubTypeOf(const GenericTypePtr& subType, const TypePtr& superType) {
+		// start from the sub-type and work toward the top.
+		// As soon as the super type is included, the procedure can stop.
+
+		// compute the closure using the delta algorithm
+		TypeSet delta = utils::set::toSet<TypeSet>(subType);
+		TypeSet superTypes = delta;
+		while (!utils::set::contains(superTypes, superType) && !delta.empty()) {
+			// get super-types of delta types
+			delta = getAllFor(delta, &getSuperTypes);
+			utils::set::insertAll(superTypes, delta);
+		}
+
+		// check whether the given super type is within the closure
+		return utils::set::contains(superTypes, superType);
+	}
+
+	template<typename Extractor>
+	TypePtr getJoinMeetType(const GenericTypePtr& typeA, const GenericTypePtr& typeB, const Extractor& extract) {
+		// from both sides, the sets of super-types are computed step by step
+		// when the sets are intersecting, the JOIN type has been found
+
+		// super-type closure is computed using the delta algorithm
+		TypeSet deltaA = utils::set::toSet<TypeSet>(typeA);
+		TypeSet deltaB = utils::set::toSet<TypeSet>(typeB);
+		TypeSet superTypesA = deltaA;
+		TypeSet superTypesB = deltaB;
+		TypeSet intersect = utils::set::intersect(superTypesA, superTypesB);
+		while(intersect.empty() && !(deltaA.empty() && deltaB.empty())) {
+
+			// get super-types of delta types
+			deltaA = extract(deltaA);
+			deltaB = extract(deltaB);
+			utils::set::insertAll(superTypesA, deltaA);
+			utils::set::insertAll(superTypesB, deltaB);
+			intersect = utils::set::intersect(superTypesA, superTypesB);
+		}
+
+		// check result
+		assert(intersect.size() <= static_cast<std::size_t>(1) && "More than one JOIN type detected!");
+
+		// use result
+		if (intersect.empty()) {
+			// no Join type detected
+			return TypePtr();
+		}
+		return *intersect.begin();
+	}
+
+	TypePtr getJoinType(const GenericTypePtr& typeA, const GenericTypePtr& typeB) {
+		return getJoinMeetType(typeA, typeB, [](const TypeSet& set) {
+			return getAllFor(set, &getSuperTypes);
+		});
+	}
+
+	TypePtr getMeetType(const GenericTypePtr& typeA, const GenericTypePtr& typeB) {
+		return getJoinMeetType(typeA, typeB, [](const TypeSet& set) {
+			return getAllFor(set, &getSubTypes);
+		});
+	}
+}
+
+bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
+
+	// quick check - reflexivity
+	if (*subType == *superType) {
+		return true;
+	}
+
+	// check whether the sub-type is generic
+	if (subType->getNodeType() == NT_GenericType) {
+		// use the delta algorithm for computing all the super-types of the given sub-type
+		return isSubTypeOf(static_pointer_cast<const GenericType>(subType), superType);
+	}
+
+	// check for vector types
+	if (subType->getNodeType() == NT_VectorType) {
+		VectorTypePtr vector = static_pointer_cast<const VectorType>(subType);
+
+		// the only potential super type is an array of the same element type
+		ASTBuilder builder(vector->getNodeManager());
+		return *superType == *builder.arrayType(vector->getElementType());
+	}
+
+	// for all other relations, the node type has to be the same
+	if (subType->getNodeType() != superType->getNodeType()) {
+		return false;
+	}
+
+	// check function types
+	if (subType->getNodeType() == NT_FunctionType) {
+		FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(subType);
+		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(superType);
+
+		bool res = true;
+		res = res && funTypeA->getArgumentTypes().size() == funTypeB->getArgumentTypes().size();
+		res = res && isSubTypeOf(funTypeA->getReturnType(), funTypeB->getReturnType());
+		for(std::size_t i = 0; res && i<funTypeB->getArgumentTypes().size(); i++) {
+			res = res && isSubTypeOf(funTypeB->getArgumentTypes()[i], funTypeA->getArgumentTypes()[i]);
+		}
+		return res;
+	}
+
+	// no other relations are supported
+	return false;
+}
+
+/**
+ * Computes a join or meet type for the given pair of types. The join flag allows to determine
+ * whether the join or meet type is computed.
+ */
+TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
+
+	// add a structure based algorithm for computing the Join-Type
+
+	// shortcut for equal types
+	if (*typeA == *typeB) {
+		return typeA;
+	}
+
+	// the rest depends on the node types
+	NodeType nodeTypeA = typeA->getNodeType();
+	NodeType nodeTypeB = typeB->getNodeType();
+
+	// handle generic types
+	if (nodeTypeA == NT_GenericType && nodeTypeB == NT_GenericType) {
+		// let the join computation handle the case
+		const GenericTypePtr& genTypeA = static_pointer_cast<const GenericType>(typeA);
+		const GenericTypePtr& genTypeB = static_pointer_cast<const GenericType>(typeB);
+		return (join) ? getJoinType(genTypeA, genTypeB) : getMeetType(genTypeA, genTypeB);
+	}
+
+	// handle vector types (only if array super type of A is a super type of B)
+
+	// make sure typeA is the vector
+	if (nodeTypeA != NT_VectorType && nodeTypeB == NT_VectorType) {
+		// switch sides
+		return getJoinMeetType(typeB, typeA, join);
+	}
+
+	// handle vector-array conversion (only works for joins)
+	if (join && nodeTypeA == NT_VectorType) {
+		VectorTypePtr vector = static_pointer_cast<const VectorType>(typeA);
+
+		// the only potential super type is an array of the same element type
+		ASTBuilder builder(vector->getNodeManager());
+		ArrayTypePtr array = builder.arrayType(vector->getElementType());
+		if (isSubTypeOf(typeB, array)) {
+			return array;
+		}
+		// no common super type!
+		return 0;
+	}
+
+	// the rest can only work if it is of the same kind
+	if (nodeTypeA != nodeTypeB) {
+		// => no common super type
+		return 0;
+	}
+
+	// check for functions
+	if (nodeTypeA == NT_FunctionType) {
+		FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(typeA);
+		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(typeB);
+
+		// check number of arguments
+		auto argsA = funTypeA->getArgumentTypes();
+		auto argsB = funTypeB->getArgumentTypes();
+		if (argsA.size() != argsB.size()) {
+			// not matching
+			return 0;
+		}
+
+		// compute join type
+		// JOIN/MEET result and argument types - if possible
+		TypePtr cur = getJoinMeetType(funTypeA->getReturnType(), funTypeB->getReturnType(), join);
+		TypePtr resType = cur;
+
+		// continue with arguments
+		TypeList args;
+		for (std::size_t i=0; cur && i<argsA.size(); i++) {
+			// ATTENTION: this goes in the reverse direction
+			cur = getJoinMeetType(argsA[i], argsB[i], !join);
+			args.push_back(cur);
+		}
+
+		// check whether for all pairs a match has been found
+		if (!cur) {
+			// no => no result
+			return 0;
+		}
+
+		// construct resulting type
+		ASTBuilder builder(funTypeA->getNodeManager());
+		return builder.functionType(args, resType);
+	}
+
+	// everything else does not have a common join/meet type
+	return 0;
+}
+
+
+TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB) {
+	// use common implementation for Join and Meet type computation
+	return getJoinMeetType(typeA, typeB, true);
+}
+
+TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
+	// use common implementation for Join and Meet type computation
+	return getJoinMeetType(typeA, typeB, false);
+}
+
 
 } // end namespace core
 } // end namespace insieme
@@ -754,7 +991,8 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::Substitution& s
 	out << join(",", substitution.getMapping(), [](std::ostream& out, const insieme::core::Substitution::Mapping::value_type& cur)->std::ostream& {
 		return out << *cur.first << "->" << *cur.second;
 	});
-	out << "/";
+
+	if (!substitution.getMapping().empty() && !substitution.getIntTypeParamMapping().empty()) out << "/";
 	out << join(",", substitution.getIntTypeParamMapping(), [](std::ostream& out, const insieme::core::Substitution::IntTypeParamMapping::value_type& cur)->std::ostream& {
 		return out << *cur.first << "->" << *cur.second;
 	});

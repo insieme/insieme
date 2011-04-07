@@ -340,6 +340,37 @@ bool areMatching(const Container& patterns, const Container& types, bool conside
 }
 
 // -------------------------------------------------------------------------------------------------------------------------
+//                                                    SubTyping
+// -------------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Tests whether the given sub-type is in deed a sub-type o the given super type.
+ *
+ * @param subType the sub-type to be tested
+ * @param superType the super type to be compared with
+ * @return true if subType is in deed a sub-type of the super type
+ */
+bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType);
+
+/**
+ * Tries to obtain the smallest common super-type of the given types (Join Type in the sub-type relation).
+ *
+ * @param typeA the first type to be considered
+ * @param typeB the second type to be considered
+ * @return the smallest common super type or null, if no such type exists
+ */
+TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB);
+
+/**
+ * Tries to obtain the biggest common sub-type of the given types (Meet Type in the sub-type relation).
+ *
+ * @param typeA the first type to be considered
+ * @param typeB the second type to be considered
+ * @return the biggest common sub type or null, if no such type exists
+ */
+TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB);
+
+// -------------------------------------------------------------------------------------------------------------------------
 //                                                    Utilities
 // -------------------------------------------------------------------------------------------------------------------------
 

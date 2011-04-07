@@ -39,6 +39,7 @@
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/statement_converter.h"
 #include "insieme/simple_backend/code_management.h"
+#include "insieme/simple_backend/transform/preprocessor.h"
 
 #include "insieme/core/types.h"
 #include "insieme/core/transform/manipulation.h"
@@ -46,6 +47,10 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/logging.h"
+
+
+#include "insieme/core/printer/pretty_printer.h"
+
 
 namespace insieme {
 namespace simple_backend {
@@ -108,8 +113,14 @@ using namespace utils::log;
 		// create a code fragment covering entire program
 		CodeFragmentPtr code = CodeFragment::createNewDummy("Full Program");
 
+		// preprocess program
+		NodeManager manager;
+		LOG(DEBUG) << "Before preprocessing: " << toString(core::printer::PrettyPrinter(prog));
+		core::NodePtr program = transform::preprocess(manager, prog);
+		LOG(DEBUG) << "After preprocessing: " << toString(core::printer::PrettyPrinter(program));
+
 		// convert code
-		getStmtConverter().convert(prog, code);
+		getStmtConverter().convert(program, code);
 
 		// create resulting, converted code
 		return std::make_shared<ConvertedCode>(prog, headers, code);

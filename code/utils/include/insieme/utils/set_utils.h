@@ -90,6 +90,20 @@ inline Set asSet(const Container& container) {
 }
 
 /**
+ * A template providing a more readable utility for the membership test within a set.
+ *
+ * @tparam Set the type of set to be tested
+ * @tparam Element the type of element to be searched
+ * @param set the set to be tested
+ * @param element the element to be searched
+ * @return true if the element is a member of the set, false otherwise
+ */
+template<typename Set, typename Element>
+inline bool contains(const Set& set, const Element& element) {
+	return set.find(element) != set.end();
+}
+
+/**
  * Computes the set-union (merge) of the given sets.
  *
  * NOTE: this function should not be used to add elements to an existing set.
@@ -106,6 +120,19 @@ Set merge(const Set& setA, const Set& setB) {
 	res.insert(setA.cbegin(), setA.cend());
 	res.insert(setB.cbegin(), setB.cend());
 	return res;
+}
+
+/**
+ * Inserts all the elements from the given container to the given set.
+ *
+ * @tparam Set the type of set forming the target
+ * @tparam Container the type of container to take elements from
+ * @param target the set to be extended
+ * @param source the collection of elements to be added
+ */
+template<typename Set, typename Container>
+inline void insertAll(Set& target, const Container& source) {
+	target.insert(source.begin(), source.end());
 }
 
 /**

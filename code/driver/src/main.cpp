@@ -299,7 +299,7 @@ int main(int argc, char** argv) {
 		if (CommandLineOptions::OpenCL) {
             insieme::utils::Timer timer("OpenCL.Backend");
 
-            LOG(INFO) << "========================= Converting to OpenCL ===============================";
+            LOG(INFO) << "========================= Converting to OpenCL ==================================";
 
 //TODO find the OpenCLChecker
 //			insieme::opencl_backend::OpenCLChecker oc;
@@ -317,7 +317,7 @@ int main(int argc, char** argv) {
 		} else {
 			insieme::utils::Timer timer("Simple.Backend");
 
-			LOG(INFO) << "========================== Converting to C++ =================================";
+			LOG(INFO) << "=========================== Converting to C ==================================";
 
 			if(!CommandLineOptions::Output.empty()) {
 				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);

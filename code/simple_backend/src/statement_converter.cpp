@@ -742,20 +742,20 @@ namespace simple_backend {
 
 	void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
 
-		// there is only a special treatment for strings
-		if (ptr->getType() != ptr->getNodeManager().basic.getString()) {
-			// standard: just print literal
-			currentCodeFragment << ptr->getValue();
+		// there is a special treatment for strings literals
+		if (ptr->getValue()[0] == '\"') {
+			// convert a string into a vector
+			NodeManager& manager = ptr->getNodeManager();
+			ASTBuilder builder(manager);
+			unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
+			TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
+
+			currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
 			return;
 		}
 
-		// convert a string into an array
-		NodeManager& manager = ptr->getNodeManager();
-		ASTBuilder builder(manager);
-		unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
-		TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
-
-		currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
+		// standard: just print literal
+		currentCodeFragment << ptr->getValue();
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {

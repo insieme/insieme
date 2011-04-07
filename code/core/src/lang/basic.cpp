@@ -42,11 +42,14 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
+
+using namespace boost;
 
 LiteralNotFoundException::LiteralNotFoundException(const string& lit) throw() : msg(string("Literal not found: ") + lit) { }
 
@@ -109,10 +112,46 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	StatementPtr ptrNoOp;
 };
 
-BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)) { }
+class BasicGenerator::SubTypeLattice : boost::noncopyable {
+
+	typedef utils::map::PointerMultiMap<TypePtr, TypePtr> RelationMap;
+	RelationMap subTypes;
+	RelationMap superTypes;
+
+public:
+
+	void addRelation(const TypePtr& subType, const TypePtr& superType) {
+		subTypes.insert(std::make_pair(superType, subType));
+		superTypes.insert(std::make_pair(subType, superType));
+	}
+
+	TypeSet getSubTypesOf(const TypePtr& type) const {
+		return getAllOf(type, subTypes);
+	}
+
+	TypeSet getSuperTypesOf(const TypePtr& type) const {
+		return getAllOf(type, superTypes);
+	}
+private:
+	TypeSet getAllOf(const TypePtr& type, const RelationMap& map) const {
+		TypeSet res;
+		auto types = map.equal_range(type);
+		auto cur = types.first;
+		while (cur != types.second) {
+			res.insert(cur->second);
+			++cur;
+		}
+		return res;
+	}
+};
+
+BasicGenerator::BasicGenerator(NodeManager& nm) : nm(nm), pimpl(new BasicGeneratorImpl(nm)), subTypeLattice(0) { }
 
 BasicGenerator::~BasicGenerator() {
 	delete pimpl;
+	if (subTypeLattice) {
+		delete subTypeLattice;
+	}
 }
 
 #define TYPE(_id, _spec) \
@@ -257,6 +296,30 @@ ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const Express
 
     // expression is either already a vector/array type or the type is not a vector type
     return subExpr;
+}
+
+
+const BasicGenerator::SubTypeLattice* BasicGenerator::getSubTypeLattice() const {
+	if (!subTypeLattice) {
+		SubTypeLattice* res = new SubTypeLattice();
+
+		// initialize lattice with generic relations from lang.def
+		#define SUB_TYPE(_typeA, _typeB) \
+		res->addRelation(get ## _typeA(), get ## _typeB());
+		#include "insieme/core/lang/lang.def"
+
+		subTypeLattice = res;
+	}
+	return subTypeLattice;
+}
+
+
+TypeSet BasicGenerator::getDirectSuperTypesOf(const TypePtr& type) const {
+	return getSubTypeLattice()->getSuperTypesOf(type);
+}
+
+TypeSet BasicGenerator::getDirectSubTypesOf(const TypePtr& type) const {
+	return getSubTypeLattice()->getSubTypesOf(type);
 }
 
 } // namespace lang
