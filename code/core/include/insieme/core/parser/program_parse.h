@@ -46,8 +46,8 @@ namespace parse {
 // parser usage:
 // T = ProgramPtr
 // U = ExpressionPtr
-template <typename P = ProgramPtr, typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
-        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
+template <typename P = ProgramPtr, typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr,
+        typename X = IdentifierPtr, typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ProgramGrammar : public qi::grammar<ParseIt, P(), qi::space_type> {
     ExpressionGrammar<T, U, V, W, X, Y, Z> *exprG;   // pointer for weak coupling
 

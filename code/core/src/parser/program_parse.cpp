@@ -55,13 +55,17 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::mainProgramHelp(const ExpressionPtr& mainProg) {
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+class LambdaDefinitionPtr>
+ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+mainProgramHelp(const ExpressionPtr& mainProg) {
     return Program::create(nodeMan, toVector(mainProg), true);
 }
 
-template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::programHelp(const vector<ExpressionPtr>& progs) {
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+class LambdaDefinitionPtr>
+ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+programHelp(const vector<ExpressionPtr>& progs) {
     return Program::create(nodeMan, progs, false);
 }
 
@@ -80,10 +84,6 @@ qi::rule<ParseIt, P(), qi::space_type> ProgramGrammar<P, T, U, V, W, X, Y, Z>::g
 template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
 ProgramGrammar<P, T, U, V, W, X, Y, Z>::ProgramGrammar(NodeManager& nMan) : ProgramGrammar::base_type(programRule),
         exprG(new ExpressionGrammar<T, U, V, W, X, Y, Z>(nMan)), nodeMan(nMan) {
-
-    auto nManRef = ph::ref(nodeMan);
-    auto basicRef = ph::ref(nodeMan.basic);
-
 
     program = getProgram();
 

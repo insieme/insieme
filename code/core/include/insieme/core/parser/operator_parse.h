@@ -132,14 +132,14 @@ struct OperatorGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     #undef get
 
     // member functions creating the Objects
-    virtual T getAssignmentHelper(T a, T b);
-    virtual T getBinaryOpHelper(const lang::BasicGenerator::Operator& op, T a, T b);
-    virtual T getInt4OpHelper(const lang::BasicGenerator::Operator& op, T a, T b);
-    virtual T getUnaryOpHelper(const lang::BasicGenerator::Operator& op, T a);
-    virtual T getSignOperation(const lang::BasicGenerator::Operator& op, T b);
-    virtual T getInplaceOperation(const lang::BasicGenerator::Operator& op, T a);
-    virtual T getLazyOpHelper(const lang::BasicGenerator::Operator& op, T a, T b);
-    virtual T getBoolOpHelper(const lang::BasicGenerator::Operator& op, T a, T b);
+    virtual T assignmentHelper(T& a, T& b);
+    virtual T binaryOpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
+    virtual T int4OpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
+    virtual T unaryOpHelper(const lang::BasicGenerator::Operator& op, T& a);
+    virtual T signOperation(const lang::BasicGenerator::Operator& op, T& b);
+    virtual T inplaceOperation(const lang::BasicGenerator::Operator& op, T& a);
+    virtual T lazyOpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
+    virtual T boolOpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
 };
 
 }

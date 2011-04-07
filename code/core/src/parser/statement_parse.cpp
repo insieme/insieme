@@ -66,14 +66,15 @@ StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParam
 }
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::returnHelp(ExpressionPtr ret) {
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        returnHelp(const ExpressionPtr& ret) {
     return ReturnStmt::get(nodeMan, ret);
 }
 
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-    declarationHelp(ExpressionPtr varExpr, ExpressionPtr initExpr) {
+        declarationHelp(const ExpressionPtr& varExpr, const ExpressionPtr& initExpr) {
     if(VariablePtr var = dynamic_pointer_cast<const Variable>(varExpr))
         return DeclarationStmt::get(nodeMan, var, initExpr);
 
@@ -81,19 +82,20 @@ StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParam
 }
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
-StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::compoundHelp(vector<StatementPtr>  stmts) {
+StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        compoundHelp(const vector<StatementPtr>&  stmts) {
     return CompoundStmt::get(nodeMan, stmts);
 }
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-    whileHelp(ExpressionPtr condition, StatementPtr body) {
+    whileHelp(const ExpressionPtr& condition, const StatementPtr& body) {
     return WhileStmt::get(nodeMan, condition, body);
 }
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-    forHelp(StatementPtr loopVarStmt, ExpressionPtr end, ExpressionPtr step, StatementPtr body) {
+    forHelp(const StatementPtr& loopVarStmt, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) {
     ASTBuilder builder(nodeMan);
     if(DeclarationStmtPtr loopVar = dynamic_pointer_cast<const DeclarationStmt>(loopVarStmt))
         return ForStmt::get(nodeMan, loopVar, body, end, step);
@@ -113,7 +115,7 @@ StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParam
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-    switchHelp(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr> >& cases, const boost::optional<StatementPtr>& defaultCase) {
+    switchHelp(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr> >& cases, const boost::optional<StatementPtr>& defaultCase){
     if(defaultCase)
         return SwitchStmt::get(nodeMan, switchExpr, cases, *defaultCase);
 
@@ -139,14 +141,16 @@ Rule StatementGrammar<T, U, V, W, X, Y, Z>::getContinue(){
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
 Rule StatementGrammar<T, U, V, W, X, Y, Z>::getReturn() {
     ASTBuilder builder(nodeMan);
-    return (qi::lit("return") >> qi::lit("unit"))                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::returnHelp, this, builder.getBasicGenerator().getUnitConstant()) ]
+    return (qi::lit("return") >> qi::lit("unit"))                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::returnHelp, this,
+                builder.getBasicGenerator().getUnitConstant()) ]
          | (qi::lit("return") >> exprG->expressionRule)             [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::returnHelp, this, qi::_1) ];
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
 Rule StatementGrammar<T, U, V, W, X, Y, Z>::getDeclaration() {
     return (qi::lit("decl") >> exprG->variableExpr >> '='
-        >> exprG->expressionRule )                                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::declarationHelp, this, qi::_1, qi::_2) ];
+        >> exprG->expressionRule )                                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::declarationHelp, this,
+                qi::_1, qi::_2) ];
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
@@ -158,21 +162,24 @@ qi::rule<ParseIt, T(), qi::locals<vector<T> >,  qi::space_type> StatementGrammar
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
 Rule StatementGrammar<T, U, V, W, X, Y, Z>::getWhile() {
     return (qi::lit("while") >> '(' >> exprG->expressionRule
-        >> ')' >> statementRule )                                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::whileHelp, this, qi::_1, qi::_2) ];
+        >> ')' >> statementRule )                                   [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::whileHelp, this,
+                                                                        qi::_1, qi::_2) ];
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
 Rule StatementGrammar<T, U, V, W, X, Y, Z>::getFor() {
     return (qi::lit("for") >> '(' >> declarationStmt >> qi::lit("..")
         >> exprG->expressionRule >> ':' >> exprG->expressionRule
-        >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::forHelp, this, qi::_1, qi::_2, qi::_3, qi::_4) ];
+        >> ')' >> statementRule)                                    [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::forHelp, this,
+                qi::_1, qi::_2, qi::_3, qi::_4) ];
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
 Rule StatementGrammar<T, U, V, W, X, Y, Z>::getIf() {
     return (qi::lit("if") >> '(' >> exprG->expressionRule >> ')'
         >> statementRule
-          >>  -(qi::lit("else") >> statementRule))                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::ifHelp, this, qi::_1, qi::_2, qi::_3) ];
+          >>  -(qi::lit("else") >> statementRule))                  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::ifHelp, this,
+                                                                        qi::_1, qi::_2, qi::_3) ];
 
 }
 
@@ -181,7 +188,8 @@ qi::rule<ParseIt, T(), qi::locals<vector<std::pair<U, T> > >, qi::space_type> St
     return (qi::lit("switch") >> '(' >> exprG->expressionRule >> ')'
         >> '{' >> *(qi::lit("case") >> exprG->expressionRule
           >> ':' >> statementRule)                                  [ ph::push_back(qi::_a, ph::bind(&makePair<ExpressionPtr, StatementPtr>, qi::_1, qi::_2)) ]
-        >> -( qi::lit("default") >> ':' >> statementRule) >> '}' )  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::switchHelp, this, qi::_1, qi::_a, qi::_3) ];
+        >> -( qi::lit("default") >> ':' >> statementRule) >> '}' )  [ qi::_val = ph::bind(&StatementGrammar<T, U, V, W, X, Y, Z>::switchHelp, this,
+                                                                        qi::_1, qi::_a, qi::_3) ];
 }
 template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
 Rule StatementGrammar<T, U, V, W, X, Y, Z>::getMarker() {
@@ -264,7 +272,7 @@ StatementGrammar<T, U, V, W, X, Y, Z>::~StatementGrammar() {
 }
 
 // Explicit Template Instantiation
-template struct StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr>;
+template struct StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
 
 } // namespace parse
 } // namespace core

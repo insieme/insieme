@@ -64,9 +64,6 @@ template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
 IdentifierPtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::identifierHelp(char start, const vector<char>& tail) {
     return Identifier::get(nodeMan, string(&start, &start+1) + string(tail.begin(), tail.end()));
 }
-//	IdentifierPtr makePrefixId(NodeManager& manager, char start, const IdentifierPtr& ident) {
-//		return Identifier::get(manager, string(&start, &start+1) + ident->getName());
-//	}
 
 template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
 TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::typeVarLabelHelp(const IdentifierPtr& id) {
@@ -80,7 +77,6 @@ IntTypeParamPtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::intTypePar
 
 template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
 TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::typeVariableHelp(const TypePtr& type) {
-//    boost::phoenix::actor<boost::phoenix::composite<boost::phoenix::detail::construct_eval<insieme::core::Pointer<const insieme::core::Type> >, boost::fusion::vector<boost::phoenix::value<insieme::core::Pointer<const insieme::core::Type> >, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_, boost::fusion::void_> > > x = ph::construct<TypePtr>(type);
     return TypePtr(type);
 }
 
@@ -115,7 +111,8 @@ TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::channelTypeHelp(co
 }
 
 template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::genericTypeHelp(const IdentifierPtr& name, const vector<TypePtr>& typeParams, const vector<IntTypeParamPtr>& intTypeParams, const TypePtr& baseType) {
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::genericTypeHelp(const IdentifierPtr& name, const vector<TypePtr>& typeParams,
+        const vector<IntTypeParamPtr>& intTypeParams, const TypePtr& baseType) {
     return GenericType::getFromID(nodeMan, name, typeParams, intTypeParams, baseType);
 }
 
@@ -225,7 +222,8 @@ qi::rule<ParseIt, T(), qi::locals<V, vector<T>, vector<U>>, qi::space_type> Type
         % ',' )
         >> -qi::char_(',') >> -( intTypeParam                       [ ph::push_back(qi::_c, qi::_1) ]
         % ',' )
-        >> '>') )                                                   [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::genericTypeHelp, this, qi::_a, qi::_b, qi::_c, TypePtr()) ];
+        >> '>') )                                                   [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::genericTypeHelp, this,
+                                                                        qi::_a, qi::_b, qi::_c, TypePtr()) ];
 
 }
 
@@ -247,8 +245,6 @@ Rule TypeGrammar<T, U, V>::getTypeRule() {
 
 template<typename T, typename U, typename V>
 TypeGrammar<T, U, V>::TypeGrammar(NodeManager& nMan) : TypeGrammar::base_type(typeRule), nodeMan(nMan) {
-
-	auto nManRef = ph::ref(nodeMan);
 
 	// RULES ---------------------------------------------------- | ACTIONS ----------------------------------------------------------------------------------
 

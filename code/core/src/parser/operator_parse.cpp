@@ -58,7 +58,7 @@ namespace ph = boost::phoenix;
 
 typedef lang::BasicGenerator::Operator lBo;
 
-TypePtr getDerefedType(ExpressionPtr& expr, ASTBuilder& builder) {
+TypePtr getDerefedType(ExpressionPtr& expr, const ASTBuilder& builder) {
     if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(expr->getType())) {
         expr = builder.deref(expr);
         return ref->getElementType();
@@ -69,7 +69,7 @@ TypePtr getDerefedType(ExpressionPtr& expr, ASTBuilder& builder) {
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getAssignmentHelper(ExpressionPtr a, ExpressionPtr b) {
+        assignmentHelper(ExpressionPtr& a, ExpressionPtr& b) {
     ASTBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
@@ -84,7 +84,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getBinaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b) {
+        binaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
     ASTBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
@@ -98,7 +98,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getInt4OpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b) {
+        int4OpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
     ASTBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
@@ -112,7 +112,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getUnaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a) {
+        unaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a) {
     ASTBuilder builder(nodeMan);
 
     // if argument is a reference, automatically deref it
@@ -123,7 +123,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getSignOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr b) {
+        signOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr& b) {
     ASTBuilder builder(nodeMan);
 
     // if argument is a reference, automatically deref it
@@ -136,7 +136,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getInplaceOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr a) {
+        inplaceOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr& a) {
     ASTBuilder builder(nodeMan);
 
     if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(a->getType())) {
@@ -148,7 +148,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getLazyOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b) {
+        lazyOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
     ASTBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
@@ -163,7 +163,7 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-        getBoolOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b) {
+        boolOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr& a, ExpressionPtr& b) {
     ASTBuilder builder(nodeMan);
 
     // if arguments are references, automatically deref them
@@ -181,43 +181,43 @@ ExpressionPtr OperatorGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParam
     qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::get##op() { \
     return ( '(' >> exprG->expressionRule >> qi::lit(symbol) \
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::\
-              getBinaryOpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
+              binaryOpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
 }
 #define getInt4(op,symbol) template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z> \
     qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::get##op() { \
     return ( '(' >> exprG->expressionRule >> symbol \
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::\
-              getInt4OpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
+              int4OpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
 }
 #define getUnary(op, symbol) template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z> \
     qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::get##op() { \
     return ( qi::lit("(") >> qi::lit(symbol) \
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::\
-              getUnaryOpHelper, this, lBo::op, qi::_1) ]; \
+                                                                          unaryOpHelper, this, lBo::op, qi::_1) ]; \
 }
 #define getInplacePre(op, symbol) template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z> \
     qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::get##op() { \
     return ( qi::lit("(") >> qi::lit(symbol) \
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::\
-    getInplaceOperation, this, lBo::op, qi::_1) ]; \
+                                                                          inplaceOperation, this, lBo::op, qi::_1) ]; \
 }
 #define getInplacePost(op, symbol) template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z> \
     qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::get##op() { \
     return ( qi::lit("(") \
       >> exprG->expressionRule >> qi::lit(symbol) >> ')' )          [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::\
-    getInplaceOperation, this, lBo::op, qi::_1) ]; \
+                                                                          inplaceOperation, this, lBo::op, qi::_1) ]; \
 }
 #define getLazy(op, symbol) template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z> \
     qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::get##op() { \
     return ( '(' >> exprG->expressionRule >> qi::lit(symbol) \
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::\
-              getLazyOpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
+                                                                          lazyOpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
 }
 #define getBool(op, symbol) template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z> \
     qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::get##op() { \
     return ( '(' >> exprG->expressionRule >> qi::lit(symbol) \
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::\
-              getBoolOpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
+              boolOpHelper, this, lBo::op, qi::_1, qi::_2) ]; \
 }
 
 
@@ -257,20 +257,20 @@ template<typename T, typename U, typename V, typename W, typename X, typename Y,
 qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::getPlus() {
     return ( qi::lit("(") >> '+'
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::
-              getSignOperation, this, lBo::Add, qi::_1) ];
+              signOperation, this, lBo::Add, qi::_1) ];
 }
 template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
 qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::getMinus() {
     return ( qi::lit("(") >> '-'
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::
-              getSignOperation, this, lBo::Sub, qi::_1) ];
+              signOperation, this, lBo::Sub, qi::_1) ];
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
 qi::rule<ParseIt, T(), qi::space_type> OperatorGrammar<T, U, V, W, X, Y, Z>::getAssignment() {
     return ( '(' >> exprG->expressionRule >> '='
       >> exprG->expressionRule >> ')' )                             [ qi::_val = ph::bind(&OperatorGrammar<T, U, V, W, X, Y, Z>::
-              getAssignmentHelper, this, qi::_1, qi::_2) ];
+              assignmentHelper, this, qi::_1, qi::_2) ];
 }
 
 template<typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>

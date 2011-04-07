@@ -119,9 +119,9 @@ private:
     virtual T variableHelp(const V& type, const X& id);
     virtual T variableHelp(const X& id);
     virtual T castHelp(const V& type, const T& subExpr);
-    virtual T bindExprHelp(const vector<T> & paramsExpr, T& callExpr);
-    virtual T tupleHelp(const vector<T> & elements);
-    virtual T vectorHelp(const V& type, const vector<T> & elements);
+    virtual T bindExprHelp(const vector<T>& paramsExpr, T& callExpr);
+    virtual T tupleHelp(const vector<T>& elements);
+    virtual T vectorHelp(const V& type, const vector<T>& elements);
     virtual T structHelp(const vector<std::pair<X, T> >& elements);
     virtual T unionHelp(const V& type, const X& memberName, const T& member);
     virtual T memberAccessHelp(const T& subExpr, const X& member);

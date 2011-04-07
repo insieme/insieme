@@ -55,6 +55,8 @@ template<typename T, typename U, typename V, typename W, typename X, typename Y,
 // V = TypePtr
 // W = IntTypeParamPtr
 // X = IdentifierPtr
+// Y = LambdaPtr
+// Z = LambdaDefinitionPtr
 template<typename T = StatementPtr, typename U = ExpressionPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
         typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct StatementGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
@@ -97,14 +99,14 @@ private:
     // member functions providing the rules
     virtual T breakHelp();
     virtual T continueHelp();
-    virtual T returnHelp(U ret);
+    virtual T returnHelp(const U& ret);
 
-    virtual T declarationHelp(U varExpr, U initExpr);
-    virtual T compoundHelp(vector<T>  stmts);
-    virtual T whileHelp(U condition, T body);
-    virtual T forHelp(T loopVar, U end, U step, T body);
+    virtual T declarationHelp(const U& varExpr, const U& initExpr);
+    virtual T compoundHelp(const vector<T>& stmts);
+    virtual T whileHelp(const U& condition, const T& body);
+    virtual T forHelp(const T& loopVar, const U& end, const U& step, const T& body);
     virtual T ifHelp(const U& condition, const T& body, const boost::optional<T>& elseBody);
-    virtual T switchHelp(const U& switchExpr, const vector<std::pair<U, T> > & cases, const boost::optional<T>& defaultCase);
+    virtual T switchHelp(const U& switchExpr, const vector<std::pair<U, T> >& cases, const boost::optional<T>& defaultCase);
     virtual T markerHelp(const T& subStmt, const unsigned int id);
 };
 

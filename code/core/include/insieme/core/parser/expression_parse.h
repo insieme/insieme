@@ -156,13 +156,13 @@ struct ExpressionGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 
 private:
     // member functions providing the rules
-    virtual T doubleLiteralHelp(int integer, vector<char> fraction);
-    virtual T intLiteralHelp(int val);
+    virtual T doubleLiteralHelp(const int integer, const vector<char>& fraction);
+    virtual T intLiteralHelp(const int val);
     virtual Y lambdaHelp(const V& retType, const vector<T>& paramsExpr, const U& body);
-    virtual Z lambdaDefHelp(const vector<T>& funVarExpr, vector<Y>& lambdaExpr );
-    virtual T lambdaExprHelp(T& variableExpr, Z& def);
-    virtual T lambdaExprHelp(Y& lambda);
-    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const vector<std::pair<T, T> >  guardedStmts, const vector<U>& localDeclStmts);
+    virtual Z lambdaDefHelp(const vector<T>& funVarExpr, const vector<Y>& lambdaExpr );
+    virtual T lambdaExprHelp(const T& variableExpr, const Z& def);
+    virtual T lambdaExprHelp(const Y& lambda);
+    virtual T jobExprHelp(const T& threadNumRange, const T& defaultStmt, const vector<std::pair<T, T> >&  guardedStmts, const vector<U>& localDeclStmts);
     virtual T callExprHelp(const T& callee, vector<T>& arguments);
     virtual T boolLiteralHelp(const bool flag);
 };
