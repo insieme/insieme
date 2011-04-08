@@ -481,6 +481,7 @@ TEST(TypeUtils, ArrayVectorRelation) {
 TEST(TypeUtils, ReturnTypeDeduction) {
 
 	NodeManager manager;
+	ASTBuilder builder(manager);
 
 	// some variables and types
 	TypePtr varA = TypeVariable::get(manager, "a");
@@ -516,6 +517,14 @@ TEST(TypeUtils, ReturnTypeDeduction) {
 	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecB, typeB))));
 	EXPECT_EQ("'a", toString(*deduceReturnType(funType, toVector<TypePtr>(genA, varA))));
 
+
+//	// make a call requiring sub-type deduction
+//	funType = FunctionType::get(manager, toVector<TypePtr>(varA, varA), varA);
+//	EXPECT_EQ("(('a,'a)->'a)", toString(*funType));
+//
+//	TypePtr vectorTypeA = VectorType::get(manager, typeA, builder.concreteIntTypeParam(12));
+//	TypePtr vectorTypeB = VectorType::get(manager, typeA, builder.concreteIntTypeParam(14));
+//	EXPECT_EQ("array<typeA,1>", toString(*deduceReturnType(funType, toVector(vectorTypeA, vectorTypeB))));
 }
 
 TypeSet getSuperTypes(const TypePtr& type) {
@@ -635,6 +644,33 @@ TEST(TypeUtils, IsSubTypeOf) {
 	EXPECT_PRED2(isNotSubTypeOf, vecA2, arrB1);
 }
 
+//TEST(TypeUtils, IsSubTypeOfTypeVariable) {
+//
+//	NodeManager manager;
+//	ASTBuilder builder(manager);
+//	const lang::BasicGenerator& basic = manager.basic;
+//
+//	TypePtr typeA = builder.genericType("A");
+//	TypePtr int2 = basic.getInt2();
+//
+//	TypePtr varA = builder.typeVariable("a");
+//	TypePtr varB = builder.typeVariable("b");
+//
+//	EXPECT_PRED2(isSubTypeOf, varA, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, varB);
+//	EXPECT_PRED2(isSubTypeOf, varB, varA);
+//	EXPECT_PRED2(isSubTypeOf, varB, varB);
+//
+//	EXPECT_PRED2(isSubTypeOf, int2, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, int2);
+//
+//	EXPECT_PRED2(isSubTypeOf, int2, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, int2);
+//
+//	EXPECT_PRED2(isSubTypeOf, typeA, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, typeA);
+//}
+
 TEST(TypeUtils, IsSubTypeOfFunctionType) {
 
 	NodeManager manager;
@@ -732,6 +768,7 @@ TEST(TypeUtils, JoinMeetTypeComputation) {
 
 	EXPECT_PRED2(isSubTypeOf, meet, funA);
 	EXPECT_PRED2(isSubTypeOf, meet, funB);
+
 }
 
 
@@ -833,10 +870,14 @@ TEST(TypeUtils, VectorMatchingBug) {
 
 	// The Bug:
 	//		When matching vectors of different size to parameters ('a,'a), the matching is successful - which it should not.
-
+	//
 	// The reason:
-
+	//		The Vector type was not recognized as a generic type (which it will no longer be in the future) - and the integer
+	//		type parameters have been ignored.
+	//
 	// The fix:
+	//		The check for generic types is no longer conducted via the node type token. It is now using a dynamic cast.
+	//
 
 	ASTBuilder builder;
 	NodeManager& manager = builder.getNodeManager();

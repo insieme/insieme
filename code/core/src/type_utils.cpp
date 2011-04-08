@@ -537,6 +537,243 @@ namespace {
 		return boost::optional<Substitution>(res);
 	}
 
+//	/**
+//	 * This method implements the actual algorithm for computing a type variable substitution to match/unify a list of types.
+//	 *
+//	 * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
+//	 * @param list the list of pairs of types to be matched / unified. In case matching should be applied,
+//	 * 				the first component has to be the pattern. The list will be altered during the computation.
+//	 * @param unify a boolean flag to distinguish between matching and unifying the given types
+//	 * @param considerSubTypes allows to enable / disable the consideration of sub-type relations
+//	 * @return the resulting (most general) unifier or an uninitialized value if the types couldn't be matched / unified.
+//	 */
+//	boost::optional<Substitution> computeSubstitution(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool unify, bool considerSubtypes) {
+//		typedef std::pair<TypePtr, TypePtr> Pair;
+//		typedef std::list<Pair> List;
+//
+//		// check input parameter
+//		assert( !(unify && considerSubtypes) && "Cannot perform unification with subtypes!");
+//
+//		// create result
+//		Substitution res;
+//
+//		// the result to be returned if no feasible substitution could be computed
+//		boost::optional<Substitution> unmatchable;
+//
+//		while(!list.empty()) {
+//
+//			// get current element
+//			Pair cur = list.front();
+//			list.pop_front();
+//
+//			const TypePtr& a = cur.first;
+//			const TypePtr& b = cur.second;
+//
+//			const NodeType typeOfA = a->getNodeType();
+//			const NodeType typeOfB = b->getNodeType();
+//
+//			// 1) if (a == b) ignore pair ..
+//			if (*a==*b) {
+//				continue;
+//			}
+//
+//			// 2) test whether on the B side there is a variable
+//			if (typeOfA != NT_TypeVariable && typeOfB == NT_TypeVariable) {
+//				if (unify) {
+//					// unification: no problem => swap sides
+//					// add swapped pair to front of list
+//					list.push_front(std::make_pair(b, a));
+//					continue;
+//				} else {
+//					// matching => cannot be matched
+//					return unmatchable;
+//				}
+//			}
+//
+//			// 3) handle variables on left hand side ...
+//			if (typeOfA == NT_TypeVariable) {
+//				if (occurs(a, b)) {
+//					// not unifiable (e.g. X = type<X> cannot be unified)
+//					return unmatchable;
+//				}
+//
+//				TypeVariablePtr var = static_pointer_cast<const TypeVariable>(a);
+//
+//				// check whether variable has already been mapped
+//				TypePtr substitute;
+//				auto mapping = res.getMapping();
+//				auto pos = mapping.find(var);
+//				if (pos != mapping.end()) {
+//					// update substitution by considering new mapping
+//					substitute = getSmallestCommonSuperType(pos->second, b);
+//					if (!substitute) {
+//						return unmatchable;
+//					}
+//				} else {
+//					// no substitute so far - use b as a new substitute
+//					substitute = b;
+//				}
+//
+//				// add entry to mapping
+//				res.addMapping(var, substitute);
+//
+////				// convert current pair into substitution
+////				Substitution mapping(
+////						static_pointer_cast<const TypeVariable>(a),
+////						static_pointer_cast<const Type>(b)
+////				);
+////
+////				// apply substitution to remaining pairs
+////				for_each(list, [&mapping, &manager](Pair& cur) {
+////					cur.first = mapping.applyTo(manager, cur.first);
+////					cur.second = mapping.applyTo(manager, cur.second);
+////				});
+////
+////				// combine current mapping with overall result
+////				res = Substitution::compose(manager, res, mapping);
+//				continue;
+//			}
+//
+//			// 4) function types / generic types / tuples / structs / unions / recursive types
+//			if (typeOfA != typeOfB) {
+//				// => not unifiable
+//				return unmatchable;
+//			}
+//
+//			// handle recursive types (special treatment)
+//			if (typeOfA == NT_RecType) {
+//				// TODO: implement
+//				assert ("RECURSIVE TYPE SUPPORT NOT IMPLEMENTED!");
+//			}
+//
+//			// handle function types (special treatment)
+//			if (!unify && typeOfA == NT_FunctionType) {
+//				// TODO: this is kind of a hack - might work, might not ... if not => redo unification properly
+//				// matching functions is kind of difficult since variables are universal quantified
+//				// => use unification from here on ...
+//				std::list<std::pair<TypePtr, TypePtr>> tmpList;
+//				tmpList.push_front(std::make_pair(a, b));
+//				auto mapping = computeSubstitution(manager, tmpList, true, false);
+//				if (!mapping) {
+//					return unmatchable;
+//				}
+//
+//				// apply substitution to remaining pairs
+//				for_each(list, [&mapping, &manager](Pair& cur) {
+//					cur.first = mapping->applyTo(manager, cur.first);
+//					cur.second = mapping->applyTo(manager, cur.second);
+//				});
+//
+//				// combine current mapping with overall result
+//				res = Substitution::compose(manager, res, *mapping);
+//				continue;
+//			}
+//
+//			// => check family of generic type
+//			if (dynamic_pointer_cast<const GenericType>(a)) {
+//				GenericTypePtr genericTypeA = static_pointer_cast<const GenericType>(a);
+//				GenericTypePtr genericTypeB = static_pointer_cast<const GenericType>(b);
+//
+//				// handle sub-types
+//				if (considerSubtypes && isSubtypeOf(genericTypeB, genericTypeA)) {
+//					// "upgrade" B-side
+//					genericTypeB = genericTypeA;
+//				}
+//
+//				// check family names
+//				if (genericTypeA->getFamilyName() != genericTypeB->getFamilyName()) {
+//					return unmatchable;
+//				}
+//
+//				// check same number of type parameters
+//				if (genericTypeA->getTypeParameter().size() != genericTypeB->getTypeParameter().size()) {
+//					return unmatchable;
+//				}
+//
+//				// ---- unify int type parameter ---
+//
+//				// get lists
+//				auto paramsA = genericTypeA->getIntTypeParameter();
+//				auto paramsB = genericTypeB->getIntTypeParameter();
+//
+//				// check number of arguments ...
+//				if (paramsA.size() != paramsB.size()) {
+//					// => not unifyable
+//					return unmatchable;
+//				}
+//
+//				for(std::size_t i=0; i<paramsA.size(); i++) {
+//					IntTypeParamPtr paramA = paramsA[i];
+//					IntTypeParamPtr paramB = paramsB[i];
+//
+//					// equivalent pairs can be ignored ...
+//					if (paramA == paramB) {
+//						continue;
+//					}
+//
+//					// check for variables
+//					if (!isVariable(paramA) && !isVariable(paramB)) {
+//						// different constants => not matchable / unifyable!
+//						return unmatchable;
+//					}
+//
+//					// move variable to first place
+//					if (!isVariable(paramA) && isVariable(paramB)) {
+//						if (!unify) {
+//							// => only allowed for unification
+//							return unmatchable;
+//						}
+//
+//						// switch sides
+//						IntTypeParamPtr tmp = paramA;
+//						paramA = paramB;
+//						paramB = tmp;
+//					}
+//
+//					// add mapping
+//					Substitution mapping(static_pointer_cast<const VariableIntTypeParam>(paramA),paramB);
+//
+//					// apply substitution to remaining pairs
+//					for_each(list, [&mapping, &manager](Pair& cur) {
+//						cur.first = mapping.applyTo(manager, cur.first);
+//						cur.second = mapping.applyTo(manager, cur.second);
+//					});
+//
+//					// combine current mapping with overall result
+//					res = Substitution::compose(manager, res, mapping);
+//				}
+//			}
+//
+//			// => check all child nodes
+//			auto childrenA = a->getChildList();
+//			auto childrenB = b->getChildList();
+//			if (childrenA.size() != childrenB.size()) {
+//				// => not matchable / unifyable
+//				return unmatchable;
+//			}
+//
+//			// add pairs of children to list to be processed
+//			std::for_each(
+//					make_paired_iterator(childrenA.begin(), childrenB.begin()),
+//					make_paired_iterator(childrenA.end(), childrenB.end()),
+//
+//					[&list](const std::pair<NodePtr, NodePtr>& cur) {
+//						if (cur.first->getNodeCategory() == NC_Type) {
+//							list.push_back(std::make_pair(
+//									static_pointer_cast<const Type>(cur.first),
+//									static_pointer_cast<const Type>(cur.second)
+//							));
+//						} else {
+//							assert(cur.second->getNodeCategory() == cur.first->getNodeCategory()
+//									&& "Unexpected incompatible node pair!");
+//						}
+//			});
+//		}
+//
+//		// done
+//		return boost::optional<Substitution>(res);
+//	}
+
 }
 
 // -------------------------------------------------------------------------------------------------------------------------
@@ -563,6 +800,309 @@ bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB) {
 // -------------------------------------------------------------------------------------------------------------------------
 //                                                    Matching
 // -------------------------------------------------------------------------------------------------------------------------
+
+namespace {
+
+	struct VariableConstraint {
+		TypeSet superTypes;
+		TypeSet subTypes;
+		TypeSet equalTypes;
+	};
+
+	class TypeVariableConstraints {
+
+		/**
+		 * A flag marking this constraints as unsatisfiable. The internally stored constraints
+		 * may still be satisfiable. However, during their inference a unsatisfiable constrain
+		 * has been encountered => no valid substitution can be derived.
+		 */
+		bool unsatisfiable;
+
+		/**
+		 * The set of type variable constraints to be represented. For each variable a set of upper and
+		 * lower boundaries as well as equality constraints can be defined.
+		 */
+		utils::map::PointerMap<TypeVariablePtr, VariableConstraint> constraints;
+
+		/**
+		 * The mapping for int-type parameter variables resulting from the constraints.
+		 */
+		utils::map::PointerMap<VariableIntTypeParamPtr, IntTypeParamPtr> intTypeParameter;
+
+	public:
+
+		TypeVariableConstraints() : unsatisfiable(false) {};
+
+		void addSubtypeConstraint(const TypeVariablePtr& var, const TypePtr& type) {
+			getConstraintsFor(var).subTypes.insert(type);
+		}
+
+		void addSupertypeConstraint(const TypeVariablePtr& var, const TypePtr& type) {
+			getConstraintsFor(var).superTypes.insert(type);
+		}
+
+		void addEqualsConstraint(const TypeVariablePtr& var, const TypePtr& type) {
+			getConstraintsFor(var).equalTypes.insert(type);
+		}
+
+		IntTypeParamPtr getIntTypeParamValue(const VariableIntTypeParamPtr& var) const {
+			auto pos = intTypeParameter.find(var);
+			if (pos != intTypeParameter.end()) {
+				return pos->second;
+			}
+			return 0;
+		}
+
+		void fixIntTypeParameter(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value) {
+			intTypeParameter.insert(std::make_pair(var, value));
+		}
+
+		void makeUnsatisfiable() {
+			unsatisfiable = true;
+		}
+
+		bool areUnsatisfiable() const {
+			return unsatisfiable;
+		}
+
+	private:
+
+		VariableConstraint& getConstraintsFor(const TypeVariablePtr& var) {
+			auto pos = constraints.find(var);
+			if (pos == constraints.end()) {
+				auto res = constraints.insert(std::make_pair(var, VariableConstraint()));
+				assert(res.second);
+				pos = res.first;
+			}
+			return pos->second;
+		}
+
+	};
+
+	/**
+	 *  Adds the necessary constraints on the instantiation of the type variables used within the given type parameter.
+	 *
+	 *  @param constraints the set of constraints to be extendeded
+	 *  @param paramType the type on the parameter side (function side)
+	 *  @param argType the type on the argument side (argument passed by call expression)
+	 */
+	void addEqualityConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
+
+		// check constraint status
+		if (constraints.areUnsatisfiable()) {
+			return;
+		}
+
+		// quick check for equality
+		if (*paramType == *argType) {
+			// no constraints necessary
+			return;
+		}
+
+		// extract node types
+		NodeType nodeTypeA = paramType->getNodeType();
+		NodeType nodeTypeB = argType->getNodeType();
+
+		// handle variables
+		if(nodeTypeA == NT_TypeVariable) {
+			// the substitution for the variable has to be equivalent to the argument type
+			constraints.addEqualsConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+			return;
+		}
+
+		// for all other types => the node type has to be the same
+		if (nodeTypeA != nodeTypeB) {
+			// not satisfiable in any way
+			constraints.makeUnsatisfiable();
+			return;
+		}
+
+
+		// so, the type is the same => distinguish the node type
+
+		// check node types
+		switch(nodeTypeA) {
+
+			// first handle those types equipped with int type parameters
+			case NT_GenericType:
+			case NT_RefType:
+			case NT_ArrayType:
+			case NT_VectorType:
+			case NT_ChannelType:
+			{
+				// check the int-type parameter ...
+				auto param = static_pointer_cast<const GenericType>(paramType)->getIntTypeParameter();
+				auto args = static_pointer_cast<const GenericType>(argType)->getIntTypeParameter();
+
+				// quick-check on size
+				if (param.size() != args.size()) {
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
+				// match int-type parameters individually
+				for (auto it = make_paired_iterator(param.begin(), args.begin()); it != make_paired_iterator(param.end(), args.end()); ++it) {
+					// check constraints state
+					if (constraints.areUnsatisfiable()) {
+						return;
+					}
+					auto paramA = (*it).first;
+					auto paramB = (*it).second;
+					if (paramA->getNodeType() == NT_VariableIntTypeParam) {
+						// obtain variable
+						VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(paramA);
+
+						// check if the parameter has already been set
+						if (IntTypeParamPtr value = constraints.getIntTypeParamValue(var)) {
+							if (*value == *paramB) {
+								// everything is fine
+								continue;
+							} else {
+								// int type parameter needs to be instantiated twice, in different ways => unsatisfiable
+								constraints.makeUnsatisfiable();
+								return;
+							}
+						}
+
+						// fix a new value for the parameter
+						constraints.fixIntTypeParameter(var, paramB);
+					}
+				}
+
+				// ... and fall-through to check the child types
+			}
+
+			case NT_TupleType:
+			case NT_FunctionType:
+			{
+				// the number of sub-types must match
+				auto paramChildren = paramType->getChildList();
+				auto argChildren = argType->getChildList();
+
+				// check number of sub-types
+				if (paramChildren.size() != argChildren.size()) {
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
+				// check all child nodes
+				for (auto it = make_paired_iterator(paramChildren.begin(), argChildren.begin());
+						it != make_paired_iterator(paramChildren.end(), argChildren.end()); ++it) {
+
+					// add equality constraints recursively
+					addEqualityConstraints(constraints,
+							static_pointer_cast<const Type>((*it).first),
+							static_pointer_cast<const Type>((*it).second)
+					);
+				}
+
+				break;
+			}
+
+			case NT_StructType:
+			case NT_UnionType:
+			{
+				// names and sub-types have to be checked
+				auto entriesA = static_pointer_cast<const NamedCompositeType>(paramType)->getEntries();
+				auto entriesB = static_pointer_cast<const NamedCompositeType>(argType)->getEntries();
+
+				// check equality of names and types
+				// check number of entries
+				if (entriesA.size() != entriesB.size()) {
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
+				// check all child nodes
+				for (auto it = make_paired_iterator(entriesA.begin(), entriesB.begin());
+						it != make_paired_iterator(entriesA.end(), entriesB.end()); ++it) {
+
+					// ensure identifiers are identical (those cannot be variable)
+					auto entryA = (*it).first;
+					auto entryB = (*it).second;
+					if (*entryA.first != *entryB.first) {
+						// unsatisfiable
+						constraints.makeUnsatisfiable();
+						return;
+					}
+
+					// add equality constraints recursively
+					addEqualityConstraints(constraints, entryA.second, entryB.second);
+				}
+
+
+				break;
+			}
+
+			case NT_RecType:
+			{
+				// TODO: implement RecType pattern matching
+				assert(false && "Sorry - not implemented!");
+				break;
+			}
+			default:
+				assert(false && "Missed a kind of type!");
+		}
+	}
+
+	/**
+	 *  Adds additional constraints to the given constraints collection such that the type variables used within the
+	 *  parameter type are limited to values representing a super type of the given argument type.
+	 *
+	 *  @param constraints the set of constraints to be extendeded
+	 *  @param paramType the type on the parameter side (function side)
+	 *  @param argType the type on the argument side (argument passed by call expression)
+	 */
+	void addSupertypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
+
+		// check constraint status
+		if (constraints.areUnsatisfiable()) {
+			return;
+		}
+
+		// quick check for equality
+		if (*paramType == *argType) {
+			// no constraints necessary
+			return;
+		}
+
+		// extract node types
+		NodeType nodeTypeA = paramType->getNodeType();
+		NodeType nodeTypeB = argType->getNodeType();
+
+		// handle variables
+		if(nodeTypeA == NT_TypeVariable) {
+			// the substitution for the variable has to be a super-type of the argument type
+			constraints.addSupertypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+			return;
+		}
+
+		// check for vector/array conversion
+		if (nodeTypeA == NT_GenericType) {
+			// add super type constraint
+			// TODO continue here with the addition of super-type constraints
+//			constraints.addSupertypeConstraint()
+		}
+
+
+		// check for generic type relations
+
+		// check function type
+
+		// check rest => has to be equivalent
+		addEqualityConstraints(constraints, paramType, argType);
+	}
+
+	boost::optional<Substitution> match(NodeManager& manager, const std::list<std::pair<TypePtr, TypePtr>>& list) {
+
+		// derive variable constraints
+
+		// solve constraints
+
+		// return resulting substitution
+		return 0;
+	}
+}
 
 
 boost::optional<Substitution> match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes) {
@@ -837,6 +1377,11 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 	if (*subType == *superType) {
 		return true;
 	}
+
+//	// sub-type check regarding type variables (variables are super/sub type of all other types)
+//	if (subType->getNodeType() == NT_TypeVariable || superType->getNodeType() == NT_TypeVariable) {
+//		return true;
+//	}
 
 	// check whether the sub-type is generic
 	if (subType->getNodeType() == NT_GenericType) {
