@@ -174,7 +174,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 	// TO.Triple = llvm::sys::getHostTriple();
 	pimpl->clang.setTarget( TargetInfo::CreateTargetInfo (pimpl->clang.getDiagnostics(), TO) );
 
-	std::string extension(file_name.substr(file_name.rfind('.'), std::string::npos));
+	std::string extension(file_name.substr(file_name.rfind('.')+1, std::string::npos));
 	bool enableCpp = extension == "cpp" || extension == "cxx" || extension == "hpp" || extension == "hxx";
 
 	LangOptions& LO = pimpl->clang.getLangOpts();
