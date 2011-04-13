@@ -75,9 +75,11 @@ struct _irt_data_item {
 /* ------------------------------ operations ----- */
 
 irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges);
-irt_data_item* irt_di_create_sub(irt_data_item_id parent, irt_data_range range);
-void* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
+irt_data_item* irt_di_create_sub(irt_data_item_id parent, irt_data_range* ranges);
 void irt_di_destroy(irt_data_item* di);
+
+void* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
+void irt_di_free(void* p);
 
 
 /* ============================== light weight data item ===== */

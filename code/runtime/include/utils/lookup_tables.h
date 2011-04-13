@@ -36,32 +36,8 @@
 
 #pragma once
 
-#include "declarations.h"
+typedef struct _lt_entry {
+	void *current;
+	void* next;
+} lt_entry;
 
-#include <signal.h>
-#include <stdio.h>
-
-#define IRT_SIG_ERR SIGUSR1
-
-/* ------------------------------ data structures ----- */
-
-enum _irt_errcode {
-	IRT_ERR_NONE,			// no error
-	IRT_ERR_IO,				// I/O error
-	IRT_ERR_INIT,			// error related to initialization
-	IRT_ERR_APP				// error caused by the user application running on the IRT
-};
-
-struct _irt_error {
-	irt_errcode errcode;
-	uint32 additional_bytes;
-};
-
-
-/* ------------------------------ operations ----- */
-
-void irt_throw_string_error(irt_errcode code, const char* message, ...);
-void irt_throw_generic_error(irt_error* error);
-
-const char* irt_errcode_string(irt_errcode code);
-void irt_print_error_info(FILE* target, irt_error* error);

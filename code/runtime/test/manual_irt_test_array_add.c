@@ -34,11 +34,123 @@
  * regarding third party software licenses.
  */
 
+#include "irt_context.h"
+#include "irt_types.h"
+#include "wi_implementation.h"
+#include "data_item.h"
 #include "work_item.h"
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
 
-int main() {
+#define NUM_ELEMENTS 100000
 
-	return 0;
+#define INSIEME_BOOL_T_INDEX 0
+#define INSIEME_INT_T_INDEX 1
+#define INSIEME_STRUCT1_T_INDEX 2
+#define INSIEME_ADD_WI_PARAM_T_INDEX 2
+
+#define INSIEME_ADD_WI_INDEX 1
+
+typedef struct _insieme_wi_add_params {
+	irt_type_id type_id;
+	irt_data_item_id input;
+	irt_data_item_id output;
+} insieme_wi_add_params;
+
+typedef struct _insieme_struct1 {
+	bool do_add;
+	int v1;
+	int v2;
+} insieme_struct1;
+
+// type table
+
+irt_type_id g_insieme_struct1_subtypes[] = {
+	INSIEME_BOOL_T_INDEX, INSIEME_INT_T_INDEX, INSIEME_INT_T_INDEX // struct with a bool and 2 32 bit integers
+};
+
+irt_type g_insieme_type_table[] = {
+	{ IRT_T_BOOL, 1, 0, 0 },
+	{ IRT_T_INT32, 4, 0, 0 },
+	{ IRT_T_STRUCT, 9, 3, g_insieme_struct1_subtypes },
+	{ IRT_T_STRUCT, sizeof(insieme_wi_add_params), 0, 0 }
+};
+
+// work item table
+
+void insieme_wi_startup_implementation(irt_work_item* wi);
+
+void insieme_wi_add_implementation1(irt_work_item* wi);
+void insieme_wi_add_implementation2(irt_work_item* wi);
+void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements);
+
+irt_wi_implementation_variant g_insieme_wi_startup_variants[] = {
+	{ &insieme_wi_startup_implementation, 0, NULL, 0, NULL }
+};
+
+irt_wi_implementation_variant g_insieme_wi_add_variants[] = {
+	{ &insieme_wi_add_implementation1, 2, &insieme_wi_add_datareq, 0, NULL },
+	{ &insieme_wi_add_implementation2, 2, &insieme_wi_add_datareq, 0, NULL }
+};
+
+irt_wi_implementation g_insieme_impl_table[] = {
+	{ 1, g_insieme_wi_startup_variants },
+	{ 2, g_insieme_wi_add_variants }
+};
+
+// initialization
+
+void insieme_init_context(irt_context* context) {
+	context->type_table = g_insieme_type_table;
+	context->impl_table = g_insieme_impl_table;
 }
+
+void insieme_cleanup_context() {
+	// nothing
+}
+
+// work item function definitions
+
+void insieme_wi_startup_implementation(irt_work_item* wi) {
+	irt_data_range fullrange = {0, NUM_ELEMENTS, 1};
+	irt_data_item* inputdata = irt_di_create(INSIEME_STRUCT1_T_INDEX, 1, &fullrange);
+	irt_data_item* outputdata = irt_di_create(INSIEME_INT_T_INDEX, 1, &fullrange);
+
+	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
+	irt_work_item* addition_wi = irt_wi_create((irt_work_item_range*)&fullrange, INSIEME_ADD_WI_INDEX, (irt_lw_data_item*)&addition_params);
+	irt_wi_enqueue(addition_wi);
+
+	irt_di_destroy(inputdata);
+}
+
+void insieme_wi_add_implementation1(irt_work_item* wi) {
+	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
+	irt_data_item* inputdata = irt_di_create_sub(params->input, (irt_data_range*)(&wi->range));
+	irt_data_item* outputdata = irt_di_create_sub(params->output, (irt_data_range*)(&wi->range));
+	insieme_struct1* input = (insieme_struct1*)irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
+	int* output = (int*)irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
+
+	for(int i = wi->range.begin; i < wi->range.end; ++i) {
+		if(input[i].do_add) output[i] = input[i].v1 + input[i].v2;
+	}
+
+	irt_di_free(input);
+	irt_di_free(output);
+	irt_di_destroy(inputdata);
+	irt_di_destroy(outputdata);
+}
+
+void insieme_wi_add_implementation2(irt_work_item* wi) {
+
+}
+
+void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
+	insieme_wi_add_params* params = ((insieme_wi_add_params*)(wi->parameters));
+	requirements[0].di_id = params->input;
+	requirements[0].range.begin = wi->range.begin;
+	requirements[0].range.end = wi->range.end;
+	requirements[0].range.step = wi->range.step;
+	requirements[1].di_id = params->output;
+	requirements[1].range.begin = wi->range.begin;
+	requirements[1].range.end = wi->range.end;
+	requirements[1].range.step = wi->range.step;
+}
+

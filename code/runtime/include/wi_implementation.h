@@ -38,6 +38,8 @@
 
 #include "declarations.h"
 
+#include "data_item.h"
+
 /* ------------------------------ data structures ----- */
 
 struct _irt_wi_di_requirement {

@@ -36,32 +36,11 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "data_item.h"
 
-#include <signal.h>
-#include <stdio.h>
+irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges);
+irt_data_item* irt_di_create_sub(irt_data_item_id parent, irt_data_range* ranges);
+void irt_di_destroy(irt_data_item* di);
 
-#define IRT_SIG_ERR SIGUSR1
-
-/* ------------------------------ data structures ----- */
-
-enum _irt_errcode {
-	IRT_ERR_NONE,			// no error
-	IRT_ERR_IO,				// I/O error
-	IRT_ERR_INIT,			// error related to initialization
-	IRT_ERR_APP				// error caused by the user application running on the IRT
-};
-
-struct _irt_error {
-	irt_errcode errcode;
-	uint32 additional_bytes;
-};
-
-
-/* ------------------------------ operations ----- */
-
-void irt_throw_string_error(irt_errcode code, const char* message, ...);
-void irt_throw_generic_error(irt_error* error);
-
-const char* irt_errcode_string(irt_errcode code);
-void irt_print_error_info(FILE* target, irt_error* error);
+void* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
+void irt_di_free(void* p);
