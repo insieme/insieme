@@ -118,7 +118,7 @@ TEST(IRParser, ExpressionTests) {
 
 	// literal
     EXPECT_EQ(builder.literal("42.7", manager.basic.getDouble()), parser.parseExpression("42.7"));
-	EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
+    EXPECT_EQ(builder.intLit(455), parser.parseExpression("lit<int<4>, 455>"));
 	EXPECT_EQ(builder.uintLit(7), parser.parseExpression("lit<uint<4>, 7>"));
 
 	// variable
@@ -144,12 +144,7 @@ TEST(IRParser, ExpressionTests) {
             toVector(manager.basic.getDouble()), manager.basic.getInt4()) );
     EXPECT_EQ( builder.compoundStmt(builder.breakStmt()), lambda->getBody() );
 
-    // captureInitExpr
-/*    auto captureInit = dynamic_pointer_cast<const CaptureInitExpr>(parser.parseExpression("[ uint<2>:a, real<4>:b ] fun [uint<2>, real<4>]()->int<4>:\
-            lambda in { [uint<2>, real<4>]()->int<4>:lambda = [uint<2>:c1, real<4>:c2]()->int<4>{ continue } }"));
-    EXPECT_TRUE(captureInit != 0);
-*/
-	// jobExpr
+    // jobExpr
     vector<std::pair<ExpressionPtr, ExpressionPtr> > guardedStmts;
 /*
     auto parsedJob = dynamic_pointer_cast<const JobExpr>(parser.parseExpression("job< (op<MinRange>(lit<uint<4>, 2>)) >[decl int<4>:var = 42]{ \

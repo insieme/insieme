@@ -48,10 +48,12 @@
 
 #include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace core {
 
+using namespace utils::set;
 
 bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {
 	return isUnifyable(typeA, typeB);
@@ -479,6 +481,7 @@ TEST(TypeUtils, ArrayVectorRelation) {
 TEST(TypeUtils, ReturnTypeDeduction) {
 
 	NodeManager manager;
+	ASTBuilder builder(manager);
 
 	// some variables and types
 	TypePtr varA = TypeVariable::get(manager, "a");
@@ -514,7 +517,260 @@ TEST(TypeUtils, ReturnTypeDeduction) {
 	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecB, typeB))));
 	EXPECT_EQ("'a", toString(*deduceReturnType(funType, toVector<TypePtr>(genA, varA))));
 
+
+//	// make a call requiring sub-type deduction
+//	funType = FunctionType::get(manager, toVector<TypePtr>(varA, varA), varA);
+//	EXPECT_EQ("(('a,'a)->'a)", toString(*funType));
+//
+//	TypePtr vectorTypeA = VectorType::get(manager, typeA, builder.concreteIntTypeParam(12));
+//	TypePtr vectorTypeB = VectorType::get(manager, typeA, builder.concreteIntTypeParam(14));
+//	EXPECT_EQ("array<typeA,1>", toString(*deduceReturnType(funType, toVector(vectorTypeA, vectorTypeB))));
 }
+
+TypeSet getSuperTypes(const TypePtr& type) {
+	return type->getNodeManager().getBasicGenerator().getDirectSuperTypesOf(type);
+}
+
+TEST(TypeUtils, IntUintSuperTypes) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr int1 = basic.getInt1();
+	TypePtr int2 = basic.getInt2();
+	TypePtr int4 = basic.getInt4();
+	TypePtr int8 = basic.getInt8();
+	TypePtr intI = basic.getIntInf();
+	TypePtr intG = basic.getIntGen();
+
+	TypePtr uint1 = basic.getUInt1();
+	TypePtr uint2 = basic.getUInt2();
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr uint8 = basic.getUInt8();
+	TypePtr uintI = basic.getUIntInf();
+	TypePtr uintG = basic.getUIntGen();
+
+	// check each super-type relation
+	EXPECT_EQ(toSet<TypeSet>(int2), getSuperTypes(int1));
+	EXPECT_EQ(toSet<TypeSet>(int4), getSuperTypes(int2));
+	EXPECT_EQ(toSet<TypeSet>(int8), getSuperTypes(int4));
+	EXPECT_EQ(toSet<TypeSet>(intI), getSuperTypes(int8));
+	EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(intI));
+	EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(intG));
+
+	EXPECT_EQ(toSet<TypeSet>(int2, uint2), getSuperTypes(uint1));
+	EXPECT_EQ(toSet<TypeSet>(int4, uint4), getSuperTypes(uint2));
+	EXPECT_EQ(toSet<TypeSet>(int8, uint8), getSuperTypes(uint4));
+	EXPECT_EQ(toSet<TypeSet>(uintI), getSuperTypes(uint8));
+	EXPECT_EQ(toSet<TypeSet>(intI), getSuperTypes(uintI));
+	EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(intG));
+
+}
+
+TEST(TypeUtils, RealSuperTypes) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr real4 = basic.getFloat();
+	TypePtr real8 = basic.getDouble();
+	TypePtr realI = basic.getRealInf();
+	TypePtr realG = basic.getRealGen();
+
+	// check each super-type relation
+	EXPECT_EQ(toSet<TypeSet>(real8), getSuperTypes(real4));
+	EXPECT_EQ(toSet<TypeSet>(realI), getSuperTypes(real8));
+	EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(realI));
+	EXPECT_EQ(toSet<TypeSet>(), getSuperTypes(realG));
+
+}
+
+bool isNotSubTypeOf(const TypePtr& a, const TypePtr& b) {
+	return !isSubTypeOf(a,b);
+}
+
+TEST(TypeUtils, IsSubTypeOf) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr int2 = basic.getInt2();
+	TypePtr int8 = basic.getInt8();
+	TypePtr uint2 = basic.getUInt2();
+	TypePtr uint8 = basic.getUInt8();
+	TypePtr real8 = basic.getDouble();
+	TypePtr intI = basic.getIntInf();
+	TypePtr uintI = basic.getUIntInf();
+
+	EXPECT_PRED2(isSubTypeOf, int2, int2);
+	EXPECT_PRED2(isSubTypeOf, int8, int8);
+
+	EXPECT_PRED2(isSubTypeOf, int2, int8);
+	EXPECT_PRED2(isSubTypeOf, uint2, int8);
+	EXPECT_PRED2(isSubTypeOf, int2, intI);
+	EXPECT_PRED2(isSubTypeOf, uint2, intI);
+
+	EXPECT_PRED2(isNotSubTypeOf, int2, uint2);
+	EXPECT_PRED2(isNotSubTypeOf, uint2, int2);
+	EXPECT_PRED2(isNotSubTypeOf, real8, intI);
+	EXPECT_PRED2(isNotSubTypeOf, int2, uintI);
+
+	// check some vector types
+	TypePtr elemA = builder.genericType("A");
+	TypePtr elemB = builder.genericType("B");
+
+	TypePtr vecA2 = builder.vectorType(elemA, builder.concreteIntTypeParam(2));
+	TypePtr vecA4 = builder.vectorType(elemA, builder.concreteIntTypeParam(4));
+	TypePtr vecB2 = builder.vectorType(elemB, builder.concreteIntTypeParam(2));
+	TypePtr vecB4 = builder.vectorType(elemB, builder.concreteIntTypeParam(4));
+
+	TypePtr arrA1 = builder.arrayType(elemA);
+	TypePtr arrA2 = builder.arrayType(elemA, builder.concreteIntTypeParam(2));
+	TypePtr arrB1 = builder.arrayType(elemB);
+	TypePtr arrB2 = builder.arrayType(elemB, builder.concreteIntTypeParam(2));
+
+	EXPECT_PRED2(isSubTypeOf, vecA2, vecA2);
+	EXPECT_PRED2(isSubTypeOf, vecA4, vecA4);
+	EXPECT_PRED2(isSubTypeOf, arrA1, arrA1);
+	EXPECT_PRED2(isSubTypeOf, arrA2, arrA2);
+
+	EXPECT_PRED2(isSubTypeOf, vecA2, arrA1);
+	EXPECT_PRED2(isSubTypeOf, vecA4, arrA1);
+
+	EXPECT_PRED2(isNotSubTypeOf, vecA2, arrA2);
+	EXPECT_PRED2(isNotSubTypeOf, vecA2, arrB1);
+}
+
+//TEST(TypeUtils, IsSubTypeOfTypeVariable) {
+//
+//	NodeManager manager;
+//	ASTBuilder builder(manager);
+//	const lang::BasicGenerator& basic = manager.basic;
+//
+//	TypePtr typeA = builder.genericType("A");
+//	TypePtr int2 = basic.getInt2();
+//
+//	TypePtr varA = builder.typeVariable("a");
+//	TypePtr varB = builder.typeVariable("b");
+//
+//	EXPECT_PRED2(isSubTypeOf, varA, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, varB);
+//	EXPECT_PRED2(isSubTypeOf, varB, varA);
+//	EXPECT_PRED2(isSubTypeOf, varB, varB);
+//
+//	EXPECT_PRED2(isSubTypeOf, int2, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, int2);
+//
+//	EXPECT_PRED2(isSubTypeOf, int2, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, int2);
+//
+//	EXPECT_PRED2(isSubTypeOf, typeA, varA);
+//	EXPECT_PRED2(isSubTypeOf, varA, typeA);
+//}
+
+TEST(TypeUtils, IsSubTypeOfFunctionType) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr int1 = basic.getInt1();
+	TypePtr int2 = basic.getInt2();
+	TypePtr int4 = basic.getInt4();
+	TypePtr int8 = basic.getInt8();
+
+
+	TypePtr funA = builder.functionType(toVector<TypePtr>(), int2);
+	TypePtr funB = builder.functionType(toVector<TypePtr>(), int8);
+
+	EXPECT_EQ("(()->int<2>)", toString(*funA));
+	EXPECT_EQ("(()->int<8>)", toString(*funB));
+
+	EXPECT_PRED2(isSubTypeOf, funA, funB);
+	EXPECT_PRED2(isNotSubTypeOf, funB, funA);
+	EXPECT_PRED2(isSubTypeOf, funA, funA);
+	EXPECT_PRED2(isSubTypeOf, funB, funB);
+
+	funA = builder.functionType(toVector(int4), int2);
+	funB = builder.functionType(toVector(int2), int2);
+
+	EXPECT_EQ("((int<4>)->int<2>)", toString(*funA));
+	EXPECT_EQ("((int<2>)->int<2>)", toString(*funB));
+
+	EXPECT_PRED2(isSubTypeOf, funA, funB);
+	EXPECT_PRED2(isNotSubTypeOf, funB, funA);
+	EXPECT_PRED2(isSubTypeOf, funA, funA);
+	EXPECT_PRED2(isSubTypeOf, funB, funB);
+
+
+	funA = builder.functionType(toVector(int4,int2,int8), int4);
+	funB = builder.functionType(toVector(int4,int1,int4), int8);
+
+	EXPECT_EQ("((int<4>,int<2>,int<8>)->int<4>)", toString(*funA));
+	EXPECT_EQ("((int<4>,int<1>,int<4>)->int<8>)", toString(*funB));
+
+	EXPECT_PRED2(isSubTypeOf, funA, funB);
+	EXPECT_PRED2(isNotSubTypeOf, funB, funA);
+	EXPECT_PRED2(isSubTypeOf, funA, funA);
+	EXPECT_PRED2(isSubTypeOf, funB, funB);
+}
+
+TEST(TypeUtils, JoinMeetTypeComputation) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	// construct some types to test the mechanisms
+	TypePtr int4 = basic.getInt4();
+	TypePtr uint4 = basic.getUInt4();
+
+	EXPECT_EQ(int4, getSmallestCommonSuperType(int4, int4));
+	EXPECT_EQ(int4, getBiggestCommonSubType(int4, int4));
+
+	TypePtr join = getSmallestCommonSuperType(int4, uint4);
+	EXPECT_EQ("int<8>", toString(*join));
+	TypePtr meet = getBiggestCommonSubType(int4, uint4);
+	EXPECT_EQ("uint<2>", toString(*meet));
+
+	EXPECT_PRED2(isSubTypeOf, int4, join);
+	EXPECT_PRED2(isSubTypeOf, uint4, join);
+
+	EXPECT_PRED2(isSubTypeOf, meet, int4);
+	EXPECT_PRED2(isSubTypeOf, meet, uint4);
+
+	// test with vectors
+	TypePtr vectorA = builder.vectorType(int4, builder.concreteIntTypeParam(12));
+	TypePtr vectorB = builder.vectorType(int4, builder.concreteIntTypeParam(14));
+
+	join = getSmallestCommonSuperType(vectorA, vectorB);
+	EXPECT_TRUE(join);
+	EXPECT_EQ("AP(array<int<4>,1>)", toString(join));
+	EXPECT_FALSE(getBiggestCommonSubType(vectorA, vectorB));
+
+	EXPECT_EQ(vectorA, getSmallestCommonSuperType(vectorA, vectorA));
+	EXPECT_EQ(vectorA, getBiggestCommonSubType(vectorA, vectorA));
+
+	// test some functions
+	TypePtr funA = builder.functionType(toVector(int4), int4);
+	TypePtr funB = builder.functionType(toVector(uint4), uint4);
+
+	join = getSmallestCommonSuperType(funA, funB);
+	EXPECT_EQ("((uint<2>)->int<8>)", toString(*join));
+	meet = getBiggestCommonSubType(funA, funB);
+	EXPECT_EQ("((int<8>)->uint<2>)", toString(*meet));
+
+	EXPECT_PRED2(isSubTypeOf, funA, join);
+	EXPECT_PRED2(isSubTypeOf, funB, join);
+
+	EXPECT_PRED2(isSubTypeOf, meet, funA);
+	EXPECT_PRED2(isSubTypeOf, meet, funB);
+
+}
+
 
 TEST(TypeUtils, VariableSubstitutionBug) {
 
@@ -607,6 +863,49 @@ TEST(TypeUtils, AutoTypeInference_ArrayInitCall) {
 	// check infered type
 	TypePtr resType = builder.arrayType(elementType, builder.concreteIntTypeParam(1));
 	EXPECT_EQ(*resType, *res->getType());
+
+}
+
+TEST(TypeUtils, VectorMatchingBug) {
+
+	// The Bug:
+	//		When matching vectors of different size to parameters ('a,'a), the matching is successful - which it should not.
+	//
+	// The reason:
+	//		The Vector type was not recognized as a generic type (which it will no longer be in the future) - and the integer
+	//		type parameters have been ignored.
+	//
+	// The fix:
+	//		The check for generic types is no longer conducted via the node type token. It is now using a dynamic cast.
+	//
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	TypePtr alpha = builder.typeVariable("a");
+	FunctionTypePtr funType = builder.functionType(toVector(alpha, alpha), alpha);
+
+	EXPECT_EQ("(('a,'a)->'a)", toString(*funType));
+
+	TypePtr elem = builder.genericType("A");
+	TypePtr vectorA = builder.vectorType(elem, builder.concreteIntTypeParam(12));
+	TypePtr vectorB = builder.vectorType(elem, builder.concreteIntTypeParam(14));
+
+	auto match = matchAll(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
+	EXPECT_FALSE(match);
+	if (match) EXPECT_EQ("{}", toString(*match));
+
+	match = matchAll(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
+	EXPECT_FALSE(match);
+	if (match) EXPECT_EQ("{}", toString(*match));
+
+	match = matchAll(manager, toVector(alpha, alpha), toVector(vectorA, vectorA));
+	EXPECT_TRUE(match);
+	if (match) EXPECT_EQ("{'a->vector<A,12>}", toString(*match));
+
+	match = matchAll(manager, toVector(alpha, alpha), toVector(vectorB, vectorB));
+	EXPECT_TRUE(match);
+	if (match) EXPECT_EQ("{'a->vector<A,14>}", toString(*match));
 
 }
 

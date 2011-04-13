@@ -55,32 +55,50 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-ProgramPtr mainProgramHelp(NodeManager& nodeMan, const ExpressionPtr& mainProg) {
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+class LambdaDefinitionPtr>
+ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+mainProgramHelp(const ExpressionPtr& mainProg) {
     return Program::create(nodeMan, toVector(mainProg), true);
 }
 
-ProgramGrammar::ProgramGrammar(NodeManager& nodeMan) : ProgramGrammar::base_type(programRule),
-        exprG(new ExpressionGrammar(nodeMan)) {
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+class LambdaDefinitionPtr>
+ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+programHelp(const vector<ExpressionPtr>& progs) {
+    return Program::create(nodeMan, progs, false);
+}
 
-    auto nManRef = ph::ref(nodeMan);
-    auto basicRef = ph::ref(nodeMan.basic);
-
-
-    program =
-        ( qi::lit("main") >> ':' >> exprG->expressionRule )         [ qi::_val = ph::bind(&mainProgramHelp, nManRef, qi::_1) ]
+template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+qi::rule<ParseIt, P(), qi::locals<vector<T> >, qi::space_type> ProgramGrammar<P, T, U, V, W, X, Y, Z>::getProgram() {
+    return ( qi::lit("main") >> ':' >> exprG->expressionRule )      [ qi::_val = ph::bind(&ProgramGrammar<P, T, U, V, W, X, Y, Z>::mainProgramHelp, this, qi::_1) ]
         | ( *exprG->expressionRule                                  [ ph::push_back(qi::_a, qi::_1) ]
-          )                                                         [ qi::_val = ph::bind(&Program::create, nManRef, qi::_a, false) ];
+          )                                                         [ qi::_val = ph::bind(&ProgramGrammar<P, T, U, V, W, X, Y, Z>::programHelp, this, qi::_a) ];
+}
 
-    programRule =
-        program                                                     [ qi::_val = ph::construct<ProgramPtr>(qi::_1) ];
+template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+qi::rule<ParseIt, P(), qi::space_type> ProgramGrammar<P, T, U, V, W, X, Y, Z>::getProgramRule() {
+    return program                                                  [ qi::_val = ph::construct<ProgramPtr>(qi::_1) ];
+}
 
+template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+ProgramGrammar<P, T, U, V, W, X, Y, Z>::ProgramGrammar(NodeManager& nMan) : ProgramGrammar::base_type(programRule),
+        exprG(new ExpressionGrammar<T, U, V, W, X, Y, Z>(nMan)), nodeMan(nMan) {
+
+    program = getProgram();
+
+    programRule = getProgramRule();
 
 //    BOOST_SPIRIT_DEBUG_NODE(programRule);
 }
 
-ProgramGrammar::~ProgramGrammar() {
+template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+ProgramGrammar<P, T, U, V, W, X, Y, Z>::~ProgramGrammar() {
     delete exprG;
 }
+
+// explicit template instantiation
+template struct ProgramGrammar<ProgramPtr, ExpressionPtr>;
 
 }
 }

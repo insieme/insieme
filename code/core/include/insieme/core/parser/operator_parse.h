@@ -45,13 +45,14 @@ namespace core {
 namespace parse {
 
 // FW Declaration
-struct ExpressionGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammar;
 
-template <typename T>
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct OperatorGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
-    ExpressionGrammar* exprG;
+    ExpressionGrammar<T, U, V, W, X, Y, Z>* exprG;
     lang::BasicGenerator* generator;
-    OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar* exprGram);
+    OperatorGrammar(NodeManager& nodeMan, ExpressionGrammar<T, U, V, W, X, Y, Z>* exprGram);
     ~OperatorGrammar();
 
     const boost::phoenix::actor<boost::phoenix::reference<insieme::core::NodeManager> >&& nManRef;
@@ -99,7 +100,6 @@ struct OperatorGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     qi::rule<ParseIt, T(), qi::space_type> operatorRule;
 
     // member functions providing the rules
-    virtual qi::rule<ParseIt, T(), qi::space_type> getAssignment();
     #define get(op) virtual qi::rule<ParseIt, T(), qi::space_type> get##op ();
     get(Add)
     get(Sub)
@@ -127,18 +127,19 @@ struct OperatorGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
     get(Le)
     get(Gt)
     get(Ge)
+    get(Assignment)
+    get(Operator)
     #undef get
 
     // member functions creating the Objects
-    virtual T getAssignmentHelper(ExpressionPtr a, ExpressionPtr b);
-    virtual T getBinaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
-    virtual T getInt4OpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
-    virtual T getUnaryOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a);
-    virtual T getSignOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr b);
-    virtual T getInplaceOperation(const lang::BasicGenerator::Operator& op, ExpressionPtr a);
-    virtual T getLazyOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
-    virtual T getBoolOpHelper(const lang::BasicGenerator::Operator& op, ExpressionPtr a, ExpressionPtr b);
-
+    virtual T assignmentHelper(T& a, T& b);
+    virtual T binaryOpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
+    virtual T int4OpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
+    virtual T unaryOpHelper(const lang::BasicGenerator::Operator& op, T& a);
+    virtual T signOperation(const lang::BasicGenerator::Operator& op, T& b);
+    virtual T inplaceOperation(const lang::BasicGenerator::Operator& op, T& a);
+    virtual T lazyOpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
+    virtual T boolOpHelper(const lang::BasicGenerator::Operator& op, T& a, T& b);
 };
 
 }

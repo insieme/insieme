@@ -136,6 +136,8 @@ public:
 	const lang::BasicGenerator basic;
 
 	NodeManager() : basic(*this) { }
+
+	const lang::BasicGenerator& getBasicGenerator() const { return basic; }
 };
 
 
@@ -167,6 +169,14 @@ public:
 	 * A virtual destructor of the mapping for a proper cleanup.
 	 */
 	virtual ~NodeMapping() { };
+
+	/**
+	 * A generic version of the map operation to be applied on a root node.
+	 */
+	template<typename T>
+	inline Pointer<T> map(const Pointer<T>& ptr) {
+		return map<T>(0, ptr);
+	}
 
 	/**
 	 * A generic version of the map operation handling pointer types properly.

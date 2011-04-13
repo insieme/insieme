@@ -69,13 +69,9 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-// workaround for bug: if ExpressionPtr is used as fixed template class, the compiler assumes all ExpressionPtr in the arguments should be of type template T
-// in their definition
-typedef ExpressionPtr ExprTmplt;
-
-
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::charLiteralHelp(char val) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        charLiteralHelp(char val) {
     ASTBuilder build(nodeMan);
     return build.literal(nodeMan.basic.getChar(), toString(val));
 }
@@ -86,38 +82,44 @@ LiteralPtr buildNat(NodeManager& nodeMan, uint64_t val) {
     return build.literal(nodeMan.basic.getUInt8(), toString(val));
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::literalHelp(const TypePtr& typeExpr, const string& name) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        literalHelp(const TypePtr& typeExpr, const string& name) {
     if(TypePtr type = dynamic_pointer_cast<const Type>(typeExpr))
         return Literal::get(nodeMan, type, name);
 
     throw ParseException("LiteralPtr must be of form 'lit<' TypePtr ',' string '>'");
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::opHelp(const string& name) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        opHelp(const string& name) {
 
     return nodeMan.basic.getLiteral(name);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::variableHelp(const TypePtr& type, const IdentifierPtr& id) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        variableHelp(const TypePtr& type, const IdentifierPtr& id) {
     return exprG->varTab.get(type, id);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::variableHelp(const IdentifierPtr& id) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        variableHelp(const IdentifierPtr& id) {
     return exprG->varTab.lookup(id);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::castHelp(const TypePtr& type, const ExpressionPtr& subExpr) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        castHelp(const TypePtr& type, const ExpressionPtr& subExpr) {
     return CastExpr::get(nodeMan, type, subExpr);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::bindExprHelp(const ExpressionList& paramsExpr, ExpressionPtr& callExpr) {
-    VariableList params;
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        bindExprHelp(const vector<ExpressionPtr>& paramsExpr, ExpressionPtr& callExpr) {
+    vector<VariablePtr> params;
 
     //TODO make cast more efficient
     for_each(paramsExpr, [&](ExpressionPtr paramExpr) {
@@ -134,78 +136,150 @@ ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::bindExprHelp(const Expressio
         throw ParseException("body of BindExpr must ba a CallExpr");
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::tupleHelp(const ExpressionList& elements) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        tupleHelp(const vector<ExpressionPtr>& elements) {
     return TupleExpr::get(nodeMan, elements);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::vectorHelp(const TypePtr& generalType, const ExpressionList& elements) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        vectorHelp(const TypePtr& generalType, const vector<ExpressionPtr > & elements) {
     if(VectorTypePtr vecType = dynamic_pointer_cast<const VectorType>(generalType))
         return VectorExpr::get(nodeMan, vecType, elements);
     else
         throw ParseException("Type of a vector must be a VectorType");
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::structHelp(const Members& elements) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        structHelp(const vector<std::pair<IdentifierPtr, ExpressionPtr> >& elements) {
     return StructExpr::get(nodeMan, elements);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::unionHelp(const TypePtr& type, const IdentifierPtr& memberName, const ExpressionPtr& member) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        unionHelp(const TypePtr& type, const IdentifierPtr& memberName, const ExpressionPtr& member) {
     return UnionExpr::get(nodeMan, type, memberName, member);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::memberAccessHelp(const ExpressionPtr& subExpr, const IdentifierPtr& member) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        memberAccessHelp(const ExpressionPtr& subExpr, const IdentifierPtr& member) {
     return MemberAccessExpr::get(nodeMan, subExpr, member);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::tupleProjectionHelp(const ExpressionPtr& subExpr, const unsigned idx) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        tupleProjectionHelp(const ExpressionPtr& subExpr, const unsigned idx) {
     return TupleProjectionExpr::get(nodeMan, subExpr, idx);
 }
 
-template<class ExpressionPtr>
-ExpressionPtr ExpressionGrammarPart<ExpressionPtr>::markerExprHelp(const ExpressionPtr& subExpr, const unsigned id) {
+template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
+ExpressionPtr ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+        markerExprHelp(const ExpressionPtr& subExpr, const unsigned id) {
     return MarkerExpr::get(nodeMan, subExpr, id);
 }
 
 //--------------------------------------------------------------------------------------------------------------------------------------------
 
-template<typename T>
-qi::rule<ParseIt, string()> ExpressionGrammarPart<T>::getLiteralString() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getCharLiteral() {
+    return ( qi::lit("'") >> qi::char_ >> "'")                      [ qi::_val = ph::bind(&ExpressionGrammarPart::charLiteralHelp, this, qi::_1) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+qi::rule<ParseIt, string()> ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getLiteralString() {
     return *(qi::char_ - ">");
 }
 
-template<typename T>
-Rule ExpressionGrammarPart<T>::getLiteralExpr() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getLiteralExpr() {
     return ( qi::lit("op<") >> literalString >> '>' )               [ qi::_val = ph::bind(&ExpressionGrammarPart::opHelp, this, qi::_1) ];
 }
 
-template<typename T>
-Rule ExpressionGrammarPart<T>::getOpExpr() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getOpExpr() {
     return  ( qi::lit("lit<") >> typeG->typeRule >> ','
         >> literalString >> '>' )                                   [ qi::_val = ph::bind(&ExpressionGrammarPart::literalHelp, this, qi::_1, qi::_2) ];
 }
 
-template<typename T>
-qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> ExpressionGrammarPart<T>::getBindExpr() {
-    return ( qi::lit("bind") >> '(' >> -( variableExpr              [ ph::push_back(qi::_a, qi::_1) ]
-        % ',') >> ')' >> '{' >> exprG->callExpr >> '}' )            [ qi::_val = ph::bind(&ExpressionGrammarPart::bindExprHelp, this, qi::_a, qi::_2) ];
-
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getVariableExpr() {
+    return ( typeG->typeRule >> ':' >> typeG->identifier )          [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ]
+        | typeG->identifier                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1) ];
 }
 
-template<typename T>
-ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar* exprGram, TypeGrammar* typeGram)
-    : ExpressionGrammarPart::base_type(expressionPart), exprG(exprGram), typeG(typeGram), nodeMan(nMan) {
-//    typeG = new TypeGrammar(nodeMan);
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getFunVarExpr() {
+    return ( typeG->functionType >> ':' >> typeG->identifier )      [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ];
+}
 
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getCastExpr() {
+    return ( qi::lit("CAST<") >> typeG->typeRule
+        >> '>' >> '(' >> exprG->expressionRule >> ')' )             [ qi::_val = ph::bind(&ExpressionGrammarPart::castHelp, this, qi::_1, qi::_2) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getBindExpr() {
+    return ( qi::lit("bind") >> '(' >> -( variableExpr              [ ph::push_back(qi::_a, qi::_1) ]
+        % ',') >> ')' >> '{' >> exprG->callExpr >> '}' )            [ qi::_val = ph::bind(&ExpressionGrammarPart::bindExprHelp, this, qi::_a, qi::_2) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getTupleExpr() {
+    return ( qi::lit("tuple") >> '[' >> -(exprG->expressionRule     [ ph::push_back(qi::_a, qi::_1) ]
+        % ',') >> ']' )                                             [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleHelp, this, qi::_a) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+qi::rule<ParseIt, T(), qi::locals<V, vector<T> >, qi::space_type> ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getVectorExpr() {
     auto nManRef = ph::ref(nodeMan);
-    auto basicRef = ph::ref(nodeMan.basic);
+    return ( qi::lit("vector") >> '<' >>
+        (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2 ) ]
+        >> '>' >> '(' >> -(exprG->expressionRule                    [ ph::push_back(qi::_b, qi::_1) ]
+          % ',') >> ')' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::vectorHelp, this, qi::_a, qi::_b ) ];
+}
 
-    auto intTypeRef = ph::cref(nodeMan.basic.getInt4());
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+qi::rule<ParseIt, T(), qi::locals<vector<std::pair<X, T> > >, qi::space_type> ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getStructExpr() {
+    return ( qi::lit("struct") >> '{' >> -(
+        (typeG->identifier >> ':' >> exprG->expressionRule )        [ ph::push_back(qi::_a, ph::bind(&makePair<IdentifierPtr, ExpressionPtr>, qi::_1, qi::_2)) ]
+          % ',') >> '}' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::structHelp, this, qi::_a ) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getUnionExpr() {
+    return ( qi::lit("union") >> '<' >> typeG->typeRule >> '>'
+        >> '{' >> typeG->identifier >> ':'
+        >> exprG->expressionRule >> '}' )                           [ qi::_val = ph::bind(&ExpressionGrammarPart::unionHelp, this, qi::_1, qi::_2, qi::_3) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getMemberAccessExpr() {
+    return ( '(' >> exprG->expressionRule >> qi::lit(").")
+        >> typeG->identifier )                                      [ qi::_val = ph::bind(&ExpressionGrammarPart::memberAccessHelp, this, qi::_1, qi::_2) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getTupleProjectionExpr() {
+    return ( '(' >> exprG->expressionRule >> qi::lit(").")
+        >> qi::ulong_long )                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleProjectionHelp, this, qi::_1, qi::_2) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+Rule ExpressionGrammarPart<T, U, V, W, X, Y, Z>::getMarkerExpr() {
+    return ( '<' >> qi::lit("me") >> qi::lit("id") >> '='
+        >> qi::ulong_long >> '>' >> exprG->expressionRule >> '<'
+        >> '/' >> qi::lit("me") >> '>')                             [ qi::_val = ph::bind(&ExpressionGrammarPart::markerExprHelp, this, qi::_2, qi::_1) ];
+}
+
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+ExpressionGrammarPart<T, U, V, W, X, Y, Z>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, U, V, W, X, Y, Z>* exprGram,
+        TypeGrammar<V, W, X>* typeGram)
+    : ExpressionGrammarPart::base_type(expressionPart), exprG(exprGram), typeG(typeGram), nodeMan(nMan) {
+
     // RULES ---------------------------------------------------- | ACTIONS ----------------------------------------------------------------------------------
 
     // terminals, no skip parser
@@ -222,8 +296,7 @@ ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGra
     // Fixed by adding parserGet to Literal, TODO should probably just remove one of the gets in Literal
 
     // literals --------------------------------------------------------------------------------------------------------------------------
-    charLiteral =
-            ( qi::lit("'") >> qi::char_ >> "'")                      [ qi::_val = ph::bind(&ExpressionGrammarPart::charLiteralHelp, this, qi::_1) ];
+    charLiteral = getCharLiteral();
 
     // -----------------------------------------------------------------------------------------------------------------------------------
 
@@ -231,56 +304,30 @@ ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGra
 
     opExpr = getOpExpr();
 
-    variableExpr =
-        ( typeG->typeRule >> ':' >> typeG->identifier )             [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ]
-        | typeG->identifier                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1) ];
+    variableExpr = getVariableExpr();
 
     // specialized type to ensure type safety
-    funVarExpr =
-        ( typeG->functionType >> ':' >> typeG->identifier )         [ qi::_val = ph::bind(&ExpressionGrammarPart::variableHelp, this, qi::_1, qi::_2) ];
+    funVarExpr = getFunVarExpr();
 
-    castExpr = //exprGpart->castExpr;
-        ( qi::lit("CAST<") >> typeG->typeRule
-        >> '>' >> '(' >> exprG->expressionRule >> ')' )             [ qi::_val = ph::bind(&ExpressionGrammarPart::castHelp, this, qi::_1, qi::_2) ];
+    castExpr = getCastExpr();
 
     // --------------------------------------------------------------------------------------
 
-    bindExpr = getBindExpr();/*
-        ( qi::lit("bind") >> '(' >> -( variableExpr                 [ ph::push_back(qi::_a, qi::_1) ]
-          % ',') >> ')' >> '{' >> exprG->callExpr >> '}' )          [ qi::_val = ph::bind(&ExpressionGrammarPart::bindExprHelp, this, qi::_a, qi::_2) ];
-*/
-    tupleExpr =
-        ( qi::lit("tuple") >> '[' >> -(exprG->expressionRule        [ ph::push_back(qi::_a, qi::_1) ]
-          % ',') >> ']' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleHelp, this, qi::_a) ];
+    bindExpr = getBindExpr();
 
-    vectorExpr =
-        ( qi::lit("vector") >> '<' >>
-        (typeG->typeRule >> ',' >> typeG->intTypeParam)             [ qi::_a = ph::bind(&VectorType::get, nManRef, qi::_1, qi::_2 ) ]
-        >> '>' >> '(' >> -(exprG->expressionRule                    [ ph::push_back(qi::_b, qi::_1) ]
-          % ',') >> ')' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::vectorHelp, this, qi::_a, qi::_b ) ];
+    tupleExpr = getTupleExpr();
 
-    structExpr =
-        ( qi::lit("struct") >> '{' >> -(
-          (typeG->identifier >> ':' >> exprG->expressionRule )      [ ph::push_back(qi::_a, ph::bind(&makePair<IdentifierPtr, ExpressionPtr>, qi::_1, qi::_2 )) ]
-          % ',') >> '}' )                                           [ qi::_val = ph::bind(&ExpressionGrammarPart::structHelp, this, qi::_a ) ];
+    vectorExpr = getVectorExpr();
 
-    unionExpr =
-        ( qi::lit("union") >> '<' >> typeG->typeRule >> '>'
-        >> '{' >> typeG->identifier >> ':'
-        >> exprG->expressionRule >> '}' )                           [ qi::_val = ph::bind(&ExpressionGrammarPart::unionHelp, this, qi::_1, qi::_2, qi::_3) ];
+    structExpr = getStructExpr();
 
-    memberAccessExpr = //exprGpart->memberAccessExpr;
-        ( '(' >> exprG->expressionRule >> qi::lit(").")
-        >> typeG->identifier )                                      [ qi::_val = ph::bind(&ExpressionGrammarPart::memberAccessHelp, this, qi::_1, qi::_2) ];
+    unionExpr = getUnionExpr();
 
-    tupleProjectionExpr = //exprGpart->tupleProjectionExpr;
-        ( '(' >> exprG->expressionRule >> qi::lit(").")
-        >> qi::ulong_long )                                         [ qi::_val = ph::bind(&ExpressionGrammarPart::tupleProjectionHelp, this, qi::_1, qi::_2) ];
+    memberAccessExpr = getMemberAccessExpr();
 
-    markerExpr =
-        ( '<' >> qi::lit("me") >> qi::lit("id") >> '='
-        >> qi::ulong_long >> '>' >> exprG->expressionRule >> '<'
-        >> '/' >> qi::lit("me") >> '>')                             [ qi::_val = ph::bind(&ExpressionGrammarPart::markerExprHelp, this, qi::_2, qi::_1) ];
+    tupleProjectionExpr = getTupleProjectionExpr();
+
+    markerExpr = getMarkerExpr();
 
     // --------------------------------------------------------------------------------------
 //    BOOST_SPIRIT_DEBUG_NODE(literalString);
@@ -303,12 +350,12 @@ ExpressionGrammarPart<T>::ExpressionGrammarPart(NodeManager& nMan, ExpressionGra
 //    BOOST_SPIRIT_DEBUG_NODE(expressionRule);
 }
 
-template<typename T>
-ExpressionGrammarPart<T>::~ExpressionGrammarPart() {
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z>
+ExpressionGrammarPart<T, U, V, W, X, Y, Z>::~ExpressionGrammarPart() {
 }
 
 // Explicit Template Instantiation
-template struct ExpressionGrammarPart<ExpressionPtr>;
+template struct ExpressionGrammarPart<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
 
 } // namespace parse
 } // namespace core

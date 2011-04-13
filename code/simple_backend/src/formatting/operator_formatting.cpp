@@ -48,7 +48,7 @@
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/type_manager.h"
 #include "insieme/simple_backend/job_manager.h"
-
+#include "insieme/simple_backend/ir_extensions.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -72,6 +72,7 @@ namespace formatting {
 	FormatTable getBasicFormatTable(const core::lang::BasicGenerator& basic) {
 
 		FormatTable res;
+		IRExtensions extended(basic.getNodeManager());
 
 		// use macros for specifying formats
 		#include "insieme/simple_backend/formatting/formats_begin.inc"
@@ -125,6 +126,41 @@ namespace formatting {
 				OUT("){");
 				VISIT_ARG(0);
 				OUT(",{1}})");
+		});
+
+		ADD_FORMATTER(res, basic.getVector2Array(), {
+				// get name of resulting type
+				TypeManager& typeManager = CONTEXT.getTypeManager();
+
+				core::NodeManager& manager = CALL->getNodeManager();
+				core::ASTBuilder builder(manager);
+
+				const TypePtr& element = static_pointer_cast<const core::VectorType>(call->getType())->getElementType();
+				const TypePtr array = builder.arrayType(element);
+				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
+				OUT("((");
+				OUT(name);
+				OUT("){&(");
+				VISIT_ARG(0);
+				OUT(").data,{1}})");
+		});
+
+		ADD_FORMATTER(res, basic.getRefVector2RefArray(), {
+				// get name of resulting type
+				TypeManager& typeManager = CONTEXT.getTypeManager();
+
+				core::NodeManager& manager = CALL->getNodeManager();
+				core::ASTBuilder builder(manager);
+
+				const TypePtr& vector = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
+				const TypePtr& element = static_pointer_cast<const core::VectorType>(vector)->getElementType();
+				const TypePtr array = builder.arrayType(element);
+				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
+				OUT("&((");
+				OUT(name);
+				OUT("){&(*");
+				VISIT_ARG(0);
+				OUT(").data,{1}})");
 		});
 
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
@@ -308,58 +344,16 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { OUT("&("); VISIT_ARG(0); OUT(")"); });
 
 
-		ADD_FORMATTER(res, basic.getIfThenElse(), {
+//		ADD_FORMATTER(res, basic.getIfThenElse(), {
+//					OUT("("); VISIT_ARG(0); OUT(")?(");
+//					STMT_CONVERTER.convert(evalLazy(ARG(1)));
+//					OUT("):(");
+//					STMT_CONVERTER.convert(evalLazy(ARG(2)));
+//					OUT(")");
+//		});
 
-				// TODO: remove this and handle it in a common place for all calls
-				ExpressionPtr ifValue = evalLazy(ARG(1));
-				ExpressionPtr elseValue = evalLazy(ARG(2));
-
-				TypePtr typeA = ifValue->getType();
-				TypePtr typeB = elseValue->getType();
-
-				ASTBuilder builder(typeA->getNodeManager());
-				const lang::BasicGenerator& basic = builder.getBasicGenerator();
-				const TypePtr& stringType = basic.getString();
-				if (typeA == stringType) {
-					typeA = builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(12346));
-				}
-				if (typeB == stringType) {
-					typeB = builder.vectorType(basic.getChar(), builder.concreteIntTypeParam(123467));
-				}
-
-				std::cout << toString(ifValue->getType()) << "=>" << toString(typeA) << std::endl;
-				std::cout << toString(elseValue->getType()) << "=>" << toString(typeB) << std::endl;
-				std::cout << std::endl;
-
-				bool done = false;
-				if (typeA != typeB && typeA->getNodeType() == NT_VectorType && typeB->getNodeType() == NT_VectorType) {
-					const VectorTypePtr& vectorA = static_pointer_cast<const VectorType>(typeA);
-					const VectorTypePtr& vectorB = static_pointer_cast<const VectorType>(typeB);
-
-					if (vectorA->getElementType() == vectorB->getElementType() &&
-						vectorA->getSize() != vectorB->getSize()) {
-
-						ArrayTypePtr arrayType = builder.arrayType(vectorA->getElementType());
-
-						string arrayTypeName = CONTEXT.getTypeManager().getTypeName(CODE, arrayType);
-
-						// implicite conversion from vector to string
-						OUT("("); VISIT_ARG(0); OUT(")?(");
-						OUT("(("); OUT(arrayTypeName); OUT("){"); STMT_CONVERTER.convert(ifValue); OUT(".data, {1}})");
-						OUT("):(");
-						OUT("(("); OUT(arrayTypeName); OUT("){"); STMT_CONVERTER.convert(elseValue); OUT(".data, {1}})");
-						OUT(")");
-						done = true;
-					}
-				}
-
-				if (!done) {
-					OUT("("); VISIT_ARG(0); OUT(")?(");
-					STMT_CONVERTER.convert(ifValue);
-					OUT("):(");
-					STMT_CONVERTER.convert(elseValue);
-					OUT(")");
-				}
+		ADD_FORMATTER(res, extended.lazyITE, {
+					OUT("("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getSizeof(), false, {

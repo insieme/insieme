@@ -384,6 +384,8 @@ public:
 		return captureTypes;
 	}
 
+	// TODO: rename to parameter types!
+
 	/**
 	 * Obtains a reference to the internally maintained list of argument types.
 	 *

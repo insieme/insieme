@@ -44,24 +44,21 @@ namespace insieme {
 namespace core {
 namespace parse {
 
-typedef std::vector<std::pair<ExpressionPtr, ExpressionPtr> > GuardedStmts;
-typedef vector<VariablePtr> VariableList;
-typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > Definitions;
-typedef std::vector<std::pair<IdentifierPtr, ExpressionPtr> > Members;
 #define Rule qi::rule<ParseIt, T(), qi::space_type>
 
 // FW Declaration
-struct TypeGrammar;
-struct ExpressionGrammar;
+template<typename V, typename W, typename X> struct TypeGrammar;
+template<typename T, typename U, typename V, typename W, typename X, typename Y, typename Z> struct ExpressionGrammar;
 
-template<typename T>
+template<typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr, typename X = IdentifierPtr,
+        typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
 struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> {
-    ExpressionGrammar* exprG;
-    TypeGrammar *typeG; // pointer for weak coupling
+    ExpressionGrammar<T, U, V, W, X, Y, Z>* exprG;
+    TypeGrammar<V, W, X> *typeG; // pointer for weak coupling
 
     NodeManager& nodeMan;
 
-    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar* exprGram, TypeGrammar* typeGram);
+    ExpressionGrammarPart(NodeManager& nMan, ExpressionGrammar<T, U, V, W, X, Y, Z>* exprGram, TypeGrammar<V, W, X>* typeGram);
     ~ExpressionGrammarPart();
 
     // terminal rules, no skip parsing
@@ -80,11 +77,11 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> 
 
     // --------------------------------------------------------------------------------------
 
-    qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> bindExpr;
+    qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> bindExpr;
 
-    qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> tupleExpr;
-    qi::rule<ParseIt, T(), qi::locals<TypePtr, ExpressionList>, qi::space_type> vectorExpr;
-    qi::rule<ParseIt, T(), qi::locals<Members>, qi::space_type> structExpr;
+    qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> tupleExpr;
+    qi::rule<ParseIt, T(), qi::locals<V, vector<T> >, qi::space_type> vectorExpr;
+    qi::rule<ParseIt, T(), qi::locals<vector<std::pair<X, T> >>, qi::space_type> structExpr;
     qi::rule<ParseIt, T(), qi::space_type> unionExpr;
 
     qi::rule<ParseIt, T(), qi::space_type> memberAccessExpr;
@@ -97,29 +94,37 @@ struct ExpressionGrammarPart : public qi::grammar<ParseIt, T(), qi::space_type> 
 
     // member functions applying the rules
     virtual qi::rule<ParseIt, string()> getLiteralString();
-    virtual qi::rule<ParseIt, T(), qi::locals<ExpressionList>, qi::space_type> getBindExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> getBindExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<vector<T> >, qi::space_type> getTupleExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<V, vector<T> >, qi::space_type> getVectorExpr();
+    virtual qi::rule<ParseIt, T(), qi::locals<vector<std::pair<X, T> > >, qi::space_type> getStructExpr();
     #define get(op) virtual Rule get##op ();
-    get(LiteralExpr);
-    get(OpExpr);
-/*    get(VariableExpr);
-    get(FunVarExpr);
-    get(CastExpr);
-    get(CharLiteral);*/
+    get(LiteralExpr)
+    get(OpExpr)
+    get(VariableExpr)
+    get(FunVarExpr)
+    get(CastExpr)
+    get(CharLiteral)
+    get(UnionExpr)
+    get(MemberAccessExpr)
+    get(TupleProjectionExpr)
+    get(MarkerExpr)
     #undef get
 
+private:
     // member functions providing the rules
     virtual T charLiteralHelp(char val);
-    virtual T literalHelp(const TypePtr& typeExpr, const string& name);
+    virtual T literalHelp(const V& typeExpr, const string& name);
     virtual T opHelp(const string& name);
-    virtual T variableHelp(const TypePtr& type, const IdentifierPtr& id);
-    virtual T variableHelp(const IdentifierPtr& id);
-    virtual T castHelp(const TypePtr& type, const T& subExpr);
-    virtual T bindExprHelp(const ExpressionList& paramsExpr, T& callExpr);
-    virtual T tupleHelp(const ExpressionList& elements);
-    virtual T vectorHelp(const TypePtr& type, const ExpressionList& elements);
-    virtual T structHelp(const Members& elements);
-    virtual T unionHelp(const TypePtr& type, const IdentifierPtr& memberName, const T& member);
-    virtual T memberAccessHelp(const T& subExpr, const IdentifierPtr& member);
+    virtual T variableHelp(const V& type, const X& id);
+    virtual T variableHelp(const X& id);
+    virtual T castHelp(const V& type, const T& subExpr);
+    virtual T bindExprHelp(const vector<T>& paramsExpr, T& callExpr);
+    virtual T tupleHelp(const vector<T>& elements);
+    virtual T vectorHelp(const V& type, const vector<T>& elements);
+    virtual T structHelp(const vector<std::pair<X, T> >& elements);
+    virtual T unionHelp(const V& type, const X& memberName, const T& member);
+    virtual T memberAccessHelp(const T& subExpr, const X& member);
     virtual T tupleProjectionHelp(const T& subExpr, const unsigned idx);
     virtual T markerExprHelp(const T& subExpr, const unsigned id);
 };

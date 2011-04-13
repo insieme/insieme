@@ -49,6 +49,10 @@
 #ifndef OPERATION
 #define OPERATION(_type, _op, _name, _spec)
 #endif
+#ifndef SUB_TYPE
+#define SUB_TYPE(_subtype, _supertype)
+#endif
+
 
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
@@ -78,12 +82,31 @@ TYPE(UInt16,  "uint<16>")
 TYPE(IntInf,  "int<#inf>")
 TYPE(UIntInf, "uint<#inf>")
 
+SUB_TYPE(Int1, Int2)
+SUB_TYPE(Int2, Int4)
+SUB_TYPE(Int4, Int8)
+SUB_TYPE(Int8, IntInf)
+
+SUB_TYPE(UInt1, UInt2)
+SUB_TYPE(UInt2, UInt4)
+SUB_TYPE(UInt4, UInt8)
+SUB_TYPE(UInt8, UIntInf)
+
+SUB_TYPE(UInt1, Int2)
+SUB_TYPE(UInt2, Int4)
+SUB_TYPE(UInt4, Int8)
+
+SUB_TYPE(UIntInf, IntInf)
+
 GROUP(Real, RealGen, RealInf, Float, Double)
 
 TYPE(RealGen, "real<#a>")
 TYPE(RealInf, "real<#inf>")
 TYPE(Float,   "real<4>")
 TYPE(Double,  "real<8>")
+
+SUB_TYPE(Float, Double)
+SUB_TYPE(Double, RealInf)
 
 GROUP(ScalarType, Int, Real)
 
@@ -327,6 +350,10 @@ LITERAL(VectorProjection, "vector.projection",
 LITERAL(VectorRefProjection, "vector.ref.projection",
 							 "(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
 
+
+LITERAL(Vector2Array, 		"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
+LITERAL(RefVector2RefArray, "ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
+							 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
 GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND)
@@ -403,3 +430,4 @@ LITERAL(CreateBoundRange,   "BoundRange",    "(uint<#8>, uint<#8>)->JobRange")		
 #undef GROUP
 #undef OPERATOR
 #undef OPERATION
+#undef SUB_TYPE

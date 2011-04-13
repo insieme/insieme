@@ -40,6 +40,8 @@
 
 #include <boost/utility.hpp>
 
+#include "insieme/utils/set_utils.h"
+
 namespace insieme {
 namespace core {
 	
@@ -49,6 +51,8 @@ class Identifier;
 typedef Pointer<const Identifier> IdentifierPtr;
 class Type;
 typedef Pointer<const Type> TypePtr;
+class GenericType;
+typedef Pointer<const GenericType> GenericTypePtr;
 class Expression;
 typedef Pointer<const Expression> ExpressionPtr;
 class Literal;
@@ -63,6 +67,7 @@ typedef Pointer<const Node> NodePtr;
 class Statement;
 typedef Pointer<const Statement> StatementPtr;
 
+typedef utils::set::PointerSet<TypePtr> TypeSet;
 
 namespace lang {
 
@@ -82,6 +87,8 @@ class BasicGenerator : boost::noncopyable {
 	mutable NodeManager& nm;
 	struct BasicGeneratorImpl;
 	mutable BasicGeneratorImpl* pimpl;
+	class SubTypeLattice;
+	mutable SubTypeLattice* subTypeLattice;
 
 public:
 	BasicGenerator(NodeManager& nm);
@@ -133,6 +140,15 @@ public:
 
 	// a method generating a vector init expression form a scalar
 	ExpressionPtr scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const;
+
+	// two methods obtaining all direct super / sub types of the given generic types
+	TypeSet getDirectSuperTypesOf(const TypePtr& type) const;
+	TypeSet getDirectSubTypesOf(const TypePtr& type) const;
+
+private:
+
+	// obtains a pointer to a lazy-instantiated sub-type lattice
+	const SubTypeLattice* getSubTypeLattice() const;
 };
 
 } // namespace lang

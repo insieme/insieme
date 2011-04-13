@@ -36,40 +36,34 @@
 
 #pragma once
 
-#include "insieme/core/program.h"
-#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/expressions.h"
 
 namespace insieme {
-namespace core {
-namespace parse {
+namespace simple_backend {
 
-// parser usage:
-// T = ProgramPtr
-// U = ExpressionPtr
-template <typename P = ProgramPtr, typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr,
-        typename X = IdentifierPtr, typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
-struct ProgramGrammar : public qi::grammar<ParseIt, P(), qi::space_type> {
-    ExpressionGrammar<T, U, V, W, X, Y, Z> *exprG;   // pointer for weak coupling
+	/**
+	 * This class offers a list of IR extensions required within the simple backend. Such
+	 * extensions include additional literals representing i.g. C operators or procedures of the
+	 * runtime interface.
+	 */
+	class IRExtensions {
+	public:
 
-    NodeManager& nodeMan;
+		/**
+		 * Creates a new instance of this IRExtension set. The given manager is used to construct
+		 * the included literals.
+		 *
+		 * @param manager the manager to be used to construct the required types and literals
+		 */
+		IRExtensions(core::NodeManager& manager);
 
-    ProgramGrammar(NodeManager& nMan);
-    ~ProgramGrammar();
+		/**
+		 * A special literal representing a lazy-evaluating if-then-else operator.
+		 */
+		const core::LiteralPtr lazyITE;
 
-    qi::rule<ParseIt, P(), qi::space_type> programRule;
-    qi::rule<ParseIt, P(), qi::locals<vector<T> >, qi::space_type> program;
+	};
 
-    // member functions applying the rules
-    qi::rule<ParseIt, P(), qi::locals<vector<T> >, qi::space_type> getProgram();
-    qi::rule<ParseIt, P(), qi::space_type> getProgramRule();
 
-protected:
-    // member functions providing the rules
-    P mainProgramHelp(const T& mainProg);
-    P programHelp(const vector<T>& progs);
-
-};
-
-}
-}
-}
+} // end namespace simple_backend
+} // end namespace insieme

@@ -103,8 +103,8 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
 						format("Invalid argument type(s) - expected: %s, actual: %s - function type: %s",
-								toString(*argumentTuple).c_str(),
 								toString(*parameterTuple).c_str(),
+								toString(*argumentTuple).c_str(),
 								toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
