@@ -591,7 +591,7 @@ public:
 	//							ELABORATED TYPE (TODO)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitElaboratedType(const ElaboratedType* elabType) {
-		assert(false && "ElaboratedType not yet handled!");
+	    return Visit(elabType->desugar().getTypePtr());
 	}
 
 

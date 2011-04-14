@@ -390,11 +390,16 @@ public:
 		return annotatedNode;
 	}
 
+	core::ExpressionPtr VisitGNUNullExpr(clang::GNUNullExpr* nullExpr) {
+	    return convFact.getNodeManager().basic.getNull();
+	}
+
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						   IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
-		START_LOG_EXPR_CONVERSION(implCastExpr);
+	    START_LOG_EXPR_CONVERSION(implCastExpr);
 		core::TypePtr&& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
 		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
