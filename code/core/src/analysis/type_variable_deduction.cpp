@@ -163,6 +163,19 @@ namespace analysis {
 
 	namespace {
 
+		// An enumeration of the constraint directions
+		enum Direction {
+			SUB_TYPE = 0, SUPER_TYPE = 1
+		};
+
+		/**
+		 * A utility function to inverse constrain types. This function will turn a sub-type constrain
+		 * into a super-type constraint and vica verce.
+		 */
+		inline static Direction inverse(Direction type) {
+			return (Direction)(1 - type);
+		}
+
 		/**
 		 *  Adds the necessary constraints on the instantiation of the type variables used within the given type parameter.
 		 *
@@ -173,26 +186,19 @@ namespace analysis {
 		void addEqualityConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
 
 		/**
-		 *  Adds additional constraints to the given constraint collection such that the type variables used within the
-		 *  parameter type are limited to values representing a super type of the given argument type.
+		 * Adds additional constraints to the given constraint collection such that the type variables used within the
+		 * parameter type are limited to values representing super- / sub-types of the given argument type.
 		 *
 		 *  @param constraints the set of constraints to be extended
 		 *  @param paramType the type on the parameter side (function side)
 		 *  @param argType the type on the argument side (argument passed by call expression)
+		 *  @param direction the direction to be ensured - sub- or supertype
 		 */
-		void addSubtypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
+		void addTypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction);
 
-		/**
-		 *  Adds additional constraints to the given constraint collection such that the type variables used within the
-		 *  parameter type are limited to values representing a sub-types of the given argument types.
-		 *
-		 *  @param constraints the set of constraints to be extended
-		 *  @param paramType the type on the parameter side (function side)
-		 *  @param argType the type on the argument side (argument passed by call expression)
-		 */
-		void addSupertypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
 
 		// -------------------------------------------------------- Implementation ----------------------------------------------
+
 
 		void addEqualityConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
 
@@ -366,194 +372,12 @@ namespace analysis {
 			}
 		}
 
-		void addSupertypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
+		void addTypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
 
 			// check constraint status
 			if (!constraints.isSatisfiable()) {
 				return;
 			}
-
-			// extract node types
-			NodeType nodeTypeA = paramType->getNodeType();
-			NodeType nodeTypeB = argType->getNodeType();
-
-			// handle variables
-			if(nodeTypeA == NT_TypeVariable) {
-				// the substitution for the variable has to be a super-type of the argument type
-				constraints.addSupertypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
-				return;
-			}
-
-			// check for vector/array conversion
-			// special handling for passing a vector to some array argument
-			if (nodeTypeA == NT_ArrayType && nodeTypeB == NT_VectorType) {
-				const ArrayTypePtr& array = static_pointer_cast<const ArrayType>(paramType);
-				const VectorTypePtr& vector = static_pointer_cast<const VectorType>(argType);
-
-				// make sure the dimension of the array is 1
-				auto dim = array->getDimension();
-				ConcreteIntTypeParamPtr one = ConcreteIntTypeParam::get(array->getNodeManager(), 1);
-				switch(dim->getNodeType()) {
-					case NT_VariableIntTypeParam:
-						constraints.fixIntTypeParameter(static_pointer_cast<const VariableIntTypeParam>(dim), one);
-						break;
-					case NT_ConcreteIntTypeParam:
-					case NT_InfiniteIntTypeParam:
-						if (*dim != *one) {
-							// only dimension 1 is allowed when passing a vector
-							constraints.makeUnsatisfiable();
-							return;
-						}
-					default:
-						assert(false && "Unknown int-type parameter encountered!");
-				}
-
-				// also make sure element types are equivalent
-				addEqualityConstraints(constraints, array->getElementType(), vector->getElementType());
-				return;
-			}
-
-			// check function type
-			if (nodeTypeA == NT_FunctionType) {
-				// argument has to be a function as well
-				if (nodeTypeB != NT_FunctionType) {
-					// => no match possible
-					constraints.makeUnsatisfiable();
-					return;
-				}
-
-				auto funParamType = static_pointer_cast<const FunctionType>(paramType);
-				auto funArgType = static_pointer_cast<const FunctionType>(argType);
-
-				// check number of arguments
-				auto paramArgs = funParamType->getArgumentTypes();
-				auto argArgs = funArgType->getArgumentTypes();
-				if (paramArgs.size() != argArgs.size()) {
-					// different number of arguments => unsatisfiable
-					constraints.makeUnsatisfiable();
-					return;
-				}
-
-				// add constraints on arguments
-				auto begin = make_paired_iterator(paramArgs.begin(), argArgs.begin());
-				auto end = make_paired_iterator(paramArgs.end(), argArgs.end());
-				for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
-					addSubtypeConstraints(constraints, it->first, it->second);
-				}
-
-				// ... and the return type
-				addSupertypeConstraints(constraints, funParamType->getReturnType(), funArgType->getReturnType());
-				return;
-			}
-
-			// check rest => has to be equivalent
-			addEqualityConstraints(constraints, paramType, argType);
-		}
-
-
-
-		void addSubtypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
-
-			// check constraint status
-			if (!constraints.isSatisfiable()) {
-				return;
-			}
-
-			// extract node types
-			NodeType nodeTypeA = paramType->getNodeType();
-			NodeType nodeTypeB = argType->getNodeType();
-
-			// handle variables
-			if(nodeTypeA == NT_TypeVariable) {
-				// the substitution for the variable has to be a super-type of the argument type
-				constraints.addSubtypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
-				return;
-			}
-
-			// check for vector/array conversion
-			// special handling for passing a vector to some array argument
-			if (nodeTypeA == NT_VectorType && nodeTypeB == NT_ArrayType) {
-				const VectorTypePtr& vector = static_pointer_cast<const VectorType>(paramType);
-				const ArrayTypePtr& array = static_pointer_cast<const ArrayType>(argType);
-
-				// make sure the dimension of the array is 1
-				auto dim = array->getDimension();
-				ConcreteIntTypeParamPtr one = ConcreteIntTypeParam::get(array->getNodeManager(), 1);
-				switch(dim->getNodeType()) {
-					case NT_VariableIntTypeParam:
-						// this is fine ... no restrictions required
-						break;
-					case NT_ConcreteIntTypeParam:
-					case NT_InfiniteIntTypeParam:
-						if (*dim != *one) {
-							// only dimension 1 is allowed when passing a vector
-							constraints.makeUnsatisfiable();
-							return;
-						}
-					default:
-						assert(false && "Unknown int-type parameter encountered!");
-				}
-
-				// also make sure element types are equivalent
-				addEqualityConstraints(constraints, array->getElementType(), vector->getElementType());
-				return;
-			}
-
-			// check function type
-			if (nodeTypeA == NT_FunctionType) {
-				// argument has to be a function as well
-				if (nodeTypeB != NT_FunctionType) {
-					// => no match possible
-					constraints.makeUnsatisfiable();
-					return;
-				}
-
-				auto funParamType = static_pointer_cast<const FunctionType>(paramType);
-				auto funArgType = static_pointer_cast<const FunctionType>(argType);
-
-				// check number of arguments
-				auto paramArgs = funParamType->getArgumentTypes();
-				auto argArgs = funArgType->getArgumentTypes();
-				if (paramArgs.size() != argArgs.size()) {
-					// different number of arguments => unsatisfiable
-					constraints.makeUnsatisfiable();
-					return;
-				}
-
-				// add constraints on arguments
-				auto begin = make_paired_iterator(paramArgs.begin(), argArgs.begin());
-				auto end = make_paired_iterator(paramArgs.end(), argArgs.end());
-				for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
-					addSupertypeConstraints(constraints, it->first, it->second);
-				}
-
-				// ... and the return type
-				addSubtypeConstraints(constraints, funParamType->getReturnType(), funArgType->getReturnType());
-				return;
-			}
-
-			// check rest => has to be equivalent
-			addEqualityConstraints(constraints, paramType, argType);
-		}
-
-		typedef TypeVariableConstraints::ConstraintType Direction;
-
-		void addTypeConstraintsConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
-
-			// check constraint status
-			if (!constraints.isSatisfiable()) {
-				return;
-			}
-
-			// check redirection
-			if (direction == Direction::EQUAL_TYPE) {
-				// wrong construction sight ...
-				addEqualityConstraints(constraints, paramType, argType);
-				return;
-			}
-
-			// the inverse direction => for cases where it is needed
-			auto inverse = TypeVariableConstraints::inverse(direction);
 
 			// extract node types
 			NodeType nodeTypeA = paramType->getNodeType();
@@ -562,7 +386,11 @@ namespace analysis {
 			// handle variables
 			if(nodeTypeA == NT_TypeVariable) {
 				// add corresponding constraint to this variable
-				constraints.addConstraint(static_pointer_cast<const TypeVariable>(paramType), argType, direction);
+				if (direction == Direction::SUB_TYPE) {
+					constraints.addSubtypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+				} else {
+					constraints.addSupertypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+				}
 				return;
 			}
 
@@ -633,11 +461,11 @@ namespace analysis {
 				auto begin = make_paired_iterator(paramArgs.begin(), argArgs.begin());
 				auto end = make_paired_iterator(paramArgs.end(), argArgs.end());
 				for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
-					addTypeConstraintsConstraints(constraints, it->first, it->second, inverse);
+					addTypeConstraints(constraints, it->first, it->second, inverse(direction));
 				}
 
 				// ... and the return type
-				addTypeConstraintsConstraints(constraints, funParamType->getReturnType(), funArgType->getReturnType(), direction);
+				addTypeConstraints(constraints, funParamType->getReturnType(), funArgType->getReturnType(), direction);
 				return;
 			}
 
@@ -665,7 +493,7 @@ namespace analysis {
 		auto end = make_paired_iterator(parameter.end(), arguments.end());
 		for (auto it = begin; constraints.isSatisfiable() && it!=end; ++it) {
 			// add constraints to ensure current parameter is a super-type of the arguments
-			addTypeConstraintsConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
+			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
 //			addSupertypeConstraints(constraints, it->first, it->second);
 		}
 

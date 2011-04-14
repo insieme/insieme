@@ -49,23 +49,6 @@ namespace analysis {
  */
 class TypeVariableConstraints : public utils::Printable {
 
-public:
-
-	// An enumeration of the various supported constraints
-	enum ConstraintType {
-		SUB_TYPE = -1, SUPER_TYPE = 1, EQUAL_TYPE = 0
-	};
-
-	/**
-	 * A utility function to inverse constrain types. This function will turn a sub-type constrain
-	 * into a super-type constraint and vica verce.
-	 */
-	inline static ConstraintType inverse(ConstraintType type) {
-		return (ConstraintType)(type * -1);
-	}
-
-private:
-
 	/**
 	 * A struct summarizing constraints on a single type variable.
 	 */
@@ -162,22 +145,6 @@ public:
 	void addEqualsConstraint(const TypeVariablePtr& var, const TypePtr& type) {
 		if (!unsatisfiable)
 			getConstraintsFor(var).equalTypes.insert(type);
-	}
-
-	/**
-	 * Adds an additional constrain on the given variable to this set of constraints.
-	 *
-	 * @param var the variable to be constrained
-	 * @param type the type representing the constrain
-	 * @param kind the kind of constraint to be added
-	 */
-	void addConstraint(const TypeVariablePtr& var, const TypePtr& type, ConstraintType kind) {
-		switch(kind) {
-		case SUB_TYPE: addSubtypeConstraint(var, type); return;
-		case SUPER_TYPE: addSupertypeConstraint(var, type); return;
-		case EQUAL_TYPE: addEqualsConstraint(var, type); return;
-		}
-		assert(false && "Illegal constrain type encountered!");
 	}
 
 	/**

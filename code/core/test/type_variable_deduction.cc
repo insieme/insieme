@@ -550,13 +550,6 @@ TEST(TypeVariableDeduction, VectorFunctionTypes) {
 }
 
 
-TEST(TypeVariableDeduction, ConstraintTypes) {
-	// just check the inversion
-	EXPECT_EQ(TypeVariableConstraints::ConstraintType::EQUAL_TYPE, TypeVariableConstraints::inverse(TypeVariableConstraints::ConstraintType::EQUAL_TYPE));
-	EXPECT_EQ(TypeVariableConstraints::ConstraintType::SUB_TYPE, TypeVariableConstraints::inverse(TypeVariableConstraints::ConstraintType::SUPER_TYPE));
-	EXPECT_EQ(TypeVariableConstraints::ConstraintType::SUPER_TYPE, TypeVariableConstraints::inverse(TypeVariableConstraints::ConstraintType::SUB_TYPE));
-}
-
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
