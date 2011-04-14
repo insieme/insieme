@@ -109,6 +109,17 @@ public:
 	TypePtr applyTo(NodeManager& manager, const TypePtr& type) const;
 
 	/**
+	 * Applies this substitution to the given type using the types node manager. A call
+	 * to applyTo(type) is equivalent to applyTo(type->getNodeManager(),type).
+	 *
+	 * @param type the type to which this substitution should be applied to
+	 * @return the resulting type expression
+	 */
+	TypePtr applyTo(const TypePtr& type) const {
+		return applyTo(type->getNodeManager(), type);
+	}
+
+	/**
 	 * Applies this substitution to the given int type parameter.
 	 * @param param the int type param this substitution should be applied to
 	 * @return the resulting int type parameter
@@ -174,6 +185,9 @@ public:
 
 };
 
+// define a simple name for an optional substitution - which will be the result of unification and matching algorithms.
+typedef boost::optional<Substitution> SubstitutionOpt;
+
 // -------------------------------------------------------------------------------------------------------------------------
 //                                                    Unification
 // -------------------------------------------------------------------------------------------------------------------------
@@ -186,7 +200,7 @@ public:
  * @param typeB the second type to be unified
  * @return the resulting most general unifier or an uninitialized value if the types couldn't be unified.
  */
-boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB);
+SubstitutionOpt unify(NodeManager& manager, const TypePtr& typeA, const TypePtr& typeB);
 
 /**
  * Tries to unify the given list of type pairs. This method actually implements the unification algorithm.
@@ -197,7 +211,7 @@ boost::optional<Substitution> unify(NodeManager& manager, const TypePtr& typeA, 
  * unifier (mgu) for the given pairs. Applying the substitution to all pairs will result in a list of equal pairs. The optional
  * will be uninitialized if the given types are not unifyable.
  */
-boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list);
+SubstitutionOpt unifyAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list);
 
 /**
  * Tries to unify the types stored within the given lists (pairwise).
@@ -208,7 +222,7 @@ boost::optional<Substitution> unifyAll(NodeManager& manager, std::list<std::pair
  * @return the resulting most general unifier or an uninitialized value if the types couldn't be unified.
  */
 template<typename Container>
-boost::optional<Substitution> unifyAll(NodeManager& manager, const Container& listA, const Container& listB) {
+SubstitutionOpt unifyAll(NodeManager& manager, const Container& listA, const Container& listB) {
 
 	// check length of lists ...
 	if (listA.size() != listB.size()) {
@@ -268,7 +282,7 @@ bool areUnifyable(const Container& listA, const Container& listB) {
  * @return a initialized substitution transforming the given pattern into the given type or an uninitialized optional in case the
  * given type is not matching the pattern
  */
-boost::optional<Substitution> match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes=true);
+SubstitutionOpt match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes=true);
 
 /**
  * Tries to match the given pattern/type pairs.
@@ -279,7 +293,7 @@ boost::optional<Substitution> match(NodeManager& manager, const TypePtr& pattern
  * @return a initialized substitution transforming the given patterns into the given types or an uninitialized optional in case the
  * given types are not matching the patterns
  */
-boost::optional<Substitution> matchAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool considerSubtypes=true);
+SubstitutionOpt matchAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool considerSubtypes=true);
 
 /**
  * Tries to match the given types to the given list of type patterns.
@@ -292,7 +306,7 @@ boost::optional<Substitution> matchAll(NodeManager& manager, std::list<std::pair
  * given types are not matching the patterns
  */
 template<typename Container>
-boost::optional<Substitution> matchAll(NodeManager& manager, const Container& patterns, const Container& types, bool considerSubtypes=true) {
+SubstitutionOpt matchAll(NodeManager& manager, const Container& patterns, const Container& types, bool considerSubtypes=true) {
 
 	// check length of lists ...
 	if (patterns.size() != types.size()) {
@@ -362,6 +376,23 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType);
 TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB);
 
 /**
+ * Computes the smallest common super type of the types within the given container.
+ *
+ * @param types the typed to be considered
+ * @return the smallest common super type or null, if no such type exists
+ */
+template<typename Container>
+TypePtr getSmallestCommonSuperType(const Container& types) {
+	assert(!types.empty() && "Illegal call - cannot be computed for a empty type list!");
+	auto it = types.begin();
+	TypePtr res = *it;
+	for(++it; res && it != types.end(); ++it) {
+		res = getSmallestCommonSuperType(res, *it);
+	}
+	return res;
+}
+
+/**
  * Tries to obtain the biggest common sub-type of the given types (Meet Type in the sub-type relation).
  *
  * @param typeA the first type to be considered
@@ -369,6 +400,23 @@ TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB);
  * @return the biggest common sub type or null, if no such type exists
  */
 TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB);
+
+/**
+ * Tries to obtain the biggest common sub-type of the given types (Meet Type in the sub-type relation).
+ *
+ * @param types the typed to be considered
+ * @return the biggest common sub type or null, if no such type exists
+ */
+template<typename Container>
+TypePtr getBiggestCommonSubType(const Container& types) {
+	assert(!types.empty() && "Illegal call - cannot be computed for a empty type list!");
+	auto it = types.begin();
+	TypePtr res = *it;
+	for(++it; res && it != types.end(); ++it) {
+		res = getBiggestCommonSubType(res, *it);
+	}
+	return res;
+}
 
 // -------------------------------------------------------------------------------------------------------------------------
 //                                                    Utilities

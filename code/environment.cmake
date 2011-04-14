@@ -193,7 +193,7 @@ endif()
 # --------------------------------------------------------- Runtime
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 
-# --------------------------------------------------------- Valgrind / GTest testiong suite
+# --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
 if (NOT MEMORY_CHECK_SETUP)
 	option(CONDUCT_MEMORY_CHECKS "Checks all test cases for memory leaks using valgrind if enabled." OFF)

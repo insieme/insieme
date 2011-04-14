@@ -150,10 +150,3 @@ namespace core {
 } // end namespace core
 } // end namespace insieme
 
-/**
- * Allows this type to be printed to a stream (especially useful during debugging and
- * within test cases where equals values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const Node& node) {
-	return node.printTo(out);
-}

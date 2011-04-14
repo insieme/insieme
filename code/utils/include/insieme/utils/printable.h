@@ -36,56 +36,33 @@
 
 #pragma once
 
-#include <utility>
-#include <iterator>
+#include <ostream>
 
-template<typename ITypeA, typename ITypeB>
-class IteratorParentType: public std::iterator<std::input_iterator_tag,
-	std::pair<typename std::iterator_traits<ITypeA>::value_type, typename std::iterator_traits<ITypeB>::value_type> > { };
+namespace insieme {
+namespace utils {
 
-// todo inherit from iterator traits
-template<typename ITypeA, typename ITypeB>
-class paired_iterator : public IteratorParentType<ITypeA, ITypeB> {
-	ITypeA a;
-	ITypeB b;
+	/**
+	 * A class forming an interface for printable classes. Implementing this interface allows
+	 * classes to be printed to output streams using a member function.
+	 */
+	class Printable {
+	public:
+		/**
+		 * A method to be implemented by sub-classes allowing instances to be printed to the
+		 * output stream.
+		 *
+		 * @param out the stream this instance should be printed to
+		 * @return the stream passed as an argument
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const = 0;
+	};
 
-	typename IteratorParentType<ITypeA, ITypeB>::value_type cur;
+} // end of namespace utils
+} // end of namespace insieme
 
-public:
-	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
+namespace std {
 
-	typename IteratorParentType<ITypeA, ITypeB>::value_type& operator*() {
-		cur = std::make_pair(*a, *b);
-		return cur;
+	inline std::ostream& operator<<(std::ostream& out, const insieme::utils::Printable& printable) {
+		return printable.printTo(out);
 	}
-
-	typename IteratorParentType<ITypeA, ITypeB>::value_type* operator->() {
-		cur = std::make_pair(*a, *b);
-		return &cur;
-	}
-
-	paired_iterator& operator++() {
-		++a;
-		++b;
-		return *this;
-	}
-
-	paired_iterator operator++(int) {
-		paired_iterator ret = *this;
-		++this;
-		return ret;
-	}
-
-	bool operator==(const paired_iterator& rhs) {
-		return (a == rhs.a) && (b == rhs.b);
-	}
-	
-	bool operator!=(const paired_iterator& rhs) {
-		return (a != rhs.a) || (b != rhs.b);
-	}
-};
-
-template<typename A, typename B>
-paired_iterator<A, B> make_paired_iterator(A a, B b) {
-	return paired_iterator<A,B>(a, b);
 }

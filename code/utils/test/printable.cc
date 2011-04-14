@@ -34,58 +34,29 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <utility>
-#include <iterator>
+#include "insieme/utils/printable.h"
 
-template<typename ITypeA, typename ITypeB>
-class IteratorParentType: public std::iterator<std::input_iterator_tag,
-	std::pair<typename std::iterator_traits<ITypeA>::value_type, typename std::iterator_traits<ITypeB>::value_type> > { };
+#include "insieme/utils/string_utils.h"
 
-// todo inherit from iterator traits
-template<typename ITypeA, typename ITypeB>
-class paired_iterator : public IteratorParentType<ITypeA, ITypeB> {
-	ITypeA a;
-	ITypeB b;
+using namespace insieme::utils;
 
-	typename IteratorParentType<ITypeA, ITypeB>::value_type cur;
-
+class Value : public Printable {
+	int value;
 public:
-	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
-
-	typename IteratorParentType<ITypeA, ITypeB>::value_type& operator*() {
-		cur = std::make_pair(*a, *b);
-		return cur;
-	}
-
-	typename IteratorParentType<ITypeA, ITypeB>::value_type* operator->() {
-		cur = std::make_pair(*a, *b);
-		return &cur;
-	}
-
-	paired_iterator& operator++() {
-		++a;
-		++b;
-		return *this;
-	}
-
-	paired_iterator operator++(int) {
-		paired_iterator ret = *this;
-		++this;
-		return ret;
-	}
-
-	bool operator==(const paired_iterator& rhs) {
-		return (a == rhs.a) && (b == rhs.b);
-	}
-	
-	bool operator!=(const paired_iterator& rhs) {
-		return (a != rhs.a) || (b != rhs.b);
+	Value(int value) : value(value) {}
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << value;
 	}
 };
 
-template<typename A, typename B>
-paired_iterator<A, B> make_paired_iterator(A a, B b) {
-	return paired_iterator<A,B>(a, b);
+
+TEST(Printable, StandardPrinting) {
+
+	Value ten(10);
+	Value twelf(12);
+
+	EXPECT_EQ("10", toString(ten));
+	EXPECT_EQ("12", toString(twelf));
 }
