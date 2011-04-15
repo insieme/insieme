@@ -254,6 +254,7 @@ TEST(TypeVariableDeduction, getTypeVariableInstantiation) {
 	TypePtr int4 = basic.getInt4();
 	TypePtr uint4 = basic.getUInt4();
 	TypePtr int8 = basic.getInt8();
+	TypePtr uint8 = basic.getUInt8();
 
 	TypePtr typeA = builder.genericType("A");
 	TypePtr typeB = builder.genericType("B");
@@ -301,6 +302,11 @@ TEST(TypeVariableDeduction, getTypeVariableInstantiation) {
 	// different int-type parameter parameter
 	res = getTypeVariableInstantiation(manager, toVector(int4), toVector(int8));
 	EXPECT_FALSE(res);
+
+	// pass a sub-type to a super type
+	res = getTypeVariableInstantiation(manager, toVector(uint8) , toVector(uint4));
+	EXPECT_TRUE(res);
+
 }
 
 TEST(TypeVariableDeduction, vectorsAndArrays) {
@@ -547,6 +553,30 @@ TEST(TypeVariableDeduction, VectorFunctionTypes) {
 	auto res = getTypeVariableInstantiation(manager, toVector(param), toVector(arg));
 	EXPECT_TRUE(res);
 
+}
+
+
+TEST(TypeVariableDeduction, ReductionBug) {
+
+	// The problem:
+	// 		within the expression "vector.reduction(v3956, 1, uint.mul)"
+	//		a function of type ((vector<'elem,#l>,'res,(('elem,'res)->'res))->'res)
+	//		is called using [vector<uint<4>,3>,uint<4>,((uint<#a>,uint<#a>)->uint<#a>))]
+	//		The inference is not working ...
+	//
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr vector = builder.vectorType(uint4, builder.concreteIntTypeParam(3));
+
+	CallExprPtr call = builder.callExpr(basic.getVectorReduction(),
+			toVector<ExpressionPtr>(builder.literal(vector, "x"), builder.literal(uint4, "1"), basic.getUnsignedIntMul()));
+
+	auto res = getTypeVariableInstantiation(manager, call);
+//	EXPECT_TRUE(res);
 }
 
 

@@ -62,7 +62,7 @@ TEST(TestUtilsTest, getList) {
 	for_each(res, [](const IntegrationTestCase& cur) {
 		SCOPED_TRACE(cur.getName());
 
-		EXPECT_GE(cur.getFiles().size(), 1);
+		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
 		for_each(cur.getFiles(), [](const string& cur){
 			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
 			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";

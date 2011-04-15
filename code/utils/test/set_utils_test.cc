@@ -61,8 +61,8 @@ TEST(SetUtilsTest, toSet) {
 	ref.insert(2);
 	ref.insert(1);
 
-	EXPECT_EQ(4, set.size());
-	EXPECT_EQ(4, ref.size());
+	EXPECT_EQ(static_cast<std::size_t>(4), set.size());
+	EXPECT_EQ(static_cast<std::size_t>(4), ref.size());
 	EXPECT_EQ(set, ref);
 }
 

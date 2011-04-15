@@ -383,6 +383,12 @@ namespace analysis {
 				return;
 			}
 
+			// check whether relation is already satisfied
+			if ((direction == Direction::SUB_TYPE && isSubTypeOf(paramType, argType)) ||
+					(direction == Direction::SUPER_TYPE && isSubTypeOf(argType, paramType))) {
+				return;
+			}
+
 			// extract node types
 			NodeType nodeTypeA = paramType->getNodeType();
 			NodeType nodeTypeB = argType->getNodeType();
@@ -473,7 +479,7 @@ namespace analysis {
 				return;
 			}
 
-			// check rest => has to be equivalent
+			// check rest => has to be equivalent (e.g. ref, channels, ...)
 			addEqualityConstraints(constraints, paramType, argType);
 		}
 
@@ -497,6 +503,8 @@ namespace analysis {
 			// add constraints to ensure current parameter is a super-type of the arguments
 			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
 		}
+
+		// std::cout << "Constraints: " << constraints << std::endl;
 
 		// solve constraints to obtain results
 		return constraints.solve();

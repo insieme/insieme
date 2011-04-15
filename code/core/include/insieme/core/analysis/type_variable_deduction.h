@@ -239,6 +239,7 @@ private:
 
 };
 
+
 /**
  * Tries to compute a valid type variable substitution for a call to a function accepting the given parameter types using
  * the given argument types.
@@ -252,6 +253,20 @@ SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager,
 		const TypeList& parameter, const TypeList& arguments);
 
 /**
+ * Tries to compute a valid type variable substitution for a call to a function accepting the given parameter type using
+ * the given argument type.
+ *
+ * @param manager the node manager to be used for temporary IR nodes
+ * @param parameter the type of the parameter
+ * @param argument the type of the argument
+ * @return a type-variable substitution mapping for the type variables within the parameter or an uninitialized option
+ * 		   if no such substitution exists.
+ */
+SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument) {
+	return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument));
+}
+
+/**
  * Tries to obtain the type variable instantiation implied by the given call.
  *
  * @param manager the node manager to be used for temporary IR nodes
@@ -259,7 +274,7 @@ SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager,
  * @return a type-variable substitution mapping the type variables to their substitutions or null if no
  * 			valid substitution could be derived
  */
-SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExpr& call);
+SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call);
 
 
 } // end namespace analysis

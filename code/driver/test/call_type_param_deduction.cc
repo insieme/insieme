@@ -39,13 +39,25 @@
 #include "insieme/frontend/frontend.h"
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/test/test_utils.h"
 #include "insieme/utils/cmd_line_utils.h"
+#include "insieme/utils/logging.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 
 using namespace utils::test;
+using namespace core;
+
+inline vector<TypePtr> getTypes(const vector<ExpressionPtr>& expressions) {
+	vector<TypePtr> res;
+	::transform(expressions, std::back_inserter(res), [](const ExpressionPtr& cur) { return cur->getType(); });
+	return res;
+}
 
 // the type definition (specifying the parameter type)
 class TypeVariableDeductionTest : public ::testing::TestWithParam<IntegrationTestCase> { };
@@ -54,6 +66,9 @@ class TypeVariableDeductionTest : public ::testing::TestWithParam<IntegrationTes
 TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 	core::NodeManager manager;
 
+	// disable logger output
+	Logger::get(std::cerr, ERROR, 0);
+
 	// obtain test case
 	utils::test::IntegrationTestCase testCase = GetParam();
 
@@ -61,8 +76,17 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 	core::ProgramPtr code = frontend::ConversionJob(manager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
 
 	// and now, apply the check
+//	core::visitAll(code, core::makeLambdaPtrVisitor([&](const NodePtr& cur){
+//		if (cur->getNodeType() == NT_CallExpr) {
+//			CallExprPtr call = static_pointer_cast<const CallExpr>(cur);
+//			EXPECT_TRUE(analysis::getTypeVariableInstantiation(manager, call))
+//					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
+//					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
+//					<< "Argument Types: " << getTypes(call->getArguments());
+//
+//		}
+//	}, false));
 
-//	std::cout << core::printer::PrettyPrinter(prog) << std::endl;
 
 }
 
