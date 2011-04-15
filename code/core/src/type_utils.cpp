@@ -192,6 +192,19 @@ void Substitution::remMappingOf(const VariableIntTypeParamPtr& var) {
 	paramMapping.erase(var);
 }
 
+std::ostream& Substitution::printTo(std::ostream& out) const {
+	out << "{";
+	out << join(",", mapping, [](std::ostream& out, const Mapping::value_type& cur)->std::ostream& {
+		return out << *cur.first << "->" << *cur.second;
+	});
+
+	if (!mapping.empty() && !paramMapping.empty()) out << "/";
+	out << join(",", paramMapping, [](std::ostream& out, const IntTypeParamMapping::value_type& cur)->std::ostream& {
+		return out << *cur.first << "->" << *cur.second;
+	});
+	out << "}";
+	return out;
+}
 
 Substitution Substitution::compose(NodeManager& manager, const Substitution& a, const Substitution& b) {
 
@@ -1226,19 +1239,3 @@ TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
 
 } // end namespace core
 } // end namespace insieme
-
-
-std::ostream& operator<<(std::ostream& out, const insieme::core::Substitution& substitution) {
-	out << "{";
-	out << join(",", substitution.getMapping(), [](std::ostream& out, const insieme::core::Substitution::Mapping::value_type& cur)->std::ostream& {
-		return out << *cur.first << "->" << *cur.second;
-	});
-
-	if (!substitution.getMapping().empty() && !substitution.getIntTypeParamMapping().empty()) out << "/";
-	out << join(",", substitution.getIntTypeParamMapping(), [](std::ostream& out, const insieme::core::Substitution::IntTypeParamMapping::value_type& cur)->std::ostream& {
-		return out << *cur.first << "->" << *cur.second;
-	});
-	out << "}";
-	return out;
-}
-

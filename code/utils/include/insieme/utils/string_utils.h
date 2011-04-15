@@ -41,6 +41,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <iterator>
 
 #include "functional_utils.h"
 
@@ -53,6 +54,22 @@ string toString(const T& value) {
 	std::stringstream res;
 	res << value;
 	return res.str();
+}
+
+/**
+ * A utility method to split a string along its white spaces.
+ *
+ * @param str the string to be splitted
+ * @return the vector of substrings
+ */
+inline std::vector<string> split(const string& str) {
+	using namespace std;
+	vector<string> tokens;
+	istringstream iss(str);
+	copy(istream_iterator<string>(iss),
+	         istream_iterator<string>(),
+	         back_inserter<vector<string> >(tokens));
+	return tokens;
 }
 
 /**

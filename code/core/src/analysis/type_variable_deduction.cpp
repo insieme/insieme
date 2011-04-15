@@ -36,6 +36,11 @@
 
 #include "insieme/core/analysis/type_variable_deduction.h"
 
+#include <iterator>
+
+#include "insieme/core/annotation.h"
+#include "insieme/core/expressions.h"
+
 namespace insieme {
 namespace core {
 namespace analysis {
@@ -158,7 +163,6 @@ namespace analysis {
 	std::ostream& TypeVariableConstraints::printTo(std::ostream& out) const {
 		return out << "[" << constraints << "/" << intTypeParameter << "]";
 	}
-
 
 
 	namespace {
@@ -478,8 +482,6 @@ namespace analysis {
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
 
-		// TODO: also implement this for call nodes + annotating results
-
 		// check length of parameter and arguments
 		if (parameter.size() != arguments.size()) {
 			return 0;
@@ -494,13 +496,85 @@ namespace analysis {
 		for (auto it = begin; constraints.isSatisfiable() && it!=end; ++it) {
 			// add constraints to ensure current parameter is a super-type of the arguments
 			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
-//			addSupertypeConstraints(constraints, it->first, it->second);
 		}
-
-//		std::cout << "Constraints derived: " << constraints << std::endl;
 
 		// solve constraints to obtain results
 		return constraints.solve();
+	}
+
+
+
+	namespace {
+
+		// The kind of annotations attached to call nodes to cache type variable substitutions
+		class TypeVariableInstantionInfo : public Annotation {
+
+		public:
+
+			// The key used to attack instantiation results to call nodes
+			static StringKey<TypeVariableInstantionInfo> KEY;
+
+		private:
+
+			// the represented value
+			SubstitutionOpt substitution;
+
+		public :
+
+			TypeVariableInstantionInfo(const SubstitutionOpt& substitution) : substitution(substitution) {}
+
+			virtual const AnnotationKey* getKey() const {
+				return &KEY;
+			}
+
+			virtual const std::string getAnnotationName() const {
+				return "TypeVariableInstantionInfo";
+			}
+
+			const SubstitutionOpt& getSubstitution() const {
+				return substitution;
+			}
+
+		};
+
+		StringKey<TypeVariableInstantionInfo> TypeVariableInstantionInfo::KEY = StringKey<TypeVariableInstantionInfo>("TYPE_VARIABLE_INSTANTIATION_INFO");
+	}
+
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call) {
+
+		// check for null
+		if (!call) {
+			return 0;
+		}
+
+		// check annotations
+		if (auto data = call->getAnnotation(TypeVariableInstantionInfo::KEY)) {
+			return data->getSubstitution();
+		}
+
+		// derive substitution
+
+		// get argument types
+		TypeList argTypes;
+		::transform(call->getArguments(), back_inserter(argTypes), [](const ExpressionPtr& cur) {
+			return cur->getType();
+		});
+
+		// get function parameter types
+		const TypePtr& funType = call->getFunctionExpr()->getType();
+		if (funType->getNodeType() != NT_FunctionType) {
+			return 0;
+		}
+		const TypeList& paramTypes = static_pointer_cast<const FunctionType>(funType)->getArgumentTypes();
+
+		// compute type variable instantiation
+		SubstitutionOpt res = getTypeVariableInstantiation(manager, paramTypes, argTypes);
+
+		// attack substitution
+		call->addAnnotation(std::make_shared<TypeVariableInstantionInfo>(res));
+
+		// done
+		return res;
 	}
 
 } // end namespace analysis

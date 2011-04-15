@@ -57,8 +57,8 @@ endif(MSVC)
 
 # - boost
 find_package( Boost COMPONENTS program_options )
-# find_package( Boost COMPONENTS system )
-# find_package( Boost COMPONENTS filesystem )
+find_package( Boost COMPONENTS system )
+find_package( Boost COMPONENTS filesystem )
 include_directories( ${Boost_INCLUDE_DIRS} )
 link_directories(${Boost_LIBRARY_DIRS})
 

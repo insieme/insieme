@@ -36,34 +36,37 @@
 
 #include <gtest/gtest.h>
 
-#include <sstream>
+#include "insieme/frontend/frontend.h"
 
-#include "insieme/utils/string_utils.h"
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/ast_node.h"
 
+#include "insieme/utils/test/test_utils.h"
+#include "insieme/utils/cmd_line_utils.h"
 
-TEST(StringUtilsTest, Format) {
-	EXPECT_EQ (format("Hello World"), "Hello World");
-	EXPECT_EQ (format("Print %2d ...", 12), "Print 12 ...");
-	EXPECT_EQ (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
+namespace insieme {
+
+using namespace utils::test;
+
+// the type definition (specifying the parameter type)
+class TypeVariableDeductionTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(TypeVariableDeductionTest, DeriveTypes) {
+	core::NodeManager manager;
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+
+	// load the code using the frontend
+	core::ProgramPtr code = frontend::ConversionJob(manager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
+
+	// and now, apply the check
+
+//	std::cout << core::printer::PrettyPrinter(prog) << std::endl;
+
 }
 
-TEST(StringUtilsTest, toString) {
-	EXPECT_EQ (toString("Hello World"), "Hello World");
-	EXPECT_EQ (toString(10), "10");
-	EXPECT_EQ (toString('c'), "c");
-}
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
 
-TEST(StringUtilsTest, times) {
-	EXPECT_EQ("", toString(times("x", 0)));
-	EXPECT_EQ("x", toString(times("x", 1)));
-	EXPECT_EQ("xx", toString(times("x", 2)));
-	EXPECT_EQ("xxx", toString(times("x", 3)));
-	EXPECT_EQ("x,x,x", toString(times("x", 3, ",")));
-}
-
-TEST(StringUtilsTest, split) {
-	EXPECT_EQ(toVector<string>("Hello", "World!"), split("Hello World!"));
-	EXPECT_EQ(toVector<string>("Some", "more", "space"), split("Some    more    space"));
-	EXPECT_EQ(toVector<string>(), split(""));
 }

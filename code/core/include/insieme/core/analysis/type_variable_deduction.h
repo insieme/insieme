@@ -251,6 +251,17 @@ private:
 SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager,
 		const TypeList& parameter, const TypeList& arguments);
 
+/**
+ * Tries to obtain the type variable instantiation implied by the given call.
+ *
+ * @param manager the node manager to be used for temporary IR nodes
+ * @param call the call to be analyzed
+ * @return a type-variable substitution mapping the type variables to their substitutions or null if no
+ * 			valid substitution could be derived
+ */
+SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExpr& call);
+
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

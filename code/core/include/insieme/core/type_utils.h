@@ -44,6 +44,7 @@
 
 #include "insieme/core/types.h"
 
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace core {
@@ -51,7 +52,7 @@ namespace core {
 /**
  * This class represents a substitution for type variables within types.
  */
-class Substitution {
+class Substitution : public utils::Printable {
 
 public:
 
@@ -171,6 +172,14 @@ public:
 	const IntTypeParamMapping& getIntTypeParamMapping() const {
 		return paramMapping;
 	}
+
+	/**
+	 * Prints this substitution to the given output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return the handed in stream
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const;
 
 	/**
 	 * A utility function to compose two substitutions. Applying the resulting substitution will have the
@@ -446,10 +455,4 @@ TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes);
 
 }
 }
-
-/**
- * Allows substitutions to be printed to a stream (especially useful during debugging and
- * within test cases where equals expects values to be printable).
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Substitution& substitution);
 

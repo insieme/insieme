@@ -34,36 +34,53 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/frontend/frontend.h"
 
-#include <sstream>
+#include "insieme/frontend/program.h"
 
-#include "insieme/utils/string_utils.h"
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/cmd_line_utils.h"
+
+namespace insieme {
+namespace frontend {
+
+const unsigned ConversionJob::DEFAULT_FLAGS = 0;
+
+ConversionJob::ConversionJob(core::NodeManager& manager, const string& file)
+	: manager(manager), files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
+
+ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs)
+	: manager(manager), files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
 
 
-TEST(StringUtilsTest, Format) {
-	EXPECT_EQ (format("Hello World"), "Hello World");
-	EXPECT_EQ (format("Print %2d ...", 12), "Print 12 ...");
-	EXPECT_EQ (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
+core::ProgramPtr ConversionJob::execute() {
+
+	// since the frontend is using ugly ugly singletons, the configuration has to be updated ... ugly :)
+
+	// create the program parser
+	frontend::Program program(manager);
+
+	// set up the translation units
+	for_each(files, [&](const string& cur) {
+		program.addTranslationUnit(cur);
+	});
+
+	// setup the include directories
+	CommandLineOptions::IncludePaths = includeDirs;
+
+	// setup the standard
+	CommandLineOptions::STD = standard;
+
+	// setup definition
+	CommandLineOptions::Defs = definitions;
+
+	// setup additional flags
+	CommandLineOptions::OMPSema = hasOption(OpenMP);
+	CommandLineOptions::OpenCL = hasOption(OpenCL);
+
+	// convert the program
+	return program.convert();
 }
 
-TEST(StringUtilsTest, toString) {
-	EXPECT_EQ (toString("Hello World"), "Hello World");
-	EXPECT_EQ (toString(10), "10");
-	EXPECT_EQ (toString('c'), "c");
-}
-
-TEST(StringUtilsTest, times) {
-	EXPECT_EQ("", toString(times("x", 0)));
-	EXPECT_EQ("x", toString(times("x", 1)));
-	EXPECT_EQ("xx", toString(times("x", 2)));
-	EXPECT_EQ("xxx", toString(times("x", 3)));
-	EXPECT_EQ("x,x,x", toString(times("x", 3, ",")));
-}
-
-TEST(StringUtilsTest, split) {
-	EXPECT_EQ(toVector<string>("Hello", "World!"), split("Hello World!"));
-	EXPECT_EQ(toVector<string>("Some", "more", "space"), split("Some    more    space"));
-	EXPECT_EQ(toVector<string>(), split(""));
-}
+} // end namespace frontend
+} // end namespace insieme

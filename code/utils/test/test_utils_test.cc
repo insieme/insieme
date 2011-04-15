@@ -36,34 +36,52 @@
 
 #include <gtest/gtest.h>
 
-#include <sstream>
+#include "insieme/utils/test/test_utils.h"
 
-#include "insieme/utils/string_utils.h"
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+
+
 #include "insieme/utils/container_utils.h"
 
+using namespace insieme::utils;
 
-TEST(StringUtilsTest, Format) {
-	EXPECT_EQ (format("Hello World"), "Hello World");
-	EXPECT_EQ (format("Print %2d ...", 12), "Print 12 ...");
-	EXPECT_EQ (format("Print %2d, %2d, %s ...", 12, 14, "hello"), "Print 12, 14, hello ...");
+namespace insieme {
+namespace utils {
+namespace test {
+
+
+TEST(TestUtilsTest, getList) {
+
+	namespace fs = boost::filesystem;
+
+	auto res = getAllCases();
+
+	// check the existens of the referenced files
+	for_each(res, [](const IntegrationTestCase& cur) {
+		SCOPED_TRACE(cur.getName());
+
+		EXPECT_GE(cur.getFiles().size(), 1);
+		for_each(cur.getFiles(), [](const string& cur){
+			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
+			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+		});
+
+		for_each(cur.getIncludeDirs(), [](const string& cur){
+			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
+			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+		});
+	});
+
+	// should also work a second time
+	auto numTests = res.size();
+	res = getAllCases();
+	EXPECT_EQ(numTests, res.size());
 }
 
-TEST(StringUtilsTest, toString) {
-	EXPECT_EQ (toString("Hello World"), "Hello World");
-	EXPECT_EQ (toString(10), "10");
-	EXPECT_EQ (toString('c'), "c");
-}
 
-TEST(StringUtilsTest, times) {
-	EXPECT_EQ("", toString(times("x", 0)));
-	EXPECT_EQ("x", toString(times("x", 1)));
-	EXPECT_EQ("xx", toString(times("x", 2)));
-	EXPECT_EQ("xxx", toString(times("x", 3)));
-	EXPECT_EQ("x,x,x", toString(times("x", 3, ",")));
-}
 
-TEST(StringUtilsTest, split) {
-	EXPECT_EQ(toVector<string>("Hello", "World!"), split("Hello World!"));
-	EXPECT_EQ(toVector<string>("Some", "more", "space"), split("Some    more    space"));
-	EXPECT_EQ(toVector<string>(), split(""));
-}
+} // end namespace test
+} // end namespace utils
+} // end namespace insieme
