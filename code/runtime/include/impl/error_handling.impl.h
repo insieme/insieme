@@ -46,7 +46,7 @@
 #include <string.h>
 
 
-char *irt_errcode_strings[] = {
+const char *irt_errcode_strings[] = {
 	"IRT_ERR_NONE",
 	"IRT_ERR_IO",
 	"IRT_ERR_INIT",

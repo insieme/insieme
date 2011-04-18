@@ -49,9 +49,9 @@ struct _irt_##__type##_id { \
 	union { \
 		uint64 full; \
 		struct { \
-			uint16 node; \
-			uint16 thread; \
 			uint32 index; \
+			uint16 thread; \
+			uint16 node; \
 		} components; \
 	} value; \
 	struct _irt_##__type* cached; \

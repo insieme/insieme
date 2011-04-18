@@ -42,12 +42,12 @@
 
 IRT_MAKE_ID_TYPE(data_item);
 
-enum _irt_data_mode {
+typedef enum _irt_data_mode {
 	IRT_DMODE_READ_ONLY,
 	IRT_DMODE_WRITE_ONLY,
 	IRT_DMODE_WRITE_FIRST,
 	IRT_DMODE_READ_WRITE
-};
+} irt_data_mode;
 
 struct _irt_data_range {
 	int64 begin, end, step;
@@ -69,6 +69,8 @@ struct _irt_data_item {
 	irt_data_range* ranges;
 	// can be NULL if data item is abstract
 	irt_data_block* data_block;
+// private
+	struct _irt_data_item* next_lt;
  };
 
 

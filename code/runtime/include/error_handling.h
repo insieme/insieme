@@ -45,12 +45,13 @@
 
 /* ------------------------------ data structures ----- */
 
-enum _irt_errcode {
+typedef enum _irt_errcode {
 	IRT_ERR_NONE,			// no error
 	IRT_ERR_IO,				// I/O error
 	IRT_ERR_INIT,			// error related to initialization
+	IRT_ERR_INTERNAL,			// error related to initialization
 	IRT_ERR_APP				// error caused by the user application running on the IRT
-};
+} irt_errcode;
 
 struct _irt_error {
 	irt_errcode errcode;

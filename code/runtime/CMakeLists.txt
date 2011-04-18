@@ -1,7 +1,7 @@
 #
 # Builds the insieme runtime
 #
-project(insieme_runtime C)
+project(insieme_runtime C CXX)
 
 include(../environment.cmake)
 
@@ -21,7 +21,7 @@ find_package(GTest REQUIRED)
 
 include_directories(include/ ${GTEST_INCLUDE_DIRS})
 
-file(GLOB test_cases test/*.c)
+file(GLOB test_cases test/*.cc)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
@@ -32,4 +32,14 @@ foreach (case_file ${test_cases})
 	target_link_libraries(ut_${case_name} dl)
 	
 	add_unit_test(${case_name})
+endforeach(case_file)
+
+file(GLOB test_cases test/*.c)
+foreach (case_file ${test_cases})
+	get_filename_component( case_name ${case_file} NAME_WE )
+	
+	add_library(${case_name} ${case_file})
+	target_link_libraries(${case_name} insieme_runtime)
+	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} dl)
 endforeach(case_file)
