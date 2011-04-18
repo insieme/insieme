@@ -37,6 +37,7 @@
 #include "insieme/analysis/cfg.h"
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -55,9 +56,9 @@ namespace {
  * to jump to the corresponding block.
  */
 struct Scope {
-	NodePtr  root;
-	CFG::VertexTy entry;
-	CFG::VertexTy exit;
+	NodePtr  root;         // The IR node which defines this scope
+	CFG::VertexTy entry;   // The CFG node where the scope begins
+	CFG::VertexTy exit;    // The CFG node where the scope ends
 
 	Scope(const NodePtr& root, const CFG::VertexTy& entry, const CFG::VertexTy& exit) :
 		root(root), entry(entry), exit(exit) { }
@@ -184,8 +185,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void appendPendingBlock() {
 
 		// if we already have allocated an empty block and it is not pending
-		if ( !isPending && currBlock && currBlock->empty() )
-			return;
+		// if ( !isPending && currBlock && currBlock->empty() )
+		//	return;
 
 		// In the case the currBlock is pending and not empty we add it to the Graph and connect
 		// it with the successive node in the CFG
@@ -257,7 +258,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg::Block* ifBlock = new cfg::Block;
 		ifBlock->terminator() = cfg::Element(ifStmt);
 		CFG::VertexTy&& src = cfg->addBlock( ifBlock );
-
+		
 		appendPendingBlock(); // append any pending block before we fork the CFG for inserting the for stmt
 		CFG::VertexTy sink = succ;
 
@@ -265,25 +266,26 @@ struct CFGBuilder: public ASTVisitor< void > {
 		visit(ifStmt->getThenBody());
 		appendPendingBlock();
 
-		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
+		ASTBuilder builder(ifStmt->getNodeManager());
+		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
 
 		// check for empty head block
-		if ( cfg->getBlock(succ).empty() ) {
-			cfg->replaceNode(succ, src);
-		}
+		// if ( cfg->getBlock(succ).empty() ) {
+		//	cfg->replaceNode(succ, src);
+		// }
 
-		succ = sink;		// reset the successor for the thenBody
+		succ = sink; // reset the successor for the thenBody
 
 		createBlock();
 		visit(ifStmt->getElseBody());
 		appendPendingBlock();
-
-		cfg->addEdge(src, succ, cfg::Edge("F")); // FIXME
+	
+		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getFalse() ));
 
 		// check for empty head block
-		if ( cfg->getBlock(succ).empty() ) {
-			cfg->replaceNode(succ, src);
-		}
+		// if ( cfg->getBlock(succ).empty() ) {
+	//		cfg->replaceNode(succ, src);
+	//	}
 
 		succ = src; 		// succ now points to the head of the IF stmt
 		currBlock = ifBlock;
@@ -319,13 +321,14 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		appendPendingBlock();
 
-		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
-		cfg->addEdge(src, sink, cfg::Edge("F")); // FIXME
+		ASTBuilder builder(forStmt->getNodeManager());
+		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
+		cfg->addEdge(src, sink, cfg::Edge( builder.getBasicGenerator().getFalse() )); 
 
 		// check for empty head block
-		if ( cfg->getBlock(succ).empty() ) {
-			cfg->replaceNode(succ, src);
-		}
+		//if ( cfg->getBlock(succ).empty() ) {
+	///		cfg->replaceNode(succ, src);
+//		}
 
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
@@ -350,13 +353,14 @@ struct CFGBuilder: public ASTVisitor< void > {
 		scopeStack.pop();
 
 		appendPendingBlock();
-		cfg->addEdge(src, succ, cfg::Edge("T")); // FIXME
-		cfg->addEdge(src, sink, cfg::Edge("F")); // FIXME
+		ASTBuilder builder(whileStmt->getNodeManager());
+		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
+		cfg->addEdge(src, sink, cfg::Edge( builder.getBasicGenerator().getFalse() ));
 
 		// check for empty head block
-		if ( cfg->getBlock(succ).empty() ) {
-			cfg->replaceNode(succ, src);
-		}
+		//if ( cfg->getBlock(succ).empty() ) {
+		//	cfg->replaceNode(succ, src);
+		//}
 
 		succ = src;
 		currBlock = whileBlock;
@@ -669,6 +673,9 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::CFG& cfg) {
 }
 
 namespace {
+//~~~~~ DOT FILE PRINTING UTILITIES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Functions invoked by the boost dot visitor to print the CFG in a dot file 
+	
 // print IR nodes to a string and removes eventual new lines and leading spaces
 std::string getPrettyPrinted(const NodePtr& node) {
 	std::ostringstream ss;
@@ -678,8 +685,14 @@ std::string getPrettyPrinted(const NodePtr& node) {
 	std::vector<char> res;
 	std::string prettyPrint = ss.str();
 	for(auto it = prettyPrint.begin(), end = prettyPrint.end(); it != end; ++it)
-		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' ')))
-			res.push_back(*it);
+		if(!(*it == '\n' || (it + 1 != end && *it == ' ' && *(it+1) == ' '))) {
+			if(*it != '\"')
+				res.push_back(*it);
+			else {
+				res.push_back('\\');
+				res.push_back('\"');
+			}
+		}
 
 	return std::string(res.begin(), res.end());
 }
