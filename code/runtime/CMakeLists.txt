@@ -21,6 +21,7 @@ find_package(GTest REQUIRED)
 
 include_directories(include/ ${GTEST_INCLUDE_DIRS})
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 file(GLOB test_cases test/*.cc)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )

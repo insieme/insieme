@@ -35,13 +35,15 @@
  */
 
 #include <gtest/gtest.h>
+#include <pthread.h>
 
 #include <utils/lookup_tables.h>
 
 #include <impl/error_handling.impl.h>
 
-#define TEST_ELEMS 5
-#define TEST_BUCKETS 11
+#define TEST_ELEMS 77
+#define TEST_BUCKETS 111
+#define PARALLEL_ITERATIONS 100
 
 IRT_DECLARE_ID_TYPE(lookup_test);
 IRT_MAKE_ID_TYPE(lookup_test);
@@ -67,6 +69,7 @@ void lock_check() {
 irt_lookup_test_id dummy_id_generator() {
 	static uint32 num = 0;
 	irt_lookup_test_id id;
+	#pragma omp critical
 	id.value.full = num++;
 	return id;
 }
@@ -131,5 +134,55 @@ TEST(lookup_tables, sequential_ops) {
 
 
 TEST(lookup_tables, parallel_ops) {
-	irt_lookup_test_table_init();
+	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
+		irt_lookup_test_table_init();
+
+		irt_lookup_test* elems[TEST_ELEMS*100];
+
+		#pragma omp parallel
+		{
+			#pragma omp for schedule(dynamic,1)
+			for(int i=0; i<TEST_ELEMS*50; ++i) {
+				elems[i] = make_item(i/10.0f);
+				irt_lookup_test_table_insert(elems[i]);
+			}
+			#pragma omp for schedule(dynamic,1)
+			for(int i=0; i<TEST_ELEMS*50; ++i) {
+				EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
+			}
+
+			// remove every second element and check all afterwards
+			#pragma omp for schedule(dynamic,1)
+			for(int i=0; i<TEST_ELEMS*50; i+=2) {
+				irt_lookup_test_table_remove(elems[i]->id);
+			}
+			#pragma omp for schedule(dynamic,1)
+			for(int i=0; i<TEST_ELEMS*50; ++i) {
+				if(i%2 == 0) EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(elems[i]->id));
+				else         EXPECT_EQ(elems[i]    , irt_lookup_test_table_lookup(elems[i]->id));
+			}
+
+			// add more and check all again
+			#pragma omp for schedule(dynamic,1)
+			for(int i=TEST_ELEMS*50; i<TEST_ELEMS*100; ++i) {
+				elems[i] = make_item(i/10.0f);
+				irt_lookup_test_table_insert(elems[i]);
+			}
+			#pragma omp for schedule(dynamic,1)
+			for(int i=0; i<TEST_ELEMS*100; ++i) {
+				if(i<TEST_ELEMS*50) {
+					if(i%2 == 0) EXPECT_EQ(0 /* NULL */, irt_lookup_test_table_lookup(elems[i]->id));
+					else         EXPECT_EQ(elems[i]    , irt_lookup_test_table_lookup(elems[i]->id));
+				} else {
+					EXPECT_EQ(elems[i], irt_lookup_test_table_lookup(elems[i]->id));
+				}
+			}
+		}
+
+		// cleanup
+		irt_lookup_test_table_cleanup();
+		for(int i=0; i<TEST_ELEMS*100; ++i) {
+			free(elems[i]);
+		}
+	}
 }
