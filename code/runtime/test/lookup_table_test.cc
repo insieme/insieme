@@ -120,13 +120,13 @@ TEST(lookup_tables, sequential_ops) {
 	}
 
 	// cleanup
+	irt_lookup_test_table_cleanup();
 	for(int i=0; i<TEST_ELEMS; ++i) {
 		free(elems[i]);
 	}
 	for(int i=0; i<TEST_ELEMS*10; ++i) {
 		free(elems2[i]);
 	}
-	irt_lookup_test_table_cleanup();
 }
 
 
