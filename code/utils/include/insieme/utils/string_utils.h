@@ -83,25 +83,26 @@ struct print : public std::binary_function<std::ostream&, const typename Extract
 	}
 };
 
-template<typename Container, typename Printer>
+template<typename Iterator, typename Printer>
 struct Joinable {
 
 	const string separator;
-	const Container& container;
+	const Iterator begin;
+	const Iterator end;
 	const Printer& printer;
 
-	Joinable(const string& separator, const Container& container, const Printer& printer) :
-		separator(separator), container(container), printer(printer) {};
+	Joinable(const string& separator, const Iterator& begin, const Iterator& end, const Printer& printer) :
+		separator(separator), begin(begin), end(end), printer(printer) {};
 };
 
 
 template<typename Container, typename Printer>
 std::ostream& operator<<(std::ostream& out, const Joinable<Container, Printer>& joinable) {
-	if(joinable.container.size() > 0) {
-		auto iter = joinable.container.cbegin();
+	if (joinable.begin != joinable.end) {
+		auto iter = joinable.begin;
 		joinable.printer(out, *iter);
 		++iter;
-		std::for_each(iter, joinable.container.cend(), [&](const typename Container::value_type& cur) {
+		std::for_each(iter, joinable.end, [&](const typename Container::value_type& cur) {
 			out << joinable.separator;
 			joinable.printer(out, cur);
 		});
@@ -109,18 +110,37 @@ std::ostream& operator<<(std::ostream& out, const Joinable<Container, Printer>& 
 	return out;
 }
 
-/** Joins the values in the collection to the stream separated by a supplied separator.
- ** NOTE: When using C++0x lambdas to supply the printer *make sure* to provide the return type (usually std::ostream&) explicitly.
- ** TODO: it should be possible to write this in a way that removes the above requirement.
- ** */
+/**
+ * Joins the values in the collection to the stream separated by a supplied separator.
+ **/
 template<typename Container, typename Printer>
-Joinable<Container, Printer> join(const string& separator, const Container& container, const Printer& printer) {
-	return Joinable<Container,Printer>(separator, container, printer);
+Joinable<typename Container::const_iterator, Printer> join(const string& separator, const Container& container, const Printer& printer) {
+	return Joinable<typename Container::const_iterator ,Printer>(separator, container.cbegin(), container.cend(), printer);
 }
 
 template<typename Container>
-Joinable<Container, print<id<const typename Container::value_type&>>> join(const string& separator, const Container& container) {
-	return Joinable<Container, print<id<const typename Container::value_type&>>>(separator, container, print<id<const typename Container::value_type&>>());
+Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>> join(const string& separator, const Container& container) {
+	return Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>>(separator, container.cbegin(), container.cend(), print<id<const typename Container::value_type&>>());
+}
+
+template<typename Iterator, typename Printer>
+Joinable<Iterator, Printer> join(const string& separator, const Iterator& begin, const Iterator& end, const Printer& printer) {
+	return Joinable<Iterator ,Printer>(separator, begin, end, printer);
+}
+
+template<typename Iterator>
+Joinable<Iterator, print<id<const typename std::iterator_traits<Iterator>::value_type&>>> join(const string& separator, const Iterator& begin, const Iterator& end) {
+	return Joinable<Iterator , print<id<const typename std::iterator_traits<Iterator>::value_type&>>>(separator, begin, end, print<id<const typename std::iterator_traits<Iterator>::value_type&>>());
+}
+
+template<typename Iterator, typename Printer>
+Joinable<Iterator, Printer> join(const string& separator, const std::pair<Iterator, Iterator>& range, const Printer& printer) {
+	return Joinable<Iterator ,Printer>(separator, range.first, range.second, printer);
+}
+
+template<typename Iterator>
+Joinable<Iterator, print<id<const typename std::iterator_traits<Iterator>::value_type&>>> join(const string& separator, const std::pair<Iterator, Iterator>& range) {
+	return Joinable<Iterator , print<id<const typename std::iterator_traits<Iterator>::value_type&>>>(separator, range.first, range.second, print<id<const typename std::iterator_traits<Iterator>::value_type&>>());
 }
 
 template<typename SeparatorFunc, typename Container, typename Printer>
