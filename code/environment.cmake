@@ -191,7 +191,8 @@ if(MSVC)
 endif()
 
 # --------------------------------------------------------- Runtime
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+# -D_XOPEN_SOURCE=700 is required to get recent pthread features with -std=c99
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
 
 # --------------------------------------------------------- Valgrind / GTest testing suite
 # avoid multiple import
