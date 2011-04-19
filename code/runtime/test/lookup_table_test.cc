@@ -42,6 +42,9 @@
 
 #include <impl/error_handling.impl.h>
 
+// horrible hack incoming
+uint32 irt_g_error_key = 0;
+
 #define TEST_ELEMS 77
 #define TEST_BUCKETS 111
 #define PARALLEL_ITERATIONS 100
@@ -74,6 +77,7 @@ irt_lookup_test_id dummy_id_generator() {
 	irt_lookup_test_id id;
 	id.value.components.thread = omp_get_thread_num();
 	id.value.components.index = num++;
+	id.cached = NULL;
 	return id;
 }
 
