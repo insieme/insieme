@@ -34,10 +34,10 @@
  * regarding third party software licenses.
  */
 
+#include "impl/data_item.impl.h"
 #include "irt_context.h"
 #include "irt_types.h"
 #include "wi_implementation.h"
-#include "data_item.h"
 #include "work_item.h"
 
 #define NUM_ELEMENTS 100000
@@ -123,17 +123,19 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 void insieme_wi_add_implementation1(irt_work_item* wi) {
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
-	irt_data_item* inputdata = irt_di_create_sub(params->input, (irt_data_range*)(&wi->range));
-	irt_data_item* outputdata = irt_di_create_sub(params->output, (irt_data_range*)(&wi->range));
-	insieme_struct1* input = (insieme_struct1*)irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
-	int* output = (int*)irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
+	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
+	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
+	irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
+	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
+	insieme_struct1* input = (insieme_struct1*)inputblock->data;
+	int* output = (int*)outputblock->data;
 
 	for(int i = wi->range.begin; i < wi->range.end; ++i) {
 		if(input[i].do_add) output[i] = input[i].v1 + input[i].v2;
 	}
 
-	irt_di_free(input);
-	irt_di_free(output);
+	irt_di_free(inputblock);
+	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
 }

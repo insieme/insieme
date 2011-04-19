@@ -5,15 +5,16 @@ project(insieme_runtime C CXX)
 
 include(../environment.cmake)
 
-# Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
 file(GLOB_RECURSE insieme_runtime_incs 	include/*.h )
 
 # list all include paths
 include_directories(include/)
 
-# Build the runtime library
-add_library(insieme_runtime ${LINKING_TYPE} ${insieme_runtime_srcs} ${insieme_runtime_incs} )
+# Build the runtime
+add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} )
+target_link_libraries(insieme_runtime ${pthread_LIB})
+target_link_libraries(insieme_runtime dl)
 
 
 # enable tests for this project
@@ -28,11 +29,15 @@ foreach (case_file ${test_cases})
 	
 	add_executable(ut_${case_name} ${case_file})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(ut_${case_name} insieme_runtime)
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	target_link_libraries(ut_${case_name} dl)
 	
-	add_unit_test(${case_name})
+	# disable valgrind for parallel test cases
+	set(VFLAG ${TRUE})
+	if(case_name MATCHES ".*_par")
+		set(VFLAG FALSE)
+	endif()
+	add_unit_test(${case_name} ${VFLAG})
 endforeach(case_file)
 
 file(GLOB test_cases test/*.c)
@@ -40,7 +45,6 @@ foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	add_library(${case_name} ${case_file})
-	target_link_libraries(${case_name} insieme_runtime)
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 endforeach(case_file)

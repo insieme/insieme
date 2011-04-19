@@ -66,6 +66,10 @@ static inline irt_##__type##_id irt_generate_##__type##_id() { \
 	id.value.components.index = (*(uint32*)(worker_ptr+2))++; \
 	id.cached = NULL; \
 	return id; \
+} \
+static inline irt_##__type##_id irt_##__type##_null_id() { \
+	irt_##__type##_id null_id = { { 0 }, NULL }; \
+	return null_id; \
 }
 
 

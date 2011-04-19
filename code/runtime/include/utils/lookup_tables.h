@@ -88,6 +88,7 @@ static inline void irt_##__type__##_table_insert(irt_##__type__* element) { \
 	pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); \
 } \
 static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id id) { \
+	if(id.cached) return id.cached; \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; \
 	irt_##__type__* element; \
 	/* No locking required assuming sequential consistency and correctness of requests */ \
@@ -95,6 +96,7 @@ static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id 
 	element = irt_g_##__type__##_table[hash_val]; \
 	while(element && element->id.value.full != id.value.full) element = element->__next_name__; \
 	/* pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); */ \
+	id.cached = element; \
 	return element; \
 } \
 static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \

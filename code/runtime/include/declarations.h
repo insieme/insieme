@@ -39,6 +39,10 @@
 #include "irt_inttypes.h"
 #include "id_generation.h"
 
+/* ------------------------------ config options ----- */
+
+#define IRT_DATA_ITEM_LT_BUCKETS 97
+
 // Declarations of insieme runtime types in alphabetical lexicographic order
 
 /* ------------------------------ channels ----- */
