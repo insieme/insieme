@@ -36,6 +36,7 @@
 
 #include <gtest/gtest.h>
 #include <pthread.h>
+#include <omp.h>
 
 #include <utils/lookup_tables.h>
 
@@ -57,20 +58,22 @@ typedef struct _irt_lookup_test {
 IRT_DEFINE_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS);
 IRT_CREATE_LOOKUP_TABLE(lookup_test, next_lt, IRT_ID_HASH, TEST_BUCKETS);
 
-void lock_check() {
-	printf("\n=================\n");
-	for(int i=0; i<TEST_BUCKETS; ++i) {
-		int res = pthread_spin_trylock(&irt_g_lookup_test_table_locks[i]);
-		printf("Bucket %d locked? %s\n", i, res?"unlocked":"locked");
-		if(res == 0) pthread_spin_unlock(&irt_g_lookup_test_table_locks[i]);
-	}
-}
+//void lock_check() {
+//	printf("\n=================\n");
+//	for(int i=0; i<TEST_BUCKETS; ++i) {
+//		int res = pthread_spin_trylock(&irt_g_lookup_test_table_locks[i]);
+//		printf("Bucket %d locked? %s\n", i, res?"unlocked":"locked");
+//		if(res == 0) pthread_spin_unlock(&irt_g_lookup_test_table_locks[i]);
+//	}
+//}
+
+uint32 num = 0;
+#pragma omp threadprivate(num)
 
 irt_lookup_test_id dummy_id_generator() {
-	static uint32 num = 0;
 	irt_lookup_test_id id;
-	#pragma omp critical
-	id.value.full = num++;
+	id.value.components.thread = omp_get_thread_num();
+	id.value.components.index = num++;
 	return id;
 }
 
@@ -130,6 +133,14 @@ TEST(lookup_tables, sequential_ops) {
 	for(int i=0; i<TEST_ELEMS*10; ++i) {
 		free(elems2[i]);
 	}
+
+	//irt_lookup_test_id testid;
+	//testid.value.components.index = 2;
+	//testid.value.components.thread = 5;
+	//testid.value.components.node = 10;
+	//printf("Index: %08x, thread: %04hx, node: %04hx, full: %016lx, hash: %08x\n", 
+	//	testid.value.components.index, testid.value.components.thread, testid.value.components.node, testid.value.full, IRT_ID_HASH(testid));
+	//exit(0);
 }
 
 
