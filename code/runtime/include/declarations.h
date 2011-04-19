@@ -39,6 +39,10 @@
 #include "irt_inttypes.h"
 #include "id_generation.h"
 
+/* ------------------------------ config options ----- */
+
+#define IRT_DATA_ITEM_LT_BUCKETS 97
+
 // Declarations of insieme runtime types in alphabetical lexicographic order
 
 /* ------------------------------ channels ----- */
@@ -59,7 +63,7 @@ typedef struct _irt_context irt_context;
 /* ------------------------------ data items ----- */
 
 IRT_DECLARE_ID_TYPE(data_item);
-typedef enum _irt_data_mode irt_data_mode;
+//typedef enum _irt_data_mode irt_data_mode;
 typedef struct _irt_data_range irt_data_range;
 typedef struct _irt_data_block irt_data_block;
 typedef struct _irt_data_item irt_data_item;
@@ -67,13 +71,13 @@ typedef struct _irt_lw_data_item irt_lw_data_item;
 
 /* ------------------------------ error handling ----- */
 
-typedef enum _irt_errcode irt_errcode;
+//typedef enum _irt_errcode irt_errcode;
 typedef struct _irt_error irt_error;
 
 /* ------------------------------ types ----- */
 
 typedef uint32 irt_type_id;
-typedef enum _irt_type_kind irt_type_kind;
+//typedef enum _irt_type_kind irt_type_kind;
 typedef struct _irt_type irt_type;
 
 /* ------------------------------ work groups ----- */

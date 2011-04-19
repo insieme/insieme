@@ -36,11 +36,68 @@
 
 #pragma once
 
-#include "data_item.h"
+#include <stdlib.h>
+#include <string.h>
 
-irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges);
-irt_data_item* irt_di_create_sub(irt_data_item_id parent, irt_data_range* ranges);
-void irt_di_destroy(irt_data_item* di);
+#include "data_item.h" 
 
-void* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
-void irt_di_free(void* p);
+#include "utils/lookup_tables.h"
+
+IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
+
+static inline irt_data_item* _irt_di_get(uint16 dimensions) {
+	char* retval = (char*)malloc(sizeof(irt_data_item) + sizeof(irt_data_range)*dimensions);
+	((irt_data_item*)retval)->ranges = (irt_data_range*)(retval + sizeof(irt_data_item));
+	return (irt_data_item*)retval;
+}
+static inline void _irt_di_recycle(irt_data_item* di) {
+	free(di);
+}
+static inline void _irt_di_dec_use_count(irt_data_item* di) {
+	if(--di->use_count == 0) _irt_di_recycle(di); // FIXME atomic operation
+}
+
+/** Creates a new data item with the given type and size.
+ **/
+irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges) {
+	irt_data_item* retval = _irt_di_get(dimensions);
+	retval->type_id = tid; 
+	retval->dimensions = dimensions;
+	retval->id = irt_generate_data_item_id();
+	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*dimensions);
+	retval->use_count = 1;
+	retval->parent_id = irt_data_item_null_id();
+	retval->lookup_table_next = NULL;
+	retval->data_block = NULL;
+	irt_data_item_table_insert(retval);
+	return retval;
+}
+/** Creates a data item representing a sub-range of a parent data item. 
+ ** Type and dimensions are the same as for the parent.
+ **/
+irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) {
+	irt_data_item* retval = _irt_di_get(parent->dimensions);
+	memcpy(retval, parent, sizeof(irt_data_item));
+	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*parent->dimensions);
+	irt_data_item_table_insert(retval);
+	return retval;
+}
+/** Destroys an existing data item.
+ **/
+void irt_di_destroy(irt_data_item* di) {
+	_irt_di_dec_use_count(di);
+}
+
+irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
+	if(di->data_block) { 
+		return di->data_block;
+	}
+	else {
+		// TODO find or create data block
+		return di->data_block;		
+	}
+}
+void irt_di_free(irt_data_block* b) {
+	// TODO notify parent
+	//_irt_di_dec_use_count(di);
+}

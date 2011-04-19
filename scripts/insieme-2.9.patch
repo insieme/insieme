@@ -1,5 +1,5 @@
-diff -crB llvm-2.9rc1/tools/clang/include/clang/Parse/Parser.h llvm-2.9/tools/clang/include/clang/Parse/Parser.h
-*** llvm-2.9rc1/tools/clang/include/clang/Parse/Parser.h	2011-03-05 15:45:16.000000000 +0100
+diff -crB llvm-2.9/tools/clang/include/clang/Parse/Parser.h llvm-2.9/tools/clang/include/clang/Parse/Parser.h
+*** llvm-2.9/tools/clang/include/clang/Parse/Parser.h	2011-03-05 15:45:16.000000000 +0100
 --- llvm-2.9/tools/clang/include/clang/Parse/Parser.h	2011-03-09 21:42:44.286334000 +0100
 ***************
 *** 24,29 ****
@@ -26,8 +26,8 @@ diff -crB llvm-2.9rc1/tools/clang/include/clang/Parse/Parser.h llvm-2.9/tools/cl
     PrettyStackTraceParserEntry CrashInfo;
   
     Preprocessor &PP;
-diff -crB llvm-2.9rc1/tools/clang/include/clang/Sema/Sema.h llvm-2.9/tools/clang/include/clang/Sema/Sema.h
-*** llvm-2.9rc1/tools/clang/include/clang/Sema/Sema.h	2011-03-07 17:54:27.000000000 +0100
+diff -crB llvm-2.9/tools/clang/include/clang/Sema/Sema.h llvm-2.9/tools/clang/include/clang/Sema/Sema.h
+*** llvm-2.9/tools/clang/include/clang/Sema/Sema.h	2011-03-07 17:54:27.000000000 +0100
 --- llvm-2.9/tools/clang/include/clang/Sema/Sema.h	2011-03-10 18:59:24.956569001 +0100
 ***************
 *** 801,807 ****

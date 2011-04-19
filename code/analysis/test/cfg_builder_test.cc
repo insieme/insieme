@@ -536,3 +536,23 @@ TEST(CFGBlockIterator, PredecessorIterator) {
 	EXPECT_TRUE(predIT == end);
 }
 
+TEST(CFGBuilder, CallExprSimple) {
+
+	NodeManager manager;
+
+	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "1");
+	FunctionTypePtr exitFuncTy = FunctionType::get( manager, toVector<TypePtr>(manager.basic.getInt4()),  manager.basic.getInt4());
+
+	CallExprPtr callExpr = CallExpr::get(manager, manager.basic.getInt4(), Literal::get(manager, exitFuncTy, "exit"),
+			toVector<ExpressionPtr>(literal));
+
+	CompoundStmtPtr cs = CompoundStmt::get(manager, toVector<StatementPtr>(callExpr));
+
+	// Build the CFG
+	CFGPtr cfg = CFG::buildCFG(cs);
+
+	EXPECT_EQ(static_cast<unsigned>(3), cfg->getSize());
+
+
+}
+
