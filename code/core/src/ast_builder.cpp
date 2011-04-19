@@ -158,6 +158,12 @@ ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 			elem, subExpr);
 }
 
+ExpressionPtr ASTBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
+	assert( manager.basic.isBool(boolExpr->getType()) && "Cannot negate a non boolean expression.");
+	return callExpr(manager.basic.getBool(), manager.basic.getBoolLNot(), boolExpr);
+}
+
+
 CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
 	auto vType = dynamic_pointer_cast<const VectorType>(vec->getType());
 	assert(vType && "Tried vector subscript operation on non-vector expression");

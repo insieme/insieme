@@ -123,6 +123,9 @@ public:
 	CallExprPtr refNew(const ExpressionPtr& subExpr) const;
 
 	ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
+	// Returns the negation of the passed subExpr (which must be of boolean type)
+	// 	       (<BOOL> expr) -> <BOOL> !expr
+	ExpressionPtr negateExpr(const ExpressionPtr& subExpr) const;
 
 	// Vectors
 	CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;

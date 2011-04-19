@@ -101,9 +101,15 @@ struct Terminator : public Element {
  * which the path is taken.
  */
 struct Edge {
-	std::string label; // fixme: replace the string label with an expression
-	Edge(const std::string& label = std::string()) : label(label) { }
-	void operator=(const Edge& other) { label = other.label; }
+	Edge(const core::ExpressionPtr& expr = core::ExpressionPtr()) : expr(expr) { }
+	Edge& operator=(const Edge& other) { 
+		expr = other.expr; 
+		return *this; 
+	}
+
+	core::ExpressionPtr getEdgeExpr() const { return expr; }
+private:
+	core::ExpressionPtr expr;	
 };
 
 } // end cfg namespace
@@ -165,7 +171,10 @@ private:
 		template <class VertexOrEdge>
 		void operator()(std::ostream& out, const VertexOrEdge& v) const {
 			const cfg::Edge& e = edge[v];
-			out << "[label=\"" << e.label << "\"]";
+			out << "[label=\"";
+			if(e.getEdgeExpr()) 
+				out << *e.getEdgeExpr();
+			out << "\"]";
 		}
 	private:
 		EdgeTy& edge;
