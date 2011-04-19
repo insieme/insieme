@@ -32,7 +32,12 @@ foreach (case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	target_link_libraries(ut_${case_name} dl)
 	
-	add_unit_test(${case_name})
+	# disable valgrind for parallel test cases
+	set(VFLAG ${TRUE})
+	if(case_name MATCHES ".*_par")
+		set(VFLAG FALSE)
+	endif()
+	add_unit_test(${case_name} ${VFLAG})
 endforeach(case_file)
 
 file(GLOB test_cases test/*.c)
