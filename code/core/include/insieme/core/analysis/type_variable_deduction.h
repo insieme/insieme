@@ -65,14 +65,6 @@ class TypeVariableConstraints : public utils::Printable {
 		TypeSet subTypes;
 
 		/**
-		 * The list of types the constraint variable has to be equivalent to.
-		 * Typically only a single value within this set is useful. An exception is
-		 * provided by cases where all the types within the set are equivalent within
-		 * the sub-type relation.
-		 */
-		TypeSet equalTypes;
-
-		/**
 		 * Requests this constraint to be solved. The solution will be the largest type which
 		 * is satisfying all the constraints.
 		 */
@@ -143,8 +135,10 @@ public:
 	 * @param type the type this variable has to be equivalent to (super- and sub-type)
 	 */
 	void addEqualsConstraint(const TypeVariablePtr& var, const TypePtr& type) {
-		if (!unsatisfiable)
-			getConstraintsFor(var).equalTypes.insert(type);
+		if (!unsatisfiable) {
+			addSupertypeConstraint(var, type);
+			addSubtypeConstraint(var, type);
+		}
 	}
 
 	/**

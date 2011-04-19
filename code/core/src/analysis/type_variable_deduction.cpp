@@ -38,8 +38,12 @@
 
 #include <iterator>
 
+#include <boost/graph/strong_components.hpp>
+
 #include "insieme/core/annotation.h"
 #include "insieme/core/expressions.h"
+
+#include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace core {
@@ -48,45 +52,6 @@ namespace analysis {
 
 	TypePtr TypeVariableConstraints::VariableConstraint::solve() const {
 		TypePtr res;
-
-		// start by checking whether there is a equal type
-		if (!equalTypes.empty()) {
-
-			// get first type to be considered
-			res = *equalTypes.begin();
-
-
-			// check against all constraints
-			bool valid = true;
-
-			// check against equality constraints
-			for_each(equalTypes, [&](const TypePtr& cur) {
-				// bidirectional ...
-				valid = valid && isSubTypeOf(res, cur) && isSubTypeOf(cur, res);
-			});
-
-			if (valid) for_each(superTypes, [&](const TypePtr& cur) {
-				// check super-type constraint
-				valid = valid && isSubTypeOf(cur, res);
-			});
-
-			if (valid) for_each(subTypes, [&](const TypePtr& cur) {
-				// check super-type constraint
-				valid = valid && isSubTypeOf(res, cur);
-			});
-
-			// if all constraints are satisfied ...
-			if (valid) {
-				return res;
-			}
-
-			// => unsatisfiable
-			return 0;
-		}
-
-
-		// no equality constraints defined
-		// => a type has to be inferred
 
 		// try infer type from sub-type constraints
 		if (!subTypes.empty()) {
@@ -122,7 +87,7 @@ namespace analysis {
 
 
 	std::ostream& TypeVariableConstraints::VariableConstraint::printTo(std::ostream& out) const {
-		return out << "[ x < " << superTypes << " && x = " << equalTypes << " && x > " << subTypes << " ]";
+		return out << "[ <= " << superTypes << " && >= " << subTypes << " ]";
 	}
 
 
@@ -132,6 +97,46 @@ namespace analysis {
 		if (!isSatisfiable()) {
 			return 0;
 		}
+
+
+		// step 1) form a sub-type graph
+		//		- types & variables are nodes
+		//		- edges indicate sub-type constraints (A -> B ... A has to be a sub-type of B)
+
+		utils::graph::PointerGraph<TypePtr> subtypeGraph;
+
+		// add edges
+		for(auto it = constraints.begin(); it != constraints.end(); ++it) {
+
+			const TypeVariablePtr& var = it->first;
+			const TypeVariableConstraints::VariableConstraint& cur = it->second;
+
+			// add sub-type constraints
+			for_each(cur.subTypes, [&](const TypePtr& cur) {
+				subtypeGraph.addEdge(var, cur);
+			});
+
+			// add super-type constraints
+			for_each(cur.superTypes, [&](const TypePtr& cur) {
+				subtypeGraph.addEdge(cur, var);
+			});
+		}
+
+		// TODO: output for debug only => remove
+		std::cout << "Subtype graph: " << std::endl;
+		subtypeGraph.printGraphViz(std::cout, print<deref<TypePtr>>());
+
+
+		// step 2) compute SCCs within subtype graph
+
+		utils::graph::PointerGraph<TypePtr>::GraphType::vertices_size_type componentMap[subtypeGraph.getNumVertices()];
+		auto numComponents = boost::strong_components(subtypeGraph.asBoostGraph(), componentMap);
+		std::cout << "Number of componentes: " << numComponents;
+
+		std::cout << std::endl;
+
+
+		// ---------- Old algorithm ----------------------
 
 		// create result
 		Substitution res;
@@ -161,6 +166,9 @@ namespace analysis {
 
 
 	std::ostream& TypeVariableConstraints::printTo(std::ostream& out) const {
+		if (unsatisfiable) {
+			return out << "[unsatisfiable / " << constraints << "/" << intTypeParameter << "]";
+		}
 		return out << "[" << constraints << "/" << intTypeParameter << "]";
 	}
 
@@ -504,7 +512,10 @@ namespace analysis {
 			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
 		}
 
-		// std::cout << "Constraints: " << constraints << std::endl;
+		std::cout << std::endl;
+		std::cout << "Parameter:   " << join(",", parameter, print<deref<TypePtr>>()) << std::endl;
+		std::cout << "Arguments:   " << join(",", arguments, print<deref<TypePtr>>()) << std::endl;
+		std::cout << "Constraints: " << constraints << std::endl;
 
 		// solve constraints to obtain results
 		return constraints.solve();

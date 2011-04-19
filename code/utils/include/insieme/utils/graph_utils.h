@@ -45,10 +45,11 @@
 
 #include "insieme/utils/printable.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace utils {
-namespace graphs {
+namespace graph {
 
 	/**
 	 * A simple, empty struct used as a label for unlabeled graphs.
@@ -323,6 +324,17 @@ namespace graphs {
 
 	};
 
+
+	/**
+	 * A special graph version capable of handling pointer as vertices. Those pointers dereferenced before being compared. Hence,
+	 * two pointers referencing two equivalent values within different memory locations will be considered identical.
+	 *
+	 * @tparam Vertex the type of vertex to be maintained within the graph - has to be a pointer type
+	 * @tparam EdgeLabel the type of label to be used on the edges (unlabeled by default)
+	 * @tparam DirectedS allows to determine the structure of the wrapped graph
+	 */
+	template<class Vertex, class EdgeLabel = unlabeled, class DirectedS = boost::directedS>
+	class PointerGraph : public Graph<Vertex, EdgeLabel, DirectedS, map::PointerMap> {};
 
 } // end namespace graph
 } // end namespace utils

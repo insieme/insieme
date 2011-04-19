@@ -47,7 +47,7 @@ using std::list;
 
 namespace insieme {
 namespace utils {
-namespace graphs {
+namespace graph {
 
 
 TEST(GraphUtils, SimpleGraph) {
@@ -133,8 +133,30 @@ TEST(GraphUtils, LabeledGraph) {
 	EXPECT_FALSE(graph.getLabel(2,8));
 	EXPECT_FALSE(graph.getLabel(4,2));
 
+}
+
+TEST(GraphUtils, PointerGraph) {
+
+	int a = 1;
+	int b = 2;
+	int c = 2;  // c == b
+
+	int* p1 = &a;
+	int* p2 = &b;
+	int* p3 = &c;
+
+	PointerGraph<int*> graph;
+
+	// first two should be fine
+	EXPECT_TRUE(graph.addVertex(p1));
+	EXPECT_TRUE(graph.addVertex(p2));
+
+	// this should not work since *p3 = *p2 => same value
+	EXPECT_FALSE(graph.addVertex(p3));
 
 }
+
+
 
 } // end namespace graph
 } // end namespace utils
