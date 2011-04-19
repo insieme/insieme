@@ -9,21 +9,21 @@ export CC="/insieme-libs/gcc452/bin/gcc"
 echo "*****************************************"
 echo "* Downloading current LLVM distribution *"
 echo "*****************************************"
-wget http://llvm.org/pre-releases/2.9/llvm-2.9rc2.src.tar.gz
-gzip -df llvm-2.9rc2.src.tar.gz
-tar -xf llvm-2.9rc2.src.tar
+wget http://llvm.org/pre-releases/2.9/llvm-2.9rc1.src.tar.gz 
+gzip -df llvm-2.9rc1.src.tar.gz
+tar -xf llvm-2.9rc1.src.tar
 # change dire into tools
-cd llvm-2.9rc2/tools
+cd llvm-2.9rc1/tools
 
 echo "******************************************"
 echo "* Downloading current CLANG distribution *"
 echo "******************************************"
 # download clang
-wget http://llvm.org/pre-releases/2.9/clang-2.9rc2.src.tar.gz
-gzip -df clang-2.9rc2.src.tar.gz 
-tar -xf clang-2.9rc2.src.tar
-mv clang-2.9rc2 clang
-rm -f clang-2.9rc2.src.tar
+wget http://llvm.org/pre-releases/2.9/clang-2.9rc1.src.tar.gz 
+gzip -df clang-2.9rc1.src.tar.gz
+tar -xf clang-2.9rc1.src.tar
+mv clang-2.9rc1 clang
+rm -f clang-2.9rc1.src.tar
 cd ../
 
 echo "***********************************"
@@ -44,7 +44,7 @@ cd ../
 echo "****************************************"
 echo "* Removing LLVM installation directory *"
 echo "****************************************"
-rm -R llvm-2.9rc2
+rm -R llvm-2.9rc1
 
 echo "****************************************************************"
 echo "* Patching stdarg.h to make CLANG work with linux libc (maybe) *"

@@ -270,9 +270,9 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
 
 		// check for empty head block
-		// if ( cfg->getBlock(succ).empty() ) {
-		//	cfg->replaceNode(succ, src);
-		// }
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
 
 		succ = sink; // reset the successor for the thenBody
 
@@ -283,9 +283,9 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getFalse() ));
 
 		// check for empty head block
-		// if ( cfg->getBlock(succ).empty() ) {
-	//		cfg->replaceNode(succ, src);
-	//	}
+		if ( cfg->getBlock(succ).empty() ) {
+			cfg->replaceNode(succ, src);
+		}
 
 		succ = src; 		// succ now points to the head of the IF stmt
 		currBlock = ifBlock;
@@ -424,6 +424,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 			if ( !cfg->hasSubGraph(lambdaExpr) ) {
 				// In the case the body has not been visited yet, proceed with the graph construction
+				// TODO: This can be executed in a separate thread (if necessary)
 				CFG::buildCFG<CP>(lambdaExpr, cfg);
 			}
 
