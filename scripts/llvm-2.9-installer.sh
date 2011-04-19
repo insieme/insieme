@@ -1,4 +1,4 @@
-PREFIX=/insieme-libs/llvm29
+PREFIX=/insieme-libs/llvm-2.9
 SLOTS=16
 
 export LD_LIBRARY_PATH=/insieme-libs/gcc452/lib64
@@ -32,8 +32,8 @@ patch -p1  < ../insieme-2.9.patch
 echo "*******************"
 echo "* Compiling CLANG *"
 echo "*******************"
-./configure --prefix=$PREFIX --enable-shared=yes --enable-assert=no --enable-debug-runtime=no \
---enable-debug-symbols=no --enable-optimized=yes
+./configure --prefix=$PREFIX --enable-shared=yes --enable-assert=yes --enable-debug-runtime=yes \
+--enable-debug-symbols=yes --enable-optimized=yes
 # --enable-doxygen=yes
 
 make REQUIRES_RTTI=1 clang-only -j$SLOTS
