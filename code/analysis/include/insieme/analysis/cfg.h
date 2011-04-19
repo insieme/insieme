@@ -266,6 +266,11 @@ public:
 	VertexTy addBlock(cfg::Block* block);
 
 	/**
+	  * Removes a CFG Block from the CFG
+	  */
+	bool removeBlock(cfg::Block* block);
+
+	/**
 	 * Returns a CFG element of the graph given its vertex id.
 	 *
 	 * @param vertexId The id of the CFG Block

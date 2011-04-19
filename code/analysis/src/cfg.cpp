@@ -158,15 +158,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		if ( entry == succ )	return;
 
-		if ( cfg->getBlock(succ).empty() ) {
-			// If the first statement of a root element is a function call
-			// we end up with an empty statement at the top of the CFG, we
-			// want to remove that block and connect the outgoing edges to
-			// the entry node
-			cfg->replaceNode(succ, entry);
-			return;
-		}
-
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
 	}
 
@@ -261,18 +252,13 @@ struct CFGBuilder: public ASTVisitor< void > {
 		
 		appendPendingBlock(); // append any pending block before we fork the CFG for inserting the for stmt
 		CFG::VertexTy sink = succ;
-
+		
 		createBlock();
 		visit(ifStmt->getThenBody());
 		appendPendingBlock();
 
 		ASTBuilder builder(ifStmt->getNodeManager());
 		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
-
-		// check for empty head block
-		if ( cfg->getBlock(succ).empty() ) {
-			cfg->replaceNode(succ, src);
-		}
 
 		succ = sink; // reset the successor for the thenBody
 
@@ -281,11 +267,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 		appendPendingBlock();
 	
 		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getFalse() ));
-
-		// check for empty head block
-		if ( cfg->getBlock(succ).empty() ) {
-			cfg->replaceNode(succ, src);
-		}
 
 		succ = src; 		// succ now points to the head of the IF stmt
 		currBlock = ifBlock;
@@ -325,11 +306,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
 		cfg->addEdge(src, sink, cfg::Edge( builder.getBasicGenerator().getFalse() )); 
 
-		// check for empty head block
-		//if ( cfg->getBlock(succ).empty() ) {
-	///		cfg->replaceNode(succ, src);
-//		}
-
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
 		createBlock();
@@ -356,11 +332,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 		ASTBuilder builder(whileStmt->getNodeManager());
 		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
 		cfg->addEdge(src, sink, cfg::Edge( builder.getBasicGenerator().getFalse() ));
-
-		// check for empty head block
-		//if ( cfg->getBlock(succ).empty() ) {
-		//	cfg->replaceNode(succ, src);
-		//}
 
 		succ = src;
 		currBlock = whileBlock;
@@ -393,11 +364,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 			appendPendingBlock();
 			cfg->addEdge(src, succ);
-
-			// check for empty head block
-			if ( cfg->getBlock(succ).empty() ) {
-				cfg->replaceNode(succ, src);
-			}
 		}
 
 		succ = sink;
@@ -473,19 +439,20 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		CFG::VertexTy sink = succ;
 
-		bool hasSpawned = false;
+		size_t spawnedArgs = 0;
 		const vector<ExpressionPtr>& args = callExpr->getArguments();
-		std::for_each(args.begin(), args.end(), [this, sink, &hasSpawned](const ExpressionPtr& curr){
+		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionPtr& curr) {
 
 			// in the case the argument is a call expression, we need to allocate a separate block in order to
 			// perform the inter-procedural function call
-			if ( curr->getNodeType() == NT_CallExpr || curr->getNodeType() == NT_CaptureInitExpr || curr->getNodeType() == NT_CastExpr ) {
+
+			if ( curr->getNodeType() == NT_CallExpr || curr->getNodeType() == NT_CastExpr ) {
 				this->createBlock();
 				this->visit(curr);
 				this->appendPendingBlock();
 
-				if(this->succ != sink) {
-					hasSpawned = true;
+				if ( this->succ != sink ) {
+					++spawnedArgs;
 				}
 
 				this->succ = sink;
@@ -493,7 +460,26 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		});
 
-		if ( !hasSpawned ) {
+		// In the case a spawnblock has been created to capture arguments of the callExpr but no arguments were 
+		// call expressions, therefore the created spawnblock is not necessary. 
+		if ( spawnedArgs<2 && hasAllocated ) {
+			
+			if (spawnedArgs == 1) {
+				succ = (*cfg->successors_begin(head)).blockId();
+			}
+
+			// remove the spawned block from the CFG 
+			cfg->removeBlock(spawnBlock);
+			delete spawnBlock;
+			spawnBlock = NULL;
+
+			// set the head to false (for next calls to this function)
+			hasHead = false;
+			return;
+		}
+
+
+		if ( spawnedArgs==0 && !hasAllocated ) {
 			cfg->addEdge(head, succ);
 		}
 
@@ -596,6 +582,14 @@ CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 	boost::property_map< CFG::ControlFlowGraph, boost::vertex_index_t>::type&& blockID = get(boost::vertex_index, graph);
 	put(blockID, v, currId++);
 	return v;
+}
+
+bool CFG::removeBlock(cfg::Block* block) {
+	CFG::VertexTy bID = block->blockId();
+	boost::clear_in_edges(bID, graph);
+	boost::clear_out_edges(bID, graph);
+	boost::remove_vertex(bID, graph);
+	return true;
 }
 
 std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
