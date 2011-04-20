@@ -302,13 +302,12 @@ public:
 	/**
 	  * Returns the Edge object associated to a graph edge connecting src and dest vertices 
 	  */
-	cfg::Edge& getEdge(VertexTy src, VertexTy dest) { 
+	const cfg::Edge& getEdge(const VertexTy& src, const VertexTy& dest) const { 
 		auto edgeDescriptor = boost::edge(src, dest, graph);
 		assert(edgeDescriptor.second && "No edge exists between the two selected vertices");
-		std::cout << "edge exists" << std::endl;
 		EdgeTy edge = edgeDescriptor.first;
-		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
-		return edgeMap[edge];
+		ConstEdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
+		return get(edgeMap, edge);
 	}
 
 	/**
@@ -405,11 +404,18 @@ struct Block {
 
 	enum Type { DEFAULT, ENTRY, EXIT, CALL, RET };
 
-	Block(const Type& blockType = DEFAULT) : blockType(blockType) { }
-	Block(const CFG::VertexTy& id, const Type& blockType) : blockType(blockType), id(id) { }
+	Block(const Type& blockType = DEFAULT) : graph(NULL), blockType(blockType) { }
+	Block(const CFG::VertexTy& id, const Type& blockType) : graph(NULL), blockType(blockType), id(id) { }
 
 	/// Appends a statement to an existing CFGBlock
 	void appendElement(const cfg::Element& elem) { stmtList.push_back(elem); }
+
+	const CFG& getCFG() const { 
+		assert(graph && "This Block doesn't belong to any CFG"); 
+		return *graph; 
+	}
+
+	void setCFG(const CFG& cfg) { graph = &cfg; }
 
 	/// Setters and getters for the terminator element
 	const Terminator& terminator() const { return term; }
@@ -451,6 +457,7 @@ struct Block {
 
 	virtual ~Block() { }
 private:
+	const CFG*		graph;
 	const Type		blockType;
 	CFG::VertexTy	id;
 	StatementList 	stmtList;
