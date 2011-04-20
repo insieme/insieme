@@ -36,52 +36,56 @@
 
 #pragma once
 
-#include "error_handling.h"
+#include "worker.h"
+
+#include <stdlib.h>
 
 #include "globals.h"
+#include "impl/error_handling.impl.h"
 
-#include <pthread.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-
-
-const char *irt_errcode_strings[] = {
-	"IRT_ERR_NONE",
-	"IRT_ERR_IO",
-	"IRT_ERR_INIT",
-	"IRT_ERR_APP"
-};
-
-
-void irt_throw_string_error(irt_errcode code, const char* message, ...) {
-	va_list args;
-	va_start(args, message);
-	char buffer[512];
-	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
-	va_end(args);
-
-	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
-	err->errcode = code;
-	err->additional_bytes = additional_bytes;
-	strncpy(((char*)err)+sizeof(irt_error), buffer, additional_bytes);
-	irt_throw_generic_error(err);
+static inline irt_worker* irt_get_current_worker() {
+	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
 }
 
-void irt_throw_generic_error(irt_error* error) {
-	if(pthread_setspecific(irt_g_error_key, error) != 0) {
-		fprintf(stderr, "Error during error reporting. Shutting down.\n");
-		exit(-1);
+typedef struct __irt_worker_func_arg {
+	irt_worker *generated;
+	bool ready;
+	irt_affinity_mask affinity;
+	uint16 index;
+} _irt_worker_func_arg;
+
+void* _irt_worker_func(void *argvp) {
+	
+	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
+	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
+	arg->generated->generator_count = 1;
+	arg->generated->pthread = pthread_self();
+	arg->generated->id.value.components.index = 1;
+	arg->generated->id.value.components.thread = arg->index;
+	arg->generated->id.value.components.node = 0; // TODO correct node id
+	arg->generated->id.cached = arg->generated;
+	arg->generated->affinity = arg->affinity;
+	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
+	arg->ready = true;
+
+	for(;;) {
+		// TODO main worker loop
 	}
-	raise(IRT_SIG_ERR);
+
+	return NULL;
 }
 
-const char* irt_errcode_string(irt_errcode code) {
-	return irt_errcode_strings[code];
-}
+irt_worker* irt_create_worker(uint16 index, irt_affinity_mask affinity) {
+	_irt_worker_func_arg arg;
+	arg.affinity = affinity;
+	arg.index = index;
+	arg.ready = false;
 
-void irt_print_error_info(FILE* target, irt_error* error) {
-	if(error->additional_bytes) {
-		fprintf(target, "%s", (char*)error+sizeof(irt_error));
-	}
+	pthread_t thread;
+
+	IRT_ASSERT(pthread_create(&thread, NULL, &_irt_worker_func, &arg) == 0, IRT_ERR_INTERNAL, "Could not create worker thread");
+
+	while(!arg.ready) { } // MARK busy wait
+
+	return arg.generated;
 }

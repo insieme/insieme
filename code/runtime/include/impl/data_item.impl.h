@@ -57,8 +57,7 @@ static inline void _irt_di_dec_use_count(irt_data_item* di) {
 	if(--di->use_count == 0) _irt_di_recycle(di); // FIXME atomic operation
 }
 
-/** Creates a new data item with the given type and size.
- **/
+
 irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges) {
 	irt_data_item* retval = _irt_di_get(dimensions);
 	retval->type_id = tid; 
@@ -72,9 +71,6 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	irt_data_item_table_insert(retval);
 	return retval;
 }
-/** Creates a data item representing a sub-range of a parent data item. 
- ** Type and dimensions are the same as for the parent.
- **/
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) {
 	irt_data_item* retval = _irt_di_get(parent->dimensions);
 	memcpy(retval, parent, sizeof(irt_data_item));
@@ -82,8 +78,6 @@ irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) 
 	irt_data_item_table_insert(retval);
 	return retval;
 }
-/** Destroys an existing data item.
- **/
 void irt_di_destroy(irt_data_item* di) {
 	_irt_di_dec_use_count(di);
 }

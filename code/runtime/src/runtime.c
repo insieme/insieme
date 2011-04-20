@@ -36,9 +36,13 @@
 
 #include "declarations.h"
 
+#include <mqueue.h>
+
 #include "impl/client_app.impl.h"
 #include "impl/irt_context.impl.h"
 #include "impl/error_handling.impl.h"
+#include "impl/worker.impl.h"
+#include "impl/irt_mqueue.impl.h"
 
 
 // error handling
@@ -53,10 +57,16 @@ void irt_error_handler(int signal) {
 // globals
 pthread_key_t irt_g_error_key;
 pthread_key_t irt_g_worker_key;
+mqd_t irt_g_message_queue;
 
 void irt_init_globals() {
+	// not using IRT_ASSERT since environment is not yet set up
 	assert(pthread_key_create(&irt_g_error_key, NULL) == 0);
 	assert(pthread_key_create(&irt_g_worker_key, NULL) == 0);
+	irt_mqueue_init();
+}
+void irt_cleanup_globals() {
+	irt_mqueue_cleanup();
 }
 
 int main(int argc, char** argv) {
@@ -70,9 +80,16 @@ int main(int argc, char** argv) {
 	// initialize globals
 	irt_init_globals();
 
-	irt_client_app* client_app = irt_client_app_create(argv[1]);
-	irt_context* prog_context = irt_context_create(client_app);
+	static const uint32 work_count = 8;
+	irt_worker* workers[work_count];
+	for(int i=0; i<work_count; ++i) {
+		workers[i] = irt_create_worker(~0, i);
+	}
 
+	//irt_client_app* client_app = irt_client_app_create(argv[1]);
+	//irt_context* prog_context = irt_context_create(client_app);
+
+	irt_cleanup_globals();
 	return 0;
 }
 

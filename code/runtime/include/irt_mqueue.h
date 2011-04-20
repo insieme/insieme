@@ -36,52 +36,42 @@
 
 #pragma once
 
-#include "error_handling.h"
+#include "declarations.h"
 
-#include "globals.h"
+#include <mqueue.h>
 
-#include <pthread.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#define IRT_MQUEUE_NAME "irt_message_queue"
+
+extern mqd_t irt_g_message_queue;
+
+/* ------------------------------ data structures ----- */
+
+typedef enum _irt_mqueue_msg_type {
+	IRT_MQ_NEW_APP
+} irt_mqueue_msg_type;
+
+typedef struct _irt_mqueue_msg {
+	irt_mqueue_msg_type type;
+	size_t size;
+} irt_mqueue_msg;
+
+typedef struct _irt_mqueue_msg_new_app {
+	irt_mqueue_msg_type type;
+	size_t size;
+	char app_name[128];
+} irt_mqueue_msg_new_app;
 
 
-const char *irt_errcode_strings[] = {
-	"IRT_ERR_NONE",
-	"IRT_ERR_IO",
-	"IRT_ERR_INIT",
-	"IRT_ERR_APP"
-};
+/* ------------------------------ operations ----- */
 
+void irt_mqueue_init();
+void irt_mqueue_cleanup();
 
-void irt_throw_string_error(irt_errcode code, const char* message, ...) {
-	va_list args;
-	va_start(args, message);
-	char buffer[512];
-	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
-	va_end(args);
+void irt_mqueue_send(irt_mqueue_msg* msg);
+void irt_mqueue_send_new_app(const char* appname);
 
-	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
-	err->errcode = code;
-	err->additional_bytes = additional_bytes;
-	strncpy(((char*)err)+sizeof(irt_error), buffer, additional_bytes);
-	irt_throw_generic_error(err);
-}
-
-void irt_throw_generic_error(irt_error* error) {
-	if(pthread_setspecific(irt_g_error_key, error) != 0) {
-		fprintf(stderr, "Error during error reporting. Shutting down.\n");
-		exit(-1);
-	}
-	raise(IRT_SIG_ERR);
-}
-
-const char* irt_errcode_string(irt_errcode code) {
-	return irt_errcode_strings[code];
-}
-
-void irt_print_error_info(FILE* target, irt_error* error) {
-	if(error->additional_bytes) {
-		fprintf(target, "%s", (char*)error+sizeof(irt_error));
-	}
-}
+/** Retrieves a message from the IRT message queue,
+ ** NULL is returned if the message queue is empty.
+ ** Note: must call free on returned object
+ **/
+irt_mqueue_msg* irt_mqueue_receive();
