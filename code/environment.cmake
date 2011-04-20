@@ -105,7 +105,7 @@ if(MSVC)
 
 else(MSVC)
 	# On Linux we have a .so file for all LLVM
-    set(llvm_LList  LLVM-2.9svn )
+    set(llvm_LList  LLVM-2.9 )
     set(clang_LList clang ${clang_LList})
 endif(MSVC)
 

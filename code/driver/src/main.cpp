@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
 			p.addTranslationUnits(inputFiles);
 			clangTimer.stop();
 			LOG(INFO) << clangTimer;
-
+			
 			// do the actual clang to IR conversion
 			insieme::utils::Timer convertTimer("Frontend.convert ");
 			program = p.convert();

@@ -9,21 +9,19 @@ export CC="/insieme-libs/gcc452/bin/gcc"
 echo "*****************************************"
 echo "* Downloading current LLVM distribution *"
 echo "*****************************************"
-wget http://llvm.org/pre-releases/2.9/llvm-2.9rc1.src.tar.gz 
-gzip -df llvm-2.9rc1.src.tar.gz
-tar -xf llvm-2.9rc1.src.tar
+wget http://llvm.org/releases/2.9/llvm-2.9.tgz 
+tar -xf llvm-2.9.tgz
 # change dire into tools
-cd llvm-2.9rc1/tools
+cd llvm-2.9/tools
 
 echo "******************************************"
 echo "* Downloading current CLANG distribution *"
 echo "******************************************"
 # download clang
-wget http://llvm.org/pre-releases/2.9/clang-2.9rc1.src.tar.gz 
-gzip -df clang-2.9rc1.src.tar.gz
-tar -xf clang-2.9rc1.src.tar
-mv clang-2.9rc1 clang
-rm -f clang-2.9rc1.src.tar
+wget http://llvm.org/releases/2.9/clang-2.9.tgz 
+tar -xf clang-2.9.tgz
+mv clang-2.9 clang
+rm -f clang-2.9.tgz
 cd ../
 
 echo "***********************************"
@@ -34,7 +32,8 @@ patch -p1  < ../insieme-2.9.patch
 echo "*******************"
 echo "* Compiling CLANG *"
 echo "*******************"
-./configure --prefix=$PREFIX --enable-shared=yes --enable-assert=yes --enable-debug-runtime=yes --enable-debug-symbols=yes --enable-optimized=no
+./configure --prefix=$PREFIX --enable-shared=yes --enable-assert=yes --enable-debug-runtime=yes \
+--enable-debug-symbols=yes --enable-optimized=yes
 # --enable-doxygen=yes
 
 make REQUIRES_RTTI=1 clang-only -j$SLOTS
@@ -44,7 +43,7 @@ cd ../
 echo "****************************************"
 echo "* Removing LLVM installation directory *"
 echo "****************************************"
-rm -R llvm-2.9rc1
+rm -R llvm-2.9
 
 echo "****************************************************************"
 echo "* Patching stdarg.h to make CLANG work with linux libc (maybe) *"

@@ -266,6 +266,11 @@ public:
 	VertexTy addBlock(cfg::Block* block);
 
 	/**
+	  * Removes a CFG Block from the CFG
+	  */
+	bool removeBlock(cfg::Block* block);
+
+	/**
 	 * Returns a CFG element of the graph given its vertex id.
 	 *
 	 * @param vertexId The id of the CFG Block
@@ -292,6 +297,18 @@ public:
 	 */
 	EdgeTy addEdge(VertexTy src, VertexTy dest) {
 		return boost::add_edge(src, dest, graph).first;
+	}
+
+	/**
+	  * Returns the Edge object associated to a graph edge connecting src and dest vertices 
+	  */
+	cfg::Edge& getEdge(VertexTy src, VertexTy dest) { 
+		auto edgeDescriptor = boost::edge(src, dest, graph);
+		assert(edgeDescriptor.second && "No edge exists between the two selected vertices");
+		std::cout << "edge exists" << std::endl;
+		EdgeTy edge = edgeDescriptor.first;
+		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
+		return edgeMap[edge];
 	}
 
 	/**
