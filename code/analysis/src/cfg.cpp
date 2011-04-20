@@ -137,8 +137,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	CFG::VertexTy entry, exit, succ, head;
 	ScopeStack 	scopeStack;
-
+	
 	bool hasHead;
+
+	std::stack<size_t> argNumStack;
 
 	CFGBuilder(CFGPtr cfg, const NodePtr& root) : ASTVisitor<>(false), cfg(cfg), currBlock(NULL), spawnBlock(NULL),
 			isPending(false), hasHead(false) {
@@ -174,10 +176,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void appendPendingBlock() {
-
-		// if we already have allocated an empty block and it is not pending
-		// if ( !isPending && currBlock && currBlock->empty() )
-		//	return;
 
 		// In the case the currBlock is pending and not empty we add it to the Graph and connect
 		// it with the successive node in the CFG
@@ -415,7 +413,12 @@ struct CFGBuilder: public ASTVisitor< void > {
 			CFG::VertexTy&& retVertex = cfg->addBlock( ret );
 			cfg->addEdge(bounds.second, retVertex); // Function Exit -> RET
 
-			cfg->addEdge(retVertex, succ);
+			if(argNumStack.empty()) {
+				cfg->addEdge(retVertex, succ);
+			} else {
+				ASTBuilder builder(callExpr->getNodeManager());
+				cfg->addEdge(retVertex, succ, cfg::Edge(builder.intLit(argNumStack.top())));
+			}
 
 			succ = callVertex;
 			currBlock = NULL;
@@ -439,9 +442,11 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		CFG::VertexTy sink = succ;
 
-		size_t spawnedArgs = 0;
+		size_t spawnedArgs = 0, argNum = 0;
 		const vector<ExpressionPtr>& args = callExpr->getArguments();
-		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs ] (const ExpressionPtr& curr) {
+		std::cout << *callExpr << std::endl;
+		argNumStack.push(argNum);
+		std::for_each(args.begin(), args.end(), [ this, sink, &spawnedArgs, &argNum ] (const ExpressionPtr& curr) {
 
 			// in the case the argument is a call expression, we need to allocate a separate block in order to
 			// perform the inter-procedural function call
@@ -450,15 +455,20 @@ struct CFGBuilder: public ASTVisitor< void > {
 				this->createBlock();
 				this->visit(curr);
 				this->appendPendingBlock();
-
+				
 				if ( this->succ != sink ) {
+					
+					// ASTBuilder builder(curr->getNodeManager());
+					// this->cfg->getEdge(this->succ, sink) = cfg::Edge( builder.intLit(argNum) );
 					++spawnedArgs;
 				}
 
 				this->succ = sink;
+				this->argNumStack.top()++; 
 			}
 
 		});
+		argNumStack.pop();
 
 		// In the case a spawnblock has been created to capture arguments of the callExpr but no arguments were 
 		// call expressions, therefore the created spawnblock is not necessary. 
@@ -480,7 +490,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 
 		if ( spawnedArgs==0 && !hasAllocated ) {
-			cfg->addEdge(head, succ);
+			ASTBuilder builder(callExpr->getNodeManager());
+			cfg->addEdge(head, succ, cfg::Edge( builder.intLit(argNumStack.top()) ));
 		}
 
 		if ( hasAllocated ) {

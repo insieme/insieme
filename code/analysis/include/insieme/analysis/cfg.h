@@ -300,6 +300,18 @@ public:
 	}
 
 	/**
+	  * Returns the Edge object associated to a graph edge connecting src and dest vertices 
+	  */
+	cfg::Edge& getEdge(VertexTy src, VertexTy dest) { 
+		auto edgeDescriptor = boost::edge(src, dest, graph);
+		assert(edgeDescriptor.second && "No edge exists between the two selected vertices");
+		std::cout << "edge exists" << std::endl;
+		EdgeTy edge = edgeDescriptor.first;
+		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
+		return edgeMap[edge];
+	}
+
+	/**
 	 * Returns the internal representation of this CFG.
 	 */
 	ControlFlowGraph& getRawGraph() { return graph; }
