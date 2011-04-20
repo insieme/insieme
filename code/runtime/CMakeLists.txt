@@ -15,6 +15,7 @@ include_directories(include/)
 add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} )
 target_link_libraries(insieme_runtime ${pthread_LIB})
 target_link_libraries(insieme_runtime dl)
+target_link_libraries(insieme_runtime rt)
 
 
 # enable tests for this project
@@ -31,6 +32,7 @@ foreach (case_file ${test_cases})
 	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(ut_${case_name} ${pthread_LIB})
 	target_link_libraries(ut_${case_name} dl)
+	target_link_libraries(insieme_runtime rt)
 	
 	# disable valgrind for parallel test cases
 	set(VFLAG ${TRUE})
@@ -47,4 +49,5 @@ foreach (case_file ${test_cases})
 	add_library(${case_name} ${case_file})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
+	target_link_libraries(insieme_runtime rt)
 endforeach(case_file)

@@ -49,7 +49,7 @@ typedef enum _irt_errcode {
 	IRT_ERR_NONE,			// no error
 	IRT_ERR_IO,				// I/O error
 	IRT_ERR_INIT,			// error related to initialization
-	IRT_ERR_INTERNAL,			// error related to initialization
+	IRT_ERR_INTERNAL,		// internal error caused by runtime system
 	IRT_ERR_APP				// error caused by the user application running on the IRT
 } irt_errcode;
 
@@ -60,6 +60,17 @@ struct _irt_error {
 
 
 /* ------------------------------ operations ----- */
+
+#ifndef NDEBUG
+#define IRT_ASSERT(__condition, __errcode, __message, ...) \
+if(!(__condition)) { \
+	printf("IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
+	irt_throw_string_error(__errcode, __message, ##__VA_ARGS__); \
+}
+#else
+#define IRT_ASSERT(__condition, __errcode, __message, ...)
+if(__condition);
+#endif
 
 void irt_throw_string_error(irt_errcode code, const char* message, ...);
 void irt_throw_generic_error(irt_error* error);
