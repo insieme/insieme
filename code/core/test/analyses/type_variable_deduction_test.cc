@@ -179,7 +179,7 @@ TEST(TypeVariableConstraints, ConstraintCombinations) {
 	EXPECT_TRUE(res);
 	if (res) {
 		auto substitute = res->applyTo(var);
-		EXPECT_EQ(uint8, substitute);
+		EXPECT_EQ(uint2, substitute);
 		EXPECT_PRED2(isSubTypeOf, uint2, substitute);
 		EXPECT_PRED2(isSubTypeOf, substitute, uint8);
 	}

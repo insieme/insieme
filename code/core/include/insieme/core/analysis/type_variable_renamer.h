@@ -39,6 +39,8 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/core/type_utils.h"
 
+#include "insieme/core/ast_visitor.h"
+
 #include "insieme/utils/printable.h"
 
 namespace insieme {
@@ -109,6 +111,20 @@ namespace analysis {
 		 */
 		TypePtr applyBackward(const TypePtr& type) {
 			return backward.applyTo(type);
+		}
+
+		/**
+		 * Obtains a reference to a substitution corresponding to the represented forward substitution.
+		 */
+		const Substitution& getForward() const {
+			return forward;
+		}
+
+		/**
+		 * Obtains a reference to a substitution corresponding to the represented backward substitution.
+		 */
+		const Substitution& getBackward() const {
+			return backward;
 		}
 
 		/**

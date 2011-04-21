@@ -41,6 +41,8 @@
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/topological_sort.hpp>
 
+#include "insieme/core/analysis/type_variable_renamer.h"
+
 #include "insieme/core/annotation.h"
 #include "insieme/core/expressions.h"
 
@@ -272,20 +274,25 @@ namespace analysis {
 
 	SubstitutionOpt TypeVariableConstraints::solve(NodeManager& manager) const {
 
-//		std::cout << std::endl << "--------------- Start -------------------" << std::endl;
-//		std::cout << "Constraints: " << *this << std::endl;
+		bool debug = false;
+
+		if (debug) std::cout << std::endl << "--------------- Start -------------------" << std::endl;
+		if (debug) std::cout << "Constraints: " << *this << std::endl;
 
 		// quick check to exclude unsatisfiability
 		if (!isSatisfiable()) {
 			return 0;
 		}
 
-		// TODO: handle empty constraints
-		// TODO: apply known parameter substitution
-		// TODO: apply renaming of variables
+		// create result
+		Substitution res;
+
+		// quick-solution for an empty constraint set
+		if (constraints.empty()) {
+			return res;
+		}
 
 		// initialize substitutions
-		Substitution res;
 		for_each(intTypeParameter, [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur) {
 			res.addMapping(cur.first, cur.second);
 		});
@@ -314,15 +321,15 @@ namespace analysis {
 		}
 
 		// TODO: output for debug only => remove
-//		std::cout << "Subtype graph: " << std::endl;
-//		subTypeGraph.printGraphViz(std::cout, print<deref<TypePtr>>());
+		if (debug) std::cout << "Subtype graph: " << std::endl;
+		if (debug) subTypeGraph.printGraphViz(std::cout, print<deref<TypePtr>>());
 
 
 		// step 2) compute SCCs within subtype graph
 		SubTypeEqualityGraph sccGraph = computeSCCGraph(subTypeGraph);
 
-//		std::cout << "Subtype Equality Graph: " << std::endl;
-//		sccGraph.printGraphViz(std::cout);
+		if (debug) std::cout << "Subtype Equality Graph: " << std::endl;
+		if (debug) sccGraph.printGraphViz(std::cout);
 
 
 		// step 3) unify sets attached to nodes within sccGraph => pick one represent
@@ -344,12 +351,12 @@ namespace analysis {
 				cur[i] = res.applyTo(cur[i]);
 			}
 
-//			std::cout << "    Before reduction: " << cur << std::endl;
+			if (debug) std::cout << "    Before reduction: " << cur << std::endl;
 
 			// try reducing set to 1 element using unification
 			reduceByUnifying(manager, cur, res);
 
-//			std::cout << "    After reduction: " << cur << std::endl;
+			if (debug) std::cout << "    After reduction: " << cur << std::endl;
 
 			// if there are more than 2 elements ...
 			std::size_t size = cur.size();
@@ -362,7 +369,7 @@ namespace analysis {
 				for (std::size_t j=i+1; j<size; j++) {
 					if (!isSubTypeOf(cur[i], cur[j]) || !isSubTypeOf(cur[j], cur[i])) {
 						// equality constraint violated => no solution
-//						std::cout << "WARNING: equality constraint violated within " << cur << std::endl;
+						if (debug) std::cout << "WARNING: equality constraint violated within " << cur << std::endl;
 						return 0;
 					}
 				}
@@ -374,8 +381,8 @@ namespace analysis {
 			cur.push_back(represent);
 		}
 
-//		std::cout << "Represent Graph: " << std::endl;
-//		printGraphViz(std::cout, graph);
+		if (debug) std::cout << "Represent Graph: " << std::endl;
+		if (debug) printGraphViz(std::cout, graph);
 
 
 		// step 4) resolve sub-type constraints - bottom up in topological order
@@ -391,7 +398,9 @@ namespace analysis {
 			assert(curList.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
 
 			TypePtr cur = curList[0];
-//			std::cout << "    Processing " << cur << std::endl;
+
+			if (debug) std::cout << "    Processing " << cur << std::endl;
+			if (debug) std::cout << "      Current res: " << res << std::endl;
 
 			// obtain super-types
 			vector<TypePtr> subTypes;
@@ -405,49 +414,98 @@ namespace analysis {
 				subTypes.push_back(sub[0]);
 			}
 
-//			std::cout << "       Sub-Types " << subTypes << std::endl;
+			if (debug) std::cout << "       Sub-Types: " << subTypes << std::endl;
 
 			// skip rest if there are no super types
-			if (subTypes.empty()) {
-				continue;
-			}
+			if (!subTypes.empty()) {
 
-			// reduce super-types using unification
-			reduceByUnifying(manager, subTypes, res);
+				// reduce sub-types using unification
+				reduceByUnifying(manager, subTypes, res);
 
-			// obtain limit => by compute smallest common super type
-			TypePtr limit = getSmallestCommonSuperType(subTypes);
+				// obtain limit => by compute smallest common super type
+				TypePtr limit = getSmallestCommonSuperType(subTypes);
+				if (debug) std::cout << "            Limit: " << limit << std::endl;
 
-			if (!limit) {
-//				std::cout << "No common super type for " << subTypes << std::endl;
-				return 0;
-			}
-
-			// super types could be unified => try the same with current
-			if (auto unifier = unify(manager, cur, limit)) {
-
-				// fine => use unified version
-				applyUnifierToAllNodes(graph, unifier);
-
-				// add to resulting unifier
-				res = Substitution::compose(manager, res, *unifier);
-				continue;
-			} else {
-
-				// check whether current type is a sub-type of the limit
-				if (!isSubTypeOf(cur, limit)) {
-					// => no solution
-//					std::cout << "The type " << cur << " is not a sub-type of " << limit << std::endl;
+				if (!limit) {
+					if (debug) std::cout << "No common super type for " << subTypes << std::endl;
 					return 0;
 				}
 
-			}
+				// super types could be unified => try the same with current
+				if (auto unifier = unify(manager, cur, limit)) {
 
+					// fine => use unified version
+					applyUnifierToAllNodes(graph, unifier);
+
+					// add to resulting unifier
+					res = Substitution::compose(manager, res, *unifier);
+					continue;
+				} else {
+
+					// check whether current type is a sub-type of the limit
+					if (!isSubTypeOf(limit, cur)) {
+						// => no solution
+						if (debug) std::cout << "The type " << cur << " is not a sub-type of " << limit << std::endl;
+						return 0;
+					}
+
+				}
+
+			} else if (cur->getNodeType() == NT_TypeVariable) { // this extension is only necessary to support also non-inhabitated types
+
+				// so, there are no sub-types => loop for super-types
+				vector<TypePtr> superTypes;
+
+				GraphType::out_edge_iterator begin;
+				GraphType::out_edge_iterator end;
+				boost::tie(begin, end) = boost::out_edges(vertex, graph);
+				for (auto it = begin; it!=end; ++it) {
+					vector<TypePtr>& super = graph[target(*it, graph)];
+					assert(super.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
+					superTypes.push_back(super[0]);
+				}
+
+				if (debug) std::cout << "     Super-Types: " << superTypes << std::endl;
+
+				if (!superTypes.empty()) {
+
+					// reduce super-types using unification
+					reduceByUnifying(manager, superTypes, res);
+
+					// obtain limit => by compute smallest common super type
+					TypePtr limit = getBiggestCommonSubType(superTypes);
+					if (debug) std::cout << "            Limit: " << limit << std::endl;
+
+					if (!limit) {
+						if (debug) std::cout << "No common sub type for " << superTypes << std::endl;
+						return 0;
+					}
+
+					// super types could be unified => try the same with current
+					if (auto unifier = unify(manager, cur, limit)) {
+
+						// fine => use unified version
+						applyUnifierToAllNodes(graph, unifier);
+
+						// add to resulting unifier
+						res = Substitution::compose(manager, res, *unifier);
+						continue;
+					} else {
+
+						// check whether current type is a sub-type of the limit
+						if (!isSubTypeOf(cur, limit)) {
+							// => no solution
+							if (debug) std::cout << "The type " << limit << " is not a sub-type of " << cur << std::endl;
+							return 0;
+						}
+
+					}
+				}
+			}
 		}
 
-
-//		std::cout << "Substitution so far: " << res << std::endl;
-//		std::cout << std::endl;
+		if (debug) std::cout << "Substitution so far: " << res << std::endl;
+		if (debug) std::cout << std::endl;
 		return res;
 
 		// ---------- Old algorithm ----------------------
@@ -816,6 +874,22 @@ namespace analysis {
 			return 0;
 		}
 
+		// TODO: apply renaming of variables
+		VariableRenamer renamer;
+
+		// 1) convert parameters (consistently, all at once)
+		VariableMapping parameterMapping = renamer.mapVariables(TupleType::get(manager, parameter));
+
+		// 2) convert arguments (individually)
+		//		- fix bounded variables consistently
+		//		- rename unbounded variables - individually per parameter
+
+		// a map mapping constant type substitutions to types they are substituting
+		utils::map::PointerMap<NodePtr, NodePtr> boundVariables;
+
+		// TODO: finish this
+
+
 		// collect constraints on the type variables used within the parameter types
 		TypeVariableConstraints constraints;
 
@@ -825,6 +899,7 @@ namespace analysis {
 		for (auto it = begin; constraints.isSatisfiable() && it!=end; ++it) {
 			// add constraints to ensure current parameter is a super-type of the arguments
 			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
+//			addTypeConstraints(constraints, parameterMapping.applyForward(it->first), renamer.rename(it->second), Direction::SUPER_TYPE);
 		}
 
 //		std::cout << std::endl;
@@ -833,6 +908,10 @@ namespace analysis {
 //		std::cout << "Constraints: " << constraints << std::endl;
 
 		// solve constraints to obtain results
+//		SubstitutionOpt&& res = constraints.solve();
+//		if (res) {
+//			return Substitution::compose(manager, *res, parameterMapping.getBackward());
+//		}
 		return constraints.solve();
 	}
 
