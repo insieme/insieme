@@ -37,6 +37,7 @@
 #include "declarations.h"
 
 #include <mqueue.h>
+#include <unistd.h>
 
 #include "impl/client_app.impl.h"
 #include "impl/irt_context.impl.h"
@@ -69,14 +70,26 @@ void irt_cleanup_globals() {
 	irt_mqueue_cleanup();
 }
 
+// exit handling
+void irt_term_handler(int signal) {
+	exit(0);
+}
+void irt_exit_handler() {
+	irt_cleanup_globals();
+	printf("\nInsieme runtime exiting.\n");
+}
+
 int main(int argc, char** argv) {
 	if(argc!=2) {
 		printf("usage: runtime [libname]\n");
 		return -1;
 	}
 
-	// initialize error signal handler
+	// initialize error and termination signal handlers
 	signal(IRT_SIG_ERR, &irt_error_handler);
+	signal(SIGTERM, &irt_term_handler);
+	signal(SIGINT, &irt_term_handler);
+	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
 
@@ -86,11 +99,11 @@ int main(int argc, char** argv) {
 		workers[i] = irt_create_worker(~0, i);
 	}
 
+	irt_mqueue_send_new_app(argv[1]);
 	//irt_client_app* client_app = irt_client_app_create(argv[1]);
 	//irt_context* prog_context = irt_context_create(client_app);
 
-	irt_cleanup_globals();
-	return 0;
+	for(;;) { sleep(60*60); }
 }
 
 

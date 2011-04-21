@@ -44,7 +44,7 @@
 #include "error_handling.impl.h"
 
 void irt_mqueue_init() {
-	irt_g_message_queue = mq_open(IRT_MQUEUE_NAME, O_RDWR | O_CREAT | O_NONBLOCK, 0777, NULL);
+	irt_g_message_queue = mq_open(IRT_MQUEUE_NAME, O_RDWR | O_CREAT | O_NONBLOCK | O_EXCL, 0666, NULL);
 	IRT_ASSERT(irt_g_message_queue != -1, IRT_ERR_IO, "Could not open message queue %s:\n Error string: %s\n", IRT_MQUEUE_NAME, strerror(errno));
 }
 void irt_mqueue_cleanup() {

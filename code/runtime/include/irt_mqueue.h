@@ -40,7 +40,7 @@
 
 #include <mqueue.h>
 
-#define IRT_MQUEUE_NAME "irt_message_queue"
+#define IRT_MQUEUE_NAME "/irt_message_queue"
 
 extern mqd_t irt_g_message_queue;
 
