@@ -36,52 +36,42 @@
 
 #pragma once
 
-#include "error_handling.h"
+#include "irt_mqueue.h"
 
-#include "globals.h"
+#include <stdlib.h>
+#include <errno.h>
 
-#include <pthread.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#include "error_handling.impl.h"
 
-
-const char *irt_errcode_strings[] = {
-	"IRT_ERR_NONE",
-	"IRT_ERR_IO",
-	"IRT_ERR_INIT",
-	"IRT_ERR_APP"
-};
-
-
-void irt_throw_string_error(irt_errcode code, const char* message, ...) {
-	va_list args;
-	va_start(args, message);
-	char buffer[512];
-	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
-	va_end(args);
-
-	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
-	err->errcode = code;
-	err->additional_bytes = additional_bytes;
-	strncpy(((char*)err)+sizeof(irt_error), buffer, additional_bytes);
-	irt_throw_generic_error(err);
+void irt_mqueue_init() {
+	irt_g_message_queue = mq_open(IRT_MQUEUE_NAME, O_RDWR | O_CREAT | O_NONBLOCK, 0777, NULL);
+	IRT_ASSERT(irt_g_message_queue != -1, IRT_ERR_IO, "Could not open message queue %s:\n Error string: %s\n", IRT_MQUEUE_NAME, strerror(errno));
+}
+void irt_mqueue_cleanup() {
+	IRT_ASSERT(mq_unlink(IRT_MQUEUE_NAME) == 0, IRT_ERR_IO, "Could not unlink message queue " IRT_MQUEUE_NAME ".\n");
 }
 
-void irt_throw_generic_error(irt_error* error) {
-	if(pthread_setspecific(irt_g_error_key, error) != 0) {
-		fprintf(stderr, "Error during error reporting. Shutting down.\n");
-		exit(-1);
-	}
-	raise(IRT_SIG_ERR);
+void irt_mqueue_send(irt_mqueue_msg* msg) {
+	IRT_ASSERT(mq_send(irt_g_message_queue, (char*)msg, msg->size, 0) == 0, IRT_ERR_IO, "Could not send posix message.");
+}
+irt_mqueue_msg* irt_mqueue_receive() {
+	static const uint32 buff_size = 256;
+	char buffer[buff_size];
+	
+	mqd_t retcode = mq_receive(irt_g_message_queue, buffer, buff_size, NULL);
+	if(retcode == -1 && errno == EAGAIN) return NULL;
+	IRT_ASSERT(retcode != -1, IRT_ERR_IO, "Could not retrieve posix message.");
+	irt_mqueue_msg *msg = (irt_mqueue_msg*)buffer;
+	irt_mqueue_msg *retval = (irt_mqueue_msg*)malloc(msg->size);
+	memcpy(retval, buffer, msg->size);
+	return retval;
 }
 
-const char* irt_errcode_string(irt_errcode code) {
-	return irt_errcode_strings[code];
+void irt_mqueue_send_new_app(const char* appname) {
+	irt_mqueue_msg_new_app msg;
+	msg.type = IRT_MQ_NEW_APP;
+	msg.size = sizeof(irt_mqueue_msg_new_app);
+	memcpy(msg.app_name, appname, sizeof(msg.app_name));
+	msg.app_name[sizeof(msg.app_name)-1] = '\0';
 }
 
-void irt_print_error_info(FILE* target, irt_error* error) {
-	if(error->additional_bytes) {
-		fprintf(target, "%s", (char*)error+sizeof(irt_error));
-	}
-}

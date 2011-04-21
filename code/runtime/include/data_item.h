@@ -71,16 +71,26 @@ struct _irt_data_item {
 	irt_data_range* ranges;
 	// can be NULL if data item is abstract
 	irt_data_block* data_block;
-// private
+// private implementation detail
 	struct _irt_data_item* lookup_table_next;
  };
 
 
 /* ------------------------------ operations ----- */
 
+/** Creates a new data item with the given type and size.
+ **/
 irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges);
+
+/** Creates a data item representing a sub-range of a parent data item. 
+ ** Type and dimensions are the same as for the parent.
+ **/
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges);
+
+/** Destroys an existing data item.
+ **/
 void irt_di_destroy(irt_data_item* di);
+
 
 irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode);
 void irt_di_free(irt_data_block* p);
