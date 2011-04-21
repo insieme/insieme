@@ -39,7 +39,7 @@
 #include "insieme/core/annotation.h"
 #include "insieme/core/types.h"
 
-#include "dummy_annotations.cc"
+#include "dummy_annotations.inc"
 
 using std::shared_ptr;
 

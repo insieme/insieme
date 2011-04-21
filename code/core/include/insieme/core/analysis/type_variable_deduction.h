@@ -54,6 +54,8 @@ class TypeVariableConstraints : public utils::Printable {
 	 */
 	struct VariableConstraint : public utils::Printable {
 
+		// TODO: invert the names
+
 		/**
 		 * The set of types the constraint variable has to be a super-type of.
 		 */
@@ -92,8 +94,11 @@ class TypeVariableConstraints : public utils::Printable {
 	/**
 	 * The mapping for int-type parameter variables resulting from the constraints.
 	 */
-	utils::map::PointerMap<VariableIntTypeParamPtr, IntTypeParamPtr>
-			intTypeParameter;
+	utils::map::PointerMap<VariableIntTypeParamPtr, IntTypeParamPtr> intTypeParameter;
+
+	utils::set::PointerSet<TypeVariablePtr> freeVariables;
+
+	utils::set::PointerSet<VariableIntTypeParamPtr> freeParameters;
 
 public:
 
@@ -139,6 +144,20 @@ public:
 			addSupertypeConstraint(var, type);
 			addSubtypeConstraint(var, type);
 		}
+	}
+
+	/**
+	 * Registers an additional free type variable.
+	 */
+	void addFreeVariable(const TypeVariablePtr& var) {
+		freeVariables.insert(var);
+	}
+
+	/**
+	 * Registers an additional free int-type parameter variable.
+	 */
+	void addFreeParameter(const VariableIntTypeParamPtr& var) {
+		freeParameters.insert(var);
 	}
 
 	/**
@@ -197,6 +216,16 @@ public:
 	SubstitutionOpt solve() const;
 
 	/**
+	 * Attempts to solve this set of constraints by deriving a variable substitution
+	 * mapping each constraint type variable to a satisfying substitute.
+	 *
+	 * @param manager the node manager to be used for constructing substitution results
+	 * @return an optional substitution satisfying all the constraints or an
+	 * 			uninitialized substitution
+	 */
+	SubstitutionOpt solve(NodeManager& manager) const;
+
+	/**
 	 * Clears all the constraints added to this container.
 	 */
 	void clear() {
@@ -204,6 +233,8 @@ public:
 		unsatisfiable = false;
 		constraints.clear();
 		intTypeParameter.clear();
+		freeVariables.clear();
+		freeParameters.clear();
 	}
 
 	/**

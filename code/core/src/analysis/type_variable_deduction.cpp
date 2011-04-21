@@ -39,6 +39,7 @@
 #include <iterator>
 
 #include <boost/graph/strong_components.hpp>
+#include <boost/graph/topological_sort.hpp>
 
 #include "insieme/core/annotation.h"
 #include "insieme/core/expressions.h"
@@ -87,23 +88,213 @@ namespace analysis {
 
 
 	std::ostream& TypeVariableConstraints::VariableConstraint::printTo(std::ostream& out) const {
-		return out << "[ <= " << superTypes << " && >= " << subTypes << " ]";
+		return out << "[ >= " << superTypes << " && <= " << subTypes << " ]";
 	}
 
 
+	namespace {
+
+		typedef utils::graph::PointerGraph<TypePtr> SubTypeGraph;
+
+		typedef utils::graph::Graph<vector<TypePtr>> SubTypeEqualityGraph;
+
+
+		/**
+		 * Converts the given sub-type constraint graph into an equivalent graph where
+		 * equivalent types are grouped together to equality classes. The nodes of
+		 * the resulting type therefore contain sets of types.
+		 */
+		inline SubTypeEqualityGraph computeSCCGraph(const SubTypeGraph& graph) {
+
+			auto numTypes = graph.getNumVertices();
+
+			// start by computing identifying the components using boost ...
+			SubTypeGraph::GraphType::vertices_size_type componentMap[numTypes];
+			auto numComponents = boost::strong_components(graph.asBoostGraph(), componentMap);
+
+			// create type sets forming equivalence groups
+			vector<TypePtr> sets[numComponents];
+
+			const SubTypeGraph::GraphType& boostGraph = graph.asBoostGraph();
+			for (std::size_t i=0; i<numTypes; i++) {
+				// add type to corresponding set
+				sets[componentMap[i]].push_back(boostGraph[i]);
+			}
+
+			// create resulting graph
+			SubTypeEqualityGraph res;
+			for (std::size_t i=0; i<numComponents; i++) {
+				res.addVertex(sets[i]);
+			}
+
+			// add edges between components
+			// Therefore: iterate through all original edges and connect corresponding SCCs
+			auto edges = boost::edges(boostGraph);
+			for(auto it = edges.first; it != edges.second; ++it) {
+				auto cur = *it;
+
+				// get components this edge is connection
+				auto src = componentMap[source(cur, boostGraph)];
+				auto trg = componentMap[target(cur, boostGraph)];
+
+				// if edge is crossing component boarders ...
+				if (src != trg) {
+					// ... add an edge to the result
+					res.addEdge(sets[src], sets[trg]);
+				}
+			}
+
+			return res;
+		}
+
+
+		inline void reduceByUnifying(NodeManager& manager, vector<TypePtr>& cur, Substitution& res) {
+
+			std::size_t size = cur.size();
+			if (size <= 1) {
+				// nothing to do left
+				return;
+			}
+
+			// test whether all entries can be unified ...
+			if (auto unifier = unifyAll(manager, cur)) {
+
+//				std::cout << " Was capable of directly unify " << cur << " using " << *unifier << std::endl;
+
+				// => drop list and exchange with unified version
+				TypePtr first = cur[0];
+				cur.clear();
+				cur.push_back(unifier->applyTo(first));
+
+				// => add unifier to result
+				res = Substitution::compose(manager, res, *unifier);
+				return;
+			}
+
+			// conduct a pair-wise unification attempt
+			bool changed = true;
+			while (changed) {
+				changed = false;
+
+				// update size
+				size = cur.size();
+				if (size <= 1) {
+					return;
+				}
+
+				// check each pair of entries
+				for (std::size_t i=0; !changed && i<size; i++) {
+					for (std::size_t j=i+1; !changed && j<size; j++) {
+						if (auto unifier = unify(manager, cur[i], cur[j])) {
+
+							// unify-able => reduce
+							TypePtr replacement = unifier->applyTo(cur[i]);
+
+							// remove cur[i] and cur[j] (j first, since j > i)
+
+//							std::cout << "Erasing " << *(cur.begin() + j) << std::endl;
+							cur.erase(cur.begin() + j);
+//							std::cout << "Erasing " << *(cur.begin() + i) << std::endl;
+							cur.erase(cur.begin() + i);
+
+							// add replacement
+							cur.push_back(replacement);
+
+							// apply unification to remaining elements
+							for (std::size_t k=0; k<size-1; k++) {
+								cur[i] = unifier->applyTo(cur[i]);
+							}
+
+							// combine with resulting substitution
+							res = Substitution::compose(manager, res, *unifier);
+
+							// mark as changed (exit for loops => restart pairwise search)
+							changed=true;
+						}
+					}
+				}
+			}
+		}
+
+
+		inline vector<SubTypeEqualityGraph::GraphType::vertex_descriptor> getTopologicalOrder(const SubTypeEqualityGraph::GraphType& graph) {
+
+			vector<SubTypeEqualityGraph::GraphType::vertex_descriptor> order;
+			try {
+				// compute (reverse) topological order
+				boost::topological_sort(graph, std::back_inserter(order));
+			} catch(boost::not_a_dag e) {
+				assert(0 && "There should not be any cycles!");
+			}
+
+			// reverse order and return result
+			return reverse(order);
+		}
+
+		inline void applyUnifierToAllNodes(SubTypeEqualityGraph::GraphType& graph, SubstitutionOpt unifier) {
+			if(!unifier) {
+				return;
+			}
+
+			typedef SubTypeEqualityGraph::GraphType::vertex_iterator vertex_iterator;
+			vertex_iterator begin;
+			vertex_iterator end;
+			boost::tie(begin, end) = boost::vertices(graph);
+			for (auto it = begin; it!=end; ++it) {
+				// obtain reference to set
+				vector<TypePtr>& cur = graph[*it];
+
+				std::size_t size = cur.size();
+				for (std::size_t i=0; i<size; i++) {
+					cur[i] = unifier->applyTo(cur[i]);
+				}
+			}
+		}
+
+	}
+
 	SubstitutionOpt TypeVariableConstraints::solve() const {
+		if (!isSatisfiable()) {
+			return 0;
+		}
+
+		if (!constraints.empty()) {
+			return solve(constraints.begin()->first->getNodeManager());
+		}
+
+		Substitution res;
+		for_each(intTypeParameter, [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur) {
+			res.addMapping(cur.first, cur.second);
+		});
+		return res;
+	}
+
+
+	SubstitutionOpt TypeVariableConstraints::solve(NodeManager& manager) const {
+
+//		std::cout << std::endl << "--------------- Start -------------------" << std::endl;
+//		std::cout << "Constraints: " << *this << std::endl;
 
 		// quick check to exclude unsatisfiability
 		if (!isSatisfiable()) {
 			return 0;
 		}
 
+		// TODO: handle empty constraints
+		// TODO: apply known parameter substitution
+		// TODO: apply renaming of variables
+
+		// initialize substitutions
+		Substitution res;
+		for_each(intTypeParameter, [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur) {
+			res.addMapping(cur.first, cur.second);
+		});
 
 		// step 1) form a sub-type graph
 		//		- types & variables are nodes
 		//		- edges indicate sub-type constraints (A -> B ... A has to be a sub-type of B)
 
-		utils::graph::PointerGraph<TypePtr> subtypeGraph;
+		SubTypeGraph subTypeGraph;
 
 		// add edges
 		for(auto it = constraints.begin(); it != constraints.end(); ++it) {
@@ -113,55 +304,179 @@ namespace analysis {
 
 			// add sub-type constraints
 			for_each(cur.subTypes, [&](const TypePtr& cur) {
-				subtypeGraph.addEdge(var, cur);
+				subTypeGraph.addEdge(var, res.applyTo(cur));
 			});
 
 			// add super-type constraints
 			for_each(cur.superTypes, [&](const TypePtr& cur) {
-				subtypeGraph.addEdge(cur, var);
+				subTypeGraph.addEdge(res.applyTo(cur), var);
 			});
 		}
 
 		// TODO: output for debug only => remove
-		std::cout << "Subtype graph: " << std::endl;
-		subtypeGraph.printGraphViz(std::cout, print<deref<TypePtr>>());
+//		std::cout << "Subtype graph: " << std::endl;
+//		subTypeGraph.printGraphViz(std::cout, print<deref<TypePtr>>());
 
 
 		// step 2) compute SCCs within subtype graph
+		SubTypeEqualityGraph sccGraph = computeSCCGraph(subTypeGraph);
 
-		utils::graph::PointerGraph<TypePtr>::GraphType::vertices_size_type componentMap[subtypeGraph.getNumVertices()];
-		auto numComponents = boost::strong_components(subtypeGraph.asBoostGraph(), componentMap);
-		std::cout << "Number of componentes: " << numComponents;
+//		std::cout << "Subtype Equality Graph: " << std::endl;
+//		sccGraph.printGraphViz(std::cout);
 
-		std::cout << std::endl;
 
+		// step 3) unify sets attached to nodes within sccGraph => pick one represent
+		typedef SubTypeEqualityGraph::GraphType GraphType;
+		typedef GraphType::vertex_descriptor vertex_descriptor;
+		typedef GraphType::vertex_iterator vertex_iterator;
+
+		SubTypeEqualityGraph::GraphType graph = sccGraph.asBoostGraph();
+
+		vertex_iterator begin;
+		vertex_iterator end;
+		boost::tie(begin, end) = boost::vertices(graph);
+		for (auto it = begin; it!=end; ++it) {
+			// obtain reference to set
+			vector<TypePtr>& cur = graph[*it];
+
+			// apply current unification step
+			for (std::size_t i=0; i<cur.size(); i++) {
+				cur[i] = res.applyTo(cur[i]);
+			}
+
+//			std::cout << "    Before reduction: " << cur << std::endl;
+
+			// try reducing set to 1 element using unification
+			reduceByUnifying(manager, cur, res);
+
+//			std::cout << "    After reduction: " << cur << std::endl;
+
+			// if there are more than 2 elements ...
+			std::size_t size = cur.size();
+			if (size == 1) {
+				continue;
+			}
+
+			// those have to be sub-types of each other
+			for (std::size_t i=0; i<size; i++) {
+				for (std::size_t j=i+1; j<size; j++) {
+					if (!isSubTypeOf(cur[i], cur[j]) || !isSubTypeOf(cur[j], cur[i])) {
+						// equality constraint violated => no solution
+//						std::cout << "WARNING: equality constraint violated within " << cur << std::endl;
+						return 0;
+					}
+				}
+			}
+
+			// OK, all are equivalent => pick only one
+			TypePtr represent = cur[0];
+			cur.clear();
+			cur.push_back(represent);
+		}
+
+//		std::cout << "Represent Graph: " << std::endl;
+//		printGraphViz(std::cout, graph);
+
+
+		// step 4) resolve sub-type constraints - bottom up in topological order
+		vector<vertex_descriptor>&& order = getTopologicalOrder(graph);
+
+		// resolve constraints per node
+		std::size_t size = order.size();
+		for (std::size_t i=0; i<size; i++) {
+
+			// get types of current node
+			vertex_descriptor vertex = order[i];
+			vector<TypePtr>& curList = graph[vertex];
+			assert(curList.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
+
+			TypePtr cur = curList[0];
+//			std::cout << "    Processing " << cur << std::endl;
+
+			// obtain super-types
+			vector<TypePtr> subTypes;
+
+			GraphType::in_edge_iterator begin;
+			GraphType::in_edge_iterator end;
+			boost::tie(begin, end) = boost::in_edges(vertex, graph);
+			for (auto it = begin; it!=end; ++it) {
+				vector<TypePtr>& sub = graph[source(*it, graph)];
+				assert(sub.size() == 1 && "Graph-Vertices are not supposed to contain more than 1 type!");
+				subTypes.push_back(sub[0]);
+			}
+
+//			std::cout << "       Sub-Types " << subTypes << std::endl;
+
+			// skip rest if there are no super types
+			if (subTypes.empty()) {
+				continue;
+			}
+
+			// reduce super-types using unification
+			reduceByUnifying(manager, subTypes, res);
+
+			// obtain limit => by compute smallest common super type
+			TypePtr limit = getSmallestCommonSuperType(subTypes);
+
+			if (!limit) {
+//				std::cout << "No common super type for " << subTypes << std::endl;
+				return 0;
+			}
+
+			// super types could be unified => try the same with current
+			if (auto unifier = unify(manager, cur, limit)) {
+
+				// fine => use unified version
+				applyUnifierToAllNodes(graph, unifier);
+
+				// add to resulting unifier
+				res = Substitution::compose(manager, res, *unifier);
+				continue;
+			} else {
+
+				// check whether current type is a sub-type of the limit
+				if (!isSubTypeOf(cur, limit)) {
+					// => no solution
+//					std::cout << "The type " << cur << " is not a sub-type of " << limit << std::endl;
+					return 0;
+				}
+
+			}
+
+		}
+
+
+//		std::cout << "Substitution so far: " << res << std::endl;
+//		std::cout << std::endl;
+		return res;
 
 		// ---------- Old algorithm ----------------------
 
 		// create result
-		Substitution res;
-
-		// solve individual constraints ...
-		for(auto it = constraints.begin(); it != constraints.end(); ++it) {
-
-			const TypeVariablePtr& var = it->first;
-			const TypePtr substitute = it->second.solve();
-
-			if (substitute) {
-				res.addMapping(var, substitute);
-			} else {
-				// => unsatisfiable
-				return 0;
-			}
-		}
-
-		// add int type parameter substitutions
-		for (auto it = intTypeParameter.begin(); it != intTypeParameter.end(); ++it) {
-			res.addMapping(it->first, it->second);
-		}
-
-		// done
-		return boost::optional<Substitution>(res);
+//		Substitution res;
+//		res = Substitution();
+//
+//		// solve individual constraints ...
+//		for(auto it = constraints.begin(); it != constraints.end(); ++it) {
+//
+//			const TypeVariablePtr& var = it->first;
+//			const TypePtr substitute = it->second.solve();
+//
+//			if (substitute) {
+//				res.addMapping(var, substitute);
+//			} else {
+//				// => unsatisfiable
+//				return 0;
+//			}
+//		}
+//
+//		// add int type parameter substitutions
+//		for (auto it = intTypeParameter.begin(); it != intTypeParameter.end(); ++it) {
+//			res.addMapping(it->first, it->second);
+//		}
+//
+//		// done
+//		return boost::optional<Substitution>(res);
 	}
 
 
@@ -512,10 +827,10 @@ namespace analysis {
 			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
 		}
 
-		std::cout << std::endl;
-		std::cout << "Parameter:   " << join(",", parameter, print<deref<TypePtr>>()) << std::endl;
-		std::cout << "Arguments:   " << join(",", arguments, print<deref<TypePtr>>()) << std::endl;
-		std::cout << "Constraints: " << constraints << std::endl;
+//		std::cout << std::endl;
+//		std::cout << "Parameter:   " << join(",", parameter, print<deref<TypePtr>>()) << std::endl;
+//		std::cout << "Arguments:   " << join(",", arguments, print<deref<TypePtr>>()) << std::endl;
+//		std::cout << "Constraints: " << constraints << std::endl;
 
 		// solve constraints to obtain results
 		return constraints.solve();

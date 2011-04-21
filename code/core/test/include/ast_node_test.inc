@@ -42,7 +42,7 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "dummy_annotations.cc"
+#include "dummy_annotations.inc"
 
 namespace insieme {
 namespace core {

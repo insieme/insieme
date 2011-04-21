@@ -910,6 +910,70 @@ TEST(TypeUtils, VectorMatchingBug) {
 }
 
 
+TEST(TypeUtils, ListUnification) {
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeB = builder.genericType("B");
+
+	TypePtr varX = builder.typeVariable("X");
+	TypePtr varY = builder.typeVariable("Y");
+
+	TypePtr genAX = builder.genericType("T", toVector(typeA, varX));
+	TypePtr genXA = builder.genericType("T", toVector(varX, typeA));
+
+	TypePtr genYY = builder.genericType("T", toVector(varY, varY));
+
+
+	auto res = unifyAll(manager, toVector(typeA, typeB));
+	EXPECT_FALSE(res);
+
+	EXPECT_TRUE(unify(manager, varX, varY));
+	res = unifyAll(manager, toVector(varX, varY));
+	EXPECT_TRUE(res);
+
+	res = unifyAll(manager, toVector(genAX, genXA));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(res->applyTo(genAX), res->applyTo(genXA));
+
+	res = unifyAll(manager, toVector(genAX, genXA, genYY));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(res->applyTo(genAX), res->applyTo(genXA));
+	if (res) EXPECT_EQ(res->applyTo(genAX), res->applyTo(genYY));
+
+	EXPECT_FALSE(unifyAll(manager, toVector(genAX, genXA, varX)));
+}
+
+TEST(TypeUtils, ListUnificationBug1) {
+
+	// The Problem:
+	//		the list [AP('a),AP(uint<4>),AP(int<4>)] can apparently be unified to [AP(uint<4>)]
+	// 		=> this should not be the case
+	//
+	// Cause of the problem:
+	//
+	//
+	// Fix:
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr varA = builder.typeVariable("a");
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr int4 = basic.getInt4();
+
+	auto list = toVector(varA, uint4, int4);
+	EXPECT_EQ("[AP('a),AP(uint<4>),AP(int<4>)]", toString(list));
+
+	auto res = unifyAll(manager, list);
+	EXPECT_FALSE(res);
+
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

@@ -97,7 +97,7 @@ namespace graph {
 	template<
 		class Vertex,
 		class EdgeLabel = unlabeled,
-		class DirectedS = boost::directedS,
+		class DirectedS = boost::bidirectionalS,
 		template<class V, class D> class VertexMap = SimpleUnorderedMap
 	>
 	class Graph : public Printable {
@@ -296,7 +296,7 @@ namespace graph {
 			vertex_descriptor&& v = boost::add_vertex(graph);
 
 			// link vertex with descriptor (via vertex map)
-			vertexMap.insert(std::make_pair(vertex, v));
+			auto res = vertexMap.insert(std::make_pair(vertex, v));
 
 			// link descriptor with vertex (via node property)
 			graph[v] = vertex;
@@ -335,6 +335,39 @@ namespace graph {
 	 */
 	template<class Vertex, class EdgeLabel = unlabeled, class DirectedS = boost::directedS>
 	class PointerGraph : public Graph<Vertex, EdgeLabel, DirectedS, map::PointerMap> {};
+
+
+	/**
+	 * A generic printer allowing to print a adjacency_list graph in the graphViz dot format. All the generic
+	 * parameters should be automatically deduced from the arguments.
+	 *
+	 * @param out the stream to be printed to
+	 * @param graph the graph to be printed
+	 * @param vertexPrinter the printer to be used for formating vertices
+	 * @param vertexPrinter the printer to be used for formating edge labels
+	 * @return the reference to the handed in output stream
+	 */
+	template<class OutEdgeListS,
+			class VertexListS,
+			class DirectedS,
+			class VertexProperty,
+			class EdgeProperty,
+			class GraphProperty,
+			class EdgeListS,
+			class VertexPrinter = print<id<VertexProperty>>,
+			class EdgePrinter = print<id<EdgeProperty>>>
+
+	inline std::ostream& printGraphViz(std::ostream& out,
+			boost::adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty, GraphProperty, EdgeListS> graph,
+			const VertexPrinter& vertexPrinter = VertexPrinter(), const EdgePrinter& edgePrinter = EdgePrinter()) {
+
+		typedef boost::adjacency_list<OutEdgeListS, VertexListS, DirectedS, VertexProperty, EdgeProperty, GraphProperty, EdgeListS> GraphType;
+		boost::write_graphviz(out, graph,
+				label_printer<GraphType, VertexPrinter>(graph, vertexPrinter),
+				label_printer<GraphType, EdgePrinter>(graph, edgePrinter)
+		);
+		return out;
+	}
 
 } // end namespace graph
 } // end namespace utils

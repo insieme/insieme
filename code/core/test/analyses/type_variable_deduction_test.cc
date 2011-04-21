@@ -91,11 +91,11 @@ TEST(TypeVariableConstraints, Solving) {
 	constraints.addSubtypeConstraint(var, basic.getUInt4());
 	res = constraints.solve();
 	EXPECT_TRUE(res);
-	EXPECT_EQ("{'a->uint<2>}", toString(*res));
+	if (res) EXPECT_EQ("{'a->uint<2>}", toString(*res));
 
-	EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getInt4());
-	EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getUInt4());
-	EXPECT_EQ(res->applyTo(manager, var), getBiggestCommonSubType(basic.getInt4(), basic.getUInt4()));
+	if (res) EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getInt4());
+	if (res) EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getUInt4());
+	if (res) EXPECT_EQ(res->applyTo(manager, var), getBiggestCommonSubType(basic.getInt4(), basic.getUInt4()));
 
 	// add a final sub-type constraint
 	constraints.addSubtypeConstraint(var, basic.getString());
@@ -113,11 +113,11 @@ TEST(TypeVariableConstraints, Solving) {
 	constraints.addSupertypeConstraint(var, basic.getUInt4());
 	res = constraints.solve();
 	EXPECT_TRUE(res);
-	EXPECT_EQ("{'a->int<8>}", toString(*res));
+	if (res) EXPECT_EQ("{'a->int<8>}", toString(*res));
 
-	EXPECT_PRED2(isSubTypeOf, basic.getInt4(), res->applyTo(manager, var));
-	EXPECT_PRED2(isSubTypeOf, basic.getUInt4(), res->applyTo(manager, var));
-	EXPECT_EQ(res->applyTo(manager, var), getSmallestCommonSuperType(basic.getInt4(), basic.getUInt4()));
+	if (res) EXPECT_PRED2(isSubTypeOf, basic.getInt4(), res->applyTo(manager, var));
+	if (res) EXPECT_PRED2(isSubTypeOf, basic.getUInt4(), res->applyTo(manager, var));
+	if (res) EXPECT_EQ(res->applyTo(manager, var), getSmallestCommonSuperType(basic.getInt4(), basic.getUInt4()));
 
 
 	// clear and use combined constraints
@@ -126,7 +126,7 @@ TEST(TypeVariableConstraints, Solving) {
 	constraints.addSupertypeConstraint(var, basic.getInt4());
 	res = constraints.solve();
 	EXPECT_TRUE(res);
-	EXPECT_EQ("{'a->int<4>}", toString(*res));
+	if (res) EXPECT_EQ("{'a->int<4>}", toString(*res));
 
 
 	// clear and add unsatisfiable constraints
@@ -576,9 +576,60 @@ TEST(TypeVariableDeduction, ReductionBug) {
 			toVector<ExpressionPtr>(builder.literal(vector, "x"), builder.literal(uint4, "1"), basic.getUnsignedIntMul()));
 
 	auto res = getTypeVariableInstantiation(manager, call);
-//	EXPECT_TRUE(res);
+	EXPECT_TRUE(res);
 }
 
+
+TEST(TypeVariableDeduction, ArrayRefElementBug) {
+
+	// The problem:
+	//		Processing:     array.ref.elem.1D(v2881, 1)
+	//		FunctionType:   ((ref<array<'elem,1>>,uint<8>)->ref<'elem>)
+	//		Argument Types: [AP(ref<vector<real<8>,5>>),AP(uint<4>)]
+	//		=> cannot be typed
+	// => WHICH IS CORRECT!
+
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr vector = builder.vectorType(uint4, builder.concreteIntTypeParam(5));
+	TypePtr ref = builder.refType(vector);
+
+	CallExprPtr call = builder.callExpr(basic.getArrayRefElem1D(),
+			toVector<ExpressionPtr>(builder.literal(ref, "x"), builder.literal(uint4, "1")));
+
+	auto res = getTypeVariableInstantiation(manager, call);
+	EXPECT_FALSE(res); // this is in deed not a valid call!
+}
+
+
+TEST(TypeVariableDeduction, ArgumentBasedTypeConstraints) {
+
+	// The following scenario should be tested:
+	//		function type: ('a, ('a -> 'r)) -> 'r
+	//		parameter: uint<4> and uint<#a> -> uint<#a>
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr alpha = builder.typeVariable("a");
+	TypePtr rho = builder.typeVariable("r");
+	TypePtr genFun = builder.functionType(alpha, rho);
+
+	TypePtr funType = builder.functionType(toVector(alpha, genFun), rho);
+
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr uintA = basic.getUIntGen();
+	TypePtr id = builder.functionType(uintA, uintA);
+
+
+	auto res = getTypeVariableInstantiation(manager, toVector(alpha, genFun), toVector(uint4, id));
+	EXPECT_TRUE(res);
+}
 
 } // end namespace analysis
 } // end namespace core

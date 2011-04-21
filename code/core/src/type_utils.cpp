@@ -184,6 +184,14 @@ void Substitution::addMapping(const VariableIntTypeParamPtr& var, const IntTypeP
 	}
 }
 
+bool Substitution::containsMappingFor(const TypeVariablePtr& var) const {
+	return mapping.find(var) != mapping.end();
+}
+
+bool Substitution::containsMappingFor(const VariableIntTypeParamPtr& var) const {
+	return paramMapping.find(var) != paramMapping.end();
+}
+
 void Substitution::remMappingOf(const TypeVariablePtr& var) {
 	mapping.erase(var);
 }

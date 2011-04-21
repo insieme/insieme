@@ -146,6 +146,23 @@ public:
 	void addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value);
 
 	/**
+	 * Checks whether this substitution contains a mapping for the given variable.
+	 *
+	 * @param var the variable to be checked
+	 * @return true if so, false otherwise
+	 */
+	bool containsMappingFor(const TypeVariablePtr& var) const;
+
+	/**
+	 * Checks whether this substitution contains a mapping for the given int type parameter
+	 * variable.
+	 *
+	 * @param var the variable to be checked
+	 * @return true if present, false otherwise
+	 */
+	bool containsMappingFor(const VariableIntTypeParamPtr& var) const;
+
+	/**
 	 * Removes the mapping stored for the given variable from this substitution.
 	 * @param var the variable which's entry should be removed
 	 */
@@ -249,6 +266,36 @@ SubstitutionOpt unifyAll(NodeManager& manager, const Container& listA, const Con
 				make_paired_iterator(listA.end(), listB.end())
 	);
 	return unifyAll(manager, list);
+}
+
+template<typename Container>
+SubstitutionOpt unifyAll(NodeManager& manager, const Container& list) {
+	return unifyRange(manager, list.begin(), list.end());
+}
+
+template<typename Iterator>
+SubstitutionOpt unifyRange(NodeManager& manager, Iterator begin, Iterator end) {
+
+	// just unify one after another
+	Substitution res;
+	if (begin == end) {
+		return res;
+	}
+
+	TypePtr unified = *begin;
+	++begin;
+	for(;begin != end; ++begin) {
+		auto cur = unify(manager, unified, res.applyTo(*begin));
+		if (!cur) {
+			// => not unify-able
+			return 0;
+		}
+		unified = cur->applyTo(unified);
+		res = Substitution::compose(manager, res, *cur);
+	}
+
+	// return result
+	return res;
 }
 
 /**

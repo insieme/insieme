@@ -76,16 +76,16 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 	core::ProgramPtr code = frontend::ConversionJob(manager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
 
 	// and now, apply the check
-//	core::visitAll(code, core::makeLambdaPtrVisitor([&](const NodePtr& cur){
-//		if (cur->getNodeType() == NT_CallExpr) {
-//			CallExprPtr call = static_pointer_cast<const CallExpr>(cur);
-//			EXPECT_TRUE(analysis::getTypeVariableInstantiation(manager, call))
+	core::visitAll(code, core::makeLambdaPtrVisitor([&](const NodePtr& cur){
+		if (cur->getNodeType() == NT_CallExpr) {
+			CallExprPtr call = static_pointer_cast<const CallExpr>(cur);
+			EXPECT_TRUE(analysis::getTypeVariableInstantiation(manager, call))
 //					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
-//					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
-//					<< "Argument Types: " << getTypes(call->getArguments());
-//
-//		}
-//	}, false));
+					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
+					<< "Argument Types: " << getTypes(call->getArguments());
+
+		}
+	}, false));
 
 
 }
