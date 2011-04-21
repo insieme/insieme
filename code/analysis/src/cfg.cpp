@@ -64,7 +64,7 @@ struct Scope {
 		root(root), entry(entry), exit(exit) { }
 };
 
-/**
+ /**
  * ScopeStack: represent a stack of scopes
  */
 struct ScopeStack : public std::vector<Scope> {
@@ -143,6 +143,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	std::stack<size_t> argNumStack;
 
+	size_t maxSpawnedArg;
+
 	CFGBuilder(CFGPtr cfg, const NodePtr& root) : ASTVisitor<>(false), cfg(cfg), builder(root->getNodeManager()), 
 		currBlock(NULL), spawnBlock(NULL), isPending(false), hasHead(false) {
 
@@ -188,7 +190,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			succ = node;
 			currBlock = NULL;
 		}
-
+		
 		if ( isPending && currBlock ) {
 			delete currBlock;
 			currBlock = NULL;
@@ -234,7 +236,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	 */
 	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
-
+		
 		createBlock();
 		currBlock->terminator() = cfg::Element(retStmt);
 		succ = scopeStack.getEnclosingLambda().exit;
@@ -310,7 +312,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		createBlock();
 		currBlock->appendElement( cfg::Element(forStmt, cfg::Element::LoopInit) );
 	}
-
+	
 	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
 		cfg::Block* whileBlock = new cfg::Block;
 		whileBlock->terminator() = cfg::Element(whileStmt);
@@ -346,7 +348,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		
 		ExpressionPtr subExpr = castExpr->getSubExpression();
 		if ( subExpr->getNodeType() == NT_CastExpr || subExpr->getNodeType() == NT_CallExpr ) {
-			visit(castExpr->getSubExpression());
+			visit(subExpr);
 		} else {
 			if ( !argNumStack.empty() ) {
 				// it meas this CastExpression was in the middle of callExpr, therefore 
@@ -362,7 +364,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		switchBlock->terminator() = cfg::Element(switchStmt);
 		CFG::VertexTy&& src = cfg->addBlock( switchBlock );
 
-		// the current node needs to be appent to the graph (if not empty)
+		// the current node needs to be append to the graph (if not empty)
 		appendPendingBlock();
 		CFG::VertexTy sink = succ;
 
@@ -397,12 +399,13 @@ struct CFGBuilder: public ASTVisitor< void > {
 	void visitCompoundStmt(const CompoundStmtPtr& compStmt);
 
 	void visitDeclarationStmt(const DeclarationStmtPtr& declStmt) {
-		appendPendingBlock(); 
 		createBlock();
 		currBlock->appendElement( cfg::Element(declStmt) );
 		appendPendingBlock();
-
+		
+		createBlock();
 		visit(declStmt->getInitialization());
+		appendPendingBlock(); 
 	}
 
 	void visitCallExpr(const CallExprPtr& callExpr) {
@@ -457,6 +460,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			head = cfg->addBlock( spawnBlock );
 			hasHead = true;
 			hasAllocated = true;
+			maxSpawnedArg = 0;
 		}
 
 		CFG::VertexTy sink = succ;
@@ -483,10 +487,13 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		});
 		argNumStack.pop();
-
+	
+		if(spawnedArgs > maxSpawnedArg) {
+			maxSpawnedArg = spawnedArgs;
+		}
 		// In the case a spawnblock has been created to capture arguments of the callExpr but no arguments were 
 		// call expressions, therefore the created spawnblock is not necessary. 
-		if ( spawnedArgs<2 && hasAllocated ) {
+		if ( maxSpawnedArg<2 && hasAllocated ) {
 			if (spawnedArgs == 1) {
 				succ = (*cfg->successors_begin(head)).blockId();
 			}
@@ -498,6 +505,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 			// set the head to false (for next calls to this function)
 			hasHead = false;
+			isPending = false;
 			return;
 		}
 
