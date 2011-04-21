@@ -36,12 +36,17 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/analysis/cmake_config.h"
+
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/statements.h"
 #include "insieme/analysis/cfg.h"
 
+#include "insieme/frontend/program.h"
+
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
 #include <boost/graph/breadth_first_search.hpp>
 
 using namespace insieme::core;
@@ -94,7 +99,7 @@ TEST(CFGBuilder, CompoundStmtMulti) {
 	CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(cs2);
 	EXPECT_EQ(static_cast<unsigned>(3), cfg->getSize());
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	const cfg::Block& block = *cfg->successors_begin(entry);
 
 	cfg::Block::const_iterator it = block.stmt_begin(), end = block.stmt_end();
@@ -130,7 +135,7 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 	CFGPtr cfg = CFG::buildCFG(cs2);
 	EXPECT_EQ(static_cast<unsigned>(7), cfg->getSize());
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	CFG::SuccessorsIterator&& it = cfg->successors_begin(entry), end = cfg->successors_end(entry);
 
 	// visit STMT2
@@ -191,7 +196,7 @@ TEST(CFGBuilder, IfStmt1) {
 	enum DFS_ORDER{ ENTRY, IF, THEN, ELSE, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	boost::breadth_first_search
 	    ( cfg->getRawGraph(), entry,
 	    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -258,7 +263,7 @@ TEST(CFGBuilder, IfStmt2) {
 	enum DFS_ORDER{ ENTRY, IF, THEN, SINK, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	boost::breadth_first_search
 	    ( cfg->getRawGraph(), entry,
 	    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -323,7 +328,7 @@ TEST(CFGBuilder, ForStmt) {
 	enum DFS_ORDER{ ENTRY, DECL, FOR, BODY, EXIT, INC };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 		boost::breadth_first_search
 		    ( cfg->getRawGraph(), entry,
 		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -395,7 +400,7 @@ TEST(CFGBuilder, WhileStmt) {
 	enum DFS_ORDER{ ENTRY, WHILE, BODY, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 		boost::breadth_first_search
 		    ( cfg->getRawGraph(), entry,
 		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -450,7 +455,7 @@ TEST(CFGBuilder, SwitchStmt) {
 	enum DFS_ORDER{ ENTRY, SWITCH, CASE1, CASE2, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 		boost::breadth_first_search
 		    ( cfg->getRawGraph(), entry,
 		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -499,7 +504,7 @@ TEST(CFGBlockIterator, SuccessorsIterator) {
 	IfStmtPtr ifStmt = buildIfStmt1(manager);
 	CFGPtr cfg = CFG::buildCFG(ifStmt);
 
-	const cfg::Block& ifBlock = *cfg->successors_begin( cfg->getEntry() );
+	const cfg::Block& ifBlock = *cfg->successors_begin( cfg->entry() );
 
 	auto succIT = cfg->successors_begin( ifBlock.blockId() ), end = cfg->successors_end( ifBlock.blockId() );
 	EXPECT_FALSE(succIT == end);
@@ -520,7 +525,7 @@ TEST(CFGBlockIterator, PredecessorIterator) {
 	IfStmtPtr ifStmt = buildIfStmt1(manager);
 	CFGPtr cfg = CFG::buildCFG(ifStmt);
 
-	auto predIT = cfg->predecessors_begin( cfg->getExit() ), end = cfg->predecessors_end( cfg->getExit() );
+	auto predIT = cfg->predecessors_begin( cfg->exit() ), end = cfg->predecessors_end( cfg->exit() );
 
 	EXPECT_FALSE(predIT == end);
 	const cfg::Block& thenBlock = *predIT;
@@ -551,7 +556,35 @@ TEST(CFGBuilder, CallExprSimple) {
 	CFGPtr cfg = CFG::buildCFG(cs);
 
 	EXPECT_EQ(static_cast<unsigned>(3), cfg->getSize());
-
-
 }
 
+TEST(CFGBuilder, BasicProgFileTest) {
+
+	Logger::get(std::cerr, DEBUG, 0);
+
+	NodeManager manager;
+	insieme::frontend::Program prog(manager);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/files/basic_prog.c" );
+
+	insieme::core::ProgramPtr p = prog.convert();
+	CFGPtr cfg = CFG::buildCFG(p);
+
+	// std::cout << *cfg;
+	
+	EXPECT_EQ(static_cast<size_t>(41), cfg->getSize()); 
+}
+
+TEST(CFGBuilder, ICFGFileTest) {
+
+	Logger::get(std::cerr, DEBUG, 0);
+
+	NodeManager manager;
+	insieme::frontend::Program prog(manager);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/files/icfg.c" );
+
+	insieme::core::ProgramPtr p = prog.convert();
+	CFGPtr cfg = CFG::buildCFG(p);
+
+	// std::cout << *cfg;
+	EXPECT_EQ(static_cast<size_t>(23), cfg->getSize()); 
+}
