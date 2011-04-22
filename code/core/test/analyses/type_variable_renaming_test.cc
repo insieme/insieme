@@ -69,7 +69,7 @@ TEST(TypeVariableRenamer, Basic) {
 
 	// rename once => should produce new names
 	auto sub = renamer.mapVariables(varA);
-	EXPECT_EQ("{'a<->'v1/}", toString(sub));
+	EXPECT_EQ("{'a<->'v1}", toString(sub));
 
 	auto res = sub.applyForward(varA);
 	EXPECT_EQ("'v1", toString(*res));
@@ -87,10 +87,10 @@ TEST(TypeVariableRenamer, Basic) {
 	EXPECT_EQ("T<'v1,'v2,'v1>", toString(*renamer.rename(genABA)));
 
 	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,#a>", toString(*renamer.rename(genABx)));
+	EXPECT_EQ("T<'v1,'v2,#A>", toString(*renamer.rename(genABx)));
 
 	renamer.reset();
-	EXPECT_EQ("T<'v1,'v2,'v1,#a,#b,#a>", toString(*renamer.rename(genABAxyx)));
+	EXPECT_EQ("T<'v1,'v2,'v1,#A,#B,#A>", toString(*renamer.rename(genABAxyx)));
 
 
 	// test multiple types within a set
@@ -101,7 +101,7 @@ TEST(TypeVariableRenamer, Basic) {
 	::transform(list, std::back_inserter(renamed), [&](const TypePtr& cur)->TypePtr {
 		return sub.applyForward(cur);
 	});
-	EXPECT_EQ("[AP('v1),AP(T<'v1,'v2,#a>),AP(T<'v1,'v2,'v1,#a,#b,#a>),AP('v2)]", toString(renamed));
+	EXPECT_EQ("[AP('v1),AP(T<'v1,'v2,#A>),AP(T<'v1,'v2,'v1,#A,#B,#A>),AP('v2)]", toString(renamed));
 }
 
 TEST(TypeVariableRenamer, VariableMapping) {
@@ -118,7 +118,7 @@ TEST(TypeVariableRenamer, VariableMapping) {
 	VariableIntTypeParamPtr paramY = builder.variableIntTypeParam('y');
 
 
-	VariableMapping mapping;
+	TypeMapping mapping;
 	mapping.addMapping(varA, varB);
 	EXPECT_EQ(varB, mapping.applyForward(varA));
 	EXPECT_EQ(varB, mapping.applyForward(varB));

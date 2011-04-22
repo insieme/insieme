@@ -347,6 +347,11 @@ TEST(TypeVariableDeduction, vectorsAndArrays) {
 	EXPECT_TRUE(res);
 	if (res) EXPECT_EQ("{'a->vector<'a,12>}", toString(*res));
 
+	// ... now with a vector with a generic variable and generic size (even the same)
+	res = getTypeVariableInstantiation(manager, toVector(varA), toVector(vectorGenA));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ("{'a->vector<'a,#l>}", toString(*res));
+
 
 	// Let's test two arguments (same type)
 	res = getTypeVariableInstantiation(manager, toVector(varA, varA), toVector(int4, int4));
