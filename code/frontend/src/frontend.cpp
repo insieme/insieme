@@ -61,9 +61,7 @@ core::ProgramPtr ConversionJob::execute() {
 	frontend::Program program(manager);
 
 	// set up the translation units
-	for_each(files, [&](const string& cur) {
-		program.addTranslationUnit(cur);
-	});
+	program.addTranslationUnits(files);
 
 	// setup the include directories
 	CommandLineOptions::IncludePaths = includeDirs;
