@@ -506,7 +506,7 @@ TEST(CFGBlockIterator, SuccessorsIterator) {
 
 	const cfg::Block& ifBlock = *cfg->successors_begin( cfg->entry() );
 
-	auto succIT = cfg->successors_begin( ifBlock.blockId() ), end = cfg->successors_end( ifBlock.blockId() );
+	auto succIT = cfg->successors_begin( ifBlock ), end = cfg->successors_end( ifBlock );
 	EXPECT_FALSE(succIT == end);
 
 	const cfg::Block& thenBlock = *succIT;

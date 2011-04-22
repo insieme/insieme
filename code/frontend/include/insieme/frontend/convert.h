@@ -310,15 +310,8 @@ public:
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
 
-	/**
-	 * Create a lambda with corresponding CallExpr from an IR statement creating the lazy evaluation semantics.
-	 * Variables used inside the body are captured using capture list.
-	 *
-	 * @param body the code which needs to be places inside a lambda
-	 * @param retTy the return type of the generated lambda expression
-	 * @return A call expression of a lambda enclosing the body
-	 */
-	// core::ExpressionPtr createCallExpr(core::StatementPtr body, core::TypePtr retTy) const;
+	//typedef std::function<NodePtr (core::NodeManager&, const clang::FunctionDecl*)> CustomFunctionHandler;
+	//void registerFunctionHandler(CustomFunctionHandler& handler);
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {

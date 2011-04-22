@@ -168,7 +168,10 @@ struct CFGBuilder: public ASTVisitor< void > {
 			// we end up with an empty statement at the top of the CFG, we
 			// want to remove that block and connect the outgoing edges to
 			// the entry node
+			const cfg::Block* b = &cfg->getBlock(succ);
 			cfg->replaceNode(succ, entry);
+			delete b;
+
 			return;
 		}	
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
@@ -183,7 +186,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		// we have to make sure the currBlock is not containing elements already
 		assert( !isPending && !currBlock && "CFG block lost during CFG creation" );
-		currBlock = new cfg::Block;
+		currBlock = new cfg::Block(*cfg);
 		isPending = true;
 	}
 
@@ -262,7 +265,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void visitIfStmt(const IfStmtPtr& ifStmt) {
-		cfg::Block* ifBlock = new cfg::Block;
+		cfg::Block* ifBlock = new cfg::Block(*cfg);
 		ifBlock->terminator() = cfg::Element(ifStmt);
 		CFG::VertexTy&& src = cfg->addBlock( ifBlock );
 		
@@ -291,7 +294,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void visitForStmt(const ForStmtPtr& forStmt) {
-		cfg::Block* forBlock = new cfg::Block;
+		cfg::Block* forBlock = new cfg::Block(*cfg);
 		forBlock->terminator() = cfg::Element(forStmt);
 		forBlock->appendElement( cfg::Element(forStmt->getEnd(), cfg::Element::CtrlCond) );
 		CFG::VertexTy&& forHead = cfg->addBlock( forBlock );
@@ -313,7 +316,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		} 
 
 		// increment expression
-		cfg::Block* incBlock = new cfg::Block;
+		cfg::Block* incBlock = new cfg::Block(*cfg);
 		incBlock->appendElement( cfg::Element(forStmt, cfg::Element::LoopIncrement) );
 		CFG::VertexTy&& inc = cfg->addBlock( incBlock );
 		cfg->addEdge(inc, src);
@@ -338,7 +341,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 	
 	void visitWhileStmt(const WhileStmtPtr& whileStmt) {
-		cfg::Block* whileBlock = new cfg::Block;
+		cfg::Block* whileBlock = new cfg::Block(*cfg);
 		whileBlock->terminator() = cfg::Element(whileStmt);
 		CFG::VertexTy&& src = cfg->addBlock( whileBlock );
 
@@ -385,7 +388,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 	}
 
 	void visitSwitchStmt(const SwitchStmtPtr& switchStmt) {
-		cfg::Block* switchBlock = new cfg::Block;
+		cfg::Block* switchBlock = new cfg::Block(*cfg);
 		switchBlock->terminator() = cfg::Element(switchStmt);
 		CFG::VertexTy&& src = cfg->addBlock( switchBlock );
 
@@ -449,15 +452,15 @@ struct CFGBuilder: public ASTVisitor< void > {
 			CFG::GraphBounds&& bounds = cfg->getNodeBounds(lambdaExpr);
 			// A call expression creates 2 blocks, 1 spawning the function call and the second one collecting
 			// the return value
-			cfg::CallBlock* call = new cfg::CallBlock;
-			cfg::RetBlock* ret = new cfg::RetBlock;
+			cfg::CallBlock* call = new cfg::CallBlock(*cfg);
+			cfg::RetBlock* ret = new cfg::RetBlock(*cfg);
 
 			// we interconnect the two blocks so that if we want to have intra-procedural analysis we can jump
 			// directly to the return block without visiting the body of the function
-			call->returnBlock() = ret;
+			call->setReturnBlock( *ret );
 			call->appendElement( cfg::Element(callExpr) );
 
-			ret->callBlock() = call;
+			ret->setCallBlock(*call);
 
 			CFG::VertexTy&& callVertex = cfg->addBlock( call );
 			cfg->addEdge(callVertex, bounds.first); // CALL -> Function Entry
@@ -480,7 +483,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		bool hasAllocated=false;
 		if ( !hasHead ) {
 			assert(!spawnBlock);
-			spawnBlock = new cfg::Block( cfg::Block::DEFAULT );
+			spawnBlock = new cfg::Block( *cfg, cfg::Block::DEFAULT );
 			head = cfg->addBlock( spawnBlock );
 			hasHead = true;
 			hasAllocated = true;
@@ -632,7 +635,6 @@ CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 	CFG::VertexTy&& v = boost::add_vertex(graph);
 	CFG::NodePropertyMapTy&& block_map = get(&NodeProperty::block, graph);
 	block->blockId() = v;
-	block->setCFG(*this);
 	put(block_map, v, block);
 
 	// Set the index appropriately
@@ -648,8 +650,8 @@ void CFG::removeBlock(const CFG::VertexTy& v) {
 }
 
 std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
-	CFG::VertexTy&& entry = addBlock(new cfg::Block(cfg::Block::ENTRY) );
-	CFG::VertexTy&& exit = addBlock(new cfg::Block(cfg::Block::EXIT) );
+	CFG::VertexTy&& entry = addBlock(new cfg::Block(*this, cfg::Block::ENTRY) );
+	CFG::VertexTy&& exit = addBlock(new cfg::Block(*this, cfg::Block::EXIT) );
 	if(subGraphs.empty()) {
 		entry_block = entry;
 		exit_block = exit;
@@ -804,7 +806,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 						// for each argument we have to check if we spawned a block to evaluate it or not
 						// in positive case we just write a reference to the block containing the evaluation
 						// of the argument 
-						const CFG& cfg = block.getCFG();
+						const CFG& cfg = block.getParentCFG();
 						const vector<ExpressionPtr>& args = callExpr->getArguments();
 						auto predIT = cfg.predecessors_begin( block ), end = cfg.predecessors_end( block );
 						size_t argID = 0, argSize = args.size();
@@ -830,7 +832,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 					} else if (curr->getNodeType() == NT_CastExpr ) {
 						const CastExprPtr& castExpr = static_pointer_cast<const CastExpr>(curr);
 						out << "CAST<" << getPrettyPrinted(castExpr->getType()) << ">"; 
-						const CFG& cfg = block.getCFG();
+						const CFG& cfg = block.getParentCFG();
 						auto predIT = cfg.predecessors_begin( block ), end = cfg.predecessors_end( block );
 						if ( predIT != end) {
 							const cfg::Block& pred = *predIT;

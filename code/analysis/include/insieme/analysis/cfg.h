@@ -36,6 +36,7 @@
 
 #pragma once
 
+
 #include "insieme/core/statements.h"
 
 #include <boost/graph/adjacency_list.hpp>
@@ -67,6 +68,10 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Termin
 
 namespace insieme {
 namespace analysis {
+
+class CFG;
+typedef std::shared_ptr<CFG> CFGPtr;
+
 namespace cfg {
 
 /**
@@ -112,10 +117,11 @@ private:
 	core::ExpressionPtr expr;	
 };
 
+
+
 } // end cfg namespace
 
-class CFG;
-typedef std::shared_ptr<CFG> CFGPtr;
+
 
 enum CreationPolicy { OneStmtPerBasicBlock, MultiStmtPerBasicBlock };
 
@@ -294,7 +300,7 @@ public:
 
 		// Returns a reference to the block referenced by this iterator
 		const cfg::Block& operator*() const {
-			assert(iter != end && cfg && "Iterator out of scope!");
+			assert(iter != end && cfg && "Iterator out of scope");
 			return cfg->getBlock(*iter);
 		}
 	};
@@ -337,9 +343,7 @@ public:
 
 	void replaceNode(const VertexTy& oldNode, const VertexTy& newNode);
 
-	/**
-	 * Returns the number of CFG Blocks in this graph.
-	 */
+	/// Returns the number of CFG Blocks in this graph.
 	size_t getSize() const  { return num_vertices(graph); }
 
 	// getter/setter for the entry block of the CFG.
@@ -400,12 +404,16 @@ public:
 
 private:
 	ControlFlowGraph	graph;
+
+	// Map LambdaExpr graphs to their respective entry/exit block 
 	SubGraphMap			subGraphs;
+
 	size_t				currId;
 	VertexTy			entry_block, exit_block;
 };
 
 namespace cfg {
+
 /**
  * Block - Represents a single basic block in a source-level CFG. It consists of:
  *
@@ -413,6 +421,7 @@ namespace cfg {
  *  (2) A "terminator" statement (not in the set of statements).
  */
 struct Block {
+	
 	typedef std::vector<Element> StatementList;
 
 	typedef StatementList::const_reverse_iterator const_iterator;
@@ -420,21 +429,16 @@ struct Block {
 
 	enum Type { DEFAULT, ENTRY, EXIT, CALL, RET };
 
-	Block(const Type& blockType = DEFAULT) : 
-		graph(NULL), blockType(blockType) { }
+	Block(const CFG& parentCFG, const Type& blockType = DEFAULT) : 
+		parentCFG(parentCFG), blockType(blockType) { }
 
-	Block(const CFG::VertexTy& id, const Type& blockType) : 
-		graph(NULL), blockType(blockType), id(id) { }
+	Block(const CFG& parentCFG, const CFG::VertexTy& id, const Type& blockType) : 
+		parentCFG(parentCFG), blockType(blockType), id(id) { }
 
 	/// Appends a statement to an existing CFGBlock
-	void appendElement(const cfg::Element& elem) { stmtList.push_back(elem); }
-
-	const CFG& getCFG() const { 
-		assert(graph && "This Block doesn't belong to any CFG"); 
-		return *graph; 
+	void appendElement(const cfg::Element& elem) { 
+		stmtList.push_back(elem); 
 	}
-
-	void setCFG(const CFG& cfg) { graph = &cfg; }
 
 	/// Setters and getters for the terminator element
 	const Terminator& terminator() const { return term; }
@@ -475,8 +479,16 @@ struct Block {
 	const_reverse_iterator stmt_rend() const { return stmtList.end(); }
 
 	virtual ~Block() { }
+
+	friend class insieme::analysis::CFG;
+	friend std::ostream& std::operator<<(std::ostream& out, const Block& block);
+
 private:
-	const CFG*		graph;
+	// private getter for CFG parent graph
+	const CFG& getParentCFG() const { return parentCFG; }
+
+	const CFG&		parentCFG;
+
 	const Type		blockType;
 	CFG::VertexTy	id;
 	StatementList 	stmtList;
@@ -486,19 +498,27 @@ private:
 struct RetBlock;
 
 struct CallBlock: public Block {
-	CallBlock(): Block(CALL), ret(NULL) { }
+	CallBlock(const CFG& cfg): Block(cfg, CALL), ret(NULL) { }
 
-	const RetBlock* returnBlock() const { return ret; }
-	RetBlock*& returnBlock() { return ret; }
+	const RetBlock& getReturnBlock() const { 
+		assert(ret && "Return block for this CALL block not set."); 
+		return *ret; 
+	}
+	void setReturnBlock(RetBlock& ret) { this->ret = &ret; }
+
 private:
 	RetBlock* ret;
 };
 
 struct RetBlock: public Block {
-	RetBlock(): Block(RET), call(NULL) { }
+	RetBlock(const CFG& cfg): Block(cfg, RET), call(NULL) { }
 
-	const CallBlock* callBlock() const { return call; }
-	CallBlock*& callBlock() { return call; }
+	const CallBlock& getCallBlock() const { 
+		assert(call && "Call block for this RET block not set.");
+		return *call; 
+	}
+	void setCallBlock(CallBlock& call) { this->call = &call; }
+
 private:
 	CallBlock* call;
 };
