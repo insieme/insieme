@@ -168,7 +168,9 @@ struct CFGBuilder: public ASTVisitor< void > {
 			// we end up with an empty statement at the top of the CFG, we
 			// want to remove that block and connect the outgoing edges to
 			// the entry node
+			const cfg::Block* b = &cfg->getBlock(succ);
 			cfg->replaceNode(succ, entry);
+			delete b;
 			return;
 		}	
 		cfg->addEdge(entry, succ);	// connect the entry with the top node
