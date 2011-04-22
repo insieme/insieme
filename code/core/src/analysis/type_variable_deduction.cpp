@@ -49,6 +49,7 @@
 #include "insieme/core/expressions.h"
 
 #include "insieme/utils/graph_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
@@ -757,7 +758,14 @@ namespace analysis {
 				case NT_RecType:
 				{
 					// TODO: implement RecType pattern matching
-					assert(false && "Sorry - not implemented!");
+					if (*paramType != *argType) {
+						LOG(WARNING) << "Yet unhandled recursive type encountered while resolving subtype constraints:"
+									 << " Parameter Type: " << paramType << std::endl
+									 << "  Argument Type: " << argType << std::endl
+									 << " => the argument will be considered equal!!!";
+//						assert(false && "Sorry - not implemented!");
+						constraints.makeUnsatisfiable();
+					}
 					break;
 				}
 				default:
@@ -907,8 +915,9 @@ namespace analysis {
 					argumentMapping.addMapping(var, substitute);
 					break;
 				}
+				case NT_RecType:
 				case NT_FunctionType: {
-					// do not consider function types (variables inside are bound)
+					// do not consider function types and recursive types (variables inside are bound)
 					break;
 				}
 				default: {

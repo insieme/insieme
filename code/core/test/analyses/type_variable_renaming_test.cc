@@ -144,6 +144,29 @@ TEST(TypeVariableRenamer, VariableMapping) {
 
 }
 
+TEST(TypeVariableRenamer, RecTypeRenaming) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypeVariablePtr var = builder.typeVariable("X");
+	TypePtr type = builder.refType(var);
+
+	RecTypeDefinition::RecTypeDefs defs;
+	defs.insert(std::make_pair(var, type));
+
+	RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
+	RecTypePtr recType = builder.recType(var, def);
+
+	EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*recType));
+
+	VariableRenamer renamer;
+	EXPECT_EQ("rec 'X.{'X=ref<'X>}", toString(*renamer.rename(recType)));
+
+
+
+}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

@@ -279,6 +279,8 @@ namespace analysis {
 
 			TypeMapping res;
 
+			// TODO: the renaming should happen recursivel within every new scope (e.g. a function)
+
 			// create visitor collecting the renaming information
 			auto visitor = makeLambdaPtrVisitor([&](const NodePtr& node) {
 				NodeType type = node->getNodeType();
@@ -292,12 +294,19 @@ namespace analysis {
 					if (!res.containsMappingFor(var)) {
 						res.addMapping(var, getFreshParameter(manager));
 					}
+				} else if (type == NT_RecType) {
+					// the type variables for the recursive definition have to be ignored
+					const RecTypePtr recType = static_pointer_cast<const RecType>(node);
+					for_each(recType->getDefinition()->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+						// fix mapping for the used type variable
+						res.addMapping(cur.first, cur.first);
+					});
 				}
 			}, true);
 
 			// use a visitor to meet all variables and variable int parameters
 			std::for_each(begin, end, [&](const TypePtr& cur) {
-				visitAllOnce(cur, visitor);
+				visitAllOnce(cur, visitor, true);
 			});
 
 			// return result
