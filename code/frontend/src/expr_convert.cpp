@@ -401,9 +401,10 @@ public:
 	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
 	    START_LOG_EXPR_CONVERSION(implCastExpr);
 		core::TypePtr&& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
-		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
-		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
+		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
+
+		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 		// if the cast is to a aa pointer type and the subexpr is a 0 it should be replaced with a null literal
 		if ( ( type->getNodeType() == core::NT_ArrayType ) &&
 				*subExpr == *convFact.builder.literal(subExpr->getType(),"0") ) {
@@ -546,6 +547,16 @@ public:
 							wrapVariable(callExpr->getArg(0))
 						);
 				}
+
+
+                //-----------------------------------------------------------------------------------------------------
+                //                          Handle of OpenCL built-in functions
+                //-----------------------------------------------------------------------------------------------------
+                // clEnqueueWriteBuffer()
+                if ( funcDecl->getNameAsString() == "clEnqueueWriteBuffer") {
+                    std::cerr << "FOUND clEnqueueWriteBuffer " << callExpr->getNumArgs() << std::endl;
+                }
+
 			}
 
 			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
@@ -1371,6 +1382,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			 << utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager())
 			 << "): " << std::endl
 			 << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
+			 << "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl
 			 << "\tEmpty map: "    << ctx.recVarExprMap.size();
 
 	if ( !ctx.isRecSubFunc ) {
@@ -1454,10 +1466,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
-	assert(!ctx.isResolvingRecFuncBody && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
-	if ( !components.empty() ) {
+	assert((components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
+	if(!components.empty())
 		ctx.isResolvingRecFuncBody = true;
-	}
+
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	/*
 	 * if any of the parameters of this function has been marked as needRef, we need to add a declaration just before
@@ -1500,7 +1512,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		decls.push_back(body);
 		body = builder.compoundStmt(decls);
 	}
-	ctx.isResolvingRecFuncBody = false;
+
+	if( !components.empty() )
+		ctx.isResolvingRecFuncBody = false;
 
 	// ADD THE GLOBALS
 	if ( isEntryPoint && ctx.globalVar ) {

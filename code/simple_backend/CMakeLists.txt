@@ -44,6 +44,9 @@ foreach ( case_file ${test_cases})
 	add_unit_test(${case_name})
 endforeach(case_file)
 
+# --- INSTALL --------------------------------------------------------------------
+install (FILES include/insieme/simple_backend/simple_backend.h DESTINATION include)
+INSTALL(TARGETS insieme_simple_backend LIBRARY DESTINATION lib)
 
 # ------------------------------------------------------------------------------------------------------------------
 

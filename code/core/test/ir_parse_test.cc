@@ -288,9 +288,10 @@ TEST(IRParser, StatementTests) {
     EXPECT_EQ(markerStmt, parser.parseStatement("<ms id = 7> while(1){ 7; break; return 0; } </ms>"));
 
     auto tmp = parser.parseStatement("(op<ref.var>((op<undefined>(lit<type<vector<'res,#l>>, arbitraryText>))))");
+
 //    std::cout << printer::PrettyPrinter(tmp) << std::endl;
     // pointwise operator implementation with simple means
-    auto vectorPointwise = parser.parseStatement("\
+/*    auto vectorPointwise = parser.parseStatement("\
         fun (('elem, 'elem) -> 'res:fct) -> (vector<'elem, #l>, vector<'elem, #l>) -> vector<'res, #l>  { \
             return bind(vector<'elem, #l>:ba, vector<'elem,#l>:bb) { \
                ( fun (vector<'elem, #l>:a, vector<'elem,#l>:b, ('elem, 'elem) -> 'res:fct2) -> vector<'res, #l>{ { \
@@ -301,7 +302,7 @@ TEST(IRParser, StatementTests) {
                } } (ba, bb, fct) ) \
             } \
         }");/*\*/
-
+/*
     auto vectorPointwiseUnary = parser.parseStatement("\
         fun (('elem) -> 'res:fct3) -> (vector<elem, #l>) -> vector<'res, #l> { \
             return bind(vector<'elem, #l>:ba2) { \
@@ -313,8 +314,50 @@ TEST(IRParser, StatementTests) {
                 } } (ba2, fct3) ) \
             } \
         }");// } ");
+(op<array.create.1D( (op<undefined>(int<8>)), 1))
+            (op<undefined>( ( op<array.subscript.1D>(host_ptr, 0)) )); \
 
 
+*/
+try {
+    // clCreateBuffer implementation
+/*    auto clCreateBuffer = parser.parseStatement("\
+        fun (struct<identifier:int<8> >:context, uint<4>:flags, uint<4>:size, ref<array<'a, 1> >:host_ptr, ref<uint<4> >:errorcode_ret )->ref<array<'a, 1> > {{ \
+            return (op<ref.new>( (op<array.create.1D>( (op<undefined>( ( op<array.subscript.1D>(host_ptr, 0)) )), \
+                (size / (op<sizeof>( ( op<array.subscript.1D>(host_ptr, 0 )) )) ) )) )); \
+        }}"
+    );
+*/
+    // clEnqueueWriteBuffer implementation
+    auto clEnqueueWriteBuffer = parser.parseStatement("\
+        fun (struct<identifier:int<8> >:command_queue, ref<array<'a, 1> >:devicePtr, bool:blocking, uint<4>:offset, uint<4>:cb, array<'a, 1>:hostPtr, \
+             uint<4>:nWait, array<struct<identifier:int<8> >, 1>:waitForEvents, struct<identifier:int<8> >:event) -> ref<uint<4> > {{ \
+             (op<ref.assign>(devicePtr, hostPtr )); \
+             return lit<uint<4>, 0>;\
+        }}"
+    );
+
+    // clEnqueueReadBuffer implementation
+    auto clEnqueueReadBuffer = parser.parseStatement("\
+        fun (struct<identifier:int<8> >:command_queue, ref<array<'a, 1> >:devicePtr, bool:blocking, uint<4>:offset, uint<4>:cb, array<'a, 1>:hostPtr, \
+             uint<4>:nWait, array<struct<identifier:int<8> >, 1>:waitForEvents, struct<identifier:int<8> >:event) -> ref<uint<4> > {{ \
+             (op<ref.assign>(hostPtr, devicePtr )); \
+             return lit<uint<4>, 0>;\
+        }}"
+    );
+
+    // clEnqueueCopyBuffer implementation
+    auto clEnqueueCopyBuffer = parser.parseStatement("\
+        fun (struct<identifier:int<8> >:command_queue, ref<array<'a, 1> >:src, ref<array<'a, 1> >:dst, uint<4>:srcOffset, uint<4>:dstOffset, uint<4>:cb, \
+             uint<4>:nWait, array<struct<identifier:int<8> >, 1>:waitForEvents, struct<identifier:int<8> >:event) -> ref<uint<4> > {{ \
+             (op<ref.assign>(dst, (op<ref.deref>(src)) )); \
+             return lit<uint<4>, 0>;\
+        }}"
+    );
+} catch(lang::LiteralNotFoundException e) {
+    std::cout << e.what() << std::endl;
+    throw lang::LiteralNotFoundException("");
+}
 //    std::cout << printer::PrettyPrinter(vectorPointwise) << std::endl;
 }
 
