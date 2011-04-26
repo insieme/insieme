@@ -1382,6 +1382,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			 << utils::location(funcDecl->getSourceRange().getBegin(), currTU->getCompiler().getSourceManager())
 			 << "): " << std::endl
 			 << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
+			 << "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl
 			 << "\tEmpty map: "    << ctx.recVarExprMap.size();
 
 	if ( !ctx.isRecSubFunc ) {
@@ -1465,10 +1466,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
-	assert(!ctx.isResolvingRecFuncBody && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
-	if ( !components.empty() ) {
+	assert((components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
+	if(!components.empty())
 		ctx.isResolvingRecFuncBody = true;
-	}
+
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	/*
 	 * if any of the parameters of this function has been marked as needRef, we need to add a declaration just before
@@ -1511,7 +1512,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		decls.push_back(body);
 		body = builder.compoundStmt(decls);
 	}
-	ctx.isResolvingRecFuncBody = false;
+
+	if( !components.empty() )
+		ctx.isResolvingRecFuncBody = false;
 
 	// ADD THE GLOBALS
 	if ( isEntryPoint && ctx.globalVar ) {
