@@ -51,98 +51,144 @@ namespace analysis {
 	 * A variable mapping is a one-to-one mapping between two sets of variables (not necessarily distinct). It is the result produced
 	 * by a renaming process. As a substitution, it can be applied on types - in forward and reverse directions.
 	 */
-	class VariableMapping : public utils::Printable {
+	class TypeMapping : public utils::Printable {
 
 		/**
 		 * The internal storage for the forward variable mapping. It is a mirrored version of the
-		 * backward substitution.
+		 * backward substitution. The element types are NodePtr to allow the structure to be forwarded
+		 * to the standard replace function.
 		 */
-		Substitution forward;
+		utils::map::PointerMap<NodePtr, NodePtr> forward;
 
 		/**
 		 * The internal storage for the backward variable mapping. It is a mirrored version of the
-		 * forward substitution.
+		 * forward substitution. The element types are NodePtr to allow the structure to be forwarded
+		 * to the standard replace function.
 		 */
-		Substitution backward;
+		utils::map::PointerMap<NodePtr, NodePtr> backward;
 
 	public:
 
 		/**
-		 * Adds a new variable mapping to this instance.
+		 * Adds a new type mapping to this instance.
 		 */
-		void addMapping(const TypeVariablePtr& varA, const TypeVariablePtr& varB) {
-			forward.addMapping(varA, varB);
-			backward.addMapping(varB, varA);
+		void addMapping(const TypePtr& varA, const TypePtr& varB) {
+			addMappingInternal(varA, varB);
 		}
 
 		/**
 		 * Checks whether the given variable has been mapped to another variable before. Only the forward
 		 * direction is checked.
 		 */
-		bool containsMappingFor(const TypeVariablePtr& var) const {
-			return forward.containsMappingFor(var);
+		bool containsMappingFor(const TypePtr& var) const {
+			return forward.find(var) != forward.end();
 		}
 
 		/**
 		 * Adds a new variable mapping to this instance.
 		 */
-		void addMapping(const VariableIntTypeParamPtr& varA, const VariableIntTypeParamPtr& varB) {
-			forward.addMapping(varA, varB);
-			backward.addMapping(varB, varA);
+		void addMapping(const IntTypeParamPtr& varA, const IntTypeParamPtr& varB) {
+			addMappingInternal(varA, varB);
 		}
 
 		/**
 		 * Checks whether the given variable has been mapped to another variable before. Only the forward
 		 * direction is checked.
 		 */
-		bool containsMappingFor(const VariableIntTypeParamPtr& var) const {
-			return forward.containsMappingFor(var);
+		bool containsMappingFor(const IntTypeParamPtr& var) const {
+			return forward.find(var) != forward.end();
 		}
 
 		/**
 		 * Applies the forward substitution represented by this mapping to the given type.
 		 */
 		TypePtr applyForward(const TypePtr& type) {
-			return forward.applyTo(type);
+			return applyForward(type->getNodeManager(), type);
 		}
+
+		/**
+		 * Applies the forward substitution on the given list of types.
+		 */
+		inline TypeList applyForward(NodeManager& manager, const TypeList& list) {
+			TypeList res;
+			for (auto it = list.begin(); it != list.end(); ++it) {
+				res.push_back(applyForward(manager, *it));
+			}
+			return res;
+		}
+
+		/**
+		 * Applies the forward substitution represented by this mapping to the given type using the given manager.
+		 */
+		TypePtr applyForward(NodeManager& manager, const TypePtr& type);
 
 		/**
 		 * Applies the reverse substitution represented by this mapping to the given type.
 		 */
 		TypePtr applyBackward(const TypePtr& type) {
-			return backward.applyTo(type);
+			return applyBackward(type->getNodeManager(), type);
 		}
 
 		/**
-		 * Obtains a reference to a substitution corresponding to the represented forward substitution.
+		 * Applies the forward substitution on the given list of types.
 		 */
-		const Substitution& getForward() const {
-			return forward;
+		inline TypeList applyBackward(NodeManager& manager, const TypeList& list) {
+			TypeList res;
+			for (auto it = list.begin(); it != list.end(); ++it) {
+				res.push_back(applyBackward(manager, *it));
+			}
+			return res;
 		}
 
 		/**
-		 * Obtains a reference to a substitution corresponding to the represented backward substitution.
+		 * Applies the reverse substitution represented by this mapping to the given type using the given manager.
 		 */
-		const Substitution& getBackward() const {
-			return backward;
+		TypePtr applyBackward(NodeManager& manager, const TypePtr& type);
+
+		/**
+		 * Applies the forward substitution represented by this mapping to the given int type parameter using the given manager.
+		 */
+		IntTypeParamPtr applyForward(NodeManager& manager, const IntTypeParamPtr& param) {
+			auto pos = forward.find(param);
+			if (pos != forward.end()) {
+				return static_pointer_cast<const IntTypeParam>(pos->second);
+			}
+			return static_pointer_cast<const IntTypeParam>(param);
 		}
+
+		/**
+		 * Applies the reverse substitution represented by this mapping to the given int type parameter using the given manager.
+		 */
+		IntTypeParamPtr applyBackward(NodeManager& manager, const IntTypeParamPtr& param) {
+			auto pos = backward.find(param);
+			if (pos != backward.end()) {
+				return static_pointer_cast<const IntTypeParam>(pos->second);
+			}
+			return static_pointer_cast<const IntTypeParam>(param);
+		}
+
 
 		/**
 		 * Writes a (somehow) readable string representation of this mapping to the given output stream.
 		 */
 		std::ostream& printTo(std::ostream& out) const {
 			out << "{";
-			out << join(",", forward.getMapping(),
-					[](std::ostream& out, const Substitution::Mapping::value_type& cur) {
-						out << *cur.first << "<->" << *cur.second;
-			});
-			out << "/";
-			out << join(",", forward.getIntTypeParamMapping(),
-					[](std::ostream& out, const Substitution::IntTypeParamMapping::value_type& cur) {
+			out << join(",", forward,
+					[](std::ostream& out, const std::pair<NodePtr, NodePtr>& cur) {
 						out << *cur.first << "<->" << *cur.second;
 			});
 			out << "}";
 			return out;
+		}
+
+	private:
+
+		/**
+		 * Internal method for adding a pair of nodes to be mapped to each other by this class.
+		 */
+		void addMappingInternal(const NodePtr& from, const NodePtr& to) {
+			forward.insert(std::make_pair(from, to));
+			backward.insert(std::make_pair(to, from));
 		}
 
 	};
@@ -166,10 +212,15 @@ namespace analysis {
 	public:
 
 		/**
+		 * A virtual destructor to support sub-classes.
+		 */
+		virtual ~VariableRenamer() {};
+
+		/**
 		 * Creates an new instance of this class producing substitutions using the given offsets.
 		 */
 		VariableRenamer(int varCounterOffset=0, int varParamCounterOffset=0)
-			: varCounter(varCounterOffset), varParamCounter(varParamCounter) { }
+			: varCounter(varCounterOffset), varParamCounter(varParamCounterOffset) { }
 
 
 		/**
@@ -199,7 +250,7 @@ namespace analysis {
 		 * new names a fresh considering the re-naming proposals previously computed
 		 * by the same instance.
 		 */
-		VariableMapping mapVariables(const TypePtr& target) {
+		TypeMapping mapVariables(const TypePtr& target) {
 			return mapVariables(target->getNodeManager(), toVector(target));
 		}
 
@@ -207,7 +258,7 @@ namespace analysis {
 		 * A template to be capable of handling containers as inputs.
 		 */
 		template<class Container>
-		VariableMapping mapVariables(NodeManager& manager, const Container& container) {
+		TypeMapping mapVariables(NodeManager& manager, const Container& container) {
 			return mapVariables(manager, container.begin(), container.end());
 		}
 
@@ -215,7 +266,7 @@ namespace analysis {
 		 * A template to be capable of handling ranges as inputs.
 		 */
 		template<class Iterator>
-		VariableMapping mapVariables(NodeManager& manager, const std::pair<Iterator, Iterator>& range) {
+		TypeMapping mapVariables(NodeManager& manager, const std::pair<Iterator, Iterator>& range) {
 			return mapVariables(manager, range.first, range.second);
 		}
 
@@ -224,9 +275,11 @@ namespace analysis {
 		 * the given range of types are replaced by a consistent set of new variables.
 		 */
 		template<class Iterator>
-		VariableMapping mapVariables(NodeManager& manager, const Iterator& begin, const Iterator& end) {
+		TypeMapping mapVariables(NodeManager& manager, const Iterator& begin, const Iterator& end) {
 
-			VariableMapping res;
+			TypeMapping res;
+
+			// TODO: the renaming should happen recursivel within every new scope (e.g. a function)
 
 			// create visitor collecting the renaming information
 			auto visitor = makeLambdaPtrVisitor([&](const NodePtr& node) {
@@ -241,12 +294,19 @@ namespace analysis {
 					if (!res.containsMappingFor(var)) {
 						res.addMapping(var, getFreshParameter(manager));
 					}
+				} else if (type == NT_RecType) {
+					// the type variables for the recursive definition have to be ignored
+					const RecTypePtr recType = static_pointer_cast<const RecType>(node);
+					for_each(recType->getDefinition()->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+						// fix mapping for the used type variable
+						res.addMapping(cur.first, cur.first);
+					});
 				}
 			}, true);
 
 			// use a visitor to meet all variables and variable int parameters
 			std::for_each(begin, end, [&](const TypePtr& cur) {
-				visitAllOnce(cur, visitor);
+				visitAllOnce(cur, visitor, true);
 			});
 
 			// return result
@@ -269,11 +329,10 @@ namespace analysis {
 		}
 
 		VariableIntTypeParamPtr getFreshParameter(NodeManager& manager) {
-			return VariableIntTypeParam::get(manager, 'a' + (varParamCounter++));
+			return VariableIntTypeParam::get(manager, 'A' + (varParamCounter++));
 		}
 
 	};
-
 
 } // end namespace analysis
 } // end namespace core

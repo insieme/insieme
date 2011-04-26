@@ -61,7 +61,7 @@ public:
 
 	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified)
 		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified),
-		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { return cur.first->getNodeCategory() == NC_Type; })) { }
+		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })) { }
 
 private:
 
@@ -328,7 +328,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 
 	// shortcut for empty replacements
 	if (replacements.empty()) {
-		return root;
+		return mgr.get(root);
 	}
 
 	// handle single element case
@@ -359,6 +359,12 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toR
 
 
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+	// special handling for empty replacement map
+	if (replacements.empty()) {
+		return mgr.get(root);
+	}
+
+	// conduct actual substitutions
 	auto mapper = ::VariableMapReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
 	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
 }

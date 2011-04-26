@@ -123,6 +123,7 @@ enum { NUM_CONCRETE_NODE_TYPES = 0
  */
 enum NodeCategory {
 	NC_Support, /* < The node represents a supporting element. */
+	NC_IntTypeParam, /* < The node represents a int-type parameter */
 	NC_Type, /* < The node represents a type. */
 	NC_Expression, /* < The node represents an expression. */
 	NC_Statement, /* < The node represents a statement. */

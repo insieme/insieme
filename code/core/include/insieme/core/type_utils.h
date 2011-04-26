@@ -102,6 +102,13 @@ public:
 	Substitution(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& parameter);
 
 	/**
+	 * Checks whether this substitution is actually mapping any variables to some type.
+	 */
+	bool empty() const {
+		return mapping.empty() && paramMapping.empty();
+	}
+
+	/**
 	 * Applies this substitution to the given type.
 	 * @param manager the manager to be used for creating new type node instances
 	 * @param type the type to which this substitution should be applied to
@@ -178,8 +185,24 @@ public:
 	 * Obtains a constant reference to the type variable mapping constituting this substitution.
 	 * @return a constant reference to the internally maintained type variable mapping
 	 */
+	Mapping& getMapping() {
+		return mapping;
+	}
+
+	/**
+	 * Obtains a constant reference to the type variable mapping constituting this substitution.
+	 * @return a constant reference to the internally maintained type variable mapping
+	 */
 	const Mapping& getMapping() const {
 		return mapping;
+	}
+
+	/**
+	 * Obtains a constant reference to the int-type parameter mapping constituting this substitution.
+	 * @return a constant reference to the internally maintained int type parameter mapping
+	 */
+	IntTypeParamMapping& getIntTypeParamMapping() {
+		return paramMapping;
 	}
 
 	/**
