@@ -60,4 +60,9 @@ if (USE_XML)
 		
 		add_unit_test(${case_name} off)
 	endforeach(case_file)
+
+	# --- INSTALL --------------------------------------------------------------------
+	INSTALL(TARGETS insieme_xml LIBRARY DESTINATION lib)
 endif (USE_XML)
+
+

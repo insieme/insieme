@@ -46,3 +46,7 @@ foreach ( case_file ${test_cases})
 	
 	add_unit_test(${case_name})
 endforeach(case_file)
+
+# --- INSTALL --------------------------------------------------------------------
+install (FILES include/insieme/analysis/cfg.h DESTINATION include/analysis)
+INSTALL(TARGETS insieme_analysis LIBRARY DESTINATION lib)

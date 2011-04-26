@@ -43,3 +43,6 @@ foreach ( case_file ${test_cases} )
 	
 	add_unit_test(${case_name})
 endforeach(case_file)
+
+# --- INSTALL --------------------------------------------------------------------
+INSTALL(TARGETS insieme_utils LIBRARY DESTINATION lib)

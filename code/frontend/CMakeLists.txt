@@ -58,3 +58,7 @@ foreach ( case_file ${test_cases})
 	endif()
 endforeach(case_file)
 
+# --- INSTALL --------------------------------------------------------------------
+install (FILES include/insieme/frontend/frontend.h DESTINATION include)
+INSTALL(TARGETS insieme_frontend LIBRARY DESTINATION lib)
+
