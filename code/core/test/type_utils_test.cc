@@ -953,9 +953,10 @@ TEST(TypeUtils, ListUnificationBug1) {
 	// 		=> this should not be the case
 	//
 	// Cause of the problem:
-	//
+	//		After each step, the current unifier was not applied on the next type / the current unified type.
 	//
 	// Fix:
+	//		This is now down.
 
 	ASTBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
@@ -970,9 +971,45 @@ TEST(TypeUtils, ListUnificationBug1) {
 
 	auto res = unifyAll(manager, list);
 	EXPECT_FALSE(res);
-
-
 }
+
+TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
+
+	//
+	// The Problem:
+	//		The Type T<#a,#a> can apparently be unified with T<1,2> using {#a->1}
+	//
+	// Cause of the problem:
+	//		The substitution derived from the first parameter (#a->1) is not applied to the
+	//		remaining parameters of the same type.
+	//
+	// Fix:
+	//		Now the substitution is applied.
+	//
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	IntTypeParamPtr varA = builder.variableIntTypeParam('a');
+	TypePtr gen = builder.genericType("T", toVector<TypePtr>(), toVector(varA, varA));
+	EXPECT_EQ("T<#a,#a>", toString(*gen));
+
+	IntTypeParamPtr param1 = builder.concreteIntTypeParam(1);
+	IntTypeParamPtr param2 = builder.concreteIntTypeParam(2);
+	TypePtr concrete = builder.genericType("T", toVector<TypePtr>(), toVector(param1, param2));
+	EXPECT_EQ("T<1,2>", toString(*concrete));
+
+	// this should not work ...
+	auto unifier = unify(manager, gen, concrete);
+	EXPECT_FALSE(unifier);
+	if (unifier) EXPECT_EQ("", toString(*unifier));
+
+	// ... but this should
+	concrete = builder.genericType("T", toVector<TypePtr>(), toVector(param1, param1));
+	EXPECT_TRUE(unify(manager, gen, concrete));
+	EXPECT_TRUE(unify(manager, concrete, gen));
+}
+
 
 } // end namespace core
 } // end namespace insieme

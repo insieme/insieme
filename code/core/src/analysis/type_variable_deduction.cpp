@@ -55,48 +55,6 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
-
-	TypePtr TypeVariableConstraints::VariableConstraint::solve() const {
-		TypePtr res;
-
-		// try infer type from sub-type constraints
-		if (!subTypes.empty()) {
-			// compute biggest common sub-type
-			res = getBiggestCommonSubType(subTypes);
-
-			// check against super-type constraints
-			bool valid = res;
-			for_each(superTypes, [&](const TypePtr& cur) {
-				// check super-type constraint
-				valid = valid && isSubTypeOf(cur, res);
-			});
-
-			// if all constraints are satisfied ...
-			if (valid) {
-				return res;
-			}
-
-			// => unsatisfiable
-			return 0;
-		}
-
-		// infer type from super-type constraints
-		if (!superTypes.empty()) {
-			// compute smallest common super type
-			res = getSmallestCommonSuperType(superTypes);
-		}
-
-		// done
-		return res;
-
-	}
-
-
-	std::ostream& TypeVariableConstraints::VariableConstraint::printTo(std::ostream& out) const {
-		return out << "[ >= " << superTypes << " && <= " << subTypes << " ]";
-	}
-
-
 	namespace {
 
 		typedef utils::graph::PointerGraph<TypePtr> SubTypeGraph;
@@ -164,8 +122,6 @@ namespace analysis {
 			// test whether all entries can be unified ...
 			if (auto unifier = unifyAll(manager, cur)) {
 
-//				std::cout << " Was capable of directly unify " << cur << " using " << *unifier << std::endl;
-
 				// => drop list and exchange with unified version
 				TypePtr first = cur[0];
 				cur.clear();
@@ -195,11 +151,7 @@ namespace analysis {
 							// unify-able => reduce
 							TypePtr replacement = unifier->applyTo(cur[i]);
 
-							// remove cur[i] and cur[j] (j first, since j > i)
-
-//							std::cout << "Erasing " << *(cur.begin() + j) << std::endl;
 							cur.erase(cur.begin() + j);
-//							std::cout << "Erasing " << *(cur.begin() + i) << std::endl;
 							cur.erase(cur.begin() + i);
 
 							// add replacement
@@ -258,7 +210,7 @@ namespace analysis {
 
 	}
 
-	SubstitutionOpt TypeVariableConstraints::solve() const {
+	SubstitutionOpt SubTypeConstraints::solve() const {
 		if (!isSatisfiable()) {
 			return 0;
 		}
@@ -275,7 +227,7 @@ namespace analysis {
 	}
 
 
-	SubstitutionOpt TypeVariableConstraints::solve(NodeManager& manager) const {
+	SubstitutionOpt SubTypeConstraints::solve(NodeManager& manager) const {
 
 		const bool debug = false;
 
@@ -338,23 +290,11 @@ namespace analysis {
 		//		- edges indicate sub-type constraints (A -> B ... A has to be a sub-type of B)
 
 
-		// add edges
+		// add edges - one edge for each sub-type constraint
 		SubTypeGraph subTypeGraph;
-		for(auto it = constraints.begin(); it != constraints.end(); ++it) {
-
-			const TypeVariablePtr& var = it->first;
-			const TypeVariableConstraints::VariableConstraint& cur = it->second;
-
-			// add sub-type constraints
-			for_each(cur.subTypes, [&](const TypePtr& cur) {
-				subTypeGraph.addEdge(var, res.applyTo(cur));
-			});
-
-			// add super-type constraints
-			for_each(cur.superTypes, [&](const TypePtr& cur) {
-				subTypeGraph.addEdge(res.applyTo(cur), var);
-			});
-		}
+		for_each(constraints, [&](const Constraint& cur) {
+			subTypeGraph.addEdge(cur.first, cur.second);
+		});
 
 		// print some debugging information
 		if (debug) std::cout << "Subtype graph: " << std::endl;
@@ -547,11 +487,16 @@ namespace analysis {
 	}
 
 
-	std::ostream& TypeVariableConstraints::printTo(std::ostream& out) const {
+	std::ostream& SubTypeConstraints::printTo(std::ostream& out) const {
+
+		auto constraintList = join(",", constraints, [](std::ostream& out, const Constraint& cur){
+			out << *(cur.first) << "<:" << *(cur.second);
+		});
+
 		if (unsatisfiable) {
-			return out << "[unsatisfiable / " << constraints << "/" << intTypeParameter << "]";
+			return out << "[unsatisfiable / {" << constraintList << "} / " << intTypeParameter << "]";
 		}
-		return out << "[" << constraints << "/" << intTypeParameter << "]";
+		return out << "[" << constraintList << " / " << intTypeParameter << "]";
 	}
 
 
@@ -577,7 +522,7 @@ namespace analysis {
 		 *  @param paramType the type on the parameter side (function side)
 		 *  @param argType the type on the argument side (argument passed by call expression)
 		 */
-		void addEqualityConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
+		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
 
 		/**
 		 * Adds additional constraints to the given constraint collection such that the type variables used within the
@@ -588,13 +533,13 @@ namespace analysis {
 		 *  @param argType the type on the argument side (argument passed by call expression)
 		 *  @param direction the direction to be ensured - sub- or supertype
 		 */
-		void addTypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction);
+		void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction);
 
 
 		// -------------------------------------------------------- Implementation ----------------------------------------------
 
 
-		void addEqualityConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
+		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
 
 			// check constraint status
 			if (!constraints.isSatisfiable()) {
@@ -773,7 +718,7 @@ namespace analysis {
 			}
 		}
 
-		void addTypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
+		void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
 
 			// check constraint status
 			if (!constraints.isSatisfiable()) {
@@ -794,9 +739,9 @@ namespace analysis {
 			if(nodeTypeA == NT_TypeVariable) {
 				// add corresponding constraint to this variable
 				if (direction == Direction::SUB_TYPE) {
-					constraints.addSubtypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+					constraints.addSubtypeConstraint(paramType, argType);
 				} else {
-					constraints.addSupertypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+					constraints.addSubtypeConstraint(argType, paramType);
 				}
 				return;
 			}
@@ -873,6 +818,13 @@ namespace analysis {
 
 				// ... and the return type
 				addTypeConstraints(constraints, funParamType->getReturnType(), funArgType->getReturnType(), direction);
+				return;
+			}
+
+			// if both are generic types => add sub-type constraint
+			if (nodeTypeA == nodeTypeB && nodeTypeA == NT_GenericType) {
+				// add a simple sub-type constraint
+				constraints.addSubtypeConstraint(argType, paramType);
 				return;
 			}
 
@@ -1001,7 +953,7 @@ namespace analysis {
 		// ---------------------------------- Assembling Constraints -----------------------------------------
 
 		// collect constraints on the type variables used within the parameter types
-		TypeVariableConstraints constraints;
+		SubTypeConstraints constraints;
 
 		// collect constraints
 		auto begin = make_paired_iterator(renamedParameter.begin(), renamedArguments.begin());
@@ -1047,7 +999,9 @@ namespace analysis {
 		return restored;
 	}
 
-
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument) {
+		return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument));
+	}
 
 	namespace {
 
@@ -1083,6 +1037,22 @@ namespace analysis {
 		};
 
 		StringKey<TypeVariableInstantionInfo> TypeVariableInstantionInfo::KEY = StringKey<TypeVariableInstantionInfo>("TYPE_VARIABLE_INSTANTIATION_INFO");
+
+
+		inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& substitution) {
+			if (!substitution) {
+				return substitution;
+			}
+
+			Substitution res;
+			for_each(substitution->getMapping(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur){
+				res.addMapping(manager.get(cur.first), manager.get(cur.second));
+			});
+			for_each(substitution->getIntTypeParamMapping(), [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur){
+				res.addMapping(manager.get(cur.first), manager.get(cur.second));
+			});
+			return res;
+		}
 	}
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call) {
@@ -1094,7 +1064,7 @@ namespace analysis {
 
 		// check annotations
 		if (auto data = call->getAnnotation(TypeVariableInstantionInfo::KEY)) {
-			return data->getSubstitution();
+			return copyTo(manager, data->getSubstitution());
 		}
 
 		// derive substitution
@@ -1116,7 +1086,7 @@ namespace analysis {
 		SubstitutionOpt res = getTypeVariableInstantiation(manager, paramTypes, argTypes);
 
 		// attack substitution
-		call->addAnnotation(std::make_shared<TypeVariableInstantionInfo>(res));
+		call->addAnnotation(std::make_shared<TypeVariableInstantionInfo>(copyTo(call->getNodeManager(), res)));
 
 		// done
 		return res;

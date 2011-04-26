@@ -134,7 +134,7 @@ TEST(CallExprTypeCheck, Basic) {
 	// => not unifyable arguments (but forming a sub-type) ...
 	expr = builder.callExpr(concreteType, binaryFun, toVector<ExpressionPtr>(y,z));
 	issues = check(expr, typeCheck);
-	EXPECT_TRUE(issues.empty());
+	EXPECT_TRUE(issues.empty()) << issues;
 
 	// => not unifyable arguments
 	expr = builder.callExpr(type, binaryFun, toVector<ExpressionPtr>(y,w));

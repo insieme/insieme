@@ -59,7 +59,7 @@ TEST(TypeVariableConstraints, Solving) {
 	TypePtr typeB = builder.genericType("B");
 
 	// test empty set of constraints
-	TypeVariableConstraints constraints;
+	SubTypeConstraints constraints;
 	auto res = constraints.solve();
 	EXPECT_TRUE(res);
 	EXPECT_EQ("{}", toString(*res));
@@ -105,12 +105,12 @@ TEST(TypeVariableConstraints, Solving) {
 
 	// clear constraints and test super-type constraints
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, basic.getInt4());
+	constraints.addSubtypeConstraint(basic.getInt4(), var);
 	res = constraints.solve();
 	EXPECT_TRUE(res);
 	EXPECT_EQ("{'a->int<4>}", toString(*res));
 
-	constraints.addSupertypeConstraint(var, basic.getUInt4());
+	constraints.addSubtypeConstraint(basic.getUInt4(), var);
 	res = constraints.solve();
 	EXPECT_TRUE(res);
 	if (res) EXPECT_EQ("{'a->int<8>}", toString(*res));
@@ -123,7 +123,7 @@ TEST(TypeVariableConstraints, Solving) {
 	// clear and use combined constraints
 	constraints.clear();
 	constraints.addSubtypeConstraint(var, basic.getInt4());
-	constraints.addSupertypeConstraint(var, basic.getInt4());
+	constraints.addSubtypeConstraint(basic.getInt4(), var);
 	res = constraints.solve();
 	EXPECT_TRUE(res);
 	if (res) EXPECT_EQ("{'a->int<4>}", toString(*res));
@@ -131,7 +131,7 @@ TEST(TypeVariableConstraints, Solving) {
 
 	// clear and add unsatisfiable constraints
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, basic.getInt4());
+	constraints.addSubtypeConstraint(basic.getInt4(), var);
 	constraints.addSubtypeConstraint(var, basic.getFloat());
 	res = constraints.solve();
 	EXPECT_FALSE(res);
@@ -171,8 +171,8 @@ TEST(TypeVariableConstraints, ConstraintCombinations) {
 
 	TypeVariablePtr var = builder.typeVariable("x");
 
-	TypeVariableConstraints constraints;
-	constraints.addSupertypeConstraint(var, uint2);
+	SubTypeConstraints constraints;
+	constraints.addSubtypeConstraint(uint2, var);
 	constraints.addSubtypeConstraint(var, uint8);
 
 	auto res = constraints.solve();
@@ -186,13 +186,13 @@ TEST(TypeVariableConstraints, ConstraintCombinations) {
 
 	// try reverse direction
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, uint8);
+	constraints.addSubtypeConstraint(uint8, var);
 	constraints.addSubtypeConstraint(var, uint2);
 	EXPECT_FALSE(constraints.solve());
 
 	// add a equality constraint
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, uint2);
+	constraints.addSubtypeConstraint(uint2, var);
 	constraints.addSubtypeConstraint(var, uint8);
 	constraints.addEqualsConstraint(var, uint4);
 	res = constraints.solve();
@@ -223,9 +223,9 @@ TEST(TypeVariableConstraints, EqualSuperSubTypeConstraintsBug) {
 	TypePtr int4 = basic.getInt4();
 	TypePtr uint4 = basic.getUInt4();
 
-	TypeVariableConstraints constraints;
-	constraints.addSupertypeConstraint(var, int4);
-	constraints.addSupertypeConstraint(var, uint4);
+	SubTypeConstraints constraints;
+	constraints.addSubtypeConstraint(int4, var);
+	constraints.addSubtypeConstraint(uint4, var);
 	constraints.addSubtypeConstraint(var, int4);
 	constraints.addSubtypeConstraint(var, uint4);
 
@@ -634,6 +634,31 @@ TEST(TypeVariableDeduction, ArgumentBasedTypeConstraints) {
 
 	auto res = getTypeVariableInstantiation(manager, toVector(alpha, genFun), toVector(uint4, id));
 	EXPECT_TRUE(res);
+}
+
+TEST(TypeVariableDeduction, PureIntTypeVariableConstraintsBug) {
+
+	// The Problem:
+	//		expected: (int<#a>,int<#a>), actual: (int<4>,int<2>) => unable to deduce that #a = 4
+
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr int2 = basic.getInt2();
+	TypePtr int4 = basic.getInt4();
+
+	TypePtr intA = basic.getIntGen();
+
+	auto res = getTypeVariableInstantiation(manager, toVector(intA, intA), toVector(int4, int2));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(int4, res->applyTo(intA));
+
+	// also test the reverse direction
+	res = getTypeVariableInstantiation(manager, toVector(intA, intA), toVector(int2, int4));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(int4, res->applyTo(intA));
 }
 
 } // end namespace analysis

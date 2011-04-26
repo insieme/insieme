@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <boost/unordered_set.hpp>
+
 #include "insieme/core/type_utils.h"
 
 #include "insieme/utils/printable.h"
@@ -45,38 +47,15 @@ namespace core {
 namespace analysis {
 
 /**
- * This class is forming a collection for type variable constraints.
+ * This class is forming a collection of sub-type constraints.
  */
-class TypeVariableConstraints : public utils::Printable {
+class SubTypeConstraints : public utils::Printable {
 
 	/**
-	 * A struct summarizing constraints on a single type variable.
+	 * A pair of types representing a sub-type constraint. The first
+	 * type is constraint to be a sub-type of the second type.
 	 */
-	struct VariableConstraint : public utils::Printable {
-
-		// TODO: invert the names
-
-		/**
-		 * The set of types the constraint variable has to be a super-type of.
-		 */
-		TypeSet superTypes;
-
-		/**
-		 * The set of types the constraint variable has to be a sub-type of.
-		 */
-		TypeSet subTypes;
-
-		/**
-		 * Requests this constraint to be solved. The solution will be the largest type which
-		 * is satisfying all the constraints.
-		 */
-		TypePtr solve() const;
-
-		/**
-		 * Allows instances of this class to be printed to a stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
-	};
+	typedef std::pair<TypePtr, TypePtr> Constraint;
 
 	/**
 	 * A flag marking this constraints as unsatisfiable. The internally stored constraints
@@ -86,26 +65,21 @@ class TypeVariableConstraints : public utils::Printable {
 	bool unsatisfiable;
 
 	/**
-	 * The set of type variable constraints to be represented. For each variable a set of upper and
-	 * lower boundaries as well as equality constraints can be defined.
+	 * The set of type constraints to be considered.
 	 */
-	utils::map::PointerMap<TypeVariablePtr, VariableConstraint> constraints;
+	boost::unordered_set<Constraint> constraints;
 
 	/**
 	 * The mapping for int-type parameter variables resulting from the constraints.
 	 */
 	utils::map::PointerMap<VariableIntTypeParamPtr, IntTypeParamPtr> intTypeParameter;
 
-	utils::set::PointerSet<TypeVariablePtr> freeVariables;
-
-	utils::set::PointerSet<VariableIntTypeParamPtr> freeParameters;
-
 public:
 
 	/**
 	 * Creates a new, empty set of constraints.
 	 */
-	TypeVariableConstraints() :
+	SubTypeConstraints() :
 		unsatisfiable(false) {
 	}
 
@@ -115,49 +89,23 @@ public:
 	 * @param var the variable to be constraint
 	 * @param subType the type the variable instantiation has to be a sub-type of
 	 */
-	void addSubtypeConstraint(const TypeVariablePtr& var,
-			const TypePtr& subType) {
+	void addSubtypeConstraint(const TypePtr& subType, const TypePtr& superType) {
 		if (!unsatisfiable)
-			getConstraintsFor(var).subTypes.insert(subType);
+			constraints.insert(std::make_pair(subType, superType));
 	}
 
 	/**
-	 * Adds an additional super-type constraint to this set of constraints.
+	 * Adds an equality constraint to this set of constraints.
 	 *
-	 * @param var the variable to be constraint
-	 * @param superType the type the variable instantiation has to be a super-type for
+	 * @param typeA the first type to be equivalent
+	 * @param typeB the second type to be equivalent
 	 */
-	void addSupertypeConstraint(const TypeVariablePtr& var,
-			const TypePtr& superType) {
-		if (!unsatisfiable)
-			getConstraintsFor(var).superTypes.insert(superType);
-	}
-
-	/**
-	 * Adds an equality constraint to the set of constraints of the given variable.
-	 *
-	 * @param var the variable to be constraint
-	 * @param type the type this variable has to be equivalent to (super- and sub-type)
-	 */
-	void addEqualsConstraint(const TypeVariablePtr& var, const TypePtr& type) {
+	void addEqualsConstraint(const TypePtr& typeA, const TypePtr& typeB) {
 		if (!unsatisfiable) {
-			addSupertypeConstraint(var, type);
-			addSubtypeConstraint(var, type);
+			// add constraints in both directions
+			constraints.insert(std::make_pair(typeA, typeB));
+			constraints.insert(std::make_pair(typeB, typeA));
 		}
-	}
-
-	/**
-	 * Registers an additional free type variable.
-	 */
-	void addFreeVariable(const TypeVariablePtr& var) {
-		freeVariables.insert(var);
-	}
-
-	/**
-	 * Registers an additional free int-type parameter variable.
-	 */
-	void addFreeParameter(const VariableIntTypeParamPtr& var) {
-		freeParameters.insert(var);
 	}
 
 	/**
@@ -233,34 +181,12 @@ public:
 		unsatisfiable = false;
 		constraints.clear();
 		intTypeParameter.clear();
-		freeVariables.clear();
-		freeParameters.clear();
 	}
 
 	/**
 	 * Allows instances of this class to be printed to a stream.
 	 */
 	virtual std::ostream& printTo(std::ostream& out) const;
-
-private:
-
-	/**
-	 * A private method obtaining the a reference to the internally maintained variable constraints
-	 * regarding the given variable.
-	 *
-	 * @param var the variable which's constraints should be looked up
-	 * @return a reference to the internally maintained constraints
-	 */
-	VariableConstraint& getConstraintsFor(const TypeVariablePtr& var) {
-		auto pos = constraints.find(var);
-		if (pos == constraints.end()) {
-			auto res = constraints.insert(
-					std::make_pair(var, VariableConstraint()));
-			assert(res.second);
-			pos = res.first;
-		}
-		return pos->second;
-	}
 
 };
 
@@ -287,9 +213,7 @@ SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager,
  * @return a type-variable substitution mapping for the type variables within the parameter or an uninitialized option
  * 		   if no such substitution exists.
  */
-SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument) {
-	return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument));
-}
+SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument);
 
 /**
  * Tries to obtain the type variable instantiation implied by the given call.

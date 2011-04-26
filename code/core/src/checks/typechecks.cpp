@@ -39,6 +39,8 @@
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/core/analysis/type_variable_deduction.h"
+
 namespace insieme {
 namespace core {
 namespace checks {
@@ -94,12 +96,12 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 		return res;
 	}
 
-	// 2) check types of arguments => by computing most general unifier
-	TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
-	TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
+	// 2) check types of arguments => using variable deduction
+	auto substitution = analysis::getTypeVariableInstantiation(manager, address);
 
-	auto mgu = match(manager, parameterTuple, argumentTuple);
-	if (!mgu) {
+	if (!substitution) {
+		TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
+		TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
 						format("Invalid argument type(s) - expected: %s, actual: %s - function type: %s",

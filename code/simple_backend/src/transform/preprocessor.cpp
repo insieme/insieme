@@ -43,9 +43,12 @@
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/transform/manipulation.h"
 
 #include "insieme/simple_backend/ir_extensions.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -263,6 +266,16 @@ namespace transform {
 				core::ASTBuilder builder(manager);
 				const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
 
+
+				// derive type variable instantiation
+				auto instantiation = core::analysis::getTypeVariableInstantiation(manager, call);
+				if (!instantiation) {
+					LOG(WARNING) << "Invalid call detected: " << call;
+					return call;
+				}
+
+				// obtain argument and parameter types
+
 				// obtain argument list
 				vector<core::ExpressionPtr> args = call->getArguments();
 				vector<core::TypePtr> argTypes;
@@ -273,22 +286,10 @@ namespace transform {
 				assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
 				core::FunctionTypePtr funType = core::static_pointer_cast<const core::FunctionType>(type);
 
-				vector<core::TypePtr> paramTypes = funType->getArgumentTypes();
-
-				// instantiate type variables
-				std::cout << "Processing: " << toString(*call) << std::endl;
-				auto match = core::matchAll(manager, funType->getArgumentTypes(), argTypes);
-				if (!match) {
-					// TODO: remove this warning!
-					std::cout << "WARNING: - could not match arguments " << argTypes << " to parameters " << funType->getArgumentTypes() << std::endl;
-					// the arguments do not fit the function call!
-					return call;
-				}
-				std::cout << "MATCH: " << toString(*match) << std::endl;
-
 				// apply match on parameter list
-				for (unsigned i=0; i<paramTypes.size(); i++) {
-					paramTypes[i] = match->applyTo(manager, paramTypes[i]);
+				vector<core::TypePtr> paramTypes = funType->getArgumentTypes();
+				for (std::size_t i=0; i<paramTypes.size(); i++) {
+					paramTypes[i] = instantiation->applyTo(manager, paramTypes[i]);
 				}
 
 				// generate new argument list
@@ -323,7 +324,7 @@ namespace transform {
 				}
 
 				// exchange parameters and done
-				return core::CallExpr::get(manager, call->getType(), call->getFunctionExpr(), args);
+				return core::CallExpr::get(manager, instantiation->applyTo(call->getType()), call->getFunctionExpr(), args);
 			}
 
 		};
