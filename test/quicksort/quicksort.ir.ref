@@ -1,0 +1,105 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<vector<int<4>,10>> v3 =  var([ var(23),  var(2),  var(1),  var(7),  var(8), ...]);
+        fun(ref<array<int<4>,1>> v4, int<4> v5){
+            decl ref<int<4>> v6 =  var(0);
+            {
+                for(decl ref<int<4>> v7 =  var(0) .. v5 : 1) {
+                    printf(string.as.char.pointer("%d "), varlist.pack((array.ref.elem.1D(v4, v7))));
+                };
+                v6 := 0+ceil(v5-0/1)*1;
+            };
+            printf(string.as.char.pointer("\n"), varlist.pack(()));
+        }(v3, 10);
+        recFun v9 {
+            v9 = fun(ref<array<int<4>,1>> v10, int<4> v11, int<4> v12){
+                if(v12>v11+1) {
+                    decl ref<int<4>> v13 =  var(array.ref.elem.1D(v10, v11));
+                    decl ref<int<4>> v14 =  var(v11+1);
+                    decl ref<int<4>> v15 =  var(v12);
+                    while(v14<v15) {
+                        if(array.ref.elem.1D(v10, v14)<=v13) int.postInc(v14) else fun(ref<array<int<4>,1>> v16, ref<array<int<4>,1>> v17){
+                            decl ref<int<4>> v18 =  var(array.ref.elem.1D(v16, 0));
+                            array.ref.elem.1D(v16, 0) := array.ref.elem.1D(v17, 0);
+                            array.ref.elem.1D(v17, 0) := v18;
+                        }(scalar.to.array(array.ref.elem.1D(v10, v14)), scalar.to.array(array.ref.elem.1D(v10, int.preDec(v15))));
+                    };
+                    fun(ref<array<int<4>,1>> v16, ref<array<int<4>,1>> v17){
+                        decl ref<int<4>> v18 =  var(array.ref.elem.1D(v16, 0));
+                        array.ref.elem.1D(v16, 0) := array.ref.elem.1D(v17, 0);
+                        array.ref.elem.1D(v17, 0) := v18;
+                    }(scalar.to.array(array.ref.elem.1D(v10, int.preDec(v14))), scalar.to.array(array.ref.elem.1D(v10, v11)));
+                    v9(v10, v11, v14);
+                    v9(v10, v15, v12);
+                } else { };
+            };
+        }(v3, 0, 10);
+        fun(ref<array<int<4>,1>> v4, int<4> v5){
+            decl ref<int<4>> v6 =  var(0);
+            {
+                for(decl ref<int<4>> v7 =  var(0) .. v5 : 1) {
+                    printf(string.as.char.pointer("%d "), varlist.pack((array.ref.elem.1D(v4, v7))));
+                };
+                v6 := 0+ceil(v5-0/1)*1;
+            };
+            printf(string.as.char.pointer("\n"), varlist.pack(()));
+        }(v3, 10);
+        return 0;
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<vector<int<4>,10>> v3 = ( var([( var(23)), ( var(2)), ( var(1)), ( var(7)), ( var(8)), ...]));
+        fun(ref<array<int<4>,1>> v4, int<4> v5){
+            decl ref<int<4>> v6 = ( var(0));
+            {
+                for(decl ref<int<4>> v7 = ( var(0)) .. v5 : 1) {
+                    printf(string.as.char.pointer("%d "), varlist.pack((( *array.ref.elem.1D(v4, CAST<uint<4>>(( *v7)))))));
+                };
+                (v6 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((v5-0))/CAST<real<8>>(1))))*1)));
+            };
+            printf(string.as.char.pointer("\n"), varlist.pack(()));
+        }(v3, 10);
+        recFun v9 {
+            v9 = fun(ref<array<int<4>,1>> v10, int<4> v11, int<4> v12){
+                if((v12>(v11+1))) {
+                    decl ref<int<4>> v13 = ( var(( *array.ref.elem.1D(v10, CAST<uint<4>>(v11)))));
+                    decl ref<int<4>> v14 = ( var((v11+1)));
+                    decl ref<int<4>> v15 = ( var(v12));
+                    while((( *v14)<( *v15))) {
+                        if((( *array.ref.elem.1D(v10, CAST<uint<4>>(( *v14))))<=( *v13))) int.postInc(v14) else fun(ref<array<int<4>,1>> v16, ref<array<int<4>,1>> v17){
+                            decl ref<int<4>> v18 = ( var(( *array.ref.elem.1D(v16, 0))));
+                            (array.ref.elem.1D(v16, 0) := ( *array.ref.elem.1D(v17, 0)));
+                            (array.ref.elem.1D(v17, 0) := ( *v18));
+                        }(scalar.to.array(array.ref.elem.1D(v10, CAST<uint<4>>(( *v14)))), scalar.to.array(array.ref.elem.1D(v10, CAST<uint<4>>(int.preDec(v15)))));
+                    };
+                    fun(ref<array<int<4>,1>> v16, ref<array<int<4>,1>> v17){
+                        decl ref<int<4>> v18 = ( var(( *array.ref.elem.1D(v16, 0))));
+                        (array.ref.elem.1D(v16, 0) := ( *array.ref.elem.1D(v17, 0)));
+                        (array.ref.elem.1D(v17, 0) := ( *v18));
+                    }(scalar.to.array(array.ref.elem.1D(v10, CAST<uint<4>>(int.preDec(v14)))), scalar.to.array(array.ref.elem.1D(v10, CAST<uint<4>>(v11))));
+                    v9(v10, v11, ( *v14));
+                    v9(v10, ( *v15), v12);
+                } else { };
+            };
+        }(v3, 0, 10);
+        fun(ref<array<int<4>,1>> v4, int<4> v5){
+            decl ref<int<4>> v6 = ( var(0));
+            {
+                for(decl ref<int<4>> v7 = ( var(0)) .. v5 : 1) {
+                    printf(string.as.char.pointer("%d "), varlist.pack((( *array.ref.elem.1D(v4, CAST<uint<4>>(( *v7)))))));
+                };
+                (v6 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((v5-0))/CAST<real<8>>(1))))*1)));
+            };
+            printf(string.as.char.pointer("\n"), varlist.pack(()));
+        }(v3, 10);
+        return 0;
+    }
+
