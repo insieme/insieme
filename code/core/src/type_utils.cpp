@@ -588,26 +588,26 @@ bool isUnifyable(const TypePtr& typeA, const TypePtr& typeB) {
 	return unify(tmp, typeA, typeB);
 }
 
-// -------------------------------------------------------------------------------------------------------------------------
-//                                                    Matching
-// -------------------------------------------------------------------------------------------------------------------------
-
-
-boost::optional<Substitution> match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes) {
-	return matchAll(manager, toVector(pattern), toVector(type));
-}
-
-boost::optional<Substitution> matchAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool considerSubtypes) {
-	return computeSubstitution(manager, list, false, true);
-}
-
-bool isMatching(const TypePtr& pattern, const TypePtr& type, bool considerSubtypes) {
-	if (pattern == type) {
-		return true;
-	}
-	NodeManager tmp; // requires only temporary manager
-	return match(tmp, pattern, type);
-}
+//// -------------------------------------------------------------------------------------------------------------------------
+////                                                    Matching
+//// -------------------------------------------------------------------------------------------------------------------------
+//
+//
+//boost::optional<Substitution> match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes) {
+//	return matchAll(manager, toVector(pattern), toVector(type));
+//}
+//
+//boost::optional<Substitution> matchAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool considerSubtypes) {
+//	return computeSubstitution(manager, list, false, true);
+//}
+//
+//bool isMatching(const TypePtr& pattern, const TypePtr& type, bool considerSubtypes) {
+//	if (pattern == type) {
+//		return true;
+//	}
+//	NodeManager tmp; // requires only temporary manager
+//	return match(tmp, pattern, type);
+//}
 
 
 // -------------------------------------------------------------------------------------------------------------------------

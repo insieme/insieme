@@ -75,9 +75,9 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	TypePtr funType = address->getFunctionExpr()->getType();
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
-	FunctionTypePtr functionType = CAST(FunctionType, funType);
-	TypeList parameterTypes = functionType->getArgumentTypes();
-	TypePtr returnType = functionType->getReturnType();
+	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
+	const TypeList& parameterTypes = functionType->getArgumentTypes();
+	const TypePtr& returnType = functionType->getReturnType();
 
 	// Obtain argument type
 	TypeList argumentTypes;
@@ -113,7 +113,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	}
 
 	// 3) check return type - which has to be matched with modified function return value.
-	TypePtr retType = deduceReturnType(functionType, argumentTypes);
+	TypePtr retType = substitution->applyTo(returnType);
 	TypePtr resType = address->getType();
 
 	if (*retType != *resType) {
@@ -402,7 +402,7 @@ OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& addr
 		LiteralPtr buildIn = manager.basic.getLiteral(address->getValue());
 
 		// check whether used one is special case of build-in version
-		if (!isMatching(buildIn->getType(),address->getType())) {
+		if (*buildIn->getType() != *address->getType()) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_LITERAL,
 					format("Deviating type of build in literal %s - expected: %s, actual: %s",

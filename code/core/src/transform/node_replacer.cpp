@@ -110,12 +110,13 @@ class SingleNodeReplacer : public NodeMapping {
 	const NodePtr& target;
 	const NodePtr& replacement;
 	const bool preservePtrAnnotationsWhenModified;
-	const bool targetIsType;
+	const bool visitTypes;
 
 public:
 
 	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), target(target), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified), targetIsType(target->getNodeCategory()==NC_Type) { }
+		: manager(manager), target(target), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified),
+		  visitTypes(target->getNodeCategory() == NC_Type || target->getNodeCategory() == NC_IntTypeParam) { }
 
 private:
 
@@ -130,7 +131,7 @@ private:
 		}
 
 		// prune types if possible
-		if (!targetIsType && ptr->getNodeCategory() == NC_Type) {
+		if (!visitTypes && ptr->getNodeCategory() == NC_Type) {
 			return ptr;
 		}
 
