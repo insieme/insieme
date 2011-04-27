@@ -57,6 +57,8 @@
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
 
+TYPE(AnyRef, "anyRef")
+
 TYPE(Char,   "char")
 TYPE(WChar,  "wchar")
 TYPE(String, "string")
@@ -293,6 +295,12 @@ LITERAL(RefDelete, "ref.delete", 			"(ref<'a>) -> unit")
 LITERAL(RefAssign, "ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  "ref.deref",  			"(ref<'a>) -> 'a")
 LITERAL(ScalarToArray, "scalar.to.array", "(ref<'a>) -> ref<array<'a,1>>")
+
+// Any References -----------------------------------------------------------------------------------------------------
+
+LITERAL(RefToAnyRef,    "ref.to.anyref",    		"(ref<'a>) -> anyRef")
+LITERAL(AnyRefToRef,    "anyref.to.ref",    		"(anyRef, type<'a>) -> ref<'a>")
+
 
 // General ------------------------------------------------------------------------------------------------------------
 

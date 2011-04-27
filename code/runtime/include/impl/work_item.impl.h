@@ -36,23 +36,41 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "work_item.h"
 
-/* ------------------------------ data structures ----- */
+#include <stdlib.h>
 
-IRT_MAKE_ID_TYPE(context);
-
-struct _irt_context {
-	irt_context_id id;
-	irt_client_app* client_app;
-	irt_type* type_table;
-	irt_wi_implementation* impl_table;
-	// private implementation detail
-	struct _irt_context* lookup_table_next;
-};
+static inline irt_work_item* _irt_wi_new() {
+	return (irt_work_item*)malloc(1, sizeof(irt_work_item));
+}
+static inline void _irt_wi_recycle(irt_work_item* wi) {
+	free(wi);
+}
 
 
-/* ------------------------------ operations ----- */
+irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	irt_work_item* retval = _irt_wi_new();
+	retval->id = irt_generate_work_item_id();
+	retval->impl_id = impl_id;
+	retval->num_groups = 0;
+	retval->parameters = params;
+	retval->range = range;
+}
+void irt_wi_destroy(irt_work_item* wi) {
+	_irt_wi_recycle(wi);
+}
 
-irt_context* irt_context_create(irt_client_app* app);
-void irt_context_destroy(irt_context* context);
+void irt_wi_enqueue(irt_work_item* wi);
+void irt_wi_enqueue_other(irt_work_item* wi, irt_worker* worker);
+
+void irt_wi_yield();
+
+void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis) {
+	// TODO
+}
+void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
+	// TODO
+}
+void irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis) {
+	// TODO
+}

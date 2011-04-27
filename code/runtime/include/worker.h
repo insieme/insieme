@@ -56,6 +56,8 @@ struct _irt_worker {
 
 /* ------------------------------ operations ----- */
 
-static inline irt_worker* irt_get_current_worker();
+static inline irt_worker* irt_worker_get_current();
 
-irt_worker* irt_create_worker(uint16 index, irt_affinity_mask affinity);
+irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
+
+void irt_worker_schedule();
