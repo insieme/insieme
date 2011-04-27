@@ -79,6 +79,8 @@ string NameManager::getName( const NodePtr& ptr, const string& fragment) {
 	}
 
 	switch(ptr->getNodeCategory()) {
+	case NC_IntTypeParam:
+		name << "param"; break;
 	case NC_Support:
 		name << "supp"; break;
 	case NC_Type:
