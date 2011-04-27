@@ -533,15 +533,16 @@ public:
 					}
 					if( funcArgTy->getNodeType() == core::NT_RefType) {
 						// we are sure at this point the type of arg is of ref-type as well
-						const core::TypePtr& elemTy = static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
-						const core::TypePtr& argSubTy = static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
+						const core::TypePtr& elemTy = core::static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
+						const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
 						if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
 							// we are in the situation where a function receiving a ref<array> gets in input a
 							// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
-							arg = builder.callExpr( funcArgTy, builder.getBasicGenerator().getRefVector2RefArray(), arg);
+							const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
+							arg = builder.callExpr( builder.arrayType(elemVecTy), builder.getBasicGenerator().getRefVector2RefArray(), arg );
 						}
 					}
-					LOG(ERROR) << *funcArgTy << " " << *arg->getType();
+					// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
 					// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
 				}
 				args.push_back( arg );
@@ -1189,7 +1190,8 @@ public:
 					 base->getType()->getNodeType() == core::NT_ArrayType) &&
 					"Base expression of array subscript is not a vector/array type.");
 
-			op = gen.getArraySubscript1D();
+			op =  base->getType()->getNodeType() ? gen.getArrayRefElem1D() : gen.getVectorRefElem();
+
 			opType = core::static_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 		}
 
