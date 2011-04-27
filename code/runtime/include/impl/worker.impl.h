@@ -97,9 +97,7 @@ void irt_worker_schedule() {
 
 	irt_mqueue_msg* received = irt_mqueue_receive();
 	if(received) {
-		printf("Omg\n");
 		if(received->type == IRT_MQ_NEW_APP) {
-			printf("Zomg\n");
 			irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
 			irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
 			irt_context* prog_context = irt_context_create(client_app);

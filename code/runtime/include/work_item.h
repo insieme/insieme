@@ -38,9 +38,13 @@
 
 #include "declarations.h"
 
+#include "utils/deques.h"
+
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(work_item);
+
+IRT_DECLARE_DEQUE(work_item);
 
 struct _irt_work_item_range {
 	int64 begin, end, step;
@@ -54,7 +58,12 @@ struct _irt_work_item {
 	irt_work_group_id* work_groups;
 	uint32 priority; // ?
 	irt_lw_data_item *parameters;
+	// private implementation details
+	struct _irt_work_item* work_deque_next;
+	struct _irt_work_item* work_deque_prev;
 };
+
+IRT_DEFINE_DEQUE(work_item, work_deque_next, work_deque_prev);
 
 
 /* ------------------------------ operations ----- */

@@ -34,49 +34,62 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
+#include <pthread.h>
+#include <omp.h>
 
-#include "work_item.h"
+#include <utils/deques.h>
 
-#include <stdlib.h>
+#include <impl/error_handling.impl.h>
 
-static inline irt_work_item* _irt_wi_new() {
-	return (irt_work_item*)malloc(1, sizeof(irt_work_item));
-}
-static inline void _irt_wi_recycle(irt_work_item* wi) {
-	free(wi);
-}
+// horrible hack incoming
+uint32 irt_g_error_key = 0;
 
+#define TEST_ELEMS 777
+#define PARALLEL_ITERATIONS 100
 
-irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
-	irt_work_item* retval = _irt_wi_new();
-	retval->id = irt_generate_work_item_id();
-	retval->impl_id = impl_id;
-	retval->num_groups = 0;
-	retval->parameters = params;
-	retval->range = range;
-}
-void irt_wi_destroy(irt_work_item* wi) {
-	_irt_wi_recycle(wi);
-}
+typedef struct _irt_deque_test {
+	float data;
+	struct _irt_deque_test* next_q;
+	struct _irt_deque_test* prev_q;
+} irt_deque_test;
 
-void irt_wi_enqueue(irt_work_item* wi) {
-	// TODO
-}
-void irt_wi_enqueue_other(irt_work_item* wi, irt_worker* worker) {
-	// TODO
+IRT_DECLARE_DEQUE(deque_test);
+IRT_DEFINE_DEQUE(deque_test, next_q, prev_q);
+
+irt_deque_test* make_item(float val) {
+	irt_deque_test* item = (irt_deque_test*)calloc(1,sizeof(irt_deque_test));
+	item->data = val;
+	return item;
 }
 
-void irt_wi_yield() {
-	// TODO
-}
+TEST(deques, mass_parallel_ops) {
+	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
+		irt_deque_test_deque q;
+		irt_deque_test_deque_init(&q);
 
-void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis) {
-	// TODO
-}
-void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
-	// TODO
-}
-void irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis) {
-	// TODO
+		irt_deque_test* elems[TEST_ELEMS];
+
+		#pragma omp parallel
+		{
+			#pragma omp for schedule(dynamic,1)
+			for(int i=0; i<TEST_ELEMS; ++i) {
+				elems[i] = make_item(i/10.0f);
+				irt_deque_test_deque_insert_back(&q, elems[i]);
+			}
+			#pragma omp for schedule(dynamic,1)
+			for(int i=0; i<TEST_ELEMS; ++i) {
+				irt_deque_test_deque_pop_back(&q);
+			}
+
+			EXPECT_EQ(0 /* NULL */, q.start);
+			EXPECT_EQ(0 /* NULL */, q.end);
+		}
+
+		// cleanup
+		irt_deque_test_deque_cleanup(&q);
+		for(int i=0; i<TEST_ELEMS; ++i) {
+			free(elems[i]);
+		}
+	}
 }
