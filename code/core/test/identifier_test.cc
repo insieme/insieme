@@ -43,7 +43,7 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "ast_node_test.cc"
+#include "ast_node_test.inc"
 
 using namespace insieme::core;
 

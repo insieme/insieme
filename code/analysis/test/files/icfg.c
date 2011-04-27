@@ -34,51 +34,34 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/frontend.h"
+/*
+ * =====================================================================================
+ *
+ *       Filename:  icfg.c
+ *
+ *    Description:  
+ *
+ *        Version:  1.0
+ *        Created:  04/21/11 13:57:11
+ *       Revision:  none
+ *       Compiler:  gcc
+ *
+ *         Author:  YOUR NAME (), 
+ *        Company:  
+ *
+ * =====================================================================================
+ */
 
-#include "insieme/frontend/program.h"
 
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/cmd_line_utils.h"
+int f(int a) { return a+a; }
 
-namespace insieme {
-namespace frontend {
+int g(int a, int b) { return f(a) * f(b); }
 
-const unsigned ConversionJob::DEFAULT_FLAGS = 0;
+int main(int args, char* argv[]) { 
+	
+	int a=10, b=20;
 
-ConversionJob::ConversionJob(core::NodeManager& manager, const string& file)
-	: manager(manager), files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
-
-ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs)
-	: manager(manager), files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
+	return f(g(a,b));
 
 
-core::ProgramPtr ConversionJob::execute() {
-
-	// since the frontend is using ugly ugly singletons, the configuration has to be updated ... ugly :)
-
-	// create the program parser
-	frontend::Program program(manager);
-
-	// set up the translation units
-	program.addTranslationUnits(files);
-
-	// setup the include directories
-	CommandLineOptions::IncludePaths = includeDirs;
-
-	// setup the standard
-	CommandLineOptions::STD = standard;
-
-	// setup definition
-	CommandLineOptions::Defs = definitions;
-
-	// setup additional flags
-	CommandLineOptions::OMPSema = hasOption(OpenMP);
-	CommandLineOptions::OpenCL = hasOption(OpenCL);
-
-	// convert the program
-	return program.convert();
 }
-
-} // end namespace frontend
-} // end namespace insieme

@@ -41,7 +41,7 @@
 #include "insieme/core/ast_pointer.h"
 #include "insieme/core/ast_builder.h"
 
-#include "dummy_annotations.cc"
+#include "dummy_annotations.inc"
 
 using std::string;
 

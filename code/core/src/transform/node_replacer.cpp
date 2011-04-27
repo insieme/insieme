@@ -61,7 +61,7 @@ public:
 
 	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified)
 		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified),
-		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { return cur.first->getNodeCategory() == NC_Type; })) { }
+		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })) { }
 
 private:
 
@@ -110,12 +110,13 @@ class SingleNodeReplacer : public NodeMapping {
 	const NodePtr& target;
 	const NodePtr& replacement;
 	const bool preservePtrAnnotationsWhenModified;
-	const bool targetIsType;
+	const bool visitTypes;
 
 public:
 
 	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), target(target), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified), targetIsType(target->getNodeCategory()==NC_Type) { }
+		: manager(manager), target(target), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified),
+		  visitTypes(target->getNodeCategory() == NC_Type || target->getNodeCategory() == NC_IntTypeParam) { }
 
 private:
 
@@ -130,7 +131,7 @@ private:
 		}
 
 		// prune types if possible
-		if (!targetIsType && ptr->getNodeCategory() == NC_Type) {
+		if (!visitTypes && ptr->getNodeCategory() == NC_Type) {
 			return ptr;
 		}
 
@@ -328,7 +329,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 
 	// shortcut for empty replacements
 	if (replacements.empty()) {
-		return root;
+		return mgr.get(root);
 	}
 
 	// handle single element case
@@ -359,6 +360,12 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toR
 
 
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+	// special handling for empty replacement map
+	if (replacements.empty()) {
+		return mgr.get(root);
+	}
+
+	// conduct actual substitutions
 	auto mapper = ::VariableMapReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
 	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
 }

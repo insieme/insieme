@@ -42,7 +42,7 @@
 
 #include "insieme/utils/set_utils.h"
 
-#include "ast_node_test.cc"
+#include "ast_node_test.inc"
 
 namespace insieme {
 namespace core {

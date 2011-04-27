@@ -44,7 +44,7 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
 
-#include "ast_node_test.cc"
+#include "ast_node_test.inc"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;

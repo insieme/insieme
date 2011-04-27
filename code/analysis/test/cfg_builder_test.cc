@@ -36,12 +36,17 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/analysis/cmake_config.h"
+
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/statements.h"
 #include "insieme/analysis/cfg.h"
 
+#include "insieme/frontend/program.h"
+
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
 #include <boost/graph/breadth_first_search.hpp>
 
 using namespace insieme::core;
@@ -83,9 +88,9 @@ TEST(CFGBuilder, CompoundStmtMulti) {
 	NodeManager manager;
 
 	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
-	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 3), literal);
+	LiteralPtr stmt1 = Literal::get(manager, manager.basic.getInt4(), "100");
+	LiteralPtr stmt2 = Literal::get(manager, manager.basic.getInt4(), "200");
+	LiteralPtr stmt3 = Literal::get(manager, manager.basic.getInt4(), "300");
 
 	CompoundStmtPtr cs0 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2, stmt3));
 	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(cs0, stmt1));
@@ -94,7 +99,7 @@ TEST(CFGBuilder, CompoundStmtMulti) {
 	CFGPtr cfg = CFG::buildCFG<MultiStmtPerBasicBlock>(cs2);
 	EXPECT_EQ(static_cast<unsigned>(3), cfg->getSize());
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	const cfg::Block& block = *cfg->successors_begin(entry);
 
 	cfg::Block::const_iterator it = block.stmt_begin(), end = block.stmt_end();
@@ -119,9 +124,9 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 	NodeManager manager;
 
 	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
-	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 3), literal);
+	VariablePtr stmt1 = Variable::get(manager, manager.basic.getInt4(), 1);
+	VariablePtr stmt2 = Variable::get(manager, manager.basic.getInt4(), 2);
+	VariablePtr stmt3 = Variable::get(manager, manager.basic.getInt4(), 3);
 
 	CompoundStmtPtr cs0 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2, stmt3));
 	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(cs0, stmt1));
@@ -130,7 +135,7 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 	CFGPtr cfg = CFG::buildCFG(cs2);
 	EXPECT_EQ(static_cast<unsigned>(7), cfg->getSize());
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	CFG::SuccessorsIterator&& it = cfg->successors_begin(entry), end = cfg->successors_end(entry);
 
 	// visit STMT2
@@ -170,12 +175,11 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 
 
 IfStmtPtr buildIfStmt1(NodeManager& mgr) {
-	LiteralPtr literal = Literal::get(mgr, mgr.basic.getInt4(), "12");
-	VariablePtr var = Variable::get(mgr, mgr.basic.getBool(), 1);
-	DeclarationStmtPtr stmt1 = DeclarationStmt::get(mgr, Variable::get(mgr, mgr.basic.getInt4(), 1), literal);
-	DeclarationStmtPtr stmt2 = DeclarationStmt::get(mgr, Variable::get(mgr, mgr.basic.getInt4(), 2), literal);
+	LiteralPtr literal1 = Literal::get(mgr, mgr.basic.getInt4(), "12");
+	LiteralPtr literal2 = Literal::get(mgr, mgr.basic.getInt8(), "1222");
+	LiteralPtr boolVal = Literal::get(mgr, mgr.basic.getBool(), "true");
 
-	return IfStmt::get(mgr, var, stmt1, stmt2);
+	return IfStmt::get(mgr, boolVal, literal1, literal2);
 }
 
 TEST(CFGBuilder, IfStmt1) {
@@ -192,7 +196,7 @@ TEST(CFGBuilder, IfStmt1) {
 	enum DFS_ORDER{ ENTRY, IF, THEN, ELSE, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	boost::breadth_first_search
 	    ( cfg->getRawGraph(), entry,
 	    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -244,8 +248,8 @@ TEST(CFGBuilder, IfStmt2) {
 	NodeManager manager;
 	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
 	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
+	LiteralPtr stmt1 = Literal::get(manager, manager.basic.getInt4(), "10");
+	LiteralPtr stmt2 = Literal::get(manager, manager.basic.getInt4(), "20");
 
 	IfStmtPtr ifStmt = IfStmt::get(manager, var, stmt1);
 	CompoundStmtPtr stmt = CompoundStmt::get(manager, toVector<StatementPtr>(ifStmt, stmt2));
@@ -259,7 +263,7 @@ TEST(CFGBuilder, IfStmt2) {
 	enum DFS_ORDER{ ENTRY, IF, THEN, SINK, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 	boost::breadth_first_search
 	    ( cfg->getRawGraph(), entry,
 	    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -312,7 +316,7 @@ TEST(CFGBuilder, ForStmt) {
 	LiteralPtr step = Literal::get(manager, manager.basic.getInt4(), "1");
 	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
 	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
+	LiteralPtr stmt = Literal::get(manager, manager.basic.getInt4(), "200");
 
 	ForStmtPtr forStmt = ForStmt::get(manager, decl, stmt, literal, step);
 	CFGPtr cfg = CFG::buildCFG(forStmt);
@@ -324,7 +328,7 @@ TEST(CFGBuilder, ForStmt) {
 	enum DFS_ORDER{ ENTRY, DECL, FOR, BODY, EXIT, INC };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 		boost::breadth_first_search
 		    ( cfg->getRawGraph(), entry,
 		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -384,7 +388,7 @@ TEST(CFGBuilder, WhileStmt) {
 	NodeManager manager;
 	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "15");
 	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
+	LiteralPtr stmt = Literal::get(manager, manager.basic.getInt4(), "100");
 
 	WhileStmtPtr whileStmt = WhileStmt::get(manager, var, stmt);
 	CFGPtr cfg = CFG::buildCFG(whileStmt);
@@ -396,7 +400,7 @@ TEST(CFGBuilder, WhileStmt) {
 	enum DFS_ORDER{ ENTRY, WHILE, BODY, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 		boost::breadth_first_search
 		    ( cfg->getRawGraph(), entry,
 		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -438,8 +442,8 @@ TEST(CFGBuilder, SwitchStmt) {
 	LiteralPtr literal1 = Literal::get(manager, manager.basic.getInt4(), "1");
 	LiteralPtr literal2 = Literal::get(manager, manager.basic.getInt4(), "2");
 	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
+	LiteralPtr stmt1 = Literal::get(manager, manager.basic.getInt4(), "200");
+	LiteralPtr stmt2 = Literal::get(manager, manager.basic.getInt4(), "300");
 
 	SwitchStmtPtr switchStmt = SwitchStmt::get(manager, var, toVector(SwitchStmt::Case(literal1, stmt1), SwitchStmt::Case(literal2, stmt2)) );
 	CFGPtr cfg = CFG::buildCFG(switchStmt);
@@ -451,7 +455,7 @@ TEST(CFGBuilder, SwitchStmt) {
 	enum DFS_ORDER{ ENTRY, SWITCH, CASE1, CASE2, EXIT };
 	std::vector<CFG::VertexTy> blocks;
 
-	CFG::VertexTy entry = cfg->getEntry();
+	CFG::VertexTy entry = cfg->entry();
 		boost::breadth_first_search
 		    ( cfg->getRawGraph(), entry,
 		    	visitor( boost::make_bfs_visitor( order_blocks(blocks, boost::on_discover_vertex()) ) )
@@ -500,9 +504,9 @@ TEST(CFGBlockIterator, SuccessorsIterator) {
 	IfStmtPtr ifStmt = buildIfStmt1(manager);
 	CFGPtr cfg = CFG::buildCFG(ifStmt);
 
-	const cfg::Block& ifBlock = *cfg->successors_begin( cfg->getEntry() );
+	const cfg::Block& ifBlock = *cfg->successors_begin( cfg->entry() );
 
-	auto succIT = cfg->successors_begin( ifBlock.blockId() ), end = cfg->successors_end( ifBlock.blockId() );
+	auto succIT = cfg->successors_begin( ifBlock ), end = cfg->successors_end( ifBlock );
 	EXPECT_FALSE(succIT == end);
 
 	const cfg::Block& thenBlock = *succIT;
@@ -521,7 +525,7 @@ TEST(CFGBlockIterator, PredecessorIterator) {
 	IfStmtPtr ifStmt = buildIfStmt1(manager);
 	CFGPtr cfg = CFG::buildCFG(ifStmt);
 
-	auto predIT = cfg->predecessors_begin( cfg->getExit() ), end = cfg->predecessors_end( cfg->getExit() );
+	auto predIT = cfg->predecessors_begin( cfg->exit() ), end = cfg->predecessors_end( cfg->exit() );
 
 	EXPECT_FALSE(predIT == end);
 	const cfg::Block& thenBlock = *predIT;
@@ -552,7 +556,35 @@ TEST(CFGBuilder, CallExprSimple) {
 	CFGPtr cfg = CFG::buildCFG(cs);
 
 	EXPECT_EQ(static_cast<unsigned>(3), cfg->getSize());
-
-
 }
 
+TEST(CFGBuilder, BasicProgFileTest) {
+
+	Logger::get(std::cerr, DEBUG, 0);
+
+	NodeManager manager;
+	insieme::frontend::Program prog(manager);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/files/basic_prog.c" );
+
+	insieme::core::ProgramPtr p = prog.convert();
+	CFGPtr cfg = CFG::buildCFG(p);
+
+	// std::cout << *cfg;
+	
+	EXPECT_EQ(static_cast<size_t>(41), cfg->getSize()); 
+}
+
+TEST(CFGBuilder, ICFGFileTest) {
+
+	Logger::get(std::cerr, DEBUG, 0);
+
+	NodeManager manager;
+	insieme::frontend::Program prog(manager);
+	prog.addTranslationUnit( std::string(SRC_DIR) + "/files/icfg.c" );
+
+	insieme::core::ProgramPtr p = prog.convert();
+	CFGPtr cfg = CFG::buildCFG(p);
+
+	// std::cout << *cfg;
+	EXPECT_EQ(static_cast<size_t>(23), cfg->getSize()); 
+}

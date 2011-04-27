@@ -38,132 +38,20 @@
 
 #include <iterator>
 
+
+#include "insieme/core/analysis/type_variable_renamer.h"
+#include "insieme/core/analysis/subtype_constraints.h"
+
+#include "insieme/core/transform/node_replacer.h"
+
 #include "insieme/core/annotation.h"
 #include "insieme/core/expressions.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
 namespace analysis {
-
-
-	TypePtr TypeVariableConstraints::VariableConstraint::solve() const {
-		TypePtr res;
-
-		// start by checking whether there is a equal type
-		if (!equalTypes.empty()) {
-
-			// get first type to be considered
-			res = *equalTypes.begin();
-
-
-			// check against all constraints
-			bool valid = true;
-
-			// check against equality constraints
-			for_each(equalTypes, [&](const TypePtr& cur) {
-				// bidirectional ...
-				valid = valid && isSubTypeOf(res, cur) && isSubTypeOf(cur, res);
-			});
-
-			if (valid) for_each(superTypes, [&](const TypePtr& cur) {
-				// check super-type constraint
-				valid = valid && isSubTypeOf(cur, res);
-			});
-
-			if (valid) for_each(subTypes, [&](const TypePtr& cur) {
-				// check super-type constraint
-				valid = valid && isSubTypeOf(res, cur);
-			});
-
-			// if all constraints are satisfied ...
-			if (valid) {
-				return res;
-			}
-
-			// => unsatisfiable
-			return 0;
-		}
-
-
-		// no equality constraints defined
-		// => a type has to be inferred
-
-		// try infer type from sub-type constraints
-		if (!subTypes.empty()) {
-			// compute biggest common sub-type
-			res = getBiggestCommonSubType(subTypes);
-
-			// check against super-type constraints
-			bool valid = res;
-			for_each(superTypes, [&](const TypePtr& cur) {
-				// check super-type constraint
-				valid = valid && isSubTypeOf(cur, res);
-			});
-
-			// if all constraints are satisfied ...
-			if (valid) {
-				return res;
-			}
-
-			// => unsatisfiable
-			return 0;
-		}
-
-		// infer type from super-type constraints
-		if (!superTypes.empty()) {
-			// compute smallest common super type
-			res = getSmallestCommonSuperType(superTypes);
-		}
-
-		// done
-		return res;
-
-	}
-
-
-	std::ostream& TypeVariableConstraints::VariableConstraint::printTo(std::ostream& out) const {
-		return out << "[ x < " << superTypes << " && x = " << equalTypes << " && x > " << subTypes << " ]";
-	}
-
-
-	SubstitutionOpt TypeVariableConstraints::solve() const {
-
-		// quick check to exclude unsatisfiability
-		if (!isSatisfiable()) {
-			return 0;
-		}
-
-		// create result
-		Substitution res;
-
-		// solve individual constraints ...
-		for(auto it = constraints.begin(); it != constraints.end(); ++it) {
-
-			const TypeVariablePtr& var = it->first;
-			const TypePtr substitute = it->second.solve();
-
-			if (substitute) {
-				res.addMapping(var, substitute);
-			} else {
-				// => unsatisfiable
-				return 0;
-			}
-		}
-
-		// add int type parameter substitutions
-		for (auto it = intTypeParameter.begin(); it != intTypeParameter.end(); ++it) {
-			res.addMapping(it->first, it->second);
-		}
-
-		// done
-		return boost::optional<Substitution>(res);
-	}
-
-
-	std::ostream& TypeVariableConstraints::printTo(std::ostream& out) const {
-		return out << "[" << constraints << "/" << intTypeParameter << "]";
-	}
-
 
 	namespace {
 
@@ -187,7 +75,7 @@ namespace analysis {
 		 *  @param paramType the type on the parameter side (function side)
 		 *  @param argType the type on the argument side (argument passed by call expression)
 		 */
-		void addEqualityConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
+		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
 
 		/**
 		 * Adds additional constraints to the given constraint collection such that the type variables used within the
@@ -198,13 +86,13 @@ namespace analysis {
 		 *  @param argType the type on the argument side (argument passed by call expression)
 		 *  @param direction the direction to be ensured - sub- or supertype
 		 */
-		void addTypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction);
+		void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction);
 
 
 		// -------------------------------------------------------- Implementation ----------------------------------------------
 
 
-		void addEqualityConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
+		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
 
 			// check constraint status
 			if (!constraints.isSatisfiable()) {
@@ -368,7 +256,14 @@ namespace analysis {
 				case NT_RecType:
 				{
 					// TODO: implement RecType pattern matching
-					assert(false && "Sorry - not implemented!");
+					if (*paramType != *argType) {
+						LOG(WARNING) << "Yet unhandled recursive type encountered while resolving subtype constraints:"
+									 << " Parameter Type: " << paramType << std::endl
+									 << "  Argument Type: " << argType << std::endl
+									 << " => the argument will be considered equal!!!";
+//						assert(false && "Sorry - not implemented!");
+						constraints.makeUnsatisfiable();
+					}
 					break;
 				}
 				default:
@@ -376,7 +271,7 @@ namespace analysis {
 			}
 		}
 
-		void addTypeConstraints(TypeVariableConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
+		void addTypeConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType, Direction direction) {
 
 			// check constraint status
 			if (!constraints.isSatisfiable()) {
@@ -397,9 +292,9 @@ namespace analysis {
 			if(nodeTypeA == NT_TypeVariable) {
 				// add corresponding constraint to this variable
 				if (direction == Direction::SUB_TYPE) {
-					constraints.addSubtypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+					constraints.addSubtypeConstraint(paramType, argType);
 				} else {
-					constraints.addSupertypeConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+					constraints.addSubtypeConstraint(argType, paramType);
 				}
 				return;
 			}
@@ -479,38 +374,215 @@ namespace analysis {
 				return;
 			}
 
+			// --------------------------------------------- Tuple Types ---------------------------------------------
+
+			// if both are generic types => add sub-type constraint
+			if (nodeTypeA == nodeTypeB && nodeTypeA == NT_TupleType) {
+				const TypeList& paramList = static_pointer_cast<const TupleType>(paramType)->getElementTypes();
+				const TypeList& argumentList = static_pointer_cast<const TupleType>(argType)->getElementTypes();
+
+				// check length
+				if (paramList.size() != argumentList.size()) {
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
+				// ensure sub-type relation
+				auto begin = make_paired_iterator(paramList.begin(), argumentList.begin());
+				auto end = make_paired_iterator(paramList.end(), argumentList.end());
+				for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
+					addTypeConstraints(constraints, it->first, it->second, direction);
+				}
+				return;
+			}
+
+			// --------------------------------------------- Generic Types ---------------------------------------------
+
+			// if both are generic types => add sub-type constraint
+			if (nodeTypeA == nodeTypeB && nodeTypeA == NT_GenericType) {
+				// add a simple sub-type constraint
+				constraints.addSubtypeConstraint(argType, paramType);
+				return;
+			}
+
+			// --------------------------------------------- Remaining Types ---------------------------------------------
+
 			// check rest => has to be equivalent (e.g. ref, channels, ...)
 			addEqualityConstraints(constraints, paramType, argType);
 		}
+
+
+
+		inline TypeMapping substituteFreeVariablesWithConstants(NodeManager& manager, const TypeList& arguments) {
+
+			TypeMapping argumentMapping;
+
+			// realized using a recursive lambda visitor
+			ASTVisitor<>* rec;
+			auto collector = makeLambdaPtrVisitor([&](const NodePtr& cur){
+				NodeType kind = cur->getNodeType();
+				switch(kind) {
+				case NT_TypeVariable: {
+					// check whether already encountered
+					const TypeVariablePtr& var = static_pointer_cast<const TypeVariable>(cur);
+					if (argumentMapping.containsMappingFor(var)) {
+						break;
+					}
+					// add a new constant
+					const TypePtr substitute = GenericType::get(manager, "_const_" + var->getVarName());
+					argumentMapping.addMapping(var, substitute);
+					break;
+				}
+				case NT_VariableIntTypeParam: {
+					// check whether already encountered
+					const VariableIntTypeParamPtr& var = static_pointer_cast<const VariableIntTypeParam>(cur);
+					if (argumentMapping.containsMappingFor(var)) {
+						break;
+					}
+					// add a new constant
+					// NOTE: the generation of constants is not safe in all cases - it is just assumed
+					// that no constants > 1.000.000.000 are used
+					auto substitute = ConcreteIntTypeParam::get(manager, 1000000000 + var->getSymbol());
+					argumentMapping.addMapping(var, substitute);
+					break;
+				}
+				case NT_RecType:
+				case NT_FunctionType: {
+					// do not consider function types and recursive types (variables inside are bound)
+					break;
+				}
+				default: {
+					// decent recursively
+					for_each(cur->getChildList(), [&](const NodePtr& cur) {
+						rec->visit(cur);
+					});
+				}
+				}
+			}, true);
+			rec = &collector;
+
+			// finally, collect and substitute variables
+			collector.visit(TupleType::get(manager, arguments));
+
+			return argumentMapping;
+		}
+
 
 	}
 
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments) {
 
+		const bool debug = false;
+
 		// check length of parameter and arguments
 		if (parameter.size() != arguments.size()) {
 			return 0;
 		}
 
+		// use private node manager for computing results
+		NodeManager internalManager;
+
+		// ---------------------------------- Variable Renaming -----------------------------------------
+		//
+		// The variables have to be renamed to avoid collisions within type variables used within the
+		// function type and variables used within the arguments. Further, variables within function
+		// types of the arguments need to be renamed independently (to avoid illegal capturing)
+		//
+		// ----------------------------------------------------------------------------------------------
+
+
+		// Vor the renaming a variable renamer is used
+		VariableRenamer renamer;
+
+		// 1) convert parameters (consistently, all at once)
+		TypeMapping parameterMapping = renamer.mapVariables(TupleType::get(internalManager, parameter));
+		TypeList renamedParameter = parameterMapping.applyForward(internalManager, parameter);
+
+		if (debug) std::cout << " Parameter: " << parameter << std::endl;
+		if (debug) std::cout << "   Renamed: " << renamedParameter << std::endl;
+
+		// 2) convert arguments (individually)
+		//		- fix free variables consistently => replace with constants
+		//		- rename unbounded variables - individually per parameter
+
+		// collects the mapping of free variables to constant replacements (to protect them
+		// from being substituted during some unification process)
+		TypeMapping&& argumentMapping = substituteFreeVariablesWithConstants(internalManager, arguments);
+
+		if (debug) std::cout << " Arguments: " << arguments << std::endl;
+		if (debug) std::cout << "   Mapping: " << argumentMapping << std::endl;
+
+		// apply renaming to arguments
+		TypeList renamedArguments = arguments;
+		for (std::size_t i = 0; i < renamedArguments.size(); ++i) {
+			TypePtr& cur = renamedArguments[i];
+
+			// first: apply bound variable substitution
+			cur = argumentMapping.applyForward(internalManager, cur);
+
+			// second: apply variable renameing
+			cur = renamer.rename(internalManager, cur);
+		}
+
+		if (debug) std::cout << " Renamed Arguments: " << renamedArguments << std::endl;
+
+
+
+		// ---------------------------------- Assembling Constraints -----------------------------------------
+
 		// collect constraints on the type variables used within the parameter types
-		TypeVariableConstraints constraints;
+		SubTypeConstraints constraints;
 
 		// collect constraints
-		auto begin = make_paired_iterator(parameter.begin(), arguments.begin());
-		auto end = make_paired_iterator(parameter.end(), arguments.end());
+		auto begin = make_paired_iterator(renamedParameter.begin(), renamedArguments.begin());
+		auto end = make_paired_iterator(renamedParameter.end(), renamedArguments.end());
 		for (auto it = begin; constraints.isSatisfiable() && it!=end; ++it) {
 			// add constraints to ensure current parameter is a super-type of the arguments
 			addTypeConstraints(constraints, it->first, it->second, Direction::SUPER_TYPE);
 		}
 
-		// std::cout << "Constraints: " << constraints << std::endl;
+
+		if (debug) std::cout << " Constraints: " << constraints << std::endl;
+
+		// ---------------------------------- Solve Constraints -----------------------------------------
 
 		// solve constraints to obtain results
-		return constraints.solve();
+		SubstitutionOpt&& res = constraints.solve(internalManager);
+		if (!res) {
+			// if unsolvable => return this information
+			if (debug) std::cout << " Terminated with no solution!" << std::endl << std::endl;
+			return res;
+		}
+
+		// ----------------------------------- Revert Renaming ------------------------------------------
+		// (and produce a result within the correct node manager - internal manager will be thrown away)
+
+		// check for empty solution (to avoid unnecessary operations
+		if (res->empty()) {
+			if (debug) std::cout << " Terminated with: " << *res << std::endl << std::endl;
+			return res;
+		}
+
+		// reverse variables from previously selected constant replacements (and bring back to correct node manager)
+		Substitution restored;
+		for (auto it = res->getMapping().begin(); it != res->getMapping().end(); ++it) {
+			TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
+			TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
+			restored.addMapping(manager.get(var), manager.get(substitute));
+		}
+		for (auto it = res->getIntTypeParamMapping().begin(); it != res->getIntTypeParamMapping().end(); ++it) {
+			VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(parameterMapping.applyBackward(manager, it->first));
+			IntTypeParamPtr substitute = argumentMapping.applyBackward(manager, it->second);
+			restored.addMapping(manager.get(var), manager.get(substitute));
+		}
+		if (debug) std::cout << " Terminated with: " << restored << std::endl << std::endl;
+		return restored;
 	}
 
-
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr& parameter, const TypePtr& argument) {
+		return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument));
+	}
 
 	namespace {
 
@@ -546,6 +618,22 @@ namespace analysis {
 		};
 
 		StringKey<TypeVariableInstantionInfo> TypeVariableInstantionInfo::KEY = StringKey<TypeVariableInstantionInfo>("TYPE_VARIABLE_INSTANTIATION_INFO");
+
+
+		inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& substitution) {
+			if (!substitution) {
+				return substitution;
+			}
+
+			Substitution res;
+			for_each(substitution->getMapping(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur){
+				res.addMapping(manager.get(cur.first), manager.get(cur.second));
+			});
+			for_each(substitution->getIntTypeParamMapping(), [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur){
+				res.addMapping(manager.get(cur.first), manager.get(cur.second));
+			});
+			return res;
+		}
 	}
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call) {
@@ -557,7 +645,7 @@ namespace analysis {
 
 		// check annotations
 		if (auto data = call->getAnnotation(TypeVariableInstantionInfo::KEY)) {
-			return data->getSubstitution();
+			return copyTo(manager, data->getSubstitution());
 		}
 
 		// derive substitution
@@ -579,7 +667,7 @@ namespace analysis {
 		SubstitutionOpt res = getTypeVariableInstantiation(manager, paramTypes, argTypes);
 
 		// attack substitution
-		call->addAnnotation(std::make_shared<TypeVariableInstantionInfo>(res));
+		call->addAnnotation(std::make_shared<TypeVariableInstantionInfo>(copyTo(call->getNodeManager(), res)));
 
 		// done
 		return res;

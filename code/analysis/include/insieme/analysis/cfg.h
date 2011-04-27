@@ -36,6 +36,7 @@
 
 #pragma once
 
+
 #include "insieme/core/statements.h"
 
 #include <boost/graph/adjacency_list.hpp>
@@ -67,6 +68,10 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Termin
 
 namespace insieme {
 namespace analysis {
+
+class CFG;
+typedef std::shared_ptr<CFG> CFGPtr;
+
 namespace cfg {
 
 /**
@@ -112,10 +117,11 @@ private:
 	core::ExpressionPtr expr;	
 };
 
+
+
 } // end cfg namespace
 
-class CFG;
-typedef std::shared_ptr<CFG> CFGPtr;
+
 
 enum CreationPolicy { OneStmtPerBasicBlock, MultiStmtPerBasicBlock };
 
@@ -124,16 +130,15 @@ enum CreationPolicy { OneStmtPerBasicBlock, MultiStmtPerBasicBlock };
  */
 class CFG {
 public:
-	// Each node of the boost::graph is mapped to a CFGBlock.
+	// Vertices of the boost::graph are mapped to cfg::Block(s)
 	struct NodeProperty {
 		const cfg::Block* block;
-
 		NodeProperty(const cfg::Block* block=NULL) : block(block) { }
 	};
 
+	// Edges of the boost::graph are mapped to cfg::Edge(s)
 	struct EdgeProperty {
 		cfg::Edge edge;
-
 		EdgeProperty() { }
 		EdgeProperty(const cfg::Edge& edge) : edge(edge) { }
 	};
@@ -190,37 +195,77 @@ public:
 	// The CFG will be internally represented by an adjacency list (we cannot use an adjacency matrix because the number
 	// of nodes in the graph is not known before hand), the CFG is a directed graph node and edge property classes
 	// are used to represent control flow blocks and edges properties
-	typedef boost::adjacency_list<boost::listS,
-								  boost::listS,
-								  boost::bidirectionalS,
-								  vertex_prop,
-								  edge_prop>  ControlFlowGraph;
+	typedef boost::adjacency_list<
+		boost::listS,
+		boost::listS,
+	 	boost::bidirectionalS,
+		vertex_prop,
+		edge_prop
+	>  ControlFlowGraph;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::type
-			NodePropertyMapTy;
+	// NodePropertyMap: maps a boost::vertex_descriptor to a cfg::Block*
+	typedef typename 
+		boost::property_map< 
+			CFG::ControlFlowGraph, 
+			const cfg::Block* CFG::NodeProperty::* 
+		>::type 		NodePropertyMapTy;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, const cfg::Block* CFG::NodeProperty::* >::const_type
-			ConstNodePropertyMapTy;
+	// ConstNodePropertyMap: maps a boost::vertex_descriptor to a const cfg::Block* 
+	typedef typename 
+		boost::property_map< 
+			CFG::ControlFlowGraph, 
+			const cfg::Block* CFG::NodeProperty::* 
+		>::const_type	ConstNodePropertyMapTy;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::type
-			EdgePropertyMapTy;
+	// EdgePropertyMap: maps a boost::edge_descriptor to a cfg::Edge 
+	typedef typename 
+		boost::property_map< 
+			CFG::ControlFlowGraph, 
+			cfg::Edge CFG::EdgeProperty::* 
+		>::type			EdgePropertyMapTy;
 
-	typedef typename boost::property_map< CFG::ControlFlowGraph, cfg::Edge CFG::EdgeProperty::* >::const_type
-			ConstEdgePropertyMapTy;
+	// ConstEdgePropertyMap: maps a boost::edge_descriptor to a const cfg::Edge 
+	typedef typename 
+		boost::property_map< 
+			CFG::ControlFlowGraph, 
+			cfg::Edge CFG::EdgeProperty::* 
+		>::const_type	ConstEdgePropertyMapTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_descriptor 	VertexTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::vertex_iterator   	VertexIterator;
+	// Vertex related types 
+	typedef typename 
+		boost::graph_traits<ControlFlowGraph>::vertex_descriptor 	VertexTy;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::edge_descriptor 	EdgeTy;
-	typedef typename boost::graph_traits<ControlFlowGraph>::out_edge_iterator 	OutEdgeIterator;
-	typedef typename boost::graph_traits<ControlFlowGraph>::in_edge_iterator 	InEdgeIterator;
+	typedef typename 
+		boost::graph_traits<ControlFlowGraph>::vertex_iterator   	VertexIterator;
 
-	typedef typename boost::graph_traits<ControlFlowGraph>::adjacency_iterator 	AdjacencyIterator;
+	// Edge related types
+	typedef typename 
+		boost::graph_traits<ControlFlowGraph>::edge_descriptor 		EdgeTy;
 
-	typedef typename boost::inv_adjacency_iterator_generator<ControlFlowGraph,
-															 VertexTy, InEdgeIterator>::type 	InvAdjacencyIterator;
+	// Iterator through the Outgoing edges of a vertex 
+	typedef typename 
+		boost::graph_traits<ControlFlowGraph>::out_edge_iterator 	OutEdgeIterator;
 
-	typedef std::pair<CFG::VertexTy, CFG::VertexTy> GraphBounds;
+	// Iterator through the incoming edges of a vertex
+	typedef typename 
+		boost::graph_traits<ControlFlowGraph>::in_edge_iterator 	InEdgeIterator;
+
+	// Iterator through precedent vertices of a vertex: all i: (i -> v)
+	typedef typename 
+		boost::graph_traits<ControlFlowGraph>::adjacency_iterator 	AdjacencyIterator;
+
+	// Iterator through successive vertices of a vertex: all i: (v -> i)
+	typedef typename 
+		boost::inv_adjacency_iterator_generator<
+			ControlFlowGraph,
+			VertexTy, 
+			InEdgeIterator
+		>::type 													InvAdjacencyIterator;
+
+	// Keeps the reference to the entry and exit node for subgraphs
+	typedef std::pair<CFG::VertexTy, CFG::VertexTy> 				GraphBounds;
+
+	// Maps IR root nodes (i.e. LambdaExpr and Program) to the respective bounds
 	typedef insieme::utils::map::PointerMap<core::NodePtr, GraphBounds> SubGraphMap;
 
 	/**
@@ -228,31 +273,40 @@ public:
 	 * iterating through cfg::Blocks. Makes traversing of the CFG easier.
 	 */
 	template <class IterT>
-	class CFGBlockIterator: public std::iterator<std::forward_iterator_tag, const cfg::Block> {
+	class BlockIterator : public std::iterator<std::forward_iterator_tag, const cfg::Block> {
 		// reference to the CFG the iterator belongs to
 		const CFG* cfg;
 		IterT iter, end;
 	public:
-		CFGBlockIterator(const CFG* cfg, const IterT& start, const IterT& end) : cfg(cfg), iter(start), end(end) { }
-		CFGBlockIterator(const IterT& end) : cfg(NULL), iter(end), end(end) { }
+		BlockIterator(const CFG* cfg, const IterT& start, const IterT& end) :
+		   cfg(cfg), iter(start), end(end) { }
+
+		BlockIterator(const IterT& end) : cfg(NULL), iter(end), end(end) { }
 
 		// increment this iterator only if we are not at the end
 		void operator++() {
 			assert(iter != end && "Incrementing an invalid iterator");
 			++iter;
 		}
+
 		// checks whether 2 iterators are equal
-		bool operator==(const CFGBlockIterator<IterT>& other) const { return iter == other.iter; }
-		bool operator!=(const CFGBlockIterator<IterT>& other) const { return !(*this == other); }
+		bool operator==(const BlockIterator<IterT>& other) const { 
+			return iter == other.iter; 
+		}
+
+		bool operator!=(const BlockIterator<IterT>& other) const { 
+			return !(*this == other); 
+		}
+
 		// Returns a reference to the block referenced by this iterator
 		const cfg::Block& operator*() const {
-			assert(iter != end && cfg && "Iterator out of scope!");
+			assert(iter != end && cfg && "Iterator out of scope");
 			return cfg->getBlock(*iter);
 		}
 	};
 
-	typedef CFGBlockIterator<AdjacencyIterator> SuccessorsIterator;
-	typedef CFGBlockIterator<InvAdjacencyIterator> PredecessorsIterator;
+	typedef BlockIterator<AdjacencyIterator> 		SuccessorsIterator;
+	typedef BlockIterator<InvAdjacencyIterator> 	PredecessorsIterator;
 
 	CFG() { }
 	~CFG();
@@ -265,10 +319,8 @@ public:
 	 */
 	VertexTy addBlock(cfg::Block* block);
 
-	/**
-	  * Removes a CFG Block from the CFG
-	  */
-	bool removeBlock(cfg::Block* block);
+	// Removes a CFG Block from the CFG
+	void removeBlock(const VertexTy& v);
 
 	/**
 	 * Returns a CFG element of the graph given its vertex id.
@@ -281,80 +333,51 @@ public:
 		return *nodeMap[vertexId];
 	}
 
-	EdgeTy addEdge(const VertexTy& src, const VertexTy& dest, const cfg::Edge& edge) {
-		EdgeTy&& edgeId = boost::add_edge(src, dest, graph).first;
-		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
-		put(edgeMap, edgeId, edge);
-		return edgeId;
-	}
+	EdgeTy addEdge(const VertexTy& src, const VertexTy& dest, const cfg::Edge& edge = cfg::Edge());
 
-	/**
-	 * Insert an edge connecting the source to the destination.
-	 *
-	 * @param src CFG Block representing the source of the edge
-	 * @param dest CFG Block representing the sink of the edge
-	 * @return The identifier of the newly created edge
-	 */
-	EdgeTy addEdge(VertexTy src, VertexTy dest) {
-		return boost::add_edge(src, dest, graph).first;
-	}
+	// Returns the Edge object associated to a graph edge connecting src and dest vertices 
+	const cfg::Edge& getEdge(const VertexTy& src, const VertexTy& dest) const; 
 
-	/**
-	  * Returns the Edge object associated to a graph edge connecting src and dest vertices 
-	  */
-	cfg::Edge& getEdge(VertexTy src, VertexTy dest) { 
-		auto edgeDescriptor = boost::edge(src, dest, graph);
-		assert(edgeDescriptor.second && "No edge exists between the two selected vertices");
-		std::cout << "edge exists" << std::endl;
-		EdgeTy edge = edgeDescriptor.first;
-		EdgePropertyMapTy&& edgeMap = get(&EdgeProperty::edge, graph);
-		return edgeMap[edge];
-	}
-
-	/**
-	 * Returns the internal representation of this CFG.
-	 */
+	// Returns the internal representation of this CFG.
 	ControlFlowGraph& getRawGraph() { return graph; }
-
 
 	void replaceNode(const VertexTy& oldNode, const VertexTy& newNode);
 
-	/**
-	 * Returns the number of CFG Blocks in this graph.
-	 */
+	/// Returns the number of CFG Blocks in this graph.
 	size_t getSize() const  { return num_vertices(graph); }
 
-	/**
-	 * Returns the entry block of the CFG.
-	 */
-	VertexTy getEntry() const { return entry; }
+	// getter/setter for the entry block of the CFG.
+	const VertexTy& entry() const { return entry_block; }
+	VertexTy& entry() { return entry_block; }
 
-	void setEntry(const CFG::VertexTy& v) { entry = v; }
+	//  getter/setter for the exit block of the CFG.
+	const VertexTy& exit() const { return exit_block; }
+	VertexTy& exit() { return exit_block; }
 
-	/**
-	 * Returns the exit block of the CFG.
-	 */
-	VertexTy getExit() const { return exit; }
-
-	void setExit(const CFG::VertexTy& v) { exit = v; }
-
+	// Returns an iterator which iterates through the successor blocks of a given cfg::Block
 	SuccessorsIterator successors_begin(const VertexTy& v) const {
 		std::pair<AdjacencyIterator, AdjacencyIterator>&& adjIt = adjacent_vertices(v, graph);
 		return SuccessorsIterator( this, adjIt.first, adjIt.second );
 	}
-
 	SuccessorsIterator successors_end(const VertexTy& v) const {
 		return SuccessorsIterator( adjacent_vertices(v, graph).second );
 	}
 
+	SuccessorsIterator successors_begin(const cfg::Block& block) const;
+	SuccessorsIterator successors_end(const cfg::Block& block) const;
+
+	// Returns an iterator which iterates through the predecessors blocks of a given cfg::Block
 	PredecessorsIterator predecessors_begin(const VertexTy& v) const {
-		std::pair<InvAdjacencyIterator, InvAdjacencyIterator>&& adjIt = inv_adjacent_vertices(v, graph);
+		std::pair<InvAdjacencyIterator, InvAdjacencyIterator>&& adjIt = 
+			inv_adjacent_vertices(v, graph);
 		return PredecessorsIterator( this, adjIt.first, adjIt.second );
 	}
-
 	PredecessorsIterator predecessors_end(const VertexTy& v) const {
 		return PredecessorsIterator( inv_adjacent_vertices(v, graph).second );
 	}
+
+	PredecessorsIterator predecessors_begin(const cfg::Block& block) const;
+	PredecessorsIterator predecessors_end(const cfg::Block& block) const;
 
 	/**
 	 * Builds a control flow graph starting from the rootNode
@@ -366,11 +389,7 @@ public:
 
 	GraphBounds addSubGraph(const core::NodePtr& root);
 
-	/**
-	 * Check whether a graph for the root node has been already created
-	 * @param root
-	 * @return
-	 */
+	// Check whether a graph for the root node has been already created
 	bool hasSubGraph(const core::NodePtr& root) const {
 		return subGraphs.find(root) != subGraphs.end();
 	}
@@ -385,12 +404,16 @@ public:
 
 private:
 	ControlFlowGraph	graph;
+
+	// Map LambdaExpr graphs to their respective entry/exit block 
 	SubGraphMap			subGraphs;
+
 	size_t				currId;
-	VertexTy			entry, exit;
+	VertexTy			entry_block, exit_block;
 };
 
 namespace cfg {
+
 /**
  * Block - Represents a single basic block in a source-level CFG. It consists of:
  *
@@ -398,6 +421,7 @@ namespace cfg {
  *  (2) A "terminator" statement (not in the set of statements).
  */
 struct Block {
+	
 	typedef std::vector<Element> StatementList;
 
 	typedef StatementList::const_reverse_iterator const_iterator;
@@ -405,11 +429,16 @@ struct Block {
 
 	enum Type { DEFAULT, ENTRY, EXIT, CALL, RET };
 
-	Block(const Type& blockType = DEFAULT) : blockType(blockType) { }
-	Block(const CFG::VertexTy& id, const Type& blockType) : blockType(blockType), id(id) { }
+	Block(const CFG& parentCFG, const Type& blockType = DEFAULT) : 
+		parentCFG(parentCFG), blockType(blockType) { }
+
+	Block(const CFG& parentCFG, const CFG::VertexTy& id, const Type& blockType) : 
+		parentCFG(parentCFG), blockType(blockType), id(id) { }
 
 	/// Appends a statement to an existing CFGBlock
-	void appendElement(const cfg::Element& elem) { stmtList.push_back(elem); }
+	void appendElement(const cfg::Element& elem) { 
+		stmtList.push_back(elem); 
+	}
 
 	/// Setters and getters for the terminator element
 	const Terminator& terminator() const { return term; }
@@ -450,7 +479,16 @@ struct Block {
 	const_reverse_iterator stmt_rend() const { return stmtList.end(); }
 
 	virtual ~Block() { }
+
+	friend class insieme::analysis::CFG;
+	friend std::ostream& std::operator<<(std::ostream& out, const Block& block);
+
 private:
+	// private getter for CFG parent graph
+	const CFG& getParentCFG() const { return parentCFG; }
+
+	const CFG&		parentCFG;
+
 	const Type		blockType;
 	CFG::VertexTy	id;
 	StatementList 	stmtList;
@@ -460,19 +498,27 @@ private:
 struct RetBlock;
 
 struct CallBlock: public Block {
-	CallBlock(): Block(CALL), ret(NULL) { }
+	CallBlock(const CFG& cfg): Block(cfg, CALL), ret(NULL) { }
 
-	const RetBlock* returnBlock() const { return ret; }
-	RetBlock*& returnBlock() { return ret; }
+	const RetBlock& getReturnBlock() const { 
+		assert(ret && "Return block for this CALL block not set."); 
+		return *ret; 
+	}
+	void setReturnBlock(RetBlock& ret) { this->ret = &ret; }
+
 private:
 	RetBlock* ret;
 };
 
 struct RetBlock: public Block {
-	RetBlock(): Block(RET), call(NULL) { }
+	RetBlock(const CFG& cfg): Block(cfg, RET), call(NULL) { }
 
-	const CallBlock* callBlock() const { return call; }
-	CallBlock*& callBlock() { return call; }
+	const CallBlock& getCallBlock() const { 
+		assert(call && "Call block for this RET block not set.");
+		return *call; 
+	}
+	void setCallBlock(CallBlock& call) { this->call = &call; }
+
 private:
 	CallBlock* call;
 };

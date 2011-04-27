@@ -46,7 +46,7 @@
 #include "insieme/core/ast_builder.h"
 // #include "insieme/core/lang_basic.h"
 
-#include "ast_node_test.cc"
+#include "ast_node_test.inc"
 
 using namespace std;
 using namespace insieme::core;

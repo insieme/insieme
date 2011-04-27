@@ -59,16 +59,8 @@ bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {
 	return isUnifyable(typeA, typeB);
 }
 
-bool matchable(const TypePtr& pattern, const TypePtr& type) {
-	return isMatching(pattern, type);
-}
-
 bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
 	return !isUnifyable(typeA, typeB);
-}
-
-bool notMatchable(const TypePtr& pattern, const TypePtr& type) {
-	return !isMatching(pattern, type);
 }
 
 TEST(TypeUtils, Substitution) {
@@ -288,143 +280,6 @@ TEST(TypeUtils, Unification) {
 }
 
 
-TEST(TypeUtils, Matching) {
-	ASTBuilder builder;
-	NodeManager& manager = builder.getNodeManager();
-
-	// create some types to "play"
-	TypeVariablePtr varA = builder.typeVariable("A");
-	TypeVariablePtr varB = builder.typeVariable("B");
-
-	TypePtr constType = builder.genericType("constType");
-
-	TypePtr genTypeA = builder.genericType("type", toVector<TypePtr>(varA));
-	TypePtr genTypeB = builder.genericType("type", toVector<TypePtr>(varB));
-
-	TypePtr specializedType = builder.genericType("type", toVector<TypePtr>(constType));
-
-	TypePtr genIntTypeA = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
-	TypePtr genIntTypeB = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'b')));
-	TypePtr specIntType = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 123)));
-
-
-	// case: one side is a variable
-	EXPECT_PRED2(matchable, varA, constType);
-	EXPECT_PRED2(notMatchable, constType, varA);
-	EXPECT_PRED2(unifyable, varA, constType);
-	EXPECT_PRED2(unifyable, constType, varA);
-
-	// case: both sides are variables
-	EXPECT_PRED2(matchable, varA, varB);
-	EXPECT_PRED2(matchable, varB, varA);
-	EXPECT_PRED2(unifyable, varA, varB);
-	EXPECT_PRED2(unifyable, varB, varA);
-
-	// more complex case: type wit
-	EXPECT_PRED2(matchable, genTypeA, specializedType);
-	EXPECT_PRED2(notMatchable, specializedType, genTypeA);
-	EXPECT_PRED2(matchable, genTypeB, specializedType);
-	EXPECT_PRED2(notMatchable, specializedType, genTypeB);
-
-	EXPECT_PRED2(unifyable, genTypeA, specializedType);
-	EXPECT_PRED2(unifyable, specializedType, genTypeA);
-	EXPECT_PRED2(unifyable, genTypeB, specializedType);
-	EXPECT_PRED2(unifyable, specializedType, genTypeB);
-
-	// case: int type parameter
-	EXPECT_PRED2(matchable, genIntTypeA, specIntType);
-	EXPECT_PRED2(notMatchable, specIntType, genIntTypeA);
-	EXPECT_PRED2(matchable, genIntTypeB, specIntType);
-	EXPECT_PRED2(notMatchable, specIntType, genIntTypeB);
-
-	EXPECT_PRED2(unifyable, genIntTypeA, specIntType);
-	EXPECT_PRED2(unifyable, specIntType, genIntTypeA);
-	EXPECT_PRED2(unifyable, genIntTypeB, specIntType);
-	EXPECT_PRED2(unifyable, specIntType, genIntTypeB);
-
-	// check result of matching process
-	auto unifier = *match(manager, genTypeA, specializedType);
-	EXPECT_EQ(*unifier.applyTo(manager, genTypeA), *unifier.applyTo(manager, specializedType));
-}
-
-
-TEST(TypeUtils, SubTyping) {
-	ASTBuilder builder;
-	NodeManager& manager = builder.getNodeManager();
-
-	// check sub-type relation between int and uint
-
-	TypePtr int1 = manager.basic.getInt1();
-	TypePtr int2 = manager.basic.getInt2();
-	TypePtr int4 = manager.basic.getInt4();
-	TypePtr int8 = manager.basic.getInt8();
-	TypePtr intInf = manager.basic.getIntInf();
-
-	TypePtr uint1 = manager.basic.getUInt1();
-	TypePtr uint2 = manager.basic.getUInt2();
-	TypePtr uint4 = manager.basic.getUInt4();
-	TypePtr uint8 = manager.basic.getUInt8();
-	TypePtr uintInf = manager.basic.getUIntInf();
-
-
-	EXPECT_TRUE(isMatching(int8, int4, false));
-	EXPECT_TRUE(isMatching(int8, int4, true));
-
-	EXPECT_TRUE(isMatching(intInf, int4));
-	EXPECT_FALSE(isMatching(int4, intInf));
-
-	// check some cases
-	EXPECT_TRUE(isMatching(int1, int1));
-	EXPECT_TRUE(isMatching(int2, int2));
-	EXPECT_TRUE(isMatching(int4, int4));
-	EXPECT_TRUE(isMatching(int8, int8));
-	EXPECT_TRUE(isMatching(intInf, intInf));
-
-
-	EXPECT_TRUE(isMatching(int2, int1));
-	EXPECT_FALSE(isMatching(int1, int2));
-
-	EXPECT_TRUE(isMatching(int4, int2));
-	EXPECT_FALSE(isMatching(int2, int4));
-
-	EXPECT_TRUE(isMatching(int8, int4));
-	EXPECT_FALSE(isMatching(int4, int8));
-
-	EXPECT_TRUE(isMatching(intInf, int8));
-	EXPECT_FALSE(isMatching(int8, intInf));
-
-
-	EXPECT_TRUE(isMatching(uint1, uint1));
-	EXPECT_TRUE(isMatching(uint2, uint2));
-	EXPECT_TRUE(isMatching(uint4, uint4));
-	EXPECT_TRUE(isMatching(uint8, uint8));
-	EXPECT_TRUE(isMatching(uintInf, uintInf));
-
-	EXPECT_TRUE(isMatching(uint2, uint1));
-	EXPECT_FALSE(isMatching(uint1, uint2));
-
-	EXPECT_TRUE(isMatching(uint4, uint2));
-	EXPECT_FALSE(isMatching(uint2, uint4));
-
-	EXPECT_TRUE(isMatching(uint8, uint4));
-	EXPECT_FALSE(isMatching(uint4, uint8));
-
-	EXPECT_TRUE(isMatching(uintInf, uint8));
-	EXPECT_FALSE(isMatching(uint8, uintInf));
-
-	// cross signed / unsigned tests
-	EXPECT_TRUE(isMatching(int8, uint4));
-	EXPECT_FALSE(isMatching(int8, uint8));
-
-	EXPECT_TRUE(isMatching(int2, uint1));
-	EXPECT_FALSE(isMatching(int4, uint8));
-
-	EXPECT_TRUE(isMatching(intInf, uintInf));
-	EXPECT_FALSE(isMatching(uintInf, intInf));
-
-}
-
-
 TEST(TypeUtils, IntParamUnification) {
 	ASTBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
@@ -464,19 +319,6 @@ ParamSet getParamVariables(const TypePtr& ptr) {
 	return res;
 }
 
-
-TEST(TypeUtils, ArrayVectorRelation) {
-
-	NodeManager manager;
-
-	TypePtr typeA = parse::parseType(manager, "(array<ref<char>,1>,var_list)");
-	TypePtr typeB = parse::parseType(manager, "(vector<ref<char>,25>,var_list)");
-
-	EXPECT_NE(typeA, typeB);
-
-	EXPECT_PRED2(matchable, typeA, typeB);
-
-}
 
 TEST(TypeUtils, ReturnTypeDeduction) {
 
@@ -866,47 +708,105 @@ TEST(TypeUtils, AutoTypeInference_ArrayInitCall) {
 
 }
 
-TEST(TypeUtils, VectorMatchingBug) {
 
-	// The Bug:
-	//		When matching vectors of different size to parameters ('a,'a), the matching is successful - which it should not.
-	//
-	// The reason:
-	//		The Vector type was not recognized as a generic type (which it will no longer be in the future) - and the integer
-	//		type parameters have been ignored.
-	//
-	// The fix:
-	//		The check for generic types is no longer conducted via the node type token. It is now using a dynamic cast.
-	//
+TEST(TypeUtils, ListUnification) {
 
 	ASTBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
-	TypePtr alpha = builder.typeVariable("a");
-	FunctionTypePtr funType = builder.functionType(toVector(alpha, alpha), alpha);
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeB = builder.genericType("B");
 
-	EXPECT_EQ("(('a,'a)->'a)", toString(*funType));
+	TypePtr varX = builder.typeVariable("X");
+	TypePtr varY = builder.typeVariable("Y");
 
-	TypePtr elem = builder.genericType("A");
-	TypePtr vectorA = builder.vectorType(elem, builder.concreteIntTypeParam(12));
-	TypePtr vectorB = builder.vectorType(elem, builder.concreteIntTypeParam(14));
+	TypePtr genAX = builder.genericType("T", toVector(typeA, varX));
+	TypePtr genXA = builder.genericType("T", toVector(varX, typeA));
 
-	auto match = matchAll(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
-	EXPECT_FALSE(match);
-	if (match) EXPECT_EQ("{}", toString(*match));
+	TypePtr genYY = builder.genericType("T", toVector(varY, varY));
 
-	match = matchAll(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
-	EXPECT_FALSE(match);
-	if (match) EXPECT_EQ("{}", toString(*match));
 
-	match = matchAll(manager, toVector(alpha, alpha), toVector(vectorA, vectorA));
-	EXPECT_TRUE(match);
-	if (match) EXPECT_EQ("{'a->vector<A,12>}", toString(*match));
+	auto res = unifyAll(manager, toVector(typeA, typeB));
+	EXPECT_FALSE(res);
 
-	match = matchAll(manager, toVector(alpha, alpha), toVector(vectorB, vectorB));
-	EXPECT_TRUE(match);
-	if (match) EXPECT_EQ("{'a->vector<A,14>}", toString(*match));
+	EXPECT_TRUE(unify(manager, varX, varY));
+	res = unifyAll(manager, toVector(varX, varY));
+	EXPECT_TRUE(res);
 
+	res = unifyAll(manager, toVector(genAX, genXA));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(res->applyTo(genAX), res->applyTo(genXA));
+
+	res = unifyAll(manager, toVector(genAX, genXA, genYY));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(res->applyTo(genAX), res->applyTo(genXA));
+	if (res) EXPECT_EQ(res->applyTo(genAX), res->applyTo(genYY));
+
+	EXPECT_FALSE(unifyAll(manager, toVector(genAX, genXA, varX)));
+}
+
+TEST(TypeUtils, ListUnificationBug1) {
+
+	// The Problem:
+	//		the list [AP('a),AP(uint<4>),AP(int<4>)] can apparently be unified to [AP(uint<4>)]
+	// 		=> this should not be the case
+	//
+	// Cause of the problem:
+	//		After each step, the current unifier was not applied on the next type / the current unified type.
+	//
+	// Fix:
+	//		This is now down.
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr varA = builder.typeVariable("a");
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr int4 = basic.getInt4();
+
+	auto list = toVector(varA, uint4, int4);
+	EXPECT_EQ("[AP('a),AP(uint<4>),AP(int<4>)]", toString(list));
+
+	auto res = unifyAll(manager, list);
+	EXPECT_FALSE(res);
+}
+
+TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
+
+	//
+	// The Problem:
+	//		The Type T<#a,#a> can apparently be unified with T<1,2> using {#a->1}
+	//
+	// Cause of the problem:
+	//		The substitution derived from the first parameter (#a->1) is not applied to the
+	//		remaining parameters of the same type.
+	//
+	// Fix:
+	//		Now the substitution is applied.
+	//
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	IntTypeParamPtr varA = builder.variableIntTypeParam('a');
+	TypePtr gen = builder.genericType("T", toVector<TypePtr>(), toVector(varA, varA));
+	EXPECT_EQ("T<#a,#a>", toString(*gen));
+
+	IntTypeParamPtr param1 = builder.concreteIntTypeParam(1);
+	IntTypeParamPtr param2 = builder.concreteIntTypeParam(2);
+	TypePtr concrete = builder.genericType("T", toVector<TypePtr>(), toVector(param1, param2));
+	EXPECT_EQ("T<1,2>", toString(*concrete));
+
+	// this should not work ...
+	auto unifier = unify(manager, gen, concrete);
+	EXPECT_FALSE(unifier);
+	if (unifier) EXPECT_EQ("", toString(*unifier));
+
+	// ... but this should
+	concrete = builder.genericType("T", toVector<TypePtr>(), toVector(param1, param1));
+	EXPECT_TRUE(unify(manager, gen, concrete));
+	EXPECT_TRUE(unify(manager, concrete, gen));
 }
 
 

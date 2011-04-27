@@ -39,7 +39,7 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "dummy_annotations.cc"
+#include "dummy_annotations.inc"
 
 namespace insieme {
 namespace core {

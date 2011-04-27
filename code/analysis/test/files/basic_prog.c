@@ -34,51 +34,33 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/frontend.h"
+/*
+ * =====================================================================================
+ *
+ *       Filename:  basic_prog.c
+ *
+ *    Description:  
+ *
+ *        Version:  1.0
+ *        Created:  04/21/11 13:12:49
+ *
+ *         Author:  Simone Pellegrini
+ *        Company:  
+ *
+ * =====================================================================================
+ */
 
-#include "insieme/frontend/program.h"
+int main (int argc, char* argv[]) {
 
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/cmd_line_utils.h"
+	int a,b=0,c=0;
 
-namespace insieme {
-namespace frontend {
+	for(a=0;a<atoi(argv[1]);a++) {
+		b += c+a;
+		if(b == 100) {
+			break;
+		}
+	}
 
-const unsigned ConversionJob::DEFAULT_FLAGS = 0;
-
-ConversionJob::ConversionJob(core::NodeManager& manager, const string& file)
-	: manager(manager), files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
-
-ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs)
-	: manager(manager), files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
-
-
-core::ProgramPtr ConversionJob::execute() {
-
-	// since the frontend is using ugly ugly singletons, the configuration has to be updated ... ugly :)
-
-	// create the program parser
-	frontend::Program program(manager);
-
-	// set up the translation units
-	program.addTranslationUnits(files);
-
-	// setup the include directories
-	CommandLineOptions::IncludePaths = includeDirs;
-
-	// setup the standard
-	CommandLineOptions::STD = standard;
-
-	// setup definition
-	CommandLineOptions::Defs = definitions;
-
-	// setup additional flags
-	CommandLineOptions::OMPSema = hasOption(OpenMP);
-	CommandLineOptions::OpenCL = hasOption(OpenCL);
-
-	// convert the program
-	return program.convert();
+	exit(1);
+	return 0;
 }
-
-} // end namespace frontend
-} // end namespace insieme

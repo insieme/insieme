@@ -39,13 +39,16 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/analysis/subtype_constraints.h"
+
+#include "insieme/core/parser/ir_parse.h"
+
 
 namespace insieme {
 namespace core {
 namespace analysis {
 
 using namespace utils::set;
-
 
 
 TEST(TypeVariableConstraints, Solving) {
@@ -59,7 +62,7 @@ TEST(TypeVariableConstraints, Solving) {
 	TypePtr typeB = builder.genericType("B");
 
 	// test empty set of constraints
-	TypeVariableConstraints constraints;
+	SubTypeConstraints constraints;
 	auto res = constraints.solve();
 	EXPECT_TRUE(res);
 	EXPECT_EQ("{}", toString(*res));
@@ -91,11 +94,11 @@ TEST(TypeVariableConstraints, Solving) {
 	constraints.addSubtypeConstraint(var, basic.getUInt4());
 	res = constraints.solve();
 	EXPECT_TRUE(res);
-	EXPECT_EQ("{'a->uint<2>}", toString(*res));
+	if (res) EXPECT_EQ("{'a->uint<2>}", toString(*res));
 
-	EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getInt4());
-	EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getUInt4());
-	EXPECT_EQ(res->applyTo(manager, var), getBiggestCommonSubType(basic.getInt4(), basic.getUInt4()));
+	if (res) EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getInt4());
+	if (res) EXPECT_PRED2(isSubTypeOf, res->applyTo(manager, var), basic.getUInt4());
+	if (res) EXPECT_EQ(res->applyTo(manager, var), getBiggestCommonSubType(basic.getInt4(), basic.getUInt4()));
 
 	// add a final sub-type constraint
 	constraints.addSubtypeConstraint(var, basic.getString());
@@ -105,33 +108,33 @@ TEST(TypeVariableConstraints, Solving) {
 
 	// clear constraints and test super-type constraints
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, basic.getInt4());
+	constraints.addSubtypeConstraint(basic.getInt4(), var);
 	res = constraints.solve();
 	EXPECT_TRUE(res);
 	EXPECT_EQ("{'a->int<4>}", toString(*res));
 
-	constraints.addSupertypeConstraint(var, basic.getUInt4());
+	constraints.addSubtypeConstraint(basic.getUInt4(), var);
 	res = constraints.solve();
 	EXPECT_TRUE(res);
-	EXPECT_EQ("{'a->int<8>}", toString(*res));
+	if (res) EXPECT_EQ("{'a->int<8>}", toString(*res));
 
-	EXPECT_PRED2(isSubTypeOf, basic.getInt4(), res->applyTo(manager, var));
-	EXPECT_PRED2(isSubTypeOf, basic.getUInt4(), res->applyTo(manager, var));
-	EXPECT_EQ(res->applyTo(manager, var), getSmallestCommonSuperType(basic.getInt4(), basic.getUInt4()));
+	if (res) EXPECT_PRED2(isSubTypeOf, basic.getInt4(), res->applyTo(manager, var));
+	if (res) EXPECT_PRED2(isSubTypeOf, basic.getUInt4(), res->applyTo(manager, var));
+	if (res) EXPECT_EQ(res->applyTo(manager, var), getSmallestCommonSuperType(basic.getInt4(), basic.getUInt4()));
 
 
 	// clear and use combined constraints
 	constraints.clear();
 	constraints.addSubtypeConstraint(var, basic.getInt4());
-	constraints.addSupertypeConstraint(var, basic.getInt4());
+	constraints.addSubtypeConstraint(basic.getInt4(), var);
 	res = constraints.solve();
 	EXPECT_TRUE(res);
-	EXPECT_EQ("{'a->int<4>}", toString(*res));
+	if (res) EXPECT_EQ("{'a->int<4>}", toString(*res));
 
 
 	// clear and add unsatisfiable constraints
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, basic.getInt4());
+	constraints.addSubtypeConstraint(basic.getInt4(), var);
 	constraints.addSubtypeConstraint(var, basic.getFloat());
 	res = constraints.solve();
 	EXPECT_FALSE(res);
@@ -171,28 +174,28 @@ TEST(TypeVariableConstraints, ConstraintCombinations) {
 
 	TypeVariablePtr var = builder.typeVariable("x");
 
-	TypeVariableConstraints constraints;
-	constraints.addSupertypeConstraint(var, uint2);
+	SubTypeConstraints constraints;
+	constraints.addSubtypeConstraint(uint2, var);
 	constraints.addSubtypeConstraint(var, uint8);
 
 	auto res = constraints.solve();
 	EXPECT_TRUE(res);
 	if (res) {
 		auto substitute = res->applyTo(var);
-		EXPECT_EQ(uint8, substitute);
+		EXPECT_EQ(uint2, substitute);
 		EXPECT_PRED2(isSubTypeOf, uint2, substitute);
 		EXPECT_PRED2(isSubTypeOf, substitute, uint8);
 	}
 
 	// try reverse direction
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, uint8);
+	constraints.addSubtypeConstraint(uint8, var);
 	constraints.addSubtypeConstraint(var, uint2);
 	EXPECT_FALSE(constraints.solve());
 
 	// add a equality constraint
 	constraints.clear();
-	constraints.addSupertypeConstraint(var, uint2);
+	constraints.addSubtypeConstraint(uint2, var);
 	constraints.addSubtypeConstraint(var, uint8);
 	constraints.addEqualsConstraint(var, uint4);
 	res = constraints.solve();
@@ -223,9 +226,9 @@ TEST(TypeVariableConstraints, EqualSuperSubTypeConstraintsBug) {
 	TypePtr int4 = basic.getInt4();
 	TypePtr uint4 = basic.getUInt4();
 
-	TypeVariableConstraints constraints;
-	constraints.addSupertypeConstraint(var, int4);
-	constraints.addSupertypeConstraint(var, uint4);
+	SubTypeConstraints constraints;
+	constraints.addSubtypeConstraint(int4, var);
+	constraints.addSubtypeConstraint(uint4, var);
 	constraints.addSubtypeConstraint(var, int4);
 	constraints.addSubtypeConstraint(var, uint4);
 
@@ -346,6 +349,11 @@ TEST(TypeVariableDeduction, vectorsAndArrays) {
 	res = getTypeVariableInstantiation(manager, toVector(varA), toVector(vectorGen12));
 	EXPECT_TRUE(res);
 	if (res) EXPECT_EQ("{'a->vector<'a,12>}", toString(*res));
+
+	// ... now with a vector with a generic variable and generic size (even the same)
+	res = getTypeVariableInstantiation(manager, toVector(varA), toVector(vectorGenA));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ("{'a->vector<'a,#l>}", toString(*res));
 
 
 	// Let's test two arguments (same type)
@@ -576,9 +584,305 @@ TEST(TypeVariableDeduction, ReductionBug) {
 			toVector<ExpressionPtr>(builder.literal(vector, "x"), builder.literal(uint4, "1"), basic.getUnsignedIntMul()));
 
 	auto res = getTypeVariableInstantiation(manager, call);
-//	EXPECT_TRUE(res);
+	EXPECT_TRUE(res);
 }
 
+
+TEST(TypeVariableDeduction, ArrayRefElementBug) {
+
+	// The problem:
+	//		Processing:     array.ref.elem.1D(v2881, 1)
+	//		FunctionType:   ((ref<array<'elem,1>>,uint<8>)->ref<'elem>)
+	//		Argument Types: [AP(ref<vector<real<8>,5>>),AP(uint<4>)]
+	//		=> cannot be typed
+	// => WHICH IS CORRECT!
+
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr vector = builder.vectorType(uint4, builder.concreteIntTypeParam(5));
+	TypePtr ref = builder.refType(vector);
+
+	CallExprPtr call = builder.callExpr(basic.getArrayRefElem1D(),
+			toVector<ExpressionPtr>(builder.literal(ref, "x"), builder.literal(uint4, "1")));
+
+	auto res = getTypeVariableInstantiation(manager, call);
+	EXPECT_FALSE(res); // this is in deed not a valid call!
+}
+
+
+TEST(TypeVariableDeduction, ArgumentBasedTypeConstraints) {
+
+	// The following scenario should be tested:
+	//		function type: ('a, ('a -> 'r)) -> 'r
+	//		parameter: uint<4> and uint<#a> -> uint<#a>
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr alpha = builder.typeVariable("a");
+	TypePtr rho = builder.typeVariable("r");
+	TypePtr genFun = builder.functionType(alpha, rho);
+
+	TypePtr funType = builder.functionType(toVector(alpha, genFun), rho);
+
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr uintA = basic.getUIntGen();
+	TypePtr id = builder.functionType(uintA, uintA);
+
+
+	auto res = getTypeVariableInstantiation(manager, toVector(alpha, genFun), toVector(uint4, id));
+	EXPECT_TRUE(res);
+}
+
+TEST(TypeVariableDeduction, PureIntTypeVariableConstraintsBug) {
+
+	// The Problem:
+	//		expected: (int<#a>,int<#a>), actual: (int<4>,int<2>) => unable to deduce that #a = 4
+
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr int2 = basic.getInt2();
+	TypePtr int4 = basic.getInt4();
+
+	TypePtr intA = basic.getIntGen();
+
+	auto res = getTypeVariableInstantiation(manager, toVector(intA, intA), toVector(int4, int2));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(int4, res->applyTo(intA));
+
+	// also test the reverse direction
+	res = getTypeVariableInstantiation(manager, toVector(intA, intA), toVector(int2, int4));
+	EXPECT_TRUE(res);
+	if (res) EXPECT_EQ(int4, res->applyTo(intA));
+}
+
+// ---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
+
+
+bool unifyable(const TypePtr& typeA, const TypePtr& typeB) {
+	return isUnifyable(typeA, typeB);
+}
+
+bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
+	return !isUnifyable(typeA, typeB);
+}
+
+bool matchable(const TypePtr& pattern, const TypePtr& type) {
+	return getTypeVariableInstantiation(pattern->getNodeManager(), pattern, type);
+}
+
+bool notMatchable(const TypePtr& pattern, const TypePtr& type) {
+	return !matchable(pattern, type);
+}
+
+TEST(TypeVariableDeduction, Matching) {
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	// create some types to "play"
+	TypeVariablePtr varA = builder.typeVariable("A");
+	TypeVariablePtr varB = builder.typeVariable("B");
+
+	TypePtr constType = builder.genericType("constType");
+
+	TypePtr genTypeA = builder.genericType("type", toVector<TypePtr>(varA));
+	TypePtr genTypeB = builder.genericType("type", toVector<TypePtr>(varB));
+
+	TypePtr specializedType = builder.genericType("type", toVector<TypePtr>(constType));
+
+	TypePtr genIntTypeA = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
+	TypePtr genIntTypeB = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'b')));
+	TypePtr specIntType = builder.genericType("type", toVector<TypePtr>(), toVector<IntTypeParamPtr>(ConcreteIntTypeParam::get(manager, 123)));
+
+
+	// case: one side is a variable
+	EXPECT_PRED2(matchable, varA, constType);
+	EXPECT_PRED2(notMatchable, constType, varA);
+	EXPECT_PRED2(unifyable, varA, constType);
+	EXPECT_PRED2(unifyable, constType, varA);
+
+	// case: both sides are variables
+	EXPECT_PRED2(matchable, varA, varB);
+	EXPECT_PRED2(matchable, varB, varA);
+	EXPECT_PRED2(unifyable, varA, varB);
+	EXPECT_PRED2(unifyable, varB, varA);
+
+	// more complex case: type wit
+	EXPECT_PRED2(matchable, genTypeA, specializedType);
+	EXPECT_PRED2(notMatchable, specializedType, genTypeA);
+	EXPECT_PRED2(matchable, genTypeB, specializedType);
+	EXPECT_PRED2(notMatchable, specializedType, genTypeB);
+
+	EXPECT_PRED2(unifyable, genTypeA, specializedType);
+	EXPECT_PRED2(unifyable, specializedType, genTypeA);
+	EXPECT_PRED2(unifyable, genTypeB, specializedType);
+	EXPECT_PRED2(unifyable, specializedType, genTypeB);
+
+	// case: int type parameter
+	EXPECT_PRED2(matchable, genIntTypeA, specIntType);
+	EXPECT_PRED2(notMatchable, specIntType, genIntTypeA);
+	EXPECT_PRED2(matchable, genIntTypeB, specIntType);
+	EXPECT_PRED2(notMatchable, specIntType, genIntTypeB);
+
+	EXPECT_PRED2(unifyable, genIntTypeA, specIntType);
+	EXPECT_PRED2(unifyable, specIntType, genIntTypeA);
+	EXPECT_PRED2(unifyable, genIntTypeB, specIntType);
+	EXPECT_PRED2(unifyable, specIntType, genIntTypeB);
+
+	// check result of matching process
+	auto unifier = getTypeVariableInstantiation(manager, genTypeA, specializedType);
+	EXPECT_TRUE(unifier);
+	EXPECT_EQ(*unifier->applyTo(manager, genTypeA), *unifier->applyTo(manager, specializedType));
+}
+
+
+TEST(TypeVariableDeduction, SubTyping) {
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	// check sub-type relation between int and uint
+
+	TypePtr int1 = manager.basic.getInt1();
+	TypePtr int2 = manager.basic.getInt2();
+	TypePtr int4 = manager.basic.getInt4();
+	TypePtr int8 = manager.basic.getInt8();
+	TypePtr intInf = manager.basic.getIntInf();
+
+	TypePtr uint1 = manager.basic.getUInt1();
+	TypePtr uint2 = manager.basic.getUInt2();
+	TypePtr uint4 = manager.basic.getUInt4();
+	TypePtr uint8 = manager.basic.getUInt8();
+	TypePtr uintInf = manager.basic.getUIntInf();
+
+
+	EXPECT_PRED2(matchable, int8, int4);
+
+	EXPECT_PRED2(matchable, intInf, int4);
+	EXPECT_PRED2(notMatchable, int4, intInf);
+
+	// check some cases
+	EXPECT_PRED2(matchable, int1, int1);
+	EXPECT_PRED2(matchable, int2, int2);
+	EXPECT_PRED2(matchable, int4, int4);
+	EXPECT_PRED2(matchable, int8, int8);
+	EXPECT_PRED2(matchable, intInf, intInf);
+
+
+	EXPECT_PRED2(matchable, int2, int1);
+	EXPECT_PRED2(notMatchable, int1, int2);
+
+	EXPECT_PRED2(matchable, int4, int2);
+	EXPECT_PRED2(notMatchable, int2, int4);
+
+	EXPECT_PRED2(matchable, int8, int4);
+	EXPECT_PRED2(notMatchable, int4, int8);
+
+	EXPECT_PRED2(matchable, intInf, int8);
+	EXPECT_PRED2(notMatchable, int8, intInf);
+
+
+	EXPECT_PRED2(matchable, uint1, uint1);
+	EXPECT_PRED2(matchable, uint2, uint2);
+	EXPECT_PRED2(matchable, uint4, uint4);
+	EXPECT_PRED2(matchable, uint8, uint8);
+	EXPECT_PRED2(matchable, uintInf, uintInf);
+
+	EXPECT_PRED2(matchable, uint2, uint1);
+	EXPECT_PRED2(notMatchable, uint1, uint2);
+
+	EXPECT_PRED2(matchable, uint4, uint2);
+	EXPECT_PRED2(notMatchable, uint2, uint4);
+
+	EXPECT_PRED2(matchable, uint8, uint4);
+	EXPECT_PRED2(notMatchable, uint4, uint8);
+
+	EXPECT_PRED2(matchable, uintInf, uint8);
+	EXPECT_PRED2(notMatchable, uint8, uintInf);
+
+	// cross signed / unsigned tests
+	EXPECT_PRED2(matchable, int8, uint4);
+	EXPECT_PRED2(notMatchable, int8, uint8);
+
+	EXPECT_PRED2(matchable, int2, uint1);
+	EXPECT_PRED2(notMatchable, int4, uint8);
+
+	EXPECT_PRED2(matchable, intInf, uintInf);
+	EXPECT_PRED2(notMatchable, uintInf, intInf);
+
+}
+
+TEST(TypeVariableDeduction, ArrayVectorRelation) {
+
+	NodeManager manager;
+
+
+	TypePtr typeA = parse::parseType(manager, "array<ref<char>,1>");
+	TypePtr typeB = parse::parseType(manager, "vector<ref<char>,25>");
+	EXPECT_NE(typeA, typeB);
+	EXPECT_PRED2(matchable, typeA, typeB);
+
+	EXPECT_EQ(NT_ArrayType, typeA->getNodeType());
+	EXPECT_EQ(NT_VectorType, typeB->getNodeType());
+
+	// now within a tuple
+	typeA = parse::parseType(manager, "(array<ref<char>,1>,var_list)");
+	typeB = parse::parseType(manager, "(vector<ref<char>,25>,var_list)");
+
+	EXPECT_NE(typeA, typeB);
+	EXPECT_PRED2(matchable, typeA, typeB);
+}
+
+TEST(TypeVariableDeduction, VectorMatchingBug) {
+
+	// The Bug:
+	//		When matching vectors of different size to parameters ('a,'a), the matching is successful - which it should not.
+	//
+	// The reason:
+	//		The Vector type was not recognized as a generic type and the integer type parameters have been ignored.
+	//
+	// The fix:
+	//		The check for generic types is no longer conducted via the node type token. It is now using a dynamic cast.
+	//
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	TypePtr alpha = builder.typeVariable("a");
+	FunctionTypePtr funType = builder.functionType(toVector(alpha, alpha), alpha);
+
+	EXPECT_EQ("(('a,'a)->'a)", toString(*funType));
+
+	TypePtr elem = builder.genericType("A");
+	TypePtr vectorA = builder.vectorType(elem, builder.concreteIntTypeParam(12));
+	TypePtr vectorB = builder.vectorType(elem, builder.concreteIntTypeParam(14));
+
+	auto match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
+	EXPECT_TRUE(match);
+	if (match) EXPECT_EQ("{'a->array<A,1>}", toString(*match));
+
+	match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorA));
+	EXPECT_TRUE(match);
+	if (match) EXPECT_EQ("{'a->array<A,1>}", toString(*match));
+
+	match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorA, vectorA));
+	EXPECT_TRUE(match);
+	if (match) EXPECT_EQ("{'a->vector<A,12>}", toString(*match));
+
+	match = getTypeVariableInstantiation(manager, toVector(alpha, alpha), toVector(vectorB, vectorB));
+	EXPECT_TRUE(match);
+	if (match) EXPECT_EQ("{'a->vector<A,14>}", toString(*match));
+
+}
 
 } // end namespace analysis
 } // end namespace core

@@ -66,6 +66,14 @@ inline void for_each(Container& c, const Functor& f) {
 }
 
 /**
+ * Convenience function for std::for_each.
+ */
+template<typename Iterator, typename Functor>
+inline void for_range(std::pair<Iterator, Iterator>& c, const Functor& f) {
+	std::for_each(c.first, c.second, f);
+}
+
+/**
  * Convenience function for std::copy.
  */
 template<typename Container, typename OutputIterator>
@@ -91,6 +99,14 @@ inline void transform(Container& c, OutputIterator out, const Functor& f) {
 	std::transform(c.begin(), c.end(), out, f);
 }
 
+/**
+ * A convenience function for std::reverse.
+ */
+template<typename Container>
+inline Container& reverse(Container& c) {
+	std::reverse(c.begin(), c.end());
+	return c;
+}
 
 namespace {
 

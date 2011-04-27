@@ -102,6 +102,13 @@ public:
 	Substitution(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& parameter);
 
 	/**
+	 * Checks whether this substitution is actually mapping any variables to some type.
+	 */
+	bool empty() const {
+		return mapping.empty() && paramMapping.empty();
+	}
+
+	/**
 	 * Applies this substitution to the given type.
 	 * @param manager the manager to be used for creating new type node instances
 	 * @param type the type to which this substitution should be applied to
@@ -146,6 +153,23 @@ public:
 	void addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value);
 
 	/**
+	 * Checks whether this substitution contains a mapping for the given variable.
+	 *
+	 * @param var the variable to be checked
+	 * @return true if so, false otherwise
+	 */
+	bool containsMappingFor(const TypeVariablePtr& var) const;
+
+	/**
+	 * Checks whether this substitution contains a mapping for the given int type parameter
+	 * variable.
+	 *
+	 * @param var the variable to be checked
+	 * @return true if present, false otherwise
+	 */
+	bool containsMappingFor(const VariableIntTypeParamPtr& var) const;
+
+	/**
 	 * Removes the mapping stored for the given variable from this substitution.
 	 * @param var the variable which's entry should be removed
 	 */
@@ -161,8 +185,24 @@ public:
 	 * Obtains a constant reference to the type variable mapping constituting this substitution.
 	 * @return a constant reference to the internally maintained type variable mapping
 	 */
+	Mapping& getMapping() {
+		return mapping;
+	}
+
+	/**
+	 * Obtains a constant reference to the type variable mapping constituting this substitution.
+	 * @return a constant reference to the internally maintained type variable mapping
+	 */
 	const Mapping& getMapping() const {
 		return mapping;
+	}
+
+	/**
+	 * Obtains a constant reference to the int-type parameter mapping constituting this substitution.
+	 * @return a constant reference to the internally maintained int type parameter mapping
+	 */
+	IntTypeParamMapping& getIntTypeParamMapping() {
+		return paramMapping;
 	}
 
 	/**
@@ -251,6 +291,36 @@ SubstitutionOpt unifyAll(NodeManager& manager, const Container& listA, const Con
 	return unifyAll(manager, list);
 }
 
+template<typename Container>
+SubstitutionOpt unifyAll(NodeManager& manager, const Container& list) {
+	return unifyRange(manager, list.begin(), list.end());
+}
+
+template<typename Iterator>
+SubstitutionOpt unifyRange(NodeManager& manager, Iterator begin, Iterator end) {
+
+	// just unify one after another
+	Substitution res;
+	if (begin == end) {
+		return res;
+	}
+
+	TypePtr unified = *begin;
+	++begin;
+	for(;begin != end; ++begin) {
+		auto cur = unify(manager, unified, res.applyTo(*begin));
+		if (!cur) {
+			// => not unify-able
+			return 0;
+		}
+		unified = cur->applyTo(unified);
+		res = Substitution::compose(manager, res, *cur);
+	}
+
+	// return result
+	return res;
+}
+
 /**
  * Tests whether the given two types are unifyable at all.
  *
@@ -274,93 +344,6 @@ bool areUnifyable(const Container& listA, const Container& listB) {
 	return unify(tmp, listA, listB);
 }
 
-
-// -------------------------------------------------------------------------------------------------------------------------
-//                                                    Matching
-// -------------------------------------------------------------------------------------------------------------------------
-
-/**
- * Tries to match the given type to the given pattern. The resulting substitution will be uninitialized in case
- * the given type does match the given pattern. Otherwise the result will describe the mapping of type variables to
- * be applied to the pattern to reach the given type.
- *
- * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
- * @param pattern the pattern to be checked against (type variables represent variable regions)
- * @param type the type to be matched against the given pattern
- * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
- * @return a initialized substitution transforming the given pattern into the given type or an uninitialized optional in case the
- * given type is not matching the pattern
- */
-SubstitutionOpt match(NodeManager& manager, const TypePtr& pattern, const TypePtr& type, bool considerSubtypes=true);
-
-/**
- * Tries to match the given pattern/type pairs.
- *
- * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
- * @param list the list of pattern/type pairs
- * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
- * @return a initialized substitution transforming the given patterns into the given types or an uninitialized optional in case the
- * given types are not matching the patterns
- */
-SubstitutionOpt matchAll(NodeManager& manager, std::list<std::pair<TypePtr, TypePtr>>& list, bool considerSubtypes=true);
-
-/**
- * Tries to match the given types to the given list of type patterns.
- *
- * @param manager the node manager to be used for creating temporal results and the mappings within the resulting substitution
- * @param patterns the list of patterns
- * @param types the list of types to be matched to the patterns
- * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
- * @return a initialized substitution transforming the given patterns into the given types or an uninitialized optional in case the
- * given types are not matching the patterns
- */
-template<typename Container>
-SubstitutionOpt matchAll(NodeManager& manager, const Container& patterns, const Container& types, bool considerSubtypes=true) {
-
-	// check length of lists ...
-	if (patterns.size() != types.size()) {
-		// ... if not equal => not matchable
-		return boost::optional<Substitution>();
-	}
-
-	// define some types ...
-	typedef std::pair<TypePtr, TypePtr> Pair;
-	typedef std::list<Pair> List;
-
-	// merge the given lists to a list of pairs
-	List list(
-				make_paired_iterator(patterns.begin(), types.begin()),
-				make_paired_iterator(patterns.end(), types.end())
-	);
-	return matchAll(manager, list);
-}
-
-
-/**
- * Tests whether the given type can be matched to the given pattern.
- *
- * @param pattern the pattern the type should be matched to
- * @param type the type to be matched against the pattern
- * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
- * @return true if matchable, false otherwise
- */
-bool isMatching(const TypePtr& pattern, const TypePtr& type, bool considerSubtypes=true);
-
-/**
- * Tests whether the given types can be matched to the given patterns.
- *
- * @param patterns the patterns to be matched to
- * @param types the types to be matched
- * @param considerSubtypes a flag allowing to enable/disable the consideration of subtypes
- * @return true if all types can be matched to the given patterns
- */
-template<typename Container>
-bool areMatching(const Container& patterns, const Container& types, bool considerSubtypes=true) {
-	// use temporary manager (to avoid polluting other managers)
-	NodeManager tmp;
-	// exploits implicit boolean conversion of boost::optional
-	return matchAll(tmp, patterns, types);
-}
 
 // -------------------------------------------------------------------------------------------------------------------------
 //                                                    SubTyping

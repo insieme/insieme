@@ -424,6 +424,13 @@ public:
 	}
 
 	/**
+	 * An implicit converter to a pointer type.
+	 */
+	operator Pointer<const T>() const {
+		return getAddressedNode();
+	}
+
+	/**
 	 * An implicit conversion to boolean. It will be converted to true, if the address is valid.
 	 * Otherwise the result will be false.
 	 *

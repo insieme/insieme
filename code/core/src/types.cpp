@@ -175,6 +175,10 @@ FunctionType::FunctionType(const TypeList& captureTypes, const TypeList& argumen
 		Type(NT_FunctionType, hashFunctionType(captureTypes, argumentTypes, returnType)),
 		captureTypes(isolate(captureTypes)), argumentTypes(isolate(argumentTypes)), returnType(isolate(returnType)) { }
 
+FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType) {
+	return get(manager, toVector(paramType), returnType);
+}
+
 FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& argumentTypes, const TypePtr& returnType) {
 	// obtain reference to new element
 	return get(manager, TypeList(), argumentTypes, returnType);

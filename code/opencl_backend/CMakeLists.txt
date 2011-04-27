@@ -44,3 +44,6 @@ foreach ( case_file ${test_cases})
 	
 	add_unit_test(${case_name} off)
 endforeach(case_file)
+
+# --- INSTALL --------------------------------------------------------------------
+INSTALL(TARGETS insieme_opencl_backend LIBRARY DESTINATION lib)

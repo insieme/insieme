@@ -39,6 +39,8 @@
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/core/analysis/type_variable_deduction.h"
+
 namespace insieme {
 namespace core {
 namespace checks {
@@ -73,9 +75,9 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	TypePtr funType = address->getFunctionExpr()->getType();
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
-	FunctionTypePtr functionType = CAST(FunctionType, funType);
-	TypeList parameterTypes = functionType->getArgumentTypes();
-	TypePtr returnType = functionType->getReturnType();
+	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
+	const TypeList& parameterTypes = functionType->getArgumentTypes();
+	const TypePtr& returnType = functionType->getReturnType();
 
 	// Obtain argument type
 	TypeList argumentTypes;
@@ -94,12 +96,12 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 		return res;
 	}
 
-	// 2) check types of arguments => by computing most general unifier
-	TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
-	TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
+	// 2) check types of arguments => using variable deduction
+	auto substitution = analysis::getTypeVariableInstantiation(manager, address);
 
-	auto mgu = match(manager, parameterTuple, argumentTuple);
-	if (!mgu) {
+	if (!substitution) {
+		TupleTypePtr argumentTuple = TupleType::get(manager, argumentTypes);
+		TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
 						format("Invalid argument type(s) - expected: %s, actual: %s - function type: %s",
@@ -111,7 +113,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	}
 
 	// 3) check return type - which has to be matched with modified function return value.
-	TypePtr retType = deduceReturnType(functionType, argumentTypes);
+	TypePtr retType = substitution->applyTo(returnType);
 	TypePtr resType = address->getType();
 
 	if (*retType != *resType) {
@@ -400,7 +402,7 @@ OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& addr
 		LiteralPtr buildIn = manager.basic.getLiteral(address->getValue());
 
 		// check whether used one is special case of build-in version
-		if (!isMatching(buildIn->getType(),address->getType())) {
+		if (*buildIn->getType() != *address->getType()) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_LITERAL,
 					format("Deviating type of build in literal %s - expected: %s, actual: %s",

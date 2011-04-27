@@ -350,6 +350,18 @@ protected:
 public:
 
 	/**
+	 * This method provides a static factory method for function types. It will return a pointer to
+	 * a function type instance representing the requested function type and being maintained
+	 * within the given manager.
+	 *
+	 * @param manager the manager to be used for handling the obtained type pointer
+	 * @param paramTypes the type of the single parameter accepted by the resulting function
+	 * @param resultType the type of value to be returned by the obtained function type
+	 * @return a pointer to a instance of the required type maintained by the given manager
+	 */
+	static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& resultType);
+
+	/**
 	 * This method provides a static factory method for this type of node. It will return
 	 * a function type pointer pointing toward a variable with the given name maintained by the
 	 * given manager.

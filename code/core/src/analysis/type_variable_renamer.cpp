@@ -34,51 +34,23 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/frontend.h"
+#include "insieme/core/analysis/type_variable_renamer.h"
 
-#include "insieme/frontend/program.h"
-
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/cmd_line_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 namespace insieme {
-namespace frontend {
+namespace core {
+namespace analysis {
 
-const unsigned ConversionJob::DEFAULT_FLAGS = 0;
-
-ConversionJob::ConversionJob(core::NodeManager& manager, const string& file)
-	: manager(manager), files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
-
-ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs)
-	: manager(manager), files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
-
-
-core::ProgramPtr ConversionJob::execute() {
-
-	// since the frontend is using ugly ugly singletons, the configuration has to be updated ... ugly :)
-
-	// create the program parser
-	frontend::Program program(manager);
-
-	// set up the translation units
-	program.addTranslationUnits(files);
-
-	// setup the include directories
-	CommandLineOptions::IncludePaths = includeDirs;
-
-	// setup the standard
-	CommandLineOptions::STD = standard;
-
-	// setup definition
-	CommandLineOptions::Defs = definitions;
-
-	// setup additional flags
-	CommandLineOptions::OMPSema = hasOption(OpenMP);
-	CommandLineOptions::OpenCL = hasOption(OpenCL);
-
-	// convert the program
-	return program.convert();
+TypePtr TypeMapping::applyForward(NodeManager& manager, const TypePtr& type) {
+	return dynamic_pointer_cast<const Type>(transform::replaceAll(manager, type, forward));
 }
 
-} // end namespace frontend
+TypePtr TypeMapping::applyBackward(NodeManager& manager, const TypePtr& type) {
+	return dynamic_pointer_cast<const Type>(transform::replaceAll(manager, type, backward));
+}
+
+
+} // end namespace analysis
+} // end namespace core
 } // end namespace insieme

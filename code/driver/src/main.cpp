@@ -66,7 +66,9 @@
 
 #include "insieme/driver/dot_printer.h"
 
+#ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
+#endif
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -235,6 +237,7 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 			}
 
+			#ifdef USE_XML
 			// XML dump
 			if(!CommandLineOptions::DumpXML.empty()) {
 				LOG(INFO) << "================================== XML DUMP =====================================";
@@ -244,6 +247,7 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			}
+			#endif
 
 			// do some cleanup
 			if (CommandLineOptions::Cleanup) {
@@ -267,6 +271,7 @@ int main(int argc, char** argv) {
 			}
 
 		}
+		#ifdef USE_XML
 		if(!CommandLineOptions::LoadXML.empty()) {
 			LOG(INFO) << "================================== XML LOAD =====================================";
 			insieme::utils::Timer timer("Xml.load");
@@ -277,6 +282,7 @@ int main(int argc, char** argv) {
 			LOG(INFO) << timer;
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
+		#endif
 
 		if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
 			// a pretty print of the AST

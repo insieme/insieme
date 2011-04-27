@@ -31,7 +31,7 @@ find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 include_directories( test/include/ )
 
-file(GLOB test_cases test/*.cc)
+file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
@@ -43,3 +43,16 @@ foreach ( case_file ${test_cases})
 	
 	add_unit_test(${case_name})
 endforeach(case_file)
+
+# --- INSTALL --------------------------------------------------------------------
+install (FILES include/insieme/core/ast_check.h DESTINATION include/core)
+install (FILES include/insieme/core/ast_node.h DESTINATION include/core)
+install (FILES include/insieme/core/ast_statistic.h DESTINATION include/core)
+install (FILES include/insieme/core/ast_visitor.h DESTINATION include/core)
+install (FILES include/insieme/core/program.h DESTINATION include/core)
+install (FILES include/insieme/core/parser/ir_parse.h DESTINATION include/)
+install (FILES include/insieme/core/printer/pretty_printer.h DESTINATION include/core/)
+install (FILES include/insieme/core/transform/manipulation.h DESTINATION include/core/)
+
+install(TARGETS insieme_core LIBRARY DESTINATION lib)
+

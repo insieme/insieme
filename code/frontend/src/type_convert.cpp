@@ -449,6 +449,7 @@ public:
 			assert(tagDecl->isDefinition() && "TagType is not a definition");
 
 			if(tagDecl->getTagKind() == clang::TTK_Enum) {
+//std::cout << "ENUM: " << tagDecl->getName().str() << std::endl;
 				assert(false && "Enum types not supported yet");
 			} else {
 				// handle struct/union/class
@@ -591,7 +592,13 @@ public:
 	//							ELABORATED TYPE (TODO)
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitElaboratedType(const ElaboratedType* elabType) {
+/*
+	    elabType->dump();
+	    elabType->desugar().getTypePtr()->dump();
+	    std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
+*/
 	    return Visit(elabType->desugar().getTypePtr());
+//		assert(false && "ElaboratedType not yet handled!");
 	}
 
 

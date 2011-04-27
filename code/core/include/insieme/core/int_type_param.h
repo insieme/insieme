@@ -66,7 +66,7 @@ namespace core {
 		 * @param hash the hash code for the resulting node
 		 */
 		IntTypeParam(NodeType nodeType, std::size_t hash)
-			: Node(nodeType, NC_Support, hash) {};
+			: Node(nodeType, NC_IntTypeParam, hash) {};
 
 
 		/**
