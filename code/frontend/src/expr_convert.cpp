@@ -1265,6 +1265,8 @@ public:
 			retExpr = convFact.lookUpVariable( varDecl );
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
+		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) { 
+			retExpr = convFact.builder.literal(enumDecl->getInitVal().toString(10), convFact.builder.getBasicGenerator().getInt4());
 		} else {
 			// todo: C++ check whether this is a reference to a class field, or method (function).
 			assert(false && "DeclRefExpr not supported!");

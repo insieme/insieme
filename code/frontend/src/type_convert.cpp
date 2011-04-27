@@ -449,8 +449,8 @@ public:
 			assert(tagDecl->isDefinition() && "TagType is not a definition");
 
 			if(tagDecl->getTagKind() == clang::TTK_Enum) {
-//std::cout << "ENUM: " << tagDecl->getName().str() << std::endl;
-				assert(false && "Enum types not supported yet");
+				// Enums are converted into integers
+				return convFact.builder.getBasicGenerator().getInt4();
 			} else {
 				// handle struct/union/class
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);

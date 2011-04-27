@@ -167,3 +167,12 @@ int mem_alloc() {
 	int* a = malloc(4);
 }
 
+enum E{ ON, OFF=10 };
+
+int test_enum() {
+	#pragma test "ref<int<4>> v1 = ref.var(0)"
+	enum E a = ON;
+	#pragma test "ref<int<4>> v1 = ref.var(10)"
+	enum E b = OFF;
+}
+
