@@ -59,7 +59,7 @@ struct _irt_work_item {
 
 /* ------------------------------ operations ----- */
 
-irt_work_item* irt_wi_create(irt_work_item_range* range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
+irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 void irt_wi_destroy(irt_work_item* wi);
 
 void irt_wi_enqueue(irt_work_item* wi);

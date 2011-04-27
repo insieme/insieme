@@ -41,6 +41,7 @@
 
 /* ------------------------------ config options ----- */
 
+#define IRT_CONTEXT_LT_BUCKETS 7
 #define IRT_DATA_ITEM_LT_BUCKETS 97
 
 // Declarations of insieme runtime types in alphabetical lexicographic order

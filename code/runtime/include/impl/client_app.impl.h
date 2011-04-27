@@ -46,15 +46,14 @@ irt_client_app* irt_client_app_create(const char* library_file_name) {
 	irt_client_app *app = (irt_client_app*)malloc(sizeof(irt_client_app));
 	app->id = irt_generate_client_app_id();
 	app->library = dlopen_unique(library_file_name, RTLD_NOW);
-	if(app->library == NULL) {
-		irt_throw_string_error(IRT_ERR_IO, "Could not load library %s\nError: %s\n", library_file_name, dlerror());
-	} else {
-		app->init_context = (init_context_fun*)dlsym(app->library, IRT_APP_INIT_CONTEXT_NAME);
-		app->cleanup_context = (cleanup_context_fun*)dlsym(app->library, IRT_APP_CLEANUP_CONTEXT_NAME);
-		if(app->init_context == NULL || app->cleanup_context == NULL) {
-			irt_throw_string_error(IRT_ERR_APP, "Insieme entry point and/or init function not found in library %s\nError: %s\n", library_file_name, dlerror());
-		}
+	IRT_ASSERT(app->library != NULL, IRT_ERR_IO, "Could not load library %s\nError: %s\n", library_file_name, dlerror());
+	
+	app->init_context = (init_context_fun*)dlsym(app->library, IRT_APP_INIT_CONTEXT_NAME);
+	app->cleanup_context = (cleanup_context_fun*)dlsym(app->library, IRT_APP_CLEANUP_CONTEXT_NAME);
+	if(app->init_context == NULL || app->cleanup_context == NULL) {
+		irt_throw_string_error(IRT_ERR_APP, "Insieme entry point and/or init function not found in library %s\nError: %s\n", library_file_name, dlerror());
 	}
+	
 	return app;
 }
 

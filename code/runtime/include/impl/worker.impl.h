@@ -42,8 +42,9 @@
 
 #include "globals.h"
 #include "impl/error_handling.impl.h"
+#include "impl/irt_mqueue.impl.h"
 
-static inline irt_worker* irt_get_current_worker() {
+static inline irt_worker* irt_worker_get_current() {
 	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
 }
 
@@ -70,12 +71,13 @@ void* _irt_worker_func(void *argvp) {
 
 	for(;;) {
 		// TODO main worker loop
+		irt_worker_schedule();
 	}
 
 	return NULL;
 }
 
-irt_worker* irt_create_worker(uint16 index, irt_affinity_mask affinity) {
+irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
 	_irt_worker_func_arg arg;
 	arg.affinity = affinity;
 	arg.index = index;
@@ -88,4 +90,21 @@ irt_worker* irt_create_worker(uint16 index, irt_affinity_mask affinity) {
 	while(!arg.ready) { } // MARK busy wait
 
 	return arg.generated;
+}
+
+void irt_worker_schedule() {
+	irt_worker* self = irt_worker_get_current();
+
+	irt_mqueue_msg* received = irt_mqueue_receive();
+	if(received) {
+		printf("Omg\n");
+		if(received->type == IRT_MQ_NEW_APP) {
+			printf("Zomg\n");
+			irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
+			irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
+			irt_context* prog_context = irt_context_create(client_app);
+			irt_context_table_insert(prog_context);
+		}
+		free(received);
+	}
 }

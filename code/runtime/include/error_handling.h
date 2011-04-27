@@ -67,9 +67,13 @@ if(!(__condition)) { \
 	printf("IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
 	irt_throw_string_error(__errcode, __message, ##__VA_ARGS__); \
 }
+#define IRT_WARN(__message, ...) { \
+	printf("IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
+	fprintf(stderr, __message "\n", ##__VA_ARGS__); \
+}
 #else
-#define IRT_ASSERT(__condition, __errcode, __message, ...)
-if(__condition);
+#define IRT_ASSERT(__condition, __errcode, __message, ...) if(__condition);
+#define IRT_WARN(__message, ...)
 #endif
 
 void irt_throw_string_error(irt_errcode code, const char* message, ...);

@@ -46,7 +46,7 @@ file(GLOB test_cases test/*.c)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	add_library(${case_name} ${case_file})
+	add_library(${case_name} SHARED ${case_file})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(insieme_runtime rt)
