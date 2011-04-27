@@ -161,7 +161,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
 	# ENABLE PROFILING
 	# add_definitions( -pg )
-	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
+	#SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
 
 	# check for -std=c++0x
