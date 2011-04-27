@@ -148,7 +148,8 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 		if ( core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr()) ) {
 
 			if ( lit->getValue() == "malloc" || lit->getValue() == "calloc" ) {
-				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
+                assert(lit->getValue() == "malloc" && callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
+                assert(lit->getValue() == "calloc" && callExpr->getArguments().size() == 2 && "calloc() takes only 2 argument");
 
 				const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
