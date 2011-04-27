@@ -135,7 +135,7 @@ namespace formatting {
 				core::NodeManager& manager = CALL->getNodeManager();
 				core::ASTBuilder builder(manager);
 
-				const TypePtr& element = static_pointer_cast<const core::VectorType>(call->getType())->getElementType();
+				const TypePtr& element = static_pointer_cast<const core::ArrayType>(call->getType())->getElementType();
 				const TypePtr array = builder.arrayType(element);
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 				OUT("((");
@@ -153,7 +153,7 @@ namespace formatting {
 				core::ASTBuilder builder(manager);
 
 				const TypePtr& vector = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
-				const TypePtr& element = static_pointer_cast<const core::VectorType>(vector)->getElementType();
+				const TypePtr& element = static_pointer_cast<const core::ArrayType>(vector)->getElementType();
 				const TypePtr array = builder.arrayType(element);
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 				OUT("&((");

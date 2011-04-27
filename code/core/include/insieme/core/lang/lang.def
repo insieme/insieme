@@ -57,6 +57,8 @@
 // Types --------------------------------------------------------------------------------------------------------------
 TYPE(Unit,   "unit")
 
+TYPE(AnyRef, "anyRef")
+
 TYPE(Char,   "char")
 TYPE(WChar,  "wchar")
 TYPE(String, "string")
@@ -294,6 +296,12 @@ LITERAL(RefAssign, "ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  "ref.deref",  			"(ref<'a>) -> 'a")
 LITERAL(ScalarToArray, "scalar.to.array", "(ref<'a>) -> ref<array<'a,1>>")
 
+// Any References -----------------------------------------------------------------------------------------------------
+
+LITERAL(RefToAnyRef,    "ref.to.anyref",    		"(ref<'a>) -> anyRef")
+LITERAL(AnyRefToRef,    "anyref.to.ref",    		"(anyRef, type<'a>) -> ref<'a>")
+
+
 // General ------------------------------------------------------------------------------------------------------------
 
 LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
@@ -339,6 +347,9 @@ GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorP
 LITERAL(VectorSubscript,      "vector.subscript",       "(vector<'elem,#l>, uint<#a>) -> 'elem")
 LITERAL(VectorInitUniform,    "vector.init.uniform",    "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
 LITERAL(VectorInitUndefined,  "vector.init.undefined",  "(intTypeParam<#a>) -> vector<'elem,#a>")
+
+LITERAL(VectorRefElem, "vector.ref.elem", "(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
+
 LITERAL(VectorPointwise,      "vector.pointwise",
 							  "(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
 LITERAL(VectorPointwiseUnary, "vector.pointwise.unary", "(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")

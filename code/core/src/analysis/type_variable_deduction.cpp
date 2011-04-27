@@ -325,6 +325,7 @@ namespace analysis {
 							constraints.makeUnsatisfiable();
 							return;
 						}
+						break;
 					default:
 						assert(false && "Unknown int-type parameter encountered!");
 				}

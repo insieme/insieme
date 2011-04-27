@@ -176,6 +176,26 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 
 }
 
+core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core::ExpressionPtr& expr) {
+	const core::TypePtr& exprTy = expr->getType();
+	if (exprTy->getNodeType() == core::NT_RefType) {
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(exprTy)->getElementType();
+
+		if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
+			core::TypePtr elemTy = core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
+			return builder.callExpr( 
+				builder.refType(elemTy), 
+			 	( subTy->getNodeType() == core::NT_VectorType ? 
+				 	builder.getBasicGenerator().getVectorRefElem():
+				 	builder.getBasicGenerator().getArrayRefElem1D() ), 
+			 	expr, 
+				builder.uintLit(0)
+			);
+		}
+	}
+	return expr;
+}
+
 } // end anonymous namespace
 
 namespace insieme {
@@ -513,15 +533,16 @@ public:
 					}
 					if( funcArgTy->getNodeType() == core::NT_RefType) {
 						// we are sure at this point the type of arg is of ref-type as well
-						const core::TypePtr& elemTy = static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
-						const core::TypePtr& argSubTy = static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
+						const core::TypePtr& elemTy = core::static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
+						const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
 						if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
 							// we are in the situation where a function receiving a ref<array> gets in input a
 							// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
-							arg = builder.callExpr( funcArgTy, builder.getBasicGenerator().getRefVector2RefArray(), arg);
+							const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
+							arg = builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), builder.getBasicGenerator().getRefVector2RefArray(), arg );
 						}
 					}
-					LOG(ERROR) << *funcArgTy << " " << *arg->getType();
+					// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
 					// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
 				}
 				args.push_back( arg );
@@ -734,17 +755,7 @@ public:
 			 * C pointers)
 			 */
 			assert( base->getType()->getNodeType() == core::NT_RefType);
-
-			const core::TypePtr& subTy =
-					core::static_pointer_cast<const core::RefType>(base->getType())->getElementType();
-
-			if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
-				const core::SingleElementTypePtr& vecTy =
-						core::static_pointer_cast<const core::SingleElementType>(subTy);
-				base = builder.callExpr(
-						builder.refType(vecTy->getElementType()), gen.getArrayRefElem1D(), base, builder.uintLit(0)
-					);
-			}
+			base = getCArrayElemRef(builder, base);
 		}
 
 		core::IdentifierPtr ident = builder.identifier(membExpr->getMemberDecl()->getNameAsString());
@@ -1035,15 +1046,11 @@ public:
 		case UO_Deref: {
 			assert(subExpr->getType()->getNodeType() == core::NT_RefType &&
 					"Impossible to apply * operator to an R-Value");
+			
 			const core::TypePtr& subTy =
 					core::static_pointer_cast<const core::RefType>(subExpr->getType())->getElementType();
 			if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
-				const core::TypePtr& subVecTy =
-						core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
-
-				subExpr = builder.callExpr(
-					builder.refType(subVecTy), gen.getArrayRefElem1D(), subExpr, builder.literal("0", gen.getUInt4())
-				);
+				subExpr = getCArrayElemRef(builder, subExpr);
 			} else {
 				subExpr = convFact.tryDeref(subExpr);
 			}
@@ -1167,7 +1174,8 @@ public:
 					 refSubTy->getElementType()->getNodeType() == core::NT_ArrayType) &&
 					"Base expression of array subscript is not a vector/array type.");
 
-			op = gen.getArrayRefElem1D();
+			op =  refSubTy->getElementType()->getNodeType() == core::NT_ArrayType ? gen.getArrayRefElem1D() : gen.getVectorRefElem();
+
 			opType = convFact.builder.refType(
 				core::static_pointer_cast<const core::SingleElementType>(refSubTy->getElementType())->getElementType()
 			);
@@ -1182,7 +1190,8 @@ public:
 					 base->getType()->getNodeType() == core::NT_ArrayType) &&
 					"Base expression of array subscript is not a vector/array type.");
 
-			op = gen.getArraySubscript1D();
+			op =  base->getType()->getNodeType() == core::NT_ArrayType ? gen.getArraySubscript1D() : gen.getVectorSubscript();
+
 			opType = core::static_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 		}
 
