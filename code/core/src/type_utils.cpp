@@ -310,15 +310,10 @@ namespace {
 
 			// 2) test whether on the B side there is a variable
 			if (typeOfA != NT_TypeVariable && typeOfB == NT_TypeVariable) {
-				if (unify) {
-					// unification: no problem => swap sides
-					// add swapped pair to front of list
-					list.push_front(std::make_pair(b, a));
-					continue;
-				} else {
-					// matching => cannot be matched
-					return unmatchable;
-				}
+				// unification: no problem => swap sides
+				// add swapped pair to front of list
+				list.push_front(std::make_pair(b, a));
+				continue;
 			}
 
 			// 3) handle variables on left hand side ...
@@ -401,11 +396,6 @@ namespace {
 
 					// move variable to first place
 					if (!isVariable(paramA) && isVariable(paramB)) {
-						if (!unify) {
-							// => only allowed for unification
-							return unmatchable;
-						}
-
 						// switch sides
 						IntTypeParamPtr tmp = paramA;
 						paramA = paramB;
