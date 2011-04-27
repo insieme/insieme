@@ -185,9 +185,9 @@ core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core
 			core::TypePtr elemTy = core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
 			return builder.callExpr( 
 				builder.refType(elemTy), 
-			 	(subTy->getNodeType() == core::NT_ArrayType ? 
-				 	builder.getBasicGenerator().getArrayRefElem1D() : 
-					builder.getBasicGenerator().getVectorRefElem()), 
+			 	( subTy->getNodeType() == core::NT_VectorType ? 
+				 	builder.getBasicGenerator().getVectorRefElem():
+				 	builder.getBasicGenerator().getArrayRefElem1D() ), 
 			 	expr, 
 				builder.uintLit(0)
 			);
@@ -1174,7 +1174,7 @@ public:
 					 refSubTy->getElementType()->getNodeType() == core::NT_ArrayType) &&
 					"Base expression of array subscript is not a vector/array type.");
 
-			op =  refSubTy->getElementType()->getNodeType() ? gen.getArrayRefElem1D() : gen.getVectorRefElem();
+			op =  refSubTy->getElementType()->getNodeType() == core::NT_ArrayType ? gen.getArrayRefElem1D() : gen.getVectorRefElem();
 
 			opType = convFact.builder.refType(
 				core::static_pointer_cast<const core::SingleElementType>(refSubTy->getElementType())->getElementType()
@@ -1190,7 +1190,7 @@ public:
 					 base->getType()->getNodeType() == core::NT_ArrayType) &&
 					"Base expression of array subscript is not a vector/array type.");
 
-			op =  base->getType()->getNodeType() ? gen.getArrayRefElem1D() : gen.getVectorRefElem();
+			op =  base->getType()->getNodeType() == core::NT_ArrayType ? gen.getArraySubscript1D() : gen.getVectorSubscript();
 
 			opType = core::static_pointer_cast<const core::SingleElementType>(base->getType())->getElementType();
 		}

@@ -343,11 +343,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"( *array.ref.elem.1D(v1, CAST<uint<4>>(0)))"
+	"( *vector.ref.elem(v1, CAST<uint<4>>(0)))"
 	a[0];
 
 	#pragma test \
-	"(array.ref.elem.1D(v1, CAST<uint<4>>(0)) := 1)"
+	"(vector.ref.elem(v1, CAST<uint<4>>(0)) := 1)"
 	a[0] = 1;
 
 	#pragma test \
@@ -355,16 +355,16 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"( *array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(0)), CAST<uint<4>>(0)))"
+	"( *vector.ref.elem(vector.ref.elem(v1, CAST<uint<4>>(0)), CAST<uint<4>>(0)))"
 	b[0][0];
 
 	#pragma test \
-	"(array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
+	"(vector.ref.elem(vector.ref.elem(v1, CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
 	b[1][1] = 0;
 
-	#pragma test \
-	"fun(ref<array<array<int<4>,1>,1>> v2){ }(ref.vector.to.ref.array(v1))"
-	evil(b);
+	//#pragma test \
+	//"fun(ref<array<array<int<4>,1>,1>> v2){ }(ref.vector.to.ref.array(v1))"
+	//evil(b);
 }
 
 void* vf(void* ptr) { return ptr; }
