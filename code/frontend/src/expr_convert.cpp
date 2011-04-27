@@ -539,7 +539,7 @@ public:
 							// we are in the situation where a function receiving a ref<array> gets in input a
 							// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
 							const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
-							arg = builder.callExpr( builder.arrayType(elemVecTy), builder.getBasicGenerator().getRefVector2RefArray(), arg );
+							arg = builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), builder.getBasicGenerator().getRefVector2RefArray(), arg );
 						}
 					}
 					// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
