@@ -176,6 +176,26 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 
 }
 
+core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core::ExpressionPtr& expr) {
+	const core::TypePtr& exprTy = expr->getType();
+	if (exprTy->getNodeType() == core::NT_RefType) {
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(exprTy)->getElementType();
+
+		if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
+			core::TypePtr elemTy = core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
+			return builder.callExpr( 
+				builder.refType(elemTy), 
+			 	(subTy->getNodeType() == core::NT_ArrayType ? 
+				 	builder.getBasicGenerator().getArrayRefElem1D() : 
+					builder.getBasicGenerator().getVectorRefElem()), 
+			 	expr, 
+				builder.uintLit(0)
+			);
+		}
+	}
+	return expr;
+}
+
 } // end anonymous namespace
 
 namespace insieme {
@@ -734,17 +754,7 @@ public:
 			 * C pointers)
 			 */
 			assert( base->getType()->getNodeType() == core::NT_RefType);
-
-			const core::TypePtr& subTy =
-					core::static_pointer_cast<const core::RefType>(base->getType())->getElementType();
-
-			if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
-				const core::SingleElementTypePtr& vecTy =
-						core::static_pointer_cast<const core::SingleElementType>(subTy);
-				base = builder.callExpr(
-						builder.refType(vecTy->getElementType()), gen.getArrayRefElem1D(), base, builder.uintLit(0)
-					);
-			}
+			base = getCArrayElemRef(builder, base);
 		}
 
 		core::IdentifierPtr ident = builder.identifier(membExpr->getMemberDecl()->getNameAsString());
@@ -1035,15 +1045,11 @@ public:
 		case UO_Deref: {
 			assert(subExpr->getType()->getNodeType() == core::NT_RefType &&
 					"Impossible to apply * operator to an R-Value");
+			
 			const core::TypePtr& subTy =
 					core::static_pointer_cast<const core::RefType>(subExpr->getType())->getElementType();
 			if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
-				const core::TypePtr& subVecTy =
-						core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
-
-				subExpr = builder.callExpr(
-					builder.refType(subVecTy), gen.getArrayRefElem1D(), subExpr, builder.literal("0", gen.getUInt4())
-				);
+				subExpr = getCArrayElemRef(builder, subExpr);
 			} else {
 				subExpr = convFact.tryDeref(subExpr);
 			}
@@ -1167,7 +1173,8 @@ public:
 					 refSubTy->getElementType()->getNodeType() == core::NT_ArrayType) &&
 					"Base expression of array subscript is not a vector/array type.");
 
-			op = gen.getArrayRefElem1D();
+			op =  refSubTy->getElementType()->getNodeType() ? gen.getArrayRefElem1D() : gen.getVectorRefElem();
+
 			opType = convFact.builder.refType(
 				core::static_pointer_cast<const core::SingleElementType>(refSubTy->getElementType())->getElementType()
 			);

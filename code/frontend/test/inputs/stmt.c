@@ -363,7 +363,7 @@ void vector_stmt_test() {
 	b[1][1] = 0;
 
 	#pragma test \
-	"fun(ref<array<array<int<4>,1>,1>> v2){ }(v1)"
+	"fun(ref<array<array<int<4>,1>,1>> v2){ }(ref.vector.to.ref.array(v1))"
 	evil(b);
 }
 
