@@ -41,11 +41,12 @@
 
 #include "data_item.h" 
 
+#include "irt_atomic.h"
 #include "utils/lookup_tables.h"
 
 IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 
-static inline irt_data_item* _irt_di_get(uint16 dimensions) {
+static inline irt_data_item* _irt_di_new(uint16 dimensions) {
 	char* retval = (char*)malloc(sizeof(irt_data_item) + sizeof(irt_data_range)*dimensions);
 	((irt_data_item*)retval)->ranges = (irt_data_range*)(retval + sizeof(irt_data_item));
 	return (irt_data_item*)retval;
@@ -54,12 +55,12 @@ static inline void _irt_di_recycle(irt_data_item* di) {
 	free(di);
 }
 static inline void _irt_di_dec_use_count(irt_data_item* di) {
-	if(--di->use_count == 0) _irt_di_recycle(di); // FIXME atomic operation
+	if(irt_atomic_sub_and_fetch(&di->use_count, 1) == 0) _irt_di_recycle(di);
 }
 
 
 irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range* ranges) {
-	irt_data_item* retval = _irt_di_get(dimensions);
+	irt_data_item* retval = _irt_di_new(dimensions);
 	retval->type_id = tid; 
 	retval->dimensions = dimensions;
 	retval->id = irt_generate_data_item_id();
@@ -72,7 +73,7 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	return retval;
 }
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) {
-	irt_data_item* retval = _irt_di_get(parent->dimensions);
+	irt_data_item* retval = _irt_di_new(parent->dimensions);
 	memcpy(retval, parent, sizeof(irt_data_item));
 	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*parent->dimensions);
 	irt_data_item_table_insert(retval);

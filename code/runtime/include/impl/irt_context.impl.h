@@ -38,11 +38,16 @@
 
 #include "irt_context.h"
 
+#include "utils/lookup_tables.h"
+
+IRT_DEFINE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
+
 irt_context* irt_context_create(irt_client_app* app) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id();
 	context->client_app = app;
 	context->client_app->init_context(context);
+	irt_context_table_insert(context);
 	return context;
 }
 

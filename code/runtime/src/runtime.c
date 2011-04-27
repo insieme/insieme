@@ -37,18 +37,21 @@
 #include "declarations.h"
 
 #include <mqueue.h>
+#include <unistd.h>
 
 #include "impl/client_app.impl.h"
 #include "impl/irt_context.impl.h"
 #include "impl/error_handling.impl.h"
 #include "impl/worker.impl.h"
 #include "impl/irt_mqueue.impl.h"
+#include "impl/data_item.impl.h"
 
+#include "utils/lookup_tables.h"
 
 // error handling
 void irt_error_handler(int signal) {
 	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
-	fprintf(stderr, "Insieme Runtime Error recieved: %s\n", irt_errcode_string(error->errcode));
+	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", pthread_self(), irt_errcode_string(error->errcode));
 	fprintf(stderr, "Additional information:\n");
 	irt_print_error_info(stderr, error);
 	exit(-error->errcode);
@@ -59,14 +62,28 @@ pthread_key_t irt_g_error_key;
 pthread_key_t irt_g_worker_key;
 mqd_t irt_g_message_queue;
 
+IRT_CREATE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
+IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
+
 void irt_init_globals() {
 	// not using IRT_ASSERT since environment is not yet set up
 	assert(pthread_key_create(&irt_g_error_key, NULL) == 0);
 	assert(pthread_key_create(&irt_g_worker_key, NULL) == 0);
 	irt_mqueue_init();
+	irt_data_item_table_init();
+	irt_context_table_init();
 }
 void irt_cleanup_globals() {
 	irt_mqueue_cleanup();
+}
+
+// exit handling
+void irt_term_handler(int signal) {
+	exit(0);
+}
+void irt_exit_handler() {
+	irt_cleanup_globals();
+	printf("\nInsieme runtime exiting.\n");
 }
 
 int main(int argc, char** argv) {
@@ -75,22 +92,20 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	// initialize error signal handler
+	// initialize error and termination signal handlers
 	signal(IRT_SIG_ERR, &irt_error_handler);
+	signal(SIGTERM, &irt_term_handler);
+	signal(SIGINT, &irt_term_handler);
+	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
 
 	static const uint32 work_count = 8;
 	irt_worker* workers[work_count];
 	for(int i=0; i<work_count; ++i) {
-		workers[i] = irt_create_worker(~0, i);
+		workers[i] = irt_worker_create(~0, i);
 	}
+	irt_mqueue_send_new_app(argv[1]);
 
-	//irt_client_app* client_app = irt_client_app_create(argv[1]);
-	//irt_context* prog_context = irt_context_create(client_app);
-
-	irt_cleanup_globals();
-	return 0;
+	for(;;) { sleep(60*60); }
 }
-
-

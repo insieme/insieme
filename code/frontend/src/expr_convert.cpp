@@ -494,17 +494,35 @@ public:
 			ExpressionList args;
 			for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
 				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-				if ( argId < funcTy->getArgumentTypes().size() &&
-						funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType ) {
-					if ( arg->getType()->getNodeType() != core::NT_RefType ) {
+				core::TypePtr&& argTy = arg->getType();
+				if ( argId < funcTy->getArgumentTypes().size() ) {
+					const core::TypePtr& funcArgTy = funcTy->getArgumentTypes()[argId];
+					if ( funcArgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
+						// the function requires an non-ref type while the current argument is of ref-type
+						arg = builder.deref( arg );
+					}
+					if ( funcArgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType ) {
+						// The function requires a refType and the current argument is of non-ref type
 						if ( builder.getBasicGenerator().isString(arg->getType()) ) {
+							// If the argument is a string then we have to convert the string into a char pointer
+							// because of C semantics 
 							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
 						} else {
 							arg = builder.refVar(arg);
 						}
 					}
-				} else {
-					arg = convFact.tryDeref(arg);
+					if( funcArgTy->getNodeType() == core::NT_RefType) {
+						// we are sure at this point the type of arg is of ref-type as well
+						const core::TypePtr& elemTy = static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
+						const core::TypePtr& argSubTy = static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
+						if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
+							// we are in the situation where a function receiving a ref<array> gets in input a
+							// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
+							arg = builder.callExpr( funcArgTy, builder.getBasicGenerator().getRefVector2RefArray(), arg);
+						}
+					}
+					LOG(ERROR) << *funcArgTy << " " << *arg->getType();
+					// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
 				}
 				args.push_back( arg );
 			}

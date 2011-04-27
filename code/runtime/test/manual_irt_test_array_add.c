@@ -103,7 +103,7 @@ void insieme_init_context(irt_context* context) {
 	context->impl_table = g_insieme_impl_table;
 }
 
-void insieme_cleanup_context() {
+void insieme_cleanup_context(irt_context* context) {
 	// nothing
 }
 
@@ -115,7 +115,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_data_item* outputdata = irt_di_create(INSIEME_INT_T_INDEX, 1, &fullrange);
 
 	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
-	irt_work_item* addition_wi = irt_wi_create((irt_work_item_range*)&fullrange, INSIEME_ADD_WI_INDEX, (irt_lw_data_item*)&addition_params);
+	irt_work_item* addition_wi = irt_wi_create(*(irt_work_item_range*)&fullrange, INSIEME_ADD_WI_INDEX, (irt_lw_data_item*)&addition_params);
 	irt_wi_enqueue(addition_wi);
 
 	irt_di_destroy(inputdata);
