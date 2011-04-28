@@ -216,7 +216,8 @@ namespace {
 
 		// check user-specified return type - only when compiled in debug mode
 		// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
-		assert(checkType(resultType, functionExpr, arguments) && "Incorrect user-specified return type!");
+		// TODO: make this check faster
+//		assert(checkType(resultType, functionExpr, arguments) && "Incorrect user-specified return type!");
 
 		// create calling expression
 		return builder.callExpr(resultType, functionExpr, arguments);
