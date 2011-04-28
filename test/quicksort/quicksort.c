@@ -40,7 +40,7 @@ void reverseIt(int a[], int S, int E) {
 		swapIt(&a[S+i], &a[E-i-1]);
 }
 
-#define N 1000000
+#define N 20000
 int main(int argc, char* argv[]) {
 
 	int* a = malloc(N*sizeof(int));
@@ -53,6 +53,9 @@ int main(int argc, char* argv[]) {
 		sortIt(a,0,N);
 		// printArray(a,N);
 		reverseIt(a,0,N);
+		// printArray(a,N);
+		sortIt(a,0,N);
+		printf("a[N/2] == %d\n", a[N/2]);
 	}
 	free(a);
 	return 0;
