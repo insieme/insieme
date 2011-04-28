@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
 				errors = check(program, insieme::core::checks::getFullCheck());
 				std::sort(errors.begin(), errors.end());
 				for_each(errors, [](const Message& cur) {
-					LOG(INFO) << cur << std::endl;
+					LOG(INFO) << cur;
 					NodeAddress address = cur.getAddress();
 					stringstream ss;
 					unsigned contextSize = 1;
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
 						NodePtr context = address.getParentNode(min((unsigned)contextSize, address.getDepth()-contextSize));
 						ss << insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
 					} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
-					LOG(INFO) << "\t Context: " << ss.str();
+					LOG(INFO) << "\t Context: " << ss.str() << std::endl;
 				});
 				timer.stop();
 				LOG(INFO) << timer;
