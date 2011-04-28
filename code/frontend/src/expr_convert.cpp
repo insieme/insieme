@@ -497,6 +497,48 @@ public:
 		return retExpr;
 	}
 
+private:
+	ExpressionList getFunctionArguments(const core::ASTBuilder& builder, clang::CallExpr* callExpr, const core::FunctionTypePtr& funcTy) {
+		ExpressionList args;
+		for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
+			core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+			core::TypePtr&& argTy = arg->getType();
+			if ( argId < funcTy->getArgumentTypes().size() ) {
+				const core::TypePtr& funcArgTy = funcTy->getArgumentTypes()[argId];
+				if ( funcArgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
+					// the function requires an non-ref type while the current argument is of ref-type
+					arg = builder.deref( arg );
+				}
+				if ( funcArgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType ) {
+					// The function requires a refType and the current argument is of non-ref type
+					if ( builder.getBasicGenerator().isString(arg->getType()) ) {
+						// If the argument is a string then we have to convert the string into a char pointer
+						// because of C semantics 
+						arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
+					} else {
+						arg = builder.refVar(arg);
+					}
+				}
+				if( funcArgTy->getNodeType() == core::NT_RefType) {
+					// we are sure at this point the type of arg is of ref-type as well
+					const core::TypePtr& elemTy = core::static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
+					const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
+					if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
+						// we are in the situation where a function receiving a ref<array> gets in input a
+						// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
+						const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
+						arg = builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), builder.getBasicGenerator().getRefVector2RefArray(), arg );
+					}
+				}
+				// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
+				// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
+			}
+			args.push_back( arg );
+		}
+		return args;
+	}
+
+public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							FUNCTION CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -512,43 +554,8 @@ public:
 				core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 			// collects the type of each argument of the expression
-			ExpressionList args;
-			for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
-				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-				core::TypePtr&& argTy = arg->getType();
-				if ( argId < funcTy->getArgumentTypes().size() ) {
-					const core::TypePtr& funcArgTy = funcTy->getArgumentTypes()[argId];
-					if ( funcArgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
-						// the function requires an non-ref type while the current argument is of ref-type
-						arg = builder.deref( arg );
-					}
-					if ( funcArgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType ) {
-						// The function requires a refType and the current argument is of non-ref type
-						if ( builder.getBasicGenerator().isString(arg->getType()) ) {
-							// If the argument is a string then we have to convert the string into a char pointer
-							// because of C semantics 
-							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
-						} else {
-							arg = builder.refVar(arg);
-						}
-					}
-					if( funcArgTy->getNodeType() == core::NT_RefType) {
-						// we are sure at this point the type of arg is of ref-type as well
-						const core::TypePtr& elemTy = core::static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
-						const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
-						if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
-							// we are in the situation where a function receiving a ref<array> gets in input a
-							// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
-							const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
-							arg = builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), builder.getBasicGenerator().getRefVector2RefArray(), arg );
-						}
-					}
-					// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
-					// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
-				}
-				args.push_back( arg );
-			}
-
+			ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+			
 			const TranslationUnit* oldTU = convFact.currTU;
 			const FunctionDecl* definition = NULL;
 			/*
@@ -669,32 +676,14 @@ public:
 		}
 		if ( callExpr->getCallee() ) {
 			core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
-			const core::TypePtr& subTy = funcPtr->getType();
+			core::TypePtr subTy = funcPtr->getType();
 			if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
-				const core::TypePtr& subVecTy =
-						core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
-
-				funcPtr = builder.callExpr( subVecTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
+				subTy = core::static_pointer_cast<const core::SingleElementType>( subTy )->getElementType();
+				funcPtr = builder.callExpr( subTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
 			}
-
-			ExpressionList args;
-			core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( funcPtr->getType() );
-			for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
-				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-				if ( argId < funcTy->getArgumentTypes().size() &&
-						funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType ) {
-					if ( arg->getType()->getNodeType() != core::NT_RefType ) {
-						if ( builder.getBasicGenerator().isString(arg->getType()) ) {
-							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
-						} else {
-							arg = builder.refVar(arg);
-						}
-					}
-				} else {
-					arg = convFact.tryDeref(arg);
-				}
-				args.push_back( arg );
-			}
+			assert(subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
+			const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
+			ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 			return  builder.callExpr( funcPtr, args );
 		}
 		assert(false && "Call expression not referring a function");
