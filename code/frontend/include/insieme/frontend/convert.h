@@ -42,6 +42,8 @@
 #include "insieme/frontend/pragma_handler.h"
 #include "insieme/utils/map_utils.h"
 
+#include <functional>
+
 // Forward declarations
 namespace clang {
 class ASTContext;
@@ -310,8 +312,17 @@ public:
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
 
-	//typedef std::function<NodePtr (core::NodeManager&, const clang::FunctionDecl*)> CustomFunctionHandler;
-	//void registerFunctionHandler(CustomFunctionHandler& handler);
+	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;
+	/**
+	 * Registers a handler for call expressions. When a call expression to the provided function declaration 
+	 * is encountered by the frontend, the provided handler is invoked. The handler produces an IR expression
+	 * which will be used to replace the call expression in the generated IR program
+	*/
+	// void registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler);
+
+// private:
+//	typedef std::map<const clang::FunctionDecl*, CustomFunctionHandler> CallExprHandlerMap;
+//	CallExprHandlerMap callExprHanlders;
 };
 
 struct GlobalVariableDeclarationException: public std::runtime_error {

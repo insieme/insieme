@@ -546,6 +546,9 @@ public:
 		START_LOG_EXPR_CONVERSION(callExpr);
 		const core::ASTBuilder& builder = convFact.builder;
 
+		// return converted node
+		core::ExpressionPtr irNode;
+
 		if ( callExpr->getDirectCallee() ) {
 
 			FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee());
@@ -668,13 +671,9 @@ public:
 			core::ExpressionPtr lambdaExpr =
 					core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(definition) );
 			convFact.currTU = oldTU;
+			irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
-			core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
-			// handle eventual pragmas attached to the Clang node
-			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
-			return annotatedNode;
-		}
-		if ( callExpr->getCallee() ) {
+		} else if ( callExpr->getCallee() ) {
 			core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
 			core::TypePtr subTy = funcPtr->getType();
 			if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
@@ -684,9 +683,15 @@ public:
 			assert(subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
 			const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
 			ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
-			return  builder.callExpr( funcPtr, args );
+			irNode = builder.callExpr( funcPtr, args );
+
+		} else {
+			assert(false && "Call expression not referring a function");
 		}
-		assert(false && "Call expression not referring a function");
+		assert(irNode && "CallExpr has not been correctly converted into an IR Expression.");
+		// handle eventual pragmas attached to the Clang node
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

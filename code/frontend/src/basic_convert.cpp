@@ -169,6 +169,14 @@ core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr)
 	return expr;
 }
 
+/*  
+ *  Register call expression handlers to be used during the clang to IR conversion
+ */
+//void ConversionFactory::registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler) {
+//	auto it = callExprHanlders.insert( std::make_pair(funcDecl, handler) );
+//	assert( !it.second && "Handler for function declaration already registered." );
+//}
+
 /* Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
  * 	-> OpenCL address spaces
  */

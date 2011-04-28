@@ -78,6 +78,11 @@ def run_test_case(test_case_name):
 	refC    = test_case_name + '.insieme.c.ref'
 	# name of the file containing the generated C output for the current test
 	testC   = test_case_name + '.insieme.c'
+	# name of the file containing the reference dot dump of the CFG
+	refCfg  = test_case_name + '.cfg.ref'
+	# name of the file containing the generated dot dump of the CFG
+	testCfg  = test_case_name + '.cfg'
+
 
 	inputs = test_case_name + '.c'
 	if os.path.exists(test_case_name + '/inputs.data'):
@@ -98,15 +103,16 @@ def run_test_case(test_case_name):
 	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
 	os.chdir(test_case_name)
 	# RUN insieme to generate the IR dump and C output
-	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} -o {C_DUMP} {FLAGS}".format(
-						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 'FLAGS':insiemeFlags}) 
-					)
+	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} -o {C_DUMP} {FLAGS}".format(
+						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 
+						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg}) 
+				 )
 	if check_for_error(test_case_name, ret):
 		os.chdir("../")
 		return 1
 
 	runTests = 0
-	if (not os.path.exists(refIr)) & os.path.exists(testIr):
+	if (not os.path.exists(refIr)) and os.path.exists(testIr):
 	  shutil.copyfile(testIr, refIr)
 	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 	  
@@ -119,7 +125,18 @@ def run_test_case(test_case_name):
 		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
 		runTests = 1 # => file comparison failed, but program might still be OK
 
-	if (not os.path.exists(refC)) & os.path.exists(testC):
+	if not os.path.exists(refCfg) and os.path.exists(testCfg):
+	  shutil.copyfile(testCfg, refCfg)
+	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+
+	sys.stderr.write(" * Comparing generated CFG...            ")
+	if check_diff(test_case_name, refCfg, testCfg):
+		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+	else:
+		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
+		runTests = 1 # => file comparison failed, but program might still be OK
+
+	if not os.path.exists(refC) and os.path.exists(testC):
 	  shutil.copyfile(testC, refC)
 	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 	  
