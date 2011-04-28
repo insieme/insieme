@@ -1,4 +1,5 @@
 #include<stdio.h>
+#include <stdlib.h>
 
 void swapIt(int *a, int *b) {
 
@@ -34,14 +35,25 @@ void printArray(int a[], int size) {
 	printf("\n");
 }
 
+void reverseIt(int a[], int S, int E) {
+	for(int i=0; i<(E-S)/2; ++i)
+		swapIt(&a[S+i], &a[E-i-1]);
+}
 
+#define N 1000000
 int main(int argc, char* argv[]) {
 
-	int a[]={23,2,1,7,8,15,5,3,11,10};
+	int* a = malloc(N*sizeof(int));
 
-	printArray(a,10);
-	sortIt(a,0,10);
-	printArray(a,10);
+	for(int iter=0; iter<10; ++iter) {
+		for(int i=0;i<N;i++) 
+			a[i] = rand()%N;
 
+		// printArray(a,N);
+		sortIt(a,0,N);
+		// printArray(a,N);
+		reverseIt(a,0,N);
+	}
+	free(a);
 	return 0;
 }
