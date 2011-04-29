@@ -112,7 +112,7 @@ def run_test_case(test_case_name):
 		return 1
 
 	runTests = 0
-	if (not os.path.exists(refIr)) and os.path.exists(testIr):
+	if not os.path.exists(refIr) and os.path.exists(testIr):
 	  shutil.copyfile(testIr, refIr)
 	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 	  

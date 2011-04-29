@@ -312,6 +312,8 @@ public:
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
 
+
+	core::ExpressionPtr castToType(const core::TypePtr& trgTy, const core::ExpressionPtr& expr) const;
 	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;
 	/**
 	 * Registers a handler for call expressions. When a call expression to the provided function declaration 
