@@ -169,7 +169,7 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaDefinitionPtr& definition) 
 		string name = nameManager.getName(cur.second);
 
 		const FunctionTypePtr& funType = cur.second->getType();
-		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name);
+		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name + " ... type: " + funType->toString());
 		prototype << getSignatureOf(prototype, funType, name, typeManager) << ";\n";
 
 		this->prototypes.insert(std::make_pair(cur.second, prototype));
@@ -218,7 +218,7 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 
 
 	// create function code for lambda
-	CodeFragmentPtr function = CodeFragment::createNew("Definition of " + name);
+	CodeFragmentPtr function = CodeFragment::createNew("Definition of " + name + " ... type: " + funType->toString());
 
 	// allows derived function managers to insert a function prefix
 	addFunctionPrefix(function, lambda);

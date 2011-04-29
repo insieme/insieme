@@ -613,7 +613,7 @@ TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
 
 	NodeManager& manager = funType->getNodeManager();
 
-	// try unifying the argument types
+	// try deducing variable instantiations the argument types
 	auto varInstantiation = analysis::getTypeVariableInstantiation(manager, funType->getArgumentTypes(), argumentTypes);
 
 	// check whether derivation was successful

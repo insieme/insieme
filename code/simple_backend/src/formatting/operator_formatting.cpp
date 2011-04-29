@@ -156,6 +156,10 @@ namespace formatting {
 				const TypePtr& element = static_pointer_cast<const core::ArrayType>(vector)->getElementType();
 				const TypePtr array = builder.arrayType(element);
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
+
+				OUT("/*");
+				OUT(toString(*array));
+				OUT("*/");
 				OUT("&((");
 				OUT(name);
 				OUT("){&(*");
@@ -242,6 +246,11 @@ namespace formatting {
 				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
 				if (isRef) OUT(")");
 		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getVectorRefElem(), false, {
+				OUT("&((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
+
 
 		ADD_FORMATTER_DETAIL(res, basic.getVectorRefProjection(), false, {
 				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
@@ -341,16 +350,17 @@ namespace formatting {
 
 
 		// string conversion
-		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { OUT("&("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, {
 
+				core::ASTBuilder builder(CONTEXT.getNodeManager());
+				TypePtr array = builder.arrayType(CONTEXT.getLangBasic().getChar());
 
-//		ADD_FORMATTER(res, basic.getIfThenElse(), {
-//					OUT("("); VISIT_ARG(0); OUT(")?(");
-//					STMT_CONVERTER.convert(evalLazy(ARG(1)));
-//					OUT("):(");
-//					STMT_CONVERTER.convert(evalLazy(ARG(2)));
-//					OUT(")");
-//		});
+				OUT("&((");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, array, true));
+				OUT("){");
+				VISIT_ARG(0);
+				OUT("})");
+		});
 
 		ADD_FORMATTER(res, extended.lazyITE, {
 					OUT("("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT(")");

@@ -39,6 +39,7 @@
 
 #include "insieme/utils/container_utils.h"
 
+
 // ---------------------------------------------- Utility Functions ------------------------------------
 
 using namespace insieme::core;
@@ -46,6 +47,11 @@ using namespace insieme::core;
 
 namespace insieme {
 namespace core {
+
+	/**
+	 * Defining the equality ID generator.
+	 */
+	utils::SimpleIDGenerator<Node::EqualityID> Node::equalityClassIDGenerator;
 
 	const Node::ChildList& Node::getChildList() const {
 		if (!children) {
@@ -70,6 +76,9 @@ namespace core {
 
 		// update manager
 		res->manager = &manager;
+
+		// update equality ID
+		res->equalityID = equalityID;
 
 		// copy annotations
 		res->setAnnotations(getAnnotations());

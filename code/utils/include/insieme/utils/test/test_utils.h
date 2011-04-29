@@ -103,6 +103,20 @@ namespace test {
 			return out << name;
 		}
 
+		/**
+		 * An equality operator for integration test case instances.
+		 */
+		bool operator==(const IntegrationTestCase& other) const {
+			return name == other.name;
+		}
+
+		/**
+		 * A comparison operator for integration test case instances.
+		 */
+		bool operator<(const IntegrationTestCase& other) const {
+			return name < other.name;
+		}
+
 	};
 
 	// an optional type wrapping a test case

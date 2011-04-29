@@ -172,18 +172,28 @@ namespace simple_backend {
 		// TODO: remove second clause when frontend is fixed ...
 
 		// check whether program is a main program
-		if (program->isMain() || isMainProgram(program)) {
+		if (true || program->isMain() || isMainProgram(program)) {
 
-			// create main program + argument wrapper
-
+			// create main program + argument wrapper (if necessary)
 			CodeFragmentPtr code = CodeFragment::createNew("main function");
+
+			// add argument conversion
+			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
+			if (main->getParameterList().empty()) {
+
+				// handle main with no arguments
+				code << "int main() {" << CodeBuffer::indR << "\n";
+				convert(main->getBody(), code);
+				code << CodeBuffer::indL << "\n}\n";
+
+				// make current code fragment depending on the main function
+				getCurrentCodeFragment()->addDependency(code);
+				return;
+			}
 
 			// create procedure header
 			code << "int main(int __argc, char** __argv) {" << CodeBuffer::indR << "\n";
 			code << "\n// encapsulating arguments within Insieme Types ...\n";
-
-			// add argument conversion
-			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
 
 			// declare parameter
 			const VariablePtr& argc = main->getParameterList()[0];
@@ -743,16 +753,16 @@ namespace simple_backend {
 	void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
 
 		// there is a special treatment for strings literals
-		if (ptr->getValue()[0] == '\"') {
-			// convert a string into a vector
-			NodeManager& manager = ptr->getNodeManager();
-			ASTBuilder builder(manager);
-			unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
-			TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
-
-			currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
-			return;
-		}
+//		if (ptr->getValue()[0] == '\"') {
+//			// convert a string into a vector
+//			NodeManager& manager = ptr->getNodeManager();
+//			ASTBuilder builder(manager);
+//			unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
+//			TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
+//
+//			currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
+//			return;
+//		}
 
 		// standard: just print literal
 		currentCodeFragment << ptr->getValue();

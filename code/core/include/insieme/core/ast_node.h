@@ -43,6 +43,7 @@
 #include "insieme/utils/instance_manager.h"
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/id_generator.h"
 
 #include "insieme/core/annotation.h"
 #include "insieme/core/ast_pointer.h"
@@ -272,6 +273,16 @@ public:
 private:
 
 	/**
+	 * The type used for representing equality IDs.
+	 */
+	typedef uint64_t EqualityID;
+
+	/**
+	 * A static generator for generating equality class IDs
+	 */
+	static utils::SimpleIDGenerator<EqualityID> equalityClassIDGenerator;
+
+	/**
 	 * The type of node to be represented by this instance.
 	 */
 	const NodeType nodeType;
@@ -290,6 +301,12 @@ private:
 	 * The list of child nodes referenced by this node.
 	 */
 	mutable OptionChildList children;
+
+	/**
+	 * The ID of the equality class of this node. This ID is used to significantly
+	 * speed up the equality check.
+	 */
+	mutable EqualityID equalityID;
 
 	/**
 	 * Retrieves a clone of this node, hence a newly allocated instance representing the same value
@@ -322,7 +339,7 @@ protected:
 	 * @param hashCode the hash code of the new node
 	 */
 	Node(const NodeType nodeType, const NodeCategory nodeCategory, const std::size_t& hashCode) :
-		HashableImmutableData(hashCode), nodeType(nodeType), nodeCategory(nodeCategory), manager(NULL) {
+		HashableImmutableData(hashCode), nodeType(nodeType), nodeCategory(nodeCategory), manager(NULL), equalityID(0) {
 	}
 
 	/**
@@ -471,8 +488,43 @@ public:
 			return false;
 		}
 
+		// check equality ID
+		if (equalityID != 0 && other.equalityID != 0 && equalityID == other.equalityID) {
+			// just compare equality IDs (having different IDs does not mean it is different)
+			return true;
+		}
+
 		// use virtual equals method
-		return equals(other);
+		bool res = equals(other);
+
+		// infect both nodes with a new ID
+		if (res) {
+			// update equality IDs - both should have the same id
+			if (equalityID == 0 && other.equalityID == 0) {
+				// non is set yet => pick a new ID and use for both
+				equalityID = equalityClassIDGenerator.getNext();
+				other.equalityID = equalityID;
+			} else if (equalityID == 0) {
+				// other.equalityID != 0 ... update local ID with other ID
+				equalityID = other.equalityID;
+			} else if (other.equalityID == 0){
+				// equality ID != 0 ... update other ID
+				other.equalityID = equalityID;
+			} else {
+				// both are != 0
+				assert(equalityID != 0 && other.equalityID != 0 && "Equality IDs should be != 0");
+
+				// pick smaller ID for both
+				if (equalityID < other.equalityID) {
+					other.equalityID = equalityID;
+				} else {
+					equalityID = other.equalityID;
+				}
+			}
+		}
+
+		// return the comparison result.
+		return res;
 	}
 
 };
