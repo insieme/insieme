@@ -290,12 +290,18 @@ namespace {
 			}
 		}
 
+		// unroll recursive types if necessary
+		if (exprType->getNodeType() == NT_RecType) {
+			exprType = static_pointer_cast<const RecType>(exprType)->unroll();
+		}
+
 		// check whether it is a composite type
 		const NamedCompositeTypePtr compositeType = dynamic_pointer_cast<const NamedCompositeType>(exprType);
 		if (!compositeType) {
 			add(res, Message(address,
 					EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE,
-					format("Cannot access member of non-named-composed type %s of type %s",
+					format("Cannot access member '%s' of non-named-composed type %s of type %s",
+							toString(*identifier).c_str(),
 							toString(*structExpr).c_str(),
 							toString(*exprType).c_str()),
 					Message::ERROR));
