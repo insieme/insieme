@@ -270,7 +270,7 @@ namespace transform {
 
 				// apply match on parameter list
 				core::TypeList newParamTypes = paramTypes;
-				for (std::size_t i=0; i<paramTypes.size(); i++) {
+				for (std::size_t i=0; i<newParamTypes.size(); i++) {
 					newParamTypes[i] = instantiation->applyTo(manager, newParamTypes[i]);
 				}
 
@@ -278,13 +278,14 @@ namespace transform {
 				bool changed = false;
 				core::ExpressionList newArgs = call->getArguments();
 				for (unsigned i=0; i<size; i++) {
+
 					// ignore identical types
-					if (*paramTypes[i] == *argTypes[i]) {
+					if (*newParamTypes[i] == *argTypes[i]) {
 						continue;
 					}
 
 					core::TypePtr argType = argTypes[i];
-					core::TypePtr paramType = paramTypes[i];
+					core::TypePtr paramType = newParamTypes[i];
 
 					// strip references
 					bool ref = false;
@@ -307,7 +308,7 @@ namespace transform {
 				}
 
 				// exchange parameters and done
-				return core::CallExpr::get(manager, instantiation->applyTo(call->getType()), call->getFunctionExpr(), args);
+				return core::CallExpr::get(manager, instantiation->applyTo(call->getType()), call->getFunctionExpr(), newArgs);
 			}
 
 			/**
