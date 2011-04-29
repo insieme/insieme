@@ -423,7 +423,7 @@ namespace simple_backend {
 			CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
 			visit(call->getArguments()[0]);
 		} else {
-			if (!refType) {
+			if (!core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefNew())) {
 				code << "*"; // dereference the produced value
 			}
 			visit(ptr->getInitialization());
