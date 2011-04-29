@@ -115,9 +115,7 @@ using namespace utils::log;
 
 		// preprocess program
 		NodeManager manager;
-		LOG(DEBUG) << "Before preprocessing: " << toString(core::printer::PrettyPrinter(prog));
 		core::NodePtr program = transform::preprocess(manager, prog);
-		LOG(DEBUG) << "After preprocessing: " << toString(core::printer::PrettyPrinter(program));
 
 		// convert code
 		getStmtConverter().convert(program, code);

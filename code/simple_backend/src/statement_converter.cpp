@@ -74,6 +74,29 @@ namespace simple_backend {
 	}
 
 
+	void StmtConverter::convertAsParameterToExternal(const core::ExpressionPtr& ep) {
+
+		const CodeFragmentPtr& code = getCurrentCodeFragment();
+
+		// obtain externalizing pattern
+		const string& pattern = cc.getTypeManager().getTypeInfo(code, ep->getType()).externalizingPattern;
+
+		// check pattern - is there some change necessary?
+		if (pattern == "%s") {
+			// no extra treatment required
+			this->visit(ep);
+			return;
+		}
+
+		// use a dummy code fragment to dump code
+		CodeFragmentPtr fragment = CodeFragment::createNew("");
+		this->convert(ep, fragment);
+		code << format(pattern.c_str(), fragment->getCodeBuffer().toString().c_str());
+
+		// propagate dependencies
+		code->addDependencies(fragment->getDependencies());
+	}
+
 	vector<string> StmtConverter::getHeaderDefinitions() {
 		vector<string> res;
 
@@ -400,6 +423,9 @@ namespace simple_backend {
 			CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
 			visit(call->getArguments()[0]);
 		} else {
+			if (!refType) {
+				code << "*"; // dereference the produced value
+			}
 			visit(ptr->getInitialization());
 		}
 	}
@@ -526,26 +552,10 @@ namespace simple_backend {
 		assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
 		const TypeList& params = funType->getArgumentTypes();
 
-		TypeManager& typeManager = cc.getTypeManager();
+		// create a lambda capable of externalizing arguments
 		auto parameterExternalizer = [&](const ExpressionPtr& ep) {
-
-			// obtain externalizing pattern
-			const string& pattern = typeManager.getTypeInfo(code, ep->getType()).externalizingPattern;
-
-			// check pattern - is there some change necessary?
-			if (pattern == "%s") {
-				// no extra treatment required
-				this->visit(ep);
-				return;
-			}
-
-			// use a dummy code fragment to dump code
-			CodeFragmentPtr fragment = CodeFragment::createNew("");
-			this->convert(ep, fragment);
-			code << format(pattern.c_str(), fragment->getCodeBuffer().toString().c_str());
-
-			// propagate dependencies
-			code->addDependencies(fragment->getDependencies());
+			// use member function
+			convertAsParameterToExternal(ep);
 		};
 
 		// special built in function handling
@@ -764,7 +774,12 @@ namespace simple_backend {
 //			return;
 //		}
 
-		// standard: just print literal
+		// enforce escape characters and print result
+//		string value = ptr->getValue();
+//		boost::replace_all(value, "\\", "\\\\");
+//		currentCodeFragment << value;
+
+		// just print the value represented by the literal
 		currentCodeFragment << ptr->getValue();
 	}
 
@@ -855,19 +870,23 @@ namespace simple_backend {
 			return;
 		}
 
+		// get the type of the resulting vector
+		string typeName = getConversionContext().getTypeManager().getTypeName(code, ptr->getType());
+
 		// test whether all expressions are calls to ref.var ...
-		code << "{";
+		code << "((" << typeName << "){{";
 		int i=0;
 		for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
-			if (!core::analysis::isCallOf(cur, cc.getLangBasic().getRefVar())) {
-				LOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
-				assert(false && "Vector initialization not supported for the given values!");
-			}
+//			if (!core::analysis::isCallOf(cur, cc.getLangBasic().getRefVar())) {
+//				LOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
+//				assert(false && "Vector initialization not supported for the given values!");
+//			}
 			// print argument of ref.var
-			this->visit(static_pointer_cast<const CallExpr>(cur)->getArguments()[0]);
+//			this->visit(static_pointer_cast<const CallExpr>(cur)->getArguments()[0]);
+			this->visit(cur);
 			if((++i)!=ptr->getExpressions().size()) code << ", ";
 		});
-		code << "}";
+		code << "}})";
 	}
 
 	void StmtConverter::visitMarkerExpr(const MarkerExprPtr& ptr) {

@@ -254,8 +254,8 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 						   break;
 				case '\t': str = "\\t";
 						   break;
-				default:
-					assert(false && "Missing support for escaping sequence");
+				case '\0': str = "\\0";
+						   break;
 			}
 			vals[it] = builder.literal( std::string("\'") + str + "\'", gen.getChar() );
 		}

@@ -115,6 +115,24 @@ namespace formatting {
 				OUT(")");
 		});
 
+		ADD_FORMATTER_DETAIL(res, basic.getRefToAnyRef(), false, {
+				OUT("(void*)");
+				// externalize data before being converted to a void*
+				STMT_CONVERTER.convertAsParameterToExternal(ARG(0));
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getAnyRefToRef(), false, {
+
+				// the name of the result type
+				const TypePtr& resType = CALL->getType();
+
+				OUT("(");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
+				OUT(")");
+				VISIT_ARG(0);
+		});
+
+
 		ADD_FORMATTER(res, basic.getScalarToArray(), {
 				// get name of resulting type
 				TypeManager& typeManager = CONTEXT.getTypeManager();
@@ -157,9 +175,6 @@ namespace formatting {
 				const TypePtr array = builder.arrayType(element);
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 
-				OUT("/*");
-				OUT(toString(*array));
-				OUT("*/");
 				OUT("&((");
 				OUT(name);
 				OUT("){&(*");
