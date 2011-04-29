@@ -35,6 +35,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <sstream>
 
 #include "insieme/frontend/frontend.h"
 
@@ -43,6 +44,8 @@
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ast_builder.h"
+
+#include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/utils/test/test_utils.h"
 #include "insieme/utils/cmd_line_utils.h"
@@ -77,10 +80,7 @@ namespace {
 		}
 
 		// not loaded yet => load and cache code
-		insieme::utils::Timer timer("Loading TestCase " + testCase.getName());
 		core::ProgramPtr code = frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
-		timer.stop();
-		std::cout << timer;
 
 		loadedCodes.insert(std::make_pair(testCase, code));
 		return manager.get(code);
@@ -110,42 +110,42 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 	utils::test::IntegrationTestCase testCase = GetParam();
 
 
-	// load the code using the frontend
-	std::cout << "Loading the first time ..." << std::endl;
-	insieme::utils::Timer firstLoad("First Load ...");
-	core::ProgramPtr code = load(manager, testCase);
-	firstLoad.stop();
-	std::cout << firstLoad;
-
-	std::cout << "Loading the second time ..." << std::endl;
-	insieme::utils::Timer secondLoad("Second Load ...");
-	core::ProgramPtr code2 = load(manager, testCase);
-	secondLoad.stop();
-	std::cout << secondLoad;
-
-	NodeManager manager2;
-	std::cout << "Copying tree from one manager to another ..." << std::endl;
-	insieme::utils::Timer copyTimer("Copying between Manager ...");
-	core::ProgramPtr code3 = manager2.get(code2);
-	copyTimer.stop();
-	std::cout << copyTimer;
-
-
-	// check presents ...
-	std::cout << "Looking up same tree of different manager ..." << std::endl;
-	insieme::utils::Timer lookup1("Lookup non-local ...");
-	core::ProgramPtr code4 = manager2.get(code2);
-	lookup1.stop();
-	std::cout << lookup1;
-
-	std::cout << "Looking up same tree of same manager ..." << std::endl;
-	insieme::utils::Timer lookup2("Lookup local ...");
-	core::ProgramPtr code5 = manager2.get(code3);
-	lookup2.stop();
-	std::cout << lookup2;
-
-
-	std::cout << "Done" << std::endl;
+//	// load the code using the frontend
+//	std::cout << "Loading the first time ..." << std::endl;
+//	insieme::utils::Timer firstLoad("First Load ...");
+//	core::ProgramPtr code = load(manager, testCase);
+//	firstLoad.stop();
+//	std::cout << firstLoad;
+//
+//	std::cout << "Loading the second time ..." << std::endl;
+//	insieme::utils::Timer secondLoad("Second Load ...");
+//	core::ProgramPtr code2 = load(manager, testCase);
+//	secondLoad.stop();
+//	std::cout << secondLoad;
+//
+//	NodeManager manager2;
+//	std::cout << "Copying tree from one manager to another ..." << std::endl;
+//	insieme::utils::Timer copyTimer("Copying between Manager ...");
+//	core::ProgramPtr code3 = manager2.get(code2);
+//	copyTimer.stop();
+//	std::cout << copyTimer;
+//
+//
+//	// check presents ...
+//	std::cout << "Looking up same tree of different manager ..." << std::endl;
+//	insieme::utils::Timer lookup1("Lookup non-local ...");
+//	core::ProgramPtr code4 = manager2.get(code2);
+//	lookup1.stop();
+//	std::cout << lookup1;
+//
+//	std::cout << "Looking up same tree of same manager ..." << std::endl;
+//	insieme::utils::Timer lookup2("Lookup local ...");
+//	core::ProgramPtr code5 = manager2.get(code3);
+//	lookup2.stop();
+//	std::cout << lookup2;
+//
+//
+//	std::cout << "Done" << std::endl;
 
 //	// and now, apply the check
 //	core::visitAll(code, core::makeLambdaPtrVisitor([&](const NodePtr& cur){
@@ -165,4 +165,53 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
 
+
+// ---------------------------------- Check the frontend -------------------------------------
+
+// the type definition (specifying the parameter type)
+class FrontendIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(FrontendIntegrationTest, SemanticChecks) {
+	core::NodeManager manager;
+
+	// disable logger output
+	Logger::get(std::cerr, ERROR, 0);
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+
+
+	// load the code using the frontend
+	core::ProgramPtr code = load(manager, testCase);
+
+	// run semantic checks on loaded program
+	auto errors = core::check(code, core::checks::getFullCheck());
+
+	EXPECT_EQ(0, errors.size());
+	if (!errors.empty()) {
+		for_each(errors, [](const Message& cur) {
+			LOG(INFO) << cur;
+			NodeAddress address = cur.getAddress();
+			std::stringstream ss;
+			unsigned contextSize = 1;
+			do {
+				ss.str("");
+				ss.clear();
+
+				unsigned up = contextSize;
+				if (contextSize > address.getDepth()) {
+					up = address.getDepth();
+				}
+				NodePtr context = address.getParentNode(up);
+				ss << insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+			} while(ss.str().length() < 50 && contextSize++ < 5);
+			LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+		});
+	}
+
+}
+
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 }

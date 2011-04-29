@@ -488,7 +488,10 @@ namespace simple_backend {
 	void StmtConverter::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 		const CodeFragmentPtr& code = currentCodeFragment;
 
-		if(ptr->getStatements().size() > 0) {
+		if (ptr->getStatements().size() ==1) {
+			this->visit(ptr->getStatements()[0]);
+			code << ";";
+		} else if(ptr->getStatements().size() > 1) {
 			code << "{" << CodeBuffer::indR << "\n";
 			for_each(ptr->getChildList(), [&](const NodePtr& cur) {
 				this->visit(cur);
