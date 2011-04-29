@@ -138,13 +138,13 @@ class Compiler {
 private:
 //    class OclVisitor;
 
-    core::ProgramPtr mProgram;
+    core::ProgramPtr& mProgram;
     core::ASTBuilder builder;
  //   core::ASTVisitor visitor;
 
 
 public:
-    Compiler(const core::ProgramPtr& program, core::NodeManager& mgr) : mProgram(program), builder(mgr) {}
+    Compiler(core::ProgramPtr& program, core::NodeManager& mgr) : mProgram(program), builder(mgr) {}
 
     core::ProgramPtr lookForOclAnnotations();
 

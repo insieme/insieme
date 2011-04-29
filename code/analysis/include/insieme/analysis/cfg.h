@@ -217,6 +217,16 @@ public:
 			const cfg::Block* CFG::NodeProperty::* 
 		>::const_type	ConstNodePropertyMapTy;
 
+	typedef typename 
+		boost::property_map<
+			CFG::ControlFlowGraph, boost::vertex_index_t
+		>::type 		BlockIDPropertyMapTy;
+
+	typedef typename 
+		boost::property_map<
+			CFG::ControlFlowGraph, boost::vertex_index_t
+		>::const_type 	ConstBlockIDPropertyMapTy;
+
 	// EdgePropertyMap: maps a boost::edge_descriptor to a cfg::Edge 
 	typedef typename 
 		boost::property_map< 
@@ -331,6 +341,11 @@ public:
 	const cfg::Block& getBlock(const VertexTy& vertexId) const {
 		ConstNodePropertyMapTy&& nodeMap = get(&NodeProperty::block, graph);
 		return *nodeMap[vertexId];
+	}
+
+	const size_t& getBlockID(const VertexTy& vertexId) const {
+		ConstBlockIDPropertyMapTy&& idMap = get(boost::vertex_index, graph);
+		return get(idMap, vertexId);
 	}
 
 	EdgeTy addEdge(const VertexTy& src, const VertexTy& dest, const cfg::Edge& edge = cfg::Edge());

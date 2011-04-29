@@ -215,7 +215,7 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						INCOMPLETE ARRAT TYPE
+	//						INCOMPLETE ARRAY TYPE
 	// This method handles C arrays with an unspecified size. For example
 	// 'int A[]' has an IncompleteArrayType where the element type is 'int'
 	// and the size is unspecified.
@@ -244,7 +244,7 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							VARIABLE ARRAT TYPE
+	//							VARIABLE ARRAY TYPE
 	// This class represents C arrays with a specified size which is not an
 	// integer-constant-expression. For example, 'int s[x+foo()]'. Since the
 	// size expression is an arbitrary expression, we store it as such.
@@ -621,7 +621,7 @@ public:
 		// ~~~~~ Handling of special cases ~~~~~~~
 		// void* -> array<'a>
 		if( convFact.mgr.basic.isUnit(subTy) ) {
-			subTy = convFact.mgr.basic.getAlpha();
+			return convFact.mgr.basic.getAnyRef();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::TypePtr&& retTy = convFact.builder.arrayType( subTy );
