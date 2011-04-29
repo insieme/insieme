@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 	char a1 = 'a';
 
 	// single / multidimensional C-arrays
-	char b1[5] = "Hallo";
+	char b1[6] = "Hallo";
 	char b2[5][3] = {"X", "Y", "Z" };
 	char b3[5][3][2];
 	//char b3[5][3][2] = { {"X", "Y", "Z" } };

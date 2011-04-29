@@ -68,6 +68,15 @@ void basic_type_test() {
 
 	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({ref.var({ref.var(cast<real<4>>(0))}),ref.var({ref.var(cast<real<4>>(0))})})"
 	float vvvv[][1] = { {0}, {0} };
+
+	#pragma test "ref<array<int<4>,1>> v1 = null"	
+	int* b1 = 0;
+
+	#pragma test "ref<array<array<array<int<4>,1>,1>,1>> v1 = null"
+	int*** c1 = 0;
+
+	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
+	//char str[10] = "Hello Mum";
 }
 
 // Simple struct
@@ -165,6 +174,8 @@ int mem_alloc() {
 
 	#pragma test "ref<array<int<4>,1>> v1 = ref.new(array.create.1D(undefined(int<4>), uint.div(4, sizeof(int<4>))))"
 	int* a = malloc(4);
+
+
 }
 
 enum E{ ON, OFF=10 };
