@@ -375,7 +375,7 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test \
-	"( *([( var(1)), ( var(2)), ( var(3))][CAST<uint<4>>(1)]))"
+	"([1, 2, 3][CAST<uint<4>>(1)])"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;
