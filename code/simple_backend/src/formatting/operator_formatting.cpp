@@ -146,7 +146,7 @@ namespace formatting {
 				OUT(",{1}})");
 		});
 
-		ADD_FORMATTER(res, basic.getVector2Array(), {
+		ADD_FORMATTER(res, basic.getVectorToArray(), {
 				// get name of resulting type
 				TypeManager& typeManager = CONTEXT.getTypeManager();
 
@@ -163,7 +163,7 @@ namespace formatting {
 				OUT(").data,{1}})");
 		});
 
-		ADD_FORMATTER(res, basic.getRefVector2RefArray(), {
+		ADD_FORMATTER(res, basic.getRefVectorToRefArray(), {
 				// get name of resulting type
 				TypeManager& typeManager = CONTEXT.getTypeManager();
 
@@ -284,6 +284,8 @@ namespace formatting {
 				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
 		});
 		ADD_FORMATTER(res, basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
+
+		ADD_FORMATTER(res, basic.getBoolToInt(), { VISIT_ARG(0); });
 
 		ADD_FORMATTER(res, basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
