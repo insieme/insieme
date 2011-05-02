@@ -149,7 +149,9 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 
 			if ( lit->getValue() == "malloc" || lit->getValue() == "calloc" ) {
                 assert(((lit->getValue() == "malloc" && callExpr->getArguments().size() == 1) || 
-						(lit->getValue() == "calloc" && callExpr->getArguments().size() == 2)) && "malloc() and calloc() takes respectively 1 and 2 arguments");
+						(lit->getValue() == "calloc" && callExpr->getArguments().size() == 2)) && 
+							"malloc() and calloc() takes respectively 1 and 2 arguments"
+					  );
 
 				const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
@@ -204,6 +206,13 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	if(gen.isVarList( trgTy ) || (*trgTy == *argTy) ) {
 		return expr;
 	}
+	// in the case of FuncType check against the return type
+	if( argTy->getNodeType() == core::NT_FunctionType && 
+			*core::static_pointer_cast<const core::FunctionType>(argTy)->getReturnType() == *trgTy ) 
+	{
+		return expr;
+	}
+
 	VLOG(1) << "\t~ CAST expr '" << *expr << "' : " << *argTy  << " -> " << *trgTy;
 
 	// RefType -> Boolean
@@ -225,25 +234,37 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	}
 	
 	// cast an integer to boolean value 
-	if( gen.isBool(trgTy) && gen.isInt(argTy) ) {
+	if ( gen.isBool(trgTy) && gen.isInt(argTy) ) {
 		return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), toVector(expr, builder.intLit(0)));
 	}
 
 	// cast an integer to a boolean value
+<<<<<<< HEAD
 	if( gen.isInt(trgTy) && gen.isBool(argTy) ) {
 		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBoolToInt(), toVector(expr) )
 			);
+=======
+	if ( gen.isInt(trgTy) && gen.isBool(argTy) ) {
+		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBool2Int(), toVector(expr) ) );
+	}
+
+	// cast a char to int<#a>
+	if ( gen.isChar(argTy) && gen.isInt(trgTy) ) {
+		const core::LiteralPtr& lit = core::static_pointer_cast<const core::Literal>(expr);
+		char val = lit->getValue()[1]; // chars are encoded as 'V', therefore position 1 always contains the char value	
+		return builder.literal(utils::numeric_cast<std::string>(static_cast<short>(val)), trgTy);
+>>>>>>> 3fe99ccf9fd8a97312b5c8f6851ba742000a333e
 	}
 
 	// Convert AnyRef to the required target type (if ref)
-	if( gen.isAnyRef(argTy) ) {
+	if ( gen.isAnyRef(argTy) ) {
 		assert( trgTy->getNodeType() == core::NT_RefType && "AnyRef can only be converted to an L-Value (RefType)" );
 		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
 		return builder.callExpr(trgTy, gen.getAnyRefToRef(), toVector<core::ExpressionPtr>(expr, gen.getTypeLiteral(subTy)));
 	}
 
 	// Convert a ref type to AnyRef
-	if( gen.isAnyRef(trgTy) ) {
+	if ( gen.isAnyRef(trgTy) ) {
 		assert( argTy->getNodeType() == core::NT_RefType && "AnyRef can only be converted to an L-Value (RefType)" );
 		return builder.callExpr(trgTy, gen.getRefToAnyRef(), toVector<core::ExpressionPtr>(expr));
 	}
@@ -321,17 +342,17 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		return builder.vectorExpr(vecTy , vals);
 	}
 
-	if(trgTy->getNodeType() == core::NT_VectorType && argTy->getNodeType() == core::NT_VectorType) {
+	if ( trgTy->getNodeType() == core::NT_VectorType && argTy->getNodeType() == core::NT_VectorType ) {
 		// if we are here is because the two types are not the same, check whether the problem is the 
 		// element type or the dimension
 		const core::VectorTypePtr& vecTrgTy = core::static_pointer_cast<const core::VectorType>(trgTy);
 		const core::VectorTypePtr& vecArgTy = core::static_pointer_cast<const core::VectorType>(argTy);
 		// check the type first 
-		if( *vecArgTy->getElementType() != *vecTrgTy->getElementType() ) {
+		if ( *vecArgTy->getElementType() != *vecTrgTy->getElementType() ) {
 			// converting from a vector of a type to a vector of another type, this is not possible
 			assert(false && "Converting from vector<'a> to vector<'b>"); 
 		}
-		if( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
+		if ( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
 			// converting from a vector size X to vector size Y, only possible if X <= Y
 			size_t vecTrgSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTrgTy->getSize())->getValue();
 			size_t vecArgSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecArgTy->getSize())->getValue();
@@ -342,7 +363,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		}
 	}
 
-	if(trgTy->getNodeType() == core::NT_ArrayType && gen.isString(argTy)) {
+	if ( trgTy->getNodeType() == core::NT_ArrayType && gen.isString(argTy) ) {
 		const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>(trgTy);
 		assert( gen.isChar(arrTy->getElementType()) && "Converting a string to something which is not a char*" );
 		
@@ -356,7 +377,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 					expr
 				);
 		// now convert the vector into an array
-		return builder.callExpr(trgTy, gen.getVectorToArray(), toVector(ret));
+		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(ret) );
 	}
 
 	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
@@ -369,7 +390,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		return builder.callExpr( trgTy, gen.getArrayCreate1D(), toVector(expr, builder.literal("1", gen.getUInt8()) ));
 	}
 
-	if(trgTy->getNodeType() == core::NT_RefType) {
+	if ( trgTy->getNodeType() == core::NT_RefType ) {
 		core::ExpressionPtr ret = expr;
 		core::LiteralPtr saveOp;
 		if(expr->getNodeType() == core::NT_CallExpr && core::analysis::isCallOf(ret, gen.getRefVar())) {
@@ -381,18 +402,14 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 			ret = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);
 		} 
 		assert(saveOp);
-		return builder.callExpr(trgTy, saveOp, makeHerbertHappy(builder, 
+		return builder.callExpr( trgTy, saveOp, makeHerbertHappy(builder, 
 				core::static_pointer_cast<const core::RefType>(trgTy)->getElementType(), 
-				ret
-				)
+				ret	)
 			);
 	}
 	
 	assert(false);
 }
-
-
-
 
 } // end anonymous namespace
 
@@ -1149,7 +1166,8 @@ public:
 
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
-			
+			lhs = convFact.castToType(exprTy, lhs);
+			rhs = convFact.castToType(exprTy, rhs);
 			// Handle pointers arithmetic
 			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 			opFunc = gen.getOperator(exprTy, op);
@@ -1159,8 +1177,9 @@ public:
 					assert(false && "Pointer arithmetic not yet supported");
 			}
 
-			if(isLogical)
+			if(isLogical) {
 				exprTy = gen.getBool();
+			}
 		}
 		assert(opFunc);
 
@@ -1701,7 +1720,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			}
 		} else {
 			// we expect the var name to be in currVar
-			ctx.recVarExprMap.insert(std::make_pair(funcDecl, ctx.currVar));
+			ctx.recVarExprMap.insert( std::make_pair(funcDecl, ctx.currVar) );
 		}
 
 		// when a subtype is resolved we expect to already have these variables in the map
@@ -1753,11 +1772,14 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
-	assert((components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
-	if(!components.empty())
+	assert( (components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && 
+			"~~~ Something odd happened, you are allowed by all means to blame Simone ~~~" );
+	if (!components.empty()) {
 		ctx.isResolvingRecFuncBody = true;
+	}
 
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
+
 	/*
 	 * if any of the parameters of this function has been marked as needRef, we need to add a declaration just before
 	 * the body of this function
@@ -1794,14 +1816,15 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 	// if we introduce new decls we have to introduce them just before the body of the function
-	if(!decls.empty()) {
+	if ( !decls.empty() ) {
 		// push the old body
 		decls.push_back(body);
 		body = builder.compoundStmt(decls);
 	}
 
-	if( !components.empty() )
+	if ( !components.empty() ) {
 		ctx.isResolvingRecFuncBody = false;
+	}
 
 	// ADD THE GLOBALS
 	if ( isEntryPoint && ctx.globalVar ) {

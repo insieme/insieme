@@ -327,7 +327,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //											CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
 	if ( mgr.basic.isAnyRef(type) ) {
 		return mgr.basic.getNull();
@@ -410,8 +409,6 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 
     assert(false && "Default initialization type not defined");
 }
-
-
 
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {
 
