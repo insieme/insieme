@@ -194,6 +194,10 @@ int main(int argc, char** argv) {
 					} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
 					LOG(INFO) << "\t Context: " << ss.str() << std::endl;
 				});
+
+				if ( !errors.empty() ) {
+					exit(1);
+				}
 				timer.stop();
 				LOG(INFO) << timer;
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
