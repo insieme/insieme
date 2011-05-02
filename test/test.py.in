@@ -57,7 +57,21 @@ def check_for_error(test_case, ret):
     if ret is not None:
         sys.stderr.write(bcolors.FAIL + '@ {0}: [FAILED]'.format(test_case) + bcolors.ENDC + '\n')
         sys.stderr.write(bcolors.FAIL + "@------------------ start cause --------------------" + bcolors.ENDC + "\n")
-        sys.stderr.write(ret)
+
+	if verbose:
+		# print the entire output
+		sys.stderr.write(ret)
+	else:
+		# print only first 15 lines
+		lines = ret.splitlines();
+		for i in range(min(len(lines), 15)):
+			sys.stderr.write(lines[i])
+			sys.stderr.write("\n")
+
+		if len(lines) > 15:
+			sys.stderr.write("\n   -- output truncated - run with --verbose to see full output -- \n\n")
+
+
         sys.stderr.write(bcolors.FAIL + "@------------------- end cause ---------------------" + bcolors.ENDC + "\n\n")
         return True
     return False
@@ -275,9 +289,9 @@ def main():
 			sys.argv.remove(arg)
 		if(arg == "--verbose") :
 			global verbose
-			global INSIEMEC
+			# global INSIEMEC
 			verbose = 1
-			INSIEMEC = INSIEMEC + " -S"
+			# INSIEMEC = INSIEMEC + " -S"
 			sys.argv.remove(arg)
 		if(arg == "--abortOnFail") :
 			abortOnFail = True
