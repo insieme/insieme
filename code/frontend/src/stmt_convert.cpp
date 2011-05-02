@@ -562,11 +562,14 @@ public:
 			const Expr* cond = ifStmt->getCond();
 			assert(cond && "If statement with no condition.");
 
-			condExpr = convFact.tryDeref(convFact.convertExpr( cond ));
-			if(*condExpr->getType() != *convFact.mgr.basic.getBool()) {
-				// add a cast expression to bool
-				condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+			condExpr = convFact.convertExpr( cond );
+			// condExpr = convFact.tryDeref(convFact.convertExpr( cond ));
+			if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
+				// convert the expression to bool via the castToType utility routine
+				condExpr = convFact.castToType(convFact.mgr.basic.getBool(), condExpr);
 			}
+			condExpr = convFact.tryDeref(condExpr);
+
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the IfStmt");
 
@@ -641,11 +644,13 @@ public:
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the WhileStmt");
 
-		condExpr = convFact.tryDeref(condExpr);
 		if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
-			// add cast to bool FIXME
-			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr);
+			// convert the expression to bool via the castToType utility routine
+			condExpr = convFact.castToType(convFact.mgr.basic.getBool(), condExpr);
 		}
+
+		condExpr = convFact.tryDeref(condExpr);
+
 
 		core::StatementPtr&& irNode = builder.whileStmt(condExpr, body);
 
@@ -675,12 +680,14 @@ public:
 
 		const Expr* cond = doStmt->getCond();
 		assert(cond && "DoStmt with no condition.");
-		core::ExpressionPtr&& condExpr = convFact.tryDeref( convFact.convertExpr( cond ) );
+		core::ExpressionPtr condExpr = convFact.convertExpr( cond );
 		assert(condExpr && "Couldn't convert 'condition' expression of the DoStmt");
 
 		if ( !convFact.mgr.basic.isBool(condExpr->getType()) ) {
-			condExpr = builder.castExpr(convFact.mgr.basic.getBool(), condExpr); // FIXME: conversion to bool
+			// convert the expression to bool via the castToType utility routine
+			condExpr = convFact.castToType(convFact.mgr.basic.getBool(), condExpr);
 		}
+		condExpr = convFact.tryDeref( condExpr );
 
 		StatementList stmts;
 		if ( core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body) ) {

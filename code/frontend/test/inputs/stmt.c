@@ -145,7 +145,7 @@ void if_stmt_test() {
 	int cond = 0;
 
 	#pragma test \
-	"if(CAST<bool>(( *v1))) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
+	"if(int.ne(( *v1), 0)) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
 	if(cond) {
 		cond += 1;
 	} else {
