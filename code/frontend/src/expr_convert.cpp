@@ -241,6 +241,17 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		return builder.deref( expr );
 	}
 
+	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
+			argTy->getNodeType() != core::NT_VectorType )
+	{
+		// we want an array from something which is not an array. This is done by creating a wrapping array
+		// containing the argument
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(trgTy)->getElementType();
+		assert(subTy == argTy && "Impossible cast!");
+		return builder.callExpr( trgTy, gen.getArrayCreate1D(), toVector(expr, builder.literal("1", gen.getUInt8()) ));
+	}
+
+
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType) {
 		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
 		// The function requires a refType and the current argument is of non-ref type
@@ -660,9 +671,7 @@ public:
 			return gen.getNull();
 		}
 
-		if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && 
-				gen.isNull(subExpr) ) 
-		{
+		if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && gen.isNull(subExpr) ) {
 			return subExpr;
 		}
 
@@ -675,9 +684,11 @@ public:
 			return subExpr;
 		}
 
+		const core::TypePtr& nonRefType = nonRefExpr->getType();
 		// if the subexpression is an array or a vector, remove all the C implicit casts
-		if ( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType ||
-				nonRefExpr->getType()->getNodeType() == core::NT_VectorType ) {
+		if ( nonRefType->getNodeType() == core::NT_ArrayType || nonRefType->getNodeType() == core::NT_VectorType || 
+				nonRefType->getNodeType() == core::NT_FunctionType ) 
+		{
 			return subExpr;
 		}
 
@@ -1544,7 +1555,7 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 
 core::ExpressionPtr ConversionFactory::castToType(const core::TypePtr& trgTy, const core::ExpressionPtr& expr) const {
 	LOG(DEBUG) << "@@ Converting expression '" << *expr << "' with type '" << *expr->getType() << "' to target type '" << *trgTy << "'";
-	const core::TypePtr& srcTy = expr->getType();
+	// const core::TypePtr& srcTy = expr->getType();
 	core::ExpressionPtr&& ret = makeHerbertHappy(builder, trgTy, expr);
 	LOG(DEBUG) << "@@ Expression converted to '" << *ret << "' with type '" << *ret->getType() << "'" << std::endl;
 	return ret;
