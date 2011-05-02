@@ -256,7 +256,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType) {
 		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
 		// The function requires a refType and the current argument is of non-ref type
-		if ( subTy->getNodeType() == core::NT_ArrayType && builder.getBasicGenerator().isString(expr->getType()) ) {
+		if ( subTy->getNodeType() == core::NT_ArrayType && builder.getBasicGenerator().isString(argTy) ) {
 			// If the argument is a string then we have to convert the string into a char pointer
 			// because of C semantics 
 			return builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), expr );
@@ -1568,6 +1568,7 @@ core::ExpressionPtr ConversionFactory::castToType(const core::TypePtr& trgTy, co
 	VLOG(1) << "@@ Converting expression '" << *expr << "' with type '" << *expr->getType() << "' to target type '" << *trgTy << "'";
 	// const core::TypePtr& srcTy = expr->getType();
 	core::ExpressionPtr&& ret = makeHerbertHappy(builder, trgTy, expr);
+	// assert(*trgTy == *expr->getType() && "Casting non supported!");
 	VLOG(1) << "@@ Expression converted to '" << *ret << "' with type '" << *ret->getType() << "'" << std::endl;
 	return ret;
 }
