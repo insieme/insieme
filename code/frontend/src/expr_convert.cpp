@@ -239,13 +239,8 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	}
 
 	// cast an integer to a boolean value
-<<<<<<< HEAD
-	if( gen.isInt(trgTy) && gen.isBool(argTy) ) {
-		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBoolToInt(), toVector(expr) )
-			);
-=======
 	if ( gen.isInt(trgTy) && gen.isBool(argTy) ) {
-		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBool2Int(), toVector(expr) ) );
+		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBoolToInt(), toVector(expr) ) );
 	}
 
 	// cast a char to int<#a>
@@ -253,7 +248,6 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		const core::LiteralPtr& lit = core::static_pointer_cast<const core::Literal>(expr);
 		char val = lit->getValue()[1]; // chars are encoded as 'V', therefore position 1 always contains the char value	
 		return builder.literal(utils::numeric_cast<std::string>(static_cast<short>(val)), trgTy);
->>>>>>> 3fe99ccf9fd8a97312b5c8f6851ba742000a333e
 	}
 
 	// Convert AnyRef to the required target type (if ref)
