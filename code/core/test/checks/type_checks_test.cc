@@ -257,7 +257,7 @@ TEST(ReturnTypeCheck, Basic) {
 
 	// create a function type (for all those functions)
 	TypePtr resultType = basic.getInt4();
-	FunctionTypePtr funType = builder.functionType(TypeList(), TypeList(), resultType);
+	FunctionTypePtr funType = builder.functionType(TypeList(), resultType);
 
 	// create a function where everything is correct
 	StatementPtr body = builder.returnStmt(builder.literal(resultType, "1"));

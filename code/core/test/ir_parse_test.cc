@@ -103,10 +103,10 @@ TEST(IRParser, TypeTests) {
 		TypeVariablePtr var = builder.typeVariable("a");
 		TypePtr vector = builder.vectorType(var, VariableIntTypeParam::get(manager, 'l'));
 
-		auto funType = builder.functionType(TypeList(), toVector<TypePtr>(vector, var), var);
+		auto funType = builder.functionType(toVector<TypePtr>(vector, var), var);
 		EXPECT_EQ(funType, parser.parseType("(vector<'a,#l>, 'a)->'a"));
 
-		EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(parser.parseType("(vector<'a,#l>, 'a)->'a"))->getArgumentTypes()[0]->getNodeType());
+		EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(parser.parseType("(vector<'a,#l>, 'a)->'a"))->getParameterTypes()[0]->getNodeType());
 	}
 }
 

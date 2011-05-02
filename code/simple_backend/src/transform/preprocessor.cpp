@@ -230,7 +230,7 @@ namespace transform {
 				assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
 				const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
-				const core::TypeList& paramTypes = funType->getArgumentTypes();
+				const core::TypeList& paramTypes = funType->getParameterTypes();
 				const core::ExpressionList& args = call->getArguments();
 
 				if (paramTypes.size() != args.size()) {

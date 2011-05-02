@@ -49,13 +49,12 @@ namespace {
 
 		ss << typeManager.getTypeName(context, funType->getReturnType()) << " " << name << "(";
 
-		auto captures = funType->getCaptureTypes();
-		auto arguments = funType->getArgumentTypes();
+		auto parameter = funType->getParameterTypes();
 
-		if (!captures.empty()) {
-			ss << "void *" << ((!arguments.empty())?", ":"");
-		}
-		ss << join(", ", arguments, [&](std::ostream& out, const TypePtr& cur) {
+//		if (!captures.empty()) {
+//			ss << "void *" << ((!arguments.empty())?", ":"");
+//		}
+		ss << join(", ", parameter, [&](std::ostream& out, const TypePtr& cur) {
 			out << typeManager.getTypeName(context, cur);
 		});
 		ss << ")";
@@ -104,7 +103,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	TypeManager& typeManager = cc.getTypeManager();
 	protoType << typeManager.getTypeInfo(protoType, type->getReturnType()).externName << " " << name << "(";
 	//protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
-	protoType << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
+	protoType << join(", ", type->getParameterTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
 		out << typeManager.getTypeInfo(protoType, cur).externName;
 	});
 	protoType << ");\n";

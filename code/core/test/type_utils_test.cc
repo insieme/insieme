@@ -342,18 +342,18 @@ TEST(TypeUtils, ReturnTypeDeduction) {
 	FunctionTypePtr funType;
 
 	// a simple case
-	funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(varA), varA);
+	funType = FunctionType::get(manager, toVector<TypePtr>(varA), varA);
 	EXPECT_EQ("(('a)->'a)", toString(*funType));
 	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(typeA))));
 
 
-	funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(varA, varB), varA);
+	funType = FunctionType::get(manager, toVector<TypePtr>(varA, varB), varA);
 	EXPECT_EQ("(('a,'b)->'a)", toString(*funType));
 	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(typeA, typeB))));
 	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(typeB, typeA))));
 
 
-	funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(genA, varA), varA);
+	funType = FunctionType::get(manager, toVector<TypePtr>(genA, varA), varA);
 	EXPECT_EQ("((type<'a>,'a)->'a)", toString(*funType));
 	EXPECT_EQ("typeA", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecA, typeA))));
 	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecB, typeB))));
@@ -637,7 +637,7 @@ TEST(TypeUtils, VariableSubstitutionBug) {
 	EXPECT_TRUE(funType);
 
 	EXPECT_EQ(NT_VectorType, vectorType->getNodeType());
-	EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(funType)->getArgumentTypes()[0]->getNodeType());
+	EXPECT_EQ(NT_VectorType, static_pointer_cast<const FunctionType>(funType)->getParameterTypes()[0]->getNodeType());
 
 	LiteralPtr fun = Literal::get(manager, funType, "fun");
 	LiteralPtr vector = Literal::get(manager, vectorType, "x");

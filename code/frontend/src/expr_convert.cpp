@@ -90,7 +90,7 @@ vector<core::ExpressionPtr>
 tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const ExpressionList& args) {
 
 	// check if the function type ends with a VAR_LIST type
-	const core::TypeList& argsTy = funcTy->getArgumentTypes();
+	const core::TypeList& argsTy = funcTy->getParameterTypes();
 	// assert(argsTy && "Function argument is of not type TupleType");
 
 	// if the tuple type is empty it means we cannot pack any of the arguments
@@ -713,8 +713,8 @@ private:
 		for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
 			core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
 			// core::TypePtr&& argTy = arg->getType();
-			if ( argId < funcTy->getArgumentTypes().size() ) {
-				const core::TypePtr& funcArgTy = funcTy->getArgumentTypes()[argId];
+			if ( argId < funcTy->getParameterTypes().size() ) {
+				const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId];
 				arg = convFact.castToType(funcArgTy, arg);
 				// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
 				// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
@@ -1629,7 +1629,7 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 						 	 	 	 	 	   const core::TypePtr& globals,
 						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
 
-	const std::vector<core::TypePtr>& oldArgs = funcType->getArgumentTypes();
+	const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes();
 
 	std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
 

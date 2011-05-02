@@ -76,7 +76,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
-	const TypeList& parameterTypes = functionType->getArgumentTypes();
+	const TypeList& parameterTypes = functionType->getParameterTypes();
 	const TypePtr& returnType = functionType->getReturnType();
 
 	// Obtain argument type
@@ -139,15 +139,13 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 		return var->getType();
 	};
 
-	TypeList capture;
-	transform(address->getCaptureList(), back_inserter(capture), extractType);
 	TypeList param;
 	transform(address->getParameterList(), back_inserter(param), extractType);
 
 	FunctionTypePtr isType = address->getLambda()->getType();
 	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, capture, param, result);
+	FunctionTypePtr funType = FunctionType::get(manager, param, result);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,

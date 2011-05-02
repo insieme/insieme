@@ -213,7 +213,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-1), "get_local_size");
 				
 				// new functionType
-				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
+				const core::TypeList& oldArgs = oldFuncType->getParameterTypes();
 				const core::TypePtr& retType = oldFuncType->getReturnType();
 				assert(retType->getNodeManager().basic.isUnit(retType) && "Return type of kernel functions must be void.");
 				TypeList newArgs;

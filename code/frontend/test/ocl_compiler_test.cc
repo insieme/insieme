@@ -73,7 +73,7 @@ public:
 
         //check globalRange and localRange arguments
         if(core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-            const core::TypeList& args = funcType->getArgumentTypes();
+            const core::TypeList& args = funcType->getParameterTypes();
 
             if(func->hasAnnotation(insieme::ocl::BaseAnnotation::KEY)) {
 

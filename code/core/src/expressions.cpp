@@ -425,7 +425,7 @@ JobExpr::JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, c
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 	// TODO: use ordinary type checks for this section ...
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
-    assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
+    assert(defaultType->getParameterTypes().empty() && "Default statement is not allowed to have any arguments");
 
     TypePtr unitType = type->getNodeManager().basic.getUnit();
     TypePtr boolType = type->getNodeManager().basic.getBool();
@@ -440,14 +440,12 @@ JobExpr::JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, c
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
     	FunctionTypePtr guardType = static_pointer_cast<const FunctionType>(s.first->getType());
-    	assert(guardType->getCaptureTypes().empty() && "Guard must not have any capture variables.");
-        assert(::equals(guardType->getArgumentTypes(), guardParams, equal_target<TypePtr>()) && "Guard must have two integer arguments");
+        assert(::equals(guardType->getParameterTypes(), guardParams, equal_target<TypePtr>()) && "Guard must have two integer arguments");
         assert(*guardType->getReturnType() == *boolType && "Return value of guard must be bool.");
 
         //Check guarded statements
         FunctionTypePtr stmtType = static_pointer_cast<const FunctionType>(s.second->getType());
-        assert(stmtType->getCaptureTypes().empty() && "Guarded statement is not allowed to have any capture variables.");
-        assert(stmtType->getArgumentTypes().empty() && "Guarded statement is not allowed to have any arguments");
+        assert(stmtType->getParameterTypes().empty() && "Guarded statement is not allowed to have any arguments");
         assert(*stmtType->getReturnType() == *unitType && "Return value of guarded statement must be void.");
     });
 
@@ -1025,7 +1023,7 @@ CaptureInitExprPtr CaptureInitExpr::get(NodeManager& manager, const ExpressionPt
 	const TypePtr& type = lambda->getType();
 	assert(type->getNodeType() == NT_FunctionType && "Lambda has to be of a function type!");
 	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(type);
-	FunctionTypePtr initExprType = FunctionType::get(manager, TypeList(), funType->getArgumentTypes(), funType->getReturnType());
+	FunctionTypePtr initExprType = FunctionType::get(manager, funType->getParameterTypes(), funType->getReturnType());
 	return manager.get(CaptureInitExpr(initExprType, lambda, values));
 }
 

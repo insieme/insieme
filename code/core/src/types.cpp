@@ -160,56 +160,44 @@ Node::OptionChildList TupleType::getChildNodes() const {
 
 namespace {
 
-	std::size_t hashFunctionType(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) {
+	std::size_t hashFunctionType(const TypeList& parameterTypes, const TypePtr& returnType) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, HS_FunctionType);
-		hashTypeList(seed, captureTypes);
-		hashTypeList(seed, argumentTypes);
+		hashTypeList(seed, parameterTypes);
 		boost::hash_combine(seed, *returnType);
 		return seed;
 	}
 
 }
 
-FunctionType::FunctionType(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) :
-		Type(NT_FunctionType, hashFunctionType(captureTypes, argumentTypes, returnType)),
-		captureTypes(isolate(captureTypes)), argumentTypes(isolate(argumentTypes)), returnType(isolate(returnType)) { }
+FunctionType::FunctionType(const TypeList& parameterTypes, const TypePtr& returnType) :
+		Type(NT_FunctionType, hashFunctionType(parameterTypes, returnType)),
+		parameterTypes(isolate(parameterTypes)), returnType(isolate(returnType)) { }
 
 FunctionTypePtr FunctionType::get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType) {
 	return get(manager, toVector(paramType), returnType);
 }
 
-FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& argumentTypes, const TypePtr& returnType) {
+FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType) {
 	// obtain reference to new element
-	return get(manager, TypeList(), argumentTypes, returnType);
-}
-
-FunctionTypePtr FunctionType::get(NodeManager& manager, const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType) {
-	// obtain reference to new element
-	return manager.get(FunctionType(captureTypes, argumentTypes, returnType));
+	return manager.get(FunctionType(parameterTypes, returnType));
 }
 
 FunctionType* FunctionType::createCopyUsing(NodeMapping& mapper) const {
-	return new FunctionType(mapper.map(0, captureTypes), mapper.map(captureTypes.size(), argumentTypes), 
-		mapper.map(captureTypes.size() + argumentTypes.size(), returnType));
+	return new FunctionType(mapper.map(0, parameterTypes), mapper.map(parameterTypes.size(), returnType));
 }
 
 Node::OptionChildList FunctionType::getChildNodes() const {
 	OptionChildList res(new ChildList());
-	std::copy(captureTypes.begin(), captureTypes.end(), std::back_inserter(*res));
-	std::copy(argumentTypes.begin(), argumentTypes.end(), std::back_inserter(*res));
+	std::copy(parameterTypes.begin(), parameterTypes.end(), std::back_inserter(*res));
 	res->push_back(returnType);
 	return res;
 }
 
 std::ostream& FunctionType::printTypeTo(std::ostream& out) const {
 	out << "(";
-	// add capture list
-	if (!captureTypes.empty()) {
-		out << "[" << join(",", captureTypes, print<deref<TypePtr>>()) << "]";
-	}
-	// add arguments
-	out << "(" << join(",", argumentTypes, print<deref<TypePtr>>()) << ")";
+	// add parameters
+	out << "(" << join(",", parameterTypes, print<deref<TypePtr>>()) << ")";
 
 	// add result
 	return out << "->" << *returnType << ")";
@@ -219,8 +207,7 @@ bool FunctionType::equalsType(const Type& type) const {
 	const FunctionType& other = static_cast<const FunctionType&>(type);
 
 	bool res = true;
-	res = res && ::equals(captureTypes, other.captureTypes, equal_target<TypePtr>());
-	res = res && ::equals(argumentTypes, other.argumentTypes, equal_target<TypePtr>());
+	res = res && ::equals(parameterTypes, other.parameterTypes, equal_target<TypePtr>());
 	res = res && *returnType == *other.returnType;
 	return res;
 }

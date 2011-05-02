@@ -552,8 +552,7 @@ namespace simple_backend {
 		auto funExp = ptr->getFunctionExpr();
 
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
-		assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
-		const TypeList& params = funType->getArgumentTypes();
+		const TypeList& params = funType->getParameterTypes();
 
 		// create a lambda capable of externalizing arguments
 		auto parameterExternalizer = [&](const ExpressionPtr& ep) {

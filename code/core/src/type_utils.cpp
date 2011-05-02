@@ -614,7 +614,7 @@ TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
 	NodeManager& manager = funType->getNodeManager();
 
 	// try deducing variable instantiations the argument types
-	auto varInstantiation = analysis::getTypeVariableInstantiation(manager, funType->getArgumentTypes(), argumentTypes);
+	auto varInstantiation = analysis::getTypeVariableInstantiation(manager, funType->getParameterTypes(), argumentTypes);
 
 	// check whether derivation was successful
 	if (!varInstantiation) {
@@ -757,10 +757,10 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(superType);
 
 		bool res = true;
-		res = res && funTypeA->getArgumentTypes().size() == funTypeB->getArgumentTypes().size();
+		res = res && funTypeA->getParameterTypes().size() == funTypeB->getParameterTypes().size();
 		res = res && isSubTypeOf(funTypeA->getReturnType(), funTypeB->getReturnType());
-		for(std::size_t i = 0; res && i<funTypeB->getArgumentTypes().size(); i++) {
-			res = res && isSubTypeOf(funTypeB->getArgumentTypes()[i], funTypeA->getArgumentTypes()[i]);
+		for(std::size_t i = 0; res && i<funTypeB->getParameterTypes().size(); i++) {
+			res = res && isSubTypeOf(funTypeB->getParameterTypes()[i], funTypeA->getParameterTypes()[i]);
 		}
 		return res;
 	}
@@ -828,9 +828,9 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(typeB);
 
 		// check number of arguments
-		auto argsA = funTypeA->getArgumentTypes();
-		auto argsB = funTypeB->getArgumentTypes();
-		if (argsA.size() != argsB.size()) {
+		auto paramsA = funTypeA->getParameterTypes();
+		auto paramsB = funTypeB->getParameterTypes();
+		if (paramsA.size() != paramsB.size()) {
 			// not matching
 			return 0;
 		}
@@ -842,9 +842,9 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 
 		// continue with arguments
 		TypeList args;
-		for (std::size_t i=0; cur && i<argsA.size(); i++) {
+		for (std::size_t i=0; cur && i<paramsA.size(); i++) {
 			// ATTENTION: this goes in the reverse direction
-			cur = getJoinMeetType(argsA[i], argsB[i], !join);
+			cur = getJoinMeetType(paramsA[i], paramsB[i], !join);
 			args.push_back(cur);
 		}
 

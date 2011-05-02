@@ -441,7 +441,7 @@ namespace {
 	}
 }
 
-CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, 
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified,
 		std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
@@ -451,7 +451,7 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root,
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
 
-CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified,
+BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified,
 		std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;

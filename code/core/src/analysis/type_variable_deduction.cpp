@@ -355,17 +355,17 @@ namespace analysis {
 				auto funArgType = static_pointer_cast<const FunctionType>(argType);
 
 				// check number of arguments
-				auto paramArgs = funParamType->getArgumentTypes();
-				auto argArgs = funArgType->getArgumentTypes();
-				if (paramArgs.size() != argArgs.size()) {
+				const TypeList& paramParams = funParamType->getParameterTypes();
+				const TypeList& argParams = funArgType->getParameterTypes();
+				if (paramParams.size() != argParams.size()) {
 					// different number of arguments => unsatisfiable
 					constraints.makeUnsatisfiable();
 					return;
 				}
 
 				// add constraints on arguments
-				auto begin = make_paired_iterator(paramArgs.begin(), argArgs.begin());
-				auto end = make_paired_iterator(paramArgs.end(), argArgs.end());
+				auto begin = make_paired_iterator(paramParams.begin(), argParams.begin());
+				auto end = make_paired_iterator(paramParams.end(), argParams.end());
 				for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
 					addTypeConstraints(constraints, it->first, it->second, inverse(direction));
 				}
@@ -662,7 +662,7 @@ namespace analysis {
 		if (funType->getNodeType() != NT_FunctionType) {
 			return 0;
 		}
-		const TypeList& paramTypes = static_pointer_cast<const FunctionType>(funType)->getArgumentTypes();
+		const TypeList& paramTypes = static_pointer_cast<const FunctionType>(funType)->getParameterTypes();
 
 		// compute type variable instantiation
 		SubstitutionOpt res = getTypeVariableInstantiation(manager, paramTypes, argTypes);

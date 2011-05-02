@@ -310,14 +310,9 @@ private:
 class FunctionType: public Type {
 
 	/**
-	 * The list of captured types.
+	 * The list of parameter types.
 	 */
-	const TypeList captureTypes;
-
-	/**
-	 * The list of argument types.
-	 */
-	const TypeList argumentTypes;
+	const TypeList parameterTypes;
 
 	/**
 	 * The type of value produced by this function type.
@@ -329,11 +324,10 @@ private:
 	/**
 	 * Creates a new instance of this type based on the given in and output types.
 	 *
-	 * @param captureTypes a reference to the type captured by this function type
-	 * @param argumentTypes a reference to the type used as argument types
+	 * @param parameterTypes a reference to the type used as argument types
 	 * @param returnType a reference to the type used as return type
 	 */
-	FunctionType(const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType);
+	FunctionType(const TypeList& parameterTypes, const TypePtr& returnType);
 
 protected:
 
@@ -367,44 +361,19 @@ public:
 	 * given manager.
 	 *
 	 * @param manager the manager to be used for handling the obtained type pointer
-	 * @param argumentTypes the arguments accepted by the resulting function type
+	 * @param parameterTypes the arguments accepted by the resulting function type
 	 * @param returnType the type of value to be returned by the obtained function type
 	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
-	static FunctionTypePtr get(NodeManager& manager, const TypeList& argumentTypes, const TypePtr& returnType);
-
-
-	/**
-	 * This method provides a static factory method for this type of node. It will return
-	 * a function type pointer pointing toward a variable with the given name maintained by the
-	 * given manager.
-	 *
-	 * @param manager the manager to be used for handling the obtained type pointer
-	 * @param captureTypes the list of capture arguments accepted by the resulting function type
-	 * @param argumentTypes the arguments accepted by the resulting function type
-	 * @param returnType the type of value to be returned by the obtained function type
-	 * @return a pointer to a instance of the required type maintained by the given manager
-	 */
-	static FunctionTypePtr get(NodeManager& manager, const TypeList& captureTypes, const TypeList& argumentTypes, const TypePtr& returnType);
+	static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType);
 
 	/**
-	 * Obtains a reference to the internally maintained list of capture types.
+	 * Obtains a reference to the internally maintained list of parameter types.
 	 *
-	 * @return a reference to the list of capture types.
+	 * @return a reference to the list of parameter types.
 	 */
-	const TypeList& getCaptureTypes() const {
-		return captureTypes;
-	}
-
-	// TODO: rename to parameter types!
-
-	/**
-	 * Obtains a reference to the internally maintained list of argument types.
-	 *
-	 * @return a reference to the list of argument types.
-	 */
-	const TypeList& getArgumentTypes() const {
-		return argumentTypes;
+	const TypeList& getParameterTypes() const {
+		return parameterTypes;
 	}
 
 	/**
