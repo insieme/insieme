@@ -64,10 +64,21 @@ SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypePtr
  *
  * @param manager the node manager to be used for temporary IR nodes
  * @param parameter the list of parameter types accepted by the function
- * @param arguements the list of argument types passed to the function
+ * @param arguments the list of argument types passed to the function
  * @return a type-variable substitution mapping all the variables to argument specific types
  */
 SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const TypeList& parameter, const TypeList& arguments);
+
+/**
+ * Tries to compute a valid type variable substitution for a call to a function of the given type using the given argument
+ * types.
+ *
+ * @param manager the node manager to be used for temporary IR nodes
+ * @param function the function to be invoked
+ * @param arguments the list of argument types passed to the function
+ * @return a type-variable substitution mapping all the variables to argument specific types
+ */
+SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const FunctionTypePtr& function, const TypeList& arguments);
 
 /**
  * Tries to obtain the type variable instantiation implied by the given call.
