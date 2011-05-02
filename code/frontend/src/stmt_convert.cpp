@@ -179,15 +179,15 @@ public:
 			retTy = convFact.builder.getBasicGenerator().getUnit();
 		}
 
-		/*
-		 * arrays and vectors in C are always returned as reference, so the type of the return expression is of array
-		 * (or vector) type we are sure we have to return a reference, in the other case we can safely deref the retExpr
-		 */
-		if ( retTy->getNodeType() != core::NT_ArrayType && retTy->getNodeType() != core::NT_VectorType ) {
-			retExpr = convFact.tryDeref(retExpr);
-		}
+		///*
+		 //* arrays and vectors in C are always returned as reference, so the type of the return expression is of array
+		 //* (or vector) type we are sure we have to return a reference, in the other case we can safely deref the retExpr
+		 //*/
+		//if ( retTy->getNodeType() != core::NT_ArrayType && retTy->getNodeType() != core::NT_VectorType ) {
+			//retExpr = convFact.tryDeref(retExpr);
+		//}
 
-		core::StatementPtr&& ret = convFact.builder.returnStmt(retExpr);
+		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.castToType(retTy, retExpr) );
 		// handle eventual OpenMP pragmas attached to the Clang node
 		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(ret, retStmt, convFact);
 

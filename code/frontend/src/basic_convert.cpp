@@ -404,7 +404,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	}
     	core::ExpressionPtr&& initVal = defaultInitVal(arrTy->getElementType());
 		return builder.callExpr(
-				arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getInt4())
+				arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
 			);
     }
 

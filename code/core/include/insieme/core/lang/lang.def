@@ -306,6 +306,8 @@ LITERAL(AnyRefToRef,    "anyref.to.ref",    		"(anyRef, type<'a>) -> ref<'a>")
 
 // General ------------------------------------------------------------------------------------------------------------
 
+LITERAL(Bool2Int, "bool.to.int", "(bool) -> int<4>")
+
 LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
 LITERAL(InitZero, "initZero", "(type<'a>) -> 'a")
 LITERAL(Sizeof, "sizeof", "(type<'a>) -> uint<8>")

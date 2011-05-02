@@ -204,9 +204,15 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	if(gen.isVarList( trgTy ) || (*trgTy == *argTy) ) {
 		return expr;
 	}
-	LOG(DEBUG) << "\t~ CAST expr '" << *expr << "' : " << *argTy  << " -> " << *trgTy;
+	VLOG(1) << "\t~ CAST expr '" << *expr << "' : " << *argTy  << " -> " << *trgTy;
 
-	// CAST a ref to a boolean value
+	// RefType -> Boolean
+	// 
+	// This happens when a reference is used in a conditional operation. In those situation 
+	// the case is invalid and we hare to replace it with a comparison with the NULL reference.
+	// therefore:
+	//
+	// if( ref )  ->  if( ref != Null )
 	if( gen.isBool(trgTy) && argTy->getNodeType() == core::NT_RefType ) {
 		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
@@ -219,8 +225,14 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	}
 	
 	// cast an integer to boolean value 
-	if( gen.isBool(trgTy) && (gen.isSignedInt(argTy) || gen.isUnsignedInt(argTy)) ) {
+	if( gen.isBool(trgTy) && gen.isInt(argTy) ) {
 		return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), toVector(expr, builder.intLit(0)));
+	}
+
+	// cast an integer to a boolean value
+	if( gen.isInt(trgTy) && gen.isBool(argTy) ) {
+		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBool2Int(), toVector(expr) ) 
+			);
 	}
 
 	// Convert AnyRef to the required target type (if ref)
@@ -241,17 +253,6 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		return builder.deref( expr );
 	}
 
-	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
-			argTy->getNodeType() != core::NT_VectorType )
-	{
-		// we want an array from something which is not an array. This is done by creating a wrapping array
-		// containing the argument
-		const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(trgTy)->getElementType();
-		assert(subTy == argTy && "Impossible cast!");
-		return builder.callExpr( trgTy, gen.getArrayCreate1D(), toVector(expr, builder.literal("1", gen.getUInt8()) ));
-	}
-
-
 	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType) {
 		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
 		// The function requires a refType and the current argument is of non-ref type
@@ -260,7 +261,12 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 			// because of C semantics 
 			return builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), expr );
 		} 
-		return builder.refVar( expr );
+
+		if ( *subTy == *argTy ) 
+			return builder.refVar( expr );
+
+		// call the function recursively
+		return builder.refVar( makeHerbertHappy(builder, subTy, expr) );
 	}
 
 	if( trgTy->getNodeType() == core::NT_RefType) {
@@ -351,6 +357,16 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 				);
 		// now convert the vector into an array
 		return builder.callExpr(trgTy, gen.getVector2Array(), toVector(ret));
+	}
+
+	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
+			argTy->getNodeType() != core::NT_VectorType )
+	{
+		// we want an array from something which is not an array. This is done by creating a wrapping array
+		// containing the argument
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(trgTy)->getElementType();
+		assert(subTy == argTy && "Impossible cast!");
+		return builder.callExpr( trgTy, gen.getArrayCreate1D(), toVector(expr, builder.literal("1", gen.getUInt8()) ));
 	}
 
 	if(trgTy->getNodeType() == core::NT_RefType) {
@@ -1119,8 +1135,7 @@ public:
 		default:
 			assert(false && "Operator not supported");
 		}
-		rhs = convFact.tryDeref(rhs);
-
+		
 		// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
 		if ( baseOp == BO_LAnd || baseOp == BO_LOr ) {
 			lhs = convFact.castToType(gen.getBool(), lhs);
@@ -1129,6 +1144,8 @@ public:
 			exprTy = gen.getBool();
 			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
+
+		rhs = convFact.tryDeref(rhs);
 
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
@@ -1288,13 +1305,7 @@ public:
 		core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
 		core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
 
-		// add ref.deref if needed
-		condExpr = convFact.tryDeref(condExpr);
-
-		if ( !gen.isBool(condExpr->getType()) ) {
-			// the return type of the condition is not a boolean, we add a cast expression
-			condExpr = builder.castExpr(gen.getBool(), condExpr); // FIXME
-		}
+		condExpr = convFact.castToType(gen.getBool(), condExpr);
 
 		// Dereference eventual references
 		if ( retTy->getNodeType() == core::NT_RefType ) {
@@ -1303,8 +1314,8 @@ public:
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, gen.getIfThenElse(),
 				condExpr,	// Condition
-				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy, true ), // True
-				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy, true ) // False
+				builder.createCallExprFromBody( builder.returnStmt(convFact.castToType(retTy, trueExpr)), retTy, true ), // True
+				builder.createCallExprFromBody( builder.returnStmt(convFact.castToType(retTy, falseExpr)), retTy, true ) // False
 		);
 
 		// handle eventual pragmas attached to the Clang node
@@ -1554,10 +1565,10 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 }
 
 core::ExpressionPtr ConversionFactory::castToType(const core::TypePtr& trgTy, const core::ExpressionPtr& expr) const {
-	LOG(DEBUG) << "@@ Converting expression '" << *expr << "' with type '" << *expr->getType() << "' to target type '" << *trgTy << "'";
+	VLOG(1) << "@@ Converting expression '" << *expr << "' with type '" << *expr->getType() << "' to target type '" << *trgTy << "'";
 	// const core::TypePtr& srcTy = expr->getType();
 	core::ExpressionPtr&& ret = makeHerbertHappy(builder, trgTy, expr);
-	LOG(DEBUG) << "@@ Expression converted to '" << *ret << "' with type '" << *ret->getType() << "'" << std::endl;
+	VLOG(1) << "@@ Expression converted to '" << *ret << "' with type '" << *ret->getType() << "'" << std::endl;
 	return ret;
 }
 
