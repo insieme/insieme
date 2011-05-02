@@ -452,12 +452,13 @@ namespace simple_backend {
 
 		code << "if(";
 		visit(ptr->getCondition());
-		code << ") ";
+		code << ") {";
 		visit(wrapBody(ptr->getThenBody()));
 		if (!cc.getLangBasic().isNoOp(ptr->getElseBody())) {
-			code << " else ";
+			code << "} else {";
 			visit(wrapBody(ptr->getElseBody()));
 		}
+		code << "}";
 	}
 
 	void StmtConverter::visitWhileStmt(const WhileStmtPtr& ptr) {
