@@ -79,7 +79,12 @@ namespace simple_backend {
 		const CodeFragmentPtr& code = getCurrentCodeFragment();
 
 		// obtain externalizing pattern
-		const string& pattern = cc.getTypeManager().getTypeInfo(code, ep->getType()).externalizingPattern;
+		string pattern = cc.getTypeManager().getTypeInfo(code, ep->getType()).externalizingPattern;
+
+		// special handling for any ref-casts
+		if (core::analysis::isCallOf(ep, ep->getNodeManager().basic.getAnyRefToRef())) {
+			pattern = "%s";
+		}
 
 		// check pattern - is there some change necessary?
 		if (pattern == "%s") {
@@ -146,7 +151,7 @@ namespace simple_backend {
 		 * @return the given statement or a compound statement in case the statement is an expression
 		 */
 		StatementPtr wrapBody(StatementPtr body) {
-			if (body->getNodeCategory() == NC_Expression) {
+			if (body->getNodeType() != NT_CompoundStmt) {
 				return CompoundStmt::get(body->getNodeManager(), toVector(body));
 			}
 			return body;
@@ -452,13 +457,12 @@ namespace simple_backend {
 
 		code << "if(";
 		visit(ptr->getCondition());
-		code << ") {";
+		code << ")";
 		visit(wrapBody(ptr->getThenBody()));
 		if (!cc.getLangBasic().isNoOp(ptr->getElseBody())) {
-			code << "} else {";
+			code << " else ";
 			visit(wrapBody(ptr->getElseBody()));
 		}
-		code << "}";
 	}
 
 	void StmtConverter::visitWhileStmt(const WhileStmtPtr& ptr) {
@@ -490,8 +494,9 @@ namespace simple_backend {
 		const CodeFragmentPtr& code = currentCodeFragment;
 
 		if (ptr->getStatements().size() ==1) {
+			code << " { ";
 			this->visit(ptr->getStatements()[0]);
-			code << ";";
+			code << "; }";
 		} else if(ptr->getStatements().size() > 1) {
 			code << "{" << CodeBuffer::indR << "\n";
 			for_each(ptr->getChildList(), [&](const NodePtr& cur) {
@@ -789,7 +794,6 @@ namespace simple_backend {
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {
 		currentCodeFragment << "return ";
 		visit(ptr->getReturnExpr());
-		currentCodeFragment << ";";
 	}
 
 

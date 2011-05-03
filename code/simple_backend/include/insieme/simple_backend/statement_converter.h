@@ -206,6 +206,5 @@ namespace simple_backend {
 
 	};
 
-
 }
 }

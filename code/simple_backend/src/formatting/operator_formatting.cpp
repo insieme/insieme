@@ -158,7 +158,7 @@ namespace formatting {
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 				OUT("((");
 				OUT(name);
-				OUT("){&(");
+				OUT("){(");
 				VISIT_ARG(0);
 				OUT(").data,{1}})");
 		});
@@ -177,7 +177,7 @@ namespace formatting {
 
 				OUT("&((");
 				OUT(name);
-				OUT("){&(*");
+				OUT("){(*");
 				VISIT_ARG(0);
 				OUT(").data,{1}})");
 		});
@@ -200,7 +200,9 @@ namespace formatting {
 					} else if (core::analysis::isCallOf(init, basic.getRefNew())) {
 						STMT_CONVERTER.convert(init);
 					} else {
-						STMT_CONVERTER.convert(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
+//						STMT_CONVERTER.convert(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
+
+						VISIT_ARG(0);
 					}
 
 				} else {
