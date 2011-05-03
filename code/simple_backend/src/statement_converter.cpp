@@ -598,15 +598,6 @@ namespace simple_backend {
 			}
 		}
 
-		// skip empty capture init expression
-		if (funExp->getNodeType() == NT_CaptureInitExpr) {
-			CaptureInitExprPtr cur = static_pointer_cast<const CaptureInitExpr>(funExp);
-			if (cur->getValues().empty()) {
-				// skip init expression
-				funExp = cur->getLambda();
-			}
-		}
-
 		// handle function based on the kind of function node
 		switch(funExp->getNodeType()) {
 
@@ -653,36 +644,6 @@ namespace simple_backend {
 				return;
 			}
 
-			case NT_CaptureInitExpr:
-			{
-
-				TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
-				code->addDependency(details.definitions);
-
-				// check whether it is a direct initialization / call situation
-				bool directCall = false;
-				CaptureInitExprPtr initExpr = static_pointer_cast<const CaptureInitExpr>(funExp);
-				if (LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(initExpr->getLambda())) {
-					// it is a direct call to a function => avoid using call wrapper
-					code << cc.getFunctionManager().getFunctionName(code, lambda);
-					directCall = true;
-				}
-
-				if (!directCall) {
-					// use call wrapper
-					code << details.callerName;
-				}
-
-				code << "(";
-				visitCaptureInitExprInternal(initExpr, directCall);
-				if (!args.empty()) {
-					code << ", ";
-					addArgumentList(*this, code, params, args, false);
-				}
-				code << ")";
-				return;
-			}
-
 			case NT_LambdaExpr: {
 
 				// function (without capture list) is directly provided => simply invoke
@@ -706,59 +667,59 @@ namespace simple_backend {
 
 	}
 
-	void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
-		visitCaptureInitExprInternal(ptr, false);
-	}
-
-	void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
-
-		// resolve resulting type of expression
-		FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
-		TypeManager::FunctionTypeInfo resDetails = cc.getTypeManager().getFunctionTypeInfo(resType);
-		currentCodeFragment->addDependency(resDetails.definitions);
-
-		// resolve type of sub-expression
-		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
-		TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
-		currentCodeFragment->addDependency(details.definitions);
-
-		// create surrounding cast
-		currentCodeFragment << "((" << resDetails.closureName << "*)";
-
-		// create struct including values
-		currentCodeFragment << "(&((" << details.closureName << ")";
-		currentCodeFragment << "{";
-
-		// add function reference
-		if (directCall) {
-			currentCodeFragment << "0";
-		} else {
-			currentCodeFragment << "&";
-			visit(ptr->getLambda());
-		}
-
-		// add size of struct
-		// NOTE: disabled since not used anywhere
-		// currentCodeFragment << ", sizeof(" << details.closureName << ")";
-
-		// add captured parameters
-		for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
-
-			// TODO: handle capture variables uniformely
-			bool addAddressOperator = isVectorOrArrayRef(cur->getType());
-			if (addAddressOperator
-					&& cur->getNodeType() == NT_Variable
-					&& cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(cur)).location == VariableManager::HEAP) {
-
-				addAddressOperator = false;
-			}
-			currentCodeFragment << (addAddressOperator?",&":",");
-
-			this->visit(cur);
-		});
-
-		currentCodeFragment << "})))";
-	}
+//	void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
+//		visitCaptureInitExprInternal(ptr, false);
+//	}
+//
+//	void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
+//
+//		// resolve resulting type of expression
+//		FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
+//		TypeManager::FunctionTypeInfo resDetails = cc.getTypeManager().getFunctionTypeInfo(resType);
+//		currentCodeFragment->addDependency(resDetails.definitions);
+//
+//		// resolve type of sub-expression
+//		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
+//		TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
+//		currentCodeFragment->addDependency(details.definitions);
+//
+//		// create surrounding cast
+//		currentCodeFragment << "((" << resDetails.closureName << "*)";
+//
+//		// create struct including values
+//		currentCodeFragment << "(&((" << details.closureName << ")";
+//		currentCodeFragment << "{";
+//
+//		// add function reference
+//		if (directCall) {
+//			currentCodeFragment << "0";
+//		} else {
+//			currentCodeFragment << "&";
+//			visit(ptr->getLambda());
+//		}
+//
+//		// add size of struct
+//		// NOTE: disabled since not used anywhere
+//		// currentCodeFragment << ", sizeof(" << details.closureName << ")";
+//
+//		// add captured parameters
+//		for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
+//
+//			// TODO: handle capture variables uniformely
+//			bool addAddressOperator = isVectorOrArrayRef(cur->getType());
+//			if (addAddressOperator
+//					&& cur->getNodeType() == NT_Variable
+//					&& cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(cur)).location == VariableManager::HEAP) {
+//
+//				addAddressOperator = false;
+//			}
+//			currentCodeFragment << (addAddressOperator?",&":",");
+//
+//			this->visit(cur);
+//		});
+//
+//		currentCodeFragment << "})))";
+//	}
 
 
 	void StmtConverter::visitBindExpr(const core::BindExprPtr& ptr) {

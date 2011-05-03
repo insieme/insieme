@@ -91,7 +91,6 @@ public:
 
 	typedef LambdaDefinition::Definitions Definitions;
 
-	typedef CaptureInitExpr::Values Values;
 	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> CaptureInits;
 
 	/**

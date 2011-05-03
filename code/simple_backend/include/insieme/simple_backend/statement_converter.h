@@ -161,10 +161,6 @@ namespace simple_backend {
 
 		void visitCallExpr(const core::CallExprPtr& ptr);
 
-		void visitCaptureInitExpr(const core::CaptureInitExprPtr& ptr);
-
-		void visitCaptureInitExprInternal(const core::CaptureInitExprPtr& ptr, bool directCall);
-
 		void visitBindExpr(const core::BindExprPtr& ptr);
 
 		void visitCastExpr(const core::CastExprPtr& ptr);

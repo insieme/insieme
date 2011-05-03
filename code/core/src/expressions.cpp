@@ -430,11 +430,8 @@ JobExpr::JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, c
     TypePtr unitType = type->getNodeManager().basic.getUnit();
     TypePtr boolType = type->getNodeManager().basic.getBool();
 
-    if(CaptureInitExprPtr cie = dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)){
-        //FIXME check return type also if default type is a capture init expression
-    } else {
-        assert(*defaultType->getReturnType() == *unitType && "Return value of default statement must be unit.");
-    }
+    assert(*defaultType->getReturnType() == *unitType && "Return value of default statement must be unit.");
+
     TypeList guardParams = TypeList(2, type->getNodeManager().basic.getUIntGen());
 
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
@@ -978,58 +975,6 @@ std::ostream& BindExpr::printTo(std::ostream& out) const {
 	return out << "bind(" << join(",", parameters, print<deref<VariablePtr>>()) << "){" << *call << "}";
 }
 
-
-// ------------------------ Capture Initialization Expression ------------------------
-
-namespace {
-
-	std::size_t hashCaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const CaptureInitExpr::Values& values) {
-		std::size_t hash = 0;
-		boost::hash_combine(hash, HS_CaptureInitExpr);
-		boost::hash_combine(hash, type->hash());
-		boost::hash_combine(hash, lambda->hash());
-		hashPtrRange(hash, values);
-		return hash;
-	}
-
-}
-
-CaptureInitExpr::CaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const Values& values)
-	: Expression(NT_CaptureInitExpr, type, ::hashCaptureInitExpr(type, lambda, values)),
-	  lambda(isolate(lambda)), values(isolate(values)) { }
-
-CaptureInitExpr* CaptureInitExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new CaptureInitExpr(
-			static_pointer_cast<const FunctionType>(mapper.map(0, type)),
-			mapper.map(1, lambda), mapper.map(2, values)
-		);
-}
-
-Node::OptionChildList CaptureInitExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
-	res->push_back(type);
-	res->push_back(lambda);
-	std::copy(values.begin(), values.end(), std::back_inserter(*res));
-	return res;
-}
-
-bool CaptureInitExpr::equalsExpr(const Expression& expr) const {
-	// conversion is guaranteed by base operator==
-	const CaptureInitExpr& rhs = static_cast<const CaptureInitExpr&>(expr);
-	return (*rhs.lambda == *lambda && ::equals(values, values, equal_target<ExpressionPtr>()));
-}
-
-CaptureInitExprPtr CaptureInitExpr::get(NodeManager& manager, const ExpressionPtr& lambda, const Values& values) {
-	const TypePtr& type = lambda->getType();
-	assert(type->getNodeType() == NT_FunctionType && "Lambda has to be of a function type!");
-	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(type);
-	FunctionTypePtr initExprType = FunctionType::get(manager, funType->getParameterTypes(), funType->getReturnType());
-	return manager.get(CaptureInitExpr(initExprType, lambda, values));
-}
-
-std::ostream& CaptureInitExpr::printTo(std::ostream& out) const {
-	return out << "([" << join(", ", values, print<deref<ExpressionPtr>>()) << "]" << *lambda << ")";
-}
 
 
 // ------------------------ Member Access Expression ------------------------
