@@ -1138,6 +1138,17 @@ public:
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) &&
 					"LHS operand must be of type ref<a'>."
 				);
+
+			// If the value of the RHS operation is AnyRef we cannot use the assignment operator 
+			// therefore the set.null literal is used
+			if ( gen.isNull(rhs) ) {
+				core::ExpressionPtr&& retExpr = builder.callExpr(gen.getSetNull(), toVector(lhs));
+
+				// handle eventual pragmas attached to the Clang node
+				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation( retExpr, binOp, convFact );
+				END_LOG_EXPR_CONVERSION( retExpr );
+				return annotatedNode;
+			}	
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();
@@ -1279,12 +1290,11 @@ public:
 			break;
 		// !a
 		case UO_LNot:
-			subExpr = convFact.tryDeref(subExpr);
 			if( !gen.isBool(subExpr->getType()) ) {
-				// for now add a cast expression to bool FIXME
-				subExpr = convFact.getASTBuilder().castExpr(gen.getBool(), subExpr);
+				subExpr = convFact.castToType(gen.getBool(), subExpr);
 			}
 			assert( gen.isBool(subExpr->getType()) );
+
 			subExpr = builder.callExpr( subExpr->getType(), gen.getBoolLNot(), subExpr );
 			break;
 		case UO_Real:
