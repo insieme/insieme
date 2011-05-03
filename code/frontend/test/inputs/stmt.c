@@ -89,7 +89,7 @@ void unary_op_test() {
 	#pragma test "decl ref<int<4>> v1 = ( var(0))"
 	int a = 0;
 
-	#pragma test "(!CAST<bool>(( *v1)))"
+	#pragma test "(!int.ne(( *v1), 0))"
 	!a;
 
 	#pragma test "( *v1)"

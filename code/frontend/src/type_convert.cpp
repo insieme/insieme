@@ -311,7 +311,7 @@ public:
 		// If the return type is of type vector or array we need to add a reference
 		// so that the semantics of C argument passing is mantained
 		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
-			retTy = this->convFact.builder.refType(retTy);
+			retTy = convFact.builder.refType(retTy);
 
 		assert(retTy && "Function has no return type!");
 
@@ -351,6 +351,12 @@ public:
 	core::TypePtr VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION( funcTy );
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+		
+		// If the return type is of type vector or array we need to add a reference
+		// so that the semantics of C argument passing is mantained
+		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
+			retTy = convFact.builder.refType(retTy);
+
 		assert(retTy && "Function has no return type!");
 
 		retTy = convFact.builder.functionType( core::TypeList(), retTy);

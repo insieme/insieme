@@ -289,14 +289,14 @@ GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
 GROUP(RefOp, RefVar, RefNew, RefDelete, RefAssign, RefDeref)
 
-LITERAL(RefVar,    "ref.var",    			"('a) -> ref<'a>")
-LITERAL(RefNew,    "ref.new",    			"('a) -> ref<'a>")
-LITERAL(RefDelete, "ref.delete", 			"(ref<'a>) -> unit")
-LITERAL(RefEqual,  "ref.eq",				"(ref<'a>, ref<'a>) -> bool")
-LITERAL(RefAssign, "ref.assign", 			"(ref<'a>,'a) -> unit")
-LITERAL(RefDeref,  "ref.deref",  			"(ref<'a>) -> 'a")
-LITERAL(ScalarToArray, "scalar.to.array", "(ref<'a>) -> ref<array<'a,1>>")
-
+LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
+LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
+LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
+LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
+LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
+LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
+LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
+LITERAL(SetNull,   		"set.null",				"(ref<'a>) -> unit")
 
 // Any References -----------------------------------------------------------------------------------------------------
 
@@ -317,8 +317,8 @@ LITERAL(IntTypeParamToInt, "int.type.param.to.int", "(intTypeParam<#n>)->int<8>"
 
 GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArrayLength1D, ArrayLengthND, ArraySubscript1D, ArraySubscriptND)
 
-LITERAL(ArrayCreate1D, "array.create.1D", "('elem, uint<8>) -> array<'elem,1>")
-LITERAL(ArrayCreateND, "array.create.ND", "('elem, vector<uint<8>,#n>) -> array<'elem,#n>")
+LITERAL(ArrayCreate1D, "array.create.1D", "(type<'elem>, uint<8>) -> array<'elem,1>")
+LITERAL(ArrayCreateND, "array.create.ND", "(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
 
 LITERAL(ArrayLength1D, "array.length.1D", "(array<'elem,1>) -> uint<8>")
 LITERAL(ArrayLengthND, "array.length.ND", "(array<'elem,#n>) -> vector<uint<8>,#n>")

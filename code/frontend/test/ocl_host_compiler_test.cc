@@ -45,6 +45,8 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/frontend/ocl/ocl_host_compiler.h"
+
 #include "insieme/utils/logging.h"
 
 namespace fe = insieme::frontend;
@@ -59,7 +61,6 @@ TEST(OclCompilerTest, HelloCLTest) {
     CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "/inputs");
     CommandLineOptions::Defs.push_back("INSIEME");
 
-    std::cout << "DONE\n";
     CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
     core::ProgramPtr program = core::Program::create(manager);
@@ -72,6 +73,10 @@ TEST(OclCompilerTest, HelloCLTest) {
     prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
     program = prog.convert();
     LOG(INFO) << "Done.";
+
+    LOG(INFO) << "Starting OpenCL host code transformations";
+    fe::ocl::HostCompiler hc(program, manager);
+    hc.compile();
 
     core::printer::PrettyPrinter pp(program);
 
