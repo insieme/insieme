@@ -298,7 +298,7 @@ namespace transform {
 					// handle vector->array
 					if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
 						// conversion needed
-						newArgs[i] = builder.callExpr((ref)?basic.getRefVector2RefArray():basic.getVector2Array(), newArgs[i]);
+						newArgs[i] = builder.callExpr((ref)?basic.getRefVectorToRefArray():basic.getVectorToArray(), newArgs[i]);
 						changed = true;
 					}
 				}
@@ -334,7 +334,7 @@ namespace transform {
 				const core::ExpressionPtr& oldInit = declaration->getInitialization();
 
 				// construct a new init statement
-				core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.basic.getVector2Array(), toVector(oldInit));
+				core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.basic.getVectorToArray(), toVector(oldInit));
 				return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
 			}
 		};

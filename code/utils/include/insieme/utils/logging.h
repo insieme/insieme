@@ -134,6 +134,7 @@ struct LevelSpec {
 		default:
 			assert(false);
 		}
+		return "UNKNOWN";
 	}
 
 	static void format(std::ostream& out, const Ctx& ctx) {

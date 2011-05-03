@@ -240,7 +240,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 
 	// cast an integer to a boolean value
 	if ( gen.isInt(trgTy) && gen.isBool(argTy) ) {
-		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBool2Int(), toVector(expr) ) );
+		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBoolToInt(), toVector(expr) ) );
 	}
 
 	// cast a char to int<#a>
@@ -292,7 +292,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 			// we are in the situation where a function receiving a ref<array> gets in input a
 			// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
 			const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
-			return builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), builder.getBasicGenerator().getRefVector2RefArray(), expr );
+			return builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), builder.getBasicGenerator().getRefVectorToRefArray(), expr );
 		}
 	}
 	// CASE 1: convert from string literal to vector<char, N>
@@ -371,7 +371,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 					expr
 				);
 		// now convert the vector into an array
-		return builder.callExpr( trgTy, gen.getVector2Array(), toVector(ret) );
+		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(ret) );
 	}
 
 	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
@@ -1138,6 +1138,17 @@ public:
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) &&
 					"LHS operand must be of type ref<a'>."
 				);
+
+			// If the value of the RHS operation is AnyRef we cannot use the assignment operator 
+			// therefore the set.null literal is used
+			if ( gen.isNull(rhs) ) {
+				core::ExpressionPtr&& retExpr = builder.callExpr(gen.getSetNull(), toVector(lhs));
+
+				// handle eventual pragmas attached to the Clang node
+				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation( retExpr, binOp, convFact );
+				END_LOG_EXPR_CONVERSION( retExpr );
+				return annotatedNode;
+			}	
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();
@@ -1279,12 +1290,11 @@ public:
 			break;
 		// !a
 		case UO_LNot:
-			subExpr = convFact.tryDeref(subExpr);
 			if( !gen.isBool(subExpr->getType()) ) {
-				// for now add a cast expression to bool FIXME
-				subExpr = convFact.getASTBuilder().castExpr(gen.getBool(), subExpr);
+				subExpr = convFact.castToType(gen.getBool(), subExpr);
 			}
 			assert( gen.isBool(subExpr->getType()) );
+
 			subExpr = builder.callExpr( subExpr->getType(), gen.getBoolLNot(), subExpr );
 			break;
 		case UO_Real:
