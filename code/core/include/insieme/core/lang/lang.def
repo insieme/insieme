@@ -317,8 +317,8 @@ LITERAL(IntTypeParamToInt, "int.type.param.to.int", "(intTypeParam<#n>)->int<8>"
 
 GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArrayLength1D, ArrayLengthND, ArraySubscript1D, ArraySubscriptND)
 
-LITERAL(ArrayCreate1D, "array.create.1D", "('elem, uint<8>) -> array<'elem,1>")
-LITERAL(ArrayCreateND, "array.create.ND", "('elem, vector<uint<8>,#n>) -> array<'elem,#n>")
+LITERAL(ArrayCreate1D, "array.create.1D", "(type<'elem>, uint<8>) -> array<'elem,1>")
+LITERAL(ArrayCreateND, "array.create.ND", "(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
 
 LITERAL(ArrayLength1D, "array.length.1D", "(array<'elem,1>) -> uint<8>")
 LITERAL(ArrayLengthND, "array.length.ND", "(array<'elem,#n>) -> vector<uint<8>,#n>")
