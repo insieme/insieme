@@ -207,7 +207,6 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	}
 
 	// provide some manager
-	VariableManager& varManager = cc.getVariableManager();
 	TypeManager& typeManager = cc.getTypeManager();
 	NameManager& nameManager = cc.getNameManager();
 
