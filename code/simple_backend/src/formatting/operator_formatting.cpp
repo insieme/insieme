@@ -346,6 +346,8 @@ namespace formatting {
 		ADD_FORMATTER(res, basic.getCharLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getCharLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
+		ADD_FORMATTER(res, basic.getRefEqual(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+
 		ADD_FORMATTER(res, basic.getUnsignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getUnsignedIntNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getUnsignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });

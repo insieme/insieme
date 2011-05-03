@@ -695,7 +695,8 @@ namespace simple_backend {
 
 			case NT_BindExpr: {
 				// a closure is to be invoked
-				code << " ... code to invoke a closure ... ";
+				code << " /* closure: " << funExp << " */";
+//				code << " ... code to invoke a closure ... ";
 				return;
 			}
 

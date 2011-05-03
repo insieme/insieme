@@ -698,7 +698,7 @@ TEST(TypeUtils, AutoTypeInference_ArrayInitCall) {
 	TypePtr elementType = builder.genericType("Set", toVector<TypePtr>(builder.typeVariable("elem")));
 
 	// create the call
-	ExpressionPtr element = builder.literal(elementType, "X");
+	ExpressionPtr element = basic.getTypeLiteral(elementType);
 	ExpressionPtr size = builder.literal(basic.getUInt8(), "15");
 	ExpressionPtr res = builder.callExpr(basic.getArrayCreate1D(), element, size);
 
