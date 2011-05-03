@@ -35,8 +35,10 @@
  */
 
 #include "insieme/core/ast_builder.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/ast_address.h"
+#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"
 
@@ -44,26 +46,104 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
-class HostVisitor : public core::AddressVisitor<void> {
-    core::ASTBuilder& builder;
+// shortcut
+#define BASIC builder.getNodeManager().basic
 
-    core::ProgramPtr replacement;
+namespace {
+
+/**
+ * This struct holds inspire representations of OpenCL built-in host functions
+ */
+struct Ocl2Inspire {
+private:
+    core::parse::IRParser parser;
 
 public:
-    HostVisitor(core::ASTBuilder& build) : core::AddressVisitor<void>(false), builder(build) { }
+    Ocl2Inspire(core::NodeManager& mgr) : parser(mgr) {}
 
-    core::ProgramPtr getReplacement() { return replacement; }
+    core::ExpressionPtr getClCreateBuffer();
+};
+
+
+/**
+ * This class allows replaces a call to an OpenCL built-in function to an INSPIRE one
+ *  */
+class Handler {
+public:
+
+    virtual core::NodePtr handleNode(core::CallExprPtr node) =0;
+};
+
+template<typename Lambda>
+class LambdaHandler : public Handler {
+    // flag indicating if the definition of the actual function has already been added to the program
+    static bool defAdded;
+    core::ASTBuilder& builder;
+
+    const char* fct;
+    Lambda body;
+
+public:
+    LambdaHandler(core::ASTBuilder& build, const char* fun, Lambda lambda): builder(build), fct(fun), body(lambda) {}
+
+    // creating a shared pointer to a LambdaHandler
+
+    core::NodePtr handleNode(core::CallExprPtr node) {
+        std::cout << "Handling node " << node << std::endl;
+
+        return body(node);
+    }
+};
+
+typedef std::shared_ptr<Handler> HandlerPtr;
+typedef boost::unordered_map<string, HandlerPtr, boost::hash<string>> HandlerTable;
+
+template<typename Lambda>
+HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambda) {
+    return std::make_shared<LambdaHandler<Lambda> >(builder, fct, lambda);
+}
+
+#define ADD_Handler(builder, fct, BODY) \
+    handles.insert(std::make_pair(fct, make_handler(builder, fct, [&](core::CallExprPtr node){ BODY }))).second;
+
+
+
+class HostMapper : public core::transform::CachedNodeMapping {
+    core::ASTBuilder& builder;
+//    Handlers handler;
+
+    HandlerTable handles;
+    Ocl2Inspire o2i;
+
+public:
+    HostMapper(core::ASTBuilder& build);
+
+    const core::NodePtr resolveElement(const core::NodePtr& element);
+
+};
+
+class HostVisitor : public core::AddressVisitor<void> {
+    core::ASTBuilder& builder;
+    core::ProgramPtr& newProg;
+
+    const core::NodePtr resolveElement(const core::NodePtr& element);
+
+public:
+    HostVisitor(core::ASTBuilder& build, core::ProgramPtr& prog) : core::AddressVisitor<void>(false), builder(build), newProg(prog) {};
+
+    core::ProgramPtr getNewProg() { return newProg; }
 
     void visitCallExpr(const core::CallExprAddress& callExp);
 
 };
+}
 
 class HostCompiler {
     core::ProgramPtr& mProgram;
     core::ASTBuilder builder;
 
 public:
-    HostCompiler(core::ProgramPtr program, core::NodeManager mgr): mProgram(program), builder(mgr) {}
+    HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr): mProgram(program), builder(mgr) {}
 
     core::ProgramPtr compile();
 };

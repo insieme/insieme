@@ -39,11 +39,14 @@
 int main(int argc, char **argv)
 {
     cl_context context;
+    cl_command_queue queue;
     cl_int err;
 
-    cl_mem dev_ptr;
+    cl_mem dev_ptr = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
     float* host_ptr;
 
 
-    dev_ptr = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
+//    dev_ptr = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
+
+    //clEnqueueWriteBuffer(queue, dev_ptr, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 }

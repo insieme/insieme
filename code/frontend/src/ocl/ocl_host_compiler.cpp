@@ -37,7 +37,7 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_node.h"
 
-#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/c_info/naming.h"
 #include "insieme/c_info/location.h"
@@ -48,16 +48,112 @@ namespace ba = boost::algorithm;
 namespace insieme {
 namespace frontend {
 namespace ocl {
+using namespace insieme::core;
 
-void HostVisitor::visitCallExpr(const core::CallExprAddress& callExpr) {
-    std::cout << callExpr->toString() << " FOUND\n";
+namespace {
+
+ExpressionPtr Ocl2Inspire::getClCreateBuffer() {
+    return parser.parseExpression("fun(type<'a>:type, uint<8>:flags, uint<8>:size, anyRef:hostPtr, array<int<4>, 1>:errorcode_ret) -> ref<array<'a, 1> > {{ \
+            return (op<ref.new>( (op<array.create.1D>( type, size )) )); \
+       }}");
 }
 
-core::ProgramPtr HostCompiler::compile() {
-    HostVisitor oclHostVisitor(builder);
 
-    mProgram = oclHostVisitor.getReplacement();
+HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeManager()) {
+    ADD_Handler(builder, "clCreateBuffer",
+        ExpressionPtr fun = o2i.getClCreateBuffer();
 
+        // extract the size form argument size, relying on it using a multiple of sizeof(type)
+        ExpressionPtr size;
+        TypePtr type;
+        if(CallExprPtr&& mul = dynamic_pointer_cast<const CallExpr>(node->getArgument(2))) {
+            if(CallExprPtr&& sizeof_ = dynamic_pointer_cast<const CallExpr>(mul->getArgument(0))) {
+                if(sizeof_->toString().find("sizeof") != string::npos) {
+                    // extract the type to be allocated
+                    type = dynamic_pointer_cast<const Type>(sizeof_->getArgument(0)->getType()->getChildList().at(0));
+                    // extract the number of elements to be allocated
+                    size = mul->getArgument(1);
+                }
+            }
+            if(CallExprPtr&& sizeof_ = dynamic_pointer_cast<const CallExpr>(mul->getArgument(1))) {
+                if(sizeof_->toString().find("sizeof") != string::npos) {
+                    // extract the type to be allocated
+                    type = dynamic_pointer_cast<const Type>(sizeof_->getArgument(0)->getType()->getChildList().at(0));
+                    // extract the number of elements to be allocated
+                    size = mul->getArgument(0);
+                }
+            }
+        }
+
+        assert(type && "Unable to deduce type from clCreateBuffer call:\nNo sizeof call found, cannot translate to INSPIRE.");
+
+        vector<ExpressionPtr> args;
+        args.push_back(BASIC.getTypeLiteral(type));//(BASIC.getTypeLiteral(BASIC.getUInt4()))
+        args.push_back(node->getArgument(1));
+        args.push_back(size);
+        args.push_back(node->getArgument(3));
+        args.push_back(node->getArgument(4));
+        return builder.callExpr(builder.arrayType(type), fun, args);
+    );
+};
+
+
+const NodePtr HostMapper::resolveElement(const NodePtr& element) {
+    // stopp recursion at type level
+    if (element->getNodeCategory() == NodeCategory::NC_Type) {
+        return element->substitute(builder.getNodeManager(), *this);
+    }
+
+    if(DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
+        const VariablePtr var = decl->getVariable();
+        if(var->getType() == builder.arrayType(builder.genericType("_cl_mem"))) {
+//            std::cout << "Found cl_mem: " << var->toString() << std::endl;
+        }
+
+    }
+
+    if(CallExprPtr callExpr = dynamic_pointer_cast<const CallExpr>(element)){
+ //       std::cout << callExpr->toString() << " FOUND\n";
+        const ExpressionPtr& fun = callExpr->getFunctionExpr();
+        vector<ExpressionPtr> args = callExpr->getArguments();
+
+        if(LiteralPtr literal = dynamic_pointer_cast<const Literal>(fun)) {
+//            std::cout << "CALL: " << literal->getValue() << std::endl;
+            if(HandlerPtr replacement = handles[literal->getValue()]) {
+                return replacement->handleNode(callExpr);
+            }
+        }
+        return element->substitute(builder.getNodeManager(), *this);
+    }
+
+    return element->substitute(builder.getNodeManager(), *this);
+}
+
+void HostVisitor::visitCallExpr(const CallExprAddress& callExpr) {
+    std::cout << callExpr->toString() << " FOUND\n";
+//    newProg = dynamic_pointer_cast<const Program>(transform::replaceNode(builder.getNodeManager(), callExpr, builder.getThreadId(), true));
+    std::cout << "CALL: " << callExpr->getChildList().at(0) << " Type: " << callExpr->getChildList().at(0)->getNodeType() << std::endl;
+}
+
+}
+ProgramPtr HostCompiler::compile() {
+//    HostVisitor oclHostVisitor(builder, mProgram);
+    HostMapper oclHostMapper(builder);
+
+//    visitAll(ProgramAddress(mProgram), oclHostVisitor);
+
+//    mProgram = oclHostVisitor.getNewProg();
+
+//    return mProgram;
+
+    const NodePtr progNode = oclHostMapper.mapElement(0, mProgram);
+
+    if(ProgramPtr newProg = dynamic_pointer_cast<const Program>(progNode)) {
+        mProgram = newProg;
+        return newProg;
+    }
+    else
+        assert(newProg && "OclHostCompiler corrupted the program");
     return mProgram;
 }
 
