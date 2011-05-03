@@ -86,7 +86,6 @@ public:
 
 	typedef RecTypeDefinition::RecTypeDefs RecTypeDefs;
 
-	typedef Lambda::CaptureList CaptureList;
 	typedef Lambda::ParamList ParamList;
 
 	typedef LambdaDefinition::Definitions Definitions;

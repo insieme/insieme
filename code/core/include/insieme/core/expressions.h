@@ -176,19 +176,17 @@ class Lambda : public Node {
 public:
 
 	/**
-	 * Type wrapper for the capture and parameter list.
+	 * Type wrapper for the parameter list.
 	 */
-	typedef vector<VariablePtr> CaptureList;
 	typedef vector<VariablePtr> ParamList;
 
 private:
 
 	const FunctionTypePtr type;
-	const CaptureList captureList;
 	const ParamList paramList;
 	const StatementPtr body;
 
-	Lambda(const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body);
+	Lambda(const FunctionTypePtr& type, const ParamList& paramList, const StatementPtr& body);
 	virtual Lambda* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
@@ -211,14 +209,10 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const FunctionTypePtr& getType() const { return type; }
-	const CaptureList& getCaptureList() const { return captureList; }
 	const ParamList& getParameterList() const { return paramList; }
 	const StatementPtr& getBody() const { return body; }
 
-	bool isCapturing() const { return !captureList.empty(); }
-
 	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body);
-	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
 
 };
 
@@ -412,18 +406,6 @@ public:
 	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::ParamList& params, const StatementPtr& body);
 
 	/**
-	 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
-	 *
-	 * @param manager the manager maintaining the resulting node instance
-	 * @param type the type of the resulting lambda expression
-	 * @param captureList the list of capture variables
-	 * @param params the parameters accepted by the resulting lambda
-	 * @param body the body of the resulting function
-	 * @return the requested lambda expression managed by the given manager
-	 */
-	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body);
-
-	/**
 	 * Prints a readable representation of this instance to the given output stream.
 	 *
 	 * @param out the stream to be printed to
@@ -445,11 +427,6 @@ public:
 	 * Obtains a pointer to the defining lambda node.
 	 */
 	const LambdaPtr& getLambda() const { return lambda; }
-
-	/**
-	 * Obtains a reference to the internally maintained capture list of this lambda.
-	 */
-	const Lambda::CaptureList& getCaptureList() const;
 
 	/**
 	 * Obtains a reference to the internally maintained parameter list of this lambda.

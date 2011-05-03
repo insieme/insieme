@@ -152,14 +152,17 @@ TEST(ExpressionsTest, Lambda) {
 	VariablePtr varA = Variable::get(manager, type, 1);
 	VariablePtr varB = Variable::get(manager, type, 2);
 	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type);
-	LambdaPtr empty = Lambda::get(manager, funType, Lambda::CaptureList(), Lambda::ParamList(), body);
-	LambdaPtr more = Lambda::get(manager, funType, toVector(varA), toVector(varB), body);
+	LambdaPtr empty = Lambda::get(manager, funType, Lambda::ParamList(), body);
+	LambdaPtr little = Lambda::get(manager, funType, toVector(varA), body);
+	LambdaPtr more = Lambda::get(manager, funType, toVector(varA, varB), body);
 
-	EXPECT_EQ ("fun[]() a", toString(*empty));
-	EXPECT_EQ ("fun[A v1](A v2) a", toString(*more));
+	EXPECT_EQ ("fun() a", toString(*empty));
+	EXPECT_EQ ("fun(A v1) a", toString(*little));
+	EXPECT_EQ ("fun(A v1, A v2) a", toString(*more));
 
 	// conduct basic node checks
 	basicNodeTests(empty, toVector<NodePtr>(funType, body));
+	basicNodeTests(little, toVector<NodePtr>(funType, varA, body));
 	basicNodeTests(more, toVector<NodePtr>(funType, varA, varB, body));
 }
 
@@ -187,7 +190,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 					builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), oddVar, x))
 			)
 	);
-	LambdaPtr evenLambda = builder.lambda(functionType, Lambda::CaptureList(), param, evenBody);
+	LambdaPtr evenLambda = builder.lambda(functionType, param, evenBody);
 
 	// build odd body ...
 	StatementPtr oddBody = builder.ifStmt(condition,
@@ -196,7 +199,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 						builder.callExpr(gen.getBool(), gen.getBoolLNot(), builder.callExpr(gen.getBool(), evenVar, x))
 				)
 	);
-	LambdaPtr oddLambda = builder.lambda(functionType, Lambda::CaptureList(), param, oddBody);
+	LambdaPtr oddLambda = builder.lambda(functionType, param, oddBody);
 
 	// finish definition
 	LambdaDefinition::Definitions definitions;
@@ -224,8 +227,8 @@ TEST(ExpressionsTest, LambdaExpr) {
 	EXPECT_TRUE(even->isRecursive());
 	EXPECT_TRUE(odd->isRecursive());
 
-	EXPECT_EQ("rec v1.{v1=fun[](uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun[](uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*even));
-	EXPECT_EQ("rec v2.{v1=fun[](uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun[](uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*odd));
+	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun(uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*even));
+	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun(uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*odd));
 }
 
 TEST(ExpressionsTest, BindExpr) {

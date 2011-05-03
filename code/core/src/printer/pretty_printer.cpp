@@ -408,11 +408,7 @@ namespace {
 					out << *cur->getType() << " " << *cur;
 				};
 
-				out << "fun";
-				if (node->isCapturing()) {
-					out << "[" << join(", ", node->getCaptureList(), paramPrinter) << "]";
-				}
-				out << "(" << join(", ", node->getParameterList(), paramPrinter) << ")";
+				out << "fun(" << join(", ", node->getParameterList(), paramPrinter) << ")";
 				visit(node->getBody());
 		});
 

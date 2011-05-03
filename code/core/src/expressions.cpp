@@ -603,13 +603,11 @@ CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const Expre
 
 namespace {
 
-	std::size_t hashLambda(const FunctionTypePtr& type, const Lambda::CaptureList& captureList,
-			const Lambda::ParamList& paramList, const StatementPtr& body) {
+	std::size_t hashLambda(const FunctionTypePtr& type, const Lambda::ParamList& paramList, const StatementPtr& body) {
 
 		std::size_t hash = 0;
 		boost::hash_combine(hash, HS_Lambda);
 		boost::hash_combine(hash, type->hash());
-		hashPtrRange(hash, captureList);
 		hashPtrRange(hash, paramList);
 		boost::hash_combine(hash, body->hash());
 		return hash;
@@ -617,15 +615,14 @@ namespace {
 
 }
 
-Lambda::Lambda(const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body)
-	: Node(NT_Lambda, NC_Support, hashLambda(type, captureList, paramList, body)), type(isolate(type)),
-	  captureList(isolate(captureList)), paramList(isolate(paramList)), body(isolate(body)) { };
+Lambda::Lambda(const FunctionTypePtr& type, const ParamList& paramList, const StatementPtr& body)
+	: Node(NT_Lambda, NC_Support, hashLambda(type, paramList, body)), type(isolate(type)),
+	  paramList(isolate(paramList)), body(isolate(body)) { };
 
 Lambda* Lambda::createCopyUsing(NodeMapping& mapper) const {
 	return new Lambda(mapper.map(0, type),
-			mapper.map(1, captureList),
-			mapper.map(1+captureList.size(), paramList),
-			mapper.map(1+captureList.size() + paramList.size(), body)
+			mapper.map(1, paramList),
+			mapper.map(1 + paramList.size(), body)
 		);
 }
 
@@ -642,7 +639,6 @@ bool Lambda::equals(const Node& other) const {
 
 	const Lambda& rhs = static_cast<const Lambda&>(other);
 	return 	*type == *rhs.type &&
-			::equals(captureList, rhs.captureList, equal_target<VariablePtr>()) &&
 			::equals(paramList, rhs.paramList, equal_target<VariablePtr>()) &&
 			*body == *rhs.body;
 }
@@ -650,7 +646,6 @@ bool Lambda::equals(const Node& other) const {
 Node::OptionChildList Lambda::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(type);
-	res->insert(res->end(), captureList.begin(), captureList.end());
 	res->insert(res->end(), paramList.begin(), paramList.end());
 	res->push_back(body);
 	return res;
@@ -662,17 +657,13 @@ std::ostream& Lambda::printTo(std::ostream& out) const {
 	};
 
 	out << "fun";
-	out << "[" << join(", ", captureList, paramPrinter) << "]";
 	out << "(" << join(", ", paramList, paramPrinter) << ") " << *body;
 
 	return out;
 }
 
 LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body) {
-	return get(manager, type, CaptureList(), params, body);
-}
-LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body) {
-	return manager.get(Lambda(type, captureList, params, body));
+	return manager.get(Lambda(type, params, body));
 }
 
 
@@ -871,7 +862,7 @@ bool LambdaExpr::equalsExpr(const Expression& expr) const {
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
-	return get(manager, lambda->getType(), lambda->getCaptureList(), lambda->getParameterList(), lambda->getBody());
+	return get(manager, lambda->getType(), lambda->getParameterList(), lambda->getBody());
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
@@ -879,15 +870,11 @@ LambdaExprPtr LambdaExpr::get(NodeManager& manager, const VariablePtr& variable,
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::ParamList& params, const StatementPtr& body) {
-	return get(manager, type, toVector<VariablePtr>(), params, body);
-}
-
-LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body) {
 
 	// build definitions
 	VariablePtr var = Variable::get(manager, type);
 	LambdaDefinition::Definitions defs;
-	defs.insert(std::make_pair(var, Lambda::get(manager, type, captureList, params, body)));
+	defs.insert(std::make_pair(var, Lambda::get(manager, type, params, body)));
 
 	return manager.get(LambdaExpr(var, LambdaDefinition::get(manager, defs)));
 }
@@ -895,10 +882,6 @@ LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type,
 std::ostream& LambdaExpr::printTo(std::ostream& out) const {
 	// TODO: special handling for non-recursive functions
 	return out << "rec " << *variable << "." << *definition;
-}
-
-const Lambda::CaptureList& LambdaExpr::getCaptureList() const {
-	return lambda->getCaptureList();
 }
 
 const Lambda::ParamList& LambdaExpr::getParameterList() const {

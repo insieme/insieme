@@ -370,7 +370,6 @@ void ASTPrinter::visitLambda(const LambdaPtr& lambda) {
 	visitAnnotationList(*builder, NODE_ID(lambda), lambda->getAnnotations());
 
 	visitChildList(*builder, toVector(lambda->getType()), lambda, "type");
-	visitChildList(*builder, lambda->getCaptureList(), lambda, "param");
 	visitChildList(*builder, lambda->getParameterList(), lambda, "param");
 	visitChildList(*builder, toVector(lambda->getBody()), lambda, "body");
 }
