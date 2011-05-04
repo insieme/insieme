@@ -54,7 +54,8 @@ static inline void irt_##__type__##_deque_cleanup(irt_##__type__##_deque* q); \
 static inline void irt_##__type__##_deque_insert_front(irt_##__type__##_deque* q, irt_##__type__* element); \
 static inline void irt_##__type__##_deque_insert_back(irt_##__type__##_deque* q, irt_##__type__* element); \
 static inline irt_##__type__* irt_##__type__##_deque_pop_front(irt_##__type__##_deque* q); \
-static inline irt_##__type__* irt_##__type__##_deque_pop_back(irt_##__type__##_deque* q);
+static inline irt_##__type__* irt_##__type__##_deque_pop_back(irt_##__type__##_deque* q); \
+static inline irt_##__type__* irt_##__type__##_deque_take_elem(irt_##__type__##_deque* q, irt_##__type__* elem);
 
 
 /* Defines a thread-safe deque and the functions to insert, 
