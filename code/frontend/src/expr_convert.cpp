@@ -170,7 +170,7 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 				//elemType = core::static_pointer_cast<const core::RefType>(elemType)->getElementType();
 
 				return builder.refNew(builder.callExpr(type, gen.getArrayCreate1D(),
-						builder.callExpr(elemType, gen.getUndefined(), gen.getTypeLiteral(elemType)), size)
+						gen.getTypeLiteral(elemType), size)
 					);
 			}
 		}
@@ -254,7 +254,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		const core::LiteralPtr& lit = core::static_pointer_cast<const core::Literal>(expr);
 		char val;
 		if ( lit->getValue().length() == 3) {
-			char val = lit->getValue()[1]; // chars are encoded as 'V', therefore position 1 always contains the char value	
+			val = lit->getValue()[1]; // chars are encoded as 'V', therefore position 1 always contains the char value	
 		} else if ( lit->getValue().length() == 4 ) {
 			// this char literal contains some escaped sequence which is represented with 2 chars' 
 			std::string strVal = lit->getValue().substr(1,2);
@@ -430,9 +430,30 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	{
 		// This is done by creating a wrapping array containing the argument
 		const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(trgTy)->getElementType();
-		return builder.callExpr( trgTy, gen.getArrayCreate1D(), 
-				toVector( makeHerbertHappy(builder, subTy, expr), builder.literal("1", gen.getUInt8()) )
+		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1); 
+		core::ExpressionPtr vecExpr = builder.callExpr( 
+				builder.vectorType(subTy, size), // vec<subTy,1>
+				gen.getVectorInitUniform(), 
+				toVector( makeHerbertHappy(builder, subTy, expr), gen.getIntTypeParamLiteral(size) )
 			);
+		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(vecExpr) );
+	}
+
+	// [ ref<'a> -> ref<array<'a>> ]
+	//
+	// Use the scalarToArray literal to perform this kind of conversion
+	if ( trgTy->getNodeType() == core::NT_RefType ) {
+		assert( argTy->getNodeType() == core::NT_RefType );
+		const core::TypePtr& subTrgTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
+		const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
+		if ( subTrgTy->getNodeType() == core::NT_ArrayType ) {
+			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
+			core::ExpressionPtr subExpr = expr;
+			if ( *arrTy->getElementType() != *argSubTy ) {
+				subExpr = makeHerbertHappy(builder, arrTy->getElementType(), expr );
+			}
+			return builder.callExpr( gen.getScalarToArray(), subExpr);
+		}
 	}
 	
 	// [  ]
@@ -450,13 +471,13 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		//} 
 		//assert(saveOp);
 		//return builder.callExpr( trgTy, saveOp, makeHerbertHappy(builder, 
-				//core::static_pointer_cast<const core::RefType>(trgTy)->getElementType(), 
-				//ret	)
-			//);
+					//core::static_pointer_cast<const core::RefType>(trgTy)->getElementType(), 
+					//ret	)
+				//);
 	//}
 	
 	LOG(ERROR) << ": converting expression '" << *expr << "' of type '" << *expr->getType() << "' to type '" 
-			   << trgTy << "' not yet supported!";
+			   << *trgTy << "' not yet supported!";
 	assert(false && "Cast conversion not supported!");
 }
 
@@ -1204,6 +1225,7 @@ public:
 				END_LOG_EXPR_CONVERSION( retExpr );
 				return annotatedNode;
 			}	
+			
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();
@@ -1308,10 +1330,16 @@ public:
 			 * we have to declare a variable holding the memory location for that value and replace every use of
 			 * the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
 			 */
-			core::ExpressionPtr&& expr = wrapVariable(unOp->getSubExpr());
-			assert(expr->getType()->getNodeType() == core::NT_RefType);
+			subExpr = wrapVariable(unOp->getSubExpr());
 
-			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  expr );
+			// in the case we are getting the address of a function the & operator 
+			// has no effects, therefore we return
+			if (subExpr->getType()->getNodeType() == core::NT_FunctionType) {
+				break;
+			}
+
+			assert(subExpr->getType()->getNodeType() == core::NT_RefType);
+			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  subExpr );
 			break;
 		}
 		// *a
@@ -1694,6 +1722,18 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 	if ( core::analysis::isCallOf(retExpr, mgr.basic.getArrayCreate1D()) ) {
 		retExpr = builder.callExpr(builder.refType(retExpr->getType()), mgr.basic.getRefNew(), retExpr);
 	}
+
+	// in the case the array is allocated in the global struct, the type is not ref and the assignment 
+	// of null becomes the initialization of the array with no elements
+	if ( mgr.getBasicGenerator().isNull(retExpr) &&  type->getNodeType() == core::NT_ArrayType ) {
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
+		return builder.callExpr(
+				type, mgr.basic.getArrayCreate1D(), 
+				mgr.basic.getTypeLiteral(subTy),
+				builder.literal("0", mgr.basic.getUInt8())
+			);
+
+	}	
 
 	//if ( !(core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
 		   //core::analysis::isCallOf(retExpr, mgr.basic.getRefNew())) ) {

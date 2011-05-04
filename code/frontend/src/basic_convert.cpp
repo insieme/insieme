@@ -401,10 +401,11 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     			return mgr.basic.getNull();
     		}
     	}
-    	core::ExpressionPtr&& initVal = defaultInitVal(arrTy->getElementType());
-		return builder.callExpr(
-				arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
-			);
+		return castToType(arrTy, defaultInitVal(arrTy->getElementType()));
+
+		//return builder.callExpr(
+				//arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
+			//);
     }
 
     assert(false && "Default initialization type not defined");
