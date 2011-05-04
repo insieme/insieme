@@ -467,7 +467,6 @@ namespace analysis {
 
 			return argumentMapping;
 		}
-
 	}
 
 
@@ -515,18 +514,20 @@ namespace analysis {
 
 		// apply renaming to arguments
 		TypeList renamedArguments = arguments;
+		vector<TypeMapping> argumentRenaming;
 		for (std::size_t i = 0; i < renamedArguments.size(); ++i) {
 			TypePtr& cur = renamedArguments[i];
 
 			// first: apply bound variable substitution
 			cur = argumentMapping.applyForward(internalManager, cur);
 
-			// second: apply variable renameing
-			cur = renamer.rename(internalManager, cur);
+			// second: apply variable renaming
+			TypeMapping mapping = renamer.mapVariables(internalManager, cur);
+			if (!mapping.empty()) argumentRenaming.push_back(mapping);
+			cur = mapping.applyForward(internalManager, cur);
 		}
 
 		if (debug) std::cout << " Renamed Arguments: " << renamedArguments << std::endl;
-
 
 
 		// ---------------------------------- Assembling Constraints -----------------------------------------
@@ -569,11 +570,23 @@ namespace analysis {
 		for (auto it = res->getMapping().begin(); it != res->getMapping().end(); ++it) {
 			TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
 			TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
+
+			// also apply argument renaming backwards ..
+			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
+				substitute = it2->applyBackward(manager, it->second);
+			}
+
 			restored.addMapping(manager.get(var), manager.get(substitute));
 		}
 		for (auto it = res->getIntTypeParamMapping().begin(); it != res->getIntTypeParamMapping().end(); ++it) {
 			VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(parameterMapping.applyBackward(manager, it->first));
 			IntTypeParamPtr substitute = argumentMapping.applyBackward(manager, it->second);
+
+			// also apply argument renaming backwards ..
+			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
+				substitute = it2->applyBackward(manager, it->second);
+			}
+
 			restored.addMapping(manager.get(var), manager.get(substitute));
 		}
 		if (debug) std::cout << " Terminated with: " << restored << std::endl << std::endl;

@@ -70,6 +70,13 @@ namespace analysis {
 	public:
 
 		/**
+		 * Test whether this mapping is empty.
+		 */
+		bool empty() const {
+			return forward.empty();
+		}
+
+		/**
 		 * Adds a new type mapping to this instance.
 		 */
 		void addMapping(const TypePtr& varA, const TypePtr& varB) {
@@ -252,6 +259,16 @@ namespace analysis {
 		 */
 		TypeMapping mapVariables(const TypePtr& target) {
 			return mapVariables(target->getNodeManager(), toVector(target));
+		}
+
+		/**
+		 * Proposes a substitution where all the variables within the given type is
+		 * are renamed to new, fresh names. However, it is only guaranteed that the
+		 * new names a fresh considering the re-naming proposals previously computed
+		 * by the same instance.
+		 */
+		TypeMapping mapVariables(NodeManager& manager, const TypePtr& target) {
+			return mapVariables(manager, toVector(target));
 		}
 
 		/**

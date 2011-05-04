@@ -884,6 +884,32 @@ TEST(TypeVariableDeduction, VectorMatchingBug) {
 
 }
 
+
+TEST(TypeVariableDeduction, IntTypeParamVariableNameBug) {
+
+	// The Bug:
+	//		Invoking pointwise using a generic function type produces esthetically incorrect int type parameter names.
+	//
+	// The reason:
+	//		The renaming of the arguments was not reverted after a matching has been found. This step is actually
+	//		not necessary, however, it makes the picking of type variables within the result more predictable.
+	//
+	// The fix:
+	//		This is now done.
+	//
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+	const lang::BasicGenerator& basic = manager.basic;
+
+	auto op = basic.getUnsignedIntAdd();
+	auto call = builder.callExpr(basic.getVectorPointwise(), op);
+
+	EXPECT_EQ("((uint<#a>,uint<#a>)->uint<#a>)", toString(*op->getType()));
+	EXPECT_EQ("((vector<uint<#a>,#l>,vector<uint<#a>,#l>)->vector<uint<#a>,#l>)", toString(*call->getType()));
+
+}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

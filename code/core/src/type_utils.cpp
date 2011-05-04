@@ -175,7 +175,6 @@ void Substitution::addMapping(const TypeVariablePtr& var, const TypePtr& type) {
 }
 
 void Substitution::addMapping(const VariableIntTypeParamPtr& var, const IntTypeParamPtr& value) {
-
 	auto element = std::make_pair(var,value);
 	auto res = paramMapping.insert(element);
 	if (!res.second) {
