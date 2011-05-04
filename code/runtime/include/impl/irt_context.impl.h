@@ -39,8 +39,13 @@
 #include "irt_context.h"
 
 #include "utils/lookup_tables.h"
+#include "worker.h"
 
 IRT_DEFINE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
+
+static inline irt_context* irt_context_get_current() {
+	return irt_context_table_lookup(irt_worker_get_current()->cur_context);
+}
 
 irt_context* irt_context_create(irt_client_app* app) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));

@@ -40,6 +40,8 @@
 
 #include <pthread.h>
 
+#include "work_item.h"
+
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(worker);
@@ -49,15 +51,23 @@ struct _irt_worker {
 	// this count has to immediately follow the id. Don't change unless you also change id_generation.h
 	uint32 generator_count;
 	irt_affinity_mask affinity;
-//	irt_work_pool *pool;
-//	irt_work_queue *queue;
 	pthread_t pthread;
+	irt_work_item_deque queue;
+	irt_work_item_deque pool;
+	intptr_t basestack;
+	irt_context_id cur_context;
+	irt_work_item* cur_wi;
 };
 
 /* ------------------------------ operations ----- */
 
-static inline irt_worker* irt_worker_get_current();
+static inline irt_worker* irt_worker_get_current() {
+	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
+}
 
 irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
 
-void irt_worker_schedule();
+void irt_worker_schedule(irt_worker* self);
+
+void irt_worker_enqueue(irt_worker* self, irt_work_item* wi);
+void irt_worker_yield(irt_worker* self, irt_work_item* wi);
