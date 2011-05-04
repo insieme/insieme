@@ -115,6 +115,24 @@ namespace formatting {
 				OUT(")");
 		});
 
+		ADD_FORMATTER_DETAIL(res, basic.getRefToAnyRef(), false, {
+				OUT("(void*)");
+				// externalize data before being converted to a void*
+				STMT_CONVERTER.convertAsParameterToExternal(ARG(0));
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getAnyRefToRef(), false, {
+
+				// the name of the result type
+				const TypePtr& resType = CALL->getType();
+
+				OUT("(");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
+				OUT(")");
+				VISIT_ARG(0);
+		});
+
+
 		ADD_FORMATTER(res, basic.getScalarToArray(), {
 				// get name of resulting type
 				TypeManager& typeManager = CONTEXT.getTypeManager();
@@ -128,7 +146,7 @@ namespace formatting {
 				OUT(",{1}})");
 		});
 
-		ADD_FORMATTER(res, basic.getVector2Array(), {
+		ADD_FORMATTER(res, basic.getVectorToArray(), {
 				// get name of resulting type
 				TypeManager& typeManager = CONTEXT.getTypeManager();
 
@@ -140,12 +158,12 @@ namespace formatting {
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 				OUT("((");
 				OUT(name);
-				OUT("){&(");
+				OUT("){(");
 				VISIT_ARG(0);
 				OUT(").data,{1}})");
 		});
 
-		ADD_FORMATTER(res, basic.getRefVector2RefArray(), {
+		ADD_FORMATTER(res, basic.getRefVectorToRefArray(), {
 				// get name of resulting type
 				TypeManager& typeManager = CONTEXT.getTypeManager();
 
@@ -156,9 +174,10 @@ namespace formatting {
 				const TypePtr& element = static_pointer_cast<const core::ArrayType>(vector)->getElementType();
 				const TypePtr array = builder.arrayType(element);
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
+
 				OUT("&((");
 				OUT(name);
-				OUT("){&(*");
+				OUT("){(*");
 				VISIT_ARG(0);
 				OUT(").data,{1}})");
 		});
@@ -181,7 +200,9 @@ namespace formatting {
 					} else if (core::analysis::isCallOf(init, basic.getRefNew())) {
 						STMT_CONVERTER.convert(init);
 					} else {
-						STMT_CONVERTER.convert(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
+//						STMT_CONVERTER.convert(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
+
+						VISIT_ARG(0);
 					}
 
 				} else {
@@ -243,6 +264,11 @@ namespace formatting {
 				if (isRef) OUT(")");
 		});
 
+		ADD_FORMATTER_DETAIL(res, basic.getVectorRefElem(), false, {
+				OUT("&((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
+		});
+
+
 		ADD_FORMATTER_DETAIL(res, basic.getVectorRefProjection(), false, {
 				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
@@ -260,6 +286,8 @@ namespace formatting {
 				OUT("((*"); VISIT_ARG(0); OUT(")."); VISIT_ARG(1); OUT(")");
 		});
 		ADD_FORMATTER(res, basic.getCompositeMemberAccess(), { VISIT_ARG(0); OUT("."); VISIT_ARG(1); });
+
+		ADD_FORMATTER(res, basic.getBoolToInt(), { VISIT_ARG(0); });
 
 		ADD_FORMATTER(res, basic.getRealAdd(), { VISIT_ARG(0); OUT("+"); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getRealSub(), { VISIT_ARG(0); OUT("-"); VISIT_ARG(1); });
@@ -318,6 +346,8 @@ namespace formatting {
 		ADD_FORMATTER(res, basic.getCharLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getCharLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
+		ADD_FORMATTER(res, basic.getRefEqual(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
+
 		ADD_FORMATTER(res, basic.getUnsignedIntEq(), { VISIT_ARG(0); OUT("=="); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getUnsignedIntNe(), { VISIT_ARG(0); OUT("!="); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getUnsignedIntGe(), { VISIT_ARG(0); OUT(">="); VISIT_ARG(1); });
@@ -341,16 +371,17 @@ namespace formatting {
 
 
 		// string conversion
-		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, { OUT("&("); VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, {
 
+				core::ASTBuilder builder(CONTEXT.getNodeManager());
+				TypePtr array = builder.arrayType(CONTEXT.getLangBasic().getChar());
 
-//		ADD_FORMATTER(res, basic.getIfThenElse(), {
-//					OUT("("); VISIT_ARG(0); OUT(")?(");
-//					STMT_CONVERTER.convert(evalLazy(ARG(1)));
-//					OUT("):(");
-//					STMT_CONVERTER.convert(evalLazy(ARG(2)));
-//					OUT(")");
-//		});
+				OUT("&((");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, array, true));
+				OUT("){");
+				VISIT_ARG(0);
+				OUT("})");
+		});
 
 		ADD_FORMATTER(res, extended.lazyITE, {
 					OUT("("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT(")");

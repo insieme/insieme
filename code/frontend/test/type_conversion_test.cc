@@ -393,9 +393,9 @@ struct VariableResetHack {
 };
 
 TEST(TypeConversion, FileTest) {
+	Logger::get(std::cerr, DEBUG, 2);
 
 	NodeManager manager;
-	CommandLineOptions::Verbosity = 1;
 	fe::Program prog(manager);
 	fe::TranslationUnit& tu = prog.addTranslationUnit( std::string(SRC_DIR) + "/inputs/types.c" );
 

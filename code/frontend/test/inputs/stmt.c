@@ -80,7 +80,7 @@ void binary_op_test() {
 	a -= b;
 
 	#pragma test \
-	"fun(ref<int<4>> v3, ref<int<4>> v4){ (( *v4)+1); return (( *v3)-1);}(v1, v2)"
+	"fun(ref<int<4>> v3, ref<int<4>> v4){ (( *v3)+1); return (( *v4)-1);}(v2, v1)"
 	(a+1, b-1);
 }
 
@@ -89,7 +89,7 @@ void unary_op_test() {
 	#pragma test "decl ref<int<4>> v1 = ( var(0))"
 	int a = 0;
 
-	#pragma test "(!CAST<bool>(( *v1)))"
+	#pragma test "(!int.ne(( *v1), 0))"
 	!a;
 
 	#pragma test "( *v1)"
@@ -145,7 +145,7 @@ void if_stmt_test() {
 	int cond = 0;
 
 	#pragma test \
-	"if(CAST<bool>(( *v1))) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
+	"if(int.ne(( *v1), 0)) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
 	if(cond) {
 		cond += 1;
 	} else {
@@ -160,7 +160,7 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"ite(CAST<bool>(( *v1)), bind(){fun(ref<int<4>> v4)return (( *v4)+1)(v1)}, bind(){fun(ref<int<4>> v2)return (( *v2)-1)(v1)})"
+	"ite(int.ne(( *v1), 0), bind(){fun(ref<int<4>> v4)return (( *v4)+1)(v1)}, bind(){fun(ref<int<4>> v2)return (( *v2)-1)(v1)})"
 	a ? a+1 : a-1;
 
 	#pragma test \
@@ -201,7 +201,7 @@ void for_stmt_test() {
 
 	int mq, nq;
 	#pragma test \
-	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v3, ref<int<4>> v4){ int.postInc(v3); (v4 := (( *v4)/2)); }(v1, v2); };}"
+	"{ (v1 := 0); while((( *v2)>1)) { { }; fun(ref<int<4>> v3, ref<int<4>> v4){ int.postInc(v4); (v3 := (( *v3)/2)); }(v2, v1); };}"
     for( mq=0; nq>1; mq++,nq/=2 ) ;
 
 	//(v1 := 0);
@@ -375,7 +375,7 @@ void init_expr() {
 	int* a = 0;
 
 	#pragma test \
-	"( *([( var(1)), ( var(2)), ( var(3))][CAST<uint<4>>(1)]))"
+	"([1, 2, 3][CAST<uint<4>>(1)])"
 	((int[3]) {1,2,3})[1];
 
 	struct Person p;

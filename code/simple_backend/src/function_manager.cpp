@@ -49,13 +49,12 @@ namespace {
 
 		ss << typeManager.getTypeName(context, funType->getReturnType()) << " " << name << "(";
 
-		auto captures = funType->getCaptureTypes();
-		auto arguments = funType->getArgumentTypes();
+		auto parameter = funType->getParameterTypes();
 
-		if (!captures.empty()) {
-			ss << "void *" << ((!arguments.empty())?", ":"");
-		}
-		ss << join(", ", arguments, [&](std::ostream& out, const TypePtr& cur) {
+//		if (!captures.empty()) {
+//			ss << "void *" << ((!arguments.empty())?", ":"");
+//		}
+		ss << join(", ", parameter, [&](std::ostream& out, const TypePtr& cur) {
 			out << typeManager.getTypeName(context, cur);
 		});
 		ss << ")";
@@ -104,7 +103,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	TypeManager& typeManager = cc.getTypeManager();
 	protoType << typeManager.getTypeInfo(protoType, type->getReturnType()).externName << " " << name << "(";
 	//protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
-	protoType << join(", ", type->getArgumentTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
+	protoType << join(", ", type->getParameterTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
 		out << typeManager.getTypeInfo(protoType, cur).externName;
 	});
 	protoType << ");\n";
@@ -169,7 +168,7 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaDefinitionPtr& definition) 
 		string name = nameManager.getName(cur.second);
 
 		const FunctionTypePtr& funType = cur.second->getType();
-		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name);
+		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name + " ... type: " + funType->toString());
 		prototype << getSignatureOf(prototype, funType, name, typeManager) << ";\n";
 
 		this->prototypes.insert(std::make_pair(cur.second, prototype));
@@ -208,7 +207,6 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	}
 
 	// provide some manager
-	VariableManager& varManager = cc.getVariableManager();
 	TypeManager& typeManager = cc.getTypeManager();
 	NameManager& nameManager = cc.getNameManager();
 
@@ -218,7 +216,7 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 
 
 	// create function code for lambda
-	CodeFragmentPtr function = CodeFragment::createNew("Definition of " + name);
+	CodeFragmentPtr function = CodeFragment::createNew("Definition of " + name + " ... type: " + funType->toString());
 
 	// allows derived function managers to insert a function prefix
 	addFunctionPrefix(function, lambda);
@@ -226,12 +224,12 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	// write the function header
 	function << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
 
-	if (lambda->isCapturing()) {
-		function << "void* _capture";
-		if (!lambda->getParameterList().empty()) {
-			function << ", ";
-		}
-	}
+//	if (lambda->isCapturing()) {
+//		function << "void* _capture";
+//		if (!lambda->getParameterList().empty()) {
+//			function << ", ";
+//		}
+//	}
 	if (!lambda->getParameterList().empty()) {
 		auto start = lambda->getParameterList().begin();
 		auto end = lambda->getParameterList().end();
@@ -249,30 +247,30 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	// add function body
 	function << " {" << CodeBuffer::indR << "\n";
 
-	if (lambda->isCapturing()) {
-		// extract capture list
-		function << "// --------- Captured Stuff - Begin -------------\n";
-
-		// get name of struct from type manager
-		TypeManager::FunctionTypeInfo functionTypeInfo = typeManager.getFunctionTypeInfo(funType);
-		function->addDependency(functionTypeInfo.definitions);
-		string structName = functionTypeInfo.closureName;
-
-		int i = 0;
-		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
-			VariableManager::VariableInfo info;
-			info.location = VariableManager::HEAP;
-
-			varManager.addInfo(var, info);
-
-			// standard handling
-			function << typeManager.formatParamter(function, var->getType(), nameManager.getName(var), false);
-			function << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
-
-		});
-
-		function << "// --------- Captured Stuff -  End  -------------\n";
-	}
+//	if (lambda->isCapturing()) {
+//		// extract capture list
+//		function << "// --------- Captured Stuff - Begin -------------\n";
+//
+//		// get name of struct from type manager
+//		TypeManager::FunctionTypeInfo functionTypeInfo = typeManager.getFunctionTypeInfo(funType);
+//		function->addDependency(functionTypeInfo.definitions);
+//		string structName = functionTypeInfo.closureName;
+//
+//		int i = 0;
+//		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
+//			VariableManager::VariableInfo info;
+//			info.location = VariableManager::HEAP;
+//
+//			varManager.addInfo(var, info);
+//
+//			// standard handling
+//			function << typeManager.formatParamter(function, var->getType(), nameManager.getName(var), false);
+//			function << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
+//
+//		});
+//
+//		function << "// --------- Captured Stuff -  End  -------------\n";
+//	}
 
 	// generate the function body
 	cc.getStmtConverter().convert(lambda->getBody(), function);

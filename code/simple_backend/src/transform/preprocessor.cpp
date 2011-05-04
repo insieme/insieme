@@ -90,9 +90,6 @@ namespace transform {
 		// for starters - just mirror the code
 		core::NodePtr res = manager.get(code);
 
-		// remove string literals
-		res = convertStringLiterals(manager, res);
-
 		// replace ITEs with lazy ITEs
 		res = convertITE(manager, res);
 
@@ -105,58 +102,6 @@ namespace transform {
 
 
 	namespace {
-
-
-		class StringConverter : public core::NodeMapping {
-
-			/**
-			 * A pointer to a string-type instance.
-			 */
-			const core::TypePtr stringType;
-
-		public:
-
-			StringConverter(core::NodeManager& manager) : stringType(manager.basic.getString()) {}
-
-			/**
-			 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
-			 * the resulting call.
-			 */
-			const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr) {
-				// do not touch types ...
-				if (ptr->getNodeCategory() == core::NC_Type) {
-					return ptr;
-				}
-
-				// apply recursively - bottom up
-				core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
-
-				// check current node
-				if (res->getNodeType() == core::NT_Literal) {
-					core::LiteralPtr literal = static_pointer_cast<const core::Literal>(res);
-					if (*literal->getType() == *stringType) {
-						// create new type (vector type)
-						core::NodeManager& manager = ptr->getNodeManager();
-						core::ASTBuilder builder(manager);
-						unsigned len = literal->getValue().length() - 1; // - 2x \" + 1x \0
-						core::TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
-						return builder.literal(type, literal->getValue());
-					}
-				}
-
-				// no modification needed
-				return res;
-			}
-		};
-
-
-		core::NodePtr convertStringLiterals(core::NodeManager& manager, const core::NodePtr& code) {
-			// the converter does the magic
-			StringConverter converter(manager);
-			return converter.map(code);
-		}
-
-
 
 		// --------------------------------------------------------------------------------------------------------------
 
@@ -229,12 +174,24 @@ namespace transform {
 
 
 		class VectorToArrayConverter : public core::NodeMapping {
+
+			/**
+			 * A cache for converted call expressions - since each might be encountered multiple times.
+			 */
+			utils::map::PointerMap<core::NodePtr, core::NodePtr> resultCache;
+
 		public:
 
 			const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr) {
 				// do not touch types ...
 				if (ptr->getNodeCategory() == core::NC_Type) {
 					return ptr;
+				}
+
+				// check result cache
+				auto pos = resultCache.find(ptr);
+				if (pos != resultCache.end()) {
+					return pos->second;
 				}
 
 				// apply recursively - bottom up
@@ -246,11 +203,12 @@ namespace transform {
 				}
 
 				// handle declarations
-//				if (ptr->getNodeType() == core::NT_CallExpr) {
-//					return mapCallExpr(core::static_pointer_cast<const core::CallExpr>(res));
-//				}
+				if (ptr->getNodeType() == core::NT_DeclarationStmt) {
+					res = handleDeclarationStmt(core::static_pointer_cast<const core::DeclarationStmt>(res));
+				}
 
 				// handle rest
+				resultCache.insert(std::make_pair(ptr, res));
 				return res;
 			}
 
@@ -267,41 +225,67 @@ namespace transform {
 				const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
 
 
-				// derive type variable instantiation
-				auto instantiation = core::analysis::getTypeVariableInstantiation(manager, call);
-				if (!instantiation) {
-					LOG(WARNING) << "Invalid call detected: " << call;
+				// check whether there is a argument which is a vector but the parameter is not
+				const core::TypePtr& type = call->getFunctionExpr()->getType();
+				assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
+				const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
+
+				const core::TypeList& paramTypes = funType->getParameterTypes();
+				const core::ExpressionList& args = call->getArguments();
+
+				if (paramTypes.size() != args.size()) {
+					LOG(WARNING) << "Invalid call detected: " << call << " " << *(call->getFunctionExpr()->getType()) << " "
+								<< join(", ", call->getArguments(), [](std::ostream& out, const core::ExpressionPtr& cur) { out << *(cur->getType()); });
 					return call;
 				}
 
-				// obtain argument and parameter types
+				bool found = false;
+				std::size_t size = args.size();
+				for (std::size_t i = 0; !found && i < size; i++) {
+					found = found || (args[i]->getType()->getNodeType() == core::NT_VectorType && paramTypes[i]->getNodeType() != core::NT_VectorType);
+				}
+
+				// check whether a vector / non-vector argument/parameter pair has been found
+				if (!found) {
+					// => no deduction required
+					return call;
+				}
+
+				// derive type variable instantiation
+				auto instantiation = core::analysis::getTypeVariableInstantiation(manager, call);
+				if (!instantiation) {
+					LOG(WARNING) << "Invalid call detected: " << call << " " << *(call->getFunctionExpr()->getType()) << " "
+							<< join(", ", call->getArguments(), [](std::ostream& out, const core::ExpressionPtr& cur) { out << *(cur->getType()); });
+					return call;
+				}
+
+				IRExtensions extensions(manager);
+				if (*call->getFunctionExpr() == *extensions.lazyITE) {
+					LOG(DEBUG) << "Lazy ITE encountered: " << *call << "  :=:  " << *instantiation;
+				}
 
 				// obtain argument list
-				vector<core::ExpressionPtr> args = call->getArguments();
 				vector<core::TypePtr> argTypes;
 				::transform(args, std::back_inserter(argTypes), [](const core::ExpressionPtr& cur) { return cur->getType(); });
 
-				// obtain parameters list
-				core::TypePtr type = call->getFunctionExpr()->getType();
-				assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
-				core::FunctionTypePtr funType = core::static_pointer_cast<const core::FunctionType>(type);
-
 				// apply match on parameter list
-				vector<core::TypePtr> paramTypes = funType->getArgumentTypes();
-				for (std::size_t i=0; i<paramTypes.size(); i++) {
-					paramTypes[i] = instantiation->applyTo(manager, paramTypes[i]);
+				core::TypeList newParamTypes = paramTypes;
+				for (std::size_t i=0; i<newParamTypes.size(); i++) {
+					newParamTypes[i] = instantiation->applyTo(manager, newParamTypes[i]);
 				}
 
 				// generate new argument list
 				bool changed = false;
-				for (unsigned i=0; i<args.size(); i++) {
+				core::ExpressionList newArgs = call->getArguments();
+				for (unsigned i=0; i<size; i++) {
+
 					// ignore identical types
-					if (*paramTypes[i] == *argTypes[i]) {
+					if (*newParamTypes[i] == *argTypes[i]) {
 						continue;
 					}
 
 					core::TypePtr argType = argTypes[i];
-					core::TypePtr paramType = paramTypes[i];
+					core::TypePtr paramType = newParamTypes[i];
 
 					// strip references
 					bool ref = false;
@@ -314,7 +298,7 @@ namespace transform {
 					// handle vector->array
 					if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
 						// conversion needed
-						args[i] = builder.callExpr((ref)?basic.getRefVector2RefArray():basic.getVector2Array(), args[i]);
+						newArgs[i] = builder.callExpr((ref)?basic.getRefVectorToRefArray():basic.getVectorToArray(), newArgs[i]);
 						changed = true;
 					}
 				}
@@ -324,9 +308,35 @@ namespace transform {
 				}
 
 				// exchange parameters and done
-				return core::CallExpr::get(manager, instantiation->applyTo(call->getType()), call->getFunctionExpr(), args);
+				return core::CallExpr::get(manager, instantiation->applyTo(call->getType()), call->getFunctionExpr(), newArgs);
 			}
 
+			/**
+			 * This method replaces vector initialization values with vector2array conversions whenever necessary.
+			 */
+			core::DeclarationStmtPtr handleDeclarationStmt(core::DeclarationStmtPtr declaration) {
+
+				// only important for array types
+				core::TypePtr type = declaration->getVariable()->getType();
+				if (type->getNodeType() != core::NT_ArrayType) {
+					return declaration;
+				}
+
+				// get initialization value
+				type = declaration->getInitialization()->getType();
+				if (type->getNodeType() != core::NT_VectorType) {
+					return declaration;
+				}
+
+				// extract some values from the declaration statement
+				core::NodeManager& manager = declaration->getNodeManager();
+				const core::VariablePtr& var = declaration->getVariable();
+				const core::ExpressionPtr& oldInit = declaration->getInitialization();
+
+				// construct a new init statement
+				core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.basic.getVectorToArray(), toVector(oldInit));
+				return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
+			}
 		};
 
 
@@ -337,7 +347,6 @@ namespace transform {
 		}
 
 	}
-
 
 } // end: namespace transform
 } // end: namespace simple_backend

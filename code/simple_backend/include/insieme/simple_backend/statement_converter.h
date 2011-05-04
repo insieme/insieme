@@ -117,6 +117,15 @@ namespace simple_backend {
 		 */
 		void convert(const core::NodePtr& node, const CodeFragmentPtr& fragment);
 
+		/**
+		 * Instructs this statement and expression converter to process the given expression and to
+		 * produce a result which can be forwarded to an external function.
+		 *
+		 * @param expression the expression which's result should be represented in a way it can
+		 *     				 be passed to an external function.
+		 */
+		void convertAsParameterToExternal(const core::ExpressionPtr& expression);
+
 	protected:
 
 		// --------------------------------------------------------------------------------
@@ -151,10 +160,6 @@ namespace simple_backend {
 		////////////////////////////////////////////////////////////////////////// Expressions
 
 		void visitCallExpr(const core::CallExprPtr& ptr);
-
-		void visitCaptureInitExpr(const core::CaptureInitExprPtr& ptr);
-
-		void visitCaptureInitExprInternal(const core::CaptureInitExprPtr& ptr, bool directCall);
 
 		void visitBindExpr(const core::BindExprPtr& ptr);
 
@@ -196,7 +201,6 @@ namespace simple_backend {
 		void visitVectorExpr(const core::VectorExprPtr& ptr);
 
 	};
-
 
 }
 }

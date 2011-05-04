@@ -91,8 +91,8 @@ class InstanceManager : private boost::noncopyable {
 		const T* clone = orig->cloneTo(*static_cast<typename S::Manager*>(this));
 
 		// make sure clone is valid
-		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
-		assert( *orig == *clone && "Clone not equivalent to original!" );
+//		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
+//		assert( *orig == *clone && "Clone not equivalent to original!" );
 
 		// step 2 - cast back to original type
 		return static_cast<const S*>(clone);

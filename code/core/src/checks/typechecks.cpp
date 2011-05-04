@@ -76,7 +76,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
-	const TypeList& parameterTypes = functionType->getArgumentTypes();
+	const TypeList& parameterTypes = functionType->getParameterTypes();
 	const TypePtr& returnType = functionType->getReturnType();
 
 	// Obtain argument type
@@ -139,15 +139,13 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 		return var->getType();
 	};
 
-	TypeList capture;
-	transform(address->getCaptureList(), back_inserter(capture), extractType);
 	TypeList param;
 	transform(address->getParameterList(), back_inserter(param), extractType);
 
 	FunctionTypePtr isType = address->getLambda()->getType();
 	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, capture, param, result);
+	FunctionTypePtr funType = FunctionType::get(manager, param, result);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
@@ -290,12 +288,18 @@ namespace {
 			}
 		}
 
+		// unroll recursive types if necessary
+		if (exprType->getNodeType() == NT_RecType) {
+			exprType = static_pointer_cast<const RecType>(exprType)->unroll();
+		}
+
 		// check whether it is a composite type
 		const NamedCompositeTypePtr compositeType = dynamic_pointer_cast<const NamedCompositeType>(exprType);
 		if (!compositeType) {
 			add(res, Message(address,
 					EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE,
-					format("Cannot access member of non-named-composed type %s of type %s",
+					format("Cannot access member '%s' of non-named-composed type %s of type %s",
+							toString(*identifier).c_str(),
 							toString(*structExpr).c_str(),
 							toString(*exprType).c_str()),
 					Message::ERROR));

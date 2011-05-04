@@ -198,7 +198,6 @@ AST_TERMINAL(Variable, Expression)
 
 AST_TERMINAL(LambdaExpr, Expression)
 AST_TERMINAL(BindExpr, Expression)
-AST_TERMINAL(CaptureInitExpr, Expression)
 
 AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(CallExpr, Expression)

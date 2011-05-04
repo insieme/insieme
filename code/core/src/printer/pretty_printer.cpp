@@ -408,11 +408,7 @@ namespace {
 					out << *cur->getType() << " " << *cur;
 				};
 
-				out << "fun";
-				if (node->isCapturing()) {
-					out << "[" << join(", ", node->getCaptureList(), paramPrinter) << "]";
-				}
-				out << "(" << join(", ", node->getParameterList(), paramPrinter) << ")";
+				out << "fun(" << join(", ", node->getParameterList(), paramPrinter) << ")";
 				visit(node->getBody());
 		});
 
@@ -459,14 +455,6 @@ namespace {
 				}) << "){";
 				visit(node->getCall());
 				out << "}";
-		});
-
-		PRINT(CaptureInitExpr, {
-				auto values = node->getValues();
-				out << "[" << join(", ", values, [&](std::ostream& out, const ExpressionPtr& cur) {
-					this->visit(cur);
-				}) << "]";
-				visit(node->getLambda());
 		});
 
 		PRINT(CastExpr, {

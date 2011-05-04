@@ -305,14 +305,7 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 
 	// Step 1 - get capture init and lambda expression
 	ExpressionPtr target = call->getFunctionExpr();
-	CaptureInitExprPtr capture;
 	LambdaExprPtr lambda;
-
-	// check for capture init expression ...
-	if (target->getNodeType() == NT_CaptureInitExpr) {
-		capture = static_pointer_cast<const CaptureInitExpr>(target);
-		target = capture->getLambda();
-	}
 
 	// check for bind expression ...
 	if (target->getNodeType() == NT_BindExpr) {
@@ -350,18 +343,9 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 	}
 
 	// Step 3 - collect variables replacements
-	const Lambda::CaptureList& captureList = lambda->getCaptureList();
 	const Lambda::ParamList& paramList = lambda->getParameterList();
 
 	utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
-
-	// add captured variables
-	if (capture) {
-		int index = 0;
-		::for_each(capture->getValues(), [&](const ExpressionPtr& cur) {
-			replacements.insert(std::make_pair(captureList[index++], cur));
-		});
-	}
 
 	// add call parameters
 	int index = 0;
@@ -441,7 +425,7 @@ namespace {
 	}
 }
 
-CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, 
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified,
 		std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
@@ -451,7 +435,7 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root,
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
 
-CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified,
+BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified,
 		std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;

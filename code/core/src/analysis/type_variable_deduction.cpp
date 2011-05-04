@@ -355,17 +355,17 @@ namespace analysis {
 				auto funArgType = static_pointer_cast<const FunctionType>(argType);
 
 				// check number of arguments
-				auto paramArgs = funParamType->getArgumentTypes();
-				auto argArgs = funArgType->getArgumentTypes();
-				if (paramArgs.size() != argArgs.size()) {
+				const TypeList& paramParams = funParamType->getParameterTypes();
+				const TypeList& argParams = funArgType->getParameterTypes();
+				if (paramParams.size() != argParams.size()) {
 					// different number of arguments => unsatisfiable
 					constraints.makeUnsatisfiable();
 					return;
 				}
 
 				// add constraints on arguments
-				auto begin = make_paired_iterator(paramArgs.begin(), argArgs.begin());
-				auto end = make_paired_iterator(paramArgs.end(), argArgs.end());
+				auto begin = make_paired_iterator(paramParams.begin(), argParams.begin());
+				auto end = make_paired_iterator(paramParams.end(), argParams.end());
 				for (auto it = begin; constraints.isSatisfiable() && it != end; ++it) {
 					addTypeConstraints(constraints, it->first, it->second, inverse(direction));
 				}
@@ -467,8 +467,6 @@ namespace analysis {
 
 			return argumentMapping;
 		}
-
-
 	}
 
 
@@ -493,7 +491,7 @@ namespace analysis {
 		// ----------------------------------------------------------------------------------------------
 
 
-		// Vor the renaming a variable renamer is used
+		// for the renaming a variable re-namer is used
 		VariableRenamer renamer;
 
 		// 1) convert parameters (consistently, all at once)
@@ -516,18 +514,20 @@ namespace analysis {
 
 		// apply renaming to arguments
 		TypeList renamedArguments = arguments;
+		vector<TypeMapping> argumentRenaming;
 		for (std::size_t i = 0; i < renamedArguments.size(); ++i) {
 			TypePtr& cur = renamedArguments[i];
 
 			// first: apply bound variable substitution
 			cur = argumentMapping.applyForward(internalManager, cur);
 
-			// second: apply variable renameing
-			cur = renamer.rename(internalManager, cur);
+			// second: apply variable renaming
+			TypeMapping mapping = renamer.mapVariables(internalManager, cur);
+			if (!mapping.empty()) argumentRenaming.push_back(mapping);
+			cur = mapping.applyForward(internalManager, cur);
 		}
 
 		if (debug) std::cout << " Renamed Arguments: " << renamedArguments << std::endl;
-
 
 
 		// ---------------------------------- Assembling Constraints -----------------------------------------
@@ -570,11 +570,23 @@ namespace analysis {
 		for (auto it = res->getMapping().begin(); it != res->getMapping().end(); ++it) {
 			TypeVariablePtr var = static_pointer_cast<const TypeVariable>(parameterMapping.applyBackward(manager, it->first));
 			TypePtr substitute = argumentMapping.applyBackward(manager, it->second);
+
+			// also apply argument renaming backwards ..
+			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
+				substitute = it2->applyBackward(manager, it->second);
+			}
+
 			restored.addMapping(manager.get(var), manager.get(substitute));
 		}
 		for (auto it = res->getIntTypeParamMapping().begin(); it != res->getIntTypeParamMapping().end(); ++it) {
 			VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(parameterMapping.applyBackward(manager, it->first));
 			IntTypeParamPtr substitute = argumentMapping.applyBackward(manager, it->second);
+
+			// also apply argument renaming backwards ..
+			for(auto it2 = argumentRenaming.begin(); it2 != argumentRenaming.end(); ++it2) {
+				substitute = it2->applyBackward(manager, it->second);
+			}
+
 			restored.addMapping(manager.get(var), manager.get(substitute));
 		}
 		if (debug) std::cout << " Terminated with: " << restored << std::endl << std::endl;
@@ -585,40 +597,78 @@ namespace analysis {
 		return getTypeVariableInstantiation(manager, toVector(parameter), toVector(argument));
 	}
 
+
 	namespace {
 
-		// The kind of annotations attached to call nodes to cache type variable substitutions
-		class TypeVariableInstantionInfo : public Annotation {
+		// -------------------------------------- Function Type Annotations -----------------------
+
+
+		/**
+		 * The kind of annotations attached to a function type nodes to cache type variable substitutions.
+		 */
+		class VariableInstantionInfo : public Annotation {
 
 		public:
 
 			// The key used to attack instantiation results to call nodes
-			static StringKey<TypeVariableInstantionInfo> KEY;
+			static StringKey<VariableInstantionInfo> KEY;
 
 		private:
 
-			// the represented value
-			SubstitutionOpt substitution;
+			/**
+			 * A container for cached results. Both, the type list and the
+			 * substitution has to refere to elements maintained by the same manager
+			 * than the annotated function type.
+			 */
+			boost::unordered_map<TypeList, SubstitutionOpt> substitutions;
 
 		public :
 
-			TypeVariableInstantionInfo(const SubstitutionOpt& substitution) : substitution(substitution) {}
+			VariableInstantionInfo() {}
 
 			virtual const AnnotationKey* getKey() const {
 				return &KEY;
 			}
 
 			virtual const std::string getAnnotationName() const {
-				return "TypeVariableInstantionInfo";
+				return "VariableInstantionInfo";
 			}
 
-			const SubstitutionOpt& getSubstitution() const {
-				return substitution;
+			SubstitutionOpt get(const TypeList& args) const {
+				auto pos = substitutions.find(args);
+				if (pos != substitutions.end()) {
+					return pos->second;
+				}
+				return 0;
+			}
+
+			void add(const TypeList& args, const SubstitutionOpt& res) {
+				substitutions.insert(std::make_pair(args, res));
+			}
+
+			static SubstitutionOpt getFromAnnotation(const FunctionTypePtr& function, const TypeList& arguments) {
+				// try loading annotation
+				if (auto res = function->getAnnotation(VariableInstantionInfo::KEY)) {
+					return res->get(arguments);
+				}
+
+				// no such annotation present
+				return 0;
+			}
+
+			static void addToAnnotation(const FunctionTypePtr& function, const TypeList& arguments, const SubstitutionOpt& substitution) {
+				auto res = function->getAnnotation(VariableInstantionInfo::KEY);
+				if (!res) {
+					// create a new annotation
+					res = std::make_shared<VariableInstantionInfo>();
+					function->addAnnotation(res);
+				}
+				res->add(arguments, substitution);
 			}
 
 		};
 
-		StringKey<TypeVariableInstantionInfo> TypeVariableInstantionInfo::KEY = StringKey<TypeVariableInstantionInfo>("TYPE_VARIABLE_INSTANTIATION_INFO");
+		StringKey<VariableInstantionInfo> VariableInstantionInfo::KEY = StringKey<VariableInstantionInfo>("VARIABLE_INSTANTIATION_INFO");
 
 
 		inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& substitution) {
@@ -635,7 +685,26 @@ namespace analysis {
 			});
 			return res;
 		}
+
 	}
+
+
+	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const FunctionTypePtr& function, const TypeList& arguments) {
+
+		// check annotations
+		TypeList localArgs = function->getNodeManager().getAll(arguments);
+		if (auto res = VariableInstantionInfo::getFromAnnotation(function, localArgs)) {
+			return copyTo(manager, res);
+		}
+
+		// use deduction mechanism
+		SubstitutionOpt res = getTypeVariableInstantiation(manager, function->getParameterTypes(), arguments);
+
+		// attack substitution
+		VariableInstantionInfo::addToAnnotation(function, localArgs, copyTo(function->getNodeManager(), res));
+		return res;
+	}
+
 
 	SubstitutionOpt getTypeVariableInstantiation(NodeManager& manager, const CallExprPtr& call) {
 
@@ -644,10 +713,6 @@ namespace analysis {
 			return 0;
 		}
 
-		// check annotations
-		if (auto data = call->getAnnotation(TypeVariableInstantionInfo::KEY)) {
-			return copyTo(manager, data->getSubstitution());
-		}
 
 		// derive substitution
 
@@ -662,13 +727,9 @@ namespace analysis {
 		if (funType->getNodeType() != NT_FunctionType) {
 			return 0;
 		}
-		const TypeList& paramTypes = static_pointer_cast<const FunctionType>(funType)->getArgumentTypes();
 
 		// compute type variable instantiation
-		SubstitutionOpt res = getTypeVariableInstantiation(manager, paramTypes, argTypes);
-
-		// attack substitution
-		call->addAnnotation(std::make_shared<TypeVariableInstantionInfo>(copyTo(call->getNodeManager(), res)));
+		SubstitutionOpt res = getTypeVariableInstantiation(manager, static_pointer_cast<const FunctionType>(funType), argTypes);
 
 		// done
 		return res;

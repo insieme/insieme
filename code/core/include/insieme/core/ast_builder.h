@@ -86,12 +86,10 @@ public:
 
 	typedef RecTypeDefinition::RecTypeDefs RecTypeDefs;
 
-	typedef Lambda::CaptureList CaptureList;
 	typedef Lambda::ParamList ParamList;
 
 	typedef LambdaDefinition::Definitions Definitions;
 
-	typedef CaptureInitExpr::Values Values;
 	typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> CaptureInits;
 
 	/**
@@ -147,13 +145,11 @@ public:
 
 	// Lambda Expressions
 	LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParamList& params = ParamList()) const;
-	LambdaExprPtr lambdaExpr(const StatementPtr& body, const CaptureList& captures, const ParamList& params = ParamList()) const;
 	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params = ParamList()) const;
-	LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureList& captures, const ParamList& params) const;
 
 	// Direct lambda with capture initialization
-	CaptureInitExprPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
-	CaptureInitExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const;
+	BindExprPtr lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params = ParamList()) const;
+	BindExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const;
 
 	// Creation of thread number ranges
 	CallExprPtr getThreadNumRange(unsigned min) const;

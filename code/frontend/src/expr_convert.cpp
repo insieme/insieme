@@ -90,7 +90,7 @@ vector<core::ExpressionPtr>
 tryPack(const core::ASTBuilder& builder, core::FunctionTypePtr funcTy, const ExpressionList& args) {
 
 	// check if the function type ends with a VAR_LIST type
-	const core::TypeList& argsTy = funcTy->getArgumentTypes();
+	const core::TypeList& argsTy = funcTy->getParameterTypes();
 	// assert(argsTy && "Function argument is of not type TupleType");
 
 	// if the tuple type is empty it means we cannot pack any of the arguments
@@ -148,7 +148,10 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 		if ( core::LiteralPtr&& lit = core::dynamic_pointer_cast<const core::Literal>(callExpr->getFunctionExpr()) ) {
 
 			if ( lit->getValue() == "malloc" || lit->getValue() == "calloc" ) {
-				assert(callExpr->getArguments().size() == 1 && "malloc() takes only 1 argument");
+                assert(((lit->getValue() == "malloc" && callExpr->getArguments().size() == 1) || 
+						(lit->getValue() == "calloc" && callExpr->getArguments().size() == 2)) && 
+							"malloc() and calloc() takes respectively 1 and 2 arguments"
+					  );
 
 				const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
@@ -167,13 +170,12 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 				//elemType = core::static_pointer_cast<const core::RefType>(elemType)->getElementType();
 
 				return builder.refNew(builder.callExpr(type, gen.getArrayCreate1D(),
-						builder.callExpr(elemType, gen.getUndefined(), gen.getTypeLiteral(elemType)), size)
+						gen.getTypeLiteral(elemType), size)
 					);
 			}
 		}
 	}
 	return core::ExpressionPtr();
-
 }
 
 core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core::ExpressionPtr& expr) {
@@ -194,6 +196,289 @@ core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core
 		}
 	}
 	return expr;
+}
+
+// This function performs the requires type conversion, from converting an expression. 
+core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core::TypePtr& trgTy, const core::ExpressionPtr& expr) {
+	// list the all possible conversions 
+	const core::TypePtr& argTy = expr->getType();
+	const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+	
+	if ( gen.isVarList( trgTy ) || (*trgTy == *argTy) ) { return expr; }
+	
+	// in the case of FuncType check against the return type
+	if ( argTy->getNodeType() == core::NT_FunctionType && 
+			*core::static_pointer_cast<const core::FunctionType>(argTy)->getReturnType() == *trgTy ) 
+	{
+		return expr;
+	}
+
+	VLOG(1) << "\t~ CAST expr '" << *expr << "' : " << *argTy  << " -> " << *trgTy;
+
+	// [ RefType -> Boolean ]
+	// 
+	// This happens when a reference is used in a conditional operation. In those situation 
+	// the case is invalid and we hare to replace it with a comparison with the NULL reference.
+	// therefore:
+	//		if( ref )  ->  if( ref != Null )
+	if ( gen.isBool(trgTy) && argTy->getNodeType() == core::NT_RefType ) {
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
+		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
+		core::ExpressionPtr&& nullRef = builder.callExpr(argTy, gen.getAnyRefToRef(), 
+				toVector<core::ExpressionPtr>(gen.getNull(), gen.getTypeLiteral(subTy) ) );
+
+		return builder.callExpr(gen.getBool(), gen.getBoolLNot(), 
+				builder.callExpr(trgTy, gen.getRefEqual(), toVector(expr, nullRef))
+			); 
+	}
+
+	// [ Signed integer -> Boolean ]
+	//
+	// cast a signed integer to boolean value, this happens for integer numbers when appear in conditional
+	// expressions, for loop exit conditions or while stmt
+	if ( gen.isBool(trgTy) && gen.isInt(argTy) ) {
+		return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), toVector(expr, builder.intLit(0)));
+	}
+
+	// [ Boolean -> Int ]
+	//
+	// cast a boolean value to an integer
+	if ( gen.isInt(trgTy) && gen.isBool(argTy) ) {
+		return builder.castExpr(trgTy, builder.callExpr(gen.getInt4(), gen.getBoolToInt(), toVector(expr) ) );
+	}
+
+	// [ Char -> Generic Integer ] 
+	// 
+	// Take the integer value of the char literal and create an int literal out of it (int)c
+	if ( gen.isChar(argTy) && gen.isInt(trgTy) ) {
+		const core::LiteralPtr& lit = core::static_pointer_cast<const core::Literal>(expr);
+		char val;
+		if ( lit->getValue().length() == 3) {
+			val = lit->getValue()[1]; // chars are encoded as 'V', therefore position 1 always contains the char value	
+		} else if ( lit->getValue().length() == 4 ) {
+			// this char literal contains some escaped sequence which is represented with 2 chars' 
+			std::string strVal = lit->getValue().substr(1,2);
+			assert(strVal.at(0) == '\\' && "Wrong encoding");
+			switch (strVal.at(1) ) {
+				case '\\': val = '\\';   break;
+				case 'n' : val = '\n';   break;
+				case 'r' : val = '\r';   break;
+				case 't' : val = '\t';   break;
+				case '0' : val = '\0';   break;
+				case 'v' : val = '\v';   break;
+				default :
+					assert(false && "missing escape sequence.");
+			}
+		} else {
+			assert(false && "Wrong encoding for char literals!");
+		}	
+
+		return builder.literal( utils::numeric_cast<std::string>(static_cast<short>(val)), trgTy );
+	}
+
+	// [ anyRef -> ref<'a> ]
+	//
+	// Converts anyRef to the required ref target type. If the target type is not a ref this is 
+	// considered a frontend error, therefore we are allowed to fail.
+	if ( gen.isAnyRef(argTy) ) {
+		assert( trgTy->getNodeType() == core::NT_RefType && "AnyRef can only be converted to an L-Value (RefType)" );
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
+		return builder.callExpr(trgTy, gen.getAnyRefToRef(), toVector<core::ExpressionPtr>(expr, gen.getTypeLiteral(subTy)));
+	}
+
+	// [ ref<'a> -> anyRef ]
+	//
+	// Convert a ref<'a> type to anyRef. 
+	if ( gen.isAnyRef(trgTy) ) {
+		assert( argTy->getNodeType() == core::NT_RefType && "AnyRef can only be converted to an L-Value (RefType)" );
+		return builder.callExpr(trgTy, gen.getRefToAnyRef(), toVector<core::ExpressionPtr>(expr));
+	}
+
+	// [ ref<'a> -> 'a ]
+	//
+	// Converts a ref<'a> to a. This is required anywhere where a non ref type is needed and the 
+	// current expression is of ref type. 
+	if ( trgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
+		// Recursively call the cast function to make sure the subtype and the target type matches
+		return builder.deref( makeHerbertHappy(builder, trgTy, expr) );
+	}
+
+	// [ 'a -> ref<'a> ]
+	//
+	// Convert an expression of non-ref type to an expression with ref-type. This is allowed for example 
+	// for string literals which can be converted to ref<arrays<>> (because of the C semantics) 
+	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType ) {
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
+		// The function requires a refType and the current argument is of non-ref type
+		if ( subTy->getNodeType() == core::NT_ArrayType && builder.getBasicGenerator().isString(argTy) ) {
+			// If the argument is a string then we have to convert the string into a char pointer
+			// because of C semantics 
+			return builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), expr );
+		} 
+
+		// call the function recursively
+		return builder.refVar( makeHerbertHappy(builder, subTy, expr) );
+	}
+
+	// NOTE: from this point on we are sure the type of the target type and the argument type are the same 
+	//       meaning that either we have a ref-type or non-ref type.
+
+	// [ ref<vector<'a, #n>> -> ref<array<'a,1>> ]
+	//
+	// convert a reference to a vector to a reference to an array using the refVector2RefArray literal  
+	if ( trgTy->getNodeType() == core::NT_RefType) {
+		// we are sure at this point the type of arg is of ref-type as well
+		const core::TypePtr& elemTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
+		const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
+		if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
+			const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
+			return builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), 
+					builder.getBasicGenerator().getRefVectorToRefArray(), expr 
+				);
+		}
+	}
+
+	// [ string -> vector<char,#n> ]
+	//
+	// Converts a string literal to a vector<char, #n>
+	if ( trgTy->getNodeType() == core::NT_VectorType && gen.isString(argTy) ) {
+		const core::VectorTypePtr& vecTy = core::static_pointer_cast<const core::VectorType>(trgTy);
+		assert(vecTy->getElementType()->getNodeType() != core::NT_RefType && 
+				"conversion of string literals to vector<ref<'a>> not yet supported");
+		assert(vecTy->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam);
+		size_t vecSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTy->getSize())->getValue();
+		// do conversion from a string to an array of char
+		const core::LiteralPtr& strLit = core::static_pointer_cast<const core::Literal>(expr);
+		std::string strVal = strLit->getValue();
+		// because string literals are stored with the corresponding " " we iterate from 1 to length()-2
+		// but we need an additional character to store the string terminator \0
+		
+		assert(strVal.length() - 1 <= vecSize && "Target vector type not large enough to hold string literal"); 
+		// FIXME: Use clang error report for this
+		
+		ExpressionList vals(vecSize);
+		size_t it;
+		for(it=0; it<strVal.length()-2; ++it) {
+			char c = strVal.at(it+1);
+			std::string str(1,c);
+			switch(c) {
+				case '\n': str = "\\n";	   break;
+				case '\\': str = "\\\\";   break;
+				case '\r': str = "\\r";	   break;
+				case '\t': str = "\\t";	   break;
+				case '\0': str = "\\0";	   break;
+			}
+			vals[it] = builder.literal( std::string("\'") + str + "\'", gen.getChar() );
+		}
+		// put '\0' terminators on the remaining elements
+		for (; it<vecSize; ++it ) {
+			vals[it] = builder.literal( std::string("\'") + "\\0" + "\'", gen.getChar() ); // Add the string terminator
+		}
+		return builder.vectorExpr(vecTy , vals);
+	}
+
+	// [ vector<'a, #n> -> vector<'b, #m> ] 
+	//
+	// this conversion is only valid if 'a and 'b are the same type and #m >= #n, in the rest of the cases 
+	// we produce a compiler error saying this cast is not allowed within the IR type system
+	if ( trgTy->getNodeType() == core::NT_VectorType && argTy->getNodeType() == core::NT_VectorType ) {
+		// if we are here is because the two types are not the same, check whether the problem is the 
+		// element type or the dimension
+		const core::VectorTypePtr& vecTrgTy = core::static_pointer_cast<const core::VectorType>(trgTy);
+		const core::VectorTypePtr& vecArgTy = core::static_pointer_cast<const core::VectorType>(argTy);
+		// check the type first 
+		if ( *vecArgTy->getElementType() != *vecTrgTy->getElementType() ) {
+			// converting from a vector of a type to a vector of another type, this is not possible
+			assert(false && "Converting from vector<'a> to vector<'b>"); 
+		}
+		if ( *vecArgTy->getSize() != *vecTrgTy->getSize() ) {
+			// converting from a vector size X to vector size Y, only possible if X <= Y
+			size_t vecTrgSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTrgTy->getSize())->getValue();
+			size_t vecArgSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecArgTy->getSize())->getValue();
+			assert(vecTrgSize >= vecArgSize && "Conversion not possible");
+
+			// TODO report it as an error ? 
+			assert(false && "Casting between two different vector types not yet implemented!");
+			return expr;
+		}
+	}
+
+	// [ string -> array<char,1> ]
+	//
+	// Converts a string literal to an array of chars, we do this by converting the string to a vector of chars 
+	// and then converting the vector to an array. 
+	if ( trgTy->getNodeType() == core::NT_ArrayType && gen.isString(argTy) ) {
+		const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>(trgTy);
+		assert( gen.isChar(arrTy->getElementType()) && "Converting a string to something which is not a char*" );
+		
+		// convert the string into a vector and then use vector.to.array to get the desired array
+		core::ExpressionPtr&& ret = 
+			makeHerbertHappy(builder, builder.vectorType(gen.getChar(), 
+				core::ConcreteIntTypeParam::get(
+					builder.getNodeManager(), 
+					core::static_pointer_cast<const core::Literal>(expr)->getValue().length()-1) ), expr );
+
+		// now convert the vector<char, #n> into an array<char, #n>
+		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(ret) );
+	}
+	
+	// [ 'a -> array<'a,1> ]
+	//
+	// builds an array from a scalar value
+	if ( trgTy->getNodeType() == core::NT_ArrayType && 	argTy->getNodeType() != core::NT_ArrayType && 
+			argTy->getNodeType() != core::NT_VectorType )
+	{
+		// This is done by creating a wrapping array containing the argument
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(trgTy)->getElementType();
+		core::ConcreteIntTypeParamPtr&& size = core::ConcreteIntTypeParam::get(builder.getNodeManager(), 1); 
+		core::ExpressionPtr vecExpr = builder.callExpr( 
+				builder.vectorType(subTy, size), // vec<subTy,1>
+				gen.getVectorInitUniform(), 
+				toVector( makeHerbertHappy(builder, subTy, expr), gen.getIntTypeParamLiteral(size) )
+			);
+		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(vecExpr) );
+	}
+
+	// [ ref<'a> -> ref<array<'a>> ]
+	//
+	// Use the scalarToArray literal to perform this kind of conversion
+	if ( trgTy->getNodeType() == core::NT_RefType ) {
+		assert( argTy->getNodeType() == core::NT_RefType );
+		const core::TypePtr& subTrgTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
+		const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
+		if ( subTrgTy->getNodeType() == core::NT_ArrayType ) {
+			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
+			core::ExpressionPtr subExpr = expr;
+			if ( *arrTy->getElementType() != *argSubTy ) {
+				subExpr = makeHerbertHappy(builder, arrTy->getElementType(), expr );
+			}
+			return builder.callExpr( gen.getScalarToArray(), subExpr);
+		}
+	}
+	
+	// [  ]
+	//
+	//if ( trgTy->getNodeType() == core::NT_RefType ) {
+		//core::ExpressionPtr ret = expr;
+		//core::LiteralPtr saveOp;
+		//if(expr->getNodeType() == core::NT_CallExpr && core::analysis::isCallOf(ret, gen.getRefVar())) {
+			//saveOp = gen.getRefVar();
+			//ret = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);
+		//} 
+		//if(expr->getNodeType() == core::NT_CallExpr && core::analysis::isCallOf(ret, gen.getRefNew())) {
+			//saveOp = gen.getRefNew();
+			//ret = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);
+		//} 
+		//assert(saveOp);
+		//return builder.callExpr( trgTy, saveOp, makeHerbertHappy(builder, 
+					//core::static_pointer_cast<const core::RefType>(trgTy)->getElementType(), 
+					//ret	)
+				//);
+	//}
+	
+	LOG(ERROR) << ": converting expression '" << *expr << "' of type '" << *expr->getType() << "' to type '" 
+			   << *trgTy << "' not yet supported!";
+	assert(false && "Cast conversion not supported!");
 }
 
 } // end anonymous namespace
@@ -380,7 +665,7 @@ public:
 		std::string&& strValue = GetStringFromStream(
 				convFact.currTU->getCompiler().getSourceManager(), stringLit->getExprLoc()
 			);
-		core::ExpressionPtr&& retExpr =	convFact.builder.literal( strValue,	convFact.mgr.basic.getString() );
+		core::ExpressionPtr&& retExpr =	convFact.builder.literal( strValue,	convFact.mgr.basic.getString() ); 
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
 	}
@@ -418,71 +703,100 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						   IMPLICIT CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
-	    START_LOG_EXPR_CONVERSION(implCastExpr);
-		core::TypePtr&& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
+	//core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
+	    //START_LOG_EXPR_CONVERSION(implCastExpr);
+		//const core::lang::BasicGenerator& gen = convFact.mgr.getBasicGenerator();
 
-		core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
+		//core::TypePtr&& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
+		//core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
 
-		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
-		// if the cast is to a aa pointer type and the subexpr is a 0 it should be replaced with a null literal
-		if ( ( type->getNodeType() == core::NT_ArrayType ) &&
-				*subExpr == *convFact.builder.literal(subExpr->getType(),"0") ) {
-			return convFact.builder.castExpr( type, convFact.builder.getNodeManager().basic.getNull() );
-		}
+		//core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
+		//// if the cast is to a pointer type and the subexpr is a 0 it should be replaced with a null literal
+		//if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && 
+				//(*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) ) 
+		//{
+			//return gen.getNull();
+		//}
 
-		// Mallocs/Allocs are replaced with ref.new expression
-		if (core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr) ) {
-			return retExpr;
-		}
+		//if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && 
+				//gen.isNull(subExpr) ) 
+		//{
+			//return subExpr;
+		//}
 
-		// If the subexpression is a string, remove the implicit casts
-		if ( convFact.mgr.basic.isString(subExpr->getType()) ) {
-			return subExpr;
-		}
+		//// Mallocs/Allocs are replaced with ref.new expression
+		//if (core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr) ) {
+			//return retExpr;
+		//}
 
-		// if the subexpression is an array or a vector, remove all the C implicit casts
-		if ( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType ||
-				nonRefExpr->getType()->getNodeType() == core::NT_VectorType ) {
-			return subExpr;
-		}
+		//// If the subexpression is a string, remove the implicit casts
+		//if ( convFact.mgr.basic.isString(subExpr->getType()) ) {
+			//return subExpr;
+		//}
 
-		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if ( !convFact.builder.getBasicGenerator().isNull(nonRefExpr) && type->getNodeType() != core::NT_RefType ) {
-			subExpr = nonRefExpr;
-		}
+		//// if the subexpression is an array or a vector, remove all the C implicit casts
+		//if ( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType ||
+				//nonRefExpr->getType()->getNodeType() == core::NT_VectorType ) {
+			//return subExpr;
+		//}
 
-		// LOG(DEBUG) << *subExpr << "(" << *subExpr->getType() << ") -> " << *type;
-		// Convert casts form scalars to vectors to vector init exrpessions
-		subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
+		//// In the case the target type of the cast is not a reftype we deref the subexpression
+		//if ( !convFact.builder.getBasicGenerator().isNull(nonRefExpr) && type->getNodeType() != core::NT_RefType ) {
+			//subExpr = nonRefExpr;
+		//}
 
-        core::ExpressionPtr&& retExpr =
-        		(type != subExpr->getType() ? convFact.builder.castExpr( type, subExpr ) : subExpr);
-		END_LOG_EXPR_CONVERSION(retExpr);
-		return retExpr;
-	}
+		//// LOG(DEBUG) << *subExpr << "(" << *subExpr->getType() << ") -> " << *type;
+		//// Convert casts form scalars to vectors to vector init exrpessions
+		//subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
+
+        //core::ExpressionPtr&& retExpr =
+        		//(type != subExpr->getType() ? convFact.builder.castExpr( type, subExpr ) : subExpr);
+		//END_LOG_EXPR_CONVERSION(retExpr);
+		//return retExpr;
+	//}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCastExpr(clang::CastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
+		
+		const core::lang::BasicGenerator& gen = convFact.mgr.getBasicGenerator();
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
-
+		
+		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 		// if the cast is to a 'void*' type and the subexpr is a 0 it should be
 		// replaced with a null literal
-		if (( type->getNodeType() == core::NT_ArrayType ) &&
-				*subExpr == *convFact.builder.literal(subExpr->getType(),"0") ) {
-			return convFact.builder.getNodeManager().basic.getNull();
+		if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && 
+				(*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) ) 
+		{
+			return gen.getNull();
+		}
+
+		if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && gen.isNull(subExpr) ) {
+			return subExpr;
 		}
 
 		// Mallocs/Allocs are replaced with ref.new expression
 		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
 			return retExpr;
+	
+		// If the subexpression is a string, remove the implicit casts
+		if ( convFact.mgr.basic.isString(subExpr->getType()) ) {
+			return subExpr;
+		}
+
+		const core::TypePtr& nonRefType = nonRefExpr->getType();
+		// if the subexpression is an array or a vector, remove all the C implicit casts
+		if ( nonRefType->getNodeType() == core::NT_ArrayType || nonRefType->getNodeType() == core::NT_VectorType || 
+				nonRefType->getNodeType() == core::NT_FunctionType ) 
+		{
+			return subExpr;
+		}
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
-		if(!convFact.builder.getBasicGenerator().isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
+		if(!gen.isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
 			subExpr = convFact.tryDeref(subExpr);
 		}
 
@@ -496,12 +810,33 @@ public:
 		return retExpr;
 	}
 
+private:
+	ExpressionList getFunctionArguments(const core::ASTBuilder& builder, clang::CallExpr* callExpr, const core::FunctionTypePtr& funcTy) {
+		ExpressionList args;
+		for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
+			core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+			// core::TypePtr&& argTy = arg->getType();
+			if ( argId < funcTy->getParameterTypes().size() ) {
+				const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId];
+				arg = convFact.castToType(funcArgTy, arg);
+				// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
+				// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
+			}
+			args.push_back( arg );
+		}
+		return args;
+	}
+
+public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							FUNCTION CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCallExpr(clang::CallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
 		const core::ASTBuilder& builder = convFact.builder;
+
+		// return converted node
+		core::ExpressionPtr irNode;
 
 		if ( callExpr->getDirectCallee() ) {
 
@@ -511,42 +846,7 @@ public:
 				core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
 			// collects the type of each argument of the expression
-			ExpressionList args;
-			for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
-				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-				core::TypePtr&& argTy = arg->getType();
-				if ( argId < funcTy->getArgumentTypes().size() ) {
-					const core::TypePtr& funcArgTy = funcTy->getArgumentTypes()[argId];
-					if ( funcArgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
-						// the function requires an non-ref type while the current argument is of ref-type
-						arg = builder.deref( arg );
-					}
-					if ( funcArgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() != core::NT_RefType ) {
-						// The function requires a refType and the current argument is of non-ref type
-						if ( builder.getBasicGenerator().isString(arg->getType()) ) {
-							// If the argument is a string then we have to convert the string into a char pointer
-							// because of C semantics 
-							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
-						} else {
-							arg = builder.refVar(arg);
-						}
-					}
-					if( funcArgTy->getNodeType() == core::NT_RefType) {
-						// we are sure at this point the type of arg is of ref-type as well
-						const core::TypePtr& elemTy = core::static_pointer_cast<const core::RefType>(funcArgTy)->getElementType();
-						const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(arg->getType())->getElementType();
-						if(elemTy->getNodeType() == core::NT_ArrayType && argSubTy->getNodeType() == core::NT_VectorType) {
-							// we are in the situation where a function receiving a ref<array> gets in input a
-							// ref<vector>, current solution is to use the refVector2refArray literal to deal with this
-							const core::TypePtr& elemVecTy = core::static_pointer_cast<const core::VectorType>(argSubTy)->getElementType();
-							arg = builder.callExpr( builder.refType(builder.arrayType(elemVecTy)), builder.getBasicGenerator().getRefVector2RefArray(), arg );
-						}
-					}
-					// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
-					// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
-				}
-				args.push_back( arg );
-			}
+			ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
 			const TranslationUnit* oldTU = convFact.currTU;
 			const FunctionDecl* definition = NULL;
@@ -578,15 +878,14 @@ public:
 				// free(): check whether this is a call to the free() function
 				if ( funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1 ) {
 					// in the case the free uses an input parameter
-					if ( args[0]->getType()->getNodeType() == core::NT_RefType ) {
-						return builder.callExpr( builder.getBasicGenerator().getRefDelete(), args[0] );
+					if ( args.front()->getType()->getNodeType() == core::NT_RefType ) {
+						return builder.callExpr( builder.getBasicGenerator().getRefDelete(), args.front() );
 					}
 					// otherwise this is not a L-Value so it needs to be wrapped into a variable
 					return builder.callExpr( builder.getBasicGenerator().getRefDelete(),
 							wrapVariable(callExpr->getArg(0))
 						);
 				}
-
 
                 //-----------------------------------------------------------------------------------------------------
                 //                          Handle of OpenCL built-in functions
@@ -660,43 +959,27 @@ public:
 			core::ExpressionPtr lambdaExpr =
 					core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(definition) );
 			convFact.currTU = oldTU;
+			irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
-			core::ExpressionPtr&& irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
-			// handle eventual pragmas attached to the Clang node
-			core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
-			return annotatedNode;
-		}
-		if ( callExpr->getCallee() ) {
+		} else if ( callExpr->getCallee() ) {
 			core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
-			const core::TypePtr& subTy = funcPtr->getType();
+			core::TypePtr subTy = funcPtr->getType();
 			if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
-				const core::TypePtr& subVecTy =
-						core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
-
-				funcPtr = builder.callExpr( subVecTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
+				subTy = core::static_pointer_cast<const core::SingleElementType>( subTy )->getElementType();
+				funcPtr = builder.callExpr( subTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
 			}
+			assert(subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
+			const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
+			ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+			irNode = builder.callExpr( funcPtr, args );
 
-			ExpressionList args;
-			core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( funcPtr->getType() );
-			for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
-				core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
-				if ( argId < funcTy->getArgumentTypes().size() &&
-						funcTy->getArgumentTypes()[argId]->getNodeType() == core::NT_RefType ) {
-					if ( arg->getType()->getNodeType() != core::NT_RefType ) {
-						if ( builder.getBasicGenerator().isString(arg->getType()) ) {
-							arg = builder.callExpr( builder.getBasicGenerator().getStringToCharPointer(), arg );
-						} else {
-							arg = builder.refVar(arg);
-						}
-					}
-				} else {
-					arg = convFact.tryDeref(arg);
-				}
-				args.push_back( arg );
-			}
-			return  builder.callExpr( funcPtr, args );
+		} else {
+			assert(false && "Call expression not referring a function");
 		}
-		assert(false && "Call expression not referring a function");
+		assert(irNode && "CallExpr has not been correctly converted into an IR Expression.");
+		// handle eventual pragmas attached to the Clang node
+		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
+		return annotatedNode;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -931,6 +1214,18 @@ public:
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) &&
 					"LHS operand must be of type ref<a'>."
 				);
+
+			// If the value of the RHS operation is AnyRef we cannot use the assignment operator 
+			// therefore the set.null literal is used
+			if ( gen.isNull(rhs) ) {
+				core::ExpressionPtr&& retExpr = builder.callExpr(gen.getSetNull(), toVector(lhs));
+
+				// handle eventual pragmas attached to the Clang node
+				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation( retExpr, binOp, convFact );
+				END_LOG_EXPR_CONVERSION( retExpr );
+				return annotatedNode;
+			}	
+			
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();
@@ -939,24 +1234,22 @@ public:
 		default:
 			assert(false && "Operator not supported");
 		}
-		rhs = convFact.tryDeref(rhs);
-
+		
 		// Operators && and || introduce short circuit operations, this has to be directly supported in the IR.
 		if ( baseOp == BO_LAnd || baseOp == BO_LOr ) {
-			if( !gen.isBool(lhs->getType()) ) {
-				lhs = builder.castExpr(gen.getBool(), lhs);
-			}
-			if( !convFact.mgr.basic.isBool(rhs->getType()) ) {
-				rhs = builder.castExpr(gen.getBool(), rhs);
-			}
+			lhs = convFact.castToType(gen.getBool(), lhs);
+			rhs = convFact.castToType(gen.getBool(), rhs);
 			// lazy evaluation of RHS
 			exprTy = gen.getBool();
 			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
 
+		rhs = convFact.tryDeref(rhs);
+
 		if( !isAssignment ) {
 			lhs = convFact.tryDeref(lhs);
-
+			lhs = convFact.castToType(exprTy, lhs);
+			rhs = convFact.castToType(exprTy, rhs);
 			// Handle pointers arithmetic
 			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 			opFunc = gen.getOperator(exprTy, op);
@@ -966,8 +1259,9 @@ public:
 					assert(false && "Pointer arithmetic not yet supported");
 			}
 
-			if(isLogical)
+			if(isLogical) {
 				exprTy = gen.getBool();
+			}
 		}
 		assert(opFunc);
 
@@ -1036,10 +1330,16 @@ public:
 			 * we have to declare a variable holding the memory location for that value and replace every use of
 			 * the paramvar with the newly generated variable: the structure needRef in the ctx is used for this
 			 */
-			core::ExpressionPtr&& expr = wrapVariable(unOp->getSubExpr());
-			assert(expr->getType()->getNodeType() == core::NT_RefType);
+			subExpr = wrapVariable(unOp->getSubExpr());
 
-			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  expr );
+			// in the case we are getting the address of a function the & operator 
+			// has no effects, therefore we return
+			if (subExpr->getType()->getNodeType() == core::NT_FunctionType) {
+				break;
+			}
+
+			assert(subExpr->getType()->getNodeType() == core::NT_RefType);
+			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  subExpr );
 			break;
 		}
 		// *a
@@ -1073,12 +1373,11 @@ public:
 			break;
 		// !a
 		case UO_LNot:
-			subExpr = convFact.tryDeref(subExpr);
 			if( !gen.isBool(subExpr->getType()) ) {
-				// for now add a cast expression to bool FIXME
-				subExpr = convFact.getASTBuilder().castExpr(gen.getBool(), subExpr);
+				subExpr = convFact.castToType(gen.getBool(), subExpr);
 			}
 			assert( gen.isBool(subExpr->getType()) );
+
 			subExpr = builder.callExpr( subExpr->getType(), gen.getBoolLNot(), subExpr );
 			break;
 		case UO_Real:
@@ -1112,13 +1411,7 @@ public:
 		core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
 		core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
 
-		// add ref.deref if needed
-		condExpr = convFact.tryDeref(condExpr);
-
-		if ( !gen.isBool(condExpr->getType()) ) {
-			// the return type of the condition is not a boolean, we add a cast expression
-			condExpr = builder.castExpr(gen.getBool(), condExpr); // FIXME
-		}
+		condExpr = convFact.castToType(gen.getBool(), condExpr);
 
 		// Dereference eventual references
 		if ( retTy->getNodeType() == core::NT_RefType ) {
@@ -1127,8 +1420,8 @@ public:
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, gen.getIfThenElse(),
 				condExpr,	// Condition
-				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(trueExpr)),  retTy, true ), // True
-				builder.createCallExprFromBody( builder.returnStmt(convFact.tryDeref(falseExpr)),  retTy, true ) // False
+				builder.createCallExprFromBody( builder.returnStmt(convFact.castToType(retTy, trueExpr)), retTy, true ), // True
+				builder.createCallExprFromBody( builder.returnStmt(convFact.castToType(retTy, falseExpr)), retTy, true ) // False
 		);
 
 		// handle eventual pragmas attached to the Clang node
@@ -1264,6 +1557,8 @@ public:
 			retExpr = convFact.lookUpVariable( varDecl );
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
+		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) { 
+			retExpr = convFact.builder.literal(enumDecl->getInitVal().toString(10), convFact.builder.getBasicGenerator().getInt4());
 		} else {
 			// todo: C++ check whether this is a reference to a class field, or method (function).
 			assert(false && "DeclRefExpr not supported!");
@@ -1341,12 +1636,12 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 		// get all values of the init expression
 		for ( size_t i = 0, end = initList->getNumInits(); i < end; ++i ) {
 			const clang::Expr* subExpr = initList->getInit(i);
-			core::ExpressionPtr convExpr = convertInitExpr(subExpr, elemTy, false);
+			core::ExpressionPtr&& convExpr = convertInitExpr(subExpr, elemTy, false);
 			// If the type is a refType we have to add a VAR.REF operation
-			if ( !core::analysis::isCallOf(convExpr, mgr.basic.getRefVar()) ) {
-				convExpr = builder.refVar(convExpr);
-			}
-			elements.push_back( convExpr );
+			// if ( !core::analysis::isCallOf(convExpr, mgr.basic.getRefVar()) ) {
+			// 	convExpr = builder.refVar(convExpr);
+			// }
+			elements.push_back( castToType(elemTy, convExpr) );
 		}
 		retExpr = builder.vectorExpr(elements);
 	}
@@ -1375,13 +1670,96 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 	return retExpr;
 }
 
+core::ExpressionPtr ConversionFactory::castToType(const core::TypePtr& trgTy, const core::ExpressionPtr& expr) const {
+	VLOG(1) << "@@ Converting expression '" << *expr << "' with type '" << *expr->getType() << "' to target type '" << *trgTy << "'";
+	// const core::TypePtr& srcTy = expr->getType();
+	core::ExpressionPtr&& ret = makeHerbertHappy(builder, trgTy, expr);
+	// assert(*trgTy == *expr->getType() && "Casting non supported!");
+	VLOG(1) << "@@ Expression converted to '" << *ret << "' with type '" << *ret->getType() << "'" << std::endl;
+	return ret;
+}
+
+core::ExpressionPtr
+ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const {
+	// get kind of initialized value
+	core::NodeType&& kind =
+		(type->getNodeType() != core::NT_RefType ?
+				type->getNodeType() :
+				core::static_pointer_cast<const core::RefType>(type)->getElementType()->getNodeType()
+			);
+
+	if ( !expr ) {
+		// if no init expression is provided => use undefined for given set of types
+		if ( kind == core::NT_StructType || kind == core::NT_UnionType || kind == core::NT_ArrayType ||
+				kind == core::NT_VectorType ) {
+			if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+				const core::TypePtr& res = refTy->getElementType();
+				return builder.refVar(
+					builder.callExpr( res,
+						(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res)
+					)
+				);
+			}
+			return builder.callExpr( type,
+				(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(type)
+			);
+		} else {
+			return defaultInitVal(type);
+		}
+	}
+
+	/*
+	 * if an expression is provided as initializer first check if this is an initializer list which is used for arrays,
+	 * structs and unions
+	 */
+	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ) ) {
+		return convertInitializerList( listExpr, type );
+	}
+
+	// Convert the expression like any other expression
+	core::ExpressionPtr&& retExpr = convertExpr( expr );
+
+	if ( core::analysis::isCallOf(retExpr, mgr.basic.getArrayCreate1D()) ) {
+		retExpr = builder.callExpr(builder.refType(retExpr->getType()), mgr.basic.getRefNew(), retExpr);
+	}
+
+	// in the case the array is allocated in the global struct, the type is not ref and the assignment 
+	// of null becomes the initialization of the array with no elements
+	if ( mgr.getBasicGenerator().isNull(retExpr) &&  type->getNodeType() == core::NT_ArrayType ) {
+		const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
+		return builder.callExpr(
+				type, mgr.basic.getArrayCreate1D(), 
+				mgr.basic.getTypeLiteral(subTy),
+				builder.literal("0", mgr.basic.getUInt8())
+			);
+
+	}	
+
+	//if ( !(core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
+		   //core::analysis::isCallOf(retExpr, mgr.basic.getRefNew())) ) {
+
+		//if( retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
+			//const core::TypePtr& subTy =
+					//core::static_pointer_cast<const core::RefType>(retExpr->getType())->getElementType();
+			//if ( !(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) )
+				//retExpr = builder.refVar( tryDeref(retExpr) );
+		//} else if ( type->getNodeType() == core::NT_RefType ) {
+			//retExpr = builder.refVar( retExpr );
+		//}
+	//}
+	retExpr = castToType(type, retExpr);
+
+	return retExpr;
+}
+
+
 namespace {
 
 core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 						 	 	 	 	 	   const core::TypePtr& globals,
 						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
 
-	const std::vector<core::TypePtr>& oldArgs = funcType->getArgumentTypes();
+	const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes();
 
 	std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
 
@@ -1441,7 +1819,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			}
 		} else {
 			// we expect the var name to be in currVar
-			ctx.recVarExprMap.insert(std::make_pair(funcDecl, ctx.currVar));
+			ctx.recVarExprMap.insert( std::make_pair(funcDecl, ctx.currVar) );
 		}
 
 		// when a subtype is resolved we expect to already have these variables in the map
@@ -1493,11 +1871,14 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
-	assert((components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && "~~~ Something odd happened, you are allowed by all means to blame Simone ~~~");
-	if(!components.empty())
+	assert( (components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && 
+			"~~~ Something odd happened, you are allowed by all means to blame Simone ~~~" );
+	if (!components.empty()) {
 		ctx.isResolvingRecFuncBody = true;
+	}
 
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
+
 	/*
 	 * if any of the parameters of this function has been marked as needRef, we need to add a declaration just before
 	 * the body of this function
@@ -1534,14 +1915,15 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 	// if we introduce new decls we have to introduce them just before the body of the function
-	if(!decls.empty()) {
+	if ( !decls.empty() ) {
 		// push the old body
 		decls.push_back(body);
 		body = builder.compoundStmt(decls);
 	}
 
-	if( !components.empty() )
+	if ( !components.empty() ) {
 		ctx.isResolvingRecFuncBody = false;
+	}
 
 	// ADD THE GLOBALS
 	if ( isEntryPoint && ctx.globalVar ) {

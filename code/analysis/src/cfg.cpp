@@ -248,7 +248,6 @@ struct CFGBuilder: public ASTVisitor< void > {
 	/**
 	 * When a return statement is encountered we jump to the exit block of the closest enclosing function scope
 	 * (i.e. lambda expression)
-	 * @param retStmt
 	 */
 	void visitReturnStmt(const ReturnStmtPtr& retStmt) {
 		assert(!currBlock || (currBlock && currBlock->empty()));
@@ -793,7 +792,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 	case cfg::Block::DEFAULT:
 	{
 		out << "[shape=box,label=\"";
-		out << "[B" << block.blockId() << "]\\l";
+		out << "[B" << block.getParentCFG().getBlockID( block.blockId() ) << "]\\l";
 		size_t num = 0;
 		std::for_each(block.stmt_begin(), block.stmt_end(), 
 			[ &out, &num, &block ](const insieme::analysis::cfg::Element& curr) {

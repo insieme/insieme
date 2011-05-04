@@ -63,11 +63,20 @@ void basic_type_test() {
     #pragma test "ref<vector<vector<int<4>,2>,3>> v1 = ref.var(undefined(vector<vector<int<4>,2>,3>))"
 	int vv[3][2];
 
-	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0)),ref.var(cast<real<4>>(0))})"
+	#pragma test "ref<vector<real<4>,3>> v1 = ref.var({cast<real<4>>(0),cast<real<4>>(0),cast<real<4>>(0)})"
 	float vvv[3] = { 0, 0, 0 };
 
-	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({ref.var({ref.var(cast<real<4>>(0))}),ref.var({ref.var(cast<real<4>>(0))})})"
+	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{cast<real<4>>(0)},{cast<real<4>>(0)}})"
 	float vvvv[][1] = { {0}, {0} };
+
+	#pragma test "ref<array<int<4>,1>> v1 = anyref.to.ref(null, array<int<4>,1>)"	
+	int* b1 = 0;
+
+	#pragma test "ref<array<array<array<int<4>,1>,1>,1>> v1 = anyref.to.ref(null, array<array<array<int<4>,1>,1>,1>)"
+	int*** c1 = 0;
+
+	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
+	//char str[10] = "Hello Mum";
 }
 
 // Simple struct
@@ -163,7 +172,18 @@ void* malloc(int);
 
 int mem_alloc() {
 
-	#pragma test "ref<array<int<4>,1>> v1 = ref.new(array.create.1D(undefined(int<4>), uint.div(4, sizeof(int<4>))))"
+	#pragma test "ref<array<int<4>,1>> v1 = ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>))))"
 	int* a = malloc(4);
+
+
+}
+
+enum E{ ON, OFF=10 };
+
+int test_enum() {
+	#pragma test "ref<int<4>> v1 = ref.var(0)"
+	enum E a = ON;
+	#pragma test "ref<int<4>> v1 = ref.var(10)"
+	enum E b = OFF;
 }
 

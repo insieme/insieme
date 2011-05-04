@@ -59,8 +59,8 @@ TEST(UndeclaredVariableCheck, Basic) {
 
 	FunctionTypePtr funType = builder.functionType(TypeList(), type);
 
-	NodePtr ok = builder.lambdaExpr(funType, toVector<VariablePtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, init));
-	NodePtr err = builder.lambdaExpr(funType, toVector<VariablePtr>(), toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
+	NodePtr ok = builder.lambdaExpr(funType, toVector<VariablePtr>(), builder.declarationStmt(varA, init));
+	NodePtr err = builder.lambdaExpr(funType, toVector<VariablePtr>(), builder.declarationStmt(varA, varB));
 
 
 	CheckPtr typeCheck = makeRecursive(make_check<UndeclaredVariableCheck>());

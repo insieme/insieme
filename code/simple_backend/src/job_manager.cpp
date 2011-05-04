@@ -57,19 +57,6 @@ namespace {
 	using namespace core;
 
 	/**
-	 * A pre-processing step for Job branches removing unnecessary capture init expressions.
-	 */
-	const ExpressionPtr& preprocessJobBranch(const ExpressionPtr& expression) {
-		if (expression->getNodeType() == NT_CaptureInitExpr) {
-			CaptureInitExprPtr init = static_pointer_cast<const CaptureInitExpr>(expression);
-			if (init->getValues().empty()) {
-				return init->getLambda();
-			}
-		}
-		return expression;
-	}
-
-	/**
 	 * Determines whether the given type is a reference of an array or vector type.
 	 * TODO: move this to a more general case, use it more often (especially within the backend_convert.cpp)
 	 */
@@ -401,14 +388,14 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 			// add condition
 			function << "if(" << ") {" << CodeBuffer::indR << "\n";
-			stmtConverter.convert(builder.callExpr(preprocessJobBranch(cur.second)), function);
+			stmtConverter.convert(builder.callExpr(cur.second), function);
 			function << ";\nreturn;" << CodeBuffer::indL << "}";
 
 		});
 
 		function << "// ------------------ Default processing -----------------\n";
 
-		stmtConverter.convert(builder.callExpr(preprocessJobBranch(targetJob->getDefaultStmt())), function);
+		stmtConverter.convert(builder.callExpr(targetJob->getDefaultStmt()), function);
 		function << ";";
 
 
@@ -448,41 +435,43 @@ namespace {
 				return static_pointer_cast<const Statement>(inlined);
 			}
 
-		} else if (body->getNodeType() == NT_CaptureInitExpr) {
 
-			CaptureInitExprPtr capture = static_pointer_cast<const CaptureInitExpr>(body);
-			if (capture->getLambda()->getNodeType() == NT_LambdaExpr) {
-
-				LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(capture->getLambda());
-				if (!lambda->isRecursive()) {
-
-					// collect initialization variables
-					utils::map::PointerMap<VariablePtr, VariablePtr> varMap;
-
-					// add function parameter (there is only one of those)
-					varMap.insert(std::make_pair(lambda->getParameterList()[0], inductionVar));
-
-					const CaptureInitExpr::Values& values = capture->getValues();
-					const Lambda::CaptureList& params = lambda->getCaptureList();
-
-					bool valid = values.size() == params.size();
-					// add values - param mapping
-					for (unsigned i=0; valid && i<values.size(); i++) {
-
-						// test value => has to be a variable
-						valid = valid && values[i]->getNodeType() == NT_Variable;
-						if (valid) {
-							varMap.insert(std::make_pair(params[i], static_pointer_cast<const Variable>(values[i])));
-						}
-					}
-
-					// replace all parameters by their value and return result
-					if (valid) {
-						const NodePtr inlined = transform::replaceVars(builder.getNodeManager(), lambda->getBody(), varMap);
-						return static_pointer_cast<const Statement>(inlined);
-					}
-				}
-			}
+		// TODO: handle bind expressions
+//		} else if (body->getNodeType() == NT_CaptureInitExpr) {
+//
+//			CaptureInitExprPtr capture = static_pointer_cast<const CaptureInitExpr>(body);
+//			if (capture->getLambda()->getNodeType() == NT_LambdaExpr) {
+//
+//				LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(capture->getLambda());
+//				if (!lambda->isRecursive()) {
+//
+//					// collect initialization variables
+//					utils::map::PointerMap<VariablePtr, VariablePtr> varMap;
+//
+//					// add function parameter (there is only one of those)
+//					varMap.insert(std::make_pair(lambda->getParameterList()[0], inductionVar));
+//
+//					const CaptureInitExpr::Values& values = capture->getValues();
+//					const Lambda::CaptureList& params = lambda->getCaptureList();
+//
+//					bool valid = values.size() == params.size();
+//					// add values - param mapping
+//					for (unsigned i=0; valid && i<values.size(); i++) {
+//
+//						// test value => has to be a variable
+//						valid = valid && values[i]->getNodeType() == NT_Variable;
+//						if (valid) {
+//							varMap.insert(std::make_pair(params[i], static_pointer_cast<const Variable>(values[i])));
+//						}
+//					}
+//
+//					// replace all parameters by their value and return result
+//					if (valid) {
+//						const NodePtr inlined = transform::replaceVars(builder.getNodeManager(), lambda->getBody(), varMap);
+//						return static_pointer_cast<const Statement>(inlined);
+//					}
+//				}
+//			}
 
 		}
 
@@ -566,7 +555,7 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 		ExpressionPtr loopBody = static_pointer_cast<const core::Expression>(transform::replaceVars(manager, body, captureMap));
 
 		// add for-loop
-		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getArgumentTypes()[0]);
+		VariablePtr inductionVar = builder.variable(static_pointer_cast<const FunctionType>(loopBody->getType())->getParameterTypes()[0]);
 		cc.getNameManager().setName(inductionVar, "__it");
 
 		function << "\n// ----- process iterations -----\n";

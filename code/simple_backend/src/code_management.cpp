@@ -51,7 +51,9 @@ const CodeBuffer::IndL CodeBuffer::indL = CodeBuffer::IndL();
 std::string CodeBuffer::toString() {
 	// defuglify code
 	std::string retval = ss.str();
-	//boost::replace_all(retval, "*&", "");
+//	boost::replace_all(retval, "*&", "");
+//	boost::replace_all(retval, ";;", ";");
+//	boost::replace_all(retval, "};", "}");
 	return retval;
 }
 

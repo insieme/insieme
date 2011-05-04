@@ -213,7 +213,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-1), "get_local_size");
 				
 				// new functionType
-				const core::TypeList& oldArgs = oldFuncType->getArgumentTypes();
+				const core::TypeList& oldArgs = oldFuncType->getParameterTypes();
 				const core::TypePtr& retType = oldFuncType->getReturnType();
 				assert(retType->getNodeManager().basic.isUnit(retType) && "Return type of kernel functions must be void.");
 				TypeList newArgs;
@@ -425,48 +425,49 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 			}
 		}
 		// check for get_local_id & get_global_id
-		const CaptureInitExprPtr& cap = dynamic_pointer_cast<const CaptureInitExpr>(ptr->getFunctionExpr());
-		if (cap){
-			const CompoundStmtPtr& comp = dynamic_pointer_cast<const CompoundStmt>
-						(dynamic_pointer_cast<const LambdaExpr>(cap->getLambda())->getBody());
-			if (comp){
-				int size = comp->getStatements().size();
-				if (size > 2) { // FIXME: improve the pattern :)
-					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
-					const DeclarationStmtPtr& dec2 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[1]);
-					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[2]);
-					
-					if (dec1 && dec2 && swt && 
-						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId()) &&
-						analysis::isCallOf(dec2->getInitialization(), builder.getBasicGenerator().getGetThreadId())
-					) {
-						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
-						core::TypeList tList;
-						tList.push_back(t);
-						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
-						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
-						simple_backend::StmtConverter::visitCallExpr(call);
-						return;
-					}
-				}
-				else if (size > 1) { // FIXME: improve the pattern :)
-					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
-					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[1]);
-					
-					if (dec1 && swt && 
-						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId())
-					) {
-						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
-						core::TypeList tList;
-						tList.push_back(t);
-						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_local_id");
-						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
-						simple_backend::StmtConverter::visitCallExpr(call);
-						return;
-					}
-				}
-			}
-		}
+		// TODO: commented out during removal of capture init type => consider bind now
+//		const CaptureInitExprPtr& cap = dynamic_pointer_cast<const CaptureInitExpr>(ptr->getFunctionExpr());
+//		if (cap){
+//			const CompoundStmtPtr& comp = dynamic_pointer_cast<const CompoundStmt>
+//						(dynamic_pointer_cast<const LambdaExpr>(cap->getLambda())->getBody());
+//			if (comp){
+//				int size = comp->getStatements().size();
+//				if (size > 2) { // FIXME: improve the pattern :)
+//					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
+//					const DeclarationStmtPtr& dec2 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[1]);
+//					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[2]);
+//
+//					if (dec1 && dec2 && swt &&
+//						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId()) &&
+//						analysis::isCallOf(dec2->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+//					) {
+//						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+//						core::TypeList tList;
+//						tList.push_back(t);
+//						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
+//						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
+//						simple_backend::StmtConverter::visitCallExpr(call);
+//						return;
+//					}
+//				}
+//				else if (size > 1) { // FIXME: improve the pattern :)
+//					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
+//					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[1]);
+//
+//					if (dec1 && swt &&
+//						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+//					) {
+//						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+//						core::TypeList tList;
+//						tList.push_back(t);
+//						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_local_id");
+//						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
+//						simple_backend::StmtConverter::visitCallExpr(call);
+//						return;
+//					}
+//				}
+//			}
+//		}
 	}
 	simple_backend::StmtConverter::visitCallExpr(ptr);
 }

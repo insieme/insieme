@@ -137,6 +137,9 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 	if(basic.isUnit(ptr)) {
 		return toTypeInfo("void");
 	}
+	if (basic.isAnyRef(ptr)) {
+		return toTypeInfo("void*");
+	}
 	if(basic.isInt(ptr)) {
 		string qualifier = basic.isUnsignedInt(ptr) ? "unsigned " : "";
 		auto intParm = ptr->getIntTypeParameter().front();
@@ -171,9 +174,11 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 	if(basic.isString(ptr)) {
 		// strings are internally managed as vectors of a certain size
 		return TypeManager::TypeInfo(
-				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
-				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
-				"char*", "char* %s", "(%s).data");
+//				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
+//				TypeInfo::UNSUPPORTED, TypeInfo::UNSUPPORTED,
+//				"char*", "char* %s", "(%s).data");
+				"char*", "char*", "char*", "char*",
+				"char*", "char* %s", "%s");
 	}
 	if(basic.isChar(ptr)) {
 		return toTypeInfo("char");
@@ -230,7 +235,7 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 
 	// add function pointer 'fun'
 	out << "    " << getTypeName(functorAndCaller, functionType->getReturnType()) << "(*call)(" << "void*";
-	auto arguments = functionType->getArgumentTypes();
+	auto arguments = functionType->getParameterTypes();
 	if (!arguments.empty()) {
 		out << ", " << join(", ", arguments, elementPrinter);
 	}
@@ -240,44 +245,31 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 	// NOTE: disabled since not used anywhere
 	// out << "    const size_t size;\n";
 
-
-	// TODO: remove
-	// add capture variables
-	auto captures = functionType->getCaptureTypes();
-	if (!captures.empty()) {
-		int i = 0;
-		for_each(captures, [&](const TypePtr& cur) {
-				out << "    " << this->formatParamter(functorAndCaller, cur, format("p%d", i++), false) << ";\n";
-		});
-	}
-
 	out << "};\n";
 
 
 	// B) define caller routine - only functions without captures can be called
-	if (captures.empty()) {
-		out << "\n";
-		out << "// Type safe function for invoking closures of type " << name << "\n";
-		string resultType = getTypeName(functorAndCaller, functionType->getReturnType());
-		out << resultType;
-		out << " " << callerName << "(struct " << name << "* lambda";
-		int i = 0;
-		if (!arguments.empty()) {
-			out << ", " << join(", ", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-				out << formatParamter(functorAndCaller, cur, format("p%d", ++i), true);
-			});
-		}
-		out << ") { ";
-		if (resultType != "void") out << "return";
-		out << " lambda->call(lambda";
-		i = 0;
-		if (!arguments.empty()) {
-			out << ", " << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-				out << format("p%d", ++i);
-			});
-		}
-		out << "); }\n";
+	out << "\n";
+	out << "// Type safe function for invoking closures of type " << name << "\n";
+	string resultType = getTypeName(functorAndCaller, functionType->getReturnType());
+	out << resultType;
+	out << " " << callerName << "(struct " << name << "* lambda";
+	int i = 0;
+	if (!arguments.empty()) {
+		out << ", " << join(", ", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << formatParamter(functorAndCaller, cur, format("p%d", ++i), true);
+		});
 	}
+	out << ") { ";
+	if (resultType != "void") out << "return";
+	out << " lambda->call(lambda";
+	i = 0;
+	if (!arguments.empty()) {
+		out << ", " << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << format("p%d", ++i);
+		});
+	}
+	out << "); }\n";
 
 	// create, register and return entry
 	FunctionTypeInfo info(functorName, callerName, functorAndCaller);
@@ -287,22 +279,6 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 
 
 TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
-	auto& basic = ptr->getNodeManager().basic;
-
-	// special handling for void* type
-	if (ArrayTypePtr arrayType = dynamic_pointer_cast<const ArrayType>(ptr->getElementType())) {
-		if ((arrayType->getElementType()->getNodeType() == NT_TypeVariable)
-				|| (basic.isRefAlpha(arrayType->getElementType()))) {
-
-			return toTypeInfo("void*");
-		}
-	}
-	if (ptr->getElementType()->getNodeType() == NT_TypeVariable) {
-		return toTypeInfo("void*");
-	}
-	if(basic.isRefAlpha(ptr)) {
-		return toTypeInfo("void*");
-	}
 
 	// establish reference type with one additional level of indirection
 	TypeInfo subType = resolveType(ptr->getElementType());
@@ -337,11 +313,17 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	// fetch name for the vector type
 	string name = nameGenerator.getName(ptr);
 
-	// create a new code fragment for the struct definition
-	CodeFragmentPtr code = CodeFragment::createNew("vector_type_declaration of " + name + " <=> " + toString(*ptr));
-
 	// look up element type info
 	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
+
+	// check whether the type has been resolved while resolving the sub-type
+	auto pos = typeDefinitions.find(ptr);
+	if (pos != typeDefinitions.end()) {
+		return pos->second;
+	}
+
+	// create a new code fragment for the struct definition
+	CodeFragmentPtr code = CodeFragment::createNew("vector_type_declaration of " + name + " <=> " + toString(*ptr));
 	code->addDependency(elementTypeInfo.definition);
 
 	// add struct definition
@@ -363,15 +345,6 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 }
 
 TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
-	auto& basic = ptr->getNodeManager().basic;
-
-	// special handling for void* type (array<ref<'a>,1> and array<'a,1>)
-	if (ptr->getElementType()->getNodeType() == NT_TypeVariable) {
-		return toTypeInfo("void*");
-	}
-	if(basic.isRefAlpha(ptr->getElementType())) {
-		return toTypeInfo("void*");
-	}
 
 	// obtain dimension of array
 	unsigned dim = 0;
@@ -388,11 +361,18 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	// fetch name for the array type
 	string name = nameGenerator.getName(ptr);
 
-	// create a new code fragment for the struct definition
-	CodeFragmentPtr code = CodeFragment::createNew("array_type_declaration of " + name + " <=> " + toString(*ptr));
 
 	// look up element type info
 	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
+
+	// check whether the type has been resolved while resolving the sub-type
+	auto pos = typeDefinitions.find(ptr);
+	if (pos != typeDefinitions.end()) {
+		return pos->second;
+	}
+
+	// create a new code fragment for the struct definition
+	CodeFragmentPtr code = CodeFragment::createNew("array_type_declaration of " + name + " <=> " + toString(*ptr));
 	code->addDependency(elementTypeInfo.definition);
 
 	// add array-struct definition
@@ -405,144 +385,7 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
 			externalName, externalName + " %s", "(%s).data", code);
 
-// 	// TODO: remove if array construction works out
-//	TypeManager::TypeInfo res = resolveRefOrVectorOrArrayType(ptr);
-//	res.rValueName = Entry::UNSUPPORTED;
-//	res.paramPattern = Entry::UNSUPPORTED;
-//	return res;
 }
-
-
-//TypeManager::TypeInfo TypeManager::resolveRefOrVectorOrArrayType(const core::TypePtr& ptr) {
-//
-//	// make sure the passed type is correct
-//	TypePtr type = ptr;
-//	NodeType kind = ptr->getNodeType();
-//	assert (kind == NT_RefType || kind == NT_ArrayType || kind == NT_VectorType);
-//
-//	// count pointers in front of arrays
-//	int refCount = 0;
-//	while(kind == NT_RefType) {
-//		refCount++;
-//		type = static_pointer_cast<const RefType>(type)->getElementType();
-//		kind = type->getNodeType();
-//	}
-//
-//	// count arrays
-//	int arrayCount = 0;
-//	while(kind == NT_ArrayType) {
-//		ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
-//
-//		// check type of dimension
-//		IntTypeParamPtr dim = arrayType->getDimension();
-//		if (dim->getNodeType() != NT_ConcreteIntTypeParam) {
-//			return toTypeInfo("[[ Unsupported generic array types ]]");
-//		}
-//		arrayCount += static_pointer_cast<const ConcreteIntTypeParam>(dim)->getValue();
-//
-//		type = arrayType->getElementType();
-//		kind = type->getNodeType();
-//	}
-//
-//	// count vectors
-//	int vectorCount = 0;
-//	string postfix = "";
-//	while(kind == NT_VectorType) {
-//		vectorCount++;
-//
-//		VectorTypePtr vectorType = static_pointer_cast<const VectorType>(type);
-//		postfix = postfix + "[" + toString(*vectorType->getSize()) + "]";
-//
-//		type = vectorType->getElementType();
-//		kind = type->getNodeType();
-//	}
-//
-//	// consider case where arrays are embedded within vectors
-//	bool vectorOfArrays = false;
-//	if (kind == NT_ArrayType && arrayCount == 0) {
-//		vectorOfArrays = true;
-//		while(kind == NT_ArrayType) {
-//			ArrayTypePtr arrayType = static_pointer_cast<const ArrayType>(type);
-//
-//			// check type of dimension
-//			IntTypeParamPtr dim = arrayType->getDimension();
-//			if (dim->getNodeType() != NT_ConcreteIntTypeParam) {
-//				return toTypeInfo("[[ Unsupported generic array types ]]");
-//			}
-//			arrayCount += static_pointer_cast<const ConcreteIntTypeParam>(dim)->getValue();
-//
-//			type = arrayType->getElementType();
-//			kind = type->getNodeType();
-//		}
-//	}
-//	// check for a mixed node
-//	assert(kind != NT_VectorType && kind != NT_RefType && kind != NT_ArrayType && "Mixed array/vector/ref mode not supported yet!");
-//
-//	// reduce number of references if declaring a C array (implicit in C)
-//
-//	// reduce ref-count by 1 (since outermost is implicit in C) - except for pure vectors
-//	refCount -= (ptr->getNodeType() != NT_VectorType)?1:0;
-//	if (refCount < 0) {
-//		// not sub-zero value allowed
-//		refCount = 0;
-//	}
-//
-//	// create type declaration
-//	Entry elementType = resolveType(type);
-//	string prefix = elementType.lValueName;
-//	bool requiresInnerParenthesis = !vectorOfArrays && (refCount + arrayCount > 0) && vectorCount > 0;
-//	if (requiresInnerParenthesis) {
-//		prefix += "(";
-//	}
-//	for (int i=0; i<refCount; i++) {
-//		prefix += "*";
-//	}
-//	for (int i=0; i<arrayCount; i++) {
-//		prefix += "*";
-//	}
-//	if (requiresInnerParenthesis) {
-//		postfix = ")" + postfix;
-//	}
-//	if (ptr->getNodeType() == NT_VectorType || ptr->getNodeType() == NT_ArrayType) {
-//		// special treatement for C vectors
-//		return Entry(
-//				prefix + "" + postfix,
-//				prefix + "" + postfix,
-//				prefix + " %s" + postfix,
-//				prefix + " %s" + postfix,
-//				elementType.definition
-//		);
-//	}
-//
-//	// handling non-C-vector types
-//	if (vectorCount > 0 && refCount == 0 && arrayCount == 0) {
-//		return Entry(
-//				prefix + "" + postfix,
-//				prefix + "(*)" + postfix,
-//				prefix + " %s" + postfix,
-//				prefix + "(* %s)" + postfix,
-//				elementType.definition
-//		);
-//	}
-//
-//	if (arrayCount > 0) {
-//		return Entry(
-//				prefix + "" + postfix,
-//				prefix + "" + postfix,
-//				prefix + " %s" + postfix,
-//				prefix + " %s" + postfix,
-//				elementType.definition
-//		);
-//	}
-//
-//	return Entry(
-//			prefix + "" + postfix,
-//			prefix + "*" + postfix,
-//			prefix + " %s" + postfix,
-//			prefix + "* %s" + postfix,
-//			elementType.definition
-//	);
-//}
 
 TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
 

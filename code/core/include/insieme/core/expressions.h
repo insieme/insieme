@@ -176,19 +176,17 @@ class Lambda : public Node {
 public:
 
 	/**
-	 * Type wrapper for the capture and parameter list.
+	 * Type wrapper for the parameter list.
 	 */
-	typedef vector<VariablePtr> CaptureList;
 	typedef vector<VariablePtr> ParamList;
 
 private:
 
 	const FunctionTypePtr type;
-	const CaptureList captureList;
 	const ParamList paramList;
 	const StatementPtr body;
 
-	Lambda(const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body);
+	Lambda(const FunctionTypePtr& type, const ParamList& paramList, const StatementPtr& body);
 	virtual Lambda* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
@@ -211,14 +209,10 @@ public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const FunctionTypePtr& getType() const { return type; }
-	const CaptureList& getCaptureList() const { return captureList; }
 	const ParamList& getParameterList() const { return paramList; }
 	const StatementPtr& getBody() const { return body; }
 
-	bool isCapturing() const { return !captureList.empty(); }
-
 	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body);
-	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body);
 
 };
 
@@ -412,18 +406,6 @@ public:
 	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::ParamList& params, const StatementPtr& body);
 
 	/**
-	 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
-	 *
-	 * @param manager the manager maintaining the resulting node instance
-	 * @param type the type of the resulting lambda expression
-	 * @param captureList the list of capture variables
-	 * @param params the parameters accepted by the resulting lambda
-	 * @param body the body of the resulting function
-	 * @return the requested lambda expression managed by the given manager
-	 */
-	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body);
-
-	/**
 	 * Prints a readable representation of this instance to the given output stream.
 	 *
 	 * @param out the stream to be printed to
@@ -445,11 +427,6 @@ public:
 	 * Obtains a pointer to the defining lambda node.
 	 */
 	const LambdaPtr& getLambda() const { return lambda; }
-
-	/**
-	 * Obtains a reference to the internally maintained capture list of this lambda.
-	 */
-	const Lambda::CaptureList& getCaptureList() const;
 
 	/**
 	 * Obtains a reference to the internally maintained parameter list of this lambda.
@@ -550,89 +527,6 @@ public:
 	}
 };
 
-
-class CaptureInitExpr : public Expression {
-
-public:
-
-	/**
-	 * A shortcut for the list of expressions used for initializing the capture variables of
-	 * the lambda.
-	 */
-	typedef std::vector<ExpressionPtr> Values;
-
-private:
-
-	/**
-	 * The lambda which's capture should be initialized.
-	 */
-	const ExpressionPtr lambda;
-
-	/**
-	 * The actual values used for initializing the capture variables.
-	 */
-	const Values values;
-
-	/**
-	 * A constructor for creating a capture initializing expression.
-	 *
-	 * @param variable the variable identifying the recursive function within the definition block
-	 * 				   to be represented by this expression.
-	 * @param values the actual initialization expressions.
-	 * @param definition the recursive definitions to be based on.
-	 */
-	CaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const Values& values);
-
-	/**
-	 * Creates a clone of this node.
-	 */
-	virtual CaptureInitExpr* createCopyUsing(NodeMapping& mapper) const;
-
-	/**
-	 * Obtains a list of all sub-nodes referenced by this AST node.
-	 */
-	virtual OptionChildList getChildNodes() const;
-
-	/**
-	 * Compares this expression with the given expression. If they
-	 * are equivalent (though potentially not identical), true will be returned. Otherwise
-	 * the result will be false.
-	 *
-	 * @param expr the expression to be compared to.
-	 * @return true if equivalent, false otherwise
-	 */
-	virtual bool equalsExpr(const Expression& expr) const;
-
-public:
-
-	/**
-	 * A factory method for obtaining a new recursive lambda expression instance.
-	 *
-	 * @param manager the manager which should be maintaining the new instance
-	 * @param lambda the lambda for which the capture list should be initialized
-	 * @þaram values the valued to be initialized
-	 */
-	static CaptureInitExprPtr get(NodeManager& manager, const ExpressionPtr& lambda, const Values& values);
-
-	/**
-	 * Prints a readable representation of this instance to the given output stream.
-	 *
-	 * @param out the stream to be printed to
-	 * @return a reference to the stream
-	 */
-	virtual std::ostream& printTo(std::ostream& out) const;
-
-	/**
-	 * The lambda which's capture should be initialized.
-	 */
-	const ExpressionPtr& getLambda() const { return lambda; }
-
-	/**
-	 * The actual values of the captured variables.
-	 */
-	const Values& getValues() const { return values; }
-
-};
 
 class TupleExpr : public Expression {
 	const vector<ExpressionPtr> expressions;

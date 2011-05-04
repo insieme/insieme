@@ -215,7 +215,7 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						INCOMPLETE ARRAT TYPE
+	//						INCOMPLETE ARRAY TYPE
 	// This method handles C arrays with an unspecified size. For example
 	// 'int A[]' has an IncompleteArrayType where the element type is 'int'
 	// and the size is unspecified.
@@ -244,7 +244,7 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							VARIABLE ARRAT TYPE
+	//							VARIABLE ARRAY TYPE
 	// This class represents C arrays with a specified size which is not an
 	// integer-constant-expression. For example, 'int s[x+foo()]'. Since the
 	// size expression is an arbitrary expression, we store it as such.
@@ -311,7 +311,7 @@ public:
 		// If the return type is of type vector or array we need to add a reference
 		// so that the semantics of C argument passing is mantained
 		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
-			retTy = this->convFact.builder.refType(retTy);
+			retTy = convFact.builder.refType(retTy);
 
 		assert(retTy && "Function has no return type!");
 
@@ -351,6 +351,12 @@ public:
 	core::TypePtr VisitFunctionNoProtoType(const FunctionNoProtoType* funcTy) {
 		START_LOG_TYPE_CONVERSION( funcTy );
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
+		
+		// If the return type is of type vector or array we need to add a reference
+		// so that the semantics of C argument passing is mantained
+		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
+			retTy = convFact.builder.refType(retTy);
+
 		assert(retTy && "Function has no return type!");
 
 		retTy = convFact.builder.functionType( core::TypeList(), retTy);
@@ -449,8 +455,8 @@ public:
 			assert(tagDecl->isDefinition() && "TagType is not a definition");
 
 			if(tagDecl->getTagKind() == clang::TTK_Enum) {
-//std::cout << "ENUM: " << tagDecl->getName().str() << std::endl;
-				assert(false && "Enum types not supported yet");
+				// Enums are converted into integers
+				return convFact.builder.getBasicGenerator().getInt4();
 			} else {
 				// handle struct/union/class
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
@@ -621,7 +627,7 @@ public:
 		// ~~~~~ Handling of special cases ~~~~~~~
 		// void* -> array<'a>
 		if( convFact.mgr.basic.isUnit(subTy) ) {
-			subTy = convFact.mgr.basic.getAlpha();
+			return convFact.mgr.basic.getAnyRef();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		core::TypePtr&& retTy = convFact.builder.arrayType( subTy );

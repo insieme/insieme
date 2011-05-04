@@ -172,7 +172,7 @@ ExpressionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypePar
 
     for_each(guardedStmts, [](std::pair<ExpressionPtr, ExpressionPtr> guardedStmt) {
         //TODO add check for guard
-        if(!dynamic_pointer_cast<const LambdaExpr>(guardedStmt.second) && !dynamic_pointer_cast<const CaptureInitExpr>(guardedStmt.second))
+        if(!dynamic_pointer_cast<const LambdaExpr>(guardedStmt.second) && !dynamic_pointer_cast<const BindExpr>(guardedStmt.second))
             throw ParseException();
     });
 

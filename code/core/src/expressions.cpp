@@ -425,29 +425,24 @@ JobExpr::JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, c
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 	// TODO: use ordinary type checks for this section ...
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
-    assert(defaultType->getArgumentTypes().empty() && "Default statement is not allowed to have any arguments");
+    assert(defaultType->getParameterTypes().empty() && "Default statement is not allowed to have any arguments");
 
     TypePtr unitType = type->getNodeManager().basic.getUnit();
     TypePtr boolType = type->getNodeManager().basic.getBool();
 
-    if(CaptureInitExprPtr cie = dynamic_pointer_cast<const CaptureInitExpr>(defaultStmt)){
-        //FIXME check return type also if default type is a capture init expression
-    } else {
-        assert(*defaultType->getReturnType() == *unitType && "Return value of default statement must be unit.");
-    }
+    assert(*defaultType->getReturnType() == *unitType && "Return value of default statement must be unit.");
+
     TypeList guardParams = TypeList(2, type->getNodeManager().basic.getUIntGen());
 
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
     	FunctionTypePtr guardType = static_pointer_cast<const FunctionType>(s.first->getType());
-    	assert(guardType->getCaptureTypes().empty() && "Guard must not have any capture variables.");
-        assert(::equals(guardType->getArgumentTypes(), guardParams, equal_target<TypePtr>()) && "Guard must have two integer arguments");
+        assert(::equals(guardType->getParameterTypes(), guardParams, equal_target<TypePtr>()) && "Guard must have two integer arguments");
         assert(*guardType->getReturnType() == *boolType && "Return value of guard must be bool.");
 
         //Check guarded statements
         FunctionTypePtr stmtType = static_pointer_cast<const FunctionType>(s.second->getType());
-        assert(stmtType->getCaptureTypes().empty() && "Guarded statement is not allowed to have any capture variables.");
-        assert(stmtType->getArgumentTypes().empty() && "Guarded statement is not allowed to have any arguments");
+        assert(stmtType->getParameterTypes().empty() && "Guarded statement is not allowed to have any arguments");
         assert(*stmtType->getReturnType() == *unitType && "Return value of guarded statement must be void.");
     });
 
@@ -608,13 +603,11 @@ CastExprPtr CastExpr::get(NodeManager& manager, const TypePtr& type, const Expre
 
 namespace {
 
-	std::size_t hashLambda(const FunctionTypePtr& type, const Lambda::CaptureList& captureList,
-			const Lambda::ParamList& paramList, const StatementPtr& body) {
+	std::size_t hashLambda(const FunctionTypePtr& type, const Lambda::ParamList& paramList, const StatementPtr& body) {
 
 		std::size_t hash = 0;
 		boost::hash_combine(hash, HS_Lambda);
 		boost::hash_combine(hash, type->hash());
-		hashPtrRange(hash, captureList);
 		hashPtrRange(hash, paramList);
 		boost::hash_combine(hash, body->hash());
 		return hash;
@@ -622,15 +615,14 @@ namespace {
 
 }
 
-Lambda::Lambda(const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& paramList, const StatementPtr& body)
-	: Node(NT_Lambda, NC_Support, hashLambda(type, captureList, paramList, body)), type(isolate(type)),
-	  captureList(isolate(captureList)), paramList(isolate(paramList)), body(isolate(body)) { };
+Lambda::Lambda(const FunctionTypePtr& type, const ParamList& paramList, const StatementPtr& body)
+	: Node(NT_Lambda, NC_Support, hashLambda(type, paramList, body)), type(isolate(type)),
+	  paramList(isolate(paramList)), body(isolate(body)) { };
 
 Lambda* Lambda::createCopyUsing(NodeMapping& mapper) const {
 	return new Lambda(mapper.map(0, type),
-			mapper.map(1, captureList),
-			mapper.map(1+captureList.size(), paramList),
-			mapper.map(1+captureList.size() + paramList.size(), body)
+			mapper.map(1, paramList),
+			mapper.map(1 + paramList.size(), body)
 		);
 }
 
@@ -647,7 +639,6 @@ bool Lambda::equals(const Node& other) const {
 
 	const Lambda& rhs = static_cast<const Lambda&>(other);
 	return 	*type == *rhs.type &&
-			::equals(captureList, rhs.captureList, equal_target<VariablePtr>()) &&
 			::equals(paramList, rhs.paramList, equal_target<VariablePtr>()) &&
 			*body == *rhs.body;
 }
@@ -655,7 +646,6 @@ bool Lambda::equals(const Node& other) const {
 Node::OptionChildList Lambda::getChildNodes() const {
 	OptionChildList res(new ChildList());
 	res->push_back(type);
-	res->insert(res->end(), captureList.begin(), captureList.end());
 	res->insert(res->end(), paramList.begin(), paramList.end());
 	res->push_back(body);
 	return res;
@@ -667,17 +657,13 @@ std::ostream& Lambda::printTo(std::ostream& out) const {
 	};
 
 	out << "fun";
-	out << "[" << join(", ", captureList, paramPrinter) << "]";
 	out << "(" << join(", ", paramList, paramPrinter) << ") " << *body;
 
 	return out;
 }
 
 LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body) {
-	return get(manager, type, CaptureList(), params, body);
-}
-LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const CaptureList& captureList, const ParamList& params, const StatementPtr& body) {
-	return manager.get(Lambda(type, captureList, params, body));
+	return manager.get(Lambda(type, params, body));
 }
 
 
@@ -876,7 +862,7 @@ bool LambdaExpr::equalsExpr(const Expression& expr) const {
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
-	return get(manager, lambda->getType(), lambda->getCaptureList(), lambda->getParameterList(), lambda->getBody());
+	return get(manager, lambda->getType(), lambda->getParameterList(), lambda->getBody());
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const VariablePtr& variable, const LambdaDefinitionPtr& definition) {
@@ -884,15 +870,11 @@ LambdaExprPtr LambdaExpr::get(NodeManager& manager, const VariablePtr& variable,
 }
 
 LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::ParamList& params, const StatementPtr& body) {
-	return get(manager, type, toVector<VariablePtr>(), params, body);
-}
-
-LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::CaptureList& captureList, const Lambda::ParamList& params, const StatementPtr& body) {
 
 	// build definitions
 	VariablePtr var = Variable::get(manager, type);
 	LambdaDefinition::Definitions defs;
-	defs.insert(std::make_pair(var, Lambda::get(manager, type, captureList, params, body)));
+	defs.insert(std::make_pair(var, Lambda::get(manager, type, params, body)));
 
 	return manager.get(LambdaExpr(var, LambdaDefinition::get(manager, defs)));
 }
@@ -900,10 +882,6 @@ LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type,
 std::ostream& LambdaExpr::printTo(std::ostream& out) const {
 	// TODO: special handling for non-recursive functions
 	return out << "rec " << *variable << "." << *definition;
-}
-
-const Lambda::CaptureList& LambdaExpr::getCaptureList() const {
-	return lambda->getCaptureList();
 }
 
 const Lambda::ParamList& LambdaExpr::getParameterList() const {
@@ -980,58 +958,6 @@ std::ostream& BindExpr::printTo(std::ostream& out) const {
 	return out << "bind(" << join(",", parameters, print<deref<VariablePtr>>()) << "){" << *call << "}";
 }
 
-
-// ------------------------ Capture Initialization Expression ------------------------
-
-namespace {
-
-	std::size_t hashCaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const CaptureInitExpr::Values& values) {
-		std::size_t hash = 0;
-		boost::hash_combine(hash, HS_CaptureInitExpr);
-		boost::hash_combine(hash, type->hash());
-		boost::hash_combine(hash, lambda->hash());
-		hashPtrRange(hash, values);
-		return hash;
-	}
-
-}
-
-CaptureInitExpr::CaptureInitExpr(const FunctionTypePtr& type, const ExpressionPtr& lambda, const Values& values)
-	: Expression(NT_CaptureInitExpr, type, ::hashCaptureInitExpr(type, lambda, values)),
-	  lambda(isolate(lambda)), values(isolate(values)) { }
-
-CaptureInitExpr* CaptureInitExpr::createCopyUsing(NodeMapping& mapper) const {
-	return new CaptureInitExpr(
-			static_pointer_cast<const FunctionType>(mapper.map(0, type)),
-			mapper.map(1, lambda), mapper.map(2, values)
-		);
-}
-
-Node::OptionChildList CaptureInitExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
-	res->push_back(type);
-	res->push_back(lambda);
-	std::copy(values.begin(), values.end(), std::back_inserter(*res));
-	return res;
-}
-
-bool CaptureInitExpr::equalsExpr(const Expression& expr) const {
-	// conversion is guaranteed by base operator==
-	const CaptureInitExpr& rhs = static_cast<const CaptureInitExpr&>(expr);
-	return (*rhs.lambda == *lambda && ::equals(values, values, equal_target<ExpressionPtr>()));
-}
-
-CaptureInitExprPtr CaptureInitExpr::get(NodeManager& manager, const ExpressionPtr& lambda, const Values& values) {
-	const TypePtr& type = lambda->getType();
-	assert(type->getNodeType() == NT_FunctionType && "Lambda has to be of a function type!");
-	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(type);
-	FunctionTypePtr initExprType = FunctionType::get(manager, TypeList(), funType->getArgumentTypes(), funType->getReturnType());
-	return manager.get(CaptureInitExpr(initExprType, lambda, values));
-}
-
-std::ostream& CaptureInitExpr::printTo(std::ostream& out) const {
-	return out << "([" << join(", ", values, print<deref<ExpressionPtr>>()) << "]" << *lambda << ")";
-}
 
 
 // ------------------------ Member Access Expression ------------------------

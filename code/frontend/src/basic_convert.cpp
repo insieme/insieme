@@ -169,6 +169,14 @@ core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr)
 	return expr;
 }
 
+/*  
+ *  Register call expression handlers to be used during the clang to IR conversion
+ */
+//void ConversionFactory::registerCallExprHandler(const clang::FunctionDecl* funcDecl, CustomFunctionHandler& handler) {
+//	auto it = callExprHanlders.insert( std::make_pair(funcDecl, handler) );
+//	assert( !it.second && "Handler for function declaration already registered." );
+//}
+
 /* Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
  * 	-> OpenCL address spaces
  */
@@ -319,9 +327,8 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //											CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
-	if ( mgr.basic.isRefAlpha(type) ) {
+	if ( mgr.basic.isAnyRef(type) ) {
 		return mgr.basic.getNull();
 	}
 	// handle integers initialization
@@ -394,78 +401,14 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     			return mgr.basic.getNull();
     		}
     	}
-    	core::ExpressionPtr&& initVal = defaultInitVal(arrTy->getElementType());
-		return builder.callExpr(
-				arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getInt4())
-			);
+		return castToType(arrTy, defaultInitVal(arrTy->getElementType()));
+
+		//return builder.callExpr(
+				//arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
+			//);
     }
 
     assert(false && "Default initialization type not defined");
-}
-
-core::ExpressionPtr
-ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr& type, const bool zeroInit) const {
-	// get kind of initialized value
-	core::NodeType&& kind =
-		(type->getNodeType() != core::NT_RefType ?
-				type->getNodeType() :
-				core::static_pointer_cast<const core::RefType>(type)->getElementType()->getNodeType()
-			);
-
-	if ( !expr ) {
-		// if no init expression is provided => use undefined for given set of types
-		if ( kind == core::NT_StructType || kind == core::NT_UnionType || kind == core::NT_ArrayType ||
-				kind == core::NT_VectorType ) {
-			if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
-				const core::TypePtr& res = refTy->getElementType();
-				return builder.refVar(
-					builder.callExpr( res,
-						(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res)
-					)
-				);
-			}
-			return builder.callExpr( type,
-				(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(type)
-			);
-		} else {
-			return defaultInitVal(type);
-		}
-	}
-
-	/*
-	 * if an expression is provided as initializer first check if this is an initializer list which is used for arrays,
-	 * structs and unions
-	 */
-	if ( const clang::InitListExpr* listExpr = dyn_cast<const clang::InitListExpr>( expr ) ) {
-		return convertInitializerList( listExpr, type );
-	}
-
-	// Convert the expression like any other expression
-	core::ExpressionPtr&& retExpr = convertExpr( expr );
-
-	if ( core::analysis::isCallOf(retExpr, mgr.basic.getArrayCreate1D()) ) {
-		retExpr = builder.callExpr(builder.refType(retExpr->getType()), mgr.basic.getRefNew(), retExpr);
-	}
-
-	if ( core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
-		 core::analysis::isCallOf(retExpr, mgr.basic.getRefNew()) ) {
-		return retExpr;
-	}
-
-	if( retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
-		const core::TypePtr& subTy =
-				core::static_pointer_cast<const core::RefType>(retExpr->getType())->getElementType();
-		if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType )
-			return retExpr;
-
-		return builder.refVar( tryDeref(retExpr) );
-	}
-
-	if ( type->getNodeType() == core::NT_RefType ) {
-		retExpr = builder.refVar( retExpr );
-	}
-
-	return retExpr;
 }
 
 core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl* varDecl) {

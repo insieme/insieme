@@ -234,7 +234,7 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
  ** @param passAsArguments an optional list of variables that will be passed as arguments instead of captured
  ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
  ** */
-CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified = false,
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified = false,
 	std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
 
 /** Builds a lambda expression that can be called in place of [root].
@@ -247,7 +247,7 @@ CaptureInitExprPtr extractLambda(NodeManager& manager, const StatementPtr& root,
  ** @param passAsArguments an optional list of variables that will be passed as arguments instead of captured
  ** @return the CaptureInitExprPtr initializing the generated lambda (only valid in the calling context!)
  ** */
-CaptureInitExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified = false,
+BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified = false,
 	std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
 
 LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize, 

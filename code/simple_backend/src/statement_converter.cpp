@@ -74,6 +74,34 @@ namespace simple_backend {
 	}
 
 
+	void StmtConverter::convertAsParameterToExternal(const core::ExpressionPtr& ep) {
+
+		const CodeFragmentPtr& code = getCurrentCodeFragment();
+
+		// obtain externalizing pattern
+		string pattern = cc.getTypeManager().getTypeInfo(code, ep->getType()).externalizingPattern;
+
+		// special handling for any ref-casts
+		if (core::analysis::isCallOf(ep, ep->getNodeManager().basic.getAnyRefToRef())) {
+			pattern = "%s";
+		}
+
+		// check pattern - is there some change necessary?
+		if (pattern == "%s") {
+			// no extra treatment required
+			this->visit(ep);
+			return;
+		}
+
+		// use a dummy code fragment to dump code
+		CodeFragmentPtr fragment = CodeFragment::createNew("");
+		this->convert(ep, fragment);
+		code << format(pattern.c_str(), fragment->getCodeBuffer().toString().c_str());
+
+		// propagate dependencies
+		code->addDependencies(fragment->getDependencies());
+	}
+
 	vector<string> StmtConverter::getHeaderDefinitions() {
 		vector<string> res;
 
@@ -123,7 +151,7 @@ namespace simple_backend {
 		 * @return the given statement or a compound statement in case the statement is an expression
 		 */
 		StatementPtr wrapBody(StatementPtr body) {
-			if (body->getNodeCategory() == NC_Expression) {
+			if (body->getNodeType() != NT_CompoundStmt) {
 				return CompoundStmt::get(body->getNodeManager(), toVector(body));
 			}
 			return body;
@@ -172,18 +200,28 @@ namespace simple_backend {
 		// TODO: remove second clause when frontend is fixed ...
 
 		// check whether program is a main program
-		if (program->isMain() || isMainProgram(program)) {
+		if (true || program->isMain() || isMainProgram(program)) {
 
-			// create main program + argument wrapper
-
+			// create main program + argument wrapper (if necessary)
 			CodeFragmentPtr code = CodeFragment::createNew("main function");
+
+			// add argument conversion
+			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
+			if (main->getParameterList().empty()) {
+
+				// handle main with no arguments
+				code << "int main() {" << CodeBuffer::indR << "\n";
+				convert(main->getBody(), code);
+				code << CodeBuffer::indL << "\n}\n";
+
+				// make current code fragment depending on the main function
+				getCurrentCodeFragment()->addDependency(code);
+				return;
+			}
 
 			// create procedure header
 			code << "int main(int __argc, char** __argv) {" << CodeBuffer::indR << "\n";
 			code << "\n// encapsulating arguments within Insieme Types ...\n";
-
-			// add argument conversion
-			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
 
 			// declare parameter
 			const VariablePtr& argc = main->getParameterList()[0];
@@ -390,6 +428,9 @@ namespace simple_backend {
 			CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
 			visit(call->getArguments()[0]);
 		} else {
+			if (!core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefNew())) {
+				code << "*"; // dereference the produced value
+			}
 			visit(ptr->getInitialization());
 		}
 	}
@@ -416,7 +457,7 @@ namespace simple_backend {
 
 		code << "if(";
 		visit(ptr->getCondition());
-		code << ") ";
+		code << ")";
 		visit(wrapBody(ptr->getThenBody()));
 		if (!cc.getLangBasic().isNoOp(ptr->getElseBody())) {
 			code << " else ";
@@ -452,7 +493,11 @@ namespace simple_backend {
 	void StmtConverter::visitCompoundStmt(const CompoundStmtPtr& ptr) {
 		const CodeFragmentPtr& code = currentCodeFragment;
 
-		if(ptr->getStatements().size() > 0) {
+		if (ptr->getStatements().size() ==1) {
+			code << " { ";
+			this->visit(ptr->getStatements()[0]);
+			code << "; }";
+		} else if(ptr->getStatements().size() > 1) {
 			code << "{" << CodeBuffer::indR << "\n";
 			for_each(ptr->getChildList(), [&](const NodePtr& cur) {
 				this->visit(cur);
@@ -513,29 +558,12 @@ namespace simple_backend {
 		auto funExp = ptr->getFunctionExpr();
 
 		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(funExp->getType());
-		assert(funType->getCaptureTypes().empty() && "Cannot call function exposing capture variables.");
-		const TypeList& params = funType->getArgumentTypes();
+		const TypeList& params = funType->getParameterTypes();
 
-		TypeManager& typeManager = cc.getTypeManager();
+		// create a lambda capable of externalizing arguments
 		auto parameterExternalizer = [&](const ExpressionPtr& ep) {
-
-			// obtain externalizing pattern
-			const string& pattern = typeManager.getTypeInfo(code, ep->getType()).externalizingPattern;
-
-			// check pattern - is there some change necessary?
-			if (pattern == "%s") {
-				// no extra treatment required
-				this->visit(ep);
-				return;
-			}
-
-			// use a dummy code fragment to dump code
-			CodeFragmentPtr fragment = CodeFragment::createNew("");
-			this->convert(ep, fragment);
-			code << format(pattern.c_str(), fragment->getCodeBuffer().toString().c_str());
-
-			// propagate dependencies
-			code->addDependencies(fragment->getDependencies());
+			// use member function
+			convertAsParameterToExternal(ep);
 		};
 
 		// special built in function handling
@@ -567,15 +595,6 @@ namespace simple_backend {
 			if (pos != formats.end()) {
 				pos->second->format(*this, ptr);
 				return;
-			}
-		}
-
-		// skip empty capture init expression
-		if (funExp->getNodeType() == NT_CaptureInitExpr) {
-			CaptureInitExprPtr cur = static_pointer_cast<const CaptureInitExpr>(funExp);
-			if (cur->getValues().empty()) {
-				// skip init expression
-				funExp = cur->getLambda();
 			}
 		}
 
@@ -625,36 +644,6 @@ namespace simple_backend {
 				return;
 			}
 
-			case NT_CaptureInitExpr:
-			{
-
-				TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
-				code->addDependency(details.definitions);
-
-				// check whether it is a direct initialization / call situation
-				bool directCall = false;
-				CaptureInitExprPtr initExpr = static_pointer_cast<const CaptureInitExpr>(funExp);
-				if (LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(initExpr->getLambda())) {
-					// it is a direct call to a function => avoid using call wrapper
-					code << cc.getFunctionManager().getFunctionName(code, lambda);
-					directCall = true;
-				}
-
-				if (!directCall) {
-					// use call wrapper
-					code << details.callerName;
-				}
-
-				code << "(";
-				visitCaptureInitExprInternal(initExpr, directCall);
-				if (!args.empty()) {
-					code << ", ";
-					addArgumentList(*this, code, params, args, false);
-				}
-				code << ")";
-				return;
-			}
-
 			case NT_LambdaExpr: {
 
 				// function (without capture list) is directly provided => simply invoke
@@ -667,7 +656,8 @@ namespace simple_backend {
 
 			case NT_BindExpr: {
 				// a closure is to be invoked
-				code << " ... code to invoke a closure ... ";
+				code << " /* closure: " << funExp << " */";
+//				code << " ... code to invoke a closure ... ";
 				return;
 			}
 
@@ -677,59 +667,59 @@ namespace simple_backend {
 
 	}
 
-	void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
-		visitCaptureInitExprInternal(ptr, false);
-	}
-
-	void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
-
-		// resolve resulting type of expression
-		FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
-		TypeManager::FunctionTypeInfo resDetails = cc.getTypeManager().getFunctionTypeInfo(resType);
-		currentCodeFragment->addDependency(resDetails.definitions);
-
-		// resolve type of sub-expression
-		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
-		TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
-		currentCodeFragment->addDependency(details.definitions);
-
-		// create surrounding cast
-		currentCodeFragment << "((" << resDetails.closureName << "*)";
-
-		// create struct including values
-		currentCodeFragment << "(&((" << details.closureName << ")";
-		currentCodeFragment << "{";
-
-		// add function reference
-		if (directCall) {
-			currentCodeFragment << "0";
-		} else {
-			currentCodeFragment << "&";
-			visit(ptr->getLambda());
-		}
-
-		// add size of struct
-		// NOTE: disabled since not used anywhere
-		// currentCodeFragment << ", sizeof(" << details.closureName << ")";
-
-		// add captured parameters
-		for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
-
-			// TODO: handle capture variables uniformely
-			bool addAddressOperator = isVectorOrArrayRef(cur->getType());
-			if (addAddressOperator
-					&& cur->getNodeType() == NT_Variable
-					&& cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(cur)).location == VariableManager::HEAP) {
-
-				addAddressOperator = false;
-			}
-			currentCodeFragment << (addAddressOperator?",&":",");
-
-			this->visit(cur);
-		});
-
-		currentCodeFragment << "})))";
-	}
+//	void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
+//		visitCaptureInitExprInternal(ptr, false);
+//	}
+//
+//	void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
+//
+//		// resolve resulting type of expression
+//		FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
+//		TypeManager::FunctionTypeInfo resDetails = cc.getTypeManager().getFunctionTypeInfo(resType);
+//		currentCodeFragment->addDependency(resDetails.definitions);
+//
+//		// resolve type of sub-expression
+//		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
+//		TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
+//		currentCodeFragment->addDependency(details.definitions);
+//
+//		// create surrounding cast
+//		currentCodeFragment << "((" << resDetails.closureName << "*)";
+//
+//		// create struct including values
+//		currentCodeFragment << "(&((" << details.closureName << ")";
+//		currentCodeFragment << "{";
+//
+//		// add function reference
+//		if (directCall) {
+//			currentCodeFragment << "0";
+//		} else {
+//			currentCodeFragment << "&";
+//			visit(ptr->getLambda());
+//		}
+//
+//		// add size of struct
+//		// NOTE: disabled since not used anywhere
+//		// currentCodeFragment << ", sizeof(" << details.closureName << ")";
+//
+//		// add captured parameters
+//		for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
+//
+//			// TODO: handle capture variables uniformely
+//			bool addAddressOperator = isVectorOrArrayRef(cur->getType());
+//			if (addAddressOperator
+//					&& cur->getNodeType() == NT_Variable
+//					&& cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(cur)).location == VariableManager::HEAP) {
+//
+//				addAddressOperator = false;
+//			}
+//			currentCodeFragment << (addAddressOperator?",&":",");
+//
+//			this->visit(cur);
+//		});
+//
+//		currentCodeFragment << "})))";
+//	}
 
 
 	void StmtConverter::visitBindExpr(const core::BindExprPtr& ptr) {
@@ -743,25 +733,29 @@ namespace simple_backend {
 	void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
 
 		// there is a special treatment for strings literals
-		if (ptr->getValue()[0] == '\"') {
-			// convert a string into a vector
-			NodeManager& manager = ptr->getNodeManager();
-			ASTBuilder builder(manager);
-			unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
-			TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
+//		if (ptr->getValue()[0] == '\"') {
+//			// convert a string into a vector
+//			NodeManager& manager = ptr->getNodeManager();
+//			ASTBuilder builder(manager);
+//			unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
+//			TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
+//
+//			currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
+//			return;
+//		}
 
-			currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
-			return;
-		}
+		// enforce escape characters and print result
+//		string value = ptr->getValue();
+//		boost::replace_all(value, "\\", "\\\\");
+//		currentCodeFragment << value;
 
-		// standard: just print literal
+		// just print the value represented by the literal
 		currentCodeFragment << ptr->getValue();
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {
 		currentCodeFragment << "return ";
 		visit(ptr->getReturnExpr());
-		currentCodeFragment << ";";
 	}
 
 
@@ -845,19 +839,23 @@ namespace simple_backend {
 			return;
 		}
 
+		// get the type of the resulting vector
+		string typeName = getConversionContext().getTypeManager().getTypeName(code, ptr->getType());
+
 		// test whether all expressions are calls to ref.var ...
-		code << "{";
+		code << "((" << typeName << "){{";
 		int i=0;
 		for_each(ptr->getExpressions(), [&](const ExpressionPtr& cur) {
-			if (!core::analysis::isCallOf(cur, cc.getLangBasic().getRefVar())) {
-				LOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
-				assert(false && "Vector initialization not supported for the given values!");
-			}
+//			if (!core::analysis::isCallOf(cur, cc.getLangBasic().getRefVar())) {
+//				LOG(FATAL) << "Unsupported vector initialization: " << toString(*cur);
+//				assert(false && "Vector initialization not supported for the given values!");
+//			}
 			// print argument of ref.var
-			this->visit(static_pointer_cast<const CallExpr>(cur)->getArguments()[0]);
+//			this->visit(static_pointer_cast<const CallExpr>(cur)->getArguments()[0]);
+			this->visit(cur);
 			if((++i)!=ptr->getExpressions().size()) code << ", ";
 		});
-		code << "}";
+		code << "}})";
 	}
 
 	void StmtConverter::visitMarkerExpr(const MarkerExprPtr& ptr) {

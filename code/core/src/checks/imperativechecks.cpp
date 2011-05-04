@@ -256,10 +256,6 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 		// add recursive function variables
 		declared.insert(recFunctions.begin(), recFunctions.end());
 
-		// extend set of defined variables => captured variables
-		auto captureList = cur.second->getCaptureList();
-		declared.insert(captureList.begin(), captureList.end());
-
 		// add parameters
 		auto paramList = cur.second->getParameterList();
 		declared.insert(paramList.begin(), paramList.end());
