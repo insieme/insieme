@@ -381,6 +381,30 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	code << "    " << "unsigned size[" << dim << "];\n";
 	code << "} " + name + ";\n";
 
+	// ---------------------- add constructor ---------------------
+	code << "\n";
+	code << "// A constructor for the array type " << name << "\n";
+	code << "static inline " << name << " " << name << "_ctr(";
+	for (unsigned i=0; i<dim; i++) {
+		code << "unsigned s" << (i+1);
+		if (i!=dim-1) {
+			code << ",";
+		}
+	}
+	code << ") {\n";
+	code << "    return ((" << name << "){malloc(sizeof(" << elementTypeInfo.lValueName << ")";
+	for (unsigned i=0; i<dim; i++) {
+		code << "*s" << (i+1);
+	}
+	code << "),{";
+	for (unsigned i=0; i<dim; i++) {
+		code << "s" << (i+1);
+		if (i!=dim-1) {
+			code << ",";
+		}
+	}
+	code << "}});\n}\n";
+
 	string externalName = elementTypeInfo.externName + toString(times("*", dim));
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
 			externalName, externalName + " %s", "(%s).data", code);
