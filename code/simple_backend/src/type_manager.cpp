@@ -63,6 +63,21 @@ string TypeManager::formatParamter(const CodeFragmentPtr& context, const TypePtr
 	return format((decl)?info.declPattern.c_str():info.paramPattern.c_str(), name.c_str());
 }
 
+string TypeManager::formatFunctionPointer(const CodeFragmentPtr& context, const FunctionTypePtr& funType, const string& name) {
+	// construct function pointer type member
+	std::stringstream buffer;
+	buffer << getTypeName(context, funType->getReturnType(), false) << "(*" << name << ")(void*";
+	auto params = funType->getParameterTypes();
+	if (!params.empty()) {
+		buffer << ", " << join(", ", params, [&](std::ostream& out, const TypePtr& cur) {
+			out << getTypeName(context, cur, false);
+		});
+	}
+	buffer << ")";
+	return buffer.str();
+}
+
+
 const TypeManager::TypeInfo TypeManager::getTypeInfo(const CodeFragmentPtr& context, const core::TypePtr& type) {
 
 	// resolve given type
@@ -219,57 +234,65 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 
 	// get name for function type
 	string name = nameGenerator.getName(functionType, "funType");
-	string functorName = "struct " + name;
-	string callerName = nameGenerator.getNamePrefix() + "_call_" + name;
+	string functorName = name;
+	string callerName = name + "_call";
+	string ctrName = name + "_ctr";
+	auto params = functionType->getParameterTypes();
 
 	CodeFragmentPtr functorAndCaller = CodeFragment::createNew("Definitions for function type: " + name);
 	CodeBuffer& out = functorAndCaller->getCodeBuffer();
 
-	auto elementPrinter = [&](std::ostream& out, const TypePtr& cur) {
-		out << getTypeName(functorAndCaller, cur, true);
-	};
+	// construct function pointer type member
+	string callPtr = formatFunctionPointer(functorAndCaller, functionType, "call");
+
 
 	// A) add abstract functor definition
+	out << "//\n// -------------------- Begin of constructs for function type " << toString(*functionType) << "---------------------\n";
 	out << "// Base-struct of describing closures of type " << name << " <-> " << toString(*functionType) << "\n";
-	out << functorName << " { \n";
+	out << "typedef struct _" << functorName << " { \n";
 
-	// add function pointer 'fun'
-	out << "    " << getTypeName(functorAndCaller, functionType->getReturnType()) << "(*call)(" << "void*";
-	auto arguments = functionType->getParameterTypes();
-	if (!arguments.empty()) {
-		out << ", " << join(", ", arguments, elementPrinter);
-	}
-	out << ");\n";
+	// add function pointer 'call'
+	out << "    " << callPtr << ";\n";
 
 	// add field for size of concrete type
 	// NOTE: disabled since not used anywhere
 	// out << "    const size_t size;\n";
 
-	out << "};\n";
+	out << "} " << functorName << ";\n";
 
 
 	// B) define caller routine - only functions without captures can be called
 	out << "\n";
 	out << "// Type safe function for invoking closures of type " << name << "\n";
 	string resultType = getTypeName(functorAndCaller, functionType->getReturnType());
-	out << resultType;
-	out << " " << callerName << "(struct " << name << "* lambda";
+	out << "static inline " << resultType << " " << callerName << "(" << name << "* closure";
 	int i = 0;
-	if (!arguments.empty()) {
-		out << ", " << join(", ", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
-			out << formatParamter(functorAndCaller, cur, format("p%d", ++i), true);
+	if (!params.empty()) {
+		out << ", " << join(", ", params, [&, this](std::ostream& out, const TypePtr& cur) {
+			out << formatParamter(functorAndCaller, cur, format("p%d", ++i), false);
 		});
 	}
 	out << ") { ";
 	if (resultType != "void") out << "return";
-	out << " lambda->call(lambda";
+	out << " closure->call(closure";
 	i = 0;
-	if (!arguments.empty()) {
-		out << ", " << join(",", arguments, [&, this](std::ostream& out, const TypePtr& cur) {
+	if (!params.empty()) {
+		out << ", " << join(",", params, [&, this](std::ostream& out, const TypePtr& cur) {
 			out << format("p%d", ++i);
 		});
 	}
 	out << "); }\n";
+
+
+	// C) define a constructor for closures of pure functions exposing this type
+	out << "\n";
+	out << "// A constructor for closures wrapping pure functions of type " << *functionType << "\n";
+	out << "static inline " << functorName << "* " << ctrName << "(" << functorName << "* target, " << callPtr << ") {" << CodeBuffer::indR << "\n";
+	out << "*target = (" << functorName << "){call};\nreturn target;";
+	out << CodeBuffer::indL;
+	out << "\n}\n";
+
+	out << "// ----------------------- end of constructs for function " << toString(*functionType) << "-----------------------\n";
 
 	// create, register and return entry
 	FunctionTypeInfo info(functorName, callerName, functorAndCaller);

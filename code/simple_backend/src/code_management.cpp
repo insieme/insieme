@@ -67,7 +67,7 @@ CodeFragmentPtr CodeFragment::createNewDummy(const std::string& name) {
 }
 
 void CodeFragment::addDependency(const CodeFragmentPtr& dep) {
-	if (dep) { // only add if it is not a null pointer
+	if (dep && this != &*dep) { // only add if it is not a null pointer and not self
 		dependencies.push_back(dep);
 	}
 }

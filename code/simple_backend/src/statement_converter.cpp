@@ -102,6 +102,18 @@ namespace simple_backend {
 		code->addDependencies(fragment->getDependencies());
 	}
 
+	void StmtConverter::convertAsParameterToExternal(const core::ExpressionPtr& expression, const CodeFragmentPtr& fragment) {
+		// replace target-code fragment
+		CodeFragmentPtr current = currentCodeFragment;
+		currentCodeFragment = fragment;
+
+		// process subtree
+		convertAsParameterToExternal(expression);
+
+		// reset to old code fragment
+		currentCodeFragment = current;
+	}
+
 	vector<string> StmtConverter::getHeaderDefinitions() {
 		vector<string> res;
 
@@ -521,7 +533,19 @@ namespace simple_backend {
 
 	void StmtConverter::visitLambdaExpr(const LambdaExprPtr& ptr) {
 		FunctionManager& funManager = cc.getFunctionManager();
-		currentCodeFragment << funManager.getFunctionName(currentCodeFragment, ptr);
+
+		CodeFragmentPtr& code = currentCodeFragment;
+
+		// obtain name of resulting function type and add cast
+		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getType());
+		const TypeManager::FunctionTypeInfo& info = cc.getTypeManager().getFunctionTypeInfo(funType);
+		const string& name = info.closureName;
+		code << "(" << name << "*)" << name << "_ctr(";
+
+		// allocate memory
+		code << "(" << name << "*)alloca(sizeof(" + name + ")),";
+		code << "&" << funManager.getFunctionName(currentCodeFragment, ptr);
+		code << "_wrap)";
 	}
 
 	namespace {
@@ -655,9 +679,16 @@ namespace simple_backend {
 			}
 
 			case NT_BindExpr: {
-				// a closure is to be invoked
-				code << " /* closure: " << funExp << " */";
-//				code << " ... code to invoke a closure ... ";
+
+
+				// resolve function type => should add caller instructions
+				const TypeManager::FunctionTypeInfo& info = cc.getTypeManager().getFunctionTypeInfo(funType);
+				code->addDependency(info.definitions);
+
+				// use caller to evaluate bind expression
+				code << info.callerName << "(";
+				visit(funExp);
+				code << ")";
 				return;
 			}
 
@@ -667,66 +698,10 @@ namespace simple_backend {
 
 	}
 
-//	void StmtConverter::visitCaptureInitExpr(const CaptureInitExprPtr& ptr) {
-//		visitCaptureInitExprInternal(ptr, false);
-//	}
-//
-//	void StmtConverter::visitCaptureInitExprInternal(const CaptureInitExprPtr& ptr, bool directCall) {
-//
-//		// resolve resulting type of expression
-//		FunctionTypePtr resType = static_pointer_cast<const FunctionType>(ptr->getType());
-//		TypeManager::FunctionTypeInfo resDetails = cc.getTypeManager().getFunctionTypeInfo(resType);
-//		currentCodeFragment->addDependency(resDetails.definitions);
-//
-//		// resolve type of sub-expression
-//		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getLambda()->getType());
-//		TypeManager::FunctionTypeInfo details = cc.getTypeManager().getFunctionTypeInfo(funType);
-//		currentCodeFragment->addDependency(details.definitions);
-//
-//		// create surrounding cast
-//		currentCodeFragment << "((" << resDetails.closureName << "*)";
-//
-//		// create struct including values
-//		currentCodeFragment << "(&((" << details.closureName << ")";
-//		currentCodeFragment << "{";
-//
-//		// add function reference
-//		if (directCall) {
-//			currentCodeFragment << "0";
-//		} else {
-//			currentCodeFragment << "&";
-//			visit(ptr->getLambda());
-//		}
-//
-//		// add size of struct
-//		// NOTE: disabled since not used anywhere
-//		// currentCodeFragment << ", sizeof(" << details.closureName << ")";
-//
-//		// add captured parameters
-//		for_each(ptr->getValues(), [&, this](const ExpressionPtr& cur) {
-//
-//			// TODO: handle capture variables uniformely
-//			bool addAddressOperator = isVectorOrArrayRef(cur->getType());
-//			if (addAddressOperator
-//					&& cur->getNodeType() == NT_Variable
-//					&& cc.getVariableManager().getInfo(static_pointer_cast<const Variable>(cur)).location == VariableManager::HEAP) {
-//
-//				addAddressOperator = false;
-//			}
-//			currentCodeFragment << (addAddressOperator?",&":",");
-//
-//			this->visit(cur);
-//		});
-//
-//		currentCodeFragment << "})))";
-//	}
-
 
 	void StmtConverter::visitBindExpr(const core::BindExprPtr& ptr) {
-
-		// TODO: implement the creation of the corresponding closure on the stack
-		currentCodeFragment << "<here you will find a bind>";
-
+		// use function manager to add bind construction
+		cc.getFunctionManager().createClosure(currentCodeFragment, ptr);
 	}
 
 
