@@ -97,6 +97,7 @@ public:
 
 typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string>> HandlerTable;
+typedef boost::unordered_map<const core::VariablePtr, const core::VariablePtr> ClmemTable;
 
 template<typename Lambda>
 HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambda) {
@@ -113,6 +114,7 @@ class HostMapper : public core::transform::CachedNodeMapping {
 //    Handlers handler;
 
     HandlerTable handles;
+    ClmemTable cl_mems;
     Ocl2Inspire o2i;
 
 public:
