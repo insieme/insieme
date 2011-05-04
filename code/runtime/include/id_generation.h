@@ -56,6 +56,7 @@ struct _irt_##__type##_id { \
 	} value; \
 	struct _irt_##__type* cached; \
 }; \
+static const irt_##__type##_id irt_g_null_##__type##_id = { {0ul}, 0}; \
 static inline irt_##__type##_id irt_generate_##__type##_id() { \
 	/* The hack below is necessary to maintain minimal dependencies. \
 	This way, id_generation.h does not need to know about workers */ \
@@ -71,5 +72,3 @@ static inline irt_##__type##_id irt_##__type##_null_id() { \
 	irt_##__type##_id null_id = { { 0 }, NULL }; \
 	return null_id; \
 }
-
-

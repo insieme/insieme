@@ -51,7 +51,7 @@
 // error handling
 void irt_error_handler(int signal) {
 	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
-	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", pthread_self(), irt_errcode_string(error->errcode));
+	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", (void*)pthread_self(), irt_errcode_string(error->errcode));
 	fprintf(stderr, "Additional information:\n");
 	irt_print_error_info(stderr, error);
 	exit(-error->errcode);
@@ -103,9 +103,10 @@ int main(int argc, char** argv) {
 	static const uint32 work_count = 8;
 	irt_worker* workers[work_count];
 	for(int i=0; i<work_count; ++i) {
-		workers[i] = irt_worker_create(~0, i);
+		workers[i] = irt_worker_create(i, ~0);
 	}
 	irt_mqueue_send_new_app(argv[1]);
+	IRT_INFO("App sent");
 
 	for(;;) { sleep(60*60); }
 }

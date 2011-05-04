@@ -38,6 +38,7 @@
 
 #include "declarations.h"
 
+#include "irt_context.h"
 #include "utils/deques.h"
 
 /* ------------------------------ data structures ----- */
@@ -46,21 +47,37 @@ IRT_MAKE_ID_TYPE(work_item);
 
 IRT_DECLARE_DEQUE(work_item);
 
+typedef enum _irt_work_item_state {
+	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_DONE, 
+} irt_work_item_state;
+
 struct _irt_work_item_range {
 	int64 begin, end, step;
 };
+const static irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
+
+typedef bool irt_wi_readiness_check_fun(irt_work_item* wi);
+typedef struct _irt_wi_readiness_check {
+	irt_wi_readiness_check_fun *fun;
+	void *data;
+} irt_wi_readiness_check;
 
 struct _irt_work_item {
 	irt_work_item_id id;
-	irt_work_item_range range;
+	irt_context_id context_id;
 	irt_wi_implementation_id impl_id;
+	irt_work_item_range range;
 	uint32 num_groups;
 	irt_work_group_id* work_groups;
 	uint32 priority; // ?
 	irt_lw_data_item *parameters;
-	// private implementation details
+	irt_work_item_state state;
+	// private implementation details, do not need to be migrated
+	irt_wi_readiness_check ready_check;
 	struct _irt_work_item* work_deque_next;
 	struct _irt_work_item* work_deque_prev;
+	intptr_t stack_ptr;
+	intptr_t stack_start;
 };
 
 IRT_DEFINE_DEQUE(work_item, work_deque_next, work_deque_prev);
@@ -71,10 +88,8 @@ IRT_DEFINE_DEQUE(work_item, work_deque_next, work_deque_prev);
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 void irt_wi_destroy(irt_work_item* wi);
 
-void irt_wi_enqueue(irt_work_item* wi);
-void irt_wi_enqueue_other(irt_work_item* wi, irt_worker* worker);
-
-void irt_wi_yield();
+void irt_wi_join(irt_work_item* wi);
+void irt_wi_end(irt_work_item* wi);
 
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);

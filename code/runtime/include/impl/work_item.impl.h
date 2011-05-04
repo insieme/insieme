@@ -40,8 +40,10 @@
 
 #include <stdlib.h>
 
+#include "worker.h"
+
 static inline irt_work_item* _irt_wi_new() {
-	return (irt_work_item*)malloc(1, sizeof(irt_work_item));
+	return (irt_work_item*)malloc(sizeof(irt_work_item));
 }
 static inline void _irt_wi_recycle(irt_work_item* wi) {
 	free(wi);
@@ -52,22 +54,32 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 	irt_work_item* retval = _irt_wi_new();
 	retval->id = irt_generate_work_item_id();
 	retval->impl_id = impl_id;
+	retval->context_id = irt_worker_get_current()->cur_context;
 	retval->num_groups = 0;
 	retval->parameters = params;
 	retval->range = range;
+	retval->state = IRT_WI_STATE_NEW;
+	retval->stack_start = 0;
+	retval->stack_ptr = 0;
+	return retval;
 }
 void irt_wi_destroy(irt_work_item* wi) {
 	_irt_wi_recycle(wi);
 }
 
-void irt_wi_enqueue(irt_work_item* wi) {
-	// TODO
-}
-void irt_wi_enqueue_other(irt_work_item* wi, irt_worker* worker) {
-	// TODO
+bool _irt_wi_done_check(irt_work_item* wi) {
+	return ((irt_work_item*)(wi->ready_check.data))->state == IRT_WI_STATE_DONE;
 }
 
-void irt_wi_yield() {
+void irt_wi_join(irt_work_item* wi) {
+	irt_worker* self = irt_worker_get_current();
+	wi->ready_check.fun = &_irt_wi_done_check;
+	wi->ready_check.data = wi;
+	irt_worker_yield(self, wi);
+	// TODO
+}
+void irt_wi_end(irt_work_item* wi) {
+	wi->state = IRT_WI_STATE_DONE;
 	// TODO
 }
 

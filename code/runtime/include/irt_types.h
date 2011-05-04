@@ -58,4 +58,6 @@ struct _irt_type {
 
 /* ------------------------------ operations ----- */
 
-uint32 irt_get_type_bytes(irt_context* context, irt_type_id type_id);
+static inline uint32 irt_type_get_bytes(irt_context* context, irt_type_id type_id) {
+	return context->type_table[type_id].bytes;
+}

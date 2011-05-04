@@ -44,6 +44,9 @@
 #define IRT_CONTEXT_LT_BUCKETS 7
 #define IRT_DATA_ITEM_LT_BUCKETS 97
 
+// TODO : better configurability, maybe per-wi stack size set by compiler?
+#define IRT_WI_STACK_SIZE 1024 * 64
+
 // Declarations of insieme runtime types in alphabetical lexicographic order
 
 /* ------------------------------ channels ----- */

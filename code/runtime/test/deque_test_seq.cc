@@ -83,7 +83,31 @@ TEST(queues, basic_sequential_ops) {
 	EXPECT_EQ(elem, irt_deque_test_deque_pop_back(&q));
 	EXPECT_EQ(0 /* NULL */, q.start);
 	EXPECT_EQ(0 /* NULL */, q.end);
+
+
+	irt_deque_test *elem2 = make_item(2.0f), *elem3 = make_item(3.0f);
+	irt_deque_test_deque_insert_back(&q, elem);
+	irt_deque_test_deque_insert_back(&q, elem2);
+	irt_deque_test_deque_insert_back(&q, elem3);
+	EXPECT_EQ(elem, q.start);
+	EXPECT_EQ(elem3, q.end);
+	EXPECT_EQ(elem2, irt_deque_test_deque_take_elem(&q, elem2));
+	EXPECT_EQ(0 /* NULL */, irt_deque_test_deque_take_elem(&q, elem2));
+	EXPECT_EQ(elem, q.start);
+	EXPECT_EQ(elem, q.end->prev_q);
+	EXPECT_EQ(elem3, q.end);
+	EXPECT_EQ(elem3, q.start->next_q);
+	EXPECT_EQ(elem, irt_deque_test_deque_take_elem(&q, elem));
+	EXPECT_EQ(0 /* NULL */, irt_deque_test_deque_take_elem(&q, elem));
+	EXPECT_EQ(elem3, q.start);
+	EXPECT_EQ(elem3, q.end);
+	EXPECT_EQ(elem3, irt_deque_test_deque_take_elem(&q, elem3));
+	EXPECT_EQ(0 /* NULL */, q.end);
+	EXPECT_EQ(0 /* NULL */, q.end);
+
 	free(elem);
+	free(elem2);
+	free(elem3);
 	
 	// cleanup
 	irt_deque_test_deque_cleanup(&q);
