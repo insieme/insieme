@@ -994,10 +994,11 @@ public:
                         newBodyStmts.push_back(lrd);
                     }
                     //declare group range TODO fix error of checker
-                    core::TypePtr vecUint = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+                    core::TypePtr vecUint4 = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+                    core::TypePtr vecUintAlpha = builder.vectorType(BASIC.getUIntGen(), builder.variableIntTypeParam('l'));
                     core::DeclarationStmtPtr groupRdecl = builder.declarationStmt(kd.numGroups,
-                            builder.callExpr(vecUint,
-                            builder.callExpr(builder.functionType(toVector(vecUint, vecUint), vecUint ),
+                            builder.callExpr(vecUint4,
+                            builder.callExpr(builder.functionType(toVector(vecUintAlpha, vecUintAlpha), vecUintAlpha ),
                                     BASIC.getVectorPointwise(), BASIC.getUnsignedIntDiv()), kd.globalRange, kd.localRange));
 
                     newBodyStmts.push_back(groupRdecl);
