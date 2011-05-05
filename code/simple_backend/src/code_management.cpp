@@ -87,10 +87,17 @@ namespace depResolve {
 	typedef adjacency_list<vecS, vecS, directedS, property<vertex_name_t, CodeFragmentPtr>> Graph;
 	typedef graph_traits<Graph>::vertex_descriptor Vertex;
 	typedef std::map<CodeFragment*, Vertex> CodeVertexMap;
+	typedef std::set<CodeFragment*> FragmentSet;
 
-	void addDeps(const CodeFragmentPtr& cur, Graph& g, CodeVertexMap& vmap) {
+	void addDeps(const CodeFragmentPtr& cur, Graph& g, CodeVertexMap& vmap, FragmentSet& processed) {
 		property_map<Graph, vertex_name_t>::type codePtrMap = get(vertex_name, g);
 		
+		// abort if node has already been processed
+		auto res = processed.insert(&(*cur));
+		if (!res.second) {
+			return;
+		}
+
 		auto vertexGen = [&g, &vmap, &codePtrMap](const CodeFragmentPtr& ptr) -> Vertex {
 			Vertex v;
 			auto insertionResult = vmap.insert(std::make_pair(&(*ptr), Vertex()));
@@ -108,7 +115,7 @@ namespace depResolve {
 		for_each(cur->getDependencies(), [&](const CodeFragmentPtr& dep) {
 			Vertex v = vertexGen(dep);
 			add_edge(u, v, g);
-			addDeps(dep, g, vmap);
+			addDeps(dep, g, vmap, processed);
 		});
 
 	}
@@ -121,8 +128,9 @@ namespace depResolve {
 		Graph g;
 		property_map<Graph, vertex_name_t>::type codePtrMap = get(vertex_name, g);
 		CodeVertexMap vmap;
+		FragmentSet processed;
 
-		addDeps(code, g, vmap);
+		addDeps(code, g, vmap, processed);
 		std::vector<Vertex> vResult;
 
 		try {

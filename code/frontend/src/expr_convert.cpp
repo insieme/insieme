@@ -300,7 +300,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	// current expression is of ref type. 
 	if ( trgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 		// Recursively call the cast function to make sure the subtype and the target type matches
-		return builder.deref( makeHerbertHappy(builder, trgTy, expr) );
+		return builder.deref(expr);
 	}
 
 	// [ 'a -> ref<'a> ]
@@ -1022,7 +1022,7 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//							BINARY OPERATOR
+	//							MEMBER EXPRESSION
 	//
 	// [C99 6.5.2.3] Structure and Union Members. X->F and X.F.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1226,6 +1226,7 @@ public:
 				return annotatedNode;
 			}	
 			
+			rhs = convFact.castToType(core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType(), rhs);	
 			isAssignment = true;
 			opFunc = gen.getRefAssign();
 			exprTy = gen.getUnit();
@@ -1244,15 +1245,36 @@ public:
 			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
 
-		rhs = convFact.tryDeref(rhs);
+	 //	rhs = convFact.tryDeref(rhs);
 
 		if( !isAssignment ) {
-			lhs = convFact.tryDeref(lhs);
-			lhs = convFact.castToType(exprTy, lhs);
-			rhs = convFact.castToType(exprTy, rhs);
-			// Handle pointers arithmetic
-			VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
-			opFunc = gen.getOperator(exprTy, op);
+			// lhs = convFact.tryDeref(lhs);
+			if ( !gen.isNull(lhs) && !gen.isNull(rhs) ) {
+				lhs = convFact.castToType(exprTy, lhs);
+				rhs = convFact.castToType(exprTy, rhs);
+				// Handle pointers arithmetic
+				VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
+				opFunc = gen.getOperator(exprTy, op);
+			} else {
+				assert( ((gen.isNull(lhs) && rhs->getType()->getNodeType() == core::NT_RefType) || 
+						(gen.isNull(rhs) && lhs->getType()->getNodeType() == core::NT_RefType)) && "WRONG!");
+				
+				assert (isLogical && "operation not supported for refs");
+				if ( gen.isNull(lhs) )
+					lhs = convFact.castToType(rhs->getType(), lhs);
+				if ( gen.isNull(rhs) )
+					rhs = convFact.castToType(lhs->getType(), rhs);
+
+				core::ExpressionPtr retExpr = convFact.builder.callExpr( gen.getBool(), gen.getRefEqual(), lhs, rhs );
+				if ( baseOp == BO_NE ) {
+					// comparing two refs
+					retExpr = convFact.builder.callExpr( gen.getBool(), gen.getBoolLNot(), retExpr );
+				} 
+				
+				// handle eventual pragmas attached to the Clang node
+				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);
+				return annotatedNode;
+			}
 
 			if ( DeclRefExpr* declRefExpr = utils::skipSugar<DeclRefExpr>(binOp->getLHS()) ) {
 				if ( isa<ArrayType>(declRefExpr->getDecl()->getType().getTypePtr()) )
