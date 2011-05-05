@@ -60,6 +60,7 @@
 #include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
+#include "insieme/utils/map_utils.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
@@ -76,9 +77,20 @@ using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
 namespace xml = insieme::xml;
+namespace utils = insieme::utils;
 namespace analysis = insieme::analysis;
 
 bool checkForHashCollisions(const ProgramPtr& program);
+
+typedef utils::map::PointerMap<core::NodePtr, insieme::core::printer::SourceRange> InverseStmtMap;
+
+void createInvMap(const insieme::core::printer::SourceLocationMap& locMap, InverseStmtMap& invMap) {
+	std::for_each(locMap.begin(), locMap.end(), 
+		[&invMap](const insieme::core::printer::SourceLocationMap::value_type& cur) {
+			invMap.insert( std::make_pair(cur.second, cur.first) );
+		}
+	);
+}
 
 int main(int argc, char** argv) {
 
@@ -173,15 +185,45 @@ int main(int argc, char** argv) {
 				timer.stop();
 				LOG(INFO) << timer;
 			}
+			
+			InverseStmtMap stmtMap;
+			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
+				using namespace insieme::core::printer;
+				// a pretty print of the AST
+				insieme::utils::Timer timer("IR.PrettyPrint");
+				LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
+				if(!CommandLineOptions::DumpIR.empty()) {
+					// write into the file
+					std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
+					fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
+					fout << PrettyPrinter(program);
+					fout << std::endl << std::endl << std::endl;
+					fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
+					fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL);
+				} else {
+					SourceLocationMap srcMap = printAndMap(LOG_STREAM(INFO), PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL));
+					LOG(INFO) << "Number of generated source code mappings: " << srcMap.size();
+					createInvMap(srcMap, stmtMap);
+				}
+
+				timer.stop();
+				LOG(INFO) << timer;
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
+				// LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
+				// LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
+				// LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+			}
 
 			// perform checks
 			MessageList errors;
 			auto checker = [&]() {
+				using namespace insieme::core::printer;
 				LOG(INFO) << "=========================== IR Semantic Checks ==================================";
 				insieme::utils::Timer timer("Checks");
 				errors = check(program, insieme::core::checks::getFullCheck());
 				std::sort(errors.begin(), errors.end());
-				for_each(errors, [](const Message& cur) {
+				for_each(errors, [&](const Message& cur) {
 					LOG(INFO) << cur;
 					NodeAddress address = cur.getAddress();
 					stringstream ss;
@@ -190,7 +232,9 @@ int main(int argc, char** argv) {
 						ss.str(""); 
 						ss.clear();
 						NodePtr context = address.getParentNode(min((unsigned)contextSize, address.getDepth()-contextSize));
-						ss << insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+						ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+						LOG(INFO) << "Source Location: " << stmtMap[address.getAddressedNode()];
+
 					} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
 					LOG(INFO) << "\t Context: " << ss.str() << std::endl;
 				});
@@ -288,32 +332,7 @@ int main(int argc, char** argv) {
 		}
 		#endif
 
-		if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
-			using namespace insieme::core::printer;
-			// a pretty print of the AST
-			insieme::utils::Timer timer("IR.PrettyPrint");
-			LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
-			if(!CommandLineOptions::DumpIR.empty()) {
-				// write into the file
-				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
-				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
-				fout << PrettyPrinter(program);
-				fout << std::endl << std::endl << std::endl;
-				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
-				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL);
-			} else {
-				SourceLocationMap srcMap = printAndMap(LOG_STREAM(INFO), PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL));
-				LOG(INFO) << "Number of generated source code mappings: " << srcMap.size();
-			}
-			timer.stop();
-			LOG(INFO) << timer;
-			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-
-			// LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
-			// LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
-			// LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-		}
-
+		
 		if (CommandLineOptions::OpenCL) {
             insieme::utils::Timer timer("OpenCL.Backend");
 
