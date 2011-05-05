@@ -131,18 +131,51 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                     // rhs of an assignment
                     if(const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
                         if(rhs->getFunctionExpr() == BASIC.getRefDeref()) {
-                            if(const CallExprPtr& createBuffer = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0)))
+                            if(const CallExprPtr& createBuffer = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0))) {
+                                std::cout << createBuffer->getFunctionExpr() << " CREATEBUFFER\n";
                                 newCall = createBuffer;
+                            }
                         }
                     }
 
-                    cl_mems.insert(std::make_pair(lhs, builder.variable(builder.refType(newCall->getArgument(1)->getType()))));
+                    TypePtr newType = builder.refType(newCall->getType());
+                    // check if variable has already been put into replacement map with a different type
+                    if(cl_mems[lhs] != static_cast<long int>(0) && cl_mems[lhs]->getType() != newType)
+                        std::cout << "asdf\n";
+                    else
+                        std::cout << "good!!!!!!!!!!!!!1\n";
 
-                    return newCall;
+                    cl_mems.insert(std::make_pair(lhs, builder.variable(newType)));
+
+                    std::cout << "asdfasdfasdfasdf " << cl_mems[lhs] << " asdflöj " << newType << std::endl;
+
+                    return builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
                 }
             }
         }
+    }
 
+    if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
+        const VariablePtr& var = decl->getVariable();
+        if(var->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
+            if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
+                if(const LiteralPtr& literal = core::dynamic_pointer_cast<const core::Literal>(initFct->getFunctionExpr())) {
+                    if(literal->getValue() == "clCreateBuffer") { // clCreateBuffer is called at definition of cl_mem variable
+                        const CallExprPtr& newInit = dynamic_pointer_cast<const CallExpr>(this->resolveElement(initFct));
+//                        std::cout << "CALLEXPR" << newInit << std::cout;
+                        //DeclarationStmtPtr newDecl = dynamic_pointer_cast<const DeclarationStmt>(decl->substitute(builder.getNodeManager(), *this));
+                        TypePtr newType = builder.refType(newInit->getType());
+
+                        const DeclarationStmtPtr newDecl = builder.declarationStmt(var, builder.refNew(newInit));
+
+                        cl_mems.insert(std::make_pair(var,builder.variable(newType)));
+
+//                        std::cout << "NEW TYPE: " << newType << std::endl;
+                        return newDecl;
+                    }
+                }
+            }
+        }
     }
 
     return element->substitute(builder.getNodeManager(), *this);
