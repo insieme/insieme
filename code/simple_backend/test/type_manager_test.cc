@@ -352,14 +352,14 @@ TEST(TypeManager, FunctionTypes) {
 	type = builder.functionType(toVector(typeA, typeB), typeC);
 	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
-	EXPECT_EQ("struct name*", info.lValueName);
-	EXPECT_EQ("struct name*", info.rValueName);
-	EXPECT_EQ("struct name* %s", info.declPattern);
-	EXPECT_EQ("struct name* %s", info.paramPattern);
+	EXPECT_EQ("name*", info.lValueName);
+	EXPECT_EQ("name*", info.rValueName);
+	EXPECT_EQ("name* %s", info.declPattern);
+	EXPECT_EQ("name* %s", info.paramPattern);
 
 	TypeManager::FunctionTypeInfo details = typeManager.getFunctionTypeInfo(type);
-	EXPECT_EQ("struct name", details.closureName);
-	EXPECT_EQ("test_call_name", details.callerName);
+	EXPECT_EQ("name", details.closureName);
+	EXPECT_EQ("name_call", details.callerName);
 	EXPECT_TRUE(::contains(fragment->getDependencies(), details.definitions));
 }
 
