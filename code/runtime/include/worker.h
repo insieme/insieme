@@ -48,8 +48,7 @@ IRT_MAKE_ID_TYPE(worker);
 
 struct _irt_worker {
 	irt_worker_id id;
-	// this count has to immediately follow the id. Don't change unless you also change id_generation.h
-	uint32 generator_count;
+	uint64 generator_id;
 	irt_affinity_mask affinity;
 	pthread_t pthread;
 	irt_work_item_deque queue;
