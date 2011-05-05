@@ -266,7 +266,7 @@ public:
 	 */
 	template <class Formatter>
 	Writer getStream(const Level& level, const Ctx& ctx) {
-		if(level <= m_level) {
+		if(level >= m_level) {
 			Writer currStream(out, mutex);
 			Formatter::format(currStream.logStream, ctx);
 			return currStream;
