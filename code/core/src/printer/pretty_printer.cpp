@@ -38,6 +38,7 @@
 
 #include <cassert>
 #include <memory>
+#include <iomanip>
 
 #include <boost/unordered_map.hpp>
 
@@ -250,17 +251,68 @@ namespace {
 				depth--; \
 				} \
 
-
 		PRINT(Identifier, {
 				// identifiers can be directly printed
 				out << *node;
-
 		});
 
-		PRINT(Type, {
-				// types can be handled easilly ...
+		PRINT(GenericType, {
+				out << node->getFamilyName();
+				const std::vector<TypePtr>& types = node->getTypeParameter();
+				const std::vector<IntTypeParamPtr>& intTypes = node->getIntTypeParameter();
+				
+				if( types.empty() && intTypes.empty() ) {
+					return;
+				}
+
+				out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur){ this->visit(cur); } );
+
+				if ( !types.empty() && !intTypes.empty() ) {
+			   		out << ",";	
+				}
+
+				out << join(",", intTypes, 
+							[&](std::ostream& jout, const IntTypeParamPtr& cur){ jout << *cur; } ) << ">"; 
+		});
+
+		PRINT(FunctionType, {
+				out << "(" << join(", ", node->getParameterTypes(), 
+						[&](std::ostream&, const TypePtr& cur){ this->visit(cur); }) 
+					<< ") -> ";
+				visit( node->getReturnType() );
+		});
+
+		PRINT(RecType, {
+				out << "rec ";
+				visit(node->getTypeVariable());
+				out << "{" << join(", ", node->getDefinition()->getDefinitions(), 
+					[&](std::ostream& jout, const RecTypeDefinition::RecTypeDefs::value_type& cur) {
+						this->visit(cur.first);
+						jout << "=";
+						this->visit(cur.second);
+				}) << "}";
+		});
+
+		PRINT(NamedCompositeType, {		
+			out << ((node->getNodeType() == NT_UnionType)?"union<":"struct<");
+			out << join(",", node->getEntries(), 
+				[&](std::ostream& out, const NamedCompositeType::Entry& cur) {
+					this->visit(cur.first);
+					out << ":";
+				   this->visit(cur.second);
+			    }) << ">";
+		});
+
+		PRINT(TupleType, {
+				out << '(' << join(",", node->getElementTypes(), 
+						[&](std::ostream&,const TypePtr& cur){ this->visit(cur); }) 
+					<< ')';
+		});
+
+		PRINT(Type,{
 				out << *node;
 		});
+
 
 		PRINT(BreakStmt, {
 				out << "break";
@@ -365,6 +417,12 @@ namespace {
 		});
 
 		PRINT(Literal, {
+				if (GenericTypePtr&& genTy = core::dynamic_pointer_cast<const GenericType>(node->getType()) ) {
+					if(genTy->getFamilyName() == "type") {
+						visit(genTy);
+						return;
+					}
+				}
 				out << *node;
 		});
 
@@ -648,17 +706,29 @@ namespace {
 		std::ostream& out;
 		// keep track of the current position in the output stream
 		SourceLocation currLoc;
+		static const size_t width = 8;
+		static const size_t textWidth = 120;
+
+		void newLine() {
+			++currLoc.first; 		// increment the line number
+			currLoc.second = 0;		// set the column number to 0
+			out << std::setw(width) << std::setiosflags(std::ios::left) << currLoc.first;
+		}
+
 	public:
 		OutputStreamWrapper(std::ostream& out) : 
-			 out(out), currLoc(0,0) { }
+			 out(out), currLoc(0,0) { out << std::setw(width) << std::setiosflags(std::ios::left) << 0; }
 
     	std::streamsize write(const char* s, std::streamsize n) {
+			if ( (n+currLoc.second) > textWidth ) {
+				out << std::endl;
+				newLine();
+			}
 			out.write(s,n);
 			// new lines are printed from the pretty printer separately
 			// therefore we can capture them easily
 			if ( n == 1 && *s == '\n' ) {
-				++currLoc.first; 		// increment the line number
-				currLoc.second = 0;		// set the column number to 0
+				newLine();
 				return n;
 			}
 			currLoc.second += n;
@@ -811,7 +881,7 @@ namespace {
 
 		ADD_FORMATTER(basic.getCreateMinRange(), { OUT("["); PRINT_ARG(0); OUT("-inf]"); });
 		ADD_FORMATTER(basic.getCreateBoundRange(), { OUT("["); PRINT_ARG(0); OUT("-"); PRINT_ARG(1); OUT("]"); });
-
+		
 		#undef ADD_FORMATTER
 		#undef OUT
 		#undef ARG

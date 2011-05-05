@@ -127,16 +127,16 @@ struct Person { int weigth; int age; };
 void member_access_test() {
 	struct Person p;
 
-	#pragma test "( *composite.ref.elem(v1, weigth, int<4>))"
+	#pragma test "( *composite.ref.elem(v1, weigth, type<int<4>>))"
 	p.weigth;
 
 	// #pragma test "decl ref<array<struct<weigth:int<4>,age:int<4>>,1>> v1 = ( var(( *scalar.to.vector(v2))))"
 	struct Person* ptr = &p;
 
-	#pragma test "( *composite.ref.elem(array.ref.elem.1D(v1, 0), age, int<4>))"
+	#pragma test "( *composite.ref.elem(array.ref.elem.1D(v1, 0), age, type<int<4>>))"
 	ptr->age;
 
-	#pragma test "(composite.ref.elem(array.ref.elem.1D(v1, 0), age, int<4>) := 100)"
+	#pragma test "(composite.ref.elem(array.ref.elem.1D(v1, 0), age, type<int<4>>) := 100)"
 	ptr->age = 100;
 }
 
@@ -339,7 +339,7 @@ void evil(int** anything) { }
 
 void vector_stmt_test() {
 
-	#pragma test "decl ref<vector<int<4>,5>> v1 = ( var(undefined(vector<int<4>,5>)))"
+	#pragma test "decl ref<vector<int<4>,5>> v1 = ( var(undefined(type<vector<int<4>,5>>)))"
 	int a[5];
 
 	#pragma test \
@@ -351,7 +351,7 @@ void vector_stmt_test() {
 	a[0] = 1;
 
 	#pragma test \
-	"decl ref<vector<vector<int<4>,3>,2>> v1 = ( var(undefined(vector<vector<int<4>,3>,2>)))"
+	"decl ref<vector<vector<int<4>,3>,2>> v1 = ( var(undefined(type<vector<vector<int<4>,3>,2>>)))"
 	int b[2][3];
 
 	#pragma test \
