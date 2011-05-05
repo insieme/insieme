@@ -39,7 +39,7 @@
 #include "irt_context.h"
 
 #include "utils/lookup_tables.h"
-#include "worker.h"
+#include "impl/worker.impl.h"
 
 IRT_DEFINE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
 
@@ -49,7 +49,7 @@ static inline irt_context* irt_context_get_current() {
 
 irt_context* irt_context_create(irt_client_app* app) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
-	context->id = irt_generate_context_id();
+	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->client_app = app;
 	context->client_app->init_context(context);
 	irt_context_table_insert(context);

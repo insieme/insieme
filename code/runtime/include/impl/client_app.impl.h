@@ -40,11 +40,11 @@
 
 #include "utils/hoisting.h"
 #include "impl/error_handling.impl.h"
-
+#include "impl/worker.impl.h"
 
 irt_client_app* irt_client_app_create(const char* library_file_name) {
 	irt_client_app *app = (irt_client_app*)malloc(sizeof(irt_client_app));
-	app->id = irt_generate_client_app_id();
+	app->id = irt_generate_client_app_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	app->library = dlopen_unique(library_file_name, RTLD_NOW);
 	IRT_ASSERT(app->library != NULL, IRT_ERR_IO, "Could not load library %s\nError: %s\n", library_file_name, dlerror());
 	

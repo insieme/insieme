@@ -38,8 +38,6 @@
 
 #include "globals.h"
 
-#include <pthread.h>
-
 #define IRT_DECLARE_ID_TYPE(__type) \
 typedef struct _irt_##__type##_id irt_##__type##_id;
 
@@ -56,15 +54,11 @@ struct _irt_##__type##_id { \
 	} value; \
 	struct _irt_##__type* cached; \
 }; \
-static const irt_##__type##_id irt_g_null_##__type##_id = { {0ul}, 0}; \
-static inline irt_##__type##_id irt_generate_##__type##_id() { \
-	/* The hack below is necessary to maintain minimal dependencies. \
-	This way, id_generation.h does not need to know about workers */ \
-	uint64* worker_ptr = (uint64*)pthread_getspecific(irt_g_worker_key); \
+static inline irt_##__type##_id irt_generate_##__type##_id(void *generator_id_ptr) { \
 	irt_##__type##_id id; \
-	id.value.full = *worker_ptr; \
-	/* access the generator index which is 128 bits after the start of the worker struct */ \
-	id.value.components.index = (*(uint32*)(worker_ptr+2))++; \
+	irt_##__type##_id *gen_id = (irt_##__type##_id*)generator_id_ptr; \
+	id.value.full = gen_id->value.full; \
+	id.value.components.index = gen_id->value.components.index++; \
 	id.cached = NULL; \
 	return id; \
 } \
@@ -72,3 +66,5 @@ static inline irt_##__type##_id irt_##__type##_null_id() { \
 	irt_##__type##_id null_id = { { 0 }, NULL }; \
 	return null_id; \
 }
+
+#define IRT_LOOKUP_GENERATOR_ID_PTR (&(irt_worker_get_current()->generator_id))
