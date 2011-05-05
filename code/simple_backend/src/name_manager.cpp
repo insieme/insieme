@@ -78,23 +78,29 @@ string NameManager::getName( const NodePtr& ptr, const string& fragment) {
 		name << fragment << "_";
 	}
 
-	switch(ptr->getNodeCategory()) {
-	case NC_IntTypeParam:
-		name << "param"; break;
-	case NC_Support:
-		name << "supp"; break;
-	case NC_Type:
-		name << "type"; break;
-	case NC_Expression:
-		switch(ptr->getNodeType()) {
-		case NT_LambdaExpr: name << "fun"; break;
-		default: name << "expr"; break;
-		} ; break;
-	case NC_Statement:
-		name << "stat"; break;
-	case NC_Program:
-		name << "prog"; break;
+	switch(ptr->getNodeType()) {
+	case NT_BindExpr:
+		name << "closure"; break;
+	default:
+		switch(ptr->getNodeCategory()) {
+		case NC_IntTypeParam:
+			name << "param"; break;
+		case NC_Support:
+			name << "supp"; break;
+		case NC_Type:
+			name << "type"; break;
+		case NC_Expression:
+			switch(ptr->getNodeType()) {
+			case NT_LambdaExpr: name << "fun"; break;
+			default: name << "expr"; break;
+			} ; break;
+		case NC_Statement:
+			name << "stat"; break;
+		case NC_Program:
+			name << "prog"; break;
+		}
 	}
+
 	name << "_" << num++;
 	nameMap.insert(make_pair(ptr, name.str()));
 	return getName(ptr, fragment);

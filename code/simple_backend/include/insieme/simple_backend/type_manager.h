@@ -185,7 +185,7 @@ public:
 	const TypeInfo getTypeInfo(const CodeFragmentPtr& context, const core::TypePtr& type);
 
 	/**
-	 * Formats the a parameter with the given type and name within the given context. This might be used
+	 * Formats a parameter with the given type and name within the given context. This might be used
 	 * for formatting function parameters and elements of a user defined type (struct and unions).
 	 *
 	 * @param context the context the resulting parameter is placed in
@@ -194,6 +194,14 @@ public:
 	 * @param a flag allowing the user to indicate whether the type definition is required for a declaration statement or for not
 	 */
 	string formatParamter(const CodeFragmentPtr& context, const core::TypePtr& type, const string& name, bool decl = false);
+
+	/**
+	 * Produces a definition of a real C-Function pointer to a function representing a valid wrapper of a closure of the given
+	 * function type. The resulting declaration will declare a variable with the given name.
+	 *
+	 * TODO: find a better place for this function
+	 */
+	string formatFunctionPointer(const CodeFragmentPtr& context, const core::FunctionTypePtr& funType, const string& name);
 
 	/**
 	 * Obtains information regarding the given function type. The resulting entry contains
