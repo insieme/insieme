@@ -122,8 +122,24 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getSetNull(), false, {
-			VISIT_ARG(0);
-			OUT("=0");
+				VISIT_ARG(0);
+				OUT("=0");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getIsNull(), false, {
+				OUT("(");
+				VISIT_ARG(0);
+				OUT(".data==0)");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getGetNull(), false, {
+
+				// the name of the result type
+				const TypePtr& resType = CALL->getType();
+
+				OUT("(");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
+				OUT("){0,{0}}");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getRefToAnyRef(), false, {
