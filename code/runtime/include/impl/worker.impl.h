@@ -43,10 +43,9 @@
 #include "globals.h"
 #include "impl/error_handling.impl.h"
 #include "impl/irt_mqueue.impl.h"
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
-}
+#include "impl/irt_context.impl.h"
+#include "impl/work_item.impl.h"
+#include "utils/minlwt.h"
 
 typedef struct __irt_worker_func_arg {
 	irt_worker *generated;
@@ -59,22 +58,56 @@ void* _irt_worker_func(void *argvp) {
 	
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
-	arg->generated->generator_count = 1;
-	arg->generated->pthread = pthread_self();
-	arg->generated->id.value.components.index = 1;
-	arg->generated->id.value.components.thread = arg->index;
-	arg->generated->id.value.components.node = 0; // TODO correct node id
-	arg->generated->id.cached = arg->generated;
-	arg->generated->affinity = arg->affinity;
+	irt_worker* self = arg->generated;
+	self->generator_count = 1;
+	self->pthread = pthread_self();
+	self->id.value.components.index = 1;
+	self->id.value.components.thread = arg->index;
+	self->id.value.components.node = 0; // TODO correct node id
+	self->id.cached = arg->generated;
+	self->affinity = arg->affinity;
+	self->cur_context = irt_g_null_context_id;
+	self->cur_wi = NULL;
+	irt_work_item_deque_init(&self->queue);
+	irt_work_item_deque_init(&self->pool);
 	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 	arg->ready = true;
 
 	for(;;) {
-		// TODO main worker loop
-		irt_worker_schedule();
+		irt_worker_schedule(self);
 	}
 
 	return NULL;
+}
+
+void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
+	if(self->cur_wi == wi) return;
+	// TODO refactor
+	if(wi->state == IRT_WI_STATE_NEW) {
+		// start WI from scratch
+		wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
+		wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
+		wi->state = IRT_WI_STATE_STARTED;
+
+		if(self->cur_wi) {
+			irt_work_item* old_wi = self->cur_wi;
+			self->cur_wi = wi;
+			lwt_start(wi, &old_wi->stack_ptr, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
+		} else {
+			self->cur_wi = wi;
+			lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
+		}
+	} else { 
+		// resume WI
+		if(self->cur_wi) {
+			irt_work_item* old_wi = self->cur_wi;
+			self->cur_wi = wi;
+			lwt_continue(wi, &old_wi->stack_ptr);
+		} else {
+			self->cur_wi = wi;
+			lwt_continue(wi, &self->basestack);
+		}
+	}
 }
 
 irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
@@ -92,17 +125,50 @@ irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
 	return arg.generated;
 }
 
-void irt_worker_schedule() {
-	irt_worker* self = irt_worker_get_current();
+void irt_worker_schedule(irt_worker* self) {
 
+	// try to take a ready WI from the pool
+	// I'm not yet 100% convinced this is thread safe
+	irt_work_item* next_wi = self->pool.start;
+	while(next_wi != NULL) {
+		if(next_wi->ready_check.fun(next_wi)) {
+			if(next_wi == irt_work_item_deque_take_elem(&self->pool, next_wi)) break;
+		}
+		next_wi = next_wi->work_deque_next;
+	}
+	if(next_wi != NULL) {
+		_irt_worker_switch_to_wi(self, next_wi);
+		return;
+	}
+
+	// if that failed, try to take a work item from the queue
+	// TODO split
+	irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
+	if(new_wi != NULL) {
+		_irt_worker_switch_to_wi(self, new_wi);
+		return;
+	}
+
+	// if that failed as well, look in the IPC message queue
 	irt_mqueue_msg* received = irt_mqueue_receive();
 	if(received) {
 		if(received->type == IRT_MQ_NEW_APP) {
 			irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
 			irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
 			irt_context* prog_context = irt_context_create(client_app);
+			self->cur_context = prog_context->id;
 			irt_context_table_insert(prog_context);
+			_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
 		}
 		free(received);
 	}
+}
+
+void irt_worker_enqueue(irt_worker* self, irt_work_item* wi) {
+	irt_work_item_deque_insert_front(&self->queue, wi);
+}
+
+void irt_worker_yield(irt_worker* self, irt_work_item* wi) {
+	irt_work_item_deque_insert_back(&self->pool, wi);
+	irt_worker_schedule(self);
 }

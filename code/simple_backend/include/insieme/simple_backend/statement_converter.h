@@ -126,6 +126,17 @@ namespace simple_backend {
 		 */
 		void convertAsParameterToExternal(const core::ExpressionPtr& expression);
 
+		/**
+		 * Instructs this statement and expression converter to process the given expression and to
+		 * produce a result which can be forwarded to an external function. The result will be
+		 * added to the given code fragment.
+		 *
+		 * @param expression the expression which's result should be represented in a way it can
+		 *     				 be passed to an external function.
+		 * @param fragment the code fragment the code should be appended to
+		 */
+		void convertAsParameterToExternal(const core::ExpressionPtr& expression, const CodeFragmentPtr& fragment);
+
 	protected:
 
 		// --------------------------------------------------------------------------------

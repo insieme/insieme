@@ -81,6 +81,12 @@ protected:
 	 */
 	utils::map::PointerMap<core::LambdaDefinitionPtr, CodeFragmentPtr> functionGroup;
 
+	/**
+	 * A map linking bind expressions to a code fragment referencing the associated closures
+	 * and functions.
+	 */
+	utils::map::PointerMap<core::BindExprPtr, CodeFragmentPtr> binds;
+
 public:
 
 	/**
@@ -103,13 +109,21 @@ public:
 
 	string getFunctionName(const CodeFragmentPtr& context, const core::LambdaExprPtr& lambda);
 
+	// TODO: add the same signature for lambdas and literals
+	void createClosure(const CodeFragmentPtr& target, const core::BindExprPtr& bind);
+
 protected:
 	virtual void appendFunctionParameter(const CodeFragmentPtr& fragment, const VariablePtr& param);
+	virtual void appendFunctionParameters(const CodeFragmentPtr& fragment, const vector<VariablePtr>& params);
+
 	virtual void addFunctionPrefix(const CodeFragmentPtr& fragment, const core::LambdaPtr& lambda) { }
+
 	virtual CodeFragmentPtr resolve(const LambdaDefinitionPtr& definition);
 	virtual CodeFragmentPtr resolve(const LambdaPtr& lambda);
 
 	virtual CodeFragmentPtr resolve(const LiteralPtr& literal);
+
+	virtual CodeFragmentPtr resolve(const BindExprPtr& bind);
 };
 
 

@@ -42,7 +42,10 @@
 #include "data_item.h" 
 
 #include "irt_atomic.h"
+#include "irt_types.h"
 #include "utils/lookup_tables.h"
+
+#include "impl/irt_context.impl.h"
 
 IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 
@@ -70,6 +73,7 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	retval->lookup_table_next = NULL;
 	retval->data_block = NULL;
 	irt_data_item_table_insert(retval);
+	irt_data_item_table_lookup(retval->id);
 	return retval;
 }
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) {
@@ -83,14 +87,31 @@ void irt_di_destroy(irt_data_item* di) {
 	_irt_di_dec_use_count(di);
 }
 
-irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
-	if(di->data_block) { 
-		return di->data_block;
-	}
+static inline uint32 _irt_di_get_bytes(irt_data_item* di) {
+	uint32 type_size = irt_type_get_bytes(irt_context_get_current(), di->type_id);
+	if(di->dimensions == 1) return (di->ranges[0].end - di->ranges[0].begin) * type_size;
 	else {
-		// TODO find or create data block
-		return di->data_block;		
+		uint32 s = 0;
+		for(int i=0; i<di->dimensions; ++i) s += (di->ranges[i].end - di->ranges[i].begin) * type_size;
+		return s;
 	}
+}
+static inline irt_data_block* _irt_db_new(uint32 size) {
+	irt_data_block* retval = (irt_data_block*)malloc(sizeof(irt_data_block));
+	retval->use_count = 1;
+	retval->data = malloc(size);
+	return retval;
+}
+static inline void _irt_db_recycle(irt_data_block* di) {
+	// TODO
+}
+
+irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
+	if(!di->data_block) { 
+		// TODO find or create data block
+		di->data_block = _irt_db_new(_irt_di_get_bytes(di));
+	}
+	return di->data_block;
 }
 void irt_di_free(irt_data_block* b) {
 	// TODO notify parent

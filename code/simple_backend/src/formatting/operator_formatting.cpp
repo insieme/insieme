@@ -184,47 +184,15 @@ namespace formatting {
 
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
 
+				// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
 
+				// create array using a constructor
 				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
 
-				OUT("((" + typeName + "){");
-
-				// test whether the size is fixed to 1
-				if (ARG(1)->getNodeType() == NT_Literal && static_pointer_cast<const Literal>(ARG(1))->getValue() == "1") {
-					// special handling of arrays with a single element
-					ASTBuilder builder(call->getNodeManager());
-					NodePtr init = ARG(0);
-					if (core::analysis::isCallOf(init, basic.getRefVar())) {
-						init = builder.refNew(static_pointer_cast<const CallExpr>(init)->getArguments()[0]);
-						STMT_CONVERTER.convert(init);
-					} else if (core::analysis::isCallOf(init, basic.getRefNew())) {
-						STMT_CONVERTER.convert(init);
-					} else {
-//						STMT_CONVERTER.convert(builder.refNew(static_pointer_cast<const Expression>(ARG(0))));
-
-						VISIT_ARG(0);
-					}
-
-				} else {
-
-					// ensure array is randomly initialized
-					ExpressionPtr initValue = ARG(0);
-					assert(!core::analysis::isCallOf(initValue, basic.getRefVar()) && "Initialization of arrays based on ref-elements not supported yet!" );
-					assert(core::analysis::isCallOf(initValue, basic.getUndefined()) && "Initializing arrays with concrete values not supported yet.");
-
-					// all arrays are allocated on the HEAP
-					OUT("malloc(");
-					OUT("sizeof(");
-					TypePtr type = static_pointer_cast<const Expression>(ARG(0))->getType();
-					OUT(CONTEXT.getTypeManager().getTypeName(CODE, type, true));
-					OUT(")*");
-					VISIT_ARG(1);
-					OUT(")");
-				}
-
-				OUT(",{");
+				OUT(typeName);
+				OUT("_ctr(");
 				VISIT_ARG(1);
-				OUT("}})");
+				OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArraySubscript1D(), false, {

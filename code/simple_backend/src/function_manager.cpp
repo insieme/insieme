@@ -72,7 +72,25 @@ void FunctionManager::appendFunctionParameter(const CodeFragmentPtr& fragment, c
 	}
 
 	// format parameter using type manager
-	fragment << (cc.getTypeManager()).formatParamter(fragment, param->getType(), (cc.getNameManager()).getName(param), false);
+	fragment << cc.getTypeManager().formatParamter(fragment, param->getType(), cc.getNameManager().getName(param), false);
+}
+
+void FunctionManager::appendFunctionParameters(const CodeFragmentPtr& fragment, const vector<VariablePtr>& params) {
+	// early exit ...
+	if (params.empty()) {
+		return;
+	}
+
+	// process all parameters step by step
+	auto start = params.begin();
+	auto end = params.end();
+	appendFunctionParameter(fragment, *start);
+	++start;
+	while (start != end) {
+		fragment << ", ";
+		appendFunctionParameter(fragment, *start);
+		++start;
+	}
 }
 
 string FunctionManager::getFunctionName(const CodeFragmentPtr& context, const core::LiteralPtr& external) {
@@ -98,18 +116,54 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	auto type = dynamic_pointer_cast<const FunctionType>(literal->getType());
 	assert(type && "Literal is not a function!");
 
+	TypePtr returnType = type->getReturnType();
+
 	const string& name = literal->getValue();
 	CodeFragmentPtr protoType = CodeFragment::createNew("Prototype for external function: " + name + " ... type: " + literal->getType()->toString());
+
+	// register code fragment to be able to call recursively (within the function wrapper)
+	externalFunctions.insert(std::make_pair(literal, protoType));
+
 	TypeManager& typeManager = cc.getTypeManager();
-	protoType << typeManager.getTypeInfo(protoType, type->getReturnType()).externName << " " << name << "(";
+	protoType << typeManager.getTypeInfo(protoType, returnType).externName << " " << name << "(";
 	//protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
 	protoType << join(", ", type->getParameterTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
 		out << typeManager.getTypeInfo(protoType, cur).externName;
 	});
 	protoType << ");\n";
 
-	// insert into function map and return
-	externalFunctions.insert(std::make_pair(literal, protoType));
+
+	// do not create a wrapper if a variable argument list is included
+	if (contains(type->getParameterTypes(), cc.getNodeManager().basic.getVarList(), equal_target<TypePtr>())) {
+		return protoType;
+	}
+
+	// add closure wrapper
+	const string wrapperName = name + "_wrap";
+	protoType << "static " << typeManager.getTypeName(protoType, returnType) << " " << wrapperName << "(";
+
+	// TODO: test whether void* is fine or actual pointer is better
+//	function << typeManager.getFunctionTypeInfo(funType).closureName << "* _closure";
+	protoType << "void* _closure";
+
+	// create a temporary-parameter list
+	NodeManager& manager = cc.getNodeManager();
+	vector<VariablePtr> params;
+	::transform(type->getParameterTypes(), std::back_inserter(params), [&](const TypePtr& type) {
+		return Variable::get(manager, type);
+	});
+
+	if (!params.empty()) {
+		protoType << ", ";
+		appendFunctionParameters(protoType, params);
+	}
+	protoType << ") { " << ((cc.getLangBasic().isUnit(returnType))?"":"return ");
+	vector<ExpressionPtr> args;
+	::copy(params, std::back_inserter(args));
+	cc.getStmtConverter().convert(CallExpr::get(manager, returnType, literal, args), protoType);
+	protoType << "; }\n";
+
+	// done => return prototype reference
 	return protoType;
 }
 
@@ -212,8 +266,10 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 
 	// get name
 	string name = nameManager.getName(lambda);
+	string wrapperName = name + "_wrap";
 	FunctionTypePtr funType = lambda->getType();
 
+	const vector<VariablePtr>& params = lambda->getParameterList();
 
 	// create function code for lambda
 	CodeFragmentPtr function = CodeFragment::createNew("Definition of " + name + " ... type: " + funType->toString());
@@ -222,67 +278,208 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	addFunctionPrefix(function, lambda);
 
 	// write the function header
-	function << typeManager.getTypeName(function, funType->getReturnType()) << " " << name << "(";
-
-//	if (lambda->isCapturing()) {
-//		function << "void* _capture";
-//		if (!lambda->getParameterList().empty()) {
-//			function << ", ";
-//		}
-//	}
-	if (!lambda->getParameterList().empty()) {
-		auto start = lambda->getParameterList().begin();
-		auto end = lambda->getParameterList().end();
-		appendFunctionParameter(function, *start);
-		++start;
-		while (start != end) {
-			function << ", ";
-			appendFunctionParameter(function, *start);
-			++start;
-		}
-	}
+	TypePtr returnType = funType->getReturnType();
+	function << typeManager.getTypeName(function, returnType) << " " << name << "(";
+	appendFunctionParameters(function, params);
 	function << ")";
 
 
 	// add function body
-	function << " {" << CodeBuffer::indR << "\n";
-
-//	if (lambda->isCapturing()) {
-//		// extract capture list
-//		function << "// --------- Captured Stuff - Begin -------------\n";
-//
-//		// get name of struct from type manager
-//		TypeManager::FunctionTypeInfo functionTypeInfo = typeManager.getFunctionTypeInfo(funType);
-//		function->addDependency(functionTypeInfo.definitions);
-//		string structName = functionTypeInfo.closureName;
-//
-//		int i = 0;
-//		for_each(lambda->getCaptureList(), [&](const VariablePtr& var) {
-//			VariableManager::VariableInfo info;
-//			info.location = VariableManager::HEAP;
-//
-//			varManager.addInfo(var, info);
-//
-//			// standard handling
-//			function << typeManager.formatParamter(function, var->getType(), nameManager.getName(var), false);
-//			function << " = ((" << structName << "*)_capture)->" << format("p%d", i++) << ";\n";
-//
-//		});
-//
-//		function << "// --------- Captured Stuff -  End  -------------\n";
-//	}
+	StatementPtr body = lambda->getBody();
+	if (body->getNodeType() != NT_CompoundStmt) {
+		body = CompoundStmt::get(cc.getNodeManager(), body);
+	}
 
 	// generate the function body
-	cc.getStmtConverter().convert(lambda->getBody(), function);
+	cc.getStmtConverter().convert(body, function);
 
-	function << CodeBuffer::indL << "\n}\n";
 	function << "\n";
+
+	// add closure wrapper
+	function << "static " << typeManager.getTypeName(function, returnType) << " " << wrapperName << "(";
+	// TODO: test whether void* is fine or actual pointer is better
+//	function << typeManager.getFunctionTypeInfo(funType).closureName << "* _closure";
+	function << "void* _closure";
+	if (!params.empty()) {
+		function << ", ";
+		appendFunctionParameters(function, params);
+	}
+	function << ") { " << ((cc.getLangBasic().isUnit(returnType))?"":"return ") << name << "(";
+	if (!params.empty()) {
+		auto start = params.begin();
+		auto end = params.end();
+		function << cc.getNameManager().getName(*start);
+		++start;
+		while (start != end) {
+			function << ", ";
+			function << cc.getNameManager().getName(*start);
+			++start;
+		}
+	}
+	function << "); }\n";
+
 
 	// register and return result
 	functions.insert(std::make_pair(lambda, function));
 	return function;
 }
 
+namespace {
+
+	/**
+	 * Extracts a list of expressions captured by the given bind node.
+	 */
+	vector<ExpressionPtr> getCapturedValues(const core::BindExprPtr& bind) {
+		const vector<VariablePtr>& params = bind->getParameters();
+		vector<ExpressionPtr> captured = bind->getCall()->getArguments();
+		std::remove_if(captured.begin(), captured.end(), [&](const ExpressionPtr& cur) {
+			if (cur->getNodeType() != NT_Variable) {
+				return false;
+			}
+			const VariablePtr& var = static_pointer_cast<const Variable>(cur);
+			return contains(params, var, equal_target<VariablePtr>());
+		});
+		return captured;
+	}
+}
+
+
+void FunctionManager::createClosure(const CodeFragmentPtr& target, const core::BindExprPtr& bind) {
+
+	// lookup bind
+	CodeFragmentPtr definitions = resolve(bind);
+
+	// add dependencies
+	target->addDependency(definitions);
+
+	// call constructor
+	string name = cc.getNameManager().getName(bind);
+	string ctrName = name + "_ctr";
+
+	// filter all captured arguments
+	vector<ExpressionPtr> captured = getCapturedValues(bind);
+
+	// obtain name of resulting function type and add cast
+	string funTypeName = cc.getTypeManager().getTypeName(target, bind->getType());
+	target << "(" << funTypeName << ")" << ctrName << "(";
+
+	// allocate memory
+	target << "(" << name << "*)alloca(sizeof(" + name + ")),";
+
+	// add nested lambda
+	cc.getStmtConverter().convert(bind->getCall()->getFunctionExpr());
+
+	// append captured parameters
+	for_each(captured, [&](const ExpressionPtr& cur) {
+		target << ", ";
+		cc.getStmtConverter().convert(cur, target);
+	});
+
+	target << ")";
+
+}
+
+CodeFragmentPtr FunctionManager::resolve(const BindExprPtr& bind) {
+
+	// check cache
+	auto pos = binds.find(bind);
+	if (pos != binds.end()) {
+		return pos->second;
+	}
+
+	// a short-cut to the type manager
+	TypeManager& typeManager = cc.getTypeManager();
+
+	// obtain some information
+	const string& name = cc.getNameManager().getName(bind);
+	FunctionTypePtr funType = static_pointer_cast<const FunctionType>(bind->getType());
+	FunctionTypePtr nestedFunType = static_pointer_cast<const FunctionType>(bind->getCall()->getFunctionExpr()->getType());
+
+	// produce new definitions for this bind
+	CodeFragmentPtr code = CodeFragment::createNew("Definition of " + name + " ... type: " + funType->toString());
+	binds.insert(std::make_pair(bind, code));
+
+	// add dependency to function type
+	const TypeManager::FunctionTypeInfo& info = typeManager.getFunctionTypeInfo(funType);
+	code->addDependency(info.definitions);
+
+	// obtain list of captured variables + parameter map
+	utils::map::PointerMap<ExpressionPtr, string> variableMap;
+
+	// add parameters
+	int paramCounter = 0;
+	const vector<VariablePtr>& params = bind->getParameters();
+	for_each(params, [&](const VariablePtr& cur) {
+		variableMap.insert(std::make_pair<ExpressionPtr, string>(cur, format("p%d", ++paramCounter)));
+	});
+
+	// add captured expressions
+	int captureCounter = 0;
+	const vector<ExpressionPtr>& args = bind->getCall()->getArguments();
+	vector<ExpressionPtr> captured = getCapturedValues(bind);
+	for_each(args, [&](const ExpressionPtr& cur) {
+		variableMap.insert(std::make_pair(cur, format("c%d", ++captureCounter)));
+	});
+
+	// 1) define struct
+	code << "// -- Begin - Closure Constructs ------------------------------------------------------------\n";
+	code << "// struct definition a closure of type " << *funType << "\n";
+	code << "typedef struct _" << name << " {\n";
+	code << "    " << typeManager.formatFunctionPointer(code, funType, "call") << ";\n";
+	code << "    " << typeManager.formatParamter(code, nestedFunType, "nested") << ";\n";
+	// add captured values
+	for_each(captured, [&](const ExpressionPtr& cur) {
+		code << "    " << typeManager.formatParamter(code, cur->getType(), variableMap.find(cur)->second, false) << ";\n";
+	});
+	code << "} " << name << ";\n\n";
+
+	// 2) define mapping function (realizing the argument mapping)
+	string mapperName = name + "_bind";
+	string resultType = typeManager.getTypeName(code, funType->getReturnType());
+	code << "static inline " << resultType << " " << mapperName << "(" << name << "* closure";
+	int i = 0;
+	if (!params.empty()) {
+		code << ", " << join(", ", params, [&, this](std::ostream& out, const VariablePtr& cur) {
+			out << typeManager.formatParamter(code, cur->getType(), variableMap.find(cur)->second, false);
+		});
+	}
+	code << ") { ";
+	if (resultType != "void") code << "return";
+	code << " closure->nested->call(closure->nested";
+	i = 0;
+	if (!args.empty()) {
+		code << ", " << join(",", args, [&, this](std::ostream& out, const ExpressionPtr& cur) {
+			out << (contains(captured, cur, equal_target<ExpressionPtr>())?"closure->":"") << variableMap.find(cur)->second;
+		});
+	}
+	code << "); }\n\n";
+
+	// 3) define a constructor
+	string ctrName = name + "_ctr";
+
+	code << "static inline " << name << "* " << ctrName << "(" << name << "* closure, ";
+	code << typeManager.formatParamter(code, nestedFunType, "nested");
+	if (!captured.empty()) {
+		code << ", " << join(", ", captured, [&, this](std::ostream& out, const ExpressionPtr& cur) {
+			out << typeManager.formatParamter(code, cur->getType(), variableMap.find(cur)->second, false);
+		});
+	}
+	code << ") {\n";
+	code << "    *closure = (" << name << "){&" << name << "_bind, nested";
+	if (!captured.empty()) {
+		code << ", " << join(", ", captured, [&, this](std::ostream& out, const ExpressionPtr& cur) {
+			out << variableMap.find(cur)->second;
+		});
+	}
+	code << "};\n";
+	code << "    return closure;\n";
+	code << "}\n";
+
+	code << "// -- End - Closure Constructs --------------------------------------------------------------\n";
+
+	// done
+	return code;
+}
 
 } // end namespace simple_backend
 } // end namespace insieme
