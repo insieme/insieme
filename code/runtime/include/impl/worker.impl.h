@@ -59,14 +59,14 @@ void* _irt_worker_func(void *argvp) {
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
-	self->generator_count = 1;
 	self->pthread = pthread_self();
 	self->id.value.components.index = 1;
 	self->id.value.components.thread = arg->index;
 	self->id.value.components.node = 0; // TODO correct node id
-	self->id.cached = arg->generated;
+	self->id.cached = self;
+	self->generator_id = self->id.value.full;
 	self->affinity = arg->affinity;
-	self->cur_context = irt_g_null_context_id;
+	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
 	irt_work_item_deque_init(&self->queue);
 	irt_work_item_deque_init(&self->pool);

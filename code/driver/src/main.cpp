@@ -289,18 +289,26 @@ int main(int argc, char** argv) {
 		#endif
 
 		if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
+			using namespace insieme::core::printer;
 			// a pretty print of the AST
+			insieme::utils::Timer timer("IR.PrettyPrint");
 			LOG(INFO) << "========================= Pretty Print INSPIRE ==================================";
 			if(!CommandLineOptions::DumpIR.empty()) {
 				// write into the file
 				std::fstream fout(CommandLineOptions::DumpIR,  std::fstream::out | std::fstream::trunc);
 				fout << "// -------------- Pretty Print Inspire --------------" << std::endl;
-				fout << insieme::core::printer::PrettyPrinter(program);
+				fout << PrettyPrinter(program);
 				fout << std::endl << std::endl << std::endl;
 				fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
-				fout << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
-			} else
-				LOG(INFO) << insieme::core::printer::PrettyPrinter(program);
+				fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL);
+			} else {
+				SourceLocationMap srcMap = printAndMap(LOG_STREAM(INFO), PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL));
+				LOG(INFO) << "Number of generated source code mappings: " << srcMap.size();
+			}
+			timer.stop();
+			LOG(INFO) << timer;
+			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+
 			// LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
 			// LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
 			// LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";

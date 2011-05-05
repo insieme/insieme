@@ -66,7 +66,7 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	irt_data_item* retval = _irt_di_new(dimensions);
 	retval->type_id = tid; 
 	retval->dimensions = dimensions;
-	retval->id = irt_generate_data_item_id();
+	retval->id = irt_generate_data_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*dimensions);
 	retval->use_count = 1;
 	retval->parent_id = irt_data_item_null_id();

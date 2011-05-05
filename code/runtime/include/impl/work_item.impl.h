@@ -40,7 +40,7 @@
 
 #include <stdlib.h>
 
-#include "worker.h"
+#include "impl/worker.impl.h"
 
 static inline irt_work_item* _irt_wi_new() {
 	return (irt_work_item*)malloc(sizeof(irt_work_item));
@@ -52,7 +52,7 @@ static inline void _irt_wi_recycle(irt_work_item* wi) {
 
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new();
-	retval->id = irt_generate_work_item_id();
+	retval->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	retval->impl_id = impl_id;
 	retval->context_id = irt_worker_get_current()->cur_context;
 	retval->num_groups = 0;
