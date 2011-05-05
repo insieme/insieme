@@ -408,22 +408,6 @@ namespace simple_backend {
 				// start new line .. initialization of a member is required
 				code << ";\n";
 
-				// special treatement of vector initialization
-				if (value->getNodeType() == NT_VectorExpr) {
-
-					VectorTypePtr vectorType = static_pointer_cast<const VectorType>(static_pointer_cast<const VectorExpr>(value)->getType());
-					string elementName = cc.getTypeManager().getTypeName(code, vectorType->getElementType(), true);
-
-					// init values using memcopy
-					code << "memcpy(&((*" << varName << ")." << *name << "),&((" << elementName << "[])";
-					this->visit(value);
-					code << "), sizeof(";
-					code << elementName;
-					code << ") * " << toString(*(vectorType->getSize()));
-					code << ")";
-					return;
-				}
-
 				// create assignment statement
 				auto target = builder.callExpr(basic.getCompositeRefElem(), var,
 						basic.getIdentifierLiteral(name), basic.getTypeLiteral(value->getType()));
@@ -440,7 +424,7 @@ namespace simple_backend {
 			CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
 			visit(call->getArguments()[0]);
 		} else {
-			if (!core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefNew())) {
+			if (var->getType()->getNodeType() == NT_RefType && !core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefNew())) {
 				code << "*"; // dereference the produced value
 			}
 			visit(ptr->getInitialization());
@@ -626,6 +610,19 @@ namespace simple_backend {
 		switch(funExp->getNodeType()) {
 
 			case NT_Literal: {
+
+				// TODO: internalize results using general mechanism
+				bool internalize = false;
+				TypePtr returnType = funType->getReturnType();
+				if (returnType->getNodeType() == NT_RefType) {
+					TypePtr elementType = static_pointer_cast<const RefType>(returnType)->getElementType();
+					if (elementType->getNodeType() == NT_ArrayType) {
+						internalize = true;
+						// add conversion
+						code << "&((" << cc.getTypeManager().getTypeName(code, elementType) << "){";
+					}
+				}
+
 				code << cc.getFunctionManager().getFunctionName(code, static_pointer_cast<const Literal>(funExp));
 				code << "(";
 
@@ -633,6 +630,10 @@ namespace simple_backend {
 				//addArgumentList(*this, code, params, args, true);
 				functionalJoin([&]{ code << ", "; }, args, parameterExternalizer);
 				code << ")";
+
+				if (internalize) {
+					code << ",{1}})";
+				}
 				return;
 			}
 

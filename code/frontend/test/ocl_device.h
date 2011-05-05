@@ -204,30 +204,6 @@ void barrier(int flags); //TODO change to enum
 
 #define genfun3(fct) float __attribute__((overloadable)) fct(float, float, float); float2 __attribute__((overloadable)) fct(float2, float2, float2); \
 	float3 __attribute__((overloadable)) fct(float3, float3, float3); float4 __attribute__((overloadable)) fct(float4, float4, float4); \
-	float8 __attribute__((overloadable)) fct(float8, float8, float8); float16 __attridouble); double4 __attribute__((overloadable)) fct(double4, double); \
-	double8 __attribute__((overloadable)) fct(double8, double); double16 __attribute__((overloadable)) fct(double16, double);
-
-#else
-#define dtypefun(fct)
-#define dtypefun2(fct)
-#define dtypefun3(fct)
-#define dtypefuni(fct)
-#define dtypefunptr(fct)
-#define dtypefuniptr(fct)
-#define dtypefun2iptr(fct)
-#define dtypefundbl(fct)
-#endif
-
-#define genfun(fct) float __attribute__((overloadable)) fct(float); float2 __attribute__((overloadable)) fct(float2);  \
-	float3 __attribute__((overloadable)) fct(float3); float4 __attribute__((overloadable)) fct(float4); \
-	float8 __attribute__((overloadable)) fct(float8); float16 __attribute__((overloadable)) fct(float16); dtypefun(fct);
-
-#define genfun2(fct) float __attribute__((overloadable)) fct(float, float); int __attribute__((overloadable)) fct(int, uint); float2 __attribute__((overloadable)) fct(float2, float2); \
-	float3 __attribute__((overloadable)) fct(float3, float3); float4 __attribute__((overloadable)) fct(float4, float4); \
-	float8 __attribute__((overloadable)) fct(float8, float8); float16 __attribute__((overloadable)) fct(float16, float16); dtypefun2(fct)
-
-#define genfun3(fct) float __attribute__((overloadable)) fct(float, float, float); float2 __attribute__((overloadable)) fct(float2, float2, float2); \
-	float3 __attribute__((overloadable)) fct(float3, float3, float3); float4 __attribute__((overloadable)) fct(float4, float4, float4); \
 	float8 __attribute__((overloadable)) fct(float8, float8, float8); float16 __attribute__((overloadable)) fct(float16, float16, float16); dtypefun3(fct)
 
 #define genfuni(fct) float __attribute__((overloadable)) fct(float, int); float2 __attribute__((overloadable)) fct(float2, int2); \

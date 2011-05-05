@@ -78,12 +78,18 @@ namespace formatting {
 		#include "insieme/simple_backend/formatting/formats_begin.inc"
 
 		ADD_FORMATTER(res, basic.getRefDeref(), {
-//				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
-				// do not add a dereferning operator to arrays and vectory => implicite within C
-//				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+
+				// special handling of derefing result of ref.new or ref.var => bogus
+				ExpressionPtr arg = ARG(0);
+				if (core::analysis::isCallOf(arg, basic.getRefVar()) || core::analysis::isCallOf(arg, basic.getRefNew())) {
+					// skip ref.var / ref.new
+					CallExprPtr call = static_pointer_cast<const CallExpr>(arg);
+					STMT_CONVERTER.convert(call->getArgument(0));
+				} else {
+					// just add deref
 					OUT("*");
-//				}
-				VISIT_ARG(0);
+					VISIT_ARG(0);
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getRefAssign(), {
@@ -113,6 +119,11 @@ namespace formatting {
 					OUT(".data");
 				}
 				OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getSetNull(), false, {
+			VISIT_ARG(0);
+			OUT("=0");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getRefToAnyRef(), false, {
@@ -187,7 +198,10 @@ namespace formatting {
 				// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
 
 				// create array using a constructor
-				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+				const TypeManager::TypeInfo& info = CONTEXT.getTypeManager().getTypeInfo(CODE, CALL->getType());
+				const string& typeName = info.rValueName;
+
+				CODE->addDependency(info.utilities);
 
 				OUT(typeName);
 				OUT("_ctr(");
