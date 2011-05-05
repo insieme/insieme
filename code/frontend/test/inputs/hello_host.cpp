@@ -44,10 +44,13 @@ int main(int argc, char **argv)
 
     cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
     cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
-//    float* host_ptr;
+    float* host_ptr;
 
 
     dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_double), NULL, &err);
 
-    //clEnqueueWriteBuffer(queue, dev_ptr, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+
+    clReleaseMemObject(dev_ptr1);
+    clReleaseMemObject(dev_ptr2);
 }

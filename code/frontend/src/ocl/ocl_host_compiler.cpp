@@ -53,13 +53,30 @@ using namespace insieme::core;
 namespace {
 
 ExpressionPtr Ocl2Inspire::getClCreateBuffer() {
+    // flags ignored
+    // hostPtr ignored
+    // errcorcode always set to 0 = CL_SUCCESS
     return parser.parseExpression("fun(type<'a>:elemType, uint<8>:flags, uint<8>:size, anyRef:hostPtr, ref<array<int<4>, 1> >:errorcode_ret) -> array<'a, 1>  {{ \
             ( (op<array.ref.elem.1D>(errorcode_ret, lit<uint<8>, 0> )) = 0 ); \
             return (op<array.create.1D>( elemType, size )); \
        }}");
 }
 
+ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
+    // blocking_write ignored
+    // event stuff removed
+    // always returns 0 = CL_SUCCESS
+    return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_write, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
+            decl array<'a, 1>:hp = (op<ref.deref>( (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )) )); \
+            for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+                ( (op<array.ref.elem.1D>(devicePtr, (i + offset) )) = (op<array.subscript.1D>(hp, i )) ); \
+            return 0; \
+    }}");
+}
 
+/*
+
+ */
 HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeManager()) {
     ADD_Handler(builder, "clCreateBuffer",
         ExpressionPtr fun = o2i.getClCreateBuffer();
@@ -90,6 +107,20 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
         args.push_back(node->getArgument(4));
         return builder.callExpr(builder.arrayType(type), fun, args);/*builder.callExpr(BASIC.getRefVar(), */
     );
+
+    ADD_Handler(builder, "clEnqueueWriteBuffer",
+        vector<ExpressionPtr> args;
+        args.push_back(node->getArgument(1));
+        args.push_back(node->getArgument(2));
+        args.push_back(node->getArgument(3));
+        args.push_back(node->getArgument(4));
+        args.push_back(node->getArgument(5));
+        return builder.callExpr(o2i.getClWriteBuffer(), args);
+    );
+
+    ADD_Handler(builder, "clReleaseMemObject",
+        return builder.callExpr(BASIC.getRefDelete(), node->getArgument(0));
+    );
 };
 
 
@@ -98,17 +129,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
     if (element->getNodeCategory() == NodeCategory::NC_Type) {
         return element->substitute(builder.getNodeManager(), *this);
     }
-/*
-    if(DeclarationStmtPtr decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
-        const VariablePtr var = decl->getVariable();
-        if(var->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
-            std::cout << "Found cl_mem: " << var->toString() << std::endl;
 
-            cl_mems.insert(std::make_pair(var, NULL));
-        }
-
-    }
-*/
     if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)){
  //       std::cout << callExpr->toString() << " FOUND\n";
         const ExpressionPtr& fun = callExpr->getFunctionExpr();
@@ -132,7 +153,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                     if(const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
                         if(rhs->getFunctionExpr() == BASIC.getRefDeref()) {
                             if(const CallExprPtr& createBuffer = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0))) {
-                                std::cout << createBuffer->getFunctionExpr() << " CREATEBUFFER\n";
                                 newCall = createBuffer;
                             }
                         }
@@ -140,21 +160,15 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
                     TypePtr newType = builder.refType(newCall->getType());
                     // check if variable has already been put into replacement map with a different type
-                    if(cl_mems[lhs] != static_cast<long int>(0) && cl_mems[lhs]->getType() != newType)
-                        std::cout << "asdf\n";
-                    else
-                        std::cout << "good!!!!!!!!!!!!!1\n";
+                    if(cl_mems[lhs] != static_cast<long int>(0))
+                        assert((cl_mems[lhs]->getType() == newType) && "cl_mem variable allocated several times with different types.");
 
                     const VariablePtr& newVar = builder.variable(newType);
 //                    cl_mems.insert(std::make_pair(lhs, newVar));
                     cl_mems[lhs] = newVar;
 
-                    std::cout << "asdfasdfasdfasdf " << cl_mems[lhs] << " asdflöj " << newVar << std::endl;
                     cl_mems.begin();
                     cl_mems.end();
-                    for(auto I = cl_mems.begin(); I != cl_mems.end();  ++I) {
-                        std::cout << *I << std::endl;
-                    }
 
                     return builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
                 }
@@ -169,7 +183,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                 if(const LiteralPtr& literal = core::dynamic_pointer_cast<const core::Literal>(initFct->getFunctionExpr())) {
                     if(literal->getValue() == "clCreateBuffer") { // clCreateBuffer is called at definition of cl_mem variable
                         const CallExprPtr& newInit = dynamic_pointer_cast<const CallExpr>(this->resolveElement(initFct));
-//                        std::cout << "CALLEXPR" << newInit << std::cout;
+
                         //DeclarationStmtPtr newDecl = dynamic_pointer_cast<const DeclarationStmt>(decl->substitute(builder.getNodeManager(), *this));
                         TypePtr newType = builder.refType(newInit->getType());
 
@@ -177,10 +191,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
                         const VariablePtr& newVar = builder.variable(newType);
 
-//                        cl_mems.insert(std::make_pair(var, newVar));
                         cl_mems[var] = newVar;
 
-//                        std::cout << "NEW TYPE: " << newType << std::endl;
                         return newDecl;
                     }
                 }
@@ -213,7 +225,7 @@ const NodePtr HostMapper2ndPass::resolveElement(const NodePtr& element) {
                         newType = rt->getElementType();
                     else
                         newType = cl_mems[var]->getType();
-                    return builder.declarationStmt(cl_mems[var], builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
+                    return builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
                 }
             }
         }
