@@ -62,6 +62,8 @@ public:
     Ocl2Inspire(core::NodeManager& mgr) : parser(mgr) {}
 
     core::ExpressionPtr getClCreateBuffer();
+    core::ExpressionPtr getClWriteBuffer();
+
 };
 
 
