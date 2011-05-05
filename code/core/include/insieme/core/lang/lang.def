@@ -296,7 +296,7 @@ LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
 LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
 LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
-LITERAL(SetNull,   		"set.null",				"(ref<'a>) -> unit")
+
 
 // Any References -----------------------------------------------------------------------------------------------------
 
@@ -342,6 +342,12 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 // function to copy an array 1D of type t and size m to an 1D array of type ref<vector<t,n> and size m/n
 LITERAL(ArrayElemToVec, "array.elem.to.vec",
 						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
+
+// -- special operations to support encoding of pointers as arrays ----------------------------------------------------
+
+LITERAL(SetNull,   		"set.null",				"(ref<'a>) -> unit")
+LITERAL(IsNull,   		"is.null",				"(array<'a,1>) -> bool")
+LITERAL(GetNull,   		"get.null",				"(type<'a>) -> array<'a,1>")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 

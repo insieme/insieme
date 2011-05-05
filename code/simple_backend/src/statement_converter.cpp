@@ -689,6 +689,10 @@ namespace simple_backend {
 				// use caller to evaluate bind expression
 				code << info.callerName << "(";
 				visit(funExp);
+				if (!args.empty()) {
+					code << ", ";
+					addArgumentList(*this, code, params, args, false);
+				}
 				code << ")";
 				return;
 			}
@@ -730,6 +734,11 @@ namespace simple_backend {
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {
+		if (cc.getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
+			currentCodeFragment << "return";
+			return;
+		}
+
 		currentCodeFragment << "return ";
 		visit(ptr->getReturnExpr());
 	}
