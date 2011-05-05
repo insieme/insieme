@@ -97,7 +97,7 @@ public:
 
 typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string>> HandlerTable;
-typedef boost::unordered_map<const core::VariablePtr, const core::VariablePtr> ClmemTable;
+typedef boost::unordered_map< core::VariablePtr,  core::VariablePtr> ClmemTable;
 
 template<typename Lambda>
 HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambda) {
@@ -121,8 +121,20 @@ public:
     HostMapper(core::ASTBuilder& build);
 
     const core::NodePtr resolveElement(const core::NodePtr& element);
+    ClmemTable& getClMemMapping() { return cl_mems; }
 
 };
+
+class HostMapper2ndPass : public core::transform::CachedNodeMapping {
+    const core::ASTBuilder& builder;
+    ClmemTable& cl_mems;
+public:
+    HostMapper2ndPass(const core::ASTBuilder build, ClmemTable& clMemTable): builder(build), cl_mems(clMemTable) {}
+
+    const core::NodePtr resolveElement(const core::NodePtr& element);
+
+};
+
 
 class HostVisitor : public core::AddressVisitor<void> {
     core::ASTBuilder& builder;

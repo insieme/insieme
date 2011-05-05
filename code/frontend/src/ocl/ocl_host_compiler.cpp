@@ -145,9 +145,16 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                     else
                         std::cout << "good!!!!!!!!!!!!!1\n";
 
-                    cl_mems.insert(std::make_pair(lhs, builder.variable(newType)));
+                    const VariablePtr& newVar = builder.variable(newType);
+//                    cl_mems.insert(std::make_pair(lhs, newVar));
+                    cl_mems[lhs] = newVar;
 
-                    std::cout << "asdfasdfasdfasdf " << cl_mems[lhs] << " asdflöj " << newType << std::endl;
+                    std::cout << "asdfasdfasdfasdf " << cl_mems[lhs] << " asdflöj " << newVar << std::endl;
+                    cl_mems.begin();
+                    cl_mems.end();
+                    for(auto I = cl_mems.begin(); I != cl_mems.end();  ++I) {
+                        std::cout << *I << std::endl;
+                    }
 
                     return builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
                 }
@@ -168,7 +175,10 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
                         const DeclarationStmtPtr newDecl = builder.declarationStmt(var, builder.refNew(newInit));
 
-                        cl_mems.insert(std::make_pair(var,builder.variable(newType)));
+                        const VariablePtr& newVar = builder.variable(newType);
+
+//                        cl_mems.insert(std::make_pair(var, newVar));
+                        cl_mems[var] = newVar;
 
 //                        std::cout << "NEW TYPE: " << newType << std::endl;
                         return newDecl;
@@ -181,6 +191,38 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
     return element->substitute(builder.getNodeManager(), *this);
 }
 
+const NodePtr HostMapper2ndPass::resolveElement(const NodePtr& element) {
+    // stopp recursion at type level
+    if (element->getNodeCategory() == NodeCategory::NC_Type) {
+        return element->substitute(builder.getNodeManager(), *this);
+    }
+
+    if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
+        if(cl_mems[var])
+            return cl_mems[var];
+    }
+
+    if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
+        const VariablePtr& var = decl->getVariable();
+        if(cl_mems[var]) {
+            if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
+
+                if(initFct->getArgument(0) == builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem"))))) {
+                    TypePtr newType;
+                    if(const RefTypePtr& rt = dynamic_pointer_cast<const RefType>(cl_mems[var]->getType()))
+                        newType = rt->getElementType();
+                    else
+                        newType = cl_mems[var]->getType();
+                    return builder.declarationStmt(cl_mems[var], builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
+                }
+            }
+        }
+    }
+
+    return element->substitute(builder.getNodeManager(), *this);
+}
+
+
 void HostVisitor::visitCallExpr(const CallExprAddress& callExpr) {
     std::cout << callExpr->toString() << " FOUND\n";
 //    newProg = dynamic_pointer_cast<const Program>(transform::replaceNode(builder.getNodeManager(), callExpr, builder.getThreadId(), true));
@@ -192,15 +234,10 @@ ProgramPtr HostCompiler::compile() {
 //    HostVisitor oclHostVisitor(builder, mProgram);
     HostMapper oclHostMapper(builder);
 
-//    visitAll(ProgramAddress(mProgram), oclHostVisitor);
-
-//    mProgram = oclHostVisitor.getNewProg();
-
-//    return mProgram;
-
     const NodePtr progNode = oclHostMapper.mapElement(0, mProgram);
+    HostMapper2ndPass ohm2nd(builder, oclHostMapper.getClMemMapping());
 
-    if(ProgramPtr newProg = dynamic_pointer_cast<const Program>(progNode)) {
+    if(ProgramPtr newProg = dynamic_pointer_cast<const Program>(ohm2nd.mapElement(0, progNode))) {
         mProgram = newProg;
         return newProg;
     }
