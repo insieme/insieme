@@ -241,8 +241,26 @@ namespace formatting {
 				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUniform(), false, { OUT("{}"); });
-		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUndefined(), false, { OUT("{}"); });
+		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUniform(), false, {
+
+				// define resulting vector structure (includes init_uniform constructor)
+				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+
+				// use constructor to generate the vector
+				OUT(typeName);
+				OUT("_init_uniform(");
+				VISIT_ARG(0);
+				OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUndefined(), false, {
+				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+
+				// just create a instance, random data inside
+				OUT("(");
+				OUT(typeName);
+				OUT("){}");
+		});
 
 
 		// struct operations

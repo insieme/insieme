@@ -337,7 +337,8 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	string name = nameGenerator.getName(ptr);
 
 	// look up element type info
-	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
+	const TypePtr& elementType = ptr->getElementType();
+	const TypeInfo& elementTypeInfo = resolveType(elementType);
 
 	// check whether the type has been resolved while resolving the sub-type
 	auto pos = typeDefinitions.find(ptr);
@@ -350,9 +351,25 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	code->addDependency(elementTypeInfo.definition);
 
 	// add struct definition
+	string size = toString(*ptr->getSize());
 	code << "typedef struct _" << name << " { \n";
-	code << "    " << elementTypeInfo.lValueName << " data[" << toString(*ptr->getSize()) << "];\n";
+	code << "    " << elementTypeInfo.lValueName << " data[" << size << "];\n";
 	code << "} " << name << ";\n";
+
+
+	// ---------------------- add init uniform ---------------------
+	code << "\n";
+	code << "// A constructor initializing a vector of the type " << name << " uniformly\n";
+	code << "static inline " << name << " " << name << "_init_uniform(";
+	code << formatParamter(code, elementType, "value");
+	code << ") {" << CodeBuffer::indR << "\n";
+	code << name << " res;\n";
+	code << "for (int i=0; i<" << size << ";++i) {\n";
+	code << "    " << "res.data[i] = value;\n";
+	code << "}\n";
+	code << "return res;";
+	code << CodeBuffer::indL << "\n}\n\n";
+
 
 	// construct type info including external type representation (as a pointer)
 	string externalName = elementTypeInfo.externName + "*";
