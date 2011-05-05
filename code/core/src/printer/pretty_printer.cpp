@@ -862,10 +862,6 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::printer::Pretty
 std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceLocationMap& srcMap) {
 	using namespace insieme::core::printer;
 
-	out << "#########################################" << std::endl;
-	out << "#          Source Location Map          #" << std::endl;
-	out << "#########################################" << std::endl;
-
 	for(SourceLocationMap::const_iterator it = srcMap.begin(), end=srcMap.end(); it != end; ++it) {
 		std::string&& stmt = it->second->toString();
 		size_t length = stmt.length();
@@ -876,7 +872,9 @@ std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::Sourc
 		if(length < 10)
 			out << stmt;
 		else {
-			out << stmt.substr(0,10) << "..." << stmt.substr(length-4, length-1); 
+			// we want to show the last 5 chars just to give an idea of the context
+			size_t remains = (length-10)>5?5:length-10;
+			out << stmt.substr(0,10) << "..." << stmt.substr(length-remains, length-1); 
 		}
 		out << std::endl;
 	}
