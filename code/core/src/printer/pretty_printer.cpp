@@ -265,13 +265,13 @@ namespace {
 					return;
 				}
 
-				out << "<" << join(", ", types, [&](std::ostream&, const TypePtr& cur){ this->visit(cur); } );
+				out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur){ this->visit(cur); } );
 
 				if ( !types.empty() && !intTypes.empty() ) {
-			   		out << ", ";	
+			   		out << ",";	
 				}
 
-				out << join(", ", intTypes, 
+				out << join(",", intTypes, 
 							[&](std::ostream& jout, const IntTypeParamPtr& cur){ jout << *cur; } ) << ">"; 
 		});
 
@@ -303,6 +303,11 @@ namespace {
 			    }) << ">";
 		});
 
+		PRINT(TupleType, {
+				out << '(' << join(",", node->getElementTypes(), 
+						[&](std::ostream&,const TypePtr& cur){ this->visit(cur); }) 
+					<< ')';
+		});
 
 		PRINT(Type,{
 				out << *node;
@@ -701,7 +706,7 @@ namespace {
 		std::ostream& out;
 		// keep track of the current position in the output stream
 		SourceLocation currLoc;
-		static const size_t width = 5;
+		static const size_t width = 8;
 		static const size_t textWidth = 120;
 
 		void newLine() {
