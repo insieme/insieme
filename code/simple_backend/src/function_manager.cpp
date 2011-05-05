@@ -125,13 +125,14 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	externalFunctions.insert(std::make_pair(literal, protoType));
 
 	TypeManager& typeManager = cc.getTypeManager();
-	protoType << typeManager.getTypeInfo(protoType, returnType).externName << " " << name << "(";
-	//protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
-	protoType << join(", ", type->getParameterTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
-		out << typeManager.getTypeInfo(protoType, cur).externName;
-	});
-	protoType << ");\n";
-
+	if (name != "atoi") { // TODO: fix list of functions included via headers
+		protoType << typeManager.getTypeInfo(protoType, returnType).externName << " " << name << "(";
+		//protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
+		protoType << join(", ", type->getParameterTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
+			out << typeManager.getTypeInfo(protoType, cur).externName;
+		});
+		protoType << ");\n";
+	}
 
 	// do not create a wrapper if a variable argument list is included
 	if (contains(type->getParameterTypes(), cc.getNodeManager().basic.getVarList(), equal_target<TypePtr>())) {
@@ -324,25 +325,6 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	return function;
 }
 
-namespace {
-
-	/**
-	 * Extracts a list of expressions captured by the given bind node.
-	 */
-	vector<ExpressionPtr> getCapturedValues(const core::BindExprPtr& bind) {
-		const vector<VariablePtr>& params = bind->getParameters();
-		vector<ExpressionPtr> captured = bind->getCall()->getArguments();
-		std::remove_if(captured.begin(), captured.end(), [&](const ExpressionPtr& cur) {
-			if (cur->getNodeType() != NT_Variable) {
-				return false;
-			}
-			const VariablePtr& var = static_pointer_cast<const Variable>(cur);
-			return contains(params, var, equal_target<VariablePtr>());
-		});
-		return captured;
-	}
-}
-
 
 void FunctionManager::createClosure(const CodeFragmentPtr& target, const core::BindExprPtr& bind) {
 
@@ -357,7 +339,7 @@ void FunctionManager::createClosure(const CodeFragmentPtr& target, const core::B
 	string ctrName = name + "_ctr";
 
 	// filter all captured arguments
-	vector<ExpressionPtr> captured = getCapturedValues(bind);
+	vector<ExpressionPtr> captured = bind->getBoundExpressions();
 
 	// obtain name of resulting function type and add cast
 	string funTypeName = cc.getTypeManager().getTypeName(target, bind->getType());
@@ -416,7 +398,7 @@ CodeFragmentPtr FunctionManager::resolve(const BindExprPtr& bind) {
 	// add captured expressions
 	int captureCounter = 0;
 	const vector<ExpressionPtr>& args = bind->getCall()->getArguments();
-	vector<ExpressionPtr> captured = getCapturedValues(bind);
+	vector<ExpressionPtr> captured = bind->getBoundExpressions();
 	for_each(args, [&](const ExpressionPtr& cur) {
 		variableMap.insert(std::make_pair(cur, format("c%d", ++captureCounter)));
 	});
