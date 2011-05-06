@@ -1305,6 +1305,26 @@ public:
 			VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 			if ( lhsTy->getNodeType() != core::NT_ArrayType || rhsTy->getNodeType() != core::NT_ArrayType ) {
+
+				// ----------------------------- Hack begin --------------------------------
+				// TODO: this is a quick solution => maybe clang allows you to determine the actual type
+				// => otherwise the sub-type checks within the core may be used
+				//
+				// Bug fixed by this:
+				//		when multiplying an integer with a double, the double is casted to an integer and the
+				//		results is an integer.
+				//
+
+				// check whether result type needs to be adjusted
+				if (*lhsTy != *rhsTy) {
+					// if second argument is a real
+					if (!gen.isReal(lhsTy) && gen.isReal(rhsTy)) {
+						exprTy = rhsTy;
+					}
+				}
+
+				// ----------------------------- Hack end --------------------------------
+
 				lhs = convFact.castToType(exprTy, lhs);
 				rhs = convFact.castToType(exprTy, rhs);
 				// Handle pointers arithmetic
