@@ -865,8 +865,8 @@ private:
 			if ( argId < funcTy->getParameterTypes().size() ) {
 				const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId];
 				arg = convFact.castToType(funcArgTy, arg);
-				// LOG(ERROR) << *funcArgTy << " " << *arg->getType();
-				// assert(funcArgTy == arg->getType() && "Argument passed to call expression not compatible with the signature of called function");
+			} else {
+				arg = convFact.castToType(builder.getNodeManager().basic.getVarList(), arg);
 			}
 			args.push_back( arg );
 		}
