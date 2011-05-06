@@ -15,10 +15,11 @@ file(GLOB insieme_xml_incs 	include/*.h )
 # -------------------------------------------------------------- Xerces library
 option (USE_XML "Build XML support in Insieme" ON) 
 
-if (USE_XML) 
-	list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
+list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
+
+if (USE_XML) 	
 	find_package(Xerces)
-	if ( NOT Xerces_FOUND )
+	if ( NOT ${Xerces_FOUND} )
 		message("Xerces library not found, XML support will be disabled!")
 		set(USE_XML OFF)
 	endif()
