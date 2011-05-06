@@ -198,10 +198,13 @@ namespace simple_backend {
 			vector<TypePtr> params = toVector<TypePtr>(basic.getInt4(),
 					builder.refType(builder.arrayType(builder.arrayType(basic.getChar(), one), one)));
 
-			FunctionTypePtr funPtr = builder.functionType(params, basic.getInt4());
+			FunctionTypePtr funPtr1 = builder.functionType(params, basic.getInt4());
+			FunctionTypePtr funPtr2 = builder.functionType(TypeList(), basic.getInt4());
+			FunctionTypePtr funPtr3 = builder.functionType(TypeList(), basic.getUnit());
 
 			// check type
-			return program->getEntryPoints()[0]->getType() == funPtr;
+			const TypePtr& type = program->getEntryPoints()[0]->getType();
+			return *type == *funPtr1 || *type == *funPtr2 || *type == *funPtr3;
 		}
 
 	}
@@ -212,7 +215,7 @@ namespace simple_backend {
 		// TODO: remove second clause when frontend is fixed ...
 
 		// check whether program is a main program
-		if (true || program->isMain() || isMainProgram(program)) {
+		if (program->isMain() || isMainProgram(program)) {
 
 			// create main program + argument wrapper (if necessary)
 			CodeFragmentPtr code = CodeFragment::createNew("main function");
@@ -317,32 +320,25 @@ namespace simple_backend {
 		info.location = VariableManager::NONE;
 		bool isAllocatedOnHEAP = false;
 		if (var->getType()->getNodeType() == NT_RefType) {
-
-			const RefTypePtr& refType = static_pointer_cast<const RefType>(var->getType());
-//			if (refType->getElementType()->getNodeType() == NT_ArrayType) {
-//				// this is a "pointer" in C - and a pointer is on the stack (pointing to the HEAP)
-//				info.location = VariableManager::STACK;
-//			} else {
-				ExpressionPtr initialization = ptr->getInitialization();
-				switch (initialization->getNodeType()) {
-				case NT_Variable:
-					info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
-					break;
-				case NT_CallExpr:
-					if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
-						info.location = VariableManager::HEAP;
-						isAllocatedOnHEAP = true;
-					} else {
-						info.location = VariableManager::STACK;
-					}
-
-					break;
-				default:
-					// default is a stack variable
+			ExpressionPtr initialization = ptr->getInitialization();
+			switch (initialization->getNodeType()) {
+			case NT_Variable:
+				info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
+				break;
+			case NT_CallExpr:
+				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
+					info.location = VariableManager::HEAP;
+					isAllocatedOnHEAP = true;
+				} else {
 					info.location = VariableManager::STACK;
-					break;
 				}
-//			}
+
+				break;
+			default:
+				// default is a stack variable
+				info.location = VariableManager::STACK;
+				break;
+			}
 		}
 		varManager.addInfo(var, info);
 
