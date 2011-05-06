@@ -159,8 +159,7 @@ public:
 		XmlElement functionType("functionType", doc);
 		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
 		
-		appendList(functionType, cur->getCaptureTypes(), "captureTypeList", "typePtr");
-		appendList(functionType, cur->getArgumentTypes(), "argumentTypeList", "typePtr");
+		appendList(functionType, cur->getParameterTypes(), "parameterTypeList", "typePtr");
 
 		XmlElement returnType("returnType", doc);
 		append(returnType, cur->getReturnType(), "typePtr");
@@ -588,7 +587,6 @@ public:
 		append(type, cur->getType(), "functionTypePtr");
 		lambda << type;
 
-		appendList(lambda, cur->getCaptureList(), "captureList", "variablePtr");
 		appendList(lambda, cur->getParameterList(), "paramList", "variablePtr");
 
 		XmlElement body("body", doc);
@@ -636,7 +634,7 @@ public:
 		visitAnnotations(cur->getAnnotations(), tupleProjectionExpr);
 	}
 	
-	void visitCaptureInitExpr (const CaptureInitExprPtr& cur){
+	/*void visitCaptureInitExpr (const CaptureInitExprPtr& cur){
 		XmlElement captureInitExpr("captureInitExpr", doc);
 		rootElem << (captureInitExpr << XmlElement::Attribute("id", GET_ID(cur)));
 		
@@ -651,7 +649,7 @@ public:
 		appendList(captureInitExpr, cur->getValues(), "values", "expressionPtr");
 		
 		visitAnnotations(cur->getAnnotations(), captureInitExpr);
-	}
+	}*/
 	
 	void visitMarkerStmt(const MarkerStmtPtr& cur) {
 		XmlElement markerStmt("markerStmt", doc);

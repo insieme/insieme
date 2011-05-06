@@ -188,9 +188,9 @@ TEST(XmlTest, GenericTypeTest) {
 TEST(XmlTest, FunctionTypeTest) {
 	NodeManager manager;
 
-	GenericTypePtr type1 = GenericType::get(manager, "val");
-	GenericTypePtr type2 = GenericType::get(manager, "int");
-	GenericTypePtr type3 = GenericType::get(manager, "var");
+	GenericTypePtr type1 = GenericType::get(manager, "A");
+	GenericTypePtr type2 = GenericType::get(manager, "B");
+	GenericTypePtr type3 = GenericType::get(manager, "R");
 
 	DummyAnnotationPtr dummy_fn(new DummyAnnotation("fun n"));
 	DummyAnnotationPtr dummy_rn(new DummyAnnotation("ret n"));
@@ -199,7 +199,11 @@ TEST(XmlTest, FunctionTypeTest) {
 	type1->addAnnotation(dummy_an);
 	type2->addAnnotation(dummy_rn);
 
-	FunctionTypePtr funType1 = FunctionType::get(manager, TypeList(), toVector<TypePtr>(type1, type3), type2);
+	TypeList list;
+	list.push_back(type1);
+	list.push_back(type2);
+
+	FunctionTypePtr funType1 = FunctionType::get(manager, list, type3);
 
 	funType1->addAnnotation(dummy_fn);
 
@@ -1006,12 +1010,12 @@ TEST(XmlTest, VariableTest) {
 }
 
 TEST(XmlTest, JobExprTest) {
-    NodeManager manager;
+	NodeManager manager;
 	ASTBuilder builder(manager);
 
 	TypePtr intType = manager.basic.getUIntGen();
-	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(), manager.basic.getUnit());
-	FunctionTypePtr guardType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(intType, intType), manager.basic.getBool());
+	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.basic.getUnit());
+	FunctionTypePtr guardType = FunctionType::get(manager, toVector<TypePtr>(intType, intType), manager.basic.getBool());
 
 	ExpressionPtr handlerA = Variable::get(manager, funType);
 	ExpressionPtr handlerB = Variable::get(manager, funType);
@@ -1063,21 +1067,21 @@ TEST(XmlTest, LambdaTest) {
 	GenericTypePtr type2 = GenericType::get(manager, "int");
 	GenericTypePtr type3 = GenericType::get(manager, "var");
 	
-	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), toVector<TypePtr>(type1, type3), type2);
+	TypeList list;
+	list.push_back(type1);
+	list.push_back(type2);
+	
+	FunctionTypePtr funType = FunctionType::get(manager, list, type3);
 	
 	Lambda::ParamList paramList;
 	paramList.push_back(Variable::get(manager, manager.basic.getBool(), 1));
 	paramList.push_back(Variable::get(manager, manager.basic.getBool(), 2));	
 	
-	Lambda::CaptureList captureList;
-	captureList.push_back(Variable::get(manager, manager.basic.getBool(), 3));
-	captureList.push_back(Variable::get(manager, manager.basic.getBool(), 4));
-
 	StatementPtr body = ReturnStmt::get(manager, manager.basic.getTrue());
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
 	body->addAnnotation(dummy_bn);
 	
-	LambdaPtr expr = Lambda::get(manager, funType,captureList, paramList, body);
+	LambdaPtr expr = Lambda::get(manager, funType, paramList, body);
 	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lambda n"));
 	expr->addAnnotation(dummy_ln);
 
@@ -1201,17 +1205,16 @@ TEST(XmlTest, TupleProjectionExprTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-TEST(XmlTest, CaptureInitExpr) {
+/*TEST(XmlTest, CaptureInitExpr) {
 	NodeManager manager;
 
 	TypePtr res = GenericType::get(manager,"A");
-	FunctionTypePtr funType2 = FunctionType::get(manager, toVector(res,res), TypeList(), res);
-	VariablePtr captureVar = Variable::get(manager, res);
+	FunctionTypePtr funType2 = FunctionType::get(manager, TypeList(), res);
 	
 	LiteralPtr initValue = Literal::get(manager, res, "X");
 	LiteralPtr initValue2 = Literal::get(manager, res, "Y");
 	
-	LambdaExprPtr lambda2 = LambdaExpr::get(manager, funType2, toVector<VariablePtr>(captureVar), Lambda::ParamList(), ReturnStmt::get(manager, Literal::get(manager, res, "A")));
+	LambdaExprPtr lambda2 = LambdaExpr::get(manager, funType2, Lambda::ParamList(), ReturnStmt::get(manager, Literal::get(manager, res, "A")));
 	
 	CaptureInitExprPtr expr = CaptureInitExpr::get(manager, lambda2, toVector<ExpressionPtr>(initValue, initValue2));
 	DummyAnnotationPtr dummy_cn(new DummyAnnotation("capinit n"));
@@ -1233,7 +1236,7 @@ TEST(XmlTest, CaptureInitExpr) {
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}
+}*/
 
 TEST(XmlTest, MarkerStmtTest) {
 	NodeManager manager;
