@@ -66,7 +66,7 @@ namespace formatting {
 		/**
 		 * Handles the initialization of a ref-variable.
 		 */
-		void handleRefConstructor(StmtConverter& converter, const NodePtr& initValue, bool isNew);
+		void handleRefConstructor(StmtConverter& converter, const TypePtr& resultType, const NodePtr& initValue, bool isNew);
 	}
 
 	FormatTable getBasicFormatTable(const core::lang::BasicGenerator& basic) {
@@ -101,7 +101,7 @@ namespace formatting {
 				VISIT_ARG(1);
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), false); });
+		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, CALL->getType(), ARG(0), false); });
 		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, {
 				//handleRefConstructor(STMT_CONVERTER, ARG(0), true);
 
@@ -157,6 +157,13 @@ namespace formatting {
 				OUT("(");
 				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
 				OUT("){0,{0}}");
+		});
+
+		ADD_FORMATTER(res, basic.getPtrEq(), {
+				VISIT_ARG(0);
+				OUT(".data == ");
+				VISIT_ARG(1);
+				OUT(".data");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getRefToAnyRef(), false, {
@@ -502,7 +509,7 @@ namespace formatting {
 			return core::transform::tryInlineToExpr(manager, call);
 		}
 
-		void handleRefConstructor(StmtConverter& converter, const NodePtr& initValue, bool isNew) {
+		void handleRefConstructor(StmtConverter& converter, const TypePtr& resultType, const NodePtr& initValue, bool isNew) {
 
 			// check input parameters
 			assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
@@ -522,6 +529,7 @@ namespace formatting {
 			CodeFragmentPtr code = converter.getCurrentCodeFragment();
 			TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
 			string typeName = converter.getConversionContext().getTypeManager().getTypeName(code, type, true);
+			string resTypeName = converter.getConversionContext().getTypeManager().getTypeName(code, resultType, false);
 
 			// use stack or heap allocator
 			string allocator = (isNew)?"malloc":"alloca";
@@ -564,6 +572,7 @@ namespace formatting {
 
 			// TODO: use memset for other initializations => see memset!!
 
+			code << "((" << resTypeName << ")";
 			code << "memcpy(";
 			code << allocator << "(";
 			code << "sizeof(";
@@ -580,7 +589,7 @@ namespace formatting {
 //			code << "}), sizeof(";
 
 			code << typeName;
-			code << "))";
+			code << ")))";
 		}
 	}
 
