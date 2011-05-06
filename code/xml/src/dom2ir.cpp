@@ -421,17 +421,17 @@ public:
 		return createIrNode<Lambda>(elem, typeT, paramList, body);
 	}
 	
-	/*NodePtr handle_captureInitExpr(const XmlElement& elem) {
-		ExpressionPtr&& lambda = createNode<Expression>(elem, "lambda", "expressionPtr");
-		
-		XmlElementList&& vals = elem.getFirstChildByName("values")->getChildrenByName("expressionPtr");
-		CaptureInitExpr::Values values;
-		for(auto iter = vals.begin(), end = vals.end(); iter != end; ++iter) {
-			values.push_back(createNode<Expression>(*iter));
+	NodePtr handle_bindExpr(const XmlElement& elem) {
+		XmlElementList&& pars = elem.getFirstChildByName("paramList")->getChildrenByName("variablePtr");
+		Lambda::ParamList paramList;
+		for(auto iter = pars.begin(), end = pars.end(); iter != end; ++iter) {
+			paramList.push_back(createNode<Variable>(*iter));
 		}
-		
-		return createIrNode<CaptureInitExpr>(elem, lambda, values);
-	}*/
+
+		CallExprPtr&& call = createNode<CallExpr>(elem, "call", "callExprPtr");
+
+		return createIrNode<BindExpr>(elem, paramList, call);
+	}
 	
 	NodePtr handle_memberAccessExpr(const XmlElement& elem) {
 		ExpressionPtr&& expr = createNode<Expression>(elem, "subExpression", "expressionPtr");
@@ -500,7 +500,7 @@ public:
 		DISPATCH(continueStmt)		DISPATCH(compoundStmt)		DISPATCH(declarationStmt)	DISPATCH(structExpr)			DISPATCH(unionExpr)
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
-		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			/*DISPATCH(captureInitExpr)*/	DISPATCH(tupleProjectionExpr)	DISPATCH(markerStmt)
+		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(bindExpr)	DISPATCH(tupleProjectionExpr)	DISPATCH(markerStmt)
 		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(returnStmt)		DISPATCH(breakStmt)				DISPATCH(identifier)
 		assert(false && "XML node not handled!");
 	}
