@@ -985,6 +985,43 @@ TEST(XmlTest, CallExprTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
+TEST(XmlTest, BindExprTest) {
+	NodeManager manager;
+
+	TypePtr typeA = GenericType::get(manager, "A");
+	TypePtr typeRes = GenericType::get(manager, "R");
+	
+	FunctionTypePtr funTypeC = FunctionType::get(manager, toVector(typeA, typeA), typeRes);
+	LiteralPtr funC = Literal::get(manager, funTypeC, "h");
+
+	VariablePtr captureVar1 = Variable::get(manager, typeA, 1);
+	VariablePtr captureVar2 = Variable::get(manager, typeA, 2);
+
+	CallExprPtr callC4 = CallExpr::get(manager, manager.basic.getBool(), funC, toVector<ExpressionPtr>(captureVar2, captureVar1));	
+	BindExprPtr bind = BindExpr::get(manager, toVector<VariablePtr>(captureVar1,captureVar2), callC4);
+		
+	DummyAnnotationPtr dummy_bn(new DummyAnnotation("bind n"));
+	bind->addAnnotation(dummy_bn);
+	
+	NodePtr root = bind;
+	
+	XmlUtil xml;
+	xml.convertIrToDom(root);
+	string s1 = xml.convertDomToString();
+	xml.convertDomToXml("dump1.xml");
+	xml.convertXmlToDom("dump1.xml", true);
+	string s2 = xml.convertDomToString();
+	EXPECT_EQ (s1, s2);
+	
+	NodeManager manager2;
+	NodePtr root2 = xml.convertDomToIr(manager2);
+	
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+	
+}
+
 TEST(XmlTest, VariableTest) {
 	NodeManager manager;
 	VariablePtr var1 = Variable::get(manager, manager.basic.getInt8());
@@ -1038,7 +1075,6 @@ TEST(XmlTest, JobExprTest) {
 	ExpressionPtr range = builder.getThreadNumRange(1,40);
 	JobExprPtr job = JobExpr::get(manager, range, defaultHandler, stmts, localDeclarations);
 	
-	//JobExprPtr job = JobExpr::get(manager, defaultHandler, stmts, localDeclarations);
 	DummyAnnotationPtr dummy_jn(new DummyAnnotation("job n"));
 	job->addAnnotation(dummy_jn);
 	

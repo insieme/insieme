@@ -90,6 +90,12 @@
     </xs:sequence>   
 </xs:complexType>
 
+<xs:complexType name="T_callExprPtr">
+	<xs:sequence>
+		<xs:element name="callExprPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
+	</xs:sequence>
+</xs:complexType>
+
 <xs:complexType name="T_lambdaDefinitionPtr">
 	<xs:sequence>
 		<xs:element name="lambdaDefinitionPtr" type="T_nodePtr" minOccurs="1" maxOccurs="1"/>
@@ -253,6 +259,15 @@
 		<xs:element name="guardedStatements" type="T_guardedStatements" minOccurs="1" maxOccurs="1"/>		
 		<xs:element name="defaultStatement" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="threadNumRange" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>		
+		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
+	</xs:sequence>
+		<xs:attribute name="id" type="xs:integer" use="required"/>
+</xs:complexType>
+
+<xs:complexType name="T_bindExpr">
+	<xs:sequence>
+		<xs:element name="paramList" type="T_listVariablePtr" minOccurs="1" maxOccurs="1"/>
+		<xs:element name="call" type="T_callExprPtr" minOccurs="1" maxOccurs="1"/>
 		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
 	</xs:sequence>
 		<xs:attribute name="id" type="xs:integer" use="required"/>
@@ -506,16 +521,6 @@
 		<xs:attribute name="id" type="xs:integer" use="required"/>
 </xs:complexType>
 
-<xs:complexType name="T_captureInitExpr"> 
-	<xs:sequence>
-		<xs:element name="type" type="T_functionTypePtr" minOccurs="1" maxOccurs="1"/>
-		<xs:element name="lambda" type="T_expressionPtr" minOccurs="1" maxOccurs="1"/>
-		<xs:element name="values" type="T_listExpressionPtr" minOccurs="1" maxOccurs="1"/>		
-		<xs:element name="annotations" type="T_annotations" minOccurs="0" maxOccurs="1"/>	
-	</xs:sequence>
-		<xs:attribute name="id" type="xs:integer" use="required"/>
-</xs:complexType>
-
 <xs:complexType name="T_concreteIntTypeParam"> 
 	<xs:sequence>
 		<xs:element name="concrete" type="T_intConcrete" minOccurs="1" maxOccurs="1"/>
@@ -580,8 +585,8 @@
 		<xs:element name="switchStmt" type="T_switchStmt"/>
 		<xs:element name="whileStmt" type="T_whileStmt"/>
 		
+		<xs:element name="bindExpr" type="T_bindExpr"/>
 		<xs:element name="callExpr" type="T_callExpr"/>
-		<xs:element name="captureInitExpr" type="T_captureInitExpr"/>
 		<xs:element name="castExpr" type="T_castExpr"/>
 		<xs:element name="jobExpr" type="T_jobExpr"/>
 		<xs:element name="lambdaExpr" type="T_lambdaExpr"/>
