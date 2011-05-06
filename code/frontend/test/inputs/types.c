@@ -69,11 +69,14 @@ void basic_type_test() {
 	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({{cast<real<4>>(0)},{cast<real<4>>(0)}})"
 	float vvvv[][1] = { {0}, {0} };
 
-	#pragma test "ref<array<int<4>,1>> v1 = anyref.to.ref(null, array<int<4>,1>)"	
+	#pragma test "ref<array<int<4>,1>> v1 = ref.var(get.null(int<4>))"	
 	int* b1 = 0;
 
-	#pragma test "ref<array<array<array<int<4>,1>,1>,1>> v1 = anyref.to.ref(null, array<array<array<int<4>,1>,1>,1>)"
+	#pragma test "ref<array<array<array<int<4>,1>,1>,1>> v1 = ref.var(get.null(array<array<int<4>,1>,1>))"
 	int*** c1 = 0;
+
+	#pragma test "ref.assign(v1, get.null(array<array<int<4>,1>,1>))"
+	c1 = 0; 
 
 	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
 	//char str[10] = "Hello Mum";

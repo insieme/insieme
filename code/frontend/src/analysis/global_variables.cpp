@@ -167,13 +167,14 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
  */
 GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conversion::ConversionFactory& fact) const {
 	// no global variable found, we return an empty tuple
-	if(globals.empty())
+	if ( globals.empty() ) {
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
+	}
 
 	const core::ASTBuilder& builder = fact.getASTBuilder();
 	core::StructType::Entries entries;
 	core::StructExpr::Members members;
-	for(auto it = globals.begin(), end = globals.end(); it != end; ++it) {
+	for ( auto it = globals.begin(), end = globals.end(); it != end; ++it ) {
 		// get entry type and wrap it into a reference if necessary
 		auto fit = varTU.find(it->first);
 		assert(fit != varTU.end());
@@ -187,7 +188,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conv
 
 		bool addPtr = false;
 		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
-		if(it->second) {
+		if ( it->second ) {
 			/*
 			 * the variable is defined as extern, so we don't have to allocate memory
 			 * for it just refer to the memory location someone else has initialized
@@ -207,10 +208,10 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conv
 		if(it->second) {
 			initExpr = builder.literal(it->first->getNameAsString(), type);
 		} else {
-			if(it->first->getInit()) {
+			if ( it->first->getInit() ) {
 				// this means the variable is not declared static inside a function so we have to initialize its value
 				initExpr = fact.convertInitExpr(it->first->getInit(), type, false);
-				if(addPtr && !builder.getBasicGenerator().isNullPtr(type)) {
+				if ( addPtr ) {
 					initExpr = builder.callExpr(type, builder.getBasicGenerator().getArrayCreate1D(),
 						initExpr, builder.intLit(1)
 					);

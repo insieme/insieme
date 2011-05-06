@@ -328,9 +328,9 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //											CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
-	if ( mgr.basic.isAnyRef(type) ) {
-		return mgr.basic.getNull();
-	}
+	//if ( mgr.basic.isAnyRef(type) ) {
+		//return mgr.basic.getNull();
+	//}
 	// handle integers initialization
     if ( mgr.basic.isInt(type) ) {
         // initialize integer value
@@ -398,7 +398,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	if(arrTy->getElementType()->getNodeType() == core::NT_RefType) {
     		const core::RefTypePtr& ref = core::static_pointer_cast<const core::RefType>(arrTy->getElementType());
     		if(ref->getElementType()->getNodeType() != core::NT_VectorType) {
-    			return mgr.basic.getNull();
+    			return builder.callExpr(mgr.basic.getGetNull(), mgr.basic.getTypeLiteral(arrTy));
     		}
     	}
 		return castToType(arrTy, defaultInitVal(arrTy->getElementType()));

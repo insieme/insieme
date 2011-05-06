@@ -120,9 +120,9 @@ LITERAL(False, "false", "bool")
 
 TYPE(Alpha, "'a")
 TYPE(RefAlpha, "ref<'a>")
-TYPE(NullPtr, "anyRef")
+// TYPE(NullPtr, "anyRef")
 
-LITERAL(Null, "null", "anyRef")
+// LITERAL(Null, "null", "anyRef")
 TYPE(VarList, "var_list")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------

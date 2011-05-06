@@ -366,6 +366,8 @@ public:
 				init = callExpr->getArguments()[0];
 				assert(init->getType()->getNodeType() != core::NT_RefType &&
 					"Initialization value of induction variable must be of non-ref type");
+			} else if (init->getType()->getNodeType() == core::NT_RefType) {
+				init = builder.deref(init);
 			}
 
 			if ( loopAnalysis.isInverted() ) {
