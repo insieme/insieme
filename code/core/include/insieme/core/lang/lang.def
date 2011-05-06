@@ -263,6 +263,10 @@ OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
 
+// Conversion ---------------------------------------------------------------------------------------------------------
+
+LITERAL(RealToInt,	"real.to.int",	"(real<#a>, intTypeParam<#b>) -> int<#b>")
+
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
 GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)

@@ -138,11 +138,6 @@ namespace formatting {
 				OUT(")");
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getSetNull(), false, {
-//				VISIT_ARG(0);
-//				OUT("=0");
-		});
-
 		ADD_FORMATTER_DETAIL(res, basic.getIsNull(), false, {
 				OUT("(");
 				VISIT_ARG(0);
@@ -409,6 +404,12 @@ namespace formatting {
 		ADD_FORMATTER(res, basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
+		ADD_FORMATTER(res, basic.getRealToInt(), {
+				OUT("(");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType(), true));
+				OUT(")");
+				VISIT_ARG(0);
+		});
 
 		// string conversion
 		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, {

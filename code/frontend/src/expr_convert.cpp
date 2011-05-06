@@ -804,7 +804,7 @@ public:
 		const core::lang::BasicGenerator& gen = convFact.mgr.getBasicGenerator();
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
-		
+
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
 		// if the cast is to a 'void*' type then we simply skip it
@@ -838,8 +838,19 @@ public:
 			return subExpr;
 		}
 
-		if (subExpr->getType()->getNodeType() == core::NT_RefType)
-		   return subExpr; // do not treat ref types
+		// handle truncation of floating point numbers
+		const core::TypePtr& subExprType = subExpr->getType();
+		if (subExprType->getNodeType() == core::NT_RefType) {
+			const core::RefTypePtr& sourceType = static_pointer_cast<const core::RefType>(subExprType);
+
+			// check whether it is a truncation
+			if (gen.isReal(sourceType->getElementType()) && gen.isSignedInt(type)) {
+				const core::GenericTypePtr& intType = static_pointer_cast<const core::GenericType>(type);
+				return convFact.builder.callExpr(type, gen.getRealToInt(), nonRefExpr, gen.getIntTypeParamLiteral(intType->getIntTypeParameter()[0]));
+			}
+
+			return subExpr;  // do not treat ref types
+		}
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
 		//if(!gen.isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
