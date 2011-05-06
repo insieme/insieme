@@ -259,6 +259,8 @@ namespace {
 
 	ExpressionPtr tryInlineBindToExpr(NodeManager& manager, const CallExprPtr& call) {
 
+		std::cout << " PROCESSING: " << *call << std::endl;
+
 		// extract bind and call expression
 		assert(call->getFunctionExpr()->getNodeType() == NT_BindExpr && "Illegal argument!");
 		BindExprPtr bind = static_pointer_cast<const BindExpr>(call->getFunctionExpr());
@@ -266,10 +268,11 @@ namespace {
 		// process call recursively
 		CallExprPtr innerCall = bind->getCall();
 		ExpressionPtr inlined = tryInlineToExpr(manager, innerCall);
-		if (innerCall == inlined) {
-			// in-lining was not successful
-			return call;
-		}
+//		if (innerCall == inlined) {
+//			// in-lining was not successful
+//			std::cout << " Inner call couldn't be inlined ... " << std::endl;
+//			return call;
+//		}
 
 
 		// check for matching argument number
@@ -292,10 +295,20 @@ namespace {
 		ExpressionPtr res = static_pointer_cast<const Expression>(substituter.mapElement(0, inlined));
 
 		// check result
-		if (substituter.wasSuccessful()) {
-			return res;
+		if (!substituter.wasSuccessful()) {
+			std::cout << " FAILED: " << *res << std::endl;
+			return call;
 		}
-		return call;
+
+		// repeat inlining as often as possible
+		bool successful = true;
+		while(successful && res->getNodeType() == NT_CallExpr) {
+			ExpressionPtr tmp = tryInlineToExpr(manager, static_pointer_cast<const CallExpr>(res));
+			successful = (*tmp != *res);
+			res = tmp;
+		}
+		std::cout << " SUCCESS: " << *res << std::endl;
+		return res;
 	}
 
 }
