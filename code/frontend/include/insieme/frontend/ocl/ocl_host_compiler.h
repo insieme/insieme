@@ -61,8 +61,13 @@ private:
 public:
     Ocl2Inspire(core::NodeManager& mgr) : parser(mgr) {}
 
+    bool extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type );
+
     core::ExpressionPtr getClCreateBuffer();
     core::ExpressionPtr getClWriteBuffer();
+    core::ExpressionPtr getClWriteBufferFallback();
+    core::ExpressionPtr getClReadBuffer();
+    core::ExpressionPtr getClReadBufferFallback();
 
 };
 
@@ -99,7 +104,8 @@ public:
 
 typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string>> HandlerTable;
-typedef boost::unordered_map< core::VariablePtr,  core::VariablePtr> ClmemTable;
+typedef boost::unordered_map<core::VariablePtr,  core::VariablePtr> ClmemTable;
+typedef boost::unordered_map<core::NodePtr, std::vector<core::ExpressionPtr> > KernelArgs;
 
 template<typename Lambda>
 HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambda) {
@@ -118,6 +124,7 @@ class HostMapper : public core::transform::CachedNodeMapping {
     HandlerTable handles;
     ClmemTable cl_mems;
     Ocl2Inspire o2i;
+    KernelArgs kernelArgs;
 
 public:
     HostMapper(core::ASTBuilder& build);
