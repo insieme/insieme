@@ -102,7 +102,24 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), false); });
-		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), true); });
+		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, {
+				//handleRefConstructor(STMT_CONVERTER, ARG(0), true);
+
+				// use new operator of target type
+				TypePtr resType = CALL->getType();
+				const TypeManager::TypeInfo& info = CONTEXT.getTypeManager().getTypeInfo(CODE, resType);
+
+				if (core::analysis::isCallOf(ARG(0), basic.getUndefined())) {
+					CODE << "malloc(sizeof(" << info.lValueName << "))";
+					return;
+				}
+
+				CODE->addDependency(info.utilities);
+
+				CODE << "_ref_new_" << CONTEXT.getNameManager().getName(resType) << "(";
+				VISIT_ARG(0);
+				CODE << ")";
+		});
 
 		ADD_FORMATTER(res, basic.getRefDelete(), {
 
@@ -122,8 +139,8 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getSetNull(), false, {
-				VISIT_ARG(0);
-				OUT("=0");
+//				VISIT_ARG(0);
+//				OUT("=0");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getIsNull(), false, {
@@ -492,13 +509,13 @@ namespace formatting {
 
 			// quick check for arrays => extra handling
 			const core::lang::BasicGenerator& basic = converter.getConversionContext().getLangBasic();
-			if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
-				core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
-
-				// vector creation is sufficient
-				converter.convert(initValue);
-				return;
-			}
+//			if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
+//				core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
+//
+//				// vector creation is sufficient
+//				converter.convert(initValue);
+//				return;
+//			}
 
 
 			// extract type
@@ -551,11 +568,17 @@ namespace formatting {
 			code << allocator << "(";
 			code << "sizeof(";
 			code << typeName;
-			code << ")), &((";
-			code << typeName;
-			code << "[]){";
+
+			code << ")), &(";
 			converter.convert(initValue);
-			code << "}), sizeof(";
+			code << "), sizeof(";
+
+//			code << ")), &((";
+//			code << typeName;
+//			code << "[]){";
+//			converter.convert(initValue);
+//			code << "}), sizeof(";
+
 			code << typeName;
 			code << "))";
 		}

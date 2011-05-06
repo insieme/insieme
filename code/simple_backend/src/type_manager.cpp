@@ -323,8 +323,25 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 		externalization = "((" + externalName + ")((*%s).data))";
 	}
 
+	// ---------------- add a new operator ------------------------
+
+	CodeFragmentPtr code = CodeFragment::createNew("New operator for type " + toString(*ptr));
+	code->addDependency(subType.definition);
+
+	// add struct definition
+	string name = nameGenerator.getName(ptr);
+	const string& result = rvalue;
+	const string& value = subType.lValueName;
+
+	code << "static inline " << result << " _ref_new_" << name << "(" << value << " value) {\n";
+	code << "    " << result << " res = malloc(sizeof(" << value << "));\n";
+	code << "    *res = value;\n";
+	code << "    return res;\n";
+	code << "}\n\n";
+
+
 	return TypeManager::TypeInfo(lvalue, rvalue, lvalue + " %s", rvalue + " %s",
-			externalName, externalName + " %s", externalization, subType.definition);
+			externalName, externalName + " %s", externalization, subType.definition, subType.definition, code);
 
 //	TODO: if
 //	return resolveRefOrVectorOrArrayType(ptr);

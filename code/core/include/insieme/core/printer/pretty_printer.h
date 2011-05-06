@@ -137,7 +137,7 @@ typedef std::pair<size_t, size_t> SourceLocation;
 typedef std::pair<SourceLocation, SourceLocation> SourceRange;
 
 // Map use to map code ranges of the generated IR representation to the corresponding  
-// IR ndoe. (to use NodeAddress in the future maybe) 
+// IR node. (to use NodeAddress in the future maybe)
 typedef std::map<SourceRange, NodePtr> SourceLocationMap;
 
 // Prints the IR to the output stream and in parallel builds the map which associates positions 
