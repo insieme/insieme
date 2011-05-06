@@ -277,7 +277,6 @@ void rank(struct __insieme_globals* var_43, int iteration){
 		{
 			for(int var_68 = 0; var_68 < 5; var_68 += 1) {
 				((k) = (((*(&((*var_43).partial_verify_vals))).data[((unsigned int)((var_68)))])));
-				printf(((char*)((*(&((__insieme_type_1){" k = %d\n"}))).data)), (k));
 				if(((0<=(k))&&((k)<=((1<<20)-1)))){
 					int var_61 = ((int)('W'));
 					switch(var_61) {

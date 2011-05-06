@@ -324,7 +324,6 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 {
                     for(decl ref<int<4>> v68 =  var(0) .. 5 : 1) {
                         v47 := vector.ref.elem(composite.ref.elem(v43, partial_verify_vals, type<vector<int<4>,5>>), v68);
-                        printf(string.as.char.pointer(" k = %d\n"), varlist.pack((v47)));
                         if(0<=v47&&bind(){fun(ref<int<4>> v66)return v66<=int.lshift(1, 20)-1(v47)}) {
                             decl int<4> v61 = 'W';
                             switch(v61) {
@@ -457,7 +456,6 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         {
                             for(decl ref<int<4>> v68 =  var(0) .. 5 : 1) {
                                 v47 := vector.ref.elem(composite.ref.elem(v43, partial_verify_vals, type<vector<int<4>,5>>), v68);
-                                printf(string.as.char.pointer(" k = %d\n"), varlist.pack((v47)));
                                 if(0<=v47&&bind(){fun(ref<int<4>> v66)return v66<=int.lshift(1, 20)-1(v47)}) {
                                     decl int<4> v61 = 'W';
                                     switch(v61) {
@@ -914,7 +912,6 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 {
                     for(decl ref<int<4>> v68 = ( var(0)) .. 5 : 1) {
                         (v47 := ( *vector.ref.elem(composite.ref.elem(v43, partial_verify_vals, type<vector<int<4>,5>>), CAST<uint<4>>(( *v68)))));
-                        printf(string.as.char.pointer(" k = %d\n"), varlist.pack((( *v47))));
                         if(((0<=( *v47))&&bind(){fun(ref<int<4>> v66)return (( *v66)<=(int.lshift(1, 20)-1))(v47)})) {
                             decl int<4> v61 = CAST<int<4>>('W');
                             switch(v61) {
@@ -1047,7 +1044,6 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         {
                             for(decl ref<int<4>> v68 = ( var(0)) .. 5 : 1) {
                                 (v47 := ( *vector.ref.elem(composite.ref.elem(v43, partial_verify_vals, type<vector<int<4>,5>>), CAST<uint<4>>(( *v68)))));
-                                printf(string.as.char.pointer(" k = %d\n"), varlist.pack((( *v47))));
                                 if(((0<=( *v47))&&bind(){fun(ref<int<4>> v66)return (( *v66)<=(int.lshift(1, 20)-1))(v47)})) {
                                     decl int<4> v61 = CAST<int<4>>('W');
                                     switch(v61) {
