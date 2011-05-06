@@ -243,7 +243,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		//core::ExpressionPtr&& nullRef = builder.callExpr(argTy, gen.getAnyRefToRef(), 
 				//toVector<core::ExpressionPtr>(gen.getNull(), gen.getTypeLiteral(subTy) ) );
 
-		return builder.callExpr( gen.getBool(), gen.getIsNull(), builder.deref(expr) ); 
+		return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getIsNull(), builder.deref(expr) ) ); 
 	}
 
 	// [ Signed integer -> Boolean ]
@@ -736,13 +736,8 @@ public:
 	core::ExpressionPtr VisitGNUNullExpr(clang::GNUNullExpr* nullExpr) {
 		const core::lang::BasicGenerator& gen = convFact.mgr.basic;
 		core::TypePtr&& type = convFact.convertType(GET_TYPE_PTR(nullExpr));
-		assert(type->getNodeType() == core::NT_ArrayType && "C pointer type must of type array<'a,1>");
-	    return convFact.builder.callExpr(
-				gen.getGetNull(), 
-				gen.getTypeLiteral( 
-					core::static_pointer_cast<const core::ArrayType>(type)->getElementType() 
-				)
-			);
+		assert(type->getNodeType() != core::NT_ArrayType && "C pointer type must of type array<'a,1>");
+	    return convFact.builder.callExpr( gen.getGetNull(), gen.getTypeLiteral( type ) );
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
