@@ -1,0 +1,43 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<vector<array<(int<4>, int<4>) -> int<4>,1>,4>> v3 =  var([vector.to.array(vector.init.uniform(fun(int<4> v4, int<4> v5){
+            return ite(v4<v5, bind(){fun(int<4> v8)return v8(v4)}, bind(){fun(int<4> v6)return v6(v5)});
+        }, 1)), vector.to.array(vector.init.uniform(fun(int<4> v11, int<4> v12){
+            return ite(v11>v12, bind(){fun(int<4> v15)return v15(v11)}, bind(){fun(int<4> v13)return v13(v12)});
+        }, 1)), vector.to.array(vector.init.uniform(fun(int<4> v18, int<4> v19){
+            return v18+v19;
+        }, 1)), vector.to.array(vector.init.uniform(fun(int<4> v21, int<4> v22){
+            return fun(int<4> v18, int<4> v19){
+                return v18+v19;
+            }(v21, v22)/2;
+        }, 1))]);
+        for(decl ref<int<4>> v24 =  var(0) .. 4 : 1) {
+            printf(string.as.char.pointer("Applying func: %d\n"), varlist.pack((vector.ref.elem(v3, v24)[0](10, 20))));
+        };
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<vector<array<(int<4>, int<4>) -> int<4>,1>,4>> v3 = ( var([vector.to.array(vector.init.uniform(fun(int<4> v4, int<4> v5){
+            return ite((v4<v5), bind(){fun(int<4> v8)return v8(v4)}, bind(){fun(int<4> v6)return v6(v5)});
+        }, 1)), vector.to.array(vector.init.uniform(fun(int<4> v11, int<4> v12){
+            return ite((v11>v12), bind(){fun(int<4> v15)return v15(v11)}, bind(){fun(int<4> v13)return v13(v12)});
+        }, 1)), vector.to.array(vector.init.uniform(fun(int<4> v18, int<4> v19){
+            return (v18+v19);
+        }, 1)), vector.to.array(vector.init.uniform(fun(int<4> v21, int<4> v22){
+            return (fun(int<4> v18, int<4> v19){
+                return (v18+v19);
+            }(v21, v22)/2);
+        }, 1))]));
+        for(decl ref<int<4>> v24 = ( var(0)) .. 4 : 1) {
+            printf(string.as.char.pointer("Applying func: %d\n"), varlist.pack(((( *vector.ref.elem(v3, CAST<uint<4>>(( *v24))))[0])(10, 20))));
+        };
+    }
+

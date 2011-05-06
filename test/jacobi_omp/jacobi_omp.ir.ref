@@ -15,19 +15,19 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         if(v1>2) {
             v8 := atoi(array.ref.elem.1D(v2, 1));
         } else { };
-        decl ref<array<real<4>,1>> v9 =  var(undefined(array<real<4>,1>));
-        decl ref<array<real<4>,1>> v10 =  var(undefined(array<real<4>,1>));
-        decl ref<array<real<4>,1>> v11 =  var(undefined(array<real<4>,1>));
-        decl ref<array<real<4>,1>> v12 =  var(undefined(array<real<4>,1>));
-        v9 :=  new(array.create.1D(undefined(real<4>), v7*v7*sizeof(real<4>)/sizeof(real<4>)));
-        v10 :=  new(array.create.1D(undefined(real<4>), v7*v7*sizeof(real<4>)/sizeof(real<4>)));
-        v11 :=  new(array.create.1D(undefined(real<4>), v7*v7*sizeof(real<4>)/sizeof(real<4>)));
-        v12 :=  new(array.create.1D(undefined(real<4>), v7*v7*sizeof(real<4>)/sizeof(real<4>)));
-        if(!v9&&bind()->fun(ref<array<real<4>,1>> v13)return v13(v10)&&bind()->fun(ref<array<real<4>,1>> v15)return v15(v11)&&bind()->fun(ref<array<real<4>,1>> v17)return v17(v12)) {
+        decl ref<array<real<4>,1>> v9 =  var(undefined(type<array<real<4>,1>>));
+        decl ref<array<real<4>,1>> v10 =  var(undefined(type<array<real<4>,1>>));
+        decl ref<array<real<4>,1>> v11 =  var(undefined(type<array<real<4>,1>>));
+        decl ref<array<real<4>,1>> v12 =  var(undefined(type<array<real<4>,1>>));
+        v9 :=  new(array.create.1D(type<real<4>>, v7*v7*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
+        v10 :=  new(array.create.1D(type<real<4>>, v7*v7*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
+        v11 :=  new(array.create.1D(type<real<4>>, v7*v7*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
+        v12 :=  new(array.create.1D(type<real<4>>, v7*v7*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
+        if(!!is.null(v9)&&bind(){fun(ref<array<real<4>,1>> v13)return !is.null(v13)(v10)}&&bind(){fun(ref<array<real<4>,1>> v15)return !is.null(v15)(v11)}&&bind(){fun(ref<array<real<4>,1>> v17)return !is.null(v17)(v12)}) {
             printf(string.as.char.pointer("Error allocating arrays\n"), varlist.pack(()));
         } else { };
-        memset(v9, 0, v7*v7*sizeof(real<4>));
-        memset(v11, 0, v7*v7*sizeof(real<4>));
+        memset(ref.to.anyref(v9), 0, v7*v7*sizeof(type<real<4>>));
+        memset(ref.to.anyref(v11), 0, v7*v7*sizeof(type<real<4>>));
         for(decl ref<int<4>> v19 =  var(0) .. v7 : 1) 
             for(decl ref<int<4>> v20 =  var(0) .. v7 : 1) 
                 array.ref.elem.1D(v11, v19*v7+v20) := fun(int<4> v21, int<4> v22){
@@ -44,19 +44,14 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         v5 := v4-v3/1000000l;
         v3 := clock();
         for(decl ref<int<4>> v36 =  var(0) .. v8 : 1) {
-            merge(parallel(job([1-inf]){
-                default: [v9, v11, v7, v10, v28]fun[ref<array<real<4>,1>> v41, ref<array<real<4>,1>> v39, ref<int<4>> v42, ref<array<real<4>,1>> v40, ref<real<8>> v38](){
-                    {
-                        pfor(getThreadGroup(0), 1, v42-1, 1, [v39, v40, v38, v41, v42]fun[ref<array<real<4>,1>> v49, ref<array<real<4>,1>> v48, ref<real<8>> v50, ref<array<real<4>,1>> v47, ref<int<4>> v46](int<4> v45){
-                            for(decl ref<int<4>> v29 =  var(1) .. v46-1 : 1) {
-                                array.ref.elem.1D(v48, v45*v46+v29) := 1/4*array.ref.elem.1D(v47, v45-1*v46+v29)+array.ref.elem.1D(v47, v45*v46+v29+1)+array.ref.elem.1D(v47, v45*v46+v29-1)+array.ref.elem.1D(v47, v45+1*v46+v29)-v50*array.ref.elem.1D(v49, v45*v46+v29);
-                            };
-                        });
-                        barrier(getThreadGroup(0));
+            {
+                for(decl ref<int<4>> v30 =  var(1) .. v7-1 : 1) {
+                    for(decl ref<int<4>> v29 =  var(1) .. v7-1 : 1) {
+                        array.ref.elem.1D(v10, v30*v7+v29) := 1/4*array.ref.elem.1D(v9, v30-1*v7+v29)+array.ref.elem.1D(v9, v30*v7+v29+1)+array.ref.elem.1D(v9, v30*v7+v29-1)+array.ref.elem.1D(v9, v30+1*v7+v29)-v28*array.ref.elem.1D(v11, v30*v7+v29);
                     };
-                }
-            }));
-            memcpy(v9, v10, v7*v7*sizeof(real<4>));
+                };
+            };
+            memcpy(ref.to.anyref(v9), ref.to.anyref(v10), v7*v7*sizeof(type<real<4>>));
             for(decl ref<int<4>> v32 =  var(1) .. v7-1 : 1) {
                 for(decl ref<int<4>> v31 =  var(1) .. v7-1 : 1) 
                     array.ref.elem.1D(v12, v32*v7+v31) := array.ref.elem.1D(v11, v32*v7+v31)-4*array.ref.elem.1D(v9, v32*v7+v31)+array.ref.elem.1D(v9, v32-1*v7+v31)+array.ref.elem.1D(v9, v32+1*v7+v31)+array.ref.elem.1D(v9, v32*v7+v31-1)+array.ref.elem.1D(v9, v32*v7+v31+1)
@@ -93,25 +88,25 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         (v3 := clock());
         decl ref<int<4>> v7 = ( var(650));
         if((v1>1)) {
-            (v7 := atoi(( *array.ref.elem.1D(v2, CAST<uint<4>>(1)))));
+            (v7 := atoi(array.ref.elem.1D(v2, CAST<uint<4>>(1))));
         } else { };
         decl ref<int<4>> v8 = ( var(100));
         if((v1>2)) {
-            (v8 := atoi(( *array.ref.elem.1D(v2, CAST<uint<4>>(1)))));
+            (v8 := atoi(array.ref.elem.1D(v2, CAST<uint<4>>(1))));
         } else { };
-        decl ref<array<real<4>,1>> v9 = ( var(undefined(array<real<4>,1>)));
-        decl ref<array<real<4>,1>> v10 = ( var(undefined(array<real<4>,1>)));
-        decl ref<array<real<4>,1>> v11 = ( var(undefined(array<real<4>,1>)));
-        decl ref<array<real<4>,1>> v12 = ( var(undefined(array<real<4>,1>)));
-        (v9 := ( *( new(array.create.1D(undefined(real<4>), ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(real<4>))/sizeof(real<4>)))))));
-        (v10 := ( *( new(array.create.1D(undefined(real<4>), ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(real<4>))/sizeof(real<4>)))))));
-        (v11 := ( *( new(array.create.1D(undefined(real<4>), ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(real<4>))/sizeof(real<4>)))))));
-        (v12 := ( *( new(array.create.1D(undefined(real<4>), ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(real<4>))/sizeof(real<4>)))))));
-        if((!(((CAST<bool>(v9)&&bind()->fun(ref<array<real<4>,1>> v13)return CAST<bool>(( *v13))(v10))&&bind()->fun(ref<array<real<4>,1>> v15)return CAST<bool>(( *v15))(v11))&&bind()->fun(ref<array<real<4>,1>> v17)return CAST<bool>(( *v17))(v12)))) {
+        decl ref<array<real<4>,1>> v9 = ( var(undefined(type<array<real<4>,1>>)));
+        decl ref<array<real<4>,1>> v10 = ( var(undefined(type<array<real<4>,1>>)));
+        decl ref<array<real<4>,1>> v11 = ( var(undefined(type<array<real<4>,1>>)));
+        decl ref<array<real<4>,1>> v12 = ( var(undefined(type<array<real<4>,1>>)));
+        (v9 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
+        (v10 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
+        (v11 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
+        (v12 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
+        if((!((((!is.null(( *v9)))&&bind(){fun(ref<array<real<4>,1>> v13)return (!is.null(( *v13)))(v10)})&&bind(){fun(ref<array<real<4>,1>> v15)return (!is.null(( *v15)))(v11)})&&bind(){fun(ref<array<real<4>,1>> v17)return (!is.null(( *v17)))(v12)}))) {
             printf(string.as.char.pointer("Error allocating arrays\n"), varlist.pack(()));
         } else { };
-        memset(v9, 0, (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(real<4>)));
-        memset(v11, 0, (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(real<4>)));
+        memset(ref.to.anyref(v9), 0, (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>)));
+        memset(ref.to.anyref(v11), 0, (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>)));
         for(decl ref<int<4>> v19 = ( var(0)) .. ( *v7) : 1) 
             for(decl ref<int<4>> v20 = ( var(0)) .. ( *v7) : 1) 
                 (array.ref.elem.1D(v11, CAST<uint<4>>(((( *v19)*( *v7))+( *v20)))) := CAST<real<4>>(fun(int<4> v21, int<4> v22){
@@ -128,19 +123,14 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         (v5 := (CAST<real<8>>((( *v4)-( *v3)))/CAST<real<8>>(1000000l)));
         (v3 := clock());
         for(decl ref<int<4>> v36 = ( var(0)) .. ( *v8) : 1) {
-            merge(parallel(job(([1-inf])){
-                default: [v9, v11, v7, v10, v28]fun[ref<array<real<4>,1>> v41, ref<array<real<4>,1>> v39, ref<int<4>> v42, ref<array<real<4>,1>> v40, ref<real<8>> v38](){
-                    {
-                        pfor(getThreadGroup(0), 1, (( *v42)-1), 1, [v39, v40, v38, v41, v42]fun[ref<array<real<4>,1>> v49, ref<array<real<4>,1>> v48, ref<real<8>> v50, ref<array<real<4>,1>> v47, ref<int<4>> v46](int<4> v45){
-                            for(decl ref<int<4>> v29 = ( var(1)) .. (( *v46)-1) : 1) {
-                                (array.ref.elem.1D(v48, CAST<uint<4>>(((v45*( *v46))+( *v29)))) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *array.ref.elem.1D(v47, CAST<uint<4>>((((v45-1)*( *v46))+( *v29)))))+( *array.ref.elem.1D(v47, CAST<uint<4>>((((v45*( *v46))+( *v29))+1)))))+( *array.ref.elem.1D(v47, CAST<uint<4>>((((v45*( *v46))+( *v29))-1)))))+( *array.ref.elem.1D(v47, CAST<uint<4>>((((v45+1)*( *v46))+( *v29)))))))-(( *v50)*CAST<real<8>>(( *array.ref.elem.1D(v49, CAST<uint<4>>(((v45*( *v46))+( *v29)))))))))));
-                            };
-                        });
-                        barrier(getThreadGroup(0));
+            <m id=2>{
+                <m id=1>for(decl ref<int<4>> v30 = ( var(1)) .. (( *v7)-1) : 1) {
+                    for(decl ref<int<4>> v29 = ( var(1)) .. (( *v7)-1) : 1) {
+                        (array.ref.elem.1D(v10, CAST<uint<4>>(((( *v30)*( *v7))+( *v29)))) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)-1)*( *v7))+( *v29)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)*( *v7))+( *v29))+1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)*( *v7))+( *v29))-1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)+1)*( *v7))+( *v29)))))))-(( *v28)*CAST<real<8>>(( *array.ref.elem.1D(v11, CAST<uint<4>>(((( *v30)*( *v7))+( *v29)))))))))));
                     };
-                }
-            }));
-            memcpy(v9, v10, (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(real<4>)));
+                }</m>;
+            }</m>;
+            memcpy(ref.to.anyref(v9), ref.to.anyref(v10), (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>)));
             for(decl ref<int<4>> v32 = ( var(1)) .. (( *v7)-1) : 1) {
                 for(decl ref<int<4>> v31 = ( var(1)) .. (( *v7)-1) : 1) 
                     (array.ref.elem.1D(v12, CAST<uint<4>>(((( *v32)*( *v7))+( *v31)))) := (((((( *array.ref.elem.1D(v11, CAST<uint<4>>(((( *v32)*( *v7))+( *v31)))))-(CAST<real<4>>(4)*( *array.ref.elem.1D(v9, CAST<uint<4>>(((( *v32)*( *v7))+( *v31)))))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)-1)*( *v7))+( *v31))))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)+1)*( *v7))+( *v31))))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)*( *v7))+( *v31))-1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)*( *v7))+( *v31))+1))))))

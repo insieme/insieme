@@ -7,27 +7,53 @@
 #define true 1
 #define false 0
 #define null 0
-// --- Entry Point ---
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+    unsigned size[1];
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+    unsigned size[1];
+} __insieme_type_0;
+
+// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
+unsigned long strlen(char*);
+static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_5) { return strlen(((char*)((*(var_5)).data))); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of main //
-int main(int argc, char** argv) {
-	{
-		printf("Hello", 0);
-		printf("Hello %s\n", "World");
-		printf("Integer:   %d\n", 14);
-		printf("Float:     %f\n", 0.54);
-		printf("Character: %c\n", 'c');
-		printf("Prime:     %c\n", '\'');
-		printf("NewLine:   %c", '\n');
-		printf("Signed:    %ld\n", (((long)(0))-2l));
-		printf("Unsigned:  %ld\n", 2ul);
-		printf("Full:      %lld\n", 0xFull);
-		char c = '\0';
-		printf("Full:      %c\n", ((int)((c))));
-		return 0;;
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
 	}
+	
+	// ---- begin of actual code body ----
+	{
+		printf(((char*)((*(&((__insieme_type_1){"Hello"}))).data)), 0);
+		printf(((char*)((*(&((__insieme_type_1){"Hello %s\n"}))).data)), "World");
+		printf(((char*)((*(&((__insieme_type_1){"Integer:   %d\n"}))).data)), 14);
+		printf(((char*)((*(&((__insieme_type_1){"Float:     %f\n"}))).data)), 0.54);
+		printf(((char*)((*(&((__insieme_type_1){"Character: %c\n"}))).data)), 'c');
+		printf(((char*)((*(&((__insieme_type_1){"Prime:     %c\n"}))).data)), '\'');
+		printf(((char*)((*(&((__insieme_type_1){"NewLine:   %c"}))).data)), '\n');
+		printf(((char*)((*(&((__insieme_type_1){"Signed:    %ld\n"}))).data)), (((long)(0))-2l));
+		printf(((char*)((*(&((__insieme_type_1){"Unsigned:  %ld\n"}))).data)), 2ul);
+		printf(((char*)((*(&((__insieme_type_1){"Full:      %lld\n"}))).data)), 0xFull);
+		char c = '\0';
+		printf(((char*)((*(&((__insieme_type_1){"Full:      %c\n"}))).data)), (c));
+		return 0;
+	}
+	// ----  end of actual code body  ----
+	
 }
 

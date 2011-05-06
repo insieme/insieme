@@ -7,94 +7,480 @@
 #define true 1
 #define false 0
 #define null 0
-// --- Entry Point ---
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+    unsigned size[1];
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+    unsigned size[1];
+} __insieme_type_0;
+
+// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
+unsigned long strlen(char*);
+static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_33) { return strlen(((char*)((*(var_33)).data))); }
+
+// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<char,6> //
+typedef struct ___insieme_type_4 { 
+    char data[6];
+} __insieme_type_4;
+
+// A constructor initializing a vector of the type __insieme_type_4 uniformly
+static inline __insieme_type_4 __insieme_type_4_init_uniform(char value) {
+	__insieme_type_4 res;
+	for (int i=0; i<6;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<char,2> //
+typedef struct ___insieme_type_7 { 
+    char data[2];
+} __insieme_type_7;
+
+// A constructor initializing a vector of the type __insieme_type_7 uniformly
+static inline __insieme_type_7 __insieme_type_7_init_uniform(char value) {
+	__insieme_type_7 res;
+	for (int i=0; i<2;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<vector<char,2>,3> //
+typedef struct ___insieme_type_6 { 
+    __insieme_type_7 data[3];
+} __insieme_type_6;
+
+// A constructor initializing a vector of the type __insieme_type_6 uniformly
+static inline __insieme_type_6 __insieme_type_6_init_uniform(__insieme_type_7 value) {
+	__insieme_type_6 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<vector<vector<char,2>,3>,5> //
+typedef struct ___insieme_type_9 { 
+    __insieme_type_6 data[5];
+} __insieme_type_9;
+
+// A constructor initializing a vector of the type __insieme_type_9 uniformly
+static inline __insieme_type_9 __insieme_type_9_init_uniform(__insieme_type_6 value) {
+	__insieme_type_9 res;
+	for (int i=0; i<5;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: array type definition of __insieme_type_12 <=> array<array<array<char,1>,1>,1> //
+typedef struct ___insieme_type_12 { 
+    __insieme_type_0* data;
+    unsigned size[1];
+} __insieme_type_12;
+
+// start code fragment :: vector_type_declaration of __insieme_type_15 <=> vector<char,3> //
+typedef struct ___insieme_type_15 { 
+    char data[3];
+} __insieme_type_15;
+
+// A constructor initializing a vector of the type __insieme_type_15 uniformly
+static inline __insieme_type_15 __insieme_type_15_init_uniform(char value) {
+	__insieme_type_15 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: array type definition of __insieme_type_14 <=> array<vector<char,3>,1> //
+typedef struct ___insieme_type_14 { 
+    __insieme_type_15* data;
+    unsigned size[1];
+} __insieme_type_14;
+
+// start code fragment :: array type definition of __insieme_type_18 <=> array<vector<vector<char,2>,3>,1> //
+typedef struct ___insieme_type_18 { 
+    __insieme_type_6* data;
+    unsigned size[1];
+} __insieme_type_18;
+
+// start code fragment :: array type definition of __insieme_type_17 <=> array<array<vector<vector<char,2>,3>,1>,1> //
+typedef struct ___insieme_type_17 { 
+    __insieme_type_18* data;
+    unsigned size[1];
+} __insieme_type_17;
+
+// start code fragment :: vector_type_declaration of __insieme_type_25 <=> vector<char,1> //
+typedef struct ___insieme_type_25 { 
+    char data[1];
+} __insieme_type_25;
+
+// A constructor initializing a vector of the type __insieme_type_25 uniformly
+static inline __insieme_type_25 __insieme_type_25_init_uniform(char value) {
+	__insieme_type_25 res;
+	for (int i=0; i<1;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_24 <=> vector<vector<char,1>,2> //
+typedef struct ___insieme_type_24 { 
+    __insieme_type_25 data[2];
+} __insieme_type_24;
+
+// A constructor initializing a vector of the type __insieme_type_24 uniformly
+static inline __insieme_type_24 __insieme_type_24_init_uniform(__insieme_type_25 value) {
+	__insieme_type_24 res;
+	for (int i=0; i<2;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_23 <=> vector<vector<vector<char,1>,2>,3> //
+typedef struct ___insieme_type_23 { 
+    __insieme_type_24 data[3];
+} __insieme_type_23;
+
+// A constructor initializing a vector of the type __insieme_type_23 uniformly
+static inline __insieme_type_23 __insieme_type_23_init_uniform(__insieme_type_24 value) {
+	__insieme_type_23 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: array type definition of __insieme_type_22 <=> array<vector<vector<vector<char,1>,2>,3>,1> //
+typedef struct ___insieme_type_22 { 
+    __insieme_type_23* data;
+    unsigned size[1];
+} __insieme_type_22;
+
+// start code fragment :: array type definition of __insieme_type_21 <=> array<array<vector<vector<vector<char,1>,2>,3>,1>,1> //
+typedef struct ___insieme_type_21 { 
+    __insieme_type_22* data;
+    unsigned size[1];
+} __insieme_type_21;
+
+// start code fragment :: array type definition of __insieme_type_20 <=> array<array<array<vector<vector<vector<char,1>,2>,3>,1>,1>,1> //
+typedef struct ___insieme_type_20 { 
+    __insieme_type_21* data;
+    unsigned size[1];
+} __insieme_type_20;
+
+// start code fragment :: array type definition of __insieme_type_28 <=> array<array<vector<char,3>,1>,1> //
+typedef struct ___insieme_type_28 { 
+    __insieme_type_14* data;
+    unsigned size[1];
+} __insieme_type_28;
+
+// start code fragment :: array type definition of __insieme_type_27 <=> array<array<array<vector<char,3>,1>,1>,1> //
+typedef struct ___insieme_type_27 { 
+    __insieme_type_28* data;
+    unsigned size[1];
+} __insieme_type_27;
+
+// start code fragment :: vector_type_declaration of __insieme_type_31 <=> vector<array<char,1>,3> //
+typedef struct ___insieme_type_31 { 
+    __insieme_type_1 data[3];
+} __insieme_type_31;
+
+// A constructor initializing a vector of the type __insieme_type_31 uniformly
+static inline __insieme_type_31 __insieme_type_31_init_uniform(__insieme_type_1 value) {
+	__insieme_type_31 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_34 <=> vector<array<array<char,1>,1>,3> //
+typedef struct ___insieme_type_34 { 
+    __insieme_type_0 data[3];
+} __insieme_type_34;
+
+// A constructor initializing a vector of the type __insieme_type_34 uniformly
+static inline __insieme_type_34 __insieme_type_34_init_uniform(__insieme_type_0 value) {
+	__insieme_type_34 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_33 <=> vector<vector<array<array<char,1>,1>,3>,2> //
+typedef struct ___insieme_type_33 { 
+    __insieme_type_34 data[2];
+} __insieme_type_33;
+
+// A constructor initializing a vector of the type __insieme_type_33 uniformly
+static inline __insieme_type_33 __insieme_type_33_init_uniform(__insieme_type_34 value) {
+	__insieme_type_33 res;
+	for (int i=0; i<2;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_38 <=> vector<array<array<array<char,1>,1>,1>,3> //
+typedef struct ___insieme_type_38 { 
+    __insieme_type_12 data[3];
+} __insieme_type_38;
+
+// A constructor initializing a vector of the type __insieme_type_38 uniformly
+static inline __insieme_type_38 __insieme_type_38_init_uniform(__insieme_type_12 value) {
+	__insieme_type_38 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_37 <=> vector<vector<array<array<array<char,1>,1>,1>,3>,2> //
+typedef struct ___insieme_type_37 { 
+    __insieme_type_38 data[2];
+} __insieme_type_37;
+
+// A constructor initializing a vector of the type __insieme_type_37 uniformly
+static inline __insieme_type_37 __insieme_type_37_init_uniform(__insieme_type_38 value) {
+	__insieme_type_37 res;
+	for (int i=0; i<2;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_36 <=> vector<vector<vector<array<array<array<char,1>,1>,1>,3>,2>,1> //
+typedef struct ___insieme_type_36 { 
+    __insieme_type_37 data[1];
+} __insieme_type_36;
+
+// A constructor initializing a vector of the type __insieme_type_36 uniformly
+static inline __insieme_type_36 __insieme_type_36_init_uniform(__insieme_type_37 value) {
+	__insieme_type_36 res;
+	for (int i=0; i<1;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_40 <=> vector<char,5> //
+typedef struct ___insieme_type_40 { 
+    char data[5];
+} __insieme_type_40;
+
+// A constructor initializing a vector of the type __insieme_type_40 uniformly
+static inline __insieme_type_40 __insieme_type_40_init_uniform(char value) {
+	__insieme_type_40 res;
+	for (int i=0; i<5;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_41 <=> vector<vector<char,3>,5> //
+typedef struct ___insieme_type_41 { 
+    __insieme_type_15 data[5];
+} __insieme_type_41;
+
+// A constructor initializing a vector of the type __insieme_type_41 uniformly
+static inline __insieme_type_41 __insieme_type_41_init_uniform(__insieme_type_15 value) {
+	__insieme_type_41 res;
+	for (int i=0; i<5;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_43 <=> vector<char,4> //
+typedef struct ___insieme_type_43 { 
+    char data[4];
+} __insieme_type_43;
+
+// A constructor initializing a vector of the type __insieme_type_43 uniformly
+static inline __insieme_type_43 __insieme_type_43_init_uniform(char value) {
+	__insieme_type_43 res;
+	for (int i=0; i<4;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: array type definition of __insieme_type_42 <=> array<vector<char,4>,1> //
+typedef struct ___insieme_type_42 { 
+    __insieme_type_43* data;
+    unsigned size[1];
+} __insieme_type_42;
+
+// start code fragment :: vector_type_declaration of __insieme_type_45 <=> vector<vector<char,3>,4> //
+typedef struct ___insieme_type_45 { 
+    __insieme_type_15 data[4];
+} __insieme_type_45;
+
+// A constructor initializing a vector of the type __insieme_type_45 uniformly
+static inline __insieme_type_45 __insieme_type_45_init_uniform(__insieme_type_15 value) {
+	__insieme_type_45 res;
+	for (int i=0; i<4;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: array type definition of __insieme_type_44 <=> array<vector<vector<char,3>,4>,1> //
+typedef struct ___insieme_type_44 { 
+    __insieme_type_45* data;
+    unsigned size[1];
+} __insieme_type_44;
+
+// start code fragment :: array type definition of __insieme_type_46 <=> array<array<vector<char,4>,1>,1> //
+typedef struct ___insieme_type_46 { 
+    __insieme_type_42* data;
+    unsigned size[1];
+} __insieme_type_46;
+
+// start code fragment :: array type definition of __insieme_type_47 <=> array<array<vector<vector<char,3>,4>,1>,1> //
+typedef struct ___insieme_type_47 { 
+    __insieme_type_44* data;
+    unsigned size[1];
+} __insieme_type_47;
 
 // start code fragment :: type_declaration_Data //
 struct Data { 
     char s1;
-    char* s2;
-    char s3[5];
-    char s4[5][3];
-    char* s5;
-    char** s6;
-    char(* s7)[4];
-    char(* s8)[4][3];
-    char(** s9)[4];
-    char(** s10)[4][3];
+    __insieme_type_1 s2;
+    __insieme_type_40 s3;
+    __insieme_type_41 s4;
+    __insieme_type_1 s5;
+    __insieme_type_0 s6;
+    __insieme_type_42 s7;
+    __insieme_type_44 s8;
+    __insieme_type_46 s9;
+    __insieme_type_47 s10;
 };
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of funArray //
-char funArray(char a, char* b, char(* c)[3], char(* d)[3][2]) {
-	{
-		return ((b[((unsigned int)(3))]));;
+// start code fragment :: array type definition of __insieme_type_49 <=> array<vector<char,2>,1> //
+typedef struct ___insieme_type_49 { 
+    __insieme_type_7* data;
+    unsigned size[1];
+} __insieme_type_49;
+
+// start code fragment :: Definition of funArray ... type: ((char,ref<array<char,1>>,ref<array<vector<char,2>,1>>,ref<array<vector<vector<char,2>,3>,1>>)->char) //
+char funArray(char a, __insieme_type_1* b, __insieme_type_49* c, __insieme_type_18* d) { return (((*b).data[((unsigned int)(3))])); }
+static char funArray_wrap(void* _closure, char a, __insieme_type_1* b, __insieme_type_49* c, __insieme_type_18* d) { return funArray(a, b, c, d); }
+
+// start code fragment :: Definition of funPointer ... type: ((char,ref<array<char,1>>,ref<array<array<char,1>,1>>,ref<array<array<array<char,1>,1>,1>>)->char) //
+char funPointer(char a, __insieme_type_1* b, __insieme_type_0* c, __insieme_type_12* d) { return (((*b).data[((unsigned int)(3))])); }
+static char funPointer_wrap(void* _closure, char a, __insieme_type_1* b, __insieme_type_0* c, __insieme_type_12* d) { return funPointer(a, b, c, d); }
+
+// start code fragment :: Definition of funStruct ... type: ((struct<s1:char,s2:array<char,1>,s3:vector<char,5>,s4:vector<vector<char,3>,5>,s5:array<char,1>,s6:array<array<char,1>,1>,s7:array<vector<char,4>,1>,s8:array<vector<vector<char,3>,4>,1>,s9:array<array<vector<char,4>,1>,1>,s10:array<array<vector<vector<char,3>,4>,1>,1>>)->char) //
+char funStruct(struct Data data) { return (data.s1); }
+static char funStruct_wrap(void* _closure, struct Data data) { return funStruct(data); }
+
+// start code fragment :: vector_type_declaration of __insieme_type_52 <=> vector<array<char,1>,5> //
+typedef struct ___insieme_type_52 { 
+    __insieme_type_1 data[5];
+} __insieme_type_52;
+
+// A constructor initializing a vector of the type __insieme_type_52 uniformly
+static inline __insieme_type_52 __insieme_type_52_init_uniform(__insieme_type_1 value) {
+	__insieme_type_52 res;
+	for (int i=0; i<5;++i) {
+	    res.data[i] = value;
 	}
+	return res;
 }
 
 
-// start code fragment :: Definition of funPointer //
-char funPointer(char a, char* b, char** c, char*** d) {
-	{
-		return ((b[((unsigned int)(3))]));;
+// start code fragment :: vector_type_declaration of __insieme_type_54 <=> vector<char,7> //
+typedef struct ___insieme_type_54 { 
+    char data[7];
+} __insieme_type_54;
+
+// A constructor initializing a vector of the type __insieme_type_54 uniformly
+static inline __insieme_type_54 __insieme_type_54_init_uniform(char value) {
+	__insieme_type_54 res;
+	for (int i=0; i<7;++i) {
+	    res.data[i] = value;
 	}
+	return res;
 }
 
 
-// start code fragment :: Definition of funStruct //
-char funStruct(struct Data data) {
-	{
-		return (data.s1);;
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
 	}
-}
-
-
-// start code fragment :: Definition of main //
-int main(int argc, char** argv) {
+	
+	// ---- begin of actual code body ----
 	{
 		char a1 = 'a';
-		char b1[5] = "Hallo";
-		char b2[5][3] = {"X", "Y", "Z"};
-		char b3[5][3][2];
-		char* c1 = b1;
-		char** c2 = ((char**)(null));
-		char*** c3 = ((char***)(null));
-		char(* d1)[3];
-		char(** d2)[3][2];
-		char(*** d3)[3][2][1];
-		char(*** d4)[3];
-		char(* d5)[3][2][1];
-		char* e1[3];
-		char** e2[2][3];
-		char*** e3[1][2][3];
+		__insieme_type_4 b1 = ((__insieme_type_4){{'H', 'a', 'l', 'l', 'o', '\0'}});
+		__insieme_type_6 b2 = ((__insieme_type_6){{((__insieme_type_7){{'X', '\0'}}), ((__insieme_type_7){{'Y', '\0'}}), ((__insieme_type_7){{'Z', '\0'}})}});
+		__insieme_type_9 b3;
+		__insieme_type_1 c1 = *(&((__insieme_type_1){(b1).data,{1}}));
+		__insieme_type_0 c2 = (__insieme_type_0){0,{0}};
+		__insieme_type_12 c3 = (__insieme_type_12){0,{0}};
+		__insieme_type_14 d1;
+		__insieme_type_17 d2;
+		__insieme_type_20 d3;
+		__insieme_type_27 d4;
+		__insieme_type_22 d5;
+		__insieme_type_31 e1;
+		__insieme_type_33 e2;
+		__insieme_type_36 e3;
 		struct Data s;
 		((*(&((s).s1))) = '#');
-		printf("size of s %d\n", sizeof(struct Data));
-		printf("size of b1 %d\n", (5*sizeof(char)));
-		printf("size of b2 %d\n", (5*(3*sizeof(char))));
-		printf("size of b3 %d\n", (5*(3*(2*sizeof(char)))));
-		printf("size of c1 %d\n", sizeof(char*));
-		printf("size of c2 %d\n", sizeof(char**));
-		printf("size of c3 %d\n", sizeof(char***));
-		printf("size of d1 %d\n", sizeof(char(*)[3]));
-		printf("size of d2 %d\n", sizeof(char(**)[3][2]));
-		printf("size of d3 %d\n", sizeof(char(***)[3][2][1]));
-		printf("size of d4 %d\n", sizeof(char(***)[3]));
-		printf("size of d5 %d\n", sizeof(char(*)[3][2][1]));
-		printf("size of e1 %d\n", (3*sizeof(char*)));
-		printf("size of e2 %d\n", (2*(3*sizeof(char**))));
-		printf("size of e3 %d\n", (1*(2*(3*sizeof(char***)))));
-		printf("Letter Array:   %c\n", ((int)(funArray((a1), b1, b2, b3))));
-		printf("Letter Pointer: %c\n", ((int)(funPointer((a1), c1, c2, c3))));
-		printf("Letter Struct:  %c\n", ((int)(funStruct((s)))));
-		char* strings[5] = {"This", "is", "a", "little", "test"};
-		printf("String:  %s\n", ((strings[((unsigned int)(0))])));
-		printf("String:  %s\n", ((strings[((unsigned int)(1))])));
-		printf("String:  %s\n", ((strings[((unsigned int)(2))])));
-		printf("String:  %s\n", ((strings[((unsigned int)(3))])));
-		printf("String:  %s\n", ((strings[((unsigned int)(4))])));
-		return 0;;
+		printf(((char*)((*(&((__insieme_type_1){"size of b1 %d\n"}))).data)), (6*sizeof(char)));
+		printf(((char*)((*(&((__insieme_type_1){"size of b2 %d\n"}))).data)), (3*(2*sizeof(char))));
+		printf(((char*)((*(&((__insieme_type_1){"size of b3 %d\n"}))).data)), (5*(3*(2*sizeof(char)))));
+		printf(((char*)((*(&((__insieme_type_1){"Letter Array:   %c\n"}))).data)), ((int)(funArray((a1), (&((__insieme_type_1){(b1).data,{1}})), (&((__insieme_type_49){(b2).data,{1}})), (&((__insieme_type_18){(b3).data,{1}}))))));
+		printf(((char*)((*(&((__insieme_type_1){"Letter Pointer: %c\n"}))).data)), ((int)(funPointer((a1), &c1, &c2, &c3))));
+		printf(((char*)((*(&((__insieme_type_1){"Letter Struct:  %c\n"}))).data)), ((int)(funStruct((s)))));
+		__insieme_type_52 strings = ((__insieme_type_52){{(((__insieme_type_1){(((__insieme_type_40){{'T', 'h', 'i', 's', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_15){{'i', 's', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_7){{'a', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_54){{'l', 'i', 't', 't', 'l', 'e', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_40){{'t', 'e', 's', 't', '\0'}})).data,{1}}))}});
+		printf(((char*)((*(&((__insieme_type_1){"String:  %s\n"}))).data)), ((char*)((*(&((strings).data[((unsigned int)(0))]))).data)));
+		printf(((char*)((*(&((__insieme_type_1){"String:  %s\n"}))).data)), ((char*)((*(&((strings).data[((unsigned int)(1))]))).data)));
+		printf(((char*)((*(&((__insieme_type_1){"String:  %s\n"}))).data)), ((char*)((*(&((strings).data[((unsigned int)(2))]))).data)));
+		printf(((char*)((*(&((__insieme_type_1){"String:  %s\n"}))).data)), ((char*)((*(&((strings).data[((unsigned int)(3))]))).data)));
+		printf(((char*)((*(&((__insieme_type_1){"String:  %s\n"}))).data)), ((char*)((*(&((strings).data[((unsigned int)(4))]))).data)));
+		return 0;
 	}
+	// ----  end of actual code body  ----
+	
 }
 

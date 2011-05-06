@@ -2,15 +2,10 @@
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        merge(parallel(job([1-inf]){
-            default: []fun(){
-                printf(string.as.char.pointer("multiple\n"), varlist.pack(()));
-                {
-                    pfor(getThreadGroup(0), 0, 1, 1, []fun(int<4> v3)printf(string.as.char.pointer("single\n"), varlist.pack(())));
-                    barrier(getThreadGroup(0));
-                };
-            }
-        }));
+        {
+            printf(string.as.char.pointer("multiple\n"), varlist.pack(()));
+            printf(string.as.char.pointer("single\n"), varlist.pack(()));
+        };
     }
 
 
@@ -20,14 +15,9 @@ fun(){
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        merge(parallel(job(([1-inf])){
-            default: []fun(){
-                printf(string.as.char.pointer("multiple\n"), varlist.pack(()));
-                {
-                    pfor(getThreadGroup(0), 0, 1, 1, []fun(int<4> v3)printf(string.as.char.pointer("single\n"), varlist.pack(())));
-                    barrier(getThreadGroup(0));
-                };
-            }
-        }));
+        <m id=1>{
+            printf(string.as.char.pointer("multiple\n"), varlist.pack(()));
+            <m id=1>printf(string.as.char.pointer("single\n"), varlist.pack(()))</m>;
+        }</m>;
     }
 

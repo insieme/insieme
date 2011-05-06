@@ -7,41 +7,89 @@
 #define true 1
 #define false 0
 #define null 0
-// --- Entry Point ---
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+    unsigned size[1];
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+    unsigned size[1];
+} __insieme_type_0;
+
+// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
+unsigned long strlen(char*);
+static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_21) { return strlen(((char*)((*(var_21)).data))); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Prototype of even //
-int even(unsigned int);
+// start code fragment :: Prototype of __insieme_supp_4 ... type: ((uint<4>)->int<4>) //
+int __insieme_supp_4(unsigned int);
 
-// start code fragment :: Prototype of odd //
-int odd(unsigned int);
+// start code fragment :: Prototype of __insieme_supp_5 ... type: ((uint<4>)->int<4>) //
+int __insieme_supp_5(unsigned int);
 
-// start code fragment :: Definition of even //
-int even(unsigned int x) {
-	{
-		return (((x==((unsigned int)(0))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>));;
+// start code fragment :: Definition of __insieme_supp_4 ... type: ((uint<4>)->int<4>) //
+int __insieme_supp_4(unsigned int x) { return (((x==((unsigned int)(0))))?(1):(__insieme_supp_5((x-((unsigned int)(1)))))); }
+static int __insieme_supp_4_wrap(void* _closure, unsigned int x) { return __insieme_supp_4(x); }
+
+// start code fragment :: Definition of __insieme_supp_5 ... type: ((uint<4>)->int<4>) //
+int __insieme_supp_5(unsigned int x) { return (((x==((unsigned int)(0))))?(0):(__insieme_supp_4((x-((unsigned int)(1)))))); }
+static int __insieme_supp_5_wrap(void* _closure, unsigned int x) { return __insieme_supp_5(x); }
+
+// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<char,5> //
+typedef struct ___insieme_type_6 { 
+    char data[5];
+} __insieme_type_6;
+
+// A constructor initializing a vector of the type __insieme_type_6 uniformly
+static inline __insieme_type_6 __insieme_type_6_init_uniform(char value) {
+	__insieme_type_6 res;
+	for (int i=0; i<5;++i) {
+	    res.data[i] = value;
 	}
+	return res;
 }
 
 
-// start code fragment :: Definition of odd //
-int odd(unsigned int x) {
-	{
-		return (((x==((unsigned int)(0))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>));;
+// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<char,6> //
+typedef struct ___insieme_type_7 { 
+    char data[6];
+} __insieme_type_7;
+
+// A constructor initializing a vector of the type __insieme_type_7 uniformly
+static inline __insieme_type_7 __insieme_type_7_init_uniform(char value) {
+	__insieme_type_7 res;
+	for (int i=0; i<6;++i) {
+	    res.data[i] = value;
 	}
+	return res;
 }
 
 
-// start code fragment :: Definition of main //
-int main(int argc, char** argv) {
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+	}
+	
+	// ---- begin of actual code body ----
 	{
 		int x = 10;
-		printf("x=%d\n", (x));
-		printf("even(x)=%s\n", ((((bool)(even(((unsigned int)((x)))))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>)));
-		printf("odd(x)=%s\n", ((((bool)(odd(((unsigned int)((x)))))))?(<?>Unhandled Type of Call Target</?>):(<?>Unhandled Type of Call Target</?>)));
-		return 0;;
+		printf(((char*)((*(&((__insieme_type_1){"x=%d\n"}))).data)), (x));
+		printf(((char*)((*(&((__insieme_type_1){"even(x)=%s\n"}))).data)), ((((__insieme_supp_4(((unsigned int)((x))))!=0))?((((__insieme_type_1){(((__insieme_type_6){{'t', 'r', 'u', 'e', '\0'}})).data,{1}}))):((((__insieme_type_1){(((__insieme_type_7){{'f', 'a', 'l', 's', 'e', '\0'}})).data,{1}}))))).data);
+		printf(((char*)((*(&((__insieme_type_1){"odd(x)=%s\n"}))).data)), ((((__insieme_supp_5(((unsigned int)((x))))!=0))?((((__insieme_type_1){(((__insieme_type_6){{'t', 'r', 'u', 'e', '\0'}})).data,{1}}))):((((__insieme_type_1){(((__insieme_type_7){{'f', 'a', 'l', 's', 'e', '\0'}})).data,{1}}))))).data);
+		return 0;
 	}
+	// ----  end of actual code body  ----
+	
 }
 

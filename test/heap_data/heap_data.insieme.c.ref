@@ -7,44 +7,75 @@
 #define true 1
 #define false 0
 #define null 0
-// --- Entry Point ---
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+    unsigned size[1];
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+    unsigned size[1];
+} __insieme_type_0;
+
+// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
+unsigned long strlen(char*);
+static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_12) { return strlen(((char*)((*(var_12)).data))); }
+
+// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<int<4>,10> //
+typedef struct ___insieme_type_3 { 
+    int data[10];
+} __insieme_type_3;
+
+// A constructor initializing a vector of the type __insieme_type_3 uniformly
+static inline __insieme_type_3 __insieme_type_3_init_uniform(int value) {
+	__insieme_type_3 res;
+	for (int i=0; i<10;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    int a[10];
+    __insieme_type_3 a;
 };
 
-// start code fragment :: Definition of init //
-void init(struct __insieme_globals var_4) {
-	{
-		for(int i = 0; i < 10; i += 1) {
-			((((((var_4).a))[((unsigned int)((i)))])) = (i));
-		};
-	}
-}
-
+// start code fragment :: Definition of init ... type: ((ref<struct<a:vector<int<4>,10>>>)->unit) //
+void init(struct __insieme_globals* var_4) { for(int i = 0; i < 10; i += 1)  { ((((*(&((*var_4).a))).data[((unsigned int)((i)))])) = (i)); }; }
+static void init_wrap(void* _closure, struct __insieme_globals* var_4) { init(var_4); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of sum //
-int sum(struct __insieme_globals var_7) {
-	{
-		int res = 0;
-		for(int i = 0; i < 10; i += 1) {
-			((res) = ((res)+(((((var_7).a))[((unsigned int)((i)))]))));
-		};
-		return (res);;
-	}
+// start code fragment :: Definition of sum ... type: ((ref<struct<a:vector<int<4>,10>>>)->int<4>) //
+int sum(struct __insieme_globals* var_7){
+	int res = 0;
+	for(int i = 0; i < 10; i += 1)  { ((res) = ((res)+(((*(&((*var_7).a))).data[((unsigned int)((i)))])))); };
+	return (res);
 }
+static int sum_wrap(void* _closure, struct __insieme_globals* var_7) { return sum(var_7); }
 
-
-// start code fragment :: Definition of main //
-int main(int argc, char** argv) {
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+	}
+	
+	// ---- begin of actual code body ----
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
 		init(var_1);
-		printf("sum=%d\n", sum(var_1));
+		printf(((char*)((*(&((__insieme_type_1){"sum=%d\n"}))).data)), sum(var_1));
 	}
+	// ----  end of actual code body  ----
+	
 }
 

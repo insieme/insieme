@@ -2,11 +2,9 @@
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        merge(parallel(job([1-inf]){
-            default: []fun(){
-                printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
-            }
-        }));
+        {
+            printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
+        };
     }
 
 
@@ -16,10 +14,8 @@ fun(){
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        merge(parallel(job(([1-inf])){
-            default: []fun(){
-                printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
-            }
-        }));
+        <m id=1>{
+            printf(string.as.char.pointer("hello world\n"), varlist.pack(()));
+        }</m>;
     }
 

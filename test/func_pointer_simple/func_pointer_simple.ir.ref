@@ -1,0 +1,33 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<int<4>> v3 =  var(10);
+        decl ref<int<4>> v4 =  var(20);
+        decl ref<array<(int<4>, int<4>) -> int<4>,1>> v5 =  var(vector.to.array(vector.init.uniform(fun(int<4> v6, int<4> v7){
+            return ite(v6<v7, bind(){fun(int<4> v15)return v15(v6)}, bind(){fun(int<4> v13)return v13(v7)});
+        }, 1)));
+        printf(string.as.char.pointer("Direct call:  min(%d,%d)=%d\n"), varlist.pack((v3, v4, fun(int<4> v6, int<4> v7){
+            return ite(v6<v7, bind(){fun(int<4> v10)return v10(v6)}, bind(){fun(int<4> v8)return v8(v7)});
+        }(v3, v4))));
+        printf(string.as.char.pointer("Pointer call:   f(%d,%d)=%d\n"), varlist.pack((v3, v4, v5[0](v3, v4))));
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
+        decl ref<int<4>> v3 = ( var(10));
+        decl ref<int<4>> v4 = ( var(20));
+        decl ref<array<(int<4>, int<4>) -> int<4>,1>> v5 = ( var(vector.to.array(vector.init.uniform(fun(int<4> v6, int<4> v7){
+            return ite((v6<v7), bind(){fun(int<4> v15)return v15(v6)}, bind(){fun(int<4> v13)return v13(v7)});
+        }, 1))));
+        printf(string.as.char.pointer("Direct call:  min(%d,%d)=%d\n"), varlist.pack((( *v3), ( *v4), fun(int<4> v6, int<4> v7){
+            return ite((v6<v7), bind(){fun(int<4> v10)return v10(v6)}, bind(){fun(int<4> v8)return v8(v7)});
+        }(( *v3), ( *v4)))));
+        printf(string.as.char.pointer("Pointer call:   f(%d,%d)=%d\n"), varlist.pack((( *v3), ( *v4), (( *v5)[0])(( *v3), ( *v4)))));
+    }
+

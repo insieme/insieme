@@ -1,0 +1,107 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+    unsigned size[1];
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+    unsigned size[1];
+} __insieme_type_0;
+
+// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
+unsigned long strlen(char*);
+static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_26) { return strlen(((char*)((*(var_26)).data))); }
+
+// start code fragment :: array type definition of __insieme_type_3 <=> array<int<4>,1> //
+typedef struct ___insieme_type_3 { 
+    int* data;
+    unsigned size[1];
+} __insieme_type_3;
+
+// start code fragment :: New operator for type ref<array<int<4>,1>> //
+static inline __insieme_type_3* _ref_new___insieme_type_4(__insieme_type_3 value) {
+    __insieme_type_3* res = malloc(sizeof(__insieme_type_3));
+    *res = value;
+    return res;
+}
+
+
+// start code fragment :: array type utils of __insieme_type_3 <=> array<int<4>,1> //
+// A constructor for the array type __insieme_type_3
+static inline __insieme_type_3 __insieme_type_3_ctr(unsigned s1) {
+    return ((__insieme_type_3){malloc(sizeof(int)*s1),{s1}});
+}
+
+// start code fragment :: Prototype for external function: rand ... type: (()->int<4>) //
+int rand();
+static int rand_wrap(void* _closure) { return rand(); }
+
+// start code fragment :: Prototype of sortIt ... type: ((ref<array<int<4>,1>>,int<4>,int<4>)->unit) //
+void sortIt(__insieme_type_3*, int, int);
+
+// start code fragment :: Definition of swapIt ... type: ((ref<array<int<4>,1>>,ref<array<int<4>,1>>)->unit) //
+void swapIt(__insieme_type_3* a, __insieme_type_3* b){
+	int t = ((*a).data[0]);
+	((((*a).data[0])) = (((*b).data[0])));
+	((((*b).data[0])) = (t));
+}
+static void swapIt_wrap(void* _closure, __insieme_type_3* a, __insieme_type_3* b) { swapIt(a, b); }
+
+// start code fragment :: Definition of sortIt ... type: ((ref<array<int<4>,1>>,int<4>,int<4>)->unit) //
+void sortIt(__insieme_type_3* arr, int beg, int end) { if((end>(beg+1))){
+	int piv = ((*arr).data[((unsigned int)(beg))]);
+	int l = (beg+1);
+	int r = end;
+	while(((l)<(r)))  { if(((((*arr).data[((unsigned int)((l)))]))<=(piv))) { ((l)++); } else  { swapIt((&((__insieme_type_3){&((*arr).data[((unsigned int)((l)))]),{1}})), (&((__insieme_type_3){&((*arr).data[((unsigned int)((--(r))))]),{1}}))); }; };
+	swapIt((&((__insieme_type_3){&((*arr).data[((unsigned int)((--(l))))]),{1}})), (&((__insieme_type_3){&((*arr).data[((unsigned int)(beg))]),{1}})));
+	sortIt(arr, beg, (l));
+	sortIt(arr, (r), end);
+}; }
+static void sortIt_wrap(void* _closure, __insieme_type_3* arr, int beg, int end) { sortIt(arr, beg, end); }
+
+// start code fragment :: Definition of reverseIt ... type: ((ref<array<int<4>,1>>,int<4>,int<4>)->unit) //
+void reverseIt(__insieme_type_3* a, int S, int E) { for(int i = 0; i < ((E-S)/2); i += 1)  { swapIt((&((__insieme_type_3){&((*a).data[((unsigned int)((S+(i))))]),{1}})), (&((__insieme_type_3){&((*a).data[((unsigned int)(((E-(i))-1)))]),{1}}))); }; }
+static void reverseIt_wrap(void* _closure, __insieme_type_3* a, int S, int E) { reverseIt(a, S, E); }
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+	}
+	
+	// ---- begin of actual code body ----
+	{
+		__insieme_type_3* a = _ref_new___insieme_type_4((__insieme_type_3_ctr(((((unsigned long)(20000))*sizeof(int))/sizeof(int)))));
+		for(int iter = 0; iter < 10; iter += 1) {
+			for(int i = 0; i < 20000; i += 1)  { ((((*a).data[((unsigned int)((i)))])) = (rand()%20000)); };
+			sortIt(a, 0, 20000);
+			reverseIt(a, 0, 20000);
+			sortIt(a, 0, 20000);
+			printf(((char*)((*(&((__insieme_type_1){"a[N/2] == %d\n"}))).data)), (((*a).data[((unsigned int)((20000/2)))])));
+		};
+		(free((*a).data));
+		return 0;
+	}
+	// ----  end of actual code body  ----
+	
+}
+

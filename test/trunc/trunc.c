@@ -11,4 +11,8 @@ int main() {
 
 	y = (int) x;
 	printf("After: %f\n", y);
+
+	int k = 2;
+	printf("Double: %f\n", k*x);
+
 }

@@ -3,12 +3,12 @@
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<struct<name:vector<char,30>,age:uint<4>>> v3 =  var(fun(){
-            decl ref<struct<name:vector<char,30>,age:uint<4>>> v4 =  var(undefined(struct<name:vector<char,30>,age:uint<4>>));
-            strcpy(composite.ref.elem(v4, name, vector<char,30>), string.as.char.pointer("John Doe"));
-            composite.ref.elem(v4, age, uint<4>) := 101;
+            decl ref<struct<name:vector<char,30>,age:uint<4>>> v4 =  var(undefined(type<struct<name:vector<char,30>,age:uint<4>>>));
+            strcpy(ref.vector.to.ref.array(composite.ref.elem(v4, name, type<vector<char,30>>)), string.as.char.pointer("John Doe"));
+            composite.ref.elem(v4, age, type<uint<4>>) := 101;
         }());
         return fun(struct<name:vector<char,30>,age:uint<4>> v6){
-            return v6.AP(age)>=10&&bind()->fun(struct<name:vector<char,30>,age:uint<4>> v7)return v7.AP(age)<20(v6);
+            return bool.to.int(v6.AP(age)>=10&&bind(){fun(struct<name:vector<char,30>,age:uint<4>> v7)return v7.AP(age)<20(v6)});
         }(v3);
     }
 
@@ -20,12 +20,12 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<struct<name:vector<char,30>,age:uint<4>>> v3 = ( var(fun(){
-            decl ref<struct<name:vector<char,30>,age:uint<4>>> v4 = ( var(undefined(struct<name:vector<char,30>,age:uint<4>>)));
-            strcpy(composite.ref.elem(v4, name, vector<char,30>), string.as.char.pointer("John Doe"));
-            (composite.ref.elem(v4, age, uint<4>) := CAST<uint<4>>(101));
+            decl ref<struct<name:vector<char,30>,age:uint<4>>> v4 = ( var(undefined(type<struct<name:vector<char,30>,age:uint<4>>>)));
+            strcpy(ref.vector.to.ref.array(composite.ref.elem(v4, name, type<vector<char,30>>)), string.as.char.pointer("John Doe"));
+            (composite.ref.elem(v4, age, type<uint<4>>) := CAST<uint<4>>(101));
         }()));
         return fun(struct<name:vector<char,30>,age:uint<4>> v6){
-            return ((v6.AP(age)>=CAST<uint<4>>(10))&&bind()->fun(struct<name:vector<char,30>,age:uint<4>> v7)return (v7.AP(age)<CAST<uint<4>>(20))(v6));
+            return CAST<int<4>>(bool.to.int(((v6.AP(age)>=CAST<uint<4>>(10))&&bind(){fun(struct<name:vector<char,30>,age:uint<4>> v7)return (v7.AP(age)<CAST<uint<4>>(20))(v6)})));
         }(( *v3));
     }
 
