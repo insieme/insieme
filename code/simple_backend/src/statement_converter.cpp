@@ -319,10 +319,10 @@ namespace simple_backend {
 		if (var->getType()->getNodeType() == NT_RefType) {
 
 			const RefTypePtr& refType = static_pointer_cast<const RefType>(var->getType());
-			if (refType->getElementType()->getNodeType() == NT_ArrayType) {
-				// this is a "pointer" in C - and a pointer is on the stack (pointing to the HEAP)
-				info.location = VariableManager::STACK;
-			} else {
+//			if (refType->getElementType()->getNodeType() == NT_ArrayType) {
+//				// this is a "pointer" in C - and a pointer is on the stack (pointing to the HEAP)
+//				info.location = VariableManager::STACK;
+//			} else {
 				ExpressionPtr initialization = ptr->getInitialization();
 				switch (initialization->getNodeType()) {
 				case NT_Variable:
@@ -342,7 +342,7 @@ namespace simple_backend {
 					info.location = VariableManager::STACK;
 					break;
 				}
-			}
+//			}
 		}
 		varManager.addInfo(var, info);
 
