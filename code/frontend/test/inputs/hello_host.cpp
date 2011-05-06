@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
     dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_double), host_ptr, &err);
 
-    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, NULL, 0, NULL, NULL);
+    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
     err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
 
