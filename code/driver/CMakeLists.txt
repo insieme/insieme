@@ -21,10 +21,13 @@ file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
 # We repeat the search for Xerces library here because adding this line to 
 # the environment.cmake file will produce the same error message every time 
 # the file is included (therefore for every module)
+
+option (USE_XML "Build XML support in Insieme" ON) 
+list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
+
 if (USE_XML) 
-	list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
 	find_package(Xerces)
-	if ( NOT Xerces_FOUND )
+	if ( NOT ${Xerces_FOUND} )
 		set(USE_XML OFF)
 	endif()
 endif (USE_XML)

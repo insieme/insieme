@@ -40,17 +40,23 @@ int main(int argc, char **argv)
 {
     cl_context context;
     cl_command_queue queue;
+    cl_kernel kernel;
     cl_int err;
 
     cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
-    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
+//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
     float* host_ptr;
 
 
-    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_double), NULL, &err);
+    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_double), host_ptr, &err);
 
     clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
+    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
+
+    clEnqueueReadBuffer(queue, dev_ptr1, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+
     clReleaseMemObject(dev_ptr1);
-    clReleaseMemObject(dev_ptr2);
+//    clReleaseMemObject(dev_ptr2);
+
 }
