@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
-        printf(string.as.char.pointer("Size of int: %d\n"), varlist.pack((sizeof(int<4>))));
+        printf(string.as.char.pointer("Size of int: %d\n"), varlist.pack((sizeof(type<int<4>>))));
         return 0;
     }
 
@@ -13,7 +13,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
-        printf(string.as.char.pointer("Size of int: %d\n"), varlist.pack((sizeof(int<4>))));
+        printf(string.as.char.pointer("Size of int: %d\n"), varlist.pack((sizeof(type<int<4>>))));
         return 0;
     }
 

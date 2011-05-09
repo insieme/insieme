@@ -7,30 +7,58 @@
 #define true 1
 #define false 0
 #define null 0
-// --- Entry Point ---
 
-// start code fragment :: Definition of f //
-int f(int* a) {
-	{
-		return (((a[0]))++);;
-	}
-}
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+    unsigned size[1];
+} __insieme_type_1;
 
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+    unsigned size[1];
+} __insieme_type_0;
+
+// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
+unsigned long strlen(char*);
+static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_8) { return strlen(((char*)((*(var_8)).data))); }
+
+// start code fragment :: array type definition of __insieme_type_4 <=> array<int<4>,1> //
+typedef struct ___insieme_type_4 { 
+    int* data;
+    unsigned size[1];
+} __insieme_type_4;
+
+// start code fragment :: Definition of f ... type: ((ref<array<int<4>,1>>)->int<4>) //
+int f(__insieme_type_4* a) { return ((((*a).data[0]))++); }
+static int f_wrap(void* _closure, __insieme_type_4* a) { return f(a); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of main //
-int main(int argc, char** argv) {
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+	}
+	
+	// ---- begin of actual code body ----
 	{
 		int var_6 = argc;
 		{
 			int a = 0;
-			f((&a));
-			f((&var_6));
-			printf("%d\n", (var_6));((var_6) = (a));
-			printf("%d\n", (var_6));
+			f((&((__insieme_type_4){&a,{1}})));
+			f((&((__insieme_type_4){&var_6,{1}})));
+			printf(((char*)((*(&((__insieme_type_1){"%d\n"}))).data)), (var_6));((var_6) = (a));
+			printf(((char*)((*(&((__insieme_type_1){"%d\n"}))).data)), (var_6));
 		};
 	}
+	// ----  end of actual code body  ----
+	
 }
 

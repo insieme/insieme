@@ -811,7 +811,7 @@ public:
 		const core::lang::BasicGenerator& gen = convFact.mgr.getBasicGenerator();
 		const core::TypePtr& type = convFact.convertType( GET_TYPE_PTR(castExpr) );
 		core::ExpressionPtr&& subExpr = Visit(castExpr->getSubExpr());
-		
+
 		core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
 
 		// if the cast is to a 'void*' type then we simply skip it
@@ -845,8 +845,19 @@ public:
 			return subExpr;
 		}
 
-		if (subExpr->getType()->getNodeType() == core::NT_RefType)
-		   return subExpr; // do not treat ref types
+		// handle truncation of floating point numbers
+		const core::TypePtr& subExprType = subExpr->getType();
+		if (subExprType->getNodeType() == core::NT_RefType) {
+			const core::RefTypePtr& sourceType = static_pointer_cast<const core::RefType>(subExprType);
+
+			// check whether it is a truncation
+			if (gen.isReal(sourceType->getElementType()) && gen.isSignedInt(type)) {
+				const core::GenericTypePtr& intType = static_pointer_cast<const core::GenericType>(type);
+				return convFact.builder.callExpr(type, gen.getRealToInt(), nonRefExpr, gen.getIntTypeParamLiteral(intType->getIntTypeParameter()[0]));
+			}
+
+			return subExpr;  // do not treat ref types
+		}
 
 		// In the case the target type of the cast is not a reftype we deref the subexpression
 		//if(!gen.isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
@@ -1301,6 +1312,26 @@ public:
 			VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 			if ( lhsTy->getNodeType() != core::NT_ArrayType || rhsTy->getNodeType() != core::NT_ArrayType ) {
+
+				// ----------------------------- Hack begin --------------------------------
+				// TODO: this is a quick solution => maybe clang allows you to determine the actual type
+				// => otherwise the sub-type checks within the core may be used
+				//
+				// Bug fixed by this:
+				//		when multiplying an integer with a double, the double is casted to an integer and the
+				//		results is an integer.
+				//
+
+				// check whether result type needs to be adjusted
+				if (*lhsTy != *rhsTy) {
+					// if second argument is a real
+					if (!gen.isReal(lhsTy) && gen.isReal(rhsTy)) {
+						exprTy = rhsTy;
+					}
+				}
+
+				// ----------------------------- Hack end --------------------------------
+
 				lhs = convFact.castToType(exprTy, lhs);
 				rhs = convFact.castToType(exprTy, rhs);
 				// Handle pointers arithmetic

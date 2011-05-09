@@ -43,6 +43,7 @@
 #include "insieme/utils/logging.h"
 
 #include <tuple>
+#include <stack>
 
 using namespace insieme::core;
 using namespace insieme::utils;

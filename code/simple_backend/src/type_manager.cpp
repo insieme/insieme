@@ -320,7 +320,7 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 
 	string externalization = "((" + externalName + ")(%s))";
 	if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
-		externalization = "((" + externalName + ")((*%s).data))";
+		externalization = "((" + externalName + ")((*(%s)).data))";
 	}
 
 	// ---------------- add a new operator ------------------------
