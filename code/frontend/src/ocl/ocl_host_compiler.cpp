@@ -140,15 +140,25 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
         // extract the size form argument size, relying on it using a multiple of sizeof(type)
         ExpressionPtr size;
         TypePtr type;
+        ExpressionPtr hostPtr;
 
         assert(o2i.extractSizeFromSizeof(node->getArgument(2), size, type)
                 && "Unable to deduce type from clCreateBuffer call:\nNo sizeof call found, cannot translate to INSPIRE.");
+
+//        std::cout << "Arg3: " << node->getArgument(3) << " of Type: " << node->getArgument(3)->getType() << std::endl;
+
+        if(node->getArgument(3)->getType() != core::NT_RefType) {// a scalar (probably NULL) has been passed as hostPtr arg
+            hostPtr = BASIC.getGetNull();
+//            std::cout << "HERElasfdj......................................................... \n";
+        }
+        else
+            hostPtr = node->getArgument(3);
 
         vector<ExpressionPtr> args;
         args.push_back(BASIC.getTypeLiteral(type));
         args.push_back(node->getArgument(1));
         args.push_back(size);
-        args.push_back(node->getArgument(3));
+        args.push_back(hostPtr);
         args.push_back(node->getArgument(4));
         return builder.callExpr(builder.arrayType(type), fun, args);
     );
@@ -209,6 +219,24 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
         }
 
         return builder.intLit(0); // returning CL_SUCCESS
+    );
+
+    ADD_Handler(builder, "oclLoadProgSource",
+        std::cerr << "oclLoadProgSource\n";
+        return node;
+    );
+
+    ADD_Handler(builder, "clEnqueueNDRangeKernel",
+        // get argument vector
+        std::vector<core::ExpressionPtr> args = kernelArgs[node->getArgument(1)];
+        assert(args.size() > 0 && "Cannot find any arguments for kernel function");
+        // adding global and local size to the argument vector
+        args.push_back(node->getArgument(4) );
+        args.push_back(node->getArgument(5) );
+
+        std::cerr << "ARGUMENTS: " << toString(join(", ", args)) << std::endl;
+
+        return node;
     );
 };
 
