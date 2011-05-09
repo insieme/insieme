@@ -300,10 +300,17 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		return builder.callExpr(trgTy, gen.getAnyRefToRef(), toVector<core::ExpressionPtr>(expr, gen.getTypeLiteral(subTy)));
 	}
 
+	// [ 0 -> anyRef ]
+	//
+	// Convert a ref<'a> type to anyRef. 
+	if ( gen.isAnyRef(trgTy) && (*expr == *builder.literal(argTy,"0")) ) {
+		return builder.callExpr( gen.getGetNull(), gen.getTypeLiteral(argTy) );
+	}
+	
 	// [ ref<'a> -> anyRef ]
 	//
 	// Convert a ref<'a> type to anyRef. 
-	if ( gen.isAnyRef(trgTy) ) {
+	if ( argTy->getNodeType() == core::NT_RefType && gen.isAnyRef(trgTy) ) {
 		assert( argTy->getNodeType() == core::NT_RefType && "AnyRef can only be converted to an L-Value (RefType)" );
 		return builder.callExpr(trgTy, gen.getRefToAnyRef(), toVector<core::ExpressionPtr>(expr));
 	}
