@@ -201,7 +201,9 @@ int main(int argc, char** argv) {
 					fout << "// --------- Pretty Print Inspire - Detail ----------" << std::endl;
 					fout << PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL);
 				} else {
-					SourceLocationMap srcMap = printAndMap(LOG_STREAM(INFO), PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL));
+					SourceLocationMap srcMap = printAndMap(LOG_STREAM(INFO), PrettyPrinter(program, PrettyPrinter::OPTIONS_DETAIL), 
+														   CommandLineOptions::ShowLineNo, CommandLineOptions::ColumnWrap
+														  );
 					LOG(INFO) << "Number of generated source code mappings: " << srcMap.size();
 					createInvMap(srcMap, stmtMap);
 				}
