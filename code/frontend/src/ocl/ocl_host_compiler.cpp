@@ -146,19 +146,19 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
                 && "Unable to deduce type from clCreateBuffer call:\nNo sizeof call found, cannot translate to INSPIRE.");
 
 //        std::cout << "Arg3: " << node->getArgument(3) << " of Type: " << node->getArgument(3)->getType() << std::endl;
-
+/*
         if(node->getArgument(3)->getType() != core::NT_RefType) {// a scalar (probably NULL) has been passed as hostPtr arg
             hostPtr = BASIC.getGetNull();
 //            std::cout << "HERElasfdj......................................................... \n";
         }
         else
             hostPtr = node->getArgument(3);
-
+*/
         vector<ExpressionPtr> args;
         args.push_back(BASIC.getTypeLiteral(type));
         args.push_back(node->getArgument(1));
         args.push_back(size);
-        args.push_back(hostPtr);
+        args.push_back(node->getArgument(3));
         args.push_back(node->getArgument(4));
         return builder.callExpr(builder.arrayType(type), fun, args);
     );
@@ -222,14 +222,21 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
     );
 
     ADD_Handler(builder, "oclLoadProgSource",
-        std::cerr << "oclLoadProgSource\n";
+        if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(node->getArgument(0))) {
+            if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
+                if(stringAsChar->getValue() == "string.as.char.pointer") {
+                    if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0)))
+                        std::cout << path->getValue() << " .........................\n";
+                }
+            }
+        }
         return node;
     );
 
     ADD_Handler(builder, "clEnqueueNDRangeKernel",
         // get argument vector
         std::vector<core::ExpressionPtr> args = kernelArgs[node->getArgument(1)];
-        assert(args.size() > 0 && "Cannot find any arguments for kernel function");
+        assert(args.size() > 0u && "Cannot find any arguments for kernel function");
         // adding global and local size to the argument vector
         args.push_back(node->getArgument(4) );
         args.push_back(node->getArgument(5) );
