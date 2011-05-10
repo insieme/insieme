@@ -299,13 +299,6 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
 		return builder.callExpr(trgTy, gen.getAnyRefToRef(), toVector<core::ExpressionPtr>(expr, gen.getTypeLiteral(subTy)));
 	}
-
-	// [ 0 -> anyRef ]
-	//
-	// Convert a ref<'a> type to anyRef. 
-	if ( gen.isAnyRef(trgTy) && (*expr == *builder.literal(argTy,"0")) ) {
-		return builder.callExpr( gen.getGetNull(), gen.getTypeLiteral(argTy) );
-	}
 	
 	// [ ref<'a> -> anyRef ]
 	//
@@ -313,6 +306,15 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	if ( argTy->getNodeType() == core::NT_RefType && gen.isAnyRef(trgTy) ) {
 		assert( argTy->getNodeType() == core::NT_RefType && "AnyRef can only be converted to an L-Value (RefType)" );
 		return builder.callExpr(trgTy, gen.getRefToAnyRef(), toVector<core::ExpressionPtr>(expr));
+	}
+
+	// [ 0 -> anyRef ]
+	//
+	// Convert a ref<'a> type to anyRef. 
+	if ( gen.isAnyRef(trgTy) && (*expr == *builder.literal(argTy,"0")) ) {
+		// FIXME: not sure about this being correct, we have to get a ref from a null in order to convert it to 
+		// the anyref value
+		return makeHerbertHappy(builder, trgTy, builder.refVar( builder.callExpr( gen.getGetNull(), gen.getTypeLiteral(argTy) )) );
 	}
 
 	// [ ref<'a> -> 'a ]
