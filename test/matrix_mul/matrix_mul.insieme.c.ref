@@ -1,0 +1,106 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<4>,1000> //
+typedef struct ___insieme_type_1 { 
+    float data[1000];
+} __insieme_type_1;
+
+// A constructor initializing a vector of the type __insieme_type_1 uniformly
+static inline __insieme_type_1 __insieme_type_1_init_uniform(float value) {
+	__insieme_type_1 res;
+	for (int i=0; i<1000;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_0 <=> vector<vector<real<4>,1000>,1000> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1 data[1000];
+} __insieme_type_0;
+
+// A constructor initializing a vector of the type __insieme_type_0 uniformly
+static inline __insieme_type_0 __insieme_type_0_init_uniform(__insieme_type_1 value) {
+	__insieme_type_0 res;
+	for (int i=0; i<1000;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: type_declaration___insieme_globals //
+struct __insieme_globals { 
+    __insieme_type_0 A;
+    __insieme_type_0 B;
+    __insieme_type_0 C;
+};
+
+// start code fragment :: array type definition of __insieme_type_5 <=> array<char,1> //
+typedef struct ___insieme_type_5 { 
+    char* data;
+} __insieme_type_5;
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<char,3> //
+typedef struct ___insieme_type_7 { 
+    char data[3];
+} __insieme_type_7;
+
+// A constructor initializing a vector of the type __insieme_type_7 uniformly
+static inline __insieme_type_7 __insieme_type_7_init_uniform(char value) {
+	__insieme_type_7 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_8 <=> vector<char,4> //
+typedef struct ___insieme_type_8 { 
+    char data[4];
+} __insieme_type_8;
+
+// A constructor initializing a vector of the type __insieme_type_8 uniformly
+static inline __insieme_type_8 __insieme_type_8_init_uniform(char value) {
+	__insieme_type_8 res;
+	for (int i=0; i<4;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: main function //
+int main() {
+	{
+		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+		{
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((*var_1).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(((i)*(j))))); }; };
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((*var_1).B))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(((((i)==(j)))?(1):(0))))); }; };
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1) {
+				double sum = ((double)(0));
+				for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((double)(((((((*(&((*var_1).A))).data[((unsigned int)((i)))])).data[((unsigned int)((k)))]))*(((((*(&((*var_1).B))).data[((unsigned int)((k)))])).data[((unsigned int)((j)))]))))))); };
+				((((((*(&((*var_1).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)((sum))));
+			}; };
+		};
+		int success = 1;
+		for(int i = 0; i < 1000; i += 1) {
+			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((((*(&((*var_1).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=(((((*(&((*var_1).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))) { ((success) = 0); }; };
+			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((*(&((*var_1).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((float)(0)))) { ((success) = 0); }; };
+		};
+		printf(((char*)((*(&((__insieme_type_5){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_5){(((__insieme_type_7){{'O', 'K', '\0'}})).data}))):((((__insieme_type_5){(((__insieme_type_8){{'E', 'R', 'R', '\0'}})).data}))))).data);
+	}
+}
