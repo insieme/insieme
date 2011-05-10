@@ -11,18 +11,12 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
-
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_22) { return strlen(((char*)((*(var_22)).data))); }
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
@@ -35,7 +29,7 @@ int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_23) { return ceil(var_23); }
+static double ceil_wrap(void* _closure, double var_22) { return ceil(var_22); }
 
 // start code fragment :: Definition of func ... type: ((int<4>)->int<4>) //
 int func(int k){
@@ -65,9 +59,9 @@ int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----

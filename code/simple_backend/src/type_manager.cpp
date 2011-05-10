@@ -36,6 +36,8 @@
 
 #include "insieme/simple_backend/type_manager.h"
 
+#include "insieme/simple_backend/backend_convert.h"
+
 #include "insieme/core/types.h"
 
 #include "insieme/c_info/naming.h"
@@ -101,6 +103,10 @@ string TypeManager::getTypeName(const CodeFragmentPtr& context, const core::Type
 	return (decl)?info.lValueName:info.rValueName;
 }
 
+
+NameManager& TypeManager::getNameManager() const {
+	return converter.getNameManager();
+}
 
 
 TypeManager::TypeInfo TypeManager::resolveType(const core::TypePtr& type) {
@@ -233,7 +239,7 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 	// create new entry:
 
 	// get name for function type
-	string name = nameGenerator.getName(functionType, "funType");
+	string name = getNameManager().getName(functionType, "funType");
 	string functorName = name;
 	string callerName = name + "_call";
 	string ctrName = name + "_ctr";
@@ -329,7 +335,7 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	code->addDependency(subType.definition);
 
 	// add struct definition
-	string name = nameGenerator.getName(ptr);
+	string name = getNameManager().getName(ptr);
 	const string& result = rvalue;
 	const string& value = subType.lValueName;
 
@@ -351,7 +357,7 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 
 	// fetch name for the vector type
-	string name = nameGenerator.getName(ptr);
+	string name = getNameManager().getName(ptr);
 
 	// look up element type info
 	const TypePtr& elementType = ptr->getElementType();
@@ -416,7 +422,7 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	// otherwise: create a struct representing the array type
 
 	// fetch name for the array type
-	string name = nameGenerator.getName(ptr);
+	string name = getNameManager().getName(ptr);
 
 
 	// look up element type info
@@ -432,10 +438,13 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	CodeFragmentPtr definition = CodeFragment::createNew("array type definition of " + name + " <=> " + toString(*ptr));
 	definition->addDependency(elementTypeInfo.declaration);
 
+	// see whether the size should be stored within an array
+	bool useSize = converter.isSupportArrayLength();
+
 	// add array-struct definition
 	definition << "typedef struct _" << name << " { \n";
 	definition << "    " << elementTypeInfo.lValueName << times("*", dim) << " data;\n";
-	definition << "    " << "unsigned size[" << dim << "];\n";
+	if (useSize) definition << "    " << "unsigned size[" << dim << "];\n";
 	definition << "} " + name + ";\n";
 
 	// ---------------------- add constructor ---------------------
@@ -455,14 +464,20 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	for (unsigned i=0; i<dim; i++) {
 		utils << "*s" << (i+1);
 	}
-	utils << "),{";
-	for (unsigned i=0; i<dim; i++) {
-		utils << "s" << (i+1);
-		if (i!=dim-1) {
-			utils << ",";
+	utils << ")";
+
+	if (useSize) {
+		utils << ",{";
+		for (unsigned i=0; i<dim; i++) {
+			utils << "s" << (i+1);
+			if (i!=dim-1) {
+				utils << ",";
+			}
 		}
+		utils << "}";
 	}
-	utils << "}});\n}\n";
+
+	utils << "});\n}\n";
 
 	string externalName = elementTypeInfo.externName + toString(times("*", dim));
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
@@ -473,7 +488,7 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
 
 	// fetch name for composed type
-	string name = nameGenerator.getName(ptr, "userdefined_type");
+	string name = getNameManager().getName(ptr, "userdefined_type");
 
 	// create a new code fragment for the struct definition
 	CodeFragmentPtr code = CodeFragment::createNew("type_declaration_" + name);
@@ -514,6 +529,7 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 	CodeFragmentPtr group = CodeFragment::createNewDummy("Dummy fragment for recursive type group");
 
 	NodeManager& manager = ptr->getNodeManager();
+	NameManager& nameManager = getNameManager();
 
 	// A) create prototype and add entry for each recursively defined type
 	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
@@ -522,7 +538,7 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 		RecTypePtr type = RecType::get(manager, cur.first, ptr);
 
 		// create prototype
-		string name = nameGenerator.getName(type, "userdefined_rec_type");
+		string name = nameManager.getName(type, "userdefined_rec_type");
 
 		switch(cur.second->getNodeType()) {
 		case NT_StructType:
@@ -549,7 +565,7 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 		TypePtr unrolled = ptr->unrollOnce(manager, cur.first);
 
 		// fix name of unrolled struct
-		nameGenerator.setName(unrolled, nameGenerator.getName(RecType::get(manager, cur.first, ptr)));
+		nameManager.setName(unrolled, nameManager.getName(RecType::get(manager, cur.first, ptr)));
 
 		// resolve unrolled type and add dependency to group
 		group->addDependency(resolveType(unrolled).definition);

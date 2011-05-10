@@ -11,51 +11,44 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
 
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_26) { return strlen(((char*)((*(var_26)).data))); }
-
-// start code fragment :: Definitions for function type: __insieme_funType_5 //
+// start code fragment :: Definitions for function type: __insieme_funType_4 //
 //
 // -------------------- Begin of constructs for function type ((int<4>,int<4>)->int<4>)---------------------
-// Base-struct of describing closures of type __insieme_funType_5 <-> ((int<4>,int<4>)->int<4>)
-typedef struct ___insieme_funType_5 { 
+// Base-struct of describing closures of type __insieme_funType_4 <-> ((int<4>,int<4>)->int<4>)
+typedef struct ___insieme_funType_4 { 
     int(*call)(void*, int, int);
-} __insieme_funType_5;
+} __insieme_funType_4;
 
-// Type safe function for invoking closures of type __insieme_funType_5
-static inline int __insieme_funType_5_call(__insieme_funType_5* closure, int p1, int p2) { return closure->call(closure, p1,p2); }
+// Type safe function for invoking closures of type __insieme_funType_4
+static inline int __insieme_funType_4_call(__insieme_funType_4* closure, int p1, int p2) { return closure->call(closure, p1,p2); }
 
 // A constructor for closures wrapping pure functions of type ((int<4>,int<4>)->int<4>)
-static inline __insieme_funType_5* __insieme_funType_5_ctr(__insieme_funType_5* target, int(*call)(void*, int, int)) {
-	*target = (__insieme_funType_5){call};
+static inline __insieme_funType_4* __insieme_funType_4_ctr(__insieme_funType_4* target, int(*call)(void*, int, int)) {
+	*target = (__insieme_funType_4){call};
 	return target;
 }
 // ----------------------- end of constructs for function ((int<4>,int<4>)->int<4>)-----------------------
 
-// start code fragment :: array type definition of __insieme_type_4 <=> array<((int<4>,int<4>)->int<4>),1> //
-typedef struct ___insieme_type_4 { 
-    __insieme_funType_5** data;
-    unsigned size[1];
-} __insieme_type_4;
-
-// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<array<((int<4>,int<4>)->int<4>),1>,4> //
+// start code fragment :: array type definition of __insieme_type_3 <=> array<((int<4>,int<4>)->int<4>),1> //
 typedef struct ___insieme_type_3 { 
-    __insieme_type_4 data[4];
+    __insieme_funType_4** data;
 } __insieme_type_3;
 
-// A constructor initializing a vector of the type __insieme_type_3 uniformly
-static inline __insieme_type_3 __insieme_type_3_init_uniform(__insieme_type_4 value) {
-	__insieme_type_3 res;
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<array<((int<4>,int<4>)->int<4>),1>,4> //
+typedef struct ___insieme_type_2 { 
+    __insieme_type_3 data[4];
+} __insieme_type_2;
+
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(__insieme_type_3 value) {
+	__insieme_type_2 res;
 	for (int i=0; i<4;++i) {
 	    res.data[i] = value;
 	}
@@ -63,14 +56,14 @@ static inline __insieme_type_3 __insieme_type_3_init_uniform(__insieme_type_4 va
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<((int<4>,int<4>)->int<4>),1> //
-typedef struct ___insieme_type_7 { 
-    __insieme_funType_5* data[1];
-} __insieme_type_7;
+// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<((int<4>,int<4>)->int<4>),1> //
+typedef struct ___insieme_type_6 { 
+    __insieme_funType_4* data[1];
+} __insieme_type_6;
 
-// A constructor initializing a vector of the type __insieme_type_7 uniformly
-static inline __insieme_type_7 __insieme_type_7_init_uniform(__insieme_funType_5* value) {
-	__insieme_type_7 res;
+// A constructor initializing a vector of the type __insieme_type_6 uniformly
+static inline __insieme_type_6 __insieme_type_6_init_uniform(__insieme_funType_4* value) {
+	__insieme_type_6 res;
 	for (int i=0; i<1;++i) {
 	    res.data[i] = value;
 	}
@@ -78,13 +71,13 @@ static inline __insieme_type_7 __insieme_type_7_init_uniform(__insieme_funType_5
 }
 
 
-// start code fragment :: Definition of __insieme_supp_8 ... type: ((int<4>,int<4>)->int<4>) //
-int __insieme_supp_8(int a, int b) { return (((a<b))?(a):(b)); }
-static int __insieme_supp_8_wrap(void* _closure, int a, int b) { return __insieme_supp_8(a, b); }
+// start code fragment :: Definition of __insieme_supp_7 ... type: ((int<4>,int<4>)->int<4>) //
+int __insieme_supp_7(int a, int b) { return (((a<b))?(a):(b)); }
+static int __insieme_supp_7_wrap(void* _closure, int a, int b) { return __insieme_supp_7(a, b); }
 
-// start code fragment :: Definition of __insieme_supp_9 ... type: ((int<4>,int<4>)->int<4>) //
-int __insieme_supp_9(int a, int b) { return (((a>b))?(a):(b)); }
-static int __insieme_supp_9_wrap(void* _closure, int a, int b) { return __insieme_supp_9(a, b); }
+// start code fragment :: Definition of __insieme_supp_8 ... type: ((int<4>,int<4>)->int<4>) //
+int __insieme_supp_8(int a, int b) { return (((a>b))?(a):(b)); }
+static int __insieme_supp_8_wrap(void* _closure, int a, int b) { return __insieme_supp_8(a, b); }
 
 // start code fragment :: Definition of sum ... type: ((int<4>,int<4>)->int<4>) //
 int sum(int a, int b) { return (a+b); }
@@ -102,15 +95,15 @@ int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
 	{
-		__insieme_type_3 funcs = ((__insieme_type_3){{(((__insieme_type_4){(__insieme_type_7_init_uniform((__insieme_funType_5*)__insieme_funType_5_ctr((__insieme_funType_5*)alloca(sizeof(__insieme_funType_5)),&__insieme_supp_8_wrap))).data,{1}})), (((__insieme_type_4){(__insieme_type_7_init_uniform((__insieme_funType_5*)__insieme_funType_5_ctr((__insieme_funType_5*)alloca(sizeof(__insieme_funType_5)),&__insieme_supp_9_wrap))).data,{1}})), (((__insieme_type_4){(__insieme_type_7_init_uniform((__insieme_funType_5*)__insieme_funType_5_ctr((__insieme_funType_5*)alloca(sizeof(__insieme_funType_5)),&sum_wrap))).data,{1}})), (((__insieme_type_4){(__insieme_type_7_init_uniform((__insieme_funType_5*)__insieme_funType_5_ctr((__insieme_funType_5*)alloca(sizeof(__insieme_funType_5)),&avg_wrap))).data,{1}}))}});
-		for(int i = 0; i < 4; i += 1)  { printf(((char*)((*(&((__insieme_type_1){"Applying func: %d\n"}))).data)), __insieme_funType_5_call((((funcs).data[((unsigned int)((i)))])).data[0], 10, 20)); };
+		__insieme_type_2 funcs = ((__insieme_type_2){{(((__insieme_type_3){(__insieme_type_6_init_uniform((__insieme_funType_4*)__insieme_funType_4_ctr((__insieme_funType_4*)alloca(sizeof(__insieme_funType_4)),&__insieme_supp_7_wrap))).data})), (((__insieme_type_3){(__insieme_type_6_init_uniform((__insieme_funType_4*)__insieme_funType_4_ctr((__insieme_funType_4*)alloca(sizeof(__insieme_funType_4)),&__insieme_supp_8_wrap))).data})), (((__insieme_type_3){(__insieme_type_6_init_uniform((__insieme_funType_4*)__insieme_funType_4_ctr((__insieme_funType_4*)alloca(sizeof(__insieme_funType_4)),&sum_wrap))).data})), (((__insieme_type_3){(__insieme_type_6_init_uniform((__insieme_funType_4*)__insieme_funType_4_ctr((__insieme_funType_4*)alloca(sizeof(__insieme_funType_4)),&avg_wrap))).data}))}});
+		for(int i = 0; i < 4; i += 1)  { printf(((char*)((*(&((__insieme_type_1){"Applying func: %d\n"}))).data)), __insieme_funType_4_call((((funcs).data[((unsigned int)((i)))])).data[0], 10, 20)); };
 	}
 	// ----  end of actual code body  ----
 	

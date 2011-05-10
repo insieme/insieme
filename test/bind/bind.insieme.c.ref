@@ -11,7 +11,6 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //

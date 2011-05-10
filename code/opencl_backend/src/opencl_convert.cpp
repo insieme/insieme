@@ -81,7 +81,7 @@ TargetCodePtr convert(const ProgramPtr& source) {
 	NameManager nameManager;
 	converter.setNameManager(&nameManager);
 
-	TypeManager typeManager(nameManager);
+	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
 
 	VariableManager variableManager;

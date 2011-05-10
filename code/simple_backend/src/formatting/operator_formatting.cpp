@@ -151,7 +151,11 @@ namespace formatting {
 
 				OUT("(");
 				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
-				OUT("){0,{0}}");
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT("){0,{0}}");
+				} else {
+					OUT("){0}");
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getPtrEq(), {
@@ -189,7 +193,11 @@ namespace formatting {
 				OUT(name);
 				OUT("){");
 				VISIT_ARG(0);
-				OUT(",{1}})");
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT(",{1}})");
+				} else {
+					OUT("})");
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getVectorToArray(), {
@@ -199,14 +207,20 @@ namespace formatting {
 				core::NodeManager& manager = CALL->getNodeManager();
 				core::ASTBuilder builder(manager);
 
-				const TypePtr& element = static_pointer_cast<const core::ArrayType>(call->getType())->getElementType();
-				const TypePtr array = builder.arrayType(element);
+				const TypePtr array = call->getType();
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 				OUT("((");
 				OUT(name);
 				OUT("){(");
 				VISIT_ARG(0);
-				OUT(").data,{1}})");
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT(").data,{");
+					const VectorTypePtr& vector = static_pointer_cast<const core::VectorType>(call->getArguments()[0]->getType());
+					OUT(*vector->getSize());
+					OUT("}})");
+				} else {
+					OUT(").data})");
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getRefVectorToRefArray(), {
@@ -216,16 +230,22 @@ namespace formatting {
 				core::NodeManager& manager = CALL->getNodeManager();
 				core::ASTBuilder builder(manager);
 
-				const TypePtr& vector = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
-				const TypePtr& element = static_pointer_cast<const core::ArrayType>(vector)->getElementType();
-				const TypePtr array = builder.arrayType(element);
+				const TypePtr array = call->getType();
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 
 				OUT("&((");
 				OUT(name);
 				OUT("){(*");
 				VISIT_ARG(0);
-				OUT(").data,{1}})");
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT(").data,{");
+					const RefTypePtr& refType = static_pointer_cast<const core::RefType>(call->getArguments()[0]->getType());
+					const VectorTypePtr& vector = static_pointer_cast<const core::VectorType>(refType->getElementType());
+					OUT(*vector->getSize());
+					OUT("}})");
+				} else {
+					OUT(").data})");
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
@@ -252,22 +272,7 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefElem1D(), false, {
-
-//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
-//				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
-//				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
-					OUT("&");
-//				}
-
-				// check whether input variable needs to be dereferenced
-//				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
-//				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
-//
-//				if (insertDeref) {
-					OUT("((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
-//				} else {
-//					OUT("("); VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]"); OUT(")");
-//				}
+				OUT("&((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {

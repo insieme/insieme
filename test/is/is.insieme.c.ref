@@ -11,27 +11,21 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
 
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_123) { return strlen(((char*)((*(var_123)).data))); }
-
-// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<real<8>,64> //
-typedef struct ___insieme_type_3 { 
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<real<8>,64> //
+typedef struct ___insieme_type_2 { 
     double data[64];
-} __insieme_type_3;
+} __insieme_type_2;
 
-// A constructor initializing a vector of the type __insieme_type_3 uniformly
-static inline __insieme_type_3 __insieme_type_3_init_uniform(double value) {
-	__insieme_type_3 res;
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(double value) {
+	__insieme_type_2 res;
 	for (int i=0; i<64;++i) {
 	    res.data[i] = value;
 	}
@@ -39,14 +33,14 @@ static inline __insieme_type_3 __insieme_type_3_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<int<4>,5> //
-typedef struct ___insieme_type_4 { 
+// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<int<4>,5> //
+typedef struct ___insieme_type_3 { 
     int data[5];
-} __insieme_type_4;
+} __insieme_type_3;
 
-// A constructor initializing a vector of the type __insieme_type_4 uniformly
-static inline __insieme_type_4 __insieme_type_4_init_uniform(int value) {
-	__insieme_type_4 res;
+// A constructor initializing a vector of the type __insieme_type_3 uniformly
+static inline __insieme_type_3 __insieme_type_3_init_uniform(int value) {
+	__insieme_type_3 res;
 	for (int i=0; i<5;++i) {
 	    res.data[i] = value;
 	}
@@ -54,20 +48,19 @@ static inline __insieme_type_4 __insieme_type_4_init_uniform(int value) {
 }
 
 
-// start code fragment :: array type definition of __insieme_type_5 <=> array<int<4>,1> //
-typedef struct ___insieme_type_5 { 
+// start code fragment :: array type definition of __insieme_type_4 <=> array<int<4>,1> //
+typedef struct ___insieme_type_4 { 
     int* data;
-    unsigned size[1];
+} __insieme_type_4;
+
+// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<int<4>,1048576> //
+typedef struct ___insieme_type_5 { 
+    int data[1048576];
 } __insieme_type_5;
 
-// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<int<4>,1048576> //
-typedef struct ___insieme_type_6 { 
-    int data[1048576];
-} __insieme_type_6;
-
-// A constructor initializing a vector of the type __insieme_type_6 uniformly
-static inline __insieme_type_6 __insieme_type_6_init_uniform(int value) {
-	__insieme_type_6 res;
+// A constructor initializing a vector of the type __insieme_type_5 uniformly
+static inline __insieme_type_5 __insieme_type_5_init_uniform(int value) {
+	__insieme_type_5 res;
 	for (int i=0; i<1048576;++i) {
 	    res.data[i] = value;
 	}
@@ -77,42 +70,42 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(int value) {
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    __insieme_type_3 start;
-    __insieme_type_3 elapsed;
+    __insieme_type_2 start;
+    __insieme_type_2 elapsed;
     int sec;
-    __insieme_type_4 B_test_index_array;
-    __insieme_type_4 B_test_rank_array;
-    __insieme_type_4 C_test_index_array;
-    __insieme_type_4 C_test_rank_array;
+    __insieme_type_3 B_test_index_array;
+    __insieme_type_3 B_test_rank_array;
+    __insieme_type_3 C_test_index_array;
+    __insieme_type_3 C_test_rank_array;
     int KS;
     double R23;
     double R46;
-    __insieme_type_5 key_buff_ptr_global;
+    __insieme_type_4 key_buff_ptr_global;
     int passed_verification;
-    __insieme_type_6 key_array;
-    __insieme_type_6 key_buff1;
-    __insieme_type_6 key_buff2;
-    __insieme_type_4 partial_verify_vals;
-    __insieme_type_4 test_index_array;
-    __insieme_type_4 test_rank_array;
-    __insieme_type_4 S_test_index_array;
-    __insieme_type_4 S_test_rank_array;
-    __insieme_type_4 W_test_index_array;
-    __insieme_type_4 W_test_rank_array;
-    __insieme_type_4 A_test_index_array;
-    __insieme_type_4 A_test_rank_array;
+    __insieme_type_5 key_array;
+    __insieme_type_5 key_buff1;
+    __insieme_type_5 key_buff2;
+    __insieme_type_3 partial_verify_vals;
+    __insieme_type_3 test_index_array;
+    __insieme_type_3 test_rank_array;
+    __insieme_type_3 S_test_index_array;
+    __insieme_type_3 S_test_rank_array;
+    __insieme_type_3 W_test_index_array;
+    __insieme_type_3 W_test_rank_array;
+    __insieme_type_3 A_test_index_array;
+    __insieme_type_3 A_test_rank_array;
     double T23;
     double T46;
 };
 
-// start code fragment :: vector_type_declaration of __insieme_type_8 <=> vector<int<4>,1> //
-typedef struct ___insieme_type_8 { 
+// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<int<4>,1> //
+typedef struct ___insieme_type_7 { 
     int data[1];
-} __insieme_type_8;
+} __insieme_type_7;
 
-// A constructor initializing a vector of the type __insieme_type_8 uniformly
-static inline __insieme_type_8 __insieme_type_8_init_uniform(int value) {
-	__insieme_type_8 res;
+// A constructor initializing a vector of the type __insieme_type_7 uniformly
+static inline __insieme_type_7 __insieme_type_7_init_uniform(int value) {
+	__insieme_type_7 res;
 	for (int i=0; i<1;++i) {
 	    res.data[i] = value;
 	}
@@ -122,7 +115,7 @@ static inline __insieme_type_8 __insieme_type_8_init_uniform(int value) {
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_124) { return ceil(var_124); }
+static double ceil_wrap(void* _closure, double var_123) { return ceil(var_123); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -134,7 +127,6 @@ static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_12, i
 // start code fragment :: array type definition of __insieme_type_11 <=> array<real<8>,1> //
 typedef struct ___insieme_type_11 { 
     double* data;
-    unsigned size[1];
 } __insieme_type_11;
 
 // start code fragment :: Definition of randlc ... type: ((ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>)->real<8>) //
@@ -203,10 +195,10 @@ void create_seq(struct __insieme_globals* var_15, double seed, double a){
 		((k) = ((1<<16)/4));
 		{
 			for(int var_41 = 0; var_41 < (1<<20); var_41 += 1) {
-				((x) = randlc(var_15, (&((__insieme_type_11){&var_22,{1}})), (&((__insieme_type_11){&var_23,{1}}))));
-				((x) = ((x)+randlc(var_15, (&((__insieme_type_11){&var_22,{1}})), (&((__insieme_type_11){&var_23,{1}})))));
-				((x) = ((x)+randlc(var_15, (&((__insieme_type_11){&var_22,{1}})), (&((__insieme_type_11){&var_23,{1}})))));
-				((x) = ((x)+randlc(var_15, (&((__insieme_type_11){&var_22,{1}})), (&((__insieme_type_11){&var_23,{1}})))));
+				((x) = randlc(var_15, (&((__insieme_type_11){&var_22})), (&((__insieme_type_11){&var_23}))));
+				((x) = ((x)+randlc(var_15, (&((__insieme_type_11){&var_22})), (&((__insieme_type_11){&var_23})))));
+				((x) = ((x)+randlc(var_15, (&((__insieme_type_11){&var_22})), (&((__insieme_type_11){&var_23})))));
+				((x) = ((x)+randlc(var_15, (&((__insieme_type_11){&var_22})), (&((__insieme_type_11){&var_23})))));
 				((((*(&((*var_15).key_array))).data[((unsigned int)((var_41)))])) = ((int)((((double)((k)))*(x)))));
 			};
 			((i) = (0+(((int)(ceil((((double)(((1<<20)-0)))/((double)(1))))))*1)));
@@ -295,7 +287,7 @@ void rank(struct __insieme_globals* var_43, int iteration){
 			};
 			((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
-		if((iteration==10)) { ((*(&((*var_43).key_buff_ptr_global))) = (((__insieme_type_5){((*(&((*var_43).key_buff1)))).data,{1}}))); };
+		if((iteration==10)) { ((*(&((*var_43).key_buff_ptr_global))) = (((__insieme_type_4){((*(&((*var_43).key_buff1)))).data}))); };
 	};
 }
 static void rank_wrap(void* _closure, struct __insieme_globals* var_43, int iteration) { rank(var_43, iteration); }
@@ -309,7 +301,6 @@ struct timeval {
 // start code fragment :: array type definition of __insieme_type_16 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
 typedef struct ___insieme_type_16 { 
     struct timeval* data;
-    unsigned size[1];
 } __insieme_type_16;
 
 // start code fragment :: type_declaration_timezone //
@@ -321,17 +312,16 @@ struct timezone {
 // start code fragment :: array type definition of __timezone_ptr_t <=> array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1> //
 typedef struct ___timezone_ptr_t { 
     struct timezone* data;
-    unsigned size[1];
 } __timezone_ptr_t;
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_16* var_125, __timezone_ptr_t* var_126) { return gettimeofday(((struct timeval*)((*(var_125)).data)), ((struct timezone*)((*(var_126)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_16* var_124, __timezone_ptr_t* var_125) { return gettimeofday(((struct timeval*)((*(var_124)).data)), ((struct timezone*)((*(var_125)).data))); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>>,ref<array<real<8>,1>>)->unit) //
 void wtime(struct __insieme_globals* var_74, __insieme_type_11* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_16){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_16){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((*var_74).sec)))<0)) { ((*(&((*var_74).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_74).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
@@ -340,7 +330,7 @@ static void wtime_wrap(void* _closure, struct __insieme_globals* var_74, __insie
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>>)->real<8>) //
 double elapsed_time(struct __insieme_globals* var_72){
 	double t = 0.0;
-	wtime(var_72, (&((__insieme_type_11){&t,{1}})));
+	wtime(var_72, (&((__insieme_type_11){&t})));
 	return (t);
 }
 static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_72) { return elapsed_time(var_72); }
@@ -413,30 +403,30 @@ int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
 		((*(&((*var_1).sec))) = (((int)(0))-1));
-		((*(&((*var_1).B_test_index_array))) = ((__insieme_type_4){{41869, 812306, 5102857, 18232239, 26860214}}));
-		((*(&((*var_1).B_test_rank_array))) = ((__insieme_type_4){{33422937, 10244, 59149, 33135281, 99}}));
-		((*(&((*var_1).C_test_index_array))) = ((__insieme_type_4){{44172927, 72999161, 74326391, 129606274, 21736814}}));
-		((*(&((*var_1).C_test_rank_array))) = ((__insieme_type_4){{61147, 882988, 266290, 133997595, 133525895}}));
+		((*(&((*var_1).B_test_index_array))) = ((__insieme_type_3){{41869, 812306, 5102857, 18232239, 26860214}}));
+		((*(&((*var_1).B_test_rank_array))) = ((__insieme_type_3){{33422937, 10244, 59149, 33135281, 99}}));
+		((*(&((*var_1).C_test_index_array))) = ((__insieme_type_3){{44172927, 72999161, 74326391, 129606274, 21736814}}));
+		((*(&((*var_1).C_test_rank_array))) = ((__insieme_type_3){{61147, 882988, 266290, 133997595, 133525895}}));
 		((*(&((*var_1).KS))) = 0);
 		((*(&((*var_1).R23))) = 0.0);
 		((*(&((*var_1).R46))) = 0.0);
-		((*(&((*var_1).key_buff_ptr_global))) = (((__insieme_type_5){(__insieme_type_8_init_uniform(0)).data,{1}})));
+		((*(&((*var_1).key_buff_ptr_global))) = (((__insieme_type_4){(__insieme_type_7_init_uniform(0)).data})));
 		((*(&((*var_1).passed_verification))) = 0);
-		((*(&((*var_1).S_test_index_array))) = ((__insieme_type_4){{48427, 17148, 23627, 62548, 4431}}));
-		((*(&((*var_1).S_test_rank_array))) = ((__insieme_type_4){{0, 18, 346, 64917, 65463}}));
-		((*(&((*var_1).W_test_index_array))) = ((__insieme_type_4){{357773, 934767, 875723, 898999, 404505}}));
-		((*(&((*var_1).W_test_rank_array))) = ((__insieme_type_4){{1249, 11698, 1039987, 1043896, 1048018}}));
-		((*(&((*var_1).A_test_index_array))) = ((__insieme_type_4){{2112377, 662041, 5336171, 3642833, 4250760}}));
-		((*(&((*var_1).A_test_rank_array))) = ((__insieme_type_4){{104, 17523, 123928, 8288932, 8388264}}));
+		((*(&((*var_1).S_test_index_array))) = ((__insieme_type_3){{48427, 17148, 23627, 62548, 4431}}));
+		((*(&((*var_1).S_test_rank_array))) = ((__insieme_type_3){{0, 18, 346, 64917, 65463}}));
+		((*(&((*var_1).W_test_index_array))) = ((__insieme_type_3){{357773, 934767, 875723, 898999, 404505}}));
+		((*(&((*var_1).W_test_rank_array))) = ((__insieme_type_3){{1249, 11698, 1039987, 1043896, 1048018}}));
+		((*(&((*var_1).A_test_index_array))) = ((__insieme_type_3){{2112377, 662041, 5336171, 3642833, 4250760}}));
+		((*(&((*var_1).A_test_rank_array))) = ((__insieme_type_3){{104, 17523, 123928, 8288932, 8388264}}));
 		((*(&((*var_1).T23))) = 0.0);
 		((*(&((*var_1).T46))) = 0.0);
 		int i = 0;

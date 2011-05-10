@@ -11,27 +11,21 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
 
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_534) { return strlen(((char*)((*(var_534)).data))); }
-
-// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<int<4>,3> //
-typedef struct ___insieme_type_3 { 
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<int<4>,3> //
+typedef struct ___insieme_type_2 { 
     int data[3];
-} __insieme_type_3;
+} __insieme_type_2;
 
-// A constructor initializing a vector of the type __insieme_type_3 uniformly
-static inline __insieme_type_3 __insieme_type_3_init_uniform(int value) {
-	__insieme_type_3 res;
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(int value) {
+	__insieme_type_2 res;
 	for (int i=0; i<3;++i) {
 	    res.data[i] = value;
 	}
@@ -39,14 +33,14 @@ static inline __insieme_type_3 __insieme_type_3_init_uniform(int value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<real<8>,13> //
-typedef struct ___insieme_type_5 { 
+// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<real<8>,13> //
+typedef struct ___insieme_type_4 { 
     double data[13];
-} __insieme_type_5;
+} __insieme_type_4;
 
-// A constructor initializing a vector of the type __insieme_type_5 uniformly
-static inline __insieme_type_5 __insieme_type_5_init_uniform(double value) {
-	__insieme_type_5 res;
+// A constructor initializing a vector of the type __insieme_type_4 uniformly
+static inline __insieme_type_4 __insieme_type_4_init_uniform(double value) {
+	__insieme_type_4 res;
 	for (int i=0; i<13;++i) {
 	    res.data[i] = value;
 	}
@@ -54,14 +48,14 @@ static inline __insieme_type_5 __insieme_type_5_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<vector<real<8>,13>,5> //
-typedef struct ___insieme_type_4 { 
-    __insieme_type_5 data[5];
-} __insieme_type_4;
+// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<vector<real<8>,13>,5> //
+typedef struct ___insieme_type_3 { 
+    __insieme_type_4 data[5];
+} __insieme_type_3;
 
-// A constructor initializing a vector of the type __insieme_type_4 uniformly
-static inline __insieme_type_4 __insieme_type_4_init_uniform(__insieme_type_5 value) {
-	__insieme_type_4 res;
+// A constructor initializing a vector of the type __insieme_type_3 uniformly
+static inline __insieme_type_3 __insieme_type_3_init_uniform(__insieme_type_4 value) {
+	__insieme_type_3 res;
 	for (int i=0; i<5;++i) {
 	    res.data[i] = value;
 	}
@@ -69,28 +63,13 @@ static inline __insieme_type_4 __insieme_type_4_init_uniform(__insieme_type_5 va
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_8 <=> vector<real<8>,25> //
-typedef struct ___insieme_type_8 { 
-    double data[25];
-} __insieme_type_8;
-
-// A constructor initializing a vector of the type __insieme_type_8 uniformly
-static inline __insieme_type_8 __insieme_type_8_init_uniform(double value) {
-	__insieme_type_8 res;
-	for (int i=0; i<25;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<vector<real<8>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<real<8>,25> //
 typedef struct ___insieme_type_7 { 
-    __insieme_type_8 data[25];
+    double data[25];
 } __insieme_type_7;
 
 // A constructor initializing a vector of the type __insieme_type_7 uniformly
-static inline __insieme_type_7 __insieme_type_7_init_uniform(__insieme_type_8 value) {
+static inline __insieme_type_7 __insieme_type_7_init_uniform(double value) {
 	__insieme_type_7 res;
 	for (int i=0; i<25;++i) {
 	    res.data[i] = value;
@@ -99,7 +78,7 @@ static inline __insieme_type_7 __insieme_type_7_init_uniform(__insieme_type_8 va
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<vector<vector<real<8>,25>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<vector<real<8>,25>,25> //
 typedef struct ___insieme_type_6 { 
     __insieme_type_7 data[25];
 } __insieme_type_6;
@@ -114,29 +93,14 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(__insieme_type_7 va
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_12 <=> vector<real<8>,6> //
-typedef struct ___insieme_type_12 { 
-    double data[6];
-} __insieme_type_12;
+// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<vector<vector<real<8>,25>,25>,25> //
+typedef struct ___insieme_type_5 { 
+    __insieme_type_6 data[25];
+} __insieme_type_5;
 
-// A constructor initializing a vector of the type __insieme_type_12 uniformly
-static inline __insieme_type_12 __insieme_type_12_init_uniform(double value) {
-	__insieme_type_12 res;
-	for (int i=0; i<6;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_11 <=> vector<vector<real<8>,6>,25> //
-typedef struct ___insieme_type_11 { 
-    __insieme_type_12 data[25];
-} __insieme_type_11;
-
-// A constructor initializing a vector of the type __insieme_type_11 uniformly
-static inline __insieme_type_11 __insieme_type_11_init_uniform(__insieme_type_12 value) {
-	__insieme_type_11 res;
+// A constructor initializing a vector of the type __insieme_type_5 uniformly
+static inline __insieme_type_5 __insieme_type_5_init_uniform(__insieme_type_6 value) {
+	__insieme_type_5 res;
 	for (int i=0; i<25;++i) {
 	    res.data[i] = value;
 	}
@@ -144,7 +108,22 @@ static inline __insieme_type_11 __insieme_type_11_init_uniform(__insieme_type_12
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_10 <=> vector<vector<vector<real<8>,6>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_11 <=> vector<real<8>,6> //
+typedef struct ___insieme_type_11 { 
+    double data[6];
+} __insieme_type_11;
+
+// A constructor initializing a vector of the type __insieme_type_11 uniformly
+static inline __insieme_type_11 __insieme_type_11_init_uniform(double value) {
+	__insieme_type_11 res;
+	for (int i=0; i<6;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_10 <=> vector<vector<real<8>,6>,25> //
 typedef struct ___insieme_type_10 { 
     __insieme_type_11 data[25];
 } __insieme_type_10;
@@ -159,7 +138,7 @@ static inline __insieme_type_10 __insieme_type_10_init_uniform(__insieme_type_11
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<vector<vector<vector<real<8>,6>,25>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<vector<vector<real<8>,6>,25>,25> //
 typedef struct ___insieme_type_9 { 
     __insieme_type_10 data[25];
 } __insieme_type_9;
@@ -174,29 +153,14 @@ static inline __insieme_type_9 __insieme_type_9_init_uniform(__insieme_type_10 v
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_16 <=> vector<real<8>,5> //
-typedef struct ___insieme_type_16 { 
-    double data[5];
-} __insieme_type_16;
+// start code fragment :: vector_type_declaration of __insieme_type_8 <=> vector<vector<vector<vector<real<8>,6>,25>,25>,25> //
+typedef struct ___insieme_type_8 { 
+    __insieme_type_9 data[25];
+} __insieme_type_8;
 
-// A constructor initializing a vector of the type __insieme_type_16 uniformly
-static inline __insieme_type_16 __insieme_type_16_init_uniform(double value) {
-	__insieme_type_16 res;
-	for (int i=0; i<5;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_15 <=> vector<vector<real<8>,5>,25> //
-typedef struct ___insieme_type_15 { 
-    __insieme_type_16 data[25];
-} __insieme_type_15;
-
-// A constructor initializing a vector of the type __insieme_type_15 uniformly
-static inline __insieme_type_15 __insieme_type_15_init_uniform(__insieme_type_16 value) {
-	__insieme_type_15 res;
+// A constructor initializing a vector of the type __insieme_type_8 uniformly
+static inline __insieme_type_8 __insieme_type_8_init_uniform(__insieme_type_9 value) {
+	__insieme_type_8 res;
 	for (int i=0; i<25;++i) {
 	    res.data[i] = value;
 	}
@@ -204,7 +168,22 @@ static inline __insieme_type_15 __insieme_type_15_init_uniform(__insieme_type_16
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_14 <=> vector<vector<vector<real<8>,5>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_15 <=> vector<real<8>,5> //
+typedef struct ___insieme_type_15 { 
+    double data[5];
+} __insieme_type_15;
+
+// A constructor initializing a vector of the type __insieme_type_15 uniformly
+static inline __insieme_type_15 __insieme_type_15_init_uniform(double value) {
+	__insieme_type_15 res;
+	for (int i=0; i<5;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_14 <=> vector<vector<real<8>,5>,25> //
 typedef struct ___insieme_type_14 { 
     __insieme_type_15 data[25];
 } __insieme_type_14;
@@ -219,7 +198,7 @@ static inline __insieme_type_14 __insieme_type_14_init_uniform(__insieme_type_15
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_13 <=> vector<vector<vector<vector<real<8>,5>,25>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_13 <=> vector<vector<vector<real<8>,5>,25>,25> //
 typedef struct ___insieme_type_13 { 
     __insieme_type_14 data[25];
 } __insieme_type_13;
@@ -234,44 +213,14 @@ static inline __insieme_type_13 __insieme_type_13_init_uniform(__insieme_type_14
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_21 <=> vector<vector<real<8>,5>,5> //
-typedef struct ___insieme_type_21 { 
-    __insieme_type_16 data[5];
-} __insieme_type_21;
+// start code fragment :: vector_type_declaration of __insieme_type_12 <=> vector<vector<vector<vector<real<8>,5>,25>,25>,25> //
+typedef struct ___insieme_type_12 { 
+    __insieme_type_13 data[25];
+} __insieme_type_12;
 
-// A constructor initializing a vector of the type __insieme_type_21 uniformly
-static inline __insieme_type_21 __insieme_type_21_init_uniform(__insieme_type_16 value) {
-	__insieme_type_21 res;
-	for (int i=0; i<5;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_20 <=> vector<vector<vector<real<8>,5>,5>,3> //
-typedef struct ___insieme_type_20 { 
-    __insieme_type_21 data[3];
-} __insieme_type_20;
-
-// A constructor initializing a vector of the type __insieme_type_20 uniformly
-static inline __insieme_type_20 __insieme_type_20_init_uniform(__insieme_type_21 value) {
-	__insieme_type_20 res;
-	for (int i=0; i<3;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_19 <=> vector<vector<vector<vector<real<8>,5>,5>,3>,25> //
-typedef struct ___insieme_type_19 { 
-    __insieme_type_20 data[25];
-} __insieme_type_19;
-
-// A constructor initializing a vector of the type __insieme_type_19 uniformly
-static inline __insieme_type_19 __insieme_type_19_init_uniform(__insieme_type_20 value) {
-	__insieme_type_19 res;
+// A constructor initializing a vector of the type __insieme_type_12 uniformly
+static inline __insieme_type_12 __insieme_type_12_init_uniform(__insieme_type_13 value) {
+	__insieme_type_12 res;
 	for (int i=0; i<25;++i) {
 	    res.data[i] = value;
 	}
@@ -279,7 +228,37 @@ static inline __insieme_type_19 __insieme_type_19_init_uniform(__insieme_type_20
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_18 <=> vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_20 <=> vector<vector<real<8>,5>,5> //
+typedef struct ___insieme_type_20 { 
+    __insieme_type_15 data[5];
+} __insieme_type_20;
+
+// A constructor initializing a vector of the type __insieme_type_20 uniformly
+static inline __insieme_type_20 __insieme_type_20_init_uniform(__insieme_type_15 value) {
+	__insieme_type_20 res;
+	for (int i=0; i<5;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_19 <=> vector<vector<vector<real<8>,5>,5>,3> //
+typedef struct ___insieme_type_19 { 
+    __insieme_type_20 data[3];
+} __insieme_type_19;
+
+// A constructor initializing a vector of the type __insieme_type_19 uniformly
+static inline __insieme_type_19 __insieme_type_19_init_uniform(__insieme_type_20 value) {
+	__insieme_type_19 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_18 <=> vector<vector<vector<vector<real<8>,5>,5>,3>,25> //
 typedef struct ___insieme_type_18 { 
     __insieme_type_19 data[25];
 } __insieme_type_18;
@@ -294,7 +273,7 @@ static inline __insieme_type_18 __insieme_type_18_init_uniform(__insieme_type_19
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_17 <=> vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_17 <=> vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25> //
 typedef struct ___insieme_type_17 { 
     __insieme_type_18 data[25];
 } __insieme_type_17;
@@ -309,13 +288,43 @@ static inline __insieme_type_17 __insieme_type_17_init_uniform(__insieme_type_18
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_22 <=> vector<real<8>,24> //
-typedef struct ___insieme_type_22 { 
+// start code fragment :: vector_type_declaration of __insieme_type_16 <=> vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25> //
+typedef struct ___insieme_type_16 { 
+    __insieme_type_17 data[25];
+} __insieme_type_16;
+
+// A constructor initializing a vector of the type __insieme_type_16 uniformly
+static inline __insieme_type_16 __insieme_type_16_init_uniform(__insieme_type_17 value) {
+	__insieme_type_16 res;
+	for (int i=0; i<25;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_21 <=> vector<real<8>,24> //
+typedef struct ___insieme_type_21 { 
     double data[24];
+} __insieme_type_21;
+
+// A constructor initializing a vector of the type __insieme_type_21 uniformly
+static inline __insieme_type_21 __insieme_type_21_init_uniform(double value) {
+	__insieme_type_21 res;
+	for (int i=0; i<24;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_22 <=> vector<vector<real<8>,5>,24> //
+typedef struct ___insieme_type_22 { 
+    __insieme_type_15 data[24];
 } __insieme_type_22;
 
 // A constructor initializing a vector of the type __insieme_type_22 uniformly
-static inline __insieme_type_22 __insieme_type_22_init_uniform(double value) {
+static inline __insieme_type_22 __insieme_type_22_init_uniform(__insieme_type_15 value) {
 	__insieme_type_22 res;
 	for (int i=0; i<24;++i) {
 	    res.data[i] = value;
@@ -324,52 +333,22 @@ static inline __insieme_type_22 __insieme_type_22_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_23 <=> vector<vector<real<8>,5>,24> //
-typedef struct ___insieme_type_23 { 
-    __insieme_type_16 data[24];
-} __insieme_type_23;
-
-// A constructor initializing a vector of the type __insieme_type_23 uniformly
-static inline __insieme_type_23 __insieme_type_23_init_uniform(__insieme_type_16 value) {
-	__insieme_type_23 res;
-	for (int i=0; i<24;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_26 <=> vector<vector<vector<real<8>,5>,5>,24> //
-typedef struct ___insieme_type_26 { 
-    __insieme_type_21 data[24];
-} __insieme_type_26;
-
-// A constructor initializing a vector of the type __insieme_type_26 uniformly
-static inline __insieme_type_26 __insieme_type_26_init_uniform(__insieme_type_21 value) {
-	__insieme_type_26 res;
-	for (int i=0; i<24;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_25 <=> vector<vector<vector<vector<real<8>,5>,5>,24>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_25 <=> vector<vector<vector<real<8>,5>,5>,24> //
 typedef struct ___insieme_type_25 { 
-    __insieme_type_26 data[25];
+    __insieme_type_20 data[24];
 } __insieme_type_25;
 
 // A constructor initializing a vector of the type __insieme_type_25 uniformly
-static inline __insieme_type_25 __insieme_type_25_init_uniform(__insieme_type_26 value) {
+static inline __insieme_type_25 __insieme_type_25_init_uniform(__insieme_type_20 value) {
 	__insieme_type_25 res;
-	for (int i=0; i<25;++i) {
+	for (int i=0; i<24;++i) {
 	    res.data[i] = value;
 	}
 	return res;
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_24 <=> vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25> //
+// start code fragment :: vector_type_declaration of __insieme_type_24 <=> vector<vector<vector<vector<real<8>,5>,5>,24>,25> //
 typedef struct ___insieme_type_24 { 
     __insieme_type_25 data[25];
 } __insieme_type_24;
@@ -384,14 +363,29 @@ static inline __insieme_type_24 __insieme_type_24_init_uniform(__insieme_type_25
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_27 <=> vector<real<8>,64> //
-typedef struct ___insieme_type_27 { 
-    double data[64];
-} __insieme_type_27;
+// start code fragment :: vector_type_declaration of __insieme_type_23 <=> vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25> //
+typedef struct ___insieme_type_23 { 
+    __insieme_type_24 data[25];
+} __insieme_type_23;
 
-// A constructor initializing a vector of the type __insieme_type_27 uniformly
-static inline __insieme_type_27 __insieme_type_27_init_uniform(double value) {
-	__insieme_type_27 res;
+// A constructor initializing a vector of the type __insieme_type_23 uniformly
+static inline __insieme_type_23 __insieme_type_23_init_uniform(__insieme_type_24 value) {
+	__insieme_type_23 res;
+	for (int i=0; i<25;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_26 <=> vector<real<8>,64> //
+typedef struct ___insieme_type_26 { 
+    double data[64];
+} __insieme_type_26;
+
+// A constructor initializing a vector of the type __insieme_type_26 uniformly
+static inline __insieme_type_26 __insieme_type_26_init_uniform(double value) {
+	__insieme_type_26 res;
 	for (int i=0; i<64;++i) {
 	    res.data[i] = value;
 	}
@@ -401,7 +395,7 @@ static inline __insieme_type_27 __insieme_type_27_init_uniform(double value) {
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    __insieme_type_3 grid_points;
+    __insieme_type_2 grid_points;
     double tx1;
     double tx2;
     double tx3;
@@ -428,7 +422,7 @@ struct __insieme_globals {
     double dz5;
     double dssp;
     double dt;
-    __insieme_type_4 ce;
+    __insieme_type_3 ce;
     double dxmax;
     double dymax;
     double dzmax;
@@ -497,45 +491,44 @@ struct __insieme_globals {
     double c2iv;
     double con43;
     double con16;
-    __insieme_type_6 us;
-    __insieme_type_6 vs;
-    __insieme_type_6 ws;
-    __insieme_type_6 qs;
-    __insieme_type_6 rho_i;
-    __insieme_type_6 square;
-    __insieme_type_9 forcing;
-    __insieme_type_13 u;
-    __insieme_type_13 rhs;
-    __insieme_type_17 lhs;
-    __insieme_type_22 cuf;
-    __insieme_type_22 q;
-    __insieme_type_23 ue;
-    __insieme_type_23 buf;
-    __insieme_type_24 fjac;
-    __insieme_type_24 njac;
+    __insieme_type_5 us;
+    __insieme_type_5 vs;
+    __insieme_type_5 ws;
+    __insieme_type_5 qs;
+    __insieme_type_5 rho_i;
+    __insieme_type_5 square;
+    __insieme_type_8 forcing;
+    __insieme_type_12 u;
+    __insieme_type_12 rhs;
+    __insieme_type_16 lhs;
+    __insieme_type_21 cuf;
+    __insieme_type_21 q;
+    __insieme_type_22 ue;
+    __insieme_type_22 buf;
+    __insieme_type_23 fjac;
+    __insieme_type_23 njac;
     double tmp1;
     double tmp2;
     double tmp3;
-    __insieme_type_27 start;
-    __insieme_type_27 elapsed;
+    __insieme_type_26 start;
+    __insieme_type_26 elapsed;
     int sec;
 };
 
 // start code fragment :: Prototype of struct FILE //
 struct FILE;
 
-// start code fragment :: array type definition of __insieme_type_32 <=> array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1> //
-typedef struct ___insieme_type_32 { 
+// start code fragment :: array type definition of __insieme_type_31 <=> array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1> //
+typedef struct ___insieme_type_31 { 
     struct FILE* data;
-    unsigned size[1];
-} __insieme_type_32;
+} __insieme_type_31;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: fopen ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>) //
 struct FILE* fopen(char*, char*);
-static __insieme_type_32* fopen_wrap(void* _closure, __insieme_type_1* var_535, __insieme_type_1* var_536) { return &((__insieme_type_32){fopen(((char*)((*(var_535)).data)), ((char*)((*(var_536)).data))),{1}}); }
+static __insieme_type_31* fopen_wrap(void* _closure, __insieme_type_1* var_534, __insieme_type_1* var_535) { return &((__insieme_type_31){fopen(((char*)((*(var_534)).data)), ((char*)((*(var_535)).data)))}); }
 
 // start code fragment :: Prototype for external function: fscanf ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>,ref<array<char,1>>,var_list)->int<4>) //
 int fscanf(struct FILE*, char*, ...);
@@ -543,26 +536,24 @@ int fscanf(struct FILE*, char*, ...);
 // start code fragment :: array type definition of __insieme_type_38 <=> array<int<4>,1> //
 typedef struct ___insieme_type_38 { 
     int* data;
-    unsigned size[1];
 } __insieme_type_38;
 
 // start code fragment :: Prototype for external function: fgetc ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
 int fgetc(struct FILE*);
-static int fgetc_wrap(void* _closure, __insieme_type_32* var_537) { return fgetc(((struct FILE*)((*(var_537)).data))); }
+static int fgetc_wrap(void* _closure, __insieme_type_31* var_536) { return fgetc(((struct FILE*)((*(var_536)).data))); }
 
 // start code fragment :: array type definition of __insieme_type_40 <=> array<real<8>,1> //
 typedef struct ___insieme_type_40 { 
     double* data;
-    unsigned size[1];
 } __insieme_type_40;
 
 // start code fragment :: Prototype for external function: fclose ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
 int fclose(struct FILE*);
-static int fclose_wrap(void* _closure, __insieme_type_32* var_538) { return fclose(((struct FILE*)((*(var_538)).data))); }
+static int fclose_wrap(void* _closure, __insieme_type_31* var_537) { return fclose(((struct FILE*)((*(var_537)).data))); }
 
 // start code fragment :: Prototype for external function: exit ... type: ((int<4>)->unit) //
 void exit(int);
-static void exit_wrap(void* _closure, int var_539) { exit(var_539); }
+static void exit_wrap(void* _closure, int var_538) { exit(var_538); }
 
 // start code fragment :: Definition of __insieme_supp_42 ... type: ((ref<struct<grid_points:vector<int<4>,3>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,dt:real<8>,ce:vector<vector<real<8>,13>,5>,dxmax:real<8>,dymax:real<8>,dzmax:real<8>,xxcon1:real<8>,xxcon2:real<8>,xxcon3:real<8>,xxcon4:real<8>,xxcon5:real<8>,dx1tx1:real<8>,dx2tx1:real<8>,dx3tx1:real<8>,dx4tx1:real<8>,dx5tx1:real<8>,yycon1:real<8>,yycon2:real<8>,yycon3:real<8>,yycon4:real<8>,yycon5:real<8>,dy1ty1:real<8>,dy2ty1:real<8>,dy3ty1:real<8>,dy4ty1:real<8>,dy5ty1:real<8>,zzcon1:real<8>,zzcon2:real<8>,zzcon3:real<8>,zzcon4:real<8>,zzcon5:real<8>,dz1tz1:real<8>,dz2tz1:real<8>,dz3tz1:real<8>,dz4tz1:real<8>,dz5tz1:real<8>,dnxm1:real<8>,dnym1:real<8>,dnzm1:real<8>,c1c2:real<8>,c1c5:real<8>,c3c4:real<8>,c1345:real<8>,conz1:real<8>,c1:real<8>,c2:real<8>,c3:real<8>,c4:real<8>,c5:real<8>,c4dssp:real<8>,c5dssp:real<8>,dtdssp:real<8>,dttx1:real<8>,dttx2:real<8>,dtty1:real<8>,dtty2:real<8>,dttz1:real<8>,dttz2:real<8>,c2dttx1:real<8>,c2dtty1:real<8>,c2dttz1:real<8>,comz1:real<8>,comz4:real<8>,comz5:real<8>,comz6:real<8>,c3c4tx3:real<8>,c3c4ty3:real<8>,c3c4tz3:real<8>,c2iv:real<8>,con43:real<8>,con16:real<8>,us:vector<vector<vector<real<8>,25>,25>,25>,vs:vector<vector<vector<real<8>,25>,25>,25>,ws:vector<vector<vector<real<8>,25>,25>,25>,qs:vector<vector<vector<real<8>,25>,25>,25>,rho_i:vector<vector<vector<real<8>,25>,25>,25>,square:vector<vector<vector<real<8>,25>,25>,25>,forcing:vector<vector<vector<vector<real<8>,6>,25>,25>,25>,u:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,rhs:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,lhs:vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25>,cuf:vector<real<8>,24>,q:vector<real<8>,24>,ue:vector<vector<real<8>,5>,24>,buf:vector<vector<real<8>,5>,24>,fjac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,njac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,tmp1:real<8>,tmp2:real<8>,tmp3:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->unit) //
 void __insieme_supp_42(struct __insieme_globals* var_18){
@@ -729,11 +720,11 @@ static void __insieme_supp_42_wrap(void* _closure, struct __insieme_globals* var
 
 // start code fragment :: vector_type_declaration of __insieme_type_44 <=> vector<vector<real<8>,5>,3> //
 typedef struct ___insieme_type_44 { 
-    __insieme_type_16 data[3];
+    __insieme_type_15 data[3];
 } __insieme_type_44;
 
 // A constructor initializing a vector of the type __insieme_type_44 uniformly
-static inline __insieme_type_44 __insieme_type_44_init_uniform(__insieme_type_16 value) {
+static inline __insieme_type_44 __insieme_type_44_init_uniform(__insieme_type_15 value) {
 	__insieme_type_44 res;
 	for (int i=0; i<3;++i) {
 	    res.data[i] = value;
@@ -759,7 +750,7 @@ static inline __insieme_type_43 __insieme_type_43_init_uniform(__insieme_type_44
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_540) { return ceil(var_540); }
+static double ceil_wrap(void* _closure, double var_539) { return ceil(var_539); }
 
 // start code fragment :: Definition of exact_solution ... type: ((ref<struct<grid_points:vector<int<4>,3>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,dt:real<8>,ce:vector<vector<real<8>,13>,5>,dxmax:real<8>,dymax:real<8>,dzmax:real<8>,xxcon1:real<8>,xxcon2:real<8>,xxcon3:real<8>,xxcon4:real<8>,xxcon5:real<8>,dx1tx1:real<8>,dx2tx1:real<8>,dx3tx1:real<8>,dx4tx1:real<8>,dx5tx1:real<8>,yycon1:real<8>,yycon2:real<8>,yycon3:real<8>,yycon4:real<8>,yycon5:real<8>,dy1ty1:real<8>,dy2ty1:real<8>,dy3ty1:real<8>,dy4ty1:real<8>,dy5ty1:real<8>,zzcon1:real<8>,zzcon2:real<8>,zzcon3:real<8>,zzcon4:real<8>,zzcon5:real<8>,dz1tz1:real<8>,dz2tz1:real<8>,dz3tz1:real<8>,dz4tz1:real<8>,dz5tz1:real<8>,dnxm1:real<8>,dnym1:real<8>,dnzm1:real<8>,c1c2:real<8>,c1c5:real<8>,c3c4:real<8>,c1345:real<8>,conz1:real<8>,c1:real<8>,c2:real<8>,c3:real<8>,c4:real<8>,c5:real<8>,c4dssp:real<8>,c5dssp:real<8>,dtdssp:real<8>,dttx1:real<8>,dttx2:real<8>,dtty1:real<8>,dtty2:real<8>,dttz1:real<8>,dttz2:real<8>,c2dttx1:real<8>,c2dtty1:real<8>,c2dttz1:real<8>,comz1:real<8>,comz4:real<8>,comz5:real<8>,comz6:real<8>,c3c4tx3:real<8>,c3c4ty3:real<8>,c3c4tz3:real<8>,c2iv:real<8>,con43:real<8>,con16:real<8>,us:vector<vector<vector<real<8>,25>,25>,25>,vs:vector<vector<vector<real<8>,25>,25>,25>,ws:vector<vector<vector<real<8>,25>,25>,25>,qs:vector<vector<vector<real<8>,25>,25>,25>,rho_i:vector<vector<vector<real<8>,25>,25>,25>,square:vector<vector<vector<real<8>,25>,25>,25>,forcing:vector<vector<vector<vector<real<8>,6>,25>,25>,25>,u:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,rhs:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,lhs:vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25>,cuf:vector<real<8>,24>,q:vector<real<8>,24>,ue:vector<vector<real<8>,5>,24>,buf:vector<vector<real<8>,5>,24>,fjac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,njac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,tmp1:real<8>,tmp2:real<8>,tmp3:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,real<8>,real<8>,real<8>,ref<array<real<8>,1>>)->unit) //
 void exact_solution(struct __insieme_globals* var_64, double xi, double eta, double zeta, __insieme_type_40* dtemp){
@@ -787,7 +778,7 @@ void initialize(struct __insieme_globals* var_44){
 	double Pxi = 0.0;
 	double Peta = 0.0;
 	double Pzeta = 0.0;
-	__insieme_type_16 temp;
+	__insieme_type_15 temp;
 	{
 		for(int var_63 = 0; var_63 < 24; var_63 += 1)  { {
 			for(int var_62 = 0; var_62 < 24; var_62 += 1)  { {
@@ -811,15 +802,15 @@ void initialize(struct __insieme_globals* var_44){
 						for(int var_76 = 0; var_76 < (((*(&((*var_44).grid_points))).data[((unsigned int)(2))])); var_76 += 1) {
 							((zeta) = (((double)((var_76)))*(*(&((*var_44).dnzm1)))));
 							{
-								for(int var_72 = 0; var_72 < 2; var_72 += 1)  { exact_solution(var_44, ((double)((var_72))), (eta), (zeta), (&((__insieme_type_40){&((((((Pface).data[((unsigned int)((var_72)))])).data[((unsigned int)(0))])).data[((unsigned int)(0))]),{1}}))); };
+								for(int var_72 = 0; var_72 < 2; var_72 += 1)  { exact_solution(var_44, ((double)((var_72))), (eta), (zeta), (&((__insieme_type_40){&((((((Pface).data[((unsigned int)((var_72)))])).data[((unsigned int)(0))])).data[((unsigned int)(0))])}))); };
 								((ix) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
 							};
 							{
-								for(int var_73 = 0; var_73 < 2; var_73 += 1)  { exact_solution(var_44, (xi), ((double)((var_73))), (zeta), (&((__insieme_type_40){&((((((Pface).data[((unsigned int)((var_73)))])).data[((unsigned int)(1))])).data[((unsigned int)(0))]),{1}}))); };
+								for(int var_73 = 0; var_73 < 2; var_73 += 1)  { exact_solution(var_44, (xi), ((double)((var_73))), (zeta), (&((__insieme_type_40){&((((((Pface).data[((unsigned int)((var_73)))])).data[((unsigned int)(1))])).data[((unsigned int)(0))])}))); };
 								((iy) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
 							};
 							{
-								for(int var_74 = 0; var_74 < 2; var_74 += 1)  { exact_solution(var_44, (xi), (eta), ((double)((var_74))), (&((__insieme_type_40){&((((((Pface).data[((unsigned int)((var_74)))])).data[((unsigned int)(2))])).data[((unsigned int)(0))]),{1}}))); };
+								for(int var_74 = 0; var_74 < 2; var_74 += 1)  { exact_solution(var_44, (xi), (eta), ((double)((var_74))), (&((__insieme_type_40){&((((((Pface).data[((unsigned int)((var_74)))])).data[((unsigned int)(2))])).data[((unsigned int)(0))])}))); };
 								((iz) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
 							};
 							{
@@ -866,7 +857,7 @@ void initialize(struct __insieme_globals* var_44){
 			{
 				for(int var_83 = 0; var_83 < (((*(&((*var_44).grid_points))).data[((unsigned int)(2))])); var_83 += 1) {
 					((zeta) = (((double)((var_83)))*(*(&((*var_44).dnzm1)))));
-					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data,{1}})));
+					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data})));
 					{
 						for(int var_82 = 0; var_82 < 5; var_82 += 1)  { ((((((((((*(&((*var_44).u))).data[((unsigned int)((i)))])).data[((unsigned int)((var_84)))])).data[((unsigned int)((var_83)))])).data[((unsigned int)((var_82)))])) = (((temp).data[((unsigned int)((var_82)))]))); };
 						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -885,7 +876,7 @@ void initialize(struct __insieme_globals* var_44){
 			{
 				for(int var_86 = 0; var_86 < (((*(&((*var_44).grid_points))).data[((unsigned int)(2))])); var_86 += 1) {
 					((zeta) = (((double)((var_86)))*(*(&((*var_44).dnzm1)))));
-					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data,{1}})));
+					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data})));
 					{
 						for(int var_85 = 0; var_85 < 5; var_85 += 1)  { ((((((((((*(&((*var_44).u))).data[((unsigned int)((var_87)))])).data[((unsigned int)((j)))])).data[((unsigned int)((var_86)))])).data[((unsigned int)((var_85)))])) = (((temp).data[((unsigned int)((var_85)))]))); };
 						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -904,7 +895,7 @@ void initialize(struct __insieme_globals* var_44){
 			{
 				for(int var_89 = 0; var_89 < (((*(&((*var_44).grid_points))).data[((unsigned int)(2))])); var_89 += 1) {
 					((zeta) = (((double)((var_89)))*(*(&((*var_44).dnzm1)))));
-					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data,{1}})));
+					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data})));
 					{
 						for(int var_88 = 0; var_88 < 5; var_88 += 1)  { ((((((((((*(&((*var_44).u))).data[((unsigned int)((var_90)))])).data[((unsigned int)((j)))])).data[((unsigned int)((var_89)))])).data[((unsigned int)((var_88)))])) = (((temp).data[((unsigned int)((var_88)))]))); };
 						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -923,7 +914,7 @@ void initialize(struct __insieme_globals* var_44){
 			{
 				for(int var_92 = 0; var_92 < (((*(&((*var_44).grid_points))).data[((unsigned int)(1))])); var_92 += 1) {
 					((eta) = (((double)((var_92)))*(*(&((*var_44).dnym1)))));
-					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data,{1}})));
+					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data})));
 					{
 						for(int var_91 = 0; var_91 < 5; var_91 += 1)  { ((((((((((*(&((*var_44).u))).data[((unsigned int)((var_93)))])).data[((unsigned int)((var_92)))])).data[((unsigned int)((k)))])).data[((unsigned int)((var_91)))])) = (((temp).data[((unsigned int)((var_91)))]))); };
 						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -942,7 +933,7 @@ void initialize(struct __insieme_globals* var_44){
 			{
 				for(int var_95 = 0; var_95 < (((*(&((*var_44).grid_points))).data[((unsigned int)(1))])); var_95 += 1) {
 					((eta) = (((double)((var_95)))*(*(&((*var_44).dnym1)))));
-					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data,{1}})));
+					exact_solution(var_44, (xi), (eta), (zeta), (&((__insieme_type_40){(temp).data})));
 					{
 						for(int var_94 = 0; var_94 < 5; var_94 += 1)  { ((((((((((*(&((*var_44).u))).data[((unsigned int)((var_96)))])).data[((unsigned int)((var_95)))])).data[((unsigned int)((k)))])).data[((unsigned int)((var_94)))])) = (((temp).data[((unsigned int)((var_94)))]))); };
 						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -1001,7 +992,7 @@ static void lhsinit_wrap(void* _closure, struct __insieme_globals* var_98) { lhs
 
 // start code fragment :: Definition of exact_rhs ... type: ((ref<struct<grid_points:vector<int<4>,3>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,dt:real<8>,ce:vector<vector<real<8>,13>,5>,dxmax:real<8>,dymax:real<8>,dzmax:real<8>,xxcon1:real<8>,xxcon2:real<8>,xxcon3:real<8>,xxcon4:real<8>,xxcon5:real<8>,dx1tx1:real<8>,dx2tx1:real<8>,dx3tx1:real<8>,dx4tx1:real<8>,dx5tx1:real<8>,yycon1:real<8>,yycon2:real<8>,yycon3:real<8>,yycon4:real<8>,yycon5:real<8>,dy1ty1:real<8>,dy2ty1:real<8>,dy3ty1:real<8>,dy4ty1:real<8>,dy5ty1:real<8>,zzcon1:real<8>,zzcon2:real<8>,zzcon3:real<8>,zzcon4:real<8>,zzcon5:real<8>,dz1tz1:real<8>,dz2tz1:real<8>,dz3tz1:real<8>,dz4tz1:real<8>,dz5tz1:real<8>,dnxm1:real<8>,dnym1:real<8>,dnzm1:real<8>,c1c2:real<8>,c1c5:real<8>,c3c4:real<8>,c1345:real<8>,conz1:real<8>,c1:real<8>,c2:real<8>,c3:real<8>,c4:real<8>,c5:real<8>,c4dssp:real<8>,c5dssp:real<8>,dtdssp:real<8>,dttx1:real<8>,dttx2:real<8>,dtty1:real<8>,dtty2:real<8>,dttz1:real<8>,dttz2:real<8>,c2dttx1:real<8>,c2dtty1:real<8>,c2dttz1:real<8>,comz1:real<8>,comz4:real<8>,comz5:real<8>,comz6:real<8>,c3c4tx3:real<8>,c3c4ty3:real<8>,c3c4tz3:real<8>,c2iv:real<8>,con43:real<8>,con16:real<8>,us:vector<vector<vector<real<8>,25>,25>,25>,vs:vector<vector<vector<real<8>,25>,25>,25>,ws:vector<vector<vector<real<8>,25>,25>,25>,qs:vector<vector<vector<real<8>,25>,25>,25>,rho_i:vector<vector<vector<real<8>,25>,25>,25>,square:vector<vector<vector<real<8>,25>,25>,25>,forcing:vector<vector<vector<vector<real<8>,6>,25>,25>,25>,u:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,rhs:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,lhs:vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25>,cuf:vector<real<8>,24>,q:vector<real<8>,24>,ue:vector<vector<real<8>,5>,24>,buf:vector<vector<real<8>,5>,24>,fjac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,njac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,tmp1:real<8>,tmp2:real<8>,tmp3:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->unit) //
 void exact_rhs(struct __insieme_globals* var_114){
-	__insieme_type_16 dtemp;
+	__insieme_type_15 dtemp;
 	double xi = 0.0;
 	double eta = 0.0;
 	double zeta = 0.0;
@@ -1038,7 +1029,7 @@ void exact_rhs(struct __insieme_globals* var_114){
 					{
 						for(int var_136 = 0; var_136 < (((*(&((*var_114).grid_points))).data[((unsigned int)(0))])); var_136 += 1) {
 							((xi) = (((double)((var_136)))*(*(&((*var_114).dnxm1)))));
-							exact_solution(var_114, (xi), (eta), (zeta), (&((__insieme_type_40){(dtemp).data,{1}})));
+							exact_solution(var_114, (xi), (eta), (zeta), (&((__insieme_type_40){(dtemp).data})));
 							{
 								for(int var_134 = 0; var_134 < 5; var_134 += 1)  { ((((((*(&((*var_114).ue))).data[((unsigned int)((var_136)))])).data[((unsigned int)((var_134)))])) = (((dtemp).data[((unsigned int)((var_134)))]))); };
 								((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -1106,7 +1097,7 @@ void exact_rhs(struct __insieme_globals* var_114){
 					{
 						for(int var_146 = 0; var_146 < (((*(&((*var_114).grid_points))).data[((unsigned int)(1))])); var_146 += 1) {
 							((eta) = (((double)((var_146)))*(*(&((*var_114).dnym1)))));
-							exact_solution(var_114, (xi), (eta), (zeta), (&((__insieme_type_40){(dtemp).data,{1}})));
+							exact_solution(var_114, (xi), (eta), (zeta), (&((__insieme_type_40){(dtemp).data})));
 							{
 								for(int var_144 = 0; var_144 < 5; var_144 += 1)  { ((((((*(&((*var_114).ue))).data[((unsigned int)((var_146)))])).data[((unsigned int)((var_144)))])) = (((dtemp).data[((unsigned int)((var_144)))]))); };
 								((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -1174,7 +1165,7 @@ void exact_rhs(struct __insieme_globals* var_114){
 					{
 						for(int var_156 = 0; var_156 < (((*(&((*var_114).grid_points))).data[((unsigned int)(2))])); var_156 += 1) {
 							((zeta) = (((double)((var_156)))*(*(&((*var_114).dnzm1)))));
-							exact_solution(var_114, (xi), (eta), (zeta), (&((__insieme_type_40){(dtemp).data,{1}})));
+							exact_solution(var_114, (xi), (eta), (zeta), (&((__insieme_type_40){(dtemp).data})));
 							{
 								for(int var_154 = 0; var_154 < 5; var_154 += 1)  { ((((((*(&((*var_114).ue))).data[((unsigned int)((var_156)))])).data[((unsigned int)((var_154)))])) = (((dtemp).data[((unsigned int)((var_154)))]))); };
 								((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -1698,8 +1689,7 @@ static void lhsx_wrap(void* _closure, struct __insieme_globals* var_255) { lhsx(
 
 // start code fragment :: array type definition of __insieme_type_47 <=> array<vector<real<8>,5>,1> //
 typedef struct ___insieme_type_47 { 
-    __insieme_type_16* data;
-    unsigned size[1];
+    __insieme_type_15* data;
 } __insieme_type_47;
 
 // start code fragment :: Definition of binvcrhs ... type: ((ref<array<vector<real<8>,5>,1>>,ref<array<vector<real<8>,5>,1>>,ref<array<real<8>,1>>)->unit) //
@@ -2076,7 +2066,7 @@ void x_solve_cell(struct __insieme_globals* var_264){
 	((isize) = ((((*(&((*var_264).grid_points))).data[((unsigned int)(0))]))-1));
 	{
 		for(int var_276 = 1; var_276 < ((((*(&((*var_264).grid_points))).data[((unsigned int)(1))]))-1); var_276 += 1)  { {
-			for(int var_275 = 1; var_275 < ((((*(&((*var_264).grid_points))).data[((unsigned int)(2))]))-1); var_275 += 1)  { binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(0))])).data[((unsigned int)((var_276)))])).data[((unsigned int)((var_275)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(0))])).data[((unsigned int)((var_276)))])).data[((unsigned int)((var_275)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)(0))])).data[((unsigned int)((var_276)))])).data[((unsigned int)((var_275)))])).data,{1}}))); };
+			for(int var_275 = 1; var_275 < ((((*(&((*var_264).grid_points))).data[((unsigned int)(2))]))-1); var_275 += 1)  { binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(0))])).data[((unsigned int)((var_276)))])).data[((unsigned int)((var_275)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(0))])).data[((unsigned int)((var_276)))])).data[((unsigned int)((var_275)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)(0))])).data[((unsigned int)((var_276)))])).data[((unsigned int)((var_275)))])).data}))); };
 			((k) = (1+(((int)(ceil((((double)((((((*(&((*var_264).grid_points))).data[((unsigned int)(2))]))-1)-1)))/((double)(1))))))*1)));
 		}; };
 		((j) = (1+(((int)(ceil((((double)((((((*(&((*var_264).grid_points))).data[((unsigned int)(1))]))-1)-1)))/((double)(1))))))*1)));
@@ -2085,9 +2075,9 @@ void x_solve_cell(struct __insieme_globals* var_264){
 		for(int var_291 = 1; var_291 < (isize); var_291 += 1)  { {
 			for(int var_290 = 1; var_290 < ((((*(&((*var_264).grid_points))).data[((unsigned int)(1))]))-1); var_290 += 1)  { {
 				for(int var_289 = 1; var_289 < ((((*(&((*var_264).grid_points))).data[((unsigned int)(2))]))-1); var_289 += 1) {
-					matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)(((var_291)-1)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data,{1}})));
-					matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(((var_291)-1)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(1))])).data,{1}})));
-					binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data,{1}})));
+					matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)(((var_291)-1)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data})));
+					matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(((var_291)-1)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(1))])).data})));
+					binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((var_291)))])).data[((unsigned int)((var_290)))])).data[((unsigned int)((var_289)))])).data})));
 				};
 				((k) = (1+(((int)(ceil((((double)((((((*(&((*var_264).grid_points))).data[((unsigned int)(2))]))-1)-1)))/((double)(1))))))*1)));
 			}; };
@@ -2098,9 +2088,9 @@ void x_solve_cell(struct __insieme_globals* var_264){
 	{
 		for(int var_298 = 1; var_298 < ((((*(&((*var_264).grid_points))).data[((unsigned int)(1))]))-1); var_298 += 1)  { {
 			for(int var_297 = 1; var_297 < ((((*(&((*var_264).grid_points))).data[((unsigned int)(2))]))-1); var_297 += 1) {
-				matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)(((isize)-1)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data,{1}})));
-				matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(((isize)-1)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(1))])).data,{1}})));
-				binvrhs((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((i)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((i)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data,{1}})));
+				matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)(((isize)-1)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data})));
+				matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)(((isize)-1)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((isize)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(1))])).data})));
+				binvrhs((&((__insieme_type_47){(((((((((*(&((*var_264).lhs))).data[((unsigned int)((i)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_40){(((((((*(&((*var_264).rhs))).data[((unsigned int)((i)))])).data[((unsigned int)((var_298)))])).data[((unsigned int)((var_297)))])).data})));
 			};
 			((k) = (1+(((int)(ceil((((double)((((((*(&((*var_264).grid_points))).data[((unsigned int)(2))]))-1)-1)))/((double)(1))))))*1)));
 		}; };
@@ -2312,7 +2302,7 @@ void y_solve_cell(struct __insieme_globals* var_325){
 	((jsize) = ((((*(&((*var_325).grid_points))).data[((unsigned int)(1))]))-1));
 	{
 		for(int var_331 = 1; var_331 < ((((*(&((*var_325).grid_points))).data[((unsigned int)(0))]))-1); var_331 += 1)  { {
-			for(int var_330 = 1; var_330 < ((((*(&((*var_325).grid_points))).data[((unsigned int)(2))]))-1); var_330 += 1)  { binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_331)))])).data[((unsigned int)(0))])).data[((unsigned int)((var_330)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_331)))])).data[((unsigned int)(0))])).data[((unsigned int)((var_330)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_331)))])).data[((unsigned int)(0))])).data[((unsigned int)((var_330)))])).data,{1}}))); };
+			for(int var_330 = 1; var_330 < ((((*(&((*var_325).grid_points))).data[((unsigned int)(2))]))-1); var_330 += 1)  { binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_331)))])).data[((unsigned int)(0))])).data[((unsigned int)((var_330)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_331)))])).data[((unsigned int)(0))])).data[((unsigned int)((var_330)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_331)))])).data[((unsigned int)(0))])).data[((unsigned int)((var_330)))])).data}))); };
 			((k) = (1+(((int)(ceil((((double)((((((*(&((*var_325).grid_points))).data[((unsigned int)(2))]))-1)-1)))/((double)(1))))))*1)));
 		}; };
 		((i) = (1+(((int)(ceil((((double)((((((*(&((*var_325).grid_points))).data[((unsigned int)(0))]))-1)-1)))/((double)(1))))))*1)));
@@ -2321,9 +2311,9 @@ void y_solve_cell(struct __insieme_globals* var_325){
 		for(int var_334 = 1; var_334 < (jsize); var_334 += 1)  { {
 			for(int var_333 = 1; var_333 < ((((*(&((*var_325).grid_points))).data[((unsigned int)(0))]))-1); var_333 += 1)  { {
 				for(int var_332 = 1; var_332 < ((((*(&((*var_325).grid_points))).data[((unsigned int)(2))]))-1); var_332 += 1) {
-					matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)(((var_334)-1)))])).data[((unsigned int)((var_332)))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data,{1}})));
-					matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)(((var_334)-1)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(1))])).data,{1}})));
-					binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data,{1}})));
+					matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)(((var_334)-1)))])).data[((unsigned int)((var_332)))])).data})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data})));
+					matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)(((var_334)-1)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(1))])).data})));
+					binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_333)))])).data[((unsigned int)((var_334)))])).data[((unsigned int)((var_332)))])).data})));
 				};
 				((k) = (1+(((int)(ceil((((double)((((((*(&((*var_325).grid_points))).data[((unsigned int)(2))]))-1)-1)))/((double)(1))))))*1)));
 			}; };
@@ -2334,9 +2324,9 @@ void y_solve_cell(struct __insieme_globals* var_325){
 	{
 		for(int var_336 = 1; var_336 < ((((*(&((*var_325).grid_points))).data[((unsigned int)(0))]))-1); var_336 += 1)  { {
 			for(int var_335 = 1; var_335 < ((((*(&((*var_325).grid_points))).data[((unsigned int)(2))]))-1); var_335 += 1) {
-				matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)(((jsize)-1)))])).data[((unsigned int)((var_335)))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data,{1}})));
-				matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)(((jsize)-1)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(1))])).data,{1}})));
-				binvrhs((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data,{1}})));
+				matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)(((jsize)-1)))])).data[((unsigned int)((var_335)))])).data})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data})));
+				matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)(((jsize)-1)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(1))])).data})));
+				binvrhs((&((__insieme_type_47){(((((((((*(&((*var_325).lhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_40){(((((((*(&((*var_325).rhs))).data[((unsigned int)((var_336)))])).data[((unsigned int)((jsize)))])).data[((unsigned int)((var_335)))])).data})));
 			};
 			((k) = (1+(((int)(ceil((((double)((((((*(&((*var_325).grid_points))).data[((unsigned int)(2))]))-1)-1)))/((double)(1))))))*1)));
 		}; };
@@ -2548,7 +2538,7 @@ void z_solve_cell(struct __insieme_globals* var_363){
 	((ksize) = ((((*(&((*var_363).grid_points))).data[((unsigned int)(2))]))-1));
 	{
 		for(int var_369 = 1; var_369 < ((((*(&((*var_363).grid_points))).data[((unsigned int)(0))]))-1); var_369 += 1)  { {
-			for(int var_368 = 1; var_368 < ((((*(&((*var_363).grid_points))).data[((unsigned int)(1))]))-1); var_368 += 1)  { binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_369)))])).data[((unsigned int)((var_368)))])).data[((unsigned int)(0))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_369)))])).data[((unsigned int)((var_368)))])).data[((unsigned int)(0))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_369)))])).data[((unsigned int)((var_368)))])).data[((unsigned int)(0))])).data,{1}}))); };
+			for(int var_368 = 1; var_368 < ((((*(&((*var_363).grid_points))).data[((unsigned int)(1))]))-1); var_368 += 1)  { binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_369)))])).data[((unsigned int)((var_368)))])).data[((unsigned int)(0))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_369)))])).data[((unsigned int)((var_368)))])).data[((unsigned int)(0))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_369)))])).data[((unsigned int)((var_368)))])).data[((unsigned int)(0))])).data}))); };
 			((j) = (1+(((int)(ceil((((double)((((((*(&((*var_363).grid_points))).data[((unsigned int)(1))]))-1)-1)))/((double)(1))))))*1)));
 		}; };
 		((i) = (1+(((int)(ceil((((double)((((((*(&((*var_363).grid_points))).data[((unsigned int)(0))]))-1)-1)))/((double)(1))))))*1)));
@@ -2557,9 +2547,9 @@ void z_solve_cell(struct __insieme_globals* var_363){
 		for(int var_372 = 1; var_372 < (ksize); var_372 += 1)  { {
 			for(int var_371 = 1; var_371 < ((((*(&((*var_363).grid_points))).data[((unsigned int)(0))]))-1); var_371 += 1)  { {
 				for(int var_370 = 1; var_370 < ((((*(&((*var_363).grid_points))).data[((unsigned int)(1))]))-1); var_370 += 1) {
-					matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)(((var_372)-1)))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data,{1}})));
-					matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)(((var_372)-1)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(1))])).data,{1}})));
-					binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data,{1}})));
+					matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)(((var_372)-1)))])).data})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data})));
+					matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)(((var_372)-1)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(1))])).data})));
+					binvcrhs((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_371)))])).data[((unsigned int)((var_370)))])).data[((unsigned int)((var_372)))])).data})));
 				};
 				((j) = (1+(((int)(ceil((((double)((((((*(&((*var_363).grid_points))).data[((unsigned int)(1))]))-1)-1)))/((double)(1))))))*1)));
 			}; };
@@ -2570,9 +2560,9 @@ void z_solve_cell(struct __insieme_globals* var_363){
 	{
 		for(int var_374 = 1; var_374 < ((((*(&((*var_363).grid_points))).data[((unsigned int)(0))]))-1); var_374 += 1)  { {
 			for(int var_373 = 1; var_373 < ((((*(&((*var_363).grid_points))).data[((unsigned int)(1))]))-1); var_373 += 1) {
-				matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)(((ksize)-1)))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data,{1}})));
-				matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(0))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)(((ksize)-1)))])).data[((unsigned int)(2))])).data,{1}})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(1))])).data,{1}})));
-				binvrhs((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(1))])).data,{1}})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data,{1}})));
+				matvec_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)(((ksize)-1)))])).data})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data})));
+				matmul_sub((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(0))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)(((ksize)-1)))])).data[((unsigned int)(2))])).data})), (&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(1))])).data})));
+				binvrhs((&((__insieme_type_47){(((((((((*(&((*var_363).lhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data[((unsigned int)(1))])).data})), (&((__insieme_type_40){(((((((*(&((*var_363).rhs))).data[((unsigned int)((var_374)))])).data[((unsigned int)((var_373)))])).data[((unsigned int)((ksize)))])).data})));
 			};
 			((j) = (1+(((int)(ceil((((double)((((((*(&((*var_363).grid_points))).data[((unsigned int)(1))]))-1)-1)))/((double)(1))))))*1)));
 		}; };
@@ -2660,7 +2650,6 @@ struct timeval {
 // start code fragment :: array type definition of __insieme_type_50 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
 typedef struct ___insieme_type_50 { 
     struct timeval* data;
-    unsigned size[1];
 } __insieme_type_50;
 
 // start code fragment :: type_declaration_timezone //
@@ -2672,17 +2661,16 @@ struct timezone {
 // start code fragment :: array type definition of __timezone_ptr_t <=> array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1> //
 typedef struct ___timezone_ptr_t { 
     struct timezone* data;
-    unsigned size[1];
 } __timezone_ptr_t;
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_50* var_541, __timezone_ptr_t* var_542) { return gettimeofday(((struct timeval*)((*(var_541)).data)), ((struct timezone*)((*(var_542)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_50* var_540, __timezone_ptr_t* var_541) { return gettimeofday(((struct timeval*)((*(var_540)).data)), ((struct timezone*)((*(var_541)).data))); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<grid_points:vector<int<4>,3>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,dt:real<8>,ce:vector<vector<real<8>,13>,5>,dxmax:real<8>,dymax:real<8>,dzmax:real<8>,xxcon1:real<8>,xxcon2:real<8>,xxcon3:real<8>,xxcon4:real<8>,xxcon5:real<8>,dx1tx1:real<8>,dx2tx1:real<8>,dx3tx1:real<8>,dx4tx1:real<8>,dx5tx1:real<8>,yycon1:real<8>,yycon2:real<8>,yycon3:real<8>,yycon4:real<8>,yycon5:real<8>,dy1ty1:real<8>,dy2ty1:real<8>,dy3ty1:real<8>,dy4ty1:real<8>,dy5ty1:real<8>,zzcon1:real<8>,zzcon2:real<8>,zzcon3:real<8>,zzcon4:real<8>,zzcon5:real<8>,dz1tz1:real<8>,dz2tz1:real<8>,dz3tz1:real<8>,dz4tz1:real<8>,dz5tz1:real<8>,dnxm1:real<8>,dnym1:real<8>,dnzm1:real<8>,c1c2:real<8>,c1c5:real<8>,c3c4:real<8>,c1345:real<8>,conz1:real<8>,c1:real<8>,c2:real<8>,c3:real<8>,c4:real<8>,c5:real<8>,c4dssp:real<8>,c5dssp:real<8>,dtdssp:real<8>,dttx1:real<8>,dttx2:real<8>,dtty1:real<8>,dtty2:real<8>,dttz1:real<8>,dttz2:real<8>,c2dttx1:real<8>,c2dtty1:real<8>,c2dttz1:real<8>,comz1:real<8>,comz4:real<8>,comz5:real<8>,comz6:real<8>,c3c4tx3:real<8>,c3c4ty3:real<8>,c3c4tz3:real<8>,c2iv:real<8>,con43:real<8>,con16:real<8>,us:vector<vector<vector<real<8>,25>,25>,25>,vs:vector<vector<vector<real<8>,25>,25>,25>,ws:vector<vector<vector<real<8>,25>,25>,25>,qs:vector<vector<vector<real<8>,25>,25>,25>,rho_i:vector<vector<vector<real<8>,25>,25>,25>,square:vector<vector<vector<real<8>,25>,25>,25>,forcing:vector<vector<vector<vector<real<8>,6>,25>,25>,25>,u:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,rhs:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,lhs:vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25>,cuf:vector<real<8>,24>,q:vector<real<8>,24>,ue:vector<vector<real<8>,5>,24>,buf:vector<vector<real<8>,5>,24>,fjac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,njac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,tmp1:real<8>,tmp2:real<8>,tmp3:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
 void wtime(struct __insieme_globals* var_407, __insieme_type_40* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_50){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_50){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((*var_407).sec)))<0)) { ((*(&((*var_407).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_407).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
@@ -2691,7 +2679,7 @@ static void wtime_wrap(void* _closure, struct __insieme_globals* var_407, __insi
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<grid_points:vector<int<4>,3>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,dt:real<8>,ce:vector<vector<real<8>,13>,5>,dxmax:real<8>,dymax:real<8>,dzmax:real<8>,xxcon1:real<8>,xxcon2:real<8>,xxcon3:real<8>,xxcon4:real<8>,xxcon5:real<8>,dx1tx1:real<8>,dx2tx1:real<8>,dx3tx1:real<8>,dx4tx1:real<8>,dx5tx1:real<8>,yycon1:real<8>,yycon2:real<8>,yycon3:real<8>,yycon4:real<8>,yycon5:real<8>,dy1ty1:real<8>,dy2ty1:real<8>,dy3ty1:real<8>,dy4ty1:real<8>,dy5ty1:real<8>,zzcon1:real<8>,zzcon2:real<8>,zzcon3:real<8>,zzcon4:real<8>,zzcon5:real<8>,dz1tz1:real<8>,dz2tz1:real<8>,dz3tz1:real<8>,dz4tz1:real<8>,dz5tz1:real<8>,dnxm1:real<8>,dnym1:real<8>,dnzm1:real<8>,c1c2:real<8>,c1c5:real<8>,c3c4:real<8>,c1345:real<8>,conz1:real<8>,c1:real<8>,c2:real<8>,c3:real<8>,c4:real<8>,c5:real<8>,c4dssp:real<8>,c5dssp:real<8>,dtdssp:real<8>,dttx1:real<8>,dttx2:real<8>,dtty1:real<8>,dtty2:real<8>,dttz1:real<8>,dttz2:real<8>,c2dttx1:real<8>,c2dtty1:real<8>,c2dttz1:real<8>,comz1:real<8>,comz4:real<8>,comz5:real<8>,comz6:real<8>,c3c4tx3:real<8>,c3c4ty3:real<8>,c3c4tz3:real<8>,c2iv:real<8>,con43:real<8>,con16:real<8>,us:vector<vector<vector<real<8>,25>,25>,25>,vs:vector<vector<vector<real<8>,25>,25>,25>,ws:vector<vector<vector<real<8>,25>,25>,25>,qs:vector<vector<vector<real<8>,25>,25>,25>,rho_i:vector<vector<vector<real<8>,25>,25>,25>,square:vector<vector<vector<real<8>,25>,25>,25>,forcing:vector<vector<vector<vector<real<8>,6>,25>,25>,25>,u:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,rhs:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,lhs:vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25>,cuf:vector<real<8>,24>,q:vector<real<8>,24>,ue:vector<vector<real<8>,5>,24>,buf:vector<vector<real<8>,5>,24>,fjac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,njac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,tmp1:real<8>,tmp2:real<8>,tmp3:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
 double elapsed_time(struct __insieme_globals* var_405){
 	double t = 0.0;
-	wtime(var_405, (&((__insieme_type_40){&t,{1}})));
+	wtime(var_405, (&((__insieme_type_40){&t})));
 	return (t);
 }
 static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_405) { return elapsed_time(var_405); }
@@ -2716,7 +2704,7 @@ static double timer_read_wrap(void* _closure, struct __insieme_globals* var_421,
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_543) { return sqrt(var_543); }
+static double sqrt_wrap(void* _closure, double var_542) { return sqrt(var_542); }
 
 // start code fragment :: Definition of error_norm ... type: ((ref<struct<grid_points:vector<int<4>,3>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,dt:real<8>,ce:vector<vector<real<8>,13>,5>,dxmax:real<8>,dymax:real<8>,dzmax:real<8>,xxcon1:real<8>,xxcon2:real<8>,xxcon3:real<8>,xxcon4:real<8>,xxcon5:real<8>,dx1tx1:real<8>,dx2tx1:real<8>,dx3tx1:real<8>,dx4tx1:real<8>,dx5tx1:real<8>,yycon1:real<8>,yycon2:real<8>,yycon3:real<8>,yycon4:real<8>,yycon5:real<8>,dy1ty1:real<8>,dy2ty1:real<8>,dy3ty1:real<8>,dy4ty1:real<8>,dy5ty1:real<8>,zzcon1:real<8>,zzcon2:real<8>,zzcon3:real<8>,zzcon4:real<8>,zzcon5:real<8>,dz1tz1:real<8>,dz2tz1:real<8>,dz3tz1:real<8>,dz4tz1:real<8>,dz5tz1:real<8>,dnxm1:real<8>,dnym1:real<8>,dnzm1:real<8>,c1c2:real<8>,c1c5:real<8>,c3c4:real<8>,c1345:real<8>,conz1:real<8>,c1:real<8>,c2:real<8>,c3:real<8>,c4:real<8>,c5:real<8>,c4dssp:real<8>,c5dssp:real<8>,dtdssp:real<8>,dttx1:real<8>,dttx2:real<8>,dtty1:real<8>,dtty2:real<8>,dttz1:real<8>,dttz2:real<8>,c2dttx1:real<8>,c2dtty1:real<8>,c2dttz1:real<8>,comz1:real<8>,comz4:real<8>,comz5:real<8>,comz6:real<8>,c3c4tx3:real<8>,c3c4ty3:real<8>,c3c4tz3:real<8>,c2iv:real<8>,con43:real<8>,con16:real<8>,us:vector<vector<vector<real<8>,25>,25>,25>,vs:vector<vector<vector<real<8>,25>,25>,25>,ws:vector<vector<vector<real<8>,25>,25>,25>,qs:vector<vector<vector<real<8>,25>,25>,25>,rho_i:vector<vector<vector<real<8>,25>,25>,25>,square:vector<vector<vector<real<8>,25>,25>,25>,forcing:vector<vector<vector<vector<real<8>,6>,25>,25>,25>,u:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,rhs:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,lhs:vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25>,cuf:vector<real<8>,24>,q:vector<real<8>,24>,ue:vector<vector<real<8>,5>,24>,buf:vector<vector<real<8>,5>,24>,fjac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,njac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,tmp1:real<8>,tmp2:real<8>,tmp3:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
 void error_norm(struct __insieme_globals* var_437, __insieme_type_40* rms){
@@ -2728,7 +2716,7 @@ void error_norm(struct __insieme_globals* var_437, __insieme_type_40* rms){
 	double xi = 0.0;
 	double eta = 0.0;
 	double zeta = 0.0;
-	__insieme_type_16 u_exact;
+	__insieme_type_15 u_exact;
 	double add = 0.0;
 	{
 		for(int var_449 = 0; var_449 < 5; var_449 += 1)  { ((((*rms).data[((unsigned int)((var_449)))])) = 0.0); };
@@ -2743,7 +2731,7 @@ void error_norm(struct __insieme_globals* var_437, __insieme_type_40* rms){
 					{
 						for(int var_451 = 0; var_451 < (((*(&((*var_437).grid_points))).data[((unsigned int)(2))])); var_451 += 1) {
 							((zeta) = (((double)((var_451)))*(*(&((*var_437).dnzm1)))));
-							exact_solution(var_437, (xi), (eta), (zeta), (&((__insieme_type_40){(u_exact).data,{1}})));
+							exact_solution(var_437, (xi), (eta), (zeta), (&((__insieme_type_40){(u_exact).data})));
 							{
 								for(int var_450 = 0; var_450 < 5; var_450 += 1) {
 									((add) = ((((((((((*(&((*var_437).u))).data[((unsigned int)((var_453)))])).data[((unsigned int)((var_452)))])).data[((unsigned int)((var_451)))])).data[((unsigned int)((var_450)))]))-(((u_exact).data[((unsigned int)((var_450)))]))));
@@ -2816,23 +2804,23 @@ static void rhs_norm_wrap(void* _closure, struct __insieme_globals* var_457, __i
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_544) { return fabs(var_544); }
+static double fabs_wrap(void* _closure, double var_543) { return fabs(var_543); }
 
 // start code fragment :: Definition of verify ... type: ((ref<struct<grid_points:vector<int<4>,3>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,dt:real<8>,ce:vector<vector<real<8>,13>,5>,dxmax:real<8>,dymax:real<8>,dzmax:real<8>,xxcon1:real<8>,xxcon2:real<8>,xxcon3:real<8>,xxcon4:real<8>,xxcon5:real<8>,dx1tx1:real<8>,dx2tx1:real<8>,dx3tx1:real<8>,dx4tx1:real<8>,dx5tx1:real<8>,yycon1:real<8>,yycon2:real<8>,yycon3:real<8>,yycon4:real<8>,yycon5:real<8>,dy1ty1:real<8>,dy2ty1:real<8>,dy3ty1:real<8>,dy4ty1:real<8>,dy5ty1:real<8>,zzcon1:real<8>,zzcon2:real<8>,zzcon3:real<8>,zzcon4:real<8>,zzcon5:real<8>,dz1tz1:real<8>,dz2tz1:real<8>,dz3tz1:real<8>,dz4tz1:real<8>,dz5tz1:real<8>,dnxm1:real<8>,dnym1:real<8>,dnzm1:real<8>,c1c2:real<8>,c1c5:real<8>,c3c4:real<8>,c1345:real<8>,conz1:real<8>,c1:real<8>,c2:real<8>,c3:real<8>,c4:real<8>,c5:real<8>,c4dssp:real<8>,c5dssp:real<8>,dtdssp:real<8>,dttx1:real<8>,dttx2:real<8>,dtty1:real<8>,dtty2:real<8>,dttz1:real<8>,dttz2:real<8>,c2dttx1:real<8>,c2dtty1:real<8>,c2dttz1:real<8>,comz1:real<8>,comz4:real<8>,comz5:real<8>,comz6:real<8>,c3c4tx3:real<8>,c3c4ty3:real<8>,c3c4tz3:real<8>,c2iv:real<8>,con43:real<8>,con16:real<8>,us:vector<vector<vector<real<8>,25>,25>,25>,vs:vector<vector<vector<real<8>,25>,25>,25>,ws:vector<vector<vector<real<8>,25>,25>,25>,qs:vector<vector<vector<real<8>,25>,25>,25>,rho_i:vector<vector<vector<real<8>,25>,25>,25>,square:vector<vector<vector<real<8>,25>,25>,25>,forcing:vector<vector<vector<vector<real<8>,6>,25>,25>,25>,u:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,rhs:vector<vector<vector<vector<real<8>,5>,25>,25>,25>,lhs:vector<vector<vector<vector<vector<vector<real<8>,5>,5>,3>,25>,25>,25>,cuf:vector<real<8>,24>,q:vector<real<8>,24>,ue:vector<vector<real<8>,5>,24>,buf:vector<vector<real<8>,5>,24>,fjac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,njac:vector<vector<vector<vector<vector<real<8>,5>,5>,24>,25>,25>,tmp1:real<8>,tmp2:real<8>,tmp3:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>,ref<array<char,1>>,ref<array<int<4>,1>>)->unit) //
 void verify(struct __insieme_globals* var_424, int no_time_steps, __insieme_type_1* class, __insieme_type_38* verified){
-	__insieme_type_16 xcrref;
-	__insieme_type_16 xceref;
-	__insieme_type_16 xcrdif;
-	__insieme_type_16 xcedif;
+	__insieme_type_15 xcrref;
+	__insieme_type_15 xceref;
+	__insieme_type_15 xcrdif;
+	__insieme_type_15 xcedif;
 	double epsilon = 0.0;
-	__insieme_type_16 xce;
-	__insieme_type_16 xcr;
+	__insieme_type_15 xce;
+	__insieme_type_15 xcr;
 	double dtref = 0.0;
 	int m = 0;
 	((epsilon) = 1.0e-08);
-	error_norm(var_424, (&((__insieme_type_40){(xce).data,{1}})));
+	error_norm(var_424, (&((__insieme_type_40){(xce).data})));
 	compute_rhs(var_424);
-	rhs_norm(var_424, (&((__insieme_type_40){(xcr).data,{1}})));
+	rhs_norm(var_424, (&((__insieme_type_40){(xcr).data})));
 	{
 		for(int var_473 = 0; var_473 < 5; var_473 += 1)  { ((((xcr).data[((unsigned int)((var_473)))])) = ((((xcr).data[((unsigned int)((var_473)))]))/(*(&((*var_424).dt))))); };
 		((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -2981,9 +2969,9 @@ int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
@@ -3096,16 +3084,16 @@ int main(int __argc, char** __argv) {
 		double tmax = 0.0;
 		int verified = 0;
 		char class = '\0';
-		__insieme_type_32 fp;
+		__insieme_type_31 fp;
 		printf(((char*)((*(&((__insieme_type_1){"\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - BT Benchmark\n\n"}))).data)), 0);
-		((fp) = (((__insieme_type_32){fopen(((char*)((*(&((__insieme_type_1){"inputbt.data"}))).data)), ((char*)((*(&((__insieme_type_1){"r"}))).data))),{1}})));
+		((fp) = (((__insieme_type_31){fopen(((char*)((*(&((__insieme_type_1){"inputbt.data"}))).data)), ((char*)((*(&((__insieme_type_1){"r"}))).data)))})));
 		if((!((fp).data==0))){
 			printf(((char*)((*(&((__insieme_type_1){" Reading from input file inputbt.data"}))).data)), 0);
-			fscanf(((struct FILE*)((*(&fp)).data)), ((char*)((*(&((__insieme_type_1){"%d"}))).data)), ((int*)((*((&((__insieme_type_38){&niter,{1}})))).data)));
+			fscanf(((struct FILE*)((*(&fp)).data)), ((char*)((*(&((__insieme_type_1){"%d"}))).data)), ((int*)((*((&((__insieme_type_38){&niter})))).data)));
 			while((fgetc(((struct FILE*)((*(&fp)).data)))!=10)) {};
-			fscanf(((struct FILE*)((*(&fp)).data)), ((char*)((*(&((__insieme_type_1){"%lg"}))).data)), ((double*)((*((&((__insieme_type_40){(&((*var_1).dt)),{1}})))).data)));
+			fscanf(((struct FILE*)((*(&fp)).data)), ((char*)((*(&((__insieme_type_1){"%lg"}))).data)), ((double*)((*((&((__insieme_type_40){(&((*var_1).dt))})))).data)));
 			while((fgetc(((struct FILE*)((*(&fp)).data)))!=10)) {};
-			fscanf(((struct FILE*)((*(&fp)).data)), ((char*)((*(&((__insieme_type_1){"%d%d%d"}))).data)), ((int*)((*((&((__insieme_type_38){&((*(&((*var_1).grid_points))).data[((unsigned int)(0))]),{1}})))).data)), ((int*)((*((&((__insieme_type_38){&((*(&((*var_1).grid_points))).data[((unsigned int)(1))]),{1}})))).data)), ((int*)((*((&((__insieme_type_38){&((*(&((*var_1).grid_points))).data[((unsigned int)(2))]),{1}})))).data)));
+			fscanf(((struct FILE*)((*(&fp)).data)), ((char*)((*(&((__insieme_type_1){"%d%d%d"}))).data)), ((int*)((*((&((__insieme_type_38){&((*(&((*var_1).grid_points))).data[((unsigned int)(0))])})))).data)), ((int*)((*((&((__insieme_type_38){&((*(&((*var_1).grid_points))).data[((unsigned int)(1))])})))).data)), ((int*)((*((&((__insieme_type_38){&((*(&((*var_1).grid_points))).data[((unsigned int)(2))])})))).data)));
 			fclose(((struct FILE*)((*(&fp)).data)));
 		} else {
 			printf(((char*)((*(&((__insieme_type_1){" No input file inputbt.data. Using compiled defaults\n"}))).data)), 0);
@@ -3140,7 +3128,7 @@ int main(int __argc, char** __argv) {
 		}; };
 		timer_stop(var_1, 1);
 		((tmax) = timer_read(var_1, 1));
-		verify(var_1, (niter), (&((__insieme_type_1){&class,{1}})), (&((__insieme_type_38){&verified,{1}})));
+		verify(var_1, (niter), (&((__insieme_type_1){&class})), (&((__insieme_type_38){&verified})));
 		((n3) = (((((*(&((*var_1).grid_points))).data[((unsigned int)(0))]))*(((*(&((*var_1).grid_points))).data[((unsigned int)(1))])))*(((*(&((*var_1).grid_points))).data[((unsigned int)(2))]))));
 		((navg) = (((double)((((((*(&((*var_1).grid_points))).data[((unsigned int)(0))]))+(((*(&((*var_1).grid_points))).data[((unsigned int)(1))])))+(((*(&((*var_1).grid_points))).data[((unsigned int)(2))])))))/3.0));
 		if(((tmax)!=0.0)) { ((mflops) = (((1.0e-6*((double)((niter))))*(((3478.8*((double)((n3))))-(17655.7*((navg)*(navg))))+(28023.7*(navg))))/(tmax))); } else  { ((mflops) = 0.0); };

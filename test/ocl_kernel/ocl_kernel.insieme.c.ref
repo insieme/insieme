@@ -3,7 +3,6 @@
 // start code fragment :: array type definition of __insieme_type_0 <=> array<real<4>,1> //
 typedef struct ___insieme_type_0 { 
     float* data;
-    unsigned size[1];
 } __insieme_type_0;
 
 // start code fragment :: Definition of constantMemArg ... type: ((ref<array<real<4>,1>>)->unit) //
@@ -17,7 +16,6 @@ static void globalMemArg_wrap(void* _closure, __global __insieme_type_0* g) { gl
 // start code fragment :: array type definition of __insieme_type_3 <=> array<int<4>,1> //
 typedef struct ___insieme_type_3 { 
     int* data;
-    unsigned size[1];
 } __insieme_type_3;
 
 // start code fragment :: Definition of localMemArg ... type: ((ref<array<int<4>,1>>)->unit) //

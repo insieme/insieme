@@ -11,41 +11,20 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
 
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_390) { return strlen(((char*)((*(var_390)).data))); }
-
-// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<int<4>,3> //
-typedef struct ___insieme_type_4 { 
-    int data[3];
-} __insieme_type_4;
-
-// A constructor initializing a vector of the type __insieme_type_4 uniformly
-static inline __insieme_type_4 __insieme_type_4_init_uniform(int value) {
-	__insieme_type_4 res;
-	for (int i=0; i<3;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<vector<int<4>,3>,3> //
+// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<int<4>,3> //
 typedef struct ___insieme_type_3 { 
-    __insieme_type_4 data[3];
+    int data[3];
 } __insieme_type_3;
 
 // A constructor initializing a vector of the type __insieme_type_3 uniformly
-static inline __insieme_type_3 __insieme_type_3_init_uniform(__insieme_type_4 value) {
+static inline __insieme_type_3 __insieme_type_3_init_uniform(int value) {
 	__insieme_type_3 res;
 	for (int i=0; i<3;++i) {
 	    res.data[i] = value;
@@ -54,14 +33,29 @@ static inline __insieme_type_3 __insieme_type_3_init_uniform(__insieme_type_4 va
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<real<8>,50689> //
-typedef struct ___insieme_type_5 { 
-    double data[50689];
-} __insieme_type_5;
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<vector<int<4>,3>,3> //
+typedef struct ___insieme_type_2 { 
+    __insieme_type_3 data[3];
+} __insieme_type_2;
 
-// A constructor initializing a vector of the type __insieme_type_5 uniformly
-static inline __insieme_type_5 __insieme_type_5_init_uniform(double value) {
-	__insieme_type_5 res;
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(__insieme_type_3 value) {
+	__insieme_type_2 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<real<8>,50689> //
+typedef struct ___insieme_type_4 { 
+    double data[50689];
+} __insieme_type_4;
+
+// A constructor initializing a vector of the type __insieme_type_4 uniformly
+static inline __insieme_type_4 __insieme_type_4_init_uniform(double value) {
+	__insieme_type_4 res;
 	for (int i=0; i<50689;++i) {
 	    res.data[i] = value;
 	}
@@ -75,14 +69,14 @@ struct dcomplex {
     double imag;
 };
 
-// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<struct<real:real<8>,imag:real<8>>,128> //
-typedef struct ___insieme_type_6 { 
+// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<struct<real:real<8>,imag:real<8>>,128> //
+typedef struct ___insieme_type_5 { 
     struct dcomplex data[128];
-} __insieme_type_6;
+} __insieme_type_5;
 
-// A constructor initializing a vector of the type __insieme_type_6 uniformly
-static inline __insieme_type_6 __insieme_type_6_init_uniform(struct dcomplex value) {
-	__insieme_type_6 res;
+// A constructor initializing a vector of the type __insieme_type_5 uniformly
+static inline __insieme_type_5 __insieme_type_5_init_uniform(struct dcomplex value) {
+	__insieme_type_5 res;
 	for (int i=0; i<128;++i) {
 	    res.data[i] = value;
 	}
@@ -90,14 +84,14 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(struct dcomplex val
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<struct<real:real<8>,imag:real<8>>,7> //
-typedef struct ___insieme_type_7 { 
+// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<struct<real:real<8>,imag:real<8>>,7> //
+typedef struct ___insieme_type_6 { 
     struct dcomplex data[7];
-} __insieme_type_7;
+} __insieme_type_6;
 
-// A constructor initializing a vector of the type __insieme_type_7 uniformly
-static inline __insieme_type_7 __insieme_type_7_init_uniform(struct dcomplex value) {
-	__insieme_type_7 res;
+// A constructor initializing a vector of the type __insieme_type_6 uniformly
+static inline __insieme_type_6 __insieme_type_6_init_uniform(struct dcomplex value) {
+	__insieme_type_6 res;
 	for (int i=0; i<7;++i) {
 	    res.data[i] = value;
 	}
@@ -105,14 +99,14 @@ static inline __insieme_type_7 __insieme_type_7_init_uniform(struct dcomplex val
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<vector<struct<real:real<8>,imag:real<8>>,128>,128> //
-typedef struct ___insieme_type_9 { 
-    __insieme_type_6 data[128];
-} __insieme_type_9;
+// start code fragment :: vector_type_declaration of __insieme_type_8 <=> vector<vector<struct<real:real<8>,imag:real<8>>,128>,128> //
+typedef struct ___insieme_type_8 { 
+    __insieme_type_5 data[128];
+} __insieme_type_8;
 
-// A constructor initializing a vector of the type __insieme_type_9 uniformly
-static inline __insieme_type_9 __insieme_type_9_init_uniform(__insieme_type_6 value) {
-	__insieme_type_9 res;
+// A constructor initializing a vector of the type __insieme_type_8 uniformly
+static inline __insieme_type_8 __insieme_type_8_init_uniform(__insieme_type_5 value) {
+	__insieme_type_8 res;
 	for (int i=0; i<128;++i) {
 	    res.data[i] = value;
 	}
@@ -120,14 +114,14 @@ static inline __insieme_type_9 __insieme_type_9_init_uniform(__insieme_type_6 va
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_8 <=> vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32> //
-typedef struct ___insieme_type_8 { 
-    __insieme_type_9 data[32];
-} __insieme_type_8;
+// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32> //
+typedef struct ___insieme_type_7 { 
+    __insieme_type_8 data[32];
+} __insieme_type_7;
 
-// A constructor initializing a vector of the type __insieme_type_8 uniformly
-static inline __insieme_type_8 __insieme_type_8_init_uniform(__insieme_type_9 value) {
-	__insieme_type_8 res;
+// A constructor initializing a vector of the type __insieme_type_7 uniformly
+static inline __insieme_type_7 __insieme_type_7_init_uniform(__insieme_type_8 value) {
+	__insieme_type_7 res;
 	for (int i=0; i<32;++i) {
 	    res.data[i] = value;
 	}
@@ -135,14 +129,14 @@ static inline __insieme_type_8 __insieme_type_8_init_uniform(__insieme_type_9 va
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_10 <=> vector<struct<real:real<8>,imag:real<8>>,3> //
-typedef struct ___insieme_type_10 { 
+// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<struct<real:real<8>,imag:real<8>>,3> //
+typedef struct ___insieme_type_9 { 
     struct dcomplex data[3];
-} __insieme_type_10;
+} __insieme_type_9;
 
-// A constructor initializing a vector of the type __insieme_type_10 uniformly
-static inline __insieme_type_10 __insieme_type_10_init_uniform(struct dcomplex value) {
-	__insieme_type_10 res;
+// A constructor initializing a vector of the type __insieme_type_9 uniformly
+static inline __insieme_type_9 __insieme_type_9_init_uniform(struct dcomplex value) {
+	__insieme_type_9 res;
 	for (int i=0; i<3;++i) {
 	    res.data[i] = value;
 	}
@@ -150,28 +144,13 @@ static inline __insieme_type_10 __insieme_type_10_init_uniform(struct dcomplex v
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_13 <=> vector<int<4>,128> //
-typedef struct ___insieme_type_13 { 
-    int data[128];
-} __insieme_type_13;
-
-// A constructor initializing a vector of the type __insieme_type_13 uniformly
-static inline __insieme_type_13 __insieme_type_13_init_uniform(int value) {
-	__insieme_type_13 res;
-	for (int i=0; i<128;++i) {
-	    res.data[i] = value;
-	}
-	return res;
-}
-
-
-// start code fragment :: vector_type_declaration of __insieme_type_12 <=> vector<vector<int<4>,128>,128> //
+// start code fragment :: vector_type_declaration of __insieme_type_12 <=> vector<int<4>,128> //
 typedef struct ___insieme_type_12 { 
-    __insieme_type_13 data[128];
+    int data[128];
 } __insieme_type_12;
 
 // A constructor initializing a vector of the type __insieme_type_12 uniformly
-static inline __insieme_type_12 __insieme_type_12_init_uniform(__insieme_type_13 value) {
+static inline __insieme_type_12 __insieme_type_12_init_uniform(int value) {
 	__insieme_type_12 res;
 	for (int i=0; i<128;++i) {
 	    res.data[i] = value;
@@ -180,14 +159,29 @@ static inline __insieme_type_12 __insieme_type_12_init_uniform(__insieme_type_13
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_11 <=> vector<vector<vector<int<4>,128>,128>,32> //
+// start code fragment :: vector_type_declaration of __insieme_type_11 <=> vector<vector<int<4>,128>,128> //
 typedef struct ___insieme_type_11 { 
-    __insieme_type_12 data[32];
+    __insieme_type_12 data[128];
 } __insieme_type_11;
 
 // A constructor initializing a vector of the type __insieme_type_11 uniformly
 static inline __insieme_type_11 __insieme_type_11_init_uniform(__insieme_type_12 value) {
 	__insieme_type_11 res;
+	for (int i=0; i<128;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_10 <=> vector<vector<vector<int<4>,128>,128>,32> //
+typedef struct ___insieme_type_10 { 
+    __insieme_type_11 data[32];
+} __insieme_type_10;
+
+// A constructor initializing a vector of the type __insieme_type_10 uniformly
+static inline __insieme_type_10 __insieme_type_10_init_uniform(__insieme_type_11 value) {
+	__insieme_type_10 res;
 	for (int i=0; i<32;++i) {
 	    res.data[i] = value;
 	}
@@ -195,14 +189,14 @@ static inline __insieme_type_11 __insieme_type_11_init_uniform(__insieme_type_12
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_14 <=> vector<real<8>,32769> //
-typedef struct ___insieme_type_14 { 
+// start code fragment :: vector_type_declaration of __insieme_type_13 <=> vector<real<8>,32769> //
+typedef struct ___insieme_type_13 { 
     double data[32769];
-} __insieme_type_14;
+} __insieme_type_13;
 
-// A constructor initializing a vector of the type __insieme_type_14 uniformly
-static inline __insieme_type_14 __insieme_type_14_init_uniform(double value) {
-	__insieme_type_14 res;
+// A constructor initializing a vector of the type __insieme_type_13 uniformly
+static inline __insieme_type_13 __insieme_type_13_init_uniform(double value) {
+	__insieme_type_13 res;
 	for (int i=0; i<32769;++i) {
 	    res.data[i] = value;
 	}
@@ -210,14 +204,14 @@ static inline __insieme_type_14 __insieme_type_14_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_15 <=> vector<real<8>,64> //
-typedef struct ___insieme_type_15 { 
+// start code fragment :: vector_type_declaration of __insieme_type_14 <=> vector<real<8>,64> //
+typedef struct ___insieme_type_14 { 
     double data[64];
-} __insieme_type_15;
+} __insieme_type_14;
 
-// A constructor initializing a vector of the type __insieme_type_15 uniformly
-static inline __insieme_type_15 __insieme_type_15_init_uniform(double value) {
-	__insieme_type_15 res;
+// A constructor initializing a vector of the type __insieme_type_14 uniformly
+static inline __insieme_type_14 __insieme_type_14_init_uniform(double value) {
+	__insieme_type_14 res;
 	for (int i=0; i<64;++i) {
 	    res.data[i] = value;
 	}
@@ -229,27 +223,27 @@ static inline __insieme_type_15 __insieme_type_15_init_uniform(double value) {
 struct __insieme_globals { 
     int fftblock;
     int fftblockpad;
-    __insieme_type_3 dims;
-    __insieme_type_4 xstart;
-    __insieme_type_4 ystart;
-    __insieme_type_4 zstart;
-    __insieme_type_4 xend;
-    __insieme_type_4 yend;
-    __insieme_type_4 zend;
-    __insieme_type_5 ex;
-    __insieme_type_6 u;
-    __insieme_type_7 sums;
+    __insieme_type_2 dims;
+    __insieme_type_3 xstart;
+    __insieme_type_3 ystart;
+    __insieme_type_3 zstart;
+    __insieme_type_3 xend;
+    __insieme_type_3 yend;
+    __insieme_type_3 zend;
+    __insieme_type_4 ex;
+    __insieme_type_5 u;
+    __insieme_type_6 sums;
     int niter;
-    __insieme_type_8 u0;
-    __insieme_type_10 pad1;
-    __insieme_type_8 u1;
-    __insieme_type_10 pad2;
-    __insieme_type_8 u2;
-    __insieme_type_10 pad3;
-    __insieme_type_11 indexmap;
-    __insieme_type_14 tmp;
-    __insieme_type_15 start;
-    __insieme_type_15 elapsed;
+    __insieme_type_7 u0;
+    __insieme_type_9 pad1;
+    __insieme_type_7 u1;
+    __insieme_type_9 pad2;
+    __insieme_type_7 u2;
+    __insieme_type_9 pad3;
+    __insieme_type_10 indexmap;
+    __insieme_type_13 tmp;
+    __insieme_type_14 start;
+    __insieme_type_14 elapsed;
     int sec;
 };
 
@@ -259,7 +253,7 @@ static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_12, i
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_391) { return ceil(var_391); }
+static double ceil_wrap(void* _closure, double var_390) { return ceil(var_390); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -301,19 +295,17 @@ static void setup_wrap(void* _closure, struct __insieme_globals* var_16) { setup
 
 // start code fragment :: array type definition of __insieme_type_20 <=> array<vector<vector<int<4>,128>,128>,1> //
 typedef struct ___insieme_type_20 { 
-    __insieme_type_12* data;
-    unsigned size[1];
+    __insieme_type_11* data;
 } __insieme_type_20;
 
 // start code fragment :: array type definition of __insieme_type_22 <=> array<int<4>,1> //
 typedef struct ___insieme_type_22 { 
     int* data;
-    unsigned size[1];
 } __insieme_type_22;
 
 // start code fragment :: Prototype for external function: exp ... type: ((real<8>)->real<8>) //
 double exp(double);
-static double exp_wrap(void* _closure, double var_392) { return exp(var_392); }
+static double exp_wrap(void* _closure, double var_391) { return exp(var_391); }
 
 // start code fragment :: Definition of compute_indexmap ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<vector<vector<int<4>,128>,128>,1>>,ref<array<int<4>,1>>)->unit) //
 void compute_indexmap(struct __insieme_globals* var_24, __insieme_type_20* indexmap, __insieme_type_22* d){
@@ -361,14 +353,12 @@ static void compute_indexmap_wrap(void* _closure, struct __insieme_globals* var_
 
 // start code fragment :: array type definition of __insieme_type_24 <=> array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1> //
 typedef struct ___insieme_type_24 { 
-    __insieme_type_9* data;
-    unsigned size[1];
+    __insieme_type_8* data;
 } __insieme_type_24;
 
 // start code fragment :: array type definition of __insieme_type_26 <=> array<real<8>,1> //
 typedef struct ___insieme_type_26 { 
     double* data;
-    unsigned size[1];
 } __insieme_type_26;
 
 // start code fragment :: Definition of randlc ... type: ((ref<array<real<8>,1>>,real<8>)->real<8>) //
@@ -413,14 +403,14 @@ int ipow46(double a, int exponent, __insieme_type_26* result){
 	while(((n)>1)) {
 		((n2) = ((n)/2));
 		if((((n2)*2)==(n))){
-			((dummy) = randlc((&((__insieme_type_26){&q,{1}})), (q)));
+			((dummy) = randlc((&((__insieme_type_26){&q})), (q)));
 			((n) = (n2));
 		} else {
-			((dummy) = randlc((&((__insieme_type_26){&r,{1}})), (q)));
+			((dummy) = randlc((&((__insieme_type_26){&r})), (q)));
 			((n) = ((n)-1));
 		};
 	};
-	((dummy) = randlc((&((__insieme_type_26){&r,{1}})), (q)));
+	((dummy) = randlc((&((__insieme_type_26){&r})), (q)));
 	((((*result).data[0])) = (r));
 	return 0;
 }
@@ -473,13 +463,13 @@ void compute_initial_conditions(struct __insieme_globals* var_41, __insieme_type
 	int j = 0;
 	int t = 0;
 	((start) = 314159265.0);
-	ipow46(1220703125.0, ((((((((*(&((*var_41).zstart))).data[((unsigned int)(0))]))-1)*2)*128)*128)+((((((*(&((*var_41).ystart))).data[((unsigned int)(0))]))-1)*2)*128)), (&((__insieme_type_26){&an,{1}})));
-	((dummy) = randlc((&((__insieme_type_26){&start,{1}})), (an)));
-	ipow46(1220703125.0, ((2*128)*128), (&((__insieme_type_26){&an,{1}})));
+	ipow46(1220703125.0, ((((((((*(&((*var_41).zstart))).data[((unsigned int)(0))]))-1)*2)*128)*128)+((((((*(&((*var_41).ystart))).data[((unsigned int)(0))]))-1)*2)*128)), (&((__insieme_type_26){&an})));
+	((dummy) = randlc((&((__insieme_type_26){&start})), (an)));
+	ipow46(1220703125.0, ((2*128)*128), (&((__insieme_type_26){&an})));
 	{
 		for(int var_92 = 0; var_92 < (((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(2))])); var_92 += 1) {
 			((x0) = (start));
-			vranlc(((2*128)*(((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(1))]))), (&((__insieme_type_26){&x0,{1}})), 1220703125.0, (&((__insieme_type_26){(*(&((*var_41).tmp))).data,{1}})));
+			vranlc(((2*128)*(((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(1))]))), (&((__insieme_type_26){&x0})), 1220703125.0, (&((__insieme_type_26){(*(&((*var_41).tmp))).data})));
 			((t) = 1);
 			{
 				for(int var_91 = 0; var_91 < (((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(1))])); var_91 += 1) {
@@ -491,7 +481,7 @@ void compute_initial_conditions(struct __insieme_globals* var_41, __insieme_type
 				};
 				((j) = (0+(((int)(ceil((((double)(((((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
 			};
-			if(((var_92)!=(((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(2))])))) { ((dummy) = randlc((&((__insieme_type_26){&start,{1}})), (an))); };
+			if(((var_92)!=(((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(2))])))) { ((dummy) = randlc((&((__insieme_type_26){&start})), (an))); };
 		};
 		((k) = (0+(((int)(ceil((((double)(((((((*(&((*var_41).dims))).data[((unsigned int)(0))])).data[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
 	};
@@ -515,11 +505,11 @@ static int ilog2_wrap(void* _closure, int n) { return ilog2(n); }
 
 // start code fragment :: Prototype for external function: cos ... type: ((real<8>)->real<8>) //
 double cos(double);
-static double cos_wrap(void* _closure, double var_393) { return cos(var_393); }
+static double cos_wrap(void* _closure, double var_392) { return cos(var_392); }
 
 // start code fragment :: Prototype for external function: sin ... type: ((real<8>)->real<8>) //
 double sin(double);
-static double sin_wrap(void* _closure, double var_394) { return sin(var_394); }
+static double sin_wrap(void* _closure, double var_393) { return sin(var_393); }
 
 // start code fragment :: Definition of fft_init ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void fft_init(struct __insieme_globals* var_94, int n){
@@ -589,17 +579,15 @@ static inline __insieme_type_28 __insieme_type_28_init_uniform(__insieme_type_29
 // start code fragment :: array type definition of __insieme_type_31 <=> array<vector<struct<real:real<8>,imag:real<8>>,18>,1> //
 typedef struct ___insieme_type_31 { 
     __insieme_type_29* data;
-    unsigned size[1];
 } __insieme_type_31;
 
 // start code fragment :: Prototype for external function: exit ... type: ((int<4>)->unit) //
 void exit(int);
-static void exit_wrap(void* _closure, int var_395) { exit(var_395); }
+static void exit_wrap(void* _closure, int var_394) { exit(var_394); }
 
 // start code fragment :: array type definition of __insieme_type_34 <=> array<struct<real:real<8>,imag:real<8>>,1> //
 typedef struct ___insieme_type_34 { 
     struct dcomplex* data;
-    unsigned size[1];
 } __insieme_type_34;
 
 // start code fragment :: Definition of fftz2 ... type: ((int<4>,int<4>,int<4>,int<4>,int<4>,int<4>,ref<array<struct<real:real<8>,imag:real<8>>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>)->unit) //
@@ -676,9 +664,9 @@ void cfftz(struct __insieme_globals* var_132, int is, int m, int n, __insieme_ty
 	};
 	{
 		for(int var_181 = 1; var_181 < (m+1); var_181 += 2) {
-			fftz2(is, (var_181), m, n, (*(&((*var_132).fftblock))), (*(&((*var_132).fftblockpad))), (&((__insieme_type_34){(*(&((*var_132).u))).data,{1}})), x, y);
+			fftz2(is, (var_181), m, n, (*(&((*var_132).fftblock))), (*(&((*var_132).fftblockpad))), (&((__insieme_type_34){(*(&((*var_132).u))).data})), x, y);
 			if(((var_181)==m)) { break; };
-			fftz2(is, ((var_181)+1), m, n, (*(&((*var_132).fftblock))), (*(&((*var_132).fftblockpad))), (&((__insieme_type_34){(*(&((*var_132).u))).data,{1}})), y, x);
+			fftz2(is, ((var_181)+1), m, n, (*(&((*var_132).fftblock))), (*(&((*var_132).fftblockpad))), (&((__insieme_type_34){(*(&((*var_132).u))).data})), y, x);
 		};
 		((l) = (1+(((int)(ceil((((double)(((m+1)-1)))/((double)(2))))))*2)));
 	};
@@ -697,7 +685,7 @@ static void cfftz_wrap(void* _closure, struct __insieme_globals* var_132, int is
 
 // start code fragment :: Definition of cffts1 ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>,ref<array<int<4>,1>>,ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>>,ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>)->unit) //
 void cffts1(struct __insieme_globals* var_117, int is, __insieme_type_22* d, __insieme_type_24* x, __insieme_type_24* xout, __insieme_type_31* y0, __insieme_type_31* y1){
-	__insieme_type_4 logd;
+	__insieme_type_3 logd;
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -740,7 +728,7 @@ static void cffts1_wrap(void* _closure, struct __insieme_globals* var_117, int i
 
 // start code fragment :: Definition of cffts2 ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>,ref<array<int<4>,1>>,ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>>,ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>)->unit) //
 void cffts2(struct __insieme_globals* var_190, int is, __insieme_type_22* d, __insieme_type_24* x, __insieme_type_24* xout, __insieme_type_31* y0, __insieme_type_31* y1){
-	__insieme_type_4 logd;
+	__insieme_type_3 logd;
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -783,7 +771,7 @@ static void cffts2_wrap(void* _closure, struct __insieme_globals* var_190, int i
 
 // start code fragment :: Definition of cffts3 ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>,ref<array<int<4>,1>>,ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>>,ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>,ref<array<vector<struct<real:real<8>,imag:real<8>>,18>,1>>)->unit) //
 void cffts3(struct __insieme_globals* var_210, int is, __insieme_type_22* d, __insieme_type_24* x, __insieme_type_24* xout, __insieme_type_31* y0, __insieme_type_31* y1){
-	__insieme_type_4 logd;
+	__insieme_type_3 logd;
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -829,13 +817,13 @@ void fft(struct __insieme_globals* var_111, int dir, __insieme_type_24* x1, __in
 	__insieme_type_28 y0;
 	__insieme_type_28 y1;
 	if((dir==1)){
-		cffts1(var_111, 1, (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(0))])).data,{1}})), x1, x1, (&((__insieme_type_31){(y0).data,{1}})), (&((__insieme_type_31){(y1).data,{1}})));
-		cffts2(var_111, 1, (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(1))])).data,{1}})), x1, x1, (&((__insieme_type_31){(y0).data,{1}})), (&((__insieme_type_31){(y1).data,{1}})));
-		cffts3(var_111, 1, (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(2))])).data,{1}})), x1, x2, (&((__insieme_type_31){(y0).data,{1}})), (&((__insieme_type_31){(y1).data,{1}})));
+		cffts1(var_111, 1, (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(0))])).data})), x1, x1, (&((__insieme_type_31){(y0).data})), (&((__insieme_type_31){(y1).data})));
+		cffts2(var_111, 1, (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(1))])).data})), x1, x1, (&((__insieme_type_31){(y0).data})), (&((__insieme_type_31){(y1).data})));
+		cffts3(var_111, 1, (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(2))])).data})), x1, x2, (&((__insieme_type_31){(y0).data})), (&((__insieme_type_31){(y1).data})));
 	} else {
-		cffts3(var_111, (((int)(0))-1), (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(2))])).data,{1}})), x1, x1, (&((__insieme_type_31){(y0).data,{1}})), (&((__insieme_type_31){(y1).data,{1}})));
-		cffts2(var_111, (((int)(0))-1), (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(1))])).data,{1}})), x1, x1, (&((__insieme_type_31){(y0).data,{1}})), (&((__insieme_type_31){(y1).data,{1}})));
-		cffts1(var_111, (((int)(0))-1), (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(0))])).data,{1}})), x1, x2, (&((__insieme_type_31){(y0).data,{1}})), (&((__insieme_type_31){(y1).data,{1}})));
+		cffts3(var_111, (((int)(0))-1), (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(2))])).data})), x1, x1, (&((__insieme_type_31){(y0).data})), (&((__insieme_type_31){(y1).data})));
+		cffts2(var_111, (((int)(0))-1), (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(1))])).data})), x1, x1, (&((__insieme_type_31){(y0).data})), (&((__insieme_type_31){(y1).data})));
+		cffts1(var_111, (((int)(0))-1), (&((__insieme_type_22){(((*(&((*var_111).dims))).data[((unsigned int)(0))])).data})), x1, x2, (&((__insieme_type_31){(y0).data})), (&((__insieme_type_31){(y1).data})));
 	};
 }
 static void fft_wrap(void* _closure, struct __insieme_globals* var_111, int dir, __insieme_type_24* x1, __insieme_type_24* x2) { fft(var_111, dir, x1, x2); }
@@ -849,7 +837,6 @@ struct timeval {
 // start code fragment :: array type definition of __insieme_type_38 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
 typedef struct ___insieme_type_38 { 
     struct timeval* data;
-    unsigned size[1];
 } __insieme_type_38;
 
 // start code fragment :: type_declaration_timezone //
@@ -861,17 +848,16 @@ struct timezone {
 // start code fragment :: array type definition of __timezone_ptr_t <=> array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1> //
 typedef struct ___timezone_ptr_t { 
     struct timezone* data;
-    unsigned size[1];
 } __timezone_ptr_t;
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_38* var_396, __timezone_ptr_t* var_397) { return gettimeofday(((struct timeval*)((*(var_396)).data)), ((struct timezone*)((*(var_397)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_38* var_395, __timezone_ptr_t* var_396) { return gettimeofday(((struct timeval*)((*(var_395)).data)), ((struct timezone*)((*(var_396)).data))); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
 void wtime(struct __insieme_globals* var_236, __insieme_type_26* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_38){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_38){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((*var_236).sec)))<0)) { ((*(&((*var_236).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_236).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
@@ -880,7 +866,7 @@ static void wtime_wrap(void* _closure, struct __insieme_globals* var_236, __insi
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
 double elapsed_time(struct __insieme_globals* var_234){
 	double t = 0.0;
-	wtime(var_234, (&((__insieme_type_26){&t,{1}})));
+	wtime(var_234, (&((__insieme_type_26){&t})));
 	return (t);
 }
 static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_234) { return elapsed_time(var_234); }
@@ -999,7 +985,7 @@ static inline __insieme_type_45 __insieme_type_45_init_uniform(double value) {
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_398) { return fabs(var_398); }
+static double fabs_wrap(void* _closure, double var_397) { return fabs(var_397); }
 
 // start code fragment :: Definition of verify ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>,int<4>,int<4>,int<4>,ref<array<int<4>,1>>,ref<array<char,1>>)->unit) //
 void verify(struct __insieme_globals* var_299, int d1, int d2, int d3, int nt, __insieme_type_22* verified, __insieme_type_1* class){
@@ -1113,7 +1099,7 @@ static double timer_read_wrap(void* _closure, struct __insieme_globals* var_357,
 
 // start code fragment :: Prototype for external function: log ... type: ((real<8>)->real<8>) //
 double log(double);
-static double log_wrap(void* _closure, double var_399) { return log(var_399); }
+static double log_wrap(void* _closure, double var_398) { return log(var_398); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(__insieme_type_1* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, __insieme_type_1* optype, int passed_verification, __insieme_type_1* npbversion, __insieme_type_1* compiletime, __insieme_type_1* cc, __insieme_type_1* clink, __insieme_type_1* c_lib, __insieme_type_1* c_inc, __insieme_type_1* cflags, __insieme_type_1* clinkflags, __insieme_type_1* rand){
@@ -1173,7 +1159,7 @@ static inline __insieme_type_49 __insieme_type_49_init_uniform(char value) {
 // start code fragment :: Definition of print_timers ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->unit) //
 void print_timers(struct __insieme_globals* var_384){
 	int i = 0;
-	__insieme_type_47 tstrings = ((__insieme_type_47){{(((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 't', 'o', 't', 'a', 'l', ' ', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 's', 'e', 't', 'u', 'p', ' ', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'f', 't', ' ', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'e', 'v', 'o', 'l', 'v', 'e', ' ', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', 'c', 'h', 'e', 'c', 'k', 's', 'u', 'm', ' ', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'f', 't', 'l', 'o', 'w', ' ', '\0'}})).data,{1}})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'f', 't', 'c', 'o', 'p', 'y', ' ', '\0'}})).data,{1}}))}});
+	__insieme_type_47 tstrings = ((__insieme_type_47){{(((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 't', 'o', 't', 'a', 'l', ' ', '\0'}})).data})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 's', 'e', 't', 'u', 'p', ' ', '\0'}})).data})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'f', 't', ' ', '\0'}})).data})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'e', 'v', 'o', 'l', 'v', 'e', ' ', '\0'}})).data})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', 'c', 'h', 'e', 'c', 'k', 's', 'u', 'm', ' ', '\0'}})).data})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'f', 't', 'l', 'o', 'w', ' ', '\0'}})).data})), (((__insieme_type_1){(((__insieme_type_49){{' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', 'f', 'f', 't', 'c', 'o', 'p', 'y', ' ', '\0'}})).data}))}});
 	{
 		for(int var_387 = 0; var_387 < 7; var_387 += 1)  { if((timer_read(var_384, (var_387))!=0.0)) { printf(((char*)((*(&((__insieme_type_1){"timer %2d(%16s( :%10.6f\n"}))).data)), (var_387), ((char*)((*(&((tstrings).data[((unsigned int)((var_387)))]))).data)), timer_read(var_384, (var_387))); }; };
 		((i) = (0+(((int)(ceil((((double)((7-0)))/((double)(1))))))*1)));
@@ -1186,9 +1172,9 @@ int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
@@ -1212,12 +1198,12 @@ int main(int __argc, char** __argv) {
 		};
 		setup(var_1);
 		{
-			compute_indexmap(var_1, (&((__insieme_type_20){(*(&((*var_1).indexmap))).data,{1}})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(2))])).data,{1}})));
+			compute_indexmap(var_1, (&((__insieme_type_20){(*(&((*var_1).indexmap))).data})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(2))])).data})));
 			{
-				compute_initial_conditions(var_1, (&((__insieme_type_24){(*(&((*var_1).u1))).data,{1}})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data,{1}})));
+				compute_initial_conditions(var_1, (&((__insieme_type_24){(*(&((*var_1).u1))).data})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data})));
 				fft_init(var_1, (((((*(&((*var_1).dims))).data[((unsigned int)(0))])).data[((unsigned int)(0))])));
 			};
-			fft(var_1, 1, (&((__insieme_type_24){(*(&((*var_1).u1))).data,{1}})), (&((__insieme_type_24){(*(&((*var_1).u0))).data,{1}})));
+			fft(var_1, 1, (&((__insieme_type_24){(*(&((*var_1).u1))).data})), (&((__insieme_type_24){(*(&((*var_1).u0))).data})));
 		};
 		{
 			for(int var_231 = 0; var_231 < 7; var_231 += 1)  { timer_clear(var_1, (var_231)); };
@@ -1226,30 +1212,30 @@ int main(int __argc, char** __argv) {
 		timer_start(var_1, 0);
 		if((0==1)) { timer_start(var_1, 1); };
 		{
-			compute_indexmap(var_1, (&((__insieme_type_20){(*(&((*var_1).indexmap))).data,{1}})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(2))])).data,{1}})));
+			compute_indexmap(var_1, (&((__insieme_type_20){(*(&((*var_1).indexmap))).data})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(2))])).data})));
 			{
-				compute_initial_conditions(var_1, (&((__insieme_type_24){(*(&((*var_1).u1))).data,{1}})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data,{1}})));
+				compute_initial_conditions(var_1, (&((__insieme_type_24){(*(&((*var_1).u1))).data})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data})));
 				fft_init(var_1, (((((*(&((*var_1).dims))).data[((unsigned int)(0))])).data[((unsigned int)(0))])));
 			};
 			if((0==1)) { timer_stop(var_1, 1); };
 			if((0==1)) { timer_start(var_1, 2); };
-			fft(var_1, 1, (&((__insieme_type_24){(*(&((*var_1).u1))).data,{1}})), (&((__insieme_type_24){(*(&((*var_1).u0))).data,{1}})));
+			fft(var_1, 1, (&((__insieme_type_24){(*(&((*var_1).u1))).data})), (&((__insieme_type_24){(*(&((*var_1).u0))).data})));
 			if((0==1)) { timer_stop(var_1, 2); };
 			{
 				for(int var_298 = 1; var_298 < ((*(&((*var_1).niter)))+1); var_298 += 1) {
 					if((0==1)) { timer_start(var_1, 3); };
-					evolve(var_1, (&((__insieme_type_24){(*(&((*var_1).u0))).data,{1}})), (&((__insieme_type_24){(*(&((*var_1).u1))).data,{1}})), (var_298), (&((__insieme_type_20){(*(&((*var_1).indexmap))).data,{1}})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data,{1}})));
+					evolve(var_1, (&((__insieme_type_24){(*(&((*var_1).u0))).data})), (&((__insieme_type_24){(*(&((*var_1).u1))).data})), (var_298), (&((__insieme_type_20){(*(&((*var_1).indexmap))).data})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data})));
 					if((0==1)) { timer_stop(var_1, 3); };
 					if((0==1)) { timer_start(var_1, 2); };
-					fft(var_1, (((int)(0))-1), (&((__insieme_type_24){(*(&((*var_1).u1))).data,{1}})), (&((__insieme_type_24){(*(&((*var_1).u2))).data,{1}})));
+					fft(var_1, (((int)(0))-1), (&((__insieme_type_24){(*(&((*var_1).u1))).data})), (&((__insieme_type_24){(*(&((*var_1).u2))).data})));
 					if((0==1)) { timer_stop(var_1, 2); };
 					if((0==1)) { timer_start(var_1, 4); };
-					checksum(var_1, (var_298), (&((__insieme_type_24){(*(&((*var_1).u2))).data,{1}})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data,{1}})));
+					checksum(var_1, (var_298), (&((__insieme_type_24){(*(&((*var_1).u2))).data})), (&((__insieme_type_22){(((*(&((*var_1).dims))).data[((unsigned int)(0))])).data})));
 					if((0==1)) { timer_stop(var_1, 4); };
 				};
 				((iter) = (1+(((int)(ceil((((double)((((*(&((*var_1).niter)))+1)-1)))/((double)(1))))))*1)));
 			};
-			verify(var_1, 128, 128, 32, (*(&((*var_1).niter))), (&((__insieme_type_22){&verified,{1}})), (&((__insieme_type_1){&class,{1}})));
+			verify(var_1, 128, 128, 32, (*(&((*var_1).niter))), (&((__insieme_type_22){&verified})), (&((__insieme_type_1){&class})));
 		};
 		timer_stop(var_1, 0);
 		((total_time) = timer_read(var_1, 0));

@@ -11,18 +11,12 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
-
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_21) { return strlen(((char*)((*(var_21)).data))); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -76,17 +70,17 @@ int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
 	{
 		int x = 10;
 		printf(((char*)((*(&((__insieme_type_1){"x=%d\n"}))).data)), (x));
-		printf(((char*)((*(&((__insieme_type_1){"even(x)=%s\n"}))).data)), ((((__insieme_supp_4(((unsigned int)((x))))!=0))?((((__insieme_type_1){(((__insieme_type_6){{'t', 'r', 'u', 'e', '\0'}})).data,{1}}))):((((__insieme_type_1){(((__insieme_type_7){{'f', 'a', 'l', 's', 'e', '\0'}})).data,{1}}))))).data);
-		printf(((char*)((*(&((__insieme_type_1){"odd(x)=%s\n"}))).data)), ((((__insieme_supp_5(((unsigned int)((x))))!=0))?((((__insieme_type_1){(((__insieme_type_6){{'t', 'r', 'u', 'e', '\0'}})).data,{1}}))):((((__insieme_type_1){(((__insieme_type_7){{'f', 'a', 'l', 's', 'e', '\0'}})).data,{1}}))))).data);
+		printf(((char*)((*(&((__insieme_type_1){"even(x)=%s\n"}))).data)), ((((__insieme_supp_4(((unsigned int)((x))))!=0))?((((__insieme_type_1){(((__insieme_type_6){{'t', 'r', 'u', 'e', '\0'}})).data}))):((((__insieme_type_1){(((__insieme_type_7){{'f', 'a', 'l', 's', 'e', '\0'}})).data}))))).data);
+		printf(((char*)((*(&((__insieme_type_1){"odd(x)=%s\n"}))).data)), ((((__insieme_supp_5(((unsigned int)((x))))!=0))?((((__insieme_type_1){(((__insieme_type_6){{'t', 'r', 'u', 'e', '\0'}})).data}))):((((__insieme_type_1){(((__insieme_type_7){{'f', 'a', 'l', 's', 'e', '\0'}})).data}))))).data);
 		return 0;
 	}
 	// ----  end of actual code body  ----

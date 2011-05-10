@@ -257,8 +257,11 @@ namespace simple_backend {
 			string charArrayArrayName = cc.getTypeManager().getTypeName(code, aaCharType, true);
 			string charArrayName = cc.getTypeManager().getTypeName(code, aCharType, true);
 
+			// check whether the arrays length should be supported
+			bool useSize = cc.isSupportArrayLength();
+
 			code << "int argc = __argc;\n";
-			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc), {argc}};\n";
+			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc)" << ((useSize)?", {argc}":"") << "};\n";
 
 			// create a literal for the strlen function
 			ASTBuilder builder(cc.getNodeManager());
@@ -266,13 +269,20 @@ namespace simple_backend {
 					toVector<TypePtr>(builder.refType(aCharType)),
 					builder.getBasicGenerator().getUInt8());
 
-			LiteralPtr strlen = builder.literal(strLenType, "strlen");
-			string strlenName = cc.getFunctionManager().getFunctionName(code, strlen);
+			if (useSize) {
+				LiteralPtr strlen = builder.literal(strLenType, "strlen");
+				string strlenName = cc.getFunctionManager().getFunctionName(code, strlen);
 
-			// initialize argument vector data structure
-			code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
-			code << "argv.data[i] = (" << charArrayName << "){__argv[i],{" << strlenName << "(__argv[i])+1}};" << CodeBuffer::indL;
-			code << "\n}\n";
+				// initialize argument vector data structure
+				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
+				code << "argv.data[i] = (" << charArrayName << "){__argv[i],{" << strlenName << "(__argv[i])+1}};" << CodeBuffer::indL;
+				code << "\n}\n";
+			} else {
+				// initialize argument vector data structure
+				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
+				code << "argv.data[i] = (" << charArrayName << "){__argv[i]};" << CodeBuffer::indL;
+				code << "\n}\n";
+			}
 
 
 			// add body
@@ -628,7 +638,7 @@ namespace simple_backend {
 				code << ")";
 
 				if (internalize) {
-					code << ",{1}})";
+					code << (cc.isSupportArrayLength()?",{1}})":"})");
 				}
 				return;
 			}

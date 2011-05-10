@@ -11,27 +11,21 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
 
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_149) { return strlen(((char*)((*(var_149)).data))); }
-
-// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<real<8>,131073> //
-typedef struct ___insieme_type_3 { 
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<real<8>,131073> //
+typedef struct ___insieme_type_2 { 
     double data[131073];
-} __insieme_type_3;
+} __insieme_type_2;
 
-// A constructor initializing a vector of the type __insieme_type_3 uniformly
-static inline __insieme_type_3 __insieme_type_3_init_uniform(double value) {
-	__insieme_type_3 res;
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(double value) {
+	__insieme_type_2 res;
 	for (int i=0; i<131073;++i) {
 	    res.data[i] = value;
 	}
@@ -39,20 +33,19 @@ static inline __insieme_type_3 __insieme_type_3_init_uniform(double value) {
 }
 
 
-// start code fragment :: array type definition of __insieme_type_4 <=> array<real<8>,1> //
-typedef struct ___insieme_type_4 { 
+// start code fragment :: array type definition of __insieme_type_3 <=> array<real<8>,1> //
+typedef struct ___insieme_type_3 { 
     double* data;
-    unsigned size[1];
+} __insieme_type_3;
+
+// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<real<8>,10> //
+typedef struct ___insieme_type_4 { 
+    double data[10];
 } __insieme_type_4;
 
-// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<real<8>,10> //
-typedef struct ___insieme_type_5 { 
-    double data[10];
-} __insieme_type_5;
-
-// A constructor initializing a vector of the type __insieme_type_5 uniformly
-static inline __insieme_type_5 __insieme_type_5_init_uniform(double value) {
-	__insieme_type_5 res;
+// A constructor initializing a vector of the type __insieme_type_4 uniformly
+static inline __insieme_type_4 __insieme_type_4_init_uniform(double value) {
+	__insieme_type_4 res;
 	for (int i=0; i<10;++i) {
 	    res.data[i] = value;
 	}
@@ -60,14 +53,14 @@ static inline __insieme_type_5 __insieme_type_5_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<real<8>,64> //
-typedef struct ___insieme_type_6 { 
+// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<real<8>,64> //
+typedef struct ___insieme_type_5 { 
     double data[64];
-} __insieme_type_6;
+} __insieme_type_5;
 
-// A constructor initializing a vector of the type __insieme_type_6 uniformly
-static inline __insieme_type_6 __insieme_type_6_init_uniform(double value) {
-	__insieme_type_6 res;
+// A constructor initializing a vector of the type __insieme_type_5 uniformly
+static inline __insieme_type_5 __insieme_type_5_init_uniform(double value) {
+	__insieme_type_5 res;
 	for (int i=0; i<64;++i) {
 	    res.data[i] = value;
 	}
@@ -77,22 +70,22 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(double value) {
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    __insieme_type_3 _x;
-    __insieme_type_4 x;
-    __insieme_type_5 q;
-    __insieme_type_6 start;
-    __insieme_type_6 elapsed;
+    __insieme_type_2 _x;
+    __insieme_type_3 x;
+    __insieme_type_4 q;
+    __insieme_type_5 start;
+    __insieme_type_5 elapsed;
     int sec;
 };
 
-// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<real<8>,3> //
-typedef struct ___insieme_type_9 { 
+// start code fragment :: vector_type_declaration of __insieme_type_8 <=> vector<real<8>,3> //
+typedef struct ___insieme_type_8 { 
     double data[3];
-} __insieme_type_9;
+} __insieme_type_8;
 
-// A constructor initializing a vector of the type __insieme_type_9 uniformly
-static inline __insieme_type_9 __insieme_type_9_init_uniform(double value) {
-	__insieme_type_9 res;
+// A constructor initializing a vector of the type __insieme_type_8 uniformly
+static inline __insieme_type_8 __insieme_type_8_init_uniform(double value) {
+	__insieme_type_8 res;
 	for (int i=0; i<3;++i) {
 	    res.data[i] = value;
 	}
@@ -100,14 +93,14 @@ static inline __insieme_type_9 __insieme_type_9_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_12 <=> vector<char,14> //
-typedef struct ___insieme_type_12 { 
+// start code fragment :: vector_type_declaration of __insieme_type_11 <=> vector<char,14> //
+typedef struct ___insieme_type_11 { 
     char data[14];
-} __insieme_type_12;
+} __insieme_type_11;
 
-// A constructor initializing a vector of the type __insieme_type_12 uniformly
-static inline __insieme_type_12 __insieme_type_12_init_uniform(char value) {
-	__insieme_type_12 res;
+// A constructor initializing a vector of the type __insieme_type_11 uniformly
+static inline __insieme_type_11 __insieme_type_11_init_uniform(char value) {
+	__insieme_type_11 res;
 	for (int i=0; i<14;++i) {
 	    res.data[i] = value;
 	}
@@ -123,14 +116,14 @@ int sprintf(char*, char*, ...);
 
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
-static double pow_wrap(void* _closure, double var_150, double var_151) { return pow(var_150, var_151); }
+static double pow_wrap(void* _closure, double var_149, double var_150) { return pow(var_149, var_150); }
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_152) { return ceil(var_152); }
+static double ceil_wrap(void* _closure, double var_151) { return ceil(var_151); }
 
 // start code fragment :: Definition of vranlc ... type: ((int<4>,ref<array<real<8>,1>>,real<8>,ref<array<real<8>,1>>)->unit) //
-void vranlc(int n, __insieme_type_4* x_seed, double a, __insieme_type_4* y){
+void vranlc(int n, __insieme_type_3* x_seed, double a, __insieme_type_3* y){
 	int i = 0;
 	double x = 0.0;
 	double t1 = 0.0;
@@ -163,10 +156,10 @@ void vranlc(int n, __insieme_type_4* x_seed, double a, __insieme_type_4* y){
 	};
 	((((*x_seed).data[0])) = (x));
 }
-static void vranlc_wrap(void* _closure, int n, __insieme_type_4* x_seed, double a, __insieme_type_4* y) { vranlc(n, x_seed, a, y); }
+static void vranlc_wrap(void* _closure, int n, __insieme_type_3* x_seed, double a, __insieme_type_3* y) { vranlc(n, x_seed, a, y); }
 
 // start code fragment :: Definition of randlc ... type: ((ref<array<real<8>,1>>,real<8>)->real<8>) //
-double randlc(__insieme_type_4* x, double a){
+double randlc(__insieme_type_3* x, double a){
 	double t1 = 0.0;
 	double t2 = 0.0;
 	double t3 = 0.0;
@@ -190,19 +183,19 @@ double randlc(__insieme_type_4* x, double a){
 	((((*x).data[0])) = ((t3)-((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0))*(t4))));
 	return ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*(((*x).data[0])));
 }
-static double randlc_wrap(void* _closure, __insieme_type_4* x, double a) { return randlc(x, a); }
+static double randlc_wrap(void* _closure, __insieme_type_3* x, double a) { return randlc(x, a); }
 
 // start code fragment :: Prototype for external function: log ... type: ((real<8>)->real<8>) //
 double log(double);
-static double log_wrap(void* _closure, double var_153) { return log(var_153); }
+static double log_wrap(void* _closure, double var_152) { return log(var_152); }
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_154) { return sqrt(var_154); }
+static double sqrt_wrap(void* _closure, double var_153) { return sqrt(var_153); }
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_155) { return fabs(var_155); }
+static double fabs_wrap(void* _closure, double var_154) { return fabs(var_154); }
 
 // start code fragment :: Definition of timer_clear ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_clear(struct __insieme_globals* var_69, int n) { ((((*(&((*var_69).elapsed))).data[((unsigned int)(n))])) = 0.0); }
@@ -217,7 +210,6 @@ struct timeval {
 // start code fragment :: array type definition of __insieme_type_16 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
 typedef struct ___insieme_type_16 { 
     struct timeval* data;
-    unsigned size[1];
 } __insieme_type_16;
 
 // start code fragment :: type_declaration_timezone //
@@ -229,26 +221,25 @@ struct timezone {
 // start code fragment :: array type definition of __timezone_ptr_t <=> array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1> //
 typedef struct ___timezone_ptr_t { 
     struct timezone* data;
-    unsigned size[1];
 } __timezone_ptr_t;
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_16* var_156, __timezone_ptr_t* var_157) { return gettimeofday(((struct timeval*)((*(var_156)).data)), ((struct timezone*)((*(var_157)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_16* var_155, __timezone_ptr_t* var_156) { return gettimeofday(((struct timeval*)((*(var_155)).data)), ((struct timezone*)((*(var_156)).data))); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
-void wtime(struct __insieme_globals* var_76, __insieme_type_4* t){
+void wtime(struct __insieme_globals* var_76, __insieme_type_3* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_16){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_16){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((*var_76).sec)))<0)) { ((*(&((*var_76).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_76).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void wtime_wrap(void* _closure, struct __insieme_globals* var_76, __insieme_type_4* t) { wtime(var_76, t); }
+static void wtime_wrap(void* _closure, struct __insieme_globals* var_76, __insieme_type_3* t) { wtime(var_76, t); }
 
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
 double elapsed_time(struct __insieme_globals* var_74){
 	double t = 0.0;
-	wtime(var_74, (&((__insieme_type_4){&t,{1}})));
+	wtime(var_74, (&((__insieme_type_3){&t})));
 	return (t);
 }
 static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_74) { return elapsed_time(var_74); }
@@ -301,15 +292,15 @@ int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
 	{
 		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		((*(&((*var_1).x))) = (__insieme_type_4){0,{0}});
+		((*(&((*var_1).x))) = (__insieme_type_3){0});
 		((*(&((*var_1).sec))) = (((int)(0))-1));
 		double Mops = 0.0;
 		double t1 = 0.0;
@@ -324,7 +315,7 @@ int main(int __argc, char** __argv) {
 		double an = 0.0;
 		double tt = 0.0;
 		double gc = 0.0;
-		__insieme_type_9 dum = ((__insieme_type_9){{1.0, 1.0, 1.0}});
+		__insieme_type_8 dum = ((__insieme_type_8){{1.0, 1.0, 1.0}});
 		int np = 0;
 		int ierr = 0;
 		int node = 0;
@@ -342,10 +333,10 @@ int main(int __argc, char** __argv) {
 		int j = 0;
 		int nthreads = 1;
 		int verified = 0;
-		__insieme_type_12 size;
-		((*(&((*var_1).x))) = (*(&((__insieme_type_4){&((*(&((*var_1)._x))).data[((unsigned int)(1))]),{1}}))));
+		__insieme_type_11 size;
+		((*(&((*var_1).x))) = (*(&((__insieme_type_3){&((*(&((*var_1)._x))).data[((unsigned int)(1))])}))));
 		printf(((char*)((*(&((__insieme_type_1){"\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - EP Benchmark\n"}))).data)), 0);
-		sprintf(((char*)((*((&((__insieme_type_1){(size).data,{1}})))).data)), ((char*)((*(&((__insieme_type_1){"%12.0f"}))).data)), pow(2.0, ((double)((25+1)))));
+		sprintf(((char*)((*((&((__insieme_type_1){(size).data})))).data)), ((char*)((*(&((__insieme_type_1){"%12.0f"}))).data)), pow(2.0, ((double)((25+1)))));
 		{
 			for(int var_36 = (((int)(0))-13); var_36 < ((((int)(0))-1)+1); var_36 += 1)  { if(((((size).data[((unsigned int)((((int)(0))-(var_36))))]))=='.')) { ((((size).data[((unsigned int)((((int)(0))-(var_36))))])) = ' '); }; };
 			((j) = (13+(((int)(ceil((((double)((((((int)(0))-1)+1)-13)))/((double)(1))))))*1)));
@@ -353,8 +344,8 @@ int main(int __argc, char** __argv) {
 		printf(((char*)((*(&((__insieme_type_1){" Number of random numbers generated: %13s\n"}))).data)), ((size)).data);
 		((verified) = 0);
 		((np) = (1<<(25-16)));
-		vranlc(0, (&((__insieme_type_4){&((dum).data[((unsigned int)(0))]),{1}})), (((dum).data[((unsigned int)(1))])), (&((__insieme_type_4){&((dum).data[((unsigned int)(2))]),{1}})));
-		((((dum).data[((unsigned int)(0))])) = randlc((&((__insieme_type_4){&((dum).data[((unsigned int)(1))]),{1}})), (((dum).data[((unsigned int)(2))]))));
+		vranlc(0, (&((__insieme_type_3){&((dum).data[((unsigned int)(0))])})), (((dum).data[((unsigned int)(1))])), (&((__insieme_type_3){&((dum).data[((unsigned int)(2))])})));
+		((((dum).data[((unsigned int)(0))])) = randlc((&((__insieme_type_3){&((dum).data[((unsigned int)(1))])})), (((dum).data[((unsigned int)(2))]))));
 		{
 			for(int var_66 = 0; var_66 < (2*(1<<16)); var_66 += 1)  { ((((*(&((*var_1).x))).data[((unsigned int)((var_66)))])) = (((double)(0))-1.0e99)); };
 			((i) = (0+(((int)(ceil((((double)(((2*(1<<16))-0)))/((double)(1))))))*1)));
@@ -364,10 +355,10 @@ int main(int __argc, char** __argv) {
 		timer_clear(var_1, 2);
 		timer_clear(var_1, 3);
 		timer_start(var_1, 1);
-		vranlc(0, (&((__insieme_type_4){&t1,{1}})), 1220703125.0, (&((*var_1).x)));
+		vranlc(0, (&((__insieme_type_3){&t1})), 1220703125.0, (&((*var_1).x)));
 		((t1) = 1220703125.0);
 		{
-			for(int var_82 = 1; var_82 < ((16+1)+1); var_82 += 1)  { ((t2) = randlc((&((__insieme_type_4){&t1,{1}})), (t1))); };
+			for(int var_82 = 1; var_82 < ((16+1)+1); var_82 += 1)  { ((t2) = randlc((&((__insieme_type_3){&t1})), (t1))); };
 			((i) = (1+(((int)(ceil((((double)((((16+1)+1)-1)))/((double)(1))))))*1)));
 		};
 		((an) = (t1));
@@ -391,7 +382,7 @@ int main(int __argc, char** __argv) {
 			int i = 0;
 			int ik = 0;
 			int l = 0;
-			__insieme_type_5 qq;
+			__insieme_type_4 qq;
 			{
 				for(int var_95 = 0; var_95 < 10; var_95 += 1)  { ((((qq).data[((unsigned int)((var_95)))])) = 0.0); };
 				((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
@@ -404,15 +395,15 @@ int main(int __argc, char** __argv) {
 					{
 						for(int var_96 = 1; var_96 < (100+1); var_96 += 1) {
 							((ik) = ((kk)/2));
-							if(((2*(ik))!=(kk))) { ((t3) = randlc((&((__insieme_type_4){&t1,{1}})), (t2))); };
+							if(((2*(ik))!=(kk))) { ((t3) = randlc((&((__insieme_type_3){&t1})), (t2))); };
 							if(((ik)==0)) { break; };
-							((t3) = randlc((&((__insieme_type_4){&t2,{1}})), (t2)));
+							((t3) = randlc((&((__insieme_type_3){&t2})), (t2)));
 							((kk) = (ik));
 						};
 						((i) = (1+(((int)(ceil((((double)(((100+1)-1)))/((double)(1))))))*1)));
 					};
 					if((0==1)) { timer_start(var_1, 3); };
-					vranlc((2*(1<<16)), (&((__insieme_type_4){&t1,{1}})), 1220703125.0, (&((__insieme_type_4){(*(&((*var_1)._x))).data,{1}})));
+					vranlc((2*(1<<16)), (&((__insieme_type_3){&t1})), 1220703125.0, (&((__insieme_type_3){(*(&((*var_1)._x))).data})));
 					if((0==1)) { timer_stop(var_1, 3); };
 					if((0==1)) { timer_start(var_1, 2); };
 					{

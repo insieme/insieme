@@ -51,15 +51,18 @@
 namespace insieme {
 namespace simple_backend {
 
+// a forward declaration for the backend converter
+class Converter;
+
 /**
  * Manages C type generation and lookup for IR types.
  */
 class TypeManager {
 
 	/**
-	 * The name generator used for deriving fresh type names.
+	 * A reference to the converter this type manager is contributing to.
 	 */
-	NameManager& nameGenerator;
+	Converter& converter;
 
 public:
 
@@ -180,7 +183,7 @@ private:
 
 public:
 
-	TypeManager(NameManager& nameGenerator) : nameGenerator(nameGenerator) { }
+	TypeManager(Converter& converter) : converter(converter) { }
 
 	/**
 	 * Obtains a type name for the given type. In case the type has been used before, the same
@@ -236,6 +239,8 @@ public:
 	FunctionTypeInfo getFunctionTypeInfo(const core::FunctionTypePtr& functionType);
 
 private:
+
+	NameManager& getNameManager() const;
 
 	TypeInfo resolveType(const core::TypePtr& ptr);
 

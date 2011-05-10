@@ -348,7 +348,6 @@ LITERAL(ArrayElemToVec, "array.elem.to.vec",
 
 // -- special operations to support encoding of C pointers as arrays ----------------------------------------------------
 
-LITERAL(SetNull,   		"set.null",				"(ref<'a>) -> unit")
 LITERAL(IsNull,   		"is.null",				"(array<'a,1>) -> bool")
 LITERAL(GetNull,   		"get.null",				"(type<'a>) -> array<'a,1>")
 LITERAL(PtrEq,			"ptr.eq",				"(array<'a,1>, array<'a,1>) -> bool")

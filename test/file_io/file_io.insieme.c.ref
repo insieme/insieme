@@ -11,7 +11,6 @@
 // start code fragment :: array type definition of __insieme_type_0 <=> array<char,1> //
 typedef struct ___insieme_type_0 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_0;
 
 // start code fragment :: Prototype of struct FILE //
@@ -20,7 +19,6 @@ struct FILE;
 // start code fragment :: array type definition of __insieme_type_2 <=> array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1> //
 typedef struct ___insieme_type_2 { 
     struct FILE* data;
-    unsigned size[1];
 } __insieme_type_2;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
@@ -28,7 +26,7 @@ int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: fopen ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>) //
 struct FILE* fopen(char*, char*);
-static __insieme_type_2* fopen_wrap(void* _closure, __insieme_type_0* var_6, __insieme_type_0* var_7) { return &((__insieme_type_2){fopen(((char*)((*(var_6)).data)), ((char*)((*(var_7)).data))),{1}}); }
+static __insieme_type_2* fopen_wrap(void* _closure, __insieme_type_0* var_6, __insieme_type_0* var_7) { return &((__insieme_type_2){fopen(((char*)((*(var_6)).data)), ((char*)((*(var_7)).data)))}); }
 
 // start code fragment :: Prototype for external function: fgetc ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
 int fgetc(struct FILE*);
@@ -42,8 +40,8 @@ static int fclose_wrap(void* _closure, __insieme_type_2* var_9) { return fclose(
 void printFile(__insieme_type_0* name){
 	__insieme_type_2 fp;
 	printf(((char*)((*(&((__insieme_type_0){"Opening file %s ...\n"}))).data)), ((char*)((*(name)).data)));
-	((fp) = (((__insieme_type_2){fopen(((char*)((*(name)).data)), ((char*)((*(&((__insieme_type_0){"r"}))).data))),{1}})));
-	if(((fp).data == (__insieme_type_2){0,{0}}.data)){
+	((fp) = (((__insieme_type_2){fopen(((char*)((*(name)).data)), ((char*)((*(&((__insieme_type_0){"r"}))).data)))})));
+	if(((fp).data == (__insieme_type_2){0}.data)){
 		printf(((char*)((*(&((__insieme_type_0){"File not found!\n"}))).data)), 0);
 		return;
 	};

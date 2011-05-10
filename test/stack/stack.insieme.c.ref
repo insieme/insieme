@@ -14,7 +14,6 @@ struct item;
 // start code fragment :: array type definition of __insieme_type_1 <=> array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1> //
 typedef struct ___insieme_type_1 { 
     struct item* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: type_declaration_stack //
@@ -25,7 +24,6 @@ struct stack {
 // start code fragment :: array type definition of Stack <=> array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1> //
 typedef struct _Stack { 
     struct stack* data;
-    unsigned size[1];
 } Stack;
 
 // start code fragment :: New operator for type ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> //
@@ -39,13 +37,13 @@ static inline Stack* _ref_new___insieme_type_2(Stack value) {
 // start code fragment :: array type utils of Stack <=> array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1> //
 // A constructor for the array type Stack
 static inline Stack Stack_ctr(unsigned s1) {
-    return ((Stack){malloc(sizeof(struct stack)*s1),{s1}});
+    return ((Stack){malloc(sizeof(struct stack)*s1)});
 }
 
 // start code fragment :: Definition of newStack ... type: (()->ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>) //
 Stack* newStack(){
 	Stack* res = _ref_new___insieme_type_2((Stack_ctr((sizeof(struct stack)/sizeof(struct stack)))));
-	((*(&((((*res).data[0])).top))) = (__insieme_type_1){0,{0}});
+	((*(&((((*res).data[0])).top))) = (__insieme_type_1){0});
 	return res;
 }
 static Stack* newStack_wrap(void* _closure) { return newStack(); }
@@ -53,7 +51,6 @@ static Stack* newStack_wrap(void* _closure) { return newStack(); }
 // start code fragment :: array type definition of __insieme_type_3 <=> array<char,1> //
 typedef struct ___insieme_type_3 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_3;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
@@ -76,7 +73,7 @@ struct item {
 // start code fragment :: array type utils of __insieme_type_1 <=> array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1> //
 // A constructor for the array type __insieme_type_1
 static inline __insieme_type_1 __insieme_type_1_ctr(unsigned s1) {
-    return ((__insieme_type_1){malloc(sizeof(struct item)*s1),{s1}});
+    return ((__insieme_type_1){malloc(sizeof(struct item)*s1)});
 }
 
 // start code fragment :: Definition of push ... type: ((ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>,int<4>)->unit) //

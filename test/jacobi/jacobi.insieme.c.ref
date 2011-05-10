@@ -11,31 +11,25 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
-
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_30) { return strlen(((char*)((*(var_30)).data))); }
 
 // start code fragment :: Prototype for external function: clock ... type: (()->int<8>) //
 long clock();
 static long clock_wrap(void* _closure) { return clock(); }
 
-// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<real<4>,650> //
-typedef struct ___insieme_type_6 { 
+// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<real<4>,650> //
+typedef struct ___insieme_type_5 { 
     float data[650];
-} __insieme_type_6;
+} __insieme_type_5;
 
-// A constructor initializing a vector of the type __insieme_type_6 uniformly
-static inline __insieme_type_6 __insieme_type_6_init_uniform(float value) {
-	__insieme_type_6 res;
+// A constructor initializing a vector of the type __insieme_type_5 uniformly
+static inline __insieme_type_5 __insieme_type_5_init_uniform(float value) {
+	__insieme_type_5 res;
 	for (int i=0; i<650;++i) {
 	    res.data[i] = value;
 	}
@@ -43,14 +37,14 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(float value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<vector<real<4>,650>,650> //
-typedef struct ___insieme_type_5 { 
-    __insieme_type_6 data[650];
-} __insieme_type_5;
+// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<vector<real<4>,650>,650> //
+typedef struct ___insieme_type_4 { 
+    __insieme_type_5 data[650];
+} __insieme_type_4;
 
-// A constructor initializing a vector of the type __insieme_type_5 uniformly
-static inline __insieme_type_5 __insieme_type_5_init_uniform(__insieme_type_6 value) {
-	__insieme_type_5 res;
+// A constructor initializing a vector of the type __insieme_type_4 uniformly
+static inline __insieme_type_4 __insieme_type_4_init_uniform(__insieme_type_5 value) {
+	__insieme_type_4 res;
 	for (int i=0; i<650;++i) {
 	    res.data[i] = value;
 	}
@@ -60,11 +54,11 @@ static inline __insieme_type_5 __insieme_type_5_init_uniform(__insieme_type_6 va
 
 // start code fragment :: Prototype for external function: memset ... type: ((anyRef,int<4>,uint<8>)->anyRef) //
 void* memset(void*, int, unsigned long);
-static void* memset_wrap(void* _closure, void* var_31, int var_32, unsigned long var_33) { return memset(var_31, var_32, var_33); }
+static void* memset_wrap(void* _closure, void* var_30, int var_31, unsigned long var_32) { return memset(var_30, var_31, var_32); }
 
 // start code fragment :: Prototype for external function: sin ... type: ((real<8>)->real<8>) //
 double sin(double);
-static double sin_wrap(void* _closure, double var_34) { return sin(var_34); }
+static double sin_wrap(void* _closure, double var_33) { return sin(var_33); }
 
 // start code fragment :: Definition of init_func ... type: ((int<4>,int<4>)->real<8>) //
 double init_func(int x, int y) { return (((double)(40))*sin(((double)(((16*((2*x)-1))*y))))); }
@@ -72,24 +66,24 @@ static double init_func_wrap(void* _closure, int x, int y) { return init_func(x,
 
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
-static double pow_wrap(void* _closure, double var_35, double var_36) { return pow(var_35, var_36); }
+static double pow_wrap(void* _closure, double var_34, double var_35) { return pow(var_34, var_35); }
 
 // start code fragment :: Prototype for external function: memcpy ... type: ((anyRef,anyRef,uint<8>)->anyRef) //
 void* memcpy(void*, void*, unsigned long);
-static void* memcpy_wrap(void* _closure, void* var_37, void* var_38, unsigned long var_39) { return memcpy(var_37, var_38, var_39); }
+static void* memcpy_wrap(void* _closure, void* var_36, void* var_37, unsigned long var_38) { return memcpy(var_36, var_37, var_38); }
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_40) { return sqrt(var_40); }
+static double sqrt_wrap(void* _closure, double var_39) { return sqrt(var_39); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
@@ -99,10 +93,10 @@ int main(int __argc, char** __argv) {
 		double setup_time = 0.0;
 		double elapsed_time = 0.0;
 		((start_t) = clock());
-		__insieme_type_5 u;
-		__insieme_type_5 tmp;
-		__insieme_type_5 f;
-		__insieme_type_5 res;
+		__insieme_type_4 u;
+		__insieme_type_4 tmp;
+		__insieme_type_4 f;
+		__insieme_type_4 res;
 		memset((void*)((float**)((*(&u)).data)), 0, ((unsigned long)((650*650))));
 		memset((void*)((float**)((*(&f)).data)), 0, ((unsigned long)((650*650))));
 		for(int i = 0; i < 650; i += 1)  { for(int j = 0; j < 650; j += 1)  { ((((((f).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(init_func((i), (j))))); }; };

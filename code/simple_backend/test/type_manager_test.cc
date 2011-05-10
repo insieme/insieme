@@ -38,6 +38,7 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/simple_backend/type_manager.h"
+#include "insieme/simple_backend/backend_convert.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -64,8 +65,10 @@ TEST(TypeManager, Basic) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -105,8 +108,10 @@ TEST(TypeManager, StructTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -139,8 +144,10 @@ TEST(TypeManager, RefTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -220,8 +227,10 @@ TEST(TypeManager, ArrayTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -277,8 +286,10 @@ TEST(TypeManager, VectorTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -334,8 +345,10 @@ TEST(TypeManager, FunctionTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");

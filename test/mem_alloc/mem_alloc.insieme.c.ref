@@ -11,27 +11,21 @@
 // start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
 typedef struct ___insieme_type_1 { 
     char* data;
-    unsigned size[1];
 } __insieme_type_1;
 
 // start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1* data;
-    unsigned size[1];
 } __insieme_type_0;
 
-// start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
-unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_7) { return strlen(((char*)((*(var_7)).data))); }
-
-// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<int<4>,4> //
-typedef struct ___insieme_type_3 { 
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<int<4>,4> //
+typedef struct ___insieme_type_2 { 
     int data[4];
-} __insieme_type_3;
+} __insieme_type_2;
 
-// A constructor initializing a vector of the type __insieme_type_3 uniformly
-static inline __insieme_type_3 __insieme_type_3_init_uniform(int value) {
-	__insieme_type_3 res;
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(int value) {
+	__insieme_type_2 res;
 	for (int i=0; i<4;++i) {
 	    res.data[i] = value;
 	}
@@ -45,7 +39,6 @@ int printf(char*, ...);
 // start code fragment :: array type definition of __insieme_type_5 <=> array<int<4>,1> //
 typedef struct ___insieme_type_5 { 
     int* data;
-    unsigned size[1];
 } __insieme_type_5;
 
 // start code fragment :: New operator for type ref<array<int<4>,1>> //
@@ -59,26 +52,26 @@ static inline __insieme_type_5* _ref_new___insieme_type_6(__insieme_type_5 value
 // start code fragment :: array type utils of __insieme_type_5 <=> array<int<4>,1> //
 // A constructor for the array type __insieme_type_5
 static inline __insieme_type_5 __insieme_type_5_ctr(unsigned s1) {
-    return ((__insieme_type_5){malloc(sizeof(int)*s1),{s1}});
+    return ((__insieme_type_5){malloc(sizeof(int)*s1)});
 }
 
 // start code fragment :: Prototype for external function: memcpy ... type: ((anyRef,anyRef,uint<8>)->anyRef) //
 void* memcpy(void*, void*, unsigned long);
-static void* memcpy_wrap(void* _closure, void* var_8, void* var_9, unsigned long var_10) { return memcpy(var_8, var_9, var_10); }
+static void* memcpy_wrap(void* _closure, void* var_7, void* var_8, unsigned long var_9) { return memcpy(var_7, var_8, var_9); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
 	
 	// encapsulating arguments within Insieme Types ...
 	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc), {argc}};
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
 	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i],{strlen(__argv[i])+1}};
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
 	
 	// ---- begin of actual code body ----
 	{
-		__insieme_type_3 src_array = ((__insieme_type_3){{1, 2, 3, 4}});
+		__insieme_type_2 src_array = ((__insieme_type_2){{1, 2, 3, 4}});
 		printf(((char*)((*(&((__insieme_type_1){"%d\n"}))).data)), (4*sizeof(int)));
 		__insieme_type_5* dest_array = _ref_new___insieme_type_6((__insieme_type_5_ctr(((4*sizeof(int))/sizeof(int)))));
 		memcpy((void*)((int*)((*(dest_array)).data)), (void*)((int*)((*(&src_array)).data)), (4*sizeof(int)));
