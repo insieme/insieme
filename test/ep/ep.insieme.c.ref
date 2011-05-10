@@ -80,8 +80,8 @@ struct __insieme_globals {
     __insieme_type_3 _x;
     __insieme_type_4 x;
     __insieme_type_5 q;
-    __insieme_type_6 start;
     __insieme_type_6 elapsed;
+    __insieme_type_6 start;
     int sec;
 };
 
@@ -204,7 +204,7 @@ static double sqrt_wrap(void* _closure, double var_154) { return sqrt(var_154); 
 double fabs(double);
 static double fabs_wrap(void* _closure, double var_155) { return fabs(var_155); }
 
-// start code fragment :: Definition of timer_clear ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
+// start code fragment :: Definition of timer_clear ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_clear(struct __insieme_globals* var_69, int n) { ((((*(&((*var_69).elapsed))).data[((unsigned int)(n))])) = 0.0); }
 static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_69, int n) { timer_clear(var_69, n); }
 
@@ -236,7 +236,7 @@ typedef struct ___timezone_ptr_t {
 int gettimeofday(struct timeval*, struct timezone*);
 static int gettimeofday_wrap(void* _closure, __insieme_type_16* var_156, __timezone_ptr_t* var_157) { return gettimeofday(((struct timeval*)((*(var_156)).data)), ((struct timezone*)((*(var_157)).data))); }
 
-// start code fragment :: Definition of wtime ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
+// start code fragment :: Definition of wtime ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
 void wtime(struct __insieme_globals* var_76, __insieme_type_4* t){
 	struct timeval tv;
 	gettimeofday(((struct timeval*)((*((&((__insieme_type_16){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
@@ -245,7 +245,7 @@ void wtime(struct __insieme_globals* var_76, __insieme_type_4* t){
 }
 static void wtime_wrap(void* _closure, struct __insieme_globals* var_76, __insieme_type_4* t) { wtime(var_76, t); }
 
-// start code fragment :: Definition of elapsed_time ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
+// start code fragment :: Definition of elapsed_time ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
 double elapsed_time(struct __insieme_globals* var_74){
 	double t = 0.0;
 	wtime(var_74, (&((__insieme_type_4){&t,{1}})));
@@ -253,11 +253,11 @@ double elapsed_time(struct __insieme_globals* var_74){
 }
 static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_74) { return elapsed_time(var_74); }
 
-// start code fragment :: Definition of timer_start ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
+// start code fragment :: Definition of timer_start ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_start(struct __insieme_globals* var_72, int n) { ((((*(&((*var_72).start))).data[((unsigned int)(n))])) = elapsed_time(var_72)); }
 static void timer_start_wrap(void* _closure, struct __insieme_globals* var_72, int n) { timer_start(var_72, n); }
 
-// start code fragment :: Definition of timer_stop ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
+// start code fragment :: Definition of timer_stop ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_stop(struct __insieme_globals* var_97, int n){
 	double t = 0.0;
 	double now = 0.0;
@@ -267,7 +267,7 @@ void timer_stop(struct __insieme_globals* var_97, int n){
 }
 static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_97, int n) { timer_stop(var_97, n); }
 
-// start code fragment :: Definition of timer_read ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
+// start code fragment :: Definition of timer_read ... type: ((ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
 double timer_read(struct __insieme_globals* var_110, int n) { return (((*(&((*var_110).elapsed))).data[((unsigned int)(n))])); }
 static double timer_read_wrap(void* _closure, struct __insieme_globals* var_110, int n) { return timer_read(var_110, n); }
 

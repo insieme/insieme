@@ -2,7 +2,7 @@
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
-        decl ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v1 =  new(struct{_x:=vector.init.uniform(0.0, 131073), x:=get.null(type<real<8>>), q:=vector.init.uniform(0.0, 10), start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=0-1});
+        decl ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v1 =  new(struct{_x:=vector.init.uniform(0.0, 131073), x:=get.null(type<real<8>>), q:=vector.init.uniform(0.0, 10), elapsed:=vector.init.uniform(0.0, 64), start:=vector.init.uniform(0.0, 64), sec:=0-1});
         decl ref<real<8>> v4 =  var(0.0);
         decl ref<real<8>> v5 =  var(0.0);
         decl ref<real<8>> v6 =  var(0.0);
@@ -111,19 +111,19 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             v22 := 0+ceil(2*int.lshift(1, 16)-0/1)*1;
         };
         v4 := log(sqrt(fabs(ite(1.0>1.0, bind(){fun()return 1.0()}, bind(){fun()return 1.0()}))));
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
             vector.ref.elem(composite.ref.elem(v69, elapsed, type<vector<real<8>,64>>), v70) := 0.0;
         }(v1, 1);
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
             vector.ref.elem(composite.ref.elem(v69, elapsed, type<vector<real<8>,64>>), v70) := 0.0;
         }(v1, 2);
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
             vector.ref.elem(composite.ref.elem(v69, elapsed, type<vector<real<8>,64>>), v70) := 0.0;
         }(v1, 3);
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
-            vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), v73) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
+            vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), v73) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                 decl ref<real<8>> v75 =  var(0.0);
-                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
                     gettimeofday(scalar.to.array(v78),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
                     if(composite.ref.elem(v76, sec, type<int<4>>)<0) composite.ref.elem(v76, sec, type<int<4>>) := composite.ref.elem(v78, tv_sec, type<int<8>>) else { };
@@ -286,10 +286,10 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         };
                         v91 := 1+ceil(100+1-1/1)*1;
                     };
-                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
-                        vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), v73) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
+                        vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), v73) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 =  var(0.0);
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
                                 gettimeofday(scalar.to.array(v78),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
                                 if(composite.ref.elem(v76, sec, type<int<4>>)<0) composite.ref.elem(v76, sec, type<int<4>>) := composite.ref.elem(v78, tv_sec, type<int<8>>) else { };
@@ -331,12 +331,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         };
                         array.ref.elem.1D(v38, 0) := v42;
                     }(2*int.lshift(1, 16), scalar.to.array(v84), 1220703125.0, ref.vector.to.ref.array(composite.ref.elem(v1, _x, type<vector<real<8>,131073>>)));
-                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
+                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
                         decl ref<real<8>> v99 =  var(0.0);
                         decl ref<real<8>> v100 =  var(0.0);
-                        v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                        v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 =  var(0.0);
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
                                 gettimeofday(scalar.to.array(v78),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
                                 if(composite.ref.elem(v76, sec, type<int<4>>)<0) composite.ref.elem(v76, sec, type<int<4>>) := composite.ref.elem(v78, tv_sec, type<int<8>>) else { };
@@ -347,10 +347,10 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         v99 := v100-vector.ref.elem(composite.ref.elem(v97, start, type<vector<real<8>,64>>), v98);
                         vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), v98) := vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), v98)+v99;
                     }(v1, 3) else { };
-                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
-                        vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), v73) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
+                        vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), v73) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 =  var(0.0);
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
                                 gettimeofday(scalar.to.array(v78),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
                                 if(composite.ref.elem(v76, sec, type<int<4>>)<0) composite.ref.elem(v76, sec, type<int<4>>) := composite.ref.elem(v78, tv_sec, type<int<8>>) else { };
@@ -376,12 +376,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         };
                         v91 := 0+ceil(int.lshift(1, 16)-0/1)*1;
                     };
-                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
+                    if(0==1) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
                         decl ref<real<8>> v99 =  var(0.0);
                         decl ref<real<8>> v100 =  var(0.0);
-                        v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                        v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 =  var(0.0);
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
                                 gettimeofday(scalar.to.array(v78),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
                                 if(composite.ref.elem(v76, sec, type<int<4>>)<0) composite.ref.elem(v76, sec, type<int<4>>) := composite.ref.elem(v78, tv_sec, type<int<8>>) else { };
@@ -410,12 +410,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             };
             v22 := 0+ceil(10-1+1-0/1)*1;
         };
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
             decl ref<real<8>> v99 =  var(0.0);
             decl ref<real<8>> v100 =  var(0.0);
-            v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+            v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                 decl ref<real<8>> v75 =  var(0.0);
-                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
                     gettimeofday(scalar.to.array(v78),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
                     if(composite.ref.elem(v76, sec, type<int<4>>)<0) composite.ref.elem(v76, sec, type<int<4>>) := composite.ref.elem(v78, tv_sec, type<int<8>>) else { };
@@ -426,7 +426,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             v99 := v100-vector.ref.elem(composite.ref.elem(v97, start, type<vector<real<8>,64>>), v98);
             vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), v98) := vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), v98)+v99;
         }(v1, 1);
-        v13 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+        v13 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
             return vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), v111);
         }(v1, 1);
         v27 := 0;
@@ -482,13 +482,13 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             printf(string.as.char.pointer("    RAND         = %s\n"), varlist.pack((v143)));
         }(string.as.char.pointer("EP"), 'W', 25+1, 0, 0, v27, v33, v13, v4, string.as.char.pointer("Random numbers generated"), v34, string.as.char.pointer("2.3"), string.as.char.pointer("03 Dec 2010"), string.as.char.pointer("cc"), string.as.char.pointer("cc"), string.as.char.pointer("-lm"), string.as.char.pointer("-I../common"), string.as.char.pointer("-O3 "), string.as.char.pointer("-lm"), string.as.char.pointer("randdp"));
         if(0==1) {
-            printf(string.as.char.pointer("Total time:     %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+            printf(string.as.char.pointer("Total time:     %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
                 return vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), v111);
             }(v1, 1))));
-            printf(string.as.char.pointer("Gaussian pairs: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+            printf(string.as.char.pointer("Gaussian pairs: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
                 return vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), v111);
             }(v1, 2))));
-            printf(string.as.char.pointer("Random numbers: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+            printf(string.as.char.pointer("Random numbers: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
                 return vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), v111);
             }(v1, 3))));
         } else { };
@@ -501,7 +501,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
 // Inspire Program 
 //  Entry Point: 
 fun(int<4> v2, ref<array<array<char,1>,1>> v3){
-        decl ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v1 = ( new(struct{_x:=vector.init.uniform(0.0, 131073), x:=get.null(type<real<8>>), q:=vector.init.uniform(0.0, 10), start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)}));
+        decl ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v1 = ( new(struct{_x:=vector.init.uniform(0.0, 131073), x:=get.null(type<real<8>>), q:=vector.init.uniform(0.0, 10), elapsed:=vector.init.uniform(0.0, 64), start:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)}));
         decl ref<real<8>> v4 = ( var(0.0));
         decl ref<real<8>> v5 = ( var(0.0));
         decl ref<real<8>> v6 = ( var(0.0));
@@ -610,19 +610,19 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>(((2*int.lshift(1, 16))-0))/CAST<real<8>>(1))))*1)));
         };
         (v4 := log(sqrt(fabs(ite((1.0>1.0), bind(){fun()return 1.0()}, bind(){fun()return 1.0()})))));
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
             (vector.ref.elem(composite.ref.elem(v69, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v70)) := 0.0);
         }(v1, 1);
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
             (vector.ref.elem(composite.ref.elem(v69, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v70)) := 0.0);
         }(v1, 2);
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v69, int<4> v70){
             (vector.ref.elem(composite.ref.elem(v69, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v70)) := 0.0);
         }(v1, 3);
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
-            (vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), CAST<uint<4>>(v73)) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
+            (vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), CAST<uint<4>>(v73)) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                 decl ref<real<8>> v75 = ( var(0.0));
-                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
                     gettimeofday(scalar.to.array(v78), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
                     if((( *composite.ref.elem(v76, sec, type<int<4>>))<0)) (composite.ref.elem(v76, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v78, tv_sec, type<int<8>>)))) else { };
@@ -785,10 +785,10 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         };
                         (v91 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((100+1)-1))/CAST<real<8>>(1))))*1)));
                     };
-                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
-                        (vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), CAST<uint<4>>(v73)) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
+                        (vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), CAST<uint<4>>(v73)) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
                                 gettimeofday(scalar.to.array(v78), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
                                 if((( *composite.ref.elem(v76, sec, type<int<4>>))<0)) (composite.ref.elem(v76, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v78, tv_sec, type<int<8>>)))) else { };
@@ -830,12 +830,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         };
                         (array.ref.elem.1D(v38, 0) := ( *v42));
                     }((2*int.lshift(1, 16)), scalar.to.array(v84), 1220703125.0, ref.vector.to.ref.array(composite.ref.elem(v1, _x, type<vector<real<8>,131073>>)));
-                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
+                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
                         decl ref<real<8>> v99 = ( var(0.0));
                         decl ref<real<8>> v100 = ( var(0.0));
-                        (v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                        (v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
                                 gettimeofday(scalar.to.array(v78), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
                                 if((( *composite.ref.elem(v76, sec, type<int<4>>))<0)) (composite.ref.elem(v76, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v78, tv_sec, type<int<8>>)))) else { };
@@ -846,10 +846,10 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         (v99 := (( *v100)-( *vector.ref.elem(composite.ref.elem(v97, start, type<vector<real<8>,64>>), CAST<uint<4>>(v98)))));
                         (vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v98)) := (( *vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v98)))+( *v99)));
                     }(v1, 3) else { };
-                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
-                        (vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), CAST<uint<4>>(v73)) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v72, int<4> v73){
+                        (vector.ref.elem(composite.ref.elem(v72, start, type<vector<real<8>,64>>), CAST<uint<4>>(v73)) := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
                                 gettimeofday(scalar.to.array(v78), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
                                 if((( *composite.ref.elem(v76, sec, type<int<4>>))<0)) (composite.ref.elem(v76, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v78, tv_sec, type<int<8>>)))) else { };
@@ -875,12 +875,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         };
                         (v91 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 16)-0))/CAST<real<8>>(1))))*1)));
                     };
-                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
+                    if((0==1)) fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
                         decl ref<real<8>> v99 = ( var(0.0));
                         decl ref<real<8>> v100 = ( var(0.0));
-                        (v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+                        (v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                             decl ref<real<8>> v75 = ( var(0.0));
-                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                            fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                                 decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
                                 gettimeofday(scalar.to.array(v78), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
                                 if((( *composite.ref.elem(v76, sec, type<int<4>>))<0)) (composite.ref.elem(v76, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v78, tv_sec, type<int<8>>)))) else { };
@@ -909,12 +909,12 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             };
             (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((10-1)+1)-0))/CAST<real<8>>(1))))*1)));
         };
-        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
+        fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v97, int<4> v98){
             decl ref<real<8>> v99 = ( var(0.0));
             decl ref<real<8>> v100 = ( var(0.0));
-            (v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v74){
+            (v100 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v74){
                 decl ref<real<8>> v75 = ( var(0.0));
-                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
+                fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v76, ref<array<real<8>,1>> v77){
                     decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v78 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
                     gettimeofday(scalar.to.array(v78), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
                     if((( *composite.ref.elem(v76, sec, type<int<4>>))<0)) (composite.ref.elem(v76, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v78, tv_sec, type<int<8>>)))) else { };
@@ -925,7 +925,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             (v99 := (( *v100)-( *vector.ref.elem(composite.ref.elem(v97, start, type<vector<real<8>,64>>), CAST<uint<4>>(v98)))));
             (vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v98)) := (( *vector.ref.elem(composite.ref.elem(v97, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v98)))+( *v99)));
         }(v1, 1);
-        (v13 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+        (v13 := fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
             return ( *vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v111)));
         }(v1, 1));
         (v27 := 0);
@@ -981,13 +981,13 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             printf(string.as.char.pointer("    RAND         = %s\n"), varlist.pack((v143)));
         }(string.as.char.pointer("EP"), 'W', (25+1), 0, 0, ( *v27), ( *v33), ( *v13), ( *v4), string.as.char.pointer("Random numbers generated"), ( *v34), string.as.char.pointer("2.3"), string.as.char.pointer("03 Dec 2010"), string.as.char.pointer("cc"), string.as.char.pointer("cc"), string.as.char.pointer("-lm"), string.as.char.pointer("-I../common"), string.as.char.pointer("-O3 "), string.as.char.pointer("-lm"), string.as.char.pointer("randdp"));
         if((0==1)) {
-            printf(string.as.char.pointer("Total time:     %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+            printf(string.as.char.pointer("Total time:     %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
                 return ( *vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v111)));
             }(v1, 1))));
-            printf(string.as.char.pointer("Gaussian pairs: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+            printf(string.as.char.pointer("Gaussian pairs: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
                 return ( *vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v111)));
             }(v1, 2))));
-            printf(string.as.char.pointer("Random numbers: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
+            printf(string.as.char.pointer("Random numbers: %f"), varlist.pack((fun(ref<struct<_x:vector<real<8>,131073>,x:array<real<8>,1>,q:vector<real<8>,10>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>> v110, int<4> v111){
                 return ( *vector.ref.elem(composite.ref.elem(v110, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v111)));
             }(v1, 3))));
         } else { };

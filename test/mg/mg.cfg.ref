@@ -6964,7 +6964,7 @@ digraph G {
 7279[shape=box,label="[B7279]\l0: decl v4 = ...\l"];
 7280[shape=box,label="[B7280]\l0: ref.var(0)\l"];
 7282[shape=box,label="[B7282]\l0: decl v1 = ...\l"];
-7283[shape=box,label="[B7283]\l0: ref.new(struct{nx:=vector.init.uniform(0, 12), ny:=vector.init.uniform(0, 12), nz:=vector.init.uniform(0, 12), Class:='\0', debug_vec:=vector.init.uniform(0, 8), m1:=vector.init.uniform(0, 12), m2:=vector.init.uniform(0, 12), m3:=vector.init.uniform(0, 12), lt:=0, lb:=0, is1:=0, is2:=0, is3:=0, ie1:=0, ie2:=0, ie3:=0, s:=0.0, start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)})\l"];
+7283[shape=box,label="[B7283]\l0: ref.new(struct{nx:=vector.init.uniform(0, 12), ny:=vector.init.uniform(0, 12), nz:=vector.init.uniform(0, 12), Class:='\0', debug_vec:=vector.init.uniform(0, 8), m1:=vector.init.uniform(0, 12), m2:=vector.init.uniform(0, 12), m3:=vector.init.uniform(0, 12), lt:=0, lb:=0, is1:=0, is2:=0, is3:=0, ie1:=0, ie2:=0, ie3:=0, s:=0.0, elapsed:=vector.init.uniform(0.0, 64), start:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)})\l"];
 4->3 [label=""];
 6->4 [label="0"];
 5->6 [label=""];

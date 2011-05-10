@@ -22,10 +22,20 @@ typedef struct ___insieme_type_0 {
 
 // start code fragment :: Prototype for external function: strlen ... type: ((ref<array<char,1>>)->uint<8>) //
 unsigned long strlen(char*);
-static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_4) { return strlen(((char*)((*(var_4)).data))); }
+static unsigned long strlen_wrap(void* _closure, __insieme_type_1* var_6) { return strlen(((char*)((*(var_6)).data))); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
+
+// start code fragment :: Definition of fun ... type: ((anyRef)->unit) //
+void fun(void* x){}
+static void fun_wrap(void* _closure, void* x) { fun(x); }
+
+// start code fragment :: array type definition of __insieme_type_3 <=> array<int<4>,1> //
+typedef struct ___insieme_type_3 { 
+    int* data;
+    unsigned size[1];
+} __insieme_type_3;
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -40,6 +50,7 @@ int main(int __argc, char** __argv) {
 	// ---- begin of actual code body ----
 	{
 		 { printf(((char*)((*(&((__insieme_type_1){"Hallo Insieme, \n\t\"the number %d in compilers!\""}))).data)), 1); };
+		fun((void*)((int*)((*(((__insieme_type_3*)memcpy(alloca(sizeof(__insieme_type_3)), &((__insieme_type_3){0,{0}}), sizeof(__insieme_type_3))))).data)));
 		return 0;
 	}
 	// ----  end of actual code body  ----

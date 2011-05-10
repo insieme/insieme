@@ -2224,7 +2224,7 @@ digraph G {
 2373[shape=box,label="[B2373]\l0: ref.assign(v471, ...)\l"];
 2375[shape=box,label="[B2375]\l0: ref.deref(...)\l"];
 2376[shape=box,label="[B2376]\l0: composite.ref.elem(v464, ny, type<int<4>>)\l"];
-2377[shape=box,label="[B2377]\l0: bool.and(..., bind(){fun{...}(v464, v476)})\lT: IF(...)\l"];
+2377[shape=box,label="[B2377]\l0: bool.and(..., bind(){fun{...}(v476, v464)})\lT: IF(...)\l"];
 2378[shape=box,label="[B2378]\l0: ref.assign(v469, ...)\l"];
 2380[shape=box,label="[B2380]\l0: ref.deref(...)\l"];
 2381[shape=box,label="[B2381]\l0: composite.ref.elem(v464, ii2, type<int<4>>)\l"];
@@ -2233,7 +2233,7 @@ digraph G {
 2384[shape=box,label="[B2384]\l0: ref.deref(...)\l"];
 2385[shape=box,label="[B2385]\l0: composite.ref.elem(v464, ii2, type<int<4>>)\l"];
 2386[shape=box,label="[B2386]\l0: ref.deref(v475)\l"];
-2387[shape=box,label="[B2387]\l0: bool.and(..., bind(){fun{...}(v464, v476)})\lT: IF(...)\l"];
+2387[shape=box,label="[B2387]\l0: bool.and(..., bind(){fun{...}(v476, v464)})\lT: IF(...)\l"];
 2388[shape=box,label="[B2388]\l0: ref.assign(v468, ...)\l"];
 2390[shape=box,label="[B2390]\l0: ref.deref(...)\l"];
 2391[shape=box,label="[B2391]\l0: composite.ref.elem(v464, ii1, type<int<4>>)\l"];
@@ -2846,7 +2846,7 @@ digraph G {
 3055[shape=box,label="[B3055]\l0: vector.ref.elem(..., ...)\l"];
 3056[shape=box,label="[B3056]\l0: composite.ref.elem(v193, tolrsd, type<vector<real<8>,5>>)\l"];
 3057[shape=box,label="[B3057]\l0: CAST<uint<4>>\l"];
-3058[shape=box,label="[B3058]\l0: bool.or(..., bind(){fun{...}(v438, v193)})\lT: IF(...)\l"];
+3058[shape=box,label="[B3058]\l0: bool.or(..., bind(){fun{...}(v193, v438)})\lT: IF(...)\l"];
 3059[shape=diamond,label="ENTRY"];
 3060[shape=diamond,label="EXIT"];
 3061[shape=box,label="[B3061]\l0: ref.assign(v300, ...)\l"];
@@ -25297,7 +25297,7 @@ digraph G {
 25652[shape=box,label="[B25652]\l0: decl ref<int<4>> v333 = ( var(( *composite.ref.elem(v193, ist, type<int<4>>)))) <LOOP_INIT>\l"];
 25653[shape=box,label="[B25653]\l0: bool.or(..., bind(){fun{...}(v438)})\lT: IF(...)\l"];
 25654[shape=box,label="[B25654]\l0: <m id=1>printf(string.as.char.pointer(\" Time step %4d\n\"), varlist.pack((( *v438))))</m>\l"];
-25656[shape=box,label="[B25656]\l0: bool.or(..., bind(){fun{...}(v438, v193)})\l"];
+25656[shape=box,label="[B25656]\l0: bool.or(..., bind(){fun{...}(v193, v438)})\l"];
 25657[shape=box,label="[B25657]\l0: int.eq(..., 0)\l"];
 25658[shape=box,label="[B25658]\l0: int.mod(..., 20)\l"];
 25659[shape=box,label="[B25659]\l0: ref.deref(v438)\l"];
@@ -32880,7 +32880,7 @@ digraph G {
 33439[shape=box,label="[B33439]\l0: decl v4 = ...\l"];
 33440[shape=box,label="[B33440]\l0: ref.var('\0')\l"];
 33442[shape=box,label="[B33442]\l0: decl v1 = ...\l"];
-33443[shape=box,label="[B33443]\l0: ref.new(struct{nx:=0, ny:=0, nz:=0, nx0:=0, ny0:=0, nz0:=0, ist:=0, iend:=0, jst:=0, jend:=0, ii1:=0, ii2:=0, ji1:=0, ji2:=0, ki1:=0, ki2:=0, dxi:=0.0, deta:=0.0, dzeta:=0.0, tx1:=0.0, tx2:=0.0, tx3:=0.0, ty1:=0.0, ty2:=0.0, ty3:=0.0, tz1:=0.0, tz2:=0.0, tz3:=0.0, dx1:=0.0, dx2:=0.0, dx3:=0.0, dx4:=0.0, dx5:=0.0, dy1:=0.0, dy2:=0.0, dy3:=0.0, dy4:=0.0, dy5:=0.0, dz1:=0.0, dz2:=0.0, dz3:=0.0, dz4:=0.0, dz5:=0.0, dssp:=0.0, u:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), rsd:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), frct:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), flux:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), ipr:=0, inorm:=0, itmax:=0, dt:=0.0, omega:=0.0, tolrsd:=vector.init.uniform(0.0, 5), rsdnm:=vector.init.uniform(0.0, 5), errnm:=vector.init.uniform(0.0, 5), frc:=0.0, a:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), b:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), c:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), d:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), ce:=vector.init.uniform(vector.init.uniform(0.0, 13), 5), maxtime:=0.0, start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)})\l"];
+33443[shape=box,label="[B33443]\l0: ref.new(struct{nx:=0, ny:=0, nz:=0, nx0:=0, ny0:=0, nz0:=0, ist:=0, iend:=0, jst:=0, jend:=0, ii1:=0, ii2:=0, ji1:=0, ji2:=0, ki1:=0, ki2:=0, dxi:=0.0, deta:=0.0, dzeta:=0.0, tx1:=0.0, tx2:=0.0, tx3:=0.0, ty1:=0.0, ty2:=0.0, ty3:=0.0, tz1:=0.0, tz2:=0.0, tz3:=0.0, dx1:=0.0, dx2:=0.0, dx3:=0.0, dx4:=0.0, dx5:=0.0, dy1:=0.0, dy2:=0.0, dy3:=0.0, dy4:=0.0, dy5:=0.0, dz1:=0.0, dz2:=0.0, dz3:=0.0, dz4:=0.0, dz5:=0.0, dssp:=0.0, u:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), rsd:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), frct:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), flux:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 33), 33), 33), ipr:=0, inorm:=0, itmax:=0, dt:=0.0, omega:=0.0, tolrsd:=vector.init.uniform(0.0, 5), rsdnm:=vector.init.uniform(0.0, 5), errnm:=vector.init.uniform(0.0, 5), frc:=0.0, a:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), b:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), c:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), d:=vector.init.uniform(vector.init.uniform(vector.init.uniform(vector.init.uniform(0.0, 5), 5), 33), 33), ce:=vector.init.uniform(vector.init.uniform(0.0, 13), 5), maxtime:=0.0, elapsed:=vector.init.uniform(0.0, 64), start:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)})\l"];
 4->3 [label=""];
 6->4 [label="0"];
 5->6 [label=""];
