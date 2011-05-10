@@ -142,7 +142,7 @@ typedef std::map<SourceRange, NodePtr> SourceLocationMap;
 
 // Prints the IR to the output stream and in parallel builds the map which associates positions 
 // in the generated stream to IR nodes 
-SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print );
+SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print, bool showLineNo=true, int columnWrap=-1);
 
 } // end of namespace printer
 } // end of namespace core

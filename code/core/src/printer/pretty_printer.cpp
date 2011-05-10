@@ -707,20 +707,30 @@ namespace {
 		// keep track of the current position in the output stream
 		SourceLocation currLoc;
 		static const size_t width = 8;
-		static const size_t textWidth = 120;
+		const bool showLineNo;
+		const bool colWrap;
+		const size_t colWidth;
 
 		void newLine() {
 			++currLoc.first; 		// increment the line number
 			currLoc.second = 0;		// set the column number to 0
-			out << std::setw(width) << std::setiosflags(std::ios::left) << currLoc.first;
+
+			if (showLineNo) {
+				out << std::setw(width) << std::setiosflags(std::ios::left) << currLoc.first;
+			}
 		}
 
 	public:
-		OutputStreamWrapper(std::ostream& out) : 
-			 out(out), currLoc(0,0) { out << std::setw(width) << std::setiosflags(std::ios::left) << 0; }
+		OutputStreamWrapper(std::ostream& out, bool showLineNo, int columnWrap) : 
+			 out(out), currLoc(0,0), showLineNo(showLineNo), colWrap(columnWrap != -1), colWidth(columnWrap)
+		{ 
+			if(showLineNo) {
+				out << std::setw(width) << std::setiosflags(std::ios::left) << 0; 
+			}
+		}
 
     	std::streamsize write(const char* s, std::streamsize n) {
-			if ( (n+currLoc.second) > textWidth ) {
+			if ( colWrap && (n+currLoc.second) > colWidth ) {
 				out << std::endl;
 				newLine();
 			}
@@ -893,11 +903,11 @@ namespace {
 
 } // end of anonymous namespace
 
-SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print) { 
+SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print, bool showLineNo, int columnWrap) { 
 	using namespace insieme::core::printer;
 	// create a boost stream out of it and pass it to the visitor
-	boost::iostreams::stream<OutputStreamWrapper> wrappedOutStream( out );
-
+	boost::iostreams::stream<OutputStreamWrapper> wrappedOutStream( out, showLineNo, columnWrap );
+	
 	// In order to avoid a copy when the map is returned, we pass it to the printer
 	SourceLocationMap srcMap;
 	
