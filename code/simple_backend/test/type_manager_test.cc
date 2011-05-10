@@ -59,6 +59,10 @@ bool containsSubString(const string& str, const string& substr) {
 	return str.find(substr) != string::npos;
 }
 
+// a small test verifying that the given substr is contained within the given string
+bool notContainsSubString(const string& str, const string& substr) {
+	return !containsSubString(str, substr);
+}
 
 TEST(TypeManager, Basic) {
 
@@ -227,7 +231,7 @@ TEST(TypeManager, ArrayTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
-	Converter converter;
+	Converter converter(true);
 	SimpleNameManager nameManager;
 	converter.setNameManager(&nameManager);
 	TypeManager typeManager(converter);
@@ -279,6 +283,32 @@ TEST(TypeManager, ArrayTypes) {
 	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
 	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[2];");
 	EXPECT_PRED2(containsSubString, toString(info.definition), "long** data;");
+}
+
+TEST(TypeManager, ArrayTypesNoSize) {
+
+	core::ASTBuilder builder;
+	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+
+	Converter converter(false);
+	SimpleNameManager nameManager;
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
+
+	TypeManager::TypeInfo info;
+	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
+
+
+	core::TypePtr type = builder.arrayType(basic.getInt4());
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(notContainsSubString, toString(info.definition), "unsigned size[1];");
+	EXPECT_PRED2(containsSubString, toString(info.definition), "int* data;");
 }
 
 TEST(TypeManager, VectorTypes) {
