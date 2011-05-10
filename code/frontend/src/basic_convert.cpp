@@ -407,7 +407,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 				//arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
 			//);
     }
-
+	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!"; 
     assert(false && "Default initialization type not defined");
 }
 

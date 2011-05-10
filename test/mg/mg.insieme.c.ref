@@ -88,8 +88,8 @@ struct __insieme_globals {
     int ie2;
     int ie3;
     double s;
-    __insieme_type_5 start;
     __insieme_type_5 elapsed;
+    __insieme_type_5 start;
     int sec;
 };
 
@@ -141,7 +141,7 @@ typedef struct ___insieme_type_17 {
     unsigned size[1];
 } __insieme_type_17;
 
-// start code fragment :: Definition of timer_clear ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
+// start code fragment :: Definition of timer_clear ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_clear(struct __insieme_globals* var_28, int n) { ((((*(&((*var_28).elapsed))).data[((unsigned int)(n))])) = 0.0); }
 static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_28, int n) { timer_clear(var_28, n); }
 
@@ -173,7 +173,7 @@ typedef struct ___timezone_ptr_t {
 int gettimeofday(struct timeval*, struct timezone*);
 static int gettimeofday_wrap(void* _closure, __insieme_type_25* var_413, __timezone_ptr_t* var_414) { return gettimeofday(((struct timeval*)((*(var_413)).data)), ((struct timezone*)((*(var_414)).data))); }
 
-// start code fragment :: Definition of wtime ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
+// start code fragment :: Definition of wtime ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
 void wtime(struct __insieme_globals* var_35, __insieme_type_12* t){
 	struct timeval tv;
 	gettimeofday(((struct timeval*)((*((&((__insieme_type_25){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
@@ -182,7 +182,7 @@ void wtime(struct __insieme_globals* var_35, __insieme_type_12* t){
 }
 static void wtime_wrap(void* _closure, struct __insieme_globals* var_35, __insieme_type_12* t) { wtime(var_35, t); }
 
-// start code fragment :: Definition of elapsed_time ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
+// start code fragment :: Definition of elapsed_time ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
 double elapsed_time(struct __insieme_globals* var_33){
 	double t = 0.0;
 	wtime(var_33, (&((__insieme_type_12){&t,{1}})));
@@ -190,7 +190,7 @@ double elapsed_time(struct __insieme_globals* var_33){
 }
 static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_33) { return elapsed_time(var_33); }
 
-// start code fragment :: Definition of timer_start ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
+// start code fragment :: Definition of timer_start ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_start(struct __insieme_globals* var_31, int n) { ((((*(&((*var_31).start))).data[((unsigned int)(n))])) = elapsed_time(var_31)); }
 static void timer_start_wrap(void* _closure, struct __insieme_globals* var_31, int n) { timer_start(var_31, n); }
 
@@ -222,7 +222,7 @@ static double ceil_wrap(void* _closure, double var_418) { return ceil(var_418); 
 int fclose(struct FILE*);
 static int fclose_wrap(void* _closure, __insieme_type_17* var_419) { return fclose(((struct FILE*)((*(var_419)).data))); }
 
-// start code fragment :: Definition of setup ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>)->unit) //
+// start code fragment :: Definition of setup ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>)->unit) //
 void setup(struct __insieme_globals* var_59, __insieme_type_28* n1, __insieme_type_28* n2, __insieme_type_28* n3, int lt){
 	int k = 0;
 	{
@@ -552,7 +552,7 @@ void comm3(__insieme_type_10* u, int n1, int n2, int n3, int kk){
 }
 static void comm3_wrap(void* _closure, __insieme_type_10* u, int n1, int n2, int n3, int kk) { comm3(u, n1, n2, n3, kk); }
 
-// start code fragment :: Definition of zran3 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,int<4>,int<4>,int<4>)->unit) //
+// start code fragment :: Definition of zran3 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,int<4>,int<4>,int<4>)->unit) //
 void zran3(struct __insieme_globals* var_87, __insieme_type_10* z, int n1, int n2, int n3, int nx, int ny, int k){
 	int i0 = 0;
 	int m0 = 0;
@@ -709,7 +709,7 @@ static double fabs_wrap(void* _closure, double var_422) { return fabs(var_422); 
 double sqrt(double);
 static double sqrt_wrap(void* _closure, double var_423) { return sqrt(var_423); }
 
-// start code fragment :: Definition of norm2u3 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,int<4>,int<4>,int<4>)->unit) //
+// start code fragment :: Definition of norm2u3 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,int<4>,int<4>,int<4>)->unit) //
 void norm2u3(struct __insieme_globals* var_195, __insieme_type_10* r, int n1, int n2, int n3, __insieme_type_12* rnm2, __insieme_type_12* rnmu, int nx, int ny, int nz){
 	double tmp = 0.0;
 	int i3 = 0;
@@ -759,7 +759,7 @@ static inline __insieme_type_43 __insieme_type_43_init_uniform(double value) {
 }
 
 
-// start code fragment :: Definition of rep_nrm ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<char,1>>,int<4>)->unit) //
+// start code fragment :: Definition of rep_nrm ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<char,1>>,int<4>)->unit) //
 void rep_nrm(struct __insieme_globals* var_234, __insieme_type_10* u, int n1, int n2, int n3, __insieme_type_1* title, int kk){
 	double rnm2 = 0.0;
 	double rnmu = 0.0;
@@ -799,7 +799,7 @@ void __insieme_supp_45(__insieme_type_10* z, int n1, int n2, int n3){
 }
 static void __insieme_supp_45_wrap(void* _closure, __insieme_type_10* z, int n1, int n2, int n3) { __insieme_supp_45(z, n1, n2, n3); }
 
-// start code fragment :: Definition of __insieme_supp_42 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<real<8>,1>>,int<4>)->unit) //
+// start code fragment :: Definition of __insieme_supp_42 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<real<8>,1>>,int<4>)->unit) //
 void __insieme_supp_42(struct __insieme_globals* var_216, __insieme_type_10* u, __insieme_type_10* v, __insieme_type_10* r, int n1, int n2, int n3, __insieme_type_12* a, int k){
 	int i3 = 0;
 	int i2 = 0;
@@ -831,7 +831,7 @@ void __insieme_supp_42(struct __insieme_globals* var_216, __insieme_type_10* u, 
 }
 static void __insieme_supp_42_wrap(void* _closure, struct __insieme_globals* var_216, __insieme_type_10* u, __insieme_type_10* v, __insieme_type_10* r, int n1, int n2, int n3, __insieme_type_12* a, int k) { __insieme_supp_42(var_216, u, v, r, n1, n2, n3, a, k); }
 
-// start code fragment :: Definition of __insieme_supp_47 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,int<4>)->unit) //
+// start code fragment :: Definition of __insieme_supp_47 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,int<4>)->unit) //
 void __insieme_supp_47(struct __insieme_globals* var_279, __insieme_type_10* r, int m1k, int m2k, int m3k, __insieme_type_10* s, int m1j, int m2j, int m3j, int k){
 	int j3 = 0;
 	int j2 = 0;
@@ -884,7 +884,7 @@ void __insieme_supp_47(struct __insieme_globals* var_279, __insieme_type_10* r, 
 }
 static void __insieme_supp_47_wrap(void* _closure, struct __insieme_globals* var_279, __insieme_type_10* r, int m1k, int m2k, int m3k, __insieme_type_10* s, int m1j, int m2j, int m3j, int k) { __insieme_supp_47(var_279, r, m1k, m2k, m3k, s, m1j, m2j, m3j, k); }
 
-// start code fragment :: Definition of __insieme_supp_48 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<real<8>,1>>,int<4>)->unit) //
+// start code fragment :: Definition of __insieme_supp_48 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<real<8>,1>>,int<4>)->unit) //
 void __insieme_supp_48(struct __insieme_globals* var_309, __insieme_type_10* r, __insieme_type_10* u, int n1, int n2, int n3, __insieme_type_12* c, int k){
 	int i3 = 0;
 	int i2 = 0;
@@ -916,7 +916,7 @@ void __insieme_supp_48(struct __insieme_globals* var_309, __insieme_type_10* r, 
 }
 static void __insieme_supp_48_wrap(void* _closure, struct __insieme_globals* var_309, __insieme_type_10* r, __insieme_type_10* u, int n1, int n2, int n3, __insieme_type_12* c, int k) { __insieme_supp_48(var_309, r, u, n1, n2, n3, c, k); }
 
-// start code fragment :: Definition of __insieme_supp_49 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,int<4>)->unit) //
+// start code fragment :: Definition of __insieme_supp_49 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,ref<array<array<array<real<8>,1>,1>,1>>,int<4>,int<4>,int<4>,int<4>)->unit) //
 void __insieme_supp_49(struct __insieme_globals* var_327, __insieme_type_10* z, int mm1, int mm2, int mm3, __insieme_type_10* u, int n1, int n2, int n3, int k){
 	int i3 = 0;
 	int i2 = 0;
@@ -1071,7 +1071,7 @@ void __insieme_supp_49(struct __insieme_globals* var_327, __insieme_type_10* z, 
 }
 static void __insieme_supp_49_wrap(void* _closure, struct __insieme_globals* var_327, __insieme_type_10* z, int mm1, int mm2, int mm3, __insieme_type_10* u, int n1, int n2, int n3, int k) { __insieme_supp_49(var_327, z, mm1, mm2, mm3, u, n1, n2, n3, k); }
 
-// start code fragment :: Definition of __insieme_supp_46 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<array<real<8>,1>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<array<real<8>,1>,1>,1>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,int<4>,int<4>,int<4>,int<4>)->unit) //
+// start code fragment :: Definition of __insieme_supp_46 ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,ref<array<array<array<array<real<8>,1>,1>,1>,1>>,ref<array<array<array<real<8>,1>,1>,1>>,ref<array<array<array<array<real<8>,1>,1>,1>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,int<4>,int<4>,int<4>,int<4>)->unit) //
 void __insieme_supp_46(struct __insieme_globals* var_268, __insieme_type_9* u, __insieme_type_10* v, __insieme_type_9* r, __insieme_type_12* a, __insieme_type_12* c, int n1, int n2, int n3, int k){
 	int var_307 = k;
 	{
@@ -1105,7 +1105,7 @@ void __insieme_supp_46(struct __insieme_globals* var_268, __insieme_type_9* u, _
 }
 static void __insieme_supp_46_wrap(void* _closure, struct __insieme_globals* var_268, __insieme_type_9* u, __insieme_type_10* v, __insieme_type_9* r, __insieme_type_12* a, __insieme_type_12* c, int n1, int n2, int n3, int k) { __insieme_supp_46(var_268, u, v, r, a, c, n1, n2, n3, k); }
 
-// start code fragment :: Definition of timer_stop ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
+// start code fragment :: Definition of timer_stop ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_stop(struct __insieme_globals* var_377, int n){
 	double t = 0.0;
 	double now = 0.0;
@@ -1115,7 +1115,7 @@ void timer_stop(struct __insieme_globals* var_377, int n){
 }
 static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_377, int n) { timer_stop(var_377, n); }
 
-// start code fragment :: Definition of timer_read ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
+// start code fragment :: Definition of timer_read ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,elapsed:vector<real<8>,64>,start:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
 double timer_read(struct __insieme_globals* var_383, int n) { return (((*(&((*var_383).elapsed))).data[((unsigned int)(n))])); }
 static double timer_read_wrap(void* _closure, struct __insieme_globals* var_383, int n) { return timer_read(var_383, n); }
 

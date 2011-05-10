@@ -1571,7 +1571,7 @@ digraph G {
 1706[shape=box,label="[B1706]\l0: decl v4 = ...\l"];
 1707[shape=box,label="[B1707]\l0: ref.var(0.0)\l"];
 1709[shape=box,label="[B1709]\l0: decl v1 = ...\l"];
-1710[shape=box,label="[B1710]\l0: ref.new(struct{_x:=vector.init.uniform(0.0, 131073), x:=get.null(type<real<8>>), q:=vector.init.uniform(0.0, 10), start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)})\l"];
+1710[shape=box,label="[B1710]\l0: ref.new(struct{_x:=vector.init.uniform(0.0, 131073), x:=get.null(type<real<8>>), q:=vector.init.uniform(0.0, 10), elapsed:=vector.init.uniform(0.0, 64), start:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)})\l"];
 3->1 [label=""];
 5->3 [label="0"];
 4->5 [label=""];
