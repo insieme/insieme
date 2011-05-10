@@ -8,15 +8,11 @@
 #define false 0
 #define null 0
 
-// start code fragment :: Definition of __insieme_supp_1 ... type: ((ref<int<4>>,ref<int<4>>)->int<4>) //
-int __insieme_supp_1(int* var_13, int* var_14) { return ((((*var_13)<(*var_14)))?((*var_13)):((*var_14))); }
-static int __insieme_supp_1_wrap(void* _closure, int* var_13, int* var_14) { return __insieme_supp_1(var_13, var_14); }
-
-// start code fragment :: array type definition of __insieme_type_2 <=> array<char,1> //
-typedef struct ___insieme_type_2 { 
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
     char* data;
     unsigned size[1];
-} __insieme_type_2;
+} __insieme_type_1;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -27,7 +23,7 @@ int main() {
 		int a = 10;
 		int b = 20;
 		int c = 5;
-		int m = ((((a)<((((b)<(c)))?((b)):((c)))))?((a)):(__insieme_supp_1(&b, &c)));
-		printf(((char*)((*(&((__insieme_type_2){"Min: %d\n"}))).data)), (m));
+		int m = ((((a)<((((b)<(c)))?((b)):((c)))))?((a)):(((((b)<(c)))?((b)):((c)))));
+		printf(((char*)((*(&((__insieme_type_1){"Min: %d\n"}))).data)), (m));
 	}
 }

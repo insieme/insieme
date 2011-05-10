@@ -241,7 +241,10 @@ namespace {
 				ExpressionPtr res = pos->second;
 
 				// to ensure a single evaluation!
-				replacedOnce.insert(var);
+				NodeType type = res->getNodeType();
+				if (type != NT_Variable && type != NT_Literal) {
+					replacedOnce.insert(var);
+				}
 				return res;
 			}
 
