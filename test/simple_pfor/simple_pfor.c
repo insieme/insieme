@@ -1,4 +1,5 @@
-extern void printf(const char*, ...);
+#include <stdlib.h>
+#include <stdio.h>
 
 #define N 100
 

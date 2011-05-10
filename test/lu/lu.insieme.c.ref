@@ -367,10 +367,6 @@ void domain(struct __insieme_globals* var_19){
 }
 static void domain_wrap(void* _closure, struct __insieme_globals* var_19) { domain(var_19); }
 
-// start code fragment :: Definition of __insieme_supp_28 ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
-double __insieme_supp_28(struct __insieme_globals* var_38) { return ((((*(&((*var_38).dy1)))>(*(&((*var_38).dz1)))))?((*(&((*var_38).dy1)))):((*(&((*var_38).dz1))))); }
-static double __insieme_supp_28_wrap(void* _closure, struct __insieme_globals* var_38) { return __insieme_supp_28(var_38); }
-
 // start code fragment :: Definition of __insieme_supp_27 ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->unit) //
 void __insieme_supp_27(struct __insieme_globals* var_29){
 	((*(&((*var_29).dxi))) = (1.0/((double)(((*(&((*var_29).nx0)))-1)))));
@@ -406,7 +402,7 @@ void __insieme_supp_27(struct __insieme_globals* var_29){
 	((*(&((*var_29).dz3))) = (*(&((*var_29).dz1))));
 	((*(&((*var_29).dz4))) = (*(&((*var_29).dz1))));
 	((*(&((*var_29).dz5))) = (*(&((*var_29).dz1))));
-	((*(&((*var_29).dssp))) = (((((*(&((*var_29).dx1)))>((((*(&((*var_29).dy1)))>(*(&((*var_29).dz1)))))?((*(&((*var_29).dy1)))):((*(&((*var_29).dz1)))))))?((*(&((*var_29).dx1)))):(__insieme_supp_28(var_29)))/4.0));
+	((*(&((*var_29).dssp))) = (((((*(&((*var_29).dx1)))>((((*(&((*var_29).dy1)))>(*(&((*var_29).dz1)))))?((*(&((*var_29).dy1)))):((*(&((*var_29).dz1)))))))?((*(&((*var_29).dx1)))):(((((*(&((*var_29).dy1)))>(*(&((*var_29).dz1)))))?((*(&((*var_29).dy1)))):((*(&((*var_29).dz1)))))))/4.0));
 	((((((*(&((*var_29).ce))).data[((unsigned int)(0))])).data[((unsigned int)(0))])) = 2.0);
 	((((((*(&((*var_29).ce))).data[((unsigned int)(0))])).data[((unsigned int)(1))])) = 0.0);
 	((((((*(&((*var_29).ce))).data[((unsigned int)(0))])).data[((unsigned int)(2))])) = 0.0);
@@ -1270,18 +1266,18 @@ void rhs(struct __insieme_globals* var_206){
 }
 static void rhs_wrap(void* _closure, struct __insieme_globals* var_206) { rhs(var_206); }
 
-// start code fragment :: array type definition of __insieme_type_31 <=> array<vector<vector<vector<real<8>,5>,33>,33>,1> //
-typedef struct ___insieme_type_31 { 
+// start code fragment :: array type definition of __insieme_type_30 <=> array<vector<vector<vector<real<8>,5>,33>,33>,1> //
+typedef struct ___insieme_type_30 { 
     __insieme_type_4* data;
     unsigned size[1];
-} __insieme_type_31;
+} __insieme_type_30;
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
 static double sqrt_wrap(void* _closure, double var_614) { return sqrt(var_614); }
 
 // start code fragment :: Definition of l2norm ... type: ((int<4>,int<4>,int<4>,int<4>,int<4>,int<4>,int<4>,ref<array<vector<vector<vector<real<8>,5>,33>,33>,1>>,ref<array<real<8>,1>>)->unit) //
-void l2norm(int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __insieme_type_31* v, __insieme_type_25* sum){
+void l2norm(int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __insieme_type_30* v, __insieme_type_25* sum){
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -1323,7 +1319,7 @@ void l2norm(int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __i
 		((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 	};
 }
-static void l2norm_wrap(void* _closure, int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __insieme_type_31* v, __insieme_type_25* sum) { l2norm(nx0, ny0, nz0, ist, iend, jst, jend, v, sum); }
+static void l2norm_wrap(void* _closure, int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __insieme_type_30* v, __insieme_type_25* sum) { l2norm(nx0, ny0, nz0, ist, iend, jst, jend, v, sum); }
 
 // start code fragment :: Definition of timer_clear ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_clear(struct __insieme_globals* var_312, int n) { ((((*(&((*var_312).elapsed))).data[((unsigned int)(n))])) = 0.0); }
@@ -1335,11 +1331,11 @@ struct timeval {
     long tv_usec;
 };
 
-// start code fragment :: array type definition of __insieme_type_34 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
-typedef struct ___insieme_type_34 { 
+// start code fragment :: array type definition of __insieme_type_33 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
+typedef struct ___insieme_type_33 { 
     struct timeval* data;
     unsigned size[1];
-} __insieme_type_34;
+} __insieme_type_33;
 
 // start code fragment :: type_declaration_timezone //
 struct timezone { 
@@ -1355,12 +1351,12 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_34* var_615, __timezone_ptr_t* var_616) { return gettimeofday(((struct timeval*)((*(var_615)).data)), ((struct timezone*)((*(var_616)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_33* var_615, __timezone_ptr_t* var_616) { return gettimeofday(((struct timeval*)((*(var_615)).data)), ((struct timezone*)((*(var_616)).data))); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
 void wtime(struct __insieme_globals* var_319, __insieme_type_25* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_34){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_33){&tv,{1}})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0,{0}}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((*var_319).sec)))<0)) { ((*(&((*var_319).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_319).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
@@ -1514,14 +1510,14 @@ void jacld(struct __insieme_globals* var_334, int k){
 }
 static void jacld_wrap(void* _closure, struct __insieme_globals* var_334, int k) { jacld(var_334, k); }
 
-// start code fragment :: array type definition of __insieme_type_37 <=> array<vector<vector<vector<real<8>,5>,5>,33>,1> //
-typedef struct ___insieme_type_37 { 
+// start code fragment :: array type definition of __insieme_type_36 <=> array<vector<vector<vector<real<8>,5>,5>,33>,1> //
+typedef struct ___insieme_type_36 { 
     __insieme_type_8* data;
     unsigned size[1];
-} __insieme_type_37;
+} __insieme_type_36;
 
 // start code fragment :: Definition of blts ... type: ((int<4>,int<4>,int<4>,int<4>,real<8>,ref<array<vector<vector<vector<real<8>,5>,33>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,int<4>,int<4>,int<4>,int<4>,int<4>,int<4>)->unit) //
-void blts(int nx, int ny, int nz, int k, double omega, __insieme_type_31* v, __insieme_type_37* ldz, __insieme_type_37* ldy, __insieme_type_37* ldx, __insieme_type_37* d, int ist, int iend, int jst, int jend, int nx0, int ny0){
+void blts(int nx, int ny, int nz, int k, double omega, __insieme_type_30* v, __insieme_type_36* ldz, __insieme_type_36* ldy, __insieme_type_36* ldx, __insieme_type_36* d, int ist, int iend, int jst, int jend, int nx0, int ny0){
 	int i = 0;
 	int j = 0;
 	int m = 0;
@@ -1624,7 +1620,7 @@ void blts(int nx, int ny, int nz, int k, double omega, __insieme_type_31* v, __i
 		((i) = (ist+(((int)(ceil((((double)(((iend+1)-ist)))/((double)(1))))))*1)));
 	};
 }
-static void blts_wrap(void* _closure, int nx, int ny, int nz, int k, double omega, __insieme_type_31* v, __insieme_type_37* ldz, __insieme_type_37* ldy, __insieme_type_37* ldx, __insieme_type_37* d, int ist, int iend, int jst, int jend, int nx0, int ny0) { blts(nx, ny, nz, k, omega, v, ldz, ldy, ldx, d, ist, iend, jst, jend, nx0, ny0); }
+static void blts_wrap(void* _closure, int nx, int ny, int nz, int k, double omega, __insieme_type_30* v, __insieme_type_36* ldz, __insieme_type_36* ldy, __insieme_type_36* ldx, __insieme_type_36* d, int ist, int iend, int jst, int jend, int nx0, int ny0) { blts(nx, ny, nz, k, omega, v, ldz, ldy, ldx, d, ist, iend, jst, jend, nx0, ny0); }
 
 // start code fragment :: Definition of jacu ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void jacu(struct __insieme_globals* var_378, int k){
@@ -1762,14 +1758,14 @@ void jacu(struct __insieme_globals* var_378, int k){
 }
 static void jacu_wrap(void* _closure, struct __insieme_globals* var_378, int k) { jacu(var_378, k); }
 
-// start code fragment :: array type definition of __insieme_type_40 <=> array<vector<vector<real<8>,5>,33>,1> //
-typedef struct ___insieme_type_40 { 
+// start code fragment :: array type definition of __insieme_type_39 <=> array<vector<vector<real<8>,5>,33>,1> //
+typedef struct ___insieme_type_39 { 
     __insieme_type_5* data;
     unsigned size[1];
-} __insieme_type_40;
+} __insieme_type_39;
 
 // start code fragment :: Definition of buts ... type: ((int<4>,int<4>,int<4>,int<4>,real<8>,ref<array<vector<vector<vector<real<8>,5>,33>,33>,1>>,ref<array<vector<vector<real<8>,5>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,ref<array<vector<vector<vector<real<8>,5>,5>,33>,1>>,int<4>,int<4>,int<4>,int<4>,int<4>,int<4>)->unit) //
-void buts(int nx, int ny, int nz, int k, double omega, __insieme_type_31* v, __insieme_type_40* tv, __insieme_type_37* d, __insieme_type_37* udx, __insieme_type_37* udy, __insieme_type_37* udz, int ist, int iend, int jst, int jend, int nx0, int ny0){
+void buts(int nx, int ny, int nz, int k, double omega, __insieme_type_30* v, __insieme_type_39* tv, __insieme_type_36* d, __insieme_type_36* udx, __insieme_type_36* udy, __insieme_type_36* udz, int ist, int iend, int jst, int jend, int nx0, int ny0){
 	int i = 0;
 	int j = 0;
 	int m = 0;
@@ -1877,23 +1873,7 @@ void buts(int nx, int ny, int nz, int k, double omega, __insieme_type_31* v, __i
 		((i) = (iend+(((int)(ceil((((double)((((((int)(0))-ist)+1)-iend)))/((double)(1))))))*1)));
 	};
 }
-static void buts_wrap(void* _closure, int nx, int ny, int nz, int k, double omega, __insieme_type_31* v, __insieme_type_40* tv, __insieme_type_37* d, __insieme_type_37* udx, __insieme_type_37* udy, __insieme_type_37* udz, int ist, int iend, int jst, int jend, int nx0, int ny0) { buts(nx, ny, nz, k, omega, v, tv, d, udx, udy, udz, ist, iend, jst, jend, nx0, ny0); }
-
-// start code fragment :: Definition of __insieme_supp_42 ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->bool) //
-bool __insieme_supp_42(struct __insieme_globals* var_430) { return ((((*(&((*var_430).rsdnm))).data[((unsigned int)(1))]))<(((*(&((*var_430).tolrsd))).data[((unsigned int)(1))]))); }
-static bool __insieme_supp_42_wrap(void* _closure, struct __insieme_globals* var_430) { return __insieme_supp_42(var_430); }
-
-// start code fragment :: Definition of __insieme_supp_43 ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->bool) //
-bool __insieme_supp_43(struct __insieme_globals* var_432) { return ((((*(&((*var_432).rsdnm))).data[((unsigned int)(2))]))<(((*(&((*var_432).tolrsd))).data[((unsigned int)(2))]))); }
-static bool __insieme_supp_43_wrap(void* _closure, struct __insieme_globals* var_432) { return __insieme_supp_43(var_432); }
-
-// start code fragment :: Definition of __insieme_supp_44 ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->bool) //
-bool __insieme_supp_44(struct __insieme_globals* var_434) { return ((((*(&((*var_434).rsdnm))).data[((unsigned int)(3))]))<(((*(&((*var_434).tolrsd))).data[((unsigned int)(3))]))); }
-static bool __insieme_supp_44_wrap(void* _closure, struct __insieme_globals* var_434) { return __insieme_supp_44(var_434); }
-
-// start code fragment :: Definition of __insieme_supp_45 ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->bool) //
-bool __insieme_supp_45(struct __insieme_globals* var_436) { return ((((*(&((*var_436).rsdnm))).data[((unsigned int)(4))]))<(((*(&((*var_436).tolrsd))).data[((unsigned int)(4))]))); }
-static bool __insieme_supp_45_wrap(void* _closure, struct __insieme_globals* var_436) { return __insieme_supp_45(var_436); }
+static void buts_wrap(void* _closure, int nx, int ny, int nz, int k, double omega, __insieme_type_30* v, __insieme_type_39* tv, __insieme_type_36* d, __insieme_type_36* udx, __insieme_type_36* udy, __insieme_type_36* udz, int ist, int iend, int jst, int jend, int nx0, int ny0) { buts(nx, ny, nz, k, omega, v, tv, d, udx, udy, udz, ist, iend, jst, jend, nx0, ny0); }
 
 // start code fragment :: Definition of timer_stop ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void timer_stop(struct __insieme_globals* var_439, int n){
@@ -1940,7 +1920,7 @@ void ssor(struct __insieme_globals* var_193){
 			((i) = (0+(((int)(ceil((((double)((33-0)))/((double)(1))))))*1)));
 		};
 		rhs(var_193);
-		l2norm((*(&((*var_193).nx0))), (*(&((*var_193).ny0))), (*(&((*var_193).nz0))), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (&((__insieme_type_31){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_25){(*(&((*var_193).rsdnm))).data,{1}})));
+		l2norm((*(&((*var_193).nx0))), (*(&((*var_193).ny0))), (*(&((*var_193).nz0))), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (&((__insieme_type_30){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_25){(*(&((*var_193).rsdnm))).data,{1}})));
 	};
 	timer_clear(var_193, 1);
 	timer_start(var_193, 1);
@@ -1963,14 +1943,14 @@ void ssor(struct __insieme_globals* var_193){
 			{
 				for(int var_377 = 1; var_377 < (((*(&((*var_193).nz)))-2)+1); var_377 += 1) {
 					jacld(var_193, (var_377));
-					blts((*(&((*var_193).nx))), (*(&((*var_193).ny))), (*(&((*var_193).nz))), (var_377), (*(&((*var_193).omega))), (&((__insieme_type_31){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).a))).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).b))).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).c))).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).d))).data,{1}})), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (*(&((*var_193).nx0))), (*(&((*var_193).ny0))));
+					blts((*(&((*var_193).nx))), (*(&((*var_193).ny))), (*(&((*var_193).nz))), (var_377), (*(&((*var_193).omega))), (&((__insieme_type_30){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).a))).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).b))).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).c))).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).d))).data,{1}})), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (*(&((*var_193).nx0))), (*(&((*var_193).ny0))));
 				};
 				((k) = (1+(((int)(ceil((((double)(((((*(&((*var_193).nz)))-2)+1)-1)))/((double)(1))))))*1)));
 			};
 			{
 				for(int var_422 = (((int)(0))-((*(&((*var_193).nz)))-2)); var_422 < ((((int)(0))-1)+1); var_422 += 1) {
 					jacu(var_193, (((int)(0))-(var_422)));
-					buts((*(&((*var_193).nx))), (*(&((*var_193).ny))), (*(&((*var_193).nz))), (((int)(0))-(var_422)), (*(&((*var_193).omega))), (&((__insieme_type_31){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_40){(tv).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).d))).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).a))).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).b))).data,{1}})), (&((__insieme_type_37){(*(&((*var_193).c))).data,{1}})), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (*(&((*var_193).nx0))), (*(&((*var_193).ny0))));
+					buts((*(&((*var_193).nx))), (*(&((*var_193).ny))), (*(&((*var_193).nz))), (((int)(0))-(var_422)), (*(&((*var_193).omega))), (&((__insieme_type_30){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_39){(tv).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).d))).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).a))).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).b))).data,{1}})), (&((__insieme_type_36){(*(&((*var_193).c))).data,{1}})), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (*(&((*var_193).nx0))), (*(&((*var_193).ny0))));
 				};
 				((k) = (((*(&((*var_193).nz)))-2)+(((int)(ceil((((double)((((((int)(0))-1)+1)-((*(&((*var_193).nz)))-2))))/((double)(1))))))*1)));
 			};
@@ -1987,10 +1967,10 @@ void ssor(struct __insieme_globals* var_193){
 				}; };
 				((i) = ((*(&((*var_193).ist)))+(((int)(ceil((((double)((((*(&((*var_193).iend)))+1)-(*(&((*var_193).ist))))))/((double)(1))))))*1)));
 			};
-			if((((var_438)%(*(&((*var_193).inorm))))==0)) { l2norm((*(&((*var_193).nx0))), (*(&((*var_193).ny0))), (*(&((*var_193).nz0))), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (&((__insieme_type_31){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_25){(delunm).data,{1}}))); };
+			if((((var_438)%(*(&((*var_193).inorm))))==0)) { l2norm((*(&((*var_193).nx0))), (*(&((*var_193).ny0))), (*(&((*var_193).nz0))), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (&((__insieme_type_30){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_25){(delunm).data,{1}}))); };
 			rhs(var_193);
-			if(((((var_438)%(*(&((*var_193).inorm))))==0)||((var_438)==(*(&((*var_193).itmax)))))) { l2norm((*(&((*var_193).nx0))), (*(&((*var_193).ny0))), (*(&((*var_193).nz0))), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (&((__insieme_type_31){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_25){(*(&((*var_193).rsdnm))).data,{1}}))); };
-			if(((((((((*(&((*var_193).rsdnm))).data[((unsigned int)(0))]))<(((*(&((*var_193).tolrsd))).data[((unsigned int)(0))])))&&__insieme_supp_42(var_193))&&__insieme_supp_43(var_193))&&__insieme_supp_44(var_193))&&__insieme_supp_45(var_193))) { exit(1); };
+			if(((((var_438)%(*(&((*var_193).inorm))))==0)||((var_438)==(*(&((*var_193).itmax)))))) { l2norm((*(&((*var_193).nx0))), (*(&((*var_193).ny0))), (*(&((*var_193).nz0))), (*(&((*var_193).ist))), (*(&((*var_193).iend))), (*(&((*var_193).jst))), (*(&((*var_193).jend))), (&((__insieme_type_30){(*(&((*var_193).rsd))).data,{1}})), (&((__insieme_type_25){(*(&((*var_193).rsdnm))).data,{1}}))); };
+			if(((((((((*(&((*var_193).rsdnm))).data[((unsigned int)(0))]))<(((*(&((*var_193).tolrsd))).data[((unsigned int)(0))])))&&((((*(&((*var_193).rsdnm))).data[((unsigned int)(1))]))<(((*(&((*var_193).tolrsd))).data[((unsigned int)(1))]))))&&((((*(&((*var_193).rsdnm))).data[((unsigned int)(2))]))<(((*(&((*var_193).tolrsd))).data[((unsigned int)(2))]))))&&((((*(&((*var_193).rsdnm))).data[((unsigned int)(3))]))<(((*(&((*var_193).tolrsd))).data[((unsigned int)(3))]))))&&((((*(&((*var_193).rsdnm))).data[((unsigned int)(4))]))<(((*(&((*var_193).tolrsd))).data[((unsigned int)(4))]))))) { exit(1); };
 		};
 		((istep) = (1+(((int)(ceil((((double)((((*(&((*var_193).itmax)))+1)-1)))/((double)(1))))))*1)));
 	}; };
@@ -2045,14 +2025,14 @@ void error(struct __insieme_globals* var_448){
 }
 static void error_wrap(void* _closure, struct __insieme_globals* var_448) { error(var_448); }
 
-// start code fragment :: vector_type_declaration of __insieme_type_47 <=> vector<real<8>,35> //
-typedef struct ___insieme_type_47 { 
+// start code fragment :: vector_type_declaration of __insieme_type_42 <=> vector<real<8>,35> //
+typedef struct ___insieme_type_42 { 
     double data[35];
-} __insieme_type_47;
+} __insieme_type_42;
 
-// A constructor initializing a vector of the type __insieme_type_47 uniformly
-static inline __insieme_type_47 __insieme_type_47_init_uniform(double value) {
-	__insieme_type_47 res;
+// A constructor initializing a vector of the type __insieme_type_42 uniformly
+static inline __insieme_type_42 __insieme_type_42_init_uniform(double value) {
+	__insieme_type_42 res;
 	for (int i=0; i<35;++i) {
 	    res.data[i] = value;
 	}
@@ -2060,28 +2040,20 @@ static inline __insieme_type_47 __insieme_type_47_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_46 <=> vector<vector<real<8>,35>,35> //
-typedef struct ___insieme_type_46 { 
-    __insieme_type_47 data[35];
-} __insieme_type_46;
+// start code fragment :: vector_type_declaration of __insieme_type_41 <=> vector<vector<real<8>,35>,35> //
+typedef struct ___insieme_type_41 { 
+    __insieme_type_42 data[35];
+} __insieme_type_41;
 
-// A constructor initializing a vector of the type __insieme_type_46 uniformly
-static inline __insieme_type_46 __insieme_type_46_init_uniform(__insieme_type_47 value) {
-	__insieme_type_46 res;
+// A constructor initializing a vector of the type __insieme_type_41 uniformly
+static inline __insieme_type_41 __insieme_type_41_init_uniform(__insieme_type_42 value) {
+	__insieme_type_41 res;
 	for (int i=0; i<35;++i) {
 	    res.data[i] = value;
 	}
 	return res;
 }
 
-
-// start code fragment :: Definition of __insieme_supp_49 ... type: ((ref<int<4>>,ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->bool) //
-bool __insieme_supp_49(int* var_485, struct __insieme_globals* var_486) { return ((*var_485)<((*(&((*var_486).ii2)))+(*(&((*var_486).nx))))); }
-static bool __insieme_supp_49_wrap(void* _closure, int* var_485, struct __insieme_globals* var_486) { return __insieme_supp_49(var_485, var_486); }
-
-// start code fragment :: Definition of __insieme_supp_50 ... type: ((ref<int<4>>,ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->bool) //
-bool __insieme_supp_50(int* var_497, struct __insieme_globals* var_498) { return ((*var_497)<((*(&((*var_498).ji2)))+(*(&((*var_498).ny))))); }
-static bool __insieme_supp_50_wrap(void* _closure, int* var_497, struct __insieme_globals* var_498) { return __insieme_supp_50(var_497, var_498); }
 
 // start code fragment :: Definition of pintgr ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->unit) //
 void pintgr(struct __insieme_globals* var_464){
@@ -2100,8 +2072,8 @@ void pintgr(struct __insieme_globals* var_464){
 	int jglob = 0;
 	int jglob1 = 0;
 	int jglob2 = 0;
-	__insieme_type_46 phi1;
-	__insieme_type_46 phi2;
+	__insieme_type_41 phi1;
+	__insieme_type_41 phi2;
 	double frc1 = 0.0;
 	double frc2 = 0.0;
 	double frc3 = 0.0;
@@ -2109,7 +2081,7 @@ void pintgr(struct __insieme_globals* var_464){
 	((ifin) = 0);
 	((iglob1) = (((int)(0))-1));
 	((iglob2) = ((*(&((*var_464).nx)))-1));
-	if((((iglob1)>=(*(&((*var_464).ii1))))&&__insieme_supp_49(&iglob2, var_464))) { ((ibeg) = 0); };
+	if((((iglob1)>=(*(&((*var_464).ii1))))&&((iglob2)<((*(&((*var_464).ii2)))+(*(&((*var_464).nx))))))) { ((ibeg) = 0); };
 	if((((iglob1)>=((*(&((*var_464).ii1)))-(*(&((*var_464).nx)))))&&((iglob2)<=(*(&((*var_464).ii2)))))) { ((ifin) = (*(&((*var_464).nx)))); };
 	if((((*(&((*var_464).ii1)))>=(iglob1))&&((*(&((*var_464).ii1)))<=(iglob2)))) { ((ibeg) = (*(&((*var_464).ii1)))); };
 	if((((*(&((*var_464).ii2)))>=(iglob1))&&((*(&((*var_464).ii2)))<=(iglob2)))) { ((ifin) = (*(&((*var_464).ii2)))); };
@@ -2117,7 +2089,7 @@ void pintgr(struct __insieme_globals* var_464){
 	((jfin) = (((int)(0))-1));
 	((jglob1) = 0);
 	((jglob2) = ((*(&((*var_464).ny)))-1));
-	if((((jglob1)>=(*(&((*var_464).ji1))))&&__insieme_supp_50(&jglob2, var_464))) { ((jbeg) = 0); };
+	if((((jglob1)>=(*(&((*var_464).ji1))))&&((jglob2)<((*(&((*var_464).ji2)))+(*(&((*var_464).ny))))))) { ((jbeg) = 0); };
 	if((((jglob1)>((*(&((*var_464).ji1)))-(*(&((*var_464).ny)))))&&((jglob2)<=(*(&((*var_464).ji2)))))) { ((jfin) = (*(&((*var_464).ny)))); };
 	if((((*(&((*var_464).ji1)))>=(jglob1))&&((*(&((*var_464).ji1)))<=(jglob2)))) { ((jbeg) = (*(&((*var_464).ji1)))); };
 	if((((*(&((*var_464).ji2)))>=(jglob1))&&((*(&((*var_464).ji2)))<=(jglob2)))) { ((jfin) = (*(&((*var_464).ji2)))); };
