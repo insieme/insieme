@@ -55,10 +55,14 @@ namespace core = insieme::core;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
-TEST(OclCompilerTest, HelloCLTest) {
+TEST(OclHostCompilerTest, HelloHostTest) {
     Logger::get(std::cerr, INFO);
 
     CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "/inputs");
+
+//    CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
+//    CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
+
     CommandLineOptions::Defs.push_back("INSIEME");
 
     CommandLineOptions::Verbosity = 2;
