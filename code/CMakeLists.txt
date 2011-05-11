@@ -37,3 +37,8 @@ if(BUILD_DOCUMENTATION)
 	# IF you do NOT want the documentation to be generated EVERY time you build the project
 	# then leave out the 'ALL' keyword from the above command.
 endif()
+
+#-- Install the examples for using insieme
+install (FILES ../extra/insieme_lib/insieme_test.cpp DESTINATION examples/)
+install (FILES ../extra/insieme_lib/infile.c DESTINATION examples/)
+install (FILES ../extra/insieme_lib/Makefile DESTINATION examples/)
