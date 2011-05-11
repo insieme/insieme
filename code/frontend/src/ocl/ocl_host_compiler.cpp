@@ -145,20 +145,19 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
         assert(o2i.extractSizeFromSizeof(node->getArgument(2), size, type)
                 && "Unable to deduce type from clCreateBuffer call:\nNo sizeof call found, cannot translate to INSPIRE.");
 
-//        std::cout << "Arg3: " << node->getArgument(3) << " of Type: " << node->getArgument(3)->getType() << std::endl;
-/*
-        if(node->getArgument(3)->getType() != core::NT_RefType) {// a scalar (probably NULL) has been passed as hostPtr arg
-            hostPtr = BASIC.getGetNull();
-//            std::cout << "HERElasfdj......................................................... \n";
+        if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(node->getArgument(3))) {
+            if(c->getSubExpression()->getType() != BASIC.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
+                hostPtr = builder.callExpr(BASIC.getRefToAnyRef(), builder.callExpr(BASIC.getRefVar(), c->getSubExpression()));
+            }
         }
         else
             hostPtr = node->getArgument(3);
-*/
+
         vector<ExpressionPtr> args;
         args.push_back(BASIC.getTypeLiteral(type));
         args.push_back(node->getArgument(1));
         args.push_back(size);
-        args.push_back(node->getArgument(3));
+        args.push_back(hostPtr);
         args.push_back(node->getArgument(4));
         return builder.callExpr(builder.arrayType(type), fun, args);
     );
@@ -222,17 +221,32 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
     );
 
     ADD_Handler(builder, "oclLoadProgSource",
+        NodePtr ret = node;
         if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(node->getArgument(0))) {
             if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
                 if(stringAsChar->getValue() == "string.as.char.pointer") {
-                    if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0)))
-                        std::cout << path->getValue() << " .........................\n";
+                    if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
+                        // delete quotation marks form path
+                        string p = path->getValue().substr(1, path->getValue().length()-2);
+                        LOG(INFO) << "Converting kernel file '" << path->getValue() << "' to IR...";
+                        frontend::Program fkernels(builder.getNodeManager());
+
+                        fkernels.addTranslationUnit(p);
+//                        kernels = fkernels.convert();
+
+                        // set source string to an empty char array
+                        ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
+                    }
                 }
             }
         }
-        return node;
+        return ret;
     );
+/*
+    ADD_Handler(builder, "clKreateKernel",
 
+    );
+  */
     ADD_Handler(builder, "clEnqueueNDRangeKernel",
         // get argument vector
         std::vector<core::ExpressionPtr> args = kernelArgs[node->getArgument(1)];
@@ -241,11 +255,29 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
         args.push_back(node->getArgument(4) );
         args.push_back(node->getArgument(5) );
 
-        std::cerr << "ARGUMENTS: " << toString(join(", ", args)) << std::endl;
+//        std::cerr << "ARGUMENTS: " << toString(join(", ", args)) << std::endl;
 
         return node;
     );
 };
+
+core::CallExprPtr HostMapper::checkAssignment(const core::CallExprPtr& oldCall){
+    CallExprPtr newCall;
+    if((newCall = dynamic_pointer_cast<const CallExpr>(oldCall->substitute(builder.getNodeManager(), *this)))) {
+
+        // get rid of deref operations, automatically inserted by the frontend coz _cl_mem* is translated to ref<array<...>>, and refs cannot be
+        // rhs of an assignment
+        if(const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
+            if(rhs->getFunctionExpr() == BASIC.getRefDeref()) {
+                if(const CallExprPtr& createBuffer = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0))) {
+                    newCall = createBuffer;
+
+                }
+            }
+        }
+    }
+    return newCall;
+}
 
 
 const NodePtr HostMapper::resolveElement(const NodePtr& element) {
@@ -263,38 +295,40 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
             callExpr->substitute(builder.getNodeManager(), *this);
 //            std::cout << "CALL: " << literal->getValue() << std::endl;
             if(const HandlerPtr& replacement = handles[literal->getValue()]) {
-                return replacement->handleNode(callExpr);
+                NodePtr ret = replacement->handleNode(callExpr);
+                // check if new kernels have been created
+                vector<ExpressionPtr> kernels;// = replacement->getKernels();
+                if(kernels.size() > 0)
+                    for_each(kernels, [&](ExpressionPtr kernel){
+                        kernelEntries.push_back(kernel);
+                    });
+                return ret;
             }
         }
 
         if(fun == BASIC.getRefAssign()) {
             if(const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
                 if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
-                    CallExprPtr newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this));
 
-                    // get rid of deref operations, automatically inserted by the frontend coz _cl_mem* is translated to ref<array<...>>, and refs cannot be
-                    // rhs of an assignment
-                    if(const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
-                        if(rhs->getFunctionExpr() == BASIC.getRefDeref()) {
-                            if(const CallExprPtr& createBuffer = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0))) {
-                                newCall = createBuffer;
-                            }
-                        }
+                    if(const CallExprPtr& newCall = checkAssignment(callExpr)) {
+                        TypePtr newType = builder.refType(newCall->getType());
+                        // check if variable has already been put into replacement map with a different type
+                        if(cl_mems[lhs] != static_cast<long int>(0))
+                            assert((cl_mems[lhs]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+
+                        const VariablePtr& newVar = builder.variable(newType);
+    //                    cl_mems.insert(std::make_pair(lhs, newVar));
+                        cl_mems[lhs] = newVar;
+
+                        return builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
                     }
-
-                    TypePtr newType = builder.refType(newCall->getType());
-                    // check if variable has already been put into replacement map with a different type
-                    if(cl_mems[lhs] != static_cast<long int>(0))
-                        assert((cl_mems[lhs]->getType() == newType) && "cl_mem variable allocated several times with different types.");
-
-                    const VariablePtr& newVar = builder.variable(newType);
-//                    cl_mems.insert(std::make_pair(lhs, newVar));
-                    cl_mems[lhs] = newVar;
-
-                    cl_mems.begin();
-                    cl_mems.end();
-
-                    return builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
+                }
+                if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))) {
+                    if(const CallExprPtr& newCall = checkAssignment(callExpr)) {
+                                std::cout << "Kernel: " << newCall->getFunctionExpr() << std::endl;
+// TODO find the LambdaExpr of the right kernel by name!
+                                //return BASIC.getNoOp();
+                    }
                 }
             }
 /*
@@ -344,8 +378,9 @@ const NodePtr HostMapper2ndPass::resolveElement(const NodePtr& element) {
     }
 
     if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
-        if(cl_mems[var])
+        if(cl_mems[var]) {
             return cl_mems[var];
+        }
     }
 
     if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
@@ -359,7 +394,7 @@ const NodePtr HostMapper2ndPass::resolveElement(const NodePtr& element) {
                         newType = rt->getElementType();
                     else
                         newType = cl_mems[var]->getType();
-                    return builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
+                    return builder.declarationStmt(cl_mems[var], builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
                 }
             }
         }
@@ -368,27 +403,27 @@ const NodePtr HostMapper2ndPass::resolveElement(const NodePtr& element) {
     return element->substitute(builder.getNodeManager(), *this);
 }
 
-
-void HostVisitor::visitCallExpr(const CallExprAddress& callExpr) {
-    std::cout << callExpr->toString() << " FOUND\n";
-//    newProg = dynamic_pointer_cast<const Program>(transform::replaceNode(builder.getNodeManager(), callExpr, builder.getThreadId(), true));
-    std::cout << "CALL: " << callExpr->getChildList().at(0) << " Type: " << callExpr->getChildList().at(0)->getNodeType() << std::endl;
 }
 
-}
 ProgramPtr HostCompiler::compile() {
 //    HostVisitor oclHostVisitor(builder, mProgram);
     HostMapper oclHostMapper(builder);
 
-    const NodePtr progNode = oclHostMapper.mapElement(0, mProgram);
+    const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
+    assert(interProg && "First pass of OclHostCompiler corrupted the program");
+
+    LOG(INFO) << "Adding kernels to host Program...";
+
+    const ProgramPtr& progWithKernels = interProg->addEntryPoints(builder.getNodeManager(), interProg, oclHostMapper.getKernels());
+
     HostMapper2ndPass ohm2nd(builder, oclHostMapper.getClMemMapping());
 
-    if(ProgramPtr newProg = dynamic_pointer_cast<const Program>(ohm2nd.mapElement(0, progNode))) {
+    if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm2nd.mapElement(0, progWithKernels))) {
         mProgram = newProg;
         return newProg;
     }
     else
-        assert(newProg && "OclHostCompiler corrupted the program");
+        assert(newProg && "Second pass of OclHostCompiler corrupted the program");
     return mProgram;
 }
 
