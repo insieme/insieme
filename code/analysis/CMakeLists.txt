@@ -48,5 +48,5 @@ foreach ( case_file ${test_cases})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-install (FILES include/insieme/analysis/cfg.h DESTINATION include/analysis)
+install (DIRECTORY ${insieme_analysis_include_dir}/insieme DESTINATION include)
 INSTALL(TARGETS insieme_analysis LIBRARY DESTINATION lib)

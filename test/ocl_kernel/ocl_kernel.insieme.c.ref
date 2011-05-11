@@ -1,0 +1,242 @@
+// --- Generated Inspire Code ---
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<real<4>,1> //
+typedef struct ___insieme_type_0 { 
+    float* data;
+} __insieme_type_0;
+
+// start code fragment :: Definition of constantMemArg ... type: ((ref<array<real<4>,1>>)->unit) //
+__kernel void constantMemArg(__global __insieme_type_0* c) { float element = ((*c).data[((unsigned int)(0))]); }
+static void constantMemArg_wrap(void* _closure, __global __insieme_type_0* c) { constantMemArg(c); }
+
+// start code fragment :: Definition of globalMemArg ... type: ((ref<array<real<4>,1>>)->unit) //
+__kernel void globalMemArg(__global __insieme_type_0* g) { float element = ((*g).data[((unsigned int)(0))]); }
+static void globalMemArg_wrap(void* _closure, __global __insieme_type_0* g) { globalMemArg(g); }
+
+// start code fragment :: array type definition of __insieme_type_3 <=> array<int<4>,1> //
+typedef struct ___insieme_type_3 { 
+    int* data;
+} __insieme_type_3;
+
+// start code fragment :: Definition of localMemArg ... type: ((ref<array<int<4>,1>>)->unit) //
+__kernel void localMemArg(__local __insieme_type_3* l) { int element = ((*l).data[((unsigned int)(0))]); }
+static void localMemArg_wrap(void* _closure, __local __insieme_type_3* l) { localMemArg(l); }
+
+// start code fragment :: Definition of privateMemArg ... type: ((int<2>)->unit) //
+__kernel void privateMemArg(short p) { short copy = p; }
+static void privateMemArg_wrap(void* _closure, short p) { privateMemArg(p); }
+
+// start code fragment :: Definition of allMemArg ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void allMemArg(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { ((((*ga).data[((unsigned int)(0))])) = ((float)((((*gb).data[((unsigned int)(0))]))))); }
+static void allMemArg_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { allMemArg(c, ga, gb, l, pa, pb); }
+
+// start code fragment :: Definition of simpleCalc ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void simpleCalc(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb){
+	((((*l).data[((unsigned int)((((*gb).data[((unsigned int)(0))]))))])) = 3.3f);
+	((((*ga).data[((unsigned int)(pa))])) = ((((*c).data[((unsigned int)(1))]))*(((*l).data[((unsigned int)((((*gb).data[((unsigned int)(0))]))))]))));
+}
+static void simpleCalc_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { simpleCalc(c, ga, gb, l, pa, pb); }
+
+// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<uint<4>,3> //
+typedef struct ___insieme_type_9 { 
+    unsigned int data[3];
+} __insieme_type_9;
+
+// A constructor initializing a vector of the type __insieme_type_9 uniformly
+static inline __insieme_type_9 __insieme_type_9_init_uniform(unsigned int value) {
+	__insieme_type_9 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: Definition of __insieme_supp_8 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_8(unsigned int var_202, __insieme_type_9 var_204, __insieme_type_9 var_203){
+	unsigned int var_205 = isbr_getThreadId(0);
+	unsigned int var_206 = isbr_getThreadId(1);
+	switch(var_202) {
+	case 0:
+		return (((var_205/var_203[2])/var_203[1])+(var_203[0]*((var_206/var_204[2])/var_204[1]))); break;
+	case 1:
+		return (((var_205/var_203[2])%var_203[1])+(var_203[1]*((var_206/var_204[2])%var_204[1]))); break;
+	case 2:
+		return ((var_205%var_203[2])+(var_203[2]*((var_206/var_204[2])%var_204[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_8_wrap(void* _closure, unsigned int var_202, __insieme_type_9 var_204, __insieme_type_9 var_203) { return __insieme_supp_8(var_202, var_204, var_203); }
+
+// start code fragment :: Definition of getId ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void getId(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb){
+	unsigned int gid = __insieme_supp_8(((unsigned int)(0)), var_200, var_201);
+	((((*ga).data[((unsigned int)((gid)))])) = ((float)((gid))));
+}
+static void getId_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { getId(c, ga, gb, l, pa, pb); }
+
+// start code fragment :: Definition of getSize ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void getSize(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb){
+	((((*ga).data[((unsigned int)(0))])) = ((float)((get_global_size(((unsigned int)(0)))))));
+	((((*ga).data[((unsigned int)(1))])) = ((float)((get_global_size(((unsigned int)(1)))))));
+	((((*ga).data[((unsigned int)(2))])) = ((float)((get_global_size(((unsigned int)(2)))))));
+	((((*ga).data[((unsigned int)(3))])) = ((float)((get_local_size(((unsigned int)(0)))))));
+	((((*ga).data[((unsigned int)(4))])) = ((float)((get_local_size(((unsigned int)(1)))))));
+	((((*ga).data[((unsigned int)(5))])) = ((float)((get_local_size(((unsigned int)(2)))))));
+	((((*ga).data[((unsigned int)(6))])) = ((float)((get_num_groups(((unsigned int)(0)))))));
+	((((*ga).data[((unsigned int)(7))])) = ((float)((get_num_groups(((unsigned int)(1)))))));
+	((((*ga).data[((unsigned int)(8))])) = ((float)((get_num_groups(((unsigned int)(2)))))));
+}
+static void getSize_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { getSize(c, ga, gb, l, pa, pb); }
+
+// start code fragment :: Definition of branch ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void branch(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { if((pa==((unsigned int)(pb)))) { ((((*ga).data[((unsigned int)(0))])) = (((*c).data[((unsigned int)(0))]))); }; }
+static void branch_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { branch(c, ga, gb, l, pa, pb); }
+
+// start code fragment :: Definition of __insieme_supp_11 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_11(unsigned int var_309, __insieme_type_9 var_311, __insieme_type_9 var_310){
+	unsigned int var_312 = isbr_getThreadId(0);
+	unsigned int var_313 = isbr_getThreadId(1);
+	switch(var_309) {
+	case 0:
+		return (((var_312/var_310[2])/var_310[1])+(var_310[0]*((var_313/var_311[2])/var_311[1]))); break;
+	case 1:
+		return (((var_312/var_310[2])%var_310[1])+(var_310[1]*((var_313/var_311[2])%var_311[1]))); break;
+	case 2:
+		return ((var_312%var_310[2])+(var_310[2]*((var_313/var_311[2])%var_311[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_11_wrap(void* _closure, unsigned int var_309, __insieme_type_9 var_311, __insieme_type_9 var_310) { return __insieme_supp_11(var_309, var_311, var_310); }
+
+// start code fragment :: Definition of __insieme_supp_12 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_12(unsigned int var_315, __insieme_type_9 var_317, __insieme_type_9 var_316){
+	unsigned int var_318 = isbr_getThreadId(0);
+	unsigned int var_319 = isbr_getThreadId(1);
+	switch(var_315) {
+	case 0:
+		return (((var_318/var_316[2])/var_316[1])+(var_316[0]*((var_319/var_317[2])/var_317[1]))); break;
+	case 1:
+		return (((var_318/var_316[2])%var_316[1])+(var_316[1]*((var_319/var_317[2])%var_317[1]))); break;
+	case 2:
+		return ((var_318%var_316[2])+(var_316[2]*((var_319/var_317[2])%var_317[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_12_wrap(void* _closure, unsigned int var_315, __insieme_type_9 var_317, __insieme_type_9 var_316) { return __insieme_supp_12(var_315, var_317, var_316); }
+
+// start code fragment :: Definition of __insieme_supp_13 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_13(unsigned int var_321, __insieme_type_9 var_323, __insieme_type_9 var_322){
+	unsigned int var_324 = isbr_getThreadId(0);
+	unsigned int var_325 = isbr_getThreadId(1);
+	switch(var_321) {
+	case 0:
+		return (((var_324/var_322[2])/var_322[1])+(var_322[0]*((var_325/var_323[2])/var_323[1]))); break;
+	case 1:
+		return (((var_324/var_322[2])%var_322[1])+(var_322[1]*((var_325/var_323[2])%var_323[1]))); break;
+	case 2:
+		return ((var_324%var_322[2])+(var_322[2]*((var_325/var_323[2])%var_323[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_13_wrap(void* _closure, unsigned int var_321, __insieme_type_9 var_323, __insieme_type_9 var_322) { return __insieme_supp_13(var_321, var_323, var_322); }
+
+// start code fragment :: Definition of access3D ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void access3D(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb){
+	__insieme_type_9 gid;
+	((((gid).data[((unsigned int)(0))])) = __insieme_supp_11(((unsigned int)(0)), var_307, var_308));
+	((((gid).data[((unsigned int)(1))])) = __insieme_supp_12(((unsigned int)(1)), var_307, var_308));
+	((((gid).data[((unsigned int)(2))])) = __insieme_supp_13(((unsigned int)(2)), var_307, var_308));
+	unsigned int gid3 = (((((((gid).data[((unsigned int)(0))]))*((unsigned int)((((*gb).data[((unsigned int)(2))])))))*((unsigned int)((((*gb).data[((unsigned int)(1))])))))+((((gid).data[((unsigned int)(1))]))*((unsigned int)((((*gb).data[((unsigned int)(2))]))))))+(((gid).data[((unsigned int)(2))])));
+	((((*ga).data[((unsigned int)((gid3)))])) = (((*c).data[((unsigned int)((gid3)))])));
+}
+static void access3D_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { access3D(c, ga, gb, l, pa, pb); }
+
+// start code fragment :: Definition of __insieme_supp_14 ... type: ((uint<4>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_14(unsigned int var_360, __insieme_type_9 var_361){
+	unsigned int var_363 = isbr_getThreadId(0);
+	switch(var_360) {
+	case 0:
+		return ((var_363/var_361[2])/var_361[1]); break;
+	case 1:
+		return ((var_363/var_361[2])%var_361[1]); break;
+	case 2:
+		return (var_363%var_361[2]); break;
+	};
+}
+static unsigned int __insieme_supp_14_wrap(void* _closure, unsigned int var_360, __insieme_type_9 var_361) { return __insieme_supp_14(var_360, var_361); }
+
+// start code fragment :: Definition of __insieme_supp_15 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_15(unsigned int var_366, __insieme_type_9 var_368, __insieme_type_9 var_367){
+	unsigned int var_369 = isbr_getThreadId(0);
+	unsigned int var_370 = isbr_getThreadId(1);
+	switch(var_366) {
+	case 0:
+		return (((var_369/var_367[2])/var_367[1])+(var_367[0]*((var_370/var_368[2])/var_368[1]))); break;
+	case 1:
+		return (((var_369/var_367[2])%var_367[1])+(var_367[1]*((var_370/var_368[2])%var_368[1]))); break;
+	case 2:
+		return ((var_369%var_367[2])+(var_367[2]*((var_370/var_368[2])%var_368[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_15_wrap(void* _closure, unsigned int var_366, __insieme_type_9 var_368, __insieme_type_9 var_367) { return __insieme_supp_15(var_366, var_368, var_367); }
+
+// start code fragment :: Definition of barriers ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void barriers(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb){
+	unsigned int lid = __insieme_supp_14(((unsigned int)(0)), var_359);
+	unsigned int gid = __insieme_supp_15(((unsigned int)(0)), var_358, var_359);
+	((((*l).data[((unsigned int)((lid)))])) = 7.0f);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	((((*ga).data[((unsigned int)((gid)))])) = (((*l).data[((unsigned int)((lid)))])));
+}
+static void barriers_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { barriers(c, ga, gb, l, pa, pb); }
+
+// start code fragment :: Definition of __insieme_supp_16 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_16(unsigned int var_405, __insieme_type_9 var_407, __insieme_type_9 var_406){
+	unsigned int var_408 = isbr_getThreadId(0);
+	unsigned int var_409 = isbr_getThreadId(1);
+	switch(var_405) {
+	case 0:
+		return (((var_408/var_406[2])/var_406[1])+(var_406[0]*((var_409/var_407[2])/var_407[1]))); break;
+	case 1:
+		return (((var_408/var_406[2])%var_406[1])+(var_406[1]*((var_409/var_407[2])%var_407[1]))); break;
+	case 2:
+		return ((var_408%var_406[2])+(var_406[2]*((var_409/var_407[2])%var_407[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_16_wrap(void* _closure, unsigned int var_405, __insieme_type_9 var_407, __insieme_type_9 var_406) { return __insieme_supp_16(var_405, var_407, var_406); }
+
+// start code fragment :: Definition of __insieme_supp_17 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_17(unsigned int var_411, __insieme_type_9 var_413, __insieme_type_9 var_412){
+	unsigned int var_414 = isbr_getThreadId(0);
+	unsigned int var_415 = isbr_getThreadId(1);
+	switch(var_411) {
+	case 0:
+		return (((var_414/var_412[2])/var_412[1])+(var_412[0]*((var_415/var_413[2])/var_413[1]))); break;
+	case 1:
+		return (((var_414/var_412[2])%var_412[1])+(var_412[1]*((var_415/var_413[2])%var_413[1]))); break;
+	case 2:
+		return ((var_414%var_412[2])+(var_412[2]*((var_415/var_413[2])%var_413[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_17_wrap(void* _closure, unsigned int var_411, __insieme_type_9 var_413, __insieme_type_9 var_412) { return __insieme_supp_17(var_411, var_413, var_412); }
+
+// start code fragment :: Definition of __insieme_supp_18 ... type: ((uint<4>,vector<uint<4>,3>,vector<uint<4>,3>)->uint<4>) //
+unsigned int __insieme_supp_18(unsigned int var_417, __insieme_type_9 var_419, __insieme_type_9 var_418){
+	unsigned int var_420 = isbr_getThreadId(0);
+	unsigned int var_421 = isbr_getThreadId(1);
+	switch(var_417) {
+	case 0:
+		return (((var_420/var_418[2])/var_418[1])+(var_418[0]*((var_421/var_419[2])/var_419[1]))); break;
+	case 1:
+		return (((var_420/var_418[2])%var_418[1])+(var_418[1]*((var_421/var_419[2])%var_419[1]))); break;
+	case 2:
+		return ((var_420%var_418[2])+(var_418[2]*((var_421/var_419[2])%var_419[1]))); break;
+	};
+}
+static unsigned int __insieme_supp_18_wrap(void* _closure, unsigned int var_417, __insieme_type_9 var_419, __insieme_type_9 var_418) { return __insieme_supp_18(var_417, var_419, var_418); }
+
+// start code fragment :: Definition of VectorAdd ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<int<4>,1>>,ref<array<real<4>,1>>,uint<4>,int<4>)->unit) //
+__kernel void VectorAdd(__global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb){
+	int iGID = ((int)(((((__insieme_supp_16(((unsigned int)(0)), var_403, var_404)*((unsigned int)((((*gb).data[((unsigned int)(1))])))))*((unsigned int)((((*gb).data[((unsigned int)(2))])))))+(__insieme_supp_17(((unsigned int)(1)), var_403, var_404)*((unsigned int)((((*gb).data[((unsigned int)(2))]))))))+__insieme_supp_18(((unsigned int)(2)), var_403, var_404))));
+	int iNumElements = ((((((*gb).data[((unsigned int)(0))]))*(((*gb).data[((unsigned int)(1))])))*(((*gb).data[((unsigned int)(2))])))-17);
+	if(((iGID)>=(iNumElements))) { return; };
+	((((*ga).data[((unsigned int)((iGID)))])) = ((((*c).data[((unsigned int)((iGID)))]))+((float)((((*gb).data[((unsigned int)((iGID)))]))))));
+}
+static void VectorAdd_wrap(void* _closure, __global __insieme_type_0* c, __global __insieme_type_0* ga, __global __insieme_type_3* gb, __local __insieme_type_0* l, unsigned int pa, int pb) { VectorAdd(c, ga, gb, l, pa, pb); }

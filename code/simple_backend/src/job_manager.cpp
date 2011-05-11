@@ -45,6 +45,7 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/iterator_utils.h"
@@ -118,13 +119,15 @@ void JobManager::createJob(const CodeFragmentPtr& code, const core::JobExprPtr& 
 		// local shared variables
 		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
 			ExpressionPtr init = cur->getInitialization();
-			code << (isVectorOrArrayRef(init->getType())?",&":",");
+//			code << (isVectorOrArrayRef(init->getType())?",&":",");
+			code << ",";
 			converter.convert(init);
 		});
 
 		// auto-captured variables
 		for_each(info.capturedVars, [&](const core::VariablePtr& var) {
-			code << (isVectorOrArrayRef(var->getType())?",&":",");
+//			code << (isVectorOrArrayRef(var->getType())?",&":",");
+			code << ",";
 			converter.convert(var);
 		});
 
@@ -238,6 +241,17 @@ namespace {
 		}
 
 		/**
+		 * Do not collect parameters of bind expressions.
+		 */
+		void visitBindExpr(const core::BindExprPtr& bind) {
+			// only visit bound expressions
+			auto boundExpressions = bind->getBoundExpressions();
+			for_each(boundExpressions, [this](const ExpressionPtr& cur) {
+				this->visit(cur);
+			});
+		}
+
+		/**
 		 * Types are generally ignored by this visitor for performance reasons (no variables will
 		 * occur within types).
 		 */
@@ -297,7 +311,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 	ASTBuilder builder(manager);
 
 	// get a name for the job
-	string name = cc.getNameManager().getName(job);
+	string name = cc.getNameManager().getName(job, "job");
 	string structName = "struct " + name;
 	string funName = "fun" + name;
 
@@ -479,7 +493,10 @@ namespace {
 
 
 		// default handling => just call loop body function
-		return builder.callExpr(body, inductionVar);
+		const CallExprPtr call = builder.callExpr(body, inductionVar);
+
+		// finally - try to inline call (to avoid closure construction)
+		return core::transform::tryInlineToExpr(builder.getNodeManager(), call);
 	}
 }
 
@@ -496,8 +513,8 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 	assert(body->getType()->getNodeType() == NT_FunctionType);
 
 	// obtain a name for this body function
-	string name = cc.getNameManager().getName(body);
-	string structName = "struct capture" + name;
+	string name = cc.getNameManager().getName(body, "pfor_body") + "_fun";
+	string structName = "struct " + name + "_capture";
 
 	// collect variables to be captured
 	vector<core::VariablePtr> varList = getVariablesToBeCaptured(body);

@@ -7,51 +7,99 @@
 #define true 1
 #define false 0
 #define null 0
-// --- Entry Point ---
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+} __insieme_type_0;
 
 // start code fragment :: Prototype for external function: clock ... type: (()->int<8>) //
 long clock();
+static long clock_wrap(void* _closure) { return clock(); }
 
-// start code fragment :: Prototype for external function: memset ... type: ((ref<array<'a,1>>,int<4>,uint<8>)->ref<array<'a,1>>) //
-void* memset(void*, int, unsigned long);
+// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<real<4>,650> //
+typedef struct ___insieme_type_5 { 
+    float data[650];
+} __insieme_type_5;
 
-// start code fragment :: Prototype for external function: sin ... type: ((real<8>)->real<8>) //
-double sin(double);
-
-// start code fragment :: Definition of init_func //
-double init_func(int x, int y) {
-	{
-		return (((double)(40))*sin(((double)(((16*((2*x)-1))*y)))));;
+// A constructor initializing a vector of the type __insieme_type_5 uniformly
+static inline __insieme_type_5 __insieme_type_5_init_uniform(float value) {
+	__insieme_type_5 res;
+	for (int i=0; i<650;++i) {
+	    res.data[i] = value;
 	}
+	return res;
 }
 
 
+// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<vector<real<4>,650>,650> //
+typedef struct ___insieme_type_4 { 
+    __insieme_type_5 data[650];
+} __insieme_type_4;
+
+// A constructor initializing a vector of the type __insieme_type_4 uniformly
+static inline __insieme_type_4 __insieme_type_4_init_uniform(__insieme_type_5 value) {
+	__insieme_type_4 res;
+	for (int i=0; i<650;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: Prototype for external function: memset ... type: ((anyRef,int<4>,uint<8>)->anyRef) //
+void* memset(void*, int, unsigned long);
+static void* memset_wrap(void* _closure, void* var_30, int var_31, unsigned long var_32) { return memset(var_30, var_31, var_32); }
+
+// start code fragment :: Prototype for external function: sin ... type: ((real<8>)->real<8>) //
+double sin(double);
+static double sin_wrap(void* _closure, double var_33) { return sin(var_33); }
+
+// start code fragment :: Definition of init_func ... type: ((int<4>,int<4>)->real<8>) //
+double init_func(int x, int y) { return (((double)(40))*sin(((double)(((16*((2*x)-1))*y))))); }
+static double init_func_wrap(void* _closure, int x, int y) { return init_func(x, y); }
+
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
+static double pow_wrap(void* _closure, double var_34, double var_35) { return pow(var_34, var_35); }
 
-// start code fragment :: Prototype for external function: memcpy ... type: ((ref<array<'a,1>>,ref<array<'a,1>>,uint<8>)->ref<array<'a,1>>) //
+// start code fragment :: Prototype for external function: memcpy ... type: ((anyRef,anyRef,uint<8>)->anyRef) //
 void* memcpy(void*, void*, unsigned long);
+static void* memcpy_wrap(void* _closure, void* var_36, void* var_37, unsigned long var_38) { return memcpy(var_36, var_37, var_38); }
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
+static double sqrt_wrap(void* _closure, double var_39) { return sqrt(var_39); }
 
-// start code fragment :: Definition of main //
-int main(int argc, char** argv) {
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i]};
+	}
+	
+	// ---- begin of actual code body ----
 	{
 		long start_t = 0;
 		long end_t = 0;
 		double setup_time = 0.0;
 		double elapsed_time = 0.0;
 		((start_t) = clock());
-		float u[650][650];
-		float tmp[650][650];
-		float f[650][650];
-		float res[650][650];
-		memset(u, 0, ((unsigned long)((650*650))));
-		memset(f, 0, ((unsigned long)((650*650))));
-		for(int i = 0; i < 650; i += 1) for(int j = 0; j < 650; j += 1) {
-			((((f[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((float)(init_func((i), (j)))));
-		};
+		__insieme_type_4 u;
+		__insieme_type_4 tmp;
+		__insieme_type_4 f;
+		__insieme_type_4 res;
+		memset((void*)((float**)((*(&u)).data)), 0, ((unsigned long)((650*650))));
+		memset((void*)((float**)((*(&f)).data)), 0, ((unsigned long)((650*650))));
+		for(int i = 0; i < 650; i += 1)  { for(int j = 0; j < 650; j += 1)  { ((((((f).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(init_func((i), (j))))); }; };
 		double comm_time = ((double)(0));
 		double comp_time = ((double)(0));
 		double timer = ((double)(0));
@@ -61,27 +109,17 @@ int main(int argc, char** argv) {
 		((setup_time) = (((double)(((end_t)-(start_t))))/((double)(1000000l))));
 		((start_t) = clock());
 		for(int it = 0; it < 10; it += 1) {
-			for(int i = 1; i < (650-1); i += 1) {
-				for(int j = 1; j < (650-1); j += 1) {
-					((((tmp[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((float)(((((double)(1))/((double)(4)))*(((double)(((((((u[((unsigned int)(((i)-1)))])[((unsigned int)((j)))]))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)+1)))])))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)-1)))])))+(((u[((unsigned int)(((i)+1)))])[((unsigned int)((j)))])))))-((factor)*((double)((((f[((unsigned int)((i)))])[((unsigned int)((j)))]))))))))));
-				};
-			};
-			memcpy(u, tmp, ((unsigned long)((650*650))));
-			for(int i = 1; i < (650-1); i += 1) {
-				for(int j = 1; j < (650-1); j += 1) {
-					((((res[((unsigned int)((i)))])[((unsigned int)((j)))])) = ((((((((f[((unsigned int)((i)))])[((unsigned int)((j)))]))-(((float)(4))*(((u[((unsigned int)((i)))])[((unsigned int)((j)))]))))+(((u[((unsigned int)(((i)-1)))])[((unsigned int)((j)))])))+(((u[((unsigned int)(((i)+1)))])[((unsigned int)((j)))])))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)-1)))])))+(((u[((unsigned int)((i)))])[((unsigned int)(((j)+1)))]))));
-				};
-			};
+			for(int i = 1; i < (650-1); i += 1)  { for(int j = 1; j < (650-1); j += 1)  { ((((((tmp).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(((((double)(1))/((double)(4)))*(((double)(((((((((u).data[((unsigned int)(((i)-1)))])).data[((unsigned int)((j)))]))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)+1)))])))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)-1)))])))+(((((u).data[((unsigned int)(((i)+1)))])).data[((unsigned int)((j)))])))))-((factor)*((double)((((((f).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))))))))); }; };
+			memcpy((void*)((float**)((*(&u)).data)), (void*)((float**)((*(&tmp)).data)), ((unsigned long)((650*650))));
+			for(int i = 1; i < (650-1); i += 1)  { for(int j = 1; j < (650-1); j += 1)  { ((((((res).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((((((((((f).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))-(((float)(4))*(((((u).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))))+(((((u).data[((unsigned int)(((i)-1)))])).data[((unsigned int)((j)))])))+(((((u).data[((unsigned int)(((i)+1)))])).data[((unsigned int)((j)))])))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)-1)))])))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)+1)))])))); }; };
 			double norm = ((double)(0));
-			for(int i = 1; i < (650-1); i += 1) {
-				for(int j = 1; j < (650-1); j += 1) {
-					((norm) = ((norm)+pow(((double)((((res[((unsigned int)((i)))])[((unsigned int)((j)))])))), ((double)(2)))));
-				};
-			};
+			for(int i = 1; i < (650-1); i += 1)  { for(int j = 1; j < (650-1); j += 1)  { ((norm) = ((norm)+pow(((double)((((((res).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))), ((double)(2))))); }; };
 			((resv) = (sqrt((norm))/((double)((650-1)))));
 		};
 		((end_t) = clock());
 		((elapsed_time) = (((double)(((end_t)-(start_t))))/((double)(1000000l))));
 	}
+	// ----  end of actual code body  ----
+	
 }
 

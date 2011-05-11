@@ -54,7 +54,7 @@ namespace simple_backend {
 	TargetCodePtr convert(const core::ProgramPtr& source) {
 
 		// create and set up the converter
-		Converter converter;
+		Converter converter(false);
 
 		// Prepare managers
 		core::NodeManager& nodeManager = source->getNodeManager();
@@ -66,7 +66,7 @@ namespace simple_backend {
 		NameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(nameManager);
+		TypeManager typeManager(converter);
 		converter.setTypeManager(&typeManager);
 
 		VariableManager variableManager;

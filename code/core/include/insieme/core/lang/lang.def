@@ -120,9 +120,9 @@ LITERAL(False, "false", "bool")
 
 TYPE(Alpha, "'a")
 TYPE(RefAlpha, "ref<'a>")
-TYPE(NullPtr, "anyRef")
+// TYPE(NullPtr, "anyRef")
 
-LITERAL(Null, "null", "anyRef")
+// LITERAL(Null, "null", "anyRef")
 TYPE(VarList, "var_list")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------
@@ -263,6 +263,10 @@ OPERATION(Real, Ge, "real.ge", "(real<#a>,real<#a>) -> bool")
 
 GROUP(CompOp, IntCompOp, UIntCompOp, RealCompOp)
 
+// Conversion ---------------------------------------------------------------------------------------------------------
+
+LITERAL(RealToInt,	"real.to.int",	"(real<#a>, intTypeParam<#b>) -> int<#b>")
+
 // Bitwise Operations -------------------------------------------------------------------------------------------------
 
 GROUP(BitwiseIntOp, SignedIntNot, SignedIntAnd, SignedIntOr, SignedIntXor, SignedIntLShift, SignedIntRShift)
@@ -296,7 +300,7 @@ LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
 LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
 LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
 LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
-LITERAL(SetNull,   		"set.null",				"(ref<'a>) -> unit")
+
 
 // Any References -----------------------------------------------------------------------------------------------------
 
@@ -306,36 +310,35 @@ LITERAL(AnyRefToRef,    "anyref.to.ref",    		"(anyRef, type<'a>) -> ref<'a>")
 
 // General ------------------------------------------------------------------------------------------------------------
 
-LITERAL(BoolToInt, "bool.to.int", "(bool) -> int<4>")
+LITERAL(BoolToInt, 			"bool.to.int", 				"(bool) -> int<4>")
 
-LITERAL(Undefined, "undefined", "(type<'a>) -> 'a")
-LITERAL(InitZero, "initZero", "(type<'a>) -> 'a")
-LITERAL(Sizeof, "sizeof", "(type<'a>) -> uint<8>")
-LITERAL(IntTypeParamToInt, "int.type.param.to.int", "(intTypeParam<#n>)->int<8>")
+LITERAL(Undefined, 			"undefined", 				"(type<'a>) -> 'a")
+LITERAL(InitZero,			"initZero",	 				"(type<'a>) -> 'a")
+LITERAL(Sizeof, 			"sizeof", 					"(type<'a>) -> uint<8>")
+LITERAL(IntTypeParamToInt, 	"int.type.param.to.int", 	"(intTypeParam<#n>)->int<8>")
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
 GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArrayLength1D, ArrayLengthND, ArraySubscript1D, ArraySubscriptND)
 
-LITERAL(ArrayCreate1D, "array.create.1D", "(type<'elem>, uint<8>) -> array<'elem,1>")
-LITERAL(ArrayCreateND, "array.create.ND", "(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
+LITERAL(ArrayCreate1D, 		"array.create.1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
+LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
 
-LITERAL(ArrayLength1D, "array.length.1D", "(array<'elem,1>) -> uint<8>")
-LITERAL(ArrayLengthND, "array.length.ND", "(array<'elem,#n>) -> vector<uint<8>,#n>")
+LITERAL(ArrayLength1D, 		"array.length.1D", 		"(array<'elem,1>) -> uint<8>")
+LITERAL(ArrayLengthND, 		"array.length.ND", 		"(array<'elem,#n>) -> vector<uint<8>,#n>")
 
-LITERAL(ArraySubscript1D, "array.subscript.1D", "(array<'elem,1>, uint<8>) -> 'elem")
-LITERAL(ArraySubscriptND, "array.subscript.ND", "(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
+LITERAL(ArraySubscript1D, 	"array.subscript.1D", 	"(array<'elem,1>, uint<8>) -> 'elem")
+LITERAL(ArraySubscriptND, 	"array.subscript.ND", 	"(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
 
-LITERAL(ArrayRefElem1D, "array.ref.elem.1D", "(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
-LITERAL(ArrayRefElemND, "array.ref.elem.ND", "(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
+LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
+LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
 
-LITERAL(ArrayProjection1D, "array.projection.1D", "(array<'elem,1>,uint<8>,uint<8>) -> array<'elem,1>")
-LITERAL(ArrayProjectionND, "array.projection.ND",
-						   "(array<'elem,#n>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
+LITERAL(ArrayProjection1D, 	"array.projection.1D", 	"(array<'elem,1>,uint<8>,uint<8>) -> array<'elem,1>")
+LITERAL(ArrayProjectionND, 	"array.projection.ND",
+						   	"(array<'elem,#n>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
 LITERAL(ArrayRefProjection1D, "array.ref.projection.1D",
 							  "(ref<array<'elem,1>>,uint<8>,uint<8>) -> ref<array<'elem,1>>")
-
 LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 							  "(ref<array<'elem,#n>>,vector<uint<8>,#n>,vector<uint<8>,#n>) -> ref<array<'elem,#n>>")
 
@@ -343,31 +346,38 @@ LITERAL(ArrayRefProjectionND, "array.ref.projection.ND",
 LITERAL(ArrayElemToVec, "array.elem.to.vec",
 						"(array<ref<'elem>,1>, intTypeParam<#n>) -> array<ref<vector<'elem,#n>>,1>")
 
+// -- special operations to support encoding of C pointers as arrays ----------------------------------------------------
+
+LITERAL(IsNull,   		"is.null",				"(array<'a,1>) -> bool")
+LITERAL(GetNull,   		"get.null",				"(type<'a>) -> array<'a,1>")
+LITERAL(PtrEq,			"ptr.eq",				"(array<'a,1>, array<'a,1>) -> bool")
+
 // Vectors ------------------------------------------------------------------------------------------------------------
 
 GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction)
 
 // deprecated
-LITERAL(VectorSubscript,      "vector.subscript",       "(vector<'elem,#l>, uint<#a>) -> 'elem")
-LITERAL(VectorInitUniform,    "vector.init.uniform",    "('elem, intTypeParam<#a>) -> vector<'elem,#a>")
-LITERAL(VectorInitUndefined,  "vector.init.undefined",  "(intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
+LITERAL(VectorInitUniform,    	"vector.init.uniform",    	"('elem, intTypeParam<#a>) -> vector<'elem,#a>")
+LITERAL(VectorInitUndefined,  	"vector.init.undefined",  	"(intTypeParam<#a>) -> vector<'elem,#a>")
 
-LITERAL(VectorRefElem, "vector.ref.elem", "(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
+LITERAL(VectorRefElem, 			"vector.ref.elem", 			"(ref<vector<'elem,#l>>, uint<8>) -> ref<'elem>")
 
-LITERAL(VectorPointwise,      "vector.pointwise",
-							  "(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
-LITERAL(VectorPointwiseUnary, "vector.pointwise.unary", "(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
-LITERAL(VectorReduction,      "vector.reduction",       "(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
-LITERAL(VectorPermute,        "vector.permute",         "(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
+LITERAL(VectorPointwise,      	"vector.pointwise",
+							  	"(('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>")
 
-LITERAL(VectorProjection, "vector.projection",
-						  "(vector<'elem,#n>,intTypeParam<#s>,intTypeParam<#m>) -> vector<'elem,#m>")
-LITERAL(VectorRefProjection, "vector.ref.projection",
-							 "(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
+LITERAL(VectorPointwiseUnary, 	"vector.pointwise.unary", 	"(('elem) -> 'res) -> (vector<'elem,#l>) -> vector<'res, #l>")
+LITERAL(VectorReduction,      	"vector.reduction",       	"(vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res")
+LITERAL(VectorPermute,        	"vector.permute",         	"(vector<'elem,#l>, vector<uint<#a>,#m>) -> vector<'elem,#m>")
 
+LITERAL(VectorProjection, 		"vector.projection",
+						  		"(vector<'elem,#n>,intTypeParam<#s>,intTypeParam<#m>) -> vector<'elem,#m>")
 
-LITERAL(VectorToArray, 		"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
-LITERAL(RefVectorToRefArray, "ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
+LITERAL(VectorRefProjection, 	"vector.ref.projection",
+							 	"(ref<vector<'elem,#n>>,intTypeParam<#s>,intTypeParam<#m>) -> ref<vector<'elem,#m>>")
+
+LITERAL(VectorToArray, 			"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
+LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
 							 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 

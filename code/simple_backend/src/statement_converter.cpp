@@ -198,10 +198,13 @@ namespace simple_backend {
 			vector<TypePtr> params = toVector<TypePtr>(basic.getInt4(),
 					builder.refType(builder.arrayType(builder.arrayType(basic.getChar(), one), one)));
 
-			FunctionTypePtr funPtr = builder.functionType(params, basic.getInt4());
+			FunctionTypePtr funPtr1 = builder.functionType(params, basic.getInt4());
+			FunctionTypePtr funPtr2 = builder.functionType(TypeList(), basic.getInt4());
+			FunctionTypePtr funPtr3 = builder.functionType(TypeList(), basic.getUnit());
 
 			// check type
-			return program->getEntryPoints()[0]->getType() == funPtr;
+			const TypePtr& type = program->getEntryPoints()[0]->getType();
+			return *type == *funPtr1 || *type == *funPtr2 || *type == *funPtr3;
 		}
 
 	}
@@ -212,7 +215,7 @@ namespace simple_backend {
 		// TODO: remove second clause when frontend is fixed ...
 
 		// check whether program is a main program
-		if (true || program->isMain() || isMainProgram(program)) {
+		if (program->isMain() || isMainProgram(program)) {
 
 			// create main program + argument wrapper (if necessary)
 			CodeFragmentPtr code = CodeFragment::createNew("main function");
@@ -254,8 +257,11 @@ namespace simple_backend {
 			string charArrayArrayName = cc.getTypeManager().getTypeName(code, aaCharType, true);
 			string charArrayName = cc.getTypeManager().getTypeName(code, aCharType, true);
 
+			// check whether the arrays length should be supported
+			bool useSize = cc.isSupportArrayLength();
+
 			code << "int argc = __argc;\n";
-			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc), {argc}};\n";
+			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc)" << ((useSize)?", {argc}":"") << "};\n";
 
 			// create a literal for the strlen function
 			ASTBuilder builder(cc.getNodeManager());
@@ -263,13 +269,20 @@ namespace simple_backend {
 					toVector<TypePtr>(builder.refType(aCharType)),
 					builder.getBasicGenerator().getUInt8());
 
-			LiteralPtr strlen = builder.literal(strLenType, "strlen");
-			string strlenName = cc.getFunctionManager().getFunctionName(code, strlen);
+			if (useSize) {
+				LiteralPtr strlen = builder.literal(strLenType, "strlen");
+				string strlenName = cc.getFunctionManager().getFunctionName(code, strlen);
 
-			// initialize argument vector data structure
-			code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
-			code << "argv.data[i] = (" << charArrayName << "){__argv[i],{" << strlenName << "(__argv[i])+1}};" << CodeBuffer::indL;
-			code << "\n}\n";
+				// initialize argument vector data structure
+				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
+				code << "argv.data[i] = (" << charArrayName << "){__argv[i],{" << strlenName << "(__argv[i])+1}};" << CodeBuffer::indL;
+				code << "\n}\n";
+			} else {
+				// initialize argument vector data structure
+				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
+				code << "argv.data[i] = (" << charArrayName << "){__argv[i]};" << CodeBuffer::indL;
+				code << "\n}\n";
+			}
 
 
 			// add body
@@ -317,31 +330,24 @@ namespace simple_backend {
 		info.location = VariableManager::NONE;
 		bool isAllocatedOnHEAP = false;
 		if (var->getType()->getNodeType() == NT_RefType) {
-
-			const RefTypePtr& refType = static_pointer_cast<const RefType>(var->getType());
-			if (refType->getElementType()->getNodeType() == NT_ArrayType) {
-				// this is a "pointer" in C - and a pointer is on the stack (pointing to the HEAP)
-				info.location = VariableManager::STACK;
-			} else {
-				ExpressionPtr initialization = ptr->getInitialization();
-				switch (initialization->getNodeType()) {
-				case NT_Variable:
-					info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
-					break;
-				case NT_CallExpr:
-					if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
-						info.location = VariableManager::HEAP;
-						isAllocatedOnHEAP = true;
-					} else {
-						info.location = VariableManager::STACK;
-					}
-
-					break;
-				default:
-					// default is a stack variable
+			ExpressionPtr initialization = ptr->getInitialization();
+			switch (initialization->getNodeType()) {
+			case NT_Variable:
+				info = varManager.getInfo(static_pointer_cast<const Variable>(initialization));
+				break;
+			case NT_CallExpr:
+				if (analysis::isCallOf(initialization, cc.getLangBasic().getRefNew())) {
+					info.location = VariableManager::HEAP;
+					isAllocatedOnHEAP = true;
+				} else {
 					info.location = VariableManager::STACK;
-					break;
 				}
+
+				break;
+			default:
+				// default is a stack variable
+				info.location = VariableManager::STACK;
+				break;
 			}
 		}
 		varManager.addInfo(var, info);
@@ -408,22 +414,6 @@ namespace simple_backend {
 				// start new line .. initialization of a member is required
 				code << ";\n";
 
-				// special treatement of vector initialization
-				if (value->getNodeType() == NT_VectorExpr) {
-
-					VectorTypePtr vectorType = static_pointer_cast<const VectorType>(static_pointer_cast<const VectorExpr>(value)->getType());
-					string elementName = cc.getTypeManager().getTypeName(code, vectorType->getElementType(), true);
-
-					// init values using memcopy
-					code << "memcpy(&((*" << varName << ")." << *name << "),&((" << elementName << "[])";
-					this->visit(value);
-					code << "), sizeof(";
-					code << elementName;
-					code << ") * " << toString(*(vectorType->getSize()));
-					code << ")";
-					return;
-				}
-
 				// create assignment statement
 				auto target = builder.callExpr(basic.getCompositeRefElem(), var,
 						basic.getIdentifierLiteral(name), basic.getTypeLiteral(value->getType()));
@@ -440,7 +430,7 @@ namespace simple_backend {
 			CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
 			visit(call->getArguments()[0]);
 		} else {
-			if (!core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefNew())) {
+			if (var->getType()->getNodeType() == NT_RefType && !core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefNew())) {
 				code << "*"; // dereference the produced value
 			}
 			visit(ptr->getInitialization());
@@ -626,6 +616,19 @@ namespace simple_backend {
 		switch(funExp->getNodeType()) {
 
 			case NT_Literal: {
+
+				// TODO: internalize results using general mechanism
+				bool internalize = false;
+				TypePtr returnType = funType->getReturnType();
+				if (returnType->getNodeType() == NT_RefType) {
+					TypePtr elementType = static_pointer_cast<const RefType>(returnType)->getElementType();
+					if (elementType->getNodeType() == NT_ArrayType) {
+						internalize = true;
+						// add conversion
+						code << "&((" << cc.getTypeManager().getTypeName(code, elementType) << "){";
+					}
+				}
+
 				code << cc.getFunctionManager().getFunctionName(code, static_pointer_cast<const Literal>(funExp));
 				code << "(";
 
@@ -633,6 +636,10 @@ namespace simple_backend {
 				//addArgumentList(*this, code, params, args, true);
 				functionalJoin([&]{ code << ", "; }, args, parameterExternalizer);
 				code << ")";
+
+				if (internalize) {
+					code << (cc.isSupportArrayLength()?",{1}})":"})");
+				}
 				return;
 			}
 
@@ -688,6 +695,10 @@ namespace simple_backend {
 				// use caller to evaluate bind expression
 				code << info.callerName << "(";
 				visit(funExp);
+				if (!args.empty()) {
+					code << ", ";
+					addArgumentList(*this, code, params, args, false);
+				}
 				code << ")";
 				return;
 			}
@@ -729,6 +740,11 @@ namespace simple_backend {
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {
+		if (cc.getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
+			currentCodeFragment << "return";
+			return;
+		}
+
 		currentCodeFragment << "return ";
 		visit(ptr->getReturnExpr());
 	}

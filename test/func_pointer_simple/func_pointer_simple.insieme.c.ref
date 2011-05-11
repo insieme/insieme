@@ -1,0 +1,87 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+} __insieme_type_0;
+
+// start code fragment :: Definitions for function type: __insieme_funType_4 //
+//
+// -------------------- Begin of constructs for function type ((int<4>,int<4>)->int<4>)---------------------
+// Base-struct of describing closures of type __insieme_funType_4 <-> ((int<4>,int<4>)->int<4>)
+typedef struct ___insieme_funType_4 { 
+    int(*call)(void*, int, int);
+} __insieme_funType_4;
+
+// Type safe function for invoking closures of type __insieme_funType_4
+static inline int __insieme_funType_4_call(__insieme_funType_4* closure, int p1, int p2) { return closure->call(closure, p1,p2); }
+
+// A constructor for closures wrapping pure functions of type ((int<4>,int<4>)->int<4>)
+static inline __insieme_funType_4* __insieme_funType_4_ctr(__insieme_funType_4* target, int(*call)(void*, int, int)) {
+	*target = (__insieme_funType_4){call};
+	return target;
+}
+// ----------------------- end of constructs for function ((int<4>,int<4>)->int<4>)-----------------------
+
+// start code fragment :: array type definition of __insieme_type_3 <=> array<((int<4>,int<4>)->int<4>),1> //
+typedef struct ___insieme_type_3 { 
+    __insieme_funType_4** data;
+} __insieme_type_3;
+
+// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<((int<4>,int<4>)->int<4>),1> //
+typedef struct ___insieme_type_6 { 
+    __insieme_funType_4* data[1];
+} __insieme_type_6;
+
+// A constructor initializing a vector of the type __insieme_type_6 uniformly
+static inline __insieme_type_6 __insieme_type_6_init_uniform(__insieme_funType_4* value) {
+	__insieme_type_6 res;
+	for (int i=0; i<1;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: Definition of __insieme_supp_7 ... type: ((int<4>,int<4>)->int<4>) //
+int __insieme_supp_7(int a, int b) { return (((a<b))?(a):(b)); }
+static int __insieme_supp_7_wrap(void* _closure, int a, int b) { return __insieme_supp_7(a, b); }
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i]};
+	}
+	
+	// ---- begin of actual code body ----
+	{
+		int a = 10;
+		int b = 20;
+		__insieme_type_3 f = (((__insieme_type_3){(__insieme_type_6_init_uniform((__insieme_funType_4*)__insieme_funType_4_ctr((__insieme_funType_4*)alloca(sizeof(__insieme_funType_4)),&__insieme_supp_7_wrap))).data}));
+		printf(((char*)((*(&((__insieme_type_1){"Direct call:  min(%d,%d)=%d\n"}))).data)), (a), (b), __insieme_supp_7((a), (b)));
+		printf(((char*)((*(&((__insieme_type_1){"Pointer call:   f(%d,%d)=%d\n"}))).data)), (a), (b), __insieme_funType_4_call((f).data[0], (a), (b)));
+	}
+	// ----  end of actual code body  ----
+	
+}
+

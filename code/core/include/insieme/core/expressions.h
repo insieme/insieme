@@ -525,6 +525,12 @@ public:
 	const CallExprPtr& getCall() const {
 		return call;
 	}
+
+	/**
+	 * Obtains a list of all expressions which's resulting value is bound by this expression.
+	 */
+	vector<ExpressionPtr> getBoundExpressions() const;
+
 };
 
 

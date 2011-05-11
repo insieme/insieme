@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 using namespace insieme::core;
@@ -77,5 +78,86 @@ TEST(PrettyPrinter, Basic) {
 	EXPECT_TRUE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
 	printerC.setOption(PrettyPrinter::PRINT_DEREFS, false);
 	EXPECT_FALSE(printerC.hasOption(PrettyPrinter::PRINT_DEREFS));
+
+}
+
+TEST(PrettyPrinter, Wrapper) {
+
+	NodeManager mgr;
+
+	LiteralPtr lit = Literal::get(mgr, "\"this is a string literal\"", mgr.basic.getString());	
+	LiteralPtr one = Literal::get(mgr, "1", mgr.basic.getInt4());
+	VariablePtr val = Variable::get(mgr, mgr.basic.getInt4());
+	DeclarationStmtPtr declStmt = DeclarationStmt::get(mgr, mgr.basic.getInt4(), one);
+	ForStmtPtr forStmt = ForStmt::get(mgr, declStmt, lit, val, one);
+
+	PrettyPrinter printerA(forStmt, PrettyPrinter::OPTIONS_DEFAULT);
+
+	std::ostringstream ss1;
+	SourceLocationMap srcMap = printAndMap(ss1, printerA);
+
+	std::ostringstream ss2;
+	ss2 << printerA;
+
+	// EXPECT_EQ(ss2.str(), ss1.str());
+
+	// print the map
+	std::cout << ss2.str() << std::endl;
+	std::cout << srcMap;
+
+	// ForStmt loc
+	SourceLocationMap::const_iterator it = srcMap.begin();
+	EXPECT_EQ(forStmt, it->second);
+	EXPECT_EQ(SourceLocation(0,0), it->first.first );
+	EXPECT_EQ(SourceLocation(2,0), it->first.second );
+	
+	++it;
+
+	// DeclStmt loc
+	EXPECT_EQ(declStmt, it->second);
+	EXPECT_EQ(SourceLocation(0,4), it->first.first );
+	EXPECT_EQ(SourceLocation(0,22), it->first.second );
+
+	++it;
+
+	// int<4> type loc
+	EXPECT_EQ(mgr.basic.getInt4(), it->second);
+	EXPECT_EQ(SourceLocation(0,9), it->first.first );
+	EXPECT_EQ(SourceLocation(0,15), it->first.second );
+	
+	++it;
+
+	// var v2 loc
+	EXPECT_EQ(declStmt->getVariable(), it->second);
+	EXPECT_EQ(SourceLocation(0,16), it->first.first );
+	EXPECT_EQ(SourceLocation(0,18), it->first.second );
+
+	++it;
+
+	// init value (1) loc
+	EXPECT_EQ(declStmt->getInitialization(), it->second);
+	EXPECT_EQ(SourceLocation(0,21), it->first.first );
+	EXPECT_EQ(SourceLocation(0,22), it->first.second );
+
+	++it;
+
+	// for loop end condition (1) loc
+	EXPECT_EQ(forStmt->getEnd(), it->second);
+	EXPECT_EQ(SourceLocation(0,26), it->first.first );
+	EXPECT_EQ(SourceLocation(0,28), it->first.second );
+
+	++it;
+
+	// for loop step (1) loc
+	EXPECT_EQ(forStmt->getStep(), it->second);
+	EXPECT_EQ(SourceLocation(0,31), it->first.first );
+	EXPECT_EQ(SourceLocation(0,32), it->first.second );
+
+	++it;
+
+	// for loop body (lit) loc
+	EXPECT_EQ(forStmt->getBody(), it->second);
+	EXPECT_EQ(SourceLocation(1,4), it->first.first );
+	EXPECT_EQ(SourceLocation(1,30), it->first.second );
 
 }

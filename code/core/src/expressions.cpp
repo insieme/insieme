@@ -958,6 +958,23 @@ std::ostream& BindExpr::printTo(std::ostream& out) const {
 	return out << "bind(" << join(",", parameters, print<deref<VariablePtr>>()) << "){" << *call << "}";
 }
 
+vector<ExpressionPtr> BindExpr::getBoundExpressions() const {
+	vector<ExpressionPtr> res;
+
+	for_each(call->getArguments(), [&](const ExpressionPtr& cur) {
+		if (cur->getNodeType() == NT_Variable) {
+			const VariablePtr& var = static_pointer_cast<const Variable>(cur);
+			if (contains(parameters, var)) {
+				return;
+			}
+		}
+		// add to bind expressions
+		res.push_back(cur);
+	});
+
+	return res;
+}
+
 
 
 // ------------------------ Member Access Expression ------------------------

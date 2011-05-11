@@ -38,6 +38,7 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/simple_backend/type_manager.h"
+#include "insieme/simple_backend/backend_convert.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -58,14 +59,20 @@ bool containsSubString(const string& str, const string& substr) {
 	return str.find(substr) != string::npos;
 }
 
+// a small test verifying that the given substr is contained within the given string
+bool notContainsSubString(const string& str, const string& substr) {
+	return !containsSubString(str, substr);
+}
 
 TEST(TypeManager, Basic) {
 
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -105,8 +112,10 @@ TEST(TypeManager, StructTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -139,8 +148,10 @@ TEST(TypeManager, RefTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -220,8 +231,10 @@ TEST(TypeManager, ArrayTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter(true);
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -272,13 +285,41 @@ TEST(TypeManager, ArrayTypes) {
 	EXPECT_PRED2(containsSubString, toString(info.definition), "long** data;");
 }
 
+TEST(TypeManager, ArrayTypesNoSize) {
+
+	core::ASTBuilder builder;
+	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+
+	Converter converter(false);
+	SimpleNameManager nameManager;
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
+
+	TypeManager::TypeInfo info;
+	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
+
+
+	core::TypePtr type = builder.arrayType(basic.getInt4());
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("name", info.lValueName);
+	EXPECT_EQ("name", info.rValueName);
+	EXPECT_EQ("name %s", info.declPattern);
+	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
+	EXPECT_PRED2(notContainsSubString, toString(info.definition), "unsigned size[1];");
+	EXPECT_PRED2(containsSubString, toString(info.definition), "int* data;");
+}
+
 TEST(TypeManager, VectorTypes) {
 
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -334,8 +375,10 @@ TEST(TypeManager, FunctionTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
+	Converter converter;
 	SimpleNameManager nameManager;
-	TypeManager typeManager(nameManager);
+	converter.setNameManager(&nameManager);
+	TypeManager typeManager(converter);
 
 	TypeManager::TypeInfo info;
 	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
@@ -352,14 +395,14 @@ TEST(TypeManager, FunctionTypes) {
 	type = builder.functionType(toVector(typeA, typeB), typeC);
 	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
-	EXPECT_EQ("struct name*", info.lValueName);
-	EXPECT_EQ("struct name*", info.rValueName);
-	EXPECT_EQ("struct name* %s", info.declPattern);
-	EXPECT_EQ("struct name* %s", info.paramPattern);
+	EXPECT_EQ("name*", info.lValueName);
+	EXPECT_EQ("name*", info.rValueName);
+	EXPECT_EQ("name* %s", info.declPattern);
+	EXPECT_EQ("name* %s", info.paramPattern);
 
 	TypeManager::FunctionTypeInfo details = typeManager.getFunctionTypeInfo(type);
-	EXPECT_EQ("struct name", details.closureName);
-	EXPECT_EQ("test_call_name", details.callerName);
+	EXPECT_EQ("name", details.closureName);
+	EXPECT_EQ("name_call", details.callerName);
 	EXPECT_TRUE(::contains(fragment->getDependencies(), details.definitions));
 }
 

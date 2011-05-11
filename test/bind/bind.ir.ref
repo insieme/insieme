@@ -1,0 +1,25 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v1 =  var(10);
+        decl ref<int<4>> v2 =  var(20);
+        decl ref<int<4>> v3 =  var(5);
+        decl ref<int<4>> v4 =  var(ite(v1<ite(v2<v3, bind(){fun(ref<int<4>> v11)return v11(v2)}, bind(){fun(ref<int<4>> v9)return v9(v3)}), bind(){fun(ref<int<4>> v16)return v16(v1)}, bind(){fun(ref<int<4>> v13, ref<int<4>> v14)return ite(v13<v14, bind(){fun(ref<int<4>> v7)return v7(v13)}, bind(){fun(ref<int<4>> v5)return v5(v14)})(v2, v3)}));
+        printf(string.as.char.pointer("Min: %d\n"), varlist.pack((v4)));
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v1 = ( var(10));
+        decl ref<int<4>> v2 = ( var(20));
+        decl ref<int<4>> v3 = ( var(5));
+        decl ref<int<4>> v4 = ( var(ite((( *v1)<ite((( *v2)<( *v3)), bind(){fun(ref<int<4>> v11)return ( *v11)(v2)}, bind(){fun(ref<int<4>> v9)return ( *v9)(v3)})), bind(){fun(ref<int<4>> v16)return ( *v16)(v1)}, bind(){fun(ref<int<4>> v13, ref<int<4>> v14)return ite((( *v13)<( *v14)), bind(){fun(ref<int<4>> v7)return ( *v7)(v13)}, bind(){fun(ref<int<4>> v5)return ( *v5)(v14)})(v2, v3)})));
+        printf(string.as.char.pointer("Min: %d\n"), varlist.pack((( *v4))));
+    }
+

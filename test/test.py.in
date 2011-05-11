@@ -5,7 +5,7 @@ CFLAGS = "--std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insiem
 LDFLAGS_ORG = "-lm -lpthread -g"
 LDFLAGS_RES = "-lm -lpthread -g -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
 #CC = "gcc -pedantic-errors -Wall"
-CC = "gcc"
+CC = "gcc -fshow-column -Wall"
 runOcl = 0
 printErr = 0
 verbose = 0
@@ -117,7 +117,7 @@ def run_test_case(test_case_name):
 	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
 	os.chdir(test_case_name)
 	# RUN insieme to generate the IR dump and C output
-	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} -S -o {C_DUMP} {FLAGS}".format(
+	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --col-wrap=120 -S -o {C_DUMP} {FLAGS}".format(
 						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 
 						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg}) 
 				 )
@@ -143,7 +143,7 @@ def run_test_case(test_case_name):
 	  shutil.copyfile(testCfg, refCfg)
 	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 
-	sys.stderr.write(" * Comparing generated CFG...            ")
+	sys.stderr.write(" * Comparing generated CFG...           ")
 	if check_diff(test_case_name, refCfg, testCfg):
 		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 	else:

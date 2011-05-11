@@ -38,6 +38,7 @@
 
 #include <cassert>
 #include <memory>
+#include <iomanip>
 
 #include <boost/unordered_map.hpp>
 
@@ -45,6 +46,9 @@
 
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
+
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/concepts.hpp> 
 
 namespace insieme {
 namespace core {
@@ -214,6 +218,7 @@ namespace {
 		 */
 		unsigned depth;
 
+
 	public:
 
 		/**
@@ -235,26 +240,79 @@ namespace {
 		 * A macro simplifying the definition for print routine of some node type.
 		 */
 		#define PRINT(NodeType, Print) \
-			void visit ## NodeType (const NodeType ## Ptr& node) { \
+		virtual	void visit ## NodeType (const NodeType ## Ptr& node) { \
 				if (depth > print.maxDepth) { \
 					out << " ... "; \
 					return;\
 				}\
 				depth++; \
 				Print \
+				out.flush(); \
 				depth--; \
 				} \
-
 
 		PRINT(Identifier, {
 				// identifiers can be directly printed
 				out << *node;
 		});
 
-		PRINT(Type, {
-				// types can be handled easilly ...
+		PRINT(GenericType, {
+				out << node->getFamilyName();
+				const std::vector<TypePtr>& types = node->getTypeParameter();
+				const std::vector<IntTypeParamPtr>& intTypes = node->getIntTypeParameter();
+				
+				if( types.empty() && intTypes.empty() ) {
+					return;
+				}
+
+				out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur){ this->visit(cur); } );
+
+				if ( !types.empty() && !intTypes.empty() ) {
+			   		out << ",";	
+				}
+
+				out << join(",", intTypes, 
+							[&](std::ostream& jout, const IntTypeParamPtr& cur){ jout << *cur; } ) << ">"; 
+		});
+
+		PRINT(FunctionType, {
+				out << "(" << join(", ", node->getParameterTypes(), 
+						[&](std::ostream&, const TypePtr& cur){ this->visit(cur); }) 
+					<< ") -> ";
+				visit( node->getReturnType() );
+		});
+
+		PRINT(RecType, {
+				out << "rec ";
+				visit(node->getTypeVariable());
+				out << "{" << join(", ", node->getDefinition()->getDefinitions(), 
+					[&](std::ostream& jout, const RecTypeDefinition::RecTypeDefs::value_type& cur) {
+						this->visit(cur.first);
+						jout << "=";
+						this->visit(cur.second);
+				}) << "}";
+		});
+
+		PRINT(NamedCompositeType, {		
+			out << ((node->getNodeType() == NT_UnionType)?"union<":"struct<");
+			out << join(",", node->getEntries(), 
+				[&](std::ostream& out, const NamedCompositeType::Entry& cur) {
+					this->visit(cur.first);
+					out << ":";
+				   this->visit(cur.second);
+			    }) << ">";
+		});
+
+		PRINT(TupleType, {
+				out << '(' << join(",", node->getElementTypes(), 
+						[&](std::ostream&,const TypePtr& cur){ this->visit(cur); }) 
+					<< ')';
+		});
+
+		PRINT(Type,{
 				out << *node;
 		});
+
 
 		PRINT(BreakStmt, {
 				out << "break";
@@ -271,10 +329,12 @@ namespace {
 
 		PRINT(DeclarationStmt, {
 				// print type
-				VariablePtr var = node->getVariable();
+				const VariablePtr& var = node->getVariable();
 				out << "decl ";
 				this->visit(var->getType());
-				out << " " << *var << " = ";
+				out << " ";
+				this->visit(var);
+			   	out << " = ";
 				this->visit(node->getInitialization());
 		});
 
@@ -291,7 +351,7 @@ namespace {
 					out << ";";
 					this->newLine();
 				});
-				this->visit(*(list.end()-1));
+				this->visit(list.back());
 				out << ";";decreaseIndent(); newLine();
 				out << "}";
 		});
@@ -314,13 +374,13 @@ namespace {
 				this->visit(node->getStep());
 				out << ") ";
 
-				NodePtr body = node->getBody();
+				NodePtr&& body = node->getBody();
 				if (body->getNodeType() != NT_CompoundStmt) {
 					increaseIndent(); this->newLine();
 					this->visit(body);
 					decreaseIndent(); this->newLine();
 				} else {
-					this->visit(node->getBody());
+					this->visit(body);
 				}
 		});
 
@@ -357,6 +417,12 @@ namespace {
 		});
 
 		PRINT(Literal, {
+				if (GenericTypePtr&& genTy = core::dynamic_pointer_cast<const GenericType>(node->getType()) ) {
+					if(genTy->getFamilyName() == "type") {
+						visit(genTy);
+						return;
+					}
+				}
 				out << *node;
 		});
 
@@ -391,7 +457,8 @@ namespace {
 				out << "{"; increaseIndent(); newLine();
 				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaPtr>& cur) {
-					out << *cur.first << " = ";
+					this->visit(cur.first);
+					out << " = ";
 					this->visit(cur.second);
 					out << ";";
 					if (count++ < defs.size() -1) this->newLine();
@@ -405,7 +472,9 @@ namespace {
 
 		PRINT(Lambda, {
 				auto paramPrinter = [&](std::ostream& out, const VariablePtr& cur) {
-					out << *cur->getType() << " " << *cur;
+					this->visit(cur->getType());
+				    out << " ";
+				    this->visit(cur);
 				};
 
 				out << "fun(" << join(", ", node->getParameterList(), paramPrinter) << ")";
@@ -459,7 +528,9 @@ namespace {
 
 		PRINT(CastExpr, {
 				if (print.hasOption(PrettyPrinter::PRINT_CASTS)) {
-					out << "CAST<" << *node->getType() << ">(";
+					out << "CAST<";
+				   	this->visit(node->getType());
+				    out << ">(";
 					this->visit(node->getSubExpression());
 					out << ")";
 				} else {
@@ -474,18 +545,21 @@ namespace {
 		});
 
 		PRINT(VectorExpr, {
-				std::vector<ExpressionPtr> elements = node->getExpressions();
+			const size_t limit = 5;	// TODO: parametrize this?
+			const std::vector<ExpressionPtr>& elements = node->getExpressions();
 
-				const std::size_t limit = 5;
-				bool cut = false;
-				if (elements.size() > limit) {
-					elements = std::vector<ExpressionPtr>(elements.begin(), elements.begin()+limit);
-					cut = true;
-				}
+			bool cut = (elements.size() > limit);
+			
+			//if (elements.size() > limit) {
+				//elements = std::vector<ExpressionPtr>(elements.begin(), elements.begin()+limit);
+				//cut = true;
+			//}
+			
+			std::vector<ExpressionPtr>::const_iterator end = cut ? elements.begin()+limit : elements.end();
 
-				out << "[" << ::join(", ", elements, [&](std::ostream&, const ExpressionPtr& cur) {
-					this->visit(cur);
-				}) << ((cut)?", ...":"") << "]";
+			out << "[" << ::join(", ", elements.begin(), end, [&](std::ostream&, const ExpressionPtr& cur) {
+				this->visit(cur);
+			}) << ((cut)?", ...":"") << "]";
 		});
 
 		PRINT(JobExpr, {
@@ -548,7 +622,8 @@ namespace {
 				out << "{"; increaseIndent(); newLine();
 				std::size_t count = 0;
 				for_each(defs.begin(), defs.end(), [&](const std::pair<const TypeVariablePtr, TypePtr>& cur) {
-					out << *cur.first << " = ";
+					this->visit(cur.first);
+					out << " = ";
 					this->visit(cur.second);
 					out << ";";
 					if (count++ < defs.size() -1) this->newLine();
@@ -601,11 +676,11 @@ namespace {
 			if (print.hasOption(PrettyPrinter::PRINT_SINGLE_LINE)) {
 				return;
 			}
-
+			out.flush();
 			// print a new line
 			out << std::endl;
 			for (unsigned i=0; i<indent; i++) {
-				out << "    ";;
+				out << std::string(print.tabSep.second, print.tabSep.first);
 			}
 		}
 
@@ -621,6 +696,84 @@ namespace {
 		 */
 		void decreaseIndent() {
 			indent--;
+		}
+	};
+
+	// OutputStreamWrapper: Wraps the output stream capturing all the operations performed on it
+	// it used to keep the current position in the output stream and forward the characters to the 
+	// real output stream
+	class OutputStreamWrapper : public boost::iostreams::sink {
+		std::ostream& out;
+		// keep track of the current position in the output stream
+		SourceLocation currLoc;
+		static const size_t width = 8;
+		const bool showLineNo;
+		const bool colWrap;
+		const size_t colWidth;
+
+		void newLine() {
+			++currLoc.first; 		// increment the line number
+			currLoc.second = 0;		// set the column number to 0
+
+			if (showLineNo) {
+				out << std::setw(width) << std::setiosflags(std::ios::left) << currLoc.first;
+			}
+		}
+
+	public:
+		OutputStreamWrapper(std::ostream& out, bool showLineNo, int columnWrap) : 
+			 out(out), currLoc(0,0), showLineNo(showLineNo), colWrap(columnWrap != -1), colWidth(columnWrap)
+		{ 
+			if(showLineNo) {
+				out << std::setw(width) << std::setiosflags(std::ios::left) << 0; 
+			}
+		}
+
+    	std::streamsize write(const char* s, std::streamsize n) {
+			if ( colWrap && (n+currLoc.second) > colWidth ) {
+				out << std::endl;
+				newLine();
+			}
+			out.write(s,n);
+			// new lines are printed from the pretty printer separately
+			// therefore we can capture them easily
+			if ( n == 1 && *s == '\n' ) {
+				newLine();
+				return n;
+			}
+			currLoc.second += n;
+			return n;
+		}
+
+		SourceLocation getSrcLoc() const { return currLoc; }
+
+	};
+
+	// InspireMapPrinter: this visitor extend the basic InspirePrinter adding the 
+	// capability to map each source range to the corresponding generating IR node 
+	struct InspireMapPrinter : public InspirePrinter {
+		
+		// reference to the underlying output stream
+		std::ostream& out;
+		// reference to the stream wrapper used to get the current position in the 
+		// generated code 
+		const OutputStreamWrapper& wout;
+
+		// Range -> IR nodes map
+		SourceLocationMap& srcMap;
+
+		InspireMapPrinter(boost::iostreams::stream<OutputStreamWrapper>& out, SourceLocationMap& srcMap, const PrettyPrinter& print) 
+				: InspirePrinter(out, print), out(out), wout(*out), srcMap(srcMap) { }
+
+		void visit(const NodePtr& node) {
+
+			out.flush();
+			SourceLocation&& start = wout.getSrcLoc();
+			InspirePrinter::visit(node);
+			out.flush();
+			SourceLocation&& end = wout.getSrcLoc();
+
+			srcMap.insert( std::make_pair(SourceRange(start,end), node) );
 		}
 	};
 
@@ -648,7 +801,7 @@ namespace {
 	 * @param n the index of the argument to be printed; in case there is no such argument a ? is printed.
 	 */
 	void printArgument(InspirePrinter& printer, const CallExprPtr& call, unsigned n) {
-		NodePtr argument = getArgument(call, n);
+		NodePtr&& argument = getArgument(call, n);
 		if (argument) {
 			printer.visit(argument);
 		} else {
@@ -738,7 +891,7 @@ namespace {
 
 		ADD_FORMATTER(basic.getCreateMinRange(), { OUT("["); PRINT_ARG(0); OUT("-inf]"); });
 		ADD_FORMATTER(basic.getCreateBoundRange(), { OUT("["); PRINT_ARG(0); OUT("-"); PRINT_ARG(1); OUT("]"); });
-
+		
 		#undef ADD_FORMATTER
 		#undef OUT
 		#undef ARG
@@ -749,6 +902,21 @@ namespace {
 	}
 
 } // end of anonymous namespace
+
+SourceLocationMap printAndMap( std::ostream& out, const insieme::core::printer::PrettyPrinter& print, bool showLineNo, int columnWrap) { 
+	using namespace insieme::core::printer;
+	// create a boost stream out of it and pass it to the visitor
+	boost::iostreams::stream<OutputStreamWrapper> wrappedOutStream( out, showLineNo, columnWrap );
+	
+	// In order to avoid a copy when the map is returned, we pass it to the printer
+	SourceLocationMap srcMap;
+	
+	InspireMapPrinter printer(wrappedOutStream, srcMap, print);
+	printer.visit(print.root);
+	wrappedOutStream.flush();
+
+	return srcMap;
+}
 
 } // end of namespace printer
 } // end of namespace core
@@ -767,6 +935,29 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::printer::Pretty
 	// use inspire printer to print the code ...
 	insieme::core::printer::InspirePrinter printer(out, print);
 	printer.visit(print.root);
+	return out;
+}
+
+
+std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceLocationMap& srcMap) {
+	using namespace insieme::core::printer;
+
+	for(SourceLocationMap::const_iterator it = srcMap.begin(), end=srcMap.end(); it != end; ++it) {
+		std::string&& stmt = it->second->toString();
+		size_t length = stmt.length();
+		
+		std::cout << "@ RANGE: " << it->first << std::endl 
+			      << "\t-> IR node [addr: " << &*it->second << "] ";
+	   
+		if(length < 10)
+			out << stmt;
+		else {
+			// we want to show the last 5 chars just to give an idea of the context
+			size_t remains = (length-10)>5?5:length-10;
+			out << stmt.substr(0,10) << "..." << stmt.substr(length-remains, length-1); 
+		}
+		out << std::endl;
+	}
 	return out;
 }
 

@@ -36,6 +36,8 @@
 
 #include "insieme/simple_backend/type_manager.h"
 
+#include "insieme/simple_backend/backend_convert.h"
+
 #include "insieme/core/types.h"
 
 #include "insieme/c_info/naming.h"
@@ -101,6 +103,10 @@ string TypeManager::getTypeName(const CodeFragmentPtr& context, const core::Type
 	return (decl)?info.lValueName:info.rValueName;
 }
 
+
+NameManager& TypeManager::getNameManager() const {
+	return converter.getNameManager();
+}
 
 
 TypeManager::TypeInfo TypeManager::resolveType(const core::TypePtr& type) {
@@ -233,7 +239,7 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 	// create new entry:
 
 	// get name for function type
-	string name = nameGenerator.getName(functionType, "funType");
+	string name = getNameManager().getName(functionType, "funType");
 	string functorName = name;
 	string callerName = name + "_call";
 	string ctrName = name + "_ctr";
@@ -320,11 +326,28 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 
 	string externalization = "((" + externalName + ")(%s))";
 	if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
-		externalization = "((" + externalName + ")((*%s).data))";
+		externalization = "((" + externalName + ")((*(%s)).data))";
 	}
 
+	// ---------------- add a new operator ------------------------
+
+	CodeFragmentPtr code = CodeFragment::createNew("New operator for type " + toString(*ptr));
+	code->addDependency(subType.definition);
+
+	// add struct definition
+	string name = getNameManager().getName(ptr);
+	const string& result = rvalue;
+	const string& value = subType.lValueName;
+
+	code << "static inline " << result << " _ref_new_" << name << "(" << value << " value) {\n";
+	code << "    " << result << " res = malloc(sizeof(" << value << "));\n";
+	code << "    *res = value;\n";
+	code << "    return res;\n";
+	code << "}\n\n";
+
+
 	return TypeManager::TypeInfo(lvalue, rvalue, lvalue + " %s", rvalue + " %s",
-			externalName, externalName + " %s", externalization, subType.definition);
+			externalName, externalName + " %s", externalization, subType.definition, subType.definition, code);
 
 //	TODO: if
 //	return resolveRefOrVectorOrArrayType(ptr);
@@ -334,10 +357,11 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 
 	// fetch name for the vector type
-	string name = nameGenerator.getName(ptr);
+	string name = getNameManager().getName(ptr);
 
 	// look up element type info
-	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
+	const TypePtr& elementType = ptr->getElementType();
+	const TypeInfo& elementTypeInfo = resolveType(elementType);
 
 	// check whether the type has been resolved while resolving the sub-type
 	auto pos = typeDefinitions.find(ptr);
@@ -350,9 +374,25 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	code->addDependency(elementTypeInfo.definition);
 
 	// add struct definition
+	string size = toString(*ptr->getSize());
 	code << "typedef struct _" << name << " { \n";
-	code << "    " << elementTypeInfo.lValueName << " data[" << toString(*ptr->getSize()) << "];\n";
+	code << "    " << elementTypeInfo.lValueName << " data[" << size << "];\n";
 	code << "} " << name << ";\n";
+
+
+	// ---------------------- add init uniform ---------------------
+	code << "\n";
+	code << "// A constructor initializing a vector of the type " << name << " uniformly\n";
+	code << "static inline " << name << " " << name << "_init_uniform(";
+	code << formatParamter(code, elementType, "value");
+	code << ") {" << CodeBuffer::indR << "\n";
+	code << name << " res;\n";
+	code << "for (int i=0; i<" << size << ";++i) {\n";
+	code << "    " << "res.data[i] = value;\n";
+	code << "}\n";
+	code << "return res;";
+	code << CodeBuffer::indL << "\n}\n\n";
+
 
 	// construct type info including external type representation (as a pointer)
 	string externalName = elementTypeInfo.externName + "*";
@@ -382,7 +422,7 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	// otherwise: create a struct representing the array type
 
 	// fetch name for the array type
-	string name = nameGenerator.getName(ptr);
+	string name = getNameManager().getName(ptr);
 
 
 	// look up element type info
@@ -395,49 +435,60 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	}
 
 	// create a new code fragment for the struct definition
-	CodeFragmentPtr code = CodeFragment::createNew("array_type_declaration of " + name + " <=> " + toString(*ptr));
-	code->addDependency(elementTypeInfo.definition);
+	CodeFragmentPtr definition = CodeFragment::createNew("array type definition of " + name + " <=> " + toString(*ptr));
+	definition->addDependency(elementTypeInfo.declaration);
+
+	// see whether the size should be stored within an array
+	bool useSize = converter.isSupportArrayLength();
 
 	// add array-struct definition
-	code << "typedef struct _" << name << " { \n";
-	code << "    " << elementTypeInfo.lValueName << times("*", dim) << " data;\n";
-	code << "    " << "unsigned size[" << dim << "];\n";
-	code << "} " + name + ";\n";
+	definition << "typedef struct _" << name << " { \n";
+	definition << "    " << elementTypeInfo.lValueName << times("*", dim) << " data;\n";
+	if (useSize) definition << "    " << "unsigned size[" << dim << "];\n";
+	definition << "} " + name + ";\n";
 
 	// ---------------------- add constructor ---------------------
-	code << "\n";
-	code << "// A constructor for the array type " << name << "\n";
-	code << "static inline " << name << " " << name << "_ctr(";
+	CodeFragmentPtr utils = CodeFragment::createNew("array type utils of " + name + " <=> " + toString(*ptr));
+	utils->addDependency(elementTypeInfo.definition);
+
+	utils << "// A constructor for the array type " << name << "\n";
+	utils << "static inline " << name << " " << name << "_ctr(";
 	for (unsigned i=0; i<dim; i++) {
-		code << "unsigned s" << (i+1);
+		utils << "unsigned s" << (i+1);
 		if (i!=dim-1) {
-			code << ",";
+			definition << ",";
 		}
 	}
-	code << ") {\n";
-	code << "    return ((" << name << "){malloc(sizeof(" << elementTypeInfo.lValueName << ")";
+	utils << ") {\n";
+	utils << "    return ((" << name << "){malloc(sizeof(" << elementTypeInfo.lValueName << ")";
 	for (unsigned i=0; i<dim; i++) {
-		code << "*s" << (i+1);
+		utils << "*s" << (i+1);
 	}
-	code << "),{";
-	for (unsigned i=0; i<dim; i++) {
-		code << "s" << (i+1);
-		if (i!=dim-1) {
-			code << ",";
+	utils << ")";
+
+	if (useSize) {
+		utils << ",{";
+		for (unsigned i=0; i<dim; i++) {
+			utils << "s" << (i+1);
+			if (i!=dim-1) {
+				utils << ",";
+			}
 		}
+		utils << "}";
 	}
-	code << "}});\n}\n";
+
+	utils << "});\n}\n";
 
 	string externalName = elementTypeInfo.externName + toString(times("*", dim));
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
-			externalName, externalName + " %s", "(%s).data", code);
+			externalName, externalName + " %s", "(%s).data", definition, definition, utils);
 
 }
 
 TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
 
 	// fetch name for composed type
-	string name = nameGenerator.getName(ptr, "userdefined_type");
+	string name = getNameManager().getName(ptr, "userdefined_type");
 
 	// create a new code fragment for the struct definition
 	CodeFragmentPtr code = CodeFragment::createNew("type_declaration_" + name);
@@ -478,6 +529,7 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 	CodeFragmentPtr group = CodeFragment::createNewDummy("Dummy fragment for recursive type group");
 
 	NodeManager& manager = ptr->getNodeManager();
+	NameManager& nameManager = getNameManager();
 
 	// A) create prototype and add entry for each recursively defined type
 	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
@@ -486,7 +538,7 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 		RecTypePtr type = RecType::get(manager, cur.first, ptr);
 
 		// create prototype
-		string name = nameGenerator.getName(type, "userdefined_rec_type");
+		string name = nameManager.getName(type, "userdefined_rec_type");
 
 		switch(cur.second->getNodeType()) {
 		case NT_StructType:
@@ -499,10 +551,9 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 
 		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name);
 		prototype << name << ";\n";
-
-		this->typeDefinitions.insert(std::make_pair(type, TypeInfo(name, name, name + " %s", name + " %s", prototype)));
-
 		group->addDependency(prototype);
+
+		this->typeDefinitions.insert(std::make_pair(type, TypeInfo(name, name, name + " %s", name + " %s", prototype, group)));
 	});
 
 
@@ -514,22 +565,22 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 		TypePtr unrolled = ptr->unrollOnce(manager, cur.first);
 
 		// fix name of unrolled struct
-		nameGenerator.setName(unrolled, nameGenerator.getName(RecType::get(manager, cur.first, ptr)));
+		nameManager.setName(unrolled, nameManager.getName(RecType::get(manager, cur.first, ptr)));
 
 		// resolve unrolled type and add dependency to group
 		group->addDependency(resolveType(unrolled).definition);
 	});
 
 
-	// C) update type definition map to reference entire group
-	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
-
-		// create recursive type using current type variable
-		RecTypePtr type = RecType::get(manager, cur.first, ptr);
-
-		// ... update code pointer to reference entire group
-		this->typeDefinitions.find(type)->second.definition = group;
-	});
+//	// C) update type definition map to reference entire group
+//	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+//
+//		// create recursive type using current type variable
+//		RecTypePtr type = RecType::get(manager, cur.first, ptr);
+//
+//		// ... update code pointer to reference entire group
+//		this->typeDefinitions.find(type)->second.definition = group;
+//	});
 
 }
 

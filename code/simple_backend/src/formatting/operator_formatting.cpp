@@ -66,7 +66,7 @@ namespace formatting {
 		/**
 		 * Handles the initialization of a ref-variable.
 		 */
-		void handleRefConstructor(StmtConverter& converter, const NodePtr& initValue, bool isNew);
+		void handleRefConstructor(StmtConverter& converter, const TypePtr& resultType, const NodePtr& initValue, bool isNew);
 	}
 
 	FormatTable getBasicFormatTable(const core::lang::BasicGenerator& basic) {
@@ -78,12 +78,18 @@ namespace formatting {
 		#include "insieme/simple_backend/formatting/formats_begin.inc"
 
 		ADD_FORMATTER(res, basic.getRefDeref(), {
-//				NodeType type = static_pointer_cast<const RefType>(ARG(0)->getType())->getElementType()->getNodeType();
-				// do not add a dereferning operator to arrays and vectory => implicite within C
-//				if (!(type == NT_ArrayType || type == NT_VectorType)) {
+
+				// special handling of derefing result of ref.new or ref.var => bogus
+				ExpressionPtr arg = ARG(0);
+				if (core::analysis::isCallOf(arg, basic.getRefVar()) || core::analysis::isCallOf(arg, basic.getRefNew())) {
+					// skip ref.var / ref.new
+					CallExprPtr call = static_pointer_cast<const CallExpr>(arg);
+					STMT_CONVERTER.convert(call->getArgument(0));
+				} else {
+					// just add deref
 					OUT("*");
-//				}
-				VISIT_ARG(0);
+					VISIT_ARG(0);
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getRefAssign(), {
@@ -95,8 +101,25 @@ namespace formatting {
 				VISIT_ARG(1);
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), false); });
-		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, { handleRefConstructor(STMT_CONVERTER, ARG(0), true); });
+		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, CALL->getType(), ARG(0), false); });
+		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, {
+				//handleRefConstructor(STMT_CONVERTER, ARG(0), true);
+
+				// use new operator of target type
+				TypePtr resType = CALL->getType();
+				const TypeManager::TypeInfo& info = CONTEXT.getTypeManager().getTypeInfo(CODE, resType);
+
+				if (core::analysis::isCallOf(ARG(0), basic.getUndefined())) {
+					CODE << "malloc(sizeof(" << info.lValueName << "))";
+					return;
+				}
+
+				CODE->addDependency(info.utilities);
+
+				CODE << "_ref_new_" << CONTEXT.getNameManager().getName(resType) << "(";
+				VISIT_ARG(0);
+				CODE << ")";
+		});
 
 		ADD_FORMATTER(res, basic.getRefDelete(), {
 
@@ -113,6 +136,33 @@ namespace formatting {
 					OUT(".data");
 				}
 				OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getIsNull(), false, {
+				OUT("(");
+				VISIT_ARG(0);
+				OUT(".data==0)");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getGetNull(), false, {
+
+				// the name of the result type
+				const TypePtr& resType = CALL->getType();
+
+				OUT("(");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT("){0,{0}}");
+				} else {
+					OUT("){0}");
+				}
+		});
+
+		ADD_FORMATTER(res, basic.getPtrEq(), {
+				VISIT_ARG(0);
+				OUT(".data == ");
+				VISIT_ARG(1);
+				OUT(".data");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getRefToAnyRef(), false, {
@@ -143,7 +193,11 @@ namespace formatting {
 				OUT(name);
 				OUT("){");
 				VISIT_ARG(0);
-				OUT(",{1}})");
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT(",{1}})");
+				} else {
+					OUT("})");
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getVectorToArray(), {
@@ -153,14 +207,20 @@ namespace formatting {
 				core::NodeManager& manager = CALL->getNodeManager();
 				core::ASTBuilder builder(manager);
 
-				const TypePtr& element = static_pointer_cast<const core::ArrayType>(call->getType())->getElementType();
-				const TypePtr array = builder.arrayType(element);
+				const TypePtr array = call->getType();
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 				OUT("((");
 				OUT(name);
 				OUT("){(");
 				VISIT_ARG(0);
-				OUT(").data,{1}})");
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT(").data,{");
+					const VectorTypePtr& vector = static_pointer_cast<const core::VectorType>(call->getArguments()[0]->getType());
+					OUT(*vector->getSize());
+					OUT("}})");
+				} else {
+					OUT(").data})");
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getRefVectorToRefArray(), {
@@ -170,16 +230,22 @@ namespace formatting {
 				core::NodeManager& manager = CALL->getNodeManager();
 				core::ASTBuilder builder(manager);
 
-				const TypePtr& vector = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
-				const TypePtr& element = static_pointer_cast<const core::ArrayType>(vector)->getElementType();
-				const TypePtr array = builder.arrayType(element);
+				const TypePtr array = call->getType();
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 
 				OUT("&((");
 				OUT(name);
 				OUT("){(*");
 				VISIT_ARG(0);
-				OUT(").data,{1}})");
+				if (CONTEXT.isSupportArrayLength()) {
+					OUT(").data,{");
+					const RefTypePtr& refType = static_pointer_cast<const core::RefType>(call->getArguments()[0]->getType());
+					const VectorTypePtr& vector = static_pointer_cast<const core::VectorType>(refType->getElementType());
+					OUT(*vector->getSize());
+					OUT("}})");
+				} else {
+					OUT(").data})");
+				}
 		});
 
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
@@ -187,7 +253,10 @@ namespace formatting {
 				// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
 
 				// create array using a constructor
-				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+				const TypeManager::TypeInfo& info = CONTEXT.getTypeManager().getTypeInfo(CODE, CALL->getType());
+				const string& typeName = info.rValueName;
+
+				CODE->addDependency(info.utilities);
 
 				OUT(typeName);
 				OUT("_ctr(");
@@ -203,22 +272,7 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefElem1D(), false, {
-
-//				RefTypePtr targetType = static_pointer_cast<const RefType>(ARG(0)->getType());
-//				NodeType elementType = static_pointer_cast<const SingleElementType>(targetType->getElementType())->getElementType()->getNodeType();
-//				if (elementType != NT_VectorType && elementType != NT_ArrayType ) {
-					OUT("&");
-//				}
-
-				// check whether input variable needs to be dereferenced
-//				bool insertDeref = (ARG(0)->getNodeType() == NT_Variable);
-//				insertDeref = insertDeref && CONTEXT.getVariableManager().getInfo(static_pointer_cast<const Variable>(ARG(0))).location == VariableManager::STACK;
-//
-//				if (insertDeref) {
-					OUT("((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
-//				} else {
-//					OUT("("); VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]"); OUT(")");
-//				}
+				OUT("&((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {
@@ -241,8 +295,26 @@ namespace formatting {
 				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]"); OUT(")");
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUniform(), false, { OUT("{}"); });
-		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUndefined(), false, { OUT("{}"); });
+		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUniform(), false, {
+
+				// define resulting vector structure (includes init_uniform constructor)
+				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+
+				// use constructor to generate the vector
+				OUT(typeName);
+				OUT("_init_uniform(");
+				VISIT_ARG(0);
+				OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(res, basic.getVectorInitUndefined(), false, {
+				const string& typeName = CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType());
+
+				// just create a instance, random data inside
+				OUT("(");
+				OUT(typeName);
+				OUT("){}");
+		});
 
 
 		// struct operations
@@ -337,6 +409,12 @@ namespace formatting {
 		ADD_FORMATTER(res, basic.getRealLt(), { VISIT_ARG(0); OUT("<"); VISIT_ARG(1); });
 		ADD_FORMATTER(res, basic.getRealLe(), { VISIT_ARG(0); OUT("<="); VISIT_ARG(1); });
 
+		ADD_FORMATTER(res, basic.getRealToInt(), {
+				OUT("(");
+				OUT(CONTEXT.getTypeManager().getTypeName(CODE, CALL->getType(), true));
+				OUT(")");
+				VISIT_ARG(0);
+		});
 
 		// string conversion
 		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, {
@@ -437,26 +515,27 @@ namespace formatting {
 			return core::transform::tryInlineToExpr(manager, call);
 		}
 
-		void handleRefConstructor(StmtConverter& converter, const NodePtr& initValue, bool isNew) {
+		void handleRefConstructor(StmtConverter& converter, const TypePtr& resultType, const NodePtr& initValue, bool isNew) {
 
 			// check input parameters
 			assert(dynamic_pointer_cast<const Expression>(initValue) && "Init Value is not an expression!");
 
 			// quick check for arrays => extra handling
 			const core::lang::BasicGenerator& basic = converter.getConversionContext().getLangBasic();
-			if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
-				core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
-
-				// vector creation is sufficient
-				converter.convert(initValue);
-				return;
-			}
+//			if (core::analysis::isCallOf(initValue, basic.getArrayCreate1D()) ||
+//				core::analysis::isCallOf(initValue, basic.getArrayCreateND())) {
+//
+//				// vector creation is sufficient
+//				converter.convert(initValue);
+//				return;
+//			}
 
 
 			// extract type
 			CodeFragmentPtr code = converter.getCurrentCodeFragment();
 			TypePtr type = static_pointer_cast<const Expression>(initValue)->getType();
 			string typeName = converter.getConversionContext().getTypeManager().getTypeName(code, type, true);
+			string resTypeName = converter.getConversionContext().getTypeManager().getTypeName(code, resultType, false);
 
 			// use stack or heap allocator
 			string allocator = (isNew)?"malloc":"alloca";
@@ -499,17 +578,24 @@ namespace formatting {
 
 			// TODO: use memset for other initializations => see memset!!
 
+			code << "((" << resTypeName << ")";
 			code << "memcpy(";
 			code << allocator << "(";
 			code << "sizeof(";
 			code << typeName;
-			code << ")), &((";
-			code << typeName;
-			code << "[]){";
+
+			code << ")), &(";
 			converter.convert(initValue);
-			code << "}), sizeof(";
+			code << "), sizeof(";
+
+//			code << ")), &((";
+//			code << typeName;
+//			code << "[]){";
+//			converter.convert(initValue);
+//			code << "}), sizeof(";
+
 			code << typeName;
-			code << "))";
+			code << ")))";
 		}
 	}
 

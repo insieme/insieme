@@ -7,40 +7,70 @@
 #define true 1
 #define false 0
 #define null 0
-// --- Entry Point ---
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+} __insieme_type_0;
+
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<char,30> //
+typedef struct ___insieme_type_2 { 
+    char data[30];
+} __insieme_type_2;
+
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(char value) {
+	__insieme_type_2 res;
+	for (int i=0; i<30;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
 
 // start code fragment :: type_declaration_Person //
 struct Person { 
-    char name[30];
+    __insieme_type_2 name;
     unsigned int age;
 };
 
 // start code fragment :: Prototype for external function: strcpy ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<char,1>>) //
 char* strcpy(char*, char*);
+static __insieme_type_1* strcpy_wrap(void* _closure, __insieme_type_1* var_11, __insieme_type_1* var_12) { return &((__insieme_type_1){strcpy(((char*)((*(var_11)).data)), ((char*)((*(var_12)).data)))}); }
 
-// start code fragment :: Definition of getPerson //
-struct Person getPerson() {
-	{
-		struct Person res;
-		strcpy((((res).name)), "John Doe");
-		((*(&((res).age))) = ((unsigned int)(101)));
-	}
+// start code fragment :: Definition of getPerson ... type: (()->struct<name:vector<char,30>,age:uint<4>>) //
+struct Person getPerson(){
+	struct Person res;
+	&((__insieme_type_1){strcpy(((char*)((*((&((__insieme_type_1){(*(&((res).name))).data})))).data)), ((char*)((*(&((__insieme_type_1){"John Doe"}))).data)))});
+	((*(&((res).age))) = ((unsigned int)(101)));
 }
+static struct Person getPerson_wrap(void* _closure) { return getPerson(); }
 
+// start code fragment :: Definition of isTeenager ... type: ((struct<name:vector<char,30>,age:uint<4>>)->int<4>) //
+int isTeenager(struct Person person) { return ((int)(((((person.age)>=((unsigned int)(10)))&&((person.age)<((unsigned int)(20))))))); }
+static int isTeenager_wrap(void* _closure, struct Person person) { return isTeenager(person); }
 
-// start code fragment :: Definition of isTeenager //
-int isTeenager(struct Person person) {
-	{
-		return (((person.age)>=((unsigned int)(10)))&&<?>Unhandled Type of Call Target</?>);;
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i]};
 	}
-}
-
-
-// start code fragment :: Definition of main //
-int main(int argc, char** argv) {
+	
+	// ---- begin of actual code body ----
 	{
 		struct Person mrX = getPerson();
-		return isTeenager((mrX));;
+		return isTeenager((mrX));
 	}
+	// ----  end of actual code body  ----
+	
 }
 

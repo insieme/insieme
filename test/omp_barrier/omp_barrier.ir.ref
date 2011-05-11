@@ -3,13 +3,10 @@
 //  Entry Point: 
 fun(){
         decl ref<int<4>> v1 =  var(0);
-        merge(parallel(job([1-inf]){
-            default: [v1]fun[ref<int<4>> v3](){
-                int.postInc(v3);
-                barrier(getThreadGroup(0));
-                printf(string.as.char.pointer("i: %d\n"), varlist.pack((v3)));
-            }
-        }));
+        {
+            int.postInc(v1);
+            printf(string.as.char.pointer("i: %d\n"), varlist.pack((v1)));
+        };
     }
 
 
@@ -20,12 +17,9 @@ fun(){
 //  Entry Point: 
 fun(){
         decl ref<int<4>> v1 = ( var(0));
-        merge(parallel(job(([1-inf])){
-            default: [v1]fun[ref<int<4>> v3](){
-                int.postInc(v3);
-                barrier(getThreadGroup(0));
-                printf(string.as.char.pointer("i: %d\n"), varlist.pack((( *v3))));
-            }
-        }));
+        <m id=1>{
+            int.postInc(v1);
+            <m id=1>printf(string.as.char.pointer("i: %d\n"), varlist.pack((( *v1))))</m>;
+        }</m>;
     }
 

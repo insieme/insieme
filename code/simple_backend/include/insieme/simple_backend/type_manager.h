@@ -51,15 +51,18 @@
 namespace insieme {
 namespace simple_backend {
 
+// a forward declaration for the backend converter
+class Converter;
+
 /**
  * Manages C type generation and lookup for IR types.
  */
 class TypeManager {
 
 	/**
-	 * The name generator used for deriving fresh type names.
+	 * A reference to the converter this type manager is contributing to.
 	 */
-	NameManager& nameGenerator;
+	Converter& converter;
 
 public:
 
@@ -88,20 +91,34 @@ public:
 		// a pattern to be used when passing a value of the internal type to an external function
 		string externalizingPattern;
 
-		// the code fragment which might define this type
+		// the code fragment which might contain the type declaration
+		CodeFragmentPtr declaration;
+
+		// the code fragment which might contain the type definition
 		CodeFragmentPtr definition;
+
+		// a code fragment including utilities like constructors for this type
+		CodeFragmentPtr utilities;
 
 		TypeInfo()
 			: lValueName(UNSUPPORTED), rValueName(UNSUPPORTED), declPattern(UNSUPPORTED), paramPattern(UNSUPPORTED),
-				externName(UNSUPPORTED), externPattern(UNSUPPORTED), externalizingPattern(UNSUPPORTED), definition() { }
+				externName(UNSUPPORTED), externPattern(UNSUPPORTED), externalizingPattern(UNSUPPORTED), declaration(),
+				definition(), utilities() { }
 
 		TypeInfo(const string& lName, const string& rName, const string& declPattern, const string& paramPattern)
 			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
-			  externName(rName), externPattern(paramPattern), externalizingPattern("%s"), definition() { }
+			    externName(rName), externPattern(paramPattern), externalizingPattern("%s"), declaration(),
+				definition(), utilities() { }
 
 		TypeInfo(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodeFragmentPtr& definition)
 			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
-			  externName(rName), externPattern(paramPattern), externalizingPattern("%s"), definition(definition) { }
+			  externName(rName), externPattern(paramPattern), externalizingPattern("%s"), declaration(definition),
+			  definition(definition), utilities(definition) { }
+
+		TypeInfo(const string& lName, const string& rName, const string& declPattern, const string& paramPattern, const CodeFragmentPtr& declaration, const CodeFragmentPtr& definition)
+			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
+			  externName(rName), externPattern(paramPattern), externalizingPattern("%s"), declaration(declaration),
+			  definition(definition), utilities(definition) { }
 
 		TypeInfo(
 				const string& lName, const string& rName, const string& declPattern, const string& paramPattern,
@@ -114,7 +131,16 @@ public:
 				const string& externName, const string& externPattern, const string& externalizingPattern,
 				const CodeFragmentPtr& definition)
 			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
-			  externName(externName), externPattern(externPattern), externalizingPattern(externalizingPattern), definition(definition) { }
+			  externName(externName), externPattern(externPattern), externalizingPattern(externalizingPattern),
+			  declaration(definition), definition(definition), utilities(definition) { }
+
+		TypeInfo(
+				const string& lName, const string& rName, const string& declPattern, const string& paramPattern,
+				const string& externName, const string& externPattern, const string& externalizingPattern,
+				const CodeFragmentPtr& declaration, const CodeFragmentPtr& definition, const CodeFragmentPtr& utilities)
+			: lValueName(lName), rValueName(rName), declPattern(declPattern), paramPattern(paramPattern),
+			  externName(externName), externPattern(externPattern), externalizingPattern(externalizingPattern),
+			  declaration(declaration), definition(definition), utilities(utilities) { }
 	};
 
 	/**
@@ -157,7 +183,7 @@ private:
 
 public:
 
-	TypeManager(NameManager& nameGenerator) : nameGenerator(nameGenerator) { }
+	TypeManager(Converter& converter) : converter(converter) { }
 
 	/**
 	 * Obtains a type name for the given type. In case the type has been used before, the same
@@ -213,6 +239,8 @@ public:
 	FunctionTypeInfo getFunctionTypeInfo(const core::FunctionTypePtr& functionType);
 
 private:
+
+	NameManager& getNameManager() const;
 
 	TypeInfo resolveType(const core::TypePtr& ptr);
 

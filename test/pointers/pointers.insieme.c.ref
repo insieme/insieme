@@ -1,0 +1,62 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+} __insieme_type_0;
+
+// start code fragment :: array type definition of __insieme_type_3 <=> array<int<4>,1> //
+typedef struct ___insieme_type_3 { 
+    int* data;
+} __insieme_type_3;
+
+// start code fragment :: array type definition of __insieme_type_5 <=> array<array<int<4>,1>,1> //
+typedef struct ___insieme_type_5 { 
+    __insieme_type_3* data;
+} __insieme_type_5;
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i]};
+	}
+	
+	// ---- begin of actual code body ----
+	{
+		int a = 666;
+		__insieme_type_3 ptr1 = *(&((__insieme_type_3){&a}));
+		__insieme_type_5 ptr2 = *(&((__insieme_type_5){&ptr1}));
+		__insieme_type_3 ptr3 = ((ptr2).data[0]);
+		((ptr1) = (*(&((__insieme_type_3){&a}))));
+		if(((!((ptr1).data==0))&&(!((ptr1).data == (__insieme_type_3){0}.data)))) { printf(((char*)((*(&((__insieme_type_1){"CHECK!\n"}))).data)), 0); };
+		if(((!(!((ptr1).data==0)))||((ptr1).data == (__insieme_type_3){0}.data))) { printf(((char*)((*(&((__insieme_type_1){"DOES NOT CHECK\n"}))).data)), 0); };
+		if((((((ptr1).data[0]))==(a))||((((ptr1).data[0]))==666))) { printf(((char*)((*(&((__insieme_type_1){"WORKS!\n"}))).data)), 0); };
+		if(((((((*(&((__insieme_type_5){&ptr1}))).data[0])).data[0]))!=(a))) { printf(((char*)((*(&((__insieme_type_1){"DOES NOT WORK!\n"}))).data)), 0); };
+		if((((ptr1).data == (((ptr2).data[0])).data)&&((ptr3).data == (ptr1).data))) { printf(((char*)((*(&((__insieme_type_1){"AWESOME\n"}))).data)), 0); };
+		((((ptr1).data[0])) = 0);
+		if((((((ptr3).data[0]))==0)&&((((((ptr2).data[0])).data[0]))==0))) { printf(((char*)((*(&((__insieme_type_1){"SUPER AWESOME\n"}))).data)), 0); };
+	}
+	// ----  end of actual code body  ----
+	
+}
+

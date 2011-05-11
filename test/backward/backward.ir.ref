@@ -2,107 +2,99 @@
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v1 =  new(struct{rate:= new(vector.init.uniform( var(0.0), 2001000)), prob:= new(vector.init.uniform( var(0.0), 6003)), succ:= new(vector.init.uniform( var(0), 6003)), pv:= new(vector.init.uniform( var(0.0), 2001)), pv_1:= new(vector.init.uniform( var(0.0), 2001)), nomval:= var(1000.0), dt:= var(1.0)});
+        decl ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>> v1 =  new(struct{rate:=vector.init.uniform(0.0, 2001000), prob:=vector.init.uniform(0.0, 6003), succ:=vector.init.uniform(0, 6003), pv:=vector.init.uniform(0.0, 2001), pv_1:=vector.init.uniform(0.0, 2001), nomval:=1000.0, dt:=1.0});
         decl ref<int<4>> v2 =  var(0);
         decl ref<int<4>> v3 =  var(0);
         decl ref<real<4>> v4 =  var(0.0);
-        v1.succ[2] := 2;
-        v1.succ[1] := 1;
-        v1.succ[0] := 0;
+        vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), 2) := 2;
+        vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), 1) := 1;
+        vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), 0) := 0;
         {
-            for(decl ref<int<4>> v35 =  var(1) .. 2*1000 : 1) {
-                v1.succ[v35*3+2] := v35+1;
-                v1.succ[v35*3+1] := v35;
-                v1.succ[v35*3] := v35-1;
+            for(decl ref<int<4>> v5 =  var(1) .. 2*1000 : 1) {
+                vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), v5*3+2) := v5+1;
+                vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), v5*3+1) := v5;
+                vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), v5*3) := v5-1;
             };
             v3 := 1+ceil(2*1000-1/1)*1;
         };
-        v1.succ[2*1000*3+2] := 2*1000;
-        v1.succ[2*1000*3+1] := 2*1000-1;
-        v1.succ[2*1000*3] := 2*1000-2;
+        vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), 2*1000*3+2) := 2*1000;
+        vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), 2*1000*3+1) := 2*1000-1;
+        vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), 2*1000*3) := 2*1000-2;
         {
-            for(decl ref<int<4>> v36 =  var(0) .. 2*1000+1 : 1) {
-                v1.prob[v36*3+2] := 1.0/4.0*1.0-0.05+0.1*rand()/2147483647+1.0;
-                v1.prob[v36*3+1] := 1.0/2.0*1.0-0.05+0.1*rand()/2147483647+1.0;
-                v1.prob[v36*3] := 1.0-v1.prob[v36*3+1]-v1.prob[v36*3+2];
+            for(decl ref<int<4>> v6 =  var(0) .. 2*1000+1 : 1) {
+                vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), v6*3+2) := 1.0/4.0*1.0-0.05+0.1*rand()/2147483647+1.0;
+                vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), v6*3+1) := 1.0/2.0*1.0-0.05+0.1*rand()/2147483647+1.0;
+                vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), v6*3) := 1.0-vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), v6*3+1)-vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), v6*3+2);
             };
             v3 := 0+ceil(2*1000+1-0/1)*1;
         };
         {
-            for(decl ref<int<4>> v38 =  var(0) .. 1000 : 1) {
+            for(decl ref<int<4>> v8 =  var(0) .. 1000 : 1) {
                 {
-                    for(decl ref<int<4>> v37 =  var(0) .. 2*1000+1 : 1) {
-                        v1.rate[2*1000+1*v38+v37] := 0.01+0.05*v37/1000+0.03*v38/1000*1.0-0.05+0.1*rand()/2147483647+1.0;
+                    for(decl ref<int<4>> v7 =  var(0) .. 2*1000+1 : 1) {
+                        vector.ref.elem(composite.ref.elem(v1, rate, type<vector<real<8>,2001000>>), 2*1000+1*v8+v7) := 0.01+0.05*v7/1000+0.03*v8/1000*1.0-0.05+0.1*rand()/2147483647+1.0;
                     };
                     v3 := 0+ceil(2*1000+1-0/1)*1;
                 };
             };
             v2 := 0+ceil(1000-0/1)*1;
         };
-        printf("start..\n", varlist.pack(()));
+        printf(string.as.char.pointer("start..\n"), varlist.pack(()));
         decl ref<real<8>> v9 =  var(fun(){
             decl ref<int<8>> v10 =  var(0);
             v10 := clock();
             return v10;
         }());
         {
-            for(decl ref<int<4>> v39 =  var(0) .. 2*1000+1 : 1) {
-                v1.pv_1[v39] := v1.nomval;
+            for(decl ref<int<4>> v12 =  var(0) .. 2*1000+1 : 1) {
+                vector.ref.elem(composite.ref.elem(v1, pv_1, type<vector<real<8>,2001>>), v12) := composite.ref.elem(v1, nomval, type<real<8>>);
             };
             v3 := 0+ceil(2*1000+1-0/1)*1;
         };
-        merge(parallel(job([1-inf]){
-            default: [v3, v1, v2]fun[ref<int<4>> v43, ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v45, ref<int<4>> v44](){
-                {
-                    for(decl ref<int<4>> v41 =  var(0-1000-1) .. 0-0+1 : 1) {
-                        [v45]fun[ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v14](int<4> v13){
-                            decl ref<real<8>> v15 =  var(0.0);
-                            decl ref<real<8>> v16 =  var(0.0);
-                            decl ref<real<8>> v17 =  var(0.0);
-                            decl ref<real<8>> v18 =  var(0.0);
-                            decl ref<real<8>> v19 =  var(0.0);
-                            decl ref<real<8>> v20 =  var(0.0);
-                            decl ref<int<4>> v21 =  var(0);
-                            decl ref<int<4>> v22 =  var(0);
-                            {
-                                {
-                                    pfor(getThreadGroup(0), 0, 2*1000+1, 1, [v15, v17, v16, v13, v14, v19, v18, v20, v21]fun[ref<real<8>> v55, ref<real<8>> v53, ref<real<8>> v54, int<4> v57, ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v56, ref<real<8>> v51, ref<real<8>> v52, ref<real<8>> v50, ref<int<4>> v49](int<4> v48){
-                                        v52 := v56.prob[v48*3+2];
-                                        v51 := v56.prob[v48*3+1];
-                                        v50 := v56.prob[v48*3];
-                                        v55 := v56.pv_1[v56.succ[v48*3+2]];
-                                        v54 := v56.pv_1[v56.succ[v48*3+1]];
-                                        v53 := v56.pv_1[v56.succ[v48*3]];
-                                        v49 := 2*1000+1*v57+v48;
-                                        v56.pv[v48] := exp(0-v56.rate[v49]*v56.dt)*v50*v53+v51*v54+v52*v55+fun(int<4> v23, real<8> v24, real<8> v25){
-                                            return v25*exp(v24)-1.0;
-                                        }(v57, v56.rate[v49], v56.nomval);
-                                    });
-                                    barrier(getThreadGroup(0));
-                                };
-                                v22 := 0+ceil(2*1000+1-0/1)*1;
-                            };
-                        }(0-v41);
+        {
+            {
+                for(decl ref<int<4>> v30 =  var(0-1000-1) .. 0-0+1 : 1) {
+                    fun(ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>> v13, int<4> v14){
+                        decl ref<real<8>> v15 =  var(0.0);
+                        decl ref<real<8>> v16 =  var(0.0);
+                        decl ref<real<8>> v17 =  var(0.0);
+                        decl ref<real<8>> v18 =  var(0.0);
+                        decl ref<real<8>> v19 =  var(0.0);
+                        decl ref<real<8>> v20 =  var(0.0);
+                        decl ref<int<4>> v21 =  var(0);
+                        decl ref<int<4>> v22 =  var(0);
                         {
-                            {
-                                pfor(getThreadGroup(0), 0, 2*1000+1, 1, [v45]fun[ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v61](int<4> v60){
-                                    v61.pv_1[v60] := v61.pv[v60];
-                                });
-                                barrier(getThreadGroup(0));
+                            for(decl ref<int<4>> v27 =  var(0) .. 2*1000+1 : 1) {
+                                v18 := vector.ref.elem(composite.ref.elem(v13, prob, type<vector<real<8>,6003>>), v27*3+2);
+                                v19 := vector.ref.elem(composite.ref.elem(v13, prob, type<vector<real<8>,6003>>), v27*3+1);
+                                v20 := vector.ref.elem(composite.ref.elem(v13, prob, type<vector<real<8>,6003>>), v27*3);
+                                v15 := vector.ref.elem(composite.ref.elem(v13, pv_1, type<vector<real<8>,2001>>), vector.ref.elem(composite.ref.elem(v13, succ, type<vector<int<4>,6003>>), v27*3+2));
+                                v16 := vector.ref.elem(composite.ref.elem(v13, pv_1, type<vector<real<8>,2001>>), vector.ref.elem(composite.ref.elem(v13, succ, type<vector<int<4>,6003>>), v27*3+1));
+                                v17 := vector.ref.elem(composite.ref.elem(v13, pv_1, type<vector<real<8>,2001>>), vector.ref.elem(composite.ref.elem(v13, succ, type<vector<int<4>,6003>>), v27*3));
+                                v21 := 2*1000+1*v14+v27;
+                                vector.ref.elem(composite.ref.elem(v13, pv, type<vector<real<8>,2001>>), v27) := exp(0-vector.ref.elem(composite.ref.elem(v13, rate, type<vector<real<8>,2001000>>), v21)*composite.ref.elem(v13, dt, type<real<8>>))*v20*v17+v19*v16+v18*v15+fun(int<4> v23, real<8> v24, real<8> v25){
+                                    return v25*exp(v24)-1.0;
+                                }(v14, vector.ref.elem(composite.ref.elem(v13, rate, type<vector<real<8>,2001000>>), v21), composite.ref.elem(v13, nomval, type<real<8>>));
                             };
-                            v43 := 0+ceil(2*1000+1-0/1)*1;
+                            v22 := 0+ceil(2*1000+1-0/1)*1;
                         };
+                    }(v1, 0-v30);
+                    {
+                        for(decl ref<int<4>> v29 =  var(0) .. 2*1000+1 : 1) {
+                            vector.ref.elem(composite.ref.elem(v1, pv_1, type<vector<real<8>,2001>>), v29) := vector.ref.elem(composite.ref.elem(v1, pv, type<vector<real<8>,2001>>), v29);
+                        };
+                        v3 := 0+ceil(2*1000+1-0/1)*1;
                     };
-                    v44 := 1000-1+ceil(0-0+1-1000-1/1)*1;
                 };
-            }
-        }));
+                v2 := 1000-1+ceil(0-0+1-1000-1/1)*1;
+            };
+        };
         v4 := fun(int<8> v31){
             decl ref<int<8>> v32 =  var(0);
             v32 := clock();
             return v32-v31;
-        }(v9);
-        printf("pval=%8.2f\n", varlist.pack((v1.pv[1000])));
+        }(real.to.int(v9, 8));
+        printf(string.as.char.pointer("pval=%8.2f\n"), varlist.pack((vector.ref.elem(composite.ref.elem(v1, pv, type<vector<real<8>,2001>>), 1000))));
     }
 
 
@@ -112,106 +104,98 @@ fun(){
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v1 = ( new(struct{rate:=( new(vector.init.uniform(( var(0.0)), 2001000))), prob:=( new(vector.init.uniform(( var(0.0)), 6003))), succ:=( new(vector.init.uniform(( var(0)), 6003))), pv:=( new(vector.init.uniform(( var(0.0)), 2001))), pv_1:=( new(vector.init.uniform(( var(0.0)), 2001))), nomval:=( var(1000.0)), dt:=( var(1.0))}));
+        decl ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>> v1 = ( new(struct{rate:=vector.init.uniform(0.0, 2001000), prob:=vector.init.uniform(0.0, 6003), succ:=vector.init.uniform(0, 6003), pv:=vector.init.uniform(0.0, 2001), pv_1:=vector.init.uniform(0.0, 2001), nomval:=1000.0, dt:=1.0}));
         decl ref<int<4>> v2 = ( var(0));
         decl ref<int<4>> v3 = ( var(0));
         decl ref<real<4>> v4 = ( var(0.0));
-        ((( *( *v1).succ)[CAST<uint<4>>(2)]) := 2);
-        ((( *( *v1).succ)[CAST<uint<4>>(1)]) := 1);
-        ((( *( *v1).succ)[CAST<uint<4>>(0)]) := 0);
+        (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(2)) := 2);
+        (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(1)) := 1);
+        (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(0)) := 0);
         {
-            for(decl ref<int<4>> v35 = ( var(1)) .. (2*1000) : 1) {
-                ((( *( *v1).succ)[CAST<uint<4>>(((( *v35)*3)+2))]) := (( *v35)+1));
-                ((( *( *v1).succ)[CAST<uint<4>>(((( *v35)*3)+1))]) := ( *v35));
-                ((( *( *v1).succ)[CAST<uint<4>>((( *v35)*3))]) := (( *v35)-1));
+            for(decl ref<int<4>> v5 = ( var(1)) .. (2*1000) : 1) {
+                (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(((( *v5)*3)+2))) := (( *v5)+1));
+                (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(((( *v5)*3)+1))) := ( *v5));
+                (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>((( *v5)*3))) := (( *v5)-1));
             };
             (v3 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((2*1000)-1))/CAST<real<8>>(1))))*1)));
         };
-        ((( *( *v1).succ)[CAST<uint<4>>((((2*1000)*3)+2))]) := (2*1000));
-        ((( *( *v1).succ)[CAST<uint<4>>((((2*1000)*3)+1))]) := ((2*1000)-1));
-        ((( *( *v1).succ)[CAST<uint<4>>(((2*1000)*3))]) := ((2*1000)-2));
+        (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>((((2*1000)*3)+2))) := (2*1000));
+        (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>((((2*1000)*3)+1))) := ((2*1000)-1));
+        (vector.ref.elem(composite.ref.elem(v1, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(((2*1000)*3))) := ((2*1000)-2));
         {
-            for(decl ref<int<4>> v36 = ( var(0)) .. ((2*1000)+1) : 1) {
-                ((( *( *v1).prob)[CAST<uint<4>>(((( *v36)*3)+2))]) := ((1.0/4.0)*((1.0-0.05)+(0.1*(CAST<real<8>>(rand())/(CAST<real<8>>(2147483647)+1.0))))));
-                ((( *( *v1).prob)[CAST<uint<4>>(((( *v36)*3)+1))]) := ((1.0/2.0)*((1.0-0.05)+(0.1*(CAST<real<8>>(rand())/(CAST<real<8>>(2147483647)+1.0))))));
-                ((( *( *v1).prob)[CAST<uint<4>>((( *v36)*3))]) := ((1.0-( *(( *( *v1).prob)[CAST<uint<4>>(((( *v36)*3)+1))])))-( *(( *( *v1).prob)[CAST<uint<4>>(((( *v36)*3)+2))]))));
+            for(decl ref<int<4>> v6 = ( var(0)) .. ((2*1000)+1) : 1) {
+                (vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), CAST<uint<4>>(((( *v6)*3)+2))) := ((1.0/4.0)*((1.0-0.05)+(0.1*(CAST<real<8>>(rand())/(CAST<real<8>>(2147483647)+1.0))))));
+                (vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), CAST<uint<4>>(((( *v6)*3)+1))) := ((1.0/2.0)*((1.0-0.05)+(0.1*(CAST<real<8>>(rand())/(CAST<real<8>>(2147483647)+1.0))))));
+                (vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), CAST<uint<4>>((( *v6)*3))) := ((1.0-( *vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), CAST<uint<4>>(((( *v6)*3)+1)))))-( *vector.ref.elem(composite.ref.elem(v1, prob, type<vector<real<8>,6003>>), CAST<uint<4>>(((( *v6)*3)+2))))));
             };
             (v3 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((2*1000)+1)-0))/CAST<real<8>>(1))))*1)));
         };
         {
-            for(decl ref<int<4>> v38 = ( var(0)) .. 1000 : 1) {
+            for(decl ref<int<4>> v8 = ( var(0)) .. 1000 : 1) {
                 {
-                    for(decl ref<int<4>> v37 = ( var(0)) .. ((2*1000)+1) : 1) {
-                        ((( *( *v1).rate)[CAST<uint<4>>(((((2*1000)+1)*( *v38))+( *v37)))]) := (((0.01+(0.05*(CAST<real<8>>(( *v37))/CAST<real<8>>(1000))))+(0.03*(CAST<real<8>>(( *v38))/CAST<real<8>>(1000))))*((1.0-0.05)+(0.1*(CAST<real<8>>(rand())/(CAST<real<8>>(2147483647)+1.0))))));
+                    for(decl ref<int<4>> v7 = ( var(0)) .. ((2*1000)+1) : 1) {
+                        (vector.ref.elem(composite.ref.elem(v1, rate, type<vector<real<8>,2001000>>), CAST<uint<4>>(((((2*1000)+1)*( *v8))+( *v7)))) := (((0.01+(0.05*(CAST<real<8>>(( *v7))/CAST<real<8>>(1000))))+(0.03*(CAST<real<8>>(( *v8))/CAST<real<8>>(1000))))*((1.0-0.05)+(0.1*(CAST<real<8>>(rand())/(CAST<real<8>>(2147483647)+1.0))))));
                     };
                     (v3 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((2*1000)+1)-0))/CAST<real<8>>(1))))*1)));
                 };
             };
             (v2 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((1000-0))/CAST<real<8>>(1))))*1)));
         };
-        printf("start..\n", varlist.pack(()));
+        printf(string.as.char.pointer("start..\n"), varlist.pack(()));
         decl ref<real<8>> v9 = ( var(CAST<real<8>>(fun(){
             decl ref<int<8>> v10 = ( var(0));
             (v10 := clock());
             return ( *v10);
         }())));
         {
-            for(decl ref<int<4>> v39 = ( var(0)) .. ((2*1000)+1) : 1) {
-                ((( *( *v1).pv_1)[CAST<uint<4>>(( *v39))]) := ( *( *v1).nomval));
+            for(decl ref<int<4>> v12 = ( var(0)) .. ((2*1000)+1) : 1) {
+                (vector.ref.elem(composite.ref.elem(v1, pv_1, type<vector<real<8>,2001>>), CAST<uint<4>>(( *v12))) := ( *composite.ref.elem(v1, nomval, type<real<8>>)));
             };
             (v3 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((2*1000)+1)-0))/CAST<real<8>>(1))))*1)));
         };
-        merge(parallel(job(([1-inf])){
-            default: [v3, v1, v2]fun[ref<int<4>> v43, ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v45, ref<int<4>> v44](){
-                {
-                    for(decl ref<int<4>> v41 = ( var((CAST<int<4>>(0)-(1000-1)))) .. ((CAST<int<4>>(0)-0)+1) : 1) {
-                        [v45]fun[ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v14](int<4> v13){
-                            decl ref<real<8>> v15 = ( var(0.0));
-                            decl ref<real<8>> v16 = ( var(0.0));
-                            decl ref<real<8>> v17 = ( var(0.0));
-                            decl ref<real<8>> v18 = ( var(0.0));
-                            decl ref<real<8>> v19 = ( var(0.0));
-                            decl ref<real<8>> v20 = ( var(0.0));
-                            decl ref<int<4>> v21 = ( var(0));
-                            decl ref<int<4>> v22 = ( var(0));
-                            {
-                                {
-                                    pfor(getThreadGroup(0), 0, ((2*1000)+1), 1, [v15, v17, v16, v13, v14, v19, v18, v20, v21]fun[ref<real<8>> v55, ref<real<8>> v53, ref<real<8>> v54, int<4> v57, ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v56, ref<real<8>> v51, ref<real<8>> v52, ref<real<8>> v50, ref<int<4>> v49](int<4> v48){
-                                        (v52 := ( *(( *( *v56).prob)[CAST<uint<4>>(((v48*3)+2))])));
-                                        (v51 := ( *(( *( *v56).prob)[CAST<uint<4>>(((v48*3)+1))])));
-                                        (v50 := ( *(( *( *v56).prob)[CAST<uint<4>>((v48*3))])));
-                                        (v55 := ( *(( *( *v56).pv_1)[CAST<uint<4>>(( *(( *( *v56).succ)[CAST<uint<4>>(((v48*3)+2))])))])));
-                                        (v54 := ( *(( *( *v56).pv_1)[CAST<uint<4>>(( *(( *( *v56).succ)[CAST<uint<4>>(((v48*3)+1))])))])));
-                                        (v53 := ( *(( *( *v56).pv_1)[CAST<uint<4>>(( *(( *( *v56).succ)[CAST<uint<4>>((v48*3))])))])));
-                                        (v49 := ((((2*1000)+1)*v57)+v48));
-                                        ((( *( *v56).pv)[CAST<uint<4>>(v48)]) := (exp(((CAST<real<8>>(0)-( *(( *( *v56).rate)[CAST<uint<4>>(( *v49))])))*( *( *v56).dt)))*((((( *v50)*( *v53))+(( *v51)*( *v54)))+(( *v52)*( *v55)))+fun(int<4> v23, real<8> v24, real<8> v25){
-                                            return (v25*(exp(v24)-1.0));
-                                        }(v57, ( *(( *( *v56).rate)[CAST<uint<4>>(( *v49))])), ( *( *v56).nomval)))));
-                                    });
-                                    barrier(getThreadGroup(0));
-                                };
-                                (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((2*1000)+1)-0))/CAST<real<8>>(1))))*1)));
-                            };
-                        }((CAST<int<4>>(0)-( *v41)));
+        <m id=3>{
+            {
+                for(decl ref<int<4>> v30 = ( var((CAST<int<4>>(0)-(1000-1)))) .. ((CAST<int<4>>(0)-0)+1) : 1) {
+                    fun(ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>> v13, int<4> v14){
+                        decl ref<real<8>> v15 = ( var(0.0));
+                        decl ref<real<8>> v16 = ( var(0.0));
+                        decl ref<real<8>> v17 = ( var(0.0));
+                        decl ref<real<8>> v18 = ( var(0.0));
+                        decl ref<real<8>> v19 = ( var(0.0));
+                        decl ref<real<8>> v20 = ( var(0.0));
+                        decl ref<int<4>> v21 = ( var(0));
+                        decl ref<int<4>> v22 = ( var(0));
                         {
-                            {
-                                pfor(getThreadGroup(0), 0, ((2*1000)+1), 1, [v45]fun[ref<struct<rate:ref<vector<ref<real<8>>,2001000>>,prob:ref<vector<ref<real<8>>,6003>>,succ:ref<vector<ref<int<4>>,6003>>,pv:ref<vector<ref<real<8>>,2001>>,pv_1:ref<vector<ref<real<8>>,2001>>,nomval:ref<real<8>>,dt:ref<real<8>>>> v61](int<4> v60){
-                                    ((( *( *v61).pv_1)[CAST<uint<4>>(v60)]) := ( *(( *( *v61).pv)[CAST<uint<4>>(v60)])));
-                                });
-                                barrier(getThreadGroup(0));
-                            };
-                            (v43 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((2*1000)+1)-0))/CAST<real<8>>(1))))*1)));
+                            <m id=1>for(decl ref<int<4>> v27 = ( var(0)) .. ((2*1000)+1) : 1) {
+                                (v18 := ( *vector.ref.elem(composite.ref.elem(v13, prob, type<vector<real<8>,6003>>), CAST<uint<4>>(((( *v27)*3)+2)))));
+                                (v19 := ( *vector.ref.elem(composite.ref.elem(v13, prob, type<vector<real<8>,6003>>), CAST<uint<4>>(((( *v27)*3)+1)))));
+                                (v20 := ( *vector.ref.elem(composite.ref.elem(v13, prob, type<vector<real<8>,6003>>), CAST<uint<4>>((( *v27)*3)))));
+                                (v15 := ( *vector.ref.elem(composite.ref.elem(v13, pv_1, type<vector<real<8>,2001>>), CAST<uint<4>>(( *vector.ref.elem(composite.ref.elem(v13, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(((( *v27)*3)+2))))))));
+                                (v16 := ( *vector.ref.elem(composite.ref.elem(v13, pv_1, type<vector<real<8>,2001>>), CAST<uint<4>>(( *vector.ref.elem(composite.ref.elem(v13, succ, type<vector<int<4>,6003>>), CAST<uint<4>>(((( *v27)*3)+1))))))));
+                                (v17 := ( *vector.ref.elem(composite.ref.elem(v13, pv_1, type<vector<real<8>,2001>>), CAST<uint<4>>(( *vector.ref.elem(composite.ref.elem(v13, succ, type<vector<int<4>,6003>>), CAST<uint<4>>((( *v27)*3))))))));
+                                (v21 := ((((2*1000)+1)*v14)+( *v27)));
+                                (vector.ref.elem(composite.ref.elem(v13, pv, type<vector<real<8>,2001>>), CAST<uint<4>>(( *v27))) := (exp(((CAST<real<8>>(0)-( *vector.ref.elem(composite.ref.elem(v13, rate, type<vector<real<8>,2001000>>), CAST<uint<4>>(( *v21)))))*( *composite.ref.elem(v13, dt, type<real<8>>))))*((((( *v20)*( *v17))+(( *v19)*( *v16)))+(( *v18)*( *v15)))+fun(int<4> v23, real<8> v24, real<8> v25){
+                                    return (v25*(exp(v24)-1.0));
+                                }(v14, ( *vector.ref.elem(composite.ref.elem(v13, rate, type<vector<real<8>,2001000>>), CAST<uint<4>>(( *v21)))), ( *composite.ref.elem(v13, nomval, type<real<8>>))))));
+                            }</m>;
+                            (v22 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((2*1000)+1)-0))/CAST<real<8>>(1))))*1)));
                         };
+                    }(v1, (CAST<int<4>>(0)-( *v30)));
+                    {
+                        <m id=2>for(decl ref<int<4>> v29 = ( var(0)) .. ((2*1000)+1) : 1) {
+                            (vector.ref.elem(composite.ref.elem(v1, pv_1, type<vector<real<8>,2001>>), CAST<uint<4>>(( *v29))) := ( *vector.ref.elem(composite.ref.elem(v1, pv, type<vector<real<8>,2001>>), CAST<uint<4>>(( *v29)))));
+                        }</m>;
+                        (v3 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((((2*1000)+1)-0))/CAST<real<8>>(1))))*1)));
                     };
-                    (v44 := ((1000-1)+(CAST<int<4>>(ceil((CAST<real<8>>((((CAST<int<4>>(0)-0)+1)-(1000-1)))/CAST<real<8>>(1))))*1)));
                 };
-            }
-        }));
+                (v2 := ((1000-1)+(CAST<int<4>>(ceil((CAST<real<8>>((((CAST<int<4>>(0)-0)+1)-(1000-1)))/CAST<real<8>>(1))))*1)));
+            };
+        }</m>;
         (v4 := CAST<real<4>>(fun(int<8> v31){
             decl ref<int<8>> v32 = ( var(0));
             (v32 := clock());
             return (( *v32)-v31);
-        }(CAST<int<8>>(( *v9)))));
-        printf("pval=%8.2f\n", varlist.pack((( *(( *( *v1).pv)[CAST<uint<4>>(1000)])))));
+        }(real.to.int(( *v9), 8))));
+        printf(string.as.char.pointer("pval=%8.2f\n"), varlist.pack((( *vector.ref.elem(composite.ref.elem(v1, pv, type<vector<real<8>,2001>>), CAST<uint<4>>(1000))))));
     }
 

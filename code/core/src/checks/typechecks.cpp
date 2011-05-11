@@ -91,7 +91,10 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (numArguments != numParameter) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
-						format("Wrong number of arguments - expected: %d, actual: %d", numParameter, numArguments),
+						format("Wrong number of arguments - expected: %d, actual: %d - function type: %s",
+								numParameter,
+								numArguments,
+								toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
 	}

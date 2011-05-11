@@ -1,0 +1,88 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+typedef struct ___insieme_type_1 { 
+    char* data;
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+} __insieme_type_0;
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: Prototype of fac ... type: ((uint<4>)->uint<4>) //
+unsigned int fac(unsigned int);
+
+// start code fragment :: Definition of fac ... type: ((uint<4>)->uint<4>) //
+unsigned int fac(unsigned int x) { if((x>((unsigned int)(1)))) { return (x*fac((x-((unsigned int)(1))))); } else  { return ((unsigned int)(1)); }; }
+static unsigned int fac_wrap(void* _closure, unsigned int x) { return fac(x); }
+
+// start code fragment :: Definition of toStr ... type: ((int<4>)->ref<array<char,1>>) //
+__insieme_type_1* toStr(int value){
+	if((value!=0)) { return &((__insieme_type_1){"true"}); };
+	return &((__insieme_type_1){"false"});
+}
+static __insieme_type_1* toStr_wrap(void* _closure, int value) { return toStr(value); }
+
+// start code fragment :: Prototype of even ... type: ((uint<4>)->int<4>) //
+int even(unsigned int);
+
+// start code fragment :: Prototype of odd ... type: ((uint<4>)->int<4>) //
+int odd(unsigned int);
+
+// start code fragment :: Definition of even ... type: ((uint<4>)->int<4>) //
+int even(unsigned int x) { if((x==((unsigned int)(0)))) { return 1; } else  { return odd((x-((unsigned int)(1)))); }; }
+static int even_wrap(void* _closure, unsigned int x) { return even(x); }
+
+// start code fragment :: Definition of odd ... type: ((uint<4>)->int<4>) //
+int odd(unsigned int x) { if((x==((unsigned int)(0)))) { return 0; } else  { return even((x-((unsigned int)(1)))); }; }
+static int odd_wrap(void* _closure, unsigned int x) { return odd(x); }
+
+// start code fragment :: Prototype of ack ... type: ((uint<4>,uint<4>)->uint<4>) //
+unsigned int ack(unsigned int, unsigned int);
+
+// start code fragment :: Definition of ack ... type: ((uint<4>,uint<4>)->uint<4>) //
+unsigned int ack(unsigned int n, unsigned int m){
+	if((n==((unsigned int)(0)))) { return (m+((unsigned int)(1))); };
+	if((m==((unsigned int)(0)))) { return ack((n-((unsigned int)(1))), ((unsigned int)(1))); };
+	return ack((n-((unsigned int)(1))), ack(n, (m-((unsigned int)(1)))));
+}
+static unsigned int ack_wrap(void* _closure, unsigned int n, unsigned int m) { return ack(n, m); }
+
+// start code fragment :: main function //
+int main(int __argc, char** __argv) {
+	
+	// encapsulating arguments within Insieme Types ...
+	int argc = __argc;
+	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
+	for(int i=0; i<argc; ++i) {
+		argv.data[i] = (__insieme_type_1){__argv[i]};
+	}
+	
+	// ---- begin of actual code body ----
+	{
+		int x = 10;
+		printf(((char*)((*(&((__insieme_type_1){"x=%d\n"}))).data)), (x));
+		printf(((char*)((*(&((__insieme_type_1){"fac(x)=%d\n"}))).data)), fac(((unsigned int)((x)))));
+		printf(((char*)((*(&((__insieme_type_1){"fac(x+1)=%d\n"}))).data)), fac(((unsigned int)(((x)+1)))));
+		printf(((char*)((*(&((__insieme_type_1){"even(x)=%s\n"}))).data)), ((char*)((*(toStr(even(((unsigned int)((x))))))).data)));
+		printf(((char*)((*(&((__insieme_type_1){"odd(x)=%s\n"}))).data)), ((char*)((*(toStr(odd(((unsigned int)((x))))))).data)));
+		printf(((char*)((*(&((__insieme_type_1){"ack(1,x)=%d\n"}))).data)), ack(((unsigned int)(1)), ((unsigned int)((x)))));
+		printf(((char*)((*(&((__insieme_type_1){"ack(2,x)=%d\n"}))).data)), ack(((unsigned int)(2)), ((unsigned int)((x)))));
+		return 0;
+	}
+	// ----  end of actual code body  ----
+	
+}
+
