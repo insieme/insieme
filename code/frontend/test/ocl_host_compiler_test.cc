@@ -37,7 +37,6 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/frontend/program.h"
@@ -73,13 +72,12 @@ TEST(OclHostCompilerTest, HelloHostTest) {
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
     fe::Program prog(manager);
 
-    std::cout << SRC_DIR << std::endl;
     prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
     program = prog.convert();
     LOG(INFO) << "Done.";
 
     LOG(INFO) << "Starting OpenCL host code transformations";
-    fe::ocl::HostCompiler hc(program, manager);
+    fe::ocl::HostCompiler hc(program, prog, manager);
     hc.compile();
 
     core::printer::PrettyPrinter pp(program);

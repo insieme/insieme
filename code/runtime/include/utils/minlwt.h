@@ -69,6 +69,7 @@ void lwt_end(intptr_t *basestack);
 // x86-64 implementation
 
 // launch lwt for wi with implementation func and store current stack address in basestack
+__attribute__ ((noinline))
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
 	__asm__ volatile (		
 		/* save registers on source stack */
@@ -98,8 +99,9 @@ void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* f
 //		"pop %%rbp \n"
 		: /* no output registers */
 	: "a" (basestack), "c" (&(wi->stack_ptr)), "d" (func) );
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
-
+__attribute__ ((noinline))
 void lwt_continue(irt_work_item *new_wi, intptr_t *basestack) {
 	__asm__ (
 		/* save registers on stack */
@@ -124,7 +126,7 @@ void lwt_continue(irt_work_item *new_wi, intptr_t *basestack) {
 		: /* no output registers */
 	: "a" (basestack), "c" (new_wi->stack_ptr) );
 }
-
+__attribute__ ((noinline))
 void lwt_end(intptr_t *basestack) {
 	__asm__ (
 		/* swap stacks */

@@ -45,8 +45,10 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/simple_backend/ir_extensions.h"
+#include "insieme/simple_backend/utils/simple_backend_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -57,15 +59,6 @@ namespace transform {
 	namespace {
 
 		/**
-		 * Converts all string literals into vectors to eliminate unsupported string types.
-		 *
-		 * @param manager the manager to be responsible for maintaining the intermediate and the final result
-		 * @param code the code to be processed
-		 * @return the same DAG, however, string literals will be convereted into char vector literals
-		 */
-		core::NodePtr convertStringLiterals(core::NodeManager& manager, const core::NodePtr& code);
-
-		/**
 		 * Replaces all occurrences of ITE calls with lazy-ITE calls. Lazy-ITE calls correspond to the C-equivalent,
 		 * where the if / then branch is only evaluated after evaluating the boolean condition.
 		 *
@@ -74,6 +67,18 @@ namespace transform {
 		 * @return the same DAG, however, ITE calls will be replaced with lazy ITE calls
 		 */
 		core::NodePtr convertITE(core::NodeManager& manager, const core::NodePtr& code);
+
+		/**
+		 * Restores global variables before generating target code. As it turned out, global variables can be handled
+		 * much faster than heap allocated variables, hence those need to be restored. Therefore, the forwarding of
+		 * the global struct through the INSPIRE program will be replaced by a literal, representing the global struct.
+		 * The literals name will be "GLOBAL".
+		 *
+		 * @param manager the manager to be responsible for maintaining the intermediate and the final result
+		 * @param code the code to be processed
+		 * @return the same program, however, global structs will be replaced by corresponding literals
+		 */
+		core::NodePtr restoreGlobals(core::NodeManager& manager, const core::NodePtr& code);
 
 		/**
 		 * This pass is introducing vector->array conversions within the given program DAG wherever necessary.
@@ -92,6 +97,9 @@ namespace transform {
 
 		// replace ITEs with lazy ITEs
 		res = convertITE(manager, res);
+
+		// restore globals
+		res = restoreGlobals(manager, res);
 
 		// apply the vector/array conversion
 		res = addImplicitVectorArrayCasts(manager, res);
@@ -168,6 +176,85 @@ namespace transform {
 		}
 
 
+		// --------------------------------------------------------------------------------------------------------------
+
+
+
+		core::NodePtr restoreGlobals(core::NodeManager& manager, const core::NodePtr& code) {
+			// check for the program
+			if (code->getNodeType() != core::NT_Program) {
+				return code;
+			}
+
+			// check whether it is a main program ...
+			const core::ProgramPtr& program = static_pointer_cast<const core::Program>(code);
+			if (!utils::isMainProgram(program)) {
+				return code;
+			}
+
+			// search for global struct
+			const core::ExpressionPtr& mainExpr = program->getEntryPoints()[0];
+			if (mainExpr->getNodeType() != core::NT_LambdaExpr) {
+				return code;
+			}
+			const core::LambdaExprPtr& main = static_pointer_cast<const core::LambdaExpr>(mainExpr);
+			const core::StatementPtr& bodyStmt = main->getBody();
+			if (bodyStmt->getNodeType() != core::NT_CompoundStmt) {
+				return code;
+			}
+			core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(bodyStmt);
+			while (body->getStatements().size() == static_cast<std::size_t>(1)
+					&& body->getStatements()[0]->getNodeType() == core::NT_CompoundStmt) {
+				body = static_pointer_cast<const core::CompoundStmt>(body->getStatements()[0]);
+			}
+
+			// global struct initialization is first line ..
+			const core::StatementPtr& globalDeclStmt = body->getStatements()[0];
+			if (globalDeclStmt->getNodeType() != core::NT_DeclarationStmt) {
+				return code;
+			}
+			const core::DeclarationStmtPtr& globalDecl = static_pointer_cast<const core::DeclarationStmt>(globalDeclStmt);
+
+			// extract variable
+			const core::VariablePtr& globals = globalDecl->getVariable();
+			const core::TypePtr& globalType = globals->getType();
+
+			// check whether it is really a global struct ...
+			if (globalType->getNodeType() != core::NT_RefType) {
+				// this is not a global struct ..
+				return code;
+			}
+
+			const core::TypePtr& structType = static_pointer_cast<const core::RefType>(globalType)->getElementType();
+			if (structType->getNodeType() != core::NT_StructType) {
+				// this is not a global struct ..
+				return code;
+			}
+
+			// check initialization
+			if (!core::analysis::isCallOf(globalDecl->getInitialization(), manager.basic.getRefNew())) {
+				// this is not a global struct ...
+				return code;
+			}
+
+			core::LiteralPtr replacement = core::Literal::get(manager, globalType, IRExtensions::GLOBAL_ID);
+
+			// replace global declaration statement with initializer call
+			IRExtensions extensions(manager);
+			core::TypePtr unit = manager.getBasicGenerator().getUnit();
+			core::StatementPtr initGlobal = core::CallExpr::get(manager, unit, extensions.initGlobals, toVector(globalDecl->getInitialization()));
+
+			// replace declaration with init call
+			core::StatementList stmts = body->getStatements();
+			stmts[0] = initGlobal;
+			core::StatementPtr newBody = core::CompoundStmt::get(manager,stmts);
+
+			// fix the global variable
+			newBody = core::transform::fixVariable(manager, newBody, globals, replacement);
+			return core::transform::replaceAll(manager, code, body, newBody);
+		}
+
+
 
 		// --------------------------------------------------------------------------------------------------------------
 
@@ -178,7 +265,7 @@ namespace transform {
 			/**
 			 * A cache for converted call expressions - since each might be encountered multiple times.
 			 */
-			utils::map::PointerMap<core::NodePtr, core::NodePtr> resultCache;
+			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> resultCache;
 
 		public:
 

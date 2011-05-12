@@ -46,10 +46,14 @@ void* dlopen_unique(const char* filename, int flag) {
 	static unsigned count = 0;
 	char uniquename[DLOPEN_UNIQUE_BUFFSIZE];
 	unsigned cc = count++; // TODO should use atomic op for thread safety
-	assert(snprintf(uniquename, DLOPEN_UNIQUE_BUFFSIZE, "%s.%d", filename, cc) < DLOPEN_UNIQUE_BUFFSIZE);
+	int retval = 0;
+	retval = snprintf(uniquename, DLOPEN_UNIQUE_BUFFSIZE, "%s.%d", filename, cc);
+	assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
 	char command[DLOPEN_UNIQUE_BUFFSIZE];
-	assert(snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename) < DLOPEN_UNIQUE_BUFFSIZE);
-	assert(system(command) == 0);
+	retval = snprintf(command, DLOPEN_UNIQUE_BUFFSIZE, "cp %s %s", filename, uniquename);
+	assert(retval < DLOPEN_UNIQUE_BUFFSIZE);
+	retval = system(command);
+	assert(retval == 0);
 	return dlopen(uniquename, flag);
 }
 

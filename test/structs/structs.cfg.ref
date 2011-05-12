@@ -6,7 +6,7 @@ digraph G {
 4[shape=box,label="[B4]\l0: CAST<int<4>>\lT: RETURN\l"];
 5[shape=box,label="[B5]\l0: bool.to.int(...)\l"];
 7[shape=box,label="[B7]\l0: bool.and(..., bind(){fun{...}(v6)})\l"];
-8[shape=box,label="[B8]\l0: uint.ge(v6.AP(age), ...)\l"];
+8[shape=box,label="[B8]\l0: uint.ge(v6.age, ...)\l"];
 9[shape=box,label="[B9]\l0: CAST<uint<4>>\l"];
 10[shape=box,label="[B10]\lT: RETURN\l"];
 11[shape=box,label="CALL"];

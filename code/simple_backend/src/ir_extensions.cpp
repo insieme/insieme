@@ -54,11 +54,23 @@ namespace simple_backend {
 			return builder.literal(funType, "lazyITE");
 		}
 
+		core::LiteralPtr createInitGlobals(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			// construct type ('a)->unit
+			core::TypePtr alpha = builder.typeVariable("a");
+			core::TypePtr unit = builder.getBasicGenerator().getUnit();
+			core::FunctionTypePtr funType = builder.functionType(toVector(alpha), unit);
+
+			return builder.literal(funType, "initGlobals");
+		}
+
 	}
 
+	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
+
 	IRExtensions::IRExtensions(core::NodeManager& manager) :
-			lazyITE(createLazyITE(manager))
-		{ }
+			lazyITE(createLazyITE(manager)), initGlobals(createInitGlobals(manager)) { }
 
 } // end namespace simple_backend
 } // end namespace insieme

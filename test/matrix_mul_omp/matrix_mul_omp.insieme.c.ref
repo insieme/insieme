@@ -1,0 +1,230 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<4>,1000> //
+typedef struct ___insieme_type_1 { 
+    float data[1000];
+} __insieme_type_1;
+
+// A constructor initializing a vector of the type __insieme_type_1 uniformly
+static inline __insieme_type_1 __insieme_type_1_init_uniform(float value) {
+	__insieme_type_1 res;
+	for (int i=0; i<1000;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_0 <=> vector<vector<real<4>,1000>,1000> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1 data[1000];
+} __insieme_type_0;
+
+// A constructor initializing a vector of the type __insieme_type_0 uniformly
+static inline __insieme_type_0 __insieme_type_0_init_uniform(__insieme_type_1 value) {
+	__insieme_type_0 res;
+	for (int i=0; i<1000;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: type_declaration___insieme_globals //
+struct __insieme_globals { 
+    __insieme_type_0 A;
+    __insieme_type_0 B;
+    __insieme_type_0 C;
+};
+
+// start code fragment :: global data //
+struct __insieme_globals __GLOBAL__;
+
+// start code fragment :: struct for job __insieme_job_2 //
+struct __insieme_job_2 { 
+	unsigned structSize;
+	unsigned min, max;
+	void (*fun)(isbr_JobArgs*);
+	// ---- additional captured variables -----
+};
+
+// start code fragment :: Definitions for function type: __insieme_funType_3 //
+//
+// -------------------- Begin of constructs for function type (()->unit)---------------------
+// Base-struct of describing closures of type __insieme_funType_3 <-> (()->unit)
+typedef struct ___insieme_funType_3 { 
+    void(*call)(void*);
+} __insieme_funType_3;
+
+// Type safe function for invoking closures of type __insieme_funType_3
+static inline void __insieme_funType_3_call(__insieme_funType_3* closure) {  closure->call(closure); }
+
+// A constructor for closures wrapping pure functions of type (()->unit)
+static inline __insieme_funType_3* __insieme_funType_3_ctr(__insieme_funType_3* target, void(*call)(void*)) {
+	*target = (__insieme_funType_3){call};
+	return target;
+}
+// ----------------------- end of constructs for function (()->unit)-----------------------
+
+// start code fragment :: Definition of __insieme_closure_4 ... type: (()->unit) //
+// -- Begin - Closure Constructs ------------------------------------------------------------
+// struct definition a closure of type (()->unit)
+typedef struct ___insieme_closure_4 {
+    void(*call)(void*);
+    __insieme_funType_3* nested;
+} __insieme_closure_4;
+
+static inline void __insieme_closure_4_bind(__insieme_closure_4* closure) {  closure->nested->call(closure->nested); }
+
+static inline __insieme_closure_4* __insieme_closure_4_ctr(__insieme_closure_4* closure, __insieme_funType_3* nested) {
+    *closure = (__insieme_closure_4){&__insieme_closure_4_bind, nested};
+    return closure;
+}
+// -- End - Closure Constructs --------------------------------------------------------------
+
+// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_6_fun //
+struct __insieme_pfor_body_6_fun_capture {
+};
+
+// start code fragment :: Definition of __insieme_supp_7 ... type: ((int<4>)->unit) //
+void __insieme_supp_7(int var_28) { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_28))])).data[((unsigned int)((j)))])) = ((float)((var_28*(j))))); }; }
+static void __insieme_supp_7_wrap(void* _closure, int var_28) { __insieme_supp_7(var_28); }
+
+// start code fragment :: function for pfor-body __insieme_pfor_body_6_fun //
+void __insieme_pfor_body_6_fun(const isbr_PForRange range) {
+	// ----- captured variables -----
+	
+	// ----- process iterations -----
+	for(int __it = range.start; __it<range.end; __it+=range.step) {
+		__insieme_supp_7(__it);
+	}
+	
+}
+
+// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_9_fun //
+struct __insieme_pfor_body_9_fun_capture {
+};
+
+// start code fragment :: Definition of __insieme_supp_10 ... type: ((int<4>)->unit) //
+void __insieme_supp_10(int var_32) { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_32))])).data[((unsigned int)((j)))])) = ((float)((((var_32==(j)))?(1):(0))))); }; }
+static void __insieme_supp_10_wrap(void* _closure, int var_32) { __insieme_supp_10(var_32); }
+
+// start code fragment :: function for pfor-body __insieme_pfor_body_9_fun //
+void __insieme_pfor_body_9_fun(const isbr_PForRange range) {
+	// ----- captured variables -----
+	
+	// ----- process iterations -----
+	for(int __it = range.start; __it<range.end; __it+=range.step) {
+		__insieme_supp_10(__it);
+	}
+	
+}
+
+// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_11_fun //
+struct __insieme_pfor_body_11_fun_capture {
+};
+
+// start code fragment :: Definition of __insieme_supp_12 ... type: ((int<4>)->unit) //
+void __insieme_supp_12(int var_36) { for(int j = 0; j < 1000; j += 1) {
+	float sum = ((float)(0));
+	for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_36))])).data[((unsigned int)((k)))]))*(((((*(&((__GLOBAL__).B))).data[((unsigned int)((k)))])).data[((unsigned int)((j)))]))))); };
+	((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_36))])).data[((unsigned int)((j)))])) = (sum));
+}; }
+static void __insieme_supp_12_wrap(void* _closure, int var_36) { __insieme_supp_12(var_36); }
+
+// start code fragment :: function for pfor-body __insieme_pfor_body_11_fun //
+void __insieme_pfor_body_11_fun(const isbr_PForRange range) {
+	// ----- captured variables -----
+	
+	// ----- process iterations -----
+	for(int __it = range.start; __it<range.end; __it+=range.step) {
+		__insieme_supp_12(__it);
+	}
+	
+}
+
+// start code fragment :: Definition of __insieme_supp_5 ... type: (()->unit) //
+void __insieme_supp_5(){
+	{
+		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, 0},&__insieme_pfor_body_6_fun);
+		isbr_barrier(isbr_getThreadGroup(0));
+	};
+	{
+		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, 0},&__insieme_pfor_body_9_fun);
+		isbr_barrier(isbr_getThreadGroup(0));
+	};
+	{
+		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, 0},&__insieme_pfor_body_11_fun);
+		isbr_barrier(isbr_getThreadGroup(0));
+	};
+}
+static void __insieme_supp_5_wrap(void* _closure) { __insieme_supp_5(); }
+
+// start code fragment :: function for job __insieme_job_2 //
+void fun__insieme_job_2(isbr_JobArgs* args) {
+	// ----------- Unpacking local scope variables ----------
+	// ---------- Unpacking auto-captured variables ---------
+	// ------------------ Processing Guards -----------------
+	// ------------------ Default processing -----------------
+	__insieme_funType_3_call((__insieme_funType_3*)__insieme_closure_4_ctr((__insieme_closure_4*)alloca(sizeof(__insieme_closure_4)),(__insieme_funType_3*)__insieme_funType_3_ctr((__insieme_funType_3*)alloca(sizeof(__insieme_funType_3)),&__insieme_supp_5_wrap)));
+}
+
+// start code fragment :: array type definition of __insieme_type_14 <=> array<char,1> //
+typedef struct ___insieme_type_14 { 
+    char* data;
+} __insieme_type_14;
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: vector_type_declaration of __insieme_type_16 <=> vector<char,3> //
+typedef struct ___insieme_type_16 { 
+    char data[3];
+} __insieme_type_16;
+
+// A constructor initializing a vector of the type __insieme_type_16 uniformly
+static inline __insieme_type_16 __insieme_type_16_init_uniform(char value) {
+	__insieme_type_16 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_17 <=> vector<char,4> //
+typedef struct ___insieme_type_17 { 
+    char data[4];
+} __insieme_type_17;
+
+// A constructor initializing a vector of the type __insieme_type_17 uniformly
+static inline __insieme_type_17 __insieme_type_17_init_uniform(char value) {
+	__insieme_type_17 res;
+	for (int i=0; i<4;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: main function //
+int main() {
+	{
+		;
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_2)),&((struct __insieme_job_2){sizeof(struct __insieme_job_2),1,isbr_getMaxThreads(),&fun__insieme_job_2}),sizeof(struct __insieme_job_2))));
+		int success = 1;
+		for(int i = 0; i < 1000; i += 1) {
+			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=(((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))) { ((success) = 0); }; };
+			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((float)(0)))) { ((success) = 0); }; };
+		};
+		printf(((char*)((*(&((__insieme_type_14){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_14){(((__insieme_type_16){{'O', 'K', '\0'}})).data}))):((((__insieme_type_14){(((__insieme_type_17){{'E', 'R', 'R', '\0'}})).data}))))).data);
+	}
+}

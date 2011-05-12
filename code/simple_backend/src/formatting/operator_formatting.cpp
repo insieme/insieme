@@ -430,7 +430,32 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER(res, extended.lazyITE, {
-					OUT("("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT(")");
+				OUT("("); VISIT_ARG(0); OUT(")?("); VISIT_ARG(1); OUT("):("); VISIT_ARG(2); OUT(")");
+		});
+
+		ADD_FORMATTER_DETAIL(res, extended.initGlobals, false, {
+
+				// only one initialization is allowed
+				assert(!CONTEXT.getVariableManager().getGlobalVarFragment() && "Already initialized!");
+
+				TypePtr globalType = ARG(0)->getType();
+				if (globalType->getNodeType() == NT_RefType) {
+					globalType = static_pointer_cast<const core::RefType>(globalType)->getElementType();
+				}
+
+				// create the global variable definition
+				CodeFragmentPtr globals = CodeFragment::createNew("global data");
+
+				// get type of global struct
+				globals << CONTEXT.getTypeManager().getTypeName(globals, globalType) << " " << IRExtensions::GLOBAL_ID << ";\n";
+
+				CODE->addDependency(globals);
+				CONTEXT.getVariableManager().setGlobalVarFragment(globals);
+
+
+				// use statement manager to produce initialization code
+				LiteralPtr globalLiteral = Literal::get(CONTEXT.getNodeManager(), ARG(0)->getType(), IRExtensions::GLOBAL_ID);
+				STMT_CONVERTER.initStruct(globalLiteral, ARG(0));
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getSizeof(), false, {

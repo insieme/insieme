@@ -38,9 +38,26 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/manipulation.h"
+#include "insieme/core/checks/ir_checks.h"
+
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace core {
+
+bool containsSubstring(string subStr, string full, int minTimes = 1) {
+	size_t pos = 0;
+	for (int i=0; i<minTimes && pos != string::npos; i++) {
+		pos = full.find(subStr, pos+1);
+	}
+	return pos!=string::npos;
+}
+
+bool isSubString(string subStr, string full) {
+	return containsSubstring(subStr, full);
+}
+
+
 
 TEST(Manipulation, Insert) {
 	NodeManager manager;
@@ -414,6 +431,58 @@ TEST(Manipulation, Move) {
 
 }
 
+
+TEST(Manipulation, TryFixingParameter_simple) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.genericType("T");
+	VariablePtr paramA = builder.variable(type, 1);
+	VariablePtr paramB = builder.variable(type, 2);
+
+	FunctionTypePtr funType = builder.functionType(toVector(type,type), type);
+	LiteralPtr op = builder.literal(funType, "op");
+	ExpressionPtr sum = builder.callExpr(op, paramA, paramB);
+
+	StatementPtr body = builder.returnStmt(sum);
+	LambdaExprPtr lambda = builder.lambdaExpr(funType, toVector(paramA, paramB), body);
+
+	EXPECT_EQ("return op(v1, v2)", toString(*body));
+
+
+	// ... now, fix first parameter to be X
+	LiteralPtr value = builder.literal(type, "X");
+	LambdaExprPtr res = transform::tryFixParameter(manager, lambda, 0, value);
+	EXPECT_NE(*res, *lambda);
+	EXPECT_EQ("return op(X, v2)", toString(*res->getBody()));
+	EXPECT_EQ("[]", toString(core::checks::check(res)));
+
+	res = transform::tryFixParameter(manager, lambda, 1, value);
+	EXPECT_NE(*res, *lambda);
+	EXPECT_EQ("return op(v1, X)", toString(*res->getBody()));
+	EXPECT_EQ("[]", toString(core::checks::check(res)));
+
+	// nested lambdas
+	VariablePtr paramC = builder.variable(type, 3);
+	VariablePtr paramD = builder.variable(type, 4);
+	StatementPtr body2 = builder.returnStmt(builder.callExpr(lambda, paramC, paramD));
+	LambdaExprPtr outer1 = builder.lambdaExpr(funType, toVector(paramC, paramD), body2);
+
+	res = transform::tryFixParameter(manager, outer1, 0, value);
+	EXPECT_PRED2(isSubString, "return op(X, v2)", toString(*res));
+	EXPECT_EQ("[]", toString(core::checks::check(res)));
+
+
+	// multiple nested lambdas
+	StatementPtr body3 = builder.returnStmt(builder.callExpr(lambda, paramC, builder.callExpr(lambda, paramC, paramD)));
+	LambdaExprPtr outer2 = builder.lambdaExpr(funType, toVector(paramC, paramD), body3);
+
+	res = transform::tryFixParameter(manager, outer2, 0, value);
+	EXPECT_PRED3(containsSubstring, "return op(X, v2)", toString(*res), 2);
+	EXPECT_EQ("[]", toString(core::checks::check(res)));
+
+}
 
 } // end namespace core
 } // end namespace insieme

@@ -40,6 +40,8 @@
 #include "insieme/core/ast_address.h"
 #include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/frontend/program.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -68,7 +70,6 @@ public:
     core::ExpressionPtr getClWriteBufferFallback();
     core::ExpressionPtr getClReadBuffer();
     core::ExpressionPtr getClReadBufferFallback();
-
 };
 
 
@@ -76,9 +77,15 @@ public:
  * This class allows replaces a call to an OpenCL built-in function to an INSPIRE one
  *  */
 class Handler {
+    core::ProgramPtr kernels;
 public:
+    Handler(core::ASTBuilder& build) {
+        kernels = core::Program::create(build.getNodeManager());
+    }
 
     virtual core::NodePtr handleNode(core::CallExprPtr node) =0;
+
+    const vector<core::ExpressionPtr>& getKernels() { return kernels->getEntryPoints(); }
 };
 
 template<typename Lambda>
@@ -91,7 +98,8 @@ class LambdaHandler : public Handler {
     Lambda body;
 
 public:
-    LambdaHandler(core::ASTBuilder& build, const char* fun, Lambda lambda): builder(build), fct(fun), body(lambda) {}
+
+    LambdaHandler(core::ASTBuilder& build, const char* fun, Lambda lambda): Handler(build), builder(build), fct(fun), body(lambda) {}
 
     // creating a shared pointer to a LambdaHandler
 
@@ -100,12 +108,14 @@ public:
 
         return body(node);
     }
+
 };
 
 typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string>> HandlerTable;
 typedef boost::unordered_map<core::VariablePtr,  core::VariablePtr> ClmemTable;
 typedef boost::unordered_map<core::NodePtr, std::vector<core::ExpressionPtr> > KernelArgs;
+typedef boost::unordered_map<core::NodePtr, core::LambdaExprPtr > KernelLambdas;
 
 template<typename Lambda>
 HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambda) {
@@ -119,18 +129,23 @@ HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambd
 
 class HostMapper : public core::transform::CachedNodeMapping {
     core::ASTBuilder& builder;
-//    Handlers handler;
 
     HandlerTable handles;
     ClmemTable cl_mems;
     Ocl2Inspire o2i;
     KernelArgs kernelArgs;
+    KernelLambdas kernelLambdas;
+    vector<core::ExpressionPtr> kernelEntries;
+
+    core::CallExprPtr checkAssignment(const core::CallExprPtr& oldCall);
 
 public:
     HostMapper(core::ASTBuilder& build);
 
     const core::NodePtr resolveElement(const core::NodePtr& element);
     ClmemTable& getClMemMapping() { return cl_mems; }
+
+    const vector<core::ExpressionPtr>& getKernels() { return kernelEntries; }
 
 };
 
@@ -163,10 +178,11 @@ public:
 
 class HostCompiler {
     core::ProgramPtr& mProgram;
+    frontend::Program& mProg;
     core::ASTBuilder builder;
 
 public:
-    HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr): mProgram(program), builder(mgr) {}
+    HostCompiler(core::ProgramPtr& program, frontend::Program& prog, core::NodeManager& mgr): mProgram(program), mProg(prog), builder(mgr) {}
 
     core::ProgramPtr compile();
 };

@@ -137,6 +137,15 @@ namespace simple_backend {
 		 */
 		void convertAsParameterToExternal(const core::ExpressionPtr& expression, const CodeFragmentPtr& fragment);
 
+		/**
+		 * Creates the code required to initialize the members of the given structs. The code will consist
+		 * of a sequence of assignment statements targeting the various members of the given struct.
+		 *
+		 * @param target the target of the initialization
+		 * @param value the call producing the value the target should be initialized with
+		 */
+		void initStruct(const core::ExpressionPtr& target, const core::ExpressionPtr& init);
+
 	protected:
 
 		// --------------------------------------------------------------------------------

@@ -45,7 +45,11 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/ast_builder.h"
 
+#include "insieme/core/ast_check.h"
+
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/imperativechecks.h"
 
 #include "insieme/utils/test/test_utils.h"
 #include "insieme/utils/cmd_line_utils.h"
@@ -163,7 +167,7 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 }
 
 // instantiate the test case
-INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
+//INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
 
 
 // ---------------------------------- Check the frontend -------------------------------------
@@ -175,12 +179,10 @@ class FrontendIntegrationTest : public ::testing::TestWithParam<IntegrationTestC
 TEST_P(FrontendIntegrationTest, SemanticChecks) {
 	core::NodeManager manager;
 
-	// disable logger output
-	Logger::get(std::cerr, ERROR, 0);
-
 	// obtain test case
 	utils::test::IntegrationTestCase testCase = GetParam();
 
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
 
 	// load the code using the frontend
 	core::ProgramPtr code = load(manager, testCase);
@@ -214,4 +216,50 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+//
+//// ------------------------------------ Semantic Checks -------------------------------------------
+//
+//// the type definition (specifying the parameter type)
+//class SemanticCheckPerformanceTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+//
+//// define the test case pattern
+//TEST_P(SemanticCheckPerformanceTest, AllTests) {
+//	core::NodeManager manager;
+//
+//	// disable logger output
+//	Logger::get(std::cerr, ERROR, 0);
+//
+//	// obtain test case
+//	utils::test::IntegrationTestCase testCase = GetParam();
+//
+//	// get program code
+//	core::ProgramPtr program = load(manager, testCase);
+//
+//	core::CheckPtr check = core::checks::getFullCheck();
+//
+//	vector<std::pair<string, core::CheckPtr>> checks;
+//	checks.push_back(std::make_pair("All", core::checks::getFullCheck()));
+//	checks.push_back(std::make_pair("Keyword", makeVisitOnce(core::make_check<core::checks::KeywordCheck>())));
+//	checks.push_back(std::make_pair("CallExprType", makeVisitOnce(core::make_check<core::checks::CallExprTypeCheck>())));
+//	checks.push_back(std::make_pair("FunctionType", makeVisitOnce(core::make_check<core::checks::FunctionTypeCheck>())));
+//	checks.push_back(std::make_pair("ReturnType", makeVisitOnce(core::make_check<core::checks::ReturnTypeCheck>())));
+//	checks.push_back(std::make_pair("DeclarationStmtType", makeVisitOnce(core::make_check<core::checks::DeclarationStmtTypeCheck>())));
+//
+//	checks.push_back(std::make_pair("UndeclaredVariable", makeVisitOnce(core::make_check<core::checks::UndeclaredVariableCheck>())));
+//	checks.push_back(std::make_pair("DeclaredOnce", core::make_check<core::checks::DeclaredOnceCheck>()));
+//
+//
+//
+//	for(auto it = checks.begin(); it != checks.end(); ++it ) {
+//		// run all checks
+//		insieme::utils::Timer checkTime("Running check " + it->first + " ...");
+//		core::check(program, it->second);
+//		checkTime.stop();
+//		std::cout << checkTime;
+//	}
+//
+//}
+//
+//// instantiate the test case
+//INSTANTIATE_TEST_CASE_P(SemanticCheckPerformanceCheck, SemanticCheckPerformanceTest, ::testing::ValuesIn(getAllCases()));
 }

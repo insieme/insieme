@@ -45,15 +45,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-
-const char *irt_errcode_strings[] = {
-	"IRT_ERR_NONE",
-	"IRT_ERR_IO",
-	"IRT_ERR_INIT",
-	"IRT_ERR_APP"
-};
-
-
 void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 	va_list args;
 	va_start(args, message);
@@ -71,12 +62,20 @@ void irt_throw_string_error(irt_errcode code, const char* message, ...) {
 void irt_throw_generic_error(irt_error* error) {
 	if(pthread_setspecific(irt_g_error_key, error) != 0) {
 		fprintf(stderr, "Error during error reporting. Shutting down.\n");
+		perror("System Error message");
 		exit(-1);
 	}
 	raise(IRT_SIG_ERR);
 }
 
 const char* irt_errcode_string(irt_errcode code) {
+	static const char *irt_errcode_strings[] = {
+		"IRT_ERR_NONE",
+		"IRT_ERR_IO",
+		"IRT_ERR_INIT",
+		"IRT_ERR_INTERNAL",
+		"IRT_ERR_APP"
+	};
 	return irt_errcode_strings[code];
 }
 

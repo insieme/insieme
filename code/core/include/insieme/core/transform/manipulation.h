@@ -224,6 +224,30 @@ NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigne
  */
 ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call);
 
+/**
+ * Replaces the parameter with the given index within the given lambda by the given value and returns
+ * the resulting, restructured lambda. This will effect the inner structure as well as the type of the
+ * given lambda. If fixing the parameter is not possible (e.g. if the argument is forwarded to some
+ * external function / literal) the original lambda will be returned.
+ *
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param lambda the lambda for which a parameter should be replaced
+ * @param index the index of the parameter to be replaced
+ * @param value the value to be used instead of the parameter (needs to be a value of the same type)
+ */
+LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value);
+
+/**
+ * Fixes the given variable by the given value. Each occurrences of the variable will be replaced by the given value. Further,
+ * whenever, the variable is passed to a function, the parameter will be eliminated.
+ *
+ * @param manager the manager to be used to create and maintain nodes which might have to be created
+ * @param statement the statement within which the given variable should be fixed
+ * @param var the variable to be fixed
+ * @param value the value to be used instead of the variable
+ */
+StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value);
+
 /** Builds a lambda expression that can be called in place of [root].
  ** Captures all free variables and returns a capture init expression.
  ** This is the statement version that generates an initialized lambda returning unit.

@@ -79,18 +79,21 @@ struct __insieme_globals {
     double dt;
 };
 
+// start code fragment :: global data //
+struct __insieme_globals __GLOBAL__;
+
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_55) { return ceil(var_55); }
+static double ceil_wrap(void* _closure, double var_59) { return ceil(var_59); }
 
 // start code fragment :: Prototype for external function: rand ... type: (()->int<4>) //
 int rand();
 static int rand_wrap(void* _closure) { return rand(); }
 
-// start code fragment :: array type definition of __insieme_type_7 <=> array<char,1> //
-typedef struct ___insieme_type_7 { 
+// start code fragment :: array type definition of __insieme_type_6 <=> array<char,1> //
+typedef struct ___insieme_type_6 { 
     char* data;
-} __insieme_type_7;
+} __insieme_type_6;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -107,68 +110,66 @@ long begin_timer(){
 }
 static long begin_timer_wrap(void* _closure) { return begin_timer(); }
 
-// start code fragment :: struct for job __insieme_job_11 //
-struct __insieme_job_11 { 
+// start code fragment :: struct for job __insieme_job_10 //
+struct __insieme_job_10 { 
 	unsigned structSize;
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
-	int* var_56;
-	int* var_57;
-	struct __insieme_globals* var_58;
+	int* var_60;
+	int* var_61;
 };
 
-// start code fragment :: Definitions for function type: __insieme_funType_12 //
+// start code fragment :: Definitions for function type: __insieme_funType_11 //
 //
 // -------------------- Begin of constructs for function type (()->unit)---------------------
-// Base-struct of describing closures of type __insieme_funType_12 <-> (()->unit)
-typedef struct ___insieme_funType_12 { 
+// Base-struct of describing closures of type __insieme_funType_11 <-> (()->unit)
+typedef struct ___insieme_funType_11 { 
     void(*call)(void*);
-} __insieme_funType_12;
+} __insieme_funType_11;
 
-// Type safe function for invoking closures of type __insieme_funType_12
-static inline void __insieme_funType_12_call(__insieme_funType_12* closure) {  closure->call(closure); }
+// Type safe function for invoking closures of type __insieme_funType_11
+static inline void __insieme_funType_11_call(__insieme_funType_11* closure) {  closure->call(closure); }
 
 // A constructor for closures wrapping pure functions of type (()->unit)
-static inline __insieme_funType_12* __insieme_funType_12_ctr(__insieme_funType_12* target, void(*call)(void*)) {
-	*target = (__insieme_funType_12){call};
+static inline __insieme_funType_11* __insieme_funType_11_ctr(__insieme_funType_11* target, void(*call)(void*)) {
+	*target = (__insieme_funType_11){call};
 	return target;
 }
 // ----------------------- end of constructs for function (()->unit)-----------------------
 
-// start code fragment :: Definitions for function type: __insieme_funType_14 //
+// start code fragment :: Definitions for function type: __insieme_funType_13 //
 //
-// -------------------- Begin of constructs for function type ((ref<int<4>>,ref<int<4>>,ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>)->unit)---------------------
-// Base-struct of describing closures of type __insieme_funType_14 <-> ((ref<int<4>>,ref<int<4>>,ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>)->unit)
-typedef struct ___insieme_funType_14 { 
-    void(*call)(void*, int*, int*, struct __insieme_globals*);
-} __insieme_funType_14;
+// -------------------- Begin of constructs for function type ((ref<int<4>>,ref<int<4>>)->unit)---------------------
+// Base-struct of describing closures of type __insieme_funType_13 <-> ((ref<int<4>>,ref<int<4>>)->unit)
+typedef struct ___insieme_funType_13 { 
+    void(*call)(void*, int*, int*);
+} __insieme_funType_13;
 
-// Type safe function for invoking closures of type __insieme_funType_14
-static inline void __insieme_funType_14_call(__insieme_funType_14* closure, int* p1, int* p2, struct __insieme_globals* p3) {  closure->call(closure, p1,p2,p3); }
+// Type safe function for invoking closures of type __insieme_funType_13
+static inline void __insieme_funType_13_call(__insieme_funType_13* closure, int* p1, int* p2) {  closure->call(closure, p1,p2); }
 
-// A constructor for closures wrapping pure functions of type ((ref<int<4>>,ref<int<4>>,ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>)->unit)
-static inline __insieme_funType_14* __insieme_funType_14_ctr(__insieme_funType_14* target, void(*call)(void*, int*, int*, struct __insieme_globals*)) {
-	*target = (__insieme_funType_14){call};
+// A constructor for closures wrapping pure functions of type ((ref<int<4>>,ref<int<4>>)->unit)
+static inline __insieme_funType_13* __insieme_funType_13_ctr(__insieme_funType_13* target, void(*call)(void*, int*, int*)) {
+	*target = (__insieme_funType_13){call};
 	return target;
 }
-// ----------------------- end of constructs for function ((ref<int<4>>,ref<int<4>>,ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>)->unit)-----------------------
+// ----------------------- end of constructs for function ((ref<int<4>>,ref<int<4>>)->unit)-----------------------
 
-// start code fragment :: Definition of __insieme_closure_13 ... type: (()->unit) //
+// start code fragment :: Definition of __insieme_closure_12 ... type: (()->unit) //
 // -- Begin - Closure Constructs ------------------------------------------------------------
 // struct definition a closure of type (()->unit)
-typedef struct ___insieme_closure_13 {
+typedef struct ___insieme_closure_12 {
     void(*call)(void*);
-    __insieme_funType_14* nested;
+    __insieme_funType_13* nested;
     int* c1;
     int* c2;
-    struct __insieme_globals* c3;
-} __insieme_closure_13;
+} __insieme_closure_12;
 
-static inline void __insieme_closure_13_bind(__insieme_closure_13* closure) {  closure->nested->call(closure->nested, closure->c1,closure->c2,closure->c3); }
+static inline void __insieme_closure_12_bind(__insieme_closure_12* closure) {  closure->nested->call(closure->nested, closure->c1,closure->c2); }
 
-static inline __insieme_closure_13* __insieme_closure_13_ctr(__insieme_closure_13* closure, __insieme_funType_14* nested, int* c1, int* c2, struct __insieme_globals* c3) {
-    *closure = (__insieme_closure_13){&__insieme_closure_13_bind, nested, c1, c2, c3};
+static inline __insieme_closure_12* __insieme_closure_12_ctr(__insieme_closure_12* closure, __insieme_funType_13* nested, int* c1, int* c2) {
+    *closure = (__insieme_closure_12){&__insieme_closure_12_bind, nested, c1, c2};
     return closure;
 }
 // -- End - Closure Constructs --------------------------------------------------------------
@@ -177,7 +178,6 @@ static inline __insieme_closure_13* __insieme_closure_13_ctr(__insieme_closure_1
 struct __insieme_pfor_body_16_fun_capture {
 	double* pv_u;
 	double* prob_m;
-	struct __insieme_globals* var_13;
 	int m;
 	double* pv_d;
 	double* prob_d;
@@ -188,47 +188,46 @@ struct __insieme_pfor_body_16_fun_capture {
 
 // start code fragment :: Prototype for external function: exp ... type: ((real<8>)->real<8>) //
 double exp(double);
-static double exp_wrap(void* _closure, double var_69) { return exp(var_69); }
+static double exp_wrap(void* _closure, double var_71) { return exp(var_71); }
 
 // start code fragment :: Definition of coupon ... type: ((int<4>,real<8>,real<8>)->real<8>) //
 double coupon(int m, double r, double nomval) { return (nomval*(exp(r)-1.0)); }
 static double coupon_wrap(void* _closure, int m, double r, double nomval) { return coupon(m, r, nomval); }
 
-// start code fragment :: Definition of __insieme_supp_17 ... type: ((ref<real<8>>,ref<real<8>>,ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>,int<4>,ref<real<8>>,ref<real<8>>,ref<real<8>>,ref<int<4>>,ref<real<8>>,int<4>)->unit) //
-void __insieme_supp_17(double* var_47, double* var_43, struct __insieme_globals* var_49, int var_48, double* var_45, double* var_42, double* var_46, int* var_41, double* var_44, int var_40){
-	((*var_44) = (((*(&((*var_49).prob))).data[((unsigned int)(((var_40*3)+2)))])));
-	((*var_43) = (((*(&((*var_49).prob))).data[((unsigned int)(((var_40*3)+1)))])));
-	((*var_42) = (((*(&((*var_49).prob))).data[((unsigned int)((var_40*3)))])));
-	((*var_47) = (((*(&((*var_49).pv_1))).data[((unsigned int)((((*(&((*var_49).succ))).data[((unsigned int)(((var_40*3)+2)))]))))])));
-	((*var_46) = (((*(&((*var_49).pv_1))).data[((unsigned int)((((*(&((*var_49).succ))).data[((unsigned int)(((var_40*3)+1)))]))))])));
-	((*var_45) = (((*(&((*var_49).pv_1))).data[((unsigned int)((((*(&((*var_49).succ))).data[((unsigned int)((var_40*3)))]))))])));
+// start code fragment :: Definition of __insieme_supp_17 ... type: ((ref<real<8>>,ref<real<8>>,int<4>,ref<real<8>>,ref<real<8>>,ref<real<8>>,ref<int<4>>,ref<real<8>>,int<4>)->unit) //
+void __insieme_supp_17(double* var_47, double* var_43, int var_48, double* var_45, double* var_42, double* var_46, int* var_41, double* var_44, int var_40){
+	((*var_44) = (((*(&((__GLOBAL__).prob))).data[((unsigned int)(((var_40*3)+2)))])));
+	((*var_43) = (((*(&((__GLOBAL__).prob))).data[((unsigned int)(((var_40*3)+1)))])));
+	((*var_42) = (((*(&((__GLOBAL__).prob))).data[((unsigned int)((var_40*3)))])));
+	((*var_47) = (((*(&((__GLOBAL__).pv_1))).data[((unsigned int)((((*(&((__GLOBAL__).succ))).data[((unsigned int)(((var_40*3)+2)))]))))])));
+	((*var_46) = (((*(&((__GLOBAL__).pv_1))).data[((unsigned int)((((*(&((__GLOBAL__).succ))).data[((unsigned int)(((var_40*3)+1)))]))))])));
+	((*var_45) = (((*(&((__GLOBAL__).pv_1))).data[((unsigned int)((((*(&((__GLOBAL__).succ))).data[((unsigned int)((var_40*3)))]))))])));
 	((*var_41) = ((((2*1000)+1)*var_48)+var_40));
-	((((*(&((*var_49).pv))).data[((unsigned int)(var_40))])) = (exp(((((double)(0))-(((*(&((*var_49).rate))).data[((unsigned int)((*var_41)))])))*(*(&((*var_49).dt)))))*(((((*var_42)*(*var_45))+((*var_43)*(*var_46)))+((*var_44)*(*var_47)))+coupon(var_48, (((*(&((*var_49).rate))).data[((unsigned int)((*var_41)))])), (*(&((*var_49).nomval)))))));
+	((((*(&((__GLOBAL__).pv))).data[((unsigned int)(var_40))])) = (exp(((((double)(0))-(((*(&((__GLOBAL__).rate))).data[((unsigned int)((*var_41)))])))*(*(&((__GLOBAL__).dt)))))*(((((*var_42)*(*var_45))+((*var_43)*(*var_46)))+((*var_44)*(*var_47)))+coupon(var_48, (((*(&((__GLOBAL__).rate))).data[((unsigned int)((*var_41)))])), (*(&((__GLOBAL__).nomval)))))));
 }
-static void __insieme_supp_17_wrap(void* _closure, double* var_47, double* var_43, struct __insieme_globals* var_49, int var_48, double* var_45, double* var_42, double* var_46, int* var_41, double* var_44, int var_40) { __insieme_supp_17(var_47, var_43, var_49, var_48, var_45, var_42, var_46, var_41, var_44, var_40); }
+static void __insieme_supp_17_wrap(void* _closure, double* var_47, double* var_43, int var_48, double* var_45, double* var_42, double* var_46, int* var_41, double* var_44, int var_40) { __insieme_supp_17(var_47, var_43, var_48, var_45, var_42, var_46, var_41, var_44, var_40); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_16_fun //
 void __insieme_pfor_body_16_fun(const isbr_PForRange range) {
 	// ----- captured variables -----
-	double* var_59 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->pv_u;
-	double* var_60 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->prob_m;
-	struct __insieme_globals* var_61 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->var_13;
-	int var_62 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->m;
-	double* var_63 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->pv_d;
-	double* var_64 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->prob_d;
-	double* var_65 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->pv_m;
-	int* var_66 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->i;
-	double* var_67 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->prob_u;
+	double* var_62 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->pv_u;
+	double* var_63 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->prob_m;
+	int var_64 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->m;
+	double* var_65 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->pv_d;
+	double* var_66 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->prob_d;
+	double* var_67 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->pv_m;
+	int* var_68 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->i;
+	double* var_69 = ((struct __insieme_pfor_body_16_fun_capture*)(range.context))->prob_u;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_17(var_59, var_60, var_61, var_62, var_63, var_64, var_65, var_66, var_67, __it);
+		__insieme_supp_17(var_62, var_63, var_64, var_65, var_66, var_67, var_68, var_69, __it);
 	}
 	
 }
 
-// start code fragment :: Definition of backward_column ... type: ((ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>,int<4>)->unit) //
-void backward_column(struct __insieme_globals* var_13, int m){
+// start code fragment :: Definition of __insieme_supp_15 ... type: ((int<4>)->unit) //
+void __insieme_supp_15(int m){
 	double pv_u = 0.0;
 	double pv_m = 0.0;
 	double pv_d = 0.0;
@@ -239,42 +238,40 @@ void backward_column(struct __insieme_globals* var_13, int m){
 	int j = 0;
 	{
 		{
-			isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, ((2*1000)+1), 1, &((struct __insieme_pfor_body_16_fun_capture){&pv_u, &prob_m, var_13, m, &pv_d, &prob_d, &pv_m, &i, &prob_u})},&__insieme_pfor_body_16_fun);
+			isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, ((2*1000)+1), 1, &((struct __insieme_pfor_body_16_fun_capture){&pv_u, &prob_m, m, &pv_d, &prob_d, &pv_m, &i, &prob_u})},&__insieme_pfor_body_16_fun);
 			isbr_barrier(isbr_getThreadGroup(0));
 		};
 		((j) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
 	};
 }
-static void backward_column_wrap(void* _closure, struct __insieme_globals* var_13, int m) { backward_column(var_13, m); }
+static void __insieme_supp_15_wrap(void* _closure, int m) { __insieme_supp_15(m); }
 
 // start code fragment :: capture-struct for pfor-body __insieme_pfor_body_18_fun //
 struct __insieme_pfor_body_18_fun_capture {
-	struct __insieme_globals* var_37;
 };
 
-// start code fragment :: Definition of __insieme_supp_19 ... type: ((ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>,int<4>)->unit) //
-void __insieme_supp_19(struct __insieme_globals* var_53, int var_52) { ((((*(&((*var_53).pv_1))).data[((unsigned int)(var_52))])) = (((*(&((*var_53).pv))).data[((unsigned int)(var_52))]))); }
-static void __insieme_supp_19_wrap(void* _closure, struct __insieme_globals* var_53, int var_52) { __insieme_supp_19(var_53, var_52); }
+// start code fragment :: Definition of __insieme_supp_19 ... type: ((int<4>)->unit) //
+void __insieme_supp_19(int var_52) { ((((*(&((__GLOBAL__).pv_1))).data[((unsigned int)(var_52))])) = (((*(&((__GLOBAL__).pv))).data[((unsigned int)(var_52))]))); }
+static void __insieme_supp_19_wrap(void* _closure, int var_52) { __insieme_supp_19(var_52); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_18_fun //
 void __insieme_pfor_body_18_fun(const isbr_PForRange range) {
 	// ----- captured variables -----
-	struct __insieme_globals* var_70 = ((struct __insieme_pfor_body_18_fun_capture*)(range.context))->var_37;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_19(var_70, __it);
+		__insieme_supp_19(__it);
 	}
 	
 }
 
-// start code fragment :: Definition of __insieme_supp_15 ... type: ((ref<int<4>>,ref<int<4>>,ref<struct<rate:vector<real<8>,2001000>,prob:vector<real<8>,6003>,succ:vector<int<4>,6003>,pv:vector<real<8>,2001>,pv_1:vector<real<8>,2001>,nomval:real<8>,dt:real<8>>>)->unit) //
-void __insieme_supp_15(int* var_36, int* var_35, struct __insieme_globals* var_37) { {
+// start code fragment :: Definition of __insieme_supp_14 ... type: ((ref<int<4>>,ref<int<4>>)->unit) //
+void __insieme_supp_14(int* var_36, int* var_35) { {
 	for(int var_30 = (((int)(0))-(1000-1)); var_30 < ((((int)(0))-0)+1); var_30 += 1) {
-		backward_column(var_37, (((int)(0))-(var_30)));
+		__insieme_supp_15((((int)(0))-(var_30)));
 		{
 			{
-				isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, ((2*1000)+1), 1, &((struct __insieme_pfor_body_18_fun_capture){var_37})},&__insieme_pfor_body_18_fun);
+				isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, ((2*1000)+1), 1, 0},&__insieme_pfor_body_18_fun);
 				isbr_barrier(isbr_getThreadGroup(0));
 			};
 			((*var_35) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
@@ -282,18 +279,17 @@ void __insieme_supp_15(int* var_36, int* var_35, struct __insieme_globals* var_3
 	};
 	((*var_36) = ((1000-1)+(((int)(ceil((((double)((((((int)(0))-0)+1)-(1000-1))))/((double)(1))))))*1)));
 }; }
-static void __insieme_supp_15_wrap(void* _closure, int* var_36, int* var_35, struct __insieme_globals* var_37) { __insieme_supp_15(var_36, var_35, var_37); }
+static void __insieme_supp_14_wrap(void* _closure, int* var_36, int* var_35) { __insieme_supp_14(var_36, var_35); }
 
-// start code fragment :: function for job __insieme_job_11 //
-void fun__insieme_job_11(isbr_JobArgs* args) {
+// start code fragment :: function for job __insieme_job_10 //
+void fun__insieme_job_10(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
-	int* var_56 = ((struct __insieme_job_11*)args)->var_56;
-	int* var_57 = ((struct __insieme_job_11*)args)->var_57;
-	struct __insieme_globals* var_58 = ((struct __insieme_job_11*)args)->var_58;
+	int* var_60 = ((struct __insieme_job_10*)args)->var_60;
+	int* var_61 = ((struct __insieme_job_10*)args)->var_61;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
-	__insieme_funType_12_call((__insieme_funType_12*)__insieme_closure_13_ctr((__insieme_closure_13*)alloca(sizeof(__insieme_closure_13)),(__insieme_funType_14*)__insieme_funType_14_ctr((__insieme_funType_14*)alloca(sizeof(__insieme_funType_14)),&__insieme_supp_15_wrap), var_56, var_57, var_58));
+	__insieme_funType_11_call((__insieme_funType_11*)__insieme_closure_12_ctr((__insieme_closure_12*)alloca(sizeof(__insieme_closure_12)),(__insieme_funType_13*)__insieme_funType_13_ctr((__insieme_funType_13*)alloca(sizeof(__insieme_funType_13)),&__insieme_supp_14_wrap), var_60, var_61));
 }
 
 // start code fragment :: Definition of end_timer ... type: ((int<8>)->int<8>) //
@@ -307,49 +303,49 @@ static long end_timer_wrap(void* _closure, long t_begin) { return end_timer(t_be
 // start code fragment :: main function //
 int main() {
 	{
-		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		((*(&((*var_1).nomval))) = 1000.0);
-		((*(&((*var_1).dt))) = 1.0);
+		;
+		((*(&((__GLOBAL__).nomval))) = 1000.0);
+		((*(&((__GLOBAL__).dt))) = 1.0);
 		int m = 0;
 		int j = 0;
 		float ticks = 0.0;
-		((((*(&((*var_1).succ))).data[((unsigned int)(2))])) = 2);
-		((((*(&((*var_1).succ))).data[((unsigned int)(1))])) = 1);
-		((((*(&((*var_1).succ))).data[((unsigned int)(0))])) = 0);
+		((((*(&((__GLOBAL__).succ))).data[((unsigned int)(2))])) = 2);
+		((((*(&((__GLOBAL__).succ))).data[((unsigned int)(1))])) = 1);
+		((((*(&((__GLOBAL__).succ))).data[((unsigned int)(0))])) = 0);
 		{
 			for(int var_5 = 1; var_5 < (2*1000); var_5 += 1) {
-				((((*(&((*var_1).succ))).data[((unsigned int)((((var_5)*3)+2)))])) = ((var_5)+1));
-				((((*(&((*var_1).succ))).data[((unsigned int)((((var_5)*3)+1)))])) = (var_5));
-				((((*(&((*var_1).succ))).data[((unsigned int)(((var_5)*3)))])) = ((var_5)-1));
+				((((*(&((__GLOBAL__).succ))).data[((unsigned int)((((var_5)*3)+2)))])) = ((var_5)+1));
+				((((*(&((__GLOBAL__).succ))).data[((unsigned int)((((var_5)*3)+1)))])) = (var_5));
+				((((*(&((__GLOBAL__).succ))).data[((unsigned int)(((var_5)*3)))])) = ((var_5)-1));
 			};
 			((j) = (1+(((int)(ceil((((double)(((2*1000)-1)))/((double)(1))))))*1)));
 		};
-		((((*(&((*var_1).succ))).data[((unsigned int)((((2*1000)*3)+2)))])) = (2*1000));
-		((((*(&((*var_1).succ))).data[((unsigned int)((((2*1000)*3)+1)))])) = ((2*1000)-1));
-		((((*(&((*var_1).succ))).data[((unsigned int)(((2*1000)*3)))])) = ((2*1000)-2));
+		((((*(&((__GLOBAL__).succ))).data[((unsigned int)((((2*1000)*3)+2)))])) = (2*1000));
+		((((*(&((__GLOBAL__).succ))).data[((unsigned int)((((2*1000)*3)+1)))])) = ((2*1000)-1));
+		((((*(&((__GLOBAL__).succ))).data[((unsigned int)(((2*1000)*3)))])) = ((2*1000)-2));
 		{
 			for(int var_6 = 0; var_6 < ((2*1000)+1); var_6 += 1) {
-				((((*(&((*var_1).prob))).data[((unsigned int)((((var_6)*3)+2)))])) = ((1.0/4.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
-				((((*(&((*var_1).prob))).data[((unsigned int)((((var_6)*3)+1)))])) = ((1.0/2.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
-				((((*(&((*var_1).prob))).data[((unsigned int)(((var_6)*3)))])) = ((1.0-(((*(&((*var_1).prob))).data[((unsigned int)((((var_6)*3)+1)))])))-(((*(&((*var_1).prob))).data[((unsigned int)((((var_6)*3)+2)))]))));
+				((((*(&((__GLOBAL__).prob))).data[((unsigned int)((((var_6)*3)+2)))])) = ((1.0/4.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
+				((((*(&((__GLOBAL__).prob))).data[((unsigned int)((((var_6)*3)+1)))])) = ((1.0/2.0)*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0))))));
+				((((*(&((__GLOBAL__).prob))).data[((unsigned int)(((var_6)*3)))])) = ((1.0-(((*(&((__GLOBAL__).prob))).data[((unsigned int)((((var_6)*3)+1)))])))-(((*(&((__GLOBAL__).prob))).data[((unsigned int)((((var_6)*3)+2)))]))));
 			};
 			((j) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
 		};
 		{
 			for(int var_8 = 0; var_8 < 1000; var_8 += 1)  { {
-				for(int var_7 = 0; var_7 < ((2*1000)+1); var_7 += 1)  { ((((*(&((*var_1).rate))).data[((unsigned int)(((((2*1000)+1)*(var_8))+(var_7))))])) = (((0.01+(0.05*(((double)((var_7)))/((double)(1000)))))+(0.03*(((double)((var_8)))/((double)(1000)))))*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0)))))); };
+				for(int var_7 = 0; var_7 < ((2*1000)+1); var_7 += 1)  { ((((*(&((__GLOBAL__).rate))).data[((unsigned int)(((((2*1000)+1)*(var_8))+(var_7))))])) = (((0.01+(0.05*(((double)((var_7)))/((double)(1000)))))+(0.03*(((double)((var_8)))/((double)(1000)))))*((1.0-0.05)+(0.1*(((double)(rand()))/(((double)(2147483647))+1.0)))))); };
 				((j) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
 			}; };
 			((m) = (0+(((int)(ceil((((double)((1000-0)))/((double)(1))))))*1)));
 		};
-		printf(((char*)((*(&((__insieme_type_7){"start..\n"}))).data)), 0);
+		printf(((char*)((*(&((__insieme_type_6){"start..\n"}))).data)), 0);
 		double begin = ((double)(begin_timer()));
 		{
-			for(int var_12 = 0; var_12 < ((2*1000)+1); var_12 += 1)  { ((((*(&((*var_1).pv_1))).data[((unsigned int)((var_12)))])) = (*(&((*var_1).nomval)))); };
+			for(int var_12 = 0; var_12 < ((2*1000)+1); var_12 += 1)  { ((((*(&((__GLOBAL__).pv_1))).data[((unsigned int)((var_12)))])) = (*(&((__GLOBAL__).nomval)))); };
 			((j) = (0+(((int)(ceil((((double)((((2*1000)+1)-0)))/((double)(1))))))*1)));
 		};
-		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_11)),&((struct __insieme_job_11){sizeof(struct __insieme_job_11),1,isbr_getMaxThreads(),&fun__insieme_job_11,&m,&j,var_1}),sizeof(struct __insieme_job_11))));
+		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_10)),&((struct __insieme_job_10){sizeof(struct __insieme_job_10),1,isbr_getMaxThreads(),&fun__insieme_job_10,&m,&j}),sizeof(struct __insieme_job_10))));
 		((ticks) = ((float)(end_timer(((long)(begin))))));
-		printf(((char*)((*(&((__insieme_type_7){"pval=%8.2f\n"}))).data)), (((*(&((*var_1).pv))).data[((unsigned int)(1000))])));
+		printf(((char*)((*(&((__insieme_type_6){"pval=%8.2f\n"}))).data)), (((*(&((__GLOBAL__).pv))).data[((unsigned int)(1000))])));
 	}
 }
