@@ -42,7 +42,7 @@ int main() {
 		#pragma omp for
 		for (int i=0; i<N; i++) {
 			for (int j=0; j<K; j++) {
-				double sum = 0;
+				VALUE sum = 0;
 				for (int k=0; k<M; k++) {
 					sum += A[i][k] * B[k][j];
 				}

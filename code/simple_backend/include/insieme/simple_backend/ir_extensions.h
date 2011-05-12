@@ -50,6 +50,11 @@ namespace simple_backend {
 	public:
 
 		/**
+		 * The name of the global literal introduced by the preprocessor.
+		 */
+		static const string GLOBAL_ID;
+
+		/**
 		 * Creates a new instance of this IRExtension set. The given manager is used to construct
 		 * the included literals.
 		 *
@@ -62,6 +67,10 @@ namespace simple_backend {
 		 */
 		const core::LiteralPtr lazyITE;
 
+		/**
+		 * A special literal representing a function causing the initialization of the global variables.
+		 */
+		const core::LiteralPtr initGlobals;
 	};
 
 

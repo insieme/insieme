@@ -45,6 +45,9 @@
 #include "insieme/simple_backend/type_manager.h"
 #include "insieme/simple_backend/job_manager.h"
 #include "insieme/simple_backend/function_manager.h"
+#include "insieme/simple_backend/ir_extensions.h"
+
+#include "insieme/simple_backend/utils/simple_backend_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -140,6 +143,59 @@ namespace simple_backend {
 	}
 
 
+	void StmtConverter::initStruct(const core::ExpressionPtr& target, const core::ExpressionPtr& init) {
+
+		// obtain reference to lang basic
+		const core::lang::BasicGenerator& basic = cc.getLangBasic();
+		core::ASTBuilder builder(cc.getNodeManager());
+
+		// check whether an initializing is required
+		if (analysis::isCallOf(init, basic.getUndefined())) {
+			// that's it - no more work required
+			return;
+		}
+
+		core::ExpressionPtr structInit = init;
+
+		// ignore ref new / ref var
+		if (target->getType()->getNodeType() == NT_RefType) {
+			if (core::analysis::isCallOf(structInit, basic.getRefNew()) || core::analysis::isCallOf(structInit, basic.getRefVar())) {
+				structInit = static_pointer_cast<const CallExpr>(structInit)->getArgument(0);
+			}
+		}
+
+		// ensure init value is a struct
+		assert(structInit->getNodeType() == NT_StructExpr && "Initialization is not of proper type!");
+		const StructExprPtr& structValue = static_pointer_cast<const StructExpr>(structInit);
+
+		// init values, one after another
+		for_each(structValue->getMembers(), [&, this](const StructExpr::Member& cur) {
+
+			const IdentifierPtr& name = cur.first;
+			ExpressionPtr value = cur.second;
+
+			// remove leading var/new calls
+			if (analysis::isCallOf(value, basic.getRefNew()) || analysis::isCallOf(value, basic.getRefVar())) {
+				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
+			}
+
+			// skip vector initialization
+			if (analysis::isCallOf(value, basic.getVectorInitUniform()) || analysis::isCallOf(value, basic.getVectorInitUndefined())) {
+				// TODO: support init uniform
+				return;
+			}
+
+			// start new line .. initialization of a member is required
+			currentCodeFragment << ";\n";
+
+			// create assignment statement
+			auto assignmentTarget = builder.callExpr(basic.getCompositeRefElem(), target,
+					basic.getIdentifierLiteral(name), basic.getTypeLiteral(value->getType()));
+			this->visit(builder.callExpr(basic.getRefAssign(), assignmentTarget, value));
+		});
+
+	}
+
 	namespace {
 
 		/**
@@ -179,43 +235,13 @@ namespace simple_backend {
 		getCurrentCodeFragment() << "<?>" << toString(*node) << "</?>";
 	}
 
-	namespace {
-		bool isMainProgram(const ProgramPtr& program) {
-			if (program->isMain()) {
-				return true;
-			}
-
-			if (program->getEntryPoints().size() != static_cast<unsigned>(1)) {
-				return false;
-			}
-
-			// construct the type of the main
-			core::ASTBuilder builder(program->getNodeManager());
-			const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
-
-			// type:   (int<4>, ref<array<array<char,1>,1>>) -> int<4>
-			ConcreteIntTypeParamPtr one = builder.concreteIntTypeParam(1);
-			vector<TypePtr> params = toVector<TypePtr>(basic.getInt4(),
-					builder.refType(builder.arrayType(builder.arrayType(basic.getChar(), one), one)));
-
-			FunctionTypePtr funPtr1 = builder.functionType(params, basic.getInt4());
-			FunctionTypePtr funPtr2 = builder.functionType(TypeList(), basic.getInt4());
-			FunctionTypePtr funPtr3 = builder.functionType(TypeList(), basic.getUnit());
-
-			// check type
-			const TypePtr& type = program->getEntryPoints()[0]->getType();
-			return *type == *funPtr1 || *type == *funPtr2 || *type == *funPtr3;
-		}
-
-	}
-
 
 	void StmtConverter::visitProgram(const ProgramPtr& program) {
 
 		// TODO: remove second clause when frontend is fixed ...
 
 		// check whether program is a main program
-		if (program->isMain() || isMainProgram(program)) {
+		if (program->isMain() || utils::isMainProgram(program)) {
 
 			// create main program + argument wrapper (if necessary)
 			CodeFragmentPtr code = CodeFragment::createNew("main function");
@@ -384,41 +410,7 @@ namespace simple_backend {
 			visit(builder.callExpr(basic.getRefNew(), builder.callExpr(basic.getUndefined(), basic.getTypeLiteral(structType))));
 
 			// initialize all the members
-			const ExpressionPtr& init = static_pointer_cast<const CallExpr>(ptr->getInitialization())->getArgument(0);
-			if (analysis::isCallOf(init, basic.getUndefined())) {
-				// that's it - no more work required
-				return;
-			}
-
-			// ensure init value is a struct
-			assert(init->getNodeType() == NT_StructExpr && "Initialization is not of proper type!");
-			const StructExprPtr& structValue = static_pointer_cast<const StructExpr>(init);
-
-			// init values, one after another
-			for_each(structValue->getMembers(), [&, this](const StructExpr::Member& cur) {
-
-				const IdentifierPtr& name = cur.first;
-				ExpressionPtr value = cur.second;
-
-				// remove leading var/new calls
-				if (analysis::isCallOf(value, basic.getRefNew()) || analysis::isCallOf(value, basic.getRefVar())) {
-					value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
-				}
-
-				// skip vector initialization
-				if (analysis::isCallOf(value, basic.getVectorInitUniform()) || analysis::isCallOf(value, basic.getVectorInitUndefined())) {
-					// TODO: support init uniform
-					return;
-				}
-
-				// start new line .. initialization of a member is required
-				code << ";\n";
-
-				// create assignment statement
-				auto target = builder.callExpr(basic.getCompositeRefElem(), var,
-						basic.getIdentifierLiteral(name), basic.getTypeLiteral(value->getType()));
-				this->visit(builder.callExpr(basic.getRefAssign(), target, value));
-			});
+			initStruct(var, ptr->getInitialization());
 
 			// done - default handling is not necessary
 			return;
@@ -718,22 +710,16 @@ namespace simple_backend {
 
 	void StmtConverter::visitLiteral(const LiteralPtr& ptr) {
 
-		// there is a special treatment for strings literals
-//		if (ptr->getValue()[0] == '\"') {
-//			// convert a string into a vector
-//			NodeManager& manager = ptr->getNodeManager();
-//			ASTBuilder builder(manager);
-//			unsigned len = ptr->getValue().length() - 1; // - 2x \" + 1x \0
-//			TypePtr type = builder.vectorType(manager.basic.getChar(), builder.concreteIntTypeParam(len));
-//
-//			currentCodeFragment << "((" << cc.getTypeManager().getTypeName(currentCodeFragment, type) << "){" << ptr->getValue() << "})";
-//			return;
-//		}
+		// special handling for the global struct
+		if (ptr->getValue() == IRExtensions::GLOBAL_ID) {
+			if (ptr->getType()->getNodeType() == NT_RefType) {
+				currentCodeFragment << "&";
+			}
 
-		// enforce escape characters and print result
-//		string value = ptr->getValue();
-//		boost::replace_all(value, "\\", "\\\\");
-//		currentCodeFragment << value;
+			// add code dependency to global struct
+			CodeFragmentPtr globals = cc.getVariableManager().getGlobalVarFragment();
+			currentCodeFragment->addDependency(globals);
+		}
 
 		// just print the value represented by the literal
 		currentCodeFragment << ptr->getValue();
