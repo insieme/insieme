@@ -16,7 +16,7 @@ fun(){
             };
             for(decl ref<int<4>> v11 =  var(0) .. 1000 : 1) {
                 for(decl ref<int<4>> v9 =  var(0) .. 1000 : 1) {
-                    decl ref<real<8>> v8 =  var(0);
+                    decl ref<real<4>> v8 =  var(0);
                     for(decl ref<int<4>> v10 =  var(0) .. 1000 : 1) {
                         v8 := v8+vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<4>,1000>,1000>>), v11), v10)*vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<4>,1000>,1000>>), v10), v9);
                     };
@@ -61,11 +61,11 @@ fun(){
             }</m>;
             <m id=3>for(decl ref<int<4>> v11 = ( var(0)) .. 1000 : 1) {
                 for(decl ref<int<4>> v9 = ( var(0)) .. 1000 : 1) {
-                    decl ref<real<8>> v8 = ( var(CAST<real<8>>(0)));
+                    decl ref<real<4>> v8 = ( var(CAST<real<4>>(0)));
                     for(decl ref<int<4>> v10 = ( var(0)) .. 1000 : 1) {
-                        (v8 := (( *v8)+CAST<real<8>>((( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<4>,1000>,1000>>), CAST<uint<4>>(( *v11))), CAST<uint<4>>(( *v10))))*( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<4>,1000>,1000>>), CAST<uint<4>>(( *v10))), CAST<uint<4>>(( *v9))))))));
+                        (v8 := (( *v8)+(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<4>,1000>,1000>>), CAST<uint<4>>(( *v11))), CAST<uint<4>>(( *v10))))*( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<4>,1000>,1000>>), CAST<uint<4>>(( *v10))), CAST<uint<4>>(( *v9)))))));
                     };
-                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<4>,1000>,1000>>), CAST<uint<4>>(( *v11))), CAST<uint<4>>(( *v9))) := CAST<real<4>>(( *v8)));
+                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<4>,1000>,1000>>), CAST<uint<4>>(( *v11))), CAST<uint<4>>(( *v9))) := ( *v8));
                 };
             }</m>;
         }</m>;

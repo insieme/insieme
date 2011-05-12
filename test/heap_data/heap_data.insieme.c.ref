@@ -38,20 +38,23 @@ struct __insieme_globals {
     __insieme_type_2 a;
 };
 
-// start code fragment :: Definition of init ... type: ((ref<struct<a:vector<int<4>,10>>>)->unit) //
-void init(struct __insieme_globals* var_4) { for(int i = 0; i < 10; i += 1)  { ((((*(&((*var_4).a))).data[((unsigned int)((i)))])) = (i)); }; }
-static void init_wrap(void* _closure, struct __insieme_globals* var_4) { init(var_4); }
+// start code fragment :: global data //
+struct __insieme_globals __GLOBAL__;
+
+// start code fragment :: Definition of __insieme_supp_3 ... type: (()->unit) //
+void __insieme_supp_3() { for(int i = 0; i < 10; i += 1)  { ((((*(&((__GLOBAL__).a))).data[((unsigned int)((i)))])) = (i)); }; }
+static void __insieme_supp_3_wrap(void* _closure) { __insieme_supp_3(); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of sum ... type: ((ref<struct<a:vector<int<4>,10>>>)->int<4>) //
-int sum(struct __insieme_globals* var_7){
+// start code fragment :: Definition of __insieme_supp_6 ... type: (()->int<4>) //
+int __insieme_supp_6(){
 	int res = 0;
-	for(int i = 0; i < 10; i += 1)  { ((res) = ((res)+(((*(&((*var_7).a))).data[((unsigned int)((i)))])))); };
+	for(int i = 0; i < 10; i += 1)  { ((res) = ((res)+(((*(&((__GLOBAL__).a))).data[((unsigned int)((i)))])))); };
 	return (res);
 }
-static int sum_wrap(void* _closure, struct __insieme_globals* var_7) { return sum(var_7); }
+static int __insieme_supp_6_wrap(void* _closure) { return __insieme_supp_6(); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -65,9 +68,9 @@ int main(int __argc, char** __argv) {
 	
 	// ---- begin of actual code body ----
 	{
-		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		init(var_1);
-		printf(((char*)((*(&((__insieme_type_1){"sum=%d\n"}))).data)), sum(var_1));
+		;
+		__insieme_supp_3();
+		printf(((char*)((*(&((__insieme_type_1){"sum=%d\n"}))).data)), __insieme_supp_6());
 	}
 	// ----  end of actual code body  ----
 	

@@ -14,10 +14,13 @@ struct __insieme_globals {
     int b;
 };
 
-// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
-typedef struct ___insieme_type_1 { 
+// start code fragment :: global data //
+struct __insieme_globals __GLOBAL__;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<char,1> //
+typedef struct ___insieme_type_0 { 
     char* data;
-} __insieme_type_1;
+} __insieme_type_0;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -25,12 +28,12 @@ int printf(char*, ...);
 // start code fragment :: main function //
 int main() {
 	{
-		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		((*(&((*var_1).a))) = 0);
-		((*(&((*var_1).b))) = 0);
-		((*(&((*var_1).a))) = 1);
-		((*(&((*var_1).b))) = 2);
-		printf(((char*)((*(&((__insieme_type_1){"Min: %d\n"}))).data)), ((((*(&((*var_1).a)))<(*(&((*var_1).b)))))?((*(&((*var_1).a)))):((*(&((*var_1).b))))));
-		printf(((char*)((*(&((__insieme_type_1){"Max: %d\n"}))).data)), ((((*(&((*var_1).a)))>(*(&((*var_1).b)))))?((*(&((*var_1).a)))):((*(&((*var_1).b))))));
+		;
+		((*(&((__GLOBAL__).a))) = 0);
+		((*(&((__GLOBAL__).b))) = 0);
+		((*(&((__GLOBAL__).a))) = 1);
+		((*(&((__GLOBAL__).b))) = 2);
+		printf(((char*)((*(&((__insieme_type_0){"Min: %d\n"}))).data)), ((((*(&((__GLOBAL__).a)))<(*(&((__GLOBAL__).b)))))?((*(&((__GLOBAL__).a)))):((*(&((__GLOBAL__).b))))));
+		printf(((char*)((*(&((__insieme_type_0){"Max: %d\n"}))).data)), ((((*(&((__GLOBAL__).a)))>(*(&((__GLOBAL__).b)))))?((*(&((__GLOBAL__).a)))):((*(&((__GLOBAL__).b))))));
 	}
 }

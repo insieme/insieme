@@ -24,12 +24,15 @@ struct __insieme_globals {
     int i;
 };
 
+// start code fragment :: global data //
+struct __insieme_globals __GLOBAL__;
+
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_22) { return ceil(var_22); }
+static double ceil_wrap(void* _closure, double var_23) { return ceil(var_23); }
 
 // start code fragment :: Definition of func ... type: ((int<4>)->int<4>) //
 int func(int k){
@@ -47,12 +50,12 @@ int func(int k){
 }
 static int func_wrap(void* _closure, int k) { return func(k); }
 
-// start code fragment :: Definition of func2 ... type: ((ref<struct<N:int<4>,i:int<4>>>)->unit) //
-void func2(struct __insieme_globals* var_18) { {
+// start code fragment :: Definition of __insieme_supp_4 ... type: (()->unit) //
+void __insieme_supp_4() { {
 	for(int var_19 = (((int)(0))-10); var_19 < ((((int)(0))-0)+1); var_19 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-(var_19))); };
-	((*(&((*var_18).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
+	((*(&((__GLOBAL__).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 }; }
-static void func2_wrap(void* _closure, struct __insieme_globals* var_18) { func2(var_18); }
+static void __insieme_supp_4_wrap(void* _closure) { __insieme_supp_4(); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -66,18 +69,18 @@ int main(int __argc, char** __argv) {
 	
 	// ---- begin of actual code body ----
 	{
-		struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
-		((*(&((*var_1).N))) = 10);
-		((*(&((*var_1).i))) = 0);
+		;
+		((*(&((__GLOBAL__).N))) = 10);
+		((*(&((__GLOBAL__).i))) = 0);
 		int a = 10;
 		for(int idx = 0; idx < (a); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (idx)); };
 		for(int idx = (((int)(0))-(a)); idx < ((((int)(0))-0)+1); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-(idx))); };
-		for(int idx = (((int)(0))-(*(&((*var_1).N)))); idx < (((int)(0))-0); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-(idx))); };
+		for(int idx = (((int)(0))-(*(&((__GLOBAL__).N)))); idx < (((int)(0))-0); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-(idx))); };
 		{
 			int idx = a;
-			while(((*(&((*var_1).N)))>0)) {
+			while(((*(&((__GLOBAL__).N)))>0)) {
 				 { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (a)); };
-				((*(&((*var_1).N)))--);
+				((*(&((__GLOBAL__).N)))--);
 			};
 		};
 		{
@@ -101,7 +104,7 @@ int main(int __argc, char** __argv) {
 		};
 		printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (a));
 		func((a));
-		func2(var_1);
+		__insieme_supp_4();
 	}
 	// ----  end of actual code body  ----
 	
