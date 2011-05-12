@@ -91,10 +91,14 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		if(self->cur_wi) {
 			irt_work_item* old_wi = self->cur_wi;
 			self->cur_wi = wi;
+			IRT_INFO("Worker %p _irt_worker_switch_to_wi - 1A.", self);
 			lwt_start(wi, &old_wi->stack_ptr, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
+			IRT_INFO("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		} else {
 			self->cur_wi = wi;
+			IRT_INFO("Worker %p _irt_worker_switch_to_wi - 2A.", self);
 			lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
+			IRT_INFO("Worker %p _irt_worker_switch_to_wi - 2B.", self);
 		}
 	} else { 
 		// resume WI
@@ -148,7 +152,9 @@ void irt_worker_schedule(irt_worker* self) {
 	// TODO split
 	irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
 	if(new_wi != NULL) {
+		IRT_INFO("Worker %p scheduling - B0.", self);
 		_irt_worker_switch_to_wi(self, new_wi);
+		IRT_INFO("Worker %p scheduling - B1.", self);
 		return;
 	}
 

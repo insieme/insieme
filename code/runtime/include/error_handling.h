@@ -61,8 +61,8 @@ struct _irt_error {
 
 /* ------------------------------ operations ----- */
 
-//#ifndef NDEBUG
-#if 1
+#ifndef NDEBUG
+//#if 1
 #define IRT_ASSERT(__condition, __errcode, __message, ...) \
 if(!(__condition)) { \
 	fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
@@ -77,6 +77,7 @@ if(!(__condition)) { \
 	printf(__message "\n", ##__VA_ARGS__); \
 }
 #else
+#define IRT_DEBUG_PRINTS_OFF
 #define IRT_ASSERT(__condition, __errcode, __message, ...) if(__condition);
 #define IRT_WARN(__message, ...)
 #define IRT_INFO(__message, ...)

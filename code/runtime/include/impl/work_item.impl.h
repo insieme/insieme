@@ -41,6 +41,7 @@
 #include <stdlib.h>
 
 #include "impl/worker.impl.h"
+#include "utils/minlwt.h"
 
 static inline irt_work_item* _irt_wi_new() {
 	return (irt_work_item*)malloc(sizeof(irt_work_item));
@@ -78,7 +79,9 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_worker_yield(self, wi);
 }
 void irt_wi_end(irt_work_item* wi) {
+	IRT_INFO("Wi %p / Worker %p irt_wi_end - A.", wi, irt_worker_get_current());
 	wi->state = IRT_WI_STATE_DONE;
+	IRT_INFO("Wi %p / Worker %p irt_wi_end - B.", wi, irt_worker_get_current());
 	lwt_end(&irt_worker_get_current()->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
