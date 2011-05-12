@@ -481,7 +481,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	TypeList paramTypes = funType->getParameterTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
-	assert(isSubTypeOf(value->getType(), paramType) && "Cannot substitute non-compatible value for specified parameter.");
+	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 
 	// conduct replacement
 
