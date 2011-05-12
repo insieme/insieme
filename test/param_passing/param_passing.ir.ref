@@ -1,0 +1,53 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, ref<array<array<char,1>,1>> v3){
+        decl ref<struct<i:int<4>>> v1 =  new(struct{i:=0});
+        decl ref<int<4>> v4 =  var(10);
+        decl ref<struct<x:int<4>,y:int<4>>> v5 =  var(struct{x:=1, y:=1});
+        fun(int<4> v6){
+            return v6;
+        }(v4);
+        fun(ref<array<int<4>,1>> v8){
+            return array.ref.elem.1D(v8, 0);
+        }(scalar.to.array(v4));
+        fun(ref<struct<i:int<4>>> v10, ref<array<int<4>,1>> v11){
+            return int.postInc(composite.ref.elem(v10, i, type<int<4>>));
+        }(v1, scalar.to.array(v4));
+        fun(struct<x:int<4>,y:int<4>> v13){
+            return v13.x;
+        }(v5);
+        fun(ref<array<struct<x:int<4>,y:int<4>>,1>> v15){
+            return composite.ref.elem(array.ref.elem.1D(v15, 0), x, type<int<4>>);
+        }(scalar.to.array(v5));
+        return v4;
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(int<4> v2, ref<array<array<char,1>,1>> v3){
+        decl ref<struct<i:int<4>>> v1 = ( new(struct{i:=0}));
+        decl ref<int<4>> v4 = ( var(10));
+        decl ref<struct<x:int<4>,y:int<4>>> v5 = ( var(struct{x:=1, y:=1}));
+        fun(int<4> v6){
+            return v6;
+        }(( *v4));
+        fun(ref<array<int<4>,1>> v8){
+            return ( *array.ref.elem.1D(v8, 0));
+        }(scalar.to.array(v4));
+        fun(ref<struct<i:int<4>>> v10, ref<array<int<4>,1>> v11){
+            return int.postInc(composite.ref.elem(v10, i, type<int<4>>));
+        }(v1, scalar.to.array(v4));
+        fun(struct<x:int<4>,y:int<4>> v13){
+            return v13.x;
+        }(( *v5));
+        fun(ref<array<struct<x:int<4>,y:int<4>>,1>> v15){
+            return ( *composite.ref.elem(array.ref.elem.1D(v15, 0), x, type<int<4>>));
+        }(scalar.to.array(v5));
+        return ( *v4);
+    }
+
