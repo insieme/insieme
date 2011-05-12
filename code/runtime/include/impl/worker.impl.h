@@ -49,13 +49,12 @@
 
 typedef struct __irt_worker_func_arg {
 	irt_worker *generated;
-	bool ready;
+	volatile bool ready;
 	irt_affinity_mask affinity;
 	uint16 index;
 } _irt_worker_func_arg;
 
 void* _irt_worker_func(void *argvp) {
-	
 	_irt_worker_func_arg *arg = (_irt_worker_func_arg*)argvp;
 	arg->generated = (irt_worker*)calloc(1, sizeof(irt_worker));
 	irt_worker* self = arg->generated;
@@ -127,6 +126,8 @@ irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
 
 void irt_worker_schedule(irt_worker* self) {
 
+	IRT_INFO("Worker %p scheduling - A.", self);
+
 	// try to take a ready WI from the pool
 	// I'm not yet 100% convinced this is thread safe
 	irt_work_item* next_wi = self->pool.start;
@@ -141,6 +142,8 @@ void irt_worker_schedule(irt_worker* self) {
 		return;
 	}
 
+	IRT_INFO("Worker %p scheduling - B.", self);
+
 	// if that failed, try to take a work item from the queue
 	// TODO split
 	irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
@@ -148,6 +151,8 @@ void irt_worker_schedule(irt_worker* self) {
 		_irt_worker_switch_to_wi(self, new_wi);
 		return;
 	}
+
+	IRT_INFO("Worker %p scheduling - C.", self);
 
 	// if that failed as well, look in the IPC message queue
 	irt_mqueue_msg* received = irt_mqueue_receive();
@@ -162,6 +167,8 @@ void irt_worker_schedule(irt_worker* self) {
 		}
 		free(received);
 	}
+
+	IRT_INFO("Worker %p scheduling - D.", self);
 }
 
 void irt_worker_enqueue(irt_worker* self, irt_work_item* wi) {

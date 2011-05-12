@@ -34,53 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "error_handling.h"
-
-#include "globals.h"
-
+#include <gtest/gtest.h>
 #include <pthread.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#include <omp.h>
 
-void irt_throw_string_error(irt_errcode code, const char* message, ...) {
-	va_list args;
-	va_start(args, message);
-	char buffer[512];
-	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
-	va_end(args);
+#include <id_generation.h>
 
-	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
-	err->errcode = code;
-	err->additional_bytes = additional_bytes;
-	strncpy(((char*)err)+sizeof(irt_error), buffer, additional_bytes);
-	irt_throw_generic_error(err);
-}
+#include <impl/error_handling.impl.h>
 
-void irt_throw_generic_error(irt_error* error) {
-	if(pthread_setspecific(irt_g_error_key, error) != 0) {
-		fprintf(stderr, "Error during error reporting. Shutting down.\n");
-		perror("System Error message");
-		exit(-1);
-	}
-	raise(IRT_SIG_ERR);
-}
+// horrible hack incoming
+uint32 irt_g_error_key = 0;
 
-const char* irt_errcode_string(irt_errcode code) {
-	static const char *irt_errcode_strings[] = {
-		"IRT_ERR_NONE",
-		"IRT_ERR_IO",
-		"IRT_ERR_INIT",
-		"IRT_ERR_INTERNAL",
-		"IRT_ERR_APP"
-	};
-	return irt_errcode_strings[code];
-}
+IRT_DECLARE_ID_TYPE(id_gen_test);
+IRT_MAKE_ID_TYPE(id_gen_test);
 
-void irt_print_error_info(FILE* target, irt_error* error) {
-	if(error->additional_bytes) {
-		fprintf(target, "%s", (char*)error+sizeof(irt_error));
-	}
+irt_id_gen_test_id gen_id;
+#pragma omp threadprivate(gen_id)
+
+TEST(id_generation, sequential_ops) {
+	gen_id.value.components.thread = 7;
+	gen_id.value.components.node = 42;
+
+	irt_id_gen_test_id test1 = irt_generate_id_gen_test_id(&gen_id);
+	EXPECT_EQ(test1.value.components.thread, gen_id.value.components.thread);
+	EXPECT_EQ(test1.value.components.node, gen_id.value.components.node);
+	EXPECT_EQ(test1.value.components.index, gen_id.value.components.index-1);
+
+	irt_id_gen_test_id test2 = irt_generate_id_gen_test_id(&gen_id);
+	EXPECT_EQ(test2.value.components.thread, gen_id.value.components.thread);
+	EXPECT_EQ(test2.value.components.node, gen_id.value.components.node);
+	EXPECT_EQ(test2.value.components.index, test1.value.components.index+1);
 }

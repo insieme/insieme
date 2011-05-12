@@ -34,53 +34,44 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "error_handling.h"
-
-#include "globals.h"
-
+#include <gtest/gtest.h>
 #include <pthread.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
+#include <omp.h>
 
-void irt_throw_string_error(irt_errcode code, const char* message, ...) {
-	va_list args;
-	va_start(args, message);
-	char buffer[512];
-	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
-	va_end(args);
+#include <id_generation.h>
 
-	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
-	err->errcode = code;
-	err->additional_bytes = additional_bytes;
-	strncpy(((char*)err)+sizeof(irt_error), buffer, additional_bytes);
-	irt_throw_generic_error(err);
-}
+#include <impl/error_handling.impl.h>
 
-void irt_throw_generic_error(irt_error* error) {
-	if(pthread_setspecific(irt_g_error_key, error) != 0) {
-		fprintf(stderr, "Error during error reporting. Shutting down.\n");
-		perror("System Error message");
-		exit(-1);
+#define TEST_COUNT 10000
+
+// horrible hack incoming
+uint32 irt_g_error_key = 0;
+
+IRT_DECLARE_ID_TYPE(id_gen_test);
+IRT_MAKE_ID_TYPE(id_gen_test);
+
+irt_id_gen_test_id gen_id;
+#pragma omp threadprivate(gen_id)
+
+TEST(id_generation, parallel_ops) {
+
+	irt_id_gen_test_id ids[TEST_COUNT];
+
+	#pragma omp parallel
+	{
+		gen_id.value.components.node = 42;
+		gen_id.value.components.thread = omp_get_thread_num();
+		#pragma omp parallel
+		for(int i=0; i<TEST_COUNT; ++i) {
+			ids[i] = irt_generate_id_gen_test_id(&gen_id);
+		}
 	}
-	raise(IRT_SIG_ERR);
-}
 
-const char* irt_errcode_string(irt_errcode code) {
-	static const char *irt_errcode_strings[] = {
-		"IRT_ERR_NONE",
-		"IRT_ERR_IO",
-		"IRT_ERR_INIT",
-		"IRT_ERR_INTERNAL",
-		"IRT_ERR_APP"
-	};
-	return irt_errcode_strings[code];
-}
-
-void irt_print_error_info(FILE* target, irt_error* error) {
-	if(error->additional_bytes) {
-		fprintf(target, "%s", (char*)error+sizeof(irt_error));
+	for(int i=0; i<TEST_COUNT; ++i) {
+		for(int j=0; j<TEST_COUNT; ++j) {
+			if(i == j) continue;
+			EXPECT_NE(ids[i].value.full, ids[j].value.full);
+		}
+		EXPECT_EQ(ids[i].value.components.node, gen_id.value.components.node);
 	}
 }

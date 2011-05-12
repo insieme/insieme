@@ -158,6 +158,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
 	# add flags for debug mode
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+  
+  # add flags for release mode
+  set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 	# ENABLE PROFILING
 	# add_definitions( -pg )
@@ -176,6 +179,14 @@ endif()
 
 # enable C99 support within gcc
 if (CMAKE_COMPILER_IS_GNUC)
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
+
+	# add flags for debug mode
+	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
+  
+  # add flags for release mode
+  set (CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
+
 	include(CheckCCompilerFlag)
   check_c_compiler_flag( -std=c99 C99_Support )
 	if(C99_Support)

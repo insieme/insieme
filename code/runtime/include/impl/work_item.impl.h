@@ -76,19 +76,19 @@ void irt_wi_join(irt_work_item* wi) {
 	wi->ready_check.fun = &_irt_wi_done_check;
 	wi->ready_check.data = wi;
 	irt_worker_yield(self, wi);
-	// TODO
 }
 void irt_wi_end(irt_work_item* wi) {
 	wi->state = IRT_WI_STATE_DONE;
-	// TODO
+	lwt_end(&irt_worker_get_current()->basestack);
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
 
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis) {
-	// TODO
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "TODO");
 }
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
-	// TODO
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "TODO");
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis) {
-	// TODO
+	IRT_ASSERT(false, IRT_ERR_INTERNAL, "TODO");
 }

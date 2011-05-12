@@ -37,25 +37,28 @@
 #include "CL/cl.h"
 //#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
 
+//#pragma insieme mark
 int main(int argc, char **argv)
 {
     cl_context context;
     cl_command_queue queue;
+    cl_program program;
     cl_kernel kernel;
     cl_int err;
 
-    cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
-//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);;
+    cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
+//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_double) * 100, NULL, &err);
     float* host_ptr;
 
 
-    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), host_ptr, &err);
+    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
     clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
     size_t kernelLength = 10;
 //    char* kernelSrc = oclLoadProgSource("/home/klaus/insieme/code/frontend/test/hello.cl", "", &kernelLength);
 
+    kernel = clCreateKernel(program, "hello", &err);
     err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
 
     size_t globalSize = 512, localSize = 32;
@@ -67,4 +70,5 @@ int main(int argc, char **argv)
     clReleaseMemObject(dev_ptr1);
 //    clReleaseMemObject(dev_ptr2);
 
+    return 0;
 }

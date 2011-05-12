@@ -36,51 +36,14 @@
 
 #pragma once
 
-#include "error_handling.h"
+#include <unistd.h>
+#include <sys/time.h>
+#include <irt_inttypes.h>
 
-#include "globals.h"
-
-#include <pthread.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-
-void irt_throw_string_error(irt_errcode code, const char* message, ...) {
-	va_list args;
-	va_start(args, message);
-	char buffer[512];
-	uint32 additional_bytes = vsnprintf(buffer, 512, message, args) + 1;
-	va_end(args);
-
-	irt_error *err = (irt_error*)malloc(sizeof(irt_error) + additional_bytes);
-	err->errcode = code;
-	err->additional_bytes = additional_bytes;
-	strncpy(((char*)err)+sizeof(irt_error), buffer, additional_bytes);
-	irt_throw_generic_error(err);
-}
-
-void irt_throw_generic_error(irt_error* error) {
-	if(pthread_setspecific(irt_g_error_key, error) != 0) {
-		fprintf(stderr, "Error during error reporting. Shutting down.\n");
-		perror("System Error message");
-		exit(-1);
-	}
-	raise(IRT_SIG_ERR);
-}
-
-const char* irt_errcode_string(irt_errcode code) {
-	static const char *irt_errcode_strings[] = {
-		"IRT_ERR_NONE",
-		"IRT_ERR_IO",
-		"IRT_ERR_INIT",
-		"IRT_ERR_INTERNAL",
-		"IRT_ERR_APP"
-	};
-	return irt_errcode_strings[code];
-}
-
-void irt_print_error_info(FILE* target, irt_error* error) {
-	if(error->additional_bytes) {
-		fprintf(target, "%s", (char*)error+sizeof(irt_error));
-	}
+uint64 irt_time_ms() {
+	struct timeval tv;
+	uint64 time;
+	gettimeofday(&tv, 0);
+	time = tv.tv_sec * 1000 + tv.tv_usec/1000;
+	return time;
 }

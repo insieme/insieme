@@ -67,8 +67,13 @@ IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_
 
 void irt_init_globals() {
 	// not using IRT_ASSERT since environment is not yet set up
-	assert(pthread_key_create(&irt_g_error_key, NULL) == 0);
-	assert(pthread_key_create(&irt_g_worker_key, NULL) == 0);
+	int err_flag = 0;
+	err_flag |= pthread_key_create(&irt_g_error_key, NULL);
+	err_flag |= pthread_key_create(&irt_g_worker_key, NULL);
+	if(err_flag != 0) {
+		fprintf(stderr, "Could not create pthread key(s). Aborting.\n");
+		exit(-1);
+	}
 	irt_mqueue_init();
 	irt_data_item_table_init();
 	irt_context_table_init();
@@ -100,13 +105,15 @@ int main(int argc, char** argv) {
 	// initialize globals
 	irt_init_globals();
 
-	static const uint32 work_count = 8;
+	//IRT_INFO("Starting worker threads");
+	static const uint32 work_count = 1;
 	irt_worker* workers[work_count];
 	for(int i=0; i<work_count; ++i) {
 		workers[i] = irt_worker_create(i, ~0);
 	}
+	//IRT_INFO("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);
-	IRT_INFO("App sent");
+	//IRT_INFO("New app msg sent");
 
 	for(;;) { sleep(60*60); }
 }

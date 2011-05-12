@@ -92,8 +92,8 @@ static inline void irt_##__type__##_deque_cleanup(irt_##__type__##_deque* q) { \
 } \
 \
 static inline void irt_##__type__##_deque_insert_front(irt_##__type__##_deque* q, irt_##__type__* element) { \
-	element->__next_name__ = q->start; \
 	element->__prev_name__ = NULL; \
+	element->__next_name__ = q->start; \
 	pthread_spin_lock(&(q->lock)); \
 	if(q->start) q->start->__prev_name__ = element; \
 	else q->end = element; \
@@ -101,8 +101,8 @@ static inline void irt_##__type__##_deque_insert_front(irt_##__type__##_deque* q
 	pthread_spin_unlock(&(q->lock)); \
 } \
 static inline void irt_##__type__##_deque_insert_back(irt_##__type__##_deque* q, irt_##__type__* element) { \
-	element->__next_name__ = NULL; \
 	element->__prev_name__ = q->end; \
+	element->__next_name__ = NULL; \
 	pthread_spin_lock(&(q->lock)); \
 	if(q->end) q->end->__next_name__ = element; \
 	else q->start = element; \
@@ -126,8 +126,8 @@ static inline irt_##__type__* irt_##__type__##_deque_pop_back(irt_##__type__##_d
 	pthread_spin_lock(&(q->lock)); \
 	irt_##__type__ *retval = q->end; \
 	if(retval) { \
-	q->end = retval->__prev_name__; \
-	if(q->end) q->end->__next_name__ = NULL; \
+		q->end = retval->__prev_name__; \
+		if(q->end) q->end->__next_name__ = NULL; \
 		else q->start = NULL; \
 		retval->__prev_name__ = NULL; \
 	} \

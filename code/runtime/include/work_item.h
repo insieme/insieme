@@ -55,6 +55,7 @@ struct _irt_work_item_range {
 	int64 begin, end, step;
 };
 const static irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
+static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) { return (r->begin - r->end) / r->step; }
 
 typedef bool irt_wi_readiness_check_fun(irt_work_item* wi);
 typedef struct _irt_wi_readiness_check {
