@@ -47,7 +47,7 @@
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/logging.h"
-
+#include "insieme/utils/timer.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -113,12 +113,22 @@ using namespace utils::log;
 		// create a code fragment covering entire program
 		CodeFragmentPtr code = CodeFragment::createNewDummy("Full Program");
 
+		utils::Timer timer = insieme::utils::Timer("SimpleBackend.Preprocessing");
+
 		// preprocess program
 		NodeManager manager;
 		core::NodePtr program = transform::preprocess(manager, prog);
 
+		timer.stop();
+		LOG(INFO) << timer;
+
+		timer = insieme::utils::Timer("SimpleBackend.Conversions");
+
 		// convert code
 		getStmtConverter().convert(program, code);
+
+		timer.stop();
+		LOG(INFO) << timer;
 
 		// create resulting, converted code
 		return std::make_shared<ConvertedCode>(prog, headers, code);
