@@ -3,3 +3,4 @@ build*
 *.inl
 *~
 /nbproject/private/
+create*.sh
