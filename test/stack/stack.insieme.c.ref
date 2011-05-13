@@ -95,7 +95,7 @@ int pop(Stack* stack){
 	__insieme_type_1 tmp = *(&((((*stack).data[0])).top));
 	int res = *(&((((tmp).data[0])).value));
 	((*(&((((*stack).data[0])).top))) = (*(&((((tmp).data[0])).next))));
-	(free((tmp).data));
+	;
 	return (res);
 }
 static int pop_wrap(void* _closure, Stack* stack) { return pop(stack); }
@@ -107,9 +107,9 @@ void dumpStack(Stack* stack){
 		while((!((*(&((((*(var_17)).data[0])).top))).data==0))) {
 			__insieme_type_1 tmp = *(&((((*(var_17)).data[0])).top));
 			((*(&((((*(var_17)).data[0])).top))) = (*(&((((tmp).data[0])).next))));
-			(free((tmp).data));
+			;
 		};
-		(free((var_17)));
+		;
 	};
 }
 static void dumpStack_wrap(void* _closure, Stack* stack) { dumpStack(stack); }

@@ -62,6 +62,9 @@ typedef struct ___insieme_type_7 {
 int f5(__insieme_type_7* data) { return (*(&((((*data).data[0])).x))); }
 static int f5_wrap(void* _closure, __insieme_type_7* data) { return f5(data); }
 
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
 	
@@ -85,7 +88,8 @@ int main(int __argc, char** __argv) {
 		__insieme_supp_6((&((__insieme_type_4){&a})));
 		f4((data));
 		f5((&((__insieme_type_7){&data})));
-		return (a);
+		printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (a));
+		return 0;
 	}
 	// ----  end of actual code body  ----
 	
