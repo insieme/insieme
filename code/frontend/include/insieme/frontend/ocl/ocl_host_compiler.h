@@ -77,6 +77,7 @@ public:
  * This class allows replaces a call to an OpenCL built-in function to an INSPIRE one
  *  */
 class Handler {
+protected:
     core::ProgramPtr kernels;
 public:
     Handler(core::ASTBuilder& build) {
@@ -104,9 +105,9 @@ public:
     // creating a shared pointer to a LambdaHandler
 
     core::NodePtr handleNode(core::CallExprPtr node) {
-        std::cout << "Handling node " << node << std::endl;
+        LOG(DEBUG) << "Handling node " << node << std::endl;
 
-        return body(node);
+        return body(node, kernels);
     }
 
 };
@@ -123,7 +124,7 @@ HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambd
 }
 
 #define ADD_Handler(builder, fct, BODY) \
-    handles.insert(std::make_pair(fct, make_handler(builder, fct, [&](core::CallExprPtr node){ BODY }))).second;
+    handles.insert(std::make_pair(fct, make_handler(builder, fct, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
 
 
 

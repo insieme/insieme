@@ -207,7 +207,7 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
         const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(arg2);
         if(const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : arg2)) {
             // use the literal as index for the argument
-            int pos = atoi(idx->getValue().c_str());
+            unsigned int pos = atoi(idx->getValue().c_str());
             if(kernelArgs[kernel].size() <= pos)
                 kernelArgs[kernel].resize(pos+1);
 
@@ -232,7 +232,7 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
                         frontend::Program fkernels(builder.getNodeManager());
 
                         fkernels.addTranslationUnit(p);
-//                        kernels = fkernels.convert();
+                        kernels = fkernels.convert();
 
                         // set source string to an empty char array
                         ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
@@ -297,7 +297,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
             if(const HandlerPtr& replacement = handles[literal->getValue()]) {
                 NodePtr ret = replacement->handleNode(callExpr);
                 // check if new kernels have been created
-                vector<ExpressionPtr> kernels;// = replacement->getKernels();
+                vector<ExpressionPtr> kernels = replacement->getKernels();
                 if(kernels.size() > 0)
                     for_each(kernels, [&](ExpressionPtr kernel){
                         kernelEntries.push_back(kernel);
