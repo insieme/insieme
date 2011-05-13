@@ -36,5 +36,6 @@ int main(int argc, char* argv[]) {
 	f3(&a);
 	f4(data);
 	f5(&data);
-	return a;
+	printf("a=%d\n", a);
+	return 0;
 }

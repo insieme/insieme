@@ -18,6 +18,9 @@ typedef struct ___insieme_type_0 {
     __insieme_type_1* data;
 } __insieme_type_0;
 
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
 // start code fragment :: Definition of g ... type: ((int<4>)->int<4>) //
 int g(int a) { return (a-1); }
 static int g_wrap(void* _closure, int a) { return g(a); }
@@ -37,7 +40,7 @@ int main(int __argc, char** __argv) {
 	}
 	
 	// ---- begin of actual code body ----
-	 { return f(argc, argc); }
+	 { printf(((char*)((*(&((__insieme_type_1){"res=%d\n"}))).data)), f(argc, argc)); }
 	// ----  end of actual code body  ----
 	
 }

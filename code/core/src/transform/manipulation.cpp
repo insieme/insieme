@@ -38,6 +38,8 @@
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+
 #include "insieme/core/ast_builder.h"
 
 #include "insieme/core/type_utils.h"
@@ -378,7 +380,7 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 
 namespace {
 
-	class ParameterFixer : public core::NodeMapping {
+	class ParameterFixer : public core::transform::CachedNodeMapping {
 
 		NodeManager& manager;
 		const VariablePtr var;
@@ -389,7 +391,7 @@ namespace {
 		ParameterFixer(NodeManager& manager, const VariablePtr& var, const ExpressionPtr& replacement)
 			: manager(manager), var(var), replacement(replacement) {}
 
-		const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+		const NodePtr resolveElement(const NodePtr& ptr) {
 			// check for replacement
 			if (*ptr == *var) {
 				return replacement;
@@ -479,8 +481,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	TypeList paramTypes = funType->getParameterTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
-	const TypePtr& paramType = paramTypes[index];
-	assert(isSubTypeOf(value->getType(), paramType) && "Cannot substitute non-compatible value for specified parameter.");
+	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
 
 	// conduct replacement
 

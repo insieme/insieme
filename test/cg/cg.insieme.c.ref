@@ -203,11 +203,11 @@ typedef struct ___insieme_type_16 {
 
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
-static double pow_wrap(void* _closure, double var_253, double var_254) { return pow(var_253, var_254); }
+static double pow_wrap(void* _closure, double var_252, double var_253) { return pow(var_252, var_253); }
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_255) { return ceil(var_255); }
+static double ceil_wrap(void* _closure, double var_254) { return ceil(var_254); }
 
 // start code fragment :: Definition of icnvrt ... type: ((real<8>,int<4>)->int<4>) //
 int icnvrt(double x, int ipwr2) { return ((int)((((double)(ipwr2))*x))); }
@@ -275,7 +275,7 @@ static void vecset_wrap(void* _closure, int n, __insieme_type_13* v, __insieme_t
 
 // start code fragment :: Prototype for external function: exit ... type: ((int<4>)->unit) //
 void exit(int);
-static void exit_wrap(void* _closure, int var_256) { exit(var_256); }
+static void exit_wrap(void* _closure, int var_255) { exit(var_255); }
 
 // start code fragment :: Definition of sparse ... type: ((ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,int<4>,int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>)->unit) //
 void sparse(__insieme_type_13* a, __insieme_type_16* colidx, __insieme_type_16* rowstr, int n, __insieme_type_16* arow, __insieme_type_16* acol, __insieme_type_13* aelt, int firstrow, int lastrow, __insieme_type_13* x, __insieme_type_16* mark, __insieme_type_16* nzloc, int nnza){
@@ -447,7 +447,7 @@ static void __insieme_supp_15_wrap(void* _closure, int n, int nz, __insieme_type
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_257) { return sqrt(var_257); }
+static double sqrt_wrap(void* _closure, double var_256) { return sqrt(var_256); }
 
 // start code fragment :: Definition of __insieme_supp_19 ... type: ((ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>)->unit) //
 void __insieme_supp_19(__insieme_type_16* colidx, __insieme_type_16* rowstr, __insieme_type_13* x, __insieme_type_13* z, __insieme_type_13* a, __insieme_type_13* p, __insieme_type_13* q, __insieme_type_13* r, __insieme_type_13* w, __insieme_type_13* rnorm){
@@ -576,7 +576,7 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_25* var_258, __timezone_ptr_t* var_259) { return gettimeofday(((struct timeval*)((*(var_258)).data)), ((struct timezone*)((*(var_259)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_25* var_257, __timezone_ptr_t* var_258) { return gettimeofday(((struct timeval*)((*(var_257)).data)), ((struct timezone*)((*(var_258)).data))); }
 
 // start code fragment :: Definition of __insieme_supp_23 ... type: ((ref<array<real<8>,1>>)->unit) //
 void __insieme_supp_23(__insieme_type_13* t){
@@ -623,7 +623,7 @@ static double __insieme_supp_30_wrap(void* _closure, int n) { return __insieme_s
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_260) { return fabs(var_260); }
+static double fabs_wrap(void* _closure, double var_259) { return fabs(var_259); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(__insieme_type_1* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, __insieme_type_1* optype, int passed_verification, __insieme_type_1* npbversion, __insieme_type_1* compiletime, __insieme_type_1* cc, __insieme_type_1* clink, __insieme_type_1* c_lib, __insieme_type_1* c_inc, __insieme_type_1* cflags, __insieme_type_1* clinkflags, __insieme_type_1* rand){

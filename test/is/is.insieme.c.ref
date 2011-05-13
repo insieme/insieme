@@ -118,7 +118,7 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(int value) {
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_139) { return ceil(var_139); }
+static double ceil_wrap(void* _closure, double var_136) { return ceil(var_136); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -319,7 +319,7 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_22* var_140, __timezone_ptr_t* var_141) { return gettimeofday(((struct timeval*)((*(var_140)).data)), ((struct timezone*)((*(var_141)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_22* var_137, __timezone_ptr_t* var_138) { return gettimeofday(((struct timeval*)((*(var_137)).data)), ((struct timezone*)((*(var_138)).data))); }
 
 // start code fragment :: Definition of __insieme_supp_20 ... type: ((ref<array<real<8>,1>>)->unit) //
 void __insieme_supp_20(__insieme_type_13* t){

@@ -531,7 +531,7 @@ int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: fopen ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>) //
 struct FILE* fopen(char*, char*);
-static __insieme_type_30* fopen_wrap(void* _closure, __insieme_type_1* var_613, __insieme_type_1* var_614) { return &((__insieme_type_30){fopen(((char*)((*(var_613)).data)), ((char*)((*(var_614)).data)))}); }
+static __insieme_type_30* fopen_wrap(void* _closure, __insieme_type_1* var_583, __insieme_type_1* var_584) { return &((__insieme_type_30){fopen(((char*)((*(var_583)).data)), ((char*)((*(var_584)).data)))}); }
 
 // start code fragment :: Prototype for external function: fscanf ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>,ref<array<char,1>>,var_list)->int<4>) //
 int fscanf(struct FILE*, char*, ...);
@@ -543,7 +543,7 @@ typedef struct ___insieme_type_37 {
 
 // start code fragment :: Prototype for external function: fgetc ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
 int fgetc(struct FILE*);
-static int fgetc_wrap(void* _closure, __insieme_type_30* var_615) { return fgetc(((struct FILE*)((*(var_615)).data))); }
+static int fgetc_wrap(void* _closure, __insieme_type_30* var_585) { return fgetc(((struct FILE*)((*(var_585)).data))); }
 
 // start code fragment :: array type definition of __insieme_type_39 <=> array<real<8>,1> //
 typedef struct ___insieme_type_39 { 
@@ -552,11 +552,11 @@ typedef struct ___insieme_type_39 {
 
 // start code fragment :: Prototype for external function: fclose ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
 int fclose(struct FILE*);
-static int fclose_wrap(void* _closure, __insieme_type_30* var_616) { return fclose(((struct FILE*)((*(var_616)).data))); }
+static int fclose_wrap(void* _closure, __insieme_type_30* var_586) { return fclose(((struct FILE*)((*(var_586)).data))); }
 
 // start code fragment :: Prototype for external function: exit ... type: ((int<4>)->unit) //
 void exit(int);
-static void exit_wrap(void* _closure, int var_617) { exit(var_617); }
+static void exit_wrap(void* _closure, int var_587) { exit(var_587); }
 
 // start code fragment :: Definition of __insieme_supp_41 ... type: (()->unit) //
 void __insieme_supp_41(){
@@ -753,7 +753,7 @@ static inline __insieme_type_43 __insieme_type_43_init_uniform(__insieme_type_44
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_618) { return ceil(var_618); }
+static double ceil_wrap(void* _closure, double var_588) { return ceil(var_588); }
 
 // start code fragment :: Definition of __insieme_supp_47 ... type: ((real<8>,real<8>,real<8>,ref<array<real<8>,1>>)->unit) //
 void __insieme_supp_47(double xi, double eta, double zeta, __insieme_type_39* dtemp){
@@ -2640,194 +2640,9 @@ void __insieme_supp_50(){
 }
 static void __insieme_supp_50_wrap(void* _closure) { __insieme_supp_50(); }
 
-// start code fragment :: Definition of __insieme_supp_67 ... type: (()->unit) //
-void __insieme_supp_67(){
-	int i = 0;
-	int j = 0;
-	int k = 0;
-	int m = 0;
-	int ix = 0;
-	int iy = 0;
-	int iz = 0;
-	double xi = 0.0;
-	double eta = 0.0;
-	double zeta = 0.0;
-	__insieme_type_43 Pface;
-	double Pxi = 0.0;
-	double Peta = 0.0;
-	double Pzeta = 0.0;
-	__insieme_type_15 temp;
-	{
-		for(int var_63 = 0; var_63 < 24; var_63 += 1)  { {
-			for(int var_62 = 0; var_62 < 24; var_62 += 1)  { {
-				for(int var_61 = 0; var_61 < 24; var_61 += 1)  { {
-					for(int var_60 = 0; var_60 < 5; var_60 += 1)  { ((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((var_63)))])).data[((unsigned int)((var_62)))])).data[((unsigned int)((var_61)))])).data[((unsigned int)((var_60)))])) = 1.0); };
-					((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-				}; };
-				((k) = (0+(((int)(ceil((((double)((24-0)))/((double)(1))))))*1)));
-			}; };
-			((j) = (0+(((int)(ceil((((double)((24-0)))/((double)(1))))))*1)));
-		}; };
-		((i) = (0+(((int)(ceil((((double)((24-0)))/((double)(1))))))*1)));
-	};
-	{
-		for(int var_78 = 0; var_78 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))])); var_78 += 1) {
-			((xi) = (((double)((var_78)))*(*(&((__GLOBAL__).dnxm1)))));
-			{
-				for(int var_77 = 0; var_77 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))])); var_77 += 1) {
-					((eta) = (((double)((var_77)))*(*(&((__GLOBAL__).dnym1)))));
-					{
-						for(int var_76 = 0; var_76 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))])); var_76 += 1) {
-							((zeta) = (((double)((var_76)))*(*(&((__GLOBAL__).dnzm1)))));
-							{
-								for(int var_72 = 0; var_72 < 2; var_72 += 1)  { __insieme_supp_47(((double)((var_72))), (eta), (zeta), (&((__insieme_type_39){&((((((Pface).data[((unsigned int)((var_72)))])).data[((unsigned int)(0))])).data[((unsigned int)(0))])}))); };
-								((ix) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
-							};
-							{
-								for(int var_73 = 0; var_73 < 2; var_73 += 1)  { __insieme_supp_47((xi), ((double)((var_73))), (zeta), (&((__insieme_type_39){&((((((Pface).data[((unsigned int)((var_73)))])).data[((unsigned int)(1))])).data[((unsigned int)(0))])}))); };
-								((iy) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
-							};
-							{
-								for(int var_74 = 0; var_74 < 2; var_74 += 1)  { __insieme_supp_47((xi), (eta), ((double)((var_74))), (&((__insieme_type_39){&((((((Pface).data[((unsigned int)((var_74)))])).data[((unsigned int)(2))])).data[((unsigned int)(0))])}))); };
-								((iz) = (0+(((int)(ceil((((double)((2-0)))/((double)(1))))))*1)));
-							};
-							{
-								for(int var_75 = 0; var_75 < 5; var_75 += 1) {
-									((Pxi) = (((xi)*(((((((Pface).data[((unsigned int)(1))])).data[((unsigned int)(0))])).data[((unsigned int)((var_75)))])))+((1.0-(xi))*(((((((Pface).data[((unsigned int)(0))])).data[((unsigned int)(0))])).data[((unsigned int)((var_75)))])))));
-									((Peta) = (((eta)*(((((((Pface).data[((unsigned int)(1))])).data[((unsigned int)(1))])).data[((unsigned int)((var_75)))])))+((1.0-(eta))*(((((((Pface).data[((unsigned int)(0))])).data[((unsigned int)(1))])).data[((unsigned int)((var_75)))])))));
-									((Pzeta) = (((zeta)*(((((((Pface).data[((unsigned int)(1))])).data[((unsigned int)(2))])).data[((unsigned int)((var_75)))])))+((1.0-(zeta))*(((((((Pface).data[((unsigned int)(0))])).data[((unsigned int)(2))])).data[((unsigned int)((var_75)))])))));
-									((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((var_78)))])).data[((unsigned int)((var_77)))])).data[((unsigned int)((var_76)))])).data[((unsigned int)((var_75)))])) = (((((((Pxi)+(Peta))+(Pzeta))-((Pxi)*(Peta)))-((Pxi)*(Pzeta)))-((Peta)*(Pzeta)))+(((Pxi)*(Peta))*(Pzeta))));
-								};
-								((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-							};
-						};
-						((k) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
-					};
-				};
-				((j) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
-			};
-		};
-		((i) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))-0)))/((double)(1))))))*1)));
-	};
-	((i) = 0);
-	((xi) = 0.0);
-	{
-		for(int var_81 = 0; var_81 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))])); var_81 += 1) {
-			((eta) = (((double)((var_81)))*(*(&((__GLOBAL__).dnym1)))));
-			{
-				for(int var_80 = 0; var_80 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))])); var_80 += 1) {
-					((zeta) = (((double)((var_80)))*(*(&((__GLOBAL__).dnzm1)))));
-					{
-						for(int var_79 = 0; var_79 < 5; var_79 += 1)  { ((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((i)))])).data[((unsigned int)((var_81)))])).data[((unsigned int)((var_80)))])).data[((unsigned int)((var_79)))])) = (((temp).data[((unsigned int)((var_79)))]))); };
-						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-					};
-				};
-				((k) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
-			};
-		};
-		((j) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
-	};
-	((i) = ((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))-1));
-	((xi) = 1.0);
-	{
-		for(int var_84 = 0; var_84 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))])); var_84 += 1) {
-			((eta) = (((double)((var_84)))*(*(&((__GLOBAL__).dnym1)))));
-			{
-				for(int var_83 = 0; var_83 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))])); var_83 += 1) {
-					((zeta) = (((double)((var_83)))*(*(&((__GLOBAL__).dnzm1)))));
-					__insieme_supp_47((xi), (eta), (zeta), (&((__insieme_type_39){(temp).data})));
-					{
-						for(int var_82 = 0; var_82 < 5; var_82 += 1)  { ((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((i)))])).data[((unsigned int)((var_84)))])).data[((unsigned int)((var_83)))])).data[((unsigned int)((var_82)))])) = (((temp).data[((unsigned int)((var_82)))]))); };
-						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-					};
-				};
-				((k) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
-			};
-		};
-		((j) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
-	};
-	((j) = 0);
-	((eta) = 0.0);
-	{
-		for(int var_87 = 0; var_87 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))])); var_87 += 1) {
-			((xi) = (((double)((var_87)))*(*(&((__GLOBAL__).dnxm1)))));
-			{
-				for(int var_86 = 0; var_86 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))])); var_86 += 1) {
-					((zeta) = (((double)((var_86)))*(*(&((__GLOBAL__).dnzm1)))));
-					__insieme_supp_47((xi), (eta), (zeta), (&((__insieme_type_39){(temp).data})));
-					{
-						for(int var_85 = 0; var_85 < 5; var_85 += 1)  { ((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((var_87)))])).data[((unsigned int)((j)))])).data[((unsigned int)((var_86)))])).data[((unsigned int)((var_85)))])) = (((temp).data[((unsigned int)((var_85)))]))); };
-						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-					};
-				};
-				((k) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
-			};
-		};
-		((i) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))-0)))/((double)(1))))))*1)));
-	};
-	((j) = ((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))]))-1));
-	((eta) = 1.0);
-	{
-		for(int var_90 = 0; var_90 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))])); var_90 += 1) {
-			((xi) = (((double)((var_90)))*(*(&((__GLOBAL__).dnxm1)))));
-			{
-				for(int var_89 = 0; var_89 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))])); var_89 += 1) {
-					((zeta) = (((double)((var_89)))*(*(&((__GLOBAL__).dnzm1)))));
-					__insieme_supp_47((xi), (eta), (zeta), (&((__insieme_type_39){(temp).data})));
-					{
-						for(int var_88 = 0; var_88 < 5; var_88 += 1)  { ((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((var_90)))])).data[((unsigned int)((j)))])).data[((unsigned int)((var_89)))])).data[((unsigned int)((var_88)))])) = (((temp).data[((unsigned int)((var_88)))]))); };
-						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-					};
-				};
-				((k) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))]))-0)))/((double)(1))))))*1)));
-			};
-		};
-		((i) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))-0)))/((double)(1))))))*1)));
-	};
-	((k) = 0);
-	((zeta) = 0.0);
-	{
-		for(int var_93 = 0; var_93 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))])); var_93 += 1) {
-			((xi) = (((double)((var_93)))*(*(&((__GLOBAL__).dnxm1)))));
-			{
-				for(int var_92 = 0; var_92 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))])); var_92 += 1) {
-					((eta) = (((double)((var_92)))*(*(&((__GLOBAL__).dnym1)))));
-					__insieme_supp_47((xi), (eta), (zeta), (&((__insieme_type_39){(temp).data})));
-					{
-						for(int var_91 = 0; var_91 < 5; var_91 += 1)  { ((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((var_93)))])).data[((unsigned int)((var_92)))])).data[((unsigned int)((k)))])).data[((unsigned int)((var_91)))])) = (((temp).data[((unsigned int)((var_91)))]))); };
-						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-					};
-				};
-				((j) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
-			};
-		};
-		((i) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))-0)))/((double)(1))))))*1)));
-	};
-	((k) = ((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))]))-1));
-	((zeta) = 1.0);
-	{
-		for(int var_96 = 0; var_96 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))])); var_96 += 1) {
-			((xi) = (((double)((var_96)))*(*(&((__GLOBAL__).dnxm1)))));
-			{
-				for(int var_95 = 0; var_95 < (((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))])); var_95 += 1) {
-					((eta) = (((double)((var_95)))*(*(&((__GLOBAL__).dnym1)))));
-					__insieme_supp_47((xi), (eta), (zeta), (&((__insieme_type_39){(temp).data})));
-					{
-						for(int var_94 = 0; var_94 < 5; var_94 += 1)  { ((((((((((*(&((__GLOBAL__).u))).data[((unsigned int)((var_96)))])).data[((unsigned int)((var_95)))])).data[((unsigned int)((k)))])).data[((unsigned int)((var_94)))])) = (((temp).data[((unsigned int)((var_94)))]))); };
-						((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-					};
-				};
-				((j) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))]))-0)))/((double)(1))))))*1)));
-			};
-		};
-		((i) = (0+(((int)(ceil((((double)(((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))-0)))/((double)(1))))))*1)));
-	};
-}
-static void __insieme_supp_67_wrap(void* _closure) { __insieme_supp_67(); }
-
-// start code fragment :: Definition of __insieme_supp_68 ... type: ((int<4>)->unit) //
-void __insieme_supp_68(int n) { ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void __insieme_supp_68_wrap(void* _closure, int n) { __insieme_supp_68(n); }
+// start code fragment :: Definition of __insieme_supp_67 ... type: ((int<4>)->unit) //
+void __insieme_supp_67(int n) { ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void __insieme_supp_67_wrap(void* _closure, int n) { __insieme_supp_67(n); }
 
 // start code fragment :: type_declaration_timeval //
 struct timeval { 
@@ -2835,10 +2650,10 @@ struct timeval {
     long tv_usec;
 };
 
-// start code fragment :: array type definition of __insieme_type_73 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
-typedef struct ___insieme_type_73 { 
+// start code fragment :: array type definition of __insieme_type_72 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
+typedef struct ___insieme_type_72 { 
     struct timeval* data;
-} __insieme_type_73;
+} __insieme_type_72;
 
 // start code fragment :: type_declaration_timezone //
 struct timezone { 
@@ -2853,91 +2668,57 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_73* var_619, __timezone_ptr_t* var_620) { return gettimeofday(((struct timeval*)((*(var_619)).data)), ((struct timezone*)((*(var_620)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_72* var_589, __timezone_ptr_t* var_590) { return gettimeofday(((struct timeval*)((*(var_589)).data)), ((struct timezone*)((*(var_590)).data))); }
 
-// start code fragment :: Definition of __insieme_supp_71 ... type: ((ref<array<real<8>,1>>)->unit) //
-void __insieme_supp_71(__insieme_type_39* t){
+// start code fragment :: Definition of __insieme_supp_70 ... type: ((ref<array<real<8>,1>>)->unit) //
+void __insieme_supp_70(__insieme_type_39* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_73){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_72){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((__GLOBAL__).sec)))<0)) { ((*(&((__GLOBAL__).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((__GLOBAL__).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void __insieme_supp_71_wrap(void* _closure, __insieme_type_39* t) { __insieme_supp_71(t); }
+static void __insieme_supp_70_wrap(void* _closure, __insieme_type_39* t) { __insieme_supp_70(t); }
 
-// start code fragment :: Definition of __insieme_supp_70 ... type: (()->real<8>) //
-double __insieme_supp_70(){
+// start code fragment :: Definition of __insieme_supp_69 ... type: (()->real<8>) //
+double __insieme_supp_69(){
 	double t = 0.0;
-	__insieme_supp_71((&((__insieme_type_39){&t})));
+	__insieme_supp_70((&((__insieme_type_39){&t})));
 	return (t);
 }
-static double __insieme_supp_70_wrap(void* _closure) { return __insieme_supp_70(); }
+static double __insieme_supp_69_wrap(void* _closure) { return __insieme_supp_69(); }
 
-// start code fragment :: Definition of __insieme_supp_69 ... type: ((int<4>)->unit) //
-void __insieme_supp_69(int n) { ((((*(&((__GLOBAL__).start))).data[((unsigned int)(n))])) = __insieme_supp_70()); }
-static void __insieme_supp_69_wrap(void* _closure, int n) { __insieme_supp_69(n); }
+// start code fragment :: Definition of __insieme_supp_68 ... type: ((int<4>)->unit) //
+void __insieme_supp_68(int n) { ((((*(&((__GLOBAL__).start))).data[((unsigned int)(n))])) = __insieme_supp_69()); }
+static void __insieme_supp_68_wrap(void* _closure, int n) { __insieme_supp_68(n); }
 
-// start code fragment :: Definition of __insieme_supp_77 ... type: (()->unit) //
-void __insieme_supp_77(){
-	__insieme_supp_53();
-	__insieme_supp_54();
-	__insieme_supp_57();
-}
-static void __insieme_supp_77_wrap(void* _closure) { __insieme_supp_77(); }
-
-// start code fragment :: Definition of __insieme_supp_78 ... type: (()->unit) //
-void __insieme_supp_78(){
-	__insieme_supp_59();
-	__insieme_supp_60();
-	__insieme_supp_61();
-}
-static void __insieme_supp_78_wrap(void* _closure) { __insieme_supp_78(); }
-
-// start code fragment :: Definition of __insieme_supp_79 ... type: (()->unit) //
-void __insieme_supp_79(){
-	__insieme_supp_63();
-	__insieme_supp_64();
-	__insieme_supp_65();
-}
-static void __insieme_supp_79_wrap(void* _closure) { __insieme_supp_79(); }
-
-// start code fragment :: Definition of __insieme_supp_76 ... type: (()->unit) //
-void __insieme_supp_76(){
-	__insieme_supp_51();
-	__insieme_supp_77();
-	__insieme_supp_78();
-	__insieme_supp_79();
-	__insieme_supp_66();
-}
-static void __insieme_supp_76_wrap(void* _closure) { __insieme_supp_76(); }
-
-// start code fragment :: Definition of __insieme_supp_81 ... type: (()->real<8>) //
-double __insieme_supp_81(){
+// start code fragment :: Definition of __insieme_supp_76 ... type: (()->real<8>) //
+double __insieme_supp_76(){
 	double t = 0.0;
-	__insieme_supp_71((&((__insieme_type_39){&t})));
+	__insieme_supp_70((&((__insieme_type_39){&t})));
 	return (t);
 }
-static double __insieme_supp_81_wrap(void* _closure) { return __insieme_supp_81(); }
+static double __insieme_supp_76_wrap(void* _closure) { return __insieme_supp_76(); }
 
-// start code fragment :: Definition of __insieme_supp_80 ... type: ((int<4>)->unit) //
-void __insieme_supp_80(int n){
+// start code fragment :: Definition of __insieme_supp_75 ... type: ((int<4>)->unit) //
+void __insieme_supp_75(int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = __insieme_supp_81());
+	((now) = __insieme_supp_76());
 	((t) = ((now)-(((*(&((__GLOBAL__).start))).data[((unsigned int)(n))]))));
 	((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void __insieme_supp_80_wrap(void* _closure, int n) { __insieme_supp_80(n); }
+static void __insieme_supp_75_wrap(void* _closure, int n) { __insieme_supp_75(n); }
 
-// start code fragment :: Definition of __insieme_supp_82 ... type: ((int<4>)->real<8>) //
-double __insieme_supp_82(int n) { return (((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])); }
-static double __insieme_supp_82_wrap(void* _closure, int n) { return __insieme_supp_82(n); }
+// start code fragment :: Definition of __insieme_supp_77 ... type: ((int<4>)->real<8>) //
+double __insieme_supp_77(int n) { return (((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])); }
+static double __insieme_supp_77_wrap(void* _closure, int n) { return __insieme_supp_77(n); }
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_621) { return sqrt(var_621); }
+static double sqrt_wrap(void* _closure, double var_591) { return sqrt(var_591); }
 
-// start code fragment :: Definition of __insieme_supp_84 ... type: ((ref<array<real<8>,1>>)->unit) //
-void __insieme_supp_84(__insieme_type_39* rms){
+// start code fragment :: Definition of __insieme_supp_79 ... type: ((ref<array<real<8>,1>>)->unit) //
+void __insieme_supp_79(__insieme_type_39* rms){
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -2989,10 +2770,10 @@ void __insieme_supp_84(__insieme_type_39* rms){
 		((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 	};
 }
-static void __insieme_supp_84_wrap(void* _closure, __insieme_type_39* rms) { __insieme_supp_84(rms); }
+static void __insieme_supp_79_wrap(void* _closure, __insieme_type_39* rms) { __insieme_supp_79(rms); }
 
-// start code fragment :: Definition of __insieme_supp_85 ... type: ((ref<array<real<8>,1>>)->unit) //
-void __insieme_supp_85(__insieme_type_39* rms){
+// start code fragment :: Definition of __insieme_supp_80 ... type: ((ref<array<real<8>,1>>)->unit) //
+void __insieme_supp_80(__insieme_type_39* rms){
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -3030,14 +2811,14 @@ void __insieme_supp_85(__insieme_type_39* rms){
 		((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 	};
 }
-static void __insieme_supp_85_wrap(void* _closure, __insieme_type_39* rms) { __insieme_supp_85(rms); }
+static void __insieme_supp_80_wrap(void* _closure, __insieme_type_39* rms) { __insieme_supp_80(rms); }
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_622) { return fabs(var_622); }
+static double fabs_wrap(void* _closure, double var_592) { return fabs(var_592); }
 
-// start code fragment :: Definition of __insieme_supp_83 ... type: ((int<4>,ref<array<char,1>>,ref<array<int<4>,1>>)->unit) //
-void __insieme_supp_83(int no_time_steps, __insieme_type_1* class, __insieme_type_37* verified){
+// start code fragment :: Definition of __insieme_supp_78 ... type: ((int<4>,ref<array<char,1>>,ref<array<int<4>,1>>)->unit) //
+void __insieme_supp_78(int no_time_steps, __insieme_type_1* class, __insieme_type_37* verified){
 	__insieme_type_15 xcrref;
 	__insieme_type_15 xceref;
 	__insieme_type_15 xcrdif;
@@ -3048,9 +2829,9 @@ void __insieme_supp_83(int no_time_steps, __insieme_type_1* class, __insieme_typ
 	double dtref = 0.0;
 	int m = 0;
 	((epsilon) = 1.0e-08);
-	__insieme_supp_84((&((__insieme_type_39){(xce).data})));
+	__insieme_supp_79((&((__insieme_type_39){(xce).data})));
 	__insieme_supp_51();
-	__insieme_supp_85((&((__insieme_type_39){(xcr).data})));
+	__insieme_supp_80((&((__insieme_type_39){(xcr).data})));
 	{
 		for(int var_473 = 0; var_473 < 5; var_473 += 1)  { ((((xcr).data[((unsigned int)((var_473)))])) = ((((xcr).data[((unsigned int)((var_473)))]))/(*(&((__GLOBAL__).dt))))); };
 		((m) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
@@ -3167,7 +2948,7 @@ void __insieme_supp_83(int no_time_steps, __insieme_type_1* class, __insieme_typ
 		printf(((char*)((*(&((__insieme_type_1){" No verification performed\n"}))).data)), 0);
 	} else  { if(((((*verified).data[0]))==1)) { printf(((char*)((*(&((__insieme_type_1){" Verification Successful\n"}))).data)), 0); } else  { printf(((char*)((*(&((__insieme_type_1){" Verification failed\n"}))).data)), 0); }; };
 }
-static void __insieme_supp_83_wrap(void* _closure, int no_time_steps, __insieme_type_1* class, __insieme_type_37* verified) { __insieme_supp_83(no_time_steps, class, verified); }
+static void __insieme_supp_78_wrap(void* _closure, int no_time_steps, __insieme_type_1* class, __insieme_type_37* verified) { __insieme_supp_78(no_time_steps, class, verified); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(__insieme_type_1* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, __insieme_type_1* optype, int passed_verification, __insieme_type_1* npbversion, __insieme_type_1* compiletime, __insieme_type_1* cc, __insieme_type_1* clink, __insieme_type_1* c_lib, __insieme_type_1* c_inc, __insieme_type_1* cflags, __insieme_type_1* clinkflags, __insieme_type_1* rand){
@@ -3342,24 +3123,23 @@ int main(int __argc, char** __argv) {
 		};
 		__insieme_supp_41();
 		{
-			__insieme_supp_42();
-			__insieme_supp_48();
+			__insieme_supp_42();__insieme_supp_48();
 			__insieme_supp_49();
 			__insieme_supp_50();
-			__insieme_supp_67();
+			__insieme_supp_42();
 		};
+		__insieme_supp_67(1);
 		__insieme_supp_68(1);
-		__insieme_supp_69(1);
 		 { {
 			for(int var_415 = 1; var_415 < ((niter)+1); var_415 += 1) {
 				if(((((var_415)%20)==0)||((var_415)==1))) { printf(((char*)((*(&((__insieme_type_1){" Time step %4d\n"}))).data)), (var_415)); };
-				__insieme_supp_76();
+				__insieme_supp_50();
 			};
 			((step) = (1+(((int)(ceil((((double)((((niter)+1)-1)))/((double)(1))))))*1)));
 		}; };
-		__insieme_supp_80(1);
-		((tmax) = __insieme_supp_82(1));
-		__insieme_supp_83((niter), (&((__insieme_type_1){&class})), (&((__insieme_type_37){&verified})));
+		__insieme_supp_75(1);
+		((tmax) = __insieme_supp_77(1));
+		__insieme_supp_78((niter), (&((__insieme_type_1){&class})), (&((__insieme_type_37){&verified})));
 		((n3) = (((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))*(((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))])))*(((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))]))));
 		((navg) = (((double)((((((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(0))]))+(((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(1))])))+(((*(&((__GLOBAL__).grid_points))).data[((unsigned int)(2))])))))/3.0));
 		if(((tmax)!=0.0)) { ((mflops) = (((1.0e-6*((double)((niter))))*(((3478.8*((double)((n3))))-(17655.7*((navg)*(navg))))+(28023.7*(navg))))/(tmax))); } else  { ((mflops) = 0.0); };

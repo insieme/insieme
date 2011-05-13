@@ -121,7 +121,17 @@ namespace formatting {
 				CODE << ")";
 		});
 
-		ADD_FORMATTER(res, basic.getRefDelete(), {
+		ADD_FORMATTER_DETAIL(res, basic.getRefDelete(), false, {
+
+				// TODO: fix when frontend is producing correct code
+
+				// do not free non-heap variables
+				if (ARG(0)->getNodeType() == NT_Variable) {
+					VariablePtr var = static_pointer_cast<const Variable>(ARG(0));
+					if (CONTEXT.getVariableManager().getInfo(var).location != VariableManager::HEAP) {
+						return;
+					}
+				}
 
 				const TypePtr& type = ARG(0)->getType();
 				assert(type->getNodeType() == NT_RefType && "Cannot free a non-ref type!");

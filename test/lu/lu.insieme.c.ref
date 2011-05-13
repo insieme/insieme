@@ -254,11 +254,11 @@ int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: fopen ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>) //
 struct FILE* fopen(char*, char*);
-static __insieme_type_16* fopen_wrap(void* _closure, __insieme_type_1* var_681, __insieme_type_1* var_682) { return &((__insieme_type_16){fopen(((char*)((*(var_681)).data)), ((char*)((*(var_682)).data)))}); }
+static __insieme_type_16* fopen_wrap(void* _closure, __insieme_type_1* var_680, __insieme_type_1* var_681) { return &((__insieme_type_16){fopen(((char*)((*(var_680)).data)), ((char*)((*(var_681)).data)))}); }
 
 // start code fragment :: Prototype for external function: fgetc ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
 int fgetc(struct FILE*);
-static int fgetc_wrap(void* _closure, __insieme_type_16* var_683) { return fgetc(((struct FILE*)((*(var_683)).data))); }
+static int fgetc_wrap(void* _closure, __insieme_type_16* var_682) { return fgetc(((struct FILE*)((*(var_682)).data))); }
 
 // start code fragment :: Prototype for external function: fscanf ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>,ref<array<char,1>>,var_list)->int<4>) //
 int fscanf(struct FILE*, char*, ...);
@@ -275,11 +275,11 @@ typedef struct ___insieme_type_25 {
 
 // start code fragment :: Prototype for external function: fclose ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
 int fclose(struct FILE*);
-static int fclose_wrap(void* _closure, __insieme_type_16* var_684) { return fclose(((struct FILE*)((*(var_684)).data))); }
+static int fclose_wrap(void* _closure, __insieme_type_16* var_683) { return fclose(((struct FILE*)((*(var_683)).data))); }
 
 // start code fragment :: Prototype for external function: exit ... type: ((int<4>)->unit) //
 void exit(int);
-static void exit_wrap(void* _closure, int var_685) { exit(var_685); }
+static void exit_wrap(void* _closure, int var_684) { exit(var_684); }
 
 // start code fragment :: Definition of __insieme_supp_15 ... type: (()->unit) //
 void __insieme_supp_15(){
@@ -467,7 +467,7 @@ static void __insieme_supp_28_wrap(void* _closure) { __insieme_supp_28(); }
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_686) { return ceil(var_686); }
+static double ceil_wrap(void* _closure, double var_685) { return ceil(var_685); }
 
 // start code fragment :: Definition of __insieme_supp_30 ... type: ((int<4>,int<4>,int<4>,ref<array<real<8>,1>>)->unit) //
 void __insieme_supp_30(int i, int j, int k, __insieme_type_25* u000ijk){
@@ -1267,7 +1267,7 @@ typedef struct ___insieme_type_37 {
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_687) { return sqrt(var_687); }
+static double sqrt_wrap(void* _closure, double var_686) { return sqrt(var_686); }
 
 // start code fragment :: Definition of l2norm ... type: ((int<4>,int<4>,int<4>,int<4>,int<4>,int<4>,int<4>,ref<array<vector<vector<vector<real<8>,5>,33>,33>,1>>,ref<array<real<8>,1>>)->unit) //
 void l2norm(int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __insieme_type_37* v, __insieme_type_25* sum){
@@ -1342,7 +1342,7 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_44* var_688, __timezone_ptr_t* var_689) { return gettimeofday(((struct timeval*)((*(var_688)).data)), ((struct timezone*)((*(var_689)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_44* var_687, __timezone_ptr_t* var_688) { return gettimeofday(((struct timeval*)((*(var_687)).data)), ((struct timezone*)((*(var_688)).data))); }
 
 // start code fragment :: Definition of __insieme_supp_42 ... type: ((ref<array<real<8>,1>>)->unit) //
 void __insieme_supp_42(__insieme_type_25* t){
@@ -2217,7 +2217,7 @@ static void __insieme_supp_58_wrap(void* _closure) { __insieme_supp_58(); }
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_690) { return fabs(var_690); }
+static double fabs_wrap(void* _closure, double var_689) { return fabs(var_689); }
 
 // start code fragment :: Definition of __insieme_supp_62 ... type: ((ref<array<real<8>,1>>,ref<array<real<8>,1>>,real<8>,ref<array<char,1>>,ref<array<int<4>,1>>)->unit) //
 void __insieme_supp_62(__insieme_type_25* xcr, __insieme_type_25* xce, double xci, __insieme_type_1* class, __insieme_type_23* verified){
