@@ -74,15 +74,18 @@ bool _irt_wi_done_check(irt_work_item* wi) {
 
 void irt_wi_join(irt_work_item* wi) {
 	irt_worker* self = irt_worker_get_current();
-	wi->ready_check.fun = &_irt_wi_done_check;
-	wi->ready_check.data = wi;
-	irt_worker_yield(self, wi);
+	irt_work_item* swi = self->cur_wi;
+	swi->ready_check.fun = &_irt_wi_done_check;
+	swi->ready_check.data = wi;
+	irt_worker_yield(self, self->cur_wi);
 }
 void irt_wi_end(irt_work_item* wi) {
-	IRT_INFO("Wi %p / Worker %p irt_wi_end - A.", wi, irt_worker_get_current());
+	//IRT_INFO("Wi %p / Worker %p irt_wi_end - A.", wi, irt_worker_get_current());
 	wi->state = IRT_WI_STATE_DONE;
 	IRT_INFO("Wi %p / Worker %p irt_wi_end - B.", wi, irt_worker_get_current());
-	lwt_end(&irt_worker_get_current()->basestack);
+	irt_worker *worker = irt_worker_get_current();
+	worker->cur_wi = NULL;
+	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
 

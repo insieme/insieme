@@ -72,7 +72,7 @@ struct _irt_work_item {
 	irt_work_group_id* work_groups;
 	uint32 priority; // ?
 	irt_lw_data_item *parameters;
-	irt_work_item_state state;
+	volatile irt_work_item_state state;
 	// private implementation details, do not need to be migrated
 	irt_wi_readiness_check ready_check;
 	struct _irt_work_item* work_deque_next;

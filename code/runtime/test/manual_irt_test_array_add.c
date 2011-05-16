@@ -131,15 +131,19 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_READ_ONLY);
 	int* output = (int*)outputblock->data;
 
+	printf("out_a\n");
 	uint64 start_time = irt_time_ms();
 
 	insieme_wi_add_params addition_params = {INSIEME_ADD_WI_PARAM_T_INDEX, inputdata->id, outputdata->id };
 	irt_work_item* addition_wi = irt_wi_create(*(irt_work_item_range*)&fullrange, INSIEME_ADD_WI_INDEX, (irt_lw_data_item*)&addition_params);
 	irt_worker_enqueue(irt_worker_get_current(), addition_wi);
 
+	printf("out_b\n");
 	irt_wi_join(addition_wi);
+	printf("out_c\n");
 
 	uint64 end_time = irt_time_ms();
+	printf("out_d\n");
 
 	printf("======================\n= manual irt test array add done\n");
 	printf("= time taken: %lu\n", end_time - start_time);
