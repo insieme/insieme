@@ -20,7 +20,8 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         fun(ref<array<struct<x:int<4>,y:int<4>>,1>> v15){
             return composite.ref.elem(array.ref.elem.1D(v15, 0), x, type<int<4>>);
         }(scalar.to.array(v5));
-        return v4;
+        printf(string.as.char.pointer("a=%d\n"), varlist.pack((v4)));
+        return 0;
     }
 
 
@@ -48,6 +49,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
         fun(ref<array<struct<x:int<4>,y:int<4>>,1>> v15){
             return ( *composite.ref.elem(array.ref.elem.1D(v15, 0), x, type<int<4>>));
         }(scalar.to.array(v5));
-        return ( *v4);
+        printf(string.as.char.pointer("a=%d\n"), varlist.pack((( *v4))));
+        return 0;
     }
 

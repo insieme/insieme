@@ -96,7 +96,9 @@ def run_test_case(test_case_name):
 	refCfg  = test_case_name + '.cfg.ref'
 	# name of the file containing the generated dot dump of the CFG
 	testCfg  = test_case_name + '.cfg'
-
+	# name of the file containing the generated XML dump
+	testXML  = test_case_name + '.xml'
+	
 
 	inputs = test_case_name + '.c'
 	if os.path.exists(test_case_name + '/inputs.data'):
@@ -117,9 +119,9 @@ def run_test_case(test_case_name):
 	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
 	os.chdir(test_case_name)
 	# RUN insieme to generate the IR dump and C output
-	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --col-wrap=120 -S -o {C_DUMP} {FLAGS}".format(
+	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --dump-xml {XML_DUMP} --col-wrap=120 -S -o {C_DUMP} {FLAGS}".format(
 						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 
-						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg}) 
+						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML}) 
 				 )
 	if check_for_error(test_case_name, ret):
 		os.chdir("../")

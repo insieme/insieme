@@ -41,6 +41,7 @@ FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 	false, 	"pretty print t
 FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check on the generated IR")
 FLAG("omp-sema",			"omp-sema", 			OMPSema, 		false,	"apply OMP semantics in frontend")
 FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
+FLAG("show-stats",			"show-stats", 			ShowStats, 		false, 	"computes statistics regarding the composition of the IR")
 
 //For debug:
 FLAG("opencl,OCL", 			"opencl", 				OpenCL, false, "produces code by OpenCL backend (debug)")
@@ -59,6 +60,7 @@ OPTION("load-xml,", 		"load-xml", 			LoadXML, 		std::string, 				"Load an xml co
 OPTION("dump-ir,i", 		"dump-ir", 				DumpIR, 		std::string, 				"Print the pretty printed representation of the IR")
 OPTION("out-file,o", 		"out-file", 			Output, 		std::string, 				"output file")
 OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph of the CFG")
+
 
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")

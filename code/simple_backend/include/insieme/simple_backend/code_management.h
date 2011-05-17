@@ -45,6 +45,7 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -53,7 +54,7 @@ namespace simple_backend {
 	 * A stream based on std::stringstream that keeps a level of indentation and automatically
 	 * applies it at every line break.
 	 */
-	class CodeBuffer {
+	class CodeBuffer : public insieme::utils::Printable {
 		public:
 
 			/**
@@ -119,7 +120,13 @@ namespace simple_backend {
 			 *
 			 * @return the code written into this stream as a string.
 			 */
-			std::string toString();
+			std::string toString() const;
+
+			/**
+			 * Prints the content of this buffer to the given output stream.
+			 * @param out the stream the output should be printed to
+			 */
+			virtual std::ostream& printTo(std::ostream& out) const;
 
 			/**
 			 * A generic implementation of the << operator allowing code to append

@@ -48,12 +48,16 @@ const CodeBuffer::IndR CodeBuffer::indR = CodeBuffer::IndR();
 const CodeBuffer::IndL CodeBuffer::indL = CodeBuffer::IndL();
 
 
-std::string CodeBuffer::toString() {
+std::string CodeBuffer::toString() const {
 	// defuglify code
 	std::string retval = ss.str();
 	boost::replace_all(retval, "*&", "");
 	boost::replace_all(retval, ";;", ";");
 	return retval;
+}
+
+std::ostream& CodeBuffer::printTo(std::ostream& out) const {
+	return out << toString();
 }
 
 
@@ -154,7 +158,7 @@ std::ostream& operator<<(std::ostream& os, const insieme::simple_backend::CodeFr
 	for_each(flatDeps, [&os](const insieme::simple_backend::CodeFragmentPtr& cur) {
 		if (!cur->isDummy()) {
 			os << "\n// start code fragment :: " << cur->getName() << " //\n";
-			os << cur->getCodeBuffer().toString();
+			os << cur->getCodeBuffer();
 		}
 	});
 	return os;
