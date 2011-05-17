@@ -106,10 +106,10 @@ int main(int argc, char** argv) {
 	irt_init_globals();
 
 	//IRT_INFO("Starting worker threads");
-	static const uint32 work_count = 1;
+	static const uint32 work_count = 16;
 	irt_worker* workers[work_count];
 	for(int i=0; i<work_count; ++i) {
-		workers[i] = irt_worker_create(i, ~0);
+		workers[i] = irt_worker_create(i, 1<<i);
 	}
 	//IRT_INFO("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);

@@ -87,19 +87,20 @@ void irt_di_destroy(irt_data_item* di) {
 	_irt_di_dec_use_count(di);
 }
 
-static inline uint32 _irt_di_get_bytes(irt_data_item* di) {
-	uint32 type_size = irt_type_get_bytes(irt_context_get_current(), di->type_id);
+static inline uint64 _irt_di_get_bytes(irt_data_item* di) {
+	uint64 type_size = irt_type_get_bytes(irt_context_get_current(), di->type_id);
 	if(di->dimensions == 1) return (di->ranges[0].end - di->ranges[0].begin) * type_size;
 	else {
-		uint32 s = 0;
+		uint64 s = 0;
 		for(int i=0; i<di->dimensions; ++i) s += (di->ranges[i].end - di->ranges[i].begin) * type_size;
 		return s;
 	}
 }
-static inline irt_data_block* _irt_db_new(uint32 size) {
+static inline irt_data_block* _irt_db_new(uint64 size) {
 	irt_data_block* retval = (irt_data_block*)malloc(sizeof(irt_data_block));
 	retval->use_count = 1;
 	retval->data = malloc(size);
+	IRT_ASSERT(retval->data != NULL, IRT_ERR_IO, "Malloc of data block failed.");
 	return retval;
 }
 static inline void _irt_db_recycle(irt_data_block* di) {

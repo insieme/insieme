@@ -50,7 +50,7 @@
 #include "impl/error_handling.impl.h"
 
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func);
-void lwt_continue(irt_work_item *new_wi, intptr_t *basestack);
+void lwt_continue(intptr_t *newstack, intptr_t *basestack);
 void lwt_end(intptr_t *basestack);
 
 
@@ -82,7 +82,7 @@ void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* f
 		"push %%r15 \n"
 		/* swap stacks */
 		"movq %%rsp, (%%rax) \n"	/* save stack pointer in memory */
-		"movq %%rsp, %%rbx \n"		/* save current stack pointer in caller save register B */
+//		"movq %%rsp, %%rbx \n"		/* save current stack pointer in caller save register B */
 		"movq (%%rcx), %%rsp \n"	/* exchange stack pointer */
 		/* retrieve function address and call */
 		/* %rdi still contains arg */
@@ -97,12 +97,14 @@ void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* f
 //		"pop %%rdi \n"
 //		"pop %%rbx \n"
 //		"pop %%rbp \n"
-		: /* no output registers */
+	: /* no output registers */
 	: "a" (basestack), "c" (&(wi->stack_ptr)), "d" (func) );
+	#ifndef NDEBUG
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
+	#endif
 }
 __attribute__ ((noinline))
-void lwt_continue(irt_work_item *new_wi, intptr_t *basestack) {
+void lwt_continue_impl(intptr_t *newstack, intptr_t *basestack) {
 	__asm__ (
 		/* save registers on stack */
 		"push %%rbp ;"
@@ -123,12 +125,19 @@ void lwt_continue(irt_work_item *new_wi, intptr_t *basestack) {
 		"pop %%rdi ;"
 		"pop %%rbx ;"
 		"pop %%rbp ;"
-		: /* no output registers */
-	: "a" (basestack), "c" (new_wi->stack_ptr) );
+	: /* no output registers */
+	: "a" (basestack), "c" (newstack) );
+}
+__attribute__ ((noinline))
+void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
+	IRT_INFO("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
+	lwt_continue_impl(newstack, basestack);
+	IRT_INFO("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 }
 __attribute__ ((noinline))
 void lwt_end(intptr_t *basestack) {
-	__asm__ (
+	//IRT_INFO("lwt_end - A.");
+	__asm__ volatile (
 		/* swap stacks */
 		"movq (%%rcx), %%rsp ;"
 		/* restore registers for original callee */
@@ -139,8 +148,10 @@ void lwt_end(intptr_t *basestack) {
 		"pop %%rdi ;"
 		"pop %%rbx ;"
 		"pop %%rbp ;"
-		: /* no output registers */
-	: "c" (basestack) );
+	: /* no output registers */ 
+	: "c" (basestack) 
+	/* : "%r15", "%r14", "%r13", "%r12", "%rdi", "%rbx", "%rbp", "%rsp", "memory" */ );
+	//IRT_INFO("lwt_end - B.");
 }
 
 #else
@@ -149,6 +160,6 @@ void lwt_end(intptr_t *basestack) {
 // x86 implementation
 
 // TODO
-#pragma error "X86 implementation TODO"
+#pragma error "minlwt X86 implementation TODO"
 
 #endif
