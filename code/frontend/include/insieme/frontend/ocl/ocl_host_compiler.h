@@ -86,7 +86,7 @@ public:
 
     virtual core::NodePtr handleNode(core::CallExprPtr node) =0;
 
-    const vector<core::ExpressionPtr>& getKernels() { return kernels->getEntryPoints(); }
+    const vector<core::ExpressionPtr>& getKernels(){ return kernels->getEntryPoints(); }
 };
 
 template<typename Lambda>
@@ -115,8 +115,9 @@ public:
 typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string>> HandlerTable;
 typedef boost::unordered_map<core::VariablePtr,  core::VariablePtr> ClmemTable;
-typedef boost::unordered_map<core::NodePtr, std::vector<core::ExpressionPtr> > KernelArgs;
-typedef boost::unordered_map<core::NodePtr, core::LambdaExprPtr > KernelLambdas;
+typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
+typedef boost::unordered_map<string, core::ExpressionPtr> KernelNames;
+typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelLambdas;
 
 template<typename Lambda>
 HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambda) {
@@ -135,7 +136,7 @@ class HostMapper : public core::transform::CachedNodeMapping {
     ClmemTable cl_mems;
     Ocl2Inspire o2i;
     KernelArgs kernelArgs;
-    KernelLambdas kernelLambdas;
+    KernelNames kernelNames;
     vector<core::ExpressionPtr> kernelEntries;
 
     core::CallExprPtr checkAssignment(const core::CallExprPtr& oldCall);
@@ -147,25 +148,45 @@ public:
     ClmemTable& getClMemMapping() { return cl_mems; }
 
     const vector<core::ExpressionPtr>& getKernels() { return kernelEntries; }
+    KernelArgs& getKernelArgs() { return kernelArgs; }
+    KernelNames& getKernelNames() { return kernelNames; }
 
 };
 
-class HostMapper2ndPass : public core::transform::CachedNodeMapping {
+class Host2ndPass {
+    KernelNames& kernelNames;
+    KernelLambdas kernelLambdas;
+
+public:
+    Host2ndPass(KernelNames& oclKernelNames, ClmemTable clMemTable, core::ASTBuilder& build) : kernelNames(oclKernelNames) { }
+    void mapNamesToLambdas(const vector<core::ExpressionPtr>& kernelEntries);
+
+    KernelNames& getKernelNames() { return kernelNames; }
+    KernelLambdas& getKernelLambdas() { return kernelLambdas; }
+};
+
+class HostMapper3rdPass : public core::transform::CachedNodeMapping {
     const core::ASTBuilder& builder;
     ClmemTable& cl_mems;
+    KernelArgs& kernelArgs;
+    KernelNames& kernelNames;
+    KernelLambdas& kernelLambdas;
+
+    void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg);
+
 public:
-    HostMapper2ndPass(const core::ASTBuilder build, ClmemTable& clMemTable): builder(build), cl_mems(clMemTable) {}
+    HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, KernelNames& oclKernelNames,
+            KernelLambdas& oclKernelLambdas):
+        builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs), kernelNames(oclKernelNames), kernelLambdas(oclKernelLambdas) {}
 
     const core::NodePtr resolveElement(const core::NodePtr& element);
 
 };
 
-
+/*
 class HostVisitor : public core::AddressVisitor<void> {
     core::ASTBuilder& builder;
     core::ProgramPtr& newProg;
-
-    const core::NodePtr resolveElement(const core::NodePtr& element);
 
 public:
     HostVisitor(core::ASTBuilder& build, core::ProgramPtr& prog) : core::AddressVisitor<void>(false), builder(build), newProg(prog) {};
@@ -174,7 +195,7 @@ public:
 
     void visitCallExpr(const core::CallExprAddress& callExp);
 
-};
+};*/
 }
 
 class HostCompiler {
