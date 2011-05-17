@@ -55,6 +55,7 @@ static inline irt_data_item* _irt_di_new(uint16 dimensions) {
 	return (irt_data_item*)retval;
 }
 static inline void _irt_di_recycle(irt_data_item* di) {
+	irt_data_item_table_remove(di->id);
 	free(di);
 }
 static inline void _irt_di_dec_use_count(irt_data_item* di) {
@@ -73,13 +74,14 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	retval->lookup_table_next = NULL;
 	retval->data_block = NULL;
 	irt_data_item_table_insert(retval);
-	irt_data_item_table_lookup(retval->id);
 	return retval;
 }
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) {
 	irt_data_item* retval = _irt_di_new(parent->dimensions);
 	memcpy(retval, parent, sizeof(irt_data_item));
 	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*parent->dimensions);
+	retval->id = irt_generate_data_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	retval->parent_id = parent->id;
 	irt_data_item_table_insert(retval);
 	return retval;
 }

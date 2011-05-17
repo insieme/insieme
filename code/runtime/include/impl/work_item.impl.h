@@ -72,19 +72,18 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {
 	irt_work_item* retval = _irt_wi_new();
 	memcpy(retval, source, sizeof(irt_work_item));
+	retval->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	retval->id.cached = retval;
+	retval->num_fragments = 0;
+	retval->range = range;
 	if(source->source_id.value.full == irt_work_item_null_id().value.full) {
 		// splitting non-fragment wi
-		source->num_fragments++;
 		retval->source_id = source->id;
 	} else {
 		// splitting fragment wi
-		irt_work_item *base_source = retval->source_id.cached->source_id.cached; // TODO
-		base_source->num_fragments++;
+		irt_work_item *base_source = source->source_id.cached; // TODO
 		retval->source_id = base_source->id;
-		_irt_wi_recycle(source);
 	}
-	retval->num_fragments = 0;
-	retval->range = range;
 	return retval;
 }
 void irt_wi_destroy(irt_work_item* wi) {
@@ -110,7 +109,8 @@ void irt_wi_end(irt_work_item* wi) {
 	if(wi->source_id.value.full != irt_work_item_null_id().value.full) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
-		source->num_fragments--;
+		IRT_INFO("Fragment end, remaining %d", source->num_fragments);
+		irt_atomic_fetch_and_sub(&source->num_fragments, 1);
 		if(source->num_fragments == 0) irt_wi_end(source);
 	}
 	lwt_end(&worker->basestack);
@@ -137,5 +137,13 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		range.begin = offsets[i];
 		range.end = i+1 < elements ? offsets[i+1] : wi->range.end;
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
+	}
+	if(wi->source_id.value.full != irt_work_item_null_id().value.full) {
+		irt_work_item* source = wi->source_id.cached; // TODO
+		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1); // This needs to be atomic even if it may not look like it
+		// splitting fragment wi, can safely delete
+		_irt_wi_recycle(wi);
+	} else {
+		irt_atomic_fetch_and_add(&wi->num_fragments, elements); // This needs to be atomic even if it may not look like it
 	}
 }
