@@ -187,7 +187,7 @@ void addBuiltinAnnotation(ASTBuilder& builder, qualifierMapType& qualifierMap, V
 }
 
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
-	ASTBuilder builder(ptr->getNodeManager());
+	/*ASTBuilder builder(ptr->getNodeManager());
 	if(ptr->hasAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "Function with some Opencl Annotation...\n";
 		BaseAnnotationPtr&& annotations = ptr->getAnnotation(BaseAnnotation::KEY);
@@ -315,7 +315,8 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					backwardVarNameMap.insert(std::make_pair(newName, oldName));
 					forwardVarNameMap.insert(std::make_pair(oldName, newName));
 					qualifierMap.insert(std::make_pair(newName, *iter));
-				}
+				}*/
+				
 				// PRINT
 				/*LOG(INFO) << "Qui ci arrivo" << std::endl;
 				for (varNameMapType::const_iterator it = forwardVarNameMap.begin(); it != end; ++it)
@@ -324,7 +325,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				}
 				*/
 				
-				Lambda::ParamList newParams;
+				/*Lambda::ParamList newParams;
 				for (uint i = 0; i < oldParams.size()-2; i++){
 					unsigned oldName = (oldParams.at(i))->getId();
 					unsigned newName = getVarName(forwardVarNameMap, oldName);
@@ -379,10 +380,10 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				code << funManager.getFunctionName(code, newFunc);
 			}
 		}
-	} 
-	else {
-		simple_backend::StmtConverter::visitLambdaExpr(ptr);
 	}
+	else {*/
+		simple_backend::StmtConverter::visitLambdaExpr(ptr);
+	//}
 }
 
 void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
