@@ -64,15 +64,18 @@ typedef struct _irt_wi_readiness_check {
 } irt_wi_readiness_check;
 
 struct _irt_work_item {
+	// core functionality
 	irt_work_item_id id;
 	irt_context_id context_id;
 	irt_wi_implementation_id impl_id;
 	irt_work_item_range range;
 	uint32 num_groups;
 	irt_work_group_id* work_groups;
-	uint32 priority; // ?
-	irt_lw_data_item *parameters;
 	volatile irt_work_item_state state;
+	irt_lw_data_item *parameters;
+	// wi splitting related
+	irt_work_item_id source_id;
+	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
 	irt_wi_readiness_check ready_check;
 	struct _irt_work_item* work_deque_next;
@@ -94,4 +97,4 @@ void irt_wi_end(irt_work_item* wi);
 
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]);
-void irt_wi_split(irt_work_item* wi, uint32 elements, uint32* offsets, irt_work_item** out_wis);
+void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis);

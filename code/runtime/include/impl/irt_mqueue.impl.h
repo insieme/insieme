@@ -61,7 +61,7 @@ void irt_mqueue_cleanup() {
 	IRT_ASSERT(mq_unlink(IRT_MQUEUE_NAME) == 0, IRT_ERR_IO, "Could not unlink message queue " IRT_MQUEUE_NAME ".\n");
 }
 
-void irt_mqueue_send(irt_mqueue_msg* msg) {
+void irt_mqueue_send(const irt_mqueue_msg* msg) {
 	IRT_ASSERT(mq_send(irt_g_message_queue, (char*)msg, msg->size, 0) == 0, IRT_ERR_IO, "Could not send posix message.\nError string: %s\n", strerror(errno));
 }
 irt_mqueue_msg* irt_mqueue_receive() {
