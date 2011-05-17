@@ -150,49 +150,82 @@ void irt_worker_schedule(irt_worker* self) {
 	//IRT_INFO("Worker %p scheduling - A.", self);
 
 	// try to take a ready WI from the pool
-	// I'm not yet 100% convinced this is thread safe
-	irt_work_item* next_wi = self->pool.start;
-	while(next_wi != NULL) {
-		IRT_INFO("Worker %p scheduling - A0.", self);
-		if(next_wi->ready_check.fun(next_wi)) {
-			IRT_INFO("Worker %p scheduling - A1.", self);
-			if(next_wi == irt_work_item_deque_take_elem(&self->pool, next_wi)) break;
-		} else {
-			next_wi = next_wi->work_deque_next;
+	{
+		irt_work_item* next_wi = self->pool.start;
+		while(next_wi != NULL) {
+			IRT_INFO("Worker %p scheduling - A0.", self);
+			if(next_wi->ready_check.fun(next_wi)) {
+				IRT_INFO("Worker %p scheduling - A1.", self);
+				if(next_wi == irt_work_item_deque_take_elem(&self->pool, next_wi)) break;
+			} else {
+				next_wi = next_wi->work_deque_next;
+			}
 		}
-	}
-	if(next_wi != NULL) {
-		IRT_INFO("Worker %p scheduling - A2.", self);
-		_irt_worker_switch_to_wi(self, next_wi);
-		return;
+		if(next_wi != NULL) {
+			IRT_INFO("Worker %p scheduling - A2.", self);
+			_irt_worker_switch_to_wi(self, next_wi);
+			return;
+		}
 	}
 
 	//IRT_INFO("Worker %p scheduling - B.", self);
 
 	// if that failed, try to take a work item from the queue
-	// TODO split
-	irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
-	if(new_wi != NULL) {
-		//IRT_INFO("Worker %p scheduling - B0.", self);
-		_irt_worker_switch_to_wi(self, new_wi);
-		//IRT_INFO("Worker %p scheduling - B1.", self);
-		return;
+	{
+		irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
+		if(new_wi != NULL) {
+			if((new_wi->range.end - new_wi->range.begin) / new_wi->range.step > 10000) {
+				// split WI
+				irt_work_item *split_wis[2];
+				irt_wi_split_binary(new_wi, split_wis);
+				irt_work_item_deque_insert_front(&self->queue, split_wis[0]);
+				irt_work_item_deque_insert_front(&self->queue, split_wis[1]);
+				return;
+			}
+			//IRT_INFO("Worker %p scheduling - B0.", self);
+			_irt_worker_switch_to_wi(self, new_wi);
+			//IRT_INFO("Worker %p scheduling - B1.", self);
+			return;
+		}
 	}
 
 	//IRT_INFO("Worker %p scheduling - C.", self);
 
 	// if that failed as well, look in the IPC message queue
-	irt_mqueue_msg* received = irt_mqueue_receive();
-	if(received) {
-		if(received->type == IRT_MQ_NEW_APP) {
-			irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
-			irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
-			irt_context* prog_context = irt_context_create(client_app);
-			self->cur_context = prog_context->id;
-			irt_context_table_insert(prog_context);
-			_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
+	{
+		irt_mqueue_msg* received = irt_mqueue_receive();
+		if(received) {
+			if(received->type == IRT_MQ_NEW_APP) {
+				irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
+				irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
+				irt_context* prog_context = irt_context_create(client_app);
+				self->cur_context = prog_context->id;
+				irt_context_table_insert(prog_context);
+				_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
+			}
+			free(received);
 		}
-		free(received);
+	}
+
+	// try to steal from adjoining thread
+	{
+		int32 neighbour_index = self->id.value.components.thread-1;
+		if(neighbour_index<0) neighbour_index = irt_g_worker_count-1;
+		irt_work_item* stolen_wi = irt_work_item_deque_pop_back(&irt_g_workers[neighbour_index]->queue);
+		if(stolen_wi != NULL) {
+			if((stolen_wi->range.end - stolen_wi->range.begin) / stolen_wi->range.step > 10000) {
+				// split WI
+				irt_work_item *split_wis[2];
+				irt_wi_split_binary(stolen_wi, split_wis);
+				irt_work_item_deque_insert_front(&self->queue, split_wis[1]);
+				irt_work_item_deque_insert_front(&self->queue, split_wis[0]);
+				return;
+			}
+			//IRT_INFO("Worker %p scheduling - B0.", self);
+			_irt_worker_switch_to_wi(self, stolen_wi);
+			//IRT_INFO("Worker %p scheduling - B1.", self);
+			return;
+		}
 	}
 
 	pthread_yield();
