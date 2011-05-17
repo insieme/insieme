@@ -249,12 +249,6 @@ int main(int argc, char** argv) {
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			};
 
-			// used for verifying quality of node-hashing
-//			if (!checkForHashCollisions(program)) {
-//				return -1;
-//			}
-
-
 			if(CommandLineOptions::CheckSema) {
 				checker();
 			}
@@ -274,9 +268,14 @@ int main(int argc, char** argv) {
 			}
 
 			// IR statistics
-			LOG(INFO) << "============================ IR Statistics ======================================";
-			LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
-			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+			if (CommandLineOptions::ShowStats) {
+				LOG(INFO) << "============================ IR Statistics ======================================";
+				insieme::utils::Timer statTimer("Statistics");
+				LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
+				statTimer.stop();
+				LOG(INFO) << statTimer;
+				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+			}
 
 			// Creates dot graph of the generated IR
 			if(!CommandLineOptions::ShowIR.empty()) {
