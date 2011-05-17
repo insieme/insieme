@@ -41,6 +41,8 @@
 
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/simple_backend/code_management.h"
+
 namespace insieme {
 	namespace core {
 		class Variable;
@@ -87,12 +89,17 @@ namespace simple_backend {
 			 */
 			utils::map::PointerMap<core::VariablePtr, VariableInfo> variableMap;
 
+			/**
+			 * The code fragment containing the global variable declaration.
+			 */
+			CodeFragmentPtr globalVar;
+
 		public:
 
 			/**
 			 * A default constructor for this manager.
 			 */
-			VariableManager() : variableMap() {};
+			VariableManager() : variableMap(), globalVar() {};
 
 			/**
 			 * Obtains a reference to the internally maintained information associated to the
@@ -125,6 +132,21 @@ namespace simple_backend {
 			 * @param variable the variable to be tested
 			 */
 			bool hasInfoFor(const core::VariablePtr& variable) const;
+
+			/**
+			 * Obtains a pointer to the current global variable fragment.
+			 */
+			CodeFragmentPtr getGlobalVarFragment() const {
+				return globalVar;
+			}
+
+			/**
+			 * Sets up the global variable fragment.
+			 */
+			void setGlobalVarFragment(CodeFragmentPtr fragment) {
+				assert(!globalVar && "Global-variable struct may only be initialized once!");
+				globalVar = fragment;
+			}
 
 	};
 

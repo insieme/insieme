@@ -503,6 +503,7 @@ public:
 		DISPATCH(memberAccessExpr)	DISPATCH(rootNode)			DISPATCH(bindExpr)	DISPATCH(tupleProjectionExpr)	DISPATCH(markerStmt)
 		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(returnStmt)		DISPATCH(breakStmt)				DISPATCH(identifier)
 		assert(false && "XML node not handled!");
+		return 0;
 	}
 
 	NodePtr buildAST(const XmlElement& inspire) {

@@ -50,6 +50,7 @@ std::string attributeIdToString(const NodeProperty& prop) {
 	case NodeProperty::COLOR: return "color";
 	default:	assert(false);
 	}
+	return "-unknown-";
 }
 
 void dumpProperties(const DOTGraphBuilder::Properties& dec, std::ostream& out) {

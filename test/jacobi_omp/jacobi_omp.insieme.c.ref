@@ -234,10 +234,10 @@ int main(int __argc, char** __argv) {
 		};
 		((end_t) = clock());
 		((elapsed_time) = (((double)(((end_t)-(start_t))))/((double)(1000000l))));
-		(free((u).data));
-		(free((tmp).data));
-		(free((f).data));
-		(free((res).data));
+		;
+		;
+		;
+		;
 		printf(((char*)((*(&((__insieme_type_1){"Job Done! - residuo: %lf\n"}))).data)), (resv));
 	}
 	// ----  end of actual code body  ----

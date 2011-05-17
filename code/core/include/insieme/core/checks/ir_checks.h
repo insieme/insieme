@@ -59,6 +59,13 @@ namespace checks {
 	 */
 	CheckPtr getFullCheck();
 
+	/**
+	 * Allies all known semantic checks on the given node and returns the obtained message list.
+	 */
+	inline MessageList check(const NodePtr& node) {
+		return check(node, getFullCheck());
+	}
+
 } // end namespace check
 } // end namespace core
 } // end namespace insieme

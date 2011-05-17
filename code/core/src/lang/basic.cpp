@@ -226,6 +226,7 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 	}
 
 	assert(false && "Required combination of operator and type not declared");
+	return 0;
 }
 
 // ----- extra material ---

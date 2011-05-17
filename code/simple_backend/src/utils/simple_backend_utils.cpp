@@ -34,45 +34,45 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/simple_backend/utils/simple_backend_utils.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/program.h"
+#include "insieme/core/ast_builder.h"
 
 namespace insieme {
 namespace simple_backend {
+namespace utils {
 
-	/**
-	 * This class offers a list of IR extensions required within the simple backend. Such
-	 * extensions include additional literals representing i.g. C operators or procedures of the
-	 * runtime interface.
-	 */
-	class IRExtensions {
-	public:
+	using namespace core;
 
-		/**
-		 * The name of the global literal introduced by the preprocessor.
-		 */
-		static const string GLOBAL_ID;
+	bool isMainProgram(const ProgramPtr& program) {
+		if (program->isMain()) {
+			return true;
+		}
 
-		/**
-		 * Creates a new instance of this IRExtension set. The given manager is used to construct
-		 * the included literals.
-		 *
-		 * @param manager the manager to be used to construct the required types and literals
-		 */
-		IRExtensions(core::NodeManager& manager);
+		if (program->getEntryPoints().size() != static_cast<unsigned>(1)) {
+			return false;
+		}
 
-		/**
-		 * A special literal representing a lazy-evaluating if-then-else operator.
-		 */
-		const core::LiteralPtr lazyITE;
+		// construct the type of the main
+		core::ASTBuilder builder(program->getNodeManager());
+		const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
 
-		/**
-		 * A special literal representing a function causing the initialization of the global variables.
-		 */
-		const core::LiteralPtr initGlobals;
-	};
+		// type:   (int<4>, ref<array<array<char,1>,1>>) -> int<4>
+		ConcreteIntTypeParamPtr one = builder.concreteIntTypeParam(1);
+		vector<TypePtr> params = toVector<TypePtr>(basic.getInt4(),
+				builder.refType(builder.arrayType(builder.arrayType(basic.getChar(), one), one)));
+
+		FunctionTypePtr funPtr1 = builder.functionType(params, basic.getInt4());
+		FunctionTypePtr funPtr2 = builder.functionType(TypeList(), basic.getInt4());
+		FunctionTypePtr funPtr3 = builder.functionType(TypeList(), basic.getUnit());
+
+		// check type
+		const TypePtr& type = program->getEntryPoints()[0]->getType();
+		return *type == *funPtr1 || *type == *funPtr2 || *type == *funPtr3;
+	}
 
 
+} // end namespace utils
 } // end namespace simple_backend
 } // end namespace insieme

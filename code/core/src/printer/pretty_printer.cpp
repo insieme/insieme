@@ -589,7 +589,7 @@ namespace {
 		PRINT(MemberAccessExpr, {
 				// prints the access to a member variable
 				this->visit(node->getSubExpression());
-				out << "." << node->getMemberName();
+				out << "." << *node->getMemberName();
 		});
 
 		PRINT(TupleProjectionExpr, {
@@ -960,5 +960,14 @@ std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::Sourc
 	}
 	return out;
 }
+
+std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceLocation& loc) {
+	return out << loc.first << ":" << loc.second;
+}
+
+std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceRange& range) {
+	return out << "[" << range.first << " - " << range.second << "]";
+}
+
 
 }

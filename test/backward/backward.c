@@ -47,25 +47,25 @@ void backward_column(int m) {
     
     // printf("column %d\n",m);
 
-	double pv_u, pv_m, pv_d;
-    	double prob_u, prob_m, prob_d;
-    	int i,j;
+	//double pv_u, pv_m, pv_d;
+    	//double prob_u, prob_m, prob_d;
+    	//int i,j;
 
 
 	    #pragma omp for
-	    for(j = 0; j<=2*jmax; j++) {
+	    for(int j = 0; j<=2*jmax; j++) {
 
 		// printf("row %d \n",j);
 
-		prob_u = prob[j*3+2];
-		prob_m = prob[j*3+1];
-		prob_d = prob[j*3];
+		double prob_u = prob[j*3+2];
+		double prob_m = prob[j*3+1];
+		double prob_d = prob[j*3];
 	    
-		pv_u = pv_1[succ[j*3+2]];
-		pv_m = pv_1[succ[j*3+1]];
-		pv_d = pv_1[succ[j*3]];
+		double pv_u = pv_1[succ[j*3+2]];
+		double pv_m = pv_1[succ[j*3+1]];
+		double pv_d = pv_1[succ[j*3]];
 	    
-		i = (2*jmax+1)*m + j; // i : (m,j) linearized
+		int i = (2*jmax+1)*m + j; // i : (m,j) linearized
 
 		pv[j] = exp(-rate[i]*dt) * 
 		    (prob_d*pv_d + prob_m*pv_m + prob_u*pv_u + coupon(m,rate[i],nomval)) ;
@@ -79,7 +79,7 @@ void backward_column(int m) {
 
 int main() {
 
-    int m,j;
+    int m, j;
     float ticks;
 
     succ[2] = 2;
@@ -118,13 +118,12 @@ int main() {
 
     #pragma omp parallel
     {
+    for(int n = mmax-1; n>=0; n--) {
 
-    for(m = mmax-1; m>=0; m--) {
-
-        backward_column(m);
+        backward_column(n);
 
 	#pragma omp for
-        for(j = 0; j<=2*jmax; j++) {
+        for(int j = 0; j<=2*jmax; j++) {
             pv_1[j] = pv[j];
             }
 

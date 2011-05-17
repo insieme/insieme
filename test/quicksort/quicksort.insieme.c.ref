@@ -91,7 +91,7 @@ int main(int __argc, char** __argv) {
 			sortIt(a, 0, 20000);
 			printf(((char*)((*(&((__insieme_type_1){"a[N/2] == %d\n"}))).data)), (((*a).data[((unsigned int)((20000/2)))])));
 		};
-		(free((*a).data));
+		free((*a).data);
 		return 0;
 	}
 	// ----  end of actual code body  ----

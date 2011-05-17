@@ -77,7 +77,7 @@ int main(int __argc, char** __argv) {
 		memcpy((void*)((int*)((*(dest_array)).data)), (void*)((int*)((*(&src_array)).data)), (4*sizeof(int)));
 		for(int idx = 0; idx < ((4*sizeof(int))/sizeof(int)); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"%d, "}))).data)), (((*dest_array).data[((unsigned int)((idx)))]))); };
 		printf(((char*)((*(&((__insieme_type_1){"\n"}))).data)), 0);
-		(free((*dest_array).data));
+		free((*dest_array).data);
 	}
 	// ----  end of actual code body  ----
 	

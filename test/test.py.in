@@ -189,17 +189,26 @@ def run_test_case(test_case_name):
 			return 1
 		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
-		sys.stderr.write(" * Running input program...             ")
+		sys.stderr.write(" * Running input program...              ")
 		start = time.time()
-		os.system("./{0} > {1}".format(ref_exec, ref_out))
-		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+		exitValue = os.system("./{0} > {1}".format(ref_exec, ref_out)) >> 8
+		if exitValue != 0:
+			sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
+			return 1
+
+		sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
 		
-		sys.stderr.write(" * Running output program...            ")
+		sys.stderr.write(" * Running output program...             ")
 		ldPath = os.getenv("LD_LIBRARY_PATH", "");
 		os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
 		start = time.time()
-		os.system("./{0} > {1}".format(test_exec, test_out))
-		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+		exitValue = os.system("./{0} > {1}".format(test_exec, test_out)) >> 8;
+		if exitValue != 0:
+			sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
+			os.remove(refC);
+			return 1
+			
+		sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
 		os.putenv("LD_LIBRARY_PATH", ldPath);
 
 		sys.stderr.write(" * Checking generated program output... ")

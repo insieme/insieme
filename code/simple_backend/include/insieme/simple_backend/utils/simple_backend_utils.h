@@ -36,43 +36,27 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
-
 namespace insieme {
+
+namespace core {
+
+// some forward declarations
+template<class T> class Pointer;
+class Program;
+typedef Pointer<const Program> ProgramPtr;
+class Type;
+typedef Pointer<const Type> TypePtr;
+
+}
+
 namespace simple_backend {
+namespace utils {
 
 	/**
-	 * This class offers a list of IR extensions required within the simple backend. Such
-	 * extensions include additional literals representing i.g. C operators or procedures of the
-	 * runtime interface.
+	 * Tests whether the given program is a full main program and should be syntesized as such.
 	 */
-	class IRExtensions {
-	public:
+	bool isMainProgram(const core::ProgramPtr& program);
 
-		/**
-		 * The name of the global literal introduced by the preprocessor.
-		 */
-		static const string GLOBAL_ID;
-
-		/**
-		 * Creates a new instance of this IRExtension set. The given manager is used to construct
-		 * the included literals.
-		 *
-		 * @param manager the manager to be used to construct the required types and literals
-		 */
-		IRExtensions(core::NodeManager& manager);
-
-		/**
-		 * A special literal representing a lazy-evaluating if-then-else operator.
-		 */
-		const core::LiteralPtr lazyITE;
-
-		/**
-		 * A special literal representing a function causing the initialization of the global variables.
-		 */
-		const core::LiteralPtr initGlobals;
-	};
-
-
+} // end namespace utils
 } // end namespace simple_backend
 } // end namespace insieme

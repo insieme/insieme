@@ -38,7 +38,11 @@
 
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+
 #include "insieme/core/ast_builder.h"
+
+#include "insieme/core/type_utils.h"
 
 namespace insieme {
 namespace core {
@@ -373,6 +377,134 @@ ExpressionPtr tryInlineToExpr(NodeManager& manager, const CallExprPtr& call) {
 	}
 	return res;
 }
+
+namespace {
+
+	class ParameterFixer : public core::transform::CachedNodeMapping {
+
+		NodeManager& manager;
+		const VariablePtr var;
+		const ExpressionPtr replacement;
+
+	public:
+
+		ParameterFixer(NodeManager& manager, const VariablePtr& var, const ExpressionPtr& replacement)
+			: manager(manager), var(var), replacement(replacement) {}
+
+		const NodePtr resolveElement(const NodePtr& ptr) {
+			// check for replacement
+			if (*ptr == *var) {
+				return replacement;
+			}
+
+			// cut off types and stop if already unsuccessful
+			if (ptr->getNodeCategory() == NC_Type) {
+				return ptr;
+			}
+
+			// handle call expressions
+			if (ptr->getNodeType() == NT_CallExpr) {
+				CallExprPtr call = static_pointer_cast<const CallExpr>(ptr);
+				if (::contains(call->getArguments(), var)) {
+
+					const ExpressionList& args = call->getArguments();
+					ExpressionList newArgs;
+					std::size_t size = args.size();
+
+					// Push value through to sub-call ...
+					ExpressionPtr fun = call->getFunctionExpr();
+					if (fun->getNodeType() != NT_LambdaExpr) {
+						// cannot be pushed through ... just substitute within arguments and done
+						::transform(args, std::back_inserter(newArgs), [&](const ExpressionPtr& cur)->const ExpressionPtr {
+							if (*cur == *var) {
+								return replacement;
+							}
+							return this->map(cur);
+						});
+					} else {
+						LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(fun);
+
+						// replace one parameter after another (back to front)
+						for (int i = size-1; i>=0; i--) {
+							// check if it is the variable
+
+							// try to fix the parameter for called function
+							if (*args[i] == *var) {
+								LambdaExprPtr newLambda = tryFixParameter(manager, lambda, i, replacement);
+								if (*newLambda != *lambda) {
+									// => nice, it worked!
+									lambda = newLambda;
+									continue;
+								}
+							}
+
+							// exchange argument
+							ExpressionPtr newArg = this->map(args[i]);
+							newArgs.insert(newArgs.begin(), newArg);
+						}
+
+						// exchange function
+						fun = lambda;
+					}
+
+					// create new call
+					return CallExpr::get(manager, call->getType(), fun, newArgs);
+				}
+			}
+
+			// handle lambda expressions ...
+			if (ptr->getNodeType() == NT_LambdaExpr) {
+				// .. end of replacement scope
+				return ptr;
+			}
+
+			// else: process recursively
+			return ptr->substitute(manager, *this);
+
+		}
+
+	};
+
+
+}
+
+
+LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda, unsigned index, const ExpressionPtr& value) {
+
+	if (lambda->isRecursive()) {
+		// TODO: support recursive lambdas
+		return lambda;
+	}
+
+	// check parameters
+	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(lambda->getType());
+	TypeList paramTypes = funType->getParameterTypes();
+	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
+
+	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
+
+	// conduct replacement
+
+	const VariablePtr& param = lambda->getParameterList()[index];
+	ParameterFixer fixer(manager, param, value);
+	StatementPtr body = fixer.map(lambda->getBody());
+
+	// create new function type
+	paramTypes.erase(paramTypes.begin() + index);
+	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType());
+
+	// create new parameter list
+	vector<VariablePtr> params = lambda->getParameterList();
+	params.erase(params.begin() + index);
+
+	return LambdaExpr::get(manager, newFunType, params, body);
+}
+
+StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value) {
+	ParameterFixer fixer(manager, var, value);
+	return fixer.map(statement);
+}
+
 
 // ------------------------------ lambda extraction -------------------------------------------------------------------
 

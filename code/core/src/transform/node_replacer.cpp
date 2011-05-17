@@ -41,6 +41,8 @@
 
 #include "insieme/utils/container_utils.h"
 
+#include "insieme/core/transform/node_mapper_utils.h"
+
 namespace {
 
 using namespace insieme::core;
@@ -51,7 +53,7 @@ using namespace insieme::utils::map;
 /**
  * Visitor which replace a specific node of the IR starting from a root node.
  */
-class NodeReplacer : public NodeMapping {
+class NodeReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const PointerMap<NodePtr, NodePtr>& replacements;
 	const bool preservePtrAnnotationsWhenModified;
@@ -68,7 +70,7 @@ private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
-	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		// check whether the element has been found
 		auto pos = replacements.find(ptr);
 		if(pos != replacements.end()) {
@@ -105,7 +107,7 @@ private:
 /**
  * Visitor which replace a specific node of the IR starting from a root node.
  */
-class SingleNodeReplacer : public NodeMapping {
+class SingleNodeReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const NodePtr& target;
 	const NodePtr& replacement;
@@ -123,7 +125,7 @@ private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
-	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 
 		// handle replacement
 		if (*ptr == *target) {
@@ -154,7 +156,7 @@ private:
 	}
 };
 
-class VariableReplacer : public NodeMapping {
+class VariableReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
 	const VariablePtr variable;
@@ -171,7 +173,7 @@ private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
-	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		// check whether the element has been found
 		if (*ptr == *variable) {
 			return replacement;
@@ -209,7 +211,7 @@ private:
 	}
 };
 
-class VariableMapReplacer : public NodeMapping {
+class VariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
@@ -225,7 +227,7 @@ private:
 	/**
 	 * Performs the recursive clone operation on all nodes passed on to this visitor.
 	 */
-	virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
 		// check whether the element has been found
 		if (ptr->getNodeType() == NT_Variable) {
 			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));

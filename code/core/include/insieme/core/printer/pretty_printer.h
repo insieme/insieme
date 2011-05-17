@@ -155,13 +155,9 @@ namespace std {
 	 */
 	std::ostream& operator<<(std::ostream& out, const insieme::core::printer::PrettyPrinter& print);
 
-	std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceLocation& loc) {
-		return out << loc.first << ":" << loc.second;	
-	}
+	std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceLocation& loc);
 
-	std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceRange& range) {
-		return out << "[" << range.first << " - " << range.second << "]";
-	}
+	std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceRange& range);
 	
 	std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::SourceLocationMap& srcMap);
 
