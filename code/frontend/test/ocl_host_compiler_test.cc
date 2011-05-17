@@ -55,7 +55,7 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 TEST(OclHostCompilerTest, HelloHostTest) {
-    Logger::get(std::cerr, INFO);
+    Logger::get(std::cerr, DEBUG);
 
     CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "/inputs");
 

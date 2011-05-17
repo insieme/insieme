@@ -61,8 +61,8 @@ typedef struct _insieme_wi_add_params {
 
 typedef struct _insieme_struct1 {
 	bool do_add;
-	int v1;
-	int v2;
+	uint64 v1;
+	uint64 v2;
 } insieme_struct1;
 
 // type table
@@ -73,7 +73,7 @@ irt_type_id g_insieme_struct1_subtypes[] = {
 
 irt_type g_insieme_type_table[] = {
 	{ IRT_T_BOOL, 4, 0, 0 },
-	{ IRT_T_INT32, 4, 0, 0 },
+	{ IRT_T_INT64, 8, 0, 0 },
 	{ IRT_T_STRUCT, sizeof(insieme_struct1), 3, g_insieme_struct1_subtypes },
 	{ IRT_T_STRUCT, sizeof(insieme_wi_add_params), 0, 0 }
 };
@@ -129,7 +129,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	// pre-aquire output block
 	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_READ_ONLY);
-	int* output = (int*)outputblock->data;
+	uint64* output = (uint64*)outputblock->data;
 
 	uint64 start_time = irt_time_ms();
 
@@ -144,9 +144,10 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	printf("======================\n= manual irt test array add done\n");
 	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
-	for(int i=0; i<NUM_ELEMENTS; ++i) {
-		if(output[i] != i*3) {
+	for(uint64 i=0; i<NUM_ELEMENTS; ++i) {
+		if(output[i] != i*3/2) {
 			check = false;
+			printf("= fail at %lu, expected %lu / actual %lu", i, i*3/2, output[i]);
 			break;
 		}
 	}
@@ -160,32 +161,25 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 }
 
 void insieme_wi_add_implementation1(irt_work_item* wi) {
-	printf("a\n");
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
-	printf("a0\n");
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
 	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
-	printf("a1\n");
 	irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
 	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
-	printf("a2\n");
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
-	int* output = (int*)outputblock->data;
-	printf("b\n");
+	uint64* output = (uint64*)outputblock->data;
 
-	for(int i = wi->range.begin; i < wi->range.end; ++i) {
-		if(input[i].do_add) output[i] = input[i].v1 + input[i].v2;
+	for(uint64 i = wi->range.begin; i < wi->range.end; ++i) {
+		if(input[i].do_add) {
+			output[i] = (input[i].v1 + input[i].v2) / 2;
+		}
 	}
-	printf("c\n");
 
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
-	printf("d\n");
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
-	printf("e\n");
 	irt_wi_end(wi);
-	printf("f\n");
 }
 
 void insieme_wi_add_implementation2(irt_work_item* wi) {

@@ -36,45 +36,39 @@
 
 #pragma once
 
-#include "declarations.h"
+/* needed for CPU_* macros */
+#define _GNU_SOURCE 1
 
-#include <mqueue.h>
+#define MAX_CORES 64
 
-#define IRT_MQUEUE_NAME "/irt_message_queue"
-// Be aware that the following value often has a very low OS-dictated ceiling
-#define IRT_MQUEUE_MAXMSGS 4
-#define IRT_MQUEUE_MAXMSGSIZE 256
+#include <sched.h>
+#include <unistd.h>
+#include <pthread.h>
 
-extern mqd_t irt_g_message_queue;
+#include "impl/error_handling.impl.h"
 
-/* ------------------------------ data structures ----- */
+void _irt_print_affinity_mask(cpu_set_t mask) {
+	for(int i=0; i<MAX_CORES; i++) {
+		printf("%s", CPU_ISSET(i, &mask)?"1":"0");
+	}
+	printf("\n");
+}
 
-typedef enum _irt_mqueue_msg_type {
-	IRT_MQ_NEW_APP
-} irt_mqueue_msg_type;
+void irt_clear_affinity() {
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	for(int i=0; i<MAX_CORES; ++i) {
+		CPU_SET(i, &mask);
+	}
+	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error clearing thread affinity.");
+}
 
-typedef struct _irt_mqueue_msg {
-	irt_mqueue_msg_type type;
-	size_t size;
-} irt_mqueue_msg;
-
-typedef struct _irt_mqueue_msg_new_app {
-	irt_mqueue_msg_type type;
-	size_t size;
-	char app_name[128];
-} irt_mqueue_msg_new_app;
-
-
-/* ------------------------------ operations ----- */
-
-void irt_mqueue_init();
-void irt_mqueue_cleanup();
-
-void irt_mqueue_send(const irt_mqueue_msg* msg);
-void irt_mqueue_send_new_app(const char* appname);
-
-/** Retrieves a message from the IRT message queue,
- ** NULL is returned if the message queue is empty.
- ** Note: must call free on returned object
- **/
-irt_mqueue_msg* irt_mqueue_receive();
+void irt_set_affinity(irt_affinity_mask irt_mask) {
+	cpu_set_t mask;
+	CPU_ZERO(&mask);
+	for(int i=0; i<MAX_CORES; ++i) {
+		if((irt_mask&1) != 0) CPU_SET(i, &mask);
+		irt_mask >>= 1;
+	}
+	IRT_ASSERT(pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) == 0, IRT_ERR_INIT, "Error setting thread affinity.");
+}

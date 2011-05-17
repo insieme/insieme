@@ -108,7 +108,3 @@ typedef uint64 irt_affinity_mask;
 typedef struct _irt_worker irt_worker;
 
 
-
-
-
-

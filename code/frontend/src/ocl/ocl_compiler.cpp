@@ -878,7 +878,8 @@ public:
                     args.push_back(kd.globalRange->getType());
                     args.push_back(kd.localRange->getType());
 
-                    newFuncType = builder.functionType(args, retTy);
+                    // function now will return cl_int (CL_SUCCESS)
+                    newFuncType = builder.functionType(args, BASIC.getInt4());
                 } else {
                     assert(funcType && "Function has unexpected type");
                 }
@@ -1008,17 +1009,21 @@ public:
                     newBodyStmts.push_back(globalPar);
                     newBodyStmts.push_back(merge);
 
+                    // always return 0 = CL_SUCCESS to meet the return value of clEnqueueNDRangeKernel
+                    newBodyStmts.push_back(builder.returnStmt(builder.intLit(0)));
+
                     core::LambdaExprPtr newFunc = builder.lambdaExpr(newFuncType, newParams, builder.compoundStmt(newBodyStmts));
 
                     // get address spaces of variables in body
     //                kernelMapper.getMemspaces(globalArgs, constantArgs, localArgs, privateArgs);
 
                     // put opencl annotation to the new function for eventual future use
-
                     newFunc->addAnnotation(funcAnnotation);
                     // put cname annotation to the new function if it was there before
-                    if(cName)
+                    if(cName) {
+                        std::cout << "Putting cname " << cName->toString() << std::endl;
                         newFunc->getLambda()->addAnnotation(cName);
+                    }
                     // put source location annotation to it if existent
                     if(sourceLoc)
                         newFunc->addAnnotation(sourceLoc);

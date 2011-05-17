@@ -40,17 +40,16 @@ uint toll(uint x){
     return x;
 }
 
-
 #pragma insieme mark
-__kernel void hello(__global float* g, __local float* l, int i) {
-    float x;
+__kernel void hello(__global float* g) {
+    float x =  0.5;
     __local float y;// = g;
 //    __global float4* p = (float4*)g;
-//    y = x;// = {i, i+0.5};
+    y = x;//
+ //   toll(i);
+    x = 2.0f;
 
-//    x.x = 2.0f;
-
-    int gid = get_local_id(get_global_id(0));
+    int gid = get_global_id(0);
 /*    uint lid = get_local_id(0);
     l[lid] = g[gid];
     l[2*lid] = g[gid+i];
@@ -63,4 +62,3 @@ __kernel void hello(__global float* g, __local float* l, int i) {
 
     g[gid] = x.x * x.y;*/
 }
-

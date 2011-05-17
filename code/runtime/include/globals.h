@@ -38,5 +38,11 @@
 
 #include <pthread.h>
 
+#include "irt_inttypes.h"
+
 extern pthread_key_t irt_g_error_key;
 extern pthread_key_t irt_g_worker_key;
+
+extern uint32 irt_g_worker_count;
+struct _irt_worker;
+extern struct _irt_worker **irt_g_workers;
