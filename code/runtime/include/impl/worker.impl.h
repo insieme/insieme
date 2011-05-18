@@ -208,7 +208,7 @@ void irt_worker_schedule(irt_worker* self) {
 	// if none available, try to steal from another thread
 	if(new_wi == NULL) new_wi = _irt_sched_steal_from_prev_thread(self);
 	if(new_wi != NULL) {
-		if(_irt_sched_split_decision_fixed_size(new_wi, 100000)) {
+		if(_irt_sched_split_decision_fixed_size(new_wi, 50)) {
 			_irt_sched_split_work_item_binary(new_wi, self);
 			return;
 		}
