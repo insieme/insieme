@@ -52,6 +52,8 @@ typedef enum _irt_data_mode {
 struct _irt_data_range {
 	int64 begin, end, step;
 };
+// data range marker value representing full range
+const static irt_data_range irt_g_data_range_all = {1,1,0};
 
 struct _irt_data_block {
 	uint32 use_count;
