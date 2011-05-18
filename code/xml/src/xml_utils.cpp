@@ -38,7 +38,6 @@
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/framework/StdOutFormatTarget.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
-#include <xercesc/framework/MemBufInputSource.hpp>
 
 #include "insieme/utils/logging.h"
 
