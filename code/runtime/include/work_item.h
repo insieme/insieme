@@ -40,12 +40,14 @@
 
 #include "irt_context.h"
 #include "utils/deques.h"
+#include "utils/counted_deques.h"
 
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(work_item);
 
 IRT_DECLARE_DEQUE(work_item);
+IRT_DECLARE_COUNTED_DEQUE(work_item);
 
 typedef enum _irt_work_item_state {
 	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_DONE, 
@@ -55,7 +57,7 @@ struct _irt_work_item_range {
 	int64 begin, end, step;
 };
 const static irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
-static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) { return (r->begin - r->end) / r->step; }
+static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) { return (r->end - r->begin) / r->step; }
 
 typedef bool irt_wi_readiness_check_fun(irt_work_item* wi);
 typedef struct _irt_wi_readiness_check {
@@ -85,9 +87,12 @@ struct _irt_work_item {
 };
 
 IRT_DEFINE_DEQUE(work_item, work_deque_next, work_deque_prev);
+IRT_DEFINE_COUNTED_DEQUE(work_item, work_deque_next, work_deque_prev);
 
 
 /* ------------------------------ operations ----- */
+
+static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.value.full != irt_work_item_null_id().value.full; }
 
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 void irt_wi_destroy(irt_work_item* wi);

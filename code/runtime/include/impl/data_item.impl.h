@@ -68,6 +68,7 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	retval->type_id = tid; 
 	retval->dimensions = dimensions;
 	retval->id = irt_generate_data_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	retval->id.cached = retval;
 	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*dimensions);
 	retval->use_count = 1;
 	retval->parent_id = irt_data_item_null_id();
@@ -79,10 +80,11 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) {
 	irt_data_item* retval = _irt_di_new(parent->dimensions);
 	memcpy(retval, parent, sizeof(irt_data_item));
+	retval->ranges = malloc(sizeof(irt_data_range)*parent->dimensions);
 	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*parent->dimensions);
 	retval->id = irt_generate_data_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	retval->id.cached = retval;
 	retval->parent_id = parent->id;
-	retval->data_block = (parent->data_block)?parent->data_block:NULL;
 	irt_data_item_table_insert(retval);
 	return retval;
 }
@@ -90,7 +92,7 @@ void irt_di_destroy(irt_data_item* di) {
 	_irt_di_dec_use_count(di);
 }
 
-static inline void* _build_data_block(uint32 element_size, uint64* sizes, uint32 dim, uint64 totalSize) {
+static inline void* _irt_di_build_data_block(uint32 element_size, uint64* sizes, uint32 dim, uint64 totalSize) {
 	IRT_ASSERT(dim != 0, IRT_ERR_IO, "Should not be called for scalars!");
 
 	// handle 0-size dimension
@@ -109,7 +111,7 @@ static inline void* _build_data_block(uint32 element_size, uint64* sizes, uint32
 
 
 	// recursively allocate the data
-	void* sub = _build_data_block(element_size, sizes+1, dim-1, totalSize*cur_size);
+	void* sub = _irt_di_build_data_block(element_size, sizes+1, dim-1, totalSize*cur_size);
 
 	// allocate index array
 	void** index = malloc(cur_size * sizeof(void*));
@@ -141,30 +143,46 @@ static inline irt_data_block* _irt_db_new(uint32 element_size, uint64* sizes, ui
 	}
 
 	// construct data block recursively
-	retval->data = _build_data_block(element_size, sizes, dim, 1);
+	retval->data = _irt_di_build_data_block(element_size, sizes, dim, 1);
 	return retval;
 }
+
+static inline void _irt_free_data_block(void* block, uint32 dim) {
+
+	// free sub-blocks if necessary
+	if (dim > 1) {
+		_irt_free_data_block(((void**)block)[0], dim-1);
+	}
+
+	// free this block
+	free(block);
+}
+
+static inline void _irt_db_delete(irt_data_block* block, uint32 dim) {
+	// recursively free blocks
+	_irt_free_data_block(block->data, dim);
+	free(block);
+}
+
 static inline void _irt_db_recycle(irt_data_block* di) {
 	// TODO
 }
 
 irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
-	// see if it is already in the data item
-	if(di->data_block) {
-		return di->data_block;
-	}
 
-	// look it up in the table
-	irt_data_item* item = irt_data_item_table_lookup(di->id);
-	if (item->data_block) {
-		di->data_block = item->data_block;
-		return item->data_block;
+	irt_data_block* cur_block = di->data_block;
+
+	// see if it is already in the data item
+	if(cur_block) {
+		return cur_block;
 	}
 
 	// look up parents
 	while (di->parent_id.value.full != irt_data_item_null_id().value.full) {
 		// resolve recursively
 		irt_data_block* block = irt_di_aquire(irt_data_item_table_lookup(di->parent_id), mode);
+
+		// no test and set required => race conditions are fixed in the parent
 		di->data_block = block;
 		return block;
 	}
@@ -176,12 +194,16 @@ irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
 	for (uint32 i=0; i<dim; ++i) {
 		sizes[i] = di->ranges[i].end - di->ranges[i].begin;
 	}
-	irt_data_block* block = _irt_db_new(type_size, sizes, dim);
 
-	// update in table and given di
-	di->data_block = block;
-	item->data_block = block;
-	return block;
+	// update data block and return value
+	irt_data_block* block = _irt_db_new(type_size, sizes, dim);
+	if (!irt_atomic_bool_compare_and_swap(&(di->data_block), cur_block, block)) {
+		// creation failed => delete created block
+		_irt_db_delete(block, dim);
+	}
+
+	// return the data block
+	return di->data_block;
 }
 void irt_di_free(irt_data_block* b) {
 	// TODO notify parent

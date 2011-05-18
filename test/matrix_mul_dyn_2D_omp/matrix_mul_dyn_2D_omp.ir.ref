@@ -1,0 +1,181 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<array<array<real<8>,1>,1>> v1 = fun(uint<4> v2, uint<4> v3){
+            decl ref<array<real<8>,1>> v4 =  new(array.create.1D(type<real<8>>, v2*v3*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
+            decl ref<array<array<real<8>,1>,1>> v5 =  new(array.create.1D(type<array<real<8>,1>>, v2*sizeof(type<array<real<8>,1>>)/sizeof(type<array<real<8>,1>>)));
+            array.ref.elem.1D(v5, 0) := v4;
+            for(decl ref<uint<4>> v6 =  var(1) .. v2 : 1) {
+                array.ref.elem.1D(v5, v6) := scalar.to.array(array.ref.elem.1D(v4, v6*v3));
+            };
+            return v5;
+        }(1000, 1000);
+        decl ref<array<array<real<8>,1>,1>> v8 = fun(uint<4> v2, uint<4> v3){
+            decl ref<array<real<8>,1>> v4 =  new(array.create.1D(type<real<8>>, v2*v3*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
+            decl ref<array<array<real<8>,1>,1>> v5 =  new(array.create.1D(type<array<real<8>,1>>, v2*sizeof(type<array<real<8>,1>>)/sizeof(type<array<real<8>,1>>)));
+            array.ref.elem.1D(v5, 0) := v4;
+            for(decl ref<uint<4>> v6 =  var(1) .. v2 : 1) {
+                array.ref.elem.1D(v5, v6) := scalar.to.array(array.ref.elem.1D(v4, v6*v3));
+            };
+            return v5;
+        }(1000, 1000);
+        decl ref<array<array<real<8>,1>,1>> v9 = fun(uint<4> v2, uint<4> v3){
+            decl ref<array<real<8>,1>> v4 =  new(array.create.1D(type<real<8>>, v2*v3*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
+            decl ref<array<array<real<8>,1>,1>> v5 =  new(array.create.1D(type<array<real<8>,1>>, v2*sizeof(type<array<real<8>,1>>)/sizeof(type<array<real<8>,1>>)));
+            array.ref.elem.1D(v5, 0) := v4;
+            for(decl ref<uint<4>> v6 =  var(1) .. v2 : 1) {
+                array.ref.elem.1D(v5, v6) := scalar.to.array(array.ref.elem.1D(v4, v6*v3));
+            };
+            return v5;
+        }(1000, 1000);
+        {
+            for(decl ref<int<4>> v11 =  var(0) .. 1000 : 1) {
+                for(decl ref<int<4>> v10 =  var(0) .. 1000 : 1) {
+                    array.ref.elem.1D(array.ref.elem.1D(v1, v11), v10) := v11*v10;
+                };
+            };
+            for(decl ref<int<4>> v13 =  var(0) .. 1000 : 1) {
+                for(decl ref<int<4>> v12 =  var(0) .. 1000 : 1) {
+                    array.ref.elem.1D(array.ref.elem.1D(v8, v13), v12) := ite(v13==v12, bind(){fun()return 1()}, bind(){fun()return 0()});
+                };
+            };
+            for(decl ref<int<4>> v19 =  var(0) .. 1000 : 1) {
+                for(decl ref<int<4>> v17 =  var(0) .. 1000 : 1) {
+                    decl ref<real<8>> v16 =  var(0);
+                    for(decl ref<int<4>> v18 =  var(0) .. 1000 : 1) {
+                        v16 := v16+array.ref.elem.1D(array.ref.elem.1D(v1, v19), v18)*array.ref.elem.1D(array.ref.elem.1D(v8, v18), v17);
+                    };
+                    array.ref.elem.1D(array.ref.elem.1D(v9, v19), v17) := v16;
+                };
+            };
+        };
+        decl ref<int<4>> v20 =  var(1);
+        for(decl ref<int<4>> v22 =  var(0) .. 1000 : 1) {
+            for(decl ref<int<4>> v21 =  var(0) .. ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(array.ref.elem.1D(array.ref.elem.1D(v1, v22), v21), array.ref.elem.1D(array.ref.elem.1D(v9, v22), v21))) {
+                    v20 := 0;
+                } else { };
+            };
+            for(decl ref<int<4>> v25 =  var(ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()})) .. ite(1000>1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(array.ref.elem.1D(array.ref.elem.1D(v9, v22), v25), 0)) {
+                    v20 := 0;
+                } else { };
+            };
+        };
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(v20, 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+        fun(ref<array<array<real<8>,1>,1>> v32){
+            decl ref<ref<array<array<real<8>,1>,1>>> v33 =  var(v32);
+            {
+                 del(array.ref.elem.1D(v33, 0));
+                 del(v33);
+            };
+        }(v1);
+        fun(ref<array<array<real<8>,1>,1>> v32){
+            decl ref<ref<array<array<real<8>,1>,1>>> v33 =  var(v32);
+            {
+                 del(array.ref.elem.1D(v33, 0));
+                 del(v33);
+            };
+        }(v8);
+        fun(ref<array<array<real<8>,1>,1>> v32){
+            decl ref<ref<array<array<real<8>,1>,1>>> v33 =  var(v32);
+            {
+                 del(array.ref.elem.1D(v33, 0));
+                 del(v33);
+            };
+        }(v9);
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<array<array<real<8>,1>,1>> v1 = fun(uint<4> v2, uint<4> v3){
+            decl ref<array<real<8>,1>> v4 = ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v2*v3))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
+            decl ref<array<array<real<8>,1>,1>> v5 = ( new(array.create.1D(type<array<real<8>,1>>, ((CAST<uint<8>>(v2)*sizeof(type<array<real<8>,1>>))/sizeof(type<array<real<8>,1>>)))));
+            (array.ref.elem.1D(v5, CAST<uint<4>>(0)) := ( *v4));
+            for(decl ref<uint<4>> v6 = ( var(CAST<uint<4>>(1))) .. v2 : 1) {
+                (array.ref.elem.1D(v5, CAST<uint<4>>(( *v6))) := ( *scalar.to.array(array.ref.elem.1D(v4, CAST<uint<4>>((( *v6)*v3))))));
+            };
+            return v5;
+        }(CAST<uint<4>>(1000), CAST<uint<4>>(1000));
+        decl ref<array<array<real<8>,1>,1>> v8 = fun(uint<4> v2, uint<4> v3){
+            decl ref<array<real<8>,1>> v4 = ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v2*v3))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
+            decl ref<array<array<real<8>,1>,1>> v5 = ( new(array.create.1D(type<array<real<8>,1>>, ((CAST<uint<8>>(v2)*sizeof(type<array<real<8>,1>>))/sizeof(type<array<real<8>,1>>)))));
+            (array.ref.elem.1D(v5, CAST<uint<4>>(0)) := ( *v4));
+            for(decl ref<uint<4>> v6 = ( var(CAST<uint<4>>(1))) .. v2 : 1) {
+                (array.ref.elem.1D(v5, CAST<uint<4>>(( *v6))) := ( *scalar.to.array(array.ref.elem.1D(v4, CAST<uint<4>>((( *v6)*v3))))));
+            };
+            return v5;
+        }(CAST<uint<4>>(1000), CAST<uint<4>>(1000));
+        decl ref<array<array<real<8>,1>,1>> v9 = fun(uint<4> v2, uint<4> v3){
+            decl ref<array<real<8>,1>> v4 = ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v2*v3))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
+            decl ref<array<array<real<8>,1>,1>> v5 = ( new(array.create.1D(type<array<real<8>,1>>, ((CAST<uint<8>>(v2)*sizeof(type<array<real<8>,1>>))/sizeof(type<array<real<8>,1>>)))));
+            (array.ref.elem.1D(v5, CAST<uint<4>>(0)) := ( *v4));
+            for(decl ref<uint<4>> v6 = ( var(CAST<uint<4>>(1))) .. v2 : 1) {
+                (array.ref.elem.1D(v5, CAST<uint<4>>(( *v6))) := ( *scalar.to.array(array.ref.elem.1D(v4, CAST<uint<4>>((( *v6)*v3))))));
+            };
+            return v5;
+        }(CAST<uint<4>>(1000), CAST<uint<4>>(1000));
+        <m id=4>{
+            <m id=1>for(decl ref<int<4>> v11 = ( var(0)) .. 1000 : 1) {
+                for(decl ref<int<4>> v10 = ( var(0)) .. 1000 : 1) {
+                    (array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(( *v11))), CAST<uint<4>>(( *v10))) := CAST<real<8>>((( *v11)*( *v10))));
+                };
+            }</m>;
+            <m id=2>for(decl ref<int<4>> v13 = ( var(0)) .. 1000 : 1) {
+                for(decl ref<int<4>> v12 = ( var(0)) .. 1000 : 1) {
+                    (array.ref.elem.1D(array.ref.elem.1D(v8, CAST<uint<4>>(( *v13))), CAST<uint<4>>(( *v12))) := CAST<real<8>>(ite((( *v13)==( *v12)), bind(){fun()return 1()}, bind(){fun()return 0()})));
+                };
+            }</m>;
+            <m id=3>for(decl ref<int<4>> v19 = ( var(0)) .. 1000 : 1) {
+                for(decl ref<int<4>> v17 = ( var(0)) .. 1000 : 1) {
+                    decl ref<real<8>> v16 = ( var(CAST<real<8>>(0)));
+                    for(decl ref<int<4>> v18 = ( var(0)) .. 1000 : 1) {
+                        (v16 := (( *v16)+(( *array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(( *v19))), CAST<uint<4>>(( *v18))))*( *array.ref.elem.1D(array.ref.elem.1D(v8, CAST<uint<4>>(( *v18))), CAST<uint<4>>(( *v17)))))));
+                    };
+                    (array.ref.elem.1D(array.ref.elem.1D(v9, CAST<uint<4>>(( *v19))), CAST<uint<4>>(( *v17))) := ( *v16));
+                };
+            }</m>;
+        }</m>;
+        decl ref<int<4>> v20 = ( var(1));
+        for(decl ref<int<4>> v22 = ( var(0)) .. 1000 : 1) {
+            for(decl ref<int<4>> v21 = ( var(0)) .. ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *array.ref.elem.1D(array.ref.elem.1D(v1, CAST<uint<4>>(( *v22))), CAST<uint<4>>(( *v21)))), ( *array.ref.elem.1D(array.ref.elem.1D(v9, CAST<uint<4>>(( *v22))), CAST<uint<4>>(( *v21)))))) {
+                    (v20 := 0);
+                } else { };
+            };
+            for(decl ref<int<4>> v25 = ( var(ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}))) .. ite((1000>1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *array.ref.elem.1D(array.ref.elem.1D(v9, CAST<uint<4>>(( *v22))), CAST<uint<4>>(( *v25)))), CAST<real<8>>(0))) {
+                    (v20 := 0);
+                } else { };
+            };
+        };
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(( *v20), 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+        fun(ref<array<array<real<8>,1>,1>> v32){
+            decl ref<ref<array<array<real<8>,1>,1>>> v33 = ( var(v32));
+            {
+                ( del(array.ref.elem.1D(( *v33), CAST<uint<4>>(0))));
+                ( del(v33));
+            };
+        }(v1);
+        fun(ref<array<array<real<8>,1>,1>> v32){
+            decl ref<ref<array<array<real<8>,1>,1>>> v33 = ( var(v32));
+            {
+                ( del(array.ref.elem.1D(( *v33), CAST<uint<4>>(0))));
+                ( del(v33));
+            };
+        }(v8);
+        fun(ref<array<array<real<8>,1>,1>> v32){
+            decl ref<ref<array<array<real<8>,1>,1>>> v33 = ( var(v32));
+            {
+                ( del(array.ref.elem.1D(( *v33), CAST<uint<4>>(0))));
+                ( del(v33));
+            };
+        }(v9);
+    }
+
