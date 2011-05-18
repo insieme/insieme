@@ -56,6 +56,7 @@ struct _irt_worker {
 	intptr_t basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
+	volatile bool start; // used to ensure all workers start at the same time
 };
 
 /* ------------------------------ operations ----- */

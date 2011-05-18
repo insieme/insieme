@@ -92,10 +92,13 @@ void* _irt_worker_func(void *argvp) {
 	self->affinity = arg->affinity;
 	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
+	self->start = false;
 	irt_work_item_deque_init(&self->queue);
 	irt_work_item_deque_init(&self->pool);
 	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 	arg->ready = true;
+
+	while(!self->start) { } // MARK busy wait
 
 	for(;;) {
 		irt_worker_schedule(self);
@@ -106,7 +109,7 @@ void* _irt_worker_func(void *argvp) {
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
-	
+	self->cur_context = wi->context_id;
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
 		wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
@@ -156,7 +159,8 @@ void irt_worker_schedule(irt_worker* self) {
 			IRT_INFO("Worker %p scheduling - A0.", self);
 			if(next_wi->ready_check.fun(next_wi)) {
 				IRT_INFO("Worker %p scheduling - A1.", self);
-				if(next_wi == irt_work_item_deque_take_elem(&self->pool, next_wi)) break;
+				next_wi = irt_work_item_deque_take_elem(&self->pool, next_wi); 
+				break;
 			} else {
 				next_wi = next_wi->work_deque_next;
 			}
@@ -174,7 +178,7 @@ void irt_worker_schedule(irt_worker* self) {
 	{
 		irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
 		if(new_wi != NULL) {
-			if((new_wi->range.end - new_wi->range.begin) / new_wi->range.step > 10000) {
+			if((new_wi->range.end - new_wi->range.begin) / new_wi->range.step > 100000) {
 				// split WI
 				irt_work_item *split_wis[2];
 				irt_wi_split_binary(new_wi, split_wis);
@@ -213,7 +217,7 @@ void irt_worker_schedule(irt_worker* self) {
 		if(neighbour_index<0) neighbour_index = irt_g_worker_count-1;
 		irt_work_item* stolen_wi = irt_work_item_deque_pop_back(&irt_g_workers[neighbour_index]->queue);
 		if(stolen_wi != NULL) {
-			if((stolen_wi->range.end - stolen_wi->range.begin) / stolen_wi->range.step > 10000) {
+			if((stolen_wi->range.end - stolen_wi->range.begin) / stolen_wi->range.step > 100000) {
 				// split WI
 				irt_work_item *split_wis[2];
 				irt_wi_split_binary(stolen_wi, split_wis);

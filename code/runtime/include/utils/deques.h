@@ -93,17 +93,17 @@ static inline void irt_##__type__##_deque_cleanup(irt_##__type__##_deque* q) { \
 \
 static inline void irt_##__type__##_deque_insert_front(irt_##__type__##_deque* q, irt_##__type__* element) { \
 	element->__prev_name__ = NULL; \
-	element->__next_name__ = q->start; \
 	pthread_spin_lock(&(q->lock)); \
+	element->__next_name__ = q->start; \
 	if(q->start) q->start->__prev_name__ = element; \
 	else q->end = element; \
 	q->start = element; \
 	pthread_spin_unlock(&(q->lock)); \
 } \
 static inline void irt_##__type__##_deque_insert_back(irt_##__type__##_deque* q, irt_##__type__* element) { \
-	element->__prev_name__ = q->end; \
 	element->__next_name__ = NULL; \
 	pthread_spin_lock(&(q->lock)); \
+	element->__prev_name__ = q->end; \
 	if(q->end) q->end->__next_name__ = element; \
 	else q->start = element; \
 	q->end = element; \

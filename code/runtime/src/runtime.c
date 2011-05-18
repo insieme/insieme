@@ -112,8 +112,13 @@ int main(int argc, char** argv) {
 	irt_g_worker_count = 1;
 	if(argc >= 3) irt_g_worker_count = atoi(argv[2]);
 	irt_g_workers = (irt_worker**)alloca(irt_g_worker_count * sizeof(irt_worker*));
+	// initialize workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i] = irt_worker_create(i, 1<<i);
+	}
+	// start workers
+	for(int i=0; i<irt_g_worker_count; ++i) {
+		irt_g_workers[i]->start = true;
 	}
 	IRT_INFO("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);

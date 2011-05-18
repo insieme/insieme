@@ -92,11 +92,12 @@ static irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id id) { \
 	uint32 hash_val = __hashing_expression__(id) % __num_buckets__; IRT_INFO("Looking up %u/%u/%u, hash val %u, in table %p", id.value.components.node, id.value.components.thread, id.value.components.index, hash_val, irt_g_##__type__##_table); \
 	irt_##__type__* element; \
 	/* No locking required assuming sequential consistency and correctness of requests */ \
-	/* pthread_spin_lock(&irt_g_##__type__##_table_locks[hash_val]); */ \
+	/* The above is a lie. A vile lie. People have lost their heads for less. */ \
+	pthread_spin_lock(&irt_g_##__type__##_table_locks[hash_val]); \
 	element = irt_g_##__type__##_table[hash_val]; \
 	IRT_INFO("Starting at elem %p, id %u/%u/%u", element, element->id.value.components.node, element->id.value.components.thread, element->id.value.components.index); \
 	while(element && element->id.value.full != id.value.full) { element = element->__next_name__; IRT_INFO("Looking at elem %p, id %u/%u/%u", element, element->id.value.components.node, element->id.value.components.thread, element->id.value.components.index); } \
-	/* pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); */ \
+	pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); \
 	id.cached = element; IRT_INFO("Found elem %p\n", element); \
 	return element; \
 } \
