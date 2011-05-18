@@ -51,7 +51,7 @@ struct _irt_worker {
 	uint64 generator_id;
 	irt_affinity_mask affinity;
 	pthread_t pthread;
-	irt_work_item_deque queue;
+	irt_work_item_cdeque queue;
 	irt_work_item_deque pool;
 	intptr_t basestack;
 	irt_context_id cur_context;

@@ -76,13 +76,13 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
-	if(source->source_id.value.full == irt_work_item_null_id().value.full) {
-		// splitting non-fragment wi
-		retval->source_id = source->id;
-	} else {
+	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
 		retval->source_id = base_source->id;
+	} else {
+		// splitting non-fragment wi
+		retval->source_id = source->id;
 	}
 	return retval;
 }
@@ -106,7 +106,7 @@ void irt_wi_end(irt_work_item* wi) {
 	IRT_INFO("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
 	worker->cur_wi = NULL;
-	if(wi->source_id.value.full != irt_work_item_null_id().value.full) {
+	if(irt_wi_is_fragment(wi)) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
 		IRT_INFO("Fragment end, remaining %d", source->num_fragments);
@@ -138,7 +138,7 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		range.end = i+1 < elements ? offsets[i+1] : wi->range.end;
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
 	}
-	if(wi->source_id.value.full != irt_work_item_null_id().value.full) {
+	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO
 		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1); // This needs to be atomic even if it may not look like it
 		// splitting fragment wi, can safely delete
