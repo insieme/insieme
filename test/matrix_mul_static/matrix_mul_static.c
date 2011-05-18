@@ -8,7 +8,7 @@
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 
-#define VALUE float
+#define VALUE double
 
 // create the matices
 VALUE A[N][M];

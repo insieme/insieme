@@ -17,12 +17,12 @@ digraph G {
 17[shape=box,label="[B17]\l0: ref.deref(...)\l"];
 18[shape=box,label="[B18]\l0: vector.ref.elem(..., ...)\l"];
 19[shape=box,label="[B19]\l0: vector.ref.elem(..., ...)\l"];
-20[shape=box,label="[B20]\l0: composite.ref.elem(v1, C, type<vector<vector<real<4>,1000>,1000>>)\l"];
+20[shape=box,label="[B20]\l0: composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>)\l"];
 21[shape=box,label="[B21]\l0: CAST<uint<4>>\l"];
 22[shape=box,label="[B22]\l0: ref.deref(v14)\l"];
 23[shape=box,label="[B23]\l0: CAST<uint<4>>\l"];
 24[shape=box,label="[B24]\l0: ref.deref(v17)\l"];
-25[shape=box,label="[B25]\l0: CAST<real<4>>\l"];
+25[shape=box,label="[B25]\l0: CAST<real<8>>\l"];
 26[shape=box,label="[B26]\l0: decl ref<int<4>> v17 = ( var(ite((1000<1000), bind(){fun{...}()}, bind(){fun{...}()}))) <LOOP_INIT>\l"];
 27[shape=box,label="[B27]\l0: ite((1000<1000), bind(){fun{...}()}, bind(){fun{...}()}) <CTRL>\lT: FOR( ... ; v13 < ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}); ...)\l"];
 28[shape=box,label="[B28]\l0: ite(..., bind(){fun{...}()}, bind(){fun{...}()})\l"];
@@ -34,7 +34,7 @@ digraph G {
 36[shape=box,label="[B36]\l0: ref.deref(...)\l"];
 37[shape=box,label="[B37]\l0: vector.ref.elem(..., ...)\l"];
 38[shape=box,label="[B38]\l0: vector.ref.elem(..., ...)\l"];
-39[shape=box,label="[B39]\l0: composite.ref.elem(v1, A, type<vector<vector<real<4>,1000>,1000>>)\l"];
+39[shape=box,label="[B39]\l0: composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>)\l"];
 40[shape=box,label="[B40]\l0: CAST<uint<4>>\l"];
 41[shape=box,label="[B41]\l0: ref.deref(v14)\l"];
 42[shape=box,label="[B42]\l0: CAST<uint<4>>\l"];
@@ -42,7 +42,7 @@ digraph G {
 44[shape=box,label="[B44]\l0: ref.deref(...)\l"];
 45[shape=box,label="[B45]\l0: vector.ref.elem(..., ...)\l"];
 46[shape=box,label="[B46]\l0: vector.ref.elem(..., ...)\l"];
-47[shape=box,label="[B47]\l0: composite.ref.elem(v1, C, type<vector<vector<real<4>,1000>,1000>>)\l"];
+47[shape=box,label="[B47]\l0: composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>)\l"];
 48[shape=box,label="[B48]\l0: CAST<uint<4>>\l"];
 49[shape=box,label="[B49]\l0: ref.deref(v14)\l"];
 50[shape=box,label="[B50]\l0: CAST<uint<4>>\l"];
@@ -59,7 +59,7 @@ digraph G {
 62[shape=box,label="[B62]\l"];
 63[shape=box,label="[B63]\l0: vector.ref.elem(..., ...)\l"];
 64[shape=box,label="[B64]\l0: vector.ref.elem(..., ...)\l"];
-65[shape=box,label="[B65]\l0: composite.ref.elem(v1, C, type<vector<vector<real<4>,1000>,1000>>)\l"];
+65[shape=box,label="[B65]\l0: composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>)\l"];
 66[shape=box,label="[B66]\l0: CAST<uint<4>>\l"];
 67[shape=box,label="[B67]\l0: ref.deref(v11)\l"];
 68[shape=box,label="[B68]\l0: CAST<uint<4>>\l"];
@@ -75,7 +75,7 @@ digraph G {
 78[shape=box,label="[B78]\l0: ref.deref(...)\l"];
 79[shape=box,label="[B79]\l0: vector.ref.elem(..., ...)\l"];
 80[shape=box,label="[B80]\l0: vector.ref.elem(..., ...)\l"];
-81[shape=box,label="[B81]\l0: composite.ref.elem(v1, A, type<vector<vector<real<4>,1000>,1000>>)\l"];
+81[shape=box,label="[B81]\l0: composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>)\l"];
 82[shape=box,label="[B82]\l0: CAST<uint<4>>\l"];
 83[shape=box,label="[B83]\l0: ref.deref(v11)\l"];
 84[shape=box,label="[B84]\l0: CAST<uint<4>>\l"];
@@ -83,7 +83,7 @@ digraph G {
 86[shape=box,label="[B86]\l0: ref.deref(...)\l"];
 87[shape=box,label="[B87]\l0: vector.ref.elem(..., ...)\l"];
 88[shape=box,label="[B88]\l0: vector.ref.elem(..., ...)\l"];
-89[shape=box,label="[B89]\l0: composite.ref.elem(v1, B, type<vector<vector<real<4>,1000>,1000>>)\l"];
+89[shape=box,label="[B89]\l0: composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>)\l"];
 90[shape=box,label="[B90]\l0: CAST<uint<4>>\l"];
 91[shape=box,label="[B91]\l0: ref.deref(v10)\l"];
 92[shape=box,label="[B92]\l0: CAST<uint<4>>\l"];
@@ -91,7 +91,7 @@ digraph G {
 94[shape=box,label="[B94]\l0: decl ref<int<4>> v10 = ( var(0)) <LOOP_INIT>\l"];
 95[shape=box,label="[B95]\l0: decl v8 = ...\l"];
 96[shape=box,label="[B96]\l0: ref.var(...)\l"];
-98[shape=box,label="[B98]\l0: CAST<real<4>>\l"];
+98[shape=box,label="[B98]\l0: CAST<real<8>>\l"];
 99[shape=box,label="[B99]\l0: decl ref<int<4>> v9 = ( var(0)) <LOOP_INIT>\l"];
 100[shape=box,label="[B100]\l0: decl ref<int<4>> v11 = ( var(0)) <LOOP_INIT>\l"];
 101[shape=box,label="[B101]\l0: 1000 <CTRL>\lT: FOR( ... ; v5 < 1000; ...)\l"];
@@ -102,12 +102,12 @@ digraph G {
 106[shape=box,label="[B106]\l"];
 107[shape=box,label="[B107]\l0: vector.ref.elem(..., ...)\l"];
 108[shape=box,label="[B108]\l0: vector.ref.elem(..., ...)\l"];
-109[shape=box,label="[B109]\l0: composite.ref.elem(v1, B, type<vector<vector<real<4>,1000>,1000>>)\l"];
+109[shape=box,label="[B109]\l0: composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>)\l"];
 110[shape=box,label="[B110]\l0: CAST<uint<4>>\l"];
 111[shape=box,label="[B111]\l0: ref.deref(v5)\l"];
 112[shape=box,label="[B112]\l0: CAST<uint<4>>\l"];
 113[shape=box,label="[B113]\l0: ref.deref(v4)\l"];
-114[shape=box,label="[B114]\l0: CAST<real<4>>\l"];
+114[shape=box,label="[B114]\l0: CAST<real<8>>\l"];
 115[shape=box,label="[B115]\l0: ite(..., bind(){fun{...}()}, bind(){fun{...}()})\l"];
 116[shape=box,label="[B116]\l0: int.eq(..., ...)\l"];
 117[shape=box,label="[B117]\l0: ref.deref(v5)\l"];
@@ -122,12 +122,12 @@ digraph G {
 126[shape=box,label="[B126]\l"];
 127[shape=box,label="[B127]\l0: vector.ref.elem(..., ...)\l"];
 128[shape=box,label="[B128]\l0: vector.ref.elem(..., ...)\l"];
-129[shape=box,label="[B129]\l0: composite.ref.elem(v1, A, type<vector<vector<real<4>,1000>,1000>>)\l"];
+129[shape=box,label="[B129]\l0: composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>)\l"];
 130[shape=box,label="[B130]\l0: CAST<uint<4>>\l"];
 131[shape=box,label="[B131]\l0: ref.deref(v3)\l"];
 132[shape=box,label="[B132]\l0: CAST<uint<4>>\l"];
 133[shape=box,label="[B133]\l0: ref.deref(v2)\l"];
-134[shape=box,label="[B134]\l0: CAST<real<4>>\l"];
+134[shape=box,label="[B134]\l0: CAST<real<8>>\l"];
 135[shape=box,label="[B135]\l0: int.mul(..., ...)\l"];
 136[shape=box,label="[B136]\l0: ref.deref(v3)\l"];
 137[shape=box,label="[B137]\l0: ref.deref(v2)\l"];

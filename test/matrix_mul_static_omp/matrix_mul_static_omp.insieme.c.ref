@@ -8,13 +8,13 @@
 #define false 0
 #define null 0
 
-// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<4>,1000> //
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<8>,1000> //
 typedef struct ___insieme_type_1 { 
-    float data[1000];
+    double data[1000];
 } __insieme_type_1;
 
 // A constructor initializing a vector of the type __insieme_type_1 uniformly
-static inline __insieme_type_1 __insieme_type_1_init_uniform(float value) {
+static inline __insieme_type_1 __insieme_type_1_init_uniform(double value) {
 	__insieme_type_1 res;
 	for (int i=0; i<1000;++i) {
 	    res.data[i] = value;
@@ -23,7 +23,7 @@ static inline __insieme_type_1 __insieme_type_1_init_uniform(float value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_0 <=> vector<vector<real<4>,1000>,1000> //
+// start code fragment :: vector_type_declaration of __insieme_type_0 <=> vector<vector<real<8>,1000>,1000> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1 data[1000];
 } __insieme_type_0;
@@ -95,7 +95,7 @@ struct __insieme_pfor_body_6_fun_capture {
 };
 
 // start code fragment :: Definition of __insieme_supp_7 ... type: ((int<4>)->unit) //
-void __insieme_supp_7(int var_28) { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_28))])).data[((unsigned int)((j)))])) = ((float)((var_28*(j))))); }; }
+void __insieme_supp_7(int var_28) { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_28))])).data[((unsigned int)((j)))])) = ((double)((var_28*(j))))); }; }
 static void __insieme_supp_7_wrap(void* _closure, int var_28) { __insieme_supp_7(var_28); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_6_fun //
@@ -114,7 +114,7 @@ struct __insieme_pfor_body_9_fun_capture {
 };
 
 // start code fragment :: Definition of __insieme_supp_10 ... type: ((int<4>)->unit) //
-void __insieme_supp_10(int var_32) { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_32))])).data[((unsigned int)((j)))])) = ((float)((((var_32==(j)))?(1):(0))))); }; }
+void __insieme_supp_10(int var_32) { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_32))])).data[((unsigned int)((j)))])) = ((double)((((var_32==(j)))?(1):(0))))); }; }
 static void __insieme_supp_10_wrap(void* _closure, int var_32) { __insieme_supp_10(var_32); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_9_fun //
@@ -134,7 +134,7 @@ struct __insieme_pfor_body_11_fun_capture {
 
 // start code fragment :: Definition of __insieme_supp_12 ... type: ((int<4>)->unit) //
 void __insieme_supp_12(int var_36) { for(int j = 0; j < 1000; j += 1) {
-	float sum = ((float)(0));
+	double sum = ((double)(0));
 	for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_36))])).data[((unsigned int)((k)))]))*(((((*(&((__GLOBAL__).B))).data[((unsigned int)((k)))])).data[((unsigned int)((j)))]))))); };
 	((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_36))])).data[((unsigned int)((j)))])) = (sum));
 }; }
@@ -223,7 +223,7 @@ int main() {
 		int success = 1;
 		for(int i = 0; i < 1000; i += 1) {
 			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=(((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))) { ((success) = 0); }; };
-			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((float)(0)))) { ((success) = 0); }; };
+			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((double)(0)))) { ((success) = 0); }; };
 		};
 		printf(((char*)((*(&((__insieme_type_14){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_14){(((__insieme_type_16){{'O', 'K', '\0'}})).data}))):((((__insieme_type_14){(((__insieme_type_17){{'E', 'R', 'R', '\0'}})).data}))))).data);
 	}

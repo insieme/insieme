@@ -1,0 +1,87 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<struct<A:vector<vector<real<8>,1000>,1000>,B:vector<vector<real<8>,1000>,1000>,C:vector<vector<real<8>,1000>,1000>>> v1 =  new(struct{A:=vector.init.uniform(vector.init.uniform(0.0, 1000), 1000), B:=vector.init.uniform(vector.init.uniform(0.0, 1000), 1000), C:=vector.init.uniform(vector.init.uniform(0.0, 1000), 1000)});
+        {
+            for(decl ref<int<4>> v3 =  var(0) .. 1000 : 1) {
+                for(decl ref<int<4>> v2 =  var(0) .. 1000 : 1) {
+                    vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v3), v2) := v3*v2;
+                };
+            };
+            for(decl ref<int<4>> v5 =  var(0) .. 1000 : 1) {
+                for(decl ref<int<4>> v4 =  var(0) .. 1000 : 1) {
+                    vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), v5), v4) := ite(v5==v4, bind(){fun()return 1()}, bind(){fun()return 0()});
+                };
+            };
+            for(decl ref<int<4>> v11 =  var(0) .. 1000 : 1) {
+                for(decl ref<int<4>> v9 =  var(0) .. 1000 : 1) {
+                    decl ref<real<8>> v8 =  var(0);
+                    for(decl ref<int<4>> v10 =  var(0) .. 1000 : 1) {
+                        v8 := v8+vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v11), v10)*vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), v10), v9);
+                    };
+                    vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v11), v9) := v8;
+                };
+            };
+        };
+        decl ref<int<4>> v12 =  var(1);
+        for(decl ref<int<4>> v14 =  var(0) .. 1000 : 1) {
+            for(decl ref<int<4>> v13 =  var(0) .. ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v14), v13), vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v14), v13))) {
+                    v12 := 0;
+                } else { };
+            };
+            for(decl ref<int<4>> v17 =  var(ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()})) .. ite(1000>1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v14), v17), 0)) {
+                    v12 := 0;
+                } else { };
+            };
+        };
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(v12, 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<struct<A:vector<vector<real<8>,1000>,1000>,B:vector<vector<real<8>,1000>,1000>,C:vector<vector<real<8>,1000>,1000>>> v1 = ( new(struct{A:=vector.init.uniform(vector.init.uniform(0.0, 1000), 1000), B:=vector.init.uniform(vector.init.uniform(0.0, 1000), 1000), C:=vector.init.uniform(vector.init.uniform(0.0, 1000), 1000)}));
+        <m id=4>{
+            <m id=1>for(decl ref<int<4>> v3 = ( var(0)) .. 1000 : 1) {
+                for(decl ref<int<4>> v2 = ( var(0)) .. 1000 : 1) {
+                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v3))), CAST<uint<4>>(( *v2))) := CAST<real<8>>((( *v3)*( *v2))));
+                };
+            }</m>;
+            <m id=2>for(decl ref<int<4>> v5 = ( var(0)) .. 1000 : 1) {
+                for(decl ref<int<4>> v4 = ( var(0)) .. 1000 : 1) {
+                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v5))), CAST<uint<4>>(( *v4))) := CAST<real<8>>(ite((( *v5)==( *v4)), bind(){fun()return 1()}, bind(){fun()return 0()})));
+                };
+            }</m>;
+            <m id=3>for(decl ref<int<4>> v11 = ( var(0)) .. 1000 : 1) {
+                for(decl ref<int<4>> v9 = ( var(0)) .. 1000 : 1) {
+                    decl ref<real<8>> v8 = ( var(CAST<real<8>>(0)));
+                    for(decl ref<int<4>> v10 = ( var(0)) .. 1000 : 1) {
+                        (v8 := (( *v8)+(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v11))), CAST<uint<4>>(( *v10))))*( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v10))), CAST<uint<4>>(( *v9)))))));
+                    };
+                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v11))), CAST<uint<4>>(( *v9))) := ( *v8));
+                };
+            }</m>;
+        }</m>;
+        decl ref<int<4>> v12 = ( var(1));
+        for(decl ref<int<4>> v14 = ( var(0)) .. 1000 : 1) {
+            for(decl ref<int<4>> v13 = ( var(0)) .. ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v14))), CAST<uint<4>>(( *v13)))), ( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v14))), CAST<uint<4>>(( *v13)))))) {
+                    (v12 := 0);
+                } else { };
+            };
+            for(decl ref<int<4>> v17 = ( var(ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}))) .. ite((1000>1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(( *v14))), CAST<uint<4>>(( *v17)))), CAST<real<8>>(0))) {
+                    (v12 := 0);
+                } else { };
+            };
+        };
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(( *v12), 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+    }
+
