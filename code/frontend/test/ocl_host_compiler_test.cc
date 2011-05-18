@@ -77,7 +77,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
     LOG(INFO) << "Done.";
 
     LOG(INFO) << "Starting OpenCL host code transformations";
-    fe::ocl::HostCompiler hc(program, prog, manager);
+    fe::ocl::HostCompiler hc(program, manager);
     hc.compile();
 
     core::printer::PrettyPrinter pp(program);
