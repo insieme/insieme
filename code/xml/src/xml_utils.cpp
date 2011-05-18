@@ -38,6 +38,7 @@
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/framework/StdOutFormatTarget.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
+#include <xercesc/framework/MemBufInputSource.hpp>
 
 #include "insieme/utils/logging.h"
 
@@ -292,6 +293,69 @@ void XmlUtil::convertXmlToDom(const string& fileName, const bool validate) {
 	}
 }
 
+void XmlUtil::convertStringToDom(const string& stringName, const bool validate) {
+	((DOMImplementationLS*)impl)->createLSSerializer();
+	parser = ((DOMImplementationLS*)impl)->createLSParser (DOMImplementationLS::MODE_SYNCHRONOUS, 0);
+	
+	// remove the old DOM
+	if (doc) {
+		doc->release();
+		doc = NULL;
+	}
+	
+	if (parser) {
+		DOMConfiguration* conf (parser->getDomConfig ());
+
+		conf->setParameter (XMLUni::fgDOMComments, false);
+		conf->setParameter (XMLUni::fgDOMDatatypeNormalization, true);
+		conf->setParameter (XMLUni::fgDOMEntities, false);
+		conf->setParameter (XMLUni::fgDOMNamespaces, true);
+		conf->setParameter (XMLUni::fgDOMElementContentWhitespace, false);
+
+		// Enable validation.
+		conf->setParameter (XMLUni::fgDOMValidate, validate);
+		conf->setParameter (XMLUni::fgXercesSchema, validate);
+		conf->setParameter (XMLUni::fgXercesSchemaFullChecking, false);
+
+		// Use the loaded grammar during parsing.
+		conf->setParameter (XMLUni::fgXercesUseCachedGrammarInParse, true);
+
+		// Don't load schemas from any other source
+		conf->setParameter (XMLUni::fgXercesLoadSchema, false);
+
+		// We will release the DOM document ourselves.
+		conf->setParameter (XMLUni::fgXercesUserAdoptsDOMDocument, true);
+
+		error_handler eh;
+		parser->getDomConfig ()->setParameter (XMLUni::fgDOMErrorHandler, &eh);
+		
+		if (validate) {
+			if (!parser->loadGrammar ((XML_SCHEMA_DIR + "schema.xsd").c_str(), Grammar::SchemaGrammarType, true)) {
+				LOG(log::ERROR) << "ERROR: Unable to load schema.xsd";
+				return;
+			}
+			if (eh.failed ()) {
+				return;
+			}
+		}
+		if (doc) doc->release();
+		XMLCh* sName = XMLString::transcode(stringName.c_str());
+		DOMLSInput* input = ((DOMImplementationLS*)impl)->createLSInput();
+		input->setStringData(sName);
+		
+		doc = parser->parse(input);
+		
+		if (eh.failed ()) {
+			doc->release();
+			doc = NULL;
+			LOG(log::ERROR) << "problem during parsing of XML file" << endl;
+			return;
+		}
+		XMLString::release(&sName);	
+	}
+
+}
+
 void XmlUtil::convertDomToXml(const string& outputFile) {
 	DOMImplementationLS* implLS = dynamic_cast<DOMImplementationLS*>(impl);
 	assert(implLS);
@@ -326,12 +390,13 @@ string XmlUtil::convertDomToString() {
 	string stringTemp = XMLString::transcode (theSerializer->writeToString(doc));
 	theSerializer->release();
 
-	string stringDump;
+	/*string stringDump;
 	for (string::iterator it = stringTemp.begin() ; it < stringTemp.end(); ++it) {
 		if (!isspace (*it))
 			stringDump += *it;
 	}
-	return stringDump;
+	return stringDump;*/
+	return stringTemp;
 }
 
 } // end xml namespace

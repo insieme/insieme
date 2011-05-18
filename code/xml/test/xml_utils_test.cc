@@ -172,10 +172,7 @@ TEST(XmlTest, GenericTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -212,10 +209,7 @@ TEST(XmlTest, FunctionTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -258,10 +252,7 @@ TEST(XmlTest, StructTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -303,10 +294,7 @@ TEST(XmlTest, UnionTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -343,10 +331,7 @@ TEST(XmlTest, TupleTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -376,10 +361,7 @@ TEST(XmlTest, TypeVariableTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -416,10 +398,7 @@ TEST(XmlTest, RecTypeTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -440,10 +419,7 @@ TEST(XmlTest, LiteralTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -466,10 +442,7 @@ TEST(XmlTest, ReturnStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -511,10 +484,7 @@ TEST(XmlTest, ForStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -546,10 +516,7 @@ TEST(XmlTest, IfStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -596,10 +563,7 @@ TEST(XmlTest, SwitchStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -630,10 +594,7 @@ TEST(XmlTest, WhileStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -655,10 +616,7 @@ TEST(XmlTest, BreakStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -680,10 +638,7 @@ TEST(XmlTest, ContinueStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -716,10 +671,7 @@ TEST(XmlTest, CompoundStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -749,10 +701,7 @@ TEST(XmlTest, DeclarationStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -792,10 +741,7 @@ TEST(XmlTest, StructExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -825,10 +771,7 @@ TEST(XmlTest, UnionExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -863,10 +806,7 @@ TEST(XmlTest, VectorExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -901,10 +841,7 @@ TEST(XmlTest, TupleExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -930,10 +867,7 @@ TEST(XmlTest, CastExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -972,10 +906,7 @@ TEST(XmlTest, CallExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1008,10 +939,7 @@ TEST(XmlTest, BindExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1033,10 +961,7 @@ TEST(XmlTest, VariableTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1083,10 +1008,7 @@ TEST(XmlTest, JobExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1126,10 +1048,7 @@ TEST(XmlTest, LambdaTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1160,10 +1079,7 @@ TEST(XmlTest, ProgramTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1195,10 +1111,7 @@ TEST(XmlTest, MemberAccessExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1228,10 +1141,7 @@ TEST(XmlTest, TupleProjectionExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1241,38 +1151,6 @@ TEST(XmlTest, TupleProjectionExprTest) {
 	EXPECT_TRUE(equalsWithAnnotations(root, root2));
 }
 
-/*TEST(XmlTest, CaptureInitExpr) {
-	NodeManager manager;
-
-	TypePtr res = GenericType::get(manager,"A");
-	FunctionTypePtr funType2 = FunctionType::get(manager, TypeList(), res);
-	
-	LiteralPtr initValue = Literal::get(manager, res, "X");
-	LiteralPtr initValue2 = Literal::get(manager, res, "Y");
-	
-	LambdaExprPtr lambda2 = LambdaExpr::get(manager, funType2, Lambda::ParamList(), ReturnStmt::get(manager, Literal::get(manager, res, "A")));
-	
-	CaptureInitExprPtr expr = CaptureInitExpr::get(manager, lambda2, toVector<ExpressionPtr>(initValue, initValue2));
-	DummyAnnotationPtr dummy_cn(new DummyAnnotation("capinit n"));
-	expr->addAnnotation(dummy_cn);
-	
-	NodePtr root = expr;
-	
-	XmlUtil xml;
-	xml.convertIrToDom(root);
-	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
-	
-	NodeManager manager2;
-	NodePtr root2 = xml.convertDomToIr(manager2);
-	
-	EXPECT_EQ(*root, *root2);
-	EXPECT_NE(root, root2);
-	EXPECT_TRUE(equalsWithAnnotations(root, root2));
-}*/
 
 TEST(XmlTest, MarkerStmtTest) {
 	NodeManager manager;
@@ -1289,10 +1167,7 @@ TEST(XmlTest, MarkerStmtTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1317,10 +1192,7 @@ TEST(XmlTest, MarkerExprTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1343,10 +1215,7 @@ TEST(XmlTest, ConcreteIntTypeParamTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1369,10 +1238,7 @@ TEST(XmlTest, InfiniteIntTypeParamTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
@@ -1395,10 +1261,7 @@ TEST(XmlTest, VariableIntTypeParamTest) {
 	XmlUtil xml;
 	xml.convertIrToDom(root);
 	string s1 = xml.convertDomToString();
-	xml.convertDomToXml("dump1.xml");
-	xml.convertXmlToDom("dump1.xml", true);
-	string s2 = xml.convertDomToString();
-	EXPECT_EQ (s1, s2);
+	xml.convertStringToDom(s1, true);
 	
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);

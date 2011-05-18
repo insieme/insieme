@@ -76,6 +76,7 @@ public:
 	insieme::core::NodePtr convertDomToIr(insieme::core::NodeManager& manager);
 	void convertIrToDom(const insieme::core::NodePtr& node);
 
+	void convertStringToDom(const std::string& stringName, const bool validate);	
 	string convertDomToString();
 
 	static void write(const insieme::core::NodePtr& node, const std::string& fileName) {
