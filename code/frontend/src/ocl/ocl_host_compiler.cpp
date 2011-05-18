@@ -389,14 +389,23 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
     for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
         if(const LambdaExprPtr& lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
         if(auto cname = lambdaEx->getLambda()->getAnnotation(c_info::CNameAnnotation::KEY)) {
-            std::cout << "Found lambda " << cname->getName() << std::endl;
             if(ExpressionPtr clKernel = kernelNames[cname->getName()]) {
-                std::cout << "_!§$%,\n";
                 kernelLambdas[clKernel] = lambdaEx;
             }
         }
     });
 }
+
+HostMapper3rdPass::HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, KernelNames& oclKernelNames,
+        KernelLambdas& oclKernelLambdas):
+    builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs), kernelNames(oclKernelNames), kernelLambdas(oclKernelLambdas) {
+//    create3Dvec = parse::parseExpression(builder.getNodeManager(), "fun(uint<4>:workDim, anyRef:size) -> vector<uint<4>, 3> {{ \
+            decl vector<uint<4>,3> sv = \
+             \
+            }}");
+
+}
+
 
 void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg){
     // remove stuff added by (void*)&
@@ -407,6 +416,52 @@ void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& ar
                     arg = scalarToArray->getArgument(0);
 
 }
+
+/* Assumptions:
+ * 1. the work dimension is a scalar in the arguments
+ * 2. The cast to void* of the local/global size happens in the argument
+ * 3. 1D only
+ */
+
+const ExpressionPtr HostMapper3rdPass::anyRefToVec3(const ExpressionPtr& workDim, ExpressionPtr size) {
+    CallExprPtr ret;
+    const TypePtr vecTy = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+
+    // check if there is a scalar to array
+    if(const CallExprPtr& scalarToArray = dynamic_pointer_cast<const CallExpr>(size))
+        if(scalarToArray->getFunctionExpr() == BASIC.getScalarToArray()) {
+            // check consitency with workDim, should be 1
+            if(const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim)) {
+                std::cout << "found Dim: " << dim->getValue() << std::endl;
+                assert(strcmp(dim->getValue().c_str(), "1") == 0 && "Scalar passed to a multi dimensional work group");
+            }
+            VariablePtr param = builder.variable(scalarToArray->getArgument(0)->getType());
+
+            ExpressionPtr init = param;
+            if(dynamic_pointer_cast<const RefType>(param->getType())) {
+                init = builder.deref(param);
+            }
+            if(init->getType() != BASIC.getUInt4()) {
+                init = builder.castExpr(BASIC.getUInt4(), init);
+            }
+
+            DeclarationStmtPtr vDecl = builder.declarationStmt(vecTy,
+                builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
+
+
+            FunctionTypePtr fctTy = builder.functionType(toVector(scalarToArray->getArgument(0)->getType()), vecTy);
+            ret = builder.callExpr(vecTy,
+                    builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
+                            builder.returnStmt(vDecl->getVariable()))), scalarToArray->getArgument(0));
+        }
+
+
+
+
+
+    return ret;
+}
+
 
 const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
     // stopp recursion at type level
@@ -455,18 +510,16 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                         //global and private memory arguments must be variables
                         getVarOutOfCrazyInspireConstruct(arg);
 
-                    std::cout << "KERNEL ARGUMENT "<< arg << std::endl;
-
                         newArgs.push_back(dynamic_pointer_cast<const Expression>(this->resolveElement(arg)));
                     });
 
+                    // make a three element vector out of the global and local size
+                    const ExpressionPtr global = anyRefToVec3(newCall->getArgument(2), newCall->getArgument(4));
+                    const ExpressionPtr local = anyRefToVec3(newCall->getArgument(2), newCall->getArgument(5));
+
                     // add global and local size to arguments
-                    newArgs.push_back(newCall->getArgument(4));
-                    newArgs.push_back(newCall->getArgument(5));
-
-
-                    std::cout << "Nargs " << newArgs.size() << " - " << lambda->getParameterList().size() << std::endl;
-                    // get return Type
+                    newArgs.push_back(global);
+                    newArgs.push_back(local);
 
                     // construct call to kernel function
                     return builder.callExpr(BASIC.getInt4(), lambda, newArgs);
