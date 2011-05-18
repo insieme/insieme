@@ -148,92 +148,78 @@ irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
 	return arg.generated;
 }
 
+static inline irt_work_item* _irt_get_ready_wi_from_pool(irt_work_item_deque* pool) {
+	irt_work_item* next_wi = pool->start;
+	while(next_wi != NULL) {
+		if(next_wi->ready_check.fun(next_wi)) {
+			next_wi = irt_work_item_deque_take_elem(pool, next_wi); 
+			if(next_wi) break;
+			else return _irt_get_ready_wi_from_pool(pool); // wi was stolen, retry
+		} else {
+			next_wi = next_wi->work_deque_next;
+		}
+	}
+	return next_wi;
+}
+
+static inline bool _irt_sched_split_decision_fixed_size(irt_work_item* wi, const uint32 size) {
+	return (wi->range.end - wi->range.begin) / wi->range.step > size;
+}
+
+static inline void _irt_sched_split_work_item_binary(irt_work_item* wi, irt_worker* self) {
+	irt_work_item *split_wis[2];
+	irt_wi_split_binary(wi, split_wis);
+	irt_work_item_deque_insert_front(&self->queue, split_wis[0]);
+	irt_work_item_deque_insert_front(&self->queue, split_wis[1]);
+}
+
+static inline void _irt_sched_check_ipc_queue(irt_worker* self) {
+	irt_mqueue_msg* received = irt_mqueue_receive();
+	if(received) {
+		if(received->type == IRT_MQ_NEW_APP) {
+			irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
+			irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
+			irt_context* prog_context = irt_context_create(client_app);
+			self->cur_context = prog_context->id;
+			irt_context_table_insert(prog_context);
+			_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
+		}
+		free(received);
+	}
+}
+
+static inline irt_work_item* _irt_sched_steal_from_prev_thread(irt_worker* self) {
+	int32 neighbour_index = self->id.value.components.thread-1;
+	if(neighbour_index<0) neighbour_index = irt_g_worker_count-1;
+	return irt_work_item_deque_pop_back(&irt_g_workers[neighbour_index]->queue);
+}
+
 void irt_worker_schedule(irt_worker* self) {
 
-	//IRT_INFO("Worker %p scheduling - A.", self);
-
 	// try to take a ready WI from the pool
-	{
-		irt_work_item* next_wi = self->pool.start;
-		while(next_wi != NULL) {
-			IRT_INFO("Worker %p scheduling - A0.", self);
-			if(next_wi->ready_check.fun(next_wi)) {
-				IRT_INFO("Worker %p scheduling - A1.", self);
-				next_wi = irt_work_item_deque_take_elem(&self->pool, next_wi); 
-				break;
-			} else {
-				next_wi = next_wi->work_deque_next;
-			}
-		}
-		if(next_wi != NULL) {
-			IRT_INFO("Worker %p scheduling - A2.", self);
-			_irt_worker_switch_to_wi(self, next_wi);
-			return;
-		}
+	irt_work_item* next_wi = _irt_get_ready_wi_from_pool(&self->pool);
+	if(next_wi != NULL) {
+		_irt_worker_switch_to_wi(self, next_wi);
+		return;
 	}
-
-	//IRT_INFO("Worker %p scheduling - B.", self);
 
 	// if that failed, try to take a work item from the queue
-	{
-		irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
-		if(new_wi != NULL) {
-			if((new_wi->range.end - new_wi->range.begin) / new_wi->range.step > 100000) {
-				// split WI
-				irt_work_item *split_wis[2];
-				irt_wi_split_binary(new_wi, split_wis);
-				irt_work_item_deque_insert_front(&self->queue, split_wis[0]);
-				irt_work_item_deque_insert_front(&self->queue, split_wis[1]);
-				return;
-			}
-			//IRT_INFO("Worker %p scheduling - B0.", self);
-			_irt_worker_switch_to_wi(self, new_wi);
-			//IRT_INFO("Worker %p scheduling - B1.", self);
+	irt_work_item* new_wi = irt_work_item_deque_pop_front(&self->queue);
+	// if none available, try to steal from another thread
+	if(new_wi == NULL) new_wi = _irt_sched_steal_from_prev_thread(self);
+	if(new_wi != NULL) {
+		if(_irt_sched_split_decision_fixed_size(new_wi, 100000)) {
+			_irt_sched_split_work_item_binary(new_wi, self);
 			return;
 		}
+		_irt_worker_switch_to_wi(self, new_wi);
+		return;
 	}
-
-	//IRT_INFO("Worker %p scheduling - C.", self);
 
 	// if that failed as well, look in the IPC message queue
-	{
-		irt_mqueue_msg* received = irt_mqueue_receive();
-		if(received) {
-			if(received->type == IRT_MQ_NEW_APP) {
-				irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
-				irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
-				irt_context* prog_context = irt_context_create(client_app);
-				self->cur_context = prog_context->id;
-				irt_context_table_insert(prog_context);
-				_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
-			}
-			free(received);
-		}
-	}
-
-	// try to steal from adjoining thread
-	{
-		int32 neighbour_index = self->id.value.components.thread-1;
-		if(neighbour_index<0) neighbour_index = irt_g_worker_count-1;
-		irt_work_item* stolen_wi = irt_work_item_deque_pop_back(&irt_g_workers[neighbour_index]->queue);
-		if(stolen_wi != NULL) {
-			if((stolen_wi->range.end - stolen_wi->range.begin) / stolen_wi->range.step > 100000) {
-				// split WI
-				irt_work_item *split_wis[2];
-				irt_wi_split_binary(stolen_wi, split_wis);
-				irt_work_item_deque_insert_front(&self->queue, split_wis[1]);
-				irt_work_item_deque_insert_front(&self->queue, split_wis[0]);
-				return;
-			}
-			//IRT_INFO("Worker %p scheduling - B0.", self);
-			_irt_worker_switch_to_wi(self, stolen_wi);
-			//IRT_INFO("Worker %p scheduling - B1.", self);
-			return;
-		}
-	}
+	_irt_sched_check_ipc_queue(self);
 
 	pthread_yield();
-	//IRT_INFO("Worker %p scheduling - D.", self);
 }
 
 void irt_worker_enqueue(irt_worker* self, irt_work_item* wi) {
