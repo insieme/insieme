@@ -181,7 +181,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		for (int j=0; j<N; j++) {
 			if (R[i][j] != i*j) {
 				check = false;
-				printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
+				// printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
 			}
 		}
 	}
@@ -220,7 +220,7 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	double** B = (double**)blockB->data;
 	double** C = (double**)blockC->data;
 
-	for (uint64 i = range.begin; i < range.end; ++i) {
+	for (uint64 i = range.begin; i < range.end; i+=range.step) {
 		for (uint64 j = 0; j < N; ++j) {
 			double sum = 0;
 			for (uint64 k =0; k<N; ++k) {
@@ -300,7 +300,7 @@ void insieme_wi_init_implementation(irt_work_item* wi) {
 	double** A = (double**)blockA->data;
 	double** B = (double**)blockB->data;
 
-	for (uint64 i = range.begin; i < range.end; ++i) {
+	for (uint64 i = range.begin; i < range.end; i+=range.step) {
 		for (uint64 j = 0; j < N; ++j) {
 			A[i][j] = i*j;
 			B[i][j] = (i==j)?1:0;

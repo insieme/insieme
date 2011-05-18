@@ -52,6 +52,12 @@
 #define irt_atomic_xor_and_fetch(__location, __value, ...)  __sync_xor_and_fetch(__location, __value, ##__VA_ARGS__)
 #define irt_atomic_nand_and_fetch(__location, __value, ...) __sync_nand_and_fetch(__location, __value, ##__VA_ARGS__)
 
+/**
+ * These builtins perform an atomic compare and swap. That is, if the current value of *__location is oldval, then write newval into *__location.
+ *
+ * irt_atomic_bool_compare_and_swap returns true if successful, false otherwise
+ * irt_atomic_val_compare_and_swap returns the value of *__location before the operation
+ */
 #define irt_atomic_bool_compare_and_swap(__location, __oldval, __newval, ...) __sync_bool_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
 #define irt_atomic_val_compare_and_swap(__location, __oldval, __newval, ...)  __sync_val_compare_and_swap(__location, __oldval, __newval, ##__VA_ARGS__)
 
