@@ -172,12 +172,15 @@ class HostMapper3rdPass : public core::transform::CachedNodeMapping {
     KernelNames& kernelNames;
     KernelLambdas& kernelLambdas;
 
+    core::ExpressionPtr create3Dvec;
+
     void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg);
+
+    const core::ExpressionPtr anyRefToVec3(const core::ExpressionPtr& workDim, core::ExpressionPtr size);
 
 public:
     HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, KernelNames& oclKernelNames,
-            KernelLambdas& oclKernelLambdas):
-        builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs), kernelNames(oclKernelNames), kernelLambdas(oclKernelLambdas) {}
+            KernelLambdas& oclKernelLambdas);
 
     const core::NodePtr resolveElement(const core::NodePtr& element);
 
