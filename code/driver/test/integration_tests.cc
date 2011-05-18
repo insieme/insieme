@@ -58,6 +58,10 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/timer.h"
 
+#ifdef USE_XML
+#include "insieme/xml/xml_utils.h"
+#endif
+
 namespace insieme {
 
 using namespace utils::test;
@@ -216,7 +220,7 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
-//
+
 //// ------------------------------------ Semantic Checks -------------------------------------------
 //
 //// the type definition (specifying the parameter type)
@@ -262,4 +266,44 @@ INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::tes
 //
 //// instantiate the test case
 //INSTANTIATE_TEST_CASE_P(SemanticCheckPerformanceCheck, SemanticCheckPerformanceTest, ::testing::ValuesIn(getAllCases()));
+
+
+#ifdef USE_XML
+
+// ---------------------------------- Check the XML dump -------------------------------------
+
+// the type definition (specifying the parameter type)
+class XMLIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(XMLIntegrationTest, WriteReadTest) {
+	core::NodeManager manager;
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+
+	// load the code using the frontend
+	core::ProgramPtr code = load(manager, testCase);
+
+	// conduct XML conversion
+	string file = "_dump.xml";
+	xml::XmlUtil::write(code, file);
+
+	NodeManager manager2;
+	core::NodePtr code2 = xml::XmlUtil::read(manager2, file);
+
+	EXPECT_EQ(*code, *code2);
+	EXPECT_NE(code, code2);
+//	EXPECT_TRUE(core::equalsWithAnnotations(code, code2));
+
+}
+
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+#endif
+
+
 }

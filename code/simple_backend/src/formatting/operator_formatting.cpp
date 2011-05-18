@@ -575,9 +575,6 @@ namespace formatting {
 			// use stack or heap allocator
 			string allocator = (isNew)?"malloc":"alloca";
 
-			// special handling of some initialization values
-			string stmt = toString(*initValue);
-
 			// TODO: use pattern matching!
 
 			// check for vector init undefined and undefined

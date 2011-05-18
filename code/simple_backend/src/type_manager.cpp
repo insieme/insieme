@@ -253,8 +253,8 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 
 
 	// A) add abstract functor definition
-	out << "//\n// -------------------- Begin of constructs for function type " << toString(*functionType) << "---------------------\n";
-	out << "// Base-struct of describing closures of type " << name << " <-> " << toString(*functionType) << "\n";
+	out << "//\n// -------------------- Begin of constructs for function type " << *functionType << "---------------------\n";
+	out << "// Base-struct of describing closures of type " << name << " <-> " << *functionType << "\n";
 	out << "typedef struct _" << functorName << " { \n";
 
 	// add function pointer 'call'
@@ -298,7 +298,7 @@ TypeManager::FunctionTypeInfo TypeManager::getFunctionTypeInfo(const core::Funct
 	out << CodeBuffer::indL;
 	out << "\n}\n";
 
-	out << "// ----------------------- end of constructs for function " << toString(*functionType) << "-----------------------\n";
+	out << "// ----------------------- end of constructs for function " << *functionType << "-----------------------\n";
 
 	// create, register and return entry
 	FunctionTypeInfo info(functorName, callerName, functorAndCaller);

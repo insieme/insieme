@@ -95,6 +95,7 @@ class NodeBuilder {
 		auto fit = elemMap.find(numeric_cast<unsigned long>(id));
 		assert(fit != elemMap.end());
 		assert(fit->second.first == &elem && "The XmlElement associated to this node has changed!");
+		assert(!fit->second.second && "Value have been resolved before!");
 		fit->second.second = node;
 	}
 
@@ -117,6 +118,12 @@ class NodeBuilder {
 
 	template <class NodeTy, class ... Args>
 	Pointer<const NodeTy> createIrNode(const XmlElement& elem, Args ... args) {
+		// test whether element has been resolved before
+		if (Pointer<const NodeTy> res = dynamic_pointer_cast<const NodeTy>(getElementId(elem.getAttr("id")).second)) {
+			return res;
+		}
+
+		// needs to be constructed
 		Pointer<const NodeTy> irNode = NodeTy::get(mgr, args...);
 		buildAnnotations(elem, *irNode);
 		updateMap(elem, irNode);
@@ -490,6 +497,16 @@ public:
 	#define DISPATCH(TYPE) if(nodeName == #TYPE) { return handle_ ## TYPE(elem); }
 
 	NodePtr buildNode(const XmlElement& elem) {
+
+		// check whether node has been resolved before
+		string&& id = elem.getAttr("id");
+		if( !id.empty() ) {
+			// => take from cache
+			NodePtr res = getElementId(id).second;
+			if (res) return res;
+		}
+
+		// ensure all referenced nodes are covered
 		checkRef(elem);
 
 		// different types of nodes
