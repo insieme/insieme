@@ -181,7 +181,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		for (int j=0; j<N; j++) {
 			if (R[i][j] != i*j) {
 				check = false;
-				printf("= fail at (%d,%d) - expected %d / actual %f", i, j, i*j, R[i][j]);
+				printf("= fail at (%d,%d) - expected %d / actual %f\n", i, j, i*j, R[i][j]);
 			}
 		}
 	}

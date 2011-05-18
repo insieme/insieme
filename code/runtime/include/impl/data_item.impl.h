@@ -82,6 +82,7 @@ irt_data_item* irt_di_create_sub(irt_data_item* parent, irt_data_range* ranges) 
 	memcpy(retval->ranges, ranges, sizeof(irt_data_range)*parent->dimensions);
 	retval->id = irt_generate_data_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	retval->parent_id = parent->id;
+	retval->data_block = (parent->data_block)?parent->data_block:NULL;
 	irt_data_item_table_insert(retval);
 	return retval;
 }
@@ -89,20 +90,58 @@ void irt_di_destroy(irt_data_item* di) {
 	_irt_di_dec_use_count(di);
 }
 
-static inline uint64 _irt_di_get_bytes(irt_data_item* di) {
-	uint64 type_size = irt_type_get_bytes(irt_context_get_current(), di->type_id);
-	if(di->dimensions == 1) return (di->ranges[0].end - di->ranges[0].begin) * type_size;
-	else {
-		uint64 s = 0;
-		for(int i=0; i<di->dimensions; ++i) s += (di->ranges[i].end - di->ranges[i].begin) * type_size;
-		return s;
+static inline void* _build_data_block(uint32 element_size, uint64* sizes, uint32 dim, uint64 totalSize) {
+	IRT_ASSERT(dim != 0, IRT_ERR_IO, "Should not be called for scalars!");
+
+	// handle 0-size dimension
+	uint64 cur_size = sizes[0];
+	if (cur_size == 0) {
+		return NULL;
 	}
+
+	// handle terminal case
+	if (dim == 1) {
+		// allocate big chunk of memory
+		void* block = malloc(totalSize * cur_size * element_size);
+		IRT_ASSERT(block != NULL, IRT_ERR_IO, "Malloc of data block failed.");
+		return block;
+	}
+
+
+	// recursively allocate the data
+	void* sub = _build_data_block(element_size, sizes+1, dim-1, totalSize*cur_size);
+
+	// allocate index array
+	void** index = malloc(cur_size * sizeof(void*));
+	IRT_ASSERT(index != NULL, IRT_ERR_IO, "Malloc of index block failed.");
+
+	// initialize the index array
+	index[0] = sub;
+	uint64 step_size = ((dim == 2)?element_size:sizeof(void*))*cur_size;
+	for (uint64 i = 1; i<cur_size; ++i) {
+		// void pointer arithmetic is not defined => use ugly int casts
+		index[i] = (void*)((uint64)index[i-1] + step_size);
+	}
+
+	// return pointer to index array
+	return (void*)index;
 }
-static inline irt_data_block* _irt_db_new(uint64 size) {
+
+static inline irt_data_block* _irt_db_new(uint32 element_size, uint64* sizes, uint32 dim) {
+
+	// create resulting data block
 	irt_data_block* retval = (irt_data_block*)malloc(sizeof(irt_data_block));
 	retval->use_count = 1;
-	retval->data = malloc(size);
-	IRT_ASSERT(retval->data != NULL, IRT_ERR_IO, "Malloc of data block failed.");
+
+	// handle scalars ..
+	if (dim == 0) {
+		retval->data = malloc(element_size);
+		IRT_ASSERT(retval->data != NULL, IRT_ERR_IO, "Malloc of data block failed.");
+		return retval;
+	}
+
+	// construct data block recursively
+	retval->data = _build_data_block(element_size, sizes, dim, 1);
 	return retval;
 }
 static inline void _irt_db_recycle(irt_data_block* di) {
@@ -110,11 +149,39 @@ static inline void _irt_db_recycle(irt_data_block* di) {
 }
 
 irt_data_block* irt_di_aquire(irt_data_item* di, irt_data_mode mode) {
-	if(!di->data_block) { 
-		// TODO find or create data block
-		di->data_block = _irt_db_new(_irt_di_get_bytes(di));
+	// see if it is already in the data item
+	if(di->data_block) {
+		return di->data_block;
 	}
-	return di->data_block;
+
+	// look it up in the table
+	irt_data_item* item = irt_data_item_table_lookup(di->id);
+	if (item->data_block) {
+		di->data_block = item->data_block;
+		return item->data_block;
+	}
+
+	// look up parents
+	while (di->parent_id.value.full != irt_data_item_null_id().value.full) {
+		// resolve recursively
+		irt_data_block* block = irt_di_aquire(irt_data_item_table_lookup(di->parent_id), mode);
+		di->data_block = block;
+		return block;
+	}
+
+	// create the data blocks
+	uint64 type_size = irt_type_get_bytes(irt_context_get_current(), di->type_id);
+	uint32 dim = di->dimensions;
+	uint64 sizes[dim];
+	for (uint32 i=0; i<dim; ++i) {
+		sizes[i] = di->ranges[i].end - di->ranges[i].begin;
+	}
+	irt_data_block* block = _irt_db_new(type_size, sizes, dim);
+
+	// update in table and given di
+	di->data_block = block;
+	item->data_block = block;
+	return block;
 }
 void irt_di_free(irt_data_block* b) {
 	// TODO notify parent
