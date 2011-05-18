@@ -258,6 +258,17 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
     );
 };
 
+void copyAnnotations(const NodePtr& source, NodePtr& sink){
+    unsigned int i = 0; // normal iterator and for_each loop leads to infinity loop, go
+    for(auto I = source->getAnnotations().begin(); i < source->getAnnotations().size(); ++I, ++i)
+        sink->addAnnotation(I->second);
+
+  /*
+    for_each(source->getAnnotations(), [&](std::pair<const AnnotationKey*, AnnotationPtr> a) {
+        sink->addAnnotation(a.second);
+    });
+*/
+}
 
 core::CallExprPtr HostMapper::checkAssignment(const core::CallExprPtr& oldCall){
     CallExprPtr newCall;
@@ -281,7 +292,7 @@ core::CallExprPtr HostMapper::checkAssignment(const core::CallExprPtr& oldCall){
 const NodePtr HostMapper::resolveElement(const NodePtr& element) {
     // stopp recursion at type level
     if (element->getNodeCategory() == NodeCategory::NC_Type) {
-        return element->substitute(builder.getNodeManager(), *this);
+        return element;
     }
 
     if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)){
@@ -300,6 +311,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                     for_each(kernels, [&](ExpressionPtr kernel){
                         kernelEntries.push_back(kernel);
                     });
+
+                copyAnnotations(callExpr, ret);
                 return ret;
             }
         }
@@ -322,7 +335,9 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
     //                    cl_mems.insert(std::make_pair(lhs, newVar));
                         cl_mems[lhs] = newVar;
 
-                        return builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
+                        NodePtr ret = builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
+                        copyAnnotations(callExpr, ret);
+                        return ret;
                     }//}}
                 }
                 if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))) {
@@ -335,7 +350,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                             if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
                                 kn = sacp->getArgument(0);
 
-                            std::cout << "!!!!!!!!!!!!!Kernel: " << kn << std::endl;
                             if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn))
                                 kernelNames[kl->getValue().substr(1, kl->getValue().length()-2)] = lhs;  // delete quotation marks form name
 
@@ -368,12 +382,13 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                         //DeclarationStmtPtr newDecl = dynamic_pointer_cast<const DeclarationStmt>(decl->substitute(builder.getNodeManager(), *this));
                         TypePtr newType = builder.refType(newInit->getType());
 
-                        const DeclarationStmtPtr newDecl = builder.declarationStmt(var, builder.refNew(newInit));
+                        NodePtr newDecl = builder.declarationStmt(var, builder.refNew(newInit));
 
                         const VariablePtr& newVar = builder.variable(newType);
 
                         cl_mems[var] = newVar;
 
+                        copyAnnotations(decl, newDecl);
                         return newDecl;
                     }
                 }
@@ -381,7 +396,9 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
         }
     }
 
-    return element->substitute(builder.getNodeManager(), *this);
+    NodePtr ret = element->substitute(builder.getNodeManager(), *this);
+    copyAnnotations(element, ret);
+    return ret;
 }
 
 void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
@@ -423,39 +440,50 @@ void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& ar
  * 3. 1D only
  */
 
-const ExpressionPtr HostMapper3rdPass::anyRefToVec3(const ExpressionPtr& workDim, ExpressionPtr size) {
+const ExpressionPtr HostMapper3rdPass::anythingToVec3(const ExpressionPtr& workDim, ExpressionPtr size) {
     CallExprPtr ret;
     const TypePtr vecTy = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+    TypePtr argTy;
+    VariablePtr param;
+    ExpressionPtr arg;
 
     // check if there is a scalar to array
-    if(const CallExprPtr& scalarToArray = dynamic_pointer_cast<const CallExpr>(size))
+    if(const CallExprPtr& scalarToArray = dynamic_pointer_cast<const CallExpr>(size)) {
         if(scalarToArray->getFunctionExpr() == BASIC.getScalarToArray()) {
             // check consitency with workDim, should be 1
             if(const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim)) {
-                std::cout << "found Dim: " << dim->getValue() << std::endl;
+//                std::cout << "found Dim: " << dim->getValue() << std::endl;
                 assert(strcmp(dim->getValue().c_str(), "1") == 0 && "Scalar passed to a multi dimensional work group");
             }
-            VariablePtr param = builder.variable(scalarToArray->getArgument(0)->getType());
-
-            ExpressionPtr init = param;
-            if(dynamic_pointer_cast<const RefType>(param->getType())) {
-                init = builder.deref(param);
-            }
-            if(init->getType() != BASIC.getUInt4()) {
-                init = builder.castExpr(BASIC.getUInt4(), init);
-            }
-
-            DeclarationStmtPtr vDecl = builder.declarationStmt(vecTy,
-                builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
-
-
-            FunctionTypePtr fctTy = builder.functionType(toVector(scalarToArray->getArgument(0)->getType()), vecTy);
-            ret = builder.callExpr(vecTy,
-                    builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
-                            builder.returnStmt(vDecl->getVariable()))), scalarToArray->getArgument(0));
+            argTy = scalarToArray->getArgument(0)->getType();
+            param = builder.variable(argTy);
+            arg = scalarToArray->getArgument(0);
+        } else {
+//            std::cout << "Unexpected Function: " << scalarToArray->getArgument(0)->getType() << std::endl;
+            assert(false && "Unexpected function in OpenCL size argument");
         }
+    }
 
 
+    // check if the argument is an array
+ //   if(const ArrayType)
+
+    ExpressionPtr init = param;
+    if(dynamic_pointer_cast<const RefType>(param->getType())) {
+        init = builder.deref(param);
+    }
+    if(init->getType() != BASIC.getUInt4()) {
+        init = builder.castExpr(BASIC.getUInt4(), init);
+    }
+
+    DeclarationStmtPtr vDecl = builder.declarationStmt(vecTy,
+        builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
+
+//std::cout << "SIZETYPE: !" << size->getType() << std::endl;
+
+    FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
+    return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
+                    builder.returnStmt(vDecl->getVariable()))), arg);
 
 
 
@@ -486,7 +514,9 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                         newType = rt->getElementType();
                     else
                         newType = cl_mems[var]->getType();
-                    return builder.declarationStmt(cl_mems[var], builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
+                    NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
+                    copyAnnotations(decl, ret);
+                    return ret;
                 }
             }
         }
@@ -514,15 +544,17 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                     });
 
                     // make a three element vector out of the global and local size
-                    const ExpressionPtr global = anyRefToVec3(newCall->getArgument(2), newCall->getArgument(4));
-                    const ExpressionPtr local = anyRefToVec3(newCall->getArgument(2), newCall->getArgument(5));
+                    const ExpressionPtr global = anythingToVec3(newCall->getArgument(2), newCall->getArgument(4));
+                    const ExpressionPtr local = anythingToVec3(newCall->getArgument(2), newCall->getArgument(5));
 
                     // add global and local size to arguments
                     newArgs.push_back(global);
                     newArgs.push_back(local);
 
                     // construct call to kernel function
-                    return builder.callExpr(BASIC.getInt4(), lambda, newArgs);
+                    NodePtr ret = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
+                    copyAnnotations(callExpr, ret);
+                    return ret;
                 }
             }
             return newCall;
@@ -530,7 +562,9 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
     }
 
-    return element->substitute(builder.getNodeManager(), *this);
+    NodePtr ret = element->substitute(builder.getNodeManager(), *this);
+    copyAnnotations(element, ret);
+    return ret;
 }
 
 }
