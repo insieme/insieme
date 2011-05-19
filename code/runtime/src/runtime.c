@@ -124,5 +124,21 @@ int main(int argc, char** argv) {
 	irt_mqueue_send_new_app(argv[1]);
 	IRT_INFO("New app msg sent");
 
-	for(;;) { sleep(60*60); }
+	// holy hack batman!
+	// reduces performance and is generally fugly, use only for testing
+	if(argc >=2) {
+		bool stuff_running = true;
+		while(stuff_running) {
+			sleep(5);
+			stuff_running = false;
+			for(int i=0; i<irt_g_worker_count; ++i) {
+				if(irt_g_workers[i]->cur_wi != NULL || irt_g_workers[i]->queue.start != NULL || irt_g_workers[i]->pool.start != NULL) {
+					stuff_running = true;
+					break;
+				}
+			}
+		}
+	}
+	//for(;;) { sleep(60*60); }
+	exit(0);
 }
