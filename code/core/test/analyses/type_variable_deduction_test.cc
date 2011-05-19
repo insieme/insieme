@@ -910,6 +910,47 @@ TEST(TypeVariableDeduction, IntTypeParamVariableNameBug) {
 
 }
 
+TEST(TypeVariableDeduction, PassingVectorToArrayBug) {
+
+	// The Bug:
+	//		passing a vector<uint<8>,1> to a function accepting an array<'elem,1> does not work
+	//
+	// The reason:
+	//		incorrect resolution of sub-type constraints within addEqualityConstraints(...) - if the second
+	//		type was a variable, the equality constraint was dismissed.
+	//
+	// The fix:
+	//		variables within the first or second type parameter are now treated equally
+	//
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+	const lang::BasicGenerator& basic = manager.basic;
+
+	TypePtr uint8 = basic.getUInt8();
+	TypePtr alpha = builder.typeVariable("a");
+	TypePtr arrayA = builder.arrayType(alpha);
+	TypePtr arrayC = builder.arrayType(uint8);
+	TypePtr vectorA = builder.vectorType(alpha, builder.concreteIntTypeParam(1));
+	TypePtr vectorC = builder.vectorType(uint8, builder.concreteIntTypeParam(1));
+
+	// the two simple, concrete cases
+	EXPECT_TRUE(getTypeVariableInstantiation(manager, toVector(arrayC), toVector(vectorC)));
+	EXPECT_FALSE(getTypeVariableInstantiation(manager, toVector(vectorC), toVector(arrayC)));
+
+	// now with variable parts
+	EXPECT_TRUE(getTypeVariableInstantiation(manager, toVector(arrayA), toVector(vectorC)));
+	EXPECT_TRUE(getTypeVariableInstantiation(manager, toVector(arrayA), toVector(vectorA)));
+
+	EXPECT_FALSE(getTypeVariableInstantiation(manager, toVector(vectorA), toVector(arrayC)));
+	EXPECT_FALSE(getTypeVariableInstantiation(manager, toVector(vectorA), toVector(arrayA)));
+
+	// the original test case leading to the identification of the problem
+	auto unifier = getTypeVariableInstantiation(manager, toVector(arrayA, uint8), toVector(vectorC, uint8));
+	EXPECT_TRUE(unifier);
+	if (unifier) EXPECT_EQ(*uint8, *unifier->applyTo(manager, alpha));
+}
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme
