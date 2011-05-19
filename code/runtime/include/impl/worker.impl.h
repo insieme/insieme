@@ -198,6 +198,7 @@ static inline irt_work_item* _irt_sched_steal_from_prev_thread(irt_worker* self)
 	return irt_work_item_cdeque_pop_back(&irt_g_workers[neighbour_index]->queue);
 }
 
+#if 1
 void irt_worker_schedule(irt_worker* self) {
 
 	// try to take a ready WI from the pool
@@ -225,6 +226,38 @@ void irt_worker_schedule(irt_worker* self) {
 
 	pthread_yield();
 }
+#else
+void irt_worker_schedule(irt_worker* self) {
+
+	// try to take a ready WI from the pool
+	irt_work_item* next_wi = _irt_get_ready_wi_from_pool(&self->pool);
+	if(next_wi != NULL) {
+		_irt_worker_switch_to_wi(self, next_wi);
+		return;
+	}
+
+	// if that failed, try to take a work item from the queue
+	irt_work_item* new_wi = irt_work_item_cdeque_pop_front(&self->queue);
+	if(new_wi != NULL) {
+		if(irt_wi_is_fragment(new_wi)) {
+			_irt_worker_switch_to_wi(self, new_wi);
+			return;
+		} else { // split unsplit WI statically
+			irt_work_item **split_wis = (irt_work_item**)alloca(irt_g_worker_count * sizeof(irt_work_item*));
+			irt_wi_split_uniform(new_wi, irt_g_worker_count, split_wis);
+			for(int i=0; i<irt_g_worker_count; ++i) {
+				irt_work_item_cdeque_insert_back(&irt_g_workers[i]->queue, split_wis[i]);
+			}
+			return;
+		}
+	}
+
+	// if that failed as well, look in the IPC message queue
+	_irt_sched_check_ipc_queue(self);
+
+	pthread_yield();
+}
+#endif
 
 void irt_worker_enqueue(irt_worker* self, irt_work_item* wi) {
 	irt_work_item_cdeque_insert_front(&self->queue, wi);
