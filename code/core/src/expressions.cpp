@@ -118,7 +118,7 @@ Variable* Variable::createCopyUsing(NodeMapping& mapper) const {
 
 bool Variable::equalsExpr(const Expression& expr) const {
 	const Variable& rhs = static_cast<const Variable&>(expr);
-	return (id == rhs.id);
+	return (id == rhs.id && *type == *rhs.type);
 }
 
 std::ostream& Variable::printTo(std::ostream& out) const {
