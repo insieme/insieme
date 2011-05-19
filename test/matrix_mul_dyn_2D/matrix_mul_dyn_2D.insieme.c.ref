@@ -1,0 +1,132 @@
+// --- Generated Inspire Code ---
+#include <alloca.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <runtime.h>
+#define bool int
+#define true 1
+#define false 0
+#define null 0
+
+// start code fragment :: array type definition of __insieme_type_1 <=> array<real<8>,1> //
+typedef struct ___insieme_type_1 { 
+    double* data;
+} __insieme_type_1;
+
+// start code fragment :: array type definition of __insieme_type_0 <=> array<array<real<8>,1>,1> //
+typedef struct ___insieme_type_0 { 
+    __insieme_type_1* data;
+} __insieme_type_0;
+
+// start code fragment :: New operator for type ref<array<real<8>,1>> //
+static inline __insieme_type_1* _ref_new___insieme_type_3(__insieme_type_1 value) {
+    __insieme_type_1* res = malloc(sizeof(__insieme_type_1));
+    *res = value;
+    return res;
+}
+
+
+// start code fragment :: array type utils of __insieme_type_1 <=> array<real<8>,1> //
+// A constructor for the array type __insieme_type_1
+static inline __insieme_type_1 __insieme_type_1_ctr(unsigned s1) {
+    return ((__insieme_type_1){malloc(sizeof(double)*s1)});
+}
+
+// start code fragment :: New operator for type ref<array<array<real<8>,1>,1>> //
+static inline __insieme_type_0* _ref_new___insieme_type_2(__insieme_type_0 value) {
+    __insieme_type_0* res = malloc(sizeof(__insieme_type_0));
+    *res = value;
+    return res;
+}
+
+
+// start code fragment :: array type utils of __insieme_type_0 <=> array<array<real<8>,1>,1> //
+// A constructor for the array type __insieme_type_0
+static inline __insieme_type_0 __insieme_type_0_ctr(unsigned s1) {
+    return ((__insieme_type_0){malloc(sizeof(__insieme_type_1)*s1)});
+}
+
+// start code fragment :: Definition of createMatrix ... type: ((uint<4>,uint<4>)->ref<array<array<real<8>,1>,1>>) //
+__insieme_type_0* createMatrix(unsigned int x, unsigned int y){
+	__insieme_type_1* data = _ref_new___insieme_type_3((__insieme_type_1_ctr(((((unsigned long)((x*y)))*sizeof(double))/sizeof(double)))));
+	__insieme_type_0* index = _ref_new___insieme_type_2((__insieme_type_0_ctr(((((unsigned long)(x))*sizeof(__insieme_type_1))/sizeof(__insieme_type_1)))));
+	((((*index).data[((unsigned int)(0))])) = (*data));
+	for(unsigned int i = ((unsigned int)(1)); i < x; i += 1)  { ((((*index).data[((unsigned int)((i)))])) = (*(&((__insieme_type_1){&((*data).data[((unsigned int)(((i)*y)))])})))); };
+	return index;
+}
+static __insieme_type_0* createMatrix_wrap(void* _closure, unsigned int x, unsigned int y) { return createMatrix(x, y); }
+
+// start code fragment :: array type definition of __insieme_type_7 <=> array<char,1> //
+typedef struct ___insieme_type_7 { 
+    char* data;
+} __insieme_type_7;
+
+// start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
+int printf(char*, ...);
+
+// start code fragment :: vector_type_declaration of __insieme_type_9 <=> vector<char,3> //
+typedef struct ___insieme_type_9 { 
+    char data[3];
+} __insieme_type_9;
+
+// A constructor initializing a vector of the type __insieme_type_9 uniformly
+static inline __insieme_type_9 __insieme_type_9_init_uniform(char value) {
+	__insieme_type_9 res;
+	for (int i=0; i<3;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: vector_type_declaration of __insieme_type_10 <=> vector<char,4> //
+typedef struct ___insieme_type_10 { 
+    char data[4];
+} __insieme_type_10;
+
+// A constructor initializing a vector of the type __insieme_type_10 uniformly
+static inline __insieme_type_10 __insieme_type_10_init_uniform(char value) {
+	__insieme_type_10 res;
+	for (int i=0; i<4;++i) {
+	    res.data[i] = value;
+	}
+	return res;
+}
+
+
+// start code fragment :: Definition of freeMatrix ... type: ((ref<array<array<real<8>,1>,1>>)->unit) //
+void freeMatrix(__insieme_type_0* matrix){
+	__insieme_type_0* var_33 = matrix;
+	{
+		free((((*(var_33)).data[((unsigned int)(0))])).data);
+		;
+	};
+}
+static void freeMatrix_wrap(void* _closure, __insieme_type_0* matrix) { freeMatrix(matrix); }
+
+// start code fragment :: main function //
+int main() {
+	{
+		__insieme_type_0 A = *createMatrix(((unsigned int)(1000)), ((unsigned int)(1000)));
+		__insieme_type_0 B = *createMatrix(((unsigned int)(1000)), ((unsigned int)(1000)));
+		__insieme_type_0 C = *createMatrix(((unsigned int)(1000)), ((unsigned int)(1000)));
+		{
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((A).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((double)(((i)*(j))))); }; };
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((B).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((double)(((((i)==(j)))?(1):(0))))); }; };
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1) {
+				double sum = ((double)(0));
+				for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((((((A).data[((unsigned int)((i)))])).data[((unsigned int)((k)))]))*(((((B).data[((unsigned int)((k)))])).data[((unsigned int)((j)))]))))); };
+				((((((C).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = (sum));
+			}; };
+		};
+		int success = 1;
+		for(int i = 0; i < 1000; i += 1) {
+			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((((A).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=(((((C).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))) { ((success) = 0); }; };
+			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((C).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((double)(0)))) { ((success) = 0); }; };
+		};
+		printf(((char*)((*(&((__insieme_type_7){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_7){(((__insieme_type_9){{'O', 'K', '\0'}})).data}))):((((__insieme_type_7){(((__insieme_type_10){{'E', 'R', 'R', '\0'}})).data}))))).data);
+		freeMatrix(&A);
+		freeMatrix(&B);
+		freeMatrix(&C);
+	}
+}

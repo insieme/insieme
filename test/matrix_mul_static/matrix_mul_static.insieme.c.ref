@@ -8,13 +8,13 @@
 #define false 0
 #define null 0
 
-// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<4>,1000> //
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<8>,1000> //
 typedef struct ___insieme_type_1 { 
-    float data[1000];
+    double data[1000];
 } __insieme_type_1;
 
 // A constructor initializing a vector of the type __insieme_type_1 uniformly
-static inline __insieme_type_1 __insieme_type_1_init_uniform(float value) {
+static inline __insieme_type_1 __insieme_type_1_init_uniform(double value) {
 	__insieme_type_1 res;
 	for (int i=0; i<1000;++i) {
 	    res.data[i] = value;
@@ -23,7 +23,7 @@ static inline __insieme_type_1 __insieme_type_1_init_uniform(float value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_0 <=> vector<vector<real<4>,1000>,1000> //
+// start code fragment :: vector_type_declaration of __insieme_type_0 <=> vector<vector<real<8>,1000>,1000> //
 typedef struct ___insieme_type_0 { 
     __insieme_type_1 data[1000];
 } __insieme_type_0;
@@ -91,10 +91,10 @@ int main() {
 	{
 		;
 		{
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(((i)*(j))))); }; };
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(((((i)==(j)))?(1):(0))))); }; };
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((double)(((i)*(j))))); }; };
+			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((double)(((((i)==(j)))?(1):(0))))); }; };
 			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1) {
-				float sum = ((float)(0));
+				double sum = ((double)(0));
 				for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((k)))]))*(((((*(&((__GLOBAL__).B))).data[((unsigned int)((k)))])).data[((unsigned int)((j)))]))))); };
 				((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = (sum));
 			}; };
@@ -102,7 +102,7 @@ int main() {
 		int success = 1;
 		for(int i = 0; i < 1000; i += 1) {
 			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=(((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))) { ((success) = 0); }; };
-			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((float)(0)))) { ((success) = 0); }; };
+			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((double)(0)))) { ((success) = 0); }; };
 		};
 		printf(((char*)((*(&((__insieme_type_4){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_4){(((__insieme_type_6){{'O', 'K', '\0'}})).data}))):((((__insieme_type_4){(((__insieme_type_7){{'E', 'R', 'R', '\0'}})).data}))))).data);
 	}

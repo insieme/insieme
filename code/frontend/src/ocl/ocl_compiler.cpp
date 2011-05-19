@@ -1020,10 +1020,8 @@ public:
                     // put opencl annotation to the new function for eventual future use
                     newFunc->addAnnotation(funcAnnotation);
                     // put cname annotation to the new function if it was there before
-                    if(cName) {
-                        std::cout << "Putting cname " << cName->toString() << std::endl;
+                    if(cName)
                         newFunc->getLambda()->addAnnotation(cName);
-                    }
                     // put source location annotation to it if existent
                     if(sourceLoc)
                         newFunc->addAnnotation(sourceLoc);
