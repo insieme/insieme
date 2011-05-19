@@ -46,29 +46,29 @@ struct __insieme_globals __GLOBAL__;
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of __insieme_supp_5 ... type: ((int<4>)->int<4>) //
-int __insieme_supp_5(int step){
+// start code fragment :: Definition of inc ... type: ((int<4>)->int<4>) //
+int inc(int step){
 	((((*(&((__GLOBAL__).a))).data[((unsigned int)(step))]))++);
 	((*(&((__GLOBAL__).count))) = ((*(&((__GLOBAL__).count)))+step));
 	return (*(&((__GLOBAL__).count)));
 }
-static int __insieme_supp_5_wrap(void* _closure, int step) { return __insieme_supp_5(step); }
+static int inc_wrap(void* _closure, int step) { return inc(step); }
 
-// start code fragment :: Definition of __insieme_supp_6 ... type: ((int<4>)->int<4>) //
-int __insieme_supp_6(int step){
+// start code fragment :: Definition of dec ... type: ((int<4>)->int<4>) //
+int dec(int step){
 	((((*(&((__GLOBAL__).a))).data[((unsigned int)(step))]))--);
 	((*(&((__GLOBAL__).count))) = ((*(&((__GLOBAL__).count)))-step));
 	return (*(&((__GLOBAL__).count)));
 }
-static int __insieme_supp_6_wrap(void* _closure, int step) { return __insieme_supp_6(step); }
+static int dec_wrap(void* _closure, int step) { return dec(step); }
 
-// start code fragment :: Definition of __insieme_supp_7 ... type: (()->int<4>) //
-int __insieme_supp_7(){
+// start code fragment :: Definition of reset ... type: (()->int<4>) //
+int reset(){
 	((*(&((__GLOBAL__).count))) = 0);
 	((*(&((__GLOBAL__).reset_count))) = ((*(&((__GLOBAL__).reset_count)))+1));
 	return (*(&((__GLOBAL__).count)));
 }
-static int __insieme_supp_7_wrap(void* _closure) { return __insieme_supp_7(); }
+static int reset_wrap(void* _closure) { return reset(); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -86,9 +86,9 @@ int main(int __argc, char** __argv) {
 		((*(&((__GLOBAL__).count))) = 0);
 		((*(&((__GLOBAL__).reset_count))) = 1);
 		for(int i = 0; i < 10; i += 1) {
-			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), __insieme_supp_5(2));
-			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), __insieme_supp_6(1));
-			if(((i)==5)) { __insieme_supp_7(); };
+			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), inc(2));
+			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), dec(1));
+			if(((i)==5)) { reset(); };
 		};
 		return 0;
 	}

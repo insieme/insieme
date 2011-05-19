@@ -422,7 +422,8 @@ namespace {
 							return this->map(cur);
 						});
 					} else {
-						LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(fun);
+						LambdaExprPtr original = static_pointer_cast<const LambdaExpr>(fun);
+						LambdaExprPtr lambda = original;
 
 						// replace one parameter after another (back to front)
 						for (int i = size-1; i>=0; i--) {
@@ -442,6 +443,11 @@ namespace {
 							ExpressionPtr newArg = this->map(args[i]);
 							newArgs.insert(newArgs.begin(), newArg);
 						}
+
+						// restore annotations
+						// TODO: let annotations decide which should be preserved
+						lambda->setAnnotations(original->getAnnotations());
+						lambda->getLambda()->setAnnotations(original->getLambda()->getAnnotations());
 
 						// exchange function
 						fun = lambda;
@@ -497,7 +503,12 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 	vector<VariablePtr> params = lambda->getParameterList();
 	params.erase(params.begin() + index);
 
-	return LambdaExpr::get(manager, newFunType, params, body);
+	// build definitions
+	VariablePtr var = Variable::get(manager, newFunType, lambda->getVariable()->getId());
+	LambdaDefinition::Definitions defs;
+	defs.insert(std::make_pair(var, Lambda::get(manager, newFunType, params, body)));
+
+	return manager.get(LambdaExpr::get(manager, var, LambdaDefinition::get(manager, defs)));
 }
 
 StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value) {

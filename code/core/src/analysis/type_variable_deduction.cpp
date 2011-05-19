@@ -75,7 +75,7 @@ namespace analysis {
 		 *  @param paramType the type on the parameter side (function side)
 		 *  @param argType the type on the argument side (argument passed by call expression)
 		 */
-		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType);
+		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& typeA, const TypePtr& typeB);
 
 		/**
 		 * Adds additional constraints to the given constraint collection such that the type variables used within the
@@ -92,7 +92,7 @@ namespace analysis {
 		// -------------------------------------------------------- Implementation ----------------------------------------------
 
 
-		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& paramType, const TypePtr& argType) {
+		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& typeA, const TypePtr& typeB) {
 
 			// check constraint status
 			if (!constraints.isSatisfiable()) {
@@ -100,13 +100,19 @@ namespace analysis {
 			}
 
 			// extract node types
-			NodeType nodeTypeA = paramType->getNodeType();
-			NodeType nodeTypeB = argType->getNodeType();
+			NodeType nodeTypeA = typeA->getNodeType();
+			NodeType nodeTypeB = typeB->getNodeType();
 
 			// handle variables
 			if(nodeTypeA == NT_TypeVariable) {
 				// the substitution for the variable has to be equivalent to the argument type
-				constraints.addEqualsConstraint(static_pointer_cast<const TypeVariable>(paramType), argType);
+				constraints.addEqualsConstraint(static_pointer_cast<const TypeVariable>(typeA), typeB);
+				return;
+			}
+
+			if(nodeTypeB == NT_TypeVariable) {
+				// the substitution for the variable has to be equivalent to the parameter type
+				constraints.addEqualsConstraint(static_pointer_cast<const TypeVariable>(typeB), typeA);
 				return;
 			}
 
@@ -131,8 +137,8 @@ namespace analysis {
 				case NT_ChannelType:
 				{
 					// check name of generic type ... if not matching => wrong
-					auto genParamType = static_pointer_cast<const GenericType>(paramType);
-					auto genArgType = static_pointer_cast<const GenericType>(argType);
+					auto genParamType = static_pointer_cast<const GenericType>(typeA);
+					auto genArgType = static_pointer_cast<const GenericType>(typeB);
 					if (genParamType->getFamilyName() != genArgType->getFamilyName()) {
 						// those types cannot be equivalent if they are part of a different family
 						constraints.makeUnsatisfiable();
@@ -192,8 +198,8 @@ namespace analysis {
 				case NT_FunctionType:
 				{
 					// the number of sub-types must match
-					auto paramChildren = paramType->getChildList();
-					auto argChildren = argType->getChildList();
+					auto paramChildren = typeA->getChildList();
+					auto argChildren = typeB->getChildList();
 
 					// check number of sub-types
 					if (paramChildren.size() != argChildren.size()) {
@@ -222,8 +228,8 @@ namespace analysis {
 				case NT_UnionType:
 				{
 					// names and sub-types have to be checked
-					auto entriesA = static_pointer_cast<const NamedCompositeType>(paramType)->getEntries();
-					auto entriesB = static_pointer_cast<const NamedCompositeType>(argType)->getEntries();
+					auto entriesA = static_pointer_cast<const NamedCompositeType>(typeA)->getEntries();
+					auto entriesB = static_pointer_cast<const NamedCompositeType>(typeB)->getEntries();
 
 					// check equality of names and types
 					// check number of entries
@@ -256,10 +262,10 @@ namespace analysis {
 				case NT_RecType:
 				{
 					// TODO: implement RecType pattern matching
-					if (*paramType != *argType) {
+					if (*typeA != *typeB) {
 						LOG(WARNING) << "Yet unhandled recursive type encountered while resolving subtype constraints:"
-									 << " Parameter Type: " << paramType << std::endl
-									 << "  Argument Type: " << argType << std::endl
+									 << " Parameter Type: " << typeA << std::endl
+									 << "  Argument Type: " << typeB << std::endl
 									 << " => the argument will be considered equal!!!";
 //						assert(false && "Sorry - not implemented!");
 						constraints.makeUnsatisfiable();
@@ -331,11 +337,7 @@ namespace analysis {
 				}
 
 				// also make sure element types are equivalent
-				if (isSubType) {
-					addEqualityConstraints(constraints, array->getElementType(), vector->getElementType());
-				} else {
-					addEqualityConstraints(constraints, vector->getElementType(), array->getElementType());
-				}
+				addEqualityConstraints(constraints, array->getElementType(), vector->getElementType());
 				return;
 
 			}
