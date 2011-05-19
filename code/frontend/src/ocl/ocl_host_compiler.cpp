@@ -464,7 +464,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
     const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim);
     assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
     wd = atoi(dim->getValue().c_str());
-    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
+//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
     assert(workDim < 3u && "Invalid work_dim. Should be 1 - 3!");
 
     // check if there is a x to array called
@@ -488,7 +488,6 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
         }
     } else { // the argument is an array
         size = tryDeref(size, builder);
-std::cout << size->getType() << std::endl;
         assert(size->getType()->getNodeType() == NT_ArrayType && "Called clEnqueueNDRangeKernel with invalid group argument");
         argTy = size->getType();
         param = builder.variable(argTy);
@@ -506,7 +505,6 @@ std::cout << size->getType() << std::endl;
 //        argTy = ref->getElementType();
     }
 
-        std::cout << "Is a vector : " << init->getType() << "__________________________________________-\n";
     TypePtr fieldTy;
     if(const ArrayTypePtr& array = dynamic_pointer_cast<const ArrayType>(init->getType()))
         fieldTy = array->getElementType();
