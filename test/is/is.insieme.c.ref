@@ -118,22 +118,22 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(int value) {
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_136) { return ceil(var_136); }
+static double ceil_wrap(void* _closure, double var_123) { return ceil(var_123); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of __insieme_supp_10 ... type: ((int<4>)->unit) //
-void __insieme_supp_10(int n) { ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void __insieme_supp_10_wrap(void* _closure, int n) { __insieme_supp_10(n); }
+// start code fragment :: Definition of timer_clear ... type: ((int<4>)->unit) //
+void timer_clear(int n) { ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void timer_clear_wrap(void* _closure, int n) { timer_clear(n); }
 
-// start code fragment :: array type definition of __insieme_type_13 <=> array<real<8>,1> //
-typedef struct ___insieme_type_13 { 
+// start code fragment :: array type definition of __insieme_type_10 <=> array<real<8>,1> //
+typedef struct ___insieme_type_10 { 
     double* data;
-} __insieme_type_13;
+} __insieme_type_10;
 
-// start code fragment :: Definition of __insieme_supp_12 ... type: ((ref<array<real<8>,1>>,ref<array<real<8>,1>>)->real<8>) //
-double __insieme_supp_12(__insieme_type_13* X, __insieme_type_13* A){
+// start code fragment :: Definition of randlc ... type: ((ref<array<real<8>,1>>,ref<array<real<8>,1>>)->real<8>) //
+double randlc(__insieme_type_10* X, __insieme_type_10* A){
 	double T1 = 0.0;
 	double T2 = 0.0;
 	double T3 = 0.0;
@@ -184,10 +184,10 @@ double __insieme_supp_12(__insieme_type_13* X, __insieme_type_13* A){
 	((((*X).data[0])) = ((T3)-((*(&((__GLOBAL__).T46)))*(T4))));
 	return ((*(&((__GLOBAL__).R46)))*(((*X).data[0])));
 }
-static double __insieme_supp_12_wrap(void* _closure, __insieme_type_13* X, __insieme_type_13* A) { return __insieme_supp_12(X, A); }
+static double randlc_wrap(void* _closure, __insieme_type_10* X, __insieme_type_10* A) { return randlc(X, A); }
 
-// start code fragment :: Definition of __insieme_supp_11 ... type: ((real<8>,real<8>)->unit) //
-void __insieme_supp_11(double seed, double a){
+// start code fragment :: Definition of create_seq ... type: ((real<8>,real<8>)->unit) //
+void create_seq(double seed, double a){
 	double var_22 = seed;
 	double var_23 = a;
 	{
@@ -198,26 +198,26 @@ void __insieme_supp_11(double seed, double a){
 		((k) = ((1<<16)/4));
 		{
 			for(int var_41 = 0; var_41 < (1<<20); var_41 += 1) {
-				((x) = __insieme_supp_12((&((__insieme_type_13){&var_22})), (&((__insieme_type_13){&var_23}))));
-				((x) = ((x)+__insieme_supp_12((&((__insieme_type_13){&var_22})), (&((__insieme_type_13){&var_23})))));
-				((x) = ((x)+__insieme_supp_12((&((__insieme_type_13){&var_22})), (&((__insieme_type_13){&var_23})))));
-				((x) = ((x)+__insieme_supp_12((&((__insieme_type_13){&var_22})), (&((__insieme_type_13){&var_23})))));
+				((x) = randlc((&((__insieme_type_10){&var_22})), (&((__insieme_type_10){&var_23}))));
+				((x) = ((x)+randlc((&((__insieme_type_10){&var_22})), (&((__insieme_type_10){&var_23})))));
+				((x) = ((x)+randlc((&((__insieme_type_10){&var_22})), (&((__insieme_type_10){&var_23})))));
+				((x) = ((x)+randlc((&((__insieme_type_10){&var_22})), (&((__insieme_type_10){&var_23})))));
 				((((*(&((__GLOBAL__).key_array))).data[((unsigned int)((var_41)))])) = ((int)((((double)((k)))*(x)))));
 			};
 			((i) = (0+(((int)(ceil((((double)(((1<<20)-0)))/((double)(1))))))*1)));
 		};
 	};
 }
-static void __insieme_supp_11_wrap(void* _closure, double seed, double a) { __insieme_supp_11(seed, a); }
+static void create_seq_wrap(void* _closure, double seed, double a) { create_seq(seed, a); }
 
-// start code fragment :: vector_type_declaration of __insieme_type_16 <=> vector<int<4>,65536> //
-typedef struct ___insieme_type_16 { 
+// start code fragment :: vector_type_declaration of __insieme_type_12 <=> vector<int<4>,65536> //
+typedef struct ___insieme_type_12 { 
     int data[65536];
-} __insieme_type_16;
+} __insieme_type_12;
 
-// A constructor initializing a vector of the type __insieme_type_16 uniformly
-static inline __insieme_type_16 __insieme_type_16_init_uniform(int value) {
-	__insieme_type_16 res;
+// A constructor initializing a vector of the type __insieme_type_12 uniformly
+static inline __insieme_type_12 __insieme_type_12_init_uniform(int value) {
+	__insieme_type_12 res;
 	for (int i=0; i<65536;++i) {
 	    res.data[i] = value;
 	}
@@ -225,8 +225,8 @@ static inline __insieme_type_16 __insieme_type_16_init_uniform(int value) {
 }
 
 
-// start code fragment :: Definition of __insieme_supp_15 ... type: ((int<4>)->unit) //
-void __insieme_supp_15(int iteration){
+// start code fragment :: Definition of rank ... type: ((int<4>)->unit) //
+void rank(int iteration){
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -236,7 +236,7 @@ void __insieme_supp_15(int iteration){
 	int key = 0;
 	int min_key_val = 0;
 	int max_key_val = 0;
-	__insieme_type_16 prv_buff1;
+	__insieme_type_12 prv_buff1;
 	{
 		((((*(&((__GLOBAL__).key_array))).data[((unsigned int)(iteration))])) = iteration);
 		((((*(&((__GLOBAL__).key_array))).data[((unsigned int)((iteration+10)))])) = ((1<<16)-iteration));
@@ -293,7 +293,7 @@ void __insieme_supp_15(int iteration){
 		if((iteration==10)) { ((*(&((__GLOBAL__).key_buff_ptr_global))) = (((__insieme_type_4){((*(&((__GLOBAL__).key_buff1)))).data}))); };
 	};
 }
-static void __insieme_supp_15_wrap(void* _closure, int iteration) { __insieme_supp_15(iteration); }
+static void rank_wrap(void* _closure, int iteration) { rank(iteration); }
 
 // start code fragment :: type_declaration_timeval //
 struct timeval { 
@@ -301,10 +301,10 @@ struct timeval {
     long tv_usec;
 };
 
-// start code fragment :: array type definition of __insieme_type_22 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
-typedef struct ___insieme_type_22 { 
+// start code fragment :: array type definition of __insieme_type_15 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
+typedef struct ___insieme_type_15 { 
     struct timeval* data;
-} __insieme_type_22;
+} __insieme_type_15;
 
 // start code fragment :: type_declaration_timezone //
 struct timezone { 
@@ -319,53 +319,45 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_22* var_137, __timezone_ptr_t* var_138) { return gettimeofday(((struct timeval*)((*(var_137)).data)), ((struct timezone*)((*(var_138)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_15* var_124, __timezone_ptr_t* var_125) { return gettimeofday(((struct timeval*)((*(var_124)).data)), ((struct timezone*)((*(var_125)).data))); }
 
-// start code fragment :: Definition of __insieme_supp_20 ... type: ((ref<array<real<8>,1>>)->unit) //
-void __insieme_supp_20(__insieme_type_13* t){
+// start code fragment :: Definition of wtime ... type: ((ref<array<real<8>,1>>)->unit) //
+void wtime(__insieme_type_10* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_22){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_15){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((__GLOBAL__).sec)))<0)) { ((*(&((__GLOBAL__).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((__GLOBAL__).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void __insieme_supp_20_wrap(void* _closure, __insieme_type_13* t) { __insieme_supp_20(t); }
+static void wtime_wrap(void* _closure, __insieme_type_10* t) { wtime(t); }
 
-// start code fragment :: Definition of __insieme_supp_19 ... type: (()->real<8>) //
-double __insieme_supp_19(){
+// start code fragment :: Definition of elapsed_time ... type: (()->real<8>) //
+double elapsed_time(){
 	double t = 0.0;
-	__insieme_supp_20((&((__insieme_type_13){&t})));
+	wtime((&((__insieme_type_10){&t})));
 	return (t);
 }
-static double __insieme_supp_19_wrap(void* _closure) { return __insieme_supp_19(); }
+static double elapsed_time_wrap(void* _closure) { return elapsed_time(); }
 
-// start code fragment :: Definition of __insieme_supp_18 ... type: ((int<4>)->unit) //
-void __insieme_supp_18(int n) { ((((*(&((__GLOBAL__).start))).data[((unsigned int)(n))])) = __insieme_supp_19()); }
-static void __insieme_supp_18_wrap(void* _closure, int n) { __insieme_supp_18(n); }
+// start code fragment :: Definition of timer_start ... type: ((int<4>)->unit) //
+void timer_start(int n) { ((((*(&((__GLOBAL__).start))).data[((unsigned int)(n))])) = elapsed_time()); }
+static void timer_start_wrap(void* _closure, int n) { timer_start(n); }
 
-// start code fragment :: Definition of __insieme_supp_26 ... type: (()->real<8>) //
-double __insieme_supp_26(){
-	double t = 0.0;
-	__insieme_supp_20((&((__insieme_type_13){&t})));
-	return (t);
-}
-static double __insieme_supp_26_wrap(void* _closure) { return __insieme_supp_26(); }
-
-// start code fragment :: Definition of __insieme_supp_25 ... type: ((int<4>)->unit) //
-void __insieme_supp_25(int n){
+// start code fragment :: Definition of timer_stop ... type: ((int<4>)->unit) //
+void timer_stop(int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = __insieme_supp_26());
+	((now) = elapsed_time());
 	((t) = ((now)-(((*(&((__GLOBAL__).start))).data[((unsigned int)(n))]))));
 	((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void __insieme_supp_25_wrap(void* _closure, int n) { __insieme_supp_25(n); }
+static void timer_stop_wrap(void* _closure, int n) { timer_stop(n); }
 
-// start code fragment :: Definition of __insieme_supp_27 ... type: ((int<4>)->real<8>) //
-double __insieme_supp_27(int n) { return (((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])); }
-static double __insieme_supp_27_wrap(void* _closure, int n) { return __insieme_supp_27(n); }
+// start code fragment :: Definition of timer_read ... type: ((int<4>)->real<8>) //
+double timer_read(int n) { return (((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])); }
+static double timer_read_wrap(void* _closure, int n) { return timer_read(n); }
 
-// start code fragment :: Definition of __insieme_supp_28 ... type: (()->unit) //
-void __insieme_supp_28(){
+// start code fragment :: Definition of full_verify ... type: (()->unit) //
+void full_verify(){
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -382,7 +374,7 @@ void __insieme_supp_28(){
 	};
 	if(((j)!=0)) { printf(((char*)((*(&((__insieme_type_1){"Full_verify: number of keys out of sort: %d\n"}))).data)), (j)); } else  { ((*(&((__GLOBAL__).passed_verification)))++); };
 }
-static void __insieme_supp_28_wrap(void* _closure) { __insieme_supp_28(); }
+static void full_verify_wrap(void* _closure) { full_verify(); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(__insieme_type_1* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, __insieme_type_1* optype, int passed_verification, __insieme_type_1* npbversion, __insieme_type_1* compiletime, __insieme_type_1* cc, __insieme_type_1* clink, __insieme_type_1* c_lib, __insieme_type_1* c_inc, __insieme_type_1* cflags, __insieme_type_1* clinkflags, __insieme_type_1* rand){
@@ -483,22 +475,22 @@ int main(int __argc, char** __argv) {
 		printf(((char*)((*(&((__insieme_type_1){"\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n"}))).data)), 0);
 		printf(((char*)((*(&((__insieme_type_1){" Size:  %d  (class %c)\n"}))).data)), (1<<20), 'W');
 		printf(((char*)((*(&((__insieme_type_1){" Iterations:   %d\n"}))).data)), 10);
-		__insieme_supp_10(0);
-		__insieme_supp_11(314159265.00, 1220703125.00);
-		__insieme_supp_15(1);
+		timer_clear(0);
+		create_seq(314159265.00, 1220703125.00);
+		rank(1);
 		((*(&((__GLOBAL__).passed_verification))) = 0);
 		if(('W'!='S')) { printf(((char*)((*(&((__insieme_type_1){"\n   iteration\n"}))).data)), 0); };
-		__insieme_supp_18(0);
+		timer_start(0);
 		{
 			for(int var_80 = 1; var_80 < (10+1); var_80 += 1) {
 				if(('W'!='S')) { printf(((char*)((*(&((__insieme_type_1){"        %d\n"}))).data)), (var_80)); };
-				__insieme_supp_15((var_80));
+				rank((var_80));
 			};
 			((iteration) = (1+(((int)(ceil((((double)(((10+1)-1)))/((double)(1))))))*1)));
 		};
-		__insieme_supp_25(0);
-		((timecounter) = __insieme_supp_27(0));
-		__insieme_supp_28();
+		timer_stop(0);
+		((timecounter) = timer_read(0));
+		full_verify();
 		if(((*(&((__GLOBAL__).passed_verification)))!=((5*10)+1))) { ((*(&((__GLOBAL__).passed_verification))) = 0); };
 		c_print_results(&((__insieme_type_1){"IS"}), 'W', (1<<20), 0, 0, 10, (nthreads), (timecounter), ((((double)((10*(1<<20))))/(timecounter))/1000000.), &((__insieme_type_1){"keys ranked"}), (*(&((__GLOBAL__).passed_verification))), &((__insieme_type_1){"2.3"}), &((__insieme_type_1){"02 Dec 2010"}), &((__insieme_type_1){"cc"}), &((__insieme_type_1){"cc"}), &((__insieme_type_1){"-lm"}), &((__insieme_type_1){"-I../common"}), &((__insieme_type_1){"-O3 "}), &((__insieme_type_1){"-lm"}), &((__insieme_type_1){"randlc"}));
 	}

@@ -45,22 +45,22 @@ typedef struct ___insieme_type_4 {
 int f2(__insieme_type_4* x) { return (((*x).data[0])); }
 static int f2_wrap(void* _closure, __insieme_type_4* x) { return f2(x); }
 
-// start code fragment :: Definition of __insieme_supp_6 ... type: ((ref<array<int<4>,1>>)->int<4>) //
-int __insieme_supp_6(__insieme_type_4* x) { return ((*(&((__GLOBAL__).i)))++); }
-static int __insieme_supp_6_wrap(void* _closure, __insieme_type_4* x) { return __insieme_supp_6(x); }
+// start code fragment :: Definition of f3 ... type: ((ref<array<int<4>,1>>)->int<4>) //
+int f3(__insieme_type_4* x) { return ((*(&((__GLOBAL__).i)))++); }
+static int f3_wrap(void* _closure, __insieme_type_4* x) { return f3(x); }
 
 // start code fragment :: Definition of f4 ... type: ((struct<x:int<4>,y:int<4>>)->int<4>) //
 int f4(struct data data) { return (data.x); }
 static int f4_wrap(void* _closure, struct data data) { return f4(data); }
 
-// start code fragment :: array type definition of __insieme_type_7 <=> array<struct<x:int<4>,y:int<4>>,1> //
-typedef struct ___insieme_type_7 { 
+// start code fragment :: array type definition of __insieme_type_6 <=> array<struct<x:int<4>,y:int<4>>,1> //
+typedef struct ___insieme_type_6 { 
     struct data* data;
-} __insieme_type_7;
+} __insieme_type_6;
 
 // start code fragment :: Definition of f5 ... type: ((ref<array<struct<x:int<4>,y:int<4>>,1>>)->int<4>) //
-int f5(__insieme_type_7* data) { return (*(&((((*data).data[0])).x))); }
-static int f5_wrap(void* _closure, __insieme_type_7* data) { return f5(data); }
+int f5(__insieme_type_6* data) { return (*(&((((*data).data[0])).x))); }
+static int f5_wrap(void* _closure, __insieme_type_6* data) { return f5(data); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -85,9 +85,9 @@ int main(int __argc, char** __argv) {
 		});
 		f1((a));
 		f2((&((__insieme_type_4){&a})));
-		__insieme_supp_6((&((__insieme_type_4){&a})));
+		f3((&((__insieme_type_4){&a})));
 		f4((data));
-		f5((&((__insieme_type_7){&data})));
+		f5((&((__insieme_type_6){&data})));
 		printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (a));
 		return 0;
 	}
