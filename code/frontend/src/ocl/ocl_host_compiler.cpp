@@ -520,6 +520,12 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                 }
             }
         }
+
+        // remove delarations of opencl type variables. Should not be used any more
+        // TODO let the unused variable removal do the job
+        if(var->getType()->toString().find("_cl_") != string::npos)
+            return BASIC.getNoOp();
+
     }
 
     if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)){
