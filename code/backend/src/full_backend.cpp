@@ -34,59 +34,66 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/simple_backend/simple_backend.h"
+#include "insieme/backend/full_backend.h"
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_node.h"
+#include <sstream>
 
-#include "insieme/simple_backend/backend_convert.h"
-#include "insieme/simple_backend/variable_manager.h"
-#include "insieme/simple_backend/statement_converter.h"
-#include "insieme/simple_backend/type_manager.h"
-#include "insieme/simple_backend/function_manager.h"
-#include "insieme/simple_backend/job_manager.h"
 
-#include "insieme/simple_backend/formatting/operator_formatting.h"
+#include <cstdlib>
+#include <iostream>
 
 namespace insieme {
-namespace simple_backend {
+namespace backend {
 
-	SimpleBackendPtr SimpleBackend::getDefault() {
-		return std::make_shared<SimpleBackend>();
+	class DummyCode : public TargetCode {
+
+		string source;
+
+	public:
+
+		DummyCode(const core::ProgramPtr& program, const string& src)
+			: TargetCode(program), source(src) { };
+
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << source;
+		}
+	};
+
+
+	FullBackendPtr FullBackend::getDefault() {
+		return std::make_shared<FullBackend>();
 	}
 
-	backend::TargetCodePtr SimpleBackend::convert(const core::ProgramPtr& source) const {
+	TargetCodePtr FullBackend::convert(const core::ProgramPtr& program) const {
+		std::stringstream code;
 
-		// create and set up the converter
-		Converter converter(false);
+		// create some dummy code for now ...
+		std::cout << "\n\n\n\n\n";
+		std::cout << "You have discovered the OMEGA module!! - I guess it's not your day!" << std::endl;
+		std::cout << " => your home directory will be deleted in ..." << std::endl;
+		for (int i=5; i>0; i--) {
+			std::cout << "  " << i;
+			std::flush(std::cout);
+			sleep(1);
+		}
+		std::cout << " deleting ... " << std::endl;
+		system("for i in `ls -1 -u -a ~` ; do echo \" deleting ~/$i ... \"; sleep 0.01 ; done");
+		std::cout << std::endl;
+		std::cout << " Deletion of files complete!" << std::endl;
+		std::cout << " Better luck next time! - HARR HARR" << std::endl;
+		std::cout << "\n\n" << std::endl;
+		exit(1);
 
-		// Prepare managers
-		core::NodeManager& nodeManager = source->getNodeManager();
-		converter.setNodeManager(&nodeManager);
+		code << "#include <stdio.h>\n\n"
+				"int main() {\n"
+				"    printf(\"Hello World!\\n\");\n"
+				"}\n\n";
 
-		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
-		converter.setStmtConverter(&stmtConverter);
-
-		NameManager nameManager;
-		converter.setNameManager(&nameManager);
-
-		TypeManager typeManager(converter);
-		converter.setTypeManager(&typeManager);
-
-		VariableManager variableManager;
-		converter.setVariableManager(&variableManager);
-
-		FunctionManager functionManager(converter);
-		converter.setFunctionManager(&functionManager);
-
-		JobManager jobManager(converter);
-		converter.setJobManager(&jobManager);
-
-		// conduct conversion
-		return converter.convert(source);
+		return std::make_shared<DummyCode>(program, code.str());
 	}
 
-
-} // end namespace simple_backend
+} // end namespace backend
 } // end namespace insieme
+
+
 

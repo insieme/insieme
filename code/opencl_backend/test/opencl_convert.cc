@@ -113,7 +113,8 @@ TEST(OpenCLBackend, HelloCLTest) {
 	std::cout << "Printing the IR: " << pp;
 	
 	std::cout << "Start OpenCL Backend visit\n";
-	auto converted = insieme::backend::ocl::convert(program);
+	auto backend = OpenCLBackend::getDefault();
+	auto converted = backend->convert(program);
 	std::cout << "Converted code:\n" << *converted;
 }
 

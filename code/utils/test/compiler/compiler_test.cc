@@ -34,59 +34,67 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/simple_backend/simple_backend.h"
+#include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_node.h"
+#include "insieme/utils/compiler/compiler.h"
 
-#include "insieme/simple_backend/backend_convert.h"
-#include "insieme/simple_backend/variable_manager.h"
-#include "insieme/simple_backend/statement_converter.h"
-#include "insieme/simple_backend/type_manager.h"
-#include "insieme/simple_backend/function_manager.h"
-#include "insieme/simple_backend/job_manager.h"
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
-#include "insieme/simple_backend/formatting/operator_formatting.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/compiler/compiler_config.h"
+
+using namespace insieme::utils;
 
 namespace insieme {
-namespace simple_backend {
+namespace utils {
+namespace compiler {
 
-	SimpleBackendPtr SimpleBackend::getDefault() {
-		return std::make_shared<SimpleBackend>();
+
+TEST(TargetCodeCompilerTest, helloWorldTest) {
+
+	namespace fs = boost::filesystem;
+
+	// create a dummy code file to be compiled
+	fs::path dir = UTILS_BUILD_DIR;
+	fs::path srcFile = dir / "_ut_hello_world.c";
+	fs::path binFile = dir / "_ut_hello_world";
+
+	// ensure file does not exist yet
+	ASSERT_FALSE(fs::exists(srcFile)) << "File " << srcFile << " should not exist!";
+	ASSERT_FALSE(fs::exists(binFile)) << "File " << binFile << " should not exist!";
+
+
+	// write hello world code into the source file
+	fs::ofstream code;
+	code.open(srcFile);
+	ASSERT_TRUE(code.is_open()) << "Unable to open source file!";
+	code << "#include <stdio.h>\n\n";
+	code << "int main() {\n";
+	code << "	printf(\"Hello World!\\n\");\n";
+	code << "}\n\n";
+	code.close();
+
+	// file should exist now
+	ASSERT_TRUE(fs::exists(srcFile));
+
+	// compile the example code using the default compiler
+	EXPECT_TRUE(compile(srcFile.file_string(), binFile.file_string()));
+
+
+	// delete both files
+	if (fs::exists(srcFile)) {
+		fs::remove(srcFile);
 	}
 
-	backend::TargetCodePtr SimpleBackend::convert(const core::ProgramPtr& source) const {
-
-		// create and set up the converter
-		Converter converter(false);
-
-		// Prepare managers
-		core::NodeManager& nodeManager = source->getNodeManager();
-		converter.setNodeManager(&nodeManager);
-
-		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
-		converter.setStmtConverter(&stmtConverter);
-
-		NameManager nameManager;
-		converter.setNameManager(&nameManager);
-
-		TypeManager typeManager(converter);
-		converter.setTypeManager(&typeManager);
-
-		VariableManager variableManager;
-		converter.setVariableManager(&variableManager);
-
-		FunctionManager functionManager(converter);
-		converter.setFunctionManager(&functionManager);
-
-		JobManager jobManager(converter);
-		converter.setJobManager(&jobManager);
-
-		// conduct conversion
-		return converter.convert(source);
+	if(fs::exists(binFile)) {
+		fs::remove(binFile);
 	}
+}
 
 
-} // end namespace simple_backend
+
+} // end namespace test
+} // end namespace utils
 } // end namespace insieme
-

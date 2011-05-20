@@ -37,6 +37,7 @@ endif (USE_XML)
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
+include_directories( ${insieme_backend_include_dir} )
 include_directories( ${insieme_analysis_include_dir} )
 include_directories( ${insieme_transform_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
@@ -52,13 +53,12 @@ endif (USE_XML)
 add_executable( main ${insieme_driver_srcs} )
 
 # add dependencies
-add_dependencies( main insieme_core insieme_utils insieme_frontend 
-					   insieme_simple_backend insieme_c_info 
-					   insieme_transform 
+add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_backend 
+					   insieme_simple_backend insieme_c_info insieme_transform
 			    )
 
 # register linked libraries
-target_link_libraries( main insieme_core insieme_utils insieme_frontend 
+target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_backend
 							insieme_simple_backend insieme_opencl_backend 
 							insieme_c_info insieme_analysis insieme_transform 
 				     )
