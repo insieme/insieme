@@ -194,7 +194,7 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 	// run semantic checks on loaded program
 	auto errors = core::check(code, core::checks::getFullCheck());
 
-	EXPECT_EQ(0, errors.size());
+	EXPECT_EQ(static_cast<std::size_t>(0), errors.size());
 	if (!errors.empty()) {
 		for_each(errors, [](const Message& cur) {
 			LOG(INFO) << cur;
