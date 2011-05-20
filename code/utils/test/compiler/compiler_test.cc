@@ -80,7 +80,7 @@ TEST(TargetCodeCompilerTest, helloWorldTest) {
 	ASSERT_TRUE(fs::exists(srcFile));
 
 	// compile the example code using the default compiler
-	EXPECT_TRUE(compile(srcFile.file_string(), binFile.file_string()));
+	EXPECT_TRUE(compile(srcFile.string(), binFile.string()));
 
 
 	// delete both files
