@@ -27,7 +27,7 @@ add_dependencies( insieme_c_info insieme_core insieme_utils )
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-set ( ut_prefix  ut_be_ )
+set ( ut_prefix  ut_cinfo_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )

@@ -240,7 +240,7 @@ if (NOT MEMORY_CHECK_SETUP)
 						--track-fds=yes
 						--error-exitcode=1
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-						${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 					WORKING_DIRECTORY
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
