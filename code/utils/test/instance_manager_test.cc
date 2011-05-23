@@ -41,8 +41,8 @@
 
 #include <boost/functional/hash.hpp>
 
+#include "insieme/utils/pointer.h"
 #include "insieme/utils/instance_manager.h"
-#include "insieme/utils/instance_ptr.h"
 
 using std::string;
 using std::cout;
@@ -68,7 +68,7 @@ std::size_t hash_value(const CloneableString& str) {
 	return boost::hash_value(str);
 }
 
-typedef InstancePtr<const CloneableString> Ptr;
+typedef Ptr<const CloneableString> MyPtr;
 
 TEST(InstanceManager, Basic) {
 
@@ -78,24 +78,24 @@ TEST(InstanceManager, Basic) {
 
 	// add and retrieve first element
 	CloneableString strA  = "Hello World";
-	InstancePtr<const CloneableString> refA = manager.get(&strA);
+	MyPtr refA = manager.get(&strA);
 	EXPECT_EQ (*refA, "Hello World");
 	EXPECT_EQ (manager.size(), 1);
 
-	InstancePtr<const CloneableString> refA2 = manager.get(&strA);
+	MyPtr refA2 = manager.get(&strA);
 	EXPECT_EQ (*refA2, "Hello World");
 	EXPECT_EQ (manager.size(), 1);
 	EXPECT_EQ (refA, refA2);
 
 	// add and retrieve second element
 	CloneableString strB = "Hello World 2";
-	InstancePtr<const CloneableString> refB = manager.get(&strB);
+	MyPtr refB = manager.get(&strB);
 	EXPECT_EQ (*refB, "Hello World 2");
 	EXPECT_EQ (manager.size(), 2);
 
 	// add and retrieve third element (which is equivalent to first element)
 	CloneableString strC = "Hello World";
-	InstancePtr<const CloneableString> refC = manager.get(&strC);
+	MyPtr refC = manager.get(&strC);
 	EXPECT_EQ (manager.size(), 2);
 
 	// ensure compiler is not reusing identical CloneableStrings
@@ -119,10 +119,10 @@ TEST(InstanceManager, GetTests) {
 	CloneableStringManager manager;
 	EXPECT_EQ (manager.size(), 0);
 
-	Ptr a = manager.get(CloneableString("A"));
-	Ptr b = manager.get(CloneableString("B"));
-	Ptr c = manager.get(CloneableString("C"));
-	Ptr d = manager.get(b);
+	MyPtr a = manager.get(CloneableString("A"));
+	MyPtr b = manager.get(CloneableString("B"));
+	MyPtr c = manager.get(CloneableString("C"));
+	MyPtr d = manager.get(b);
 
 	EXPECT_EQ ( *a , "A" );
 	EXPECT_EQ ( *b , "B" );
@@ -131,18 +131,18 @@ TEST(InstanceManager, GetTests) {
 
 	EXPECT_EQ ( 3, manager.size());
 
-	vector<Ptr> list;
+	vector<MyPtr> list;
 	list.push_back(a);
 	list.push_back(b);
 	list.push_back(c);
 	list.push_back(d);
 
-	vector<Ptr> listA = manager.getAll(list);
+	vector<MyPtr> listA = manager.getAll(list);
 	EXPECT_EQ ( list , listA );
 
 	CloneableStringManager manager2;
 	EXPECT_EQ ( 0, manager2.size() );
-	vector<Ptr> listB = manager2.getAll(list);
+	vector<MyPtr> listB = manager2.getAll(list);
 	EXPECT_EQ ( 3, manager2.size() );
 	EXPECT_NE ( list , listB );
 }
@@ -155,17 +155,17 @@ TEST(InstanceManager, ContainsTests) {
 	EXPECT_EQ (manager.size(), 0);
 
 	// check null pointer
-	Ptr nPtr(NULL);
+	MyPtr nPtr(NULL);
 	EXPECT_TRUE( manager.contains(nPtr) );
 	EXPECT_TRUE( manager.addressesLocal(nPtr));
 
 	CloneableString strA("A");
 	CloneableString strB("B");
 
-	Ptr strPtrA(&strA);
-	Ptr strPtrB(&strB);
+	MyPtr strPtrA(&strA);
+	MyPtr strPtrB(&strB);
 
-	vector<Ptr> list;
+	vector<MyPtr> list;
 	list.push_back(strPtrA);
 	list.push_back(strPtrB);
 
@@ -178,7 +178,7 @@ TEST(InstanceManager, ContainsTests) {
 	EXPECT_FALSE( manager.addressesLocal(strPtrB) );
 	EXPECT_FALSE( manager.addressesLocalAll(list) );
 
-	Ptr a = manager.get(&strA);
+	MyPtr a = manager.get(&strA);
 
 	EXPECT_TRUE( manager.contains(strA) );
 	EXPECT_FALSE( manager.contains(strB) );
@@ -189,7 +189,7 @@ TEST(InstanceManager, ContainsTests) {
 	EXPECT_FALSE( manager.addressesLocal(strPtrB) );
 	EXPECT_FALSE( manager.addressesLocalAll(list) );
 
-	Ptr b = manager.get(&strB);
+	MyPtr b = manager.get(&strB);
 
 	EXPECT_TRUE( manager.contains(strA) );
 	EXPECT_TRUE( manager.contains(strB) );
@@ -200,7 +200,7 @@ TEST(InstanceManager, ContainsTests) {
 	EXPECT_FALSE( manager.addressesLocal(strPtrB) );
 	EXPECT_FALSE( manager.addressesLocalAll(list) );
 
-	vector<Ptr> ptrList1;
+	vector<MyPtr> ptrList1;
 	EXPECT_TRUE( manager.addressesLocalAll(ptrList1) );
 	ptrList1.push_back(nPtr);
 	EXPECT_TRUE( manager.addressesLocalAll(ptrList1) );
@@ -215,7 +215,7 @@ TEST(InstanceManager, ContainsTests) {
 
 	// create new manager
 	CloneableStringManager manager2;
-	vector<Ptr> ptrList2;
+	vector<MyPtr> ptrList2;
 	ptrList2.push_back(manager2.get(nPtr));
 	ptrList2.push_back(manager2.get(a));
 	ptrList2.push_back(manager2.get(b));
@@ -237,14 +237,14 @@ TEST(InstanceManager, LookupTests) {
 	CloneableStringManager manager;
 
 	CloneableString strA = "Hello";
-	Ptr strPtr(&strA);
-	Ptr nulPtr(NULL);
+	MyPtr strPtr(&strA);
+	MyPtr nulPtr(NULL);
 
 
 	EXPECT_EQ ( nulPtr, manager.lookup(strA) );
 	EXPECT_EQ ( nulPtr, manager.lookup(strPtr) );
 
-	std::pair<Ptr, bool> addRes = manager.add(strA);
+	std::pair<MyPtr, bool> addRes = manager.add(strA);
 	EXPECT_TRUE (addRes.second);
 	EXPECT_EQ ( strA, *addRes.first );
 
@@ -255,16 +255,16 @@ TEST(InstanceManager, LookupTests) {
 	EXPECT_EQ ( *strPtr, *manager.lookup(strPtr) );
 
 	CloneableString strB = "World";
-	Ptr strPtrB(&strB);
+	MyPtr strPtrB(&strB);
 	EXPECT_EQ ( nulPtr, manager.lookup(strB) );
 
-	vector<Ptr> list;
+	vector<MyPtr> list;
 	list.push_back(strPtr);
 	list.push_back(strPtrB);
 	list.push_back(nulPtr);
 
 	EXPECT_EQ ( 1 , manager.size() );
-	vector<Ptr> res = manager.lookupAll(list);
+	vector<MyPtr> res = manager.lookupAll(list);
 	EXPECT_EQ ( 1 , manager.size() );
 	EXPECT_EQ ( *strPtr, *res[0] );
 	EXPECT_EQ ( nulPtr, res[1] );

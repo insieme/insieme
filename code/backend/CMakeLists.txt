@@ -39,7 +39,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_c_info)
 	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} insieme_simple_backend)
+	target_link_libraries(${case_name} insieme_backend)
 	
 	add_unit_test(${case_name})
 endforeach(case_file)

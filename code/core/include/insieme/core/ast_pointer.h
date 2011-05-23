@@ -40,7 +40,7 @@
 #include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
-#include "insieme/utils/instance_ptr.h"
+#include "insieme/utils/pointer.h"
 #include "insieme/utils/type_traits_utils.h"
 
 
@@ -52,15 +52,15 @@ struct StaticPointerCast;
 struct PointerChildFactory;
 
 template<typename T>
-class Pointer : public InstancePtr<T> {
+class Pointer : public Ptr<T> {
 public:
 
 	typedef StaticPointerCast StaticCast;
 	typedef PointerChildFactory ChildFactory;
 
-	Pointer() : InstancePtr<T>(NULL) {}
+	Pointer() : Ptr<T>(NULL) {}
 
-	Pointer(T* ptr) : InstancePtr<T>(ptr) { }
+	Pointer(T* ptr) : Ptr<T>(ptr) { }
 
 	/**
 	 * A conversion operator to a annotated pointer referencing a super type of the type
@@ -125,7 +125,6 @@ struct PointerChildFactory {
 
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
-//	out << "AP@" << (&ptr) << "->" << (&*ptr) << "(";
 	out << "AP(";
 	if (!!ptr) {
 		out << *ptr;

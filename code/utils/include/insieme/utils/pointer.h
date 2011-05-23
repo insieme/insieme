@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <iostream>
 #include <cassert>
 
 #include <boost/type_traits/is_base_of.hpp>
@@ -45,7 +46,7 @@
 
 
 template<typename T>
-class InstancePtr {
+class Ptr {
 public:
 
 	/**
@@ -55,19 +56,19 @@ public:
 
 	T* ptr;
 
-	InstancePtr() : ptr(NULL) {}
+	Ptr() : ptr(NULL) {}
 
-	InstancePtr(T* ptr) : ptr(ptr) { }
+	Ptr(T* ptr) : ptr(ptr) { }
 
-	~InstancePtr() {};
+	~Ptr() {};
 
 	/**
 	 * A conversion operator converting this instance pointer instance into a instance referencing
 	 * a base type without changing the actual pointer.
 	 */
 	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
-	operator const InstancePtr<B>() const {
-		return *reinterpret_cast<const InstancePtr<B>* >(this);
+	operator const Ptr<B>() const {
+		return *reinterpret_cast<const Ptr<B>* >(this);
 	}
 
 	operator bool() const {
@@ -102,7 +103,7 @@ public:
 	 * @return true if both point to the same location (regardless of the actual type)
 	 */
 	template<typename A>
-	const typename boost::enable_if< boost::mpl::or_<boost::is_convertible<T*, A*>,boost::is_convertible<A*, T*>> , bool >::type operator==(const InstancePtr<A>& other) const {
+	const typename boost::enable_if< boost::mpl::or_<boost::is_convertible<T*, A*>,boost::is_convertible<A*, T*>> , bool >::type operator==(const Ptr<A>& other) const {
 		return ptr == other.ptr;
 	}
 
@@ -121,12 +122,12 @@ public:
 	 * @return true if both point to the same location (regardless of the actual type)
 	 */
 	template<typename A>
-	const typename boost::disable_if<boost::mpl::or_<boost::is_convertible<T*, A*>,boost::is_convertible<A*, T*>>, bool>::type operator==(const InstancePtr<A>& other) const {
+	const typename boost::disable_if<boost::mpl::or_<boost::is_convertible<T*, A*>,boost::is_convertible<A*, T*>>, bool>::type operator==(const Ptr<A>& other) const {
 		return ptr == NULL && other.ptr == NULL;
 	}
 	
 	template<typename A>
-	bool operator!=(const InstancePtr<A>& other) const {
+	bool operator!=(const Ptr<A>& other) const {
 		return !(*this == other);
 	}
 
@@ -141,8 +142,8 @@ public:
  * @return the down-casted pointer pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type dynamic_pointer_cast(const InstancePtr<T>& src) {
-	return InstancePtr<B>((src)?dynamic_cast<B*>(&(*src)):NULL);
+inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>>::type dynamic_pointer_cast(const Ptr<T>& src) {
+	return Ptr<B>((src)?dynamic_cast<B*>(&(*src)):NULL);
 }
 
 /**
@@ -155,14 +156,14 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>>::type d
  * @return the down-casted pointer pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, InstancePtr<B>&>::type static_pointer_cast(InstancePtr<T>& src) {
+inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>&>::type static_pointer_cast(Ptr<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return *(reinterpret_cast<InstancePtr<B>* >(&src));
+	return *(reinterpret_cast<Ptr<B>* >(&src));
 }
 
 template<typename T>
-std::ostream& operator<<(std::ostream& out, const InstancePtr<T>& ptr) {
-	out << "IP(";
+std::ostream& operator<<(std::ostream& out, const Ptr<T>& ptr) {
+	out << "P(";
 	if (!!ptr) {
 		out << *ptr;
 	} else {

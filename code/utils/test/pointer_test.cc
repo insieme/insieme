@@ -39,7 +39,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/utils/instance_ptr.h"
+#include "insieme/utils/pointer.h"
 #include "insieme/utils/string_utils.h"
 
 using std::string;
@@ -48,29 +48,29 @@ using std::endl;
 
 
 
-TEST(InstancePtr, NullTest) {
+TEST(Ptr, NullTest) {
 
-	InstancePtr<int> null = InstancePtr<int>(NULL);
+	Ptr<int> null = Ptr<int>(NULL);
 
-	InstancePtr<int> ptrN(0);
+	Ptr<int> ptrN(0);
 	EXPECT_TRUE ( ptrN == null );
 	EXPECT_TRUE ( ptrN == ptrN );
 	EXPECT_FALSE ( ptrN );
 
 	int a = 10;
-	InstancePtr<int> ptrA(&a);
+	Ptr<int> ptrA(&a);
 	EXPECT_FALSE ( ptrA == null );
 	EXPECT_FALSE ( null == ptrA );
 	EXPECT_FALSE ( ptrA == ptrN );
 	EXPECT_FALSE ( ptrN == ptrA );
 	EXPECT_TRUE ( !!ptrA );
 
-	InstancePtr<int> ptrA2(&a);
+	Ptr<int> ptrA2(&a);
 	EXPECT_TRUE ( ptrA == ptrA2 );
 	EXPECT_TRUE ( ptrA2 == ptrA );
 
 	int b = 12;
-	InstancePtr<int> ptrB(&b);
+	Ptr<int> ptrB(&b);
 	EXPECT_FALSE ( ptrB == null );
 	EXPECT_FALSE ( null == ptrB );
 	EXPECT_FALSE ( ptrB == ptrN );
@@ -83,19 +83,19 @@ TEST(InstancePtr, NullTest) {
 }
 
 
-TEST(InstancePtr, Size) {
+TEST(Ptr, Size) {
 	// just ensures
-	EXPECT_LE ( sizeof (InstancePtr<int>), 2*sizeof(int*) );
+	EXPECT_LE ( sizeof (Ptr<int>), 2*sizeof(int*) );
 }
 
-TEST(InstancePtr, Print) {
+TEST(Ptr, Print) {
 	// just ensures
 	int a = 10;
-	InstancePtr<int> ptrA(&a);
-	EXPECT_EQ( "IP(10)", toString(ptrA) );
+	Ptr<int> ptrA(&a);
+	EXPECT_EQ( "P(10)", toString(ptrA) );
 
-	InstancePtr<int> ptrN = InstancePtr<int>(NULL);
-	EXPECT_EQ( "IP(NULL)", toString(ptrN) );
+	Ptr<int> ptrN = Ptr<int>(NULL);
+	EXPECT_EQ( "P(NULL)", toString(ptrN) );
 }
 
 typedef float real;
@@ -108,26 +108,26 @@ class B : public A {};
 class C : public A {};
 
 
-TEST(InstancePtr, Casts) {
+TEST(Ptr, Casts) {
 
 	A a;
 	B b;
 	C c;
 
-	InstancePtr<const A> refA(&a);
-	InstancePtr<const B> refB(&b);
-	InstancePtr<const C> refC(&c);
+	Ptr<const A> refA(&a);
+	Ptr<const B> refB(&b);
+	Ptr<const C> refC(&c);
 
 	refA = refB;
 	// refB = refA;
 	refB = dynamic_pointer_cast<const B >(refA);
-	EXPECT_FALSE( refB == InstancePtr<B>(NULL) );
+	EXPECT_FALSE( refB == Ptr<B>(NULL) );
 
 	// should not compile ...
 //	refC = dynamic_pointer_cast<const C >(refA);
-//	EXPECT_TRUE( refC == InstancePtr<C>(NULL) );
+//	EXPECT_TRUE( refC == Ptr<C>(NULL) );
 
 	refA = refC;
 	refB = dynamic_pointer_cast<const B >(refA);
-	EXPECT_TRUE( refB == InstancePtr<B>(NULL) );
+	EXPECT_TRUE( refB == Ptr<B>(NULL) );
 }
