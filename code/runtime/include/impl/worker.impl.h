@@ -173,8 +173,8 @@ static inline bool _irt_sched_split_decision_max_queued_min_size(irt_work_item* 
 static inline void _irt_sched_split_work_item_binary(irt_work_item* wi, irt_worker* self) {
 	irt_work_item *split_wis[2];
 	irt_wi_split_binary(wi, split_wis);
-	irt_work_item_cdeque_insert_front(&self->queue, split_wis[0]);
 	irt_work_item_cdeque_insert_front(&self->queue, split_wis[1]);
+	irt_work_item_cdeque_insert_front(&self->queue, split_wis[0]);
 }
 
 static inline void _irt_sched_check_ipc_queue(irt_worker* self) {
@@ -198,7 +198,7 @@ static inline irt_work_item* _irt_sched_steal_from_prev_thread(irt_worker* self)
 	return irt_work_item_cdeque_pop_back(&irt_g_workers[neighbour_index]->queue);
 }
 
-#if 1
+#if 0
 void irt_worker_schedule(irt_worker* self) {
 
 	// try to take a ready WI from the pool
@@ -213,7 +213,7 @@ void irt_worker_schedule(irt_worker* self) {
 	// if none available, try to steal from another thread
 	if(new_wi == NULL) new_wi = _irt_sched_steal_from_prev_thread(self);
 	if(new_wi != NULL) {
-		if(_irt_sched_split_decision_max_queued_min_size(new_wi, self, 4, 50)) {
+		if(_irt_sched_split_decision_max_queued_min_size(new_wi, self, 4, 50000)) {
 			_irt_sched_split_work_item_binary(new_wi, self);
 			return;
 		}

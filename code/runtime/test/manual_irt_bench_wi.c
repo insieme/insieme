@@ -89,16 +89,11 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	
 	uint64 start_time = irt_time_ms();
 
-	insieme_wi_bench_params bench_params = { 1, NUM_LEVELS-1 };
-	irt_work_item **bench_wis = (irt_work_item**)malloc(NUM_ITER*sizeof(irt_work_item*));
-	for(int i=0; i<NUM_ITER; ++i) {
-		bench_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
-		irt_worker_enqueue(irt_worker_get_current(), bench_wis[i]);
-	}
+	insieme_wi_bench_params bench_params = { 1, NUM_LEVELS };
+	irt_work_item* bench_wi = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
+	irt_worker_enqueue(irt_worker_get_current(), bench_wi);
 
-	for(int i=0; i<NUM_ITER; ++i) {
-		irt_wi_join(bench_wis[i]);
-	}
+	irt_wi_join(bench_wi);
 
 	uint64 total_time = irt_time_ms() - start_time;
 	uint64 total_wis = pow(NUM_ITER, NUM_LEVELS);
@@ -108,7 +103,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	printf("= time taken: %lu\n", total_time);
 	printf("= wis/s: %lu\n======================\n", wis_per_sec);
 
-	free(bench_wis);
 	irt_wi_end(wi);
 }
 
@@ -123,9 +117,10 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 			irt_worker_enqueue(irt_worker_get_current(), bench_wis[i]);
 		}
 
-		for(int i=0; i<NUM_ITER; ++i) {
-			irt_wi_join(bench_wis[i]);
-		}
+		irt_wi_multi_join(NUM_ITER, bench_wis);
+		//for(int i=0; i<NUM_ITER; ++i) {
+		//	irt_wi_join(bench_wis[i]);
+		//}
 
 		free(bench_wis);
 	}

@@ -58,6 +58,7 @@ struct _irt_work_item_range {
 };
 const static irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
 static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) { return (r->end - r->begin) / r->step; }
+static inline void _irt_print_work_item_range(const irt_work_item_range* r) { printf("%ld..%ld : %ld", r->begin, r->end, r->step); }
 
 typedef bool irt_wi_readiness_check_fun(irt_work_item* wi);
 typedef struct _irt_wi_readiness_check {
@@ -98,6 +99,7 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 void irt_wi_destroy(irt_work_item* wi);
 
 void irt_wi_join(irt_work_item* wi);
+void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis); // bad idea
 void irt_wi_end(irt_work_item* wi);
 
 void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** out_wis);

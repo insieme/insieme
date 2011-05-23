@@ -93,14 +93,38 @@ void irt_wi_destroy(irt_work_item* wi) {
 bool _irt_wi_done_check(irt_work_item* wi) {
 	return ((irt_work_item*)(wi->ready_check.data))->state == IRT_WI_STATE_DONE;
 }
+typedef struct __irt_wi_multi_check_closure {
+	uint32 cur_wi;
+	uint32 num_wis;
+	irt_work_item** wis;
+} _irt_wi_multi_check_closure;
+bool _irt_wi_multi_done_check(irt_work_item* wi) {
+	_irt_wi_multi_check_closure* closure = (_irt_wi_multi_check_closure*)wi->ready_check.data;
+	for(int i = closure->cur_wi; i < closure->num_wis; ++i) {
+		if(closure->wis[i]->state != IRT_WI_STATE_DONE) {
+			closure->cur_wi = i;
+			return false;
+		}
+	}
+	return true;
+}
 
 void irt_wi_join(irt_work_item* wi) {
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* swi = self->cur_wi;
 	swi->ready_check.fun = &_irt_wi_done_check;
 	swi->ready_check.data = wi;
-	irt_worker_yield(self, self->cur_wi);
+	irt_worker_yield(self, swi);
 }
+void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
+	irt_worker* self = irt_worker_get_current();
+	irt_work_item* swi = self->cur_wi;
+	swi->ready_check.fun = &_irt_wi_multi_done_check;
+	_irt_wi_multi_check_closure closure = { 0, num_wis, wis };
+	swi->ready_check.data = &closure;
+	irt_worker_yield(self, swi);
+}
+
 void irt_wi_end(irt_work_item* wi) {
 	wi->state = IRT_WI_STATE_DONE;
 	IRT_INFO("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
