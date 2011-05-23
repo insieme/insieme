@@ -194,7 +194,7 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 	// run semantic checks on loaded program
 	auto errors = core::check(code, core::checks::getFullCheck());
 
-	EXPECT_EQ(0, errors.size());
+	EXPECT_EQ(static_cast<std::size_t>(0), errors.size());
 	if (!errors.empty()) {
 		for_each(errors, [](const Message& cur) {
 			LOG(INFO) << cur;
@@ -288,11 +288,14 @@ TEST_P(XMLIntegrationTest, WriteReadTest) {
 	core::ProgramPtr code = load(manager, testCase);
 
 	// conduct XML conversion
-	string file = "_dump.xml";
-	xml::XmlUtil::write(code, file);
+	xml::XmlUtil xml;
+	xml.convertIrToDom(code);
+	string res = xml.convertDomToString();
 
 	NodeManager manager2;
-	core::NodePtr code2 = xml::XmlUtil::read(manager2, file);
+	xml::XmlUtil xml2;
+	xml.convertStringToDom(res, true);
+	core::NodePtr code2 = xml.convertDomToIr(manager2);
 
 	EXPECT_EQ(*code, *code2);
 	EXPECT_NE(code, code2);

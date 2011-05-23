@@ -84,7 +84,8 @@ TEST(SimpleBackend, Basic) {
 
 
 	std::cout << "Start visit\n";
-	auto converted = convert(prog);
+	auto backend = SimpleBackend::getDefault();
+	auto converted = backend->convert(prog);
 	std::cout << "Converted code:\n" << *converted;
 
 }

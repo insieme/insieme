@@ -62,7 +62,7 @@ using namespace utils::log;
 	 * A map from Entry points to Code sections returned by ConversionContext::convert.
 	 * Can be printed to any output stream
 	 */
-	class ConvertedCode : public TargetCode {
+	class ConvertedCode : public backend::TargetCode {
 
 		/**
 		 * A special list of headers to be included. This fragment will always be printed
@@ -105,7 +105,7 @@ using namespace utils::log;
 		return ::operator<<(out, this->code);
 	}
 
-	TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
+	backend::TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
 
 		// obtain headers
 		std::vector<string> headers = stmtConverter->getHeaderDefinitions();

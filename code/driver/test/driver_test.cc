@@ -72,8 +72,7 @@ TEST(DriverTest, HelloWorldTest) {
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
 	LOG(INFO) << "Converting IR to C...";
-
-	auto converted = insieme::simple_backend::convert(program);
+	auto converted = SimpleBackend::getDefault()->convert(program);
 	LOG(INFO) << "Printing converted code: " << *converted;
 
 	std::ofstream out( std::string(SRC_DIR) + "/hello_world.insieme.c" );

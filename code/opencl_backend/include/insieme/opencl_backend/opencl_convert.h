@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include "insieme/backend/backend.h"
+
 #include "insieme/simple_backend/statement_converter.h"
 #include "insieme/simple_backend/function_manager.h"
 
@@ -43,7 +45,14 @@ namespace insieme {
 namespace backend {
 namespace ocl {
 
-simple_backend::TargetCodePtr convert(const core::ProgramPtr& source);
+class OpenCLBackend;
+typedef std::shared_ptr<OpenCLBackend> OpenCLBackendPtr;
+
+class OpenCLBackend : public backend::Backend {
+public:
+	static OpenCLBackendPtr getDefault();
+	backend::TargetCodePtr convert(const core::ProgramPtr& source) const;
+};
 
 class OclFunctionManager : public simple_backend::FunctionManager {
 public:

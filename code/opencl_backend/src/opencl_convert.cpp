@@ -66,7 +66,11 @@ namespace detail {
 	simple_backend::formatting::FormatTable getOCLFormatTable(const core::lang::BasicGenerator& basic);
 }
 
-TargetCodePtr convert(const ProgramPtr& source) {
+OpenCLBackendPtr OpenCLBackend::getDefault() {
+	return std::make_shared<OpenCLBackend>();
+}
+
+backend::TargetCodePtr OpenCLBackend::convert(const ProgramPtr& source) const {
 
 	// create and set up the converter
 	Converter converter;

@@ -34,59 +34,52 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/simple_backend/simple_backend.h"
+#include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/compiler/compiler_config.h"
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_node.h"
+#include <cstdio>
+#include <sstream>
 
-#include "insieme/simple_backend/backend_convert.h"
-#include "insieme/simple_backend/variable_manager.h"
-#include "insieme/simple_backend/statement_converter.h"
-#include "insieme/simple_backend/type_manager.h"
-#include "insieme/simple_backend/function_manager.h"
-#include "insieme/simple_backend/job_manager.h"
-
-#include "insieme/simple_backend/formatting/operator_formatting.h"
+#include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
-namespace simple_backend {
+namespace utils {
+namespace compiler {
 
-	SimpleBackendPtr SimpleBackend::getDefault() {
-		return std::make_shared<SimpleBackend>();
+	Compiler Compiler::getDefaultC99Compiler() {
+		// create a default version of a C99 compiler
+//		Compiler res(C_COMPILER); // TODO: re-enable when constant is set properly
+		Compiler res("gcc");
+		res.addFlag("--std=c99");
+		return res;
 	}
 
-	backend::TargetCodePtr SimpleBackend::convert(const core::ProgramPtr& source) const {
+	string Compiler::getCommand(const vector<string>& inputFiles, const string& outputFile) const {
+		// build up compiler command
+		std::stringstream cmd;
 
-		// create and set up the converter
-		Converter converter(false);
+		cmd << executable;
+		cmd << " " << join(" ", flags);
+		cmd << " " << join(" ", inputFiles);
+		cmd << " -o " << outputFile;
 
-		// Prepare managers
-		core::NodeManager& nodeManager = source->getNodeManager();
-		converter.setNodeManager(&nodeManager);
-
-		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
-		converter.setStmtConverter(&stmtConverter);
-
-		NameManager nameManager;
-		converter.setNameManager(&nameManager);
-
-		TypeManager typeManager(converter);
-		converter.setTypeManager(&typeManager);
-
-		VariableManager variableManager;
-		converter.setVariableManager(&variableManager);
-
-		FunctionManager functionManager(converter);
-		converter.setFunctionManager(&functionManager);
-
-		JobManager jobManager(converter);
-		converter.setJobManager(&jobManager);
-
-		// conduct conversion
-		return converter.convert(source);
+		return cmd.str();
 	}
 
 
-} // end namespace simple_backend
+
+	bool compile(const vector<string>& sourcefile, const string& targetfile, const Compiler& compiler) {
+
+		string&& cmd = compiler.getCommand(sourcefile, targetfile);
+
+		LOG(DEBUG) << "Running command: " << cmd << "\n";
+		int res = system(cmd.c_str());
+		LOG(DEBUG) << "Result of command " << cmd << ": " << res << "\n";
+
+		return res == 0;
+	}
+
+} // end namespace compiler
+} // end namespace utils
 } // end namespace insieme
-

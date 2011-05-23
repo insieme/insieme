@@ -196,25 +196,25 @@ double randlc(__insieme_type_13* x, double a){
 }
 static double randlc_wrap(void* _closure, __insieme_type_13* x, double a) { return randlc(x, a); }
 
-// start code fragment :: array type definition of __insieme_type_16 <=> array<int<4>,1> //
-typedef struct ___insieme_type_16 { 
+// start code fragment :: array type definition of __insieme_type_15 <=> array<int<4>,1> //
+typedef struct ___insieme_type_15 { 
     int* data;
-} __insieme_type_16;
+} __insieme_type_15;
 
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
-static double pow_wrap(void* _closure, double var_252, double var_253) { return pow(var_252, var_253); }
+static double pow_wrap(void* _closure, double var_241, double var_242) { return pow(var_241, var_242); }
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_254) { return ceil(var_254); }
+static double ceil_wrap(void* _closure, double var_243) { return ceil(var_243); }
 
 // start code fragment :: Definition of icnvrt ... type: ((real<8>,int<4>)->int<4>) //
 int icnvrt(double x, int ipwr2) { return ((int)((((double)(ipwr2))*x))); }
 static int icnvrt_wrap(void* _closure, double x, int ipwr2) { return icnvrt(x, ipwr2); }
 
-// start code fragment :: Definition of __insieme_supp_18 ... type: ((int<4>,int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>)->unit) //
-void __insieme_supp_18(int n, int nz, __insieme_type_13* v, __insieme_type_16* iv, __insieme_type_16* nzloc, __insieme_type_16* mark){
+// start code fragment :: Definition of sprnvc ... type: ((int<4>,int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>)->unit) //
+void sprnvc(int n, int nz, __insieme_type_13* v, __insieme_type_15* iv, __insieme_type_15* nzloc, __insieme_type_15* mark){
 	int nn1 = 0;
 	int nzrow = 0;
 	int nzv = 0;
@@ -251,10 +251,10 @@ void __insieme_supp_18(int n, int nz, __insieme_type_13* v, __insieme_type_16* i
 		((ii) = (1+(((int)(ceil((((double)((((nzrow)+1)-1)))/((double)(1))))))*1)));
 	};
 }
-static void __insieme_supp_18_wrap(void* _closure, int n, int nz, __insieme_type_13* v, __insieme_type_16* iv, __insieme_type_16* nzloc, __insieme_type_16* mark) { __insieme_supp_18(n, nz, v, iv, nzloc, mark); }
+static void sprnvc_wrap(void* _closure, int n, int nz, __insieme_type_13* v, __insieme_type_15* iv, __insieme_type_15* nzloc, __insieme_type_15* mark) { sprnvc(n, nz, v, iv, nzloc, mark); }
 
 // start code fragment :: Definition of vecset ... type: ((int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>,real<8>)->unit) //
-void vecset(int n, __insieme_type_13* v, __insieme_type_16* iv, __insieme_type_16* nzv, int i, double val){
+void vecset(int n, __insieme_type_13* v, __insieme_type_15* iv, __insieme_type_15* nzv, int i, double val){
 	int k = 0;
 	int set = 0;
 	((set) = 0);
@@ -271,14 +271,14 @@ void vecset(int n, __insieme_type_13* v, __insieme_type_16* iv, __insieme_type_1
 		((((*iv).data[((unsigned int)((((*nzv).data[0]))))])) = i);
 	};
 }
-static void vecset_wrap(void* _closure, int n, __insieme_type_13* v, __insieme_type_16* iv, __insieme_type_16* nzv, int i, double val) { vecset(n, v, iv, nzv, i, val); }
+static void vecset_wrap(void* _closure, int n, __insieme_type_13* v, __insieme_type_15* iv, __insieme_type_15* nzv, int i, double val) { vecset(n, v, iv, nzv, i, val); }
 
 // start code fragment :: Prototype for external function: exit ... type: ((int<4>)->unit) //
 void exit(int);
-static void exit_wrap(void* _closure, int var_255) { exit(var_255); }
+static void exit_wrap(void* _closure, int var_244) { exit(var_244); }
 
 // start code fragment :: Definition of sparse ... type: ((ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,int<4>,int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>)->unit) //
-void sparse(__insieme_type_13* a, __insieme_type_16* colidx, __insieme_type_16* rowstr, int n, __insieme_type_16* arow, __insieme_type_16* acol, __insieme_type_13* aelt, int firstrow, int lastrow, __insieme_type_13* x, __insieme_type_16* mark, __insieme_type_16* nzloc, int nnza){
+void sparse(__insieme_type_13* a, __insieme_type_15* colidx, __insieme_type_15* rowstr, int n, __insieme_type_15* arow, __insieme_type_15* acol, __insieme_type_13* aelt, int firstrow, int lastrow, __insieme_type_13* x, __insieme_type_15* mark, __insieme_type_15* nzloc, int nnza){
 	int nrows = 0;
 	int i = 0;
 	int j = 0;
@@ -367,10 +367,10 @@ void sparse(__insieme_type_13* a, __insieme_type_16* colidx, __insieme_type_16* 
 		((j) = (1+(((int)(ceil((((double)((((nrows)+1)-1)))/((double)(1))))))*1)));
 	};
 }
-static void sparse_wrap(void* _closure, __insieme_type_13* a, __insieme_type_16* colidx, __insieme_type_16* rowstr, int n, __insieme_type_16* arow, __insieme_type_16* acol, __insieme_type_13* aelt, int firstrow, int lastrow, __insieme_type_13* x, __insieme_type_16* mark, __insieme_type_16* nzloc, int nnza) { sparse(a, colidx, rowstr, n, arow, acol, aelt, firstrow, lastrow, x, mark, nzloc, nnza); }
+static void sparse_wrap(void* _closure, __insieme_type_13* a, __insieme_type_15* colidx, __insieme_type_15* rowstr, int n, __insieme_type_15* arow, __insieme_type_15* acol, __insieme_type_13* aelt, int firstrow, int lastrow, __insieme_type_13* x, __insieme_type_15* mark, __insieme_type_15* nzloc, int nnza) { sparse(a, colidx, rowstr, n, arow, acol, aelt, firstrow, lastrow, x, mark, nzloc, nnza); }
 
-// start code fragment :: Definition of __insieme_supp_15 ... type: ((int<4>,int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,real<8>)->unit) //
-void __insieme_supp_15(int n, int nz, __insieme_type_13* a, __insieme_type_16* colidx, __insieme_type_16* rowstr, int nonzer, int firstrow, int lastrow, int firstcol, int lastcol, double rcond, __insieme_type_16* arow, __insieme_type_16* acol, __insieme_type_13* aelt, __insieme_type_13* v, __insieme_type_16* iv, double shift){
+// start code fragment :: Definition of makea ... type: ((int<4>,int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,real<8>)->unit) //
+void makea(int n, int nz, __insieme_type_13* a, __insieme_type_15* colidx, __insieme_type_15* rowstr, int nonzer, int firstrow, int lastrow, int firstcol, int lastcol, double rcond, __insieme_type_15* arow, __insieme_type_15* acol, __insieme_type_13* aelt, __insieme_type_13* v, __insieme_type_15* iv, double shift){
 	int i = 0;
 	int nnza = 0;
 	int iouter = 0;
@@ -392,8 +392,8 @@ void __insieme_supp_15(int n, int nz, __insieme_type_13* a, __insieme_type_16* c
 	{
 		for(int var_113 = 1; var_113 < (n+1); var_113 += 1) {
 			((nzv) = nonzer);
-			__insieme_supp_18(n, (nzv), v, iv, (&((__insieme_type_16){&((*colidx).data[((unsigned int)(0))])})), (&((__insieme_type_16){&((*colidx).data[((unsigned int)(n))])})));
-			vecset(n, v, iv, (&((__insieme_type_16){&nzv})), (var_113), 0.5);
+			sprnvc(n, (nzv), v, iv, (&((__insieme_type_15){&((*colidx).data[((unsigned int)(0))])})), (&((__insieme_type_15){&((*colidx).data[((unsigned int)(n))])})));
+			vecset(n, v, iv, (&((__insieme_type_15){&nzv})), (var_113), 0.5);
 			{
 				for(int var_112 = 1; var_112 < ((nzv)+1); var_112 += 1) {
 					((jcol) = (((*iv).data[((unsigned int)((var_112)))])));
@@ -441,16 +441,16 @@ void __insieme_supp_15(int n, int nz, __insieme_type_13* a, __insieme_type_16* c
 		}; };
 		((i) = (firstrow+(((int)(ceil((((double)(((lastrow+1)-firstrow)))/((double)(1))))))*1)));
 	};
-	sparse(a, colidx, rowstr, n, arow, acol, aelt, firstrow, lastrow, v, (&((__insieme_type_16){&((*iv).data[((unsigned int)(0))])})), (&((__insieme_type_16){&((*iv).data[((unsigned int)(n))])})), (nnza));
+	sparse(a, colidx, rowstr, n, arow, acol, aelt, firstrow, lastrow, v, (&((__insieme_type_15){&((*iv).data[((unsigned int)(0))])})), (&((__insieme_type_15){&((*iv).data[((unsigned int)(n))])})), (nnza));
 }
-static void __insieme_supp_15_wrap(void* _closure, int n, int nz, __insieme_type_13* a, __insieme_type_16* colidx, __insieme_type_16* rowstr, int nonzer, int firstrow, int lastrow, int firstcol, int lastcol, double rcond, __insieme_type_16* arow, __insieme_type_16* acol, __insieme_type_13* aelt, __insieme_type_13* v, __insieme_type_16* iv, double shift) { __insieme_supp_15(n, nz, a, colidx, rowstr, nonzer, firstrow, lastrow, firstcol, lastcol, rcond, arow, acol, aelt, v, iv, shift); }
+static void makea_wrap(void* _closure, int n, int nz, __insieme_type_13* a, __insieme_type_15* colidx, __insieme_type_15* rowstr, int nonzer, int firstrow, int lastrow, int firstcol, int lastcol, double rcond, __insieme_type_15* arow, __insieme_type_15* acol, __insieme_type_13* aelt, __insieme_type_13* v, __insieme_type_15* iv, double shift) { makea(n, nz, a, colidx, rowstr, nonzer, firstrow, lastrow, firstcol, lastcol, rcond, arow, acol, aelt, v, iv, shift); }
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_256) { return sqrt(var_256); }
+static double sqrt_wrap(void* _closure, double var_245) { return sqrt(var_245); }
 
-// start code fragment :: Definition of __insieme_supp_19 ... type: ((ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>)->unit) //
-void __insieme_supp_19(__insieme_type_16* colidx, __insieme_type_16* rowstr, __insieme_type_13* x, __insieme_type_13* z, __insieme_type_13* a, __insieme_type_13* p, __insieme_type_13* q, __insieme_type_13* r, __insieme_type_13* w, __insieme_type_13* rnorm){
+// start code fragment :: Definition of conj_grad ... type: ((ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>)->unit) //
+void conj_grad(__insieme_type_15* colidx, __insieme_type_15* rowstr, __insieme_type_13* x, __insieme_type_13* z, __insieme_type_13* a, __insieme_type_13* p, __insieme_type_13* q, __insieme_type_13* r, __insieme_type_13* w, __insieme_type_13* rnorm){
 	int i = 0;
 	int j = 0;
 	int k = 0;
@@ -546,11 +546,11 @@ void __insieme_supp_19(__insieme_type_16* colidx, __insieme_type_16* rowstr, __i
 	};
 	 { ((((*rnorm).data[0])) = sqrt((*(&((__GLOBAL__).sum))))); };
 }
-static void __insieme_supp_19_wrap(void* _closure, __insieme_type_16* colidx, __insieme_type_16* rowstr, __insieme_type_13* x, __insieme_type_13* z, __insieme_type_13* a, __insieme_type_13* p, __insieme_type_13* q, __insieme_type_13* r, __insieme_type_13* w, __insieme_type_13* rnorm) { __insieme_supp_19(colidx, rowstr, x, z, a, p, q, r, w, rnorm); }
+static void conj_grad_wrap(void* _closure, __insieme_type_15* colidx, __insieme_type_15* rowstr, __insieme_type_13* x, __insieme_type_13* z, __insieme_type_13* a, __insieme_type_13* p, __insieme_type_13* q, __insieme_type_13* r, __insieme_type_13* w, __insieme_type_13* rnorm) { conj_grad(colidx, rowstr, x, z, a, p, q, r, w, rnorm); }
 
-// start code fragment :: Definition of __insieme_supp_20 ... type: ((int<4>)->unit) //
-void __insieme_supp_20(int n) { ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void __insieme_supp_20_wrap(void* _closure, int n) { __insieme_supp_20(n); }
+// start code fragment :: Definition of timer_clear ... type: ((int<4>)->unit) //
+void timer_clear(int n) { ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void timer_clear_wrap(void* _closure, int n) { timer_clear(n); }
 
 // start code fragment :: type_declaration_timeval //
 struct timeval { 
@@ -558,10 +558,10 @@ struct timeval {
     long tv_usec;
 };
 
-// start code fragment :: array type definition of __insieme_type_25 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
-typedef struct ___insieme_type_25 { 
+// start code fragment :: array type definition of __insieme_type_18 <=> array<struct<tv_sec:int<8>,tv_usec:int<8>>,1> //
+typedef struct ___insieme_type_18 { 
     struct timeval* data;
-} __insieme_type_25;
+} __insieme_type_18;
 
 // start code fragment :: type_declaration_timezone //
 struct timezone { 
@@ -576,54 +576,46 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_25* var_257, __timezone_ptr_t* var_258) { return gettimeofday(((struct timeval*)((*(var_257)).data)), ((struct timezone*)((*(var_258)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_18* var_246, __timezone_ptr_t* var_247) { return gettimeofday(((struct timeval*)((*(var_246)).data)), ((struct timezone*)((*(var_247)).data))); }
 
-// start code fragment :: Definition of __insieme_supp_23 ... type: ((ref<array<real<8>,1>>)->unit) //
-void __insieme_supp_23(__insieme_type_13* t){
+// start code fragment :: Definition of wtime ... type: ((ref<array<real<8>,1>>)->unit) //
+void wtime(__insieme_type_13* t){
 	struct timeval tv;
-	gettimeofday(((struct timeval*)((*((&((__insieme_type_25){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
+	gettimeofday(((struct timeval*)((*((&((__insieme_type_18){&tv})))).data)), ((struct timezone*)((*(((__timezone_ptr_t*)memcpy(alloca(sizeof(__timezone_ptr_t)), &((__timezone_ptr_t){0}), sizeof(__timezone_ptr_t))))).data)));
 	if(((*(&((__GLOBAL__).sec)))<0)) { ((*(&((__GLOBAL__).sec))) = ((int)((*(&((tv).tv_sec)))))); };
 	((((*t).data[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((__GLOBAL__).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void __insieme_supp_23_wrap(void* _closure, __insieme_type_13* t) { __insieme_supp_23(t); }
+static void wtime_wrap(void* _closure, __insieme_type_13* t) { wtime(t); }
 
-// start code fragment :: Definition of __insieme_supp_22 ... type: (()->real<8>) //
-double __insieme_supp_22(){
+// start code fragment :: Definition of elapsed_time ... type: (()->real<8>) //
+double elapsed_time(){
 	double t = 0.0;
-	__insieme_supp_23((&((__insieme_type_13){&t})));
+	wtime((&((__insieme_type_13){&t})));
 	return (t);
 }
-static double __insieme_supp_22_wrap(void* _closure) { return __insieme_supp_22(); }
+static double elapsed_time_wrap(void* _closure) { return elapsed_time(); }
 
-// start code fragment :: Definition of __insieme_supp_21 ... type: ((int<4>)->unit) //
-void __insieme_supp_21(int n) { ((((*(&((__GLOBAL__).start))).data[((unsigned int)(n))])) = __insieme_supp_22()); }
-static void __insieme_supp_21_wrap(void* _closure, int n) { __insieme_supp_21(n); }
+// start code fragment :: Definition of timer_start ... type: ((int<4>)->unit) //
+void timer_start(int n) { ((((*(&((__GLOBAL__).start))).data[((unsigned int)(n))])) = elapsed_time()); }
+static void timer_start_wrap(void* _closure, int n) { timer_start(n); }
 
-// start code fragment :: Definition of __insieme_supp_29 ... type: (()->real<8>) //
-double __insieme_supp_29(){
-	double t = 0.0;
-	__insieme_supp_23((&((__insieme_type_13){&t})));
-	return (t);
-}
-static double __insieme_supp_29_wrap(void* _closure) { return __insieme_supp_29(); }
-
-// start code fragment :: Definition of __insieme_supp_28 ... type: ((int<4>)->unit) //
-void __insieme_supp_28(int n){
+// start code fragment :: Definition of timer_stop ... type: ((int<4>)->unit) //
+void timer_stop(int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = __insieme_supp_29());
+	((now) = elapsed_time());
 	((t) = ((now)-(((*(&((__GLOBAL__).start))).data[((unsigned int)(n))]))));
 	((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])) = ((((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void __insieme_supp_28_wrap(void* _closure, int n) { __insieme_supp_28(n); }
+static void timer_stop_wrap(void* _closure, int n) { timer_stop(n); }
 
-// start code fragment :: Definition of __insieme_supp_30 ... type: ((int<4>)->real<8>) //
-double __insieme_supp_30(int n) { return (((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])); }
-static double __insieme_supp_30_wrap(void* _closure, int n) { return __insieme_supp_30(n); }
+// start code fragment :: Definition of timer_read ... type: ((int<4>)->real<8>) //
+double timer_read(int n) { return (((*(&((__GLOBAL__).elapsed))).data[((unsigned int)(n))])); }
+static double timer_read_wrap(void* _closure, int n) { return timer_read(n); }
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_259) { return fabs(var_259); }
+static double fabs_wrap(void* _closure, double var_248) { return fabs(var_248); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(__insieme_type_1* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, __insieme_type_1* optype, int passed_verification, __insieme_type_1* npbversion, __insieme_type_1* compiletime, __insieme_type_1* cc, __insieme_type_1* clink, __insieme_type_1* c_lib, __insieme_type_1* c_inc, __insieme_type_1* cflags, __insieme_type_1* clinkflags, __insieme_type_1* rand){
@@ -721,7 +713,7 @@ int main(int __argc, char** __argv) {
 		((*(&((__GLOBAL__).tran))) = 314159265.0);
 		((*(&((__GLOBAL__).amult))) = 1220703125.0);
 		((zeta) = randlc((&((__insieme_type_13){(&((__GLOBAL__).tran))})), (*(&((__GLOBAL__).amult)))));
-		__insieme_supp_15((*(&((__GLOBAL__).naa))), (*(&((__GLOBAL__).nzz))), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_16){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_16){(*(&((__GLOBAL__).rowstr))).data})), 8, (*(&((__GLOBAL__).firstrow))), (*(&((__GLOBAL__).lastrow))), (*(&((__GLOBAL__).firstcol))), (*(&((__GLOBAL__).lastcol))), 1.0e-1, (&((__insieme_type_16){(*(&((__GLOBAL__).arow))).data})), (&((__insieme_type_16){(*(&((__GLOBAL__).acol))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).aelt))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).v))).data})), (&((__insieme_type_16){(*(&((__GLOBAL__).iv))).data})), 12.0);
+		makea((*(&((__GLOBAL__).naa))), (*(&((__GLOBAL__).nzz))), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).rowstr))).data})), 8, (*(&((__GLOBAL__).firstrow))), (*(&((__GLOBAL__).lastrow))), (*(&((__GLOBAL__).firstcol))), (*(&((__GLOBAL__).lastcol))), 1.0e-1, (&((__insieme_type_15){(*(&((__GLOBAL__).arow))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).acol))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).aelt))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).v))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).iv))).data})), 12.0);
 		{
 			{
 				for(int var_154 = 1; var_154 < ((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1); var_154 += 1)  { {
@@ -737,7 +729,7 @@ int main(int __argc, char** __argv) {
 			((zeta) = 0.0);
 			{
 				for(int var_190 = 1; var_190 < (1+1); var_190 += 1) {
-					__insieme_supp_19((&((__insieme_type_16){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_16){(*(&((__GLOBAL__).rowstr))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).x))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).z))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).p))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).q))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).r))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).w))).data})), (&((__insieme_type_13){&rnorm})));
+					conj_grad((&((__insieme_type_15){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).rowstr))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).x))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).z))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).p))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).q))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).r))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).w))).data})), (&((__insieme_type_13){&rnorm})));
 					{
 						((norm_temp11) = 0.0);
 						((norm_temp12) = 0.0);
@@ -763,11 +755,11 @@ int main(int __argc, char** __argv) {
 			};
 			((zeta) = 0.0);
 		};
-		__insieme_supp_20(1);
-		__insieme_supp_21(1);
+		timer_clear(1);
+		timer_start(1);
 		 { {
 			for(int var_207 = 1; var_207 < (15+1); var_207 += 1) {
-				__insieme_supp_19((&((__insieme_type_16){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_16){(*(&((__GLOBAL__).rowstr))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).x))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).z))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).p))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).q))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).r))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).w))).data})), (&((__insieme_type_13){&rnorm})));
+				conj_grad((&((__insieme_type_15){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).rowstr))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).x))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).z))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).p))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).q))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).r))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).w))).data})), (&((__insieme_type_13){&rnorm})));
 				{
 					((norm_temp11) = 0.0);
 					((norm_temp12) = 0.0);
@@ -794,8 +786,8 @@ int main(int __argc, char** __argv) {
 			};
 			((it) = (1+(((int)(ceil((((double)(((15+1)-1)))/((double)(1))))))*1)));
 		}; };
-		__insieme_supp_28(1);
-		((t) = __insieme_supp_30(1));
+		timer_stop(1);
+		((t) = timer_read(1));
 		printf(((char*)((*(&((__insieme_type_1){" Benchmark completed\n"}))).data)), 0);
 		((epsilon) = 1.0e-10);
 		if(((class)!='U')) { if((fabs(((zeta)-(zeta_verify_value)))<=(epsilon))){

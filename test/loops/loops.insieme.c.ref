@@ -32,7 +32,7 @@ int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_23) { return ceil(var_23); }
+static double ceil_wrap(void* _closure, double var_22) { return ceil(var_22); }
 
 // start code fragment :: Definition of func ... type: ((int<4>)->int<4>) //
 int func(int k){
@@ -50,12 +50,12 @@ int func(int k){
 }
 static int func_wrap(void* _closure, int k) { return func(k); }
 
-// start code fragment :: Definition of __insieme_supp_4 ... type: (()->unit) //
-void __insieme_supp_4() { {
+// start code fragment :: Definition of func2 ... type: (()->unit) //
+void func2() { {
 	for(int var_19 = (((int)(0))-10); var_19 < ((((int)(0))-0)+1); var_19 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-(var_19))); };
 	((*(&((__GLOBAL__).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 }; }
-static void __insieme_supp_4_wrap(void* _closure) { __insieme_supp_4(); }
+static void func2_wrap(void* _closure) { func2(); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -104,7 +104,7 @@ int main(int __argc, char** __argv) {
 		};
 		printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (a));
 		func((a));
-		__insieme_supp_4();
+		func2();
 	}
 	// ----  end of actual code body  ----
 	

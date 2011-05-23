@@ -10,6 +10,7 @@ cmake_minimum_required(VERSION 2.6)
 
 # configure config files
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/test_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/test/test_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compiler_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/utils/compiler/compiler_config.h)
 
 # collect source files 
 file(GLOB_RECURSE insieme_utils_srcs 	src/*.cpp )
@@ -29,17 +30,19 @@ target_link_libraries( insieme_utils ${Boost_FILESYSTEM_LIBRARY})
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-file(GLOB test_cases test/*.cc)
+set ( ut_prefix  ut_util_ )
+file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases} )
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	add_executable(ut_${case_name} ${case_file})
-	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(ut_${case_name} insieme_utils)
-	target_link_libraries(ut_${case_name} ${Boost_LIBRARIES})
-	target_link_libraries(ut_${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
-	target_link_libraries(ut_${case_name} ${Boost_FILESYSTEM_LIBRARY})
-	target_link_libraries(ut_${case_name} ${pthread_LIB})
+	set ( case_name ${ut_prefix}${case_name} )
+	add_executable(${case_name} ${case_file})
+	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(${case_name} insieme_utils)
+	target_link_libraries(${case_name} ${Boost_LIBRARIES})
+	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
+	target_link_libraries(${case_name} ${Boost_FILESYSTEM_LIBRARY})
+	target_link_libraries(${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name})
 endforeach(case_file)

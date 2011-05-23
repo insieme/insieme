@@ -270,6 +270,14 @@ void copyAnnotations(const NodePtr& source, NodePtr& sink){
 */
 }
 
+core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const ASTBuilder& builder) {
+    // core::ExpressionPtr retExpr = expr;
+    if(core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+        return builder.callExpr( refTy->getElementType(), BASIC.getRefDeref(), expr );
+    }
+    return expr;
+}
+
 core::CallExprPtr HostMapper::checkAssignment(const core::CallExprPtr& oldCall){
     CallExprPtr newCall;
     if((newCall = dynamic_pointer_cast<const CallExpr>(oldCall->substitute(builder.getNodeManager(), *this)))) {
@@ -440,28 +448,50 @@ void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& ar
  * 3. 1D only
  */
 
-const ExpressionPtr HostMapper3rdPass::anythingToVec3(const ExpressionPtr& workDim, ExpressionPtr size) {
-    CallExprPtr ret;
+const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
     const TypePtr vecTy = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
     TypePtr argTy;
     VariablePtr param;
     ExpressionPtr arg;
+    unsigned int wd;
 
-    // check if there is a scalar to array
-    if(const CallExprPtr& scalarToArray = dynamic_pointer_cast<const CallExpr>(size)) {
-        if(scalarToArray->getFunctionExpr() == BASIC.getScalarToArray()) {
+    if(const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(workDim)) {
+        std::cout << cast->getSubExpression() << " is called at work_dim\n";
+        workDim = cast->getSubExpression();
+    }
+
+    // check work dimension
+    const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim);
+    assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
+    wd = atoi(dim->getValue().c_str());
+//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
+    assert(workDim < 3u && "Invalid work_dim. Should be 1 - 3!");
+
+    // check if there is a x to array called
+    if(const CallExprPtr& toArray = dynamic_pointer_cast<const CallExpr>(size)) {
+        if(toArray->getFunctionExpr() == BASIC.getScalarToArray()) {
             // check consitency with workDim, should be 1
-            if(const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim)) {
+//            if(const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim)) {
 //                std::cout << "found Dim: " << dim->getValue() << std::endl;
-                assert(strcmp(dim->getValue().c_str(), "1") == 0 && "Scalar passed to a multi dimensional work group");
-            }
-            argTy = scalarToArray->getArgument(0)->getType();
+            assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
+//            }*/
+            argTy = toArray->getArgument(0)->getType();
             param = builder.variable(argTy);
-            arg = scalarToArray->getArgument(0);
+            arg = toArray->getArgument(0);
+        } else if(toArray->getFunctionExpr() == BASIC.getRefVectorToRefArray()) {
+            argTy = toArray->getArgument(0)->getType();
+            param = builder.variable(argTy);
+            arg = toArray->getArgument(0);
         } else {
-//            std::cout << "Unexpected Function: " << scalarToArray->getArgument(0)->getType() << std::endl;
+            std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
             assert(false && "Unexpected function in OpenCL size argument");
         }
+    } else { // the argument is an array
+        size = tryDeref(size, builder);
+        assert(size->getType()->getNodeType() == NT_ArrayType && "Called clEnqueueNDRangeKernel with invalid group argument");
+        argTy = size->getType();
+        param = builder.variable(argTy);
+        arg = size;
     }
 
 
@@ -469,15 +499,44 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(const ExpressionPtr& workD
  //   if(const ArrayType)
 
     ExpressionPtr init = param;
-    if(dynamic_pointer_cast<const RefType>(param->getType())) {
+
+    if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(param->getType())) {
         init = builder.deref(param);
-    }
-    if(init->getType() != BASIC.getUInt4()) {
-        init = builder.castExpr(BASIC.getUInt4(), init);
+//        argTy = ref->getElementType();
     }
 
-    DeclarationStmtPtr vDecl = builder.declarationStmt(vecTy,
-        builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
+    TypePtr fieldTy;
+    if(const ArrayTypePtr& array = dynamic_pointer_cast<const ArrayType>(init->getType()))
+        fieldTy = array->getElementType();
+
+    if(const VectorTypePtr& vector = dynamic_pointer_cast<const VectorType>(init->getType()))
+        fieldTy = vector->getElementType();
+
+    DeclarationStmtPtr vDecl;
+    if(wd == 1) {
+        if(fieldTy)
+            init = builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0"));
+        if(init->getType() != BASIC.getUInt4()) {
+            init = builder.castExpr(BASIC.getUInt4(), init);
+        }
+        vDecl = builder.declarationStmt(vecTy,
+            builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
+    } else {
+        assert(fieldTy && "Size argument of multidimensional group is no vector or array");
+
+        vector<ExpressionPtr> subscripts;
+        subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0")));
+        subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "1")));
+        subscripts.push_back(wd == 3 ? (ExpressionPtr)builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "2")) :
+            (ExpressionPtr)builder.literal(BASIC.getUInt4(), "1"));
+
+        for_each(subscripts, [&](ExpressionPtr& r) {
+            if(r->getType() != BASIC.getUInt4())
+                r = builder.castExpr(BASIC.getUInt4(), r);
+        });
+
+        vDecl = builder.declarationStmt(vecTy, builder.vectorExpr(subscripts));
+    }
 
 //std::cout << "SIZETYPE: !" << size->getType() << std::endl;
 
@@ -486,8 +545,6 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(const ExpressionPtr& workD
                     builder.returnStmt(vDecl->getVariable()))), arg);
 
 
-
-    return ret;
 }
 
 
@@ -520,6 +577,12 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                 }
             }
         }
+
+        // remove delarations of opencl type variables. Should not be used any more
+        // TODO let the unused variable removal do the job
+        if(var->getType()->toString().find("_cl_") != string::npos)
+            return BASIC.getNoOp();
+
     }
 
     if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)){

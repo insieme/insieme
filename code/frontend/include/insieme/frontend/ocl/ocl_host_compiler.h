@@ -176,7 +176,7 @@ class HostMapper3rdPass : public core::transform::CachedNodeMapping {
 
     void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg);
 
-    const core::ExpressionPtr anythingToVec3(const core::ExpressionPtr& workDim, core::ExpressionPtr size);
+    const core::ExpressionPtr anythingToVec3(core::ExpressionPtr workDim, core::ExpressionPtr size);
 
 public:
     HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, KernelNames& oclKernelNames,

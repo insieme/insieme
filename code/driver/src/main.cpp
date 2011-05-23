@@ -45,8 +45,11 @@
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 
+#include "insieme/backend/backend.h"
+
 #include "insieme/simple_backend/simple_backend.h"
 #include "insieme/opencl_backend/opencl_convert.h"
+#include "insieme/backend/full_backend.h"
 #include "insieme/simple_backend/rewrite.h"
 
 #include "insieme/analysis/cfg.h"
@@ -76,6 +79,7 @@ using namespace insieme::utils::log;
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
+namespace be = insieme::backend;
 namespace xml = insieme::xml;
 namespace utils = insieme::utils;
 namespace analysis = insieme::analysis;
@@ -249,9 +253,9 @@ int main(int argc, char** argv) {
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			};
 
-			if(CommandLineOptions::CheckSema) {
-				checker();
-			}
+//			if(CommandLineOptions::CheckSema) {
+//				checker();
+//			}
 
 			// run OMP frontend
 			if(CommandLineOptions::OMPSema) {
@@ -333,37 +337,50 @@ int main(int argc, char** argv) {
 		}
 		#endif
 
-		
-		if (CommandLineOptions::OpenCL) {
-            insieme::utils::Timer timer("OpenCL.Backend");
-
-            LOG(INFO) << "========================= Converting to OpenCL ==================================";
+		{
+			string backendName = "";
+			be::BackendPtr backend;
+			if (CommandLineOptions::OpenCL) {
+				backendName = "OpenCL.Backend";
 
 //TODO find the OpenCLChecker
-//			insieme::opencl_backend::OpenCLChecker oc;
-//			LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
+//				insieme::opencl_backend::OpenCLChecker oc;
+//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
 
-            if(!CommandLineOptions::Output.empty()) {
-                insieme::backend::Rewriter::writeBack(program, insieme::backend::ocl::convert(program), CommandLineOptions::Output);
-            } else {
-                auto converted = insieme::backend::ocl::convert(program);
-                LOG(INFO) << *converted;
-            }
-
-            timer.stop();
-            LOG(INFO) << timer;
-		} else {
-			insieme::utils::Timer timer("Simple.Backend");
-
-			LOG(INFO) << "=========================== Converting to C ==================================";
-
-			if(!CommandLineOptions::Output.empty()) {
-				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
+				// obtain open CL backend instance
+				backend = insieme::backend::ocl::OpenCLBackend::getDefault();
+			} else if (CommandLineOptions::OmegaBackend) {
+				backendName = "Full.Backend";
+				backend = insieme::backend::FullBackend::getDefault();
 			} else {
-				auto converted = insieme::simple_backend::convert(program);
-				LOG(INFO) << *converted;
+				backendName = "Simple.Backend";
+				backend = insieme::simple_backend::SimpleBackend::getDefault();
 			}
 
+
+			insieme::utils::Timer timer(backendName);
+
+			LOG(INFO) << "======================= Converting to TargetCode ================================";
+
+			// convert code
+			be::TargetCodePtr targetCode = backend->convert(program);
+
+			// select output target
+			if(!CommandLineOptions::Output.empty()) {
+				// write result to file ...
+				std::fstream outFile(CommandLineOptions::Output, std::fstream::out | std::fstream::trunc);
+				outFile << *targetCode;
+				outFile.close();
+
+				// TODO: reinstate rewriter when fractions of programs are supported as entry points
+//				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
+
+			} else {
+				// just write result to logger
+				LOG(INFO) << *targetCode;
+			}
+
+			// print timing information
 			timer.stop();
 			LOG(INFO) << timer;
 		}

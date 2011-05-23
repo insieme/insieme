@@ -34,59 +34,41 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/simple_backend/simple_backend.h"
+#pragma once
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_node.h"
-
-#include "insieme/simple_backend/backend_convert.h"
-#include "insieme/simple_backend/variable_manager.h"
-#include "insieme/simple_backend/statement_converter.h"
-#include "insieme/simple_backend/type_manager.h"
-#include "insieme/simple_backend/function_manager.h"
-#include "insieme/simple_backend/job_manager.h"
-
-#include "insieme/simple_backend/formatting/operator_formatting.h"
+#include "insieme/backend/backend.h"
 
 namespace insieme {
-namespace simple_backend {
+namespace backend {
 
-	SimpleBackendPtr SimpleBackend::getDefault() {
-		return std::make_shared<SimpleBackend>();
-	}
+	// A forward declaration of the full backend implementation
+	class FullBackend;
+	typedef std::shared_ptr<FullBackend> FullBackendPtr;
 
-	backend::TargetCodePtr SimpleBackend::convert(const core::ProgramPtr& source) const {
+	/**
+	 * The backend interface implementation facading the omega backend.
+	 */
+	class FullBackend : public Backend {
+	public:
 
-		// create and set up the converter
-		Converter converter(false);
+		/**
+		 * A factory method obtaining a smart pointer referencing a
+		 * fresh instance of the full backend using the default configuration.
+		 *
+		 * @return a smart pointer to a fresh instance of the full backend
+		 */
+		static FullBackendPtr getDefault();
 
-		// Prepare managers
-		core::NodeManager& nodeManager = source->getNodeManager();
-		converter.setNodeManager(&nodeManager);
+		/**
+		 * The main facade function of the full backend. This function converts the given
+		 * IR representation into C99-target code interacting with the Insieme Runtime environment.
+		 *
+		 * @param source the program to be converted
+		 * @return a pointer to the converted target code
+		 */
+		backend::TargetCodePtr convert(const core::ProgramPtr& source) const;
 
-		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
-		converter.setStmtConverter(&stmtConverter);
+	};
 
-		NameManager nameManager;
-		converter.setNameManager(&nameManager);
-
-		TypeManager typeManager(converter);
-		converter.setTypeManager(&typeManager);
-
-		VariableManager variableManager;
-		converter.setVariableManager(&variableManager);
-
-		FunctionManager functionManager(converter);
-		converter.setFunctionManager(&functionManager);
-
-		JobManager jobManager(converter);
-		converter.setJobManager(&jobManager);
-
-		// conduct conversion
-		return converter.convert(source);
-	}
-
-
-} // end namespace simple_backend
+} // end namespace backend
 } // end namespace insieme
-

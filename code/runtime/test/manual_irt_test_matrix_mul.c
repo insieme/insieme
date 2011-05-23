@@ -174,7 +174,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_data_block* blockR = irt_di_aquire(itemR, IRT_DMODE_READ_ONLY);
 	double** R = (double**)blockR->data;
 
-	printf("======================\n= manual irt test array add done\n");
+	printf("======================\n= manual irt test matrix multiplication\n");
 	printf("= time taken: %lu\n", end_time - start_time);
 	bool check = true;
 	for (int i=0; i<N; i++) {

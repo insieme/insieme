@@ -114,7 +114,7 @@ namespace simple_backend {
 		 * @param prog the program to be converted
 		 * @return the converted target code program
 		 */
-		TargetCodePtr convert(const core::ProgramPtr& prog);
+		backend::TargetCodePtr convert(const core::ProgramPtr& prog);
 
 		StmtConverter& getStmtConverter() const {
 			assert(stmtConverter);

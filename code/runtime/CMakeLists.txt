@@ -24,14 +24,17 @@ find_package(GTest REQUIRED)
 include_directories(include/ ${GTEST_INCLUDE_DIRS})
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-file(GLOB test_cases test/*.cc)
-foreach (case_file ${test_cases})
+
+set ( ut_prefix  ut_rt_ )
+file(GLOB_RECURSE test_cases test/*.cc)
+foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
-	add_executable(ut_${case_name} ${case_file})
-	target_link_libraries(ut_${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(ut_${case_name} ${pthread_LIB})
-	target_link_libraries(ut_${case_name} dl)
+	set ( case_name ${ut_prefix}${case_name} )
+	add_executable(${case_name} ${case_file})
+	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
+	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} dl)
 	target_link_libraries(insieme_runtime rt)
 	
 	# disable valgrind for parallel test cases

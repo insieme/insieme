@@ -34,50 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/core/program.h"
-#include "insieme/core/printer/pretty_printer.h"
-
-#include "insieme/frontend/program.h"
-#include "insieme/driver/driver_config.h"
-#include "insieme/opencl_backend/opencl_convert.h"
-
-//#include <glog/logging.h>
-#include "insieme/utils/logging.h"
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
-
-namespace fe = insieme::frontend;
-namespace core = insieme::core;
-using namespace insieme::utils::set;
-using namespace insieme::backend::ocl;
-using namespace insieme::utils::log;
-
-TEST(OclDriverTest, KernelTest) {
-
-	Logger::get(std::cerr, INFO);
-
-	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
-
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "ocl/test_kernels.cl" << "' to IR...";
-	fe::Program prog(manager);
-	prog.addTranslationUnit(std::string(SRC_DIR) + "ocl/test_kernels.cl");
-	program = prog.convert();
-	LOG(INFO) << "Done.";
-
-	LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
-
-	LOG(INFO) << "Converting IR to OpenCL...";
-	auto converted = OpenCLBackend::getDefault()->convert(program);
-	LOG(INFO) << "Printing converted code: " << *converted;
-
-	std::ofstream out( std::string(SRC_DIR) + "/test_kernels.insieme.cl" );
-	out << *converted;
-	out.close();
-
-	LOG(INFO) << "Wrote source to " << SRC_DIR << "/test_kernels.insieme.cl" << std::endl;
-}
+#pragma once
+#define C_COMPILER "${CMAKE_C_COMPILER}"
+#define UTILS_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}"

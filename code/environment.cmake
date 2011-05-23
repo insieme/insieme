@@ -24,6 +24,7 @@ set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
 set ( insieme_c_info_include_dir         	${insieme_code_dir}/c_info/include )
 
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
+set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
 
 set ( insieme_xml_include_dir            	${insieme_code_dir}/xml/include )
 set ( insieme_driver_include_dir         	${insieme_code_dir}/driver/include )
@@ -239,14 +240,14 @@ if (NOT MEMORY_CHECK_SETUP)
 						--track-fds=yes
 						--error-exitcode=1
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-						${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 					WORKING_DIRECTORY
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
 			endif(NOT MSVC)
 		else(USE_VALGRIND)
 			# add normal test
-			add_test(ut_${case_name} ut_${case_name})
+			add_test(${case_name} ${case_name})
 
 			# + valgrind as a custom target (only of not explicitly prohibited)
 			if ((NOT MSVC) AND ((NOT (${ARGC} GREATER 1)) OR (${ARG2})))
@@ -257,7 +258,7 @@ if (NOT MEMORY_CHECK_SETUP)
 						--track-fds=yes
 						--error-exitcode=1
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
-						${CMAKE_CURRENT_BINARY_DIR}/ut_${case_name}
+						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 					WORKING_DIRECTORY
 						${CMAKE_CURRENT_BINARY_DIR}
 				)
