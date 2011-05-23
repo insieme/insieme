@@ -205,6 +205,10 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
 	irt_work_item_range range = wi->range;
+	printf("MMUL WI Range: ");
+	_irt_print_work_item_range(&range);
+	printf("\n");
+
 	irt_data_range subrange[] = {{range.begin, range.end, range.step}, {0,N,1}};
 	irt_data_range fullrange[] = {{0,N,1}, {0,N,1}};
 
