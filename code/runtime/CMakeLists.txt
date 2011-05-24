@@ -32,7 +32,11 @@ include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 
 # Build the runtime
 add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} )
-target_link_libraries(insieme_runtime ${OPENCL_LIBS} ${pthread_LIB} dl rt )
+if ( USE_OPENCL )
+	 target_link_libraries(insieme_runtime ${OPENCL_LIBS})
+endif ( USE_OPENCL )
+
+target_link_libraries(insieme_runtime ${pthread_LIB} dl rt )
 
 # enable tests for this project
 find_package(GTest REQUIRED)
