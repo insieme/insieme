@@ -8,9 +8,20 @@ include(../environment.cmake)
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
 file(GLOB_RECURSE insieme_runtime_incs 	include/*.h )
 
-message(STATUS "HELLO" $ENV{OPENCL_ROOT})
-# We also search for OpenCL in the NVIDIA SDK default location
+# We also search for OpenCL in the SDK default location
 find_library(OPENCL_LIBS NAMES OpenCL PATHS $ENV{OPENCL_ROOT}/lib/x86_64)
+
+option (USE_OPENCL "Build Insieme Runtime with Opencl" ON)
+
+if ( NOT ${OPENCL_LIBS_FOUND} )
+	set(USE_OPENCL OFF)
+endif()
+if ( USE_OPENCL )
+	add_definitions(-DUSE_OPENCL)
+	message(STATUS "OPENCL ENABLED")
+else ( USE_OPENCL )
+	message(STATUS "OPENCL DISABLED")
+endif()
 
 # list all include paths
 include_directories(include/ $ENV{OPENCL_ROOT}/include/)

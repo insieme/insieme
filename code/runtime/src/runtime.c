@@ -46,7 +46,10 @@
 #include "impl/worker.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
+
+#ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"
+#endif
 
 #include "utils/lookup_tables.h"
 
@@ -110,8 +113,11 @@ int main(int argc, char** argv) {
 	irt_init_globals();
 
 	// initialize opencl devices
+	#ifdef USE_OPENCL
+	printf("Running Insieme runtime with OpenCL!\n");
 	cl_uint num_devices = irt_ocl_get_num_devices();
-
+	#endif
+	
 	IRT_INFO("!!! Starting worker threads");
 	irt_g_worker_count = 1;
 	if(argc >= 3) irt_g_worker_count = atoi(argv[2]);

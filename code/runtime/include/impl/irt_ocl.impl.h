@@ -45,7 +45,7 @@
  * =====================================================================================
  */
 
-static void _irt_cl_print_platform_info(cl_platform_id* id) {
+void _irt_cl_print_platform_info(cl_platform_id* id) {
 	if (id == NULL) {
 		fprintf (stderr, "OCL ERROR: function %s is called with an invalid platform id in file %s, at line %d\n", __PRETTY_FUNCTION__, __FILE__, __LINE__);
 		exit (EXIT_FAILURE);
