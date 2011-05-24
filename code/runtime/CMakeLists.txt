@@ -2,7 +2,7 @@
 # Builds the insieme runtime
 #
 project(insieme_runtime C CXX)
-
+cmake_minimum_required(VERSION 2.6)
 include(../environment.cmake)
 
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
@@ -21,11 +21,11 @@ if ( USE_OPENCL )
 		message (STATUS "Found At: " ${OPENCL_LIBS})
 		message(STATUS "OPENCL ENABLED")
 		message(STATUS "USING ${OPENCL_LIBS}")			
-	endif()
+	endif(${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
 	
 else ( USE_OPENCL )
 	message(STATUS "OPENCL DISABLED")
-endif()
+endif( USE_OPENCL )
 
 # list all include paths
 include_directories(include/ $ENV{OPENCL_ROOT}/include/)
@@ -57,7 +57,7 @@ foreach ( case_file ${test_cases})
 	set(VFLAG ${TRUE})
 	if(case_name MATCHES ".*_par")
 		set(VFLAG FALSE)
-	endif()
+	endif(case_name MATCHES ".*_par")
 	add_unit_test(${case_name} ${VFLAG})
 endforeach(case_file)
 
