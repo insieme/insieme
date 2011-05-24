@@ -113,6 +113,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	analysis::GlobalVarCollector globColl(ret.second, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(funcDecl);
 	VLOG(1) << globColl;
+	VLOG(2) <<  mFact.ctx.globalStruct.first;
 
 	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
 	if (mFact.ctx.globalStruct.first) {

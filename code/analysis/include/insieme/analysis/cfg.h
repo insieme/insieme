@@ -117,11 +117,7 @@ private:
 	core::ExpressionPtr expr;	
 };
 
-
-
 } // end cfg namespace
-
-
 
 enum CreationPolicy { OneStmtPerBasicBlock, MultiStmtPerBasicBlock };
 

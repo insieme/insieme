@@ -191,31 +191,38 @@ struct CFGBuilder: public ASTVisitor< void > {
 		isPending = true;
 	}
 
+	void resetCurrBlock(){ currBlock = NULL; }
+
+	// Appends the block currently referred by currBlock pointer to the graph if it is pending. 
+	// This requires to add a node to the CFG and connect it to the current head of the CFG which is
+	// referred by the succ variable. The pointer to the head (succ) will be then updated to point 
+	// to the node just inserted. 
 	void appendPendingBlock(bool soft=true) {
 
 		// if we already have allocated an empty block and it is not pending
-        if ( soft && !isPending && currBlock && currBlock->empty() )
-	        return;
+        if ( soft && !isPending && currBlock && currBlock->empty() ) { return; }
 
 		// In the case the currBlock is pending and not empty we add it to the Graph and connect
 		// it with the successive node in the CFG
 		if ( isPending && currBlock && !currBlock->empty() ) {
 			CFG::VertexTy&& node = cfg->addBlock(currBlock);
 			
-			cfg->addEdge(node, succ, (argNumStack.empty()?cfg::Edge():cfg::Edge( builder.intLit( argNumStack.top() ) )));
+			cfg->addEdge( node, succ, 
+					(argNumStack.empty() ? cfg::Edge() : cfg::Edge(builder.intLit( argNumStack.top() ))) 
+				);
 
 			succ = node;
-			currBlock = NULL;
+			resetCurrBlock();
 		}
 		
+		// The node is pending but the content is empty, in this case we avoid to insert 
+		// the node in the CFG and free the memory used to allocate the empty block
 		if ( isPending && currBlock ) {
 			delete currBlock;
-			currBlock = NULL;
+			resetCurrBlock();
 		}
 
-		if ( !isPending && currBlock ) {
-			currBlock = NULL;
-		}
+		if ( !isPending && currBlock ) { resetCurrBlock(); }
 		isPending = false;
 
 		// check post conditions
@@ -300,7 +307,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		CFG::VertexTy&& forHead = cfg->addBlock( forBlock );
 
 		appendPendingBlock(false);  // append any pending block before we fork the CFG for inserting the for stmt
-		currBlock = NULL;
+		resetCurrBlock();
 
 		CFG::VertexTy sink = succ;
 		CFG::VertexTy src = forHead; 
@@ -471,7 +478,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 			cfg->addEdge(retVertex, succ, (argNumStack.empty()?cfg::Edge():cfg::Edge(builder.intLit(argNumStack.top()))) );
 
 			succ = callVertex;
-			currBlock = NULL;
+			resetCurrBlock();
 
 		} else {
 			// we are in the multistmt per block mode we should not append and create a new block here
@@ -638,7 +645,7 @@ CFG::VertexTy CFG::addBlock(cfg::Block* block) {
 	put(block_map, v, block);
 
 	// Set the index appropriately
-	boost::property_map< CFG::ControlFlowGraph, boost::vertex_index_t>::type&& blockID = get(boost::vertex_index, graph);
+	boost::property_map<CFG::ControlFlowGraph, boost::vertex_index_t>::type&& blockID = get(boost::vertex_index, graph);
 	put(blockID, v, currId++);
 	return v;
 }
@@ -650,9 +657,9 @@ void CFG::removeBlock(const CFG::VertexTy& v) {
 }
 
 std::pair<CFG::VertexTy,CFG::VertexTy> CFG::addSubGraph(const NodePtr& root) {
-	CFG::VertexTy&& entry = addBlock(new cfg::Block(*this, cfg::Block::ENTRY) );
-	CFG::VertexTy&& exit = addBlock(new cfg::Block(*this, cfg::Block::EXIT) );
-	if(subGraphs.empty()) {
+	CFG::VertexTy&& entry = addBlock( new cfg::Block(*this, cfg::Block::ENTRY) );
+	CFG::VertexTy&& exit = addBlock( new cfg::Block(*this, cfg::Block::EXIT) );
+	if (subGraphs.empty()) {
 		entry_block = entry;
 		exit_block = exit;
 	}
@@ -727,9 +734,9 @@ const cfg::Edge& CFG::getEdge(const CFG::VertexTy& src, const CFG::VertexTy& des
 
 void CFG::printStats(std::ostream& out) {
 	out << "****************************************" << std::endl;
-	out << "* Num. of CFGs:        " << subGraphs.size() << std::endl;
-	out << "* Num. of total nodes: " << boost::num_vertices(graph) << std::endl;
-	out << "* Num. of total edges: " << boost::num_edges(graph) << std::endl;
+	out << "* # of CFGs:        " << subGraphs.size() << std::endl;
+	out << "* # of total nodes: " << boost::num_vertices(graph) << std::endl;
+	out << "* # of total edges: " << boost::num_edges(graph) << std::endl;
 	out << "****************************************" << std::endl;
 }
 
