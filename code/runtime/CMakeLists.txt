@@ -9,16 +9,20 @@ file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
 file(GLOB_RECURSE insieme_runtime_incs 	include/*.h )
 
 # We also search for OpenCL in the SDK default location
-find_library(OPENCL_LIBS NAMES OpenCL PATHS $ENV{OPENCL_ROOT}/lib/x86_64)
 
-option (USE_OPENCL "Build Insieme Runtime with Opencl" ON)
-
-if ( NOT ${OPENCL_LIBS_FOUND} )
-	set(USE_OPENCL OFF)
-endif()
+option (USE_OPENCL "Build Insieme Runtime with Opencl" OFF)
 if ( USE_OPENCL )
-	add_definitions(-DUSE_OPENCL)
-	message(STATUS "OPENCL ENABLED")
+	find_library(OPENCL_LIBS NAMES OpenCL PATHS $ENV{OPENCL_ROOT}/lib/x86_64)
+	if ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
+		set(USE_OPENCL OFF)
+		message(WARNING "OPENCL DISABLED, LIBRARY NOT FOUND")	
+	else ( ${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
+		add_definitions(-DUSE_OPENCL)
+		message (STATUS "Found At: " ${OPENCL_LIBS})
+		message(STATUS "OPENCL ENABLED")
+		message(STATUS "USING ${OPENCL_LIBS}")			
+	endif()
+	
 else ( USE_OPENCL )
 	message(STATUS "OPENCL DISABLED")
 endif()
