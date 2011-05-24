@@ -46,6 +46,7 @@
 #include "impl/worker.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
+#include "impl/irt_ocl.impl.h"
 
 #include "utils/lookup_tables.h"
 
@@ -107,6 +108,9 @@ int main(int argc, char** argv) {
 	atexit(&irt_exit_handler);
 	// initialize globals
 	irt_init_globals();
+
+	// initialize opencl devices
+	cl_uint num_devices = irt_ocl_get_num_devices();
 
 	IRT_INFO("!!! Starting worker threads");
 	irt_g_worker_count = 1;
