@@ -44,6 +44,7 @@
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"
+#include "impl/error_handling.impl.h"
 
 static inline irt_work_item* _irt_wi_new() {
 	return (irt_work_item*)malloc(sizeof(irt_work_item));
@@ -52,6 +53,9 @@ static inline void _irt_wi_recycle(irt_work_item* wi) {
 	free(wi);
 }
 
+static inline void _irt_print_work_item_range(const irt_work_item_range* r) { 
+	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
+}
 
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new();

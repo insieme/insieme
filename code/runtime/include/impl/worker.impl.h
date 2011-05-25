@@ -41,12 +41,12 @@
 #include <stdlib.h>
 
 #include "globals.h"
-#include "impl/error_handling.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/irt_context.impl.h"
 #include "impl/work_item.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "utils/affinity.h"
+#include "impl/error_handling.impl.h"
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
@@ -118,7 +118,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		lwt_prepare(wi, &self->basestack);
 
 		self->cur_wi = wi;
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, wi->stack_ptr);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
@@ -126,7 +126,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	} else { 
 		// resume WI
 		self->cur_wi = wi;
-		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, wi->stack_ptr);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		lwt_continue(&wi->stack_ptr, &self->basestack);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);
@@ -229,7 +229,6 @@ void irt_worker_schedule(irt_worker* self) {
 }
 #else
 void irt_worker_schedule(irt_worker* self) {
-
 	// try to take a ready WI from the pool
 	irt_work_item* next_wi = _irt_get_ready_wi_from_pool(&self->pool);
 	if(next_wi != NULL) {

@@ -46,7 +46,7 @@
 #include "wi_implementation.h"
 #include "utils/timing.h"
 
-#define NUM_ITER 100000
+#define NUM_ITER 1000000
 #define NUM_LEVELS 1
 
 typedef struct _insieme_wi_bench_params {

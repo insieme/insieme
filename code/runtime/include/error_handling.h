@@ -41,7 +41,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#define IRT_VERBOSE
+//#define IRT_VERBOSE
 
 #define IRT_SIG_ERR SIGUSR1
 
@@ -89,6 +89,7 @@ if(!(__condition)) { \
 #define IRT_DEBUG_PRINTS_OFF
 #define IRT_ASSERT(__condition, __errcode, __message, ...) if(__condition);
 #define IRT_WARN(__message, ...)
+#define IRT_INFO(__message, ...)
 #define IRT_DEBUG(__message, ...)
 #endif
 
