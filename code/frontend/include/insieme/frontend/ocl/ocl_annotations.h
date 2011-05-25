@@ -184,9 +184,10 @@ class KernelFileAnnotation : public core::Annotation {
 private:
     const string path;
 public:
+    static const string NAME;
     static const core::StringKey<KernelFileAnnotation> KEY;
 
-    const std::string getAnnotationName() const { return "OclKernelFileAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
     KernelFileAnnotation(string kernelPath) : core::Annotation(), path(kernelPath) { }
 
