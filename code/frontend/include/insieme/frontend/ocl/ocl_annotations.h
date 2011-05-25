@@ -106,10 +106,11 @@ class WorkGroupSizeAnnotation : public Annotation {
 private:
     const unsigned int xDim, yDim, zDim;
 public:
+    static const string NAME;
     WorkGroupSizeAnnotation(unsigned int x, unsigned int y, unsigned int z) :
         Annotation(), xDim(x), yDim(y), zDim(z) { }
 
-    const std::string& getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
     unsigned int getXdim() const;
     unsigned int getYdim() const;

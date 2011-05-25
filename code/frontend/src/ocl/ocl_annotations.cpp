@@ -51,6 +51,8 @@ const core::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY(
 const string AddressSpaceAnnotation::NAME = "OclAddressSpaceAnnotation";
 const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
 
+const string WorkGroupSizeAnnotation::NAME = "OclWorkGroupSizeAnnotation";
+
 void KernelFctAnnotation::setKernelFct(bool isKernelFct) { kf = isKernelFct; }
 
 bool KernelFctAnnotation::isKernelFct() const { return kf; }

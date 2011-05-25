@@ -39,6 +39,8 @@
 #include <memory>
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
+#include <boost/optional.hpp>
+#include <boost/utility/typed_in_place_factory.hpp>
 
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/functional_utils.h"
@@ -154,25 +156,23 @@ typedef utils::map::PointerMap<const AnnotationKey*, AnnotationPtr> AnnotationMa
 class Annotatable {
 
 	/**
-	 * Defines the type of the internally used annotation map reference. The annotation map may be shared
-	 * among multiple, identical instances of an annotatable Object (created via a copy constructor). Further,
-	 * an indirection level is introduced, which allows the annotation map to be lazy constructed.
+	 * Defines the type of the internally used annotation map reference. The annotation map is maintained
+	 * within a boost optional, which reduces the creation overhead of the annotatable objects. The
+	 * internal map will only be created in case an actual annotation should be attached.
 	 */
-	typedef std::shared_ptr<std::unique_ptr<AnnotationMap>> SharedAnnotationMap;
+	typedef boost::optional<AnnotationMap> AnnotationMapOpt;
 
 	/**
 	 * The internal storage for annotations. It links every key to its corresponding value.
-	 * The actual register is shared among copies of this class. Hence, the register is referenced
-	 * via a shared pointer referencing an optional annotation map.
 	 */
-	mutable SharedAnnotationMap map;
+	mutable AnnotationMapOpt map;
 
 public:
 
 	/**
 	 * The constructor of this class is initializing the referenced shared annotation register.
 	 */
-	Annotatable() : map(std::make_shared<std::unique_ptr<AnnotationMap>>()) {};
+	Annotatable() {};
 
 	/**
 	 * The destructor is marked virtual since most likely derived classes will be used by client code.
@@ -203,8 +203,8 @@ public:
 		}
 
 		// search for entry
-		auto pos = (*map)->find(key);
-		if (pos == (*map)->end() ) {
+		auto pos = map->find(key);
+		if (pos == map->end() ) {
 			return std::shared_ptr<typename Key::annotation_type>();
 		}
 
@@ -236,13 +236,13 @@ public:
 	void remAnnotation(const AnnotationKey* key) const {
 
 		// check whether there are annotations at all
-		if (!(*map)) {
+		if (!map) {
 			return;
 		}
 
-		auto pos = (*map)->find(key);
-		if (pos != (*map)->end()) {
-			(*map)->erase(pos);
+		auto pos = map->find(key);
+		if (pos != map->end()) {
+			map->erase(pos);
 		}
 	}
 
@@ -262,7 +262,7 @@ public:
 	 * @return true if found, false otherwise
 	 */
 	bool hasAnnotation(const AnnotationKey* key) const {
-		return (*map) && (*map)->find(key) != (*map)->end();
+		return map && map->find(key) != map->end();
 	}
 
 	/**
@@ -280,7 +280,7 @@ public:
 	 */
 	const AnnotationMap& getAnnotations() const {
 		initAnnotationMap();
-		return **map;
+		return *map;
 	}
 
 	/**
@@ -294,7 +294,7 @@ public:
 	void setAnnotations(const AnnotationMap& annotations) const {
 		// replace all currently assigned annotations
 		initAnnotationMap();
-		(**map) = annotations;
+		map = annotations;
 	}
 
 	/**
@@ -304,6 +304,7 @@ public:
 	 * updated the map pointer such that it is pointing to the new location.
 	 */
 	const void isolateAnnotations() const {
+		// TODO: remove this from this class
 		// copy current annotations
 		setAnnotations(getAnnotations());
 	}
@@ -315,18 +316,18 @@ public:
 	 */
 	bool hasAnnotations() const {
 		// check state of internally maintained map
-		return *map && !((*map)->empty());
+		return map && !(map->empty());
 	}
 
 private:
 
 	void initAnnotationMap() const {
 		// test whether it has already been initialized
-		if (*map) {
+		if (map) {
 			return;
 		}
-		// it has to be ... the annotation map has to be created
-		*map = std::unique_ptr<AnnotationMap>(new AnnotationMap());
+		// the annotation map has to be created
+		map = boost::in_place<AnnotationMap>();
 	}
 };
 

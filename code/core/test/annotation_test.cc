@@ -149,62 +149,62 @@ TEST(Annotation, CopyTests) {
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	b.remAnnotation(DummyAnnotation::DummyKey);
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	// test assignment
 	Annotatable c;
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	c.addAnnotation(annotation);
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	// assign a to c ... (annotations should now be shared)
 	c = a;
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	b.addAnnotation(annotation);
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	a.remAnnotation(DummyAnnotation::DummyKey);
 	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	c.remAnnotation(DummyAnnotation2::DummyKey);
 	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
+	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
+	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 }
 
