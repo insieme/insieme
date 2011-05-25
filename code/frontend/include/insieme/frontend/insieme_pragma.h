@@ -86,5 +86,17 @@ public:
 		InsiemePragma(startLoc, endLoc, type, mmap) { }
 };
 
+class InsiemeKernelFile: public InsiemePragma {
+    const MatchMap mMap;
+public:
+    InsiemeKernelFile(const clang::SourceLocation& startLoc, const clang::SourceLocation& endLoc, const std::string& type, MatchMap const& mmap):
+        InsiemePragma(startLoc, endLoc, type, mmap), mMap(mmap) {}
+
+        const string getPath() const {
+            assert(mMap.size() == 1 && "Insieme KernelPath pragma cannot have more than one argument");
+            return *mMap.begin()->second.front()->get<std::string*>();
+        }
+};
+
 } // End frontend namespace
 } // End insieme namespace

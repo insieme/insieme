@@ -51,6 +51,7 @@ DEFINE_TYPE(Annotation);
 DEFINE_TYPE(KernelFctAnnotation);
 DEFINE_TYPE(WorkGroupSizeAnnotation);
 DEFINE_TYPE(AddressSpaceAnnotation);
+DEFINE_TYPE(KernelFileAnnotation);
 
 class BaseAnnotation : public core::CompoundAnnotation<ocl::Annotation> {
 public:
@@ -174,6 +175,24 @@ public:
     core::LiteralPtr getBuiltinLiteral() const;
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
+
+};
+
+/** Annotatinon holding a string with the path of a kernel source file
+ ** */
+class KernelFileAnnotation : public core::Annotation {
+private:
+    const string path;
+public:
+    static const core::StringKey<KernelFileAnnotation> KEY;
+
+    const std::string getAnnotationName() const { return "OclKernelFileAnnotation"; }
+
+    KernelFileAnnotation(string kernelPath) : core::Annotation(), path(kernelPath) { }
+
+    const string& getKernelPath() const { return path; }
+
+    const core::AnnotationKey* getKey() const { return &KEY; }
 
 };
 

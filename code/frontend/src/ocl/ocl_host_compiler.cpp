@@ -45,6 +45,7 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 
 namespace ba = boost::algorithm;
+namespace iocl = insieme::ocl;
 
 namespace insieme {
 namespace frontend {
@@ -52,6 +53,17 @@ namespace ocl {
 using namespace insieme::core;
 
 namespace {
+
+ProgramPtr loadKernelsFromFile(string path, ASTBuilder builder) {
+    LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
+    // delete quotation marks form path
+    if(path[0] == '"')
+        path = path.substr(1, path.length()-2);
+    frontend::Program fkernels(builder.getNodeManager());
+    fkernels.addTranslationUnit(path);
+    return fkernels.convert();
+}
+
 
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type ) {
     if(CallExprPtr&& mul = dynamic_pointer_cast<const CallExpr>(arg)) {
@@ -227,13 +239,12 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
             if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
                 if(stringAsChar->getValue() == "string.as.char.pointer") {
                     if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-                        // delete quotation marks form path
-                        string p = path->getValue().substr(1, path->getValue().length()-2);
-                        LOG(INFO) << "Converting kernel file '" << path->getValue() << "' to IR...";
+/*                        LOG(INFO) << "Converting kernel file '" << p << "' to IR...";
                         frontend::Program fkernels(builder.getNodeManager());
 
                         fkernels.addTranslationUnit(p);
-                        kernels = fkernels.convert();
+                        kernels = fkernels.convert();*/
+                        kernels = loadKernelsFromFile(path->getValue(), builder);
 
                         // set source string to an empty char array
                         ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
@@ -243,7 +254,11 @@ HostMapper::HostMapper(ASTBuilder& build) : builder(build), o2i(build.getNodeMan
         }
         return ret;
     );
-
+/*
+    ADD_Handler(builder, "clCreateProgramWithSource",
+        return BASIC.getNoOp();
+    );
+*/
     ADD_Handler(builder, "clEnqueueNDRangeKernel",
         // get argument vector
         std::vector<core::ExpressionPtr> args = kernelArgs[node->getArgument(1)];
@@ -303,6 +318,14 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
         return element;
     }
 
+    if(const MarkerExprPtr& marker = dynamic_pointer_cast<const MarkerExpr>(element)){
+ //       std::cout << "MarkerExpr: " << marker << std::endl;
+    }
+
+    if(const MarkerStmtPtr& marker = dynamic_pointer_cast<const MarkerStmt>(element)){
+        std::cout << "MarkerStmt: " << marker << std::endl;
+    }
+
     if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)){
  //       std::cout << callExpr->toString() << " FOUND\n";
         const ExpressionPtr& fun = callExpr->getFunctionExpr();
@@ -327,8 +350,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
         if(fun == BASIC.getRefAssign()) {
             if(const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
+//std::cerr << "LHS: " << lhs << "->" << lhs->getType() << std::endl << "\nRHS: " << callExpr->getArgument(0) << "->" << callExpr->getArgument(0)->getType() << std::endl;
                 if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
-
                     if(const CallExprPtr& newCall = checkAssignment(callExpr)) {
 /* omitting further checks
                         if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())){
@@ -354,7 +377,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                         if(fun->getValue() == "clCreateKernel" ) {
 
                             ExpressionPtr kn = newCall->getArgument(1);
-                            // usually kernel name is enbeddid in a "string.as.char.pointer" call"
+                            // usually kernel name is enbedded in a "string.as.char.pointer" call"
                             if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
                                 kn = sacp->getArgument(0);
 
@@ -365,7 +388,37 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                         }
                     }
                 }
+
+                if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_program")))) {
+                    if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+                        if(rhs->getFunctionExpr() == BASIC.getRefDeref() && rhs->getArgument(0)->getNodeType() == NT_CallExpr) {
+
+                            if(iocl::KernelFileAnnotationPtr kfa =
+                                    dynamic_pointer_cast<iocl::KernelFileAnnotation>(rhs->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
+                                string path = kfa->getKernelPath();
+                                LOG(DEBUG) << "Found OpenCL kernel file path: " << path;
+                                rhs = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0));
+
+                                if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(rhs->getFunctionExpr())) {
+                                    if(clCPWS->getValue() == "clCreateProgramWithSource") {
+                                        ProgramPtr kernels = loadKernelsFromFile(path, builder);
+
+                                        for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel){
+                                            kernelEntries.push_back(kernel);
+                                        });
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+
+                    std::cout << "found cl_program" << std::endl;
+                    return BASIC.getNoOp();
+
+                }
             }
+
 /*
             if(const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
                     std::cout << "Assigning literal " << callExpr->getArgument(1) << " to " << callExpr->getArgument(0) << std::endl;
@@ -424,10 +477,10 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 HostMapper3rdPass::HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, KernelNames& oclKernelNames,
         KernelLambdas& oclKernelLambdas):
     builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs), kernelNames(oclKernelNames), kernelLambdas(oclKernelLambdas) {
-//    create3Dvec = parse::parseExpression(builder.getNodeManager(), "fun(uint<4>:workDim, anyRef:size) -> vector<uint<4>, 3> {{ \
+/*    create3Dvec = parse::parseExpression(builder.getNodeManager(), "fun(uint<4>:workDim, anyRef:size) -> vector<uint<4>, 3> {{ \
             decl vector<uint<4>,3> sv = \
              \
-            }}");
+            }}");*/
 
 }
 
@@ -445,7 +498,6 @@ void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& ar
 /* Assumptions:
  * 1. the work dimension is a scalar in the arguments
  * 2. The cast to void* of the local/global size happens in the argument
- * 3. 1D only
  */
 
 const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
