@@ -48,9 +48,9 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/utility.hpp>
 
+#include "insieme/utils/pointer.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
-#include "insieme/utils/instance_ptr.h"
 
 
 /**
@@ -63,8 +63,8 @@
  */
 template<
 	typename T,
-	template<class C> class R = InstancePtr,
-	typename boost::enable_if<boost::is_base_of<InstancePtr<T>, R<T> >,int>::type = 0
+	template<class C> class R = Ptr,
+	typename boost::enable_if<boost::is_base_of<Ptr<T>, R<T> >,int>::type = 0
 	>
 class InstanceManager : private boost::noncopyable {
 

@@ -47,6 +47,10 @@
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
 
+#ifdef USE_OPENCL 
+#include "impl/irt_ocl.impl.h"
+#endif
+
 #include "utils/lookup_tables.h"
 
 // error handling
@@ -109,6 +113,12 @@ int main(int argc, char** argv) {
 	irt_init_globals();
 
 	IRT_DEBUG("!!! Starting worker threads");
+	// initialize opencl devices
+	#ifdef USE_OPENCL
+	printf("Running Insieme runtime with OpenCL!\n");
+	cl_uint num_devices = irt_ocl_get_num_devices();
+	#endif
+	
 	irt_g_worker_count = 1;
 	if(argc >= 3) irt_g_worker_count = atoi(argv[2]);
 	irt_g_workers = (irt_worker**)alloca(irt_g_worker_count * sizeof(irt_worker*));

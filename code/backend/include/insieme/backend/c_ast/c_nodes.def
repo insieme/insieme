@@ -1,0 +1,265 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+// ----------------------------------------------------------------------------------
+// 				  X-Macro file describing C AST Node Properties
+// ----------------------------------------------------------------------------------
+// This file describes the C AST nodes and their relation using MACRO names. The file
+// may be used to create code for inspecting / transforming syntax trees using actual
+// definitions of the macros.
+// ----------------------------------------------------------------------------------
+
+// ----------- MACRO definitions -----------------
+//  The following macros may be defined outside this file, within the context
+//  it gets included. By default, all of them will be defined empty
+
+//
+// --- Properties ---
+//
+
+// This macro is used to announce a node type.
+#if ! defined NODE
+	#define NODE(name)
+	#define __INTERNAL_NODE_DEFINITION
+#endif /* NODE definition */
+
+// This macro will be added for each node without a sub-type
+#if ! defined TERMINAL
+	#define TERMINAL(name)
+	#define __INTERNAL_TERMINAL_DEFINITION
+#endif /* TERMINAL definition */
+
+// This macro will be added for each node wich is not a terminal (has sub-types
+#if ! defined NON_TERMINAL
+	#define NON_TERMINAL(name)
+	#define __INTERNAL_NON_TERMINAL_DEFINITION
+#endif /* NON_TERMINAL definition */
+
+// A macro to mark abstract nodes
+#if ! defined ABSTRACT
+	#define ABSTRACT(name)
+	#define __INTERNAL_ABSTRACT_DEFINITION
+#endif /* ABSTRACT definition */
+
+// A macro to mark concrete nodes (non-abstract nodes)
+#if ! defined CONCRETE
+	#define CONCRETE(name)
+	#define __INTERNAL_CONCRETE_DEFINITION
+#endif /* CONCRETE definition */
+
+// This macro is used to describe an IS_A relation between node types
+#if ! defined IS_A
+	#define IS_A(type,base)
+	#define __INTERNAL_IS_A_DEFINITION
+#endif /* IS_A definition */
+
+
+//
+// --- Macros to describe nodes within this file ---
+//
+
+/**
+ * The AST_BASE macro is used to define the BASE node of the AST.
+ * (It should only be used once)
+ */
+#if ! defined AST_BASE
+	#define AST_BASE(name) \
+		NODE(name) \
+		NON_TERMINAL(name) \
+		ABSTRACT(name)
+	#define __INTERNAL_AST_BASE_DEFINITON
+#endif
+
+/**
+ * The AST_NODE macro adds a new node which is derived from another
+ * node type and still has further sub-types.
+ */
+#if ! defined AST_NODE
+	#define AST_NODE(name, baseType) \
+		NODE(name) \
+		IS_A(name, baseType) \
+		NON_TERMINAL(name)
+	#define __INTERNAL_AST_NODE_DEFINITON
+#endif
+
+/**
+ * The AST_TERMINAL macro defines a new node type which is derived from
+ * the given base type and does not have any further sub-types.
+ */
+#if ! defined AST_TERMINAL
+	#define AST_TERMINAL(name, baseType) \
+		NODE(name) \
+		IS_A(name, baseType) \
+		TERMINAL(name) \
+		CONCRETE(name)
+	#define __INTERNAL_AST_TERMINAL_DEFINITON
+#endif
+
+
+// ------------------------- BEGIN: AST NODE DEFINITONS ----------------------------
+
+//
+// --- Base Node ---
+//
+AST_BASE(Node)
+
+
+//
+// --- Supporting Nodes ---
+//
+
+AST_TERMINAL(Identifier, Node)
+
+
+//
+// --- Types ---
+//
+
+// add type node
+AST_NODE(Type, Node)
+ABSTRACT(Type)
+
+// and type constructors ...
+AST_TERMINAL(PrimitiveType, Type)
+AST_TERMINAL(PointerType, Type)
+AST_TERMINAL(VectorType, Type)
+AST_TERMINAL(StructType, Type)
+AST_TERMINAL(UnionType, Type)
+
+//
+// --- Statements ---
+//
+
+AST_NODE(Statement, Node)
+
+AST_TERMINAL(VarDecl, Statement)
+AST_TERMINAL(Compound, Statement)
+AST_TERMINAL(If, Statement)
+AST_TERMINAL(Switch, Statement)
+AST_TERMINAL(For, Statement)
+AST_TERMINAL(While, Statement)
+AST_TERMINAL(Continue, Statement)
+AST_TERMINAL(Break, Statement)
+AST_TERMINAL(Return, Statement)
+
+
+//
+// --- Expressions ---
+//
+
+AST_NODE(Expression, Statement)
+
+AST_TERMINAL(Literal, Expression)
+AST_TERMINAL(Variable, Expression)
+AST_TERMINAL(Initializer, Expression)
+
+AST_TERMINAL(UnaryOperation, Expression)
+AST_TERMINAL(BinaryOperation, Expression)
+AST_TERMINAL(TernaryOperation, Expression)
+
+AST_TERMINAL(Call, Expression)
+AST_TERMINAL(Parentheses, Expression)
+
+
+//
+// --- Declarations ---
+//
+
+AST_NODE(Declaration, Node)
+
+AST_TERMINAL(TypePrototype, Declaration)
+AST_TERMINAL(TypeDef, Declaration)
+AST_TERMINAL(FunctionPrototype, Declaration)
+AST_TERMINAL(Function, Declaration)
+
+
+//
+// --- Program ---
+//
+
+AST_TERMINAL(Program, Node)
+
+
+
+
+// ------------------------- END: AST NODE DEFINITONS ----------------------------
+
+// --- Cleaning up Macro definitions ---
+
+#ifdef __INTERNAL_NODE_DEFINITION
+	#undef __INTERNAL_NODE_DEFINITION
+	#undef NODE
+#endif
+
+#ifdef __INTERNAL_IS_A_DEFINITION
+	#undef __INTERNAL_IS_A_DEFINITION
+	#undef IS_A
+#endif
+
+#ifdef __INTERNAL_TERMINAL_DEFINITION
+	#undef __INTERNAL_TERMINAL_DEFINITION
+	#undef TERMINAL
+#endif
+
+#ifdef __INTERNAL_NON_TERMINAL_DEFINITION
+	#undef __INTERNAL_NON_TERMINAL_DEFINITION
+	#undef NON_TERMINAL
+#endif
+
+#ifdef __INTERNAL_ABSTRACT_DEFINITION
+	#undef __INTERNAL_ABSTRACT_DEFINITION
+	#undef ABSTRACT
+#endif
+
+#ifdef __INTERNAL_CONCRETE_DEFINITION
+	#undef __INTERNAL_CONCRETE_DEFINITION
+	#undef CONCRETE
+#endif
+
+#ifdef __INTERNAL_AST_BASE_DEFINITON
+	#undef __INTERNAL_AST_BASE_DEFINITON
+	#undef AST_BASE
+#endif
+
+#ifdef __INTERNAL_AST_NODE_DEFINITON
+	#undef __INTERNAL_AST_NODE_DEFINITON
+	#undef AST_NODE
+#endif
+
+#ifdef __INTERNAL_AST_TERMINAL_DEFINITON
+	#undef __INTERNAL_AST_TERMINAL_DEFINITON
+	#undef AST_TERMINAL
+#endif
