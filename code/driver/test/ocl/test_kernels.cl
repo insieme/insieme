@@ -118,11 +118,11 @@ __kernel void barriers(__constant float* c, __global float* ga, __global int* gb
     uint lid = get_local_id(0);
     uint gid = get_global_id(0);
 
-    l[lid] = 7.0f;//(float)c[gid];
+    l[lid] = (float)c[gid];
     barrier(CLK_LOCAL_MEM_FENCE);
     ga[gid] = l[lid];
 }
-/* init zero missing, so no in kernel local variables possible
+//* init zero missing, so no in kernel local variables possible
 #pragma insieme mark
 __kernel void localMem(__constant float* c, __global float* ga, __global int* gb, __local float* l, uint pa, int pb ) {
     uint gid = get_global_id(0);
@@ -135,7 +135,7 @@ __kernel void localMem(__constant float* c, __global float* ga, __global int* gb
 
     ga[gid] = l[gid+1] + inKernelLocal[gid];
 }
-*/
+
 
 /*
  * Copyright 1993-2009 NVIDIA Corporation.  All rights reserved.

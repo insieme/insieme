@@ -77,6 +77,10 @@ void InsiemePragma::registerPragmaHandler(clang::Preprocessor& pp) {
 	insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeIgnore>(
 			pp.getIdentifierInfo("ignore"), tok::eod, "insieme")
 		);
+
+    insieme->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<InsiemeKernelFile>(
+            pp.getIdentifierInfo("kernelFile"), tok::string_literal  >> tok::eod, "insieme")
+        );
 }
 
 } // end frontend namespace
