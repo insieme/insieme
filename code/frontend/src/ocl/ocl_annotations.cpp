@@ -39,9 +39,16 @@
 namespace insieme {
 namespace ocl {
 
+const string BaseAnnotation::NAME = "OclAnnotation";
 const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
+
+const string KernelFctAnnotation::NAME = "OclKernelFctAnnotation";
 const core::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
+
+const string BuiltinFunctionAnnotation::NAME = "OclBuiltinFunctionAnnotation";
 const core::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
+
+const string AddressSpaceAnnotation::NAME = "OclAddressSpaceAnnotation";
 const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
 
 void KernelFctAnnotation::setKernelFct(bool isKernelFct) { kf = isKernelFct; }

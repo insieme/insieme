@@ -53,62 +53,17 @@ class CNameAnnotation : public core::Annotation {
 	const string name;
 
 public:
+	static const string NAME;
 	static const core::StringKey<CNameAnnotation> KEY;
 
 	CNameAnnotation(const std::string& name) : core::Annotation(), name(name) { }
 
 	const std::string& getName() const { return name; }
-	const std::string getAnnotationName() const {return "CNameAnnotation";}
+	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const { return name; }
 
 	const core::AnnotationKey* getKey() const { return &KEY; }
-};
-
-/** Annotation class intended to keep the name(s) of recursive C types and functions.
- ** Should be used to annotate *pointers* to recursive types, mapping each type variable
- ** identifier to the corresponding C name.
- ** */
-//class CRecNameAnnotation : public core::Annotation {
-//public:
-//	typedef std::unordered_map<core::Identifier, core::Identifier, boost::hash<core::Identifier>> IdentMap;
-//
-//private:
-//	IdentMap identMap;
-//
-//public:
-//	static const core::StringKey<CRecNameAnnotation> KEY;
-//
-//	CRecNameAnnotation() : core::Annotation() { }
-//
-//	IdentMap& getIdentMap() { return identMap; }
-//
-//	void addIdent(const core::Identifier& recVarName, const core::Identifier& cName);
-//	const core::Identifier& getIdent(const core::Identifier& recVarName);
-//	const std::string& getName(const core::Identifier& recVarName);
-//	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
-//
-//	const std::string toString() const { return "TBD"; }
-//
-//	const core::AnnotationKey* getKey() const { return &KEY; }
-//};
-
-class COpAnnotation : public core::Annotation {
-
-	std::string opStr;
-
-public:
-	static const core::StringKey<COpAnnotation> KEY;
-
-	COpAnnotation(const std::string& opStr) : core::Annotation(), opStr(opStr) { }
-
-	const std::string getOperator() const { return opStr; }
-	const std::string getAnnotationName() const {return "COpAnnotation";}
-
-	const core::AnnotationKey* getKey() const { return &KEY; }
-
-	const std::string toString() const { return opStr; }
-
 };
 
 } // namespace c_info

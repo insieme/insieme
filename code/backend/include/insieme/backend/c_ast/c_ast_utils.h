@@ -72,6 +72,13 @@ namespace c_ast {
 		return manager->create<Variable>(type, manager->create(name));
 	}
 
+	// --- create a pair of parentheses -------------------------
+
+	inline ParenthesesPtr parenthese(ExpressionPtr expr) {
+		assert(expr && expr->getManager() && "There should be a manager!");
+		return expr->getManager()->create<Parentheses>(expr);
+	}
+
 	// --- all kind of overloaded operators ---
 
 	// -- Unary Operations --------------------------------------

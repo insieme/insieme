@@ -81,13 +81,14 @@ DEFINE_TYPE(Parallel);
  */
 class BaseAnnotation : public core::CompoundAnnotation< omp::Annotation > {
 public:
+	static const string NAME;
     static const core::StringKey<BaseAnnotation> KEY;
 
     BaseAnnotation(const core::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
     	core::CompoundAnnotation< omp::Annotation >(annotationList) { }
 
     const core::AnnotationKey* getKey() const { return &KEY; }
-	const std::string getAnnotationName() const { return "OmpAnnotation"; }
+	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;
 

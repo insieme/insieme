@@ -54,21 +54,23 @@ DEFINE_TYPE(AddressSpaceAnnotation);
 
 class BaseAnnotation : public core::CompoundAnnotation<ocl::Annotation> {
 public:
+	static const string NAME;
     static const core::StringKey<BaseAnnotation> KEY;
 
     BaseAnnotation(core::CompoundAnnotation<ocl::Annotation>::AnnotationList& annotationList) :
     	core::CompoundAnnotation<ocl::Annotation>(annotationList) { }
 
     const core::AnnotationKey* getKey() const { return &KEY; }
-    const std::string getAnnotationName() const { return "OclAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 };
 
 
-/** Base class for OpenCL related annotations
- ** */
+/**
+ * Base class for OpenCL related annotations
+ */
 class Annotation {
     //needed to make OclAnnotation polymorphic
-    virtual const std::string getAnnotationName() const = 0;
+    virtual const std::string& getAnnotationName() const = 0;
 };
 
 
@@ -81,11 +83,12 @@ class KernelFctAnnotation : public Annotation , public core::Annotation {
 private:
     bool kf;
 public:
+    static const string NAME;
 	static const core::StringKey<KernelFctAnnotation> KEY;
 
     KernelFctAnnotation() : ocl::Annotation(), core::Annotation(), kf(true){ }
 
-    const std::string getAnnotationName() const { return "OclKernelFctAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
     void setKernelFct(bool isKernelFct);
 
@@ -106,7 +109,7 @@ public:
     WorkGroupSizeAnnotation(unsigned int x, unsigned int y, unsigned int z) :
         Annotation(), xDim(x), yDim(y), zDim(z) { }
 
-    const std::string getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
+    const std::string& getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
 
     unsigned int getXdim() const;
     unsigned int getYdim() const;
@@ -132,9 +135,10 @@ public:
 private:
     addressSpace as;
 public:
+    static const string NAME;
     static const core::StringKey<AddressSpaceAnnotation> KEY;
 
-    const std::string getAnnotationName() const { return "OclAddressSpaceAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
     AddressSpaceAnnotation() : ocl::Annotation(), core::Annotation(), as(addressSpace::PRIVATE) { }
 
@@ -159,9 +163,10 @@ class BuiltinFunctionAnnotation : public Annotation , public core::Annotation {
 private:
     core::LiteralPtr lit;
 public:
+    static const string NAME;
     static const core::StringKey<BuiltinFunctionAnnotation> KEY;
 
-    const std::string getAnnotationName() const { return "OclBuiltinFunctionAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
     BuiltinFunctionAnnotation(core::LiteralPtr l) : ocl::Annotation(), core::Annotation(), lit(l) { }
 

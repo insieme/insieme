@@ -610,6 +610,9 @@ namespace analysis {
 		 */
 		class VariableInstantionInfo : public Annotation {
 
+			// The name of this annotation
+			const static string NAME;
+
 		public:
 
 			// The key used to attack instantiation results to call nodes
@@ -632,8 +635,8 @@ namespace analysis {
 				return &KEY;
 			}
 
-			virtual const std::string getAnnotationName() const {
-				return "VariableInstantionInfo";
+			virtual const std::string& getAnnotationName() const {
+				return NAME;
 			}
 
 			SubstitutionOpt get(const TypeList& args) const {
@@ -670,6 +673,7 @@ namespace analysis {
 
 		};
 
+		const string VariableInstantionInfo::NAME = "VariableInstantionInfo";
 		StringKey<VariableInstantionInfo> VariableInstantionInfo::KEY = StringKey<VariableInstantionInfo>("VARIABLE_INSTANTIATION_INFO");
 
 

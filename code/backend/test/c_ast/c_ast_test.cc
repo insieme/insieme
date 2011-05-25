@@ -68,6 +68,9 @@ TEST(C_AST, Basic) {
 	sum = add(sum, x);
 	EXPECT_EQ("x+y+x", toString(sum));
 
+	sum = add(sum, parenthese(add(x,y)));
+	EXPECT_EQ("x+y+x+(x+y)", toString(sum));
+
 }
 
 } // end namespace c_ast

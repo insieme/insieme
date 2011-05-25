@@ -1490,11 +1490,6 @@ public:
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(subExpr, unOp, convFact);
 
-		// add the operator name in order to help the convertion process in the backend
-		subExpr->addAnnotation(
-				std::make_shared<c_info::COpAnnotation>( UnaryOperator::getOpcodeStr(unOp->getOpcode()) )
-			);
-
 		return annotatedNode;
 	}
 

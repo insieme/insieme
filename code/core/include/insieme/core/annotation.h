@@ -44,6 +44,7 @@
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace core {
@@ -69,9 +70,11 @@ protected:
  * An abstract base class for any kind of annotation to be attached to a AST node or pointer.
  */
 class Annotation {
+
 public:
+
 	/**
-	 * Request a pointer to the key this annotation should be associated to. The memory of the
+	 * Request a reference to the key this annotation should be associated to. The memory of the
 	 * obtained key has to be managed by the annotation. As long as the annotation is valid, the
 	 * key has to be valid.
 	 *
@@ -79,7 +82,12 @@ public:
 	 */
 	virtual const AnnotationKey* getKey() const = 0;
 	
-	virtual const std::string getAnnotationName() const = 0;
+	/**
+	 * Requests the name of this annotation. The name should be a constant class member.
+	 *
+	 * @return the name of this annotation type
+	 */
+	virtual const std::string& getAnnotationName() const = 0;
 
 	/**
 	 * Returns a string representation for this annotation, by default it returns the annotation name
@@ -113,9 +121,9 @@ public:
 };
 
 /**
- * An abstract base class for compound annotations to be attached to a AST node or pointer.
+ * An abstract base class for compound annotations to be attached to a annotatable objects.
  * A compound annotation is used to store multiple informations with has the same key to
- * the same IR node or pointer. Useful to encode both OpenMP and OpenCL annotations.
+ * the same object. Useful to encode both OpenMP and OpenCL annotations.
  */
 template <class SubAnnTy>
 class CompoundAnnotation: public Annotation {
@@ -126,7 +134,7 @@ public:
 	CompoundAnnotation(const AnnotationList& annotationList) : Annotation(), annotationList(annotationList) { }
 
 	virtual const AnnotationKey* getKey() const = 0;
-	virtual const std::string getAnnotationName() const = 0;
+	virtual const std::string& getAnnotationName() const = 0;
 
 	typename AnnotationList::const_iterator getAnnotationListBegin() const { return annotationList.cbegin(); }
 	typename AnnotationList::const_iterator getAnnotationListEnd() const { return annotationList.cend(); }
@@ -329,7 +337,7 @@ private:
  * @tparam Comparator the comparator to be used to compare instances of the key type
  */
 template<typename T, typename AnnotationType=Annotation, typename Comparator = std::equal_to<T>>
-class SimpleKey : public AnnotationKey {
+class SimpleKey : public AnnotationKey, public utils::Printable {
 public:
 
 	/**
@@ -365,6 +373,11 @@ public:
 	 * @param other the key to be compared to
 	 */
 	bool equals(const AnnotationKey& other) const {
+		// quick check regarding memory location
+		if (this == &other) {
+			return true;
+		}
+
 		// check type of other key
 		if (typeid(other) != typeid(SimpleKey<T, Comparator>)) {
 			return false;
@@ -383,6 +396,16 @@ public:
 	const T& getValue() const {
 		return value;
 	}
+
+	/**
+	 * Allows simple keys to be printed to an output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return out a reference to the handed in output stream
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << "SimpleKey(" << value << ")";
+	}
 };
 
 
@@ -390,14 +413,8 @@ public:
  * A simple annotation key definition which is based on a string.
  */
 template<typename AnnotationType = Annotation>
-class StringKey : public SimpleKey<string, AnnotationType, std::equal_to<string>> {
+class StringKey : public SimpleKey<string, AnnotationType> {
 public:
-
-	/**
-	 * The type of annotation referenced by this key. Since it is a simple, general key
-	 * the annotation key type is
-	 */
-	typedef AnnotationType annotation_type;
 
 	/**
 	 * A default constructor for the String-Key type.
@@ -405,6 +422,16 @@ public:
 	 * @param value the value to be represented.
 	 */
 	StringKey(const string& value) : SimpleKey<string, AnnotationType, std::equal_to<string>>(value) {};
+
+	/**
+	 * Allows string keys to be printed to an output stream.
+	 *
+	 * @param out the stream to be printed to
+	 * @return out a reference to the handed in output stream
+	 */
+	virtual std::ostream& printTo(std::ostream& out) const {
+		return out << "StringKey(" << this->getValue() << ")";
+	}
 };
 
 
@@ -420,15 +447,3 @@ bool hasSameAnnotations(const Annotatable& annotatableA, const Annotatable& anno
 } // end namespace core
 } // end namespace insieme
 
-/**
- * Allows simple keys to be printed to an output stream.
- *
- * @tparam T the type of value maintained by the SimpleKey
- * @param out the stream to be printed to
- * @param key the key to be printed
- * @return out a reference to the handed in output stream
- */
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const insieme::core::SimpleKey<T>& key) {
-	return out << "SimpleKey(" << key.getValue() << ")";
-}

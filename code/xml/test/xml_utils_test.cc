@@ -50,16 +50,17 @@ using namespace insieme::xml;
 // ------------------- DummyAnnotation ---------------------------------
 class DummyAnnotation : public Annotation {
 public:
-	static StringKey<DummyAnnotation> DummyKey;
+	static const string NAME;
+	static const StringKey<DummyAnnotation> DummyKey;
 	string value;
 	DummyAnnotation(string value) : value(value) { };
 	
-	virtual AnnotationKey* getKey() const {
+	virtual const AnnotationKey* getKey() const {
 		return &DummyKey;
 	}
 	
-	const std::string getAnnotationName() const {
-		 return "DummyAnnotation"; 
+	const std::string& getAnnotationName() const {
+		 return NAME;
 	}
 	
 	bool operator==(const Annotation& other) const {
@@ -75,7 +76,8 @@ public:
 };
 
 // initalization of the dummy key
-StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+const string DummyAnnotation::NAME = "DummyAnnotation";
+const StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
 
 typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
 
@@ -95,16 +97,17 @@ XML_REGISTER_ANNOTATION(DummyAnnotation, "DummyAnnotation", DummyAnnotationToXML
 // ------------------- VectorAnnotation ---------------------------------
 class VectorAnnotation : public Annotation {
 public:
-	static StringKey<VectorAnnotation> VectorKey;
+	static const string NAME;
+	static const StringKey<VectorAnnotation> VectorKey;
 	vector<string> values;
 	VectorAnnotation(vector<string> values) : values(values) { };
 
-	virtual AnnotationKey* getKey() const {
+	virtual const AnnotationKey* getKey() const {
 		return &VectorKey;
 	}
 	
-	const std::string getAnnotationName() const {
-		 return "VectorAnnotation"; 
+	const std::string& getAnnotationName() const {
+		 return NAME;
 	}
 	
 	bool operator==(const Annotation& other) const {
@@ -118,8 +121,9 @@ public:
 	}
 };
 
-// initalization of the vector key
-StringKey<VectorAnnotation> VectorAnnotation::VectorKey("VectorKey");
+// initalization of the vector name and key
+const string VectorAnnotation::NAME = "VectorAnnotation";
+const StringKey<VectorAnnotation> VectorAnnotation::VectorKey("VectorKey");
 
 typedef shared_ptr<VectorAnnotation> VectorAnnotationPtr;
 

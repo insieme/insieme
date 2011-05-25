@@ -81,6 +81,7 @@ public:
 class CLocAnnotation : public insieme::core::Annotation {
 public:
 	typedef std::vector<std::string> ArgumentList;
+	static const string NAME;
 	static const insieme::core::StringKey<CLocAnnotation> KEY;
 
 	CLocAnnotation(const SourceLocation& begin, const SourceLocation& end, bool isFuncDecl=true, const ArgumentList& args = ArgumentList()) :
@@ -88,7 +89,7 @@ public:
 		assert(begin.getFileName() == end.getFileName() && "Source locations belongs to different files.");
 	}
 
-	const std::string getAnnotationName() const {return "CLocAnnotation";}
+	const std::string& getAnnotationName() const {return NAME;}
 
 	const std::string toString() const;
 
