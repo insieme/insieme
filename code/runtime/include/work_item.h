@@ -41,6 +41,7 @@
 #include "irt_context.h"
 #include "utils/deques.h"
 #include "utils/counted_deques.h"
+#include "utils/minlwt.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -58,7 +59,7 @@ struct _irt_work_item_range {
 };
 const static irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
 static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) { return (r->end - r->begin) / r->step; }
-static inline void _irt_print_work_item_range(const irt_work_item_range* r) { printf("%ld..%ld : %ld", r->begin, r->end, r->step); }
+static inline void _irt_print_work_item_range(const irt_work_item_range* r) { IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step); }
 
 typedef bool irt_wi_readiness_check_fun(irt_work_item* wi);
 typedef struct _irt_wi_readiness_check {
@@ -83,7 +84,7 @@ struct _irt_work_item {
 	irt_wi_readiness_check ready_check;
 	struct _irt_work_item* work_deque_next;
 	struct _irt_work_item* work_deque_prev;
-	intptr_t stack_ptr;
+	minlwt_context stack_ptr;
 	intptr_t stack_start;
 };
 

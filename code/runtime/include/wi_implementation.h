@@ -47,10 +47,6 @@ struct _irt_wi_di_requirement {
 	irt_data_range range;
 };
 
-typedef void wi_implementation_func(irt_work_item*);
-typedef void wi_di_req_func(irt_work_item*, irt_wi_di_requirement*);
-typedef void wi_channel_req_func(irt_work_item*, irt_channel*);
-
 struct _irt_wi_implementation {
 	uint32 num_variants;
 	irt_wi_implementation_variant* variants;

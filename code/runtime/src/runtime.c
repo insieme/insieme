@@ -91,12 +91,12 @@ void irt_term_handler(int signal) {
 }
 void irt_exit_handler() {
 	irt_cleanup_globals();
-	printf("\nInsieme runtime exiting.\n");
+	IRT_INFO("\nInsieme runtime exiting.\n");
 }
 
 int main(int argc, char** argv) {
 	if(argc < 2 || argc > 3) {
-		printf("usage: runtime [libname] [numthreads]\n");
+		IRT_INFO("usage: runtime [libname] [numthreads]\n");
 		return -1;
 	}
 
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 	// initialize globals
 	irt_init_globals();
 
-	IRT_INFO("!!! Starting worker threads");
+	IRT_DEBUG("!!! Starting worker threads");
 	irt_g_worker_count = 1;
 	if(argc >= 3) irt_g_worker_count = atoi(argv[2]);
 	irt_g_workers = (irt_worker**)alloca(irt_g_worker_count * sizeof(irt_worker*));
@@ -120,9 +120,9 @@ int main(int argc, char** argv) {
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->start = true;
 	}
-	IRT_INFO("Sending new app msg");
+	IRT_DEBUG("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);
-	IRT_INFO("New app msg sent");
+	IRT_DEBUG("New app msg sent");
 
 	// holy hack batman!
 	// reduces performance and is generally fugly, use only for testing
