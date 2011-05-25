@@ -41,35 +41,37 @@
 #include <stdlib.h>
 
 #include "globals.h"
-#include "impl/error_handling.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/irt_context.impl.h"
 #include "impl/work_item.impl.h"
-#include "utils/minlwt.h"
+#include "utils/impl/minlwt.impl.h"
 #include "utils/affinity.h"
+#include "impl/error_handling.impl.h"
 
+#ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-	printf("======== Worker %p debug info:\n", (void*)self);
-	printf("== Base ptr: %p\n", (void*)self->basestack);
-	printf("== Current wi: %p\n", (void*)self->cur_wi);
-	printf("==== Pool:\n");
+	IRT_INFO("======== Worker %p debug info:\n", (void*)self);
+	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack);
+	IRT_INFO("== Current wi: %p\n", (void*)self->cur_wi);
+	IRT_INFO("==== Pool:\n");
 	irt_work_item* next_wi = self->pool.start;
 	while(next_wi != NULL) {
-		printf("--- Work item %p:\n", (void*)next_wi);
-		printf("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
-		printf("- start ptr: %p\n", (void*)next_wi->stack_start);
+		IRT_INFO("--- Work item %p:\n", (void*)next_wi);
+		IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
+		IRT_INFO("- start ptr: %p\n", (void*)next_wi->stack_start);
 		next_wi = next_wi->work_deque_next;
 	}
-	printf("==== Queue:\n");
+	IRT_INFO("==== Queue:\n");
 	next_wi = self->queue.start;
 	while(next_wi != NULL) {
-		printf("--- Work item %p:\n", (void*)next_wi);
-		printf("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
-		printf("- start ptr: %p\n", (void*)next_wi->stack_start);
+		IRT_INFO("--- Work item %p:\n", (void*)next_wi);
+		IRT_INFO("- stack ptr: %p\n", (void*)next_wi->stack_ptr);
+		IRT_INFO("- start ptr: %p\n", (void*)next_wi->stack_start);
 		next_wi = next_wi->work_deque_next;
 	}
-	printf("========\n");
+	IRT_INFO("========\n");
 }
+#endif
 
 typedef struct __irt_worker_func_arg {
 	irt_worker *generated;
@@ -112,23 +114,22 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	self->cur_context = wi->context_id;
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
-		wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
-		wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
 		wi->state = IRT_WI_STATE_STARTED;
+		lwt_prepare(wi, &self->basestack);
 
 		self->cur_wi = wi;
-		IRT_INFO("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, wi->stack_ptr);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
-		IRT_INFO("Worker %p _irt_worker_switch_to_wi - 1B.", self);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
 		// resume WI
 		self->cur_wi = wi;
-		IRT_INFO("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, wi->stack_ptr);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		lwt_continue(&wi->stack_ptr, &self->basestack);
-		IRT_INFO("Worker %p _irt_worker_switch_to_wi - 2B.", self);
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	}
 }
@@ -228,7 +229,6 @@ void irt_worker_schedule(irt_worker* self) {
 }
 #else
 void irt_worker_schedule(irt_worker* self) {
-
 	// try to take a ready WI from the pool
 	irt_work_item* next_wi = _irt_get_ready_wi_from_pool(&self->pool);
 	if(next_wi != NULL) {
@@ -264,7 +264,7 @@ void irt_worker_enqueue(irt_worker* self, irt_work_item* wi) {
 }
 
 void irt_worker_yield(irt_worker* self, irt_work_item* wi) {
-	IRT_INFO("Worker yield, worker: %p,  wi: %p", self, wi);
+	IRT_DEBUG("Worker yield, worker: %p,  wi: %p", self, wi);
 	irt_work_item_deque_insert_back(&self->pool, wi);
 	self->cur_wi = NULL;
 	lwt_continue(&self->basestack, &wi->stack_ptr);

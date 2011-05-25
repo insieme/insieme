@@ -42,8 +42,9 @@
 #include <alloca.h>
 
 #include "impl/worker.impl.h"
-#include "utils/minlwt.h"
+#include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"
+#include "impl/error_handling.impl.h"
 
 static inline irt_work_item* _irt_wi_new() {
 	return (irt_work_item*)malloc(sizeof(irt_work_item));
@@ -52,6 +53,9 @@ static inline void _irt_wi_recycle(irt_work_item* wi) {
 	free(wi);
 }
 
+static inline void _irt_print_work_item_range(const irt_work_item_range* r) { 
+	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
+}
 
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new();
@@ -64,7 +68,7 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 	retval->range = range;
 	retval->state = IRT_WI_STATE_NEW;
 	retval->stack_start = 0;
-	retval->stack_ptr = 0;
+	//retval->stack_ptr = 0;
 	retval->source_id = irt_work_item_null_id();
 	retval->num_fragments = 0;
 	return retval;
@@ -127,13 +131,13 @@ void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
 
 void irt_wi_end(irt_work_item* wi) {
 	wi->state = IRT_WI_STATE_DONE;
-	IRT_INFO("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
+	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
 	worker->cur_wi = NULL;
 	if(irt_wi_is_fragment(wi)) {
 		// ended wi was a fragment
 		irt_work_item *source = wi->source_id.cached; // TODO
-		IRT_INFO("Fragment end, remaining %d", source->num_fragments);
+		IRT_DEBUG("Fragment end, remaining %d", source->num_fragments);
 		irt_atomic_fetch_and_sub(&source->num_fragments, 1);
 		if(source->num_fragments == 0) irt_wi_end(source);
 	}
@@ -156,7 +160,7 @@ void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	irt_wi_split(wi, 2, offsets, out_wis);
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis) {
-	irt_work_item_range range = wi->range; 
+	irt_work_item_range range = wi->range;
 	for(int i=0; i<elements; ++i) {
 		range.begin = offsets[i];
 		range.end = i+1 < elements ? offsets[i+1] : wi->range.end;

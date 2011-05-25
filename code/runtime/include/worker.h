@@ -41,6 +41,7 @@
 #include <pthread.h>
 
 #include "work_item.h"
+#include "utils/minlwt.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -53,7 +54,7 @@ struct _irt_worker {
 	pthread_t pthread;
 	irt_work_item_cdeque queue;
 	irt_work_item_deque pool;
-	intptr_t basestack;
+	minlwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
 	volatile bool start; // used to ensure all workers start at the same time

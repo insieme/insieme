@@ -45,121 +45,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "work_item.h"
-#include "wi_implementation.h"
-#include "impl/error_handling.impl.h"
+#include "declarations.h"
 
-void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func);
-void lwt_continue(intptr_t *newstack, intptr_t *basestack);
-void lwt_end(intptr_t *basestack);
-
-
-// determine system type
-#if ( __WORDSIZE == 64 )
-#define BUILD_64 1
+#ifdef __x86_64__
+typedef intptr_t minlwt_context;
 #else
-#if defined(__LP64__) || defined(_LP64)
-#define BUILD_64   1
+#include <ucontext.h>
+typedef ucontext_t minlwt_context;
 #endif
-#endif
 
-#ifdef BUILD_64
-
-// ----------------------------------------------------------------------------
-// x86-64 implementation
-
-// launch lwt for wi with implementation func and store current stack address in basestack
-__attribute__ ((noinline))
-void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
-	__asm__ volatile (		
-		/* save registers on source stack */
-		"push %%rbp \n"
-		"push %%rbx \n"
-		"push %%rdi \n"
-		"push %%r12 \n"
-		"push %%r13 \n"
-		"push %%r14 \n"
-		"push %%r15 \n"
-		/* swap stacks */
-		"movq %%rsp, (%%rax) \n"	/* save stack pointer in memory */
-//		"movq %%rsp, %%rbx \n"		/* save current stack pointer in caller save register B */
-		"movq (%%rcx), %%rsp \n"	/* exchange stack pointer */
-		/* retrieve function address and call */
-		/* %rdi still contains arg */
-		"call *%%rdx \n"		/* call procedure (using alternative stack) */
-/* this call should never return */
-//		"movq %%rbx, %%rsp \n"		/* restore stack pointer (of source stack) */
-//		/* restore saved registers */
-//		"pop %%r15 \n"
-//		"pop %%r14 \n"
-//		"pop %%r13 \n"
-//		"pop %%r12 \n"
-//		"pop %%rdi \n"
-//		"pop %%rbx \n"
-//		"pop %%rbp \n"
-	: /* no output registers */
-	: "a" (basestack), "c" (&(wi->stack_ptr)), "d" (func) );
-	#ifndef NDEBUG
-	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
-	#endif
-}
-__attribute__ ((noinline))
-void lwt_continue_impl(intptr_t *newstack, intptr_t *basestack) {
-	__asm__ (
-		/* save registers on stack */
-		"push %%rbp ;"
-		"push %%rbx ;"
-		"push %%rdi ;"
-		"push %%r12 ;"
-		"push %%r13 ;"
-		"push %%r14 ;"
-		"push %%r15 ;"
-		/* swap stacks */
-		"movq %%rsp, (%%rax) ;" 
-		"movq (%%rcx), %%rsp ;"
-		/* restore registers for other coroutine */
-		"pop %%r15 ;"
-		"pop %%r14 ;"
-		"pop %%r13 ;"
-		"pop %%r12 ;"
-		"pop %%rdi ;"
-		"pop %%rbx ;"
-		"pop %%rbp ;"
-	: /* no output registers */
-	: "a" (basestack), "c" (newstack) );
-}
-__attribute__ ((noinline))
-void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
-	IRT_INFO("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
-	lwt_continue_impl(newstack, basestack);
-	IRT_INFO("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
-}
-__attribute__ ((noinline))
-void lwt_end(intptr_t *basestack) {
-	//IRT_INFO("lwt_end - A.");
-	__asm__ volatile (
-		/* swap stacks */
-		"movq (%%rcx), %%rsp ;"
-		/* restore registers for original callee */
-		"pop %%r15 ;"
-		"pop %%r14 ;"
-		"pop %%r13 ;"
-		"pop %%r12 ;"
-		"pop %%rdi ;"
-		"pop %%rbx ;"
-		"pop %%rbp ;"
-	: /* no output registers */ 
-	: "c" (basestack) 
-	/* : "%r15", "%r14", "%r13", "%r12", "%rdi", "%rbx", "%rbp", "%rsp", "memory" */ );
-	//IRT_INFO("lwt_end - B.");
-}
-
-#else
-
-// ----------------------------------------------------------------------------
-// x86 implementation
-
-// TODO
-#pragma error "minlwt X86 implementation TODO"
-
-#endif
+static inline void lwt_prepare(irt_work_item *wi, minlwt_context *basestack);
+void lwt_start(irt_work_item *wi, minlwt_context *basestack, wi_implementation_func* func);
+void lwt_continue(minlwt_context *newstack, minlwt_context *basestack);
+void lwt_end(minlwt_context *basestack);

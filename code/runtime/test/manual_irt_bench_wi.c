@@ -46,8 +46,8 @@
 #include "wi_implementation.h"
 #include "utils/timing.h"
 
-#define NUM_ITER 1000
-#define NUM_LEVELS 2
+#define NUM_ITER 1000000
+#define NUM_LEVELS 1
 
 typedef struct _insieme_wi_bench_params {
 	irt_type_id type_id;
@@ -117,10 +117,10 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 			irt_worker_enqueue(irt_worker_get_current(), bench_wis[i]);
 		}
 
-		irt_wi_multi_join(NUM_ITER, bench_wis);
-		//for(int i=0; i<NUM_ITER; ++i) {
-		//	irt_wi_join(bench_wis[i]);
-		//}
+		//irt_wi_multi_join(NUM_ITER, bench_wis);
+		for(int i=0; i<NUM_ITER; ++i) {
+			irt_wi_join(bench_wis[i]);
+		}
 
 		free(bench_wis);
 	}
