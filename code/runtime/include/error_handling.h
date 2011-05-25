@@ -52,7 +52,8 @@ typedef enum _irt_errcode {
 	IRT_ERR_IO,				// I/O error
 	IRT_ERR_INIT,			// error related to initialization
 	IRT_ERR_INTERNAL,		// internal error caused by runtime system
-	IRT_ERR_APP				// error caused by the user application running on the IRT
+	IRT_ERR_APP,			// error caused by the user application running on the IRT
+	IRT_ERR_OCL				// error caused by the opencl runtime system
 } irt_errcode;
 
 struct _irt_error {
