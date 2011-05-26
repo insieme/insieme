@@ -45,7 +45,11 @@
  * __type__ : struct type to create deque for
  * */
 #define IRT_DECLARE_COUNTED_DEQUE(__type__) \
-struct _irt_##__type__##_cdeque; \
+struct _irt_##__type__##_cdeque { \
+	irt_##__type__ *start, *end; \
+	pthread_spinlock_t lock; \
+	uint32 size; \
+}; \
 typedef struct _irt_##__type__##_cdeque irt_##__type__##_cdeque; \
 \
 static inline void irt_##__type__##_cdeque_init(irt_##__type__##_cdeque* q); \
@@ -66,11 +70,6 @@ static inline uint32 irt_##__type__##_cdeque_get_size(irt_##__type__##_cdeque* q
  * __prev_name__ : name of the prev pointer in the struct
  * */
 #define IRT_DEFINE_COUNTED_DEQUE(__type__, __next_name__, __prev_name__) \
-struct _irt_##__type__##_cdeque { \
-	irt_##__type__ *start, *end; \
-	pthread_spinlock_t lock; \
-	uint32 size; \
-}; \
 \
 static inline void irt_##__type__##_cdeque_init(irt_##__type__##_cdeque* q) { \
 	IRT_ASSERT(pthread_spin_init(&(q->lock), PTHREAD_PROCESS_PRIVATE) == 0, \

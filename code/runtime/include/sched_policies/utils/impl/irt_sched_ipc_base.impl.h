@@ -36,40 +36,20 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "sched_policies/utils/irt_sched_ipc_base.h"
+#include "impl/worker.impl.h"
 
-#include <pthread.h>
-
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(worker);
-
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
-
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	minlwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state; // used to ensure all workers start at the same time
-	irt_worker_scheduling_data sched_data;
-};
-
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
+static inline void _irt_sched_check_ipc_queue(irt_worker* self) {
+	irt_mqueue_msg* received = irt_mqueue_receive();
+	if(received) {
+		if(received->type == IRT_MQ_NEW_APP) {
+			irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
+			irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
+			irt_context* prog_context = irt_context_create(client_app);
+			self->cur_context = prog_context->id;
+			irt_context_table_insert(prog_context);
+			_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
+		}
+		free(received);
+	}
 }
-
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);

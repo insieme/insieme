@@ -36,40 +36,21 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "sched_policies/utils/irt_sched_queue_pool_base.h"
 
-#include <pthread.h>
+IRT_DEFINE_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
+IRT_DEFINE_COUNTED_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(worker);
-
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
-
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	minlwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state; // used to ensure all workers start at the same time
-	irt_worker_scheduling_data sched_data;
-};
-
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
+static inline irt_work_item* _irt_get_ready_wi_from_pool(irt_work_item_deque* pool) {
+	irt_work_item* next_wi = pool->start;
+	while(next_wi != NULL) {
+		if(next_wi->ready_check.fun(next_wi)) {
+			next_wi = irt_work_item_deque_take_elem(pool, next_wi); 
+			if(next_wi) break;
+			else return _irt_get_ready_wi_from_pool(pool); // wi was stolen, retry
+		} else {
+			next_wi = next_wi->sched_data.work_deque_next;
+		}
+	}
+	return next_wi;
 }
-
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);

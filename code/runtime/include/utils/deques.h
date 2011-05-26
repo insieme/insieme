@@ -45,7 +45,10 @@
  * __type__ : struct type to create deque for
  * */
 #define IRT_DECLARE_DEQUE(__type__) \
-struct _irt_##__type__##_deque; \
+struct _irt_##__type__##_deque { \
+	irt_##__type__ *start, *end; \
+	pthread_spinlock_t lock; \
+}; \
 typedef struct _irt_##__type__##_deque irt_##__type__##_deque; \
 \
 static inline void irt_##__type__##_deque_init(irt_##__type__##_deque* q); \
@@ -65,10 +68,6 @@ static inline irt_##__type__* irt_##__type__##_deque_take_elem(irt_##__type__##_
  * __prev_name__ : name of the prev pointer in the struct
  * */
 #define IRT_DEFINE_DEQUE(__type__, __next_name__, __prev_name__) \
-struct _irt_##__type__##_deque { \
-	irt_##__type__ *start, *end; \
-	pthread_spinlock_t lock; \
-}; \
 static inline void irt_##__type__##_deque_init(irt_##__type__##_deque* q) { \
 	IRT_ASSERT(pthread_spin_init(&(q->lock), PTHREAD_PROCESS_PRIVATE) == 0, \
 				IRT_ERR_INIT, "Failed initializing locks for " #__type__ " deque."); \

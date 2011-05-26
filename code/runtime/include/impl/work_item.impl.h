@@ -45,6 +45,7 @@
 #include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"
 #include "impl/error_handling.impl.h"
+#include "impl/irt_scheduling.impl.h"
 
 static inline irt_work_item* _irt_wi_new() {
 	return (irt_work_item*)malloc(sizeof(irt_work_item));
@@ -118,7 +119,7 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_work_item* swi = self->cur_wi;
 	swi->ready_check.fun = &_irt_wi_done_check;
 	swi->ready_check.data = wi;
-	irt_worker_yield(self, swi);
+	irt_scheduling_yield(self, swi);
 }
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
 	irt_worker* self = irt_worker_get_current();
@@ -126,7 +127,7 @@ void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
 	swi->ready_check.fun = &_irt_wi_multi_done_check;
 	_irt_wi_multi_check_closure closure = { 0, num_wis, wis };
 	swi->ready_check.data = &closure;
-	irt_worker_yield(self, swi);
+	irt_scheduling_yield(self, swi);
 }
 
 void irt_wi_end(irt_work_item* wi) {

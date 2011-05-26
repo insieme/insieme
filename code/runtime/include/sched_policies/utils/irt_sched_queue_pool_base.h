@@ -36,40 +36,20 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "utils/deques.h"
+#include "utils/counted_deques.h"
 
-#include <pthread.h>
+IRT_DECLARE_DEQUE(work_item);
+IRT_DECLARE_COUNTED_DEQUE(work_item);
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
+typedef struct _irt_worker_queue_pool_base {
+	irt_work_item_cdeque queue;
+	irt_work_item_deque pool;
+} irt_worker_queue_pool_base;
 
-/* ------------------------------ data structures ----- */
+typedef struct _irt_wi_queue_pool_base {
+	struct _irt_work_item* work_deque_next;
+	struct _irt_work_item* work_deque_prev;
+} irt_wi_queue_pool_base;
 
-IRT_MAKE_ID_TYPE(worker);
-
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
-
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	minlwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state; // used to ensure all workers start at the same time
-	irt_worker_scheduling_data sched_data;
-};
-
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
-}
-
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
+static inline irt_work_item* _irt_get_ready_wi_from_pool(irt_work_item_deque* pool);
