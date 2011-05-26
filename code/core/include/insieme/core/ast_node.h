@@ -38,14 +38,14 @@
 
 #include <cassert>
 
+#include "insieme/utils/annotation.h"
 #include "insieme/utils/hash_utils.h"
-#include "insieme/utils/printable.h"
+#include "insieme/utils/id_generator.h"
 #include "insieme/utils/instance_manager.h"
+#include "insieme/utils/printable.h"
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/set_utils.h"
-#include "insieme/utils/id_generator.h"
 
-#include "insieme/core/annotation.h"
 #include "insieme/core/ast_pointer.h"
 
 #include "insieme/core/lang/basic.h"
@@ -246,7 +246,7 @@ LambdaNodeMapper<Lambda> makeLambdaMapper(Lambda lambda) {
  * (including to be hash- and comparable, such that instances can be used within unordered
  * sets).
  */
-class Node: public insieme::utils::HashableImmutableData<Node>, public Annotatable, public utils::Printable {
+class Node: public utils::HashableImmutableData<Node>, public utils::Annotatable, public utils::Printable {
 
 	/**
 	 * Allow the instance manager to access the private clone method.

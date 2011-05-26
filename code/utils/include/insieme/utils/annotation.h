@@ -49,7 +49,7 @@
 #include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace core {
+namespace utils {
 
 /**
  * This class constitutes the base class for all AnnotationKey types to be used to

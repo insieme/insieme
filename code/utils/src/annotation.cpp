@@ -34,11 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/annotation.h"
+#include "insieme/utils/annotation.h"
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
-namespace core {
+namespace utils {
 
 
 void Annotatable::addAnnotation(const AnnotationPtr& annotation) const {

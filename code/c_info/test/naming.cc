@@ -43,7 +43,7 @@ namespace c_info {
 
 TEST(Naming, Basic) {
 
-	insieme::core::Annotatable obj;
+	insieme::utils::Annotatable obj;
 
 //	const CRecNameAnnotation annotation;
 }

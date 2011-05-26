@@ -37,14 +37,14 @@
 namespace insieme {
 namespace core {
 
-	class DummyAnnotation : public Annotation {
+	class DummyAnnotation : public utils::Annotation {
 	public:
 		static const string NAME;
-		static const StringKey<DummyAnnotation> DummyKey;
+		static const utils::StringKey<DummyAnnotation> DummyKey;
 		int value;
 		DummyAnnotation(int value) : value(value) { };
 
-		virtual const AnnotationKey* getKey() const {
+		virtual const utils::AnnotationKey* getKey() const {
 			return &DummyKey;
 		}
 
@@ -53,14 +53,14 @@ namespace core {
 		}
 	};
 
-	class DummyAnnotation2 : public Annotation {
+	class DummyAnnotation2 : public utils::Annotation {
 	public:
 		static const string NAME; 
-		static const StringKey<DummyAnnotation2> DummyKey;
+		static const utils::StringKey<DummyAnnotation2> DummyKey;
 		int value;
 		DummyAnnotation2(int value) : value(value) { };
 
-		virtual const AnnotationKey* getKey() const {
+		virtual const utils::AnnotationKey* getKey() const {
 			return &DummyKey;
 		}
 
@@ -71,9 +71,9 @@ namespace core {
 
 	// initalization of the dummy key
 	const string DummyAnnotation::NAME = "DummyAnnotation";
-	const StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+	const utils::StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
 	const string DummyAnnotation2::NAME = "DummyAnnotation2";
-	const StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
+	const utils::StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
 
 } // end namespace core
 } // end namespace insieme

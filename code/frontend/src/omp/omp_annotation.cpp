@@ -44,7 +44,7 @@ namespace frontend {
 namespace omp {
 
 const string BaseAnnotation::NAME = "OmpAnnotation";
-const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenMP");
+const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenMP");
 
 const std::string BaseAnnotation::toString() const {
 	std::ostringstream ss;

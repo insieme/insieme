@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
+#include <insieme/utils/annotation.h>
 #include <insieme/core/ast_node.h>
-#include <insieme/core/annotation.h>
 
 #include <map>
 
@@ -141,16 +141,16 @@ public:
 class XmlConverter: public boost::noncopyable {
 	XmlConverter() { }
 public:
-	typedef std::function<XmlElementPtr (const insieme::core::Annotation&, xercesc_3_1::DOMDocument*)> IrToDomConvertType;
+	typedef std::function<XmlElementPtr (const insieme::utils::Annotation&, xercesc_3_1::DOMDocument*)> IrToDomConvertType;
 	typedef std::map<const std::string, IrToDomConvertType> IrToDomConvertMapType;
 
-	typedef std::function<insieme::core::AnnotationPtr (const XmlElement&)> DomToIrConvertType;
+	typedef std::function<insieme::utils::AnnotationPtr (const XmlElement&)> DomToIrConvertType;
 	typedef std::map<const std::string, DomToIrConvertType> DomToIrConvertMapType;
 
 	static XmlConverter& get();
 	
-	insieme::core::AnnotationPtr domToIrAnnotation (const XmlElement& el) const;
-	XmlElementPtr irToDomAnnotation (const insieme::core::Annotation& ann, xercesc_3_1::DOMDocument* doc) const;
+	insieme::utils::AnnotationPtr domToIrAnnotation (const XmlElement& el) const;
+	XmlElementPtr irToDomAnnotation (const insieme::utils::Annotation& ann, xercesc_3_1::DOMDocument* doc) const;
 	
 	void* registerAnnotation(const std::string& name, const IrToDomConvertType& toXml, const DomToIrConvertType& fromXml);
 private:
@@ -160,7 +160,7 @@ private:
 
 template <class AnnotationTy>
 XmlElementPtr convertToXML(const std::string& mapName, std::function<XmlElement& (const AnnotationTy&, XmlElement&)> toXml,
-		const insieme::core::Annotation& ann, xercesc_3_1::DOMDocument* doc) {
+		const insieme::utils::Annotation& ann, xercesc_3_1::DOMDocument* doc) {
 	insieme::xml::XmlElementPtr node( new XmlElement("annotation", doc) );
 	*node << XmlElement::Attribute("type", mapName);
 	toXml(dynamic_cast<const AnnotationTy&>(ann), *node);
@@ -168,7 +168,7 @@ XmlElementPtr convertToXML(const std::string& mapName, std::function<XmlElement&
 }
 
 template <class AnnotationTy>
-insieme::core::AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const XmlElement&)> fromXml, const XmlElement& node) {
+insieme::utils::AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const XmlElement&)> fromXml, const XmlElement& node) {
 	return fromXml(node);
 }
 

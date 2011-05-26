@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/annotation.h"
+#include "insieme/utils/annotation.h"
 #include "insieme/core/expressions.h"
 
 #define DEFINE_TYPE(Type) \
@@ -53,15 +53,15 @@ DEFINE_TYPE(WorkGroupSizeAnnotation);
 DEFINE_TYPE(AddressSpaceAnnotation);
 DEFINE_TYPE(KernelFileAnnotation);
 
-class BaseAnnotation : public core::CompoundAnnotation<ocl::Annotation> {
+class BaseAnnotation : public utils::CompoundAnnotation<ocl::Annotation> {
 public:
 	static const string NAME;
-    static const core::StringKey<BaseAnnotation> KEY;
+    static const utils::StringKey<BaseAnnotation> KEY;
 
-    BaseAnnotation(core::CompoundAnnotation<ocl::Annotation>::AnnotationList& annotationList) :
-    	core::CompoundAnnotation<ocl::Annotation>(annotationList) { }
+    BaseAnnotation(utils::CompoundAnnotation<ocl::Annotation>::AnnotationList& annotationList) :
+    	utils::CompoundAnnotation<ocl::Annotation>(annotationList) { }
 
-    const core::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKey* getKey() const { return &KEY; }
     const std::string& getAnnotationName() const { return NAME; }
 };
 
@@ -79,15 +79,15 @@ class Annotation {
  ** Should be used to annotate OpenCL kernel functions
  ** Default value is isKernelFct() = true
  ** */
-class KernelFctAnnotation : public Annotation , public core::Annotation {
+class KernelFctAnnotation : public Annotation , public utils::Annotation {
 
 private:
     bool kf;
 public:
     static const string NAME;
-	static const core::StringKey<KernelFctAnnotation> KEY;
+	static const utils::StringKey<KernelFctAnnotation> KEY;
 
-    KernelFctAnnotation() : ocl::Annotation(), core::Annotation(), kf(true){ }
+    KernelFctAnnotation() : ocl::Annotation(), utils::Annotation(), kf(true){ }
 
     const std::string& getAnnotationName() const { return NAME; }
 
@@ -95,7 +95,7 @@ public:
 
     bool isKernelFct() const;
 
-	const core::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKey* getKey() const { return &KEY; }
 };
 
 /** Annotation class intended to mark store the required work group size if given.
@@ -124,7 +124,7 @@ public:
  ** Should be used to annotate OpenCL variable declarations inside kernel functions
  ** Default value is getAddressSpace() = addressSpace::PRIVATE
  ** */
-class AddressSpaceAnnotation : public Annotation , public core::Annotation {
+class AddressSpaceAnnotation : public Annotation , public utils::Annotation {
 public:
     enum addressSpace{
         PRIVATE,
@@ -138,19 +138,19 @@ private:
     addressSpace as;
 public:
     static const string NAME;
-    static const core::StringKey<AddressSpaceAnnotation> KEY;
+    static const utils::StringKey<AddressSpaceAnnotation> KEY;
 
     const std::string& getAnnotationName() const { return NAME; }
 
-    AddressSpaceAnnotation() : ocl::Annotation(), core::Annotation(), as(addressSpace::PRIVATE) { }
+    AddressSpaceAnnotation() : ocl::Annotation(), utils::Annotation(), as(addressSpace::PRIVATE) { }
 
-    AddressSpaceAnnotation(addressSpace space) : ocl::Annotation(), core::Annotation(), as(space) { }
+    AddressSpaceAnnotation(addressSpace space) : ocl::Annotation(), utils::Annotation(), as(space) { }
 
     bool setAddressSpace(addressSpace newAs);
 
     addressSpace getAddressSpace() const;
 
-	const core::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKey* getKey() const { return &KEY; }
 
 };
 
@@ -161,39 +161,39 @@ typedef std::shared_ptr<AddressSpaceAnnotation> AddressSpaceAnnotationPtr;
  ** Should be used to annotate OpenCL variable that have to be translated to
  ** built-in functions by the OpenCL Back-end
  ** */
-class BuiltinFunctionAnnotation : public Annotation , public core::Annotation {
+class BuiltinFunctionAnnotation : public Annotation , public utils::Annotation {
 private:
     core::LiteralPtr lit;
 public:
     static const string NAME;
-    static const core::StringKey<BuiltinFunctionAnnotation> KEY;
+    static const utils::StringKey<BuiltinFunctionAnnotation> KEY;
 
     const std::string& getAnnotationName() const { return NAME; }
 
-    BuiltinFunctionAnnotation(core::LiteralPtr l) : ocl::Annotation(), core::Annotation(), lit(l) { }
+    BuiltinFunctionAnnotation(core::LiteralPtr l) : ocl::Annotation(), utils::Annotation(), lit(l) { }
 
     core::LiteralPtr getBuiltinLiteral() const;
 
-	const core::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKey* getKey() const { return &KEY; }
 
 };
 
 /** Annotatinon holding a string with the path of a kernel source file
  ** */
-class KernelFileAnnotation : public core::Annotation {
+class KernelFileAnnotation : public utils::Annotation {
 private:
     const string path;
 public:
     static const string NAME;
-    static const core::StringKey<KernelFileAnnotation> KEY;
+    static const utils::StringKey<KernelFileAnnotation> KEY;
 
     const std::string& getAnnotationName() const { return NAME; }
 
-    KernelFileAnnotation(string kernelPath) : core::Annotation(), path(kernelPath) { }
+    KernelFileAnnotation(string kernelPath) : utils::Annotation(), path(kernelPath) { }
 
     const string& getKernelPath() const { return path; }
 
-    const core::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKey* getKey() const { return &KEY; }
 
 };
 

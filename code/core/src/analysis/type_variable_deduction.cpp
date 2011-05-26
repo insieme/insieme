@@ -38,13 +38,13 @@
 
 #include <iterator>
 
+#include "insieme/utils/annotation.h"
 
 #include "insieme/core/analysis/type_variable_renamer.h"
 #include "insieme/core/analysis/subtype_constraints.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/core/annotation.h"
 #include "insieme/core/expressions.h"
 
 #include "insieme/utils/logging.h"
@@ -608,7 +608,7 @@ namespace analysis {
 		/**
 		 * The kind of annotations attached to a function type nodes to cache type variable substitutions.
 		 */
-		class VariableInstantionInfo : public Annotation {
+		class VariableInstantionInfo : public utils::Annotation {
 
 			// The name of this annotation
 			const static string NAME;
@@ -616,7 +616,7 @@ namespace analysis {
 		public:
 
 			// The key used to attack instantiation results to call nodes
-			static StringKey<VariableInstantionInfo> KEY;
+			const static utils::StringKey<VariableInstantionInfo> KEY;
 
 		private:
 
@@ -631,7 +631,7 @@ namespace analysis {
 
 			VariableInstantionInfo() {}
 
-			virtual const AnnotationKey* getKey() const {
+			virtual const utils::AnnotationKey* getKey() const {
 				return &KEY;
 			}
 
@@ -674,7 +674,7 @@ namespace analysis {
 		};
 
 		const string VariableInstantionInfo::NAME = "VariableInstantionInfo";
-		StringKey<VariableInstantionInfo> VariableInstantionInfo::KEY = StringKey<VariableInstantionInfo>("VARIABLE_INSTANTIATION_INFO");
+		const utils::StringKey<VariableInstantionInfo> VariableInstantionInfo::KEY = utils::StringKey<VariableInstantionInfo>("VARIABLE_INSTANTIATION_INFO");
 
 
 		inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& substitution) {

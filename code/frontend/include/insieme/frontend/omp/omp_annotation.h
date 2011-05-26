@@ -36,9 +36,10 @@
 
 #pragma once
 
-#include "insieme/core/annotation.h"
-#include "insieme/core/expressions.h"
+#include "insieme/utils/annotation.h"
 #include "insieme/utils/string_utils.h"
+
+#include "insieme/core/expressions.h"
 
 // #include "boost/optional.hpp"
 
@@ -79,15 +80,15 @@ DEFINE_TYPE(Parallel);
  *
  * The omp::BaseAnnotation node will contains a list of omp pragmas which are associated to the IR node.
  */
-class BaseAnnotation : public core::CompoundAnnotation< omp::Annotation > {
+class BaseAnnotation : public utils::CompoundAnnotation< omp::Annotation > {
 public:
 	static const string NAME;
-    static const core::StringKey<BaseAnnotation> KEY;
+    static const utils::StringKey<BaseAnnotation> KEY;
 
-    BaseAnnotation(const core::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
-    	core::CompoundAnnotation< omp::Annotation >(annotationList) { }
+    BaseAnnotation(const utils::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
+    	utils::CompoundAnnotation< omp::Annotation >(annotationList) { }
 
-    const core::AnnotationKey* getKey() const { return &KEY; }
+    const utils::AnnotationKey* getKey() const { return &KEY; }
 	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;

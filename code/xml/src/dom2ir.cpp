@@ -40,7 +40,6 @@
 #include "insieme/xml/xsd_config.h"
 
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/annotation.h"
 
 #include "insieme/utils/logging.h"
 

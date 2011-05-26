@@ -40,19 +40,19 @@ namespace insieme {
 namespace ocl {
 
 const string BaseAnnotation::NAME = "OclAnnotation";
-const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
+const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
 
 const string KernelFctAnnotation::NAME = "OclKernelFctAnnotation";
-const core::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
+const utils::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
 
 const string BuiltinFunctionAnnotation::NAME = "OclBuiltinFunctionAnnotation";
-const core::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
+const utils::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
 
 const string AddressSpaceAnnotation::NAME = "OclAddressSpaceAnnotation";
-const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
+const utils::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
 
 const string KernelFileAnnotation::NAME = "OclKernelFileAnnotation";
-const core::StringKey<KernelFileAnnotation> KernelFileAnnotation::KEY("KernelFileAnnotationKey");
+const utils::StringKey<KernelFileAnnotation> KernelFileAnnotation::KEY("KernelFileAnnotationKey");
 
 const string WorkGroupSizeAnnotation::NAME = "OclWorkGroupSizeAnnotation";
 

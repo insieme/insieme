@@ -42,7 +42,7 @@ namespace insieme {
 namespace c_info {
 
 const string CNameAnnotation::NAME = "CNameAnnotation";
-const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
+const utils::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
 
 }
 }

@@ -43,6 +43,7 @@
 #include "insieme/xml/xml_utils.h"
 
 using namespace std;
+using namespace insieme::utils;
 using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::xml;
