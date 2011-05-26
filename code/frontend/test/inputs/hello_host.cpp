@@ -35,7 +35,7 @@
  */
 
 #include "CL/cl.h"
-#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
+//#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
 
 //#pragma insieme mark
 int main(int argc, char **argv)
