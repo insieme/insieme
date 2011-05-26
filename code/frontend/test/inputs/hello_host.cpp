@@ -59,9 +59,9 @@ int main(int argc, char **argv)
 
     char* path = "../frontend/test/hello.cl";
 
-    char* kernelSrc = oclLoadProgSource(path, "", &kernelLength);
+    char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
 
-//#pragma insieme kernelFile "/home/klaus/insieme/code/frontend/test/hello.cl"
+#pragma insieme kernelFile "/home/klaus/insieme/code/frontend/test/hello.cl"
     program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
 
     kernel = clCreateKernel(program, "hello", &err);
