@@ -342,11 +342,11 @@ public:
 
 				declStmt = builder.declarationStmt( newIndVar, builder.refVar(init) );
 				core::NodePtr&& ret = core::transform::replaceAll(
-						builder.getNodeManager(), body.getSingleStmt(), inductionVar, replacement, true
+						builder.getNodeManager(), body.getSingleStmt(), inductionVar, replacement
 					);
 				if ( oldInductionVar ) {
 					ret = core::transform::replaceAll(
-						builder.getNodeManager(), body.getSingleStmt(), oldInductionVar, replacement, true
+						builder.getNodeManager(), body.getSingleStmt(), oldInductionVar, replacement
 					);
 				}
 
@@ -382,7 +382,7 @@ public:
 						builder.getNodeManager(),
 						body.getSingleStmt(),
 						builder.deref(declStmt->getVariable()),
-						inductionVar, true
+						inductionVar
 					);
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 			}

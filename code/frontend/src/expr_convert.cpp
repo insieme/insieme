@@ -2025,8 +2025,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				 */
 				body = core::static_pointer_cast<const core::Statement>(
 						core::transform::replaceAll( this->builder.getNodeManager(), body, fit->first,
-								this->tryDeref(fit->second), true
-							)
+								this->tryDeref(fit->second))
 				);
 			}
 

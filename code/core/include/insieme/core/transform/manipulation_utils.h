@@ -34,62 +34,36 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/utils/annotation.h"
-#include "insieme/utils/map_utils.h"
+#pragma once
+
+#include "insieme/core/ast_node.h"
+#include "insieme/core/ast_address.h"
 
 namespace insieme {
+namespace core {
+namespace transform {
 namespace utils {
 
+/**
+ * A utility function handling the migration of annotations between nodes during
+ * transformations. It is invoking the migration handling routine of the node annotations
+ * to determine whether and how the individual annotations should be migrated.
+ */
+inline void migrateAnnotations(const NodePtr& before, const NodePtr& after) {
+	typedef typename Node::annotation_map_type AnnotationMap;
 
-void Annotatable::addAnnotation(const AnnotationPtr& annotation) const {
-
-	// check pre-condition
-	assert ( annotation && "Cannot add NULL annotation!" );
-
-	// ensure map to be initialized
-	initAnnotationMap();
-
-	// insert new element
-	auto key = annotation->getKey();
-	auto value = std::make_pair(key, annotation);
-	auto res = map->insert(value);
-
-	if (!res.second) {
-		// equivalent element already present => remove old and add new element
-		map->erase(res.first);
-		res = map->insert(value);
+	// check whether there is something to do
+	if (before == after || !before->hasAnnotations()) {
+		return;
 	}
 
-	// check post-condition
-	assert ( res.second && "Insert not successful!");
-	assert ( hasAnnotation(key) && "Insert not successful!");
-	assert ( &*((*map->find(key)).second)==&*annotation && "Insert not successful!");
-};
-
-
-bool hasSameAnnotations(const Annotatable& annotatableA, const Annotatable& annotatableB) {
-
-	// check whether both have no annotations ...
-	if (!annotatableA.hasAnnotations() && !annotatableB.hasAnnotations()) {
-		return true;
-	}
-
-	// check in case both have annotations ...
-	if (annotatableA.hasAnnotations() && annotatableB.hasAnnotations()) {
-
-		// extract maps
-		const AnnotationMap& mapA = annotatableA.getAnnotations();
-		const AnnotationMap& mapB = annotatableB.getAnnotations();
-
-		// compare maps
-		return insieme::utils::map::equal(mapA, mapB, equal_target<AnnotationPtr>());
-
-	}
-
-	// one does have annotations, the other doesn't
-	return false;
+	// migrate annotations individually
+	for_each(before->getAnnotations(), [&](const AnnotationMap::value_type& cur) {
+		cur.second->migrate(cur.second, before, after);
+	});
 }
 
-
+} // end namespace utils
+} // end namespace transform
 } // end namespace core
 } // end namespace insieme

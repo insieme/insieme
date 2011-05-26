@@ -73,6 +73,8 @@ namespace core {
 		}
 		
 		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			assert(&*ptr == this && "Annotation pointer should reference this annotation.");
+			after->addAnnotation(ptr);
 			return false;
 		}
 	};
