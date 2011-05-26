@@ -52,7 +52,12 @@ struct _irt_wi_implementation {
 	irt_wi_implementation_variant* variants;
 };
 
+typedef enum _irt_wi_implementation_type {
+	IRT_WI_IMPL_SHARED_MEM, IRT_WI_IMPL_DISTRIBUTED, IRT_WI_IMPL_OPENCL
+} irt_wi_implementation_type;
+
 struct _irt_wi_implementation_variant {
+	irt_wi_implementation_type type;
 	wi_implementation_func* implementation;
 	uint32 num_required_data_items;
 	wi_di_req_func* data_requirements;
