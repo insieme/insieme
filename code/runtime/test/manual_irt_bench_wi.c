@@ -42,6 +42,7 @@
 #include "impl/worker.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
+#include "impl/irt_scheduling.impl.h"
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
@@ -64,9 +65,9 @@ irt_type g_insieme_type_table[] = {
 void insieme_wi_startup_implementation(irt_work_item* wi);
 void insieme_wi_bench_implementation(irt_work_item* wi);
 
-irt_wi_implementation_variant g_insieme_wi_startup_variants[] = { { &insieme_wi_startup_implementation, 0, NULL, 0, NULL } };
+irt_wi_implementation_variant g_insieme_wi_startup_variants[] = { { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, 0, NULL, 0, NULL } };
 
-irt_wi_implementation_variant g_insieme_wi_bench_variants[] = { { &insieme_wi_bench_implementation, 0, NULL, 0, NULL } };
+irt_wi_implementation_variant g_insieme_wi_bench_variants[] = { { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_bench_implementation, 0, NULL, 0, NULL } };
 
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants },
@@ -91,7 +92,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 
 	insieme_wi_bench_params bench_params = { 1, NUM_LEVELS };
 	irt_work_item* bench_wi = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
-	irt_worker_enqueue(irt_worker_get_current(), bench_wi);
+	irt_scheduling_assign_wi(irt_worker_get_current(), bench_wi);
 
 	irt_wi_join(bench_wi);
 
@@ -114,7 +115,7 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 		irt_work_item **bench_wis = (irt_work_item**)malloc(NUM_ITER*sizeof(irt_work_item*));
 		for(int i=0; i<NUM_ITER; ++i) {
 			bench_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
-			irt_worker_enqueue(irt_worker_get_current(), bench_wis[i]);
+			irt_scheduling_assign_wi(irt_worker_get_current(), bench_wis[i]);
 		}
 
 		//irt_wi_multi_join(NUM_ITER, bench_wis);

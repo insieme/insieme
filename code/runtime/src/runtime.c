@@ -134,28 +134,13 @@ int main(int argc, char** argv) {
 	}
 	// start workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i]->start = true;
+		irt_g_workers[i]->state = IRT_WORKER_STATE_START;
 	}
 	IRT_DEBUG("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);
 	IRT_DEBUG("New app msg sent");
 
-	// holy hack batman!
-	// reduces performance and is generally fugly, use only for testing
-	if(argc >=2) {
-		bool stuff_running = true;
-		while(stuff_running) {
-			sleep(5);
-			stuff_running = false;
-			for(int i=0; i<irt_g_worker_count; ++i) {
-				if(irt_g_workers[i]->cur_wi != NULL || irt_g_workers[i]->queue.start != NULL || irt_g_workers[i]->pool.start != NULL) {
-					stuff_running = true;
-					break;
-				}
-			}
-		}
-	}
-	//for(;;) { sleep(60*60); }
+	for(;;) { sleep(60*60); }
 
 	// free OpenCL devices
 	#ifdef USE_OPENCL

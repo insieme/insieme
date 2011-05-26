@@ -34,48 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include "CL/cl.h"
-//#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
+#include <gtest/gtest.h>
 
-//#pragma insieme mark
-int main(int argc, char **argv)
-{
-    cl_context context;
-    cl_command_queue queue;
-    cl_program program;
-    cl_kernel kernel;
-    cl_int err;
+#include "insieme/simple_backend/backend_convert.h"
 
-    cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
-//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_double) * 100, NULL, &err);
-    float* host_ptr;
+#include "insieme/core/program.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/parser/ir_parse.h"
 
+#include "insieme/utils/logging.h"
 
-    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
+namespace insieme {
+namespace backend {
 
-    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+TEST(FunctionCall, templates) {
+    core::NodeManager manager;
+    core::parse::IRParser parser(manager);
 
-    size_t kernelLength = 10;
+    core::ProgramPtr program = parser.parseProgram("main: fun ()->int<4>:\
+            mainfct in { ()->int<4>:mainfct = ()->int<4>{ { \
+                (fun('a:in) -> int<4> {{ \
+                    decl 'a:local = (op<undefined>(lit<type<'a>, type('a) > )); \
+                }}(0)); \
+                return 0; \
+            } } }");
 
-    char* path = "../frontend/test/hello.cl";
+    LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
-    char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
+    LOG(INFO) << "Converting IR to C...";
+    auto converted = simple_backend::SimpleBackend::getDefault()->convert(program);
+    LOG(INFO) << "Printing converted code: " << *converted;
 
-#pragma insieme kernelFile "/home/klaus/insieme/code/frontend/test/hello.cl"
-    program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
+    string code = toString(*converted);
 
-    kernel = clCreateKernel(program, "hello", &err);
-    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
-
-    size_t globalSize[] = {8, 8};
-    size_t localSize[] = {3, 5, 6};
-
-    err =  clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, NULL);
-
-    clEnqueueReadBuffer(queue, dev_ptr1, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-
-    clReleaseMemObject(dev_ptr1);
-//    clReleaseMemObject(dev_ptr2);
-
-    return 0;
+    // should be enabled!
+//    EXPECT_FALSE(code.find("<?>") != -1);
 }
+
+} // namespace backend
+} // namespace insieme

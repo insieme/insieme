@@ -39,16 +39,12 @@
 #include "declarations.h"
 
 #include "irt_context.h"
-#include "utils/deques.h"
-#include "utils/counted_deques.h"
 #include "utils/minlwt.h"
+#include "irt_scheduling.h"
 
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(work_item);
-
-IRT_DECLARE_DEQUE(work_item);
-IRT_DECLARE_COUNTED_DEQUE(work_item);
 
 typedef enum _irt_work_item_state {
 	IRT_WI_STATE_NEW, IRT_WI_STATE_STARTED, IRT_WI_STATE_DONE, 
@@ -82,15 +78,10 @@ struct _irt_work_item {
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
 	irt_wi_readiness_check ready_check;
-	struct _irt_work_item* work_deque_next;
-	struct _irt_work_item* work_deque_prev;
 	minlwt_context stack_ptr;
 	intptr_t stack_start;
+	irt_wi_scheduling_data sched_data;
 };
-
-IRT_DEFINE_DEQUE(work_item, work_deque_next, work_deque_prev);
-IRT_DEFINE_COUNTED_DEQUE(work_item, work_deque_next, work_deque_prev);
-
 
 /* ------------------------------ operations ----- */
 

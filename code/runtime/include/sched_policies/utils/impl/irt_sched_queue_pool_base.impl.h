@@ -34,48 +34,23 @@
  * regarding third party software licenses.
  */
 
-#include "CL/cl.h"
-//#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
+#pragma once
 
-//#pragma insieme mark
-int main(int argc, char **argv)
-{
-    cl_context context;
-    cl_command_queue queue;
-    cl_program program;
-    cl_kernel kernel;
-    cl_int err;
+#include "sched_policies/utils/irt_sched_queue_pool_base.h"
 
-    cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
-//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_double) * 100, NULL, &err);
-    float* host_ptr;
+IRT_DEFINE_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
+IRT_DEFINE_COUNTED_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
 
-
-    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
-
-    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-
-    size_t kernelLength = 10;
-
-    char* path = "../frontend/test/hello.cl";
-
-    char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
-
-#pragma insieme kernelFile "/home/klaus/insieme/code/frontend/test/hello.cl"
-    program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
-
-    kernel = clCreateKernel(program, "hello", &err);
-    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
-
-    size_t globalSize[] = {8, 8};
-    size_t localSize[] = {3, 5, 6};
-
-    err =  clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, NULL);
-
-    clEnqueueReadBuffer(queue, dev_ptr1, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-
-    clReleaseMemObject(dev_ptr1);
-//    clReleaseMemObject(dev_ptr2);
-
-    return 0;
+static inline irt_work_item* _irt_get_ready_wi_from_pool(irt_work_item_deque* pool) {
+	irt_work_item* next_wi = pool->start;
+	while(next_wi != NULL) {
+		if(next_wi->ready_check.fun(next_wi)) {
+			next_wi = irt_work_item_deque_take_elem(pool, next_wi); 
+			if(next_wi) break;
+			else return _irt_get_ready_wi_from_pool(pool); // wi was stolen, retry
+		} else {
+			next_wi = next_wi->sched_data.work_deque_next;
+		}
+	}
+	return next_wi;
 }
