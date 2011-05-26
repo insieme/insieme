@@ -240,13 +240,39 @@ LambdaNodeMapper<Lambda> makeLambdaMapper(Lambda lambda) {
 	return LambdaNodeMapper<Lambda> (lambda);
 }
 
+// a forward declaration of the node annotation class and a pointer type referencing it
+class NodeAnnotation;
+typedef std::shared_ptr<NodeAnnotation> NodeAnnotationPtr;
+
+/**
+ * An abstract super type for all annotations being attached to nodes. In addition to the
+ * usual annotation requirements, node annotations have to support the migration between
+ * nodes during transformations.
+ */
+class NodeAnnotation : public utils::Annotation {
+public:
+
+	/**
+	 * A method which will be invoked whenever a node with this annotation is
+	 * transformed. If the annotation should be preserved, this method has to migrate
+	 * itself to the given after node. During this migration, necessary modifications
+	 * on the annotations may as well be applied.
+	 *
+	 * @param ptr the shared annotation pointer referencing this annotation within the before node
+	 * @param before the node state before the transformation having this annotation attached to
+	 * @param after the node state after the transformation, which might have to be updated
+	 * @return true if a migration took place, false otherwise
+	 */
+	virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const =0;
+};
+
 /**
  * This class models an abstract base class for all AST nodes to be used within a program
  * representation. It defines a minimum number of functionality to be supported by all nodes
  * (including to be hash- and comparable, such that instances can be used within unordered
  * sets).
  */
-class Node: public utils::HashableImmutableData<Node>, public utils::Annotatable, public utils::Printable {
+class Node: public utils::HashableImmutableData<Node>, public utils::Annotatable<NodeAnnotation>, public utils::Printable {
 
 	/**
 	 * Allow the instance manager to access the private clone method.

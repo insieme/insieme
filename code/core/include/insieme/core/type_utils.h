@@ -41,6 +41,8 @@
 
 #include <boost/optional/optional.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/utility/typed_in_place_factory.hpp>
+
 
 #include "insieme/core/types.h"
 
@@ -236,6 +238,31 @@ public:
 
 // define a simple name for an optional substitution - which will be the result of unification and matching algorithms.
 typedef boost::optional<Substitution> SubstitutionOpt;
+
+/**
+ * Creates a copy of the given substitution where all referenced types are handled by the given manger.
+ *
+ * @param manager the manager to be managing the nodes referenced by the resulting substitution
+ * @param substitution the substitution to be copied
+ * @return a copy of the given substitution instance where all nodes are maintained by the given manager
+ */
+inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& substitution) {
+	// check for early exit
+	if (!substitution) {
+		return substitution;
+	}
+
+	// copy the substitution
+	SubstitutionOpt res(boost::in_place<Substitution>());
+	for_each(substitution->getMapping(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur){
+		res->addMapping(manager.get(cur.first), manager.get(cur.second));
+	});
+	for_each(substitution->getIntTypeParamMapping(), [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur){
+		res->addMapping(manager.get(cur.first), manager.get(cur.second));
+	});
+	return res;
+}
+
 
 // -------------------------------------------------------------------------------------------------------------------------
 //                                                    Unification

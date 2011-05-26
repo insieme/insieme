@@ -43,7 +43,7 @@ namespace ocl {
 
 TEST(ocl_properties, FunctionAnnotations) {
 
-	insieme::utils::Annotatable function;
+	insieme::utils::Annotatable<> function;
 
     ocl::BaseAnnotation::AnnotationList functionAnnotation;
 
@@ -52,7 +52,7 @@ TEST(ocl_properties, FunctionAnnotations) {
 
     function.addAnnotation(std::make_shared<ocl::BaseAnnotation>(functionAnnotation));
 
-    insieme::utils::AnnotationMap aMap = function.getAnnotations();
+    insieme::utils::Annotatable<>::annotation_map_type aMap = function.getAnnotations();
 
     EXPECT_EQ(static_cast<unsigned int>(1), aMap.size());
 
@@ -82,7 +82,7 @@ TEST(ocl_properties, FunctionAnnotations) {
 }
 
 TEST(ocl_properties, DeclarationAnnotations) {
-	insieme::utils::Annotatable declaration;
+	insieme::utils::Annotatable<> declaration;
 
     ocl::BaseAnnotation::AnnotationList functionAnnotations;
 

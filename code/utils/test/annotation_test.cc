@@ -91,7 +91,7 @@ TEST(Annotation, Basic) {
 	typedef shared_ptr<DummyAnnotation2> DummyAnnotation2Ptr;
 
 	// create instance
-	Annotatable target;
+	Annotatable<> target;
 
 	// some basic tests
 //	EXPECT_DEATH( target.addAnnotation(DummyAnnotationPtr()), ".*Cannot add NULL annotation!.*");
@@ -161,11 +161,11 @@ TEST(Annotation, CopyTests) {
 	auto annotation = std::make_shared<DummyAnnotation>(1);
 
 	// create first instance
-	Annotatable a;
+	Annotatable<> a;
 	a.addAnnotation(annotation);
 
 	// test copy constructor
-	Annotatable b(a);
+	Annotatable<> b(a);
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
 
@@ -183,7 +183,7 @@ TEST(Annotation, CopyTests) {
 	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
 
 	// test assignment
-	Annotatable c;
+	Annotatable<> c;
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
 	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
 	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));

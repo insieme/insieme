@@ -181,9 +181,9 @@ core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr)
 /* Function to convert Clang attributes of declarations to IR annotations (local version) currently used for:
  * 	-> OpenCL address spaces
  */
-insieme::utils::AnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDecl* varDecl) const {
+insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang::ValueDecl* varDecl) const {
     if ( !varDecl->hasAttrs() ) {
-    	return insieme::utils::AnnotationPtr();
+    	return insieme::core::NodeAnnotationPtr();
     }
 
 	std::ostringstream ss;
@@ -318,7 +318,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(valDecl->getNameAsString()) );
 
 	// Add OpenCL attributes
-	insieme::utils::AnnotationPtr&& attr = convertAttribute(valDecl);
+	insieme::core::NodeAnnotationPtr&& attr = convertAttribute(valDecl);
 	if (attr) {
 		var->addAnnotation(attr);
 	}

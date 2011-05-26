@@ -1306,7 +1306,7 @@ public:
 			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
 
-		insieme::utils::AnnotationPtr annot;
+		insieme::core::NodeAnnotationPtr annot;
 		if( !isAssignment ) {
 			// because now pointers are arrays, whenever we have a binary expression
 			// which is not an assignment, we have to deref the two operators 

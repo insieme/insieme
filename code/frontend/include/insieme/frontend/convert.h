@@ -302,7 +302,7 @@ public:
 	 * @param varDecl clang Variable declaration AST node
 	 * @return IR annotation
 	 */
-	utils::AnnotationPtr convertAttribute(const clang::ValueDecl* valDecl) const;
+	core::NodeAnnotationPtr convertAttribute(const clang::ValueDecl* valDecl) const;
 
 	/**
 	 * Utility function which tries to apply the deref operation. If the input expression is not a of ref type

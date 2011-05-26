@@ -144,12 +144,12 @@ public:
 	typedef std::function<XmlElementPtr (const insieme::utils::Annotation&, xercesc_3_1::DOMDocument*)> IrToDomConvertType;
 	typedef std::map<const std::string, IrToDomConvertType> IrToDomConvertMapType;
 
-	typedef std::function<insieme::utils::AnnotationPtr (const XmlElement&)> DomToIrConvertType;
+	typedef std::function<insieme::core::NodeAnnotationPtr (const XmlElement&)> DomToIrConvertType;
 	typedef std::map<const std::string, DomToIrConvertType> DomToIrConvertMapType;
 
 	static XmlConverter& get();
 	
-	insieme::utils::AnnotationPtr domToIrAnnotation (const XmlElement& el) const;
+	insieme::core::NodeAnnotationPtr domToIrAnnotation (const XmlElement& el) const;
 	XmlElementPtr irToDomAnnotation (const insieme::utils::Annotation& ann, xercesc_3_1::DOMDocument* doc) const;
 	
 	void* registerAnnotation(const std::string& name, const IrToDomConvertType& toXml, const DomToIrConvertType& fromXml);
@@ -168,7 +168,7 @@ XmlElementPtr convertToXML(const std::string& mapName, std::function<XmlElement&
 }
 
 template <class AnnotationTy>
-insieme::utils::AnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const XmlElement&)> fromXml, const XmlElement& node) {
+insieme::core::NodeAnnotationPtr convertFromXML(std::function<std::shared_ptr<AnnotationTy> (const XmlElement&)> fromXml, const XmlElement& node) {
 	return fromXml(node);
 }
 

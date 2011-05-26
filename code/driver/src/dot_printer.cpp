@@ -138,8 +138,8 @@ void DOTGraphBuilder::addLink(const DOTGraphBuilder::Link& link) {
 size_t DOTGraphBuilder::getNodeId(const core::NodePtr& fromNode) { return (size_t) &*fromNode; }
 
 template <class BuilderTy>
-void visitAnnotationList(BuilderTy& builder, size_t parentId, const utils::AnnotationMap& map) {
-	for(utils::AnnotationMap::const_iterator it = map.begin(), end = map.end(); it != end; ++it) {
+void visitAnnotationList(BuilderTy& builder, size_t parentId, const core::Node::annotation_map_type& map) {
+	for(core::Node::annotation_map_type::const_iterator it = map.begin(), end = map.end(); it != end; ++it) {
 		size_t annotationId = (size_t)&*it->second;
 		std::string label = it->second->getAnnotationName();
 		if(!it->second->toString().empty())

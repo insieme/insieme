@@ -49,7 +49,7 @@ using namespace insieme::core::lang;
 using namespace insieme::xml;
 
 // ------------------- DummyAnnotation ---------------------------------
-class DummyAnnotation : public Annotation {
+class DummyAnnotation : public NodeAnnotation {
 public:
 	static const string NAME;
 	static const StringKey<DummyAnnotation> DummyKey;
@@ -74,6 +74,10 @@ public:
 		return !operator==(other);
 	}
 	
+	virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+		// just ignore
+		return false;
+	}
 };
 
 // initalization of the dummy key
@@ -96,7 +100,7 @@ DummyAnnotationPtr DummyAnnotationFromXML(const XmlElement& el){
 XML_REGISTER_ANNOTATION(DummyAnnotation, "DummyAnnotation", DummyAnnotationToXML, DummyAnnotationFromXML);
 
 // ------------------- VectorAnnotation ---------------------------------
-class VectorAnnotation : public Annotation {
+class VectorAnnotation : public NodeAnnotation {
 public:
 	static const string NAME;
 	static const StringKey<VectorAnnotation> VectorKey;
@@ -119,6 +123,11 @@ public:
 	
 	bool operator!=(const Annotation& other) const {
 		return !operator==(other);
+	}
+
+	virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+		// just ignore
+		return false;
 	}
 };
 

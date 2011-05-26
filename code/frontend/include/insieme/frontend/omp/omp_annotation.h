@@ -80,18 +80,25 @@ DEFINE_TYPE(Parallel);
  *
  * The omp::BaseAnnotation node will contains a list of omp pragmas which are associated to the IR node.
  */
-class BaseAnnotation : public utils::CompoundAnnotation< omp::Annotation > {
+class BaseAnnotation : public utils::CompoundAnnotation< omp::Annotation , core::NodeAnnotation > {
 public:
 	static const string NAME;
     static const utils::StringKey<BaseAnnotation> KEY;
 
     BaseAnnotation(const utils::CompoundAnnotation< omp::Annotation >::AnnotationList& annotationList):
-    	utils::CompoundAnnotation< omp::Annotation >(annotationList) { }
+    	utils::CompoundAnnotation< omp::Annotation , core::NodeAnnotation >(annotationList) { }
 
     const utils::AnnotationKey* getKey() const { return &KEY; }
 	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;
+
+	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// always copy the annotation
+		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		after->addAnnotation(ptr);
+		return true;
+	}
 
 private:
 	AnnotationList annotationList;

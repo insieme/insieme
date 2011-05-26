@@ -37,7 +37,7 @@
 namespace insieme {
 namespace core {
 
-	class DummyAnnotation : public utils::Annotation {
+	class DummyAnnotation : public core::NodeAnnotation {
 	public:
 		static const string NAME;
 		static const utils::StringKey<DummyAnnotation> DummyKey;
@@ -51,9 +51,13 @@ namespace core {
 		const std::string& getAnnotationName() const {
 			 return NAME;
 		}
+		
+		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			return false;
+		}
 	};
 
-	class DummyAnnotation2 : public utils::Annotation {
+	class DummyAnnotation2 : public core::NodeAnnotation {
 	public:
 		static const string NAME; 
 		static const utils::StringKey<DummyAnnotation2> DummyKey;
@@ -66,6 +70,10 @@ namespace core {
 
 		const std::string& getAnnotationName() const {
 			 return NAME;
+		}
+		
+		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			return false;
 		}
 	};
 
