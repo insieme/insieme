@@ -35,7 +35,7 @@
  */
 
 #include "CL/cl.h"
-//#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
+#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
 
 //#pragma insieme mark
 int main(int argc, char **argv)
@@ -57,9 +57,11 @@ int main(int argc, char **argv)
 
     size_t kernelLength = 10;
 
-    char* kernelSrc;// = oclLoadProgSource("/home/klaus/insieme/code/frontend/test/hello.cl", "", &kernelLength);
+    char* path = "../frontend/test/hello.cl";
 
-#pragma insieme kernelFile "/home/klaus/insieme/code/frontend/test/hello.cl"
+    char* kernelSrc = oclLoadProgSource(path, "", &kernelLength);
+
+//#pragma insieme kernelFile "/home/klaus/insieme/code/frontend/test/hello.cl"
     program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
 
     kernel = clCreateKernel(program, "hello", &err);
