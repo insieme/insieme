@@ -49,9 +49,9 @@
 
 void _irt_print_affinity_mask(cpu_set_t mask) {
 	for(int i=0; i<MAX_CORES; i++) {
-		printf("%s", CPU_ISSET(i, &mask)?"1":"0");
+		IRT_INFO("%s", CPU_ISSET(i, &mask)?"1":"0");
 	}
-	printf("\n");
+	IRT_INFO("\n");
 }
 
 void irt_clear_affinity() {

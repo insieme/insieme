@@ -53,7 +53,7 @@ static _irt_cl_platform_param _irt_cl_platform_params[] = {
 	//{ CL_PLATFORM_EXTENSIONS, "CL_PLATFORM_EXTENSIONS" },
 };
 
-static void _irt_cl_print_platform_info(cl_platform_id* id);
+void _irt_cl_print_platform_info(cl_platform_id* id);
 static cl_uint _irt_cl_get_num_platforms();
 static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms);
 

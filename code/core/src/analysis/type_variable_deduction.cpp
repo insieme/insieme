@@ -38,13 +38,13 @@
 
 #include <iterator>
 
+#include "insieme/utils/annotation.h"
 
 #include "insieme/core/analysis/type_variable_renamer.h"
 #include "insieme/core/analysis/subtype_constraints.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/core/annotation.h"
 #include "insieme/core/expressions.h"
 
 #include "insieme/utils/logging.h"
@@ -604,42 +604,49 @@ namespace analysis {
 
 		// -------------------------------------- Function Type Annotations -----------------------
 
-
 		/**
 		 * The kind of annotations attached to a function type nodes to cache type variable substitutions.
 		 */
-		class VariableInstantionInfo : public Annotation {
+		class VariableInstantionInfo : public core::NodeAnnotation {
+
+			// The name of this annotation
+			const static string NAME;
 
 		public:
 
 			// The key used to attack instantiation results to call nodes
-			static StringKey<VariableInstantionInfo> KEY;
+			const static utils::StringKey<VariableInstantionInfo> KEY;
 
 		private:
+
+			/**
+			 * The type of map used internally to manager
+			 */
+			typedef boost::unordered_map<TypeList, SubstitutionOpt> SubstitutionMap;
 
 			/**
 			 * A container for cached results. Both, the type list and the
 			 * substitution has to refere to elements maintained by the same manager
 			 * than the annotated function type.
 			 */
-			boost::unordered_map<TypeList, SubstitutionOpt> substitutions;
+			SubstitutionMap substitutions;
 
 		public :
 
 			VariableInstantionInfo() {}
 
-			virtual const AnnotationKey* getKey() const {
+			virtual const utils::AnnotationKey* getKey() const {
 				return &KEY;
 			}
 
-			virtual const std::string getAnnotationName() const {
-				return "VariableInstantionInfo";
+			virtual const std::string& getAnnotationName() const {
+				return NAME;
 			}
 
-			SubstitutionOpt get(const TypeList& args) const {
+			const SubstitutionOpt* get(const TypeList& args) const {
 				auto pos = substitutions.find(args);
 				if (pos != substitutions.end()) {
-					return pos->second;
+					return &(pos->second);
 				}
 				return 0;
 			}
@@ -648,7 +655,40 @@ namespace analysis {
 				substitutions.insert(std::make_pair(args, res));
 			}
 
-			static SubstitutionOpt getFromAnnotation(const FunctionTypePtr& function, const TypeList& arguments) {
+			virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+				// check some general assertions
+				assert(&*ptr == this && "The pointer has to reference this annotation!");
+				assert(before != after && "Should not be invoked with before == after!");
+
+				// do not migrate the annotation if the node has changed
+				if (*before != *after) {
+					return false;
+				}
+
+				// node is the same but within a differnt manager => migrate
+				assert(before->getNodeManagerPtr() != after->getNodeManagerPtr()
+						&& "Two equal yet distinct instances in the same Manager should not be present!");
+
+				assert(!after->hasAnnotation(KEY) && "After should not have this annotation already!");
+
+				// copy the nodes reference by this annotation to the new manager
+				NodeManager& manager = after->getNodeManager();
+
+				// attach annotation
+				std::shared_ptr<VariableInstantionInfo> copy = std::make_shared<VariableInstantionInfo>();
+				SubstitutionMap& map = copy->substitutions;
+
+				// insert copies of the current map
+				for_each(substitutions, [&](const SubstitutionMap::value_type& cur) {
+					map.insert(std::make_pair(manager.getAll(cur.first), copyTo(manager, cur.second)));
+				});
+
+				// finally, add new annotation to new version of node
+				after->addAnnotation(copy);
+				return true;
+			}
+
+			static const SubstitutionOpt* getFromAnnotation(const FunctionTypePtr& function, const TypeList& arguments) {
 				// try loading annotation
 				if (auto res = function->getAnnotation(VariableInstantionInfo::KEY)) {
 					return res->get(arguments);
@@ -670,23 +710,8 @@ namespace analysis {
 
 		};
 
-		StringKey<VariableInstantionInfo> VariableInstantionInfo::KEY = StringKey<VariableInstantionInfo>("VARIABLE_INSTANTIATION_INFO");
-
-
-		inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& substitution) {
-			if (!substitution) {
-				return substitution;
-			}
-
-			Substitution res;
-			for_each(substitution->getMapping(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur){
-				res.addMapping(manager.get(cur.first), manager.get(cur.second));
-			});
-			for_each(substitution->getIntTypeParamMapping(), [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur){
-				res.addMapping(manager.get(cur.first), manager.get(cur.second));
-			});
-			return res;
-		}
+		const string VariableInstantionInfo::NAME = "VariableInstantionInfo";
+		const utils::StringKey<VariableInstantionInfo> VariableInstantionInfo::KEY = utils::StringKey<VariableInstantionInfo>("VARIABLE_INSTANTIATION_INFO");
 
 	}
 
@@ -696,7 +721,7 @@ namespace analysis {
 		// check annotations
 		TypeList localArgs = function->getNodeManager().getAll(arguments);
 		if (auto res = VariableInstantionInfo::getFromAnnotation(function, localArgs)) {
-			return copyTo(manager, res);
+			return copyTo(manager, *res);
 		}
 
 		// use deduction mechanism

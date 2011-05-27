@@ -329,7 +329,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 	});
 
 	// replace the variables
-	core::JobExprPtr targetJob = static_pointer_cast<const core::JobExpr>(core::transform::replaceAll(manager, job, mapping, true));
+	core::JobExprPtr targetJob = static_pointer_cast<const core::JobExpr>(core::transform::replaceAll(manager, job, mapping));
 
 
 	// Step a) create job struct

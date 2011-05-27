@@ -37,39 +37,53 @@
 namespace insieme {
 namespace core {
 
-	class DummyAnnotation : public Annotation {
+	class DummyAnnotation : public core::NodeAnnotation {
 	public:
-		static StringKey<DummyAnnotation> DummyKey;
+		static const string NAME;
+		static const utils::StringKey<DummyAnnotation> DummyKey;
 		int value;
 		DummyAnnotation(int value) : value(value) { };
 
-		virtual AnnotationKey* getKey() const {
+		virtual const utils::AnnotationKey* getKey() const {
 			return &DummyKey;
 		}
 
-		const std::string getAnnotationName() const {
-			 return "DummyAnnotation";
+		const std::string& getAnnotationName() const {
+			 return NAME;
+		}
+		
+		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			return false;
 		}
 	};
 
-	class DummyAnnotation2 : public Annotation {
+	class DummyAnnotation2 : public core::NodeAnnotation {
 	public:
-		static StringKey<DummyAnnotation2> DummyKey;
+		static const string NAME; 
+		static const utils::StringKey<DummyAnnotation2> DummyKey;
 		int value;
 		DummyAnnotation2(int value) : value(value) { };
 
-		virtual AnnotationKey* getKey() const {
+		virtual const utils::AnnotationKey* getKey() const {
 			return &DummyKey;
 		}
 
-		const std::string getAnnotationName() const {
-			 return "DummyAnnotation2";
+		const std::string& getAnnotationName() const {
+			 return NAME;
+		}
+		
+		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			assert(&*ptr == this && "Annotation pointer should reference this annotation.");
+			after->addAnnotation(ptr);
+			return false;
 		}
 	};
 
 	// initalization of the dummy key
-	StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
-	StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
+	const string DummyAnnotation::NAME = "DummyAnnotation";
+	const utils::StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+	const string DummyAnnotation2::NAME = "DummyAnnotation2";
+	const utils::StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
 
 } // end namespace core
 } // end namespace insieme

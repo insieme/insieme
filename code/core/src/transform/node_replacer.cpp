@@ -41,6 +41,7 @@
 
 #include "insieme/utils/container_utils.h"
 
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
 namespace {
@@ -56,13 +57,12 @@ using namespace insieme::utils::map;
 class NodeReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const PointerMap<NodePtr, NodePtr>& replacements;
-	const bool preservePtrAnnotationsWhenModified;
 	const bool includesTypes;
 
 public:
 
-	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified),
+	NodeReplacer(NodeManager& manager, const PointerMap<NodePtr, NodePtr>& replacements)
+		: manager(manager), replacements(replacements),
 		  includesTypes(any(replacements, [](const std::pair<NodePtr, NodePtr>& cur) { auto cat = cur.first->getNodeCategory(); return cat == NC_Type || cat == NC_IntTypeParam; })) { }
 
 private:
@@ -93,11 +93,8 @@ private:
 			return ptr;
 		}
 
-		// restore annotations if requested
-		if (preservePtrAnnotationsWhenModified) {
-			// TODO: merge annotations - do not override!
-			res->setAnnotations(ptr->getAnnotations());
-		}
+		// preserve annotations
+		utils::migrateAnnotations(ptr, res);
 
 		// done
 		return res;
@@ -111,14 +108,12 @@ class SingleNodeReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const NodePtr& target;
 	const NodePtr& replacement;
-	const bool preservePtrAnnotationsWhenModified;
 	const bool visitTypes;
 
 public:
 
-	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), target(target), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified),
-		  visitTypes(target->getNodeCategory() == NC_Type || target->getNodeCategory() == NC_IntTypeParam) { }
+	SingleNodeReplacer(NodeManager& manager, const NodePtr& target, const NodePtr& replacement)
+		: manager(manager), target(target), replacement(replacement), visitTypes(target->getNodeCategory() == NC_Type || target->getNodeCategory() == NC_IntTypeParam) { }
 
 private:
 
@@ -146,10 +141,9 @@ private:
 			return ptr;
 		}
 
-		// restore annotations if requested
-		if (preservePtrAnnotationsWhenModified) {
-			res->setAnnotations(ptr->getAnnotations());
-		}
+		// preserve annotations
+		utils::migrateAnnotations(ptr, res);
+
 
 		// done
 		return res;
@@ -161,13 +155,11 @@ class VariableReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	const VariablePtr variable;
 	const NodePtr replacement;
-	const bool preservePtrAnnotationsWhenModified;
-
 
 public:
 
-	VariableReplacer(NodeManager& manager, const VariablePtr& variable, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), variable(variable), replacement(replacement), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
+	VariableReplacer(NodeManager& manager, const VariablePtr& variable, const NodePtr& replacement)
+		: manager(manager), variable(variable), replacement(replacement) { }
 
 private:
 	/**
@@ -201,10 +193,8 @@ private:
 			return ptr;
 		}
 
-		// restore annotations if requested
-		if (preservePtrAnnotationsWhenModified) {
-			res->setAnnotations(ptr->getAnnotations());
-		}
+		// preserve annotations
+		utils::migrateAnnotations(ptr, res);
 
 		// done
 		return res;
@@ -215,13 +205,11 @@ class VariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
-	const bool preservePtrAnnotationsWhenModified;
-
 
 public:
 
-	VariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool preservePtrAnnotationsWhenModified)
-		: manager(manager), replacements(replacements), preservePtrAnnotationsWhenModified(preservePtrAnnotationsWhenModified) { }
+	VariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements)
+		: manager(manager), replacements(replacements) { }
 
 private:
 	/**
@@ -258,10 +246,8 @@ private:
 			return ptr;
 		}
 
-		// restore annotations if requested
-		if (preservePtrAnnotationsWhenModified) {
-			res->setAnnotations(ptr->getAnnotations());
-		}
+		// preserve annotations
+		utils::migrateAnnotations(ptr, res);
 
 		// done
 		return res;
@@ -303,7 +289,7 @@ namespace insieme {
 namespace core {
 namespace transform {
 
-NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper, bool preservePtrAnnotationsWhenModified) {
+NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper) {
 	if(!root) {
 		return NodePtr(NULL);
 	}
@@ -317,17 +303,14 @@ NodePtr applyReplacer(NodeManager& mgr, const NodePtr& root, NodeMapping& mapper
 		return root;
 	}
 
-	// if annotations should be preserved anyway ...
-	if (preservePtrAnnotationsWhenModified) {
-		// ... restore annotations.
-		res->setAnnotations(root->getAnnotations());
-	}
+	// preserve annotations
+	utils::migrateAnnotations(root, res);
 
 	return res;
 }
 
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodePtr, NodePtr>& replacements) {
 
 	// shortcut for empty replacements
 	if (replacements.empty()) {
@@ -337,43 +320,43 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const PointerMap<NodeP
 	// handle single element case
 	if (replacements.size() == 1) {
 		auto pair = *replacements.begin();
-		return replaceAll(mgr, root, pair.first, pair.second, preservePtrAnnotationsWhenModified);
+		return replaceAll(mgr, root, pair.first, pair.second);
 	}
 
 	// handle entire map
-	auto mapper = ::NodeReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
-	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
+	auto mapper = ::NodeReplacer(mgr, replacements);
+	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const NodePtr& toReplace, const NodePtr& replacement) {
 
 	if (toReplace->getNodeType() == NT_Variable) {
-		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement, preservePtrAnnotationsWhenModified);
+		return replaceAll(mgr, root, static_pointer_cast<const Variable>(toReplace), replacement);
 	}
 
-	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement, preservePtrAnnotationsWhenModified);
-	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
+	auto mapper = ::SingleNodeReplacer(mgr, toReplace, replacement);
+	return applyReplacer(mgr, root, mapper);
 }
 
-NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
-	auto mapper = ::VariableReplacer(mgr, toReplace, replacement, preservePtrAnnotationsWhenModified);
-	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
+NodePtr replaceAll(NodeManager& mgr, const NodePtr& root, const VariablePtr& toReplace, const NodePtr& replacement) {
+	auto mapper = ::VariableReplacer(mgr, toReplace, replacement);
+	return applyReplacer(mgr, root, mapper);
 }
 
 
-NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool preservePtrAnnotationsWhenModified) {
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
 	// special handling for empty replacement map
 	if (replacements.empty()) {
 		return mgr.get(root);
 	}
 
 	// conduct actual substitutions
-	auto mapper = ::VariableMapReplacer(mgr, replacements, preservePtrAnnotationsWhenModified);
-	return applyReplacer(mgr, root, mapper, preservePtrAnnotationsWhenModified);
+	auto mapper = ::VariableMapReplacer(mgr, replacements);
+	return applyReplacer(mgr, root, mapper);
 }
 
 
-NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement, bool preservePtrAnnotationsWhenModified) {
+NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
 	assert( toReplace.isValid() && "Invalid node address provided!");
 
 	// create result
@@ -393,12 +376,8 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 		const NodePtr& cur = path.getAddressedNode();
 		res = cur->substitute(manager, mapper);
 
-		// restore annotations
-		if (preservePtrAnnotationsWhenModified) {
-			// copy annotations ...
-			// TODO: determine whether annotations should be merged or overridden
-			res->setAnnotations(cur->getAnnotations());
-		}
+		// preserve annotations
+		utils::migrateAnnotations(cur, res);
 
 		// update last-pos
 		lastPos = path.getIndex();

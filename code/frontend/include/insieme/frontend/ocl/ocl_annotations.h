@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/annotation.h"
+#include "insieme/utils/annotation.h"
 #include "insieme/core/expressions.h"
 
 #define DEFINE_TYPE(Type) \
@@ -51,24 +51,35 @@ DEFINE_TYPE(Annotation);
 DEFINE_TYPE(KernelFctAnnotation);
 DEFINE_TYPE(WorkGroupSizeAnnotation);
 DEFINE_TYPE(AddressSpaceAnnotation);
+DEFINE_TYPE(KernelFileAnnotation);
 
-class BaseAnnotation : public core::CompoundAnnotation<ocl::Annotation> {
+class BaseAnnotation : public utils::CompoundAnnotation<ocl::Annotation, core::NodeAnnotation> {
 public:
-    static const core::StringKey<BaseAnnotation> KEY;
+	static const string NAME;
+    static const utils::StringKey<BaseAnnotation> KEY;
 
-    BaseAnnotation(core::CompoundAnnotation<ocl::Annotation>::AnnotationList& annotationList) :
-    	core::CompoundAnnotation<ocl::Annotation>(annotationList) { }
+    BaseAnnotation(utils::CompoundAnnotation<ocl::Annotation>::AnnotationList& annotationList) :
+    	utils::CompoundAnnotation<ocl::Annotation, core::NodeAnnotation>(annotationList) { }
 
-    const core::AnnotationKey* getKey() const { return &KEY; }
-    const std::string getAnnotationName() const { return "OclAnnotation"; }
+    const utils::AnnotationKey* getKey() const { return &KEY; }
+    const std::string& getAnnotationName() const { return NAME; }
+
+    virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// always copy the annotation
+		assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+		after->addAnnotation(ptr);
+		return true;
+	}
+
 };
 
 
-/** Base class for OpenCL related annotations
- ** */
+/**
+ * Base class for OpenCL related annotations
+ */
 class Annotation {
     //needed to make OclAnnotation polymorphic
-    virtual const std::string getAnnotationName() const = 0;
+    virtual const std::string& getAnnotationName() const = 0;
 };
 
 
@@ -76,22 +87,23 @@ class Annotation {
  ** Should be used to annotate OpenCL kernel functions
  ** Default value is isKernelFct() = true
  ** */
-class KernelFctAnnotation : public Annotation , public core::Annotation {
+class KernelFctAnnotation : public Annotation , public utils::Annotation {
 
 private:
     bool kf;
 public:
-	static const core::StringKey<KernelFctAnnotation> KEY;
+    static const string NAME;
+	static const utils::StringKey<KernelFctAnnotation> KEY;
 
-    KernelFctAnnotation() : ocl::Annotation(), core::Annotation(), kf(true){ }
+    KernelFctAnnotation() : ocl::Annotation(), utils::Annotation(), kf(true){ }
 
-    const std::string getAnnotationName() const { return "OclKernelFctAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
     void setKernelFct(bool isKernelFct);
 
     bool isKernelFct() const;
 
-	const core::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKey* getKey() const { return &KEY; }
 };
 
 /** Annotation class intended to mark store the required work group size if given.
@@ -103,10 +115,11 @@ class WorkGroupSizeAnnotation : public Annotation {
 private:
     const unsigned int xDim, yDim, zDim;
 public:
+    static const string NAME;
     WorkGroupSizeAnnotation(unsigned int x, unsigned int y, unsigned int z) :
         Annotation(), xDim(x), yDim(y), zDim(z) { }
 
-    const std::string getAnnotationName() const { return "OclWorkGroupSizeAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
     unsigned int getXdim() const;
     unsigned int getYdim() const;
@@ -119,7 +132,7 @@ public:
  ** Should be used to annotate OpenCL variable declarations inside kernel functions
  ** Default value is getAddressSpace() = addressSpace::PRIVATE
  ** */
-class AddressSpaceAnnotation : public Annotation , public core::Annotation {
+class AddressSpaceAnnotation : public Annotation , public core::NodeAnnotation {
 public:
     enum addressSpace{
         PRIVATE,
@@ -132,20 +145,25 @@ public:
 private:
     addressSpace as;
 public:
-    static const core::StringKey<AddressSpaceAnnotation> KEY;
+    static const string NAME;
+    static const utils::StringKey<AddressSpaceAnnotation> KEY;
 
-    const std::string getAnnotationName() const { return "OclAddressSpaceAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
-    AddressSpaceAnnotation() : ocl::Annotation(), core::Annotation(), as(addressSpace::PRIVATE) { }
+    AddressSpaceAnnotation() : ocl::Annotation(), core::NodeAnnotation(), as(addressSpace::PRIVATE) { }
 
-    AddressSpaceAnnotation(addressSpace space) : ocl::Annotation(), core::Annotation(), as(space) { }
+    AddressSpaceAnnotation(addressSpace space) : ocl::Annotation(), core::NodeAnnotation(), as(space) { }
 
     bool setAddressSpace(addressSpace newAs);
 
     addressSpace getAddressSpace() const;
 
-	const core::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKey* getKey() const { return &KEY; }
 
+	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// just ignore
+		return false;
+	}
 };
 
 typedef std::shared_ptr<AddressSpaceAnnotation> AddressSpaceAnnotationPtr;
@@ -155,20 +173,52 @@ typedef std::shared_ptr<AddressSpaceAnnotation> AddressSpaceAnnotationPtr;
  ** Should be used to annotate OpenCL variable that have to be translated to
  ** built-in functions by the OpenCL Back-end
  ** */
-class BuiltinFunctionAnnotation : public Annotation , public core::Annotation {
+class BuiltinFunctionAnnotation : public Annotation , public core::NodeAnnotation {
 private:
     core::LiteralPtr lit;
 public:
-    static const core::StringKey<BuiltinFunctionAnnotation> KEY;
+    static const string NAME;
+    static const utils::StringKey<BuiltinFunctionAnnotation> KEY;
 
-    const std::string getAnnotationName() const { return "OclBuiltinFunctionAnnotation"; }
+    const std::string& getAnnotationName() const { return NAME; }
 
-    BuiltinFunctionAnnotation(core::LiteralPtr l) : ocl::Annotation(), core::Annotation(), lit(l) { }
+    BuiltinFunctionAnnotation(core::LiteralPtr l) : lit(l) { }
 
     core::LiteralPtr getBuiltinLiteral() const;
 
-	const core::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKey* getKey() const { return &KEY; }
 
+	virtual bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		// just always copy annotation
+		assert(&*ptr == this && "Annotation pointer should reference this instance!");
+		after->addAnnotation(ptr);
+		return false;
+	}
+};
+
+/** Annotatinon holding a string with the path of a kernel source file
+ ** */
+class KernelFileAnnotation : public core::NodeAnnotation {
+private:
+    const string path;
+public:
+    static const string NAME;
+    static const utils::StringKey<KernelFileAnnotation> KEY;
+
+    const std::string& getAnnotationName() const { return NAME; }
+
+    KernelFileAnnotation(string kernelPath) : path(kernelPath) { }
+
+    const string& getKernelPath() const { return path; }
+
+    const utils::AnnotationKey* getKey() const { return &KEY; }
+
+    bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+    	// always copy the annotation
+    	assert(&*ptr == this && "Annotation pointer should reference this annotation!");
+    	after->addAnnotation(ptr);
+    	return true;
+    }
 };
 
 typedef std::shared_ptr<BuiltinFunctionAnnotation> BuiltinFunctionAnnotationPtr;

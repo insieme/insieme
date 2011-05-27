@@ -41,22 +41,27 @@
 #include <pthread.h>
 
 #include "work_item.h"
+#include "irt_scheduling.h"
+#include "utils/minlwt.h"
 
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(worker);
+
+typedef enum _irt_worker_state {
+	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_STOP
+} irt_worker_state;
 
 struct _irt_worker {
 	irt_worker_id id;
 	uint64 generator_id;
 	irt_affinity_mask affinity;
 	pthread_t pthread;
-	irt_work_item_cdeque queue;
-	irt_work_item_deque pool;
-	intptr_t basestack;
+	minlwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
-	volatile bool start; // used to ensure all workers start at the same time
+	irt_worker_state state; // used to ensure all workers start at the same time
+	irt_worker_scheduling_data sched_data;
 };
 
 /* ------------------------------ operations ----- */
@@ -67,7 +72,4 @@ static inline irt_worker* irt_worker_get_current() {
 
 irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
 
-void irt_worker_schedule(irt_worker* self);
-
-void irt_worker_enqueue(irt_worker* self, irt_work_item* wi);
-void irt_worker_yield(irt_worker* self, irt_work_item* wi);
+void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);

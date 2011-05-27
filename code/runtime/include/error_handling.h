@@ -52,7 +52,8 @@ typedef enum _irt_errcode {
 	IRT_ERR_IO,				// I/O error
 	IRT_ERR_INIT,			// error related to initialization
 	IRT_ERR_INTERNAL,		// internal error caused by runtime system
-	IRT_ERR_APP				// error caused by the user application running on the IRT
+	IRT_ERR_APP,			// error caused by the user application running on the IRT
+	IRT_ERR_OCL				// error caused by the opencl runtime system
 } irt_errcode;
 
 struct _irt_error {
@@ -63,8 +64,7 @@ struct _irt_error {
 
 /* ------------------------------ operations ----- */
 
-#ifndef NDEBUG
-//#if 1
+#if !defined(NDEBUG) || defined(IRT_VERBOSE)
 #define IRT_ASSERT(__condition, __errcode, __message, ...) \
 if(!(__condition)) { \
 	fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
@@ -74,19 +74,23 @@ if(!(__condition)) { \
 	fprintf(stderr, "IRT Warning in %s#%d:\n", __FILE__, __LINE__); \
 	fprintf(stderr, __message "\n", ##__VA_ARGS__); \
 }
-#ifdef IRT_VERBOSE
 #define IRT_INFO(__message, ...) { \
-	printf("IRT Info (%s#%d): ", __FILE__, __LINE__); \
+	printf(__message, ##__VA_ARGS__); \
+}
+#ifdef IRT_VERBOSE
+#define IRT_DEBUG(__message, ...) { \
+	printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
 	printf(__message "\n", ##__VA_ARGS__); \
 }
 #else
-#define IRT_INFO(__message, ...)
+#define IRT_DEBUG(__message, ...)
 #endif
 #else
 #define IRT_DEBUG_PRINTS_OFF
 #define IRT_ASSERT(__condition, __errcode, __message, ...) if(__condition);
 #define IRT_WARN(__message, ...)
 #define IRT_INFO(__message, ...)
+#define IRT_DEBUG(__message, ...)
 #endif
 
 #ifdef IRT_VERBOSE

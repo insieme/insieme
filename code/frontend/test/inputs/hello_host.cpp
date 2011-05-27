@@ -56,16 +56,22 @@ int main(int argc, char **argv)
     clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
     size_t kernelLength = 10;
-/*    char* kernelSrc = oclLoadProgSource("/home/klaus/insieme/code/frontend/test/hello.cl", "", &kernelLength);
+
+    char* path = "../frontend/test/hello.cl";
+
+    char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
+
+//#pragma insieme kernelFile "../frontend/test/hello.cl"
+    program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
 
     kernel = clCreateKernel(program, "hello", &err);
     err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
 
-    size_t globalSize = 512;
-    size_t localSize = 32;
+    size_t globalSize[] = {8, 8};
+    size_t localSize[] = {3, 5, 6};
 
-    err = clEnqueueNDRangeKernel(queue, kernel, 1, NULL, &globalSize, &localSize, 0, NULL, NULL);
-*/
+    err =  clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, NULL);
+
     clEnqueueReadBuffer(queue, dev_ptr1, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
     clReleaseMemObject(dev_ptr1);

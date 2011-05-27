@@ -43,7 +43,7 @@ namespace ocl {
 
 TEST(ocl_properties, FunctionAnnotations) {
 
-    core::Annotatable function;
+	insieme::utils::Annotatable<> function;
 
     ocl::BaseAnnotation::AnnotationList functionAnnotation;
 
@@ -52,11 +52,11 @@ TEST(ocl_properties, FunctionAnnotations) {
 
     function.addAnnotation(std::make_shared<ocl::BaseAnnotation>(functionAnnotation));
 
-    core::AnnotationMap aMap = function.getAnnotations();
+    insieme::utils::Annotatable<>::annotation_map_type aMap = function.getAnnotations();
 
     EXPECT_EQ(static_cast<unsigned int>(1), aMap.size());
 
-    std::shared_ptr<insieme::core::Annotation> oa = (*aMap.find(&BaseAnnotation::KEY)).second;
+    std::shared_ptr<insieme::utils::Annotation> oa = (*aMap.find(&BaseAnnotation::KEY)).second;
 
     //does not work in Hudson
 //    EXPECT_TRUE(std::dynamic_pointer_cast<BaseAnnotation>(oa));
@@ -82,7 +82,7 @@ TEST(ocl_properties, FunctionAnnotations) {
 }
 
 TEST(ocl_properties, DeclarationAnnotations) {
-    core::Annotatable declaration;
+	insieme::utils::Annotatable<> declaration;
 
     ocl::BaseAnnotation::AnnotationList functionAnnotations;
 

@@ -34,62 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/annotation.h"
-#include "insieme/utils/map_utils.h"
+#pragma once
 
-namespace insieme {
-namespace core {
+#include "utils/deques.h"
+#include "utils/counted_deques.h"
 
+IRT_DECLARE_DEQUE(work_item);
+IRT_DECLARE_COUNTED_DEQUE(work_item);
 
-void Annotatable::addAnnotation(const AnnotationPtr& annotation) const {
+typedef struct _irt_worker_queue_pool_base {
+	irt_work_item_cdeque queue;
+	irt_work_item_deque pool;
+} irt_worker_queue_pool_base;
 
-	// check pre-condition
-	assert ( annotation && "Cannot add NULL annotation!" );
+typedef struct _irt_wi_queue_pool_base {
+	struct _irt_work_item* work_deque_next;
+	struct _irt_work_item* work_deque_prev;
+} irt_wi_queue_pool_base;
 
-	// ensure map to be initialized
-	initAnnotationMap();
-
-	// insert new element
-	auto key = annotation->getKey();
-	auto value = std::make_pair(key, annotation);
-	auto res = (*map)->insert(value);
-
-	if (!res.second) {
-		// equivalent element already present => remove old and add new element
-		(*map)->erase(res.first);
-		res = (*map)->insert(value);
-	}
-
-	// check post-condition
-	assert ( res.second && "Insert not successful!");
-	assert ( hasAnnotation(key) && "Insert not successful!");
-	assert ( &*((*(*map)->find(key)).second)==&*annotation && "Insert not successful!");
-};
-
-
-bool hasSameAnnotations(const Annotatable& annotatableA, const Annotatable& annotatableB) {
-
-	// check whether both have no annotations ...
-	if (!annotatableA.hasAnnotations() && !annotatableB.hasAnnotations()) {
-		return true;
-	}
-
-	// check in case both have annotations ...
-	if (annotatableA.hasAnnotations() && annotatableB.hasAnnotations()) {
-
-		// extract maps
-		const AnnotationMap& mapA = annotatableA.getAnnotations();
-		const AnnotationMap& mapB = annotatableB.getAnnotations();
-
-		// compare maps
-		return insieme::utils::map::equal(mapA, mapB, equal_target<AnnotationPtr>());
-
-	}
-
-	// one does have annotations, the other doesn't
-	return false;
-}
-
-
-} // end namespace core
-} // end namespace insieme
+static inline irt_work_item* _irt_get_ready_wi_from_pool(irt_work_item_deque* pool);

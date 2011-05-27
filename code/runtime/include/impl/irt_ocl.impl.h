@@ -45,36 +45,27 @@
  * =====================================================================================
  */
 
-static void _irt_cl_print_platform_info(cl_platform_id* id) {
-	if (id == NULL) {
-		fprintf (stderr, "OCL ERROR: function %s is called with an invalid platform id in file %s, at line %d\n", __PRETTY_FUNCTION__, __FILE__, __LINE__);
-		exit (EXIT_FAILURE);
-	}
-	
+void _irt_cl_print_platform_info(cl_platform_id* id) {
+	IRT_ASSERT(id != NULL, IRT_ERR_OCL, "Error: invalid platform");
 	for (cl_uint i = 0; i < IRT_CL_NUM_PLATFORM_PARAMS; i++) {
 		size_t cl_param_size;
 		char* cl_param_value;
-		clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, 0, NULL, &cl_param_size); // FIXME: check for errors
+		IRT_ASSERT(clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info");
 		cl_param_value = alloca (cl_param_size);
-		if (!cl_param_value) {
-			fprintf (stderr, "OCL ERROR: cannot allocate memory for string buffer in file %s, at line %d\n", __FILE__, __LINE__);
-			exit (EXIT_FAILURE);
-		}
-		clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, cl_param_size, cl_param_value, NULL); // FIXME: check for errors
-		printf("%-25s = \"%s\"\n", _irt_cl_platform_params[i].name_string, cl_param_value);
+		IRT_ASSERT(clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, cl_param_size, cl_param_value, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info");
+		IRT_INFO("%-25s = \"%s\"\n", _irt_cl_platform_params[i].name_string, cl_param_value);
 	}
-	printf("\n");
+	IRT_INFO("\n");
 }
 
 static cl_uint _irt_cl_get_num_platforms(){
 	cl_uint cl_num_platforms;
-	cl_int err_code = clGetPlatformIDs(0, NULL, &cl_num_platforms);
-	if (err_code != CL_SUCCESS) return 0;
+	if (clGetPlatformIDs(0, NULL, &cl_num_platforms) != CL_SUCCESS) return 0;
 	return cl_num_platforms;
 }
 
 static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms) {
-	clGetPlatformIDs(num_platforms, platforms, NULL); // FIXME: check for errors
+	IRT_ASSERT(clGetPlatformIDs(num_platforms, platforms, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting platforms");
 }
 
 /* 
@@ -84,127 +75,68 @@ static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platfor
  */
 
 static void _irt_cl_print_device_info(cl_device_id* id) {
-	if (id == NULL) {
-		fprintf (stderr, "OCL ERROR: function %s is called with an invalid device id in file %s, at line %d\n", __PRETTY_FUNCTION__, __FILE__, __LINE__);
-		exit (EXIT_FAILURE);
-	}
-	
+	IRT_ASSERT(id != NULL, IRT_ERR_OCL, "Error: invalid device");
 	for (cl_uint i = 0; i < IRT_CL_NUM_DEVICE_PARAMS; i++) {
 		size_t cl_param_size;
 		char* cl_param_value;
-		clGetDeviceInfo(*id, _irt_cl_device_params[i].name, 0, NULL, &cl_param_size); // FIXME: check for errors
+		IRT_ASSERT(clGetDeviceInfo(*id, _irt_cl_device_params[i].name, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info");
 		cl_param_value = alloca (cl_param_size);
-		if (!cl_param_value) {
-			fprintf (stderr, "OCL ERROR: cannot allocate memory for string buffer in file %s, at line %d\n", __FILE__, __LINE__);
-			exit (EXIT_FAILURE);
-		}
-		clGetDeviceInfo(*id, _irt_cl_device_params[i].name, cl_param_size, cl_param_value, NULL); // FIXME: check for errors
-		printf("%-25s = \"%s\"\n", _irt_cl_device_params[i].name_string, cl_param_value);
+		IRT_ASSERT(clGetDeviceInfo(*id, _irt_cl_device_params[i].name, cl_param_size, cl_param_value, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info");
+		IRT_INFO("%-25s = \"%s\"\n", _irt_cl_device_params[i].name_string, cl_param_value);
 	}
-	printf("\n");
+	IRT_INFO("\n");
 }
 
 cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type){
 	cl_uint cl_num_devices;
-	cl_int err_code = clGetDeviceIDs(*platform, device_type, 0, NULL, &cl_num_devices);
-	if (err_code == CL_DEVICE_NOT_FOUND) return 0;
+	if (clGetDeviceIDs(*platform, device_type, 0, NULL, &cl_num_devices) != CL_SUCCESS) return 0;
 	return cl_num_devices;
 }
 
 static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices) {
-	clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL); // FIXME: check for errors
+	IRT_ASSERT(clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices"); 
 }
 
 
-static char* _irt_load_program_source (const char* filename, size_t* filesize) {
-	FILE *fp;
-	int err, size;
-	char *source;
-	fp = fopen(filename, "rb");
-	if(fp == NULL) {
-		printf("Could not open kernel file: %s\n", filename);
-		exit(-1);
-	}
-	err = fseek(fp, 0, SEEK_END);
-	if(err != 0) {
-		printf("Error seeking to end of file\n");
-		exit(-1);
-	}
-	size = ftell(fp);
-	if(size < 0) {
-		printf("Error getting file position\n");
-		exit(-1);
-	}
-	err = fseek(fp, 0, SEEK_SET);
-	if(err != 0) {
-		printf("Error seeking to start of file\n");
-		exit(-1);
-	}
-	source = (char*)malloc(size+1);
-	if(source == NULL) {
-		printf("Error allocating %d bytes for the program source\n", size+1);
-		exit(-1);
-	}
-	err = fread(source, 1, size, fp);
-	if(err != size) {
-		printf("only read %d bytes\n", err);
-		exit(0);
-	}
+/* 
+* =====================================================================================
+*  OpenCL Load & Save Program Utility
+* =====================================================================================
+*/
+
+static char* _irt_load_program_source (const char* filename, size_t* filesize) { // remember to free the returned source
+	IRT_ASSERT(filename != NULL && filesize != NULL, IRT_ERR_OCL, "Error input parameters");
+	FILE* fp = fopen(filename, "rb");
+	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening kernel file");
+	IRT_ASSERT(fseek(fp, 0, SEEK_END) == 0, IRT_ERR_OCL, "Error seeking to end of file");
+	int size = ftell(fp);
+	IRT_ASSERT(size >= 0, IRT_ERR_OCL, "Error getting file position");
+	IRT_ASSERT(fseek(fp, 0, SEEK_SET) == 0, IRT_ERR_OCL, "Error seeking to begin of file");
+	char* source = (char*)malloc(size+1);
+	IRT_ASSERT(source != NULL, IRT_ERR_OCL, "Error allocating space for program source");
+	IRT_ASSERT(fread(source, 1, size, fp) == size, IRT_ERR_OCL, "Error reading file");
 	source[size] = '\0';
 	*filesize = size; // this is the size useful for create program from binary
 	return source;
 }
 
 static void _irt_save_program_binary (cl_program program, const char* binary_filename) {
-	/* check for input errors */
-	if (program == NULL) {
-  		exit (EXIT_FAILURE);
-	}
-
-	/*  Get the size of the binaries associated with the program */
-	size_t err; 
+	IRT_ASSERT(binary_filename != NULL && program != NULL, IRT_ERR_OCL, "Error input parameters");
 	size_t size_ret;
-	clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, 0, NULL, &size_ret);
-      	//printf("size_ret %u\n", size_ret);
-
-	/*  allocate an array to store the sizes of the binaries */
+	IRT_ASSERT(clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, 0, NULL, &size_ret) == CL_SUCCESS, IRT_ERR_OCL, "Error getting program info");
 	size_t* binary_size = (size_t *) alloca (size_ret);
-	if (!binary_size) {
-  		exit (EXIT_FAILURE);
-	}
-
-	/* query the sizes of the binaries */
-	clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, size_ret, binary_size, NULL);
-      	//printf("bin_size %zu\n", *binary_size);
-
-	/* allocate space for each binary associated with the program from the sizes queried above */
+	IRT_ASSERT(binary_size != NULL, IRT_ERR_OCL, "Error allocating binary_size");
+	IRT_ASSERT(clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, size_ret, binary_size, NULL) == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info");
     	unsigned char* binary = (unsigned char *) alloca (sizeof (unsigned char) * (*binary_size));
-    	if (!binary) {
-      		fprintf (stderr, "ERROR in function %s, failed to allocate memory for storing binaries[i], file=%s, line=%d\n", 
-      	 	__PRETTY_FUNCTION__, __FILE__, __LINE__);
-      		exit (EXIT_FAILURE);
-    	}
+	IRT_ASSERT(binary != NULL, IRT_ERR_OCL, "Error allocating binary");
 
-	/* Get the binaries */
-	clGetProgramInfo (program, CL_PROGRAM_BINARIES, sizeof (unsigned char *), &binary, NULL);
+	// get the binary
+	IRT_ASSERT(clGetProgramInfo (program, CL_PROGRAM_BINARIES, sizeof (unsigned char *), &binary, NULL) == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info");
 
-	FILE *fh = fopen (binary_filename, "w");
-	if (fh == NULL) {
-  		fprintf (stderr, "fopen(%s,'w') failed errno=\n", binary_filename);
-  		exit (EXIT_FAILURE);
-	}
-	
-	/*  write the binary into the file */
-	err = fwrite (binary, 1, *binary_size, fh);
-	if (err != (size_t) *binary_size) {
-  		exit (EXIT_FAILURE);
-	}
-
-	err = fclose (fh);
-	if (err != 0) {
-		fprintf (stderr, "close failed err= errno=\n");
- 		 exit (EXIT_FAILURE);
-	}	
+	FILE *fp = fopen (binary_filename, "w");
+	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening binary file");
+	IRT_ASSERT(fwrite (binary, 1, *binary_size, fp) ==  (size_t) *binary_size, IRT_ERR_OCL, "Error writing file");
+	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
 }
 
 /* 
@@ -213,7 +145,7 @@ static void _irt_save_program_binary (cl_program program, const char* binary_fil
  * =====================================================================================
  */
 
-cl_uint irt_ocl_get_num_devices(){
+cl_uint irt_ocl_get_num_devices() {
 	cl_uint num_devices = 0;
 	cl_platform_id* cl_platforms;
 	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
@@ -230,7 +162,7 @@ cl_uint irt_ocl_get_num_devices(){
 	return num_devices;
 }
 
-void irt_ocl_get_devices(irt_ocl_device* devices){
+void irt_ocl_get_devices(irt_ocl_device* devices) {
 	cl_uint index = 0;
 	cl_platform_id* cl_platforms;
 	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
@@ -250,31 +182,21 @@ void irt_ocl_get_devices(irt_ocl_device* devices){
 					irt_ocl_device* dev = &devices[index];
 					dev->cl_device = cl_devices[i];
 					dev->cl_context = clCreateContext(NULL, 1, &dev->cl_device, NULL, NULL, &status);
-					if (status != CL_SUCCESS || dev->cl_context == NULL){
-						// FIXME check for errors
-						printf("Error during creation of Context\n");
-						exit(-1);
-					}
-					
+					IRT_ASSERT(status == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context");
 					dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &status);
-					if (status != CL_SUCCESS || dev->cl_queue == NULL){
-						// FIXME check for errors
-						printf("Error during creation of Queue \n");
-						exit(-1);
-					}
+					IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue");
 				}
 			}
 		}
 	}
 }
 
-void irt_ocl_release_device(irt_ocl_device* dev){
+void irt_ocl_release_device(irt_ocl_device* dev) {
 	clReleaseContext(dev->cl_context);
 	clReleaseCommandQueue(dev->cl_queue);
 }
 
-
-void irt_ocl_print_device_info(irt_ocl_device* dev){
+void irt_ocl_print_device_info(irt_ocl_device* dev) {
 	_irt_cl_print_device_info(&(dev->cl_device));
 }
 
@@ -284,9 +206,8 @@ float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_pr
 
 float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag) {
 	cl_ulong event_one_start, event_two_end;
-	cl_int errcode;
-	errcode = clGetEventProfilingInfo(event_two, event_two_command, sizeof(cl_ulong), &event_two_end, NULL);
-	errcode = clGetEventProfilingInfo(event_one, event_one_command, sizeof(cl_ulong), &event_one_start, NULL);
+	IRT_ASSERT(clGetEventProfilingInfo(event_two, event_two_command, sizeof(cl_ulong), &event_two_end, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info");
+	IRT_ASSERT(clGetEventProfilingInfo(event_one, event_one_command, sizeof(cl_ulong), &event_one_start, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info");
 	float time = 0.0;
 	switch(time_flag){
 		case IRT_OCL_NANO:
@@ -302,74 +223,44 @@ float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_com
 	return time;
 }
 
-cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag){
-	// FIXME: assert for everythig
+cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
 	cl_kernel kernel = NULL;
 	cl_program program = NULL;
 	size_t filesize = 0;	
 	char* program_source = _irt_load_program_source(filename, &filesize);
-	if (program_source == NULL) {
-		exit (EXIT_FAILURE);
-      	}
-	//printf("Program Source: %s\n", program_source);
-	if (flag == IRT_OCL_SOURCE){ // FIXME write better way
+	IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
+	if (flag == IRT_OCL_SOURCE){ // FIXME write in a better way
 		cl_int status;
 		program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &program_source, NULL, &status);
-		if(status != CL_SUCCESS) {
-			printf("clCreateProgramWithSource failed\n");
-			exit(-1);
-		}
-		if (program == NULL) {
-			printf("Error: Failed to create compute program!\n") ;
-			exit(-1);
-		}
+		IRT_ASSERT(status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
 		status = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
-			
+		
 		// If there are build errors, print them to the screen
 		if(status != CL_SUCCESS) {
-			printf("Program failed to build.\n");
-			cl_build_status buildStatus;
-			clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_STATUS,
-			sizeof(cl_build_status), &buildStatus, NULL);
+			IRT_INFO("Kernel program failed to build.\n");
 			char *buildLog;
 			size_t buildLogSize;
-			clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize);
+			IRT_ASSERT(clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize) == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info");
 			buildLog = (char*)malloc(buildLogSize);
-			if(buildLog == NULL) {
-				exit(-1);
-			}	
-
-			clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL);
+			IRT_ASSERT(clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info");
 			buildLog[buildLogSize-1] = '\0';
-			printf("Device Build Log:\n%s\n", buildLog);   
+			IRT_INFO("Device Build Log:\n%s\n", buildLog); 
 			free(buildLog);
-			exit(0);
 		}
-		else {
-			printf("No build errors\n");
-		}
-
-		_irt_save_program_binary(program, "esatto.bin");
+		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");	
+		
+		// FIXME: save and load only to test...
+		_irt_save_program_binary(program, "esatto.bin"); // FIXME: define a variable name
 
 		cl_int binary_status;
 		unsigned char* program_s = (unsigned char*) _irt_load_program_source("esatto.bin", &filesize); 
 		program = clCreateProgramWithBinary (dev->cl_context, 1, &(dev->cl_device), &filesize, (const unsigned char **) &program_s, &binary_status, &status);
 		free(program_s);
-		if((status != CL_SUCCESS) && (binary_status != CL_SUCCESS)) { // FIXME: check even for binary_status
-			printf("clCreateProgramWithBinary failed\n");
-			exit(-1);
-		}
-		if (program == NULL) {
-			printf("Error: Failed to create compute program!\n") ;
-			exit(-1);
-		}
-		clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
+		IRT_ASSERT(status == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
+		IRT_ASSERT(clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");
 		
 		kernel = clCreateKernel(program, kernel_name, &status);
-		if(status != CL_SUCCESS) {
-			printf("clCreateKernel failed\n");
-			exit(-1);
-		}	
+		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
 	}
 	free(program_source);
 	return kernel;

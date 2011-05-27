@@ -41,6 +41,9 @@
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
+
+#include "insieme/frontend/insieme_pragma.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -1303,6 +1306,7 @@ public:
 			rhs = builder.createCallExprFromBody(builder.returnStmt(rhs), gen.getBool(), true);
 		}
 
+		insieme::core::NodeAnnotationPtr annot;
 		if( !isAssignment ) {
 			// because now pointers are arrays, whenever we have a binary expression
 			// which is not an assignment, we have to deref the two operators 
@@ -1361,10 +1365,30 @@ public:
 			if(isLogical) {
 				exprTy = gen.getBool();
 			}
+		} else {
+		    // check if there is a kernelFile annotation
+		    const PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+		    std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(binOp);
+
+		    InsiemeKernelFile* ip;
+
+		    std::for_each(iter.first, iter.second,
+		        [ & ](const PragmaStmtMap::StmtMap::value_type& curr){
+		            const fe::InsiemeKernelFile* kf = dynamic_cast<const InsiemeKernelFile*>( &*(curr.second) );
+		            if(kf) {
+		                annot = std::make_shared<ocl::KernelFileAnnotation>(ocl::KernelFileAnnotation(kf->getPath()));
+		            }
+		    });
+
 		}
 		assert(opFunc);
+		// add source code annotation to the rhs if present
 		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << " RHS(" << *rhs << "[" << *rhs->getType() << "])";
         core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
+		if(annot) {
+		    std::cout << "Annotation " << annot << " to " << rhs << std::endl;
+		    rhs->addAnnotation(annot);
+		}
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);
 
@@ -1488,11 +1512,6 @@ public:
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(subExpr, unOp, convFact);
-
-		// add the operator name in order to help the convertion process in the backend
-		subExpr->addAnnotation(
-				std::make_shared<c_info::COpAnnotation>( UnaryOperator::getOpcodeStr(unOp->getOpcode()) )
-			);
 
 		return annotatedNode;
 	}
@@ -2005,8 +2024,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				 */
 				body = core::static_pointer_cast<const core::Statement>(
 						core::transform::replaceAll( this->builder.getNodeManager(), body, fit->first,
-								this->tryDeref(fit->second), true
-							)
+								this->tryDeref(fit->second))
 				);
 			}
 

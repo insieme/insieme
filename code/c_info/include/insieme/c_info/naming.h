@@ -36,11 +36,13 @@
 
 #pragma once
 
+#include <cassert>
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
 
-#include "insieme/core/annotation.h"
-#include "insieme/core/identifier.h"
+#include "insieme/utils/annotation.h"
+
+#include "insieme/core/ast_node.h"
 
 namespace insieme {
 namespace c_info {
@@ -49,66 +51,28 @@ namespace c_info {
  ** Should be used to annotate *pointers* when exactly one name is required,
  ** for example with structs, unions or functions.
  ** */
-class CNameAnnotation : public core::Annotation {
+class CNameAnnotation : public core::NodeAnnotation {
 	const string name;
 
 public:
-	static const core::StringKey<CNameAnnotation> KEY;
+	static const string NAME;
+	static const utils::StringKey<CNameAnnotation> KEY;
 
-	CNameAnnotation(const std::string& name) : core::Annotation(), name(name) { }
+	CNameAnnotation(const std::string& name) : core::NodeAnnotation(), name(name) { }
 
 	const std::string& getName() const { return name; }
-	const std::string getAnnotationName() const {return "CNameAnnotation";}
+	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const { return name; }
 
-	const core::AnnotationKey* getKey() const { return &KEY; }
-};
+	const utils::AnnotationKey* getKey() const { return &KEY; }
 
-/** Annotation class intended to keep the name(s) of recursive C types and functions.
- ** Should be used to annotate *pointers* to recursive types, mapping each type variable
- ** identifier to the corresponding C name.
- ** */
-//class CRecNameAnnotation : public core::Annotation {
-//public:
-//	typedef std::unordered_map<core::Identifier, core::Identifier, boost::hash<core::Identifier>> IdentMap;
-//
-//private:
-//	IdentMap identMap;
-//
-//public:
-//	static const core::StringKey<CRecNameAnnotation> KEY;
-//
-//	CRecNameAnnotation() : core::Annotation() { }
-//
-//	IdentMap& getIdentMap() { return identMap; }
-//
-//	void addIdent(const core::Identifier& recVarName, const core::Identifier& cName);
-//	const core::Identifier& getIdent(const core::Identifier& recVarName);
-//	const std::string& getName(const core::Identifier& recVarName);
-//	const std::string getAnnotationName() const {return "CRecNameAnnotation";}
-//
-//	const std::string toString() const { return "TBD"; }
-//
-//	const core::AnnotationKey* getKey() const { return &KEY; }
-//};
-
-class COpAnnotation : public core::Annotation {
-
-	std::string opStr;
-
-public:
-	static const core::StringKey<COpAnnotation> KEY;
-
-	COpAnnotation(const std::string& opStr) : core::Annotation(), opStr(opStr) { }
-
-	const std::string getOperator() const { return opStr; }
-	const std::string getAnnotationName() const {return "COpAnnotation";}
-
-	const core::AnnotationKey* getKey() const { return &KEY; }
-
-	const std::string toString() const { return opStr; }
-
+	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
+		assert(&*ptr == this && "Annotation Pointer should point to this!");
+		// always migrate the name annotation
+		after->addAnnotation(ptr);
+		return true;
+	}
 };
 
 } // namespace c_info

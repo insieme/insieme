@@ -46,7 +46,10 @@
 #include "impl/worker.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
+
+#ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"
+#endif
 
 #include "utils/lookup_tables.h"
 
@@ -92,12 +95,12 @@ void irt_term_handler(int signal) {
 }
 void irt_exit_handler() {
 	irt_cleanup_globals();
-	printf("\nInsieme runtime exiting.\n");
+	IRT_INFO("\nInsieme runtime exiting.\n");
 }
 
 int main(int argc, char** argv) {
 	if(argc < 2 || argc > 3) {
-		printf("usage: runtime [libname] [numthreads]\n");
+		IRT_INFO("usage: runtime [libname] [numthreads]\n");
 		return -1;
 	}
 
@@ -109,10 +112,19 @@ int main(int argc, char** argv) {
 	// initialize globals
 	irt_init_globals();
 
-	// initialize opencl devices
+	IRT_DEBUG("!!! Starting worker threads");
+	
+	// initialize OpenCL devices
+	#ifdef USE_OPENCL
+	IRT_INFO("Running Insieme runtime with OpenCL!\n");
+	irt_ocl_device* devices;
 	cl_uint num_devices = irt_ocl_get_num_devices();
-
-	IRT_INFO("!!! Starting worker threads");
+	if (num_devices != 0) {
+		devices = (irt_ocl_device*)malloc(num_devices * sizeof(irt_ocl_device));
+		irt_ocl_get_devices(devices);
+	}
+	#endif
+	
 	irt_g_worker_count = 1;
 	if(argc >= 3) irt_g_worker_count = atoi(argv[2]);
 	irt_g_workers = (irt_worker**)alloca(irt_g_worker_count * sizeof(irt_worker*));
@@ -122,27 +134,20 @@ int main(int argc, char** argv) {
 	}
 	// start workers
 	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i]->start = true;
+		irt_g_workers[i]->state = IRT_WORKER_STATE_START;
 	}
-	IRT_INFO("Sending new app msg");
+	IRT_DEBUG("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);
-	IRT_INFO("New app msg sent");
+	IRT_DEBUG("New app msg sent");
 
-	// holy hack batman!
-	// reduces performance and is generally fugly, use only for testing
-	if(argc >=2) {
-		bool stuff_running = true;
-		while(stuff_running) {
-			sleep(5);
-			stuff_running = false;
-			for(int i=0; i<irt_g_worker_count; ++i) {
-				if(irt_g_workers[i]->cur_wi != NULL || irt_g_workers[i]->queue.start != NULL || irt_g_workers[i]->pool.start != NULL) {
-					stuff_running = true;
-					break;
-				}
-			}
-		}
-	}
-	//for(;;) { sleep(60*60); }
+	for(;;) { sleep(60*60); }
+
+	// free OpenCL devices
+	#ifdef USE_OPENCL
+	for (int i = 0; i < num_devices; ++i){
+		irt_ocl_release_device(&devices[i]);    
+	}       
+	free(devices);
+	#endif
 	exit(0);
 }

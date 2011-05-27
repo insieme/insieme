@@ -41,10 +41,8 @@
 namespace insieme {
 namespace c_info {
 
-const core::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
-
-const core::StringKey<COpAnnotation> COpAnnotation::KEY("COpAnnotation");
-
+const string CNameAnnotation::NAME = "CNameAnnotation";
+const utils::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
 
 }
 }

@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/annotation.h"
+#include "insieme/utils/annotation.h"
+
+#include "insieme/core/ast_node.h"
 #include "insieme/core/types.h"
 
 #include "dummy_annotations.inc"
@@ -46,76 +48,6 @@ using std::shared_ptr;
 namespace insieme {
 namespace core {
 
-
-TEST(Annotation, Basic) {
-
-	typedef shared_ptr<DummyAnnotation> DummyAnnotationPtr;
-	typedef shared_ptr<DummyAnnotation2> DummyAnnotation2Ptr;
-
-	// create instance
-	Annotatable target;
-
-	// some basic tests
-//	EXPECT_DEATH( target.addAnnotation(DummyAnnotationPtr()), ".*Cannot add NULL annotation!.*");
-
-	// check annotations
-	EXPECT_EQ ( static_cast<size_t>(0), target.getAnnotations().size() );
-	EXPECT_FALSE ( target.getAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( target.getAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE(target.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE(target.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	DummyAnnotationPtr dummyA(new DummyAnnotation(1));
-
-	target.addAnnotation(dummyA);
-	EXPECT_EQ ( static_cast<size_t>(1), target.getAnnotations().size());
-	EXPECT_EQ ( dummyA->value, target.getAnnotation(DummyAnnotation::DummyKey)->value);
-	EXPECT_EQ ( dummyA, target.getAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( target.hasAnnotation(DummyAnnotation::DummyKey) );
-
-	EXPECT_FALSE ( target.getAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE(target.hasAnnotation(DummyAnnotation2::DummyKey));
-
-
-	DummyAnnotationPtr dummyB(new DummyAnnotation(2));
-	target.addAnnotation(dummyB);
-	EXPECT_EQ ( static_cast<size_t>(1), target.getAnnotations().size());
-	EXPECT_EQ ( dummyB->value, target.getAnnotation(DummyAnnotation::DummyKey)->value);
-	EXPECT_EQ ( dummyB, target.getAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( target.hasAnnotation(DummyAnnotation::DummyKey) );
-
-	EXPECT_FALSE ( target.getAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE(target.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	DummyAnnotation2Ptr dummyC(new DummyAnnotation2(123));
-	target.addAnnotation(dummyC);
-	EXPECT_EQ ( static_cast<size_t>(2), target.getAnnotations().size());
-	EXPECT_EQ ( dummyB->value, target.getAnnotation(DummyAnnotation::DummyKey)->value);
-	EXPECT_EQ ( dummyB, target.getAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( target.hasAnnotation(DummyAnnotation::DummyKey) );
-
-	EXPECT_EQ ( dummyC->value, target.getAnnotation(DummyAnnotation2::DummyKey)->value);
-	EXPECT_EQ ( dummyC, target.getAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE ( target.hasAnnotation(DummyAnnotation2::DummyKey) );
-
-	// test removing annotation
-	target.remAnnotation(DummyAnnotation::DummyKey);
-	EXPECT_EQ ( static_cast<size_t>(1), target.getAnnotations().size());
-	EXPECT_FALSE ( target.getAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( target.hasAnnotation(DummyAnnotation::DummyKey) );
-
-	EXPECT_EQ ( dummyC->value, target.getAnnotation(DummyAnnotation2::DummyKey)->value);
-	EXPECT_EQ ( dummyC, target.getAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE ( target.hasAnnotation(DummyAnnotation2::DummyKey) );
-
-	target.remAnnotation(DummyAnnotation2::DummyKey);
-	EXPECT_EQ ( static_cast<size_t>(0), target.getAnnotations().size());
-	EXPECT_FALSE ( target.getAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( target.hasAnnotation(DummyAnnotation::DummyKey) );
-
-	EXPECT_FALSE ( target.getAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE(target.hasAnnotation(DummyAnnotation2::DummyKey));
-}
 
 TEST(Annotation, ASTNode) {
 
@@ -128,84 +60,6 @@ TEST(Annotation, ASTNode) {
 	ptr->addAnnotation(annotation);
 
 	EXPECT_TRUE ( ptr->hasAnnotation(DummyAnnotation::DummyKey));
-}
-
-TEST(Annotation, CopyTests) {
-
-	// Just try to add an annotation to a AST node
-	auto annotation = std::make_shared<DummyAnnotation>(1);
-
-	// create first instance
-	Annotatable a;
-	a.addAnnotation(annotation);
-
-	// test copy constructor
-	Annotatable b(a);
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-
-	auto annotation2 = std::make_shared<DummyAnnotation2>(2);
-	a.addAnnotation(annotation2);
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	b.remAnnotation(DummyAnnotation::DummyKey);
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	// test assignment
-	Annotatable c;
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	c.addAnnotation(annotation);
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	// assign a to c ... (annotations should now be shared)
-	c = a;
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	b.addAnnotation(annotation);
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	a.remAnnotation(DummyAnnotation::DummyKey);
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_TRUE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
-
-	c.remAnnotation(DummyAnnotation2::DummyKey);
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( a.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( b.hasAnnotation(DummyAnnotation2::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation::DummyKey));
-	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 }
 
 
@@ -271,7 +125,6 @@ TEST(Annotation, EqualsTest) {
 
 	NodeManager manager1;
 	NodeManager manager2;
-
 
 	// create a node
 	TypePtr child = GenericType::get(manager1, "B");

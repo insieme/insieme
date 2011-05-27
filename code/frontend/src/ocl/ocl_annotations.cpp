@@ -39,10 +39,22 @@
 namespace insieme {
 namespace ocl {
 
-const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
-const core::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
-const core::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
-const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
+const string BaseAnnotation::NAME = "OclAnnotation";
+const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
+
+const string KernelFctAnnotation::NAME = "OclKernelFctAnnotation";
+const utils::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
+
+const string BuiltinFunctionAnnotation::NAME = "OclBuiltinFunctionAnnotation";
+const utils::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
+
+const string AddressSpaceAnnotation::NAME = "OclAddressSpaceAnnotation";
+const utils::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
+
+const string KernelFileAnnotation::NAME = "OclKernelFileAnnotation";
+const utils::StringKey<KernelFileAnnotation> KernelFileAnnotation::KEY("KernelFileAnnotationKey");
+
+const string WorkGroupSizeAnnotation::NAME = "OclWorkGroupSizeAnnotation";
 
 void KernelFctAnnotation::setKernelFct(bool isKernelFct) { kf = isKernelFct; }
 
