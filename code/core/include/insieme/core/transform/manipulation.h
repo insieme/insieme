@@ -41,6 +41,10 @@
 
 namespace insieme {
 namespace core {
+
+class Substitution;
+typedef boost::optional<Substitution> SubstitutionOpt;
+
 namespace transform {
 
 // TODO: merge this file and the node replacer.h
@@ -217,6 +221,17 @@ BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::v
 BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments = toVector<VariablePtr>());
 
 LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize);
+
+/**
+ * Instantiates the type variables within the given lambda based on the given variable instantiation and
+ * returns the same lambda, having its generic parameters fixed.
+ *
+ * @param manager the manager used to crate new nodes
+ * @param lambda the lambda to be instantiated
+ * @param variableInstantiation the substitution describing the instantiation of the various type and int-param variables.
+ * @return the instantiated lambda expression
+ */
+LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const SubstitutionOpt& variableInstantiation);
 
 } // end namespace transform
 } // end namespace core

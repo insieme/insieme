@@ -810,6 +810,20 @@ TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
 }
 
 
+TEST(TypeUtils, isGeneric) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypeVariablePtr var = builder.typeVariable("a");
+	TypePtr constA = builder.genericType("type");
+
+	EXPECT_TRUE(isGeneric(var));
+	EXPECT_FALSE(isGeneric(constA));
+
+}
+
+
 } // end namespace core
 } // end namespace insieme
 

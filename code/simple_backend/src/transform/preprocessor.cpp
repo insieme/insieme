@@ -46,6 +46,7 @@
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 #include "insieme/simple_backend/ir_extensions.h"
 #include "insieme/simple_backend/utils/simple_backend_utils.h"
@@ -57,6 +58,16 @@ namespace simple_backend {
 namespace transform {
 
 	namespace {
+
+		/**
+		 * Replaces all generic lambdas with a specialized version fitting the callers context.
+		 * Thereby, all generic type variables will be deduced and substituted by a valid instantiation.
+		 *
+		 * @param manager the manager to be responsible for maintaining the intermediate and the final result
+		 * @param code the code to be processed
+		 * @return the same code, however, all generic lambdas will be instantiated using concrete types.
+		 */
+		core::NodePtr instantiateGenericLambdas(core::NodeManager& manager, const core::NodePtr& code);
 
 		/**
 		 * Replaces all occurrences of ITE calls with lazy-ITE calls. Lazy-ITE calls correspond to the C-equivalent,
@@ -91,15 +102,21 @@ namespace transform {
 
 	}
 
-	core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code, const int steps) {
 		// for starters - just mirror the code
 		core::NodePtr res = manager.get(code);
 
+		// instantiate generic functions
+		if (steps & ~INSTANTIATE_GENERIC_LAMBDAS)
+			res = instantiateGenericLambdas(manager, res);
+
 		// replace ITEs with lazy ITEs
-		res = convertITE(manager, res);
+		if (steps & ~INLINE_IF_THEN_ELSE)
+			res = convertITE(manager, res);
 
 		// restore globals
-		res = restoreGlobals(manager, res);
+		if (steps & ~RESTORE_GLOBALS)
+			res = restoreGlobals(manager, res);
 
 		// apply the vector/array conversion
 		res = addImplicitVectorArrayCasts(manager, res);
@@ -113,9 +130,73 @@ namespace transform {
 
 		// --------------------------------------------------------------------------------------------------------------
 
+		class LambdaInstantiater : public core::transform::CachedNodeMapping {
+
+			core::NodeManager& manager;
+
+		public:
+
+			LambdaInstantiater(core::NodeManager& manager) : manager(manager) {};
+
+			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+				// check types => abort
+				if (ptr->getNodeCategory() == core::NC_Type) {
+					return ptr;
+				}
 
 
-		class ITEConverter : public core::NodeMapping {
+				// look for call expressions
+				if (ptr->getNodeType() == core::NT_CallExpr) {
+					// extract the call
+					core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
+
+					// only care about lambdas
+					core::ExpressionPtr fun = call->getFunctionExpr();
+					if (fun->getNodeType() == core::NT_LambdaExpr) {
+
+						// convert to lambda
+						core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
+
+						// check whether the lambda is generic
+						if (core::isGeneric(fun->getType())) {
+
+							// compute substitutions
+							core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+
+							// instantiate type variables according to map
+							lambda = core::transform::instantiate(manager, lambda, map);
+
+							// create new call node
+							core::ExpressionList arguments;
+							::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
+								return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
+							});
+
+							// produce new call expression
+							return core::CallExpr::get(manager, call->getType(), lambda, arguments);
+
+						}
+					}
+				}
+
+				// decent recursively
+				return ptr->substitute(manager, *this, true);
+			}
+
+		};
+
+
+		core::NodePtr instantiateGenericLambdas(core::NodeManager& manager, const core::NodePtr& code) {
+			// just use a lambda instantiate to do the trick
+			return LambdaInstantiater(manager).map(0, code);
+		}
+
+
+
+		// --------------------------------------------------------------------------------------------------------------
+
+		class ITEConverter : public core::transform::CachedNodeMapping {
 
 			const core::LiteralPtr ITE;
 			const IRExtensions extensions;
@@ -129,7 +210,7 @@ namespace transform {
 			 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
 			 * the resulting call.
 			 */
-			const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr) {
+			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 				// do not touch types ...
 				if (ptr->getNodeCategory() == core::NC_Type) {
 					return ptr;
@@ -260,7 +341,7 @@ namespace transform {
 
 
 
-		class VectorToArrayConverter : public core::NodeMapping {
+		class VectorToArrayConverter : public core::transform::CachedNodeMapping {
 
 			/**
 			 * A cache for converted call expressions - since each might be encountered multiple times.
@@ -269,7 +350,7 @@ namespace transform {
 
 		public:
 
-			const core::NodePtr mapElement(unsigned index, const core::NodePtr& ptr) {
+			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 				// do not touch types ...
 				if (ptr->getNodeCategory() == core::NC_Type) {
 					return ptr;

@@ -36,14 +36,17 @@
 
 #pragma once
 
-#include "insieme/core/ast_visitor.h"
+#include <boost/optional/optional.hpp>
 
 #include "insieme/utils/map_utils.h"
+
+#include "insieme/core/ast_node.h"
 
 namespace insieme {
 namespace core {
 
-class ASTBuilder;
+class Substitution;
+typedef boost::optional<Substitution> SubstitutionOpt;
 
 namespace transform {
 
@@ -96,6 +99,15 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
 		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements);
 
+/**
+ * Replaces all occurrences of the type variables and int type parameters within the top level scope of the
+ * given root node by the values assigned to them within the given substitution.
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param substitution the substitution defining the mapping of variables to their instantiations
+ */
+NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution);
 
 /**
  * Replaces the node specified by the given address and returns the root node of the modified tree.
