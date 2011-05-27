@@ -72,10 +72,14 @@ static _irt_cl_device_param _irt_cl_device_params[] = {
 	{ CL_DEVICE_VENDOR, "CL_DEVICE_VENDOR" },
 };
 
-static void _irt_cl_print_device_info(cl_device_id* device);
 static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
 static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
-static char* _irt_load_program_source (const char* filename, size_t* filesize); 
+static void _irt_cl_release_device(cl_context context, cl_command_queue queue);  
+static void _irt_cl_print_device_info(cl_device_id* device);
+
+static char* _irt_load_program_source (const char* filename, size_t* filesize);
+static void _irt_save_program_binary (cl_program program, const char* binary_filename);
+
 
 //-------------------
 
@@ -87,12 +91,19 @@ typedef struct _irt_ocl_device{
 	cl_command_queue cl_queue;
 } irt_ocl_device;
 
+irt_ocl_device* devices;
+cl_uint num_devices;
+
+
 typedef enum {IRT_OCL_SOURCE, IRT_OCL_BINARY, IRT_OCL_NO_CACHE} irt_ocl_create_kernel_flag;  
 typedef enum {IRT_OCL_SEC, IRT_OCL_MILLI, IRT_OCL_NANO} irt_ocl_profile_event_flag;
 
+void irt_ocl_init_devices();
+void irt_ocl_finalize_devices();
+
 cl_uint irt_ocl_get_num_devices();
-void irt_ocl_get_devices(irt_ocl_device* devices);
-void irt_ocl_release_device(irt_ocl_device* dev);
+irt_ocl_device* irt_ocl_get_device(cl_uint id);
+
 void irt_ocl_print_device_info(irt_ocl_device* dev);
 float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag);
 float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag);

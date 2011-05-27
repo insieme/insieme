@@ -1088,7 +1088,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX OPERATOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	core::ExpressionPtr VisitCXXOperatorCallExprr(clang::CXXOperatorCallExpr* callExpr) {
+	core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
 		//todo: CXX extensions
 		assert(false && "CXXOperatorCallExpr not yet handled");
 	}
@@ -1337,7 +1337,6 @@ public:
 				}
 
 				// ----------------------------- Hack end --------------------------------
-
 				lhs = convFact.castToType(exprTy, lhs);
 				rhs = convFact.castToType(exprTy, rhs);
 				// Handle pointers arithmetic
