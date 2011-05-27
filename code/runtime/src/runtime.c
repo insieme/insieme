@@ -114,17 +114,11 @@ int main(int argc, char** argv) {
 
 	IRT_DEBUG("!!! Starting worker threads");
 	
-	// initialize OpenCL devices
 	#ifdef USE_OPENCL
 	IRT_INFO("Running Insieme runtime with OpenCL!\n");
-	irt_ocl_device* devices;
-	cl_uint num_devices = irt_ocl_get_num_devices();
-	if (num_devices != 0) {
-		devices = (irt_ocl_device*)malloc(num_devices * sizeof(irt_ocl_device));
-		irt_ocl_get_devices(devices);
-	}
+	irt_ocl_init_devices();
 	#endif
-	
+
 	irt_g_worker_count = 1;
 	if(argc >= 3) irt_g_worker_count = atoi(argv[2]);
 	irt_g_workers = (irt_worker**)alloca(irt_g_worker_count * sizeof(irt_worker*));
@@ -142,12 +136,9 @@ int main(int argc, char** argv) {
 
 	for(;;) { sleep(60*60); }
 
-	// free OpenCL devices
 	#ifdef USE_OPENCL
-	for (int i = 0; i < num_devices; ++i){
-		irt_ocl_release_device(&devices[i]);    
-	}       
-	free(devices);
+	irt_ocl_finalize_devices();	
 	#endif
+	
 	exit(0);
 }
