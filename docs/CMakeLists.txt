@@ -10,5 +10,6 @@ add_subdirectory(ir_translation)
 
 add_subdirectory(insieme_runtime)
 add_subdirectory(dataflow_framework)
+add_subdirectory(polyhedral)
 add_subdirectory(transformation_framework)
 
