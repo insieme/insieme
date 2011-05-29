@@ -815,12 +815,15 @@ TEST(TypeUtils, isGeneric) {
 	NodeManager manager;
 	ASTBuilder builder(manager);
 
-	TypeVariablePtr var = builder.typeVariable("a");
+	TypePtr var = builder.typeVariable("a");
 	TypePtr constA = builder.genericType("type");
 
 	EXPECT_TRUE(isGeneric(var));
 	EXPECT_FALSE(isGeneric(constA));
 
+	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), var)));
+	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), constA)));
+	EXPECT_FALSE(isGeneric(builder.functionType(toVector(constA), constA)));
 }
 
 
