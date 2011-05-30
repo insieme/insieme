@@ -461,7 +461,17 @@ bool occurs(const NodePtr& x, const NodePtr& term);
  * @param argumentTypes the types of arguments passed to this function
  * @return the deduced, most generic return type
  */
-TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes);
+TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
+
+/**
+ * Determines whether the given type is generic or not. A type is considered to be generic if it
+ * includes type variables. Hence, a function accepting a generic input parameter or a value type
+ * including a variable type parameter will be considered generic.
+ *
+ * @param type the type to be checked
+ * @return true if the type is generic, false otherwise
+ */
+bool isGeneric(const TypePtr& type);
 
 }
 }

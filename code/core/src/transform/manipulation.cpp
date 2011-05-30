@@ -601,6 +601,35 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 	return dynamic_pointer_cast<const LambdaExpr>(newBody);
 }
 
+LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const SubstitutionOpt& substitution) {
+
+	// check for early exit
+	if (!substitution || substitution->empty()) {
+		return lambda;
+	}
+
+	assert(!lambda->isRecursive() && "I owe you the support for recursive functions!");
+
+	// update type
+	const FunctionTypePtr funType = static_pointer_cast<const FunctionType>(substitution->applyTo(lambda->getType()));
+
+	// update body
+	const StatementPtr body = static_pointer_cast<const Statement>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
+
+	// update parameters
+	Lambda::ParamList params;
+	::transform(lambda->getParameterList(), std::back_inserter(params), [&](const VariablePtr& cur)->VariablePtr {
+		TypePtr newType = substitution->applyTo(cur->getType());
+		if (newType == cur->getType()) {
+			return cur;
+		}
+		return Variable::get(manager, newType, cur->getId());
+	});
+
+	// construct result
+	return LambdaExpr::get(manager, funType, params, body);
+}
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

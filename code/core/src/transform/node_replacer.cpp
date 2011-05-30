@@ -36,10 +36,11 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/utils/container_utils.h"
+
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_address.h"
-
-#include "insieme/utils/container_utils.h"
+#include "insieme/core/type_utils.h"
 
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
@@ -254,6 +255,72 @@ private:
 	}
 };
 
+class TypeVariableReplacer : public CachedNodeMapping {
+
+	NodeManager& manager;
+	const SubstitutionOpt& substitution;
+
+public:
+
+	TypeVariableReplacer(NodeManager& manager, const SubstitutionOpt& substitution)
+		: manager(manager), substitution(substitution) {
+		assert(substitution && !substitution->empty() && "Substitution must not be empty!");
+	}
+
+private:
+
+	/**
+	 * Performs the recursive clone operation on all nodes passed on to this visitor.
+	 */
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+		// check whether the element has been found
+		if (ptr->getNodeType() == NT_TypeVariable || ptr->getNodeType() == NT_VariableIntTypeParam) {
+			return substitution->applyTo(manager, static_pointer_cast<const Type>(ptr));
+		}
+
+		// handle scope limiting elements
+		switch(ptr->getNodeType()) {
+		case NT_LambdaExpr:
+		case NT_FunctionType:
+			// enters a new scope => variable will no longer occur
+			return ptr;
+		default: { }
+		}
+
+		// recursive replacement has to be continued
+		NodePtr res = ptr->substitute(manager, *this);
+
+		// check whether something has changed ...
+		if (res == ptr) {
+			// => nothing changed
+			return ptr;
+		}
+
+		// preserve annotations
+		utils::migrateAnnotations(ptr, res);
+
+		// correct type literal name => cosmetic
+		if (res->getNodeType() == NT_Literal) {
+			const LiteralPtr& literal = static_pointer_cast<const Literal>(res);
+			if (literal->getType()->getNodeType() == NT_GenericType) {
+				const GenericTypePtr& type = static_pointer_cast<const GenericType>(literal->getType());
+				if (type->getFamilyName() == "type"
+						&& type->getTypeParameter().size() == static_cast<std::size_t>(1)
+						&& type->getIntTypeParameter().empty()) {
+
+					// update type
+					return manager.basic.getTypeLiteral(type);
+				}
+			}
+		}
+
+		// done
+		return res;
+	}
+
+};
+
 
 class NodeAddressReplacer : public NodeMapping {
 	const unsigned indexToReplace;
@@ -355,6 +422,19 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 	return applyReplacer(mgr, root, mapper);
 }
 
+
+NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {
+	assert(root && "Root must not be a null pointer!");
+
+	// check whether there is something to do
+	if (!substitution || substitution->empty()) {
+		return root;
+	}
+
+	// conduct actual substitution
+	auto mapper = ::TypeVariableReplacer(mgr, substitution);
+	return applyReplacer(mgr, root, mapper);
+}
 
 NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement) {
 	assert( toReplace.isValid() && "Invalid node address provided!");

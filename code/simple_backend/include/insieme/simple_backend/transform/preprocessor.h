@@ -43,14 +43,30 @@ namespace simple_backend {
 namespace transform {
 
 	/**
+	 * An enumeration of optional preprocessing steps.
+	 */
+	enum PreProcessorSteps {
+		INSTANTIATE_GENERIC_LAMBDAS 		= 1 << 0,
+		INLINE_IF_THEN_ELSE					= 1 << 1,
+		RESTORE_GLOBALS						= 1 << 2,
+	};
+
+
+	/**
+	 * The default selection of steps => all steps.
+	 */
+	const int ALL_STEPS = INSTANTIATE_GENERIC_LAMBDAS | INLINE_IF_THEN_ELSE | RESTORE_GLOBALS;
+
+	/**
 	 * This function is applying pre-processing steps on the given code. The pre-processing includes
 	 * for instance the introduction of explicit vector -> array casts.
 	 *
 	 * @param manager the manager used for maintaining the resulting IR DAG
 	 * @param code the code fragment to be pre-processed
+	 * @param steps allows to select a subset of the preprocessing steps to be conducted
 	 * @return the result of the pre-processing step, maintained by the given manager
 	 */
-	core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code);
+	core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code, const int steps = ALL_STEPS);
 
 } // end: namespace transform
 } // end: namespace simple_backend

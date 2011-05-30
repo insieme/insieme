@@ -608,7 +608,7 @@ namespace {
 
 }
 
-TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes) {
+TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes) {
 
 	NodeManager& manager = funType->getNodeManager();
 
@@ -871,6 +871,15 @@ TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB) {
 TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
 	// use common implementation for Join and Meet type computation
 	return getJoinMeetType(typeA, typeB, false);
+}
+
+
+bool isGeneric(const TypePtr& type) {
+	// just use a interruptable visitor to check for type or integer param variables
+	return visitAllOnceInterruptable(type, makeLambdaPtrVisitor([](const NodePtr& cur) {
+		// return false when a generic type has been found => interrupts the visiting process
+		return !(cur->getNodeType() == core::NT_TypeVariable || cur->getNodeType() == core::NT_VariableIntTypeParam);
+	}, true));
 }
 
 

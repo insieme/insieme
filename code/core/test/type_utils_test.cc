@@ -810,6 +810,23 @@ TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
 }
 
 
+TEST(TypeUtils, isGeneric) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr var = builder.typeVariable("a");
+	TypePtr constA = builder.genericType("type");
+
+	EXPECT_TRUE(isGeneric(var));
+	EXPECT_FALSE(isGeneric(constA));
+
+	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), var)));
+	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), constA)));
+	EXPECT_FALSE(isGeneric(builder.functionType(toVector(constA), constA)));
+}
+
+
 } // end namespace core
 } // end namespace insieme
 

@@ -97,6 +97,11 @@ static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_
 	IRT_ASSERT(clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices"); 
 }
 
+static void _irt_cl_release_device(cl_context context, cl_command_queue queue) {
+	IRT_ASSERT(clReleaseCommandQueue(queue) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing command queue");
+	IRT_ASSERT(clReleaseContext(context) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context");
+}
+
 
 /* 
 * =====================================================================================
@@ -145,8 +150,9 @@ static void _irt_save_program_binary (cl_program program, const char* binary_fil
  * =====================================================================================
  */
 
-cl_uint irt_ocl_get_num_devices() {
-	cl_uint num_devices = 0;
+void irt_ocl_init_devices(){
+	devices = NULL;
+	num_devices = 0;
 	cl_platform_id* cl_platforms;
 	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
 	if (cl_num_platforms != 0) {
@@ -159,41 +165,53 @@ cl_uint irt_ocl_get_num_devices() {
 			num_devices += cl_num_devices;
 		}
 	}
-	return num_devices;
-}
-
-void irt_ocl_get_devices(irt_ocl_device* devices) {
-	cl_uint index = 0;
-	cl_platform_id* cl_platforms;
-	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
-	if (cl_num_platforms != 0) {
-		cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
-		_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
+	if (num_devices != 0) {
+		devices = (irt_ocl_device*)malloc(num_devices * sizeof(irt_ocl_device));
+		cl_uint index = 0;
+		cl_platform_id* cl_platforms;
+		cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
+		if (cl_num_platforms != 0) {
+			cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
+			_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
 		
-		for (cl_uint i = 0; i < cl_num_platforms; i++){
-			cl_device_type device_type = DEVICE_TYPE;
-			cl_device_id* cl_devices;
-			cl_uint cl_num_devices = _irt_cl_get_num_devices(&cl_platforms[i], device_type);
-			if (cl_num_devices != 0) {
-				cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
-				_irt_cl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
-				for (int i = 0; i < cl_num_devices; ++i, ++index){
-					cl_int status;
-					irt_ocl_device* dev = &devices[index];
-					dev->cl_device = cl_devices[i];
-					dev->cl_context = clCreateContext(NULL, 1, &dev->cl_device, NULL, NULL, &status);
-					IRT_ASSERT(status == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context");
-					dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &status);
-					IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue");
+			for (cl_uint i = 0; i < cl_num_platforms; i++){
+				cl_device_type device_type = DEVICE_TYPE;
+				cl_device_id* cl_devices;
+				cl_uint cl_num_devices = _irt_cl_get_num_devices(&cl_platforms[i], device_type);
+				if (cl_num_devices != 0) {
+					cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
+					_irt_cl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
+					for (int i = 0; i < cl_num_devices; ++i, ++index){
+						cl_int status;
+						irt_ocl_device* dev = &devices[index];
+						dev->cl_device = cl_devices[i];
+						dev->cl_context = clCreateContext(NULL, 1, &dev->cl_device, NULL, NULL, &status);
+						IRT_ASSERT(status == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context");
+						dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &status);
+						IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue");
+					}
 				}
 			}
-		}
+		}	
 	}
 }
 
-void irt_ocl_release_device(irt_ocl_device* dev) {
-	clReleaseContext(dev->cl_context);
-	clReleaseCommandQueue(dev->cl_queue);
+void irt_ocl_finalize_devices() {
+	for (int i = 0; i < num_devices; ++i) {
+		irt_ocl_device* dev = &devices[i];
+		_irt_cl_release_device(dev->cl_context, dev->cl_queue);    
+	} 
+	free(devices);
+}
+
+
+cl_uint irt_ocl_get_num_devices(){
+	return num_devices;
+}
+
+irt_ocl_device* irt_ocl_get_device(cl_uint id){
+	IRT_ASSERT(id < num_devices && id >= 0, IRT_ERR_OCL, "Error accessing device with wrong ID");
+	return &devices[id];
 }
 
 void irt_ocl_print_device_info(irt_ocl_device* dev) {
@@ -263,5 +281,6 @@ cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, cons
 		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
 	}
 	free(program_source);
+	IRT_ASSERT(clReleaseProgram(program) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing program");
 	return kernel;
 }
