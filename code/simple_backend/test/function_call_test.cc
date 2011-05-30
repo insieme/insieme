@@ -69,7 +69,7 @@ TEST(FunctionCall, templates) {
     string code = toString(*converted);
 
     // should be enabled!
-//    EXPECT_FALSE(code.find("<?>") != -1);
+    EXPECT_FALSE(code.find("<?>") != -1);
 }
 
 } // namespace backend

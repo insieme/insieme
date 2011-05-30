@@ -144,7 +144,7 @@ TEST(Preprocessor, Vector2Array_GenericParameter) {
 	EXPECT_EQ("[]", toString(check(call, checker)));
 
 	// conduct preprocessing
-	core::NodePtr res = preprocess(manager, call);
+	core::NodePtr res = preprocess(manager, call, 0);
 	EXPECT_PRED2(isSubString, "=fun('a v1, 'a v2) return v1}(X, vector.to.array(Y))", toString(*res));
 	EXPECT_EQ("[]", toString(check(res, checker)));
 
@@ -152,7 +152,7 @@ TEST(Preprocessor, Vector2Array_GenericParameter) {
 	call = builder.callExpr(lambda, litY, litX);
 	EXPECT_PRED2(isSubString, "=fun('a v1, 'a v2) return v1}(Y, X)", toString(*call));
 	EXPECT_EQ("[]", toString(check(call, checker)));
-	res = preprocess(manager, call);
+	res = preprocess(manager, call, 0);
 	EXPECT_PRED2(isSubString, "=fun('a v1, 'a v2) return v1}(vector.to.array(Y), X)", toString(*res));
 	EXPECT_EQ("[]", toString(check(res, checker)));
 
@@ -161,14 +161,14 @@ TEST(Preprocessor, Vector2Array_GenericParameter) {
 	call = builder.callExpr(lambda, litX, litX);
 	EXPECT_PRED2(isSubString, "=fun('a v1, 'a v2) return v1}(X, X)", toString(*call));
 	EXPECT_EQ("[]", toString(check(call, checker)));
-	res = preprocess(manager, call);
+	res = preprocess(manager, call, 0);
 	EXPECT_PRED2(isSubString, "=fun('a v1, 'a v2) return v1}(X, X)", toString(*res));
 	EXPECT_EQ("[]", toString(check(res, checker)));
 
 	call = builder.callExpr(lambda, litY, litY);
 	EXPECT_PRED2(isSubString, "=fun('a v1, 'a v2) return v1}(Y, Y)", toString(*call));
 	EXPECT_EQ("[]", toString(check(call, checker)));
-	res = preprocess(manager, call);
+	res = preprocess(manager, call, 0);
 	EXPECT_PRED2(isSubString, "=fun('a v1, 'a v2) return v1}(Y, Y)", toString(*res));
 	EXPECT_EQ("[]", toString(check(res, checker)));
 
