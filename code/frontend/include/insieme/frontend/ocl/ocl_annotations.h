@@ -43,7 +43,17 @@
     class Type; \
     typedef std::shared_ptr<Type> Type##Ptr;
 
+namespace clang {
+class Stmt;
+}
+
 namespace insieme {
+namespace frontend {
+namespace conversion {
+class ConversionFactory;
+}
+}
+
 namespace ocl {
 
 DEFINE_TYPE(BaseAnnotation);
@@ -223,5 +233,12 @@ public:
 
 typedef std::shared_ptr<BuiltinFunctionAnnotation> BuiltinFunctionAnnotationPtr;
 
+// responsible for adding ocl KernelFile annotation
+void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& fact);
+
+
+
 } // namespace ocl
 } // namespace insieme
+
