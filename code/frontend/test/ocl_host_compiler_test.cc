@@ -56,13 +56,14 @@ using namespace insieme::utils::log;
 
 TEST(OclHostCompilerTest, HelloHostTest) {
     Logger::get(std::cerr, DEBUG);
-
     CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "/inputs");
 
 //    CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
 //    CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
 
-    CommandLineOptions::Defs.push_back("INSIEME");
+    CommandLineOptions::Defs.push_back("INSIEME=\"" + string(SRC_DIR) + "hello.cl\"");
+//    string kernelSrc = SRC_DIR + "../../frontend/test/hello.cl" + string(SRC_DIR) + "";
+//    CommandLineOptions::Defs.push_back("KERNEL=\"/home/klaus/insieme/code/frontend/test/hello.cl\"");
 
     CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
@@ -77,8 +78,8 @@ TEST(OclHostCompilerTest, HelloHostTest) {
     LOG(INFO) << "Done.";
 
     LOG(INFO) << "Starting OpenCL host code transformations";
-    fe::ocl::HostCompiler hc(program, manager);
-    hc.compile();
+//    fe::ocl::HostCompiler hc(program, manager);
+//    hc.compile();
 
     core::printer::PrettyPrinter pp(program);
 
