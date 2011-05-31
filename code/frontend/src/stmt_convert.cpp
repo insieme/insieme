@@ -39,6 +39,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -137,10 +139,14 @@ public:
 	// In clang a declstmt is represented as a list of VarDecl
 	StmtWrapper VisitDeclStmt(clang::DeclStmt* declStmt) {
 		// if there is only one declaration in the DeclStmt we return it
-		if ( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
+
+	    if ( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
 			try {
 				core::DeclarationStmtPtr&& retStmt =
 						convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
+
+                // check if there is a kernelFile annotation
+				ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, convFact);
 				// handle eventual OpenMP pragmas attached to the Clang node
 				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
 				return StmtWrapper( annotatedNode );

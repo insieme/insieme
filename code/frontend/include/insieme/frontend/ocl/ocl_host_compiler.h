@@ -163,7 +163,7 @@ class HostMapper : public core::transform::CachedNodeMapping {
 
     bool translateClCreateBuffer(const core::VariablePtr& var, const core::CallExprPtr& fun, const core::CallExprPtr& newRhs, core::NodePtr& ret);
     bool handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call);
-    void lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource, const core::StatementPtr& annotated);
+    bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource, const core::StatementPtr& annotated);
 
 public:
     HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);

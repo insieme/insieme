@@ -411,33 +411,28 @@ bool HostMapper::handleClCreateKernel(const core::VariablePtr& var, const core::
     return false;
 }
 
-void HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource, const core::StatementPtr& annotated) {
+bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource, const core::StatementPtr& annotated) {
     if(type == builder.refType(builder.arrayType(builder.genericType("_cl_program")))) { //!
-//        std::cout << "FOUND: clProgram\n";
         if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) { //!
-            if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr) {
-//std::cout << "still on track\n";
-                if(iocl::KernelFileAnnotationPtr kfa =
-                        dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
-                    string path = kfa->getKernelPath();
-                    LOG(DEBUG) << "Found OpenCL kernel file path: " << path;
-                    cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
-//std::cout << "KFA\n";
-                    if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
-                        if(clCPWS->getValue() == "clCreateProgramWithSource") {
-//std::cout << "FOUND: clCreateProgramWithSource\n";
-                            ProgramPtr kernels = loadKernelsFromFile(path, builder);
-
-                            for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel){
-                                kernelEntries.push_back(kernel);
-                            });
-                        }
+            if(iocl::KernelFileAnnotationPtr kfa =
+                    dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
+                string path = kfa->getKernelPath();
+                LOG(DEBUG) << "Found OpenCL kernel file path: " << path;
+            if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
+                cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
+                if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
+                    if(clCPWS->getValue() == "clCreateProgramWithSource") {
+                        ProgramPtr kernels = loadKernelsFromFile(path, builder);
+                        for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel){
+                            kernelEntries.push_back(kernel);
+                        });
                     }
                 }
-
             }
         }
+        return true;
     }
+    return false;
 }
 
 /* crap
@@ -609,34 +604,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                     }
                 }*/
 
-                if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_program")))) {
-//                    std::cout << "FOUND: clProgram\n";
-                    if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
-                        if(rhs->getFunctionExpr() == BASIC.getRefDeref() && rhs->getArgument(0)->getNodeType() == NT_CallExpr) {
-//std::cout << "still on track\n";
-                            if(iocl::KernelFileAnnotationPtr kfa =
-                                    dynamic_pointer_cast<iocl::KernelFileAnnotation>(rhs->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
-                                string path = kfa->getKernelPath();
-                                LOG(DEBUG) << "Found OpenCL kernel file path: " << path;
-                                rhs = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0));
-//std::cout << "KFA\n";
-                                if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(rhs->getFunctionExpr())) {
-                                    if(clCPWS->getValue() == "clCreateProgramWithSource") {
-//std::cout << "FOUND: clCreateProgramWithSource\n";
-                                        ProgramPtr kernels = loadKernelsFromFile(path, builder);
-
-                                        for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel){
-                                            kernelEntries.push_back(kernel);
-                                        });
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-
+                if(lookForKernelFilePragma(lhs->getType(), callExpr->getArgument(1), callExpr->getArgument(1))) {
                     return BASIC.getNoOp();
-
                 }
             }
 
@@ -677,33 +646,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
             }
         }
 
-        lookForKernelFilePragma(var->getType(), decl->getInitialization(), decl);/*
-        if(var->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_program")))) { //!
-            std::cout << "FOUND: clProgram\n";
-            if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) { //!
-                if(rhs->getFunctionExpr() == BASIC.getRefDeref() && rhs->getArgument(0)->getNodeType() == NT_CallExpr) {
-std::cout << "still on track\n";
-                    if(iocl::KernelFileAnnotationPtr kfa =
-                            dynamic_pointer_cast<iocl::KernelFileAnnotation>(rhs->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
-                        string path = kfa->getKernelPath();
-                        LOG(DEBUG) << "Found OpenCL kernel file path: " << path;
-                        rhs = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0));
-std::cout << "KFA\n";
-                        if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(rhs->getFunctionExpr())) {
-                            if(clCPWS->getValue() == "clCreateProgramWithSource") {
-std::cout << "FOUND: clCreateProgramWithSource\n";
-                                ProgramPtr kernels = loadKernelsFromFile(path, builder);
-
-                                for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel){
-                                    kernelEntries.push_back(kernel);
-                                });
-                            }
-                        }
-                    }
-
-                }
-            }
-        }*/
+        lookForKernelFilePragma(var->getType(), decl->getInitialization(), decl);
 
         if(handleClCreateKernel(var, decl->getInitialization())) {
             return BASIC.getNoOp();
