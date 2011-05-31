@@ -35,6 +35,11 @@
  */
 
 #include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/insieme_pragma.h"
+
+#include <clang/AST/Stmt.h>
 
 namespace insieme {
 namespace ocl {
@@ -79,9 +84,28 @@ bool AddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     return true;
 }
 
-
-
 core::LiteralPtr BuiltinFunctionAnnotation::getBuiltinLiteral() const { return lit; }
+
+void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& convFact){
+    insieme::core::NodeAnnotationPtr annot;
+
+    // check if there is a kernelFile annotation
+    const frontend::PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+    std::pair<frontend::PragmaStmtMap::StmtMap::const_iterator, frontend::PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+    std::for_each(iter.first, iter.second,
+        [ & ](const frontend::PragmaStmtMap::StmtMap::value_type& curr){
+            const frontend::InsiemeKernelFile* kf = dynamic_cast<const frontend::InsiemeKernelFile*>( &*(curr.second) );
+            if(kf) {
+                annot = std::make_shared<ocl::KernelFileAnnotation>(ocl::KernelFileAnnotation(kf->getPath()));
+            }
+    });
+
+    if(annot)
+        irNode->addAnnotation(annot);
+}
+
 
 } // namespace ocl
 } // namespace c_info
