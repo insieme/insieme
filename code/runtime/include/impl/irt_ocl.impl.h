@@ -122,6 +122,7 @@ static char* _irt_load_program_source (const char* filename, size_t* filesize) {
 	IRT_ASSERT(fread(source, 1, size, fp) == size, IRT_ERR_OCL, "Error reading file");
 	source[size] = '\0';
 	*filesize = size; // this is the size useful for create program from binary
+	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
 	return source;
 }
 
