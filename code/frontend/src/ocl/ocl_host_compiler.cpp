@@ -288,7 +288,6 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
             // use one argument after another
             kernelArgs[kernel].push_back(arg);
         }
-std::cout << "adding argument " << arg << " to " << kernel << std::endl;
         return builder.intLit(0); // returning CL_SUCCESS
     );
 
@@ -843,15 +842,9 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                     // get kernel function
                     ExpressionPtr k = callExpr->getArgument(1);
 
-                    std::cout << "NKETNELslamb " << k << std::endl;
                     // check if argument is a call to composite.ref.elem
                     if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(k))
                         k = cre->getArgument(0);
-
-                    std::cout << "ARGUMENTS " << kernelArgs.size() << std::endl;
-                    for_each(kernelArgs, [](std::pair<ExpressionPtr, vector<ExpressionPtr> > kl) {
-                        std::cout << kl.first << " - " << kl.second << " tttttttttttttttttttttt\n";
-                    });
 
                     // get corresponding lambda expression
                     LambdaExprPtr lambda = kernelLambdas[k];
