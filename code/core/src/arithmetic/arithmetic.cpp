@@ -38,25 +38,17 @@
 
 #include <functional>
 
+#include "insieme/utils/iterator_utils.h"
+
 namespace insieme {
 namespace core {
 namespace arithmetic {
 
 	namespace {
 
-		inline Product::Factors getSingle(const core::VariablePtr& var, int exponent) {
+		inline vector<Product::Factor> getSingle(const core::VariablePtr& var, int exponent) {
 			return toVector(std::make_pair(var, exponent));
 		}
-
-		template<typename A, typename B>
-		std::size_t hashPairs(const vector<std::pair<A,B>>& factors) {
-			std::size_t res = 0;
-			for_each(factors, [&](const std::pair<A, B>& cur) {
-				appendHash(res, cur.first, cur.second);
-			});
-			return res;
-		}
-
 
 		template<typename Combinator, typename Extractor, typename Container>
 		Container combine(const Container& a, const Container& b) {
@@ -66,7 +58,7 @@ namespace arithmetic {
 			Combinator op;
 			Extractor ext;
 
-			// assemble the resulting factors
+			// assemble the resulting elements
 			Container res;
 
 			auto it1 = a.begin();
@@ -88,7 +80,8 @@ namespace arithmetic {
 					res.push_back(a);
 					++it1;
 				} else {
-					res.push_back(b);
+					// add inverted of second element
+					res.push_back(std::make_pair(b.first, op(0,b.second)));
 					++it2;
 				}
 			}
@@ -111,21 +104,18 @@ namespace arithmetic {
 
 	}
 
-	Product::Product()
-		: utils::HashableImmutableData<Product>(0) {};
-
 	Product::Product(const core::VariablePtr& var, int exponent)
-		: utils::HashableImmutableData<Product>(hashPairs(getSingle(var, exponent))), variables(getSingle(var, exponent)) {};
+		: factors(getSingle(var, exponent)) {};
 
-	Product::Product(const Factors&& factors)
-		: utils::HashableImmutableData<Product>(hashPairs(factors)), variables(factors) {};
+	Product::Product(const vector<Factor>&& factors)
+		: factors(factors) {};
 
 	Product Product::operator*(const Product& other) const {
-		return Product(combine<std::plus<int>, deref<VariablePtr>>(variables, other.variables));
+		return Product(combine<std::plus<int>, deref<VariablePtr>>(factors, other.factors));
 	}
 
 	Product Product::operator/(const Product& other) const {
-		return Product(combine<std::minus<int>, deref<VariablePtr>>(variables, other.variables));
+		return Product(combine<std::minus<int>, deref<VariablePtr>>(factors, other.factors));
 	}
 
 	bool Product::operator<(const Product& other) const {
@@ -136,10 +126,10 @@ namespace arithmetic {
 		}
 
 		// obtain iterators for the variables
-		auto it1 = variables.begin();
-		auto end1 = variables.end();
-		auto it2 = other.variables.begin();
-		auto end2 = other.variables.end();
+		auto it1 = factors.begin();
+		auto end1 = factors.end();
+		auto it2 = other.factors.begin();
+		auto end2 = other.factors.end();
 
 		// check whether any of the lists is empty
 		if (it1 == end1) {
@@ -175,12 +165,12 @@ namespace arithmetic {
 	std::ostream& Product::printTo(std::ostream& out) const {
 
 		// check whether product is empty
-		if (variables.empty()) {
+		if (factors.empty()) {
 			return out << "1";
 		}
 
 		// print individual factors
-		return out << join("*", variables, [](std::ostream& out, const pair<core::VariablePtr, int>& cur) {
+		return out << join("*", factors, [](std::ostream& out, const Factor& cur) {
 			out << *cur.first;
 			if (cur.second != 1) {
 				out << "^" << cur.second;
@@ -188,30 +178,41 @@ namespace arithmetic {
 		});
 	}
 
+	bool Product::isLinear() const {
+		return factors.size() <= static_cast<std::size_t>(1) && all(factors, [](const Factor& cur) {
+			return cur.second == 1;
+		});
+	}
+
+	bool Product::isPolynomial() const {
+		return all(factors, [](const Factor& cur) {
+			return cur.second > 0;
+		});
+	}
+
+
 
 	namespace {
 
-		inline Formula::Terms getSingle(const Product& product, int coefficient) {
+		inline vector<Formula::Term> getSingle(const Product& product, int coefficient) {
 			return toVector(std::make_pair(product, coefficient));
 		}
 
 	}
 
 
-	Formula::Formula()
-		: utils::HashableImmutableData<Formula>(0) {};
+	Formula::Formula(const vector<Term>&& terms) : terms(terms) {};
 
-	Formula::Formula(const Terms&& terms)
-		: utils::HashableImmutableData<Formula>(hashPairs(terms)), terms(terms) {};
+	Formula::Formula(int value) : terms(toVector(std::make_pair(Product(), value))) {};
 
-	Formula::Formula(int value)
-		: utils::HashableImmutableData<Formula>(hashPairs(getSingle(Product(), value))), terms(toVector(std::make_pair(Product(), value))) {};
+	Formula::Formula(const Product& product, int coefficient) : terms(toVector(std::make_pair(product, coefficient))) {
+		assert(coefficient != 0 && "Coefficient must be != 0!");
+	};
 
-	Formula::Formula(const Product& product, int coefficient)
-		: utils::HashableImmutableData<Formula>(hashPairs(getSingle(product, coefficient))), terms(toVector(std::make_pair(product, coefficient))) {};
-
-	Formula::Formula(const core::VariablePtr& var, int exponent, int coefficient)
-		: utils::HashableImmutableData<Formula>(hashPairs(getSingle(Product(var, exponent), coefficient))), terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {};
+	Formula::Formula(const core::VariablePtr& var, int exponent, int coefficient) : terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {
+		assert(exponent != 0 && "Exponent must be != 0!");
+		assert(coefficient != 0 && "Coefficient must be != 0!");
+	};
 
 	std::ostream& Formula::printTo(std::ostream& out) const {
 
@@ -226,16 +227,15 @@ namespace arithmetic {
 
 			bool isFirst = firstTerm;
 			firstTerm = false;
-			if (cur.first.isOne() && cur.second == 1) {
-				return out << ((isFirst)?"1":"+1");
-			}
-
 			if (cur.first.isOne()) {
 				return out << format(((isFirst)?"%d":"%+d"), cur.second);
 			}
 
 			if (cur.second == 1) {
 				return out << ((isFirst)?"":"+") << cur.first;
+			}
+			if (cur.second == -1) {
+				return out << "-" << cur.first;
 			}
 
 			return out <<  format(((isFirst)?"%d":"%+d"), cur.second) << "*" << cur.first;
@@ -252,28 +252,55 @@ namespace arithmetic {
 
 	Formula Formula::operator*(const Formula& other) const {
 
-		// TODO: continue here
-		// form the cross-product of the terms within the formulas
-		// => implement a cross product iterator! in the utils
-		// collect products!
-
-		return other;
+		// compute cross-product of terms
+		Formula res;
+		auto range = make_product_range(terms, other.terms);
+		for_range(range, [&](const std::pair<Term, Term>& cur){
+			const Product& A = cur.first.first;
+			const Product& B = cur.second.first;
+			int coeffA = cur.first.second;
+			int coeffB = cur.second.second;
+			int newCoeff = coeffA * coeffB;
+			if (newCoeff != 0) {
+				res = res + (A * B) * newCoeff;
+			}
+		});
+		return res;
 	}
 
-	Formula operator+(int a, const Product& b) {
-		return Formula(a) + Formula(b);
+	Formula Formula::operator/(int divisor) const {
+		Formula res = *this;
+		for_each(res.terms, [&](Term& cur) {
+			cur.second = cur.second / divisor;
+		});
+		return res;
 	}
 
-	Formula operator+(const Product& a, int b) {
-		return Formula(a) + Formula(b);
+	Formula Formula::operator/(const Product& divisor) const {
+		Formula res = *this;
+		for_each(res.terms, [&](Term& cur) {
+			cur.first = cur.first / divisor;
+		});
+		return res;
 	}
 
-	Formula operator+(const Product& a, const Product& b) {
-		return Formula(a) + Formula(b);
+
+	bool Formula::isConstant() const {
+		return isZero() || (terms.size() == static_cast<std::size_t>(1) && terms[0].first.isOne());
 	}
-	Formula operator-(const Product& a, const Product& b) {
-		return Formula(a) - Formula(b);
+
+	bool Formula::isLinear() const {
+		return all(terms, [](const Term& cur) {
+			return cur.first.isLinear();
+		});
 	}
+
+	bool Formula::isPolynomial() const {
+		return all(terms, [](const Term& cur) {
+			return cur.first.isPolynomial();
+		});
+	}
+
 
 } // end namespace arithmetic
 } // end namespace core

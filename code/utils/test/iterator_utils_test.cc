@@ -62,3 +62,20 @@ TEST(IteratorUtils, PairedIterator) {
 	EXPECT_EQ(ss.str(), "15:A--26:B--");
 }
 
+TEST(IteratorUtils, ProductIterator) {
+
+	vector<int> testInt;
+	testInt.push_back(15);
+	testInt.push_back(26);
+	vector<string> testString;
+	testString.push_back("A");
+	testString.push_back("B");
+	testString.push_back("C");
+
+	auto range = make_product_range(testInt, testString);
+
+	stringstream ss;
+	for_each(range.first, range.second, [&ss](const pair<int, string>& elem) { ss << elem.first << ":" << elem.second << "--"; } );
+
+	EXPECT_EQ(ss.str(), "15:A--26:A--15:B--26:B--15:C--26:C--");
+}

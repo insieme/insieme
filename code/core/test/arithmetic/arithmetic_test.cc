@@ -134,6 +134,8 @@ TEST(ArithmeticTest, Formula) {
 	f = f + 2;
 	EXPECT_EQ("7", toString(f));
 
+	f = 5 - 2;
+	EXPECT_EQ("3", toString(f));
 
 	// test variables
 	TypePtr type = builder.getBasicGenerator().getInt4();
@@ -167,8 +169,210 @@ TEST(ArithmeticTest, Formula) {
 	EXPECT_EQ("v1", toString(Formula(A)));
 
 	EXPECT_EQ("v1+2", toString(2+A));
+	EXPECT_EQ("2*v1+v2+5", toString(1 + 1 + A + 3 + B + A));
 
-	EXPECT_EQ("v1+v2+5", toString(1 + 1 + A + 3 + B));
+	EXPECT_EQ("2*v1", toString(2*A));
+	EXPECT_EQ("2*v1+3*v2+5", toString(2*A + 3*B + 5));
+
+	EXPECT_EQ("v1^2+2*v1+1", toString((A+1)*(A+1)));
+	EXPECT_EQ("v1^2-1", toString((A+1)*(A-1)));
+
+	EXPECT_EQ("v1^2-1", toString((varA+1)*(varA-1)));
+
+	EXPECT_EQ("-v1+1", toString(1-varA));
+
+	// causing a coefficient == 0
+	EXPECT_EQ("0", toString((varA-1)+(1-varA)));
+
+
+}
+
+
+TEST(ArithmeticTest, ProductProperties) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr varA = builder.variable(type, 1);
+	VariablePtr varB = builder.variable(type, 2);
+
+	Product one;
+
+	EXPECT_TRUE(one.isOne());
+	EXPECT_TRUE(one.isLinear());
+	EXPECT_TRUE(one.isPolynomial());
+
+	Product tmp;
+
+	tmp = varA;
+	EXPECT_FALSE(tmp.isOne());
+	EXPECT_TRUE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = varA * varA;
+	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = one / varA;
+	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isPolynomial());
+
+	tmp = varA * varB;
+	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = tmp * varA;
+	EXPECT_FALSE(tmp.isOne());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	// check for 1 = 1
+	EXPECT_EQ(Product(), varA * (one/varA));
+}
+
+
+TEST(ArithmeticTest, FormulaProperties) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr varA = builder.variable(type, 1);
+	VariablePtr varB = builder.variable(type, 2);
+
+	Formula zero;
+
+	EXPECT_TRUE(zero.isZero());
+	EXPECT_TRUE(zero.isConstant());
+	EXPECT_TRUE(zero.isLinear());
+	EXPECT_TRUE(zero.isPolynomial());
+
+	Formula tmp;
+
+	tmp = varA;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_TRUE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = varA * varA;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	Product one;
+	tmp = one / varA;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_FALSE(tmp.isPolynomial());
+
+	tmp = varA * varB;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = tmp * varA;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = 2*varA + 2*varB + 3;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_TRUE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+	tmp = 2*varA + 2*varA*varB + 3;
+	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isConstant());
+	EXPECT_FALSE(tmp.isLinear());
+	EXPECT_TRUE(tmp.isPolynomial());
+
+
+	// check isConstant
+	tmp = 1;
+	EXPECT_TRUE(tmp.isConstant());
+	tmp = tmp + 2;
+	EXPECT_TRUE(tmp.isConstant());
+	tmp = tmp - 10;
+	EXPECT_TRUE(tmp.isConstant());
+	tmp = tmp + varA;
+	EXPECT_FALSE(tmp.isConstant());
+	tmp = tmp - varA;
+	EXPECT_TRUE(tmp.isConstant());
+
+
+	// check for 0 = 0
+	EXPECT_EQ(Formula(), varA + (zero - varA));
+}
+
+TEST(ArithmeticTest, TicketRequirement) {
+
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+
+	// input: 2+4+3*i+(2+4)*j
+	// output: 3*i+6*j+6
+
+	EXPECT_EQ("3*v1+6*v2+6", toString(2+4+3*i+(2+4)*j));
+
+}
+
+
+TEST(ArithmeticTest, Division) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+
+	Formula tmp;
+
+	tmp = tmp + 2;
+	EXPECT_EQ("2", toString(tmp));
+
+	tmp = tmp / 2;
+	EXPECT_EQ("1", toString(tmp));
+
+	tmp = 2*i + 2*j + 2;
+	EXPECT_EQ("2*v1+2*v2+2", toString(tmp));
+
+	tmp = tmp / 2;
+	EXPECT_EQ("v1+v2+1", toString(tmp));
+
+	tmp = 2*i + 2*j + 3;
+	EXPECT_EQ("2*v1+2*v2+3", toString(tmp));
+
+	tmp = tmp / 2;
+	EXPECT_EQ("v1+v2+1", toString(tmp));
+
+
+	// with variables
+	tmp = i * i - j * i - 2;
+	EXPECT_EQ("v1^2-v1*v2-2", toString(tmp));
+
+	tmp = tmp / i;
+	EXPECT_EQ("v1-v2-2*v1^-1", toString(tmp));
+
+
+
 }
 
 } // end namespace arithmetic
