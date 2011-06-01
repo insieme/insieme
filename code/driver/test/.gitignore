@@ -1,0 +1,3 @@
+# the two files produced by the test cases
+hello_world.insieme.c
+test_kernels.insieme.cl

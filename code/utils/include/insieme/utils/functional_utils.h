@@ -74,7 +74,7 @@ struct equal_target : public std::binary_function<const PointerType&, const Poin
 	 * @param y the pointer to the second element to be compared
 	 */
 	bool operator()(const PointerType& x, const PointerType& y) const {
-		return *x == *y;
+		return x == y || *x == *y;
 	}
 };
 

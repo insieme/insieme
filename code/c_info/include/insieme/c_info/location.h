@@ -39,7 +39,8 @@
 #include <string>
 #include <boost/operators.hpp>
 
-#include "insieme/core/annotation.h"
+#include "insieme/utils/annotation.h"
+#include "insieme/core/ast_node.h"
 
 namespace insieme {
 namespace c_info {
@@ -78,14 +79,14 @@ public:
 /**
  * Annotation which contains the range within an element in the IR was defined.
  */
-class CLocAnnotation : public insieme::core::Annotation {
+class CLocAnnotation : public core::NodeAnnotation {
 public:
 	typedef std::vector<std::string> ArgumentList;
 	static const string NAME;
-	static const insieme::core::StringKey<CLocAnnotation> KEY;
+	static const utils::StringKey<CLocAnnotation> KEY;
 
 	CLocAnnotation(const SourceLocation& begin, const SourceLocation& end, bool isFuncDecl=true, const ArgumentList& args = ArgumentList()) :
-		insieme::core::Annotation(), begin(begin), end(end), isFunctionDef(isFuncDecl), args(args) {
+		core::NodeAnnotation(), begin(begin), end(end), isFunctionDef(isFuncDecl), args(args) {
 		assert(begin.getFileName() == end.getFileName() && "Source locations belongs to different files.");
 	}
 
@@ -99,7 +100,9 @@ public:
 	bool isFunctionDefinition() const { return isFunctionDef; }
 	const ArgumentList& getArgumentList() const { return args; }
 
-	const insieme::core::AnnotationKey* getKey() const { return &KEY; }
+	const utils::AnnotationKey* getKey() const { return &KEY; }
+
+	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const { return false; }
 
 private:
 	const SourceLocation begin;

@@ -42,6 +42,10 @@
 #include <boost/optional.hpp>
 #include <boost/utility/typed_in_place_factory.hpp>
 
+#include <boost/type_traits/is_base_of.hpp>
+#include <boost/utility/enable_if.hpp>
+
+
 #include "insieme/utils/hash_utils.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -49,7 +53,7 @@
 #include "insieme/utils/printable.h"
 
 namespace insieme {
-namespace core {
+namespace utils {
 
 /**
  * This class constitutes the base class for all AnnotationKey types to be used to
@@ -59,7 +63,7 @@ namespace core {
  * @see SimpleKey<T>
  * @see StringKey
  */
-class AnnotationKey : public insieme::utils::HashableImmutableData<AnnotationKey> {
+class AnnotationKey : public HashableImmutableData<AnnotationKey> {
 protected:
 
 	/**
@@ -123,20 +127,21 @@ public:
 };
 
 /**
- * An abstract base class for compound annotations to be attached to a annotatable objects.
- * A compound annotation is used to store multiple informations with has the same key to
+ * An abstract base class for compound annotations to be attached to an annotatable objects.
+ * A compound annotation is used for attaching multiple annotations using the same key to
  * the same object. Useful to encode both OpenMP and OpenCL annotations.
  */
-template <class SubAnnTy>
-class CompoundAnnotation: public Annotation {
+template <
+	class SubAnnTy,
+	class BaseAnnotation = Annotation,
+	typename boost::enable_if<boost::is_base_of<Annotation, BaseAnnotation>, int>::type = 0
+>
+class CompoundAnnotation : public BaseAnnotation {
 public:
 	typedef std::shared_ptr<SubAnnTy> SubAnnotationPtr;
 	typedef std::vector<SubAnnotationPtr> AnnotationList;
 
-	CompoundAnnotation(const AnnotationList& annotationList) : Annotation(), annotationList(annotationList) { }
-
-	virtual const AnnotationKey* getKey() const = 0;
-	virtual const std::string& getAnnotationName() const = 0;
+	CompoundAnnotation(const AnnotationList& annotationList) : annotationList(annotationList) { }
 
 	typename AnnotationList::const_iterator getAnnotationListBegin() const { return annotationList.cbegin(); }
 	typename AnnotationList::const_iterator getAnnotationListEnd() const { return annotationList.cend(); }
@@ -146,21 +151,40 @@ private:
 };
 
 // Some type definitions for combined types required for handling annotations
-typedef std::shared_ptr<Annotation> AnnotationPtr;
-typedef utils::map::PointerMap<const AnnotationKey*, AnnotationPtr> AnnotationMap;
+//typedef std::shared_ptr<Annotation> AnnotationPtr;
 
 /**
  * The base class of an annotatable object. This base class is maintaining a map of annotations
  * an offers means to manipulate the set of associated annotations.
  */
+template<
+	typename AnnotationType = Annotation,
+	typename KeyType = AnnotationKey,
+	typename boost::enable_if<boost::is_base_of<Annotation, AnnotationType>, int>::type = 0,
+	typename boost::enable_if<boost::is_base_of<AnnotationKey, KeyType>, int>::type = 0
+	>
 class Annotatable {
+
+public:
+
+	/**
+	 * A type definition for the pointer type used to internally maintain annotation instances.
+	 */
+	typedef std::shared_ptr<AnnotationType> annotation_ptr_type;
+
+	/**
+	 * A type definition for the internal data structure used for storing the annotations.
+	 */
+	typedef utils::map::PointerMap<const KeyType*, std::shared_ptr<AnnotationType>> annotation_map_type;
+
+private:
 
 	/**
 	 * Defines the type of the internally used annotation map reference. The annotation map is maintained
 	 * within a boost optional, which reduces the creation overhead of the annotatable objects. The
 	 * internal map will only be created in case an actual annotation should be attached.
 	 */
-	typedef boost::optional<AnnotationMap> AnnotationMapOpt;
+	typedef boost::optional<annotation_map_type> AnnotationMapOpt;
 
 	/**
 	 * The internal storage for annotations. It links every key to its corresponding value.
@@ -185,7 +209,29 @@ public:
 	 *
 	 * @param annotation the annotation to be added. The key will be obtained from the given annotation.
 	 */
-	void addAnnotation(const AnnotationPtr& annotation) const;
+	void addAnnotation(const annotation_ptr_type& annotation) const {
+		// check pre-condition
+		assert ( annotation && "Cannot add NULL annotation!" );
+
+		// ensure map to be initialized
+		initAnnotationMap();
+
+		// insert new element
+		auto key = annotation->getKey();
+		auto value = std::make_pair(key, annotation);
+		auto res = map->insert(value);
+
+		if (!res.second) {
+			// equivalent element already present => remove old and add new element
+			map->erase(res.first);
+			res = map->insert(value);
+		}
+
+		// check post-condition
+		assert ( res.second && "Insert not successful!");
+		assert ( hasAnnotation(key) && "Insert not successful!");
+		assert ( &*((*map->find(key)).second)==&*annotation && "Insert not successful!");
+	}
 
 	/**
 	 * Obtains a pointer to an Annotation associated to this annotatable class.
@@ -233,7 +279,7 @@ public:
 	 *
 	 * @param key a pointer to the key addressing the element to be removed.
 	 */
-	void remAnnotation(const AnnotationKey* key) const {
+	void remAnnotation(const KeyType* key) const {
 
 		// check whether there are annotations at all
 		if (!map) {
@@ -251,7 +297,7 @@ public:
 	 *
 	 * @param key a refernec to the key addressing the element to be removed.
 	 */
-	void remAnnotation(const AnnotationKey& key) const {
+	void remAnnotation(const KeyType& key) const {
 		remAnnotation(&key);
 	}
 
@@ -261,7 +307,7 @@ public:
 	 * @param key a pointer to the key to be looking for
 	 * @return true if found, false otherwise
 	 */
-	bool hasAnnotation(const AnnotationKey* key) const {
+	bool hasAnnotation(const KeyType* key) const {
 		return map && map->find(key) != map->end();
 	}
 
@@ -271,14 +317,14 @@ public:
 	 * @param key a reference to the key to be looking for
 	 * @return true if found, false otherwise
 	 */
-	bool hasAnnotation(const AnnotationKey& key) const {
+	bool hasAnnotation(const KeyType& key) const {
 		return hasAnnotation(&key);
 	}
 
 	/**
 	 * Obtains an immutable reference to the internally maintained annotations.
 	 */
-	const AnnotationMap& getAnnotations() const {
+	const annotation_map_type& getAnnotations() const {
 		initAnnotationMap();
 		return *map;
 	}
@@ -291,22 +337,9 @@ public:
 	 *
 	 * @param annotations the annotations to be assigned
 	 */
-	void setAnnotations(const AnnotationMap& annotations) const {
+	void setAnnotations(const annotation_map_type& annotations) const {
 		// replace all currently assigned annotations
-		initAnnotationMap();
 		map = annotations;
-	}
-
-	/**
-	 * By default, annotations between copies of the same Annotated object are shared.
-	 * To separated the connection between one annotated instance and a copy of it, this
-	 * method can be used. Internally it copies all the annotation to a new location and
-	 * updated the map pointer such that it is pointing to the new location.
-	 */
-	const void isolateAnnotations() const {
-		// TODO: remove this from this class
-		// copy current annotations
-		setAnnotations(getAnnotations());
 	}
 
 	/**
@@ -327,14 +360,14 @@ private:
 			return;
 		}
 		// the annotation map has to be created
-		map = boost::in_place<AnnotationMap>();
+		map = boost::in_place<annotation_map_type>();
 	}
 };
 
 /**
  * A simple implementation of a AnnotationKey which is solely represented by a single value.
  *
- * @tparam T the type of value to be used by this key
+ * @tparam T the type of key-value to be used by this key
  * @tparam Comparator the comparator to be used to compare instances of the key type
  */
 template<typename T, typename AnnotationType=Annotation, typename Comparator = std::equal_to<T>>
@@ -443,8 +476,30 @@ public:
  * @param annotatableB the second of the annotatable objects to be compared
  * @return true if both have the same set of annotations, false otherwise
  */
-bool hasSameAnnotations(const Annotatable& annotatableA, const Annotatable& annotatableB);
+template<typename Annotation, typename Key>
+bool hasSameAnnotations(const Annotatable<Annotation, Key>& annotatableA, const Annotatable<Annotation, Key>& annotatableB) {
+	typedef typename Annotatable<Annotation, Key>::annotation_ptr_type Ptr;
+	typedef typename Annotatable<Annotation, Key>::annotation_map_type Map;
 
-} // end namespace core
+
+	// check whether both have no annotations ...
+	if (!annotatableA.hasAnnotations() && !annotatableB.hasAnnotations()) {
+		return true;
+	}
+
+	// check in case both have annotations ...
+	if (!(annotatableA.hasAnnotations() && annotatableB.hasAnnotations())) {
+		return false;
+	}
+
+	// extract maps
+	const Map& mapA = annotatableA.getAnnotations();
+	const Map& mapB = annotatableB.getAnnotations();
+
+	// compare maps
+	return insieme::utils::map::equal(mapA, mapB, equal_target<Ptr>());
+}
+
+} // end namespace utils
 } // end namespace insieme
 

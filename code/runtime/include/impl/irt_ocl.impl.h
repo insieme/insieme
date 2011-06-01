@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <alloca.h>
+#include <ctype.h>
 #include "irt_ocl.h"
 
 /*
@@ -97,6 +98,11 @@ static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_
 	IRT_ASSERT(clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices"); 
 }
 
+static void _irt_cl_release_device(cl_context context, cl_command_queue queue) {
+	IRT_ASSERT(clReleaseCommandQueue(queue) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing command queue");
+	IRT_ASSERT(clReleaseContext(context) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context");
+}
+
 
 /* 
 * =====================================================================================
@@ -117,6 +123,7 @@ static char* _irt_load_program_source (const char* filename, size_t* filesize) {
 	IRT_ASSERT(fread(source, 1, size, fp) == size, IRT_ERR_OCL, "Error reading file");
 	source[size] = '\0';
 	*filesize = size; // this is the size useful for create program from binary
+	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
 	return source;
 }
 
@@ -145,8 +152,9 @@ static void _irt_save_program_binary (cl_program program, const char* binary_fil
  * =====================================================================================
  */
 
-cl_uint irt_ocl_get_num_devices() {
-	cl_uint num_devices = 0;
+void irt_ocl_init_devices(){
+	devices = NULL;
+	num_devices = 0;
 	cl_platform_id* cl_platforms;
 	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
 	if (cl_num_platforms != 0) {
@@ -159,41 +167,53 @@ cl_uint irt_ocl_get_num_devices() {
 			num_devices += cl_num_devices;
 		}
 	}
-	return num_devices;
-}
-
-void irt_ocl_get_devices(irt_ocl_device* devices) {
-	cl_uint index = 0;
-	cl_platform_id* cl_platforms;
-	cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
-	if (cl_num_platforms != 0) {
-		cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
-		_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
+	if (num_devices != 0) {
+		devices = (irt_ocl_device*)malloc(num_devices * sizeof(irt_ocl_device));
+		cl_uint index = 0;
+		cl_platform_id* cl_platforms;
+		cl_uint cl_num_platforms = _irt_cl_get_num_platforms();
+		if (cl_num_platforms != 0) {
+			cl_platforms = (cl_platform_id*)alloca(cl_num_platforms * sizeof(cl_platform_id));
+			_irt_cl_get_platforms(cl_num_platforms, cl_platforms);
 		
-		for (cl_uint i = 0; i < cl_num_platforms; i++){
-			cl_device_type device_type = DEVICE_TYPE;
-			cl_device_id* cl_devices;
-			cl_uint cl_num_devices = _irt_cl_get_num_devices(&cl_platforms[i], device_type);
-			if (cl_num_devices != 0) {
-				cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
-				_irt_cl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
-				for (int i = 0; i < cl_num_devices; ++i, ++index){
-					cl_int status;
-					irt_ocl_device* dev = &devices[index];
-					dev->cl_device = cl_devices[i];
-					dev->cl_context = clCreateContext(NULL, 1, &dev->cl_device, NULL, NULL, &status);
-					IRT_ASSERT(status == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context");
-					dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &status);
-					IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue");
+			for (cl_uint i = 0; i < cl_num_platforms; i++){
+				cl_device_type device_type = DEVICE_TYPE;
+				cl_device_id* cl_devices;
+				cl_uint cl_num_devices = _irt_cl_get_num_devices(&cl_platforms[i], device_type);
+				if (cl_num_devices != 0) {
+					cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
+					_irt_cl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
+					for (int i = 0; i < cl_num_devices; ++i, ++index){
+						cl_int status;
+						irt_ocl_device* dev = &devices[index];
+						dev->cl_device = cl_devices[i];
+						dev->cl_context = clCreateContext(NULL, 1, &dev->cl_device, NULL, NULL, &status);
+						IRT_ASSERT(status == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context");
+						dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &status);
+						IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue");
+					}
 				}
 			}
-		}
+		}	
 	}
 }
 
-void irt_ocl_release_device(irt_ocl_device* dev) {
-	clReleaseContext(dev->cl_context);
-	clReleaseCommandQueue(dev->cl_queue);
+void irt_ocl_finalize_devices() {
+	for (int i = 0; i < num_devices; ++i) {
+		irt_ocl_device* dev = &devices[i];
+		_irt_cl_release_device(dev->cl_context, dev->cl_queue);    
+	} 
+	free(devices);
+}
+
+
+cl_uint irt_ocl_get_num_devices(){
+	return num_devices;
+}
+
+irt_ocl_device* irt_ocl_get_device(cl_uint id){
+	IRT_ASSERT(id < num_devices && id >= 0, IRT_ERR_OCL, "Error accessing device with wrong ID");
+	return &devices[id];
 }
 
 void irt_ocl_print_device_info(irt_ocl_device* dev) {
@@ -226,13 +246,49 @@ float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_com
 cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
 	cl_kernel kernel = NULL;
 	cl_program program = NULL;
-	size_t filesize = 0;	
-	char* program_source = _irt_load_program_source(filename, &filesize);
-	IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
-	if (flag == IRT_OCL_SOURCE){ // FIXME write in a better way
-		cl_int status;
+	size_t filesize = 0;
+	cl_int status;
+	
+	// create the binary name
+	size_t len, binary_name_size, cl_param_size;
+	char* device_name;
+	IRT_ASSERT(clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	device_name = alloca (cl_param_size);
+	IRT_ASSERT(clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, cl_param_size, device_name, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	
+	len = strlen(kernel_name);
+	char* converted_kernel_name = alloca(len + 1); // +1 for the \0 in the end
+	strcpy (converted_kernel_name, kernel_name);
+	for (int i = 0; i < len; ++i) {
+		if (!isalnum ((int)converted_kernel_name[i])) {
+			converted_kernel_name[i] = '_';
+		}
+	}
+	binary_name_size = len;
+
+	len = strlen(device_name);
+	char* converted_device_name = alloca(len + 1); // +1 for the \0 in the end
+	strcpy (converted_device_name, device_name);
+	for (int i = 0; i < len; ++i) {
+		if (!isalnum ((int)converted_device_name[i])) {
+			converted_device_name[i] = '_';
+		}
+	}
+	binary_name_size += len;
+	binary_name_size += 6; // kernel_name.device_name.bin\0
+	
+	char* binary_name = alloca (binary_name_size);
+
+	sprintf (binary_name, "%s.%s.bin", converted_kernel_name, converted_device_name);
+	//printf("%s\n", binary_name);
+
+	if (flag == IRT_OCL_SOURCE){
+		char* program_source = _irt_load_program_source(filename, &filesize);
+		IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
+	
 		program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &program_source, NULL, &status);
 		IRT_ASSERT(status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
+		free(program_source);
 		status = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
 		
 		// If there are build errors, print them to the screen
@@ -249,19 +305,22 @@ cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, cons
 		}
 		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");	
 		
-		// FIXME: save and load only to test...
-		_irt_save_program_binary(program, "esatto.bin"); // FIXME: define a variable name
-
+		_irt_save_program_binary(program, binary_name); 
+	}
+	
+	if (flag == IRT_OCL_BINARY) {	
 		cl_int binary_status;
-		unsigned char* program_s = (unsigned char*) _irt_load_program_source("esatto.bin", &filesize); 
+		unsigned char* program_s = (unsigned char*) _irt_load_program_source(binary_name, &filesize); 
 		program = clCreateProgramWithBinary (dev->cl_context, 1, &(dev->cl_device), &filesize, (const unsigned char **) &program_s, &binary_status, &status);
 		free(program_s);
 		IRT_ASSERT(status == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
-		IRT_ASSERT(clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");
-		
-		kernel = clCreateKernel(program, kernel_name, &status);
-		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
+		IRT_ASSERT(clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");		
 	}
-	free(program_source);
+	
+	kernel = clCreateKernel(program, kernel_name, &status);
+	IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
+	
+	IRT_ASSERT(clReleaseProgram(program) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing program");
 	return kernel;
 }
+

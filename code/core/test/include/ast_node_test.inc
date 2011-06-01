@@ -36,8 +36,9 @@
 
 #include <gtest/gtest.h>
 
+#include "insieme/utils/annotation.h"
+
 #include "insieme/core/ast_node.h"
-#include "insieme/core/annotation.h"
 #include "insieme/core/program.h"
 
 #include "insieme/utils/container_utils.h"

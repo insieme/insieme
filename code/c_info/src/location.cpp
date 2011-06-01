@@ -42,7 +42,7 @@ namespace insieme {
 namespace c_info {
 
 const string CLocAnnotation::NAME = "CLocAnnotation";
-const core::StringKey<CLocAnnotation> CLocAnnotation::KEY("CLocAnnotationKey");
+const utils::StringKey<CLocAnnotation> CLocAnnotation::KEY("CLocAnnotationKey");
 
 std::string SourceLocation::toString() const {
 	std::ostringstream ss;

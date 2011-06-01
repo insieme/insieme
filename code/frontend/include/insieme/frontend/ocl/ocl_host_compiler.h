@@ -54,6 +54,25 @@ namespace ocl {
 namespace {
 
 /**
+ * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel
+ */
+class KernelCodeRetriver : public core::ASTVisitor<bool> {
+    const core::VariablePtr& pathToKernelFile; // Variable to look for
+    const core::NodePtr& breakingStmt; // place where the path would be needed, can stop searching there
+    const core::ASTBuilder builder;
+    string path;
+
+    bool visitNode(const core::NodePtr& node);
+    bool visitCallExpr(const core::CallExprPtr& callExpr);
+    bool visitDeclarationStmt(const core::DeclarationStmtPtr& decl);
+
+public:
+    KernelCodeRetriver(const core::VariablePtr lookFor, const core::NodePtr& stopAt, core::ASTBuilder build):
+        ASTVisitor<bool>(false), pathToKernelFile(lookFor), breakingStmt(stopAt), builder(build) { }
+    string getKernelFilePath(){ return path; }
+};
+
+/**
  * This struct holds inspire representations of OpenCL built-in host functions
  */
 struct Ocl2Inspire {
@@ -138,11 +157,16 @@ class HostMapper : public core::transform::CachedNodeMapping {
     KernelArgs kernelArgs;
     KernelNames kernelNames;
     vector<core::ExpressionPtr> kernelEntries;
+    core::ProgramPtr& mProgram;
 
     core::CallExprPtr checkAssignment(const core::CallExprPtr& oldCall);
 
+    bool translateClCreateBuffer(const core::VariablePtr& var, const core::CallExprPtr& fun, const core::CallExprPtr& newRhs, core::NodePtr& ret);
+    bool handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call);
+    bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource, const core::StatementPtr& annotated);
+
 public:
-    HostMapper(core::ASTBuilder& build);
+    HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);
 
     const core::NodePtr resolveElement(const core::NodePtr& element);
     ClmemTable& getClMemMapping() { return cl_mems; }

@@ -56,15 +56,10 @@ using namespace std;
  * @param manager the manager used to create new nodes
  * @param target the compound statement which should be manipulated
  * @param manipulator the manipulation to be applied as a functor
- * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the manipulation will
- * 				get a copy of the annotations of the original node by default, this feature is disabled
- * 				and it should be used with care. In case on of the resulting nodes is already present
- * 				within the manager, the present node and its version of the annotations will be preserved
- * 				and returned.
  * @return the root node of the modified AST tree (according to the root of the address)
  */
 template<typename Manipulator>
-NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Manipulator manipulator, bool preservePtrAnnotationsWhenModified = false) {
+NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Manipulator manipulator) {
 
 	// get and manipulate statement list
 	vector<StatementPtr> list = target->getStatements();
@@ -74,115 +69,111 @@ NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Mani
 
 	// create and apply replacement
 	CompoundStmtPtr replacement = CompoundStmt::get(manager, list);
-	return replaceNode(manager, target, replacement, preservePtrAnnotationsWhenModified);
+	return replaceNode(manager, target, replacement);
 }
 
 
-NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, unsigned index, bool preservePtrAnnotationsWhenModified) {
+NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementPtr& statement, unsigned index) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index, &statement](vector<StatementPtr>& list){
 		// limit index and insert element
 		unsigned pos = min((unsigned)(list.size()), index);
 		list.insert(list.begin() + pos, statement);
-	}, preservePtrAnnotationsWhenModified);
+	});
 }
 
-NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements, unsigned index, 
-		bool preservePtrAnnotationsWhenModified) {
+NodePtr insert(NodeManager& manager, const CompoundStmtAddress& target, const StatementList& statements, unsigned index) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index, &statements](vector<StatementPtr>& list){
 		// limit index and insert element
 		unsigned pos = min((unsigned)(list.size()), index);
 		list.insert(list.begin() + pos, statements.cbegin(), statements.cend());
-	}, preservePtrAnnotationsWhenModified);
+	});
 }
 
 
-NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified) {
-	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
-	if(compoundParent) {
-//		auto statements = compoundParent->getStatements();
-//		auto targetloc = std::find(statements.cbegin(), statements.cend(), target);
-//		assert(targetloc!=statements.cend() && "Could not find target Statement in compound");
-//		return insert(manager, compoundParent, statement, targetloc-statements.cbegin(), preservePtrAnnotationsWhenModified);
-		return insert(manager, compoundParent, statement, target.getIndex(), preservePtrAnnotationsWhenModified);
-	} else {
-		ASTBuilder build(manager);
-		auto newCompound = build.compoundStmt(statement, target.getAddressedNode());
-		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement) {
+
+	// check whether target is within a compound statement
+	if(auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress())) {
+		return insert(manager, compoundParent, statement, target.getIndex());
 	}
+
+	ASTBuilder build(manager);
+	auto newCompound = build.compoundStmt(statement, target.getAddressedNode());
+	return replaceNode(manager, target, newCompound);
 }
 
-NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified) {
-	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
-	if(compoundParent) {
-		return insert(manager, compoundParent, statements, target.getIndex(), preservePtrAnnotationsWhenModified);
-	} else {
-		ASTBuilder build(manager);
-		StatementList allStatements;
-		allStatements.insert(allStatements.begin(), statements.cbegin(), statements.cend());
-		allStatements.push_back(target.getAddressedNode());
-		auto newCompound = build.compoundStmt(allStatements);
-		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const StatementList& statements) {
+
+	// check whether target is within a compound statement
+	if(auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress())) {
+		return insert(manager, compoundParent, statements, target.getIndex());
 	}
+
+	ASTBuilder build(manager);
+	StatementList allStatements;
+	allStatements.insert(allStatements.begin(), statements.cbegin(), statements.cend());
+	allStatements.push_back(target.getAddressedNode());
+	auto newCompound = build.compoundStmt(allStatements);
+	return replaceNode(manager, target, newCompound);
 }
 
-NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement, bool preservePtrAnnotationsWhenModified) {
+NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementPtr& statement) {
 	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
-		return insert(manager, compoundParent, statement, target.getIndex()+1, preservePtrAnnotationsWhenModified);
+		return insert(manager, compoundParent, statement, target.getIndex()+1);
 	} else {
 		ASTBuilder build(manager);
 		auto newCompound = build.compoundStmt(target.getAddressedNode(), statement);
-		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+		return replaceNode(manager, target, newCompound);
 	}
 }
 
-NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementList& statements, bool preservePtrAnnotationsWhenModified) {
+NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const StatementList& statements) {
 	auto compoundParent = dynamic_address_cast<const CompoundStmt>(target.getParentAddress());
 	if(compoundParent) {
-		return insert(manager, compoundParent, statements, target.getIndex()+1, preservePtrAnnotationsWhenModified);
+		return insert(manager, compoundParent, statements, target.getIndex()+1);
 	} else {
 		ASTBuilder build(manager);
 		StatementList allStatements;
 		allStatements.push_back(target.getAddressedNode());
 		allStatements.insert(allStatements.end(), statements.cbegin(), statements.cend());
 		auto newCompound = build.compoundStmt(allStatements);
-		return replaceNode(manager, target, newCompound, preservePtrAnnotationsWhenModified);
+		return replaceNode(manager, target, newCompound);
 	}
 }
 
 
-NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, bool preservePtrAnnotationsWhenModified) {
+NodePtr remove(NodeManager& manager, const CompoundStmtAddress& target, unsigned index) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index](vector<StatementPtr>& list){
 		// remove element
 		assert( index < list.size() && "Index out of range!");
 		list.erase(list.begin() + index);
-	}, preservePtrAnnotationsWhenModified);
+	});
 }
 
-NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement, bool preservePtrAnnotationsWhenModified) {
+NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementPtr& replacement) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index, replacement](vector<StatementPtr>& list){
 		// remove element
 		assert( index < list.size() && "Index out of range!");
 		list[index] = replacement;
-	}, preservePtrAnnotationsWhenModified);
+	});
 }
 
-NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementList& replacements, 
-		bool preservePtrAnnotationsWhenModified) {
+NodePtr replace(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, const StatementList& replacements) {
 	// use generic manipulation function
 	return manipulate(manager, target, [index, &replacements](vector<StatementPtr>& list){
 		// remove element
 		assert( index < list.size() && "Index out of range!");
 		list.erase(list.begin() + index);
 		list.insert(list.begin() + index, replacements.cbegin(), replacements.cend());
-	}, preservePtrAnnotationsWhenModified);
+	});
 }
 
-NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, int displacement, bool preservePtrAnnotationsWhenModified) {
+NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned index, int displacement) {
 
 	// shortcut for no offset
 	if (displacement == 0) {
@@ -201,7 +192,7 @@ NodePtr move(NodeManager& manager, const CompoundStmtAddress& target, unsigned i
 		StatementPtr element = list[index];
 		list.erase(list.begin() + index);
 		list.insert(list.begin() + newPos, element);
-	}, preservePtrAnnotationsWhenModified);
+	});
 }
 
 namespace {
@@ -550,7 +541,7 @@ namespace {
 		}
 	};
 
-	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified, ASTBuilder::CaptureInits& captures,
+	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, ASTBuilder::CaptureInits& captures,
 			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
 		visitAllPrunable(StatementAddress(root), ldv);
@@ -574,33 +565,28 @@ namespace {
 			}
 		});
 
-		return replaceAll(manager, root, replacements, preservePtrAnnotationsWhenModified);
+		return replaceAll(manager, root, replacements);
 	}
 }
 
-BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, bool preservePtrAnnotationsWhenModified,
-		std::vector<VariablePtr> passAsArguments) {
+BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
-	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, 
-		preservePtrAnnotationsWhenModified, captures, replacements, passAsArguments));
+	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
 
-BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, bool preservePtrAnnotationsWhenModified,
-		std::vector<VariablePtr> passAsArguments) {
+BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
-	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, 
-		preservePtrAnnotationsWhenModified, captures, replacements, passAsArguments));
+	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
 	return build.lambdaExpr(root->getType(), body, captures, passAsArguments);
 }
 
-LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize, 
-		bool preservePtrAnnotationsWhenModified) {
+LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root, const std::vector<VariablePtr>& varsToPrivatize) {
 	
 	auto body = root->getBody();
 
@@ -610,9 +596,38 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 		auto var = build.variable(p->getType());
 		replacements[p] = var;
 	});
-	auto newBody = replaceAll(manager, body, replacements, preservePtrAnnotationsWhenModified);
+	auto newBody = replaceAll(manager, body, replacements);
 
 	return dynamic_pointer_cast<const LambdaExpr>(newBody);
+}
+
+LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const SubstitutionOpt& substitution) {
+
+	// check for early exit
+	if (!substitution || substitution->empty()) {
+		return lambda;
+	}
+
+	assert(!lambda->isRecursive() && "I owe you the support for recursive functions!");
+
+	// update type
+	const FunctionTypePtr funType = static_pointer_cast<const FunctionType>(substitution->applyTo(lambda->getType()));
+
+	// update body
+	const StatementPtr body = static_pointer_cast<const Statement>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
+
+	// update parameters
+	Lambda::ParamList params;
+	::transform(lambda->getParameterList(), std::back_inserter(params), [&](const VariablePtr& cur)->VariablePtr {
+		TypePtr newType = substitution->applyTo(cur->getType());
+		if (newType == cur->getType()) {
+			return cur;
+		}
+		return Variable::get(manager, newType, cur->getId());
+	});
+
+	// construct result
+	return LambdaExpr::get(manager, funType, params, body);
 }
 
 } // end namespace transform

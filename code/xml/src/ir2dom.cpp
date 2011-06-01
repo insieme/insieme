@@ -56,6 +56,8 @@ XERCES_CPP_NAMESPACE_USE
 namespace {
 // ------------------------------------ XmlVisitor ----------------------------
 
+typedef typename Node::annotation_map_type AnnotationMap;
+
 class XmlVisitor : public ASTVisitor<void> {
 	DOMDocument* doc;
 	XmlElement rootElem;

@@ -53,15 +53,15 @@ int main(int argc, char **argv)
 
     dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
-    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+//    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
     size_t kernelLength = 10;
 
-    char* path = "../frontend/test/hello.cl";
+    char* path;// = "hello.cl";
 
     char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
 
-#pragma insieme kernelFile "/home/klaus/insieme/code/frontend/test/hello.cl"
+#pragma insieme kernelFile "hello.cl"
     program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
 
     kernel = clCreateKernel(program, "hello", &err);

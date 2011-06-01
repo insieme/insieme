@@ -41,6 +41,8 @@
 
 #include <boost/optional/optional.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/utility/typed_in_place_factory.hpp>
+
 
 #include "insieme/core/types.h"
 
@@ -236,6 +238,31 @@ public:
 
 // define a simple name for an optional substitution - which will be the result of unification and matching algorithms.
 typedef boost::optional<Substitution> SubstitutionOpt;
+
+/**
+ * Creates a copy of the given substitution where all referenced types are handled by the given manger.
+ *
+ * @param manager the manager to be managing the nodes referenced by the resulting substitution
+ * @param substitution the substitution to be copied
+ * @return a copy of the given substitution instance where all nodes are maintained by the given manager
+ */
+inline SubstitutionOpt copyTo(NodeManager& manager, const SubstitutionOpt& substitution) {
+	// check for early exit
+	if (!substitution) {
+		return substitution;
+	}
+
+	// copy the substitution
+	SubstitutionOpt res(boost::in_place<Substitution>());
+	for_each(substitution->getMapping(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur){
+		res->addMapping(manager.get(cur.first), manager.get(cur.second));
+	});
+	for_each(substitution->getIntTypeParamMapping(), [&](const std::pair<VariableIntTypeParamPtr, IntTypeParamPtr>& cur){
+		res->addMapping(manager.get(cur.first), manager.get(cur.second));
+	});
+	return res;
+}
+
 
 // -------------------------------------------------------------------------------------------------------------------------
 //                                                    Unification
@@ -434,7 +461,17 @@ bool occurs(const NodePtr& x, const NodePtr& term);
  * @param argumentTypes the types of arguments passed to this function
  * @return the deduced, most generic return type
  */
-TypePtr deduceReturnType(FunctionTypePtr funType, TypeList argumentTypes);
+TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
+
+/**
+ * Determines whether the given type is generic or not. A type is considered to be generic if it
+ * includes type variables. Hence, a function accepting a generic input parameter or a value type
+ * including a variable type parameter will be considered generic.
+ *
+ * @param type the type to be checked
+ * @return true if the type is generic, false otherwise
+ */
+bool isGeneric(const TypePtr& type);
 
 }
 }

@@ -54,11 +54,19 @@ TEST(FunctionCall, templates) {
 
     core::ProgramPtr program = parser.parseProgram("main: fun ()->int<4>:\
             mainfct in { ()->int<4>:mainfct = ()->int<4>{ { \
-                (fun('a:in) -> int<4> {{ \
-                    decl 'a:local = (op<undefined>(lit<type<'a>, type('a) > )); \
-                }}(0)); \
+                (fun(type<'a>:dtype, uint<4>:size) -> array<'a, 1> {{ \
+                    return (op<array.create.1D>( dtype, size )); \
+                }}(lit<type<real<4> >, type(real(4)) >, lit<uint<4>, 7>) ); \
+                \
+                \
                 return 0; \
             } } }");
+/*
+    (fun(array<'a, 1>:in) -> int<4> {{ \
+        decl array<'a, 1>:local = (op<undefined>(lit<type<array<'a> >, type(array('a)) > )); \
+        return 0; \
+    }}(lit<array<int<4>, 1>, x>)); \
+*/
 
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
@@ -68,8 +76,8 @@ TEST(FunctionCall, templates) {
 
     string code = toString(*converted);
 
-    // should be enabled!
-//    EXPECT_FALSE(code.find("<?>") != -1);
+    EXPECT_FALSE(code.find("<?>") != string::npos);
+//    EXPECT_FALSE(code.find("[[unhandled_simple_type") != string::npos);
 }
 
 } // namespace backend

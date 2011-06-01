@@ -35,24 +35,29 @@
  */
 
 #include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/pragma_handler.h"
+#include "insieme/frontend/insieme_pragma.h"
+
+#include <clang/AST/Stmt.h>
 
 namespace insieme {
 namespace ocl {
 
 const string BaseAnnotation::NAME = "OclAnnotation";
-const core::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
+const utils::StringKey<BaseAnnotation> BaseAnnotation::KEY("OpenCL");
 
 const string KernelFctAnnotation::NAME = "OclKernelFctAnnotation";
-const core::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
+const utils::StringKey<KernelFctAnnotation> KernelFctAnnotation::KEY("KernelFctAnnotationKey");
 
 const string BuiltinFunctionAnnotation::NAME = "OclBuiltinFunctionAnnotation";
-const core::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
+const utils::StringKey<BuiltinFunctionAnnotation> BuiltinFunctionAnnotation::KEY("BuiltinFunctionAnnotationKey");
 
 const string AddressSpaceAnnotation::NAME = "OclAddressSpaceAnnotation";
-const core::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
+const utils::StringKey<AddressSpaceAnnotation> AddressSpaceAnnotation::KEY("AddressSpaceAnnotationKey");
 
 const string KernelFileAnnotation::NAME = "OclKernelFileAnnotation";
-const core::StringKey<KernelFileAnnotation> KernelFileAnnotation::KEY("KernelFileAnnotationKey");
+const utils::StringKey<KernelFileAnnotation> KernelFileAnnotation::KEY("KernelFileAnnotationKey");
 
 const string WorkGroupSizeAnnotation::NAME = "OclWorkGroupSizeAnnotation";
 
@@ -79,9 +84,28 @@ bool AddressSpaceAnnotation::setAddressSpace(addressSpace newAs){
     return true;
 }
 
-
-
 core::LiteralPtr BuiltinFunctionAnnotation::getBuiltinLiteral() const { return lit; }
+
+void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& convFact){
+    insieme::core::NodeAnnotationPtr annot;
+
+    // check if there is a kernelFile annotation
+    const frontend::PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+    std::pair<frontend::PragmaStmtMap::StmtMap::const_iterator, frontend::PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+    std::for_each(iter.first, iter.second,
+        [ & ](const frontend::PragmaStmtMap::StmtMap::value_type& curr){
+            const frontend::InsiemeKernelFile* kf = dynamic_cast<const frontend::InsiemeKernelFile*>( &*(curr.second) );
+            if(kf) {
+                annot = std::make_shared<ocl::KernelFileAnnotation>(ocl::KernelFileAnnotation(kf->getPath()));
+            }
+    });
+
+    if(annot)
+        irNode->addAnnotation(annot);
+}
+
 
 } // namespace ocl
 } // namespace c_info

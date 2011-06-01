@@ -40,7 +40,6 @@
 #include "insieme/xml/xsd_config.h"
 
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/annotation.h"
 
 #include "insieme/utils/logging.h"
 
@@ -53,7 +52,7 @@ XERCES_CPP_NAMESPACE_USE
 
 namespace { // begin namespace
 
-void buildAnnotations(const XmlElement& type, const Annotatable& baseType){
+void buildAnnotations(const XmlElement& type, const Node& baseType){
 	XmlElementPtr annotations = type.getFirstChildByName("annotations");
 	if(!annotations) return;
 
@@ -543,14 +542,14 @@ public:
 namespace insieme {
 namespace xml {
 
-AnnotationPtr XmlConverter::domToIrAnnotation(const XmlElement& el) const {
+NodeAnnotationPtr XmlConverter::domToIrAnnotation(const XmlElement& el) const {
 	string&& type = el.getAttr("type");
 	DomToIrConvertMapType::const_iterator fit = DomToIrConvertMap.find(type);
 	if(fit != DomToIrConvertMap.end()) {
 		return (fit->second)(el);
 	}
 	LOG(log::WARNING) << "Annotation \"" << type << "\" is not registered for Xml_Read!";
-	return AnnotationPtr();
+	return NodeAnnotationPtr();
 }
 
 NodePtr XmlUtil::convertDomToIr(NodeManager& manager) {

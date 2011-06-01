@@ -339,7 +339,7 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	modifications.insert(std::make_pair(deref(loopvar), pforLambdaParam));
 	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, modifications));
 
-	BindExprPtr lambda = transform::extractLambda(manager, adaptedBody, true, toVector(pforLambdaParam));
+	BindExprPtr lambda = transform::extractLambda(manager, adaptedBody, toVector(pforLambdaParam));
 	//LOG(INFO) << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << lambda->getValues() 
 	//	<< "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << pforLambdaParam << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
 	auto initExp = decl->getInitialization();
@@ -384,7 +384,7 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     // Replace the variables in the body with the input parameters which have been created
     if ( !replVariableMap.empty() ) {
     	body = core::static_pointer_cast<const core::Statement>(
-    			core::transform::replaceVars(manager, body, replVariableMap, true)
+    			core::transform::replaceVars(manager, body, replVariableMap)
     		);
     }
 

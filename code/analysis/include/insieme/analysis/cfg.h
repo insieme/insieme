@@ -327,7 +327,7 @@ public:
 
 	// Removes a CFG Block from the CFG
 	void removeBlock(const VertexTy& v);
-
+\
 	/**
 	 * Returns a CFG element of the graph given its vertex id.
 	 *

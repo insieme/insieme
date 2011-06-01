@@ -36,14 +36,17 @@
 
 #pragma once
 
-#include "insieme/core/ast_visitor.h"
+#include <boost/optional/optional.hpp>
 
 #include "insieme/utils/map_utils.h"
+
+#include "insieme/core/ast_node.h"
 
 namespace insieme {
 namespace core {
 
-class ASTBuilder;
+class Substitution;
+typedef boost::optional<Substitution> SubstitutionOpt;
 
 namespace transform {
 
@@ -54,15 +57,9 @@ namespace transform {
  * @param root the root of the sub-tree to be manipulated
  * @param toReplace the node to be replaced during this operation
  * @param replacement the node to be used as a substitution for the toReplace node
- * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
- * 				get a copy of the annotations of the original node by default, this feature is disabled
- * 				and it should be used with care. In case on of the resulting nodes is already present
- * 				within the manager, the present node and its version of the annotations will be preserved
- * 				and returned.
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const NodePtr& toReplace, const NodePtr& replacement,
-		bool preservePtrAnnotationsWhenModified = false);
+		const NodePtr& toReplace, const NodePtr& replacement);
 
 /**
  * Replaces all occurrences of the specified variable within the given sub-tree with the given replacement.
@@ -71,15 +68,9 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * @param root the root of the sub-tree to be manipulated
  * @param toReplace the variable to be replaced during this operation
  * @param replacement the node to be used as a substitution for the toReplace node
- * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
- * 				get a copy of the annotations of the original node by default, this feature is disabled
- * 				and it should be used with care. In case on of the resulting nodes is already present
- * 				within the manager, the present node and its version of the annotations will be preserved
- * 				and returned.
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const VariablePtr& toReplace, const NodePtr& replacement,
-		bool preservePtrAnnotationsWhenModified = false);
+		const VariablePtr& toReplace, const NodePtr& replacement);
 
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
@@ -95,8 +86,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * 				and returned.
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<NodePtr, NodePtr>& replacements,
-		bool preservePtrAnnotationsWhenModified = false);
+		const utils::map::PointerMap<NodePtr, NodePtr>& replacements);
 
 /**
  * Replaces all occurrences of the variables within the given map and the current scope by the element associated
@@ -105,16 +95,19 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping variables to their replacements
- * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
- * 				get a copy of the annotations of the original node by default, this feature is disabled
- * 				and it should be used with care. In case on of the resulting nodes is already present
- * 				within the manager, the present node and its version of the annotations will be preserved
- * 				and returned.
  */
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
-		bool preservePtrAnnotationsWhenModified = false);
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements);
 
+/**
+ * Replaces all occurrences of the type variables and int type parameters within the top level scope of the
+ * given root node by the values assigned to them within the given substitution.
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param substitution the substitution defining the mapping of variables to their instantiations
+ */
+NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution);
 
 /**
  * Replaces the node specified by the given address and returns the root node of the modified tree.
@@ -122,15 +115,9 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
  * @param manager the manager to be used for maintaining node instances
  * @param toReplace the address of the node to be replaced
  * @param replacement the node to be used as a substitution for the toReplace node
- * @param preservePtrAnnotationsWhenModified if enabled, new nodes created due to the replacement will
- * 				get a copy of the annotations of the original node by default, this feature is disabled
- * 				and it should be used with care. In case on of the resulting nodes is already present
- * 				within the manager, the present node and its version of the annotations will be preserved
- * 				and returned.
  * @return the root node of the modified AST tree (according to the root of the address)
  */
-NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace,
-		const NodePtr& replacement, bool preservePtrAnnotationsWhenModified = false);
+NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const NodePtr& replacement);
 
 
 } // End transform namespace
