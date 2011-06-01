@@ -101,6 +101,15 @@ namespace arithmetic {
 		Product(const core::VariablePtr& var, int exponent = 1);
 
 		/**
+		 * Obtains a constant reference to the internally maintained factors.
+		 *
+		 * @return a constant reference to the involved factors
+		 */
+		const vector<Factor>& getFactors() const {
+			return factors;
+		}
+
+		/**
 		 * Tests whether this product represents the constant 1 - hence, no variables
 		 * are involved.
 		 *
@@ -370,6 +379,15 @@ namespace arithmetic {
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
 
+		/**
+		 * Provides access to the internally maintained list of terms.
+		 *
+		 * @return a constant reference to the internally maintained list of terms
+		 */
+		const vector<Term>& getTerms() const {
+			return terms;
+		}
+
 	};
 
 	// -----------------------------------------------------------------
@@ -402,6 +420,10 @@ namespace arithmetic {
 
 	inline Formula operator+(const Formula& a, const VariablePtr& b) {
 		return a + Formula(b);
+	}
+
+	inline Formula operator+(const VariablePtr& a, const VariablePtr& b) {
+		return Formula(a) + Formula(b);
 	}
 
 	inline Formula operator+(const Product& a, int b) {
