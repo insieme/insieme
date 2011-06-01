@@ -85,6 +85,8 @@ struct _irt_work_item {
 
 /* ------------------------------ operations ----- */
 
+static inline irt_work_item* irt_wi_get_current();
+
 static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.value.full != irt_work_item_null_id().value.full; }
 
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
