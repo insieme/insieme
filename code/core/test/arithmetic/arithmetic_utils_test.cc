@@ -39,6 +39,7 @@
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/core/ast_builder.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
 namespace core {
@@ -84,6 +85,10 @@ TEST(ArithmeticUtilsTest, fromIR) {
 
 }
 
+bool empty(const MessageList& list) {
+	return list.empty();
+}
+
 TEST(ArithmeticTest, toIR) {
 	NodeManager manager;
 	ASTBuilder builder(manager);
@@ -94,19 +99,21 @@ TEST(ArithmeticTest, toIR) {
 	VariablePtr varB = builder.variable(type, 2);
 	VariablePtr varC = builder.variable(type, 3);
 
+	auto all = checks::getFullCheck();
 
 	Formula f = varA + varB;
 	EXPECT_EQ("v1+v2", toString(f));
 	EXPECT_EQ("int.add(v1, v2)", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
+	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 
 	f = 2*varA + varB;
 	EXPECT_EQ("2*v1+v2", toString(f));
 	EXPECT_EQ("int.add(int.mul(2, v1), v2)", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
-
+	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 
 	// test varA^2
 	f = 2*varA*varA + varB*varA;
@@ -114,7 +121,7 @@ TEST(ArithmeticTest, toIR) {
 	EXPECT_EQ("int.add(int.mul(2, int.mul(v1, v1)), int.mul(v1, v2))", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
-
+	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 
 	Product one;
 	f = one / varA;
@@ -122,14 +129,21 @@ TEST(ArithmeticTest, toIR) {
 	EXPECT_EQ("int.div(1, v1)", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
-
+	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 
 	f = one / (varA*varA*varA);
 	EXPECT_EQ("v1^-3", toString(f));
 	EXPECT_EQ("int.div(1, int.mul(int.mul(v1, v1), v1))", toString(*toIR(manager, f)));
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
+	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 
+	f = varA + varA*varA - varB*varB - one/(varA*varB) + varB - varC;
+	EXPECT_EQ("v1^2+v1-v1^-1*v2^-1-v2^2+v2-v3", toString(f));
+	EXPECT_EQ("int.sub(int.add(int.sub(int.sub(int.add(int.mul(v1, v1), v1), int.mul(int.div(1, v1), int.div(1, v2))), int.mul(v2, v2)), v2), v3)", toString(*toIR(manager, f)));
+	EXPECT_EQ(f, toFormula(toIR(manager, f)));
+	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
+	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 }
 
 } // end namespace arithmetic

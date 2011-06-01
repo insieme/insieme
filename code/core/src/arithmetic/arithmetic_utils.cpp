@@ -39,6 +39,7 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_visitor.h"
+#include "insieme/core/type_utils.h"
 
 #include "insieme/utils/numeric_cast.h"
 
@@ -152,7 +153,32 @@ Formula toFormula(const ExpressionPtr& expr) {
 
 namespace {
 
+	const TypePtr getBiggerType(const TypePtr& a, const TypePtr& b) {
+		assert(a->getNodeManager().getBasicGenerator().isInt(a) && "Has to be a IntegerType!");
+		assert(b->getNodeManager().getBasicGenerator().isInt(b) && "Has to be a IntegerType!");
 
+		// quick exit
+		if (*a == *b) {
+			return a;
+		}
+
+		const GenericTypePtr& t1 = static_pointer_cast<const GenericType>(a);
+		const GenericTypePtr& t2 = static_pointer_cast<const GenericType>(b);
+		const IntTypeParamPtr& p1 = t1->getIntTypeParameter()[0];
+		const IntTypeParamPtr& p2 = t2->getIntTypeParameter()[0];
+
+		// if both are signed / unsigned
+		if (t1->getFamilyName() == t2->getFamilyName()) {
+			return p1<p2?b:a;
+		}
+
+		// for the rest => use generic solution
+		return getSmallestCommonSuperType(a, b);
+	}
+
+	ExpressionPtr createCall(ASTBuilder& builder, const ExpressionPtr& fun, const ExpressionPtr& a, const ExpressionPtr& b) {
+		return builder.callExpr(getBiggerType(a->getType(), b->getType()), fun, a, b);
+	}
 
 }
 
@@ -173,14 +199,14 @@ ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
 	// handle exponent
 	ExpressionPtr res = factor.first;
 	for (int i=1; i<exponent; ++i) {
-		res = builder.callExpr(MulOp, res, factor.first);
+		res = createCall(builder, MulOp, res, factor.first);
 	}
 
 	// handle negative exponent
 	if (factor.second < 0) {
 		auto DivOp = basic.getSignedIntDiv();
 		auto one = builder.intLit(1);
-		return builder.callExpr(DivOp, one, res);
+		return createCall(builder, DivOp, one, res);
 	}
 
 	// done
@@ -208,7 +234,7 @@ ExpressionPtr toIR(NodeManager& manager, const Product& product) {
 
 	// append rest
 	for_each(it, end, [&](const Product::Factor& cur) {
-		res = builder.callExpr(MulOp, res, toIR(manager, cur));
+		res = createCall(builder, MulOp, res, toIR(manager, cur));
 	});
 
 	// done
@@ -241,7 +267,7 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 	} else if (it->first.isOne()) {
 		res = builder.intLit(it->second);
 	} else {
-		res = builder.callExpr(MulOp, builder.intLit(it->second), toIR(manager, it->first));
+		res = createCall(builder, MulOp, builder.intLit(it->second), toIR(manager, it->first));
 	}
 	++it;
 
@@ -257,17 +283,16 @@ ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 			op = SubOp;
 		}
 
-		if (cur.second == 1 && cur.first.isOne()) {
+		if (factor == 1 && cur.first.isOne()) {
 			res = builder.callExpr(op, res, builder.intLit(1));
-		} else if (cur.second == 1) {
-			res = builder.callExpr(op, res, toIR(manager, cur.first));
+		} else if (factor == 1) {
+			res = createCall(builder, op, res, toIR(manager, cur.first));
 		} else if (cur.first.isOne()) {
-			res = builder.callExpr(op, res, builder.intLit(factor));
+			res = createCall(builder, op, res, builder.intLit(factor));
 		} else {
-			res = builder.callExpr(op, res, builder.callExpr(MulOp,builder.intLit(factor), toIR(manager, cur.first)));
+			res = createCall(builder, op, res, createCall(builder, MulOp, builder.intLit(factor), toIR(manager, cur.first)));
 		}
 	});
-
 
 	// done
 	return res;

@@ -434,6 +434,10 @@ namespace arithmetic {
 		return Formula(a) + Formula(b);
 	}
 
+	inline Formula operator+(const VariablePtr& a, const Product& b) {
+		return Formula(a) + Formula(b);
+	}
+
 	inline Formula operator-(int a, const VariablePtr& b) {
 		return Formula(a) - Formula(b);
 	}
