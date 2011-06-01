@@ -45,6 +45,11 @@
 #include "wi_implementation.h"
 #include "utils/timing.h"
 
+#ifdef USE_OPENCL 
+#include "impl/irt_ocl.impl.h"
+#endif
+
+
 #define NUM_ELEMENTS 100000000
 
 #define INSIEME_BOOL_T_INDEX 0
@@ -103,6 +108,13 @@ irt_wi_implementation g_insieme_impl_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
+	#ifdef USE_OPENCL
+	// FIXME: finish OpenCl implementation
+	//irt_ocl_device* dev = irt_ocl_get_device(0);
+	//irt_ocl_print_device_info(dev);
+	//cl_kernel clKernel = irt_ocl_create_kernel(dev, "/insieme-dev/ivan/code/runtime/kernel.cl", "vector_add", "", IRT_OCL_SOURCE);
+	#endif
+
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }
@@ -185,7 +197,31 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 }
 
 void insieme_wi_add_implementation2(irt_work_item* wi) {
+	#ifdef USE_OPENCL
+	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
+	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
+	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
+	irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
+	irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
+	insieme_struct1* input = (insieme_struct1*)inputblock->data;
+	uint64* output = (uint64*)outputblock->data;
 
+	//irt_ocl_device* dev = irt_ocl_get_device(0); // FIXME: finish Opencl Version
+	//cl_kernel clKernel = irt_ocl_create_kernel(dev, "/insieme-dev/ivan/code/runtime/kernel.cl", "vector_add", "", IRT_OCL_BINARY);
+	
+
+	for(uint64 i = wi->range.begin; i < wi->range.end; ++i) {
+		if(input[i].do_add) {
+			output[i] = (input[i].v1 + input[i].v2) / 2;
+		}
+	}
+
+	irt_di_free(inputblock);
+	irt_di_free(outputblock);
+	irt_di_destroy(inputdata);
+	irt_di_destroy(outputdata);
+	irt_wi_end(wi);
+	#endif
 }
 
 void insieme_wi_add_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
