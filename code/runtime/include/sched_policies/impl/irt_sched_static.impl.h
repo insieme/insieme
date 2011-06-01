@@ -47,7 +47,6 @@ void irt_scheduling_init_worker(irt_worker* self) {
 
 void irt_scheduling_loop(irt_worker* self) {
 	while(self->state != IRT_WORKER_STATE_STOP) {
-		IRT_DEBUG("AA");
 		// try to take a ready WI from the pool
 		irt_work_item* next_wi = _irt_get_ready_wi_from_pool(&self->sched_data.pool);
 		if(next_wi != NULL) {
@@ -68,7 +67,7 @@ void irt_scheduling_loop(irt_worker* self) {
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	// split wis equally among workers
-	if(irt_wi_range_get_size(&wi->range) > 1) {
+	if(irt_wi_range_get_size(&wi->range) >= irt_g_worker_count) {
 		irt_work_item **split_wis = (irt_work_item**)alloca(irt_g_worker_count * sizeof(irt_work_item*));
 		irt_wi_split_uniform(wi, irt_g_worker_count, split_wis);
 		for(int i=0; i<irt_g_worker_count; ++i) {

@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <alloca.h>
+#include <ctype.h>
 #include "irt_ocl.h"
 
 /*
@@ -245,13 +246,49 @@ float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_com
 cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
 	cl_kernel kernel = NULL;
 	cl_program program = NULL;
-	size_t filesize = 0;	
-	char* program_source = _irt_load_program_source(filename, &filesize);
-	IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
-	if (flag == IRT_OCL_SOURCE){ // FIXME write in a better way
-		cl_int status;
+	size_t filesize = 0;
+	cl_int status;
+	
+	// create the binary name
+	size_t len, binary_name_size, cl_param_size;
+	char* device_name;
+	IRT_ASSERT(clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	device_name = alloca (cl_param_size);
+	IRT_ASSERT(clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, cl_param_size, device_name, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	
+	len = strlen(kernel_name);
+	char* converted_kernel_name = alloca(len + 1); // +1 for the \0 in the end
+	strcpy (converted_kernel_name, kernel_name);
+	for (int i = 0; i < len; ++i) {
+		if (!isalnum ((int)converted_kernel_name[i])) {
+			converted_kernel_name[i] = '_';
+		}
+	}
+	binary_name_size = len;
+
+	len = strlen(device_name);
+	char* converted_device_name = alloca(len + 1); // +1 for the \0 in the end
+	strcpy (converted_device_name, device_name);
+	for (int i = 0; i < len; ++i) {
+		if (!isalnum ((int)converted_device_name[i])) {
+			converted_device_name[i] = '_';
+		}
+	}
+	binary_name_size += len;
+	binary_name_size += 6; // kernel_name.device_name.bin\0
+	
+	char* binary_name = alloca (binary_name_size);
+
+	sprintf (binary_name, "%s.%s.bin", converted_kernel_name, converted_device_name);
+	//printf("%s\n", binary_name);
+
+	if (flag == IRT_OCL_SOURCE){
+		char* program_source = _irt_load_program_source(filename, &filesize);
+		IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
+	
 		program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &program_source, NULL, &status);
 		IRT_ASSERT(status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
+		free(program_source);
 		status = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
 		
 		// If there are build errors, print them to the screen
@@ -268,20 +305,22 @@ cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, cons
 		}
 		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");	
 		
-		// FIXME: save and load only to test...
-		_irt_save_program_binary(program, "esatto.bin"); // FIXME: define a variable name
-
+		_irt_save_program_binary(program, binary_name); 
+	}
+	
+	if (flag == IRT_OCL_BINARY) {	
 		cl_int binary_status;
-		unsigned char* program_s = (unsigned char*) _irt_load_program_source("esatto.bin", &filesize); 
+		unsigned char* program_s = (unsigned char*) _irt_load_program_source(binary_name, &filesize); 
 		program = clCreateProgramWithBinary (dev->cl_context, 1, &(dev->cl_device), &filesize, (const unsigned char **) &program_s, &binary_status, &status);
 		free(program_s);
 		IRT_ASSERT(status == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
-		IRT_ASSERT(clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");
-		
-		kernel = clCreateKernel(program, kernel_name, &status);
-		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
+		IRT_ASSERT(clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");		
 	}
-	free(program_source);
+	
+	kernel = clCreateKernel(program, kernel_name, &status);
+	IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
+	
 	IRT_ASSERT(clReleaseProgram(program) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing program");
 	return kernel;
 }
+
