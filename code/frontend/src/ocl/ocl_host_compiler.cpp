@@ -55,16 +55,25 @@ using namespace insieme::core;
 
 namespace {
 
-ProgramPtr loadKernelsFromFile(string path, ASTBuilder builder) {
-    LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
+const ProgramPtr& loadKernelsFromFile(string path, const ASTBuilder& builder) {
     // delete quotation marks form path
     if(path[0] == '"')
         path = path.substr(1, path.length()-2);
     if(path.find("/") != 0) // a relative path has been given
         path = SRC_DIR + path;   // TODO change this to the directory of the actual input file
+    LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
+
     frontend::Program fkernels(builder.getNodeManager());
     fkernels.addTranslationUnit(path);
     return fkernels.convert();
+}
+
+void tryStructExtract(ExpressionPtr& expr, ASTBuilder& builder) {
+    if(const CallExprPtr& cre = dynamic_pointer_cast<const CallExpr>(expr)) {
+        if(cre->getFunctionExpr() == BASIC.getCompositeRefElem()) {
+            expr = cre->getArgument(0);
+        }
+    }
 }
 
 bool KernelCodeRetriver::visitNode(const core::NodePtr& node) {
@@ -77,28 +86,19 @@ bool KernelCodeRetriver::visitNode(const core::NodePtr& node) {
 bool KernelCodeRetriver::visitCallExpr(const core::CallExprPtr& callExpr) {
     if(callExpr->getFunctionExpr() != BASIC.getRefAssign())
         return true;
-//std::cout << "VISITING a CallExpr....\n";
     // check if it is the variable we are looking for
     if(const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
-//std::cout << "lhs: " << lhs->getId() << " - " << pathToKernelFile->getId() << std::endl;
         if(lhs->getId() != pathToKernelFile->getId())
             return true;
     } else {
-//std::cout << "lhsCrap: " << lhs << std::endl;
         return true;
     }
-//std::cout << "It's the pathToKernelFile\n";
     if(const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0))) {
-//std::cout << "rhs is callExpr\n";
         if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0))) {
-//std::cout << "callSaC\n";
             if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-//std::cout << "there's a literal\n";
                 if(stringAsChar->getValue() == "string.as.char.pointer") {
-//std::cout << "string.as.char.pointer\n";
                     if(const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
                         path = pl->getValue();
-//std::cout << "SETTING kernel path: " << path << std::endl;
                         return false;
                     }
                 }
@@ -112,16 +112,11 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
     if(decl->getVariable()->getId() != pathToKernelFile->getId())
         return true;
 
-//    std::cout << "foutnd variable " << pathToKernelFile << std::endl << decl->getInitialization();
     if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
-//std::cout << "callSaC\n";
         if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-//std::cout << "there's a literal\n";
             if(stringAsChar->getValue() == "string.as.char.pointer") {
-//std::cout << "string.as.char.pointer\n";
                 if(const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
                     path = pl->getValue();
-//std::cout << "SETTING kernel path: " << path << std::endl;
                     return false;
                 }
             }
@@ -208,9 +203,6 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
     }}");
 }
 
-/*
-
- */
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build), o2i(build.getNodeManager()), mProgram(program) {
     ADD_Handler(builder, "clCreateBuffer",
         ExpressionPtr fun = o2i.getClCreateBuffer();
@@ -278,7 +270,9 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
 
     ADD_Handler(builder, "clSetKernelArg",
         // arg_index must either be an integer literal or all arguments have to be specified in the right order in the source code
-        const ExpressionPtr& kernel = node->getArgument(0);
+        ExpressionPtr kernel = node->getArgument(0);
+        // check if kernel argument is in a struct, if yes, use the struct-variable
+        tryStructExtract(kernel, builder);
         const ExpressionPtr& arg = node->getArgument(3);
         const ExpressionPtr& arg2 = node->getArgument(1);
         // check if the index argument is a (casted) integer literal
@@ -294,7 +288,6 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
             // use one argument after another
             kernelArgs[kernel].push_back(arg);
         }
-
         return builder.intLit(0); // returning CL_SUCCESS
     );
 
@@ -329,7 +322,9 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
 */
     ADD_Handler(builder, "clEnqueueNDRangeKernel",
         // get argument vector
-        std::vector<core::ExpressionPtr> args = kernelArgs[node->getArgument(1)];
+        ExpressionPtr k = node->getArgument(1);
+        tryStructExtract(k, builder);
+        std::vector<core::ExpressionPtr> args = kernelArgs[k];
         assert(args.size() > 0u && "Cannot find any arguments for kernel function");
         // adding global and local size to the argument vector
         args.push_back(node->getArgument(4) );
@@ -385,8 +380,23 @@ core::CallExprPtr HostMapper::checkAssignment(const core::CallExprPtr& oldCall){
     return newCall;
 }
 
-bool HostMapper::handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call) {
-    if(var->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))) {
+bool HostMapper::handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName) {
+    TypePtr type = getNonRefType(var);
+    // if it is a struct we have to check the field
+    if(const StructTypePtr st = dynamic_pointer_cast<const StructType>(type)) {
+        //TODO if one puts more than one kernel inside a struct he should be hit in the face
+        if(fieldName) {
+        if(const LiteralPtr& fieldLit = dynamic_pointer_cast<const Literal>(fieldName)){
+            for_each(st->getEntries(), [&](StructType::Entry field) {
+                if(field.first->getName() == fieldLit->getValue())
+                    type = field.second;
+            });
+        } else
+            assert(fieldLit && "If the clKernel variable is inside a struct, the fieldName of it has to be passed to handleClCreateKernel");
+        }
+    }
+
+    if(type == builder.arrayType(builder.genericType("_cl_kernel"))) {
         if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(call)) {//!
             if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
             if(fun->getValue() == "clCreateKernel" ) {
@@ -398,8 +408,6 @@ bool HostMapper::handleClCreateKernel(const core::VariablePtr& var, const core::
 
                 if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
                     string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
-//                    assert(kernelNames[name] == 0 && "Multiple kernels with the same name not supported");
-//std::cout << "KernelName: " << name << ": " << kernelNames[name] << std::endl;
 
                     kernelNames[name] = var; //!
                 }
@@ -411,17 +419,18 @@ bool HostMapper::handleClCreateKernel(const core::VariablePtr& var, const core::
     return false;
 }
 
-bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource, const core::StatementPtr& annotated) {
-    if(type == builder.refType(builder.arrayType(builder.genericType("_cl_program")))) { //!
-        if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) { //!
+bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
+    if(type == builder.refType(builder.arrayType(builder.genericType("_cl_program")))) {
+        if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) {
             if(iocl::KernelFileAnnotationPtr kfa =
                     dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
                 string path = kfa->getKernelPath();
-                LOG(DEBUG) << "Found OpenCL kernel file path: " << path;
-            if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
-                cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
+std::cerr << "Found OpenCL kernel file path: " << path;
+                if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
+                    cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
                 if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
                     if(clCPWS->getValue() == "clCreateProgramWithSource") {
+std::cerr << "BLABLABLABLABLABLABLBLBA\n";
                         ProgramPtr kernels = loadKernelsFromFile(path, builder);
                         for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel){
                             kernelEntries.push_back(kernel);
@@ -540,16 +549,26 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                             });
 
                             // update struct in replacement map
-                            cl_mems[struct_] = builder.variable(builder.structType(newEntries));
+                            NodePtr&& replacement = builder.variable(builder.structType(newEntries));
+
+                            copyAnnotations(struct_, replacement);
+                            cl_mems[struct_] = dynamic_pointer_cast<const Variable>(replacement);
+
 
 //                            std:: cout << newStruct->getType() << " type " << dynamic_pointer_cast<const StructType>(getNonRefType(struct_)) << std::endl;
-                            ExpressionPtr field = cre->getArgument(1);
 //                            assert(false);
 /**/
                         }
                     }
-                    if(cre->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_program")))) {
 
+                    if(const CallExprPtr& newCall = checkAssignment(callExpr))
+                        if(const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(cre->getArgument(0)))
+                            if(handleClCreateKernel(struct_, newCall, cre->getArgument(1)))
+                                return BASIC.getNoOp();
+
+
+                    if(lookForKernelFilePragma(cre->getType(), callExpr->getArgument(1))) {
+                        return BASIC.getNoOp();
                     }
                 }
             }
@@ -580,31 +599,10 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                 }
 
                 if(const CallExprPtr& newCall = checkAssignment(callExpr))
-                    if(handleClCreateKernel(lhs, newCall))
+                    if(handleClCreateKernel(lhs, newCall, NULL))
                         return BASIC.getNoOp();
-/*                if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))) {
-                    if(const CallExprPtr& newCall = checkAssignment(callExpr)) {
-                        if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
-                        if(fun->getValue() == "clCreateKernel" ) {
 
-                            ExpressionPtr kn = newCall->getArgument(1);
-                            // usually kernel name is enbedded in a "string.as.char.pointer" call"
-                            if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
-                                kn = sacp->getArgument(0);
-
-                            if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
-                                string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
-//std::cout << "KernelName: " << name << ": " << kernelNames[name] << std::endl;
-
-                                kernelNames[name] = lhs;
-                            }
-
-                            return BASIC.getNoOp();
-                        }
-                    }
-                }*/
-
-                if(lookForKernelFilePragma(lhs->getType(), callExpr->getArgument(1), callExpr->getArgument(1))) {
+                if(lookForKernelFilePragma(lhs->getType(), callExpr->getArgument(1))) {
                     return BASIC.getNoOp();
                 }
             }
@@ -646,9 +644,9 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
             }
         }
 
-        lookForKernelFilePragma(var->getType(), decl->getInitialization(), decl);
+        lookForKernelFilePragma(var->getType(), decl->getInitialization());
 
-        if(handleClCreateKernel(var, decl->getInitialization())) {
+        if(handleClCreateKernel(var, decl->getInitialization(), NULL)) {
             return BASIC.getNoOp();
         }
 
@@ -664,14 +662,14 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
     std::map<string, int> checkDuplicates;
     for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
         if(const LambdaExprPtr& lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
-        if(auto cname = lambdaEx->getLambda()->getAnnotation(c_info::CNameAnnotation::KEY)) {
-            assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
-            checkDuplicates[cname->getName()] = 1;
+            if(auto cname = lambdaEx->getLambda()->getAnnotation(c_info::CNameAnnotation::KEY)) {
+                assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
+                checkDuplicates[cname->getName()] = 1;
 
-            if(ExpressionPtr clKernel = kernelNames[cname->getName()]) {
-                kernelLambdas[clKernel] = lambdaEx;
+                if(ExpressionPtr clKernel = kernelNames[cname->getName()]) {
+                    kernelLambdas[clKernel] = lambdaEx;
+                }
             }
-        }
     });
 }
 
@@ -842,7 +840,11 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
             if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
                 if(fun->getValue() == "clEnqueueNDRangeKernel" ) {
                     // get kernel function
-                    ExpressionPtr k = newCall->getArgument(1);
+                    ExpressionPtr k = callExpr->getArgument(1);
+
+                    // check if argument is a call to composite.ref.elem
+                    if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(k))
+                        k = cre->getArgument(0);
 
                     // get corresponding lambda expression
                     LambdaExprPtr lambda = kernelLambdas[k];
@@ -891,16 +893,16 @@ ProgramPtr HostCompiler::compile() {
     const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
     assert(interProg && "First pass of OclHostCompiler corrupted the program");
 
-    LOG(INFO) << "Adding kernels to host Program...";
+    LOG(INFO) << "Adding kernels to host Program..." << oclHostMapper.getKernelArgs().size();
 
     const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
 std::cerr << "N kernelEntries: " << kernelEntries.size();
     const ProgramPtr& progWithKernels = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 
-    Host2ndPass ohv2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
-    ohv2nd.mapNamesToLambdas(kernelEntries);
+    Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
+    oh2nd.mapNamesToLambdas(kernelEntries);
 
-    HostMapper3rdPass ohm3rd(builder, oclHostMapper.getClMemMapping(), oclHostMapper.getKernelArgs(), ohv2nd.getKernelNames(), ohv2nd.getKernelLambdas());
+    HostMapper3rdPass ohm3rd(builder, oclHostMapper.getClMemMapping(), oclHostMapper.getKernelArgs(), oh2nd.getKernelNames(), oh2nd.getKernelLambdas());
     if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
         mProgram = newProg;
         return newProg;

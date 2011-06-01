@@ -36,13 +36,13 @@
 
 #include "CL/cl.h"
 //#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
+    cl_program program = NULL;
 
 //#pragma insieme mark
 int main(int argc, char **argv)
 {
     cl_context context;
     cl_command_queue queue;
-    cl_program program;
     cl_kernel kernel;
     cl_int err;
 

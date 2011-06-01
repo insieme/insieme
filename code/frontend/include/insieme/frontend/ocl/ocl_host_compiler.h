@@ -54,7 +54,7 @@ namespace ocl {
 namespace {
 
 /**
- * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel
+ * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel, if it exists at all
  */
 class KernelCodeRetriver : public core::ASTVisitor<bool> {
     const core::VariablePtr& pathToKernelFile; // Variable to look for
@@ -94,7 +94,7 @@ public:
 
 /**
  * This class allows replaces a call to an OpenCL built-in function to an INSPIRE one
- *  */
+ */
 class Handler {
 protected:
     core::ProgramPtr kernels;
@@ -108,6 +108,10 @@ public:
     const vector<core::ExpressionPtr>& getKernels(){ return kernels->getEntryPoints(); }
 };
 
+/*
+ * Provides templated child functions of the Handler class. The template argument determines which
+ * OpenCL built-in funciton is handled
+ */
 template<typename Lambda>
 class LambdaHandler : public Handler {
     // flag indicating if the definition of the actual function has already been added to the program
@@ -147,7 +151,18 @@ HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambd
     handles.insert(std::make_pair(fct, make_handler(builder, fct, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
 
 
-
+/*
+ * First pass when translating a program OpenCL to IR
+ * Responsible for:
+ * - finding path to kernel file (in-code kernel code strings not supported yet)
+ * - find cl_mem variable replacements and store them in the cl_mems map
+ * - store names of called kernels in kernelNames
+ * - store arguments of kernels in kernelArgs (the kernel name is the key)
+ * - translate kernel code to IR
+ * - store all entry points to kernels in kernelEntries
+ * - call Ocl2Inspire's functions when encountering a function which needs IR replacement (e.g. clEnqueueWriteBuffer)
+ * No out of order queue supported yet
+ */
 class HostMapper : public core::transform::CachedNodeMapping {
     core::ASTBuilder& builder;
 
@@ -159,24 +174,29 @@ class HostMapper : public core::transform::CachedNodeMapping {
     vector<core::ExpressionPtr> kernelEntries;
     core::ProgramPtr& mProgram;
 
+    // check if the call is a call to ref.assign
     core::CallExprPtr checkAssignment(const core::CallExprPtr& oldCall);
 
     bool translateClCreateBuffer(const core::VariablePtr& var, const core::CallExprPtr& fun, const core::CallExprPtr& newRhs, core::NodePtr& ret);
-    bool handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call);
-    bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource, const core::StatementPtr& annotated);
+    bool handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName);
+    bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
 
 public:
     HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);
 
     const core::NodePtr resolveElement(const core::NodePtr& element);
-    ClmemTable& getClMemMapping() { return cl_mems; }
 
+    ClmemTable& getClMemMapping() { return cl_mems; }
     const vector<core::ExpressionPtr>& getKernels() { return kernelEntries; }
     KernelArgs& getKernelArgs() { return kernelArgs; }
     KernelNames& getKernelNames() { return kernelNames; }
-
 };
 
+/*
+ * Second pass when translating a program OpenCL to IR
+ * Responsible for:
+ * - connecting the names of kernel functions with the IR entry points (= LambdaExpr)
+ */
 class Host2ndPass {
     KernelNames& kernelNames;
     KernelLambdas kernelLambdas;
@@ -189,6 +209,13 @@ public:
     KernelLambdas& getKernelLambdas() { return kernelLambdas; }
 };
 
+/*
+ * First pass when translating a program OpenCL to IR
+ * Responsible for:
+ * - replace the OpenCL cl_mem vars/structs containing cl_mem vars with IR variables (array<...>)
+ * - remove instances of unused variables (cl_program, cl_kernel, ...)
+ * - replace calls to cl_enqueueNDRangeKernls with function calls to the correct LambdaExpr with the appropriate arguments
+ */
 class HostMapper3rdPass : public core::transform::CachedNodeMapping {
     const core::ASTBuilder& builder;
     ClmemTable& cl_mems;
@@ -198,8 +225,13 @@ class HostMapper3rdPass : public core::transform::CachedNodeMapping {
 
     core::ExpressionPtr create3Dvec;
 
+    // get a VariablePtr which is hidden under the stuff added by the frontend if ther is a cast to (void*) in the C input
+    // the variable is stored in the passed argument arg
     void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg);
 
+    // takes the expression size which describes the work size for the clEnqueueNDRange and embed it in an IR function which returns a
+    // vector<uint<4>, 3>, always awaited by the kernel function. The elements with index greater or equal to workDim will always be set
+    // to 1, regardles of the argument size
     const core::ExpressionPtr anythingToVec3(core::ExpressionPtr workDim, core::ExpressionPtr size);
 
 public:
@@ -210,21 +242,12 @@ public:
 
 };
 
-/*
-class HostVisitor : public core::AddressVisitor<void> {
-    core::ASTBuilder& builder;
-    core::ProgramPtr& newProg;
-
-public:
-    HostVisitor(core::ASTBuilder& build, core::ProgramPtr& prog) : core::AddressVisitor<void>(false), builder(build), newProg(prog) {};
-
-    core::ProgramPtr getNewProg() { return newProg; }
-
-    void visitCallExpr(const core::CallExprAddress& callExp);
-
-};*/
 }
 
+
+/*
+ * provides interface to the OpenCL host compiler
+ */
 class HostCompiler {
     core::ProgramPtr& mProgram;
 //    frontend::Program& mProg;
