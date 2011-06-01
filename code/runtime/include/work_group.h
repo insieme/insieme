@@ -48,6 +48,8 @@ struct _irt_work_group {
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
 	uint32 local_member_count;
+	uint32 cur_barrier_count_up;
+	uint32 cur_barrier_count_down;
 };
 
 
@@ -56,12 +58,12 @@ struct _irt_work_group {
 irt_work_group* irt_wg_create();
 void irt_wg_destroy(irt_work_group* wg);
 
-void irt_wg_join(irt_work_group* wg);
-void irt_wg_leave(irt_work_group* wg);
+//static inline void irt_wg_join(irt_work_group* wg);
+//static inline void irt_wg_leave(irt_work_group* wg);
 
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
 
-void irt_wg_barrier(irt_work_group* wg, irt_barrier_id barrier);
+void irt_wg_barrier(irt_work_group* wg);
 void irt_wg_distribute(irt_work_group* wg, irt_distribute_id dist /*, ???*/);
 

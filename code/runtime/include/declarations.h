@@ -47,6 +47,8 @@
 // TODO : better configurability, maybe per-wi stack size set by compiler?
 #define IRT_WI_STACK_SIZE 1024 * 64
 
+#define IRT_MAX_WORK_GROUPS 16
+
 // Declarations of insieme runtime types in alphabetical lexicographic order
 
 /* ------------------------------ channels ----- */
@@ -84,7 +86,7 @@ typedef struct _irt_type irt_type;
 /* ------------------------------ work groups ----- */
 
 IRT_DECLARE_ID_TYPE(work_group);
-typedef uint32 irt_barrier_id;
+//typedef uint32 irt_barrier_id;
 typedef uint32 irt_distribute_id;
 typedef struct _irt_work_group irt_work_group;
 

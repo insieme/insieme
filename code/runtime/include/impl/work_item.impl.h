@@ -44,14 +44,24 @@
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"
+#include "work_group.h"
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"
+
+
+static inline irt_work_item* irt_wi_get_current() {
+	return irt_worker_get_current()->cur_wi;
+}
 
 static inline irt_work_item* _irt_wi_new() {
 	return (irt_work_item*)malloc(sizeof(irt_work_item));
 }
 static inline void _irt_wi_recycle(irt_work_item* wi) {
 	free(wi);
+}
+
+static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
+	wi->work_groups = (irt_work_group_id*)malloc(sizeof(irt_work_group_id)*IRT_MAX_WORK_GROUPS);
 }
 
 static inline void _irt_print_work_item_range(const irt_work_item_range* r) { 
@@ -65,6 +75,7 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 	retval->impl_id = impl_id;
 	retval->context_id = irt_worker_get_current()->cur_context;
 	retval->num_groups = 0;
+	retval->work_groups = NULL;
 	retval->parameters = params;
 	retval->range = range;
 	retval->state = IRT_WI_STATE_NEW;
@@ -167,12 +178,19 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		range.end = i+1 < elements ? offsets[i+1] : wi->range.end;
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
 	}
+	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO
 		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1); // This needs to be atomic even if it may not look like it
+		for(uint32 i=0; i<source->num_groups; ++i) {
+			irt_atomic_fetch_and_add(&(source->work_groups[i].cached->local_member_count), elements - 1); // TODO
+		}
 		// splitting fragment wi, can safely delete
 		_irt_wi_recycle(wi);
 	} else {
-		irt_atomic_fetch_and_add(&wi->num_fragments, elements); // This needs to be atomic even if it may not look like it
+		irt_atomic_fetch_and_add(&wi->num_fragments, elements); // This needs to be atomic even if it may not look like it		
+		for(uint32 i=0; i<wi->num_groups; ++i) {
+			irt_atomic_fetch_and_add(&(wi->work_groups[i].cached->local_member_count), elements - 1); // TODO
+		}
 	}
 }
