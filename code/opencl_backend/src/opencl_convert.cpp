@@ -70,7 +70,7 @@ OpenCLBackendPtr OpenCLBackend::getDefault() {
 	return std::make_shared<OpenCLBackend>();
 }
 
-backend::TargetCodePtr OpenCLBackend::convert(const ProgramPtr& source) const {
+backend::TargetCodePtr OpenCLBackend::convert(const NodePtr& source) const {
 
 	// create and set up the converter
 	Converter converter;

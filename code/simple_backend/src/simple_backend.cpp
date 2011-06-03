@@ -55,7 +55,7 @@ namespace simple_backend {
 		return std::make_shared<SimpleBackend>();
 	}
 
-	backend::TargetCodePtr SimpleBackend::convert(const core::ProgramPtr& source) const {
+	backend::TargetCodePtr SimpleBackend::convert(const core::NodePtr& source) const {
 
 		// create and set up the converter
 		Converter converter(false);

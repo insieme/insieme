@@ -80,7 +80,7 @@ using namespace utils::log;
 		/**
 		 * A constructor for this class.
 		 */
-		ConvertedCode(const core::ProgramPtr& source, const std::vector<string>& headers, const CodeFragmentPtr& code)
+		ConvertedCode(const core::NodePtr& source, const std::vector<string>& headers, const CodeFragmentPtr& code)
 			: TargetCode(source), headers(headers), code(code) { }
 
 		/**
@@ -105,7 +105,7 @@ using namespace utils::log;
 		return ::operator<<(out, this->code);
 	}
 
-	backend::TargetCodePtr Converter::convert(const core::ProgramPtr& prog) {
+	backend::TargetCodePtr Converter::convert(const core::NodePtr& prog) {
 
 		// obtain headers
 		std::vector<string> headers = stmtConverter->getHeaderDefinitions();
