@@ -381,7 +381,7 @@ namespace arithmetic {
 		/**
 		 * Obtains the coefficient of the given product within this formula.
 		 *
-		 * @param product
+		 * @param product the product looking for
 		 * @return the coefficient of the given product, 0 if not present
 		 */
 		int operator[](const Product& product) const;

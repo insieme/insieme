@@ -295,9 +295,11 @@ namespace arithmetic {
 
 		// search for product (binary search)
 		auto end = terms.end();
-		auto pos = std::lower_bound(terms.begin(), end, std::make_pair(product,0), [](const Formula::Term& a, const Formula::Term& b) {
-			return a.first < b.first;
-		});
+		auto pos = std::lower_bound(terms.begin(), end, std::make_pair(product,0),
+				[](const Formula::Term& a, const Formula::Term& b) {
+					return a.first < b.first;
+				}
+		);
 
 		// check whether it has been found
 		if (pos != end && pos->first == product) {
