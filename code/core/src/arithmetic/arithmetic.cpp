@@ -37,6 +37,7 @@
 #include "insieme/core/arithmetic/arithmetic.h"
 
 #include <functional>
+#include <algorithm>
 
 #include "insieme/utils/iterator_utils.h"
 
@@ -282,6 +283,29 @@ namespace arithmetic {
 			cur.first = cur.first / divisor;
 		});
 		return res;
+	}
+
+
+	int Formula::operator[](const Product& product) const {
+
+		// quick check
+		if (terms.empty()) {
+			return 0;
+		}
+
+		// search for product (binary search)
+		auto end = terms.end();
+		auto pos = std::lower_bound(terms.begin(), end, std::make_pair(product,0), [](const Formula::Term& a, const Formula::Term& b) {
+			return a.first < b.first;
+		});
+
+		// check whether it has been found
+		if (pos != end && pos->first == product) {
+			return pos->second;
+		}
+
+		// not included
+		return 0;
 	}
 
 

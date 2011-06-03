@@ -245,53 +245,66 @@ TEST(ArithmeticTest, FormulaProperties) {
 	VariablePtr varB = builder.variable(type, 2);
 
 	Formula zero;
-
 	EXPECT_TRUE(zero.isZero());
+	EXPECT_FALSE(zero.isOne());
 	EXPECT_TRUE(zero.isConstant());
 	EXPECT_TRUE(zero.isLinear());
 	EXPECT_TRUE(zero.isPolynomial());
+
+	Formula one = Product();
+	EXPECT_FALSE(one.isZero());
+	EXPECT_TRUE(one.isOne());
+	EXPECT_TRUE(one.isConstant());
+	EXPECT_TRUE(one.isLinear());
+	EXPECT_TRUE(one.isPolynomial());
 
 	Formula tmp;
 
 	tmp = varA;
 	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
 	EXPECT_TRUE(tmp.isLinear());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = varA * varA;
 	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
 	EXPECT_FALSE(tmp.isLinear());
 	EXPECT_TRUE(tmp.isPolynomial());
 
-	Product one;
 	tmp = one / varA;
 	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
 	EXPECT_FALSE(tmp.isLinear());
 	EXPECT_FALSE(tmp.isPolynomial());
 
 	tmp = varA * varB;
 	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
 	EXPECT_FALSE(tmp.isLinear());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = tmp * varA;
 	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
 	EXPECT_FALSE(tmp.isLinear());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = 2*varA + 2*varB + 3;
 	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
 	EXPECT_TRUE(tmp.isLinear());
 	EXPECT_TRUE(tmp.isPolynomial());
 
 	tmp = 2*varA + 2*varA*varB + 3;
 	EXPECT_FALSE(tmp.isZero());
+	EXPECT_FALSE(tmp.isOne());
 	EXPECT_FALSE(tmp.isConstant());
 	EXPECT_FALSE(tmp.isLinear());
 	EXPECT_TRUE(tmp.isPolynomial());
@@ -371,6 +384,38 @@ TEST(ArithmeticTest, Division) {
 	tmp = tmp / i;
 	EXPECT_EQ("v1-v2-2*v1^-1", toString(tmp));
 
+}
+
+TEST(ArithmeticTest, SubscriptOperator) {
+
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+
+	// input: 2+4+3*i+(2+4)*j
+	// output: 3*i+6*j+6
+
+	auto f = 2+4+3*i+(2+4)*j;
+	EXPECT_EQ("3*v1+6*v2+6", toString(f));
+
+	Product one;
+	EXPECT_EQ(3, f[i]);
+	EXPECT_EQ(6, f[j]);
+	EXPECT_EQ(6, f[one]);
+
+	f = 2 * i * j + 3 * i - 2;
+	EXPECT_EQ(2, f[i*j]);
+	EXPECT_EQ(3, f[i]);
+	EXPECT_EQ(-2, f[one]);
+
+	// some none-existing terms
+	EXPECT_EQ(0, f[i*i]);
+	EXPECT_EQ(0, f[j]);
 
 
 }

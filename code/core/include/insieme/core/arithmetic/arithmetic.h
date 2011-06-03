@@ -275,6 +275,11 @@ namespace arithmetic {
 		bool isZero() const { return terms.empty(); }
 
 		/**
+		 * Checks whether this formula represents one.
+		 */
+		bool isOne() const { return terms.size() == static_cast<std::size_t>(1) && terms[0].first.isOne() && terms[0].second == 1; }
+
+		/**
 		 * Checks whether this formula represents a constant value.
 		 *
 		 * @return true if so, false otherwise
@@ -372,6 +377,14 @@ namespace arithmetic {
 		bool operator!=(const Formula& other) const {
 			return !(*this == other);
 		}
+
+		/**
+		 * Obtains the coefficient of the given product within this formula.
+		 *
+		 * @param product
+		 * @return the coefficient of the given product, 0 if not present
+		 */
+		int operator[](const Product& product) const;
 
 		/**
 		 * Allows this formula to be printed to some output stream via
