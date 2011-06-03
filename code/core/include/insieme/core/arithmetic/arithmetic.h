@@ -164,6 +164,14 @@ namespace arithmetic {
 		bool operator<(const Product& other) const;
 
 		/**
+		 * Obtains the exponent of the given variable within this product.
+		 *
+		 * @param var the variable for which's product to be looking for
+		 * @return the associated exponent or 0 if the variable is not included.
+		 */
+		int operator[](const VariablePtr& var) const;
+
+		/**
 		 * Compares this product with another product. Two products are equivalent if
 		 * they are formed by the same set of variables, each equipped with the same exponent.
 		 *
