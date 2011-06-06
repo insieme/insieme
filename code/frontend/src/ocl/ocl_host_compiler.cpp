@@ -425,12 +425,11 @@ bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::
             if(iocl::KernelFileAnnotationPtr kfa =
                     dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
                 string path = kfa->getKernelPath();
-std::cerr << "Found OpenCL kernel file path: " << path;
+//std::cerr << "Found OpenCL kernel file path: " << path;
                 if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
                     cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
                 if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
                     if(clCPWS->getValue() == "clCreateProgramWithSource") {
-std::cerr << "BLABLABLABLABLABLABLBLBA\n";
                         ProgramPtr kernels = loadKernelsFromFile(path, builder);
                         for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel){
                             kernelEntries.push_back(kernel);
@@ -632,7 +631,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                         TypePtr newType = builder.refType(newInit->getType());
 
                         NodePtr newDecl = builder.declarationStmt(var, builder.refNew(newInit));
-
+//assert(false && "I'm an important part of this program and MUST stay here!\n");
                         const VariablePtr& newVar = builder.variable(newType);
 
                         cl_mems[var] = newVar;
@@ -821,17 +820,17 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                         newType = rt->getElementType();
                     else
                         newType = cl_mems[var]->getType();
-                    NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
+                    NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
                     copyAnnotations(decl, ret);
                     return ret;
                 }
             }
+        } else {
+            // remove delarations of opencl type variables. Should not be used any more
+            // TODO let the unused variable removal do the job
+            if(var->getType()->toString().find("_cl_") != string::npos)
+                return BASIC.getNoOp();
         }
-
-        // remove delarations of opencl type variables. Should not be used any more
-        // TODO let the unused variable removal do the job
-        if(var->getType()->toString().find("_cl_") != string::npos)
-            return BASIC.getNoOp();
 
     }
 
