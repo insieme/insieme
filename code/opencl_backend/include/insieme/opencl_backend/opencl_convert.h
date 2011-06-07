@@ -51,7 +51,7 @@ typedef std::shared_ptr<OpenCLBackend> OpenCLBackendPtr;
 class OpenCLBackend : public backend::Backend {
 public:
 	static OpenCLBackendPtr getDefault();
-	backend::TargetCodePtr convert(const core::ProgramPtr& source) const;
+	backend::TargetCodePtr convert(const core::NodePtr& source) const;
 };
 
 class OclFunctionManager : public simple_backend::FunctionManager {

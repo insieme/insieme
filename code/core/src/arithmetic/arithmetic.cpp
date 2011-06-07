@@ -102,6 +102,41 @@ namespace arithmetic {
 			return res;
 		}
 
+		template<typename Extractor, typename Container, typename T>
+		inline int findAssignedValue(const Container& list, const T& value) {
+			typedef std::pair<T,int> Element;
+			Extractor ext;
+
+			// quick check
+			if (list.empty()) {
+				return 0;
+			}
+
+			// short cut for single-element lists
+			if (list.size() == static_cast<std::size_t>(1)) {
+				if (ext(list[0].first) == ext(value)) {
+					return list[0].second;
+				}
+				return 0;
+			}
+
+			// search for product (binary search)
+			auto end = list.end();
+			auto pos = std::lower_bound(list.begin(), end, std::make_pair(value,0),
+					[](const Element& a, const Element& b) {
+						Extractor ext;
+						return ext(a.first) < ext(b.first);
+					}
+			);
+
+			// check whether it has been found
+			if (pos != end && ext(pos->first) == ext(value)) {
+				return pos->second;
+			}
+
+			// not included
+			return 0;
+		}
 
 	}
 
@@ -161,6 +196,10 @@ namespace arithmetic {
 
 		// this is smaller if not done yet
 		return it1!=end1;
+	}
+
+	int Product::operator[](const VariablePtr& var) const {
+		return findAssignedValue<deref<VariablePtr>>(factors, var);
 	}
 
 	std::ostream& Product::printTo(std::ostream& out) const {
@@ -287,25 +326,7 @@ namespace arithmetic {
 
 
 	int Formula::operator[](const Product& product) const {
-
-		// quick check
-		if (terms.empty()) {
-			return 0;
-		}
-
-		// search for product (binary search)
-		auto end = terms.end();
-		auto pos = std::lower_bound(terms.begin(), end, std::make_pair(product,0), [](const Formula::Term& a, const Formula::Term& b) {
-			return a.first < b.first;
-		});
-
-		// check whether it has been found
-		if (pos != end && pos->first == product) {
-			return pos->second;
-		}
-
-		// not included
-		return 0;
+		return findAssignedValue<id<Product>>(terms, product);
 	}
 
 

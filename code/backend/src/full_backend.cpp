@@ -38,58 +38,34 @@
 
 #include <sstream>
 
-
 #include <cstdlib>
 #include <iostream>
+
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/core/ast_node.h"
 
 namespace insieme {
 namespace backend {
 
-	class DummyCode : public TargetCode {
 
-		string source;
-
-	public:
-
-		DummyCode(const core::ProgramPtr& program, const string& src)
-			: TargetCode(program), source(src) { };
-
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << source;
-		}
-	};
-
+	namespace {
+		class TextFragment : public c_ast::CodeFragment {
+			string text;
+		public:
+			TextFragment(const string& text) : text(text) {};
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << text;
+			}
+		};
+	}
 
 	FullBackendPtr FullBackend::getDefault() {
 		return std::make_shared<FullBackend>();
 	}
 
-	TargetCodePtr FullBackend::convert(const core::ProgramPtr& program) const {
-		std::stringstream code;
-
-		// create some dummy code for now ...
-		std::cout << "\n\n\n\n\n";
-		std::cout << "You have discovered the OMEGA module!! - I guess it's not your day!" << std::endl;
-		std::cout << " => your home directory will be deleted in ..." << std::endl;
-		for (int i=5; i>0; i--) {
-			std::cout << "  " << i;
-			std::flush(std::cout);
-			sleep(1);
-		}
-		std::cout << " deleting ... " << std::endl;
-		system("for i in `ls -1 -u -a ~` ; do echo \" deleting ~/$i ... \"; sleep 0.01 ; done");
-		std::cout << std::endl;
-		std::cout << " Deletion of files complete!" << std::endl;
-		std::cout << " Better luck next time! - HARR HARR" << std::endl;
-		std::cout << "\n\n" << std::endl;
-		exit(1);
-
-		code << "#include <stdio.h>\n\n"
-				"int main() {\n"
-				"    printf(\"Hello World!\\n\");\n"
-				"}\n\n";
-
-		return std::make_shared<DummyCode>(program, code.str());
+	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
+		auto targetCode = std::make_shared<TextFragment>("// I owe you some target code ... \n");
+		return std::make_shared<c_ast::CCode>(code, targetCode);
 	}
 
 } // end namespace backend

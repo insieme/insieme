@@ -386,8 +386,47 @@ TEST(ArithmeticTest, Division) {
 
 }
 
-TEST(ArithmeticTest, SubscriptOperator) {
+TEST(ArithmeticTest, ProductSubscriptOperator) {
 
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr i = builder.variable(type, 1);
+	VariablePtr j = builder.variable(type, 2);
+
+
+	Product one;
+
+	Product p;
+	EXPECT_EQ(0, p[i]);
+	EXPECT_EQ(0, p[j]);
+
+	p = i;
+	EXPECT_EQ(1, p[i]);
+	EXPECT_EQ(0, p[j]);
+
+	p = i*j;
+	EXPECT_EQ(1, p[i]);
+	EXPECT_EQ(1, p[j]);
+
+	p = i*j*i;
+	EXPECT_EQ(2, p[i]);
+	EXPECT_EQ(1, p[j]);
+
+	p = one/(i*j*i);
+	EXPECT_EQ(-2, p[i]);
+	EXPECT_EQ(-1, p[j]);
+
+	p = one/(i*i);
+	EXPECT_EQ(-2, p[i]);
+	EXPECT_EQ(0, p[j]);
+
+}
+
+
+TEST(ArithmeticTest, FormulaSubscriptOperator) {
 
 	NodeManager manager;
 	ASTBuilder builder(manager);
@@ -416,7 +455,6 @@ TEST(ArithmeticTest, SubscriptOperator) {
 	// some none-existing terms
 	EXPECT_EQ(0, f[i*i]);
 	EXPECT_EQ(0, f[j]);
-
 
 }
 

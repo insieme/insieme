@@ -70,7 +70,7 @@ struct _irt_work_item {
 	irt_wi_implementation_id impl_id;
 	irt_work_item_range range;
 	uint32 num_groups;
-	irt_work_group_id* work_groups;
+	irt_wi_wg_membership* wg_memberships;
 	volatile irt_work_item_state state;
 	irt_lw_data_item *parameters;
 	// wi splitting related

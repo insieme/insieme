@@ -34,6 +34,60 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define XML_SCHEMA_DIR std::string("/home/herbert/insieme/code/xml/schema/")
+#include <gtest/gtest.h>
+
+#include "insieme/backend/c_ast/c_code.h"
+
+namespace insieme {
+namespace backend {
+namespace c_ast {
+
+namespace {
+
+	// a dummy fragment just representing text
+	class TextFragment : public c_ast::CodeFragment {
+		string text;
+	public:
+		TextFragment(const string& text) : text(text) {};
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << text;
+		}
+	};
+
+	CodeFragmentPtr getTextFragment(const string& text) {
+		return std::make_shared<TextFragment>(text);
+	}
+
+}
+
+
+TEST(C_AST, FragmentDependencyResolution) {
+
+	// create a simple code fragment
+	CodeFragmentPtr code = getTextFragment("A");
+
+	EXPECT_EQ("A\n", toString(CCode(core::NodePtr(), code)));
+
+	// add something with dependencies
+
+	CodeFragmentPtr codeA = getTextFragment("A");
+	CodeFragmentPtr codeB = getTextFragment("B");
+	CodeFragmentPtr codeC = getTextFragment("C");
+	CodeFragmentPtr codeD = getTextFragment("D");
+
+	codeB->addDependency(codeA);
+	codeC->addDependency(codeB);
+	codeD->addDependency(codeC);
+
+	EXPECT_EQ("A\nB\nC\nD\n", toString(CCode(core::NodePtr(), codeD)));
+
+	// add additional edge (should not change anything)
+	codeD->addDependency(codeA);
+	EXPECT_EQ("A\nB\nC\nD\n", toString(CCode(core::NodePtr(), codeD)));
+
+}
+
+} // end namespace c_ast
+} // end namespace backend
+} // end namespace insieme
 

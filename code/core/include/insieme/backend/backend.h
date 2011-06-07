@@ -61,9 +61,9 @@ namespace backend {
 	class TargetCode : public utils::Printable {
 
 		/**
-		 * The INSPIRE program this target code has been generated from.
+		 * The INSPIRE program fragment this target code has been generated from.
 		 */
-		const core::ProgramPtr source;
+		const core::NodePtr source;
 
 	protected:
 
@@ -72,7 +72,7 @@ namespace backend {
 		 *
 		 * @param source the INSPIRE program for which this target code representation has been generated.
 		 */
-		TargetCode(const core::ProgramPtr& source) : source(source) {}
+		TargetCode(const core::NodePtr& source) : source(source) {}
 
 	public:
 
@@ -84,7 +84,7 @@ namespace backend {
 		/**
 		 * Obtains the INSPIRE program code this target code is based on.
 		 */
-		const core::ProgramPtr& getSource() const {
+		const core::NodePtr& getSource() const {
 			return source;
 		}
 
@@ -134,7 +134,7 @@ namespace backend {
 		 * specific target code. Multiple (parallel) invocations of this function have to
 		 * be supported.
 		 */
-		virtual TargetCodePtr convert(const core::ProgramPtr& program) const =0;
+		virtual TargetCodePtr convert(const core::NodePtr& program) const =0;
 
 	};
 
