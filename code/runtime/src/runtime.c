@@ -46,6 +46,7 @@
 #include "impl/worker.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
+#include "impl/work_group.impl.h"
 
 #ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"

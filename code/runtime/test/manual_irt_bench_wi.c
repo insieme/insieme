@@ -46,6 +46,7 @@
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
+#include "impl/work_group.impl.h"
 
 #define NUM_ITER 1000000
 #define NUM_LEVELS 1
