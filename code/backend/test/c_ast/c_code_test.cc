@@ -34,48 +34,60 @@
  * regarding third party software licenses.
  */
 
-#include "CL/cl.h"
-//#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
-    cl_program program = NULL;
+#include <gtest/gtest.h>
 
-//#pragma insieme mark
-int main(int argc, char **argv)
-{
-    cl_context context;
-    cl_command_queue queue;
-    cl_kernel kernel;
-    cl_int err;
+#include "insieme/backend/c_ast/c_code.h"
 
-    cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
-//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_double) * 100, NULL, &err);
-    float* host_ptr;
+namespace insieme {
+namespace backend {
+namespace c_ast {
 
+namespace {
 
-    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
+	// a dummy fragment just representing text
+	class TextFragment : public c_ast::CodeFragment {
+		string text;
+	public:
+		TextFragment(const string& text) : text(text) {};
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << text;
+		}
+	};
 
-//    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	CodeFragmentPtr getTextFragment(const string& text) {
+		return std::make_shared<TextFragment>(text);
+	}
 
-    size_t kernelLength = 10;
-
-    char* path;// = "hello.cl";
-
-    char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
-
-#pragma insieme kernelFile "hello.cl"
-    program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
-
-    kernel = clCreateKernel(program, "hello", &err);
-    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
-
-    size_t globalSize[] = {8, 8};
-    size_t localSize[] = {3, 5, 6};
-
-    err =  clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, NULL);
-
-    clEnqueueReadBuffer(queue, dev_ptr1, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-
-    clReleaseMemObject(dev_ptr1);
-//    clReleaseMemObject(dev_ptr2);
-
-    return 0;
 }
+
+
+TEST(C_AST, FragmentDependencyResolution) {
+
+	// create a simple code fragment
+	CodeFragmentPtr code = getTextFragment("A");
+
+	EXPECT_EQ("A\n", toString(CCode(core::NodePtr(), code)));
+
+	// add something with dependencies
+
+	CodeFragmentPtr codeA = getTextFragment("A");
+	CodeFragmentPtr codeB = getTextFragment("B");
+	CodeFragmentPtr codeC = getTextFragment("C");
+	CodeFragmentPtr codeD = getTextFragment("D");
+
+	codeB->addDependency(codeA);
+	codeC->addDependency(codeB);
+	codeD->addDependency(codeC);
+
+	EXPECT_EQ("A\nB\nC\nD\n", toString(CCode(core::NodePtr(), codeD)));
+
+	// add additional edge (should not change anything)
+	codeD->addDependency(codeA);
+	EXPECT_EQ("A\nB\nC\nD\n", toString(CCode(core::NodePtr(), codeD)));
+
+}
+
+} // end namespace c_ast
+} // end namespace backend
+} // end namespace insieme
+

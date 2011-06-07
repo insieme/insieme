@@ -34,48 +34,53 @@
  * regarding third party software licenses.
  */
 
-#include "CL/cl.h"
-//#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
-    cl_program program = NULL;
+#pragma once
 
-//#pragma insieme mark
-int main(int argc, char **argv)
-{
-    cl_context context;
-    cl_command_queue queue;
-    cl_kernel kernel;
-    cl_int err;
+#include <exception>
 
-    cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
-//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_double) * 100, NULL, &err);
-    float* host_ptr;
+#include "insieme/core/arithmetic/arithmetic.h"
+
+namespace insieme {
+namespace core {
+
+class Expression;
+template<typename T> class Pointer;
+typedef Pointer<const Expression> ExpressionPtr;
+
+namespace arithmetic {
+
+	class NotAFormulaException;
+
+	/**
+	 * A function converting a given expression into an equivalent formula.
+	 *
+	 * @param expr the expression to be converted
+	 * @return an equivalent formula
+	 *
+	 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
+	 */
+	Formula toFormula(const ExpressionPtr& expr);
+
+	/**
+	 * A function converting a formula into an equivalent expression.
+	 *
+	 * @param manager the manager responsible for handling the IR nodes constructed by this method
+	 * @param formula the formula to be converted
+	 * @return an equivalent IR expression
+	 */
+	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
 
 
-    dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
+	/**
+	 * An exception which will be raised if a expression not representing
+	 * a formula should be converted into one.
+	 */
+	class NotAFormulaException : public std::exception {
+		virtual const char* what() const throw() {
+			return "Cannot convert given expression - not a formula!";
+		}
+	};
 
-//    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-
-    size_t kernelLength = 10;
-
-    char* path;// = "hello.cl";
-
-    char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
-
-#pragma insieme kernelFile "hello.cl"
-    program = clCreateProgramWithSource(context, 1, (const char**)&kernelSrc, &kernelLength, &err);
-
-    kernel = clCreateKernel(program, "hello", &err);
-    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
-
-    size_t globalSize[] = {8, 8};
-    size_t localSize[] = {3, 5, 6};
-
-    err =  clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, NULL);
-
-    clEnqueueReadBuffer(queue, dev_ptr1, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-
-    clReleaseMemObject(dev_ptr1);
-//    clReleaseMemObject(dev_ptr2);
-
-    return 0;
-}
+} // end namespace arithmetic
+} // end namespace core
+} // end namespace insieme

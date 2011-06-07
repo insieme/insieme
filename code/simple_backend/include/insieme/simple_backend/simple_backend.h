@@ -73,7 +73,7 @@ namespace simple_backend {
 		 * @param source the program to be converted
 		 * @return a pointer to the converted target code
 		 */
-		backend::TargetCodePtr convert(const core::ProgramPtr& source) const;
+		backend::TargetCodePtr convert(const core::NodePtr& source) const;
 	};
 
 } // end: namespace simple_backend

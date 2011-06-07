@@ -39,9 +39,12 @@
 #include <utility>
 #include <iterator>
 
-template<typename ITypeA, typename ITypeB>
-class IteratorParentType: public std::iterator<std::input_iterator_tag,
-	std::pair<typename std::iterator_traits<ITypeA>::value_type, typename std::iterator_traits<ITypeB>::value_type> > { };
+template<
+	typename ITypeA,
+	typename ITypeB,
+	typename ValueTypeA = typename std::iterator_traits<ITypeA>::value_type,
+	typename ValueTypeB = typename std::iterator_traits<ITypeB>::value_type>
+class IteratorParentType : public std::iterator<std::input_iterator_tag, std::pair<ValueTypeA, ValueTypeB> > { };
 
 // todo inherit from iterator traits
 template<typename ITypeA, typename ITypeB>
@@ -49,17 +52,19 @@ class paired_iterator : public IteratorParentType<ITypeA, ITypeB> {
 	ITypeA a;
 	ITypeB b;
 
-	typename IteratorParentType<ITypeA, ITypeB>::value_type cur;
+	typedef typename IteratorParentType<ITypeA, ITypeB>::value_type ValueType;
+
+	ValueType cur;
 
 public:
 	paired_iterator(ITypeA a, ITypeB b) : a(a), b(b) { }
 
-	typename IteratorParentType<ITypeA, ITypeB>::value_type& operator*() {
+	ValueType& operator*() {
 		cur = std::make_pair(*a, *b);
 		return cur;
 	}
 
-	typename IteratorParentType<ITypeA, ITypeB>::value_type* operator->() {
+	ValueType* operator->() {
 		cur = std::make_pair(*a, *b);
 		return &cur;
 	}
@@ -88,4 +93,79 @@ public:
 template<typename A, typename B>
 paired_iterator<A, B> make_paired_iterator(A a, B b) {
 	return paired_iterator<A,B>(a, b);
+}
+
+
+// -----------------------------------------------------------------------
+//                 Cartesian Product Iterator
+// -----------------------------------------------------------------------
+
+// todo inherit from iterator traits
+template<typename ITypeA, typename ITypeB>
+class product_iterator : public IteratorParentType<ITypeA, ITypeB> {
+	ITypeA beginA;
+	ITypeA endA;
+	ITypeB endB;
+	ITypeA a;
+	ITypeB b;
+
+	typedef typename IteratorParentType<ITypeA, ITypeB>::value_type ValueType;
+
+	/**
+	 * A instance of the currently referenced element.
+	 */
+	ValueType cur;
+
+public:
+	product_iterator(ITypeA beginA, ITypeA endA, ITypeB beginB, ITypeB endB)
+		: beginA(beginA), endA(endA), endB(endB), a(beginA), b(beginB) { }
+
+	ValueType& operator*() {
+		cur = std::make_pair(*a, *b);
+		return cur;
+	}
+
+	ValueType* operator->() {
+		cur = std::make_pair(*a, *b);
+		return &cur;
+	}
+
+	product_iterator& operator++() {
+		++a;
+		if (a == endA) {
+			++b;
+			if (b != endB) {
+				a= beginA;
+			}
+		}
+		return *this;
+	}
+
+	product_iterator operator++(int) {
+		product_iterator ret = *this;
+		++this;
+		return ret;
+	}
+
+	bool operator==(const product_iterator& rhs) {
+		return (a == rhs.a) && (b == rhs.b);
+	}
+
+	bool operator!=(const product_iterator& rhs) {
+		return (a != rhs.a) || (b != rhs.b);
+	}
+};
+
+template<
+	typename ContainerA,
+	typename ContainerB,
+	typename IterA = typename ContainerA::const_iterator,
+	typename IterB = typename ContainerB::const_iterator,
+	typename ResIter = product_iterator<IterA, IterB>
+>
+std::pair<ResIter, ResIter> make_product_range(const ContainerA& first, const ContainerB& second) {
+	return std::make_pair(
+			ResIter(first.begin(), first.end(), second.begin(), second.end()),
+			ResIter(first.end(), first.end(), second.end(), second.end())
+	);
 }
