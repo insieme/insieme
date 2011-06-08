@@ -33,7 +33,8 @@ include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 # Build the runtime
 add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} )
 if ( USE_OPENCL )
-	 target_link_libraries(insieme_runtime ${OPENCL_LIBS})
+	target_link_libraries(insieme_runtime ${OPENCL_LIBS})
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/irt_ocl_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/irt_ocl_config.h)
 endif ( USE_OPENCL )
 
 target_link_libraries(insieme_runtime ${pthread_LIB} dl rt )

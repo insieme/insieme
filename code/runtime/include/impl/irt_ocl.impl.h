@@ -75,17 +75,23 @@ static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platfor
  * =====================================================================================
  */
 
-static void _irt_cl_print_device_info(cl_device_id* id) {
+static void _irt_cl_print_device_infos(cl_device_id* id) {
 	IRT_ASSERT(id != NULL, IRT_ERR_OCL, "Error: invalid device");
 	for (cl_uint i = 0; i < IRT_CL_NUM_DEVICE_PARAMS; i++) {
-		size_t cl_param_size;
-		char* cl_param_value;
-		IRT_ASSERT(clGetDeviceInfo(*id, _irt_cl_device_params[i].name, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info");
-		cl_param_value = alloca (cl_param_size);
-		IRT_ASSERT(clGetDeviceInfo(*id, _irt_cl_device_params[i].name, cl_param_size, cl_param_value, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info");
-		IRT_INFO("%-25s = \"%s\"\n", _irt_cl_device_params[i].name_string, cl_param_value);
+		IRT_INFO("%-25s = \"", _irt_cl_device_params[i].name_string);
+		_irt_cl_print_device_info(id, _irt_cl_device_params[i].name);
+		IRT_INFO("\"\n");
 	}
 	IRT_INFO("\n");
+}
+
+static void _irt_cl_print_device_info(cl_device_id* id, cl_device_info param_name){
+	size_t cl_param_size;
+	char* cl_param_value;
+	IRT_ASSERT(clGetDeviceInfo(*id, param_name, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info");
+	cl_param_value = alloca (cl_param_size);
+	IRT_ASSERT(clGetDeviceInfo(*id, param_name, cl_param_size, cl_param_value, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	IRT_INFO("%s", cl_param_value);
 }
 
 cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type){
@@ -216,8 +222,12 @@ irt_ocl_device* irt_ocl_get_device(cl_uint id){
 	return &devices[id];
 }
 
-void irt_ocl_print_device_info(irt_ocl_device* dev) {
-	_irt_cl_print_device_info(&(dev->cl_device));
+void irt_ocl_print_device_infos(irt_ocl_device* dev) {
+	_irt_cl_print_device_infos(&(dev->cl_device));
+}
+
+void irt_ocl_print_device_info(irt_ocl_device* dev, cl_device_info param_name){
+	_irt_cl_print_device_info(&(dev->cl_device), param_name);
 }
 
 float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag) {
@@ -243,8 +253,7 @@ float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_com
 	return time;
 }
 
-cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
-	cl_kernel kernel = NULL;
+cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
 	cl_program program = NULL;
 	size_t filesize = 0;
 	cl_int status;
@@ -256,12 +265,20 @@ cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, cons
 	device_name = alloca (cl_param_size);
 	IRT_ASSERT(clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, cl_param_size, device_name, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
 	
-	len = strlen(kernel_name);
-	char* converted_kernel_name = alloca(len + 1); // +1 for the \0 in the end
-	strcpy (converted_kernel_name, kernel_name);
+	const char* file_ptr = strrchr(file_name, '/'); // remove the path from the file_name
+	if (file_ptr) 
+		file_ptr++; // remove the last '/'
+	else
+		file_ptr = file_name;
+	
+	len = strlen(file_ptr);
+	IRT_ASSERT(len >= 0, IRT_ERR_OCL, "Error size of file_name");
+	
+	char* converted_file_name = alloca(len + 1); // +1 for the \0 in the end
+	strcpy (converted_file_name, file_ptr);
 	for (int i = 0; i < len; ++i) {
-		if (!isalnum ((int)converted_kernel_name[i])) {
-			converted_kernel_name[i] = '_';
+		if (!isalnum ((int)converted_file_name[i])) {
+			converted_file_name[i] = '_';
 		}
 	}
 	binary_name_size = len;
@@ -275,15 +292,15 @@ cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, cons
 		}
 	}
 	binary_name_size += len;
-	binary_name_size += 6; // kernel_name.device_name.bin\0
+	binary_name_size += 6; // file_name.device_name.bin\0
 	
 	char* binary_name = alloca (binary_name_size);
 
-	sprintf (binary_name, "%s.%s.bin", converted_kernel_name, converted_device_name);
+	sprintf (binary_name, "%s.%s.bin", converted_file_name, converted_device_name);
 	//printf("%s\n", binary_name);
 
-	if (flag == IRT_OCL_SOURCE){
-		char* program_source = _irt_load_program_source(filename, &filesize);
+	if (flag == IRT_OCL_SOURCE) {
+		char* program_source = _irt_load_program_source(file_name, &filesize);
 		IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
 	
 		program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &program_source, NULL, &status);
@@ -303,12 +320,12 @@ cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, cons
 			IRT_INFO("Device Build Log:\n%s\n", buildLog); 
 			free(buildLog);
 		}
-		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");	
+		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");
 		
 		_irt_save_program_binary(program, binary_name); 
 	}
 	
-	if (flag == IRT_OCL_BINARY) {	
+	if (flag == IRT_OCL_BINARY) {
 		cl_int binary_status;
 		unsigned char* program_s = (unsigned char*) _irt_load_program_source(binary_name, &filesize); 
 		program = clCreateProgramWithBinary (dev->cl_context, 1, &(dev->cl_device), &filesize, (const unsigned char **) &program_s, &binary_status, &status);
@@ -316,11 +333,14 @@ cl_kernel  irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, cons
 		IRT_ASSERT(status == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
 		IRT_ASSERT(clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");		
 	}
-	
-	kernel = clCreateKernel(program, kernel_name, &status);
-	IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
-	
-	IRT_ASSERT(clReleaseProgram(program) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing program");
-	return kernel;
+
+	return program;
 }
 
+cl_kernel irt_ocl_create_kernel(irt_ocl_device* dev, cl_program program, const char* kernel_name){
+	cl_int status;
+	cl_kernel kernel;
+	kernel = clCreateKernel(program, kernel_name, &status);
+	IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
+	return kernel;
+}

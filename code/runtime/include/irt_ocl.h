@@ -75,7 +75,8 @@ static _irt_cl_device_param _irt_cl_device_params[] = {
 static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
 static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
 static void _irt_cl_release_device(cl_context context, cl_command_queue queue);  
-static void _irt_cl_print_device_info(cl_device_id* device);
+static void _irt_cl_print_device_infos(cl_device_id* device);
+static void _irt_cl_print_device_info(cl_device_id* device, cl_device_info param_name);
 
 static char* _irt_load_program_source (const char* filename, size_t* filesize);
 static void _irt_save_program_binary (cl_program program, const char* binary_filename);
@@ -83,7 +84,7 @@ static void _irt_save_program_binary (cl_program program, const char* binary_fil
 
 //-------------------
 
-#define DEVICE_TYPE (CL_DEVICE_TYPE_CPU | CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR)
+#define DEVICE_TYPE (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_CPU)
 
 typedef struct _irt_ocl_device{
 	cl_device_id cl_device;
@@ -104,8 +105,11 @@ void irt_ocl_finalize_devices();
 cl_uint irt_ocl_get_num_devices();
 irt_ocl_device* irt_ocl_get_device(cl_uint id);
 
-void irt_ocl_print_device_info(irt_ocl_device* dev);
+void irt_ocl_print_device_info(irt_ocl_device* dev, cl_device_info param_name);
+void irt_ocl_print_device_infos(irt_ocl_device* dev);
+
 float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag);
 float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag);
 
-cl_kernel irt_ocl_create_kernel(irt_ocl_device* dev, const char* filename, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
+cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, const char* build_options, irt_ocl_create_kernel_flag flag);
+cl_kernel irt_ocl_create_kernel(irt_ocl_device* dev, cl_program program, const char* kernel_name);
