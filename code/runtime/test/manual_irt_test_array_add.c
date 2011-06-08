@@ -44,6 +44,7 @@
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
+#include "impl/work_group.impl.h"
 
 #ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"

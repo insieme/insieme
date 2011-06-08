@@ -89,6 +89,7 @@ IRT_DECLARE_ID_TYPE(work_group);
 //typedef uint32 irt_barrier_id;
 typedef uint32 irt_distribute_id;
 typedef struct _irt_work_group irt_work_group;
+typedef struct _irt_wi_wg_membership irt_wi_wg_membership;
 
 /* ------------------------------ work items ----- */
 
