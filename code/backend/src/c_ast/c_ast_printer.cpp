@@ -89,6 +89,10 @@ namespace c_ast {
 				return out << node->name;
 			}
 
+			PRINT(OpaqueCode) {
+				return out << node->code;
+			}
+
 			PRINT(PrimitiveType) {
 				return print(node->name);
 			}
