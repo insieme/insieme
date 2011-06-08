@@ -50,8 +50,15 @@ struct _irt_work_group {
 	uint32 local_member_count;
 	uint32 cur_barrier_count_up;
 	uint32 cur_barrier_count_down;
+	void** redistribute_data_array;
 };
 
+struct _irt_wi_wg_membership {
+	irt_work_group_id wg_id;
+	uint32 num;
+};
+
+typedef void* irt_wg_redistribution_function(void** collected, uint32 local_id);
 
 /* ------------------------------ operations ----- */
 
@@ -64,6 +71,8 @@ void irt_wg_destroy(irt_work_group* wg);
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
 
+static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi);
+
 void irt_wg_barrier(irt_work_group* wg);
-void irt_wg_distribute(irt_work_group* wg, irt_distribute_id dist /*, ???*/);
+void* irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* data, irt_wg_redistribution_function* func);
 
