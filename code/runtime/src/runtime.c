@@ -34,6 +34,10 @@
  * regarding third party software licenses.
  */
 
+#ifdef USE_OPENCL 
+#include "impl/irt_ocl.impl.h"
+#endif
+
 #include "declarations.h"
 
 #include <mqueue.h>
@@ -48,9 +52,6 @@
 #include "impl/data_item.impl.h"
 #include "impl/work_group.impl.h"
 
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
-#endif
 
 #include "utils/lookup_tables.h"
 
