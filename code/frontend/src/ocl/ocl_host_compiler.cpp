@@ -76,6 +76,18 @@ void tryStructExtract(ExpressionPtr& expr, ASTBuilder& builder) {
     }
 }
 
+bool isNullPtr(ExpressionPtr& expr, ASTBuilder& builder) {
+    if(const CallExprPtr rta = dynamic_pointer_cast<const CallExpr>(expr))
+        if(rta->getFunctionExpr() == BASIC.getRefToAnyRef())
+            if(const CallExprPtr refVar = dynamic_pointer_cast<const CallExpr>(rta->getArgument(0)))
+                if(refVar->getFunctionExpr() == BASIC.getRefVar())
+                    if(const CallExprPtr getNull = dynamic_pointer_cast<const CallExpr>(refVar->getArgument(0)))
+                        if(getNull->getFunctionExpr() == BASIC.getGetNull())
+                            return true;
+
+    return false;
+}
+
 bool KernelCodeRetriver::visitNode(const core::NodePtr& node) {
     if(node == breakingStmt) {
         return false; // stop recursion
@@ -212,8 +224,8 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
         TypePtr type;
         ExpressionPtr hostPtr;
 
-        assert(o2i.extractSizeFromSizeof(node->getArgument(2), size, type)
-                && "Unable to deduce type from clCreateBuffer call:\nNo sizeof call found, cannot translate to INSPIRE.");
+        bool sizeFound = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+        assert(sizeFound && "Unable to deduce type from clCreateBuffer call:\nNo sizeof call found, cannot translate to INSPIRE.");
 
         if(CastExprPtr c = dynamic_pointer_cast<const CastExpr>(node->getArgument(3))) {
             if(c->getSubExpression()->getType() != BASIC.getAnyRef()) {// a scalar (probably NULL) has been passed as hostPtr arg
@@ -273,7 +285,26 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
         ExpressionPtr kernel = node->getArgument(0);
         // check if kernel argument is in a struct, if yes, use the struct-variable
         tryStructExtract(kernel, builder);
-        const ExpressionPtr& arg = node->getArgument(3);
+        ExpressionPtr arg = node->getArgument(3);
+
+        if(isNullPtr(arg, builder)) {
+            // in this case arg is a local variable which has to be declared in host code
+            // need to read size parameter
+            ExpressionPtr size;
+            TypePtr type;
+            ExpressionPtr hostPtr;
+            bool sizeFound = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+            assert(sizeFound && "Unable to deduce type from clSetKernelArg call when allocating local memory:\nNo sizeof call found, cannot translate to INSPIRE.");
+
+            // declare a new variable to be used as argument
+            VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
+            DeclarationStmtPtr localDecl = builder.declarationStmt(localMem, builder.callExpr(BASIC.getRefVar(),
+                    builder.callExpr(BASIC.getArrayCreate1D(), BASIC.getTypeLiteral(type), size)));
+            // should I really have access to private members or HostMapper here or is this a compiler bug?
+            localMemDecls[kernel].push_back(localDecl);
+            arg = localMem;
+        }
+
         const ExpressionPtr& arg2 = node->getArgument(1);
         // check if the index argument is a (casted) integer literal
         const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(arg2);
@@ -315,11 +346,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
         }
         return ret;
     );
-/*
-    ADD_Handler(builder, "clCreateProgramWithSource",
-        return BASIC.getNoOp();
-    );
-*/
+
     ADD_Handler(builder, "clEnqueueNDRangeKernel",
         // get argument vector
         ExpressionPtr k = node->getArgument(1);
@@ -329,8 +356,6 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) : builder(build),
         // adding global and local size to the argument vector
         args.push_back(node->getArgument(4) );
         args.push_back(node->getArgument(5) );
-
-//        std::cerr << "ARGUMENTS: " << toString(join(", ", args)) << std::endl;
 
         return node;
     );
@@ -483,13 +508,11 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
     }
 
     if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)){
- //       std::cout << callExpr->toString() << " FOUND\n";
         const ExpressionPtr& fun = callExpr->getFunctionExpr();
         vector<ExpressionPtr> args = callExpr->getArguments();
 
         if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(fun)) {
             callExpr->substitute(builder.getNodeManager(), *this);
-//            std::cout << "CALL: " << literal->getValue() << std::endl;
             if(const HandlerPtr& replacement = handles[literal->getValue()]) {
                 NodePtr ret = replacement->handleNode(callExpr);
                 // check if new kernels have been created
@@ -505,19 +528,14 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
         }
 
         if(fun == BASIC.getRefAssign()) {
-//std::cout << "ASSIGNMENT: " << callExpr << std::endl;
             // on the left hand side we'll either have a variable or a struct, probably holding a reference to the global array
             // for the latter case we have to handle it differently
             if(const CallExprPtr& cre = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0))) {
-//std::cout << "Is a callExpr: " << cre << std::endl;
                 if(cre->getFunctionExpr() == BASIC.getCompositeRefElem()) {
-//std::cout << "The lhs: " << *cre << ", the rhs: " << callExpr->getArgument(1) << std::endl;
                     if(cre->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
                         if(const CallExprPtr& newCall = checkAssignment(callExpr)) {
                             TypePtr newType = builder.refType(newCall->getType());
 
-//                            std::cout << "newType " << newType << std::endl;
- /**/
                             const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(cre->getArgument(0));
                             assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
                             VariablePtr newStruct;
@@ -536,11 +554,9 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                             StructTypePtr structType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct));
                             StructType::Entries entries = structType->getEntries(); // actual fields of the struct
                             StructType::Entries newEntries;
-                            //StructExpr::Members members =
 
                             for_each(entries, [&](std::pair<IdentifierPtr, TypePtr> entry) {
                                 if(entry.first == toChange) {
-//                                    std::cout << "changing " << entry << " to " << newType << std::endl;
                                     newEntries.push_back(std::make_pair(entry.first, newType));
                                 } else {
                                     newEntries.push_back(entry);
@@ -552,11 +568,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
                             copyAnnotations(struct_, replacement);
                             cl_mems[struct_] = dynamic_pointer_cast<const Variable>(replacement);
-
-
-//                            std:: cout << newStruct->getType() << " type " << dynamic_pointer_cast<const StructType>(getNonRefType(struct_)) << std::endl;
-//                            assert(false);
-/**/
                         }
                     }
 
@@ -606,16 +617,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                 }
             }
 
-/*
-            if(const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
-                    std::cout << "Assigning literal " << callExpr->getArgument(1) << " to " << callExpr->getArgument(0) << std::endl;
-                if(const LiteralPtr literal = dynamic_pointer_cast<const Literal>(rhs->getFunctionExpr())) {
-                    std::cout << "Where you wanted to be " <<  callExpr->getArgument(0) << std::endl;
-                    if(HandlerPtr replacement = handles[literal->getValue()]) {
-                        return replacement->handleNode(callExpr);
-                    }
-                }
-            }*/
         }
     }
 
@@ -631,7 +632,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
                         TypePtr newType = builder.refType(newInit->getType());
 
                         NodePtr newDecl = builder.declarationStmt(var, builder.refNew(newInit));
-//assert(false && "I'm an important part of this program and MUST stay here!\n");
                         const VariablePtr& newVar = builder.variable(newType);
 
                         cl_mems[var] = newVar;
@@ -672,16 +672,6 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
     });
 }
 
-HostMapper3rdPass::HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, KernelNames& oclKernelNames,
-        KernelLambdas& oclKernelLambdas):
-    builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs), kernelNames(oclKernelNames), kernelLambdas(oclKernelLambdas) {
-/*    create3Dvec = parse::parseExpression(builder.getNodeManager(), "fun(uint<4>:workDim, anyRef:size) -> vector<uint<4>, 3> {{ \
-            decl vector<uint<4>,3> sv = \
-             \
-            }}");*/
-
-}
-
 
 void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg){
     // remove stuff added by (void*)&
@@ -720,10 +710,8 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
     if(const CallExprPtr& toArray = dynamic_pointer_cast<const CallExpr>(size)) {
         if(toArray->getFunctionExpr() == BASIC.getScalarToArray()) {
             // check consitency with workDim, should be 1
-//            if(const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim)) {
-//                std::cout << "found Dim: " << dim->getValue() << std::endl;
             assert(wd == 1 && "Scalar group size passed to a multi dimensional work_dim");
-//            }*/
+
             argTy = toArray->getArgument(0)->getType();
             param = builder.variable(argTy);
             arg = toArray->getArgument(0);
@@ -743,9 +731,6 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
         arg = size;
     }
 
-
-    // check if the argument is an array
- //   if(const ArrayType)
 
     ExpressionPtr init = param;
 
@@ -786,8 +771,6 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 
         vDecl = builder.declarationStmt(vecTy, builder.vectorExpr(subscripts));
     }
-
-//std::cout << "SIZETYPE: !" << size->getType() << std::endl;
 
     FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
     return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
@@ -851,26 +834,88 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
                     vector<ExpressionPtr>& args = kernelArgs[k];
                     assert(args.size() > 0 && "No arguments for call to kernel function found");
 
-                    vector<ExpressionPtr> newArgs;
-                    for_each(args, [&](ExpressionPtr& arg) {
-                        //global and private memory arguments must be variables
-                        getVarOutOfCrazyInspireConstruct(arg);
-
-                        newArgs.push_back(dynamic_pointer_cast<const Expression>(this->resolveElement(arg)));
-                    });
-
                     // make a three element vector out of the global and local size
                     const ExpressionPtr global = anythingToVec3(newCall->getArgument(2), newCall->getArgument(4));
                     const ExpressionPtr local = anythingToVec3(newCall->getArgument(2), newCall->getArgument(5));
 
-                    // add global and local size to arguments
-                    newArgs.push_back(global);
-                    newArgs.push_back(local);
-
+                    vector<ExpressionPtr> newArgs;
                     // construct call to kernel function
-                    NodePtr ret = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
-                    copyAnnotations(callExpr, ret);
-                    return ret;
+                    if(localMemDecls[k].size() == 0) {
+                        // if there is no local memory in argument, the arguments can simply be copyied
+                        for_each(args, [&](ExpressionPtr& arg) {
+                            //global and private memory arguments must be variables
+                            getVarOutOfCrazyInspireConstruct(arg);
+
+                            newArgs.push_back(dynamic_pointer_cast<const Expression>(this->resolveElement(arg)));
+                        });
+
+                        // add global and local size to arguments
+                        newArgs.push_back(global);
+                        newArgs.push_back(local);
+
+                        NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
+                        copyAnnotations(callExpr, kernelCall);
+
+                        return kernelCall;
+                    }
+                    // add declarations for argument local variables if any, warping a function around it
+
+                    vector<StatementPtr> declsAndKernelCall;
+                    for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
+                        declsAndKernelCall.push_back(decl);
+                    });
+
+                    vector<VariablePtr> params;
+                    vector<ExpressionPtr> innerArgs;
+                    vector<TypePtr> wrapperInterface;
+
+                    for_each(args, [&](ExpressionPtr& arg) {
+                        bool local = false;
+                        //global and private memory arguments must be variables
+                        getVarOutOfCrazyInspireConstruct(arg);
+
+                        // local args are declared in localMemDecls
+                        for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
+                            if(arg == decl->getVariable()) {
+//                                params.push_back(decl->getVariable());
+                                // will be declared inside wrapper function
+                                local = true;
+                            }
+                        });
+                        if(!local) {
+                            // global and private memory arguments will be passed to the wrapper function as agrument
+                            ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
+                            assert(newArg && "Argument of kernel function must be an Expression");
+                            newArgs.push_back(newArg);
+                            wrapperInterface.push_back(newArg->getType());
+
+                            // kernel funtion will take a new variable as argument
+                            params.push_back(builder.variable(newArg->getType()));
+                        }
+                        // the kernel call will use the params of the outer call as arguments, they must be an expression
+                        innerArgs.push_back(params.back());
+                    });
+
+                    // add global and local size to arguments
+                    TypePtr vec3type = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+                    newArgs.push_back(global);
+                    VariablePtr globalVar = builder.variable(vec3type);
+                    params.push_back(globalVar);
+                    innerArgs.push_back(globalVar);
+                    wrapperInterface.push_back(vec3type);
+
+                    newArgs.push_back(local);
+                    VariablePtr localVar = builder.variable(vec3type);
+                    params.push_back(localVar);
+                    innerArgs.push_back(localVar);
+                    wrapperInterface.push_back(vec3type);
+
+                    NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, innerArgs);
+                    copyAnnotations(callExpr, kernelCall);
+
+                    declsAndKernelCall.push_back(dynamic_pointer_cast<const Statement>(kernelCall));
+                    const FunctionTypePtr& wrapperType = builder.functionType(wrapperInterface, BASIC.getInt4());
+                    return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
                 }
             }
             return newCall;
@@ -895,13 +940,14 @@ ProgramPtr HostCompiler::compile() {
     LOG(INFO) << "Adding kernels to host Program..." << oclHostMapper.getKernelArgs().size();
 
     const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
-std::cerr << "N kernelEntries: " << kernelEntries.size();
+
     const ProgramPtr& progWithKernels = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 
     Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
     oh2nd.mapNamesToLambdas(kernelEntries);
 
-    HostMapper3rdPass ohm3rd(builder, oclHostMapper.getClMemMapping(), oclHostMapper.getKernelArgs(), oh2nd.getKernelNames(), oh2nd.getKernelLambdas());
+    HostMapper3rdPass ohm3rd(builder, oclHostMapper.getClMemMapping(), oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
+            oh2nd.getKernelLambdas());
     if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
         mProgram = newProg;
         return newProg;

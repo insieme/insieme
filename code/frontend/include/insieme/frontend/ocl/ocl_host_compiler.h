@@ -141,6 +141,7 @@ typedef boost::unordered_map<core::VariablePtr,  core::VariablePtr> ClmemTable;
 typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
 typedef boost::unordered_map<string, core::ExpressionPtr> KernelNames;
 typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelLambdas;
+typedef boost::unordered_map<core::ExpressionPtr, vector<core::DeclarationStmtPtr> > LocalMemDecls;
 
 template<typename Lambda>
 HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct, Lambda lambda) {
@@ -172,6 +173,7 @@ class HostMapper : public core::transform::CachedNodeMapping {
     KernelArgs kernelArgs;
     KernelNames kernelNames;
     vector<core::ExpressionPtr> kernelEntries;
+    LocalMemDecls localMemDecls;
     core::ProgramPtr& mProgram;
 
     // check if the call is a call to ref.assign
@@ -190,6 +192,7 @@ public:
     const vector<core::ExpressionPtr>& getKernels() { return kernelEntries; }
     KernelArgs& getKernelArgs() { return kernelArgs; }
     KernelNames& getKernelNames() { return kernelNames; }
+    LocalMemDecls& getLocalMemDecls(){ return localMemDecls; }
 };
 
 /*
@@ -220,6 +223,7 @@ class HostMapper3rdPass : public core::transform::CachedNodeMapping {
     const core::ASTBuilder& builder;
     ClmemTable& cl_mems;
     KernelArgs& kernelArgs;
+    LocalMemDecls& localMemDecls;
     KernelNames& kernelNames;
     KernelLambdas& kernelLambdas;
 
@@ -235,8 +239,9 @@ class HostMapper3rdPass : public core::transform::CachedNodeMapping {
     const core::ExpressionPtr anythingToVec3(core::ExpressionPtr workDim, core::ExpressionPtr size);
 
 public:
-    HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, KernelNames& oclKernelNames,
-            KernelLambdas& oclKernelLambdas);
+    HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls, KernelNames& oclKernelNames,
+            KernelLambdas& oclKernelLambdas): builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs), localMemDecls(oclLocalMemDecls),
+                kernelNames(oclKernelNames), kernelLambdas(oclKernelLambdas) {}
 
     const core::NodePtr resolveElement(const core::NodePtr& element);
 

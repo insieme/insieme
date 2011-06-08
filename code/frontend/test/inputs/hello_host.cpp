@@ -47,17 +47,17 @@ int main(int argc, char **argv)
     cl_int err;
 
     cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
-//    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_double) * 100, NULL, &err);
+    cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
     float* host_ptr;
 
 
     dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
-//    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+    clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
     size_t kernelLength = 10;
 
-    char* path;// = "hello.cl";
+    char* path = "hello.cl";
 
     char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
 
@@ -66,16 +66,18 @@ int main(int argc, char **argv)
 
     kernel = clCreateKernel(program, "hello", &err);
     err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*)&dev_ptr1);
+    // local memory
+    clSetKernelArg(kernel, 1, sizeof(float) * 42, 0);
 
     size_t globalSize[] = {8, 8};
     size_t localSize[] = {3, 5, 6};
 
     err =  clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, NULL);
 
-    clEnqueueReadBuffer(queue, dev_ptr1, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+    clEnqueueReadBuffer(queue, dev_ptr2, CL_TRUE, 0,  sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
     clReleaseMemObject(dev_ptr1);
-//    clReleaseMemObject(dev_ptr2);
+    clReleaseMemObject(dev_ptr2);
 
     return 0;
 }
