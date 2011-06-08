@@ -66,15 +66,18 @@ namespace poly {
 struct NotAffineExpr : public std::logic_error {
 	const core::ExpressionPtr expr;
 	NotAffineExpr(const core::ExpressionPtr& expr);
+	~NotAffineExpr() throw () { }
 };
 
 struct VariableNotFound : public std::logic_error {
 	const core::VariablePtr var;
 	VariableNotFound(const core::VariablePtr& var);
+	~VariableNotFound() throw () { }
 };
 
 struct IteratorNotValid : public std::logic_error { 
 	IteratorNotValid() : std::logic_error("Iterator not valid!") { }
+	~IteratorNotValid() throw () { }
 };
 
 /**
