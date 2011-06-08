@@ -276,12 +276,19 @@ public:
 	size_t getIteratorNum() const { return iters.size(); }
 	size_t getParameterNum() const { return params.size(); }
 
+	// Returns an iterator over the Elements of this iteration vector,
+	// the elements are returned according to the order defined as follows:
+	// (iter0, iter1 ... iterN, param0, param1, ... paramM, 1)
 	iterator begin() const { return iterator(*this, iters.begin(), params.begin()); }
 	iterator end() const { return iterator(*this, iters.end(), params.end(), false); }
 
+	// Returns an iterator over the iterators of this iteration vector:
+	// (iter0, iter1, ... iterN)
 	IterVec::const_iterator iter_begin() const { return iters.begin(); }
 	IterVec::const_iterator iter_end() const { return iters.end(); }
 
+	// Returns an iterator over the parameters of this iteration vector:
+	// (param0, param1, ... paramM)
 	ParamVec::const_iterator param_begin() const { return params.begin(); }
 	ParamVec::const_iterator param_end() const { return params.end(); }
 
@@ -543,19 +550,41 @@ public:
 struct IterationDomain : public ConstraintSet<Constraint> {
 	IterationDomain(const IterationVector& iterVec, const ConstraintList& clist) : 
 		ConstraintSet<Constraint>(iterVec, clist) { }
+
+	std::ostream& printTo(std::ostream& out) {
+		out << "IterationDomain: ";
+	   	ConstraintSet<Constraint>::printTo(out);
+		return out;
+	}
+
 };
 
-
+// Access functions are defined by a set of equalities which defined the way
+// arrays are accessed. 
 struct AccessFunction : public ConstraintSet<EqualityConstraint> { 
 	
 	AccessFunction(const IterationVector& iterVec, const std::vector<EqualityConstraint>& clist) :
 		ConstraintSet<EqualityConstraint>(iterVec, clist) { }
+
+	std::ostream& printTo(std::ostream& out) {
+		out << "AccessFunctions: ";
+	   	ConstraintSet<EqualityConstraint>::printTo(out);
+		return out;
+	}
 };
 
+// Scheduling functions defines the order of statements in the program
 struct ScatteringFunction : public ConstraintSet<EqualityConstraint> { 
 	
 	ScatteringFunction(const IterationVector& iterVec, const std::vector<EqualityConstraint>& clist) :
 		ConstraintSet<EqualityConstraint>(iterVec, clist) { }
+	
+	std::ostream& printTo(std::ostream& out) {
+		out << "ScatteringFunction: ";
+	   	ConstraintSet<EqualityConstraint>::printTo(out);
+		return out;
+	}
+
 };
 
 } // end poly namespace

@@ -37,6 +37,7 @@
 #pragma once
 
 #include "CL/opencl.h"
+#include "impl/error_handling.impl.h"
 
 #define IRT_CL_NUM_PLATFORM_PARAMS	(sizeof(_irt_cl_platform_params)/sizeof(_irt_cl_platform_param))
 
