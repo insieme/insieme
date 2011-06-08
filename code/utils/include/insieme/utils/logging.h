@@ -54,6 +54,8 @@ namespace insieme {
 namespace utils {
 namespace log {
 
+#define LOG_DEFAULT DEBUG
+
 namespace io = boost::iostreams;
 
 /**
@@ -143,6 +145,7 @@ struct LevelSpec {
 	}
 	
 	static Level loggingLevelFromStr(const std::string& level) {
+		if(level.empty())		return LOG_DEFAULT;
 		if(level == "DEBUG")	return DEBUG;
 		if(level == "INFO")		return INFO;
 		if(level == "WARNING")	return WARNING;
