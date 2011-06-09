@@ -51,7 +51,7 @@
 #include "irt_ocl_config.h"
 #endif
 
-#define NUM_ELEMENTS 1000000
+#define NUM_ELEMENTS 100000000
 
 #define INSIEME_BOOL_T_INDEX 0
 #define INSIEME_INT_T_INDEX 1
@@ -116,8 +116,8 @@ void insieme_init_context(irt_context* context) {
 		printf("Compiling OpenCL program in \"");
 		irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
 		printf("\"\n");
-		//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "", IRT_OCL_SOURCE);
-		cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl", "", IRT_OCL_SOURCE); //FIXME remove
+		cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "", IRT_OCL_SOURCE);
+		//cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
 		clReleaseProgram(program);
 	}
 	#endif
@@ -181,7 +181,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_add_implementation2(irt_work_item* wi) {
+void insieme_wi_add_implementation1(irt_work_item* wi) {
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
 	irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
@@ -203,7 +203,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_add_implementation1(irt_work_item* wi) {
+void insieme_wi_add_implementation2(irt_work_item* wi) {
 	#ifdef USE_OPENCL
 	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
 	irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
@@ -218,8 +218,8 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 	irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
 	printf("\"\n");
 	
-	//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl" , "", IRT_OCL_BINARY);
-	cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl" , "", IRT_OCL_BINARY); // FIXME remove
+	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl" , "", IRT_OCL_BINARY);
+	//cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "vector_add");
 
 	unsigned int mem_size_input = sizeof(insieme_struct1) * wi->range.end;
