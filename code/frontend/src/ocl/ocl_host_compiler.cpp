@@ -45,6 +45,8 @@
 #include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/frontend/clang_config.h"
 
+#include <fstream>
+
 namespace ba = boost::algorithm;
 namespace iocl = insieme::ocl;
 
@@ -59,10 +61,37 @@ const ProgramPtr& loadKernelsFromFile(string path, const ASTBuilder& builder) {
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
-	if (path.find("/") != 0) // a relative path has been given
-		path = SRC_DIR + path; // TODO change this to the directory of the actual input file
-	LOG(INFO)
-		<< "Converting kernel file '" << path << "' to IR...";
+
+	std::ifstream check;
+	string root = path;
+	size_t nIncludes = CommandLineOptions::IncludePaths.size();
+	// try relative path first
+	check.open(path);
+	// if not found now, check the include directories
+	for(size_t i = 0; i < nIncludes && check.fail(); ++i) {
+		check.close();
+		// try with include paths
+		path = CommandLineOptions::IncludePaths.at(i) + "/" + root;
+		check.open(path);
+	}
+	// if there is still no match, try the paths of the input files
+	size_t nInputFiles = CommandLineOptions::InputFiles.size();
+	for(size_t i = 0; i < nInputFiles && check.fail(); ++i) {
+		// try the paths of the input files
+		string ifp = CommandLineOptions::InputFiles.at(i);
+		size_t slash = ifp.find_last_of("/");
+		path = ifp.substr(0u, slash+1) + root;
+		check.open(path);
+	}
+
+	check.close();
+
+	if(check.fail()) {// no kernel file found, leave the error printing to the compiler frontend
+		std::cout << "FAIL! " << path << std::endl;
+		path = root;
+	}
+
+	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 
 	frontend::Program fkernels(builder.getNodeManager());
 	fkernels.addTranslationUnit(path);
