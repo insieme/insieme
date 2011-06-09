@@ -42,7 +42,7 @@
 
 /*
  * =====================================================================================
- *  OpenCL Platforms Informations
+ *  OpenCL Platforms Functions 
  * =====================================================================================
  */
 
@@ -51,9 +51,13 @@ void _irt_cl_print_platform_info(cl_platform_id* id) {
 	for (cl_uint i = 0; i < IRT_CL_NUM_PLATFORM_PARAMS; i++) {
 		size_t cl_param_size;
 		char* cl_param_value;
-		IRT_ASSERT(clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info");
+		cl_int err_code;
+		err_code = clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, 0, NULL, &cl_param_size);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info: \"%s\"", _irt_error_string(err_code));
+		
 		cl_param_value = alloca (cl_param_size);
-		IRT_ASSERT(clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, cl_param_size, cl_param_value, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info");
+		err_code = clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, cl_param_size, cl_param_value, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info: \"%s\"", _irt_error_string(err_code));
 		IRT_INFO("%-25s = \"%s\"\n", _irt_cl_platform_params[i].name_string, cl_param_value);
 	}
 	IRT_INFO("\n");
@@ -66,12 +70,13 @@ static cl_uint _irt_cl_get_num_platforms(){
 }
 
 static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms) {
-	IRT_ASSERT(clGetPlatformIDs(num_platforms, platforms, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting platforms");
+	cl_int err_code = clGetPlatformIDs(num_platforms, platforms, NULL);	
+	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting platforms: \"%s\"", _irt_error_string(err_code));
 }
 
 /* 
  * =====================================================================================
- *  OpenCL Devices Informations
+ *  OpenCL Devices Functions
  * =====================================================================================
  */
 
@@ -88,9 +93,12 @@ static void _irt_cl_print_device_infos(cl_device_id* id) {
 static void _irt_cl_print_device_info(cl_device_id* id, cl_device_info param_name){
 	size_t cl_param_size;
 	char* cl_param_value;
-	IRT_ASSERT(clGetDeviceInfo(*id, param_name, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info");
+	cl_int err_code;
+	err_code = clGetDeviceInfo(*id, param_name, 0, NULL, &cl_param_size);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info: \"%s\"", _irt_error_string(err_code));
 	cl_param_value = alloca (cl_param_size);
-	IRT_ASSERT(clGetDeviceInfo(*id, param_name, cl_param_size, cl_param_value, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	err_code = clGetDeviceInfo(*id, param_name, cl_param_size, cl_param_value, NULL);
+	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
 	IRT_INFO("%s", cl_param_value);
 }
 
@@ -101,18 +109,22 @@ cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_
 }
 
 static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices) {
-	IRT_ASSERT(clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices"); 
+	cl_int err_code = clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL);
+	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices: \"%s\"", _irt_error_string(err_code)); 
 }
 
 static void _irt_cl_release_device(cl_context context, cl_command_queue queue) {
-	IRT_ASSERT(clReleaseCommandQueue(queue) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing command queue");
-	IRT_ASSERT(clReleaseContext(context) == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context");
+	cl_int err_code;
+	err_code = clReleaseCommandQueue(queue);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing command queue: \"%s\"", _irt_error_string(err_code));
+	err_code = clReleaseContext(context);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context: \"%s\"", _irt_error_string(err_code));
 }
 
 
 /* 
 * =====================================================================================
-*  OpenCL Load & Save Program Utility
+*  OpenCL Load, Save, Error Functions
 * =====================================================================================
 */
 
@@ -136,20 +148,131 @@ static char* _irt_load_program_source (const char* filename, size_t* filesize) {
 static void _irt_save_program_binary (cl_program program, const char* binary_filename) {
 	IRT_ASSERT(binary_filename != NULL && program != NULL, IRT_ERR_OCL, "Error input parameters");
 	size_t size_ret;
-	IRT_ASSERT(clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, 0, NULL, &size_ret) == CL_SUCCESS, IRT_ERR_OCL, "Error getting program info");
+	cl_int err_code;
+	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, 0, NULL, &size_ret);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
 	size_t* binary_size = (size_t *) alloca (size_ret);
 	IRT_ASSERT(binary_size != NULL, IRT_ERR_OCL, "Error allocating binary_size");
-	IRT_ASSERT(clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, size_ret, binary_size, NULL) == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info");
+	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, size_ret, binary_size, NULL);
+	IRT_ASSERT(err_code == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
     	unsigned char* binary = (unsigned char *) alloca (sizeof (unsigned char) * (*binary_size));
 	IRT_ASSERT(binary != NULL, IRT_ERR_OCL, "Error allocating binary");
 
 	// get the binary
-	IRT_ASSERT(clGetProgramInfo (program, CL_PROGRAM_BINARIES, sizeof (unsigned char *), &binary, NULL) == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info");
+	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARIES, sizeof (unsigned char *), &binary, NULL);
+	IRT_ASSERT(err_code == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
 
 	FILE *fp = fopen (binary_filename, "w");
 	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening binary file");
 	IRT_ASSERT(fwrite (binary, 1, *binary_size, fp) ==  (size_t) *binary_size, IRT_ERR_OCL, "Error writing file");
 	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
+}
+
+static const char* _irt_error_string (cl_int errcode) {
+	switch (errcode) {
+		case CL_SUCCESS:
+			return "SUCCESS";
+		case CL_DEVICE_NOT_FOUND:
+			return "Device not found";
+		case CL_DEVICE_NOT_AVAILABLE:
+			return "Device not available";
+		case CL_COMPILER_NOT_AVAILABLE:
+			return "Compiler not available";
+		case CL_MEM_OBJECT_ALLOCATION_FAILURE:
+			return "Memory Object allocation failure";
+		case CL_OUT_OF_RESOURCES:
+			return "Out of resources";
+		case CL_OUT_OF_HOST_MEMORY:
+			return "Out of host memory";
+		case CL_PROFILING_INFO_NOT_AVAILABLE:
+			return "Profiling info not available";
+		case CL_MEM_COPY_OVERLAP:
+			return "Mem copy overlap";
+		case CL_IMAGE_FORMAT_MISMATCH:
+			return "Image format mismatch";
+		case CL_IMAGE_FORMAT_NOT_SUPPORTED:
+			return "Image format not supported";
+		case CL_BUILD_PROGRAM_FAILURE:
+			return "Build program failure";
+		case CL_MAP_FAILURE:
+			return "Map failure";
+		case CL_MISALIGNED_SUB_BUFFER_OFFSET:
+			return "Misaligned sub buffer offset";
+		case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST:
+			return "Status Error for events in wait list";
+		case CL_INVALID_VALUE:
+			return "Invalid value";
+		case CL_INVALID_DEVICE_TYPE:
+			return "Invalid device type";
+		case CL_INVALID_PLATFORM:
+			return "Invalid platform";
+		case CL_INVALID_DEVICE:
+			return "Invalid device";
+		case CL_INVALID_CONTEXT:
+			return "Invalid context";
+		case CL_INVALID_QUEUE_PROPERTIES:
+			return "Invalid queue properties";
+		case CL_INVALID_COMMAND_QUEUE:
+			return "Invalid command queue";
+		case CL_INVALID_HOST_PTR:
+			return "Invalid host pointer";
+		case CL_INVALID_MEM_OBJECT:
+			return "Invalid memory object";
+		case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR:
+			return "Invalid image format descriptor";
+		case CL_INVALID_IMAGE_SIZE:
+			return "Invalid image size";
+		case CL_INVALID_SAMPLER:
+			return "Invalid sampler";
+		case CL_INVALID_BINARY:
+			return "Invalid Binary";
+		case CL_INVALID_BUILD_OPTIONS:
+			return "Invalid build options";
+		case CL_INVALID_PROGRAM:
+			return "Invalid program";
+		case CL_INVALID_PROGRAM_EXECUTABLE:
+			return "Invalid program executable";
+		case CL_INVALID_KERNEL_NAME:
+			return "Invalid kernel name";
+		case CL_INVALID_KERNEL_DEFINITION:
+			return "Invalid kernel definition";
+		case CL_INVALID_KERNEL:
+			return "Invalid kernel";
+		case CL_INVALID_ARG_INDEX:
+			return "Invalid arg index";
+		case CL_INVALID_ARG_VALUE:
+			return "Invalid arg value";
+		case CL_INVALID_ARG_SIZE:
+			return "Invalid arg size";
+		case CL_INVALID_KERNEL_ARGS:
+			return "Invalid kernel args";
+		case CL_INVALID_WORK_DIMENSION:
+			return "Invalid work dimension";
+		case CL_INVALID_WORK_GROUP_SIZE:
+			return "Invalid work group size";
+		case CL_INVALID_WORK_ITEM_SIZE:
+			return "Invalid work item size";
+		case CL_INVALID_GLOBAL_OFFSET:
+			return "Invalid global offset";
+		case CL_INVALID_EVENT_WAIT_LIST:
+			return "Invalid wait list";
+		case CL_INVALID_EVENT:
+			return "Invalid event";
+		case CL_INVALID_OPERATION:
+			return "Invalid operation";
+		case CL_INVALID_GL_OBJECT:
+			return "Invalid gl object";
+		case CL_INVALID_BUFFER_SIZE:
+			return "Invalid buffer size";
+		case CL_INVALID_MIP_LEVEL:
+			return "Invalid mip level";
+		case CL_INVALID_GLOBAL_WORK_SIZE:
+			return "Invalid global work size";
+		case CL_INVALID_PROPERTY:
+			return "Invalid property";
+		default:
+			return "Unknown";
+	};
 }
 
 /* 
@@ -194,13 +317,13 @@ void irt_ocl_init_devices(){
 						irt_ocl_device* dev = &devices[index];
 						dev->cl_device = cl_devices[i];
 						dev->cl_context = clCreateContext(NULL, 1, &dev->cl_device, NULL, NULL, &status);
-						IRT_ASSERT(status == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context");
+						IRT_ASSERT(status == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context: \"%s\"", _irt_error_string(status));
 						dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE | CL_QUEUE_PROFILING_ENABLE, &status);
-						IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue");
+						IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue: \"%s\"", _irt_error_string(status));
 					}
 				}
 			}
-		}	
+		}
 	}
 }
 
@@ -236,8 +359,11 @@ float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_pr
 
 float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag) {
 	cl_ulong event_one_start, event_two_end;
-	IRT_ASSERT(clGetEventProfilingInfo(event_two, event_two_command, sizeof(cl_ulong), &event_two_end, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info");
-	IRT_ASSERT(clGetEventProfilingInfo(event_one, event_one_command, sizeof(cl_ulong), &event_one_start, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info");
+	cl_int err_code;
+	err_code = clGetEventProfilingInfo(event_two, event_two_command, sizeof(cl_ulong), &event_two_end, NULL);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
+	err_code = clGetEventProfilingInfo(event_one, event_one_command, sizeof(cl_ulong), &event_one_start, NULL);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"", _irt_error_string(err_code));
 	float time = 0.0;
 	switch(time_flag){
 		case IRT_OCL_NANO:
@@ -261,9 +387,12 @@ cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, c
 	// create the binary name
 	size_t len, binary_name_size, cl_param_size;
 	char* device_name;
-	IRT_ASSERT(clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, 0, NULL, &cl_param_size) == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	cl_int err_code;
+	err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, 0, NULL, &cl_param_size);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
 	device_name = alloca (cl_param_size);
-	IRT_ASSERT(clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, cl_param_size, device_name, NULL)  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name");
+	err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, cl_param_size, device_name, NULL);
+	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
 	
 	const char* file_ptr = strrchr(file_name, '/'); // remove the path from the file_name
 	if (file_ptr) 
@@ -304,7 +433,7 @@ cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, c
 		IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
 	
 		program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &program_source, NULL, &status);
-		IRT_ASSERT(status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
+		IRT_ASSERT(status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(status));
 		free(program_source);
 		status = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
 		
@@ -313,14 +442,16 @@ cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, c
 			IRT_INFO("Kernel program failed to build.\n");
 			char *buildLog;
 			size_t buildLogSize;
-			IRT_ASSERT(clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize) == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info");
+			err_code = clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize);
+			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info: \"%s\"", _irt_error_string(err_code));
 			buildLog = (char*)malloc(buildLogSize);
-			IRT_ASSERT(clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info");
+			err_code = clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL);
+			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info: \"%s\"", _irt_error_string(err_code));
 			buildLog[buildLogSize-1] = '\0';
 			IRT_INFO("Device Build Log:\n%s\n", buildLog); 
 			free(buildLog);
 		}
-		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");
+		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(status));
 		
 		_irt_save_program_binary(program, binary_name); 
 	}
@@ -330,8 +461,9 @@ cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, c
 		unsigned char* program_s = (unsigned char*) _irt_load_program_source(binary_name, &filesize); 
 		program = clCreateProgramWithBinary (dev->cl_context, 1, &(dev->cl_device), &filesize, (const unsigned char **) &program_s, &binary_status, &status);
 		free(program_s);
-		IRT_ASSERT(status == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program");
-		IRT_ASSERT(clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL) == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program");		
+		IRT_ASSERT(status == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(status));
+		err_code = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(err_code));		
 	}
 
 	return program;
@@ -341,6 +473,6 @@ cl_kernel irt_ocl_create_kernel(irt_ocl_device* dev, cl_program program, const c
 	cl_int status;
 	cl_kernel kernel;
 	kernel = clCreateKernel(program, kernel_name, &status);
-	IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel");
+	IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel: \"%s\"", _irt_error_string(status));
 	return kernel;
 }
