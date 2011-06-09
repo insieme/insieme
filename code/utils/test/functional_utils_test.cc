@@ -34,54 +34,27 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <ostream>
-
-namespace insieme {
-namespace utils {
-
-	/**
-	 * A class forming an interface for printable classes. Implementing this interface allows
-	 * classes to be printed to output streams using a member function.
-	 */
-	class Printable {
-	public:
-		/**
-		 * A method to be implemented by sub-classes allowing instances to be printed to the
-		 * output stream.
-		 *
-		 * @param out the stream this instance should be printed to
-		 * @return the stream passed as an argument
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const = 0;
-	};
+#include "insieme/utils/functional_utils.h"
 
 
-	/**
-	 * A class forming an adapter from class supporting the output operator <<
-	 * and classes implementing the printable interface.
-	 */
-	template<typename T>
-	class PrintWrapper : public Printable {
-		const T& content;
-	public:
-		PrintWrapper(const T& content) : content(content) {};
-		virtual std::ostream& printTo(std::ostream& out) const { return out << content; }
-	};
-
-	template<typename T>
-	PrintWrapper<T> toPrintable(const T& element) {
-		return PrintWrapper<T>(element);
-	}
 
 
-} // end of namespace utils
-} // end of namespace insieme
 
-namespace std {
+TEST(TypeListTrait, DealingWithListTraits) {
 
-	inline std::ostream& operator<<(std::ostream& out, const insieme::utils::Printable& printable) {
-		return printable.printTo(out);
-	}
+
+	EXPECT_TRUE(typeid(type_list<int,double>::head) == typeid(int));
+	EXPECT_TRUE(typeid(type_list<int,double>::rest::head) == typeid(double));
+
+	EXPECT_TRUE(typeid(element_type<1,int,double>::type) == typeid(int));
+	EXPECT_TRUE(typeid(element_type<2,int,double>::type) == typeid(double));
+
+	EXPECT_TRUE(typeid(type_at<1,type_list<int,double>>::type) == typeid(int));
+	EXPECT_TRUE(typeid(type_at<2,type_list<int,double>>::type) == typeid(double));
+
+	EXPECT_FALSE(typeid(type_at<1,type_list<int,double>>::type) == typeid(double));
+	EXPECT_FALSE(typeid(type_at<2,type_list<int,double>>::type) == typeid(int));
+
 }

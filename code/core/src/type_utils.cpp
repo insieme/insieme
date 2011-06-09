@@ -579,7 +579,7 @@ namespace {
 	void collectAllTypeVariables(const TypeList& types, TypeSet& varSet, IntTypeParamSet& paramSet) {
 
 		// assemble type-variable collecting visitor
-		auto visitor = makeLambdaPtrVisitor([&](const NodePtr& cur) {
+		auto visitor = makeLambdaVisitor([&](const NodePtr& cur) {
 			// collect all type variables
 			if (cur->getNodeType() == NT_TypeVariable) {
 				varSet.insert(static_pointer_cast<const Type>(cur));
@@ -876,7 +876,7 @@ TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
 
 bool isGeneric(const TypePtr& type) {
 	// just use a interruptable visitor to check for type or integer param variables
-	return visitAllOnceInterruptable(type, makeLambdaPtrVisitor([](const NodePtr& cur) {
+	return visitAllOnceInterruptable(type, makeLambdaVisitor([](const NodePtr& cur) {
 		// return false when a generic type has been found => interrupts the visiting process
 		return !(cur->getNodeType() == core::NT_TypeVariable || cur->getNodeType() == core::NT_VariableIntTypeParam);
 	}, true));

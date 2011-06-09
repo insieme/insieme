@@ -177,6 +177,46 @@ struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<Poi
 	}
 };
 
+// -------------------- Type List traits ----------------------------
+
+
+template <typename ... Ts>
+struct type_list;
+
+template<>
+struct type_list<> {
+	BOOST_STATIC_CONSTANT(bool, empty=true);
+};
+
+template<typename H, typename ... R>
+struct type_list<H,R...> {
+	BOOST_STATIC_CONSTANT(bool, empty=false);
+	typedef H head;
+	typedef type_list<R...> rest;
+};
+
+template<unsigned pos, typename L>
+struct type_at;
+
+template<typename H, typename ...R>
+struct type_at<1, type_list<H,R...>> {
+	typedef H type;
+};
+
+template<unsigned pos, typename H, typename ...R>
+struct type_at<pos, type_list<H,R...>> {
+	typedef typename type_at<pos-1, type_list<R...>>::type type;
+};
+
+template<typename L>
+struct cons;
+
+template<typename H, typename ...R>
+struct cons<type_list<H,R...>> {
+	typedef H head;
+	typedef type_list<R...> rest;
+};
+
 
 // -------------------- Function Traits for Lambdas ----------------------------
 //
@@ -187,20 +227,12 @@ namespace detail {
 
 	template<typename Function> struct lambda_traits_helper { };
 
-	// - for member function pointer -
-	//
-	// TODO: enable in case variadic templates will ever be supported
-	//
-	//template <typename R, typename C, typename ... A >
-	//struct function_traits<R (C::*)( A ... ) const>  { // inherits from this one on VS2010 RC
-	//  typedef R result_type;
-	//};
-
 	template<typename R, typename C>
 	struct lambda_traits_helper<R (C::*)(void) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
 	  typedef R result_type;
+	  typedef type_list<> argument_types;
 	};
 
 	template<typename R, typename C, typename T1>
@@ -210,6 +242,7 @@ namespace detail {
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T1 argument_type;
+	  typedef type_list<T1> argument_types;
 	};
 
 	template<typename R, typename C, typename T1, typename T2>
@@ -221,6 +254,7 @@ namespace detail {
 	  typedef T2 arg2_type;
 	  typedef T1 first_argument_type;
 	  typedef T2 second_argument_type;
+	  typedef type_list<T1,T2> argument_types;
 	};
 
 	template<typename R, typename C, typename T1, typename T2, typename T3>
@@ -231,6 +265,14 @@ namespace detail {
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
 	  typedef T3 arg3_type;
+	  typedef type_list<T1,T2,T3> argument_types;
+	};
+
+	template <typename R, typename C, typename ... A >
+	struct lambda_traits_helper<R (C::*)( A ... ) const>  {
+		BOOST_STATIC_CONSTANT(unsigned, arity = sizeof...(A));
+		typedef R result_type;
+		typedef type_list<A...> argument_types;
 	};
 
 } // end namespace detail
@@ -238,4 +280,20 @@ namespace detail {
 
 template <typename Lambda>
 struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> { };
+
+
+template<unsigned pos, typename ...R>
+struct element_type;
+
+template<typename H, typename ...R>
+struct element_type<1,H,R...> {
+	typedef H type;
+};
+
+template<unsigned pos, typename H, typename ...R>
+struct element_type<pos,H,R...> {
+	typedef typename element_type<pos-1,R...>::type type;
+};
+
+
 
