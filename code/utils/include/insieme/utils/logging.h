@@ -48,9 +48,13 @@
 
 #include "insieme/utils/cmd_line_utils.h"
 
+#include <stdexcept>
+
 namespace insieme {
 namespace utils {
 namespace log {
+
+#define LOG_DEFAULT DEBUG
 
 namespace io = boost::iostreams;
 
@@ -118,13 +122,17 @@ struct TimeSpec<DATE> {
 	}
 };
 
+struct LoggingLevelNotDefined: public std::runtime_error {
+	LoggingLevelNotDefined(const std::string& message): std::runtime_error(message){}
+};
+
 /**
  * Prints the level at which the log was taken.
  */
-template <const Level L>
+template <const Level L=DEBUG>
 struct LevelSpec {
 
-	static std::string levelToStr(const Level& level) {
+	static std::string loggingLevelToStr(const Level& level) {
 		switch(level) {
 		case DEBUG:		return "DEBUG";
 		case INFO:		return "INFO ";
@@ -132,13 +140,26 @@ struct LevelSpec {
 		case ERROR:		return "ERROR";
 		case FATAL:		return "FATAL";
 		default:
-			assert(false);
+		assert(false);
 		}
-		return "UNKNOWN";
+	}
+	
+	static Level loggingLevelFromStr(const std::string& level) {
+		if(level.empty())		return LOG_DEFAULT;
+		if(level == "DEBUG")	return DEBUG;
+		if(level == "INFO")		return INFO;
+		if(level == "WARNING")	return WARNING;
+		if(level == "ERROR")	return ERROR;
+		if(level == "FATAL")	return FATAL;
+		std::ostringstream os;
+		os << "Logging level '" << level << 
+			"' not valid. Available logging levels are: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'FATAL'" 
+		   << std::endl;
+		throw LoggingLevelNotDefined(os.str());
 	}
 
 	static void format(std::ostream& out, const Ctx& ctx) {
-		out << levelToStr(L);
+		out << loggingLevelToStr(L);
 	}
 };
 
@@ -275,6 +296,7 @@ public:
 	}
 
 };
+
 
 } // End log namespace
 } // End utils namespace

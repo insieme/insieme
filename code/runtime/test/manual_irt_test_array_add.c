@@ -44,13 +44,14 @@
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
+#include "impl/work_group.impl.h"
 
 #ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"
+#include "irt_ocl_config.h"
 #endif
 
-
-#define NUM_ELEMENTS 100000000
+#define NUM_ELEMENTS 1000000
 
 #define INSIEME_BOOL_T_INDEX 0
 #define INSIEME_INT_T_INDEX 1
@@ -109,10 +110,15 @@ irt_wi_implementation g_insieme_impl_table[] = {
 // initialization
 void insieme_init_context(irt_context* context) {
 	#ifdef USE_OPENCL
-	// FIXME: finish OpenCl implementation
-	//irt_ocl_device* dev = irt_ocl_get_device(0);
-	//irt_ocl_print_device_info(dev);
-	//cl_kernel clKernel = irt_ocl_create_kernel(dev, "/insieme-dev/ivan/code/runtime/kernel.cl", "vector_add", "", IRT_OCL_SOURCE);
+	cl_uint num = irt_ocl_get_num_devices();
+	for (uint i = 0; i < num; ++i){	
+		irt_ocl_device* dev = irt_ocl_get_device(i);
+		printf("Compiling OpenCL program in \"");	
+		irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
+		printf("\"\n");
+		cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "", IRT_OCL_SOURCE);
+		clReleaseProgram(program);
+	}
 	#endif
 
 	context->type_table = g_insieme_type_table;
@@ -206,20 +212,70 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
 
-	//irt_ocl_device* dev = irt_ocl_get_device(0); // FIXME: finish Opencl Version
-	//cl_kernel clKernel = irt_ocl_create_kernel(dev, "/insieme-dev/ivan/code/runtime/kernel.cl", "vector_add", "", IRT_OCL_BINARY);
+	irt_ocl_device* dev = irt_ocl_get_device(0);
+	printf("Running Opencl Kernel in \"");
+	irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
+	printf("\"\n");
 	
+	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl" , "", IRT_OCL_BINARY);
+	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "vector_add");
 
-	for(uint64 i = wi->range.begin; i < wi->range.end; ++i) {
-		if(input[i].do_add) {
-			output[i] = (input[i].v1 + input[i].v2) / 2;
-		}
+	unsigned int mem_size_input = sizeof(insieme_struct1) * wi->range.end;
+	unsigned int mem_size_output = sizeof(uint64) * wi->range.end;
+
+	cl_int errcode;
+	cl_mem d_input = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_input, NULL, &errcode);
+	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of input\n");	
+	
+	cl_mem d_output= clCreateBuffer(dev->cl_context, CL_MEM_WRITE_ONLY, mem_size_output, NULL, &errcode);
+	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of output\n");
+		
+	cl_event event_write_input, event_read_output, event_kernel;
+	
+	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_input, CL_FALSE, 0, mem_size_input, input, 0, NULL, &event_write_input);
+	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of input, %d\n", errcode);
+	
+	errcode  = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&d_input);
+	if (errcode != CL_SUCCESS) printf("Error First Arg\n");
+
+	errcode  = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&d_output);
+	if (errcode != CL_SUCCESS) printf("Error Second Arg\n");
+	
+	errcode  = clSetKernelArg(kernel, 2, sizeof(cl_long), (void *)&wi->range.end);
+	if (errcode != CL_SUCCESS) printf("Error Third Arg\n");
+
+	size_t szLocalWorkSize = 256;
+	float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
+	if(multiplier > (int)multiplier){
+		multiplier += 1;
 	}
+	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
+	clEnqueueNDRangeKernel(dev->cl_queue, kernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 1, &event_write_input, &event_kernel);
+	errcode = clEnqueueReadBuffer(dev->cl_queue, d_output, CL_TRUE, 0, mem_size_output, output, 1, &event_kernel, &event_read_output); // sync copy FIXME
+	//clFinish(dev->cl_queue);
+	if (errcode != CL_SUCCESS) printf("Error in clEnqueueReadBuffer of output, %d\n", errcode);
+
+	errcode = clReleaseEvent(event_write_input);
+	errcode |= clReleaseEvent(event_read_output);
+	errcode |= clReleaseEvent(event_kernel);
+	if (errcode != CL_SUCCESS) printf("Error Releasing Event\n");
+	errcode = clReleaseMemObject(d_input);
+	if (errcode != CL_SUCCESS) printf("Error Releasing d_input\n");
+	errcode = clReleaseMemObject(d_output);
+	if (errcode != CL_SUCCESS) printf("Error Releasing d_output\n");
+	
+	errcode = clReleaseKernel(kernel);
+	if (errcode != CL_SUCCESS) printf("Error Releasing kernel\n");
+	
+	errcode = clReleaseProgram(program);
+	if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
+		
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
+
 	irt_wi_end(wi);
 	#endif
 }

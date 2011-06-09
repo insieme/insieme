@@ -34,31 +34,25 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
+typedef struct _insieme_struct1 {
+	int do_add;
+	ulong v1;
+	ulong v2;
+} insieme_struct1;
 
-uint toll(uint x) {
-	return x;
-}
+__kernel void vector_add(__global const insieme_struct1* input, __global ulong* output, long num_elements)
+{
+    // get index into global data array
+    int gid = get_global_id(0);
 
-#pragma insieme mark
-__kernel void hello(__global float* g, __local float* l) {
-	float x = 0.5;
-	__local float y;// = g;
-//    __global float4* p = (float4*)g;
-	y = x;//
-//   toll(i);
-	x = 2.0f;
-
-	int gid = get_global_id(0);
-/*    uint lid = get_local_id(0);
-	 l[lid] = g[gid];
-	 l[2*lid] = g[gid+i];
-/*
-	 barrier(CLK_LOCAL_MEM_FENCE);
-	 x.x = l[i];
-	 x.y = native_sin(l[lid+i]);
-
-	 x = x+y;
-
-	 g[gid] = x.x * x.y;*/
+    // bound check (equivalent to the limit on a 'for' loop for standard/serial C code
+    if (gid >= num_elements)
+    {   
+        return; 
+    }
+    
+    // add the vector elements
+    if(input[gid].do_add) {
+	output[gid] = (input[gid].v1 + input[gid].v2) /2;;
+    }
 }

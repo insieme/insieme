@@ -46,6 +46,7 @@ static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
+	free(wg->redistribute_data_array);
 	free(wg);
 }
 
@@ -57,6 +58,7 @@ irt_work_group* irt_wg_create() {
 	wg->local_member_count = 0;
 	wg->cur_barrier_count_up = 0;
 	wg->cur_barrier_count_down = 0;
+	wg->redistribute_data_array = NULL;
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
@@ -72,15 +74,24 @@ void irt_wg_destroy(irt_work_group* wg) {
 
 void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
-	irt_atomic_inc(&wg->local_member_count);
-	if(wi->work_groups == NULL) _irt_wi_allocate_wgs(wi);
-	wi->work_groups[wi->num_groups++] = wg->id;
+	uint32 mem_num = irt_atomic_fetch_and_add(&wg->local_member_count, 1);
+	if(wi->wg_memberships == NULL) _irt_wi_allocate_wgs(wi);
+	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1);
+	wi->wg_memberships[group_num].wg_id = wg->id;
+	wi->wg_memberships[group_num].num = mem_num;
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
 	irt_atomic_dec(&wg->local_member_count);
 	// cleaning up group membership in wi is not necessary, wis may only be removed from groups when they end
 }
+
+static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi) {
+	uint32 i;
+	for(i=0; i<wi->num_groups; ++i) if(wi->wg_memberships[i].wg_id.value.full == wi->id.value.full) break;
+	return wi->wg_memberships[i].num;
+}
+
 
 bool _irt_wg_barrier_check_down(irt_work_item* wi) {
 	irt_work_group *wg = (irt_work_group*)wi->ready_check.data;
@@ -117,5 +128,20 @@ void irt_wg_barrier(irt_work_group* wg) {
 	}
 }
 
-void irt_wg_distribute(irt_work_group* wg, irt_distribute_id dist /*, ???*/);
+
+void _irt_wg_allocate_redist_array(irt_work_group* wg) {
+	void** arr = (void**)malloc(sizeof(void*)*wg->local_member_count);
+	bool worked = irt_atomic_bool_compare_and_swap(&wg->redistribute_data_array, 0, arr);
+	if(!worked) free(arr);
+}
+
+void* irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* data, irt_wg_redistribution_function* func) {
+	if(wg->redistribute_data_array == NULL) _irt_wg_allocate_redist_array(wg);
+	uint32 local_id = irt_wg_get_wi_num(wg, this_wi);
+	wg->redistribute_data_array[local_id] = data;
+	irt_wg_barrier(wg);
+	void* retval = func(wg->redistribute_data_array, local_id);
+	irt_wg_barrier(wg);
+	return retval;
+}
 

@@ -34,31 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
+#include "insieme/analysis/scop.h"
 
-uint toll(uint x) {
-	return x;
+#include "insieme/core/ast_visitor.h"
+
+namespace insieme {
+namespace analysis {
+namespace scop {
+
+using namespace core;
+
+class ScopVisitor : public core::ASTVisitor<> {
+
+	ScopList& scopList;
+	core::NodePtr scopBeign;
+
+public:
+	ScopVisitor(ScopList& scopList) : ASTVisitor<>(false), scopList(scopList) { }
+
+	void visitIfStmt(const IfStmtPtr& ifStmt) {
+
+	}
+
+	void visitForStmt(const ForStmtPtr& forStmt) {
+
+	}
+
+
+	void visitLambda(const LambdaPtr& lambda) {	}
+};
+
+
+ScopList mark(const core::NodePtr& root, bool interproc) {
+	ScopList ret;
+	ScopVisitor sv(ret);
+	sv.visit(root);
+	return ret;	
 }
 
-#pragma insieme mark
-__kernel void hello(__global float* g, __local float* l) {
-	float x = 0.5;
-	__local float y;// = g;
-//    __global float4* p = (float4*)g;
-	y = x;//
-//   toll(i);
-	x = 2.0f;
 
-	int gid = get_global_id(0);
-/*    uint lid = get_local_id(0);
-	 l[lid] = g[gid];
-	 l[2*lid] = g[gid+i];
-/*
-	 barrier(CLK_LOCAL_MEM_FENCE);
-	 x.x = l[i];
-	 x.y = native_sin(l[lid+i]);
+} // end namespace scop
+} // end namespace analysis
+} // end namespace insieme
 
-	 x = x+y;
-
-	 g[gid] = x.x * x.y;*/
-}

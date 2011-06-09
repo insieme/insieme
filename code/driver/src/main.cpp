@@ -99,7 +99,7 @@ void createInvMap(const insieme::core::printer::SourceLocationMap& locMap, Inver
 int main(int argc, char** argv) {
 
 	CommandLineOptions::Parse(argc, argv);
-	Logger::get(std::cerr, DEBUG);
+	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(CommandLineOptions::LogLevel));
 
 	LOG(INFO) << "Insieme compiler";
 

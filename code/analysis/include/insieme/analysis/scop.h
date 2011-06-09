@@ -34,31 +34,38 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
+#pragma once 
 
-uint toll(uint x) {
-	return x;
-}
+#include <vector>
 
-#pragma insieme mark
-__kernel void hello(__global float* g, __local float* l) {
-	float x = 0.5;
-	__local float y;// = g;
-//    __global float4* p = (float4*)g;
-	y = x;//
-//   toll(i);
-	x = 2.0f;
+namespace insieme {
 
-	int gid = get_global_id(0);
-/*    uint lid = get_local_id(0);
-	 l[lid] = g[gid];
-	 l[2*lid] = g[gid+i];
-/*
-	 barrier(CLK_LOCAL_MEM_FENCE);
-	 x.x = l[i];
-	 x.y = native_sin(l[lid+i]);
+namespace core {
 
-	 x = x+y;
+class Node;
+template<typename T> class Pointer;
+typedef Pointer<const Node> NodePtr;
 
-	 g[gid] = x.x * x.y;*/
-}
+} // end namespace core
+
+namespace analysis {
+namespace scop {
+
+/**
+ * Stores the information related to a SCoP (Static Control Part) region of a
+ * program. A SCoP has a begin and an end. 
+ */
+class Scop { };
+
+typedef std::vector<Scop> ScopList;
+
+/**
+ * Finds and marks the SCoPs contained in the root subtree and returns a list of
+ * found SCoPs (an empty list in the case no SCoP was found). 
+ */ 
+ScopList mark(const core::NodePtr& root, bool interproc=false);
+
+} // end namespace scop
+} // end namespace analysis
+} // end namespace insieme
+

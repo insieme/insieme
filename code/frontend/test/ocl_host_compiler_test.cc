@@ -54,49 +54,49 @@ namespace core = insieme::core;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
-TEST(OclHostCompilerTest, HelloHostTest) {
-    Logger::get(std::cerr, DEBUG);
-    CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "/inputs");
+TEST(OclHostCompilerTest, HelloHostTest)
+{
+	Logger::get(std::cerr, DEBUG);
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
 
-//    CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
-//    CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
+//	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
+//	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
 
-    CommandLineOptions::Defs.push_back("INSIEME=\"" + string(SRC_DIR) + "hello.cl\"");
-//    string kernelSrc = SRC_DIR + "../../frontend/test/hello.cl" + string(SRC_DIR) + "";
-//    CommandLineOptions::Defs.push_back("KERNEL=\"/home/klaus/insieme/code/frontend/test/hello.cl\"");
+	CommandLineOptions::Defs.push_back("INSIEME=\"" + string(SRC_DIR) + "hello.cl\"");
+	//    string kernelSrc = SRC_DIR + "../../frontend/test/hello.cl" + string(SRC_DIR) + "";
+	//    CommandLineOptions::Defs.push_back("KERNEL=\"/home/klaus/insieme/code/frontend/test/hello.cl\"");
 
-    CommandLineOptions::Verbosity = 2;
-    core::NodeManager manager;
-    core::ProgramPtr program = core::Program::create(manager);
+	CommandLineOptions::Verbosity = 2;
+	core::NodeManager manager;
+	core::ProgramPtr program = core::Program::create(manager);
 
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
+	fe::Program prog(manager);
 
-    LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
-    fe::Program prog(manager);
+	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
+	program = prog.convert();
+	LOG(INFO) << "Done.";
 
-    prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
-    program = prog.convert();
-    LOG(INFO) << "Done.";
+	LOG(INFO) << "Starting OpenCL host code transformations";
+	fe::ocl::HostCompiler hc(program, manager);
+	hc.compile();
 
-    LOG(INFO) << "Starting OpenCL host code transformations";
-    fe::ocl::HostCompiler hc(program, manager);
-    hc.compile();
+	core::printer::PrettyPrinter pp(program);
 
-    core::printer::PrettyPrinter pp(program);
+	LOG(INFO) << "Printing the IR: " << pp;
 
-    LOG(INFO) << "Printing the IR: " << pp;
+	//    LOG(INFO) << pp;
 
-
-//    LOG(INFO) << pp;
-
-    auto errors = core::check(program, insieme::core::checks::getFullCheck());
-    std::sort(errors.begin(), errors.end());
-    for_each(errors, [](const core::Message& cur) {
-        LOG(INFO) << cur << std::endl;
-/*        core::NodeAddress address = cur.getAddress();
-        core::NodePtr context = address.getParentNode(address.getDepth()-1);
-        std::cout << "\t Context: " <<
-                insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
-*/
-    });
+	auto errors = core::check(program, insieme::core::checks::getFullCheck());
+	std::sort(errors.begin(), errors.end());
+	for_each(errors, [](const core::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+		/*        core::NodeAddress address = cur.getAddress();
+		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
+		 std::cout << "\t Context: " <<
+		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
+		 */
+	});
 
 }

@@ -51,6 +51,7 @@ FLAG("benchmark-core,B", 	"benchmark-core", 		BenchmarkCore, false, "runs some s
 FLAG("show-line-no,",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
 
 //OPTION(opt_name, opt_id, var_name, var_type, var_help)
+OPTION("log-level,L",		"log-level",				LogLevel,		std::string,				"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 OPTION("input-file", 		"input-file", 			InputFiles, 	std::vector<std::string>, 	"input file(s)")
 OPTION("include-path,I", 	"include-path", 		IncludePaths, 	std::vector<std::string>, "Add directory to include search path")
 OPTION("std,std", 			"std-compatibility",	STD, 			std::string, 				"Set compatibility mode")

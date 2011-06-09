@@ -34,31 +34,5 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
-
-uint toll(uint x) {
-	return x;
-}
-
-#pragma insieme mark
-__kernel void hello(__global float* g, __local float* l) {
-	float x = 0.5;
-	__local float y;// = g;
-//    __global float4* p = (float4*)g;
-	y = x;//
-//   toll(i);
-	x = 2.0f;
-
-	int gid = get_global_id(0);
-/*    uint lid = get_local_id(0);
-	 l[lid] = g[gid];
-	 l[2*lid] = g[gid+i];
-/*
-	 barrier(CLK_LOCAL_MEM_FENCE);
-	 x.x = l[i];
-	 x.y = native_sin(l[lid+i]);
-
-	 x = x+y;
-
-	 g[gid] = x.x * x.y;*/
-}
+#pragma once
+#define IRT_OCL_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/"

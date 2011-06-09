@@ -11,21 +11,21 @@ printErr = 0
 verbose = 0
 
 class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    DEBUG = '\033[37m'
-    ENDC = '\033[0m'
-
-    def disable(self):
-        self.HEADER = ''
-        self.OKBLUE = ''
-        self.OKGREEN = ''
-        self.WARNING = ''
-        self.FAIL = ''
-        self.ENDC = ''
+	HEADER = '\033[95m'
+	OKBLUE = '\033[94m'
+	OKGREEN = '\033[92m'
+	WARNING = '\033[93m'
+	FAIL = '\033[91m'
+	DEBUG = '\033[37m'
+	ENDC = '\033[0m'
+	
+	def disable(self):
+		self.HEADER = ''
+		self.OKBLUE = ''
+		self.OKGREEN = ''
+		self.WARNING = ''
+		self.FAIL = ''
+		self.ENDC = ''
 
 def run_cmd(cmd):
 	start = time.time()
@@ -40,11 +40,11 @@ def run_cmd(cmd):
 
 	if verbose:
 		sys.stderr.write(bcolors.DEBUG)
-        	sys.stderr.write("@------------------ start output --------------------\n")
+		sys.stderr.write("@------------------ start output --------------------\n")
 		sys.stderr.write("Executed command: " + cmd + "\n")
-        	sys.stderr.write("@----------------------------------------------------\n")
+		sys.stderr.write("@----------------------------------------------------\n")
 		sys.stderr.write(res)
-        	sys.stderr.write("@------------------- end output ---------------------\n")
+		sys.stderr.write("@------------------- end output ---------------------\n")
 		sys.stderr.write(bcolors.ENDC)
 
 	# determine information to be included within the result
@@ -54,31 +54,30 @@ def run_cmd(cmd):
 	return res
 
 def check_for_error(test_case, ret):
-    if ret is not None:
-        sys.stderr.write(bcolors.FAIL + '@ {0}: [FAILED]'.format(test_case) + bcolors.ENDC + '\n')
-        sys.stderr.write(bcolors.FAIL + "@------------------ start cause --------------------" + bcolors.ENDC + "\n")
+	if ret is not None:
+		sys.stderr.write(bcolors.FAIL + '@ {0}: [FAILED]'.format(test_case) + bcolors.ENDC + '\n')
+		sys.stderr.write(bcolors.FAIL + "@------------------ start cause --------------------" + bcolors.ENDC + "\n")
 
 	if verbose:
 		# print the entire output
 		sys.stderr.write(ret)
-	else:
+	elif ret:
 		# print only first 15 lines
 		lines = ret.splitlines();
 		for i in range(min(len(lines), 15)):
-			sys.stderr.write(lines[i])
+			sys.stderr.write( str(lines[i]) )
 			sys.stderr.write("\n")
 
 		if len(lines) > 15:
 			sys.stderr.write("\n   -- output truncated - run with --verbose to see full output -- \n\n")
 
-
-        sys.stderr.write(bcolors.FAIL + "@------------------- end cause ---------------------" + bcolors.ENDC + "\n\n")
-        return True
-    return False
+		sys.stderr.write(bcolors.FAIL + "@------------------- end cause ---------------------" + bcolors.ENDC + "\n\n")
+		return True
+	return False
     
 def check_diff(test_case_name, ref, test):
-    ret = run_cmd("diff {0} {1}".format(ref, test))
-    return not check_for_error(test_case_name, ret)
+	ret = run_cmd("diff {0} {1}".format(ref, test))
+	return not check_for_error(test_case_name, ret)
 
 def run_test_case(test_case_name): 
 	sys.stderr.write("#-----------------------------------------------------\n")
@@ -142,8 +141,8 @@ def run_test_case(test_case_name):
 		runTests = 1 # => file comparison failed, but program might still be OK
 
 	if not os.path.exists(refCfg) and os.path.exists(testCfg):
-	  shutil.copyfile(testCfg, refCfg)
-	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+		shutil.copyfile(testCfg, refCfg)
+		runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 
 	sys.stderr.write(" * Comparing generated CFG...           ")
 	if check_diff(test_case_name, refCfg, testCfg):
@@ -235,44 +234,38 @@ def run_test_case(test_case_name):
 	if runOcl & (test_case_name == "ocl_kernel"):
 		sys.stderr.write(" * Compiling OpenCL host program...                 ")
 
-	        ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c {LDFLAGS} {GCCFLAGS}".format(
+		ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c {LDFLAGS} {GCCFLAGS}".format(
 							**{'CC':CC, 'CFLAGS':CFLAGS, 'LDFLAGS':os.path.expandvars(LDFLAGS_ORG), 'GCCFLAGS':os.path.expandvars(gccFlagsRef)})  
 						)
 		if(ret != None) :
 			sys.stderr.write("Failed to build OpenCL host program:\n" + ret + "\n")
 		    
-                if check_for_error(test_case_name, ret):
-                        os.chdir("../")
-                        return 1
+			if check_for_error(test_case_name, ret):
+				os.chdir("../")
+				return 1
  	
-                sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
-
-                sys.stderr.write(" * Running input program...             ")
+			sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+			sys.stderr.write(" * Running input program...             ")
 		
 		ref_out = "ref.out"
-                start = time.time()
+		start = time.time()
 
 		os.system("./host ocl_kernel.c > {0}".format( ref_out))
-
-                sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
-
+		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
 		sys.stderr.write(" * Running output program...            ")
 
 		test_out = "test.out"	
-                start = time.time()
+		start = time.time()
 
 		os.system("./host ocl_kernel.insieme.c > {0}".format( test_out))
+		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
 
-                sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
-
-                sys.stderr.write(" * Checking generated program output... ")
-                if not check_diff(test_case_name, ref_out, test_out):
-                        os.chdir("../")
-                        return 1
-                sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
-
+		sys.stderr.write(" * Checking generated program output... ")
+		if not check_diff(test_case_name, ref_out, test_out):
+			os.chdir("../")
+			return 1
+		sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
 		map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
-
 	
 	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
 
