@@ -158,8 +158,11 @@ namespace c_ast {
 		});
 	}
 
+	CCodeFragmentPtr CCodeFragment::createNew(const std::string& name) {
+		return std::make_shared<CCodeFragment>(name);
+	}
 
-	CodeFragmentPtr CCodeFragment::createNew(const NodePtr& code, const std::string& name) {
+	CCodeFragmentPtr CCodeFragment::createNew(const NodePtr& code, const std::string& name) {
 		return std::make_shared<CCodeFragment>(code, name);
 	}
 

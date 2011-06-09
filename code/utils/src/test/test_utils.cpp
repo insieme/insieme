@@ -157,6 +157,22 @@ namespace test {
 		return *TEST_CASES;
 	}
 
+	const IntegrationTestCaseOpt getCase(const string& name) {
+
+		// load list of test cases
+		const vector<IntegrationTestCase>& cases = getAllCases();
+
+		// search for case with given name
+		for(auto it = cases.begin(); it != cases.end(); ++it) {
+			if (it->getName() == name) {
+				return *it;
+			}
+		}
+		// no such test case present
+		return IntegrationTestCaseOpt();
+	}
+
+
 
 } // end namespace test
 } // end namespace utils

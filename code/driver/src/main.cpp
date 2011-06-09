@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 				// Benchmark pointer-based visitor
 				insieme::utils::Timer visitPtrTime("Benchmark.IterateAll.Pointer ");
 				int count = 0;
-				core::visitAll(program, core::makeLambdaPtrVisitor([&](const NodePtr& cur) {
+				core::visitAll(program, core::makeLambdaVisitor([&](const NodePtr& cur) {
 					count++;
 				}, true));
 				visitPtrTime.stop();
@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 				// Benchmark address based visitor
 				insieme::utils::Timer visitAddrTime("Benchmark.IterateAll.Address ");
 				count = 0;
-				core::visitAll(core::ProgramAddress(program), core::makeLambdaAddressVisitor([&](const NodeAddress& cur) {
+				core::visitAll(core::ProgramAddress(program), core::makeLambdaVisitor([&](const NodeAddress& cur) {
 					count++;
 				}, true));
 				visitAddrTime.stop();
@@ -400,7 +400,7 @@ bool checkForHashCollisions(const ProgramPtr& program) {
 
 	// create a set of all nodes
 	insieme::utils::set::PointerSet<NodePtr> allNodes;
-	insieme::core::visitAllOnce(program, insieme::core::makeLambdaPtrVisitor([&allNodes](const NodePtr& cur) {
+	insieme::core::visitAllOnce(program, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
 		allNodes.insert(cur);
 	}, true));
 

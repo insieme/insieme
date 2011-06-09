@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#define BOOST_FILESYSTEM_VERSION 3
 #include <gtest/gtest.h>
 
 #include "insieme/utils/compiler/compiler.h"
@@ -93,6 +94,20 @@ TEST(TargetCodeCompilerTest, helloWorldTest) {
 	}
 }
 
+
+TEST(TargetCodeCompilerTest, DirectHelloWorldTest) {
+
+	// write some code
+	string code =
+			"#include <stdio.h>\n\n"
+			"int main() {\n"
+			"	printf(\"Hello World!\\n\");\n"
+			"}\n\n";
+
+	// compile using direct signature
+	EXPECT_TRUE(compile(toPrintable(code)));
+
+}
 
 
 } // end namespace test

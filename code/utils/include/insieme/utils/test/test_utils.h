@@ -127,6 +127,14 @@ namespace test {
 	 */
 	const vector<IntegrationTestCase>& getAllCases();
 
+	/**
+	 * Obtains the test case matching the given name.
+	 *
+	 * @param name the name of the test case looking for
+	 * @return an optional representing the test case or being uninitialized if there is no such test case.
+	 */
+	const IntegrationTestCaseOpt getCase(const string& name);
+
 } // end namespace test
 } // end namespace utils
 } // end namespace insieme

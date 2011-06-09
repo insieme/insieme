@@ -71,13 +71,13 @@ ASTStatistic ASTStatistic::evaluate(const NodePtr& node) {
 	ASTStatistic res;
 
 	// count number of shared nodes ...
-	visitAllOnce(node, makeLambdaPtrVisitor([&res](const NodePtr& ptr) {
+	visitAllOnce(node, makeLambdaVisitor([&res](const NodePtr& ptr) {
 		res.numSharedNodes++;
 		res.nodeTypeInfo[ptr->getNodeType()].numShared++;
 	}, true));
 
 	// ... and addressable nodes
-	visitAll(node, makeLambdaPtrVisitor([&res](const NodePtr& ptr) {
+	visitAll(node, makeLambdaVisitor([&res](const NodePtr& ptr) {
 		res.numAddressableNodes++;
 		res.nodeTypeInfo[ptr->getNodeType()].numAddressable++;
 	}, true));

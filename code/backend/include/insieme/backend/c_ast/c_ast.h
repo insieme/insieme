@@ -122,6 +122,12 @@ namespace c_ast {
 		bool operator<(Identifier& other) const { return name < other.name; }
 	};
 
+	struct OpaqueCode : public Node {
+		string code;
+		OpaqueCode(const string& code) : Node(NT_OpaqueCode), code(code) {};
+		OpaqueCode(const string&& code) : Node(NT_OpaqueCode), code(code) {};
+	};
+
 	// -- Types ----------------------------------
 
 	struct Type : public Node {

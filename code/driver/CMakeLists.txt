@@ -58,10 +58,15 @@ add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_backe
 			    )
 
 # register linked libraries
-target_link_libraries( main insieme_core insieme_utils insieme_frontend insieme_backend
-							insieme_simple_backend insieme_opencl_backend 
-							insieme_c_info insieme_analysis insieme_transform 
-				     )
+target_link_libraries( main insieme_utils )
+target_link_libraries( main insieme_frontend )
+target_link_libraries( main insieme_core )
+target_link_libraries( main insieme_backend )
+target_link_libraries( main insieme_simple_backend )
+target_link_libraries( main insieme_opencl_backend ) 
+target_link_libraries( main insieme_c_info )
+target_link_libraries( main insieme_analysis )
+target_link_libraries( main insieme_transform )
 
 if (USE_XML)
 	target_link_libraries(main insieme_xml)
@@ -84,6 +89,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_frontend)
+	target_link_libraries(${case_name} insieme_backend )
 	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_simple_backend)
 	target_link_libraries(${case_name} insieme_opencl_backend)

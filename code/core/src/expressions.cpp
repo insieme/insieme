@@ -767,7 +767,7 @@ bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
 
 	// a detector which aborts a visiting in cased a recursive function invocation
 	// is detected
-	auto detector = makeLambdaPtrVisitor([&defs](const NodePtr& node)->bool {
+	auto detector = makeLambdaVisitor([&defs](const NodePtr& node)->bool {
 		// check node type
 		if (node->getNodeType() != NT_Variable) {
 			return true;
