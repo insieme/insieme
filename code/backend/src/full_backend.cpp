@@ -64,7 +64,7 @@ namespace backend {
 	}
 
 	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
-		auto targetCode = std::make_shared<TextFragment>("// I owe you some target code ... \n");
+		auto targetCode = std::make_shared<TextFragment>("int main() { return 0; }\n");
 		return std::make_shared<c_ast::CCode>(code, targetCode);
 	}
 

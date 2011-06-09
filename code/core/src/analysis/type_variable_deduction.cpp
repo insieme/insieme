@@ -422,7 +422,7 @@ namespace analysis {
 
 			// realized using a recursive lambda visitor
 			ASTVisitor<>* rec;
-			auto collector = makeLambdaPtrVisitor([&](const NodePtr& cur){
+			auto collector = makeLambdaVisitor([&](const NodePtr& cur){
 				NodeType kind = cur->getNodeType();
 				switch(kind) {
 				case NT_TypeVariable: {

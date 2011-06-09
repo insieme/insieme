@@ -299,7 +299,7 @@ namespace analysis {
 			// TODO: the renaming should happen recursivel within every new scope (e.g. a function)
 
 			// create visitor collecting the renaming information
-			auto visitor = makeLambdaPtrVisitor([&](const NodePtr& node) {
+			auto visitor = makeLambdaVisitor([&](const NodePtr& node) {
 				NodeType type = node->getNodeType();
 				if (type == NT_TypeVariable) {
 					const TypeVariablePtr& var = static_pointer_cast<const TypeVariable>(node);

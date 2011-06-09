@@ -142,6 +142,7 @@ AST_BASE(Node)
 //
 
 AST_TERMINAL(Identifier, Node)
+AST_TERMINAL(OpaqueCode, Node)
 
 
 //
@@ -164,6 +165,7 @@ AST_TERMINAL(UnionType, Type)
 //
 
 AST_NODE(Statement, Node)
+ABSTRACT(Statement)
 
 AST_TERMINAL(VarDecl, Statement)
 AST_TERMINAL(Compound, Statement)
@@ -175,12 +177,12 @@ AST_TERMINAL(Continue, Statement)
 AST_TERMINAL(Break, Statement)
 AST_TERMINAL(Return, Statement)
 
-
 //
 // --- Expressions ---
 //
 
 AST_NODE(Expression, Statement)
+ABSTRACT(Expression)
 
 AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(Variable, Expression)
@@ -193,18 +195,17 @@ AST_TERMINAL(TernaryOperation, Expression)
 AST_TERMINAL(Call, Expression)
 AST_TERMINAL(Parentheses, Expression)
 
-
 //
 // --- Declarations ---
 //
 
 AST_NODE(Declaration, Node)
+ABSTRACT(Declaration)
 
 AST_TERMINAL(TypePrototype, Declaration)
 AST_TERMINAL(TypeDef, Declaration)
 AST_TERMINAL(FunctionPrototype, Declaration)
 AST_TERMINAL(Function, Declaration)
-
 
 //
 // --- Program ---

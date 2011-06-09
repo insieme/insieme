@@ -123,7 +123,7 @@ namespace {
 			// create internally maintained visitor performing the actual check
 			// NOTE: the visitor pointer is required to support recursion
 			ASTVisitor<void, Address>* visitor;
-			auto lambdaVisitor = makeLambdaVisitor<Address>([&res, &visitor, this](const NodeAddress& node) {
+			auto lambdaVisitor = makeLambdaVisitor([&res, &visitor, this](const NodeAddress& node) {
 
 				// check the current node and collect results
 				addAll(res, this->check->visit(node));
@@ -178,7 +178,7 @@ namespace {
 			// create internally maintained visitor performing the actual check
 			// NOTE: the visitor pointer is required to support recursion
 			ASTVisitor<void, Address>* visitor;
-			auto lambdaVisitor = makeLambdaVisitor<Address>([&res, &visitor, &all, this](const NodeAddress& node) {
+			auto lambdaVisitor = makeLambdaVisitor([&res, &visitor, &all, this](const NodeAddress& node) {
 				// add current node to set ...
 				bool isNew = all.insert(node.getAddressedNode()).second;
 				if (!isNew) {
