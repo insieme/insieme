@@ -80,5 +80,64 @@ TEST(FunctionCall, templates) {
 //    EXPECT_FALSE(code.find("[[unhandled_simple_type") != string::npos);
 }
 
+
+TEST(FunctionCall, VectorReduction) {
+    core::NodeManager manager;
+    core::parse::IRParser parser(manager);
+
+    core::ASTBuilder builder(manager);
+    const core::lang::BasicGenerator& basic = manager.basic;
+
+    // Operation: vector.reduction
+    // Type: (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
+
+//    core::ProgramPtr program = parser.parseProgram("main: fun ()->unit:\
+//            mainfct in { ()->unit:mainfct = ()->unit{ { \
+//                (fun() -> unit {{ \
+//    		        decl vector<int<4>,4>:x = vector<vector<int<4>,4>>(1,2,3,4);\
+//                    return (op<vector.reduction>( vector<int<4>,4>:x, lit<int<4>, 0>, op<int.add> )); \
+//                }}() ); \
+//                return 0; \
+//            } } }");
+
+
+    core::TypePtr int4 = basic.getInt4();
+    core::VectorTypePtr vectorType = builder.vectorType(int4, builder.concreteIntTypeParam(4));
+
+    core::ExpressionPtr vector = builder.vectorExpr(vectorType,
+    		toVector<core::ExpressionPtr>(
+    				builder.literal(int4, "1"),
+    				builder.literal(int4, "2"),
+    				builder.literal(int4, "3"),
+    				builder.literal(int4, "4")
+    		)
+    );
+
+    core::ExpressionPtr call = builder.callExpr(basic.getVectorReduction(), vector, builder.literal(int4, "0"), basic.getSignedIntAdd());
+
+    core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(), basic.getUnit());
+    core::ExpressionPtr lambda = builder.lambdaExpr(funType, toVector<core::VariablePtr>(), builder.returnStmt(call));
+
+    core::ProgramPtr program = builder.createProgram(toVector(lambda), true);
+
+/*
+    (fun(array<'a, 1>:in) -> int<4> {{ \
+        decl array<'a, 1>:local = (op<undefined>(lit<type<array<'a> >, type(array('a)) > )); \
+        return 0; \
+    }}(lit<array<int<4>, 1>, x>)); \
+*/
+
+    LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
+
+    LOG(INFO) << "Converting IR to C...";
+    auto converted = simple_backend::SimpleBackend::getDefault()->convert(program);
+    LOG(INFO) << "Printing converted code: " << *converted;
+
+    string code = toString(*converted);
+
+//    EXPECT_FALSE(code.find("<?>") != string::npos);
+//    EXPECT_FALSE(code.find("[[unhandled_simple_type") != string::npos);
+}
+
 } // namespace backend
 } // namespace insieme
