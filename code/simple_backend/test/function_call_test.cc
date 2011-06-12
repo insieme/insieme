@@ -44,6 +44,7 @@
 #include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"
+#include "insieme/utils/compiler/compiler.h"
 
 namespace insieme {
 namespace backend {
@@ -135,8 +136,10 @@ TEST(FunctionCall, VectorReduction) {
 
     string code = toString(*converted);
 
-//    EXPECT_FALSE(code.find("<?>") != string::npos);
-//    EXPECT_FALSE(code.find("[[unhandled_simple_type") != string::npos);
+    EXPECT_FALSE(code.find("<?>") != string::npos);
+
+    // test contracted form
+    EXPECT_TRUE(code.find("return (((((0+1)+2)+3)+4));") != string::npos);
 }
 
 } // namespace backend
