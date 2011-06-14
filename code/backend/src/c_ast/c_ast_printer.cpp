@@ -89,6 +89,10 @@ namespace c_ast {
 				return out << node->name;
 			}
 
+			PRINT(Comment) {
+				return out << "/* " <<  node->comment << " */";
+			}
+
 			PRINT(OpaqueCode) {
 				return out << node->code;
 			}
@@ -369,10 +373,6 @@ namespace c_ast {
 			}
 
 			PRINT(Function) {
-				return out << "TODO";
-			}
-
-			PRINT(Program) {
 				return out << "TODO";
 			}
 

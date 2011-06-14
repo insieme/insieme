@@ -41,8 +41,11 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "insieme/backend/c_ast/c_code.h"
 #include "insieme/core/ast_node.h"
+
+#include "insieme/backend/converter.h"
+#include "insieme/backend/c_ast/c_code.h"
+
 
 namespace insieme {
 namespace backend {
@@ -64,8 +67,15 @@ namespace backend {
 	}
 
 	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
-		auto targetCode = std::make_shared<TextFragment>("int main() { return 0; }\n");
-		return std::make_shared<c_ast::CCode>(code, targetCode);
+
+		// create a C Node Manager
+		c_ast::SharedCNodeManager manager = c_ast::CNodeManager::createShared();
+
+		// create Converter instance
+		Converter converter;
+
+		// convert IR node target code
+		return converter.convert(code, manager);
 	}
 
 } // end namespace backend

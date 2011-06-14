@@ -41,6 +41,9 @@
 #include <vector>
 #include <cassert>
 #include <map>
+#include <memory>
+
+#include <boost/utility.hpp>
 
 #include "insieme/utils/pointer.h"
 
@@ -74,7 +77,10 @@ namespace c_ast {
 
 	// -- Utilities ------------------------------
 
-	class CNodeManager {
+	class CNodeManager;
+	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+
+	class CNodeManager : private boost::noncopyable {
 
 		vector<NodePtr> nodes;
 		std::map<string, IdentifierPtr> identMap;
@@ -91,6 +97,10 @@ namespace c_ast {
 			res->setManager(this);
 			nodes.push_back(res);
 			return res;
+		}
+
+		static SharedCNodeManager createShared() {
+			return std::make_shared<CNodeManager>();
 		}
 
 	};
@@ -120,6 +130,11 @@ namespace c_ast {
 
 		bool operator==(Identifier& other) const { return name == other.name; }
 		bool operator<(Identifier& other) const { return name < other.name; }
+	};
+
+	struct Comment : public Node {
+		const string comment;
+		Comment(const string& comment) : Node(NT_Comment), comment(comment) {}
 	};
 
 	struct OpaqueCode : public Node {
@@ -383,13 +398,6 @@ namespace c_ast {
 		FunctionPrototype(FunctionPtr function) : Declaration(NT_FunctionPrototype), function(function) {}
 	};
 
-	// -- Program ---------------------------------
-
-	class Program : public Node {
-		vector<string> includes;
-		vector<DeclarationPtr> declarations;
-		Program() : Node(NT_Program) {}
-	};
 
 } // end namespace c_ast
 } // end namespace backend

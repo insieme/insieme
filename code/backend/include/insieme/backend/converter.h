@@ -34,60 +34,54 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/backend/c_ast/c_code.h"
+#include <memory>
+
+#include "insieme/utils/pointer.h"
+#include "insieme/core/ast_visitor.h"
 
 namespace insieme {
 namespace backend {
+
 namespace c_ast {
 
-namespace {
+	class Node;
+	typedef Ptr<Node> NodePtr;
 
-	// a dummy fragment just representing text
-	class TextFragment : public c_ast::CodeFragment {
-		string text;
+	class CNodeManager;
+	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+
+	class CCode;
+	typedef std::shared_ptr<CCode> CCodePtr;
+
+}
+
+	// a forward declaration - implementation is hidden
+	class ConversionContext;
+
+
+	class Converter : public core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&> {
+
 	public:
-		TextFragment(const string& text) : text(text) {};
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << text;
+
+		Converter() : core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true) {}
+
+		c_ast::CCodePtr convert(const core::NodePtr& node, c_ast::SharedCNodeManager& cNodeManager);
+
+	protected:
+
+		c_ast::NodePtr convert(const core::NodePtr& node, ConversionContext& context) {
+			return visit(node, context);
 		}
+
+		c_ast::NodePtr visitNode(const core::NodePtr& node, ConversionContext& context);
+
+		c_ast::NodePtr visitProgram(const core::ProgramPtr& node, ConversionContext& context);
+
+
 	};
 
-	CodeFragmentPtr getTextFragment(const string& text) {
-		return std::make_shared<TextFragment>(text);
-	}
 
-}
-
-
-TEST(C_AST, FragmentDependencyResolution) {
-
-	// create a simple code fragment
-	CodeFragmentPtr code = getTextFragment("A");
-
-	EXPECT_EQ("A\n", toString(CCode(core::NodePtr(), code)));
-
-	// add something with dependencies
-
-	CodeFragmentPtr codeA = getTextFragment("A");
-	CodeFragmentPtr codeB = getTextFragment("B");
-	CodeFragmentPtr codeC = getTextFragment("C");
-	CodeFragmentPtr codeD = getTextFragment("D");
-
-	codeB->addDependency(codeA);
-	codeC->addDependency(codeB);
-	codeD->addDependency(codeC);
-
-	EXPECT_EQ("ABCD\n", toString(CCode(core::NodePtr(), codeD)));
-
-	// add additional edge (should not change anything)
-	codeD->addDependency(codeA);
-	EXPECT_EQ("ABCD\n", toString(CCode(core::NodePtr(), codeD)));
-
-}
-
-} // end namespace c_ast
 } // end namespace backend
 } // end namespace insieme
-
