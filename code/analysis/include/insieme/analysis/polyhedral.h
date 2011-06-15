@@ -163,7 +163,7 @@ struct Constant : public Element {
  * The order of the variables in the vector is usually required (by the 
  * polyhedral libraries) to be ordered in the following way: 
  *
- * (iter0,...iterN, param0, ..., paramM, 1)
+ * (iter0,...iterN | param0, ..., paramM | 1)
  *
  * Which defines an iteration vector of size N+M+1, the first N elements 
  * are iterators, followed by M parameters and the last element is the 
@@ -313,9 +313,7 @@ public:
 };
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which 
-// contains both the elements of a and b. Because these elements have the same 
-// context in common elements which are iterators in a must cannot be parameters 
-// in b (and viceversa). 
+// contains both the elements of a and b. 
 IterationVector merge(const IterationVector& a, const IterationVector& b); 
 
 /**

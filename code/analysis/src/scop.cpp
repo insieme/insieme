@@ -41,6 +41,39 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
 
+#include "insieme/core/ast_builder.h"
+
+namespace {
+using namespace insieme::core;
+using namespace insieme::analysis::poly;
+
+Constraint extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
+
+	NodeManager& mgr = cond->getNodeManager();
+    if (cond->getNodeType() == NT_CallExpr) {
+    	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
+        if ( mgr.basic.isIntCompOp(callExpr->getFunctionExpr()) || 
+	  		 mgr.basic.isUIntCompOp(callExpr->getFunctionExpr()) ) 
+		{
+			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
+			// A constraints is normalized having a 0 on the right side,
+			// therefore we build a temporary expression by subtracting the rhs
+			// to the lhs, Example: 
+			//
+			// if (a<b) { }    ->    a-b<0
+			ASTBuilder builder(mgr);
+			AffineFunction af(iv, builder.callExpr( 
+					mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
+				) 
+			);
+			return Constraint(af,Constraint::EQ);
+		}
+	}
+	assert(false);
+}
+
+} // end namespace anonymous 
+
 namespace insieme {
 namespace analysis {
 namespace scop {
@@ -55,9 +88,10 @@ class ScopVisitor : public core::ASTVisitor<IterationVector> {
 
 	ScopList& scopList;
 	core::NodePtr scopBeign;
+    bool analyzeCond;
 
 public:
-	ScopVisitor(ScopList& scopList) : ASTVisitor<IterationVector>(false), scopList(scopList) { }
+	ScopVisitor(ScopList& scopList) : ASTVisitor<IterationVector>(false), scopList(scopList), analyzeCond(false) { }
 
 	IterationVector visitIfStmt(const IfStmtPtr& ifStmt) {
 		IterationVector ret;
@@ -88,7 +122,10 @@ public:
 		if (!isSCoP) { assert(except); throw *except; }
 
 		// check the condition expression
-		ret = merge(ret, visitExpression(ifStmt->getCondition()));
+		Constraint&& c = extractFromCondition(ret, ifStmt->getCondition());
+		std::cout << "CONSTRAINT: " << c << std::endl;
+
+		ret = merge(ret, visit(ifStmt->getCondition()));
 		// FIXME: condition expression creates new Constrain in the domain,
 		// therefore is needs special handling!!!
 		
@@ -142,8 +179,8 @@ public:
 			callExpr->getArgument(1)->addAnnotation( std::make_shared<SCoP>(it) );
 			return it;
 		}
-
-		IterationVector ret;
+		
+        IterationVector ret;
 		const std::vector<ExpressionPtr>& args = callExpr->getArguments();
 		std::for_each(args.begin(), args.end(), 
 				[&](const ExpressionPtr& cur) { ret = merge(this->visit(cur), ret); }	);

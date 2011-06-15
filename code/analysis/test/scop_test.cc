@@ -75,19 +75,22 @@ TEST(SCoP, IfStmt) {
 	parse::IRParser parser(mgr);
 
     auto ifStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
-		if((int<4>:c == 0)){ \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a*int<4>:b))); \
+		if((int<4>:c == int<4>:d)){ \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a-int<4>:b))); \
 		} else { \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:c+int<4>:d))); \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a+int<4>:b))); \
 		}") );
 	std::cout << *ifStmt << std::endl;
 	scop::mark(ifStmt);
 
-	EXPECT_FALSE(ifStmt->hasAnnotation(scop::SCoP::KEY));
-	EXPECT_FALSE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
+	EXPECT_TRUE(ifStmt->hasAnnotation(scop::SCoP::KEY));
+	scop::SCoP& ann = *ifStmt->getAnnotation(scop::SCoP::KEY);
+    std::cout << ann.getIterationVector() << std::endl;
+
+	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
 	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::SCoP::KEY));
 
-	scop::SCoP& ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
+	ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
 	std::cout << ann.getIterationVector() << std::endl;
 
 }
