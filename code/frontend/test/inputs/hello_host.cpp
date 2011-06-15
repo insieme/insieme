@@ -40,10 +40,14 @@ cl_program program = NULL;
 
 //#pragma insieme mark
 int main(int argc, char **argv) {
+	cl_int err;
 	cl_context context;
+	cl_device_id device;
 	cl_command_queue queue;
 	cl_kernel kernel;
-	cl_int err;
+	cl_event event;
+
+//	queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
 
 	cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
 	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
@@ -70,12 +74,22 @@ int main(int argc, char **argv) {
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
 
-	err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, NULL);
+	err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
+
+	err = clWaitForEvents(1, &event);
 
 	clEnqueueReadBuffer(queue, dev_ptr2, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	clFinish(queue);
+
+	cl_ulong start, end;
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
+    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
+
 
 	clReleaseMemObject(dev_ptr1);
 	clReleaseMemObject(dev_ptr2);
+	clReleaseEvent(event);
+	clReleaseKernel(kernel);
 
 	return 0;
 }

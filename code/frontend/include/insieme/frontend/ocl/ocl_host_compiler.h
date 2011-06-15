@@ -190,6 +190,9 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	// check if the call is a call to ref.assign
 	core::CallExprPtr checkAssignment(const core::CallExprPtr& oldCall);
 
+	// needed to be able to work with handlers, identified by prefixes of function names
+	HandlerPtr& findHandler(const string& fctName);
+
 	bool translateClCreateBuffer(const core::VariablePtr& var, const core::CallExprPtr& fun, const core::CallExprPtr& newRhs, core::NodePtr& ret);
 	bool handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName);
 	bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);

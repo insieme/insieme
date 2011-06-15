@@ -201,7 +201,7 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
 }
 
 
-core::CallExprPtr KernelData::callBarrier(core::ExpressionPtr memFence) {
+core::CallExprPtr KernelData::callBarrier(const core::ExpressionPtr& memFence) {
     //get rid of casts
     core::NodePtr arg = memFence;
     while(arg->getNodeType() == core::NT_CastExpr) {

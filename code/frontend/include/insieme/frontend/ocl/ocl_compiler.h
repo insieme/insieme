@@ -130,7 +130,7 @@ public:
     core::CallExprPtr accessId(OCL_PAR_LEVEL level, core::ExpressionPtr idx);
 
     //returns a call expression to one or two barrier function
-    core::CallExprPtr callBarrier(core::ExpressionPtr memFence);
+    core::CallExprPtr callBarrier(const core::ExpressionPtr& memFence);
 };
 } // namespace
 

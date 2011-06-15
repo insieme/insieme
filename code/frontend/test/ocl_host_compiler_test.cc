@@ -54,8 +54,7 @@ namespace core = insieme::core;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
-TEST(OclHostCompilerTest, HelloHostTest)
-{
+TEST(OclHostCompilerTest, HelloHostTest) {
 	Logger::get(std::cerr, DEBUG);
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
@@ -63,7 +62,7 @@ TEST(OclHostCompilerTest, HelloHostTest)
 //	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/shared/inc");
 //	CommandLineOptions::IncludePaths.push_back("/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc");
 
-	CommandLineOptions::Defs.push_back("INSIEME=\"" + string(SRC_DIR) + "hello.cl\"");
+	CommandLineOptions::Defs.push_back("INSIEME");
 	//    string kernelSrc = SRC_DIR + "../../frontend/test/hello.cl" + string(SRC_DIR) + "";
 	//    CommandLineOptions::Defs.push_back("KERNEL=\"/home/klaus/insieme/code/frontend/test/hello.cl\"");
 
