@@ -240,6 +240,9 @@ public:
 	// Allows the iterator class to access the private part of the IterationVector class 
 	friend class iterator;
 
+	typedef IterVec::const_iterator iter_iterator;
+	typedef ParamVec::const_iterator param_iterator;
+
 	IterationVector() { }
 
 	/**
@@ -251,6 +254,11 @@ public:
 	 */
 	size_t add(const Iterator& iter) { return addTo(iter, iters); }
 	size_t add(const Parameter& param) { return addTo(param, params) + iters.size(); }
+
+	size_t add(const Element& elem) { 
+		return elem.getType() == Element::ITER ? 
+				add(static_cast<const Iterator&>(elem)) : add(static_cast<const Parameter&>(elem)); 
+	}
 
 	/**
 	 * Returns the index of an element inside the iteration vector. 
@@ -287,13 +295,13 @@ public:
 
 	// Returns an iterator over the iterators of this iteration vector:
 	// (iter0, iter1, ... iterN)
-	IterVec::const_iterator iter_begin() const { return iters.begin(); }
-	IterVec::const_iterator iter_end() const { return iters.end(); }
+	iter_iterator iter_begin() const { return iters.begin(); }
+	iter_iterator iter_end() const { return iters.end(); }
 
 	// Returns an iterator over the parameters of this iteration vector:
 	// (param0, param1, ... paramM)
-	ParamVec::const_iterator param_begin() const { return params.begin(); }
-	ParamVec::const_iterator param_end() const { return params.end(); }
+	param_iterator param_begin() const { return params.begin(); }
+	param_iterator param_end() const { return params.end(); }
 
 	const Element& operator[](size_t idx) const;
 
@@ -302,6 +310,12 @@ public:
 	// Implements the Printable interface
 	std::ostream& printTo(std::ostream& out) const;
 };
+
+// Merges two iteration vectors (a and b) to create a new iteration vector which 
+// contains both the elements of a and b. Because these elements have the same 
+// context in common elements which are iterators in a must cannot be parameters 
+// in b (and viceversa). 
+IterationVector merge(const IterationVector& a, const IterationVector& b); 
 
 /**
  * AffineFunction represents an affine function based on an iteration vector. An

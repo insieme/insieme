@@ -108,6 +108,20 @@ std::ostream& IterationVector::printTo(std::ostream& out) const {
 	return out << join(",", begin(), end(), [&](std::ostream& jout, const Element& cur){ jout << cur; } );
 }
 
+// Merges two iteration vectors (a and b) to create a new iteration vector which contains
+// both the elements of a and b. 
+IterationVector merge(const IterationVector& a, const IterationVector& b) {
+	IterationVector::iter_iterator aIt = a.iter_begin(), aEnd = a.iter_end(), bIt = b.iter_begin(), bEnd = b.iter_end();
+	IterationVector ret;
+
+	// because the two iteration vectors are built bottom-up, the iterators in a will not be b and viceversa
+	// having the same iterators would mean the same variable has been used as loop iterator index in 1  statement
+	// as a parameter in another, therefore we can safely remove the iterators and merge the set of parameters. 
+		
+	ret.add( *aIt );
+		
+}
+
 //====== IterationVector::iterator =============================================
 
 void IterationVector::iterator::inc(size_t n) {
