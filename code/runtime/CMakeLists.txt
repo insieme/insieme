@@ -20,15 +20,14 @@ if ( USE_OPENCL )
 		add_definitions(-DUSE_OPENCL)
 		message (STATUS "Found At: " ${OPENCL_LIBS})
 		message(STATUS "OPENCL ENABLED")
-		message(STATUS "USING ${OPENCL_LIBS}")			
+		message(STATUS "USING ${OPENCL_LIBS}")
+		# list all include paths
+		include_directories(include/ $ENV{OPENCL_ROOT}/include/)			
 	endif(${OPENCL_LIBS} STREQUAL "OPENCL_LIBS-NOTFOUND")
 	
 else ( USE_OPENCL )
 	message(STATUS "OPENCL DISABLED")
 endif( USE_OPENCL )
-
-# list all include paths
-include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 
 # Build the runtime
 add_executable(insieme_runtime ${insieme_runtime_srcs} ${insieme_runtime_incs} )
@@ -82,12 +81,12 @@ file(GLOB test_cases test/standalone_*.c)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
+	include_directories(include/ $ENV{OPENCL_ROOT}/include/)
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} rt)
-  if ( USE_OPENCL )
-    target_link_libraries(insieme_runtime ${OPENCL_LIBS})
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/irt_ocl_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/irt_ocl_config.h)
-  endif ( USE_OPENCL )
+	if ( USE_OPENCL )
+    	target_link_libraries(${case_name} ${OPENCL_LIBS})
+	endif ( USE_OPENCL )
 endforeach(case_file)
