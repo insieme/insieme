@@ -104,3 +104,5 @@ void irt_throw_generic_error(irt_error* error);
 
 const char* irt_errcode_string(irt_errcode code);
 void irt_print_error_info(FILE* target, irt_error* error);
+
+void irt_error_handler(int signal);
