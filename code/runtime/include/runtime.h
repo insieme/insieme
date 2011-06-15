@@ -36,26 +36,7 @@
 
 #pragma once
 
-#include "declarations.h"
-
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(context);
-
-struct _irt_context {
-	irt_context_id id;
-	irt_client_app* client_app;
-	irt_type* type_table;
-	irt_wi_implementation* impl_table;
-	// private implementation detail
-	struct _irt_context* lookup_table_next;
-};
-
-
-/* ------------------------------ operations ----- */
-
-static inline irt_context* irt_context_get_current();
-
-irt_context* irt_context_create(irt_client_app* app);
-irt_context* irt_context_create_standalone(irt_type* type_table, irt_wi_implementation* impl_table);
-void irt_context_destroy(irt_context* context);
+typedef enum _irt_runtime_behaviour_flags {
+	IRT_RT_STANDALONE	=	1<<0,
+	IRT_RT_MQUEUE		=	1<<1
+} irt_runtime_behaviour_flags;

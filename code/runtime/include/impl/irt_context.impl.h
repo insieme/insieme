@@ -47,6 +47,17 @@ static inline irt_context* irt_context_get_current() {
 	return irt_context_table_lookup(irt_worker_get_current()->cur_context);
 }
 
+
+irt_context* irt_context_create_standalone(irt_type* type_table, irt_wi_implementation* impl_table) {
+	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
+	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	context->client_app = NULL;
+	context->type_table = type_table;
+	context->impl_table = impl_table;
+	irt_context_table_insert(context);
+	return context;
+}
+
 irt_context* irt_context_create(irt_client_app* app) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);

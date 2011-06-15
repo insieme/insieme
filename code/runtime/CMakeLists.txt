@@ -46,6 +46,7 @@ include_directories(include/ ${GTEST_INCLUDE_DIRS} ${OPENCL_INCLUDE_DIR})
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
+# handle gtest unit tests
 set ( ut_prefix  ut_rt_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
@@ -66,12 +67,23 @@ foreach ( case_file ${test_cases})
 	add_unit_test(${case_name} ${VFLAG})
 endforeach(case_file)
 
-file(GLOB test_cases test/*.c)
+# handle manual (library) test cases
+file(GLOB test_cases test/manual_*.c)
 foreach (case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
 	
 	add_library(${case_name} SHARED ${case_file})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} dl)
-	target_link_libraries(insieme_runtime rt)
+endforeach(case_file)
+
+# handle standalone (executable) test cases
+file(GLOB test_cases test/standalone_*.c)
+foreach (case_file ${test_cases})
+	get_filename_component( case_name ${case_file} NAME_WE )
+	
+	add_executable(${case_name} ${case_file})
+	target_link_libraries(${case_name} ${pthread_LIB})
+	target_link_libraries(${case_name} dl)
+	target_link_libraries(${case_name} rt)
 endforeach(case_file)
