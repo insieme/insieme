@@ -65,6 +65,14 @@ bool Element::operator==(const Element& other) const {
 	return false;
 }
 
+bool Element::operator<(const Element& other) const {
+    if (type != other.type) { return type < other.type; }
+	if (type == ITER || type == PARAM) { 
+		return static_cast<const Variable&>(*this).getVariable()->getId() < 
+			static_cast<const Variable&>(other).getVariable()->getId(); }
+    return false;
+}
+
 std::ostream& Iterator::printTo(std::ostream& out) const { return out << *getVariable(); }
 
 std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getVariable(); }
@@ -104,22 +112,40 @@ bool IterationVector::operator==(const IterationVector& other) const {
 	return std::equal(begin(), end(), other.begin());
 }
 
+// An iteration vector is represented by three main components, the iterators,
+// the parameters and the constant part. The vector is printed displaying the
+// comma separated list of iterators and parameters divided by the '|'
+// separator. 
 std::ostream& IterationVector::printTo(std::ostream& out) const {
-	return out << join(",", begin(), end(), [&](std::ostream& jout, const Element& cur){ jout << cur; } );
+	out << "(" << join(",", iter_begin(), iter_end(), [&](std::ostream& jout, const Element& cur){ jout << cur; } );
+	out << "|";
+	out << join(",", param_begin(), param_end(), [&](std::ostream& jout, const Element& cur){ jout << cur; } );
+	out << "|1)";
+	return out;
+}
+
+template <class T>
+void merge_add(IterationVector& dest, typename std::vector<T>::const_iterator aBegin, 
+		typename std::vector<T>::const_iterator aEnd, typename std::vector<T>::const_iterator bBegin, 
+		typename std::vector<T>::const_iterator bEnd) {
+	std::set<T> varSet;
+    std::set_union(aBegin, aEnd, bBegin, bEnd, std::inserter(varSet, varSet.begin()));
+    std::for_each(varSet.begin(), varSet.end(), [&dest](const T& cur) { dest.add(cur); } );
 }
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which contains
 // both the elements of a and b. 
 IterationVector merge(const IterationVector& a, const IterationVector& b) {
-	IterationVector::iter_iterator aIt = a.iter_begin(), aEnd = a.iter_end(), bIt = b.iter_begin(), bEnd = b.iter_end();
 	IterationVector ret;
 
 	// because the two iteration vectors are built bottom-up, the iterators in a will not be b and viceversa
 	// having the same iterators would mean the same variable has been used as loop iterator index in 1  statement
 	// as a parameter in another, therefore we can safely remove the iterators and merge the set of parameters. 
-		
-	ret.add( *aIt );
-		
+	merge_add<Iterator>(ret, a.iter_begin(), a.iter_end(), b.iter_begin(), b.iter_end());	
+	// Also the parameters have to be merged, we use the same procedure for
+	// this 
+	merge_add<Parameter>(ret, a.param_begin(), a.param_end(), b.param_begin(), b.param_end());	
+	return ret;
 }
 
 //====== IterationVector::iterator =============================================

@@ -34,51 +34,61 @@
  * regarding third party software licenses.
  */
 
-#pragma once 
+#include <gtest/gtest.h>
 
-#include <vector>
-
-#include "insieme/core/ast_node.h"
+#include "insieme/analysis/scop.h"
 #include "insieme/analysis/polyhedral.h"
 
-namespace insieme {
-namespace analysis {
-namespace scop {
+#include "insieme/core/program.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/statements.h"
 
-/**
- * Stores the information related to a SCoP (Static Control Part) region of a
- * program. 
- */
-class SCoP: public core::NodeAnnotation {
-	poly::IterationVector iterVec;
+#include "insieme/core/parser/ir_parse.h"
 
-public:
-	static const string NAME;
-	static const utils::StringKey<SCoP> KEY;
+using namespace insieme::core;
+using namespace insieme::analysis;
 
-	SCoP(const poly::IterationVector& iterVec): core::NodeAnnotation(), iterVec(iterVec) { } 
+TEST(SCoP, CompoundStmt) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
 
-	const std::string& getAnnotationName() const {return NAME;}
+    auto compStmt = parser.parseStatement(
+		"{\
+			decl int<4>:b = 20; \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a+b)));\
+		}"
+	);
+	std::cout << *compStmt << std::endl;
 
-	const std::string toString() const { return ""; }
+	scop::mark(compStmt);
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	EXPECT_TRUE(compStmt->hasAnnotation(scop::SCoP::KEY));
+	scop::SCoP& ann = *compStmt->getAnnotation(scop::SCoP::KEY);
 
-	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const { 
-		return false; 
-	}
+	std::cout << ann.getIterationVector() << std::endl;
+}
 
-	const poly::IterationVector& getIterationVector() const { return iterVec; }
-};
-typedef std::vector<SCoP> ScopList;
+TEST(SCoP, IfStmt) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
 
-/**
- * Finds and marks the SCoPs contained in the root subtree and returns a list of
- * found SCoPs (an empty list in the case no SCoP was found). 
- */ 
-ScopList mark(const core::NodePtr& root, bool interproc=false);
+    auto ifStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
+		if((int<4>:c == 0)){ \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a*int<4>:b))); \
+		} else { \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:c+int<4>:d))); \
+		}") );
+	std::cout << *ifStmt << std::endl;
+	scop::mark(ifStmt);
 
-} // end namespace scop
-} // end namespace analysis
-} // end namespace insieme
+	EXPECT_FALSE(ifStmt->hasAnnotation(scop::SCoP::KEY));
+	EXPECT_FALSE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
+	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::SCoP::KEY));
+
+	scop::SCoP& ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
+	std::cout << ann.getIterationVector() << std::endl;
+
+}
 
