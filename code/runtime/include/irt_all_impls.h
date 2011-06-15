@@ -36,26 +36,20 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "impl/client_app.impl.h"
+#include "impl/irt_context.impl.h"
+#include "impl/error_handling.impl.h"
+#include "impl/worker.impl.h"
+#include "impl/irt_scheduling.impl.h"
+#include "impl/irt_mqueue.impl.h"
+#include "impl/data_item.impl.h"
+#include "irt_types.h"
+#include "wi_implementation.h"
+#include "utils/timing.h"
+#include "impl/work_group.impl.h"
+#include "runtime.h"
 
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(context);
-
-struct _irt_context {
-	irt_context_id id;
-	irt_client_app* client_app;
-	irt_type* type_table;
-	irt_wi_implementation* impl_table;
-	// private implementation detail
-	struct _irt_context* lookup_table_next;
-};
-
-
-/* ------------------------------ operations ----- */
-
-static inline irt_context* irt_context_get_current();
-
-irt_context* irt_context_create(irt_client_app* app);
-irt_context* irt_context_create_standalone(irt_type* type_table, irt_wi_implementation* impl_table);
-void irt_context_destroy(irt_context* context);
+#ifdef USE_OPENCL 
+#include "impl/irt_ocl.impl.h"
+#include "irt_ocl_config.h"
+#endif

@@ -58,7 +58,7 @@ struct _irt_wi_wg_membership {
 	uint32 num;
 };
 
-typedef void* irt_wg_redistribution_function(void** collected, uint32 local_id);
+typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, uint32 num_participants, void *out_result);
 
 /* ------------------------------ operations ----- */
 
@@ -74,5 +74,5 @@ void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
 static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi);
 
 void irt_wg_barrier(irt_work_group* wg);
-void* irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* data, irt_wg_redistribution_function* func);
+void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_data, void* result_data, irt_wg_redistribution_function* func);
 

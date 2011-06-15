@@ -34,71 +34,11 @@
  * regarding third party software licenses.
  */
 
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
-#endif
-
 #include "declarations.h"
+#include "runtime.h"
 
-#include <mqueue.h>
-#include <unistd.h>
-#include <alloca.h>
-
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
-#include "impl/irt_mqueue.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-
-
-#include "utils/lookup_tables.h"
-
-// error handling
-void irt_error_handler(int signal) {
-	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
-	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", (void*)pthread_self(), irt_errcode_string(error->errcode));
-	fprintf(stderr, "Additional information:\n");
-	irt_print_error_info(stderr, error);
-	exit(-error->errcode);
-}
-
-// globals
-pthread_key_t irt_g_error_key;
-pthread_key_t irt_g_worker_key;
-mqd_t irt_g_message_queue;
-uint32 irt_g_worker_count;
-struct _irt_worker **irt_g_workers;
-
-IRT_CREATE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
-IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
-
-void irt_init_globals() {
-	// not using IRT_ASSERT since environment is not yet set up
-	int err_flag = 0;
-	err_flag |= pthread_key_create(&irt_g_error_key, NULL);
-	err_flag |= pthread_key_create(&irt_g_worker_key, NULL);
-	if(err_flag != 0) {
-		fprintf(stderr, "Could not create pthread key(s). Aborting.\n");
-		exit(-1);
-	}
-	irt_mqueue_init();
-	irt_data_item_table_init();
-	irt_context_table_init();
-}
-void irt_cleanup_globals() {
-	irt_mqueue_cleanup();
-}
-
-// exit handling
-void irt_term_handler(int signal) {
-	exit(0);
-}
-void irt_exit_handler() {
-	irt_cleanup_globals();
-	IRT_INFO("\nInsieme runtime exiting.\n");
-}
+#include "irt_all_impls.h"
+#include "standalone.h"
 
 int main(int argc, char** argv) {
 	if(argc < 2 || argc > 3) {
@@ -106,41 +46,15 @@ int main(int argc, char** argv) {
 		return -1;
 	}
 
-	// initialize error and termination signal handlers
-	signal(IRT_SIG_ERR, &irt_error_handler);
-	signal(SIGTERM, &irt_term_handler);
-	signal(SIGINT, &irt_term_handler);
-	atexit(&irt_exit_handler);
-	// initialize globals
-	irt_init_globals();
+	uint32 worker_count = 1;
+	if(argc >= 3) worker_count = atoi(argv[2]);
+	irt_runtime_start(IRT_RT_MQUEUE, worker_count);
 
-	IRT_DEBUG("!!! Starting worker threads");
-	
-	#ifdef USE_OPENCL
-	IRT_INFO("Running Insieme runtime with OpenCL!\n");
-	irt_ocl_init_devices();
-	#endif
-
-	irt_g_worker_count = 1;
-	if(argc >= 3) irt_g_worker_count = atoi(argv[2]);
-	irt_g_workers = (irt_worker**)alloca(irt_g_worker_count * sizeof(irt_worker*));
-	// initialize workers
-	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i] = irt_worker_create(i, 1<<i);
-	}
-	// start workers
-	for(int i=0; i<irt_g_worker_count; ++i) {
-		irt_g_workers[i]->state = IRT_WORKER_STATE_START;
-	}
 	IRT_DEBUG("Sending new app msg");
 	irt_mqueue_send_new_app(argv[1]);
 	IRT_DEBUG("New app msg sent");
 
 	for(;;) { sleep(60*60); }
 
-	#ifdef USE_OPENCL
-	irt_ocl_finalize_devices();	
-	#endif
-	
 	exit(0);
 }
