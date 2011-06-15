@@ -99,6 +99,7 @@ struct Element : public utils::Printable, public boost::equality_comparable<Elem
 	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	bool operator==(const Element& other) const;
+    bool operator<(const Element& other) const;
 private:
 	Type type;
 };
