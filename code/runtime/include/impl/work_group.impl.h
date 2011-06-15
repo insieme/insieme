@@ -88,7 +88,7 @@ void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 
 static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi) {
 	uint32 i;
-	for(i=0; i<wi->num_groups; ++i) if(wi->wg_memberships[i].wg_id.value.full == wi->id.value.full) break;
+	for(i=0; i<wi->num_groups; ++i) if(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full) break;
 	return wi->wg_memberships[i].num;
 }
 
@@ -135,13 +135,12 @@ void _irt_wg_allocate_redist_array(irt_work_group* wg) {
 	if(!worked) free(arr);
 }
 
-void* irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* data, irt_wg_redistribution_function* func) {
+void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_data, void* result_data, irt_wg_redistribution_function* func) {
 	if(wg->redistribute_data_array == NULL) _irt_wg_allocate_redist_array(wg);
 	uint32 local_id = irt_wg_get_wi_num(wg, this_wi);
-	wg->redistribute_data_array[local_id] = data;
+	wg->redistribute_data_array[local_id] = my_data;
 	irt_wg_barrier(wg);
-	void* retval = func(wg->redistribute_data_array, local_id);
+	func(wg->redistribute_data_array, local_id, wg->local_member_count, result_data);
 	irt_wg_barrier(wg);
-	return retval;
 }
 
