@@ -81,7 +81,7 @@ static void _irt_cl_print_device_info(cl_device_id* device, cl_device_info param
 
 static char* _irt_load_program_source (const char* filename, size_t* filesize);
 static void _irt_save_program_binary (cl_program program, const char* binary_filename);
-
+static const char* _irt_error_string (cl_int err_code);
 
 //-------------------
 

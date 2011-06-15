@@ -253,7 +253,7 @@ namespace simple_backend {
 				// handle main with no arguments
 				code << "int main() {" << CodeBuffer::indR << "\n";
 				convert(main->getBody(), code);
-				code << CodeBuffer::indL << "\n}\n";
+				code << CodeBuffer::indL << ";\n}\n";
 
 				// make current code fragment depending on the main function
 				getCurrentCodeFragment()->addDependency(code);

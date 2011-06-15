@@ -149,6 +149,10 @@ namespace c_ast {
 	};
 
 
+	// a type definition for a pointer to a C code fragment
+	class CCodeFragment;
+	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
+
 	/**
 	 * A code fragment is a top-level piece of code within the resulting C program. It encapsulate a
 	 * type / variable / function declaration or definition represented via a C_AST instance, a name
@@ -170,6 +174,13 @@ namespace c_ast {
 	public:
 
 		/**
+		 * Creates a new code fragment without any assigned code
+		 *
+		 * @param name the name of the new fragment
+		 */
+		CCodeFragment(const std::string& name) : name(name){ }
+
+		/**
 		 * Creates a new code fragment encapsulating the given code fragment.
 		 *
 		 * @param code the code this fragment is covering
@@ -178,12 +189,19 @@ namespace c_ast {
 		CCodeFragment(const NodePtr& code, const std::string& name) : code(code), name(name){ }
 
 		/**
+		 * A static factory method creating a new code fragment based on the given name.
+		 *
+		 * @param name the name of the new fragment
+		 */
+		static CCodeFragmentPtr createNew(const std::string& name);
+
+		/**
 		 * A static factory method creating a new code fragment based on the given code and name.
 		 *
 		 * @param code the code forming the body of the resulting fragment
 		 * @param name the name of the new fragment
 		 */
-		static CodeFragmentPtr createNew(const NodePtr& code, const std::string& name);
+		static CCodeFragmentPtr createNew(const NodePtr& code, const std::string& name);
 
 		/**
 		 * Obtains a reference to the code buffer defining the body of this code fragment.
@@ -229,7 +247,7 @@ namespace c_ast {
 		 *
 		 * @param dependencies a list of fragments this new fragment should depend on
 		 */
-		DummyFragment(const vector<CodeFragmentPtr>& dependencies) : CodeFragment(dependencies) {}
+		DummyFragment(const vector<CodeFragmentPtr>& dependencies = vector<CodeFragmentPtr>()) : CodeFragment(dependencies) {}
 
 		/**
 		 * A static factory method creating a new dummy-code fragment based on the given name.

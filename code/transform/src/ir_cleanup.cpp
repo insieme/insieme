@@ -76,7 +76,7 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	utils::set::PointerSet<StructTypePtr> structs;
 
 	// search for the property
-	visitAllOnce(node, makeLambdaPtrVisitor([&](const NodePtr& cur){
+	visitAllOnce(node, makeLambdaVisitor([&](const NodePtr& cur){
 		if (cur->getNodeType() != NT_StructType) {
 			return;
 		}

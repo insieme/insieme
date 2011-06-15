@@ -38,6 +38,11 @@
 
 #include <string>
 #include <vector>
+#include <fstream>
+
+#include "insieme/utils/logging.h"
+#include "insieme/utils/printable.h"
+
 
 namespace insieme {
 namespace utils {
@@ -103,7 +108,13 @@ namespace compiler {
 		return compile(files, targetfile, compiler);
 	}
 
-
+	/**
+	 * Compiles the given source code using the given compiler and temporary source and target files.
+	 *
+	 * @param source the source code to be compiled
+	 * @param compiler the compiler to be used for the compilation - the default is a C99 compiler
+	 */
+	bool compile(const Printable& source, const Compiler& compiler = Compiler::getDefaultC99Compiler());
 
 } // end namespace: compiler
 } // end namespace: utils

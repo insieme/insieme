@@ -288,7 +288,7 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaPtrVisitor([&res](const NodePtr& cur) {
+	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
 	}, true);
 
@@ -334,7 +334,7 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaPtrVisitor([&res](const NodePtr& cur) {
+	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
 	}, true);
 
@@ -372,7 +372,7 @@ TEST(ASTVisitor, UtilitiesTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaPtrVisitor([&res](const NodePtr& cur) {
+	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
 		res.push_back(cur);
 	}, true);
 
@@ -602,3 +602,43 @@ TEST(ASTVisitor, VisitOncePrunableVisitorTest) {
 	visitAllOnce(NodeAddress(ifStmt), limitB);
 	EXPECT_EQ( 5, limitB.counter);
 }
+
+
+TEST(ASTVisitor, ParameterTest) {
+
+	NodeManager manager;
+
+	GenericTypePtr type = GenericType::get(manager, "int");
+
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
+		CompoundStmt::get(manager)
+	);
+
+	auto visitor = makeLambdaVisitor([](const NodePtr& cur, int& a, int& b){
+		a++;
+		b--;
+	}, true);
+
+
+	int n = 0;
+	int m = 1;
+	visitor.visit(ifStmt, n, m);
+	EXPECT_EQ(1, n);
+	EXPECT_EQ(0, m);
+
+	n = 0;
+	m = 0;
+	auto recVisitor = makeRecursiveVisitor(visitor);
+	recVisitor.visit(ifStmt, n, m);
+	EXPECT_EQ(6, n);
+	EXPECT_EQ(-6, m);
+
+	// this should work - but it does not ...
+//	visitAllP(type, visitor, false, n, m);
+
+
+}
+
+

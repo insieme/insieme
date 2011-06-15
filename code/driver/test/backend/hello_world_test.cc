@@ -34,82 +34,44 @@
  * regarding third party software licenses.
  */
 
-#define BOOST_FILESYSTEM_VERSION 3
 #include <gtest/gtest.h>
 
+#include "insieme/utils/test/test_utils.h"
 #include "insieme/utils/compiler/compiler.h"
 
-#include <iostream>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/compiler/compiler_config.h"
-
-using namespace insieme::utils;
+#include "insieme/frontend/frontend.h"
+#include "insieme/core/ast_node.h"
+#include "insieme/core/program.h"
+#include "insieme/backend/full_backend.h"
 
 namespace insieme {
-namespace utils {
-namespace compiler {
+namespace backend {
 
 
-TEST(TargetCodeCompilerTest, helloWorldTest) {
+TEST(FullBackend, HelloWorld) {
 
-	namespace fs = boost::filesystem;
+	core::NodeManager manager;
 
-	// create a dummy code file to be compiled
-	fs::path dir = UTILS_BUILD_DIR;
-	fs::path srcFile = dir / "_ut_hello_world.c";
-	fs::path binFile = dir / "_ut_hello_world";
+	// load hello world test case
+	auto testCase = utils::test::getCase("hello_world");
+	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
 
-	// ensure file does not exist yet
-	ASSERT_FALSE(fs::exists(srcFile)) << "File " << srcFile << " should not exist!";
-	ASSERT_FALSE(fs::exists(binFile)) << "File " << binFile << " should not exist!";
+	// convert test case into IR using the frontend
+	auto code = frontend::ConversionJob(manager, testCase->getFiles(), testCase->getIncludeDirs()).execute();
+	ASSERT_TRUE(code) << "Unable to load input code!";
 
+	// create target code using real backend
+	auto target = backend::FullBackend::getDefault()->convert(code);
 
-	// write hello world code into the source file
-	fs::ofstream code;
-	code.open(srcFile);
-	ASSERT_TRUE(code.is_open()) << "Unable to open source file!";
-	code << "#include <stdio.h>\n\n";
-	code << "int main() {\n";
-	code << "	printf(\"Hello World!\\n\");\n";
-	code << "}\n\n";
-	code.close();
+	// check target code
+//	EXPECT_EQ("", toString(*target));
 
-	// file should exist now
-	ASSERT_TRUE(fs::exists(srcFile));
+	// see whether target code can be compiled
+	EXPECT_TRUE(utils::compiler::compile(*target));
 
-	// compile the example code using the default compiler
-	EXPECT_TRUE(compile(srcFile.string(), binFile.string()));
-
-
-	// delete both files
-	if (fs::exists(srcFile)) {
-		fs::remove(srcFile);
-	}
-
-	if(fs::exists(binFile)) {
-		fs::remove(binFile);
-	}
+	// TODO: compile target code => test result
 }
 
-
-TEST(TargetCodeCompilerTest, DirectHelloWorldTest) {
-
-	// write some code
-	string code =
-			"#include <stdio.h>\n\n"
-			"int main() {\n"
-			"	printf(\"Hello World!\\n\");\n"
-			"}\n\n";
-
-	// compile using direct signature
-	EXPECT_TRUE(compile(toPrintable(code)));
-
-}
-
-
-} // end namespace test
-} // end namespace utils
+} // end namespace backend
 } // end namespace insieme
+

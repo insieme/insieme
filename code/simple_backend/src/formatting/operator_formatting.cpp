@@ -258,6 +258,47 @@ namespace formatting {
 				}
 		});
 
+		ADD_FORMATTER(res, basic.getVectorReduction(), {
+				// type of the operation:
+				// (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
+
+				// get vector size
+				core::ExpressionPtr vector = ARG(0);
+				assert(
+					( vector->getNodeType() == core::NT_VectorExpr
+					|| vector->getNodeType() == core::NT_Variable )
+							&& "Only supporting vector expression or variable!");
+
+				core::VectorExprPtr vectorExpr = dynamic_pointer_cast<const core::VectorExpr>(vector);
+				core::VectorTypePtr vectorType = static_pointer_cast<const core::VectorType>(vector->getType());
+
+				core::IntTypeParamPtr vectorSize = vectorType->getSize();
+				assert(vectorSize->getNodeType() == NT_ConcreteIntTypeParam && "Only supported for fixed vector sizes!");
+				std::size_t size = static_pointer_cast<const core::ConcreteIntTypeParam>(vectorSize)->getValue();
+
+				// compose unfolded reduction expression
+				core::ExpressionPtr res = ARG(1);
+				core::ExpressionPtr op = ARG(2);
+				core::ExpressionPtr subscript = op->getNodeManager().getBasicGenerator().getVectorSubscript();
+				core::TypePtr elementType = vectorType->getElementType();
+
+				core::ASTBuilder builder(op->getNodeManager());
+				for (std::size_t i = 0; i<size; i++) {
+					ExpressionPtr element;
+					if (vectorExpr) {
+						element = vectorExpr->getExpressions()[i];
+					} else {
+						element = builder.callExpr(elementType, subscript, toVector(vector, builder.uintLit(i)));
+					}
+
+					res = builder.callExpr(res->getType(), op, toVector(res, element));
+				}
+
+				// add code of reduction expression
+				STMT_CONVERTER.convert(res);
+		});
+
+
 		ADD_FORMATTER(res, basic.getArrayCreate1D(), {
 
 				// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
