@@ -46,7 +46,12 @@
 #include "utils/timing.h"
 #include "impl/work_group.impl.h"
 
-#define N 1000
+#ifdef USE_OPENCL 
+#include "impl/irt_ocl.impl.h"
+#include "irt_ocl_config.h"
+#endif
+
+#define N 1024
 
 #define INSIEME_BOOL_T_INDEX 0
 #define INSIEME_DOUBLE_T_INDEX 1
@@ -126,6 +131,19 @@ irt_wi_implementation g_insieme_impl_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
+	#ifdef USE_OPENCL
+	cl_uint num = irt_ocl_get_num_devices();
+	for (uint i = 0; i < num; ++i){	
+		irt_ocl_device* dev = irt_ocl_get_device(i);
+		printf("Compiling OpenCL program in \"");
+		irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
+		printf("\"\n");
+		cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", IRT_OCL_SOURCE);
+		//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
+		clReleaseProgram(program);
+	}
+	#endif
+
 	context->type_table = g_insieme_type_table;
 	context->impl_table = g_insieme_impl_table;
 }
@@ -201,7 +219,6 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 }
 
 void insieme_wi_mul_implementation1(irt_work_item* wi) {
-
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
@@ -245,7 +262,124 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 }
 
 void insieme_wi_mul_implementation2(irt_work_item* wi) {
+	#ifdef USE_OPENCL
+	// get parameters
+	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
+	irt_work_item_range range = wi->range;
+	IRT_DEBUG("MMUL WI Range: ");
+	IRT_VERBOSE_ONLY(_irt_print_work_item_range(&range));
+
+	irt_data_range subrange[] = {{range.begin, range.end, range.step}, {0,N,1}};
+	irt_data_range fullrange[] = {{0,N,1}, {0,N,1}};
+
+	irt_data_item* itemA = irt_di_create_sub(irt_data_item_table_lookup(params->A), subrange);
+	irt_data_item* itemB = irt_di_create_sub(irt_data_item_table_lookup(params->B), fullrange);
+	irt_data_item* itemC = irt_di_create_sub(irt_data_item_table_lookup(params->C), subrange);
+
+	irt_data_block* blockA = irt_di_aquire(itemA, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockB = irt_di_aquire(itemB, IRT_DMODE_READ_ONLY);
+	irt_data_block* blockC = irt_di_aquire(itemC, IRT_DMODE_WRITE_FIRST);
+
+	double** A = (double**)blockA->data;
+	double** B = (double**)blockB->data;
+	double** C = (double**)blockC->data;
+//	
+	irt_ocl_device* dev = irt_ocl_get_device(0);
+	printf("Running Opencl Kernel in \"");
+	irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
+	printf("\"\n");
+	
+	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
+	//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
+	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "matrix_mul");
+
+	unsigned int len_A = (subrange[0].end-subrange[0].begin) * (subrange[1].end-subrange[1].begin);
+	unsigned int len_B = fullrange[0].end * fullrange[1].end;
+	unsigned int len_C = (subrange[0].end-subrange[0].begin) * (subrange[1].end-subrange[1].begin);
+	printf("%u %u %u\n", len_A, len_B, len_C);
+
+	unsigned int mem_size_A = sizeof(double) * len_A;
+	unsigned int mem_size_B = sizeof(double) * len_B;
+	unsigned int mem_size_C = sizeof(double) * len_C;
+
+	cl_int errcode;
+	cl_mem d_A = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_A, NULL, &errcode);
+	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of A\n");
+	
+	cl_mem d_B = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_B, NULL, &errcode);
+	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of B\n");
+	
+	cl_mem d_C = clCreateBuffer(dev->cl_context, CL_MEM_WRITE_ONLY, mem_size_C, NULL, &errcode);
+	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of C\n");
+		
+	cl_event event_write_A, event_write_B, event_read_C, event_kernel;
+	
+	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_A, CL_FALSE, 0, mem_size_A, A, 0, NULL, &event_write_A);
+	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of A, %d\n", errcode);
+	
+	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_B, CL_FALSE, 0, mem_size_B, B, 0, NULL, &event_write_B);
+	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of B, %d\n", errcode);
+	
+	errcode  = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&d_A);
+	if (errcode != CL_SUCCESS) printf("Error Arg d_A\n");
+
+	errcode  = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&d_B);
+	if (errcode != CL_SUCCESS) printf("Error Arg d_B\n");
+	
+	errcode  = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&d_C);
+	if (errcode != CL_SUCCESS) printf("Error Arg d_C\n");
+
+	errcode  = clSetKernelArg(kernel, 3, sizeof(cl_long), (void *)&fullrange[0].end); //FIXME think about it
+	if (errcode != CL_SUCCESS) printf("Error Arg len_A\n");
+	
+	errcode  = clSetKernelArg(kernel, 4, sizeof(cl_long), (void *)&fullrange[0].end); //FIXME think about it
+	if (errcode != CL_SUCCESS) printf("Error Arg len_B\n");
+	
+
+	long test = (subrange[0].end-subrange[0].begin);	
+	size_t szLocalWorkSize[2] = {16, 16};
+	size_t szGlobalWorkSize[2] = {test, 1024}; // FIXME change it... multiple of szLocalWorkSize 
+
+	cl_event event_write[2] = {event_write_A, event_write_B};
+
+	errcode = clEnqueueNDRangeKernel(dev->cl_queue, kernel, 2, NULL, szGlobalWorkSize, szLocalWorkSize, 2, event_write, &event_kernel);
+	if (errcode != CL_SUCCESS) printf("Error in clEnqueueNDRangeKernel, %d\n", errcode);
+	errcode = clEnqueueReadBuffer(dev->cl_queue, d_C, CL_TRUE, 0, mem_size_C, C, 1, &event_kernel, &event_read_C); // sync copy FIXME
+	//clFinish(dev->cl_queue);
+	if (errcode != CL_SUCCESS) printf("Error in clEnqueueReadBuffer of C, %d\n", errcode);
+
+	//errcode = clReleaseEvent(event_write_A);
+	//errcode = clReleaseEvent(event_write_B);
+	//errcode = clReleaseEvent(event_write); // FIXME check
+	//errcode |= clReleaseEvent(event_read_C);
+	//errcode |= clReleaseEvent(event_kernel);
+	//if (errcode != CL_SUCCESS) printf("Error Releasing Event\n");
+	
+	errcode = clReleaseMemObject(d_A);
+	if (errcode != CL_SUCCESS) printf("Error Releasing d_A\n");
+	
+	errcode = clReleaseMemObject(d_B);
+	if (errcode != CL_SUCCESS) printf("Error Releasing d_B\n");
+
+	errcode = clReleaseMemObject(d_C);
+	if (errcode != CL_SUCCESS) printf("Error Releasing d_C\n");
+	
+	errcode = clReleaseKernel(kernel);
+	if (errcode != CL_SUCCESS) printf("Error Releasing kernel\n");
+	
+	errcode = clReleaseProgram(program);
+	if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
+
+	irt_di_free(blockA);
+	irt_di_free(blockB);
+	irt_di_free(blockC);
+	irt_di_destroy(itemA);
+	irt_di_destroy(itemB);
+	irt_di_destroy(itemC);
+
+	irt_wi_end(wi);
+	#endif
 }
 
 void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
