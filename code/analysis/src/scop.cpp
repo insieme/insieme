@@ -45,9 +45,10 @@
 
 namespace {
 using namespace insieme::core;
+using namespace insieme::core::lang;
 using namespace insieme::analysis::poly;
 
-Constraint extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
+std::set<Constraint> extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
 
 	NodeManager& mgr = cond->getNodeManager();
     if (cond->getNodeType() == NT_CallExpr) {
@@ -56,17 +57,58 @@ Constraint extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) 
 	  		 mgr.basic.isUIntCompOp(callExpr->getFunctionExpr()) ) 
 		{
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
+
+			std::set<Constraint> constraints;
+
+			// First of all we check whether this condition is a composed by
+			// multiple conditions connected through || or && statements 
+			BasicGenerator::Operator&& op = 
+				mgr.basic.getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
+
+			switch (op) {
+			case BasicGenerator::LOr:
+				assert(false && "Logical OR not supported yet.");
+			case BasicGenerator::LAnd:
+				{
+					std::set<Constraint>&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
+					if (op == BasicGenerator::LOr) {
+						// because we can only represent conjuctions of
+						// constraints, we apply demorgan rule to transform a
+						// logical or to be expressed using logical and
+						
+					}
+					std::copy(lhs.begin(), lhs.end(), std::inserter(constraints, constraints.begin()));
+					
+					std::set<Constraint>&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
+					std::copy(rhs.begin(), rhs.end(), std::inserter(constraints, constraints.begin()));
+					return constraints;
+				}
+			default:
+				break;
+			}
 			// A constraints is normalized having a 0 on the right side,
 			// therefore we build a temporary expression by subtracting the rhs
 			// to the lhs, Example: 
 			//
-			// if (a<b) { }    ->    a-b<0
+			// if (a<b) { }    ->    if( a-b<0 ) { }
 			ASTBuilder builder(mgr);
 			AffineFunction af(iv, builder.callExpr( 
 					mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
 				) 
 			);
-			return Constraint(af,Constraint::EQ);
+			Constraint::Type type;
+			switch (op) {
+				case BasicGenerator::Eq: type = Constraint::EQ; break;
+				case BasicGenerator::Ne: type = Constraint::NE; break;
+				case BasicGenerator::Lt: type = Constraint::LT; break;
+				case BasicGenerator::Le: type = Constraint::LE; break;
+				case BasicGenerator::Gt: type = Constraint::GT; break;
+				case BasicGenerator::Ge: type = Constraint::GE; break;
+				default:
+					assert(false && "Operation not supported!");
+			}
+			constraints.insert( Constraint(af,type) );
+			return constraints;
 		}
 	}
 	assert(false);
@@ -97,7 +139,7 @@ public:
 		IterationVector ret;
 		bool isSCoP = true;
 		std::shared_ptr<NotAffineExpr> except; 
-
+		
 		try {
 			// check the then body
 			ret = merge(ret, visit(ifStmt->getThenBody()));
@@ -108,7 +150,7 @@ public:
 		}
 
 		try {
-		// check the else body
+			// check the else body
 			ret = merge(ret, visit(ifStmt->getElseBody()));
 		} catch (const NotAffineExpr& e) { 
 			isSCoP = false; 
@@ -122,29 +164,57 @@ public:
 		if (!isSCoP) { assert(except); throw *except; }
 
 		// check the condition expression
-		Constraint&& c = extractFromCondition(ret, ifStmt->getCondition());
-		std::cout << "CONSTRAINT: " << c << std::endl;
+		std::set<Constraint>&& c = extractFromCondition(ret, ifStmt->getCondition());
 
-		ret = merge(ret, visit(ifStmt->getCondition()));
-		// FIXME: condition expression creates new Constrain in the domain,
-		// therefore is needs special handling!!!
-		
 		// if no exception has been thrown we are sure the sub else and then
 		// tree are SCoPs, therefore this node can be marked as SCoP as well.
 		ifStmt->addAnnotation( std::make_shared<SCoP>( ret ) );
 		return ret;
 	}
 
+	IterationVector visitCastExpr(const CastExprPtr& castExpr) {
+		return visit(castExpr->getSubExpression());
+	}
+
 	IterationVector visitForStmt(const ForStmtPtr& forStmt) {
 		IterationVector&& bodyIV = visit(forStmt->getBody());
 		
-		return IterationVector();
+		IterationVector ret;
+		const DeclarationStmtPtr& decl = forStmt->getDeclaration();
+		ret.add( Iterator(decl->getVariable()) ); 
+		
+		NodeManager& mgr = forStmt->getNodeManager();
+		ASTBuilder builder(mgr);
+		
+		std::set<Constraint> cons; 
+		// We assume the IR loop semantics to be the following: 
+		// i: lb...ub:s 
+		// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
+		AffineFunction lb(ret, 
+			builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), decl->getInitialization())
+		);
+		cons.insert( Constraint(lb, Constraint::GE) );
+
+		AffineFunction ub(ret, 
+			builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), forStmt->getEnd())
+		);
+		cons.insert( Constraint(ub, Constraint::LT) );
+		
+		ret = merge(ret,bodyIV);
+
+		// Add constraint for the step 
+		forStmt->addAnnotation( std::make_shared<SCoP>(ret) ); 
+		return ret;
+	}
+
+	IterationVector visitWhileStmt(const WhileStmtPtr& whileStmt) {
+		throw NotAffineExpr( ExpressionPtr() );
 	}
 
 	IterationVector visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 		IterationVector ret;
 		for_each(compStmt->getStatements().cbegin(), compStmt->getStatements().cend(), 
-			[&](const StatementPtr& cur) { ret = merge(this->visit(cur), ret);	} );
+			[&](const StatementPtr& cur) { ret = merge(ret, this->visit(cur));	} );
 		// Marks this compund statement with the iteration vector created from
 		// its body
 		compStmt->addAnnotation( std::make_shared<SCoP>(ret) );
@@ -158,7 +228,6 @@ public:
 
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
 			// we have to check whether assignments to iterators or parameters
-			// exist in this region
 		}
 
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
@@ -174,6 +243,7 @@ public:
 
 			IterationVector it;
 			AffineFunction af(it, callExpr->getArgument(1));
+			std::cout << af << std::endl;
 			it = merge(subIV, it);
 
 			callExpr->getArgument(1)->addAnnotation( std::make_shared<SCoP>(it) );
@@ -183,18 +253,11 @@ public:
         IterationVector ret;
 		const std::vector<ExpressionPtr>& args = callExpr->getArguments();
 		std::for_each(args.begin(), args.end(), 
-				[&](const ExpressionPtr& cur) { ret = merge(this->visit(cur), ret); }	);
+			[&](const ExpressionPtr& cur) { ret = merge(ret, this->visit(cur)); } );
 		return ret;
 	}
 	
-	IterationVector visitStatement(const StatementPtr& stmt) {
-		if (ExpressionPtr&& expr = dynamic_pointer_cast<const Expression>(stmt) ) {
-			return visitExpression(expr);
-		}
-		return IterationVector();
-	}
-
-	IterationVector visitExpression(const ExpressionPtr& expr) { return IterationVector(); }
+	// IterationVector visitExpression(const ExpressionPtr& expr) { return IterationVector(); }
 
 };
 
