@@ -130,7 +130,9 @@ void merge_add(IterationVector& dest, typename std::vector<T>::const_iterator aB
 		typename std::vector<T>::const_iterator bEnd) {
 	std::set<T> varSet;
     std::set_union(aBegin, aEnd, bBegin, bEnd, std::inserter(varSet, varSet.begin()));
-    std::for_each(varSet.begin(), varSet.end(), [&dest](const T& cur) { dest.add(cur); } );
+	std::for_each(varSet.begin(), varSet.end(), [&dest](const T& cur) { 
+			if (dest.getIdx(static_cast<const poly::Variable&>(cur).getVariable()) == -1) { dest.add(cur); }
+		} );
 }
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which contains
@@ -142,8 +144,6 @@ IterationVector merge(const IterationVector& a, const IterationVector& b) {
 	// having the same iterators would mean the same variable has been used as loop iterator index in 1  statement
 	// as a parameter in another, therefore we can safely remove the iterators and merge the set of parameters. 
 	merge_add<Iterator>(ret, a.iter_begin(), a.iter_end(), b.iter_begin(), b.iter_end());	
-	// Also the parameters have to be merged, we use the same procedure for
-	// this 
 	merge_add<Parameter>(ret, a.param_begin(), a.param_end(), b.param_begin(), b.param_end());	
 	return ret;
 }

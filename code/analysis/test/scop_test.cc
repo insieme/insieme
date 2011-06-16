@@ -95,3 +95,57 @@ TEST(SCoP, IfStmt) {
 
 }
 
+TEST(SCoP, SimpleForStmt) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. 50 : -1) { \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (i+int<4>:b))); \
+		}") );
+	std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::SCoP::KEY));
+	scop::SCoP& ann = *forStmt->getAnnotation(scop::SCoP::KEY);
+    std::cout << ann.getIterationVector() << std::endl;
+
+	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::SCoP::KEY));
+	
+}
+
+TEST(SCoP, ForStmt) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
+		for(decl int<4>:i = 10 .. 50 : -1) { \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (i+int<4>:b))); \
+			if ((i > 25)) { \
+				(int<4>:h = (op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:n*2))));\
+			};\
+		}") );
+	std::cout << *forStmt << std::endl;
+	scop::mark(forStmt);
+
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::SCoP::KEY));
+	scop::SCoP& ann = *forStmt->getAnnotation(scop::SCoP::KEY);
+    std::cout << ann.getIterationVector() << std::endl;
+	IfStmtPtr ifStmt = static_pointer_cast<const IfStmt>(
+			static_pointer_cast<const CompoundStmt>(forStmt->getBody())->getStatements().back());
+	
+	EXPECT_TRUE(ifStmt->hasAnnotation(scop::SCoP::KEY));
+	ann = *ifStmt->getThenBody()->getAnnotation(scop::SCoP::KEY);
+
+	std::cout << ann.getIterationVector() << std::endl;
+
+	// EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
+	// EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::SCoP::KEY));
+
+	// ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
+	// std::cout << ann.getIterationVector() << std::endl;
+
+}
+
