@@ -49,13 +49,13 @@ int main(int argc, char **argv) {
 
 //	queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
 
-	cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
-	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
 	float* host_ptr;
+	cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
+	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 
-	dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), NULL, &err);
+	dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), host_ptr, &err);
 
-	clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+//	clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
 	size_t kernelLength = 10;
 
