@@ -262,6 +262,8 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build.getNodeManager()), mProgram(program) {
 	ADD_Handler(builder, "clCreateBuffer",
+			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
+
 			ExpressionPtr fun = o2i.getClCreateBuffer();
 
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
@@ -510,12 +512,48 @@ CallExprPtr HostMapper::checkAssignment(const core::CallExprPtr& oldCall) {
 	return newCall;
 }
 
-bool HostMapper::handleClCreateKernel(const core::VariablePtr& var,
-		const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName) {
+template<typename Enum>
+void HostMapper::recursiveFlagCheck(const ExpressionPtr& flagExpr, std::set<Enum>& flags) {
+	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(flagExpr)) {
+		// check if there is an lshift -> flag reached
+		if(call->getFunctionExpr() ==  BASIC.getSignedIntLShift() || call->getFunctionExpr() == BASIC.getUnsignedIntLShift()) {
+			if(const LiteralPtr& flagLit = dynamic_pointer_cast<const Literal>(call->getArgument(1))) {
+				int flag = atoi(flagLit->getValue().c_str());
+				if(flag < Enum::size) // last field of enum to be used must be size
+					flags.insert(Enum(flag));
+				else
+					LOG(ERROR) << "Flag " << flag << " is out of range. Max value is " << CreateBufferFlags::size-1;
+			}
+		} else if(call->getFunctionExpr() == BASIC.getSignedIntOr() || call->getFunctionExpr() == BASIC.getUnsignedIntOr()) {
+			// two flags are ored, search flags in the arguments
+			recursiveFlagCheck(call->getArgument(0), flags);
+			recursiveFlagCheck(call->getArgument(1), flags);
+		} else
+			LOG(ERROR) << "Unexpected operation in flag argument: " << call << "\nUnable to deduce flags, using default settings";
+
+	}
+}
+
+template<typename Enum>
+std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
+	std::set<Enum> flags;
+
+	// remove cast to uint<8>
+	if(const CastExprPtr cast = dynamic_pointer_cast<const CastExpr>(flagExpr)) {
+		recursiveFlagCheck(cast->getSubExpression(), flags);
+	} else
+		LOG(ERROR) << "No flags found in " << flagExpr << "\nUsing default settings";
+
+	return flags;
+}
+
+
+
+bool HostMapper::handleClCreateKernel(const VariablePtr& var, const ExpressionPtr& call, const ExpressionPtr& fieldName) {
 	TypePtr type = getNonRefType(var);
 	// if it is a struct we have to check the field
 	if (const StructTypePtr st = dynamic_pointer_cast<const StructType>(type)) {
-		//TODO if one puts more than one kernel inside a struct he should be hit in the face
+		//TODO if one puts more than one kernel inside a struct (s)he should be hit in the face
 		if (fieldName) {
 			if (const LiteralPtr& fieldLit = dynamic_pointer_cast<const Literal>(fieldName)) {
 				for_each(st->getEntries(), [&](StructType::Entry field) {

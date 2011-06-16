@@ -41,7 +41,6 @@
 #include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/frontend/program.h"
-
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -52,6 +51,17 @@ namespace ocl {
 #define BASIC builder.getNodeManager().basic
 
 namespace {
+
+// enums corresponding to the flags in clCreateBuffer
+enum CreateBufferFlags {
+		CL_MEM_READ_WRITE = 0,
+		CL_MEM_WRITE_ONLY,
+		CL_MEM_READ_ONLY,
+		CL_MEM_USE_HOST_PTR,
+		CL_MEM_ALLOC_HOST_PTR,
+		CL_MEM_COPY_HOST_PTR,
+		size
+};
 
 /**
  * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel, if it exists at all
@@ -192,6 +202,13 @@ class HostMapper: public core::transform::CachedNodeMapping {
 
 	// needed to be able to work with handlers, identified by prefixes of function names
 	HandlerPtr& findHandler(const string& fctName);
+
+	// functions to get set of flags out of an Expression
+	// recursiveFlagCheck is designed to be called form getFlags only
+	template<typename Enum>
+	void recursiveFlagCheck(const core::ExpressionPtr& flagExpr, std::set<Enum>& flags);
+	template<typename Enum>
+	std::set<Enum> getFlags(const core::ExpressionPtr& flagExpr);
 
 	bool translateClCreateBuffer(const core::VariablePtr& var, const core::CallExprPtr& fun, const core::CallExprPtr& newRhs, core::NodePtr& ret);
 	bool handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName);
