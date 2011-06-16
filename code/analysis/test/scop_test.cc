@@ -75,7 +75,7 @@ TEST(SCoP, IfStmt) {
 	parse::IRParser parser(mgr);
 
     auto ifStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
-		if((int<4>:c == int<4>:d)){ \
+		if((int<4>:c <= int<4>:d)){ \
 			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a-int<4>:b))); \
 		} else { \
 			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a+int<4>:b))); \

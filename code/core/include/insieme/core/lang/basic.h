@@ -123,7 +123,12 @@ public:
 
 	bool isBuiltIn(const NodePtr& node) const;
 	LiteralPtr getLiteral(const std::string& name) const;
+	// Obtains the LiteralPtr which implements the operator op for literals of
+	// type 'type'
 	ExpressionPtr getOperator(const TypePtr& type, const Operator& op) const;
+	// Obtains the operator (as defined in the lang.def class) from a literal
+	// expression obtained thorugh the previous metod (inverse procedure)
+	Operator getOperator(const LiteralPtr& lit) const;
 	// ----- extra material ---
 
 	StatementPtr getNoOp() const;

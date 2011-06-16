@@ -45,6 +45,7 @@
 
 namespace {
 using namespace insieme::core;
+using namespace insieme::core::lang;
 using namespace insieme::analysis::poly;
 
 Constraint extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
@@ -60,13 +61,27 @@ Constraint extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) 
 			// therefore we build a temporary expression by subtracting the rhs
 			// to the lhs, Example: 
 			//
-			// if (a<b) { }    ->    a-b<0
+			// if (a<b) { }    ->    if( a-b<0 ) { }
 			ASTBuilder builder(mgr);
 			AffineFunction af(iv, builder.callExpr( 
 					mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
 				) 
 			);
-			return Constraint(af,Constraint::EQ);
+			Constraint::Type type;
+			switch ( mgr.basic.getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr())) ) {
+				// case BasicGenerator::LAnd: 
+				// case BasicGenerator::LOr:
+				// case BasicGenerator::LNot: 
+				case BasicGenerator::Eq: type = Constraint::EQ; break;
+				case BasicGenerator::Ne: type = Constraint::NE; break;
+				case BasicGenerator::Lt: type = Constraint::LT; break;
+				case BasicGenerator::Le: type = Constraint::LE; break;
+				case BasicGenerator::Gt: type = Constraint::GT; break;
+				case BasicGenerator::Ge: type = Constraint::GE; break;
+				default:
+					assert(false && "Operation not supported!");
+			}
+			return Constraint(af,type);
 		}
 	}
 	assert(false);
