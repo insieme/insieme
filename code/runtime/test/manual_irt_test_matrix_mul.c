@@ -372,7 +372,6 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 
 	errcode = clReleaseEvent(event_write_A);
 	errcode = clReleaseEvent(event_write_B);
-	//errcode = clReleaseEvent(event_write); // FIXME check
 	errcode |= clReleaseEvent(event_read_C);
 	errcode |= clReleaseEvent(event_kernel);
 	if (errcode != CL_SUCCESS) printf("Error Releasing Event\n");
