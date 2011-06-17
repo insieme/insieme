@@ -225,6 +225,7 @@ public:
 			[&](const StatementPtr& cur) { ret = merge(ret, this->visit(cur));	} );
 		// we don't need to mark compound statements as they do not cause
 		// changes in terms of iteration domain or constraints 
+		compStmt->addAnnotation( std::make_shared<SCoP>(ret) ); 
 		return ret;
 	}
 

@@ -571,7 +571,7 @@ TEST(CFGBuilder, BasicProgFileTest) {
 
 	// std::cout << *cfg;
 	
-	EXPECT_EQ(static_cast<size_t>(39), cfg->getSize()); 
+	EXPECT_EQ(static_cast<size_t>(38), cfg->getSize()); 
 }
 
 TEST(CFGBuilder, ICFGFileTest) {
