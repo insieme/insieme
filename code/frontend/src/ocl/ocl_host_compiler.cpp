@@ -201,7 +201,7 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
 	// errcorcode always set to 0 = CL_SUCCESS
 	if(copyHostPtr)
 		return parser.parseExpression("fun(type<'a>:elemType, uint<8>:flags, uint<8>:size, anyRef:hostPtr, ref<array<int<4>, 1> >:errorcode_ret) -> array<'a, 1>  {{ \
-	            decl ref<array<'a, 1> >:devicePtr = (op<ref.new>( (op<array.create.1D>( elemType, size )) )); \
+	            decl ref<array<'a, 1> >:devicePtr = (op<ref.var>( (op<array.create.1D>( elemType, size )) )); \
 				decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
 				for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
 					( (op<array.ref.elem.1D>(devicePtr, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
