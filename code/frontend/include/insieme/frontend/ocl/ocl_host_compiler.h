@@ -198,7 +198,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	core::ProgramPtr& mProgram;
 
 	// check if the call is a call to ref.assign
-	core::CallExprPtr checkAssignment(const core::CallExprPtr& oldCall);
+	core::CallExprPtr checkAssignment(const core::NodePtr& oldCall);
 
 	// needed to be able to work with handlers, identified by prefixes of function names
 	HandlerPtr& findHandler(const string& fctName);
