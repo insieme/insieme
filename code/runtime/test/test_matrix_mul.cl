@@ -34,18 +34,21 @@
  * regarding third party software licenses.
  */
 
+//#pragma OPENCL EXTENSION cl_amd_fp64 : enable // AMD GPU PRAGMA
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-__kernel void matrix_mul(__global const double* A, __global const double* B, __global double* C, long wA, long wB) 
+__kernel void matrix_mul(__global const double* A, __global const double* B, __global double* C, long hA, long wA, long wB) 
 {
-	/*
+	
 	// get index into global data array
 	int tx = get_global_id(0);
 	int ty = get_global_id(1);
 	
+	if (tx >= hA || ty >= wA )
+		return;	
 	double sum = 0;
 	for (int k = 0; k < wA; ++k) {
 		sum += A[tx * wA + k] * B[k * wB + ty];
 	}
 	C[tx * wB + ty] = sum;
-	*/
+	
 }

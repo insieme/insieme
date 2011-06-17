@@ -41,7 +41,7 @@ uint toll(uint x) {
 }
 
 #pragma insieme mark
-__kernel void hello(__global float* g, __local float* l) {
+__kernel void hello(__global float* g, __global float* g2, __local float* l) {
 	float x = 0.5;
 	__local float y;// = g;
 //    __global float4* p = (float4*)g;

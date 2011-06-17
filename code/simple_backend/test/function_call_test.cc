@@ -86,21 +86,20 @@ TEST(FunctionCall, VectorReduction) {
     core::NodeManager manager;
     core::parse::IRParser parser(manager);
 
-    core::ASTBuilder builder(manager);
-    const core::lang::BasicGenerator& basic = manager.basic;
+//    core::ASTBuilder builder(manager);
+//    const core::lang::BasicGenerator& basic = manager.basic;
 
     // Operation: vector.reduction
     // Type: (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
 
-//    core::ProgramPtr program = parser.parseProgram("main: fun ()->unit:\
-//            mainfct in { ()->unit:mainfct = ()->unit{ { \
-//                (fun() -> unit {{ \
-//    		        decl vector<int<4>,4>:x = vector<vector<int<4>,4>>(1,2,3,4);\
-//                    return (op<vector.reduction>( vector<int<4>,4>:x, lit<int<4>, 0>, op<int.add> )); \
-//                }}() ); \
-//                return 0; \
-//            } } }");
-
+    core::ProgramPtr program = parser.parseProgram("main: fun ()->unit:\
+            mainfct in { ()->unit:mainfct = ()->unit{ { \
+                (fun() -> unit {{ \
+                    return (op<vector.reduction>( vector<int<4>,4>(1,2,3,4), 0, op<int.add> )); \
+                }}() ); \
+                return 0; \
+            } } }");
+/*
 
     core::TypePtr int4 = basic.getInt4();
     core::VectorTypePtr vectorType = builder.vectorType(int4, builder.concreteIntTypeParam(4));
@@ -120,7 +119,7 @@ TEST(FunctionCall, VectorReduction) {
     core::ExpressionPtr lambda = builder.lambdaExpr(funType, toVector<core::VariablePtr>(), builder.returnStmt(call));
 
     core::ProgramPtr program = builder.createProgram(toVector(lambda), true);
-
+*/
 /*
     (fun(array<'a, 1>:in) -> int<4> {{ \
         decl array<'a, 1>:local = (op<undefined>(lit<type<array<'a> >, type(array('a)) > )); \
