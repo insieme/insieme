@@ -40,16 +40,18 @@
 #include "impl/worker.impl.h"
 
 static inline void _irt_sched_check_ipc_queue(irt_worker* self) {
-	irt_mqueue_msg* received = irt_mqueue_receive();
-	if(received) {
-		if(received->type == IRT_MQ_NEW_APP) {
-			irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
-			irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
-			irt_context* prog_context = irt_context_create(client_app);
-			self->cur_context = prog_context->id;
-			irt_context_table_insert(prog_context);
-			_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
+	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) {
+		irt_mqueue_msg* received = irt_mqueue_receive();
+		if(received) {
+			if(received->type == IRT_MQ_NEW_APP) {
+				irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
+				irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
+				irt_context* prog_context = irt_context_create(client_app);
+				self->cur_context = prog_context->id;
+				irt_context_table_insert(prog_context);
+				_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
+			}
+			free(received);
 		}
-		free(received);
 	}
 }

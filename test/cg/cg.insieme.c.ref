@@ -203,11 +203,11 @@ typedef struct ___insieme_type_15 {
 
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
-static double pow_wrap(void* _closure, double var_241, double var_242) { return pow(var_241, var_242); }
+static double pow_wrap(void* _closure, double var_282, double var_283) { return pow(var_282, var_283); }
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_243) { return ceil(var_243); }
+static double ceil_wrap(void* _closure, double var_284) { return ceil(var_284); }
 
 // start code fragment :: Definition of icnvrt ... type: ((real<8>,int<4>)->int<4>) //
 int icnvrt(double x, int ipwr2) { return ((int)((((double)(ipwr2))*x))); }
@@ -244,8 +244,8 @@ void sprnvc(int n, int nz, __insieme_type_13* v, __insieme_type_15* iv, __insiem
 		};
 	};
 	{
-		for(int var_93 = 1; var_93 < ((nzrow)+1); var_93 += 1) {
-			((i) = (((*nzloc).data[((unsigned int)((var_93)))])));
+		for(int var_95 = 1; var_95 < ((nzrow)+1); var_95 += 1) {
+			((i) = (((*nzloc).data[((unsigned int)(var_95))])));
 			((((*mark).data[((unsigned int)((i)))])) = 0);
 		};
 		((ii) = (1+(((int)(ceil((((double)((((nzrow)+1)-1)))/((double)(1))))))*1)));
@@ -259,8 +259,8 @@ void vecset(int n, __insieme_type_13* v, __insieme_type_15* iv, __insieme_type_1
 	int set = 0;
 	((set) = 0);
 	{
-		for(int var_103 = 1; var_103 < ((((*nzv).data[0]))+1); var_103 += 1)  { if(((((*iv).data[((unsigned int)((var_103)))]))==i)){
-			((((*v).data[((unsigned int)((var_103)))])) = val);
+		for(int var_106 = 1; var_106 < ((((*nzv).data[0]))+1); var_106 += 1)  { if(((((*iv).data[((unsigned int)(var_106))]))==i)){
+			((((*v).data[((unsigned int)(var_106))])) = val);
 			((set) = 1);
 		}; };
 		((k) = (1+(((int)(ceil((((double)((((((*nzv).data[0]))+1)-1)))/((double)(1))))))*1)));
@@ -275,7 +275,7 @@ static void vecset_wrap(void* _closure, int n, __insieme_type_13* v, __insieme_t
 
 // start code fragment :: Prototype for external function: exit ... type: ((int<4>)->unit) //
 void exit(int);
-static void exit_wrap(void* _closure, int var_244) { exit(var_244); }
+static void exit_wrap(void* _closure, int var_285) { exit(var_285); }
 
 // start code fragment :: Definition of sparse ... type: ((ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,int<4>,int<4>,ref<array<real<8>,1>>,ref<array<int<4>,1>>,ref<array<int<4>,1>>,int<4>)->unit) //
 void sparse(__insieme_type_13* a, __insieme_type_15* colidx, __insieme_type_15* rowstr, int n, __insieme_type_15* arow, __insieme_type_15* acol, __insieme_type_13* aelt, int firstrow, int lastrow, __insieme_type_13* x, __insieme_type_15* mark, __insieme_type_15* nzloc, int nnza){
@@ -289,67 +289,67 @@ void sparse(__insieme_type_13* a, __insieme_type_15* colidx, __insieme_type_15* 
 	double xi = 0.0;
 	((nrows) = ((lastrow-firstrow)+1));
 	{
-		for(int var_139 = 1; var_139 < (n+1); var_139 += 1) {
-			((((*rowstr).data[((unsigned int)((var_139)))])) = 0);
-			((((*mark).data[((unsigned int)((var_139)))])) = 0);
+		for(int var_147 = 1; var_147 < (n+1); var_147 += 1) {
+			((((*rowstr).data[((unsigned int)(var_147))])) = 0);
+			((((*mark).data[((unsigned int)(var_147))])) = 0);
 		};
 		((j) = (1+(((int)(ceil((((double)(((n+1)-1)))/((double)(1))))))*1)));
 	};
 	((((*rowstr).data[((unsigned int)((n+1)))])) = 0);
 	{
-		for(int var_140 = 1; var_140 < (nnza+1); var_140 += 1) {
-			((j) = ((((((*arow).data[((unsigned int)((var_140)))]))-firstrow)+1)+1));
+		for(int var_149 = 1; var_149 < (nnza+1); var_149 += 1) {
+			((j) = ((((((*arow).data[((unsigned int)(var_149))]))-firstrow)+1)+1));
 			((((*rowstr).data[((unsigned int)((j)))])) = ((((*rowstr).data[((unsigned int)((j)))]))+1));
 		};
 		((nza) = (1+(((int)(ceil((((double)(((nnza+1)-1)))/((double)(1))))))*1)));
 	};
 	((((*rowstr).data[((unsigned int)(1))])) = 1);
 	{
-		for(int var_141 = 2; var_141 < (((nrows)+1)+1); var_141 += 1)  { ((((*rowstr).data[((unsigned int)((var_141)))])) = ((((*rowstr).data[((unsigned int)((var_141)))]))+(((*rowstr).data[((unsigned int)(((var_141)-1)))])))); };
+		for(int var_151 = 2; var_151 < (((nrows)+1)+1); var_151 += 1)  { ((((*rowstr).data[((unsigned int)(var_151))])) = ((((*rowstr).data[((unsigned int)(var_151))]))+(((*rowstr).data[((unsigned int)((var_151-1)))])))); };
 		((j) = (2+(((int)(ceil((((double)(((((nrows)+1)+1)-2)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_142 = 1; var_142 < (nnza+1); var_142 += 1) {
-			((j) = (((((*arow).data[((unsigned int)((var_142)))]))-firstrow)+1));
+		for(int var_153 = 1; var_153 < (nnza+1); var_153 += 1) {
+			((j) = (((((*arow).data[((unsigned int)(var_153))]))-firstrow)+1));
 			((k) = (((*rowstr).data[((unsigned int)((j)))])));
-			((((*a).data[((unsigned int)((k)))])) = (((*aelt).data[((unsigned int)((var_142)))])));
-			((((*colidx).data[((unsigned int)((k)))])) = (((*acol).data[((unsigned int)((var_142)))])));
+			((((*a).data[((unsigned int)((k)))])) = (((*aelt).data[((unsigned int)(var_153))])));
+			((((*colidx).data[((unsigned int)((k)))])) = (((*acol).data[((unsigned int)(var_153))])));
 			((((*rowstr).data[((unsigned int)((j)))])) = ((((*rowstr).data[((unsigned int)((j)))]))+1));
 		};
 		((nza) = (1+(((int)(ceil((((double)(((nnza+1)-1)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_143 = (((int)(0))-(nrows)); var_143 < ((((int)(0))-1)+1); var_143 += 1)  { ((((*rowstr).data[((unsigned int)(((((int)(0))-(var_143))+1)))])) = (((*rowstr).data[((unsigned int)((((int)(0))-(var_143))))]))); };
+		for(int var_155 = (((int)(0))-(nrows)); var_155 < ((((int)(0))-1)+1); var_155 += 1)  { ((((*rowstr).data[((unsigned int)(((((int)(0))-var_155)+1)))])) = (((*rowstr).data[((unsigned int)((((int)(0))-var_155)))]))); };
 		((j) = ((nrows)+(((int)(ceil((((double)((((((int)(0))-1)+1)-(nrows))))/((double)(1))))))*1)));
 	};
 	((((*rowstr).data[((unsigned int)(1))])) = 1);
 	((nza) = 0);
 	{
-		for(int var_144 = 1; var_144 < (n+1); var_144 += 1) {
-			((((*x).data[((unsigned int)((var_144)))])) = 0.0);
-			((((*mark).data[((unsigned int)((var_144)))])) = 0);
+		for(int var_157 = 1; var_157 < (n+1); var_157 += 1) {
+			((((*x).data[((unsigned int)(var_157))])) = 0.0);
+			((((*mark).data[((unsigned int)(var_157))])) = 0);
 		};
 		((i) = (1+(((int)(ceil((((double)(((n+1)-1)))/((double)(1))))))*1)));
 	};
 	((jajp1) = (((*rowstr).data[((unsigned int)(1))])));
 	{
-		for(int var_150 = 1; var_150 < ((nrows)+1); var_150 += 1) {
+		for(int var_166 = 1; var_166 < ((nrows)+1); var_166 += 1) {
 			((nzrow) = 0);
 			{
-				for(int var_148 = (jajp1); var_148 < (((*rowstr).data[((unsigned int)(((var_150)+1)))])); var_148 += 1) {
-					((i) = (((*colidx).data[((unsigned int)((var_148)))])));
-					((((*x).data[((unsigned int)((i)))])) = ((((*x).data[((unsigned int)((i)))]))+(((*a).data[((unsigned int)((var_148)))]))));
+				for(int var_162 = (jajp1); var_162 < (((*rowstr).data[((unsigned int)((var_166+1)))])); var_162 += 1) {
+					((i) = (((*colidx).data[((unsigned int)(var_162))])));
+					((((*x).data[((unsigned int)((i)))])) = ((((*x).data[((unsigned int)((i)))]))+(((*a).data[((unsigned int)(var_162))]))));
 					if((((((*mark).data[((unsigned int)((i)))]))==0)&&((((*x).data[((unsigned int)((i)))]))!=0.0))){
 						((((*mark).data[((unsigned int)((i)))])) = 1);
 						((nzrow) = ((nzrow)+1));
 						((((*nzloc).data[((unsigned int)((nzrow)))])) = (i));
 					};
 				};
-				((k) = ((jajp1)+(((int)(ceil((((double)(((((*rowstr).data[((unsigned int)(((var_150)+1)))]))-(jajp1))))/((double)(1))))))*1)));
+				((k) = ((jajp1)+(((int)(ceil((((double)(((((*rowstr).data[((unsigned int)((var_166+1)))]))-(jajp1))))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_149 = 1; var_149 < ((nzrow)+1); var_149 += 1) {
-					((i) = (((*nzloc).data[((unsigned int)((var_149)))])));
+				for(int var_164 = 1; var_164 < ((nzrow)+1); var_164 += 1) {
+					((i) = (((*nzloc).data[((unsigned int)(var_164))])));
 					((((*mark).data[((unsigned int)((i)))])) = 0);
 					((xi) = (((*x).data[((unsigned int)((i)))])));
 					((((*x).data[((unsigned int)((i)))])) = 0.0);
@@ -361,8 +361,8 @@ void sparse(__insieme_type_13* a, __insieme_type_15* colidx, __insieme_type_15* 
 				};
 				((k) = (1+(((int)(ceil((((double)((((nzrow)+1)-1)))/((double)(1))))))*1)));
 			};
-			((jajp1) = (((*rowstr).data[((unsigned int)(((var_150)+1)))])));
-			((((*rowstr).data[((unsigned int)(((var_150)+1)))])) = ((nza)+(((*rowstr).data[((unsigned int)(1))]))));
+			((jajp1) = (((*rowstr).data[((unsigned int)((var_166+1)))])));
+			((((*rowstr).data[((unsigned int)((var_166+1)))])) = ((nza)+(((*rowstr).data[((unsigned int)(1))]))));
 		};
 		((j) = (1+(((int)(ceil((((double)((((nrows)+1)-1)))/((double)(1))))))*1)));
 	};
@@ -386,33 +386,33 @@ void makea(int n, int nz, __insieme_type_13* a, __insieme_type_15* colidx, __ins
 	((ratio) = pow(rcond, (1.0/((double)(n)))));
 	((nnza) = 0);
 	{
-		for(int var_75 = 1; var_75 < (n+1); var_75 += 1)  { ((((*colidx).data[((unsigned int)((n+(var_75))))])) = 0); };
+		for(int var_76 = 1; var_76 < (n+1); var_76 += 1)  { ((((*colidx).data[((unsigned int)((n+var_76)))])) = 0); };
 		((i) = (1+(((int)(ceil((((double)(((n+1)-1)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_113 = 1; var_113 < (n+1); var_113 += 1) {
+		for(int var_119 = 1; var_119 < (n+1); var_119 += 1) {
 			((nzv) = nonzer);
 			sprnvc(n, (nzv), v, iv, (&((__insieme_type_15){&((*colidx).data[((unsigned int)(0))])})), (&((__insieme_type_15){&((*colidx).data[((unsigned int)(n))])})));
-			vecset(n, v, iv, (&((__insieme_type_15){&nzv})), (var_113), 0.5);
+			vecset(n, v, iv, (&((__insieme_type_15){&nzv})), var_119, 0.5);
 			{
-				for(int var_112 = 1; var_112 < ((nzv)+1); var_112 += 1) {
-					((jcol) = (((*iv).data[((unsigned int)((var_112)))])));
+				for(int var_117 = 1; var_117 < ((nzv)+1); var_117 += 1) {
+					((jcol) = (((*iv).data[((unsigned int)(var_117))])));
 					if((((jcol)>=firstcol)&&((jcol)<=lastcol))){
-						((scale) = ((size)*(((*v).data[((unsigned int)((var_112)))]))));
+						((scale) = ((size)*(((*v).data[((unsigned int)(var_117))]))));
 						{
-							for(int var_108 = 1; var_108 < ((nzv)+1); var_108 += 1) {
-								((irow) = (((*iv).data[((unsigned int)((var_108)))])));
+							for(int var_112 = 1; var_112 < ((nzv)+1); var_112 += 1) {
+								((irow) = (((*iv).data[((unsigned int)(var_112))])));
 								if((((irow)>=firstrow)&&((irow)<=lastrow))){
 									((nnza) = ((nnza)+1));
 									if(((nnza)>nz)){
 										printf(((char*)((*(&((__insieme_type_1){"Space for matrix elements exceeded in"}))).data)), 0);
 										printf(((char*)((*(&((__insieme_type_1){"nnza, nzmax = %d, %d\n"}))).data)), (nnza), nz);
-										printf(((char*)((*(&((__insieme_type_1){"iouter = %d\n"}))).data)), (var_113));
+										printf(((char*)((*(&((__insieme_type_1){"iouter = %d\n"}))).data)), var_119);
 										exit(1);
 									};
 									((((*acol).data[((unsigned int)((nnza)))])) = (jcol));
 									((((*arow).data[((unsigned int)((nnza)))])) = (irow));
-									((((*aelt).data[((unsigned int)((nnza)))])) = ((((*v).data[((unsigned int)((var_108)))]))*(scale)));
+									((((*aelt).data[((unsigned int)((nnza)))])) = ((((*v).data[((unsigned int)(var_112))]))*(scale)));
 								};
 							};
 							((ivelt1) = (1+(((int)(ceil((((double)((((nzv)+1)-1)))/((double)(1))))))*1)));
@@ -426,8 +426,8 @@ void makea(int n, int nz, __insieme_type_13* a, __insieme_type_15* colidx, __ins
 		((iouter) = (1+(((int)(ceil((((double)(((n+1)-1)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_117 = firstrow; var_117 < (lastrow+1); var_117 += 1)  { if((((var_117)>=firstcol)&&((var_117)<=lastcol))){
-			((iouter) = (n+(var_117)));
+		for(int var_124 = firstrow; var_124 < (lastrow+1); var_124 += 1)  { if(((var_124>=firstcol)&&((var_124)<=lastcol))){
+			((iouter) = (n+var_124));
 			((nnza) = ((nnza)+1));
 			if(((nnza)>nz)){
 				printf(((char*)((*(&((__insieme_type_1){"Space for matrix elements exceeded in makea\n"}))).data)), 0);
@@ -435,8 +435,8 @@ void makea(int n, int nz, __insieme_type_13* a, __insieme_type_15* colidx, __ins
 				printf(((char*)((*(&((__insieme_type_1){"iouter = %d\n"}))).data)), (iouter));
 				exit(1);
 			};
-			((((*acol).data[((unsigned int)((nnza)))])) = (var_117));
-			((((*arow).data[((unsigned int)((nnza)))])) = (var_117));
+			((((*acol).data[((unsigned int)((nnza)))])) = var_124);
+			((((*arow).data[((unsigned int)((nnza)))])) = var_124);
 			((((*aelt).data[((unsigned int)((nnza)))])) = (rcond-shift));
 		}; };
 		((i) = (firstrow+(((int)(ceil((((double)(((lastrow+1)-firstrow)))/((double)(1))))))*1)));
@@ -447,7 +447,7 @@ static void makea_wrap(void* _closure, int n, int nz, __insieme_type_13* a, __in
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_245) { return sqrt(var_245); }
+static double sqrt_wrap(void* _closure, double var_286) { return sqrt(var_286); }
 
 // start code fragment :: Definition of conj_grad ... type: ((ref<array<int<4>,1>>,ref<array<int<4>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>)->unit) //
 void conj_grad(__insieme_type_15* colidx, __insieme_type_15* rowstr, __insieme_type_13* x, __insieme_type_13* z, __insieme_type_13* a, __insieme_type_13* p, __insieme_type_13* q, __insieme_type_13* r, __insieme_type_13* w, __insieme_type_13* rnorm){
@@ -458,64 +458,64 @@ void conj_grad(__insieme_type_15* colidx, __insieme_type_15* rowstr, __insieme_t
 	int cgitmax = 25;
 	((*(&((__GLOBAL__).rho))) = 0.0);
 	{
-		for(int var_172 = 1; var_172 < (((*(&((__GLOBAL__).naa)))+1)+1); var_172 += 1) {
-			((((*q).data[((unsigned int)((var_172)))])) = 0.0);
-			((((*z).data[((unsigned int)((var_172)))])) = 0.0);
-			((((*r).data[((unsigned int)((var_172)))])) = (((*x).data[((unsigned int)((var_172)))])));
-			((((*p).data[((unsigned int)((var_172)))])) = (((*r).data[((unsigned int)((var_172)))])));
-			((((*w).data[((unsigned int)((var_172)))])) = 0.0);
+		for(int var_192 = 1; var_192 < (((*(&((__GLOBAL__).naa)))+1)+1); var_192 += 1) {
+			((((*q).data[((unsigned int)(var_192))])) = 0.0);
+			((((*z).data[((unsigned int)(var_192))])) = 0.0);
+			((((*r).data[((unsigned int)(var_192))])) = (((*x).data[((unsigned int)(var_192))])));
+			((((*p).data[((unsigned int)(var_192))])) = (((*r).data[((unsigned int)(var_192))])));
+			((((*w).data[((unsigned int)(var_192))])) = 0.0);
 		};
 		((j) = (1+(((int)(ceil((((double)(((((*(&((__GLOBAL__).naa)))+1)+1)-1)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_173 = 1; var_173 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_173 += 1)  { ((*(&((__GLOBAL__).rho))) = ((*(&((__GLOBAL__).rho)))+((((*x).data[((unsigned int)((var_173)))]))*(((*x).data[((unsigned int)((var_173)))]))))); };
+		for(int var_194 = 1; var_194 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_194 += 1)  { ((*(&((__GLOBAL__).rho))) = ((*(&((__GLOBAL__).rho)))+((((*x).data[((unsigned int)(var_194))]))*(((*x).data[((unsigned int)(var_194))]))))); };
 		((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_182 = 1; var_182 < ((cgitmax)+1); var_182 += 1) {
+		for(int var_212 = 1; var_212 < ((cgitmax)+1); var_212 += 1) {
 			{
 				((*(&((__GLOBAL__).rho0))) = (*(&((__GLOBAL__).rho))));
 				((*(&((__GLOBAL__).d))) = 0.0);
 				((*(&((__GLOBAL__).rho))) = 0.0);
 			};
 			{
-				for(int var_175 = 1; var_175 < ((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1); var_175 += 1) {
+				for(int var_198 = 1; var_198 < ((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1); var_198 += 1) {
 					((*(&((__GLOBAL__).sum))) = 0.0);
 					{
-						for(int var_174 = (((*rowstr).data[((unsigned int)((var_175)))])); var_174 < (((*rowstr).data[((unsigned int)(((var_175)+1)))])); var_174 += 1)  { ((*(&((__GLOBAL__).sum))) = ((*(&((__GLOBAL__).sum)))+((((*a).data[((unsigned int)((var_174)))]))*(((*p).data[((unsigned int)((((*colidx).data[((unsigned int)((var_174)))]))))]))))); };
-						((k) = ((((*rowstr).data[((unsigned int)((var_175)))]))+(((int)(ceil((((double)(((((*rowstr).data[((unsigned int)(((var_175)+1)))]))-(((*rowstr).data[((unsigned int)((var_175)))])))))/((double)(1))))))*1)));
+						for(int var_196 = (((*rowstr).data[((unsigned int)(var_198))])); var_196 < (((*rowstr).data[((unsigned int)((var_198+1)))])); var_196 += 1)  { ((*(&((__GLOBAL__).sum))) = ((*(&((__GLOBAL__).sum)))+((((*a).data[((unsigned int)(var_196))]))*(((*p).data[((unsigned int)((((*colidx).data[((unsigned int)(var_196))]))))]))))); };
+						((k) = ((((*rowstr).data[((unsigned int)(var_198))]))+(((int)(ceil((((double)(((((*rowstr).data[((unsigned int)((var_198+1)))]))-(((*rowstr).data[((unsigned int)(var_198))])))))/((double)(1))))))*1)));
 					};
-					((((*w).data[((unsigned int)((var_175)))])) = (*(&((__GLOBAL__).sum))));
+					((((*w).data[((unsigned int)(var_198))])) = (*(&((__GLOBAL__).sum))));
 				};
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_176 = 1; var_176 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_176 += 1)  { ((((*q).data[((unsigned int)((var_176)))])) = (((*w).data[((unsigned int)((var_176)))]))); };
+				for(int var_200 = 1; var_200 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_200 += 1)  { ((((*q).data[((unsigned int)(var_200))])) = (((*w).data[((unsigned int)(var_200))]))); };
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_177 = 1; var_177 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_177 += 1)  { ((((*w).data[((unsigned int)((var_177)))])) = 0.0); };
+				for(int var_202 = 1; var_202 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_202 += 1)  { ((((*w).data[((unsigned int)(var_202))])) = 0.0); };
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_178 = 1; var_178 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_178 += 1)  { ((*(&((__GLOBAL__).d))) = ((*(&((__GLOBAL__).d)))+((((*p).data[((unsigned int)((var_178)))]))*(((*q).data[((unsigned int)((var_178)))]))))); };
+				for(int var_204 = 1; var_204 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_204 += 1)  { ((*(&((__GLOBAL__).d))) = ((*(&((__GLOBAL__).d)))+((((*p).data[((unsigned int)(var_204))]))*(((*q).data[((unsigned int)(var_204))]))))); };
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			((*(&((__GLOBAL__).alpha))) = ((*(&((__GLOBAL__).rho0)))/(*(&((__GLOBAL__).d)))));
 			{
-				for(int var_179 = 1; var_179 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_179 += 1) {
-					((((*z).data[((unsigned int)((var_179)))])) = ((((*z).data[((unsigned int)((var_179)))]))+((*(&((__GLOBAL__).alpha)))*(((*p).data[((unsigned int)((var_179)))])))));
-					((((*r).data[((unsigned int)((var_179)))])) = ((((*r).data[((unsigned int)((var_179)))]))-((*(&((__GLOBAL__).alpha)))*(((*q).data[((unsigned int)((var_179)))])))));
+				for(int var_206 = 1; var_206 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_206 += 1) {
+					((((*z).data[((unsigned int)(var_206))])) = ((((*z).data[((unsigned int)(var_206))]))+((*(&((__GLOBAL__).alpha)))*(((*p).data[((unsigned int)(var_206))])))));
+					((((*r).data[((unsigned int)(var_206))])) = ((((*r).data[((unsigned int)(var_206))]))-((*(&((__GLOBAL__).alpha)))*(((*q).data[((unsigned int)(var_206))])))));
 				};
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_180 = 1; var_180 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_180 += 1)  { ((*(&((__GLOBAL__).rho))) = ((*(&((__GLOBAL__).rho)))+((((*r).data[((unsigned int)((var_180)))]))*(((*r).data[((unsigned int)((var_180)))]))))); };
+				for(int var_208 = 1; var_208 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_208 += 1)  { ((*(&((__GLOBAL__).rho))) = ((*(&((__GLOBAL__).rho)))+((((*r).data[((unsigned int)(var_208))]))*(((*r).data[((unsigned int)(var_208))]))))); };
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			((*(&((__GLOBAL__).beta))) = ((*(&((__GLOBAL__).rho)))/(*(&((__GLOBAL__).rho0)))));
 			{
-				for(int var_181 = 1; var_181 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_181 += 1)  { ((((*p).data[((unsigned int)((var_181)))])) = ((((*r).data[((unsigned int)((var_181)))]))+((*(&((__GLOBAL__).beta)))*(((*p).data[((unsigned int)((var_181)))]))))); };
+				for(int var_210 = 1; var_210 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_210 += 1)  { ((((*p).data[((unsigned int)(var_210))])) = ((((*r).data[((unsigned int)(var_210))]))+((*(&((__GLOBAL__).beta)))*(((*p).data[((unsigned int)(var_210))]))))); };
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 		};
@@ -523,23 +523,23 @@ void conj_grad(__insieme_type_15* colidx, __insieme_type_15* rowstr, __insieme_t
 	};
 	((*(&((__GLOBAL__).sum))) = 0.0);
 	{
-		for(int var_184 = 1; var_184 < ((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1); var_184 += 1) {
+		for(int var_216 = 1; var_216 < ((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1); var_216 += 1) {
 			((*(&((__GLOBAL__).d))) = 0.0);
 			{
-				for(int var_183 = (((*rowstr).data[((unsigned int)((var_184)))])); var_183 < (((((*rowstr).data[((unsigned int)(((var_184)+1)))]))-1)+1); var_183 += 1)  { ((*(&((__GLOBAL__).d))) = ((*(&((__GLOBAL__).d)))+((((*a).data[((unsigned int)((var_183)))]))*(((*z).data[((unsigned int)((((*colidx).data[((unsigned int)((var_183)))]))))]))))); };
-				((k) = ((((*rowstr).data[((unsigned int)((var_184)))]))+(((int)(ceil((((double)(((((((*rowstr).data[((unsigned int)(((var_184)+1)))]))-1)+1)-(((*rowstr).data[((unsigned int)((var_184)))])))))/((double)(1))))))*1)));
+				for(int var_214 = (((*rowstr).data[((unsigned int)(var_216))])); var_214 < (((((*rowstr).data[((unsigned int)((var_216+1)))]))-1)+1); var_214 += 1)  { ((*(&((__GLOBAL__).d))) = ((*(&((__GLOBAL__).d)))+((((*a).data[((unsigned int)(var_214))]))*(((*z).data[((unsigned int)((((*colidx).data[((unsigned int)(var_214))]))))]))))); };
+				((k) = ((((*rowstr).data[((unsigned int)(var_216))]))+(((int)(ceil((((double)(((((((*rowstr).data[((unsigned int)((var_216+1)))]))-1)+1)-(((*rowstr).data[((unsigned int)(var_216))])))))/((double)(1))))))*1)));
 			};
-			((((*w).data[((unsigned int)((var_184)))])) = (*(&((__GLOBAL__).d))));
+			((((*w).data[((unsigned int)(var_216))])) = (*(&((__GLOBAL__).d))));
 		};
 		((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1)-1)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_185 = 1; var_185 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_185 += 1)  { ((((*r).data[((unsigned int)((var_185)))])) = (((*w).data[((unsigned int)((var_185)))]))); };
+		for(int var_218 = 1; var_218 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_218 += 1)  { ((((*r).data[((unsigned int)(var_218))])) = (((*w).data[((unsigned int)(var_218))]))); };
 		((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 	};
 	{
-		for(int var_186 = 1; var_186 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_186 += 1) {
-			((*(&((__GLOBAL__).d))) = ((((*x).data[((unsigned int)((var_186)))]))-(((*r).data[((unsigned int)((var_186)))]))));
+		for(int var_220 = 1; var_220 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_220 += 1) {
+			((*(&((__GLOBAL__).d))) = ((((*x).data[((unsigned int)(var_220))]))-(((*r).data[((unsigned int)(var_220))]))));
 			((*(&((__GLOBAL__).sum))) = ((*(&((__GLOBAL__).sum)))+((*(&((__GLOBAL__).d)))*(*(&((__GLOBAL__).d))))));
 		};
 		((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
@@ -576,7 +576,7 @@ typedef struct ___timezone_ptr_t {
 
 // start code fragment :: Prototype for external function: gettimeofday ... type: ((ref<array<struct<tv_sec:int<8>,tv_usec:int<8>>,1>>,ref<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>)->int<4>) //
 int gettimeofday(struct timeval*, struct timezone*);
-static int gettimeofday_wrap(void* _closure, __insieme_type_18* var_246, __timezone_ptr_t* var_247) { return gettimeofday(((struct timeval*)((*(var_246)).data)), ((struct timezone*)((*(var_247)).data))); }
+static int gettimeofday_wrap(void* _closure, __insieme_type_18* var_287, __timezone_ptr_t* var_288) { return gettimeofday(((struct timeval*)((*(var_287)).data)), ((struct timezone*)((*(var_288)).data))); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<array<real<8>,1>>)->unit) //
 void wtime(__insieme_type_13* t){
@@ -615,7 +615,7 @@ static double timer_read_wrap(void* _closure, int n) { return timer_read(n); }
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);
-static double fabs_wrap(void* _closure, double var_248) { return fabs(var_248); }
+static double fabs_wrap(void* _closure, double var_289) { return fabs(var_289); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(__insieme_type_1* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, __insieme_type_1* optype, int passed_verification, __insieme_type_1* npbversion, __insieme_type_1* compiletime, __insieme_type_1* cc, __insieme_type_1* clink, __insieme_type_1* c_lib, __insieme_type_1* c_inc, __insieme_type_1* cflags, __insieme_type_1* clinkflags, __insieme_type_1* rand){
@@ -716,41 +716,41 @@ int main(int __argc, char** __argv) {
 		makea((*(&((__GLOBAL__).naa))), (*(&((__GLOBAL__).nzz))), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).rowstr))).data})), 8, (*(&((__GLOBAL__).firstrow))), (*(&((__GLOBAL__).lastrow))), (*(&((__GLOBAL__).firstcol))), (*(&((__GLOBAL__).lastcol))), 1.0e-1, (&((__insieme_type_15){(*(&((__GLOBAL__).arow))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).acol))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).aelt))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).v))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).iv))).data})), 12.0);
 		{
 			{
-				for(int var_154 = 1; var_154 < ((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1); var_154 += 1)  { {
-					for(int var_153 = (((*(&((__GLOBAL__).rowstr))).data[((unsigned int)((var_154)))])); var_153 < (((*(&((__GLOBAL__).rowstr))).data[((unsigned int)(((var_154)+1)))])); var_153 += 1)  { ((((*(&((__GLOBAL__).colidx))).data[((unsigned int)((var_153)))])) = (((((*(&((__GLOBAL__).colidx))).data[((unsigned int)((var_153)))]))-(*(&((__GLOBAL__).firstcol))))+1)); };
-					((k) = ((((*(&((__GLOBAL__).rowstr))).data[((unsigned int)((var_154)))]))+(((int)(ceil((((double)(((((*(&((__GLOBAL__).rowstr))).data[((unsigned int)(((var_154)+1)))]))-(((*(&((__GLOBAL__).rowstr))).data[((unsigned int)((var_154)))])))))/((double)(1))))))*1)));
+				for(int var_172 = 1; var_172 < ((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1); var_172 += 1)  { {
+					for(int var_170 = (((*(&((__GLOBAL__).rowstr))).data[((unsigned int)(var_172))])); var_170 < (((*(&((__GLOBAL__).rowstr))).data[((unsigned int)((var_172+1)))])); var_170 += 1)  { ((((*(&((__GLOBAL__).colidx))).data[((unsigned int)(var_170))])) = (((((*(&((__GLOBAL__).colidx))).data[((unsigned int)(var_170))]))-(*(&((__GLOBAL__).firstcol))))+1)); };
+					((k) = ((((*(&((__GLOBAL__).rowstr))).data[((unsigned int)(var_172))]))+(((int)(ceil((((double)(((((*(&((__GLOBAL__).rowstr))).data[((unsigned int)((var_172+1)))]))-(((*(&((__GLOBAL__).rowstr))).data[((unsigned int)(var_172))])))))/((double)(1))))))*1)));
 				}; };
 				((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastrow)))-(*(&((__GLOBAL__).firstrow))))+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_155 = 1; var_155 < ((7000+1)+1); var_155 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)((var_155)))])) = 1.0); };
+				for(int var_174 = 1; var_174 < ((7000+1)+1); var_174 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_174))])) = 1.0); };
 				((i) = (1+(((int)(ceil((((double)((((7000+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			((zeta) = 0.0);
 			{
-				for(int var_190 = 1; var_190 < (1+1); var_190 += 1) {
+				for(int var_227 = 1; var_227 < (1+1); var_227 += 1) {
 					conj_grad((&((__insieme_type_15){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).rowstr))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).x))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).z))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).p))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).q))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).r))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).w))).data})), (&((__insieme_type_13){&rnorm})));
 					{
 						((norm_temp11) = 0.0);
 						((norm_temp12) = 0.0);
 					};
 					{
-						for(int var_188 = 1; var_188 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_188 += 1) {
-							((norm_temp11) = ((norm_temp11)+((((*(&((__GLOBAL__).x))).data[((unsigned int)((var_188)))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)((var_188)))])))));
-							((norm_temp12) = ((norm_temp12)+((((*(&((__GLOBAL__).z))).data[((unsigned int)((var_188)))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)((var_188)))])))));
+						for(int var_223 = 1; var_223 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_223 += 1) {
+							((norm_temp11) = ((norm_temp11)+((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_223))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)(var_223))])))));
+							((norm_temp12) = ((norm_temp12)+((((*(&((__GLOBAL__).z))).data[((unsigned int)(var_223))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)(var_223))])))));
 						};
 						((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 					};
 					((norm_temp12) = (1.0/sqrt((norm_temp12))));
 					{
-						for(int var_189 = 1; var_189 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_189 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)((var_189)))])) = ((norm_temp12)*(((*(&((__GLOBAL__).z))).data[((unsigned int)((var_189)))])))); };
+						for(int var_225 = 1; var_225 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_225 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_225))])) = ((norm_temp12)*(((*(&((__GLOBAL__).z))).data[((unsigned int)(var_225))])))); };
 						((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 					};
 				};
 				((it) = (1+(((int)(ceil((((double)(((1+1)-1)))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_191 = 1; var_191 < ((7000+1)+1); var_191 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)((var_191)))])) = 1.0); };
+				for(int var_229 = 1; var_229 < ((7000+1)+1); var_229 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_229))])) = 1.0); };
 				((i) = (1+(((int)(ceil((((double)((((7000+1)+1)-1)))/((double)(1))))))*1)));
 			};
 			((zeta) = 0.0);
@@ -758,16 +758,16 @@ int main(int __argc, char** __argv) {
 		timer_clear(1);
 		timer_start(1);
 		 { {
-			for(int var_207 = 1; var_207 < (15+1); var_207 += 1) {
+			for(int var_248 = 1; var_248 < (15+1); var_248 += 1) {
 				conj_grad((&((__insieme_type_15){(*(&((__GLOBAL__).colidx))).data})), (&((__insieme_type_15){(*(&((__GLOBAL__).rowstr))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).x))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).z))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).a))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).p))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).q))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).r))).data})), (&((__insieme_type_13){(*(&((__GLOBAL__).w))).data})), (&((__insieme_type_13){&rnorm})));
 				{
 					((norm_temp11) = 0.0);
 					((norm_temp12) = 0.0);
 				};
 				{
-					for(int var_205 = 1; var_205 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_205 += 1) {
-						((norm_temp11) = ((norm_temp11)+((((*(&((__GLOBAL__).x))).data[((unsigned int)((var_205)))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)((var_205)))])))));
-						((norm_temp12) = ((norm_temp12)+((((*(&((__GLOBAL__).z))).data[((unsigned int)((var_205)))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)((var_205)))])))));
+					for(int var_244 = 1; var_244 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_244 += 1) {
+						((norm_temp11) = ((norm_temp11)+((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_244))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)(var_244))])))));
+						((norm_temp12) = ((norm_temp12)+((((*(&((__GLOBAL__).z))).data[((unsigned int)(var_244))]))*(((*(&((__GLOBAL__).z))).data[((unsigned int)(var_244))])))));
 					};
 					((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 				};
@@ -776,11 +776,11 @@ int main(int __argc, char** __argv) {
 					((zeta) = (12.0+(1.0/(norm_temp11))));
 				};
 				{
-					if(((var_207)==1)) { printf(((char*)((*(&((__insieme_type_1){"   iteration           ||r||                 zeta\n"}))).data)), 0); };
-					printf(((char*)((*(&((__insieme_type_1){"    %5d       %20.14e%20.13e\n"}))).data)), (var_207), (rnorm), (zeta));
+					if((var_248==1)) { printf(((char*)((*(&((__insieme_type_1){"   iteration           ||r||                 zeta\n"}))).data)), 0); };
+					printf(((char*)((*(&((__insieme_type_1){"    %5d       %20.14e%20.13e\n"}))).data)), var_248, (rnorm), (zeta));
 				};
 				{
-					for(int var_206 = 1; var_206 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_206 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)((var_206)))])) = ((norm_temp12)*(((*(&((__GLOBAL__).z))).data[((unsigned int)((var_206)))])))); };
+					for(int var_246 = 1; var_246 < ((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1); var_246 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_246))])) = ((norm_temp12)*(((*(&((__GLOBAL__).z))).data[((unsigned int)(var_246))])))); };
 					((j) = (1+(((int)(ceil((((double)((((((*(&((__GLOBAL__).lastcol)))-(*(&((__GLOBAL__).firstcol))))+1)+1)-1)))/((double)(1))))))*1)));
 				};
 			};

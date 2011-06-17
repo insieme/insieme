@@ -101,5 +101,5 @@ int main() {
 	{
 		int i = 0;
 		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_1)),&((struct __insieme_job_1){sizeof(struct __insieme_job_1),1,isbr_getMaxThreads(),&fun__insieme_job_1,&i}),sizeof(struct __insieme_job_1))));
-	}
+	};
 }

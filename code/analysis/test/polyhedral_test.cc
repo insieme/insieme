@@ -67,7 +67,7 @@ TEST(IterationVector, Creation) {
 	{
 		std::ostringstream ss;
 		iterVec.printTo(ss);
-		EXPECT_EQ("v1,v2,v3,1", ss.str());
+		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
 	}
 	EXPECT_TRUE( iterVec[0] == poly::Iterator(iter1) );
 	EXPECT_FALSE( iterVec[0] == poly::Parameter(iter1) );
@@ -83,8 +83,8 @@ TEST(IterationVector, Creation) {
 	}
 	{
 		std::ostringstream ss;
-		iterVec2.printTo(ss);
-		EXPECT_EQ("v1,v2,v3,1", ss.str());
+		ss << iterVec2;
+		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
 	}
 }
 
@@ -98,6 +98,64 @@ TEST(IterationVector, Iterator) {
 	EXPECT_EQ(*(it+2), poly::Parameter(param));
 	EXPECT_EQ(*(it+3), poly::Constant());
 
+}
+
+TEST(IterationVector, MergeEmpty) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Iterator(iter2) );
+//	iterVec1.add( poly::Parameter(param) ); 
+
+	poly::IterationVector iterVec2; 
+
+	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
+	// std::cout << itv;
+	poly::IterationVector::iterator it = itv.begin();
+	EXPECT_EQ(poly::Iterator(iter1), *(it++));
+	EXPECT_EQ(poly::Iterator(iter2), *(it++));
+//	EXPECT_EQ(poly::Parameter(param), *(it++));
+	EXPECT_EQ(poly::Constant(), *it);
+
+	poly::IterationVector itv2 = poly::merge(iterVec2, itv);
+	// std::cout << itv;
+	poly::IterationVector::iterator it2 = itv2.begin();
+	EXPECT_EQ(poly::Iterator(iter1), *(it2++));
+	EXPECT_EQ(poly::Iterator(iter2), *(it2++));
+// 	EXPECT_EQ(poly::Parameter(param), *(it2++));
+	EXPECT_EQ(poly::Constant(), *it2);
+
+}
+
+TEST(IterationVector, Merge) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Parameter(param) ); 
+	// std::cout << iterVec1 << std::endl;
+
+	poly::IterationVector iterVec2; 
+	iterVec2.add( poly::Parameter(param) ); 
+	iterVec2.add( poly::Iterator(iter2) ); 
+	// std::cout << iterVec2 << std::endl; 
+
+	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
+	// std::cout << itv;
+	poly::IterationVector::iterator it = itv.begin();
+	EXPECT_EQ(poly::Iterator(iter1), *(it++));
+	EXPECT_EQ(poly::Iterator(iter2), *(it++));
+	EXPECT_EQ(poly::Parameter(param), *(it++));
+	EXPECT_EQ(poly::Constant(), *it);
 }
 
 TEST(AffineFunction, Creation) {
@@ -135,7 +193,6 @@ TEST(AffineFunction, Creation) {
 		af.printTo(ss);
 		EXPECT_EQ("0*v1 + 1*v2 + 2*v3 + 0*v4 + 10*1", ss.str());
 	}
-
 }
 
 TEST(AffineFunction, CreationFromExpr) {
@@ -233,7 +290,7 @@ TEST(IterationDomain, Creation) {
 	{
 		std::ostringstream ss;
 		iterVec.printTo(ss);
-		EXPECT_EQ("v1,v2,v3,1", ss.str());
+		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
 	}
 
 	poly::IterationDomain it(iterVec, cl);
@@ -244,13 +301,13 @@ TEST(IterationDomain, Creation) {
 	{
 		std::ostringstream ss;
 		iterVec.printTo(ss);
-		EXPECT_EQ("v1,v2,v3,v4,1", ss.str());
+		EXPECT_EQ("(v1,v2|v3,v4|1)", ss.str());
 	}
 
 	{
 		std::ostringstream ss;
 		it.getIterationVector().printTo(ss);
-		EXPECT_EQ("v1,v2,v3,1", ss.str());
+		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
 	}
 	// check weather these 2 affine functions are the same... even thought the
 	// underlying iteration vector has been changed

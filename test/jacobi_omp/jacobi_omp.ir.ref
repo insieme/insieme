@@ -28,42 +28,42 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         } else { };
         memset(ref.to.anyref(v9), 0, v7*v7*sizeof(type<real<4>>));
         memset(ref.to.anyref(v11), 0, v7*v7*sizeof(type<real<4>>));
-        for(decl ref<int<4>> v19 =  var(0) .. v7 : 1) 
-            for(decl ref<int<4>> v20 =  var(0) .. v7 : 1) 
-                array.ref.elem.1D(v11, v19*v7+v20) := fun(int<4> v21, int<4> v22){
+        for(decl int<4> v25 = 0 .. v7 : 1) 
+            for(decl int<4> v24 = 0 .. v7 : 1) 
+                array.ref.elem.1D(v11, v25*v7+v24) := fun(int<4> v21, int<4> v22){
                     return 40*sin(16*2*v21-1*v22);
-                }(v19, v20)
+                }(v25, v24)
             
         ;
-        decl ref<real<8>> v24 =  var(0);
-        decl ref<real<8>> v25 =  var(0);
         decl ref<real<8>> v26 =  var(0);
-        decl ref<real<8>> v27 =  var(0.0);
-        decl ref<real<8>> v28 =  var(pow(1/v7, 2));
+        decl ref<real<8>> v27 =  var(0);
+        decl ref<real<8>> v28 =  var(0);
+        decl ref<real<8>> v29 =  var(0.0);
+        decl ref<real<8>> v30 =  var(pow(1/v7, 2));
         v4 := clock();
         v5 := v4-v3/1000000l;
         v3 := clock();
-        for(decl ref<int<4>> v36 =  var(0) .. v8 : 1) {
+        for(decl int<4> v45 = 0 .. v8 : 1) {
             {
-                for(decl ref<int<4>> v30 =  var(1) .. v7-1 : 1) {
-                    for(decl ref<int<4>> v29 =  var(1) .. v7-1 : 1) {
-                        array.ref.elem.1D(v10, v30*v7+v29) := 1/4*array.ref.elem.1D(v9, v30-1*v7+v29)+array.ref.elem.1D(v9, v30*v7+v29+1)+array.ref.elem.1D(v9, v30*v7+v29-1)+array.ref.elem.1D(v9, v30+1*v7+v29)-v28*array.ref.elem.1D(v11, v30*v7+v29);
+                for(decl int<4> v34 = 1 .. v7-1 : 1) {
+                    for(decl int<4> v33 = 1 .. v7-1 : 1) {
+                        array.ref.elem.1D(v10, v34*v7+v33) := 1/4*array.ref.elem.1D(v9, v34-1*v7+v33)+array.ref.elem.1D(v9, v34*v7+v33+1)+array.ref.elem.1D(v9, v34*v7+v33-1)+array.ref.elem.1D(v9, v34+1*v7+v33)-v30*array.ref.elem.1D(v11, v34*v7+v33);
                     };
                 };
             };
             memcpy(ref.to.anyref(v9), ref.to.anyref(v10), v7*v7*sizeof(type<real<4>>));
-            for(decl ref<int<4>> v32 =  var(1) .. v7-1 : 1) {
-                for(decl ref<int<4>> v31 =  var(1) .. v7-1 : 1) 
-                    array.ref.elem.1D(v12, v32*v7+v31) := array.ref.elem.1D(v11, v32*v7+v31)-4*array.ref.elem.1D(v9, v32*v7+v31)+array.ref.elem.1D(v9, v32-1*v7+v31)+array.ref.elem.1D(v9, v32+1*v7+v31)+array.ref.elem.1D(v9, v32*v7+v31-1)+array.ref.elem.1D(v9, v32*v7+v31+1)
+            for(decl int<4> v38 = 1 .. v7-1 : 1) {
+                for(decl int<4> v37 = 1 .. v7-1 : 1) 
+                    array.ref.elem.1D(v12, v38*v7+v37) := array.ref.elem.1D(v11, v38*v7+v37)-4*array.ref.elem.1D(v9, v38*v7+v37)+array.ref.elem.1D(v9, v38-1*v7+v37)+array.ref.elem.1D(v9, v38+1*v7+v37)+array.ref.elem.1D(v9, v38*v7+v37-1)+array.ref.elem.1D(v9, v38*v7+v37+1)
                 ;
             };
-            decl ref<real<8>> v33 =  var(0);
-            for(decl ref<int<4>> v35 =  var(1) .. v7-1 : 1) {
-                for(decl ref<int<4>> v34 =  var(1) .. v7-1 : 1) {
-                    v33 := v33+pow(array.ref.elem.1D(v12, v35*v7+v34), 2);
+            decl ref<real<8>> v39 =  var(0);
+            for(decl int<4> v43 = 1 .. v7-1 : 1) {
+                for(decl int<4> v42 = 1 .. v7-1 : 1) {
+                    v39 := v39+pow(array.ref.elem.1D(v12, v43*v7+v42), 2);
                 };
             };
-            v27 := sqrt(v33)/v7-1;
+            v29 := sqrt(v39)/v7-1;
         };
         v4 := clock();
         v6 := v4-v3/1000000l;
@@ -71,7 +71,7 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
          del(v10);
          del(v11);
          del(v12);
-        printf(string.as.char.pointer("Job Done! - residuo: %lf\n"), varlist.pack((v27)));
+        printf(string.as.char.pointer("Job Done! - residuo: %lf\n"), varlist.pack((v29)));
     }
 
 
@@ -107,42 +107,42 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         } else { };
         memset(ref.to.anyref(v9), 0, (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>)));
         memset(ref.to.anyref(v11), 0, (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>)));
-        for(decl ref<int<4>> v19 = ( var(0)) .. ( *v7) : 1) 
-            for(decl ref<int<4>> v20 = ( var(0)) .. ( *v7) : 1) 
-                (array.ref.elem.1D(v11, CAST<uint<4>>(((( *v19)*( *v7))+( *v20)))) := CAST<real<4>>(fun(int<4> v21, int<4> v22){
+        for(decl int<4> v25 = 0 .. ( *v7) : 1) 
+            for(decl int<4> v24 = 0 .. ( *v7) : 1) 
+                (array.ref.elem.1D(v11, CAST<uint<4>>(((v25*( *v7))+v24))) := CAST<real<4>>(fun(int<4> v21, int<4> v22){
                     return (CAST<real<8>>(40)*sin(CAST<real<8>>(((16*((2*v21)-1))*v22))));
-                }(( *v19), ( *v20))))
+                }(v25, v24)))
             
         ;
-        decl ref<real<8>> v24 = ( var(CAST<real<8>>(0)));
-        decl ref<real<8>> v25 = ( var(CAST<real<8>>(0)));
         decl ref<real<8>> v26 = ( var(CAST<real<8>>(0)));
-        decl ref<real<8>> v27 = ( var(0.0));
-        decl ref<real<8>> v28 = ( var(pow((CAST<real<8>>(1)/CAST<real<8>>(( *v7))), CAST<real<8>>(2))));
+        decl ref<real<8>> v27 = ( var(CAST<real<8>>(0)));
+        decl ref<real<8>> v28 = ( var(CAST<real<8>>(0)));
+        decl ref<real<8>> v29 = ( var(0.0));
+        decl ref<real<8>> v30 = ( var(pow((CAST<real<8>>(1)/CAST<real<8>>(( *v7))), CAST<real<8>>(2))));
         (v4 := clock());
         (v5 := (CAST<real<8>>((( *v4)-( *v3)))/CAST<real<8>>(1000000l)));
         (v3 := clock());
-        for(decl ref<int<4>> v36 = ( var(0)) .. ( *v8) : 1) {
+        for(decl int<4> v45 = 0 .. ( *v8) : 1) {
             <m id=2>{
-                <m id=1>for(decl ref<int<4>> v30 = ( var(1)) .. (( *v7)-1) : 1) {
-                    for(decl ref<int<4>> v29 = ( var(1)) .. (( *v7)-1) : 1) {
-                        (array.ref.elem.1D(v10, CAST<uint<4>>(((( *v30)*( *v7))+( *v29)))) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)-1)*( *v7))+( *v29)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)*( *v7))+( *v29))+1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)*( *v7))+( *v29))-1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v30)+1)*( *v7))+( *v29)))))))-(( *v28)*CAST<real<8>>(( *array.ref.elem.1D(v11, CAST<uint<4>>(((( *v30)*( *v7))+( *v29)))))))))));
+                <m id=1>for(decl int<4> v34 = 1 .. (( *v7)-1) : 1) {
+                    for(decl int<4> v33 = 1 .. (( *v7)-1) : 1) {
+                        (array.ref.elem.1D(v10, CAST<uint<4>>(((v34*( *v7))+v33))) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *array.ref.elem.1D(v9, CAST<uint<4>>((((v34-1)*( *v7))+v33))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((v34*( *v7))+v33)+1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((v34*( *v7))+v33)-1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((v34+1)*( *v7))+v33))))))-(( *v30)*CAST<real<8>>(( *array.ref.elem.1D(v11, CAST<uint<4>>(((v34*( *v7))+v33))))))))));
                     };
                 }</m>;
             }</m>;
             memcpy(ref.to.anyref(v9), ref.to.anyref(v10), (CAST<uint<8>>((( *v7)*( *v7)))*sizeof(type<real<4>>)));
-            for(decl ref<int<4>> v32 = ( var(1)) .. (( *v7)-1) : 1) {
-                for(decl ref<int<4>> v31 = ( var(1)) .. (( *v7)-1) : 1) 
-                    (array.ref.elem.1D(v12, CAST<uint<4>>(((( *v32)*( *v7))+( *v31)))) := (((((( *array.ref.elem.1D(v11, CAST<uint<4>>(((( *v32)*( *v7))+( *v31)))))-(CAST<real<4>>(4)*( *array.ref.elem.1D(v9, CAST<uint<4>>(((( *v32)*( *v7))+( *v31)))))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)-1)*( *v7))+( *v31))))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)+1)*( *v7))+( *v31))))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)*( *v7))+( *v31))-1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((( *v32)*( *v7))+( *v31))+1))))))
+            for(decl int<4> v38 = 1 .. (( *v7)-1) : 1) {
+                for(decl int<4> v37 = 1 .. (( *v7)-1) : 1) 
+                    (array.ref.elem.1D(v12, CAST<uint<4>>(((v38*( *v7))+v37))) := (((((( *array.ref.elem.1D(v11, CAST<uint<4>>(((v38*( *v7))+v37))))-(CAST<real<4>>(4)*( *array.ref.elem.1D(v9, CAST<uint<4>>(((v38*( *v7))+v37))))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((v38-1)*( *v7))+v37)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((v38+1)*( *v7))+v37)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((v38*( *v7))+v37)-1)))))+( *array.ref.elem.1D(v9, CAST<uint<4>>((((v38*( *v7))+v37)+1))))))
                 ;
             };
-            decl ref<real<8>> v33 = ( var(CAST<real<8>>(0)));
-            for(decl ref<int<4>> v35 = ( var(1)) .. (( *v7)-1) : 1) {
-                for(decl ref<int<4>> v34 = ( var(1)) .. (( *v7)-1) : 1) {
-                    (v33 := (( *v33)+pow(CAST<real<8>>(( *array.ref.elem.1D(v12, CAST<uint<4>>(((( *v35)*( *v7))+( *v34)))))), CAST<real<8>>(2))));
+            decl ref<real<8>> v39 = ( var(CAST<real<8>>(0)));
+            for(decl int<4> v43 = 1 .. (( *v7)-1) : 1) {
+                for(decl int<4> v42 = 1 .. (( *v7)-1) : 1) {
+                    (v39 := (( *v39)+pow(CAST<real<8>>(( *array.ref.elem.1D(v12, CAST<uint<4>>(((v43*( *v7))+v42))))), CAST<real<8>>(2))));
                 };
             };
-            (v27 := (sqrt(( *v33))/CAST<real<8>>((( *v7)-1))));
+            (v29 := (sqrt(( *v39))/CAST<real<8>>((( *v7)-1))));
         };
         (v4 := clock());
         (v6 := (CAST<real<8>>((( *v4)-( *v3)))/CAST<real<8>>(1000000l)));
@@ -150,6 +150,6 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         ( del(v10));
         ( del(v11));
         ( del(v12));
-        printf(string.as.char.pointer("Job Done! - residuo: %lf\n"), varlist.pack((( *v27))));
+        printf(string.as.char.pointer("Job Done! - residuo: %lf\n"), varlist.pack((( *v29))));
     }
 

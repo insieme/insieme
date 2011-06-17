@@ -65,7 +65,7 @@ void sortIt(__insieme_type_2* arr, int beg, int end) { if((end>(beg+1))){
 static void sortIt_wrap(void* _closure, __insieme_type_2* arr, int beg, int end) { sortIt(arr, beg, end); }
 
 // start code fragment :: Definition of reverseIt ... type: ((ref<array<int<4>,1>>,int<4>,int<4>)->unit) //
-void reverseIt(__insieme_type_2* a, int S, int E) { for(int i = 0; i < ((E-S)/2); i += 1)  { swapIt((&((__insieme_type_2){&((*a).data[((unsigned int)((S+(i))))])})), (&((__insieme_type_2){&((*a).data[((unsigned int)(((E-(i))-1)))])}))); }; }
+void reverseIt(__insieme_type_2* a, int S, int E) { for(int var_24 = 0; var_24 < ((E-S)/2); var_24 += 1)  { swapIt((&((__insieme_type_2){&((*a).data[((unsigned int)((S+var_24)))])})), (&((__insieme_type_2){&((*a).data[((unsigned int)(((E-var_24)-1)))])}))); }; }
 static void reverseIt_wrap(void* _closure, __insieme_type_2* a, int S, int E) { reverseIt(a, S, E); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
@@ -84,8 +84,8 @@ int main(int __argc, char** __argv) {
 	// ---- begin of actual code body ----
 	{
 		__insieme_type_2* a = _ref_new___insieme_type_3((__insieme_type_2_ctr(((((unsigned long)(20000))*sizeof(int))/sizeof(int)))));
-		for(int iter = 0; iter < 10; iter += 1) {
-			for(int i = 0; i < 20000; i += 1)  { ((((*a).data[((unsigned int)((i)))])) = (rand()%20000)); };
+		for(int var_27 = 0; var_27 < 10; var_27 += 1) {
+			for(int var_5 = 0; var_5 < 20000; var_5 += 1)  { ((((*a).data[((unsigned int)(var_5))])) = (rand()%20000)); };
 			sortIt(a, 0, 20000);
 			reverseIt(a, 0, 20000);
 			sortIt(a, 0, 20000);

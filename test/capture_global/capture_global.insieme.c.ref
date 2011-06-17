@@ -85,10 +85,10 @@ int main(int __argc, char** __argv) {
 		;
 		((*(&((__GLOBAL__).count))) = 0);
 		((*(&((__GLOBAL__).reset_count))) = 1);
-		for(int i = 0; i < 10; i += 1) {
+		for(int var_13 = 0; var_13 < 10; var_13 += 1) {
 			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), inc(2));
 			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), dec(1));
-			if(((i)==5)) { reset(); };
+			if((var_13==5)) { reset(); };
 		};
 		return 0;
 	}

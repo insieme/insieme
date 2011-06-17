@@ -99,6 +99,7 @@ struct Element : public utils::Printable, public boost::equality_comparable<Elem
 	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	bool operator==(const Element& other) const;
+    bool operator<(const Element& other) const;
 private:
 	Type type;
 };
@@ -162,7 +163,7 @@ struct Constant : public Element {
  * The order of the variables in the vector is usually required (by the 
  * polyhedral libraries) to be ordered in the following way: 
  *
- * (iter0,...iterN, param0, ..., paramM, 1)
+ * (iter0,...iterN | param0, ..., paramM | 1)
  *
  * Which defines an iteration vector of size N+M+1, the first N elements 
  * are iterators, followed by M parameters and the last element is the 
@@ -240,6 +241,9 @@ public:
 	// Allows the iterator class to access the private part of the IterationVector class 
 	friend class iterator;
 
+	typedef IterVec::const_iterator iter_iterator;
+	typedef ParamVec::const_iterator param_iterator;
+
 	IterationVector() { }
 
 	/**
@@ -251,6 +255,11 @@ public:
 	 */
 	size_t add(const Iterator& iter) { return addTo(iter, iters); }
 	size_t add(const Parameter& param) { return addTo(param, params) + iters.size(); }
+
+	size_t add(const Element& elem) { 
+		return elem.getType() == Element::ITER ? 
+				add(static_cast<const Iterator&>(elem)) : add(static_cast<const Parameter&>(elem)); 
+	}
 
 	/**
 	 * Returns the index of an element inside the iteration vector. 
@@ -287,13 +296,13 @@ public:
 
 	// Returns an iterator over the iterators of this iteration vector:
 	// (iter0, iter1, ... iterN)
-	IterVec::const_iterator iter_begin() const { return iters.begin(); }
-	IterVec::const_iterator iter_end() const { return iters.end(); }
+	iter_iterator iter_begin() const { return iters.begin(); }
+	iter_iterator iter_end() const { return iters.end(); }
 
 	// Returns an iterator over the parameters of this iteration vector:
 	// (param0, param1, ... paramM)
-	ParamVec::const_iterator param_begin() const { return params.begin(); }
-	ParamVec::const_iterator param_end() const { return params.end(); }
+	param_iterator param_begin() const { return params.begin(); }
+	param_iterator param_end() const { return params.end(); }
 
 	const Element& operator[](size_t idx) const;
 
@@ -302,6 +311,10 @@ public:
 	// Implements the Printable interface
 	std::ostream& printTo(std::ostream& out) const;
 };
+
+// Merges two iteration vectors (a and b) to create a new iteration vector which 
+// contains both the elements of a and b. 
+IterationVector merge(const IterationVector& a, const IterationVector& b); 
 
 /**
  * AffineFunction represents an affine function based on an iteration vector. An

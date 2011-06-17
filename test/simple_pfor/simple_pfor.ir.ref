@@ -6,16 +6,16 @@ fun(){
         decl ref<vector<int<4>,100>> v2 =  var(undefined(type<vector<int<4>,100>>));
         {
             {
-                for(decl ref<int<4>> v3 =  var(0) .. 100 : 1) {
-                    vector.ref.elem(v2, v3) := v3;
+                for(decl int<4> v4 = 0 .. 100 : 1) {
+                    vector.ref.elem(v2, v4) := v4;
                 };
                 v1 := 0+ceil(100-0/1)*1;
             };
         };
         printf(string.as.char.pointer("After Loop: %d\n"), varlist.pack((v1)));
         {
-            for(decl ref<int<4>> v4 =  var(0) .. 100 : 1) {
-                printf(string.as.char.pointer("a[%d]=%d\n"), varlist.pack((v4, vector.ref.elem(v2, v4))));
+            for(decl int<4> v6 = 0 .. 100 : 1) {
+                printf(string.as.char.pointer("a[%d]=%d\n"), varlist.pack((v6, vector.ref.elem(v2, v6))));
             };
             v1 := 0+ceil(100-0/1)*1;
         };
@@ -32,16 +32,16 @@ fun(){
         decl ref<vector<int<4>,100>> v2 = ( var(undefined(type<vector<int<4>,100>>)));
         <m id=2>{
             {
-                <m id=1>for(decl ref<int<4>> v3 = ( var(0)) .. 100 : 1) {
-                    (vector.ref.elem(v2, CAST<uint<4>>(( *v3))) := ( *v3));
+                <m id=1>for(decl int<4> v4 = 0 .. 100 : 1) {
+                    (vector.ref.elem(v2, CAST<uint<4>>(v4)) := v4);
                 }</m>;
                 (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));
             };
         }</m>;
         printf(string.as.char.pointer("After Loop: %d\n"), varlist.pack((( *v1))));
         {
-            for(decl ref<int<4>> v4 = ( var(0)) .. 100 : 1) {
-                printf(string.as.char.pointer("a[%d]=%d\n"), varlist.pack((( *v4), ( *vector.ref.elem(v2, CAST<uint<4>>(( *v4)))))));
+            for(decl int<4> v6 = 0 .. 100 : 1) {
+                printf(string.as.char.pointer("a[%d]=%d\n"), varlist.pack((v6, ( *vector.ref.elem(v2, CAST<uint<4>>(v6))))));
             };
             (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((100-0))/CAST<real<8>>(1))))*1)));
         };

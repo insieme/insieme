@@ -28,5 +28,5 @@ int main() {
 		printf(((char*)((*(&((__insieme_type_1){"After: %f\n"}))).data)), (y));
 		int k = 2;
 		printf(((char*)((*(&((__insieme_type_1){"Double: %f\n"}))).data)), (((double)((k)))*(x)));
-	}
+	};
 }

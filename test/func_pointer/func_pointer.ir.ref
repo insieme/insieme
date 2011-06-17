@@ -13,9 +13,15 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
                 return v18+v19;
             }(v21, v22)/2;
         }, 1))]);
-        for(decl ref<int<4>> v24 =  var(0) .. 4 : 1) {
-            printf(string.as.char.pointer("Applying func: %d\n"), varlist.pack((vector.ref.elem(v3, v24)[0](10, 20))));
+        for(decl int<4> v25 = 0 .. 4 : 1) {
+            printf(string.as.char.pointer("Applying func: %d\n"), varlist.pack((vector.ref.elem(v3, v25)[0](10, 20))));
         };
+        fun(ref<array<int<4>,1>> v26, int<4> v27){
+            for(decl int<4> v29 = 0 .. v27 : 1) 
+                printf(string.as.char.pointer("%d,"), varlist.pack((array.ref.elem.1D(v26, v29))))
+            ;
+        }( var(vector.to.array([2, 3, 4])), 3);
+        if(!int.ne(2, 0)) { } else { };
     }
 
 
@@ -36,8 +42,14 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
                 return (v18+v19);
             }(v21, v22)/2);
         }, 1))]));
-        for(decl ref<int<4>> v24 = ( var(0)) .. 4 : 1) {
-            printf(string.as.char.pointer("Applying func: %d\n"), varlist.pack(((( *vector.ref.elem(v3, CAST<uint<4>>(( *v24))))[0])(10, 20))));
+        for(decl int<4> v25 = 0 .. 4 : 1) {
+            printf(string.as.char.pointer("Applying func: %d\n"), varlist.pack(((( *vector.ref.elem(v3, CAST<uint<4>>(v25)))[0])(10, 20))));
         };
+        fun(ref<array<int<4>,1>> v26, int<4> v27){
+            for(decl int<4> v29 = 0 .. v27 : 1) 
+                printf(string.as.char.pointer("%d,"), varlist.pack((( *array.ref.elem.1D(v26, CAST<uint<4>>(v29))))))
+            ;
+        }(( var(vector.to.array([2, 3, 4]))), 3);
+        if((!int.ne(2, 0))) { } else { };
     }
 

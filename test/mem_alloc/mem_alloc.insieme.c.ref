@@ -57,7 +57,7 @@ static inline __insieme_type_5 __insieme_type_5_ctr(unsigned s1) {
 
 // start code fragment :: Prototype for external function: memcpy ... type: ((anyRef,anyRef,uint<8>)->anyRef) //
 void* memcpy(void*, void*, unsigned long);
-static void* memcpy_wrap(void* _closure, void* var_7, void* var_8, unsigned long var_9) { return memcpy(var_7, var_8, var_9); }
+static void* memcpy_wrap(void* _closure, void* var_8, void* var_9, unsigned long var_10) { return memcpy(var_8, var_9, var_10); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -75,7 +75,7 @@ int main(int __argc, char** __argv) {
 		printf(((char*)((*(&((__insieme_type_1){"%d\n"}))).data)), (4*sizeof(int)));
 		__insieme_type_5* dest_array = _ref_new___insieme_type_6((__insieme_type_5_ctr(((4*sizeof(int))/sizeof(int)))));
 		memcpy((void*)((int*)((*(dest_array)).data)), (void*)((int*)((*(&src_array)).data)), (4*sizeof(int)));
-		for(int idx = 0; idx < ((4*sizeof(int))/sizeof(int)); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"%d, "}))).data)), (((*dest_array).data[((unsigned int)((idx)))]))); };
+		for(int var_6 = 0; var_6 < ((4*sizeof(int))/sizeof(int)); var_6 += 1)  { printf(((char*)((*(&((__insieme_type_1){"%d, "}))).data)), (((*dest_array).data[((unsigned int)(var_6))]))); };
 		printf(((char*)((*(&((__insieme_type_1){"\n"}))).data)), 0);
 		free((*dest_array).data);
 	}

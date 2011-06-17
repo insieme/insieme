@@ -180,7 +180,7 @@ endif()
 
 # enable C99 support within gcc
 if (CMAKE_COMPILER_IS_GNUC)
-	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic")
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
 
 	# add flags for debug mode
 	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")

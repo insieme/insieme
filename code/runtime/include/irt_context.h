@@ -57,4 +57,5 @@ struct _irt_context {
 static inline irt_context* irt_context_get_current();
 
 irt_context* irt_context_create(irt_client_app* app);
+irt_context* irt_context_create_standalone(irt_type* type_table, irt_wi_implementation* impl_table);
 void irt_context_destroy(irt_context* context);

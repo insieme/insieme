@@ -32,19 +32,19 @@ int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
-static double ceil_wrap(void* _closure, double var_22) { return ceil(var_22); }
+static double ceil_wrap(void* _closure, double var_30) { return ceil(var_30); }
 
 // start code fragment :: Definition of func ... type: ((int<4>)->int<4>) //
 int func(int k){
-	int var_14 = k;
+	int var_19 = k;
 	{
 		{
-			for(int var_15 = (var_14); var_15 < 10; var_15 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (var_15)); };
-			((var_14) = ((var_14)+(((int)(ceil((((double)((10-(var_14))))/((double)(1))))))*1)));
+			for(int var_21 = (var_19); var_21 < 10; var_21 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), var_21); };
+			((var_19) = ((var_19)+(((int)(ceil((((double)((10-(var_19))))/((double)(1))))))*1)));
 		};
 		{
-			for(int var_16 = (((int)(0))-10); var_16 < ((((int)(0))-0)+1); var_16 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-(var_16))); };
-			((var_14) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
+			for(int var_23 = (((int)(0))-10); var_23 < ((((int)(0))-0)+1); var_23 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-var_23)); };
+			((var_19) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 		};
 	};
 }
@@ -52,7 +52,7 @@ static int func_wrap(void* _closure, int k) { return func(k); }
 
 // start code fragment :: Definition of func2 ... type: (()->unit) //
 void func2() { {
-	for(int var_19 = (((int)(0))-10); var_19 < ((((int)(0))-0)+1); var_19 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-(var_19))); };
+	for(int var_27 = (((int)(0))-10); var_27 < ((((int)(0))-0)+1); var_27 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-var_27)); };
 	((*(&((__GLOBAL__).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 }; }
 static void func2_wrap(void* _closure) { func2(); }
@@ -73,9 +73,9 @@ int main(int __argc, char** __argv) {
 		((*(&((__GLOBAL__).N))) = 10);
 		((*(&((__GLOBAL__).i))) = 0);
 		int a = 10;
-		for(int idx = 0; idx < (a); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (idx)); };
-		for(int idx = (((int)(0))-(a)); idx < ((((int)(0))-0)+1); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-(idx))); };
-		for(int idx = (((int)(0))-(*(&((__GLOBAL__).N)))); idx < (((int)(0))-0); idx += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-(idx))); };
+		for(int var_6 = 0; var_6 < (a); var_6 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), var_6); };
+		for(int var_8 = (((int)(0))-(a)); var_8 < ((((int)(0))-0)+1); var_8 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-var_8)); };
+		for(int var_10 = (((int)(0))-(*(&((__GLOBAL__).N)))); var_10 < (((int)(0))-0); var_10 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-var_10)); };
 		{
 			int idx = a;
 			while(((*(&((__GLOBAL__).N)))>0)) {
@@ -84,11 +84,11 @@ int main(int __argc, char** __argv) {
 			};
 		};
 		{
-			for(int var_9 = (((int)(0))-15); var_9 < ((((int)(0))-0)+1); var_9 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (((int)(0))-(var_9))); };
+			for(int var_13 = (((int)(0))-15); var_13 < ((((int)(0))-0)+1); var_13 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (((int)(0))-var_13)); };
 			((a) = (15+(((int)(ceil((((double)((((((int)(0))-0)+1)-15)))/((double)(3))))))*3)));
 		};
 		{
-			for(int var_10 = 1; var_10 < 15; var_10 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (var_10)); };
+			for(int var_15 = 1; var_15 < 15; var_15 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), var_15); };
 			((a) = (1+(((int)(ceil((((double)((15-1)))/((double)(3))))))*3)));
 		};
 		{

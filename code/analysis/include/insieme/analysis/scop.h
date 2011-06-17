@@ -38,26 +38,39 @@
 
 #include <vector>
 
+#include "insieme/core/ast_node.h"
+#include "insieme/analysis/polyhedral.h"
+
 namespace insieme {
-
-namespace core {
-
-class Node;
-template<typename T> class Pointer;
-typedef Pointer<const Node> NodePtr;
-
-} // end namespace core
-
 namespace analysis {
 namespace scop {
 
 /**
  * Stores the information related to a SCoP (Static Control Part) region of a
- * program. A SCoP has a begin and an end. 
+ * program. 
  */
-class Scop { };
+class SCoP: public core::NodeAnnotation {
+	poly::IterationVector iterVec;
 
-typedef std::vector<Scop> ScopList;
+public:
+	static const string NAME;
+	static const utils::StringKey<SCoP> KEY;
+
+	SCoP(const poly::IterationVector& iterVec): core::NodeAnnotation(), iterVec(iterVec) { } 
+
+	const std::string& getAnnotationName() const {return NAME;}
+
+	const std::string toString() const;
+
+	const utils::AnnotationKey* getKey() const { return &KEY; }
+
+	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const { 
+		return false; 
+	}
+
+	const poly::IterationVector& getIterationVector() const { return iterVec; }
+};
+typedef std::vector<SCoP> ScopList;
 
 /**
  * Finds and marks the SCoPs contained in the root subtree and returns a list of

@@ -229,6 +229,19 @@ ExpressionPtr BasicGenerator::getOperator(const TypePtr& type, const BasicGenera
 	return 0;
 }
 
+BasicGenerator::Operator BasicGenerator::getOperator(const LiteralPtr& lit) const {
+	// We have to scan the multimap operationMap and find the operation which
+	// has this literal as second argument.
+	BasicGeneratorImpl::OperationMap& opMap = pimpl->operationMap;
+	auto fit = std::find_if(opMap.begin(), opMap.end(), 
+		[&](const BasicGeneratorImpl::OperationMap::value_type& cur) { 
+			if (*((*this).*cur.second.second)() == *lit) { return true; }
+			return false;
+		}
+	);
+	if (fit != opMap.end()) { return fit->first; }
+	assert(false && "Literal not found within the OperationMap, therefore not a valid IR literal expression");
+}
 // ----- extra material ---
 
 StatementPtr BasicGenerator::getNoOp() const {

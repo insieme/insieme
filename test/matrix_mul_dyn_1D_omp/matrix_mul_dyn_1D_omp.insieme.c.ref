@@ -37,9 +37,9 @@ struct __insieme_job_2 {
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
-	__insieme_type_0* var_51;
-	__insieme_type_0* var_52;
-	__insieme_type_0* var_53;
+	__insieme_type_0* var_61;
+	__insieme_type_0* var_62;
+	__insieme_type_0* var_63;
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_3 //
@@ -99,102 +99,102 @@ static inline __insieme_closure_4* __insieme_closure_4_ctr(__insieme_closure_4* 
 
 // start code fragment :: capture-struct for pfor-body __insieme_pfor_body_7_fun //
 struct __insieme_pfor_body_7_fun_capture {
-	__insieme_type_0* var_35;
+	__insieme_type_0* var_45;
 };
 
 // start code fragment :: Definition of __insieme_supp_8 ... type: ((ref<array<real<8>,1>>,int<4>)->unit) //
-void __insieme_supp_8(__insieme_type_0* var_39, int var_38) { for(int j = 0; j < 1000; j += 1)  { ((((*var_39).data[((unsigned int)(((var_38*1000)+(j))))])) = ((double)((var_38*(j))))); }; }
-static void __insieme_supp_8_wrap(void* _closure, __insieme_type_0* var_39, int var_38) { __insieme_supp_8(var_39, var_38); }
+void __insieme_supp_8(__insieme_type_0* var_49, int var_48) { for(int var_9 = 0; var_9 < 1000; var_9 += 1)  { ((((*var_49).data[((unsigned int)(((var_48*1000)+var_9)))])) = ((double)((var_48*var_9)))); }; }
+static void __insieme_supp_8_wrap(void* _closure, __insieme_type_0* var_49, int var_48) { __insieme_supp_8(var_49, var_48); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_7_fun //
 void __insieme_pfor_body_7_fun(const isbr_PForRange range) {
 	// ----- captured variables -----
-	__insieme_type_0* var_54 = ((struct __insieme_pfor_body_7_fun_capture*)(range.context))->var_35;
+	__insieme_type_0* var_64 = ((struct __insieme_pfor_body_7_fun_capture*)(range.context))->var_45;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_8(var_54, __it);
+		__insieme_supp_8(var_64, __it);
 	}
 	
 }
 
-// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_10_fun //
-struct __insieme_pfor_body_10_fun_capture {
-	__insieme_type_0* var_34;
+// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_9_fun //
+struct __insieme_pfor_body_9_fun_capture {
+	__insieme_type_0* var_44;
 };
 
-// start code fragment :: Definition of __insieme_supp_11 ... type: ((ref<array<real<8>,1>>,int<4>)->unit) //
-void __insieme_supp_11(__insieme_type_0* var_43, int var_42) { for(int j = 0; j < 1000; j += 1)  { ((((*var_43).data[((unsigned int)(((var_42*1000)+(j))))])) = ((double)((((var_42==(j)))?(1):(0))))); }; }
-static void __insieme_supp_11_wrap(void* _closure, __insieme_type_0* var_43, int var_42) { __insieme_supp_11(var_43, var_42); }
+// start code fragment :: Definition of __insieme_supp_10 ... type: ((ref<array<real<8>,1>>,int<4>)->unit) //
+void __insieme_supp_10(__insieme_type_0* var_53, int var_52) { for(int var_15 = 0; var_15 < 1000; var_15 += 1)  { ((((*var_53).data[((unsigned int)(((var_52*1000)+var_15)))])) = ((double)((((var_52==var_15))?(1):(0))))); }; }
+static void __insieme_supp_10_wrap(void* _closure, __insieme_type_0* var_53, int var_52) { __insieme_supp_10(var_53, var_52); }
 
-// start code fragment :: function for pfor-body __insieme_pfor_body_10_fun //
-void __insieme_pfor_body_10_fun(const isbr_PForRange range) {
+// start code fragment :: function for pfor-body __insieme_pfor_body_9_fun //
+void __insieme_pfor_body_9_fun(const isbr_PForRange range) {
 	// ----- captured variables -----
-	__insieme_type_0* var_56 = ((struct __insieme_pfor_body_10_fun_capture*)(range.context))->var_34;
+	__insieme_type_0* var_66 = ((struct __insieme_pfor_body_9_fun_capture*)(range.context))->var_44;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_11(var_56, __it);
+		__insieme_supp_10(var_66, __it);
 	}
 	
 }
 
-// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_12_fun //
-struct __insieme_pfor_body_12_fun_capture {
-	__insieme_type_0* var_33;
-	__insieme_type_0* var_34;
-	__insieme_type_0* var_35;
+// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_11_fun //
+struct __insieme_pfor_body_11_fun_capture {
+	__insieme_type_0* var_43;
+	__insieme_type_0* var_44;
+	__insieme_type_0* var_45;
 };
 
-// start code fragment :: Definition of __insieme_supp_13 ... type: ((ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,int<4>)->unit) //
-void __insieme_supp_13(__insieme_type_0* var_49, __insieme_type_0* var_48, __insieme_type_0* var_47, int var_46) { for(int j = 0; j < 1000; j += 1) {
+// start code fragment :: Definition of __insieme_supp_12 ... type: ((ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,int<4>)->unit) //
+void __insieme_supp_12(__insieme_type_0* var_59, __insieme_type_0* var_58, __insieme_type_0* var_57, int var_56) { for(int var_22 = 0; var_22 < 1000; var_22 += 1) {
 	double sum = ((double)(0));
-	for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((((*var_47).data[((unsigned int)(((var_46*1000)+(k))))]))*(((*var_48).data[((unsigned int)((((k)*1000)+(j))))]))))); };
-	((((*var_49).data[((unsigned int)(((var_46*1000)+(j))))])) = (sum));
+	for(int var_21 = 0; var_21 < 1000; var_21 += 1)  { ((sum) = ((sum)+((((*var_57).data[((unsigned int)(((var_56*1000)+var_21)))]))*(((*var_58).data[((unsigned int)(((var_21*1000)+var_22)))]))))); };
+	((((*var_59).data[((unsigned int)(((var_56*1000)+var_22)))])) = (sum));
 }; }
-static void __insieme_supp_13_wrap(void* _closure, __insieme_type_0* var_49, __insieme_type_0* var_48, __insieme_type_0* var_47, int var_46) { __insieme_supp_13(var_49, var_48, var_47, var_46); }
+static void __insieme_supp_12_wrap(void* _closure, __insieme_type_0* var_59, __insieme_type_0* var_58, __insieme_type_0* var_57, int var_56) { __insieme_supp_12(var_59, var_58, var_57, var_56); }
 
-// start code fragment :: function for pfor-body __insieme_pfor_body_12_fun //
-void __insieme_pfor_body_12_fun(const isbr_PForRange range) {
+// start code fragment :: function for pfor-body __insieme_pfor_body_11_fun //
+void __insieme_pfor_body_11_fun(const isbr_PForRange range) {
 	// ----- captured variables -----
-	__insieme_type_0* var_58 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_33;
-	__insieme_type_0* var_59 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_34;
-	__insieme_type_0* var_60 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_35;
+	__insieme_type_0* var_68 = ((struct __insieme_pfor_body_11_fun_capture*)(range.context))->var_43;
+	__insieme_type_0* var_69 = ((struct __insieme_pfor_body_11_fun_capture*)(range.context))->var_44;
+	__insieme_type_0* var_70 = ((struct __insieme_pfor_body_11_fun_capture*)(range.context))->var_45;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_13(var_58, var_59, var_60, __it);
+		__insieme_supp_12(var_68, var_69, var_70, __it);
 	}
 	
 }
 
 // start code fragment :: Definition of __insieme_supp_6 ... type: ((ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>)->unit) //
-void __insieme_supp_6(__insieme_type_0* var_35, __insieme_type_0* var_34, __insieme_type_0* var_33){
+void __insieme_supp_6(__insieme_type_0* var_45, __insieme_type_0* var_44, __insieme_type_0* var_43){
 	{
-		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, &((struct __insieme_pfor_body_7_fun_capture){var_35})},&__insieme_pfor_body_7_fun);
+		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, &((struct __insieme_pfor_body_7_fun_capture){var_45})},&__insieme_pfor_body_7_fun);
 		isbr_barrier(isbr_getThreadGroup(0));
 	};
 	{
-		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, &((struct __insieme_pfor_body_10_fun_capture){var_34})},&__insieme_pfor_body_10_fun);
+		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, &((struct __insieme_pfor_body_9_fun_capture){var_44})},&__insieme_pfor_body_9_fun);
 		isbr_barrier(isbr_getThreadGroup(0));
 	};
 	{
-		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, &((struct __insieme_pfor_body_12_fun_capture){var_33, var_34, var_35})},&__insieme_pfor_body_12_fun);
+		isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, 1000, 1, &((struct __insieme_pfor_body_11_fun_capture){var_43, var_44, var_45})},&__insieme_pfor_body_11_fun);
 		isbr_barrier(isbr_getThreadGroup(0));
 	};
 }
-static void __insieme_supp_6_wrap(void* _closure, __insieme_type_0* var_35, __insieme_type_0* var_34, __insieme_type_0* var_33) { __insieme_supp_6(var_35, var_34, var_33); }
+static void __insieme_supp_6_wrap(void* _closure, __insieme_type_0* var_45, __insieme_type_0* var_44, __insieme_type_0* var_43) { __insieme_supp_6(var_45, var_44, var_43); }
 
 // start code fragment :: function for job __insieme_job_2 //
 void fun__insieme_job_2(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
-	__insieme_type_0* var_51 = ((struct __insieme_job_2*)args)->var_51;
-	__insieme_type_0* var_52 = ((struct __insieme_job_2*)args)->var_52;
-	__insieme_type_0* var_53 = ((struct __insieme_job_2*)args)->var_53;
+	__insieme_type_0* var_61 = ((struct __insieme_job_2*)args)->var_61;
+	__insieme_type_0* var_62 = ((struct __insieme_job_2*)args)->var_62;
+	__insieme_type_0* var_63 = ((struct __insieme_job_2*)args)->var_63;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
-	__insieme_funType_3_call((__insieme_funType_3*)__insieme_closure_4_ctr((__insieme_closure_4*)alloca(sizeof(__insieme_closure_4)),(__insieme_funType_5*)__insieme_funType_5_ctr((__insieme_funType_5*)alloca(sizeof(__insieme_funType_5)),&__insieme_supp_6_wrap), var_51, var_52, var_53));
+	__insieme_funType_3_call((__insieme_funType_3*)__insieme_closure_4_ctr((__insieme_closure_4*)alloca(sizeof(__insieme_closure_4)),(__insieme_funType_5*)__insieme_funType_5_ctr((__insieme_funType_5*)alloca(sizeof(__insieme_funType_5)),&__insieme_supp_6_wrap), var_61, var_62, var_63));
 }
 
 // start code fragment :: array type definition of __insieme_type_15 <=> array<char,1> //
@@ -237,7 +237,7 @@ static inline __insieme_type_18 __insieme_type_18_init_uniform(char value) {
 
 // start code fragment :: Definition of freeMatrix ... type: ((ref<array<real<8>,1>>)->unit) //
 void freeMatrix(__insieme_type_0* matrix){
-	__insieme_type_0* var_30 = matrix;
+	__insieme_type_0* var_40 = matrix;
 	 { ; };
 }
 static void freeMatrix_wrap(void* _closure, __insieme_type_0* matrix) { freeMatrix(matrix); }
@@ -250,13 +250,13 @@ int main() {
 		__insieme_type_0 C = *createMatrix(((unsigned int)(1000)), ((unsigned int)(1000)));
 		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_2)),&((struct __insieme_job_2){sizeof(struct __insieme_job_2),1,isbr_getMaxThreads(),&fun__insieme_job_2,&A,&B,&C}),sizeof(struct __insieme_job_2))));
 		int success = 1;
-		for(int i = 0; i < 1000; i += 1) {
-			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((A).data[((unsigned int)((((i)*1000)+(j))))]))!=(((C).data[((unsigned int)((((i)*1000)+(j))))])))) { ((success) = 0); }; };
-			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((C).data[((unsigned int)((((i)*1000)+(j))))]))!=((double)(0)))) { ((success) = 0); }; };
+		for(int var_36 = 0; var_36 < 1000; var_36 += 1) {
+			for(int var_29 = 0; var_29 < (((1000<1000))?(1000):(1000)); var_29 += 1)  { if(((((A).data[((unsigned int)(((var_36*1000)+var_29)))]))!=(((C).data[((unsigned int)(((var_36*1000)+var_29)))])))) { ((success) = 0); }; };
+			for(int var_35 = (((1000<1000))?(1000):(1000)); var_35 < (((1000>1000))?(1000):(1000)); var_35 += 1)  { if(((((C).data[((unsigned int)(((var_36*1000)+var_35)))]))!=((double)(0)))) { ((success) = 0); }; };
 		};
 		printf(((char*)((*(&((__insieme_type_15){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_15){(((__insieme_type_17){{'O', 'K', '\0'}})).data}))):((((__insieme_type_15){(((__insieme_type_18){{'E', 'R', 'R', '\0'}})).data}))))).data);
 		freeMatrix(&A);
 		freeMatrix(&B);
 		freeMatrix(&C);
-	}
+	};
 }

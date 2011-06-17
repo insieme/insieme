@@ -62,5 +62,5 @@ int main() {
 		printFile(&((__insieme_type_0){"file.txt"}));
 		printFile(&((__insieme_type_0){"file2.txt"}));
 		printf(((char*)((*(&((__insieme_type_0){"Done.\n"}))).data)), 0);
-	}
+	};
 }

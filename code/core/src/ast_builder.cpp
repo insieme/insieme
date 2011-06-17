@@ -336,7 +336,7 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 
 	insieme::utils::map::PointerMap<NodePtr, NodePtr> modifications;
 	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
-	modifications.insert(std::make_pair(deref(loopvar), pforLambdaParam));
+//	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
 	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, modifications));
 
 	BindExprPtr lambda = transform::extractLambda(manager, adaptedBody, toVector(pforLambdaParam));
