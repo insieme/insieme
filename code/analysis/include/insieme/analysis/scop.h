@@ -60,7 +60,7 @@ public:
 
 	const std::string& getAnnotationName() const {return NAME;}
 
-	const std::string toString() const { return ""; }
+	const std::string toString() const;
 
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 

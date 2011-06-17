@@ -3,62 +3,62 @@
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<array<int<4>,1>> v3 =  new(array.create.1D(type<int<4>>, 20000*sizeof(type<int<4>>)/sizeof(type<int<4>>)));
-        for(decl ref<int<4>> v24 =  var(0) .. 10 : 1) {
-            for(decl ref<int<4>> v4 =  var(0) .. 20000 : 1) 
-                array.ref.elem.1D(v3, v4) := rand()%20000
+        for(decl int<4> v27 = 0 .. 10 : 1) {
+            for(decl int<4> v5 = 0 .. 20000 : 1) 
+                array.ref.elem.1D(v3, v5) := rand()%20000
             ;
-            recFun v5 {
-                v5 = fun(ref<array<int<4>,1>> v6, int<4> v7, int<4> v8){
-                    if(v8>v7+1) {
-                        decl ref<int<4>> v9 = array.ref.elem.1D(v6, v7);
-                        decl ref<int<4>> v10 =  var(v7+1);
-                        decl ref<int<4>> v11 =  var(v8);
-                        while(v10<v11) {
-                            if(array.ref.elem.1D(v6, v10)<=v9) int.postInc(v10) else fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                                decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                                array.ref.elem.1D(v12, 0) := array.ref.elem.1D(v13, 0);
-                                array.ref.elem.1D(v13, 0) := v14;
-                            }(scalar.to.array(array.ref.elem.1D(v6, v10)), scalar.to.array(array.ref.elem.1D(v6, int.preDec(v11))));
+            recFun v6 {
+                v6 = fun(ref<array<int<4>,1>> v7, int<4> v8, int<4> v9){
+                    if(v9>v8+1) {
+                        decl ref<int<4>> v10 = array.ref.elem.1D(v7, v8);
+                        decl ref<int<4>> v11 =  var(v8+1);
+                        decl ref<int<4>> v12 =  var(v9);
+                        while(v11<v12) {
+                            if(array.ref.elem.1D(v7, v11)<=v10) int.postInc(v11) else fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                                decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                                array.ref.elem.1D(v13, 0) := array.ref.elem.1D(v14, 0);
+                                array.ref.elem.1D(v14, 0) := v15;
+                            }(scalar.to.array(array.ref.elem.1D(v7, v11)), scalar.to.array(array.ref.elem.1D(v7, int.preDec(v12))));
                         };
-                        fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                            decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                            array.ref.elem.1D(v12, 0) := array.ref.elem.1D(v13, 0);
-                            array.ref.elem.1D(v13, 0) := v14;
-                        }(scalar.to.array(array.ref.elem.1D(v6, int.preDec(v10))), scalar.to.array(array.ref.elem.1D(v6, v7)));
-                        v5(v6, v7, v10);
-                        v5(v6, v11, v8);
+                        fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                            decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                            array.ref.elem.1D(v13, 0) := array.ref.elem.1D(v14, 0);
+                            array.ref.elem.1D(v14, 0) := v15;
+                        }(scalar.to.array(array.ref.elem.1D(v7, int.preDec(v11))), scalar.to.array(array.ref.elem.1D(v7, v8)));
+                        v6(v7, v8, v11);
+                        v6(v7, v12, v9);
                     } else { };
                 };
             }(v3, 0, 20000);
-            fun(ref<array<int<4>,1>> v19, int<4> v20, int<4> v21){
-                for(decl ref<int<4>> v22 =  var(0) .. v21-v20/2 : 1) 
-                    fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                        decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                        array.ref.elem.1D(v12, 0) := array.ref.elem.1D(v13, 0);
-                        array.ref.elem.1D(v13, 0) := v14;
-                    }(scalar.to.array(array.ref.elem.1D(v19, v20+v22)), scalar.to.array(array.ref.elem.1D(v19, v21-v22-1)))
+            fun(ref<array<int<4>,1>> v20, int<4> v21, int<4> v22){
+                for(decl int<4> v24 = 0 .. v22-v21/2 : 1) 
+                    fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                        decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                        array.ref.elem.1D(v13, 0) := array.ref.elem.1D(v14, 0);
+                        array.ref.elem.1D(v14, 0) := v15;
+                    }(scalar.to.array(array.ref.elem.1D(v20, v21+v24)), scalar.to.array(array.ref.elem.1D(v20, v22-v24-1)))
                 ;
             }(v3, 0, 20000);
-            recFun v5 {
-                v5 = fun(ref<array<int<4>,1>> v6, int<4> v7, int<4> v8){
-                    if(v8>v7+1) {
-                        decl ref<int<4>> v9 = array.ref.elem.1D(v6, v7);
-                        decl ref<int<4>> v10 =  var(v7+1);
-                        decl ref<int<4>> v11 =  var(v8);
-                        while(v10<v11) {
-                            if(array.ref.elem.1D(v6, v10)<=v9) int.postInc(v10) else fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                                decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                                array.ref.elem.1D(v12, 0) := array.ref.elem.1D(v13, 0);
-                                array.ref.elem.1D(v13, 0) := v14;
-                            }(scalar.to.array(array.ref.elem.1D(v6, v10)), scalar.to.array(array.ref.elem.1D(v6, int.preDec(v11))));
+            recFun v6 {
+                v6 = fun(ref<array<int<4>,1>> v7, int<4> v8, int<4> v9){
+                    if(v9>v8+1) {
+                        decl ref<int<4>> v10 = array.ref.elem.1D(v7, v8);
+                        decl ref<int<4>> v11 =  var(v8+1);
+                        decl ref<int<4>> v12 =  var(v9);
+                        while(v11<v12) {
+                            if(array.ref.elem.1D(v7, v11)<=v10) int.postInc(v11) else fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                                decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                                array.ref.elem.1D(v13, 0) := array.ref.elem.1D(v14, 0);
+                                array.ref.elem.1D(v14, 0) := v15;
+                            }(scalar.to.array(array.ref.elem.1D(v7, v11)), scalar.to.array(array.ref.elem.1D(v7, int.preDec(v12))));
                         };
-                        fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                            decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                            array.ref.elem.1D(v12, 0) := array.ref.elem.1D(v13, 0);
-                            array.ref.elem.1D(v13, 0) := v14;
-                        }(scalar.to.array(array.ref.elem.1D(v6, int.preDec(v10))), scalar.to.array(array.ref.elem.1D(v6, v7)));
-                        v5(v6, v7, v10);
-                        v5(v6, v11, v8);
+                        fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                            decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                            array.ref.elem.1D(v13, 0) := array.ref.elem.1D(v14, 0);
+                            array.ref.elem.1D(v14, 0) := v15;
+                        }(scalar.to.array(array.ref.elem.1D(v7, int.preDec(v11))), scalar.to.array(array.ref.elem.1D(v7, v8)));
+                        v6(v7, v8, v11);
+                        v6(v7, v12, v9);
                     } else { };
                 };
             }(v3, 0, 20000);
@@ -76,62 +76,62 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
 //  Entry Point: 
 fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<array<int<4>,1>> v3 = ( new(array.create.1D(type<int<4>>, ((CAST<uint<8>>(20000)*sizeof(type<int<4>>))/sizeof(type<int<4>>)))));
-        for(decl ref<int<4>> v24 = ( var(0)) .. 10 : 1) {
-            for(decl ref<int<4>> v4 = ( var(0)) .. 20000 : 1) 
-                (array.ref.elem.1D(v3, CAST<uint<4>>(( *v4))) := (rand()%20000))
+        for(decl int<4> v27 = 0 .. 10 : 1) {
+            for(decl int<4> v5 = 0 .. 20000 : 1) 
+                (array.ref.elem.1D(v3, CAST<uint<4>>(v5)) := (rand()%20000))
             ;
-            recFun v5 {
-                v5 = fun(ref<array<int<4>,1>> v6, int<4> v7, int<4> v8){
-                    if((v8>(v7+1))) {
-                        decl ref<int<4>> v9 = array.ref.elem.1D(v6, CAST<uint<4>>(v7));
-                        decl ref<int<4>> v10 = ( var((v7+1)));
-                        decl ref<int<4>> v11 = ( var(v8));
-                        while((( *v10)<( *v11))) {
-                            if((( *array.ref.elem.1D(v6, CAST<uint<4>>(( *v10))))<=( *v9))) int.postInc(v10) else fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                                decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                                (array.ref.elem.1D(v12, 0) := ( *array.ref.elem.1D(v13, 0)));
-                                (array.ref.elem.1D(v13, 0) := ( *v14));
-                            }(scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(( *v10)))), scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(int.preDec(v11)))));
+            recFun v6 {
+                v6 = fun(ref<array<int<4>,1>> v7, int<4> v8, int<4> v9){
+                    if((v9>(v8+1))) {
+                        decl ref<int<4>> v10 = array.ref.elem.1D(v7, CAST<uint<4>>(v8));
+                        decl ref<int<4>> v11 = ( var((v8+1)));
+                        decl ref<int<4>> v12 = ( var(v9));
+                        while((( *v11)<( *v12))) {
+                            if((( *array.ref.elem.1D(v7, CAST<uint<4>>(( *v11))))<=( *v10))) int.postInc(v11) else fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                                decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                                (array.ref.elem.1D(v13, 0) := ( *array.ref.elem.1D(v14, 0)));
+                                (array.ref.elem.1D(v14, 0) := ( *v15));
+                            }(scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(( *v11)))), scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(int.preDec(v12)))));
                         };
-                        fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                            decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                            (array.ref.elem.1D(v12, 0) := ( *array.ref.elem.1D(v13, 0)));
-                            (array.ref.elem.1D(v13, 0) := ( *v14));
-                        }(scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(int.preDec(v10)))), scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(v7))));
-                        v5(v6, v7, ( *v10));
-                        v5(v6, ( *v11), v8);
+                        fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                            decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                            (array.ref.elem.1D(v13, 0) := ( *array.ref.elem.1D(v14, 0)));
+                            (array.ref.elem.1D(v14, 0) := ( *v15));
+                        }(scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(int.preDec(v11)))), scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(v8))));
+                        v6(v7, v8, ( *v11));
+                        v6(v7, ( *v12), v9);
                     } else { };
                 };
             }(v3, 0, 20000);
-            fun(ref<array<int<4>,1>> v19, int<4> v20, int<4> v21){
-                for(decl ref<int<4>> v22 = ( var(0)) .. ((v21-v20)/2) : 1) 
-                    fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                        decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                        (array.ref.elem.1D(v12, 0) := ( *array.ref.elem.1D(v13, 0)));
-                        (array.ref.elem.1D(v13, 0) := ( *v14));
-                    }(scalar.to.array(array.ref.elem.1D(v19, CAST<uint<4>>((v20+( *v22))))), scalar.to.array(array.ref.elem.1D(v19, CAST<uint<4>>(((v21-( *v22))-1)))))
+            fun(ref<array<int<4>,1>> v20, int<4> v21, int<4> v22){
+                for(decl int<4> v24 = 0 .. ((v22-v21)/2) : 1) 
+                    fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                        decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                        (array.ref.elem.1D(v13, 0) := ( *array.ref.elem.1D(v14, 0)));
+                        (array.ref.elem.1D(v14, 0) := ( *v15));
+                    }(scalar.to.array(array.ref.elem.1D(v20, CAST<uint<4>>((v21+v24)))), scalar.to.array(array.ref.elem.1D(v20, CAST<uint<4>>(((v22-v24)-1)))))
                 ;
             }(v3, 0, 20000);
-            recFun v5 {
-                v5 = fun(ref<array<int<4>,1>> v6, int<4> v7, int<4> v8){
-                    if((v8>(v7+1))) {
-                        decl ref<int<4>> v9 = array.ref.elem.1D(v6, CAST<uint<4>>(v7));
-                        decl ref<int<4>> v10 = ( var((v7+1)));
-                        decl ref<int<4>> v11 = ( var(v8));
-                        while((( *v10)<( *v11))) {
-                            if((( *array.ref.elem.1D(v6, CAST<uint<4>>(( *v10))))<=( *v9))) int.postInc(v10) else fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                                decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                                (array.ref.elem.1D(v12, 0) := ( *array.ref.elem.1D(v13, 0)));
-                                (array.ref.elem.1D(v13, 0) := ( *v14));
-                            }(scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(( *v10)))), scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(int.preDec(v11)))));
+            recFun v6 {
+                v6 = fun(ref<array<int<4>,1>> v7, int<4> v8, int<4> v9){
+                    if((v9>(v8+1))) {
+                        decl ref<int<4>> v10 = array.ref.elem.1D(v7, CAST<uint<4>>(v8));
+                        decl ref<int<4>> v11 = ( var((v8+1)));
+                        decl ref<int<4>> v12 = ( var(v9));
+                        while((( *v11)<( *v12))) {
+                            if((( *array.ref.elem.1D(v7, CAST<uint<4>>(( *v11))))<=( *v10))) int.postInc(v11) else fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                                decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                                (array.ref.elem.1D(v13, 0) := ( *array.ref.elem.1D(v14, 0)));
+                                (array.ref.elem.1D(v14, 0) := ( *v15));
+                            }(scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(( *v11)))), scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(int.preDec(v12)))));
                         };
-                        fun(ref<array<int<4>,1>> v12, ref<array<int<4>,1>> v13){
-                            decl ref<int<4>> v14 = array.ref.elem.1D(v12, 0);
-                            (array.ref.elem.1D(v12, 0) := ( *array.ref.elem.1D(v13, 0)));
-                            (array.ref.elem.1D(v13, 0) := ( *v14));
-                        }(scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(int.preDec(v10)))), scalar.to.array(array.ref.elem.1D(v6, CAST<uint<4>>(v7))));
-                        v5(v6, v7, ( *v10));
-                        v5(v6, ( *v11), v8);
+                        fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14){
+                            decl ref<int<4>> v15 = array.ref.elem.1D(v13, 0);
+                            (array.ref.elem.1D(v13, 0) := ( *array.ref.elem.1D(v14, 0)));
+                            (array.ref.elem.1D(v14, 0) := ( *v15));
+                        }(scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(int.preDec(v11)))), scalar.to.array(array.ref.elem.1D(v7, CAST<uint<4>>(v8))));
+                        v6(v7, v8, ( *v11));
+                        v6(v7, ( *v12), v9);
                     } else { };
                 };
             }(v3, 0, 20000);

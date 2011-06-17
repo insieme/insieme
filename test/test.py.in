@@ -43,7 +43,7 @@ def run_cmd(cmd):
 		sys.stderr.write("@------------------ start output --------------------\n")
 		sys.stderr.write("Executed command: " + cmd + "\n")
 		sys.stderr.write("@----------------------------------------------------\n")
-		sys.stderr.write(res)
+		sys.stderr.write(str(res))
 		sys.stderr.write("@------------------- end output ---------------------\n")
 		sys.stderr.write(bcolors.ENDC)
 
@@ -98,176 +98,178 @@ def run_test_case(test_case_name):
 	# name of the file containing the generated XML dump
 	testXML  = test_case_name + '.xml'
 	
+	try: 
+		inputs = test_case_name + '.c'
+		if os.path.exists(test_case_name + '/inputs.data'):
+			inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
 
-	inputs = test_case_name + '.c'
-	if os.path.exists(test_case_name + '/inputs.data'):
-		inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
+		insiemeFlags = ''
+		if os.path.exists(test_case_name + '/insieme.flags'):
+			insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().split(',')])
 
-	insiemeFlags = ''
-	if os.path.exists(test_case_name + '/insieme.flags'):
-		insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().split(',')])
+		gccFlagsRef = ''
+		if os.path.exists(test_case_name + '/ref-gcc.flags'):
+			gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().split(',')])
 
-	gccFlagsRef = ''
-	if os.path.exists(test_case_name + '/ref-gcc.flags'):
-		gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().split(',')])
+		gccFlagsTest = ''
+		if os.path.exists(test_case_name + '/test-gcc.flags'):
+			gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().split(',')])
 
-	gccFlagsTest = ''
-	if os.path.exists(test_case_name + '/test-gcc.flags'):
-		gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().split(',')])
-
-	sys.stderr.write(" * Running Insieme Compiler...          ")	  		
-	os.chdir(test_case_name)
-	# RUN insieme to generate the IR dump and C output
-	ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --dump-xml {XML_DUMP} --col-wrap=120 -S -o {C_DUMP} {FLAGS}".format(
-						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 
-						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML}) 
-				 )
-	if check_for_error(test_case_name, ret):
-		os.chdir("../")
-		return 1
-
-	runTests = 0
-	if not os.path.exists(refIr) and os.path.exists(testIr):
-	  shutil.copyfile(testIr, refIr)
-	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
-	  
-	sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
-
-	sys.stderr.write(" * Comparing generated IR...            ")
-	if check_diff(test_case_name, refIr, testIr):
-		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
-	else:
-		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
-		runTests = 1 # => file comparison failed, but program might still be OK
-
-	if not os.path.exists(refCfg) and os.path.exists(testCfg):
-		shutil.copyfile(testCfg, refCfg)
-		runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
-
-	sys.stderr.write(" * Comparing generated CFG...           ")
-	if check_diff(test_case_name, refCfg, testCfg):
-		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
-	else:
-		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
-		runTests = 1 # => file comparison failed, but program might still be OK
-
-	if not os.path.exists(refC) and os.path.exists(testC):
-	  shutil.copyfile(testC, refC)
-	  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
-	  
-	sys.stderr.write(" * Comparing generated C output...      ")
-	if check_diff(test_case_name, refC, testC):
-		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
-	else:
-		sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
-		runTests = 1 # => file comparison failed, but program might still be OK
-	
-	# test whether executables are missing within #bin directory
-	ref_exec = test_case_name + '.ref'
-	test_exec = test_case_name + '.test'
-	if not runTests and os.path.exists("../#bin/"):
-		if not os.path.exists("../#bin/" + ref_exec) or not os.path.exists("../#bin/" + test_exec):
-			runTests = 1 # => ensure that all binaries are present within #bin
-
-	if runTests & (test_case_name != "ocl_kernel"):
-
-		# file containing the output of the reference program
-		ref_out = "ref.out"
-		# file containing the output of the test program
-		test_out = "test.out"
-
-		sys.stderr.write(" * Compiling C input...                 ")
-		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
-							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG, 'GCCFLAGS':gccFlagsRef})  
-						)
-
-		sys.stderr.write(" * Compiling generated C output...      ")
-		ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
-							**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES, 'GCCFLAGS':gccFlagsTest})
-						)
+		sys.stderr.write(" * Running Insieme Compiler...          ")	  		
+		os.chdir(test_case_name)
+		# RUN insieme to generate the IR dump and C output
+		ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --dump-xml {XML_DUMP} --col-wrap=120 -S -o {C_DUMP} {FLAGS}".format(
+							**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 
+							   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML}) 
+					 )
 		if check_for_error(test_case_name, ret):
 			os.chdir("../")
 			return 1
+
+		runTests = 0
+		if not os.path.exists(refIr) and os.path.exists(testIr):
+		  shutil.copyfile(testIr, refIr)
+		  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+		  
 		sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
-		sys.stderr.write(" * Running input program...              ")
-		start = time.time()
-		exitValue = os.system("./{0} > {1}".format(ref_exec, ref_out)) >> 8
-		if exitValue != 0:
-			sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
-			return 1
+		sys.stderr.write(" * Comparing generated IR...            ")
+		if check_diff(test_case_name, refIr, testIr):
+			sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+		else:
+			sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
+			runTests = 1 # => file comparison failed, but program might still be OK
 
-		sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
+		if not os.path.exists(refCfg) and os.path.exists(testCfg):
+			shutil.copyfile(testCfg, refCfg)
+			runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+
+		sys.stderr.write(" * Comparing generated CFG...           ")
+		if check_diff(test_case_name, refCfg, testCfg):
+			sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+		else:
+			sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
+			runTests = 1 # => file comparison failed, but program might still be OK
+
+		if not os.path.exists(refC) and os.path.exists(testC):
+		  shutil.copyfile(testC, refC)
+		  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+		  
+		sys.stderr.write(" * Comparing generated C output...      ")
+		if check_diff(test_case_name, refC, testC):
+			sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+		else:
+			sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
+			runTests = 1 # => file comparison failed, but program might still be OK
 		
-		sys.stderr.write(" * Running output program...             ")
-		ldPath = os.getenv("LD_LIBRARY_PATH", "");
-		os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
-		start = time.time()
-		exitValue = os.system("./{0} > {1}".format(test_exec, test_out)) >> 8;
-		if exitValue != 0:
-			sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
-			os.remove(refC);
-			return 1
-			
-		sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
-		os.putenv("LD_LIBRARY_PATH", ldPath);
+		# test whether executables are missing within #bin directory
+		ref_exec = test_case_name + '.ref'
+		test_exec = test_case_name + '.test'
+		if not runTests and os.path.exists("../#bin/"):
+			if not os.path.exists("../#bin/" + ref_exec) or not os.path.exists("../#bin/" + test_exec):
+				runTests = 1 # => ensure that all binaries are present within #bin
 
-		sys.stderr.write(" * Checking generated program output... ")
-		if not check_diff(test_case_name, ref_out, test_out):
-			os.chdir("../")
-			return 1
-		sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
+		if runTests & (test_case_name != "ocl_kernel"):
 
-		# if the test is successful move the executable in the ../#bin directory for further benchmarking
-		if os.path.exists("../#bin/"):
-			if os.path.exists("../#bin/" + ref_exec):
-				os.remove("../#bin/" + ref_exec)
-			shutil.move(ref_exec, "../#bin/")
-		
-			if os.path.exists("../#bin/" + test_exec):
-				os.remove("../#bin/" + test_exec)
-			shutil.move(test_exec, "../#bin/")
-		
-		# map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
-		map(lambda x : os.remove(x), [ref_out, test_out])
+			# file containing the output of the reference program
+			ref_out = "ref.out"
+			# file containing the output of the test program
+			test_out = "test.out"
 
-	if runOcl & (test_case_name == "ocl_kernel"):
-		sys.stderr.write(" * Compiling OpenCL host program...                 ")
+			sys.stderr.write(" * Compiling C input...                 ")
+			ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+								**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_ORG, 'GCCFLAGS':gccFlagsRef})  
+							)
 
-		ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c {LDFLAGS} {GCCFLAGS}".format(
-							**{'CC':CC, 'CFLAGS':CFLAGS, 'LDFLAGS':os.path.expandvars(LDFLAGS_ORG), 'GCCFLAGS':os.path.expandvars(gccFlagsRef)})  
-						)
-		if(ret != None) :
-			sys.stderr.write("Failed to build OpenCL host program:\n" + ret + "\n")
-		    
+			sys.stderr.write(" * Compiling generated C output...      ")
+			ret = run_cmd( "{CC} -O3 {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+								**{'CC':CC, 'CFLAGS':CFLAGS, 'INPUTS':testC, 'OUTPUT':test_exec, 'LDFLAGS':LDFLAGS_RES, 'GCCFLAGS':gccFlagsTest})
+							)
 			if check_for_error(test_case_name, ret):
 				os.chdir("../")
 				return 1
- 	
 			sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
-			sys.stderr.write(" * Running input program...             ")
+
+			sys.stderr.write(" * Running input program...              ")
+			start = time.time()
+			exitValue = os.system("./{0} > {1}".format(ref_exec, ref_out)) >> 8
+			if exitValue != 0:
+				sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
+				return 1
+
+			sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
+			
+			sys.stderr.write(" * Running output program...             ")
+			ldPath = os.getenv("LD_LIBRARY_PATH", "");
+			os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
+			start = time.time()
+			exitValue = os.system("./{0} > {1}".format(test_exec, test_out)) >> 8;
+			if exitValue != 0:
+				sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
+				os.remove(refC);
+				return 1
+				
+			sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
+			os.putenv("LD_LIBRARY_PATH", ldPath);
+
+			sys.stderr.write(" * Checking generated program output... ")
+			if not check_diff(test_case_name, ref_out, test_out):
+				os.chdir("../")
+				return 1
+			sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
+
+			# if the test is successful move the executable in the ../#bin directory for further benchmarking
+			if os.path.exists("../#bin/"):
+				if os.path.exists("../#bin/" + ref_exec):
+					os.remove("../#bin/" + ref_exec)
+				shutil.move(ref_exec, "../#bin/")
+			
+				if os.path.exists("../#bin/" + test_exec):
+					os.remove("../#bin/" + test_exec)
+				shutil.move(test_exec, "../#bin/")
+			
+			# map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+			map(lambda x : os.remove(x), [ref_out, test_out])
+
+		if runOcl & (test_case_name == "ocl_kernel"):
+			sys.stderr.write(" * Compiling OpenCL host program...                 ")
+
+			ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c {LDFLAGS} {GCCFLAGS}".format(
+								**{'CC':CC, 'CFLAGS':CFLAGS, 'LDFLAGS':os.path.expandvars(LDFLAGS_ORG), 'GCCFLAGS':os.path.expandvars(gccFlagsRef)})  
+							)
+			if(ret != None) :
+				sys.stderr.write("Failed to build OpenCL host program:\n" + ret + "\n")
+				
+				if check_for_error(test_case_name, ret):
+					os.chdir("../")
+					return 1
 		
-		ref_out = "ref.out"
-		start = time.time()
+				sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+				sys.stderr.write(" * Running input program...             ")
+			
+			ref_out = "ref.out"
+			start = time.time()
 
-		os.system("./host ocl_kernel.c > {0}".format( ref_out))
-		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
-		sys.stderr.write(" * Running output program...            ")
+			os.system("./host ocl_kernel.c > {0}".format( ref_out))
+			sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+			sys.stderr.write(" * Running output program...            ")
 
-		test_out = "test.out"	
-		start = time.time()
+			test_out = "test.out"	
+			start = time.time()
 
-		os.system("./host ocl_kernel.insieme.c > {0}".format( test_out))
-		sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
+			os.system("./host ocl_kernel.insieme.c > {0}".format( test_out))
+			sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
 
-		sys.stderr.write(" * Checking generated program output... ")
-		if not check_diff(test_case_name, ref_out, test_out):
-			os.chdir("../")
-			return 1
-		sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
-		map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
-	
-	sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
+			sys.stderr.write(" * Checking generated program output... ")
+			if not check_diff(test_case_name, ref_out, test_out):
+				os.chdir("../")
+				return 1
+			sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
+			map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+		
+		sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
+	except: 
+		print ("Error:", sys.exc_info()[0])
 
 	os.chdir("../")
 	return 0

@@ -54,11 +54,11 @@ static inline __insieme_type_4 __insieme_type_4_init_uniform(__insieme_type_5 va
 
 // start code fragment :: Prototype for external function: memset ... type: ((anyRef,int<4>,uint<8>)->anyRef) //
 void* memset(void*, int, unsigned long);
-static void* memset_wrap(void* _closure, void* var_30, int var_31, unsigned long var_32) { return memset(var_30, var_31, var_32); }
+static void* memset_wrap(void* _closure, void* var_39, int var_40, unsigned long var_41) { return memset(var_39, var_40, var_41); }
 
 // start code fragment :: Prototype for external function: sin ... type: ((real<8>)->real<8>) //
 double sin(double);
-static double sin_wrap(void* _closure, double var_33) { return sin(var_33); }
+static double sin_wrap(void* _closure, double var_42) { return sin(var_42); }
 
 // start code fragment :: Definition of init_func ... type: ((int<4>,int<4>)->real<8>) //
 double init_func(int x, int y) { return (((double)(40))*sin(((double)(((16*((2*x)-1))*y))))); }
@@ -66,15 +66,15 @@ static double init_func_wrap(void* _closure, int x, int y) { return init_func(x,
 
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
-static double pow_wrap(void* _closure, double var_34, double var_35) { return pow(var_34, var_35); }
+static double pow_wrap(void* _closure, double var_43, double var_44) { return pow(var_43, var_44); }
 
 // start code fragment :: Prototype for external function: memcpy ... type: ((anyRef,anyRef,uint<8>)->anyRef) //
 void* memcpy(void*, void*, unsigned long);
-static void* memcpy_wrap(void* _closure, void* var_36, void* var_37, unsigned long var_38) { return memcpy(var_36, var_37, var_38); }
+static void* memcpy_wrap(void* _closure, void* var_45, void* var_46, unsigned long var_47) { return memcpy(var_45, var_46, var_47); }
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_39) { return sqrt(var_39); }
+static double sqrt_wrap(void* _closure, double var_48) { return sqrt(var_48); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -99,7 +99,7 @@ int main(int __argc, char** __argv) {
 		__insieme_type_4 res;
 		memset((void*)((float**)((*(&u)).data)), 0, ((unsigned long)((650*650))));
 		memset((void*)((float**)((*(&f)).data)), 0, ((unsigned long)((650*650))));
-		for(int i = 0; i < 650; i += 1)  { for(int j = 0; j < 650; j += 1)  { ((((((f).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(init_func((i), (j))))); }; };
+		for(int var_17 = 0; var_17 < 650; var_17 += 1)  { for(int var_16 = 0; var_16 < 650; var_16 += 1)  { ((((((f).data[((unsigned int)(var_17))])).data[((unsigned int)(var_16))])) = ((float)(init_func(var_17, var_16)))); }; };
 		double comm_time = ((double)(0));
 		double comp_time = ((double)(0));
 		double timer = ((double)(0));
@@ -108,12 +108,12 @@ int main(int __argc, char** __argv) {
 		((end_t) = clock());
 		((setup_time) = (((double)(((end_t)-(start_t))))/((double)(1000000l))));
 		((start_t) = clock());
-		for(int it = 0; it < 10; it += 1) {
-			for(int i = 1; i < (650-1); i += 1)  { for(int j = 1; j < (650-1); j += 1)  { ((((((tmp).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((float)(((((double)(1))/((double)(4)))*(((double)(((((((((u).data[((unsigned int)(((i)-1)))])).data[((unsigned int)((j)))]))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)+1)))])))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)-1)))])))+(((((u).data[((unsigned int)(((i)+1)))])).data[((unsigned int)((j)))])))))-((factor)*((double)((((((f).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))))))))); }; };
+		for(int var_37 = 0; var_37 < 10; var_37 += 1) {
+			for(int var_26 = 1; var_26 < (650-1); var_26 += 1)  { for(int var_25 = 1; var_25 < (650-1); var_25 += 1)  { ((((((tmp).data[((unsigned int)(var_26))])).data[((unsigned int)(var_25))])) = ((float)(((((double)(1))/((double)(4)))*(((double)(((((((((u).data[((unsigned int)((var_26-1)))])).data[((unsigned int)(var_25))]))+(((((u).data[((unsigned int)(var_26))])).data[((unsigned int)((var_25+1)))])))+(((((u).data[((unsigned int)(var_26))])).data[((unsigned int)((var_25-1)))])))+(((((u).data[((unsigned int)((var_26+1)))])).data[((unsigned int)(var_25))])))))-((factor)*((double)((((((f).data[((unsigned int)(var_26))])).data[((unsigned int)(var_25))])))))))))); }; };
 			memcpy((void*)((float**)((*(&u)).data)), (void*)((float**)((*(&tmp)).data)), ((unsigned long)((650*650))));
-			for(int i = 1; i < (650-1); i += 1)  { for(int j = 1; j < (650-1); j += 1)  { ((((((res).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((((((((((f).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))-(((float)(4))*(((((u).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))))+(((((u).data[((unsigned int)(((i)-1)))])).data[((unsigned int)((j)))])))+(((((u).data[((unsigned int)(((i)+1)))])).data[((unsigned int)((j)))])))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)-1)))])))+(((((u).data[((unsigned int)((i)))])).data[((unsigned int)(((j)+1)))])))); }; };
+			for(int var_30 = 1; var_30 < (650-1); var_30 += 1)  { for(int var_29 = 1; var_29 < (650-1); var_29 += 1)  { ((((((res).data[((unsigned int)(var_30))])).data[((unsigned int)(var_29))])) = ((((((((((f).data[((unsigned int)(var_30))])).data[((unsigned int)(var_29))]))-(((float)(4))*(((((u).data[((unsigned int)(var_30))])).data[((unsigned int)(var_29))]))))+(((((u).data[((unsigned int)((var_30-1)))])).data[((unsigned int)(var_29))])))+(((((u).data[((unsigned int)((var_30+1)))])).data[((unsigned int)(var_29))])))+(((((u).data[((unsigned int)(var_30))])).data[((unsigned int)((var_29-1)))])))+(((((u).data[((unsigned int)(var_30))])).data[((unsigned int)((var_29+1)))])))); }; };
 			double norm = ((double)(0));
-			for(int i = 1; i < (650-1); i += 1)  { for(int j = 1; j < (650-1); j += 1)  { ((norm) = ((norm)+pow(((double)((((((res).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))), ((double)(2))))); }; };
+			for(int var_35 = 1; var_35 < (650-1); var_35 += 1)  { for(int var_34 = 1; var_34 < (650-1); var_34 += 1)  { ((norm) = ((norm)+pow(((double)((((((res).data[((unsigned int)(var_35))])).data[((unsigned int)(var_34))])))), ((double)(2))))); }; };
 			((resv) = (sqrt((norm))/((double)((650-1)))));
 		};
 		((end_t) = clock());

@@ -71,7 +71,7 @@ static inline __insieme_type_7 __insieme_type_7_init_uniform(char value) {
 
 // start code fragment :: Definition of freeMatrix ... type: ((ref<array<real<8>,1>>)->unit) //
 void freeMatrix(__insieme_type_0* matrix){
-	__insieme_type_0* var_30 = matrix;
+	__insieme_type_0* var_40 = matrix;
 	 { ; };
 }
 static void freeMatrix_wrap(void* _closure, __insieme_type_0* matrix) { freeMatrix(matrix); }
@@ -83,22 +83,22 @@ int main() {
 		__insieme_type_0 B = *createMatrix(((unsigned int)(1000)), ((unsigned int)(1000)));
 		__insieme_type_0 C = *createMatrix(((unsigned int)(1000)), ((unsigned int)(1000)));
 		{
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((A).data[((unsigned int)((((i)*1000)+(j))))])) = ((double)(((i)*(j))))); }; };
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((B).data[((unsigned int)((((i)*1000)+(j))))])) = ((double)(((((i)==(j)))?(1):(0))))); }; };
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1) {
+			for(int var_10 = 0; var_10 < 1000; var_10 += 1)  { for(int var_9 = 0; var_9 < 1000; var_9 += 1)  { ((((A).data[((unsigned int)(((var_10*1000)+var_9)))])) = ((double)((var_10*var_9)))); }; };
+			for(int var_16 = 0; var_16 < 1000; var_16 += 1)  { for(int var_15 = 0; var_15 < 1000; var_15 += 1)  { ((((B).data[((unsigned int)(((var_16*1000)+var_15)))])) = ((double)((((var_16==var_15))?(1):(0))))); }; };
+			for(int var_23 = 0; var_23 < 1000; var_23 += 1)  { for(int var_22 = 0; var_22 < 1000; var_22 += 1) {
 				double sum = ((double)(0));
-				for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((((A).data[((unsigned int)((((i)*1000)+(k))))]))*(((B).data[((unsigned int)((((k)*1000)+(j))))]))))); };
-				((((C).data[((unsigned int)((((i)*1000)+(j))))])) = (sum));
+				for(int var_21 = 0; var_21 < 1000; var_21 += 1)  { ((sum) = ((sum)+((((A).data[((unsigned int)(((var_23*1000)+var_21)))]))*(((B).data[((unsigned int)(((var_21*1000)+var_22)))]))))); };
+				((((C).data[((unsigned int)(((var_23*1000)+var_22)))])) = (sum));
 			}; };
 		};
 		int success = 1;
-		for(int i = 0; i < 1000; i += 1) {
-			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((A).data[((unsigned int)((((i)*1000)+(j))))]))!=(((C).data[((unsigned int)((((i)*1000)+(j))))])))) { ((success) = 0); }; };
-			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((C).data[((unsigned int)((((i)*1000)+(j))))]))!=((double)(0)))) { ((success) = 0); }; };
+		for(int var_36 = 0; var_36 < 1000; var_36 += 1) {
+			for(int var_29 = 0; var_29 < (((1000<1000))?(1000):(1000)); var_29 += 1)  { if(((((A).data[((unsigned int)(((var_36*1000)+var_29)))]))!=(((C).data[((unsigned int)(((var_36*1000)+var_29)))])))) { ((success) = 0); }; };
+			for(int var_35 = (((1000<1000))?(1000):(1000)); var_35 < (((1000>1000))?(1000):(1000)); var_35 += 1)  { if(((((C).data[((unsigned int)(((var_36*1000)+var_35)))]))!=((double)(0)))) { ((success) = 0); }; };
 		};
 		printf(((char*)((*(&((__insieme_type_4){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_4){(((__insieme_type_6){{'O', 'K', '\0'}})).data}))):((((__insieme_type_4){(((__insieme_type_7){{'E', 'R', 'R', '\0'}})).data}))))).data);
 		freeMatrix(&A);
 		freeMatrix(&B);
 		freeMatrix(&C);
-	}
+	};
 }

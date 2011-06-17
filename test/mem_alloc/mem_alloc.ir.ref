@@ -6,8 +6,8 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf(string.as.char.pointer("%d\n"), varlist.pack((4*sizeof(type<int<4>>))));
         decl ref<array<int<4>,1>> v4 =  new(array.create.1D(type<int<4>>, 4*sizeof(type<int<4>>)/sizeof(type<int<4>>)));
         memcpy(ref.to.anyref(v4), ref.to.anyref(v3), 4*sizeof(type<int<4>>));
-        for(decl ref<int<4>> v5 =  var(0) .. 4*sizeof(type<int<4>>)/sizeof(type<int<4>>) : 1) {
-            printf(string.as.char.pointer("%d, "), varlist.pack((array.ref.elem.1D(v4, v5))));
+        for(decl int<4> v6 = 0 .. 4*sizeof(type<int<4>>)/sizeof(type<int<4>>) : 1) {
+            printf(string.as.char.pointer("%d, "), varlist.pack((array.ref.elem.1D(v4, v6))));
         };
         printf(string.as.char.pointer("\n"), varlist.pack(()));
          del(v4);
@@ -24,8 +24,8 @@ fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf(string.as.char.pointer("%d\n"), varlist.pack(((4*sizeof(type<int<4>>)))));
         decl ref<array<int<4>,1>> v4 = ( new(array.create.1D(type<int<4>>, ((4*sizeof(type<int<4>>))/sizeof(type<int<4>>)))));
         memcpy(ref.to.anyref(v4), ref.to.anyref(v3), (4*sizeof(type<int<4>>)));
-        for(decl ref<int<4>> v5 = ( var(0)) .. ((4*sizeof(type<int<4>>))/sizeof(type<int<4>>)) : 1) {
-            printf(string.as.char.pointer("%d, "), varlist.pack((( *array.ref.elem.1D(v4, CAST<uint<4>>(( *v5)))))));
+        for(decl int<4> v6 = 0 .. ((4*sizeof(type<int<4>>))/sizeof(type<int<4>>)) : 1) {
+            printf(string.as.char.pointer("%d, "), varlist.pack((( *array.ref.elem.1D(v4, CAST<uint<4>>(v6))))));
         };
         printf(string.as.char.pointer("\n"), varlist.pack(()));
         ( del(v4));

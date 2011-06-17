@@ -74,6 +74,8 @@
 #include "insieme/xml/xml_utils.h"
 #endif
 
+#include "insieme/analysis/scop.h"
+
 using namespace std;
 using namespace insieme::utils::log;
 
@@ -189,7 +191,9 @@ int main(int argc, char** argv) {
 				timer.stop();
 				LOG(INFO) << timer;
 			}
-			
+		
+			// insieme::analysis::scop::mark(program);
+
 			InverseStmtMap stmtMap;
 			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
 				using namespace insieme::core::printer;

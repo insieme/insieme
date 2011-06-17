@@ -223,7 +223,10 @@ public:
 			// induction variable for this loop
 			core::VariablePtr oldInductionVar;
 			core::ExpressionPtr&& inductionVar = convFact.lookUpVariable(loopAnalysis.getInductionVar());
-
+	
+			// The loop is using as induction variable a function parameter,
+			// therefore we have to introduce a new variable which acts as loop
+			// induction variable 
 			if ( isa<ParmVarDecl>(loopAnalysis.getInductionVar()) ) {
 				const core::VariablePtr& indVar = core::static_pointer_cast<const core::Variable>(inductionVar);
 				auto fit = convFact.ctx.wrapRefMap.find(indVar);
@@ -369,7 +372,7 @@ public:
 			if ( core::analysis::isCallOf(init, convFact.mgr.basic.getRefVar()) ) {
 				const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(init);
 				assert(callExpr->getArguments().size() == 1);
-				init = callExpr->getArguments()[0];
+				init = callExpr->getArgument(0);
 				assert(init->getType()->getNodeType() != core::NT_RefType &&
 					"Initialization value of induction variable must be of non-ref type");
 			} else if (init->getType()->getNodeType() == core::NT_RefType) {
@@ -392,20 +395,34 @@ public:
 					);
 				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 			}
-//			else {
-//				const core::RefTypePtr& varTy =
-//						core::static_pointer_cast<const core::RefType>(declStmt->getVariable()->getType());
-//
-//				// The ref induction variable
-//				core::VariablePtr&& nonRefInductionVar = builder.variable(varTy->getElementType());
-//
-//				core::NodePtr&& ret = core::transform::replaceAll(
-//						builder.getNodeManager(), body.getSingleStmt(), builder.deref(declStmt->getVariable()),
-//						nonRefInductionVar, true
-//					);
-//				body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
-//				declStmt = builder.declarationStmt(nonRefInductionVar, init );
-//			}
+
+			// Now replace the induction variable of type ref<int<4>> with the
+			// non ref type. This requires to replace any occurence of the
+			// iterator in the code with new induction variable.
+			const core::RefTypePtr& varTy =
+				core::static_pointer_cast<const core::RefType>(declStmt->getVariable()->getType());
+
+			// The ref induction variable
+			core::VariablePtr&& nonRefInductionVar = builder.variable(varTy->getElementType());
+			
+			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+			replacements.insert( std::make_pair(builder.deref(declStmt->getVariable()),nonRefInductionVar) );
+			replacements.insert( std::make_pair(declStmt->getVariable(),builder.refVar(nonRefInductionVar))); 
+			core::NodePtr&& ret = core::transform::replaceAll(
+					builder.getNodeManager(), body.getSingleStmt(),  replacements);
+
+			body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
+			core::ExpressionPtr newInit = declStmt->getInitialization();
+			if ( core::analysis::isCallOf(newInit, convFact.mgr.basic.getRefVar()) ) {
+				const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(newInit);
+				assert(callExpr->getArguments().size() == 1);
+				newInit = callExpr->getArgument(0);
+				assert(newInit->getType()->getNodeType() != core::NT_RefType &&
+					"Initialization value of induction variable must be of non-ref type");
+			} else if (newInit->getType()->getNodeType() == core::NT_RefType) {
+				newInit = builder.deref(newInit);
+			}
+			declStmt = builder.declarationStmt(nonRefInductionVar, newInit);
 
 			// We finally create the IR ForStmt
 			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, body.getSingleStmt(), condExpr, incExpr);

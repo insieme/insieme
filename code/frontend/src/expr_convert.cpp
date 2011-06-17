@@ -202,7 +202,8 @@ core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core
 }
 
 // This function performs the requires type conversion, from converting an expression. 
-core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core::TypePtr& trgTy, const core::ExpressionPtr& expr) {
+core::ExpressionPtr 
+convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	const core::ExpressionPtr& expr) {
 	// list the all possible conversions 
 	const core::TypePtr& argTy = expr->getType();
 	const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
@@ -317,7 +318,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	if ( gen.isAnyRef(trgTy) && (*expr == *builder.literal(argTy,"0")) ) {
 		// FIXME: not sure about this being correct, we have to get a ref from a null in order to convert it to 
 		// the anyref value
-		return makeHerbertHappy(builder, trgTy, builder.refVar( builder.callExpr( gen.getGetNull(), gen.getTypeLiteral(argTy) )) );
+		return convertExprTo(builder, trgTy, builder.refVar( builder.callExpr( gen.getGetNull(), gen.getTypeLiteral(argTy) )) );
 	}
 
 	// [ ref<'a> -> 'a ]
@@ -326,7 +327,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 	// current expression is of ref type. 
 	if ( trgTy->getNodeType() != core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
 		// Recursively call the cast function to make sure the subtype and the target type matches
-		return makeHerbertHappy(builder, trgTy, builder.deref(expr));
+		return convertExprTo(builder, trgTy, builder.deref(expr));
 	}
 
 	// [ 'a -> ref<'a> ]
@@ -343,7 +344,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		} 
 
 		// call the function recursively
-		return builder.refVar( makeHerbertHappy(builder, subTy, expr) );
+		return builder.refVar( convertExprTo(builder, subTy, expr) );
 	}
 
 	// NOTE: from this point on we are sure the type of the target type and the argument type are the same 
@@ -451,7 +452,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		
 		// convert the string into a vector and then use vector.to.array to get the desired array
 		core::ExpressionPtr&& ret = 
-			makeHerbertHappy(builder, builder.vectorType(gen.getChar(), 
+			convertExprTo(builder, builder.vectorType(gen.getChar(), 
 				core::ConcreteIntTypeParam::get(
 					builder.getNodeManager(), 
 					core::static_pointer_cast<const core::Literal>(expr)->getValue().length()-1) ), expr );
@@ -472,7 +473,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 		core::ExpressionPtr vecExpr = builder.callExpr( 
 				builder.vectorType(subTy, size), // vec<subTy,1>
 				gen.getVectorInitUniform(), 
-				toVector( makeHerbertHappy(builder, subTy, expr), gen.getIntTypeParamLiteral(size) )
+				toVector( convertExprTo(builder, subTy, expr), gen.getIntTypeParamLiteral(size) )
 			);
 		return builder.callExpr( trgTy, gen.getVectorToArray(), toVector(vecExpr) );
 	}
@@ -488,7 +489,7 @@ core::ExpressionPtr makeHerbertHappy(const core::ASTBuilder& builder, const core
 			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
 			core::ExpressionPtr subExpr = expr;
 			if ( *arrTy->getElementType() != *argSubTy ) {
-				subExpr = makeHerbertHappy(builder, arrTy->getElementType(), expr );
+				subExpr = convertExprTo(builder, arrTy->getElementType(), expr );
 			}
 			return builder.callExpr( gen.getScalarToArray(), subExpr);
 		}
@@ -880,7 +881,9 @@ public:
 	}
 
 private:
-	ExpressionList getFunctionArguments(const core::ASTBuilder& builder, clang::CallExpr* callExpr, const core::FunctionTypePtr& funcTy) {
+	ExpressionList getFunctionArguments(const core::ASTBuilder& builder, 
+			clang::CallExpr* callExpr, const core::FunctionTypePtr& funcTy) 
+	{
 		ExpressionList args;
 		for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
 			core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
@@ -937,7 +940,6 @@ public:
 					assert(ret.second && "Error while loading translation unit for function definition");
 					convFact.currTU = &Program::getTranslationUnit(ret.second);
 				}
-
 			}
 
 			if ( !definition ) {
@@ -963,7 +965,6 @@ public:
                 if ( funcDecl->getNameAsString() == "clEnqueueWriteBuffer") {
                     std::cerr << "FOUND clEnqueueWriteBuffer " << callExpr->getNumArgs() << std::endl;
                 }
-
 			}
 
 			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
@@ -1314,7 +1315,8 @@ public:
 
 			core::TypePtr&& lhsTy = lhs->getType();
 			core::TypePtr&& rhsTy = rhs->getType();
-			VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << " RHS(" << *rhs << "[" << *rhs->getType() << "])";
+			VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
+				      " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
 			if ( lhsTy->getNodeType() != core::NT_ArrayType || rhsTy->getNodeType() != core::NT_ArrayType ) {
 
@@ -1361,16 +1363,16 @@ public:
 					assert(false && "Pointer arithmetic not yet supported");
 			}
 
-			if(isLogical) {
-				exprTy = gen.getBool();
-			}
+			if(isLogical) { exprTy = gen.getBool(); }
+
 		} else {
 		    // check if there is a kernelFile annotation
 		    ocl::attatchOclAnnotation(rhs, binOp, convFact);
 		}
 		assert(opFunc);
 		// add source code annotation to the rhs if present
-		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << " RHS(" << *rhs << "[" << *rhs->getType() << "])";
+		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << 
+			      " RHS(" << *rhs << "[" << *rhs->getType() << "])";
         core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
 
 		// handle eventual pragmas attached to the Clang node
@@ -1775,7 +1777,7 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 core::ExpressionPtr ConversionFactory::castToType(const core::TypePtr& trgTy, const core::ExpressionPtr& expr) const {
 	VLOG(1) << "@@ Converting expression '" << *expr << "' with type '" << *expr->getType() << "' to target type '" << *trgTy << "'";
 	// const core::TypePtr& srcTy = expr->getType();
-	core::ExpressionPtr&& ret = makeHerbertHappy(builder, trgTy, expr);
+	core::ExpressionPtr&& ret = convertExprTo(builder, trgTy, expr);
 	// assert(*trgTy == *expr->getType() && "Casting non supported!");
 	VLOG(1) << "@@ Expression converted to '" << *ret << "' with type '" << *ret->getType() << "'" << std::endl;
 	return ret;

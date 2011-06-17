@@ -23,7 +23,7 @@ long clock();
 static long clock_wrap(void* _closure) { return clock(); }
 
 // start code fragment :: Prototype for external function: atoi ... type: ((ref<array<char,1>>)->int<4>) //
-static int atoi_wrap(void* _closure, __insieme_type_1* var_52) { return atoi(((char*)((*(var_52)).data))); }
+static int atoi_wrap(void* _closure, __insieme_type_1* var_61) { return atoi(((char*)((*(var_61)).data))); }
 
 // start code fragment :: array type definition of __insieme_type_6 <=> array<real<4>,1> //
 typedef struct ___insieme_type_6 { 
@@ -41,11 +41,11 @@ int printf(char*, ...);
 
 // start code fragment :: Prototype for external function: memset ... type: ((anyRef,int<4>,uint<8>)->anyRef) //
 void* memset(void*, int, unsigned long);
-static void* memset_wrap(void* _closure, void* var_53, int var_54, unsigned long var_55) { return memset(var_53, var_54, var_55); }
+static void* memset_wrap(void* _closure, void* var_62, int var_63, unsigned long var_64) { return memset(var_62, var_63, var_64); }
 
 // start code fragment :: Prototype for external function: sin ... type: ((real<8>)->real<8>) //
 double sin(double);
-static double sin_wrap(void* _closure, double var_56) { return sin(var_56); }
+static double sin_wrap(void* _closure, double var_65) { return sin(var_65); }
 
 // start code fragment :: Definition of init_func ... type: ((int<4>,int<4>)->real<8>) //
 double init_func(int x, int y) { return (((double)(40))*sin(((double)(((16*((2*x)-1))*y))))); }
@@ -53,7 +53,7 @@ static double init_func_wrap(void* _closure, int x, int y) { return init_func(x,
 
 // start code fragment :: Prototype for external function: pow ... type: ((real<8>,real<8>)->real<8>) //
 double pow(double, double);
-static double pow_wrap(void* _closure, double var_57, double var_58) { return pow(var_57, var_58); }
+static double pow_wrap(void* _closure, double var_66, double var_67) { return pow(var_66, var_67); }
 
 // start code fragment :: struct for job __insieme_job_8 //
 struct __insieme_job_8 { 
@@ -61,11 +61,11 @@ struct __insieme_job_8 {
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
-	int* var_59;
-	__insieme_type_6* var_60;
-	__insieme_type_6* var_61;
-	double* var_62;
-	__insieme_type_6* var_63;
+	__insieme_type_6* var_68;
+	double* var_69;
+	__insieme_type_6* var_70;
+	__insieme_type_6* var_71;
+	int* var_72;
 };
 
 // start code fragment :: Definitions for function type: __insieme_funType_9 //
@@ -88,21 +88,21 @@ static inline __insieme_funType_9* __insieme_funType_9_ctr(__insieme_funType_9* 
 
 // start code fragment :: Definitions for function type: __insieme_funType_11 //
 //
-// -------------------- Begin of constructs for function type ((ref<int<4>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>)->unit)---------------------
-// Base-struct of describing closures of type __insieme_funType_11 <-> ((ref<int<4>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>)->unit)
+// -------------------- Begin of constructs for function type ((ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<int<4>>)->unit)---------------------
+// Base-struct of describing closures of type __insieme_funType_11 <-> ((ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<int<4>>)->unit)
 typedef struct ___insieme_funType_11 { 
-    void(*call)(void*, int*, __insieme_type_6*, __insieme_type_6*, double*, __insieme_type_6*);
+    void(*call)(void*, __insieme_type_6*, double*, __insieme_type_6*, __insieme_type_6*, int*);
 } __insieme_funType_11;
 
 // Type safe function for invoking closures of type __insieme_funType_11
-static inline void __insieme_funType_11_call(__insieme_funType_11* closure, int* p1, __insieme_type_6* p2, __insieme_type_6* p3, double* p4, __insieme_type_6* p5) {  closure->call(closure, p1,p2,p3,p4,p5); }
+static inline void __insieme_funType_11_call(__insieme_funType_11* closure, __insieme_type_6* p1, double* p2, __insieme_type_6* p3, __insieme_type_6* p4, int* p5) {  closure->call(closure, p1,p2,p3,p4,p5); }
 
-// A constructor for closures wrapping pure functions of type ((ref<int<4>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>)->unit)
-static inline __insieme_funType_11* __insieme_funType_11_ctr(__insieme_funType_11* target, void(*call)(void*, int*, __insieme_type_6*, __insieme_type_6*, double*, __insieme_type_6*)) {
+// A constructor for closures wrapping pure functions of type ((ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<int<4>>)->unit)
+static inline __insieme_funType_11* __insieme_funType_11_ctr(__insieme_funType_11* target, void(*call)(void*, __insieme_type_6*, double*, __insieme_type_6*, __insieme_type_6*, int*)) {
 	*target = (__insieme_funType_11){call};
 	return target;
 }
-// ----------------------- end of constructs for function ((ref<int<4>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>)->unit)-----------------------
+// ----------------------- end of constructs for function ((ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<int<4>>)->unit)-----------------------
 
 // start code fragment :: Definition of __insieme_closure_10 ... type: (()->unit) //
 // -- Begin - Closure Constructs ------------------------------------------------------------
@@ -110,16 +110,16 @@ static inline __insieme_funType_11* __insieme_funType_11_ctr(__insieme_funType_1
 typedef struct ___insieme_closure_10 {
     void(*call)(void*);
     __insieme_funType_11* nested;
-    int* c1;
-    __insieme_type_6* c2;
+    __insieme_type_6* c1;
+    double* c2;
     __insieme_type_6* c3;
-    double* c4;
-    __insieme_type_6* c5;
+    __insieme_type_6* c4;
+    int* c5;
 } __insieme_closure_10;
 
 static inline void __insieme_closure_10_bind(__insieme_closure_10* closure) {  closure->nested->call(closure->nested, closure->c1,closure->c2,closure->c3,closure->c4,closure->c5); }
 
-static inline __insieme_closure_10* __insieme_closure_10_ctr(__insieme_closure_10* closure, __insieme_funType_11* nested, int* c1, __insieme_type_6* c2, __insieme_type_6* c3, double* c4, __insieme_type_6* c5) {
+static inline __insieme_closure_10* __insieme_closure_10_ctr(__insieme_closure_10* closure, __insieme_funType_11* nested, __insieme_type_6* c1, double* c2, __insieme_type_6* c3, __insieme_type_6* c4, int* c5) {
     *closure = (__insieme_closure_10){&__insieme_closure_10_bind, nested, c1, c2, c3, c4, c5};
     return closure;
 }
@@ -127,61 +127,61 @@ static inline __insieme_closure_10* __insieme_closure_10_ctr(__insieme_closure_1
 
 // start code fragment :: capture-struct for pfor-body __insieme_pfor_body_13_fun //
 struct __insieme_pfor_body_13_fun_capture {
-	__insieme_type_6* var_39;
-	double* var_38;
-	__insieme_type_6* var_40;
-	int* var_42;
-	__insieme_type_6* var_41;
+	__insieme_type_6* var_50;
+	__insieme_type_6* var_49;
+	__insieme_type_6* var_48;
+	int* var_51;
+	double* var_47;
 };
 
-// start code fragment :: Definition of __insieme_supp_14 ... type: ((ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>,ref<int<4>>,ref<array<real<4>,1>>,int<4>)->unit) //
-void __insieme_supp_14(__insieme_type_6* var_49, double* var_50, __insieme_type_6* var_48, int* var_46, __insieme_type_6* var_47, int var_45) { for(int j = 1; j < ((*var_46)-1); j += 1)  { ((((*var_48).data[((unsigned int)(((var_45*(*var_46))+(j))))])) = ((float)(((((double)(1))/((double)(4)))*(((double)(((((((*var_47).data[((unsigned int)((((var_45-1)*(*var_46))+(j))))]))+(((*var_47).data[((unsigned int)((((var_45*(*var_46))+(j))+1)))])))+(((*var_47).data[((unsigned int)((((var_45*(*var_46))+(j))-1)))])))+(((*var_47).data[((unsigned int)((((var_45+1)*(*var_46))+(j))))])))))-((*var_50)*((double)((((*var_49).data[((unsigned int)(((var_45*(*var_46))+(j))))])))))))))); }; }
-static void __insieme_supp_14_wrap(void* _closure, __insieme_type_6* var_49, double* var_50, __insieme_type_6* var_48, int* var_46, __insieme_type_6* var_47, int var_45) { __insieme_supp_14(var_49, var_50, var_48, var_46, var_47, var_45); }
+// start code fragment :: Definition of __insieme_supp_14 ... type: ((ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<int<4>>,ref<real<8>>,int<4>)->unit) //
+void __insieme_supp_14(__insieme_type_6* var_56, __insieme_type_6* var_57, __insieme_type_6* var_58, int* var_55, double* var_59, int var_54) { for(int var_33 = 1; var_33 < ((*var_55)-1); var_33 += 1)  { ((((*var_57).data[((unsigned int)(((var_54*(*var_55))+var_33)))])) = ((float)(((((double)(1))/((double)(4)))*(((double)(((((((*var_56).data[((unsigned int)((((var_54-1)*(*var_55))+var_33)))]))+(((*var_56).data[((unsigned int)((((var_54*(*var_55))+var_33)+1)))])))+(((*var_56).data[((unsigned int)((((var_54*(*var_55))+var_33)-1)))])))+(((*var_56).data[((unsigned int)((((var_54+1)*(*var_55))+var_33)))])))))-((*var_59)*((double)((((*var_58).data[((unsigned int)(((var_54*(*var_55))+var_33)))])))))))))); }; }
+static void __insieme_supp_14_wrap(void* _closure, __insieme_type_6* var_56, __insieme_type_6* var_57, __insieme_type_6* var_58, int* var_55, double* var_59, int var_54) { __insieme_supp_14(var_56, var_57, var_58, var_55, var_59, var_54); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_13_fun //
 void __insieme_pfor_body_13_fun(const isbr_PForRange range) {
 	// ----- captured variables -----
-	__insieme_type_6* var_64 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_39;
-	double* var_65 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_38;
-	__insieme_type_6* var_66 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_40;
-	int* var_67 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_42;
-	__insieme_type_6* var_68 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_41;
+	__insieme_type_6* var_73 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_50;
+	__insieme_type_6* var_74 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_49;
+	__insieme_type_6* var_75 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_48;
+	int* var_76 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_51;
+	double* var_77 = ((struct __insieme_pfor_body_13_fun_capture*)(range.context))->var_47;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_14(var_64, var_65, var_66, var_67, var_68, __it);
+		__insieme_supp_14(var_73, var_74, var_75, var_76, var_77, __it);
 	}
 	
 }
 
-// start code fragment :: Definition of __insieme_supp_12 ... type: ((ref<int<4>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>)->unit) //
-void __insieme_supp_12(int* var_42, __insieme_type_6* var_39, __insieme_type_6* var_40, double* var_38, __insieme_type_6* var_41) { {
-	isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){1, ((*var_42)-1), 1, &((struct __insieme_pfor_body_13_fun_capture){var_39, var_38, var_40, var_42, var_41})},&__insieme_pfor_body_13_fun);
+// start code fragment :: Definition of __insieme_supp_12 ... type: ((ref<array<real<4>,1>>,ref<real<8>>,ref<array<real<4>,1>>,ref<array<real<4>,1>>,ref<int<4>>)->unit) //
+void __insieme_supp_12(__insieme_type_6* var_49, double* var_47, __insieme_type_6* var_50, __insieme_type_6* var_48, int* var_51) { {
+	isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){1, ((*var_51)-1), 1, &((struct __insieme_pfor_body_13_fun_capture){var_50, var_49, var_48, var_51, var_47})},&__insieme_pfor_body_13_fun);
 	isbr_barrier(isbr_getThreadGroup(0));
 }; }
-static void __insieme_supp_12_wrap(void* _closure, int* var_42, __insieme_type_6* var_39, __insieme_type_6* var_40, double* var_38, __insieme_type_6* var_41) { __insieme_supp_12(var_42, var_39, var_40, var_38, var_41); }
+static void __insieme_supp_12_wrap(void* _closure, __insieme_type_6* var_49, double* var_47, __insieme_type_6* var_50, __insieme_type_6* var_48, int* var_51) { __insieme_supp_12(var_49, var_47, var_50, var_48, var_51); }
 
 // start code fragment :: function for job __insieme_job_8 //
 void fun__insieme_job_8(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
-	int* var_59 = ((struct __insieme_job_8*)args)->var_59;
-	__insieme_type_6* var_60 = ((struct __insieme_job_8*)args)->var_60;
-	__insieme_type_6* var_61 = ((struct __insieme_job_8*)args)->var_61;
-	double* var_62 = ((struct __insieme_job_8*)args)->var_62;
-	__insieme_type_6* var_63 = ((struct __insieme_job_8*)args)->var_63;
+	__insieme_type_6* var_68 = ((struct __insieme_job_8*)args)->var_68;
+	double* var_69 = ((struct __insieme_job_8*)args)->var_69;
+	__insieme_type_6* var_70 = ((struct __insieme_job_8*)args)->var_70;
+	__insieme_type_6* var_71 = ((struct __insieme_job_8*)args)->var_71;
+	int* var_72 = ((struct __insieme_job_8*)args)->var_72;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
-	__insieme_funType_9_call((__insieme_funType_9*)__insieme_closure_10_ctr((__insieme_closure_10*)alloca(sizeof(__insieme_closure_10)),(__insieme_funType_11*)__insieme_funType_11_ctr((__insieme_funType_11*)alloca(sizeof(__insieme_funType_11)),&__insieme_supp_12_wrap), var_59, var_60, var_61, var_62, var_63));
+	__insieme_funType_9_call((__insieme_funType_9*)__insieme_closure_10_ctr((__insieme_closure_10*)alloca(sizeof(__insieme_closure_10)),(__insieme_funType_11*)__insieme_funType_11_ctr((__insieme_funType_11*)alloca(sizeof(__insieme_funType_11)),&__insieme_supp_12_wrap), var_68, var_69, var_70, var_71, var_72));
 }
 
 // start code fragment :: Prototype for external function: memcpy ... type: ((anyRef,anyRef,uint<8>)->anyRef) //
 void* memcpy(void*, void*, unsigned long);
-static void* memcpy_wrap(void* _closure, void* var_70, void* var_71, unsigned long var_72) { return memcpy(var_70, var_71, var_72); }
+static void* memcpy_wrap(void* _closure, void* var_79, void* var_80, unsigned long var_81) { return memcpy(var_79, var_80, var_81); }
 
 // start code fragment :: Prototype for external function: sqrt ... type: ((real<8>)->real<8>) //
 double sqrt(double);
-static double sqrt_wrap(void* _closure, double var_73) { return sqrt(var_73); }
+static double sqrt_wrap(void* _closure, double var_82) { return sqrt(var_82); }
 
 // start code fragment :: main function //
 int main(int __argc, char** __argv) {
@@ -215,7 +215,7 @@ int main(int __argc, char** __argv) {
 		if((!((((!((u).data==0))&&(!((tmp).data==0)))&&(!((f).data==0)))&&(!((res).data==0))))) { printf(((char*)((*(&((__insieme_type_1){"Error allocating arrays\n"}))).data)), 0); };
 		memset((void*)((float*)((*(&u)).data)), 0, (((unsigned long)(((N)*(N))))*sizeof(float)));
 		memset((void*)((float*)((*(&f)).data)), 0, (((unsigned long)(((N)*(N))))*sizeof(float)));
-		for(int i = 0; i < (N); i += 1)  { for(int j = 0; j < (N); j += 1)  { ((((f).data[((unsigned int)((((i)*(N))+(j))))])) = ((float)(init_func((i), (j))))); }; };
+		for(int var_25 = 0; var_25 < (N); var_25 += 1)  { for(int var_24 = 0; var_24 < (N); var_24 += 1)  { ((((f).data[((unsigned int)(((var_25*(N))+var_24)))])) = ((float)(init_func(var_25, var_24)))); }; };
 		double comm_time = ((double)(0));
 		double comp_time = ((double)(0));
 		double timer = ((double)(0));
@@ -224,12 +224,12 @@ int main(int __argc, char** __argv) {
 		((end_t) = clock());
 		((setup_time) = (((double)(((end_t)-(start_t))))/((double)(1000000l))));
 		((start_t) = clock());
-		for(int it = 0; it < (numIter); it += 1) {
-			isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_8)),&((struct __insieme_job_8){sizeof(struct __insieme_job_8),1,isbr_getMaxThreads(),&fun__insieme_job_8,&N,&f,&tmp,&factor,&u}),sizeof(struct __insieme_job_8))));
+		for(int var_45 = 0; var_45 < (numIter); var_45 += 1) {
+			isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_8)),&((struct __insieme_job_8){sizeof(struct __insieme_job_8),1,isbr_getMaxThreads(),&fun__insieme_job_8,&tmp,&factor,&u,&f,&N}),sizeof(struct __insieme_job_8))));
 			memcpy((void*)((float*)((*(&u)).data)), (void*)((float*)((*(&tmp)).data)), (((unsigned long)(((N)*(N))))*sizeof(float)));
-			for(int i = 1; i < ((N)-1); i += 1)  { for(int j = 1; j < ((N)-1); j += 1)  { ((((res).data[((unsigned int)((((i)*(N))+(j))))])) = ((((((((f).data[((unsigned int)((((i)*(N))+(j))))]))-(((float)(4))*(((u).data[((unsigned int)((((i)*(N))+(j))))]))))+(((u).data[((unsigned int)(((((i)-1)*(N))+(j))))])))+(((u).data[((unsigned int)(((((i)+1)*(N))+(j))))])))+(((u).data[((unsigned int)(((((i)*(N))+(j))-1)))])))+(((u).data[((unsigned int)(((((i)*(N))+(j))+1)))])))); }; };
+			for(int var_38 = 1; var_38 < ((N)-1); var_38 += 1)  { for(int var_37 = 1; var_37 < ((N)-1); var_37 += 1)  { ((((res).data[((unsigned int)(((var_38*(N))+var_37)))])) = ((((((((f).data[((unsigned int)(((var_38*(N))+var_37)))]))-(((float)(4))*(((u).data[((unsigned int)(((var_38*(N))+var_37)))]))))+(((u).data[((unsigned int)((((var_38-1)*(N))+var_37)))])))+(((u).data[((unsigned int)((((var_38+1)*(N))+var_37)))])))+(((u).data[((unsigned int)((((var_38*(N))+var_37)-1)))])))+(((u).data[((unsigned int)((((var_38*(N))+var_37)+1)))])))); }; };
 			double norm = ((double)(0));
-			for(int i = 1; i < ((N)-1); i += 1)  { for(int j = 1; j < ((N)-1); j += 1)  { ((norm) = ((norm)+pow(((double)((((res).data[((unsigned int)((((i)*(N))+(j))))])))), ((double)(2))))); }; };
+			for(int var_43 = 1; var_43 < ((N)-1); var_43 += 1)  { for(int var_42 = 1; var_42 < ((N)-1); var_42 += 1)  { ((norm) = ((norm)+pow(((double)((((res).data[((unsigned int)(((var_43*(N))+var_42)))])))), ((double)(2))))); }; };
 			((resv) = (sqrt((norm))/((double)(((N)-1)))));
 		};
 		((end_t) = clock());

@@ -91,19 +91,19 @@ int main() {
 	{
 		;
 		{
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((double)(((i)*(j))))); }; };
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = ((double)(((((i)==(j)))?(1):(0))))); }; };
-			for(int i = 0; i < 1000; i += 1)  { for(int j = 0; j < 1000; j += 1) {
+			for(int var_5 = 0; var_5 < 1000; var_5 += 1)  { for(int var_4 = 0; var_4 < 1000; var_4 += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_5))])).data[((unsigned int)(var_4))])) = ((double)((var_5*var_4)))); }; };
+			for(int var_11 = 0; var_11 < 1000; var_11 += 1)  { for(int var_10 = 0; var_10 < 1000; var_10 += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_11))])).data[((unsigned int)(var_10))])) = ((double)((((var_11==var_10))?(1):(0))))); }; };
+			for(int var_18 = 0; var_18 < 1000; var_18 += 1)  { for(int var_17 = 0; var_17 < 1000; var_17 += 1) {
 				double sum = ((double)(0));
-				for(int k = 0; k < 1000; k += 1)  { ((sum) = ((sum)+((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((k)))]))*(((((*(&((__GLOBAL__).B))).data[((unsigned int)((k)))])).data[((unsigned int)((j)))]))))); };
-				((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])) = (sum));
+				for(int var_16 = 0; var_16 < 1000; var_16 += 1)  { ((sum) = ((sum)+((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_18))])).data[((unsigned int)(var_16))]))*(((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_16))])).data[((unsigned int)(var_17))]))))); };
+				((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_18))])).data[((unsigned int)(var_17))])) = (sum));
 			}; };
 		};
 		int success = 1;
-		for(int i = 0; i < 1000; i += 1) {
-			for(int j = 0; j < (((1000<1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).A))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=(((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))])))) { ((success) = 0); }; };
-			for(int j = (((1000<1000))?(1000):(1000)); j < (((1000>1000))?(1000):(1000)); j += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)((i)))])).data[((unsigned int)((j)))]))!=((double)(0)))) { ((success) = 0); }; };
+		for(int var_31 = 0; var_31 < 1000; var_31 += 1) {
+			for(int var_24 = 0; var_24 < (((1000<1000))?(1000):(1000)); var_24 += 1)  { if(((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_31))])).data[((unsigned int)(var_24))]))!=(((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_31))])).data[((unsigned int)(var_24))])))) { ((success) = 0); }; };
+			for(int var_30 = (((1000<1000))?(1000):(1000)); var_30 < (((1000>1000))?(1000):(1000)); var_30 += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_31))])).data[((unsigned int)(var_30))]))!=((double)(0)))) { ((success) = 0); }; };
 		};
 		printf(((char*)((*(&((__insieme_type_4){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_4){(((__insieme_type_6){{'O', 'K', '\0'}})).data}))):((((__insieme_type_4){(((__insieme_type_7){{'E', 'R', 'R', '\0'}})).data}))))).data);
-	}
+	};
 }

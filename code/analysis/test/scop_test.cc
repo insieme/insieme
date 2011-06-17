@@ -59,14 +59,21 @@ TEST(SCoP, CompoundStmt) {
 			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a+b)));\
 		}"
 	);
-	std::cout << *compStmt << std::endl;
-
+	// Mark scops in this code snippet
 	scop::mark(compStmt);
 
 	EXPECT_TRUE(compStmt->hasAnnotation(scop::SCoP::KEY));
 	scop::SCoP& ann = *compStmt->getAnnotation(scop::SCoP::KEY);
+	
+	const poly::IterationVector& iterVec = ann.getIterationVector();
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 
-	std::cout << ann.getIterationVector() << std::endl;
+	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(2), iterVec.getParameterNum());
+
+	std::ostringstream ss;
+	ss << ann.getIterationVector();
+	EXPECT_EQ("(|v1,v3|1)", ss.str());
 }
 
 TEST(SCoP, IfStmt) {
@@ -80,19 +87,37 @@ TEST(SCoP, IfStmt) {
 		} else { \
 			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a+int<4>:b))); \
 		}") );
-	std::cout << *ifStmt << std::endl;
+	// std::cout << *ifStmt << std::endl;
+	// Mark scops in this code snippet
 	scop::mark(ifStmt);
 
 	EXPECT_TRUE(ifStmt->hasAnnotation(scop::SCoP::KEY));
 	scop::SCoP& ann = *ifStmt->getAnnotation(scop::SCoP::KEY);
-    std::cout << ann.getIterationVector() << std::endl;
 
+	poly::IterationVector iterVec = ann.getIterationVector();
+	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
+
+	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(4), iterVec.getParameterNum());
+	{	
+		std::ostringstream ss;
+		ss << ann.getIterationVector();
+		EXPECT_EQ("(|v7,v8,v4,v5|1)", ss.str());
+	}
 	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
 	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::SCoP::KEY));
 
 	ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
-	std::cout << ann.getIterationVector() << std::endl;
+	iterVec = ann.getIterationVector();
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 
+	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(2), iterVec.getParameterNum());
+ 	{	
+		std::ostringstream ss;
+		ss << ann.getIterationVector();
+		EXPECT_EQ("(|v7,v8|1)", ss.str());
+	}
 }
 
 TEST(SCoP, SimpleForStmt) {
@@ -138,11 +163,9 @@ TEST(SCoP, ForStmt) {
 	
 	EXPECT_TRUE(ifStmt->hasAnnotation(scop::SCoP::KEY));
 	ann = *ifStmt->getThenBody()->getAnnotation(scop::SCoP::KEY);
-
 	std::cout << ann.getIterationVector() << std::endl;
 
-	// EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
-	// EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::SCoP::KEY));
+	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
 
 	// ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
 	// std::cout << ann.getIterationVector() << std::endl;

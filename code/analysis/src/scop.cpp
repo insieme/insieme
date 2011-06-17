@@ -92,10 +92,11 @@ std::set<Constraint> extractFromCondition(IterationVector& iv, const ExpressionP
 			//
 			// if (a<b) { }    ->    if( a-b<0 ) { }
 			ASTBuilder builder(mgr);
-			AffineFunction af(iv, builder.callExpr( 
+			ExpressionPtr&& expr = builder.callExpr( 
 					mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
-				) 
-			);
+				);
+			std::cout << *expr << std::endl;
+			AffineFunction af(iv, expr);
 			Constraint::Type type;
 			switch (op) {
 				case BasicGenerator::Eq: type = Constraint::EQ; break;
@@ -125,6 +126,13 @@ const utils::StringKey<SCoP> SCoP::KEY("SCoPAnnotationKey");
 
 using namespace core;
 using namespace poly;
+
+const std::string SCoP::toString() const {
+	std::ostringstream ss;
+	ss << "SCoP {" << std::endl;
+	ss << "\tIterationVector: " << iterVec;
+	return ss.str();
+}
 
 class ScopVisitor : public core::ASTVisitor<IterationVector> {
 
@@ -190,16 +198,16 @@ public:
 		// We assume the IR loop semantics to be the following: 
 		// i: lb...ub:s 
 		// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
-		AffineFunction lb(ret, 
-			builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), decl->getInitialization())
-		);
+		ExpressionPtr&& expr = 
+			builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), decl->getInitialization());
+		std::cout << *expr << std::endl;
+		AffineFunction lb(ret, expr	);
 		cons.insert( Constraint(lb, Constraint::GE) );
 
 		AffineFunction ub(ret, 
 			builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), forStmt->getEnd())
 		);
 		cons.insert( Constraint(ub, Constraint::LT) );
-		
 		ret = merge(ret,bodyIV);
 
 		// Add constraint for the step 
@@ -215,13 +223,14 @@ public:
 		IterationVector ret;
 		for_each(compStmt->getStatements().cbegin(), compStmt->getStatements().cend(), 
 			[&](const StatementPtr& cur) { ret = merge(ret, this->visit(cur));	} );
-		// Marks this compund statement with the iteration vector created from
-		// its body
-		compStmt->addAnnotation( std::make_shared<SCoP>(ret) );
+		// we don't need to mark compound statements as they do not cause
+		// changes in terms of iteration domain or constraints 
 		return ret;
 	}
 
-	IterationVector visitLambda(const LambdaPtr& lambda) {	return visit(lambda->getBody()); }
+	IterationVector visitLambda(const LambdaPtr& lambda) {	
+		return visit(lambda->getBody()); 
+	}
 
 	IterationVector visitCallExpr(const CallExprPtr& callExpr) { 
 		const NodeManager& mgr = callExpr->getNodeManager();
@@ -256,9 +265,17 @@ public:
 			[&](const ExpressionPtr& cur) { ret = merge(ret, this->visit(cur)); } );
 		return ret;
 	}
-	
-	// IterationVector visitExpression(const ExpressionPtr& expr) { return IterationVector(); }
 
+	IterationVector visitProgram(const ProgramPtr& prog) { 
+		for_each(prog->getEntryPoints().cbegin(), prog->getEntryPoints().cend(), 
+			[&](const ExpressionPtr& cur) { this->visit(cur); } );
+		return IterationVector();
+	}
+
+	IterationVector visitLambdaExpr(const LambdaExprPtr& lambdaExpr) {
+		return visit(lambdaExpr->getLambda());
+	}
+	
 };
 
 
