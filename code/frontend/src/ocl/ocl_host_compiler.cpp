@@ -196,11 +196,22 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 	return false;
 }
 
-ExpressionPtr Ocl2Inspire::getClCreateBuffer() {
-	// flags ignored
-	// hostPtr ignored
+ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
+	// read/write flags ignored
 	// errcorcode always set to 0 = CL_SUCCESS
-	return parser.parseExpression("fun(type<'a>:elemType, uint<8>:flags, uint<8>:size, anyRef:hostPtr, ref<array<int<4>, 1> >:errorcode_ret) -> array<'a, 1>  {{ \
+	if(copyHostPtr)
+		return parser.parseExpression("fun(type<'a>:elemType, uint<8>:flags, uint<8>:size, anyRef:hostPtr, ref<array<int<4>, 1> >:errorcode_ret) -> array<'a, 1>  {{ \
+	            decl ref<array<'a, 1> >:devicePtr = (op<ref.new>( (op<array.create.1D>( elemType, size )) )); \
+				decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
+				for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
+					( (op<array.ref.elem.1D>(devicePtr, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
+				 \
+	            ( (op<array.ref.elem.1D>(errorcode_ret, lit<uint<8>, 0> )) = 0 ); \
+				return (op<ref.deref> (devicePtr)); \
+	       }}");
+
+
+	return parser.parseExpression("fun(type<'a>:elemType, uint<8>:flags, uint<8>:size, ref<array<int<4>, 1> >:errorcode_ret) -> array<'a, 1>  {{ \
             ( (op<array.ref.elem.1D>(errorcode_ret, lit<uint<8>, 0> )) = 0 ); \
             return (op<array.create.1D>( elemType, size )); \
        }}");
@@ -287,7 +298,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 				return hostPtr;
 			}
 
-			ExpressionPtr fun = o2i.getClCreateBuffer();
+			ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr);
 
 			bool sizeFound = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
 			assert(sizeFound && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
@@ -296,7 +307,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			args.push_back(BASIC.getTypeLiteral(type));
 			args.push_back(node->getArgument(1));
 			args.push_back(size);
-			args.push_back(hostPtr);
+			if(copyPtr) args.push_back(hostPtr);
 			args.push_back(node->getArgument(4));
 			ExpressionPtr retVal = builder.callExpr(builder.arrayType(type), fun, args);
 			return retVal;
@@ -792,11 +803,10 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 						const CallExprPtr& newInit = dynamic_pointer_cast<const CallExpr>(this->resolveElement(initFct));
 
 						// check if the variable was created with CL_MEM_USE_HOST_PTR flag and can be removed
-						if(const VariablePtr replacement = dynamic_pointer_cast<const Variable>(newInit->getArgument(0)))
+						if(const VariablePtr replacement = dynamic_pointer_cast<const Variable>(newInit->getArgument(0))) {
 							cl_mems[var] = replacement; // TODO check if error argument has been set and set error to CL_SUCCESS
-						else
-							assert(false && "Use a variable as host_ptr on clCreateBuffer!");
-						return BASIC.getNoOp();
+							return BASIC.getNoOp();
+						}
 
 						//DeclarationStmtPtr newDecl = dynamic_pointer_cast<const DeclarationStmt>(decl->substitute(builder.getNodeManager(), *this));
 						TypePtr newType = builder.refType(newInit->getType());
@@ -811,6 +821,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					}
 				}
 			}
+			assert(decl->getInitialization()->getNodeType() == NT_CallExpr && "Unexpected initialization of cl_mem variable");
 		}
 
 		lookForKernelFilePragma(var->getType(), decl->getInitialization());

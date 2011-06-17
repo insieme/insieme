@@ -52,8 +52,11 @@ int main(int argc, char **argv) {
 	float* host_ptr;
 	cl_mem dev_ptr1;// = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float) * 100, NULL, &err);
 	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
+	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
+	cl_mem dev_ptr4;
 
-	dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY, 100 * sizeof(cl_float), host_ptr, &err);
+	dev_ptr1 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, 100 * sizeof(cl_float), host_ptr, &err);
+	dev_ptr4 = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
 //	clEnqueueWriteBuffer(queue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
@@ -68,8 +71,9 @@ int main(int argc, char **argv) {
 
 	kernel = clCreateKernel(program, "hello", &err);
 	err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void*) &dev_ptr2);
 	// local memory
-	clSetKernelArg(kernel, 1, sizeof(float) * 42, 0);
+	clSetKernelArg(kernel, 2, sizeof(float) * 42, 0);
 
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
@@ -78,7 +82,7 @@ int main(int argc, char **argv) {
 
 	err = clWaitForEvents(1, &event);
 
-	clEnqueueReadBuffer(queue, dev_ptr2, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	clEnqueueReadBuffer(queue, dev_ptr4, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 	clFinish(queue);
 
 	cl_ulong start, end;
@@ -88,6 +92,9 @@ int main(int argc, char **argv) {
 
 	clReleaseMemObject(dev_ptr1);
 	clReleaseMemObject(dev_ptr2);
+	clReleaseMemObject(dev_ptr3);
+	clReleaseMemObject(dev_ptr4);
+
 	clReleaseEvent(event);
 	clReleaseKernel(kernel);
 
