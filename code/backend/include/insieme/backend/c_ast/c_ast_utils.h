@@ -86,7 +86,7 @@ namespace c_ast {
 
 	// -- Binary Operations -------------------------------------
 
-	inline ExpressionPtr binaryOp(BinaryOperation::BinaryOp op, ExpressionPtr a, ExpressionPtr b) {
+	inline ExpressionPtr binaryOp(BinaryOperation::BinaryOp op, NodePtr a, NodePtr b) {
 		assert(a && b && a->getManager() && a->getManager() == b->getManager() && "Manager should match!");
 		return a->getManager()->create<BinaryOperation>(op, a, b);
 	}
@@ -115,6 +115,13 @@ namespace c_ast {
 		return binaryOp(BinaryOperation::LogicAnd, a, b);
 	}
 
+	inline ExpressionPtr cast(TypePtr type, NodePtr expr) {
+		return binaryOp(BinaryOperation::Cast, type, expr);
+	}
+
+	inline ExpressionPtr access(NodePtr expr, IdentifierPtr element) {
+		return binaryOp(BinaryOperation::MemberAccess, expr, element);
+	}
 
 } // end namespace c_ast
 } // end namespace backend

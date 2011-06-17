@@ -41,31 +41,10 @@
 #include <boost/utility.hpp>
 
 #include "insieme/utils/set_utils.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace core {
-	
-class NodeManager;
-template<class T> class Pointer;
-class Identifier;
-typedef Pointer<const Identifier> IdentifierPtr;
-class Type;
-typedef Pointer<const Type> TypePtr;
-class GenericType;
-typedef Pointer<const GenericType> GenericTypePtr;
-class Expression;
-typedef Pointer<const Expression> ExpressionPtr;
-class Literal;
-typedef Pointer<const Literal> LiteralPtr;
-class VectorType;
-typedef Pointer<const VectorType> VectorTypePtr;
-class IntTypeParam;
-typedef Pointer<const IntTypeParam> IntTypeParamPtr;
-
-class Node;
-typedef Pointer<const Node> NodePtr;
-class Statement;
-typedef Pointer<const Statement> StatementPtr;
 
 typedef utils::set::PointerSet<TypePtr> TypeSet;
 

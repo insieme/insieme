@@ -43,7 +43,15 @@
 
 #include "insieme/core/ast_node.h"
 
+#include "insieme/backend/preprocessor.h"
 #include "insieme/backend/converter.h"
+#include "insieme/backend/name_manager.h"
+#include "insieme/backend/variable_manager.h"
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/function_manager.h"
+#include "insieme/backend/parallel_manager.h"
+
 #include "insieme/backend/c_ast/c_code.h"
 
 
@@ -51,31 +59,50 @@ namespace insieme {
 namespace backend {
 
 
-	namespace {
-		class TextFragment : public c_ast::CodeFragment {
-			string text;
-		public:
-			TextFragment(const string& text) : text(text) {};
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << text;
-			}
-		};
-	}
-
 	FullBackendPtr FullBackend::getDefault() {
 		return std::make_shared<FullBackend>();
 	}
 
 	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
 
-		// create a C Node Manager
-		c_ast::SharedCNodeManager manager = c_ast::CNodeManager::createShared();
+		// basic setup
+		ConverterConfig config;
+		config.supportArrayLength = false;
 
-		// create Converter instance
-		Converter converter;
+		// create and set up the converter
+		Converter converter(config);
 
-		// convert IR node target code
-		return converter.convert(code, manager);
+		// set up pre-processing
+		NoPreProcessing preprocessor;
+		converter.setPreProcessor(&preprocessor);
+
+		// Prepare managers
+		SimpleNameManager nameManager;
+		converter.setNameManager(&nameManager);
+
+		TypeManager typeManager(converter);
+		converter.setTypeManager(&typeManager);
+
+		VariableManager variableManager;
+		converter.setVariableManager(&variableManager);
+
+		StmtConverter stmtConverter(converter);
+		converter.setStmtConverter(&stmtConverter);
+
+		FunctionManager functionManager;
+		converter.setFunctionManager(&functionManager);
+
+		ParallelManager parallelManager;
+		converter.setParallelManager(&parallelManager);
+
+		core::NodeManager& nodeManager = code->getNodeManager();
+		converter.setNodeManager(&nodeManager);
+
+		c_ast::SharedCNodeManager cNodeManager = c_ast::CNodeManager::createShared();
+		converter.setCNodeManager(cNodeManager);
+
+		// conduct conversion
+		return converter.convert(code);
 	}
 
 } // end namespace backend

@@ -36,49 +36,175 @@
 
 #pragma once
 
+#include <cassert>
 #include <memory>
 
-#include "insieme/utils/pointer.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace backend {
 
-namespace c_ast {
+	// forward declaration of preprocessor
+	class PreProcessor;
 
-	class Node;
-	typedef Ptr<Node> NodePtr;
+	// forward declaration of involved managers
+	class NameManager;
+	class TypeManager;
+	class VariableManager;
+	class StmtConverter;
+	class FunctionManager;
+	class ParallelManager;
 
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+	class TargetCode;
+	typedef std::shared_ptr<TargetCode> TargetCodePtr;
 
-	class CCode;
-	typedef std::shared_ptr<CCode> CCodePtr;
+	namespace c_ast {
 
-}
+		class CNodeManager;
+		typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
 
-	// a forward declaration - implementation is hidden
-	class ConversionContext;
+	}
 
 
-	class Converter : public core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&> {
+	struct ConverterConfig {
+		bool supportArrayLength;
+
+
+		static ConverterConfig getDefault() {
+			ConverterConfig res;
+			res.supportArrayLength = false;
+			return res;
+		}
+	};
+
+	class Converter {
+
+		// ------- The Preprocessor applied before the conversion -----------
+
+		PreProcessor* preProcessor;
+
+		// ------- Manager involved in the conversion process -----------
+
+		NameManager* nameManager;
+		TypeManager* typeManager;
+		VariableManager* variableManager;
+		StmtConverter* stmtConverter;
+		FunctionManager* functionManager;
+		ParallelManager* parallelManager;
+
+		// -------- Node Managers for Source and Target Code ------------
+
+		core::NodeManager* nodeManager;
+
+		// NOTE: shared pointer, since it has to survive the conversion process
+		c_ast::SharedCNodeManager cNodeManager;
+
+
+		// ----------- Overall Conversion Configuration ----------------
+
+		ConverterConfig config;
+
 
 	public:
 
-		Converter() : core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true) {}
+		Converter() :
+			preProcessor(0), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			functionManager(0), parallelManager(0), config(ConverterConfig::getDefault()) {}
 
-		c_ast::CCodePtr convert(const core::NodePtr& node, c_ast::SharedCNodeManager& cNodeManager);
+		Converter(const ConverterConfig& config) :
+			preProcessor(0), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			functionManager(0), parallelManager(0), config(config) {}
 
-	protected:
+		backend::TargetCodePtr convert(const core::NodePtr& code);
 
-		c_ast::NodePtr convert(const core::NodePtr& node, ConversionContext& context) {
-			return visit(node, context);
+		PreProcessor& getPreProcessor() const {
+			assert(preProcessor);
+			return *preProcessor;
 		}
 
-		c_ast::NodePtr visitNode(const core::NodePtr& node, ConversionContext& context);
+		void setPreProcessor(PreProcessor* newPreProcessor) {
+			preProcessor = newPreProcessor;
+		}
 
-		c_ast::NodePtr visitProgram(const core::ProgramPtr& node, ConversionContext& context);
+		NameManager& getNameManager() const {
+			assert(nameManager);
+			return *nameManager;
+		}
 
+		void setNameManager(NameManager* manager) {
+			nameManager = manager;
+		}
+
+		TypeManager& getTypeManager() const {
+			assert(typeManager);
+			return *typeManager;
+		}
+
+		void setTypeManager(TypeManager* manager) {
+			typeManager = manager;
+		}
+
+		VariableManager& getVariableManager() const {
+			assert(variableManager);
+			return *variableManager;
+		}
+
+		void setVariableManager(VariableManager* manager) {
+			variableManager = manager;
+		}
+
+		StmtConverter& getStmtConverter() const {
+			assert(stmtConverter);
+			return *stmtConverter;
+		}
+
+		void setStmtConverter(StmtConverter* converter) {
+			stmtConverter = converter;
+		}
+
+		FunctionManager& getFunctionManager() const {
+			assert(functionManager);
+			return *functionManager;
+		}
+
+		void setFunctionManager(FunctionManager* manager) {
+			functionManager = manager;
+		}
+
+		ParallelManager& getParallelManager() const {
+			assert(parallelManager);
+			return *parallelManager;
+		}
+
+		void setParallelManager(ParallelManager* manager) {
+			parallelManager = manager;
+		}
+
+		core::NodeManager& getNodeManager() const {
+			assert(nodeManager);
+			return *nodeManager;
+		}
+
+		void setNodeManager(core::NodeManager* manager) {
+			nodeManager = manager;
+		}
+
+		const c_ast::SharedCNodeManager& getCNodeManager() const {
+			assert(cNodeManager);
+			return cNodeManager;
+		}
+
+		void setCNodeManager(const c_ast::SharedCNodeManager& manager) {
+			cNodeManager = manager;
+		}
+
+		ConverterConfig& getConfig() {
+			return config;
+		}
+
+		void setConfig(const ConverterConfig& newConfig) {
+			config = newConfig;
+		}
 
 	};
 

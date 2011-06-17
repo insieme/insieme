@@ -38,6 +38,7 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace backend {
@@ -45,22 +46,32 @@ namespace c_ast {
 
 	namespace {
 
+		class CPrinter;
+
+		struct PrintWrapper : public utils::Printable {
+			CPrinter& printer;
+			const NodePtr& node;
+		public:
+			PrintWrapper(CPrinter& printer, const NodePtr& node)
+				: printer(printer), node(node) {};
+			virtual std::ostream& printTo(std::ostream& out) const;
+		};
+
 
 		// the actual printer of the C AST
 		class CPrinter {
 
-			std::ostream& out;
 			string indentStep;
 			int indent;
 
 		public:
 
-			CPrinter(std::ostream& out, const string& indentStep = "    ")
-				: out(out), indentStep(indentStep), indent(0) {}
+			CPrinter(const string& indentStep = "    ")
+				: indentStep(indentStep), indent(0) {}
 
-			std::ostream& print(NodePtr node) {
+			std::ostream& print(NodePtr node, std::ostream& out) {
 				switch(node->getType()) {
-					#define CONCRETE(name) case NT_ ## name: print ## name (static_pointer_cast<name>(node)); return out;
+					#define CONCRETE(name) case NT_ ## name: return print ## name (static_pointer_cast<name>(node), out);
 					#include "insieme/backend/c_ast/c_nodes.def"
 					#undef CONCRETE
 				}
@@ -70,7 +81,11 @@ namespace c_ast {
 
 		private:
 
-			std::ostream& newLine() {
+			PrintWrapper print(const NodePtr& node) {
+				return PrintWrapper(*this, node);
+			}
+
+			std::ostream& newLine(std::ostream& out) {
 				return out << "\n" << times(indentStep, indent);
 			}
 
@@ -83,7 +98,12 @@ namespace c_ast {
 				assert(indent >= 0 && "Should never become < 0");
 			}
 
-			#define PRINT(name) std::ostream& print ## name (name ## Ptr node)
+			std::ostream& formatParameter(const c_ast::TypePtr& type, const c_ast::IdentifierPtr& name, std::ostream& out) {
+				return out << print(type) << " " << print(name);
+			}
+
+
+			#define PRINT(name) std::ostream& print ## name (name ## Ptr node, std::ostream& out)
 
 			PRINT(Identifier) {
 				return out << node->name;
@@ -98,11 +118,11 @@ namespace c_ast {
 			}
 
 			PRINT(PrimitiveType) {
-				return print(node->name);
+				return out << print(node->name);
 			}
 
 			PRINT(PointerType) {
-				return print(node->elementType) << "*";
+				return out << print(node->elementType) << "*";
 			}
 
 			PRINT(VectorType) {
@@ -114,42 +134,38 @@ namespace c_ast {
 			}
 
 			PRINT(StructType) {
-				// TODO: implement a struct
-				return out << "TODO - struct";
+				return out << "struct " << print(node->name);
 			}
 
 			PRINT(UnionType) {
-				// TODO: implement a struct
-				return out << "TODO - union";
+				return out << "union " << print(node->name);
 			}
 
 			PRINT(VarDecl) {
 				// print a variable declaration
-				print(node->var->type);
-				out << " ";
-				print(node->var->name);
+				out << print(node->var->type) << " " << print(node->var->name);
 
 				if (!node->init) {
 					return out;
 				}
-				out << " = ";
-				return print(node->init);
+
+				return out << " = " << print(node->init);
 			}
 
 			PRINT(Compound) {
 				out << "{";
 				incIndent();
-				newLine();
+				newLine(out);
 
 				std::size_t size = node->statements.size();
 				for (std::size_t i=0; i<size; i++) {
 					print(node->statements[i]);
 					out << ";";
-					if (i < size-1) newLine();
+					if (i < size-1) newLine(out);
 				}
 
 				decIndent();
-				newLine();
+				newLine(out);
 				out << "}";
 
 				return out;
@@ -172,7 +188,7 @@ namespace c_ast {
 				print(node->value);
 				out << ") {";
 				incIndent();
-				newLine();
+				newLine(out);
 
 				std::size_t size = node->cases.size();
 				for (std::size_t i=0; i<size; i++) {
@@ -181,17 +197,17 @@ namespace c_ast {
 					print(cur.first);
 					out << ": ";
 					print(cur.second);
-					if (i < size-1) newLine();
+					if (i < size-1) newLine(out);
 				}
 
 				if (node->defaultBranch) {
-					newLine();
+					newLine(out);
 					out << "default: ";
 					print(node->defaultBranch);
 				}
 
 				decIndent();
-				newLine();
+				newLine(out);
 				out << "}";
 				return out;
 			}
@@ -225,8 +241,7 @@ namespace c_ast {
 			}
 
 			PRINT(Return) {
-				out << "return ";
-				return print(node->value);
+				return out << "return " << print(node->value);
 			}
 
 			PRINT(Literal) {
@@ -234,8 +249,7 @@ namespace c_ast {
 			}
 
 			PRINT(Variable) {
-				printIdentifier(node->name);
-				return out;
+				return printIdentifier(node->name, out);
 			}
 
 			PRINT(Initializer) {
@@ -257,17 +271,17 @@ namespace c_ast {
 
 				// handle operations
 				switch (node->operation) {
-					case UnaryOperation::UnaryPlus: 	out << "+"; return print(node->operand);
-					case UnaryOperation::UnaryMinus: 	out << "-"; return print(node->operand);
-					case UnaryOperation::PrefixInc: 	out << "++"; return print(node->operand);
-					case UnaryOperation::PrefixDec: 	out << "--"; return print(node->operand);
-					case UnaryOperation::PostFixInc: 	print(node->operand); return out << "++";
-					case UnaryOperation::PostFixDec: 	print(node->operand); return out << "--";
-					case UnaryOperation::LogicNot: 		out << "!"; return print(node->operand);
-					case UnaryOperation::BitwiseNot: 	out << "~"; return print(node->operand);
-					case UnaryOperation::Indirection: 	out << "*"; return print(node->operand);
-					case UnaryOperation::Reference: 	out << "&"; return print(node->operand);
-					case UnaryOperation::SizeOf: 		out << "sizeof("; print(node->operand); return out << ")";
+					case UnaryOperation::UnaryPlus: 	return out << "+" << print(node->operand);
+					case UnaryOperation::UnaryMinus: 	return out << "-" << print(node->operand);
+					case UnaryOperation::PrefixInc: 	return out << "++" << print(node->operand);
+					case UnaryOperation::PrefixDec: 	return out << "--" << print(node->operand);
+					case UnaryOperation::PostFixInc: 	return out << print(node->operand) << "++";
+					case UnaryOperation::PostFixDec: 	return out << print(node->operand) << "--";
+					case UnaryOperation::LogicNot: 		return out << "!" << print(node->operand);
+					case UnaryOperation::BitwiseNot: 	return out << "~" << print(node->operand);
+					case UnaryOperation::Indirection: 	return out << "*" << print(node->operand);
+					case UnaryOperation::Reference: 	return out << "&" << print(node->operand);
+					case UnaryOperation::SizeOf: 		return out << "sizeof(" << print(node->operand) << ")";
 				}
 
 				assert(false && "Invalid unary operation encountered!");
@@ -311,16 +325,13 @@ namespace c_ast {
 
 					// special handling for subscript and cast
 					case BinaryOperation::Subscript: print(node->operandA); out << "["; print(node->operandB); return out << "]";
-					case BinaryOperation::Cast: out << "("; print(node->operandA); out << ")"; return print(node->operandB);
+					case BinaryOperation::Cast: return out << "(" << print(node->operandA) << ")" << print(node->operandB);
 
 				}
 
 				assert(op != "" && "Invalid binary operation encountered!");
 
-				print(node->operandA);
-				out << op;
-				print(node->operandB);
-				return out;
+				return out << print(node->operandA) << op << print(node->operandB);
 			}
 
 			PRINT(TernaryOperation) {
@@ -342,7 +353,7 @@ namespace c_ast {
 
 			PRINT(Call) {
 
-				printIdentifier(node->function);
+				printIdentifier(node->function, out);
 				out << "(";
 
 				std::size_t size = node->arguments.size();
@@ -355,21 +366,41 @@ namespace c_ast {
 			}
 
 			PRINT(Parentheses) {
-				out << "(";
-				print(node->expression);
-				return out << ")";
+				return out << "(" << print(node->expression) << ")";
 			}
 
-			PRINT(TypePrototype) {
-				return out << "TODO";
-			}
-
-			PRINT(TypeDef) {
-				return out << "TODO";
+			PRINT(TypeDeclaration) {
+				print(node->type);
+				return out << ";\n";
 			}
 
 			PRINT(FunctionPrototype) {
 				return out << "TODO";
+			}
+
+			PRINT(TypeDefinition) {
+
+				bool explicitTypeDef = (bool)(node->name);
+
+				// print prefix
+				if (explicitTypeDef) {
+					out << "typedef ";
+				}
+
+				// define type
+				out << print(node->type);
+				if (c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type)) {
+					out << " {\n    " << join(";\n    ", composite->elements,
+							[&](std::ostream& out, const pair<c_ast::IdentifierPtr, c_ast::TypePtr>& cur) {
+								this->formatParameter(cur.second, cur.first, out);
+					}) << ";\n}";
+				}
+
+				// print name and finish
+				if (explicitTypeDef) {
+					out << " " << print(node->name);
+				}
+				return out << ";\n";
 			}
 
 			PRINT(Function) {
@@ -381,12 +412,17 @@ namespace c_ast {
 		};
 
 
+		std::ostream& PrintWrapper::printTo(std::ostream& out) const {
+			return printer.print(node, out);
+		}
+
+
 	}
 
 
 	std::ostream& CPrint::printTo(std::ostream& out) const {
 		// use internal printer to generate code
-		return CPrinter(out).print(fragment);
+		return CPrinter().print(fragment, out);
 	}
 
 	string toString(const NodePtr& node) {

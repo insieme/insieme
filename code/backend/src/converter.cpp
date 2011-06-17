@@ -36,77 +36,41 @@
 
 #include "insieme/backend/converter.h"
 
-#include <set>
+#include "insieme/utils/timer.h"
+#include "insieme/utils/logging.h"
 
-#include "insieme/backend/c_ast/c_ast.h"
-#include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/preprocessor.h"
 #include "insieme/backend/c_ast/c_code.h"
-
 
 namespace insieme {
 namespace backend {
 
-	// --------------- Conversion Context struct ---------------
-
-	struct ConversionContext {
-		c_ast::SharedCNodeManager cNodeManager;
-		std::set<c_ast::CodeFragmentPtr> dependencies;
-		ConversionContext(const c_ast::SharedCNodeManager& manager) : cNodeManager(manager) {}
-	};
+	backend::TargetCodePtr Converter::convert(const core::NodePtr& code) {
 
 
-	namespace {
+		// conduct pre-processing
+		utils::Timer timer = insieme::utils::Timer("Backend.Preprocessing");
 
-		c_ast::CodeFragmentPtr toCodeFragment(ConversionContext context, c_ast::NodePtr code) {
-			c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.cNodeManager, code);
-			fragment->addDependencies(context.dependencies);
-			return fragment;
-		}
+		// TODO: make pre-processor an option
 
+		// pre-process program
+		core::NodePtr processed = getPreProcessor().preprocess(getNodeManager(), code);
+
+		timer.stop();
+		LOG(INFO) << timer;
+
+		timer = insieme::utils::Timer("Backend.Conversions");
+
+		// convert IR node target code
+		auto res = getStmtConverter().convert(processed);
+
+		timer.stop();
+		LOG(INFO) << timer;
+
+		// job done!
+		return res;
 	}
-
-
-	// --------------- conversion operations -------------------
-
-	c_ast::CCodePtr Converter::convert(const core::NodePtr& node, c_ast::SharedCNodeManager& cNodeManager) {
-
-		// convert content
-		ConversionContext context(cNodeManager);
-		c_ast::NodePtr code = visit(node, context);
-
-		// construct target code
-		return std::make_shared<c_ast::CCode>(node, toCodeFragment(context, code));
-	}
-
-	c_ast::NodePtr Converter::visitNode(const core::NodePtr& node, ConversionContext& context) {
-		// default handling of unsupported nodes => produce comment
-		return context.cNodeManager->create<c_ast::Comment>("Unsupported: " + toString(node));
-	}
-
-
-	c_ast::NodePtr Converter::visitProgram(const core::ProgramPtr& node, ConversionContext& context) {
-
-		// get shared C Node Manager reference
-		const c_ast::SharedCNodeManager& manager = context.cNodeManager;
-
-		// program is not producing any C code => just dependencies
-		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
-
-			// create a new context
-			ConversionContext entryContext(manager);
-
-			// create new fragment
-			auto fragment = toCodeFragment(entryContext, convert(entryPoint, entryContext));
-
-			// add converted fragment to dependency list
-			context.dependencies.insert(fragment);
-
-		});
-
-		// create empty node (program does not represent any code)
-		return 0;
-	}
-
 
 } // end namespace backend
 } // end namespace insieme

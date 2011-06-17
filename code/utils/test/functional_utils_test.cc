@@ -58,3 +58,93 @@ TEST(TypeListTrait, DealingWithListTraits) {
 	EXPECT_FALSE(typeid(type_at<2,type_list<int,double>>::type) == typeid(int));
 
 }
+
+// ------------------------- Some experimenting with std::function ----------------
+
+#include <functional>
+#include <vector>
+
+int add(int a, int b) {
+	return a + b;
+}
+
+struct mul {
+	int operator()(int a, int b) {
+		return a * b;
+	};
+};
+
+std::vector<std::function<int(int,int)>> buildOperations(int step, int& akk) {
+	std::vector<std::function<int(int,int)>> res;
+	res.push_back(&add);
+	res.push_back(mul());
+	res.push_back([&akk, step](int a, int b) {
+		akk += a + b + step;
+		return akk;
+	});
+
+	return res;
+}
+
+int poluteStack(int depth) {
+	if (depth == 0) {
+		return 0;
+	}
+	return poluteStack(depth - 1) + depth;
+}
+
+
+TEST(FunctionExperiment, TryStdFunction) {
+
+	std::function<int(int,int)> func;
+
+	func = &add;
+	EXPECT_EQ(3, func(1,2));
+
+	mul op;
+	func = op;
+	EXPECT_EQ(2, func(1,2));
+
+	func = [](int a, int b) {
+		return a - b;
+	};
+	EXPECT_EQ(-1, func(1,2));
+
+	int res = 0;
+	auto funs = buildOperations(1, res);
+
+	poluteStack(40);
+
+	EXPECT_EQ(3, funs[0](1,2));
+	EXPECT_EQ(2, funs[1](1,2));
+	EXPECT_EQ(4, funs[2](1,2));
+	EXPECT_EQ(4, res);
+	EXPECT_EQ(8, funs[2](1,2));
+	EXPECT_EQ(8, res);
+
+
+	// check lambdas with states ....
+
+	int counter = 0;
+	auto l = [counter]() mutable {
+		counter++;
+		return counter;
+	};
+
+	std::function<int()> funcA;
+	std::function<int()> funcB;
+
+	// the actual lambda is copied
+	funcA = l;
+	funcB = l;
+
+	EXPECT_EQ(1, funcA());
+	EXPECT_EQ(2, funcA());
+	EXPECT_EQ(3, funcA());
+
+	// here shit gets real! => lambda was copied, not handled by reference
+	EXPECT_EQ(1, funcB());
+	EXPECT_EQ(2, funcB());
+
+
+}
