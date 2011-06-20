@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 			}
 		
-			// insieme::analysis::scop::mark(program);
+		// 	insieme::analysis::scop::mark(program);
 
 			InverseStmtMap stmtMap;
 			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {

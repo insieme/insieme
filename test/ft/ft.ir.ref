@@ -3649,7 +3649,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 }(v1, 2);
             } else { };
             {
-                for(decl int<4> v344 = 1 .. composite.ref.elem(v1, niter, type<int<4>>)+1 : 1) {
+                for(decl int<4> v339 = 1 .. composite.ref.elem(v1, niter, type<int<4>>)+1 : 1) {
                     if(0==1) {
                         fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v273, int<4> v274){
                             vector.ref.elem(composite.ref.elem(v273, start, type<vector<real<8>,64>>), v274) := fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v275){
@@ -3669,15 +3669,15 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         decl ref<int<4>> v295 =  var(0);
                         decl ref<int<4>> v296 =  var(0);
                         {
-                            for(decl int<4> v311 = 0 .. array.ref.elem.1D(v293, 2) : 1) {
+                            for(decl int<4> v306 = 0 .. array.ref.elem.1D(v293, 2) : 1) {
                                 {
-                                    for(decl int<4> v309 = 0 .. array.ref.elem.1D(v293, 1) : 1) {
+                                    for(decl int<4> v304 = 0 .. array.ref.elem.1D(v293, 1) : 1) {
                                         {
-                                            for(decl int<4> v307 = 0 .. array.ref.elem.1D(v293, 0) : 1) {
-                                                fun(ref<int<4>> v297, int<4> v298, ref<array<vector<vector<int<4>,128>,128>,1>> v299, ref<int<4>> v300, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v301, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v302, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v303, ref<int<4>> v304){
-                                                    composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v301, v304), v297), v300), real, type<real<8>>) := composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v302, v304), v297), v300), real, type<real<8>>)*vector.ref.elem(composite.ref.elem(v303, ex, type<vector<real<8>,50689>>), v298*vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v299, v304), v297), v300));
-                                                    composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v301, v304), v297), v300), imag, type<real<8>>) := composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v302, v304), v297), v300), imag, type<real<8>>)*vector.ref.elem(composite.ref.elem(v303, ex, type<vector<real<8>,50689>>), v298*vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v299, v304), v297), v300));
-                                                }( var(v309), v291, v292,  var(v307), v290, v289, v288,  var(v311));
+                                            for(decl int<4> v302 = 0 .. array.ref.elem.1D(v293, 0) : 1) {
+                                                fun(ref<array<struct<real:real<8>,imag:real<8>>,1>> v297, ref<array<struct<real:real<8>,imag:real<8>>,1>> v298, int<4> v299){
+                                                    composite.ref.elem(array.ref.elem.1D(v297, 0), real, type<real<8>>) := composite.ref.elem(array.ref.elem.1D(v298, 0), real, type<real<8>>)*v299;
+                                                    return composite.ref.elem(array.ref.elem.1D(v297, 0), imag, type<real<8>>) := composite.ref.elem(array.ref.elem.1D(v298, 0), imag, type<real<8>>)*v299;
+                                                }(scalar.to.array(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v290, v306), v304), v302)), scalar.to.array(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v289, v306), v304), v302)), real.to.int(vector.ref.elem(composite.ref.elem(v288, ex, type<vector<real<8>,50689>>), v291*vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v292, v306), v304), v302)), 4));
                                             };
                                             v294 := 0+ceil(array.ref.elem.1D(v293, 0)-0/1)*1;
                                         };
@@ -3687,7 +3687,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             };
                             v296 := 0+ceil(array.ref.elem.1D(v293, 2)-0/1)*1;
                         };
-                    }(v1, ref.vector.to.ref.array(composite.ref.elem(v1, u0, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(composite.ref.elem(v1, u1, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), v344, ref.vector.to.ref.array(composite.ref.elem(v1, indexmap, type<vector<vector<vector<int<4>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), 0)));
+                    }(v1, ref.vector.to.ref.array(composite.ref.elem(v1, u0, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(composite.ref.elem(v1, u1, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), v339, ref.vector.to.ref.array(composite.ref.elem(v1, indexmap, type<vector<vector<vector<int<4>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), 0)));
                     if(0==1) {
                         fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v283, int<4> v284){
                             decl ref<real<8>> v285 =  var(0.0);
@@ -5121,44 +5121,44 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             }(v273);
                         }(v1, 4);
                     } else { };
-                    fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v313, int<4> v314, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v315, ref<array<int<4>,1>> v316){
-                        decl ref<int<4>> v317 =  var(0);
-                        decl ref<int<4>> v318 =  var(0);
-                        decl ref<int<4>> v319 =  var(0);
-                        decl ref<int<4>> v320 =  var(0);
-                        decl ref<int<4>> v321 =  var(0);
-                        decl ref<struct<real:real<8>,imag:real<8>>> v322 =  var(undefined(type<struct<real:real<8>,imag:real<8>>>));
-                        decl ref<struct<real:real<8>,imag:real<8>>> v323 =  var(undefined(type<struct<real:real<8>,imag:real<8>>>));
-                        composite.ref.elem(v322, real, type<real<8>>) := 0.0;
-                        composite.ref.elem(v322, imag, type<real<8>>) := 0.0;
+                    fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v308, int<4> v309, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v310, ref<array<int<4>,1>> v311){
+                        decl ref<int<4>> v312 =  var(0);
+                        decl ref<int<4>> v313 =  var(0);
+                        decl ref<int<4>> v314 =  var(0);
+                        decl ref<int<4>> v315 =  var(0);
+                        decl ref<int<4>> v316 =  var(0);
+                        decl ref<struct<real:real<8>,imag:real<8>>> v317 =  var(undefined(type<struct<real:real<8>,imag:real<8>>>));
+                        decl ref<struct<real:real<8>,imag:real<8>>> v318 =  var(undefined(type<struct<real:real<8>,imag:real<8>>>));
+                        composite.ref.elem(v317, real, type<real<8>>) := 0.0;
+                        composite.ref.elem(v317, imag, type<real<8>>) := 0.0;
                         {
-                            for(decl int<4> v341 = 1 .. 1024+1 : 1) {
-                                v318 := v341%128+1;
-                                if(v318>=vector.ref.elem(composite.ref.elem(v313, xstart, type<vector<int<4>,3>>), 0)&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v337, ref<int<4>> v338)return v338<=vector.ref.elem(composite.ref.elem(v337, xend, type<vector<int<4>,3>>), 0)(v313, v318)}) {
-                                    v319 := 3*v341%128+1;
-                                    if(v319>=vector.ref.elem(composite.ref.elem(v313, ystart, type<vector<int<4>,3>>), 0)&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v334, ref<int<4>> v335)return v335<=vector.ref.elem(composite.ref.elem(v334, yend, type<vector<int<4>,3>>), 0)(v313, v319)}) {
-                                        v320 := 5*v341%32+1;
-                                        if(v320>=vector.ref.elem(composite.ref.elem(v313, zstart, type<vector<int<4>,3>>), 0)&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v331, ref<int<4>> v332)return v332<=vector.ref.elem(composite.ref.elem(v331, zend, type<vector<int<4>,3>>), 0)(v313, v320)}) {
-                                            fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v324, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v325, ref<struct<real:real<8>,imag:real<8>>> v326, ref<int<4>> v327, ref<int<4>> v328, ref<int<4>> v329){
-                                                composite.ref.elem(v326, real, type<real<8>>) := composite.ref.elem(v326, real, type<real<8>>)+composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v325, v327-vector.ref.elem(composite.ref.elem(v324, zstart, type<vector<int<4>,3>>), 0)), v328-vector.ref.elem(composite.ref.elem(v324, ystart, type<vector<int<4>,3>>), 0)), v329-vector.ref.elem(composite.ref.elem(v324, xstart, type<vector<int<4>,3>>), 0)), real, type<real<8>>);
-                                                composite.ref.elem(v326, imag, type<real<8>>) := composite.ref.elem(v326, imag, type<real<8>>)+composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v325, v327-vector.ref.elem(composite.ref.elem(v324, zstart, type<vector<int<4>,3>>), 0)), v328-vector.ref.elem(composite.ref.elem(v324, ystart, type<vector<int<4>,3>>), 0)), v329-vector.ref.elem(composite.ref.elem(v324, xstart, type<vector<int<4>,3>>), 0)), imag, type<real<8>>);
-                                            }(v313, v315, v322, v320, v319, v318);
+                            for(decl int<4> v336 = 1 .. 1024+1 : 1) {
+                                v313 := v336%128+1;
+                                if(v313>=vector.ref.elem(composite.ref.elem(v308, xstart, type<vector<int<4>,3>>), 0)&&bind(){fun(ref<int<4>> v332, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v333)return v332<=vector.ref.elem(composite.ref.elem(v333, xend, type<vector<int<4>,3>>), 0)(v313, v308)}) {
+                                    v314 := 3*v336%128+1;
+                                    if(v314>=vector.ref.elem(composite.ref.elem(v308, ystart, type<vector<int<4>,3>>), 0)&&bind(){fun(ref<int<4>> v329, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v330)return v329<=vector.ref.elem(composite.ref.elem(v330, yend, type<vector<int<4>,3>>), 0)(v314, v308)}) {
+                                        v315 := 5*v336%32+1;
+                                        if(v315>=vector.ref.elem(composite.ref.elem(v308, zstart, type<vector<int<4>,3>>), 0)&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v326, ref<int<4>> v327)return v327<=vector.ref.elem(composite.ref.elem(v326, zend, type<vector<int<4>,3>>), 0)(v308, v315)}) {
+                                            fun(ref<int<4>> v319, ref<int<4>> v320, ref<struct<real:real<8>,imag:real<8>>> v321, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v322, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v323, ref<int<4>> v324){
+                                                composite.ref.elem(v321, real, type<real<8>>) := composite.ref.elem(v321, real, type<real<8>>)+composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v322, v324-vector.ref.elem(composite.ref.elem(v323, zstart, type<vector<int<4>,3>>), 0)), v319-vector.ref.elem(composite.ref.elem(v323, ystart, type<vector<int<4>,3>>), 0)), v320-vector.ref.elem(composite.ref.elem(v323, xstart, type<vector<int<4>,3>>), 0)), real, type<real<8>>);
+                                                composite.ref.elem(v321, imag, type<real<8>>) := composite.ref.elem(v321, imag, type<real<8>>)+composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v322, v324-vector.ref.elem(composite.ref.elem(v323, zstart, type<vector<int<4>,3>>), 0)), v319-vector.ref.elem(composite.ref.elem(v323, ystart, type<vector<int<4>,3>>), 0)), v320-vector.ref.elem(composite.ref.elem(v323, xstart, type<vector<int<4>,3>>), 0)), imag, type<real<8>>);
+                                            }(v314, v313, v317, v310, v308, v315);
                                         } else { };
                                     } else { };
                                 } else { };
                             };
-                            v317 := 1+ceil(1024+1-1/1)*1;
+                            v312 := 1+ceil(1024+1-1/1)*1;
                         };
                         {
-                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), real, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), real, type<real<8>>)+composite.ref.elem(v322, real, type<real<8>>);
-                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), imag, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), imag, type<real<8>>)+composite.ref.elem(v322, imag, type<real<8>>);
+                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), real, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), real, type<real<8>>)+composite.ref.elem(v317, real, type<real<8>>);
+                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), imag, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), imag, type<real<8>>)+composite.ref.elem(v317, imag, type<real<8>>);
                         };
                         {
-                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), real, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), real, type<real<8>>)/524288;
-                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), imag, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), imag, type<real<8>>)/524288;
-                            printf(string.as.char.pointer("T = %5d     Checksum = %22.12e %22.12e\n"), varlist.pack((v314, composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), real, type<real<8>>), composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v314), imag, type<real<8>>))));
+                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), real, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), real, type<real<8>>)/524288;
+                            composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), imag, type<real<8>>) := composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), imag, type<real<8>>)/524288;
+                            printf(string.as.char.pointer("T = %5d     Checksum = %22.12e %22.12e\n"), varlist.pack((v309, composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), real, type<real<8>>), composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v309), imag, type<real<8>>))));
                         };
-                    }(v1, v344, ref.vector.to.ref.array(composite.ref.elem(v1, u2, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), 0)));
+                    }(v1, v339, ref.vector.to.ref.array(composite.ref.elem(v1, u2, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), 0)));
                     if(0==1) {
                         fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v283, int<4> v284){
                             decl ref<real<8>> v285 =  var(0.0);
@@ -5180,117 +5180,117 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 };
                 v6 := 1+ceil(composite.ref.elem(v1, niter, type<int<4>>)+1-1/1)*1;
             };
-            fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v345, int<4> v346, int<4> v347, int<4> v348, int<4> v349, ref<array<int<4>,1>> v350, ref<array<char,1>> v351){
-                decl ref<int<4>> v352 =  var(0);
-                decl ref<int<4>> v353 =  var(0);
-                decl ref<int<4>> v354 =  var(0);
-                decl ref<real<8>> v355 =  var(0.0);
-                decl ref<real<8>> v356 =  var(0.0);
-                decl ref<vector<real<8>,7>> v357 =  var([0.0, 5.546087004964e+02, 5.546385409189e+02, 5.546148406171e+02, 5.545423607415e+02, ...]);
-                decl ref<vector<real<8>,7>> v358 =  var([0.0, 4.845363331978e+02, 4.865304269511e+02, 4.883910722336e+02, 4.901273169046e+02, ...]);
-                decl ref<vector<real<8>,7>> v359 =  var([0.0, 5.673612178944e+02, 5.631436885271e+02, 5.594024089970e+02, 5.560698047020e+02, ...]);
-                decl ref<vector<real<8>,7>> v360 =  var([0.0, 5.293246849175e+02, 5.282149986629e+02, 5.270996558037e+02, 5.260027904925e+02, ...]);
-                decl ref<vector<real<8>,7>> v361 =  var([0.0, 5.046735008193e+02, 5.059412319734e+02, 5.069376896287e+02, 5.077892868474e+02, ...]);
-                decl ref<vector<real<8>,7>> v362 =  var([0.0, 5.114047905510e+02, 5.098809666433e+02, 5.098144042213e+02, 5.101336130759e+02, ...]);
-                decl ref<vector<real<8>,21>> v363 =  var([0.0, 5.177643571579e+02, 5.154521291263e+02, 5.146409228649e+02, 5.142378756213e+02, ...]);
-                decl ref<vector<real<8>,21>> v364 =  var([0.0, 5.077803458597e+02, 5.088249431599e+02, 5.096208912659e+02, 5.101023387619e+02, ...]);
-                decl ref<vector<real<8>,21>> v365 =  var([0.0, 5.195078707457e+02, 5.155422171134e+02, 5.144678022222e+02, 5.140150594328e+02, ...]);
-                decl ref<vector<real<8>,21>> v366 =  var([0.0, 5.149019699238e+02, 5.127578201997e+02, 5.122251847514e+02, 5.121090289018e+02, ...]);
-                v356 := 1.0e-12;
-                array.ref.elem.1D(v350, 0) := 1;
-                array.ref.elem.1D(v351, 0) := 'U';
-                if(v346==64&&bind(){fun(int<4> v369)return v369==64(v347)}&&bind(){fun(int<4> v371)return v371==64(v348)}&&bind(){fun(int<4> v373)return v373==6(v349)}) {
-                    array.ref.elem.1D(v351, 0) := 'S';
+            fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v340, int<4> v341, int<4> v342, int<4> v343, int<4> v344, ref<array<int<4>,1>> v345, ref<array<char,1>> v346){
+                decl ref<int<4>> v347 =  var(0);
+                decl ref<int<4>> v348 =  var(0);
+                decl ref<int<4>> v349 =  var(0);
+                decl ref<real<8>> v350 =  var(0.0);
+                decl ref<real<8>> v351 =  var(0.0);
+                decl ref<vector<real<8>,7>> v352 =  var([0.0, 5.546087004964e+02, 5.546385409189e+02, 5.546148406171e+02, 5.545423607415e+02, ...]);
+                decl ref<vector<real<8>,7>> v353 =  var([0.0, 4.845363331978e+02, 4.865304269511e+02, 4.883910722336e+02, 4.901273169046e+02, ...]);
+                decl ref<vector<real<8>,7>> v354 =  var([0.0, 5.673612178944e+02, 5.631436885271e+02, 5.594024089970e+02, 5.560698047020e+02, ...]);
+                decl ref<vector<real<8>,7>> v355 =  var([0.0, 5.293246849175e+02, 5.282149986629e+02, 5.270996558037e+02, 5.260027904925e+02, ...]);
+                decl ref<vector<real<8>,7>> v356 =  var([0.0, 5.046735008193e+02, 5.059412319734e+02, 5.069376896287e+02, 5.077892868474e+02, ...]);
+                decl ref<vector<real<8>,7>> v357 =  var([0.0, 5.114047905510e+02, 5.098809666433e+02, 5.098144042213e+02, 5.101336130759e+02, ...]);
+                decl ref<vector<real<8>,21>> v358 =  var([0.0, 5.177643571579e+02, 5.154521291263e+02, 5.146409228649e+02, 5.142378756213e+02, ...]);
+                decl ref<vector<real<8>,21>> v359 =  var([0.0, 5.077803458597e+02, 5.088249431599e+02, 5.096208912659e+02, 5.101023387619e+02, ...]);
+                decl ref<vector<real<8>,21>> v360 =  var([0.0, 5.195078707457e+02, 5.155422171134e+02, 5.144678022222e+02, 5.140150594328e+02, ...]);
+                decl ref<vector<real<8>,21>> v361 =  var([0.0, 5.149019699238e+02, 5.127578201997e+02, 5.122251847514e+02, 5.121090289018e+02, ...]);
+                v351 := 1.0e-12;
+                array.ref.elem.1D(v345, 0) := 1;
+                array.ref.elem.1D(v346, 0) := 'U';
+                if(v341==64&&bind(){fun(int<4> v364)return v364==64(v342)}&&bind(){fun(int<4> v366)return v366==64(v343)}&&bind(){fun(int<4> v368)return v368==6(v344)}) {
+                    array.ref.elem.1D(v346, 0) := 'S';
                     {
-                        for(decl int<4> v368 = 1 .. v349+1 : 1) {
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v368), real, type<real<8>>)-vector.ref.elem(v357, v368)/vector.ref.elem(v357, v368);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                        for(decl int<4> v363 = 1 .. v344+1 : 1) {
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v363), real, type<real<8>>)-vector.ref.elem(v352, v363)/vector.ref.elem(v352, v363);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v368), imag, type<real<8>>)-vector.ref.elem(v358, v368)/vector.ref.elem(v358, v368);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v363), imag, type<real<8>>)-vector.ref.elem(v353, v363)/vector.ref.elem(v353, v363);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
                         };
-                        v354 := 1+ceil(v349+1-1/1)*1;
+                        v349 := 1+ceil(v344+1-1/1)*1;
                     };
-                } else if(v346==128&&bind(){fun(int<4> v377)return v377==128(v347)}&&bind(){fun(int<4> v379)return v379==32(v348)}&&bind(){fun(int<4> v381)return v381==6(v349)}) {
-                    array.ref.elem.1D(v351, 0) := 'W';
+                } else if(v341==128&&bind(){fun(int<4> v372)return v372==128(v342)}&&bind(){fun(int<4> v374)return v374==32(v343)}&&bind(){fun(int<4> v376)return v376==6(v344)}) {
+                    array.ref.elem.1D(v346, 0) := 'W';
                     {
-                        for(decl int<4> v376 = 1 .. v349+1 : 1) {
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v376), real, type<real<8>>)-vector.ref.elem(v359, v376)/vector.ref.elem(v359, v376);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                        for(decl int<4> v371 = 1 .. v344+1 : 1) {
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v371), real, type<real<8>>)-vector.ref.elem(v354, v371)/vector.ref.elem(v354, v371);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v376), imag, type<real<8>>)-vector.ref.elem(v360, v376)/vector.ref.elem(v360, v376);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v371), imag, type<real<8>>)-vector.ref.elem(v355, v371)/vector.ref.elem(v355, v371);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
                         };
-                        v354 := 1+ceil(v349+1-1/1)*1;
+                        v349 := 1+ceil(v344+1-1/1)*1;
                     };
-                } else if(v346==256&&bind(){fun(int<4> v385)return v385==256(v347)}&&bind(){fun(int<4> v387)return v387==128(v348)}&&bind(){fun(int<4> v389)return v389==6(v349)}) {
-                    array.ref.elem.1D(v351, 0) := 'A';
+                } else if(v341==256&&bind(){fun(int<4> v380)return v380==256(v342)}&&bind(){fun(int<4> v382)return v382==128(v343)}&&bind(){fun(int<4> v384)return v384==6(v344)}) {
+                    array.ref.elem.1D(v346, 0) := 'A';
                     {
-                        for(decl int<4> v384 = 1 .. v349+1 : 1) {
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v384), real, type<real<8>>)-vector.ref.elem(v361, v384)/vector.ref.elem(v361, v384);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                        for(decl int<4> v379 = 1 .. v344+1 : 1) {
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v379), real, type<real<8>>)-vector.ref.elem(v356, v379)/vector.ref.elem(v356, v379);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v384), imag, type<real<8>>)-vector.ref.elem(v362, v384)/vector.ref.elem(v362, v384);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v379), imag, type<real<8>>)-vector.ref.elem(v357, v379)/vector.ref.elem(v357, v379);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
                         };
-                        v354 := 1+ceil(v349+1-1/1)*1;
+                        v349 := 1+ceil(v344+1-1/1)*1;
                     };
-                } else if(v346==512&&bind(){fun(int<4> v393)return v393==256(v347)}&&bind(){fun(int<4> v395)return v395==256(v348)}&&bind(){fun(int<4> v397)return v397==20(v349)}) {
-                    array.ref.elem.1D(v351, 0) := 'B';
+                } else if(v341==512&&bind(){fun(int<4> v388)return v388==256(v342)}&&bind(){fun(int<4> v390)return v390==256(v343)}&&bind(){fun(int<4> v392)return v392==20(v344)}) {
+                    array.ref.elem.1D(v346, 0) := 'B';
                     {
-                        for(decl int<4> v392 = 1 .. v349+1 : 1) {
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v392), real, type<real<8>>)-vector.ref.elem(v363, v392)/vector.ref.elem(v363, v392);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                        for(decl int<4> v387 = 1 .. v344+1 : 1) {
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v387), real, type<real<8>>)-vector.ref.elem(v358, v387)/vector.ref.elem(v358, v387);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v392), imag, type<real<8>>)-vector.ref.elem(v364, v392)/vector.ref.elem(v364, v392);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v387), imag, type<real<8>>)-vector.ref.elem(v359, v387)/vector.ref.elem(v359, v387);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
                         };
-                        v354 := 1+ceil(v349+1-1/1)*1;
+                        v349 := 1+ceil(v344+1-1/1)*1;
                     };
-                } else if(v346==512&&bind(){fun(int<4> v401)return v401==512(v347)}&&bind(){fun(int<4> v403)return v403==512(v348)}&&bind(){fun(int<4> v405)return v405==20(v349)}) {
-                    array.ref.elem.1D(v351, 0) := 'C';
+                } else if(v341==512&&bind(){fun(int<4> v396)return v396==512(v342)}&&bind(){fun(int<4> v398)return v398==512(v343)}&&bind(){fun(int<4> v400)return v400==20(v344)}) {
+                    array.ref.elem.1D(v346, 0) := 'C';
                     {
-                        for(decl int<4> v400 = 1 .. v349+1 : 1) {
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v400), real, type<real<8>>)-vector.ref.elem(v365, v400)/vector.ref.elem(v365, v400);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                        for(decl int<4> v395 = 1 .. v344+1 : 1) {
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v395), real, type<real<8>>)-vector.ref.elem(v360, v395)/vector.ref.elem(v360, v395);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
-                            v355 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v400), imag, type<real<8>>)-vector.ref.elem(v366, v400)/vector.ref.elem(v366, v400);
-                            if(fabs(v355)>v356) {
-                                array.ref.elem.1D(v350, 0) := 0;
+                            v350 := composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), v395), imag, type<real<8>>)-vector.ref.elem(v361, v395)/vector.ref.elem(v361, v395);
+                            if(fabs(v350)>v351) {
+                                array.ref.elem.1D(v345, 0) := 0;
                                 break;
                             } else { };
                         };
-                        v354 := 1+ceil(v349+1-1/1)*1;
+                        v349 := 1+ceil(v344+1-1/1)*1;
                     };
                 } else { };
-                if(array.ref.elem.1D(v351, 0)!='U') {
+                if(array.ref.elem.1D(v346, 0)!='U') {
                     printf(string.as.char.pointer("Result verification successful\n"), varlist.pack(()));
                 } else {
                     printf(string.as.char.pointer("Result verification failed\n"), varlist.pack(()));
                 };
-                printf(string.as.char.pointer("class = %1c\n"), varlist.pack((array.ref.elem.1D(v351, 0))));
+                printf(string.as.char.pointer("class = %1c\n"), varlist.pack((array.ref.elem.1D(v346, 0))));
             }(v1, 128, 128, 32, composite.ref.elem(v1, niter, type<int<4>>), scalar.to.array(v10), scalar.to.array(v11));
         };
         fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v283, int<4> v284){
@@ -5309,50 +5309,50 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             v285 := v286-vector.ref.elem(composite.ref.elem(v283, start, type<vector<real<8>,64>>), v284);
             vector.ref.elem(composite.ref.elem(v283, elapsed, type<vector<real<8>,64>>), v284) := vector.ref.elem(composite.ref.elem(v283, elapsed, type<vector<real<8>,64>>), v284)+v285;
         }(v1, 0);
-        v8 := fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v408, int<4> v409){
-            return vector.ref.elem(composite.ref.elem(v408, elapsed, type<vector<real<8>,64>>), v409);
+        v8 := fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v403, int<4> v404){
+            return vector.ref.elem(composite.ref.elem(v403, elapsed, type<vector<real<8>,64>>), v404);
         }(v1, 0);
         if(real.ne(v8, 0.0)) {
             v9 := 1.0e-6*524288*14.8157+7.19641*log(524288)+5.23518+7.21113*log(524288)*composite.ref.elem(v1, niter, type<int<4>>)/v8;
         } else {
             v9 := 0.0;
         };
-        fun(ref<array<char,1>> v411, char v412, int<4> v413, int<4> v414, int<4> v415, int<4> v416, int<4> v417, real<8> v418, real<8> v419, ref<array<char,1>> v420, int<4> v421, ref<array<char,1>> v422, ref<array<char,1>> v423, ref<array<char,1>> v424, ref<array<char,1>> v425, ref<array<char,1>> v426, ref<array<char,1>> v427, ref<array<char,1>> v428, ref<array<char,1>> v429, ref<array<char,1>> v430){
-            decl ref<array<char,1>> v431 = string.as.char.pointer("1000");
-            printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v411)));
-            printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((v412)));
-            if(v414==0&&bind(){fun(int<4> v432)return v432==0(v415)}) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v413))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v413, v414, v415)));
-            printf(string.as.char.pointer(" Iterations      =             %12d\n"), varlist.pack((v416)));
-            printf(string.as.char.pointer(" Threads         =             %12d\n"), varlist.pack((v417)));
+        fun(ref<array<char,1>> v406, char v407, int<4> v408, int<4> v409, int<4> v410, int<4> v411, int<4> v412, real<8> v413, real<8> v414, ref<array<char,1>> v415, int<4> v416, ref<array<char,1>> v417, ref<array<char,1>> v418, ref<array<char,1>> v419, ref<array<char,1>> v420, ref<array<char,1>> v421, ref<array<char,1>> v422, ref<array<char,1>> v423, ref<array<char,1>> v424, ref<array<char,1>> v425){
+            decl ref<array<char,1>> v426 = string.as.char.pointer("1000");
+            printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v406)));
+            printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((v407)));
+            if(v409==0&&bind(){fun(int<4> v427)return v427==0(v410)}) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v408))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v408, v409, v410)));
+            printf(string.as.char.pointer(" Iterations      =             %12d\n"), varlist.pack((v411)));
+            printf(string.as.char.pointer(" Threads         =             %12d\n"), varlist.pack((v412)));
             printf(string.as.char.pointer(" Time in seconds =             %12.2f\n"), varlist.pack((0.0)));
             printf(string.as.char.pointer(" Mop/s total     =             %12.2f\n"), varlist.pack((0.0)));
-            printf(string.as.char.pointer(" Operation type  = %24s\n"), varlist.pack((v420)));
-            if(int.ne(v421, 0)) printf(string.as.char.pointer(" Verification    =               SUCCESSFUL\n"), varlist.pack(())) else printf(string.as.char.pointer(" Verification    =             UNSUCCESSFUL\n"), varlist.pack(()));
-            printf(string.as.char.pointer(" Version         =             %12s\n"), varlist.pack((v422)));
-            printf(string.as.char.pointer(" Compile date    =             %12s\n"), varlist.pack((v423)));
+            printf(string.as.char.pointer(" Operation type  = %24s\n"), varlist.pack((v415)));
+            if(int.ne(v416, 0)) printf(string.as.char.pointer(" Verification    =               SUCCESSFUL\n"), varlist.pack(())) else printf(string.as.char.pointer(" Verification    =             UNSUCCESSFUL\n"), varlist.pack(()));
+            printf(string.as.char.pointer(" Version         =             %12s\n"), varlist.pack((v417)));
+            printf(string.as.char.pointer(" Compile date    =             %12s\n"), varlist.pack((v418)));
             printf(string.as.char.pointer("\n Compile options:\n"), varlist.pack(()));
-            printf(string.as.char.pointer("    CC           = %s\n"), varlist.pack((v424)));
-            printf(string.as.char.pointer("    CLINK        = %s\n"), varlist.pack((v425)));
-            printf(string.as.char.pointer("    C_LIB        = %s\n"), varlist.pack((v426)));
-            printf(string.as.char.pointer("    C_INC        = %s\n"), varlist.pack((v427)));
-            printf(string.as.char.pointer("    CFLAGS       = %s\n"), varlist.pack((v428)));
-            printf(string.as.char.pointer("    CLINKFLAGS   = %s\n"), varlist.pack((v429)));
-            printf(string.as.char.pointer("    RAND         = %s\n"), varlist.pack((v430)));
+            printf(string.as.char.pointer("    CC           = %s\n"), varlist.pack((v419)));
+            printf(string.as.char.pointer("    CLINK        = %s\n"), varlist.pack((v420)));
+            printf(string.as.char.pointer("    C_LIB        = %s\n"), varlist.pack((v421)));
+            printf(string.as.char.pointer("    C_INC        = %s\n"), varlist.pack((v422)));
+            printf(string.as.char.pointer("    CFLAGS       = %s\n"), varlist.pack((v423)));
+            printf(string.as.char.pointer("    CLINKFLAGS   = %s\n"), varlist.pack((v424)));
+            printf(string.as.char.pointer("    RAND         = %s\n"), varlist.pack((v425)));
         }(string.as.char.pointer("FT"), v11, 128, 128, 32, composite.ref.elem(v1, niter, type<int<4>>), v7, v8, v9, string.as.char.pointer("          floating point"), v10, string.as.char.pointer("2.3"), string.as.char.pointer("02 Dec 2010"), string.as.char.pointer("cc"), string.as.char.pointer("cc"), string.as.char.pointer("-lm"), string.as.char.pointer("-I../common"), string.as.char.pointer("-O3 "), string.as.char.pointer("-lm"), string.as.char.pointer("randdp"));
-        if(0==1) fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v435){
-            decl ref<int<4>> v436 =  var(0);
-            decl ref<vector<array<char,1>,7>> v437 =  var([vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), ...]);
+        if(0==1) fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v430){
+            decl ref<int<4>> v431 =  var(0);
+            decl ref<vector<array<char,1>,7>> v432 =  var([vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), ...]);
             {
-                for(decl int<4> v439 = 0 .. 7 : 1) {
-                    if(real.ne(fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v408, int<4> v409){
-                        return vector.ref.elem(composite.ref.elem(v408, elapsed, type<vector<real<8>,64>>), v409);
-                    }(v435, v439), 0.0)) {
-                        printf(string.as.char.pointer("timer %2d(%16s( :%10.6f\n"), varlist.pack((v439, vector.ref.elem(v437, v439), fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v408, int<4> v409){
-                            return vector.ref.elem(composite.ref.elem(v408, elapsed, type<vector<real<8>,64>>), v409);
-                        }(v435, v439))));
+                for(decl int<4> v434 = 0 .. 7 : 1) {
+                    if(real.ne(fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v403, int<4> v404){
+                        return vector.ref.elem(composite.ref.elem(v403, elapsed, type<vector<real<8>,64>>), v404);
+                    }(v430, v434), 0.0)) {
+                        printf(string.as.char.pointer("timer %2d(%16s( :%10.6f\n"), varlist.pack((v434, vector.ref.elem(v432, v434), fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v403, int<4> v404){
+                            return vector.ref.elem(composite.ref.elem(v403, elapsed, type<vector<real<8>,64>>), v404);
+                        }(v430, v434))));
                     } else { };
                 };
-                v436 := 0+ceil(7-0/1)*1;
+                v431 := 0+ceil(7-0/1)*1;
             };
         }(v1) else { };
     }
@@ -9011,7 +9011,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 }(v1, 2)</m>;
             } else { };
             {
-                for(decl int<4> v344 = 1 .. (( *composite.ref.elem(v1, niter, type<int<4>>))+1) : 1) {
+                for(decl int<4> v339 = 1 .. (( *composite.ref.elem(v1, niter, type<int<4>>))+1) : 1) {
                     if((0==1)) {
                         <m id=5>fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v273, int<4> v274){
                             (vector.ref.elem(composite.ref.elem(v273, start, type<vector<real<8>,64>>), CAST<uint<4>>(v274)) := fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v275){
@@ -9031,15 +9031,15 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                         decl ref<int<4>> v295 = ( var(0));
                         decl ref<int<4>> v296 = ( var(0));
                         {
-                            <m id=9>for(decl int<4> v311 = 0 .. ( *array.ref.elem.1D(v293, CAST<uint<4>>(2))) : 1) {
+                            <m id=9>for(decl int<4> v306 = 0 .. ( *array.ref.elem.1D(v293, CAST<uint<4>>(2))) : 1) {
                                 {
-                                    for(decl int<4> v309 = 0 .. ( *array.ref.elem.1D(v293, CAST<uint<4>>(1))) : 1) {
+                                    for(decl int<4> v304 = 0 .. ( *array.ref.elem.1D(v293, CAST<uint<4>>(1))) : 1) {
                                         {
-                                            for(decl int<4> v307 = 0 .. ( *array.ref.elem.1D(v293, CAST<uint<4>>(0))) : 1) {
-                                                fun(ref<int<4>> v297, int<4> v298, ref<array<vector<vector<int<4>,128>,128>,1>> v299, ref<int<4>> v300, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v301, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v302, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v303, ref<int<4>> v304){
-                                                    (composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v301, CAST<uint<4>>(( *v304))), CAST<uint<4>>(( *v297))), CAST<uint<4>>(( *v300))), real, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v302, CAST<uint<4>>(( *v304))), CAST<uint<4>>(( *v297))), CAST<uint<4>>(( *v300))), real, type<real<8>>))*( *vector.ref.elem(composite.ref.elem(v303, ex, type<vector<real<8>,50689>>), CAST<uint<4>>((v298*( *vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v299, CAST<uint<4>>(( *v304))), CAST<uint<4>>(( *v297))), CAST<uint<4>>(( *v300))))))))));
-                                                    (composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v301, CAST<uint<4>>(( *v304))), CAST<uint<4>>(( *v297))), CAST<uint<4>>(( *v300))), imag, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v302, CAST<uint<4>>(( *v304))), CAST<uint<4>>(( *v297))), CAST<uint<4>>(( *v300))), imag, type<real<8>>))*( *vector.ref.elem(composite.ref.elem(v303, ex, type<vector<real<8>,50689>>), CAST<uint<4>>((v298*( *vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v299, CAST<uint<4>>(( *v304))), CAST<uint<4>>(( *v297))), CAST<uint<4>>(( *v300))))))))));
-                                                }(( var(v309)), v291, v292, ( var(v307)), v290, v289, v288, ( var(v311)));
+                                            for(decl int<4> v302 = 0 .. ( *array.ref.elem.1D(v293, CAST<uint<4>>(0))) : 1) {
+                                                fun(ref<array<struct<real:real<8>,imag:real<8>>,1>> v297, ref<array<struct<real:real<8>,imag:real<8>>,1>> v298, int<4> v299){
+                                                    (composite.ref.elem(array.ref.elem.1D(v297, 0), real, type<real<8>>) := (( *composite.ref.elem(array.ref.elem.1D(v298, 0), real, type<real<8>>))*CAST<real<8>>(v299)));
+                                                    return CAST<real<8>>((composite.ref.elem(array.ref.elem.1D(v297, 0), imag, type<real<8>>) := (( *composite.ref.elem(array.ref.elem.1D(v298, 0), imag, type<real<8>>))*CAST<real<8>>(v299))));
+                                                }(scalar.to.array(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v290, CAST<uint<4>>(v306)), CAST<uint<4>>(v304)), CAST<uint<4>>(v302))), scalar.to.array(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v289, CAST<uint<4>>(v306)), CAST<uint<4>>(v304)), CAST<uint<4>>(v302))), real.to.int(( *vector.ref.elem(composite.ref.elem(v288, ex, type<vector<real<8>,50689>>), CAST<uint<4>>((v291*( *vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v292, CAST<uint<4>>(v306)), CAST<uint<4>>(v304)), CAST<uint<4>>(v302))))))), 4));
                                             };
                                             (v294 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((( *array.ref.elem.1D(v293, CAST<uint<4>>(0)))-0))/CAST<real<8>>(1))))*1)));
                                         };
@@ -9049,7 +9049,7 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             }</m>;
                             (v296 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((( *array.ref.elem.1D(v293, CAST<uint<4>>(2)))-0))/CAST<real<8>>(1))))*1)));
                         };
-                    }(v1, ref.vector.to.ref.array(composite.ref.elem(v1, u0, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(composite.ref.elem(v1, u1, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), v344, ref.vector.to.ref.array(composite.ref.elem(v1, indexmap, type<vector<vector<vector<int<4>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), CAST<uint<4>>(0))));
+                    }(v1, ref.vector.to.ref.array(composite.ref.elem(v1, u0, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(composite.ref.elem(v1, u1, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), v339, ref.vector.to.ref.array(composite.ref.elem(v1, indexmap, type<vector<vector<vector<int<4>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), CAST<uint<4>>(0))));
                     if((0==1)) {
                         <m id=6>fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v283, int<4> v284){
                             decl ref<real<8>> v285 = ( var(0.0));
@@ -10483,44 +10483,44 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                             }(v273));
                         }(v1, 4)</m>;
                     } else { };
-                    fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v313, int<4> v314, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v315, ref<array<int<4>,1>> v316){
-                        decl ref<int<4>> v317 = ( var(0));
-                        decl ref<int<4>> v318 = ( var(0));
-                        decl ref<int<4>> v319 = ( var(0));
-                        decl ref<int<4>> v320 = ( var(0));
-                        decl ref<int<4>> v321 = ( var(0));
-                        decl ref<struct<real:real<8>,imag:real<8>>> v322 = ( var(undefined(type<struct<real:real<8>,imag:real<8>>>)));
-                        decl ref<struct<real:real<8>,imag:real<8>>> v323 = ( var(undefined(type<struct<real:real<8>,imag:real<8>>>)));
-                        (composite.ref.elem(v322, real, type<real<8>>) := 0.0);
-                        (composite.ref.elem(v322, imag, type<real<8>>) := 0.0);
+                    fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v308, int<4> v309, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v310, ref<array<int<4>,1>> v311){
+                        decl ref<int<4>> v312 = ( var(0));
+                        decl ref<int<4>> v313 = ( var(0));
+                        decl ref<int<4>> v314 = ( var(0));
+                        decl ref<int<4>> v315 = ( var(0));
+                        decl ref<int<4>> v316 = ( var(0));
+                        decl ref<struct<real:real<8>,imag:real<8>>> v317 = ( var(undefined(type<struct<real:real<8>,imag:real<8>>>)));
+                        decl ref<struct<real:real<8>,imag:real<8>>> v318 = ( var(undefined(type<struct<real:real<8>,imag:real<8>>>)));
+                        (composite.ref.elem(v317, real, type<real<8>>) := 0.0);
+                        (composite.ref.elem(v317, imag, type<real<8>>) := 0.0);
                         {
-                            <m id=10>for(decl int<4> v341 = 1 .. (1024+1) : 1) {
-                                (v318 := ((v341%128)+1));
-                                if(((( *v318)>=( *vector.ref.elem(composite.ref.elem(v313, xstart, type<vector<int<4>,3>>), CAST<uint<4>>(0))))&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v337, ref<int<4>> v338)return (( *v338)<=( *vector.ref.elem(composite.ref.elem(v337, xend, type<vector<int<4>,3>>), CAST<uint<4>>(0))))(v313, v318)})) {
-                                    (v319 := (((3*v341)%128)+1));
-                                    if(((( *v319)>=( *vector.ref.elem(composite.ref.elem(v313, ystart, type<vector<int<4>,3>>), CAST<uint<4>>(0))))&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v334, ref<int<4>> v335)return (( *v335)<=( *vector.ref.elem(composite.ref.elem(v334, yend, type<vector<int<4>,3>>), CAST<uint<4>>(0))))(v313, v319)})) {
-                                        (v320 := (((5*v341)%32)+1));
-                                        if(((( *v320)>=( *vector.ref.elem(composite.ref.elem(v313, zstart, type<vector<int<4>,3>>), CAST<uint<4>>(0))))&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v331, ref<int<4>> v332)return (( *v332)<=( *vector.ref.elem(composite.ref.elem(v331, zend, type<vector<int<4>,3>>), CAST<uint<4>>(0))))(v313, v320)})) {
-                                            fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v324, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v325, ref<struct<real:real<8>,imag:real<8>>> v326, ref<int<4>> v327, ref<int<4>> v328, ref<int<4>> v329){
-                                                (composite.ref.elem(v326, real, type<real<8>>) := (( *composite.ref.elem(v326, real, type<real<8>>))+( *composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v325, CAST<uint<4>>((( *v327)-( *vector.ref.elem(composite.ref.elem(v324, zstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v328)-( *vector.ref.elem(composite.ref.elem(v324, ystart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v329)-( *vector.ref.elem(composite.ref.elem(v324, xstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), real, type<real<8>>))));
-                                                (composite.ref.elem(v326, imag, type<real<8>>) := (( *composite.ref.elem(v326, imag, type<real<8>>))+( *composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v325, CAST<uint<4>>((( *v327)-( *vector.ref.elem(composite.ref.elem(v324, zstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v328)-( *vector.ref.elem(composite.ref.elem(v324, ystart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v329)-( *vector.ref.elem(composite.ref.elem(v324, xstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), imag, type<real<8>>))));
-                                            }(v313, v315, v322, v320, v319, v318);
+                            <m id=10>for(decl int<4> v336 = 1 .. (1024+1) : 1) {
+                                (v313 := ((v336%128)+1));
+                                if(((( *v313)>=( *vector.ref.elem(composite.ref.elem(v308, xstart, type<vector<int<4>,3>>), CAST<uint<4>>(0))))&&bind(){fun(ref<int<4>> v332, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v333)return (( *v332)<=( *vector.ref.elem(composite.ref.elem(v333, xend, type<vector<int<4>,3>>), CAST<uint<4>>(0))))(v313, v308)})) {
+                                    (v314 := (((3*v336)%128)+1));
+                                    if(((( *v314)>=( *vector.ref.elem(composite.ref.elem(v308, ystart, type<vector<int<4>,3>>), CAST<uint<4>>(0))))&&bind(){fun(ref<int<4>> v329, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v330)return (( *v329)<=( *vector.ref.elem(composite.ref.elem(v330, yend, type<vector<int<4>,3>>), CAST<uint<4>>(0))))(v314, v308)})) {
+                                        (v315 := (((5*v336)%32)+1));
+                                        if(((( *v315)>=( *vector.ref.elem(composite.ref.elem(v308, zstart, type<vector<int<4>,3>>), CAST<uint<4>>(0))))&&bind(){fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v326, ref<int<4>> v327)return (( *v327)<=( *vector.ref.elem(composite.ref.elem(v326, zend, type<vector<int<4>,3>>), CAST<uint<4>>(0))))(v308, v315)})) {
+                                            fun(ref<int<4>> v319, ref<int<4>> v320, ref<struct<real:real<8>,imag:real<8>>> v321, ref<array<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,1>> v322, ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v323, ref<int<4>> v324){
+                                                (composite.ref.elem(v321, real, type<real<8>>) := (( *composite.ref.elem(v321, real, type<real<8>>))+( *composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v322, CAST<uint<4>>((( *v324)-( *vector.ref.elem(composite.ref.elem(v323, zstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v319)-( *vector.ref.elem(composite.ref.elem(v323, ystart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v320)-( *vector.ref.elem(composite.ref.elem(v323, xstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), real, type<real<8>>))));
+                                                (composite.ref.elem(v321, imag, type<real<8>>) := (( *composite.ref.elem(v321, imag, type<real<8>>))+( *composite.ref.elem(vector.ref.elem(vector.ref.elem(array.ref.elem.1D(v322, CAST<uint<4>>((( *v324)-( *vector.ref.elem(composite.ref.elem(v323, zstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v319)-( *vector.ref.elem(composite.ref.elem(v323, ystart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), CAST<uint<4>>((( *v320)-( *vector.ref.elem(composite.ref.elem(v323, xstart, type<vector<int<4>,3>>), CAST<uint<4>>(0)))))), imag, type<real<8>>))));
+                                            }(v314, v313, v317, v310, v308, v315);
                                         } else { };
                                     } else { };
                                 } else { };
                             }</m>;
-                            (v317 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((1024+1)-1))/CAST<real<8>>(1))))*1)));
+                            (v312 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((1024+1)-1))/CAST<real<8>>(1))))*1)));
                         };
                         <m id=11>{
-                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), real, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), real, type<real<8>>))+( *composite.ref.elem(v322, real, type<real<8>>))));
-                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), imag, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), imag, type<real<8>>))+( *composite.ref.elem(v322, imag, type<real<8>>))));
+                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), real, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), real, type<real<8>>))+( *composite.ref.elem(v317, real, type<real<8>>))));
+                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), imag, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), imag, type<real<8>>))+( *composite.ref.elem(v317, imag, type<real<8>>))));
                         }</m>;
                         <m id=12>{
-                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), real, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), real, type<real<8>>))/CAST<real<8>>(524288)));
-                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), imag, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), imag, type<real<8>>))/CAST<real<8>>(524288)));
-                            printf(string.as.char.pointer("T = %5d     Checksum = %22.12e %22.12e\n"), varlist.pack((v314, ( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), real, type<real<8>>)), ( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v313, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v314)), imag, type<real<8>>)))));
+                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), real, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), real, type<real<8>>))/CAST<real<8>>(524288)));
+                            (composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), imag, type<real<8>>) := (( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), imag, type<real<8>>))/CAST<real<8>>(524288)));
+                            printf(string.as.char.pointer("T = %5d     Checksum = %22.12e %22.12e\n"), varlist.pack((v309, ( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), real, type<real<8>>)), ( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v308, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v309)), imag, type<real<8>>)))));
                         }</m>;
-                    }(v1, v344, ref.vector.to.ref.array(composite.ref.elem(v1, u2, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), CAST<uint<4>>(0))));
+                    }(v1, v339, ref.vector.to.ref.array(composite.ref.elem(v1, u2, type<vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>>)), ref.vector.to.ref.array(vector.ref.elem(composite.ref.elem(v1, dims, type<vector<vector<int<4>,3>,3>>), CAST<uint<4>>(0))));
                     if((0==1)) {
                         <m id=10>fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v283, int<4> v284){
                             decl ref<real<8>> v285 = ( var(0.0));
@@ -10542,117 +10542,117 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
                 };
                 (v6 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((( *composite.ref.elem(v1, niter, type<int<4>>))+1)-1))/CAST<real<8>>(1))))*1)));
             };
-            <m id=11>fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v345, int<4> v346, int<4> v347, int<4> v348, int<4> v349, ref<array<int<4>,1>> v350, ref<array<char,1>> v351){
-                decl ref<int<4>> v352 = ( var(0));
-                decl ref<int<4>> v353 = ( var(0));
-                decl ref<int<4>> v354 = ( var(0));
-                decl ref<real<8>> v355 = ( var(0.0));
-                decl ref<real<8>> v356 = ( var(0.0));
-                decl ref<vector<real<8>,7>> v357 = ( var([0.0, 5.546087004964e+02, 5.546385409189e+02, 5.546148406171e+02, 5.545423607415e+02, ...]));
-                decl ref<vector<real<8>,7>> v358 = ( var([0.0, 4.845363331978e+02, 4.865304269511e+02, 4.883910722336e+02, 4.901273169046e+02, ...]));
-                decl ref<vector<real<8>,7>> v359 = ( var([0.0, 5.673612178944e+02, 5.631436885271e+02, 5.594024089970e+02, 5.560698047020e+02, ...]));
-                decl ref<vector<real<8>,7>> v360 = ( var([0.0, 5.293246849175e+02, 5.282149986629e+02, 5.270996558037e+02, 5.260027904925e+02, ...]));
-                decl ref<vector<real<8>,7>> v361 = ( var([0.0, 5.046735008193e+02, 5.059412319734e+02, 5.069376896287e+02, 5.077892868474e+02, ...]));
-                decl ref<vector<real<8>,7>> v362 = ( var([0.0, 5.114047905510e+02, 5.098809666433e+02, 5.098144042213e+02, 5.101336130759e+02, ...]));
-                decl ref<vector<real<8>,21>> v363 = ( var([0.0, 5.177643571579e+02, 5.154521291263e+02, 5.146409228649e+02, 5.142378756213e+02, ...]));
-                decl ref<vector<real<8>,21>> v364 = ( var([0.0, 5.077803458597e+02, 5.088249431599e+02, 5.096208912659e+02, 5.101023387619e+02, ...]));
-                decl ref<vector<real<8>,21>> v365 = ( var([0.0, 5.195078707457e+02, 5.155422171134e+02, 5.144678022222e+02, 5.140150594328e+02, ...]));
-                decl ref<vector<real<8>,21>> v366 = ( var([0.0, 5.149019699238e+02, 5.127578201997e+02, 5.122251847514e+02, 5.121090289018e+02, ...]));
-                (v356 := 1.0e-12);
-                (array.ref.elem.1D(v350, 0) := 1);
-                (array.ref.elem.1D(v351, 0) := 'U');
-                if(((((v346==64)&&bind(){fun(int<4> v369)return (v369==64)(v347)})&&bind(){fun(int<4> v371)return (v371==64)(v348)})&&bind(){fun(int<4> v373)return (v373==6)(v349)})) {
-                    (array.ref.elem.1D(v351, 0) := 'S');
+            <m id=11>fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v340, int<4> v341, int<4> v342, int<4> v343, int<4> v344, ref<array<int<4>,1>> v345, ref<array<char,1>> v346){
+                decl ref<int<4>> v347 = ( var(0));
+                decl ref<int<4>> v348 = ( var(0));
+                decl ref<int<4>> v349 = ( var(0));
+                decl ref<real<8>> v350 = ( var(0.0));
+                decl ref<real<8>> v351 = ( var(0.0));
+                decl ref<vector<real<8>,7>> v352 = ( var([0.0, 5.546087004964e+02, 5.546385409189e+02, 5.546148406171e+02, 5.545423607415e+02, ...]));
+                decl ref<vector<real<8>,7>> v353 = ( var([0.0, 4.845363331978e+02, 4.865304269511e+02, 4.883910722336e+02, 4.901273169046e+02, ...]));
+                decl ref<vector<real<8>,7>> v354 = ( var([0.0, 5.673612178944e+02, 5.631436885271e+02, 5.594024089970e+02, 5.560698047020e+02, ...]));
+                decl ref<vector<real<8>,7>> v355 = ( var([0.0, 5.293246849175e+02, 5.282149986629e+02, 5.270996558037e+02, 5.260027904925e+02, ...]));
+                decl ref<vector<real<8>,7>> v356 = ( var([0.0, 5.046735008193e+02, 5.059412319734e+02, 5.069376896287e+02, 5.077892868474e+02, ...]));
+                decl ref<vector<real<8>,7>> v357 = ( var([0.0, 5.114047905510e+02, 5.098809666433e+02, 5.098144042213e+02, 5.101336130759e+02, ...]));
+                decl ref<vector<real<8>,21>> v358 = ( var([0.0, 5.177643571579e+02, 5.154521291263e+02, 5.146409228649e+02, 5.142378756213e+02, ...]));
+                decl ref<vector<real<8>,21>> v359 = ( var([0.0, 5.077803458597e+02, 5.088249431599e+02, 5.096208912659e+02, 5.101023387619e+02, ...]));
+                decl ref<vector<real<8>,21>> v360 = ( var([0.0, 5.195078707457e+02, 5.155422171134e+02, 5.144678022222e+02, 5.140150594328e+02, ...]));
+                decl ref<vector<real<8>,21>> v361 = ( var([0.0, 5.149019699238e+02, 5.127578201997e+02, 5.122251847514e+02, 5.121090289018e+02, ...]));
+                (v351 := 1.0e-12);
+                (array.ref.elem.1D(v345, 0) := 1);
+                (array.ref.elem.1D(v346, 0) := 'U');
+                if(((((v341==64)&&bind(){fun(int<4> v364)return (v364==64)(v342)})&&bind(){fun(int<4> v366)return (v366==64)(v343)})&&bind(){fun(int<4> v368)return (v368==6)(v344)})) {
+                    (array.ref.elem.1D(v346, 0) := 'S');
                     {
-                        for(decl int<4> v368 = 1 .. (v349+1) : 1) {
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v368)), real, type<real<8>>))-( *vector.ref.elem(v357, CAST<uint<4>>(v368))))/( *vector.ref.elem(v357, CAST<uint<4>>(v368)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                        for(decl int<4> v363 = 1 .. (v344+1) : 1) {
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v363)), real, type<real<8>>))-( *vector.ref.elem(v352, CAST<uint<4>>(v363))))/( *vector.ref.elem(v352, CAST<uint<4>>(v363)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v368)), imag, type<real<8>>))-( *vector.ref.elem(v358, CAST<uint<4>>(v368))))/( *vector.ref.elem(v358, CAST<uint<4>>(v368)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v363)), imag, type<real<8>>))-( *vector.ref.elem(v353, CAST<uint<4>>(v363))))/( *vector.ref.elem(v353, CAST<uint<4>>(v363)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
                         };
-                        (v354 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v349+1)-1))/CAST<real<8>>(1))))*1)));
+                        (v349 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v344+1)-1))/CAST<real<8>>(1))))*1)));
                     };
-                } else if(((((v346==128)&&bind(){fun(int<4> v377)return (v377==128)(v347)})&&bind(){fun(int<4> v379)return (v379==32)(v348)})&&bind(){fun(int<4> v381)return (v381==6)(v349)})) {
-                    (array.ref.elem.1D(v351, 0) := 'W');
+                } else if(((((v341==128)&&bind(){fun(int<4> v372)return (v372==128)(v342)})&&bind(){fun(int<4> v374)return (v374==32)(v343)})&&bind(){fun(int<4> v376)return (v376==6)(v344)})) {
+                    (array.ref.elem.1D(v346, 0) := 'W');
                     {
-                        for(decl int<4> v376 = 1 .. (v349+1) : 1) {
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v376)), real, type<real<8>>))-( *vector.ref.elem(v359, CAST<uint<4>>(v376))))/( *vector.ref.elem(v359, CAST<uint<4>>(v376)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                        for(decl int<4> v371 = 1 .. (v344+1) : 1) {
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v371)), real, type<real<8>>))-( *vector.ref.elem(v354, CAST<uint<4>>(v371))))/( *vector.ref.elem(v354, CAST<uint<4>>(v371)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v376)), imag, type<real<8>>))-( *vector.ref.elem(v360, CAST<uint<4>>(v376))))/( *vector.ref.elem(v360, CAST<uint<4>>(v376)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v371)), imag, type<real<8>>))-( *vector.ref.elem(v355, CAST<uint<4>>(v371))))/( *vector.ref.elem(v355, CAST<uint<4>>(v371)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
                         };
-                        (v354 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v349+1)-1))/CAST<real<8>>(1))))*1)));
+                        (v349 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v344+1)-1))/CAST<real<8>>(1))))*1)));
                     };
-                } else if(((((v346==256)&&bind(){fun(int<4> v385)return (v385==256)(v347)})&&bind(){fun(int<4> v387)return (v387==128)(v348)})&&bind(){fun(int<4> v389)return (v389==6)(v349)})) {
-                    (array.ref.elem.1D(v351, 0) := 'A');
+                } else if(((((v341==256)&&bind(){fun(int<4> v380)return (v380==256)(v342)})&&bind(){fun(int<4> v382)return (v382==128)(v343)})&&bind(){fun(int<4> v384)return (v384==6)(v344)})) {
+                    (array.ref.elem.1D(v346, 0) := 'A');
                     {
-                        for(decl int<4> v384 = 1 .. (v349+1) : 1) {
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v384)), real, type<real<8>>))-( *vector.ref.elem(v361, CAST<uint<4>>(v384))))/( *vector.ref.elem(v361, CAST<uint<4>>(v384)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                        for(decl int<4> v379 = 1 .. (v344+1) : 1) {
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v379)), real, type<real<8>>))-( *vector.ref.elem(v356, CAST<uint<4>>(v379))))/( *vector.ref.elem(v356, CAST<uint<4>>(v379)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v384)), imag, type<real<8>>))-( *vector.ref.elem(v362, CAST<uint<4>>(v384))))/( *vector.ref.elem(v362, CAST<uint<4>>(v384)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v379)), imag, type<real<8>>))-( *vector.ref.elem(v357, CAST<uint<4>>(v379))))/( *vector.ref.elem(v357, CAST<uint<4>>(v379)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
                         };
-                        (v354 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v349+1)-1))/CAST<real<8>>(1))))*1)));
+                        (v349 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v344+1)-1))/CAST<real<8>>(1))))*1)));
                     };
-                } else if(((((v346==512)&&bind(){fun(int<4> v393)return (v393==256)(v347)})&&bind(){fun(int<4> v395)return (v395==256)(v348)})&&bind(){fun(int<4> v397)return (v397==20)(v349)})) {
-                    (array.ref.elem.1D(v351, 0) := 'B');
+                } else if(((((v341==512)&&bind(){fun(int<4> v388)return (v388==256)(v342)})&&bind(){fun(int<4> v390)return (v390==256)(v343)})&&bind(){fun(int<4> v392)return (v392==20)(v344)})) {
+                    (array.ref.elem.1D(v346, 0) := 'B');
                     {
-                        for(decl int<4> v392 = 1 .. (v349+1) : 1) {
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v392)), real, type<real<8>>))-( *vector.ref.elem(v363, CAST<uint<4>>(v392))))/( *vector.ref.elem(v363, CAST<uint<4>>(v392)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                        for(decl int<4> v387 = 1 .. (v344+1) : 1) {
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v387)), real, type<real<8>>))-( *vector.ref.elem(v358, CAST<uint<4>>(v387))))/( *vector.ref.elem(v358, CAST<uint<4>>(v387)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v392)), imag, type<real<8>>))-( *vector.ref.elem(v364, CAST<uint<4>>(v392))))/( *vector.ref.elem(v364, CAST<uint<4>>(v392)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v387)), imag, type<real<8>>))-( *vector.ref.elem(v359, CAST<uint<4>>(v387))))/( *vector.ref.elem(v359, CAST<uint<4>>(v387)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
                         };
-                        (v354 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v349+1)-1))/CAST<real<8>>(1))))*1)));
+                        (v349 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v344+1)-1))/CAST<real<8>>(1))))*1)));
                     };
-                } else if(((((v346==512)&&bind(){fun(int<4> v401)return (v401==512)(v347)})&&bind(){fun(int<4> v403)return (v403==512)(v348)})&&bind(){fun(int<4> v405)return (v405==20)(v349)})) {
-                    (array.ref.elem.1D(v351, 0) := 'C');
+                } else if(((((v341==512)&&bind(){fun(int<4> v396)return (v396==512)(v342)})&&bind(){fun(int<4> v398)return (v398==512)(v343)})&&bind(){fun(int<4> v400)return (v400==20)(v344)})) {
+                    (array.ref.elem.1D(v346, 0) := 'C');
                     {
-                        for(decl int<4> v400 = 1 .. (v349+1) : 1) {
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v400)), real, type<real<8>>))-( *vector.ref.elem(v365, CAST<uint<4>>(v400))))/( *vector.ref.elem(v365, CAST<uint<4>>(v400)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                        for(decl int<4> v395 = 1 .. (v344+1) : 1) {
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v395)), real, type<real<8>>))-( *vector.ref.elem(v360, CAST<uint<4>>(v395))))/( *vector.ref.elem(v360, CAST<uint<4>>(v395)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
-                            (v355 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v345, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v400)), imag, type<real<8>>))-( *vector.ref.elem(v366, CAST<uint<4>>(v400))))/( *vector.ref.elem(v366, CAST<uint<4>>(v400)))));
-                            if((fabs(( *v355))>( *v356))) {
-                                (array.ref.elem.1D(v350, 0) := 0);
+                            (v350 := ((( *composite.ref.elem(vector.ref.elem(composite.ref.elem(v340, sums, type<vector<struct<real:real<8>,imag:real<8>>,7>>), CAST<uint<4>>(v395)), imag, type<real<8>>))-( *vector.ref.elem(v361, CAST<uint<4>>(v395))))/( *vector.ref.elem(v361, CAST<uint<4>>(v395)))));
+                            if((fabs(( *v350))>( *v351))) {
+                                (array.ref.elem.1D(v345, 0) := 0);
                                 break;
                             } else { };
                         };
-                        (v354 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v349+1)-1))/CAST<real<8>>(1))))*1)));
+                        (v349 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((v344+1)-1))/CAST<real<8>>(1))))*1)));
                     };
                 } else { };
-                if((( *array.ref.elem.1D(v351, 0))!='U')) {
+                if((( *array.ref.elem.1D(v346, 0))!='U')) {
                     printf(string.as.char.pointer("Result verification successful\n"), varlist.pack(()));
                 } else {
                     printf(string.as.char.pointer("Result verification failed\n"), varlist.pack(()));
                 };
-                printf(string.as.char.pointer("class = %1c\n"), varlist.pack((( *array.ref.elem.1D(v351, 0)))));
+                printf(string.as.char.pointer("class = %1c\n"), varlist.pack((( *array.ref.elem.1D(v346, 0)))));
             }(v1, 128, 128, 32, ( *composite.ref.elem(v1, niter, type<int<4>>)), scalar.to.array(v10), scalar.to.array(v11))</m>;
         };
         fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v283, int<4> v284){
@@ -10671,50 +10671,50 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
             (v285 := (( *v286)-( *vector.ref.elem(composite.ref.elem(v283, start, type<vector<real<8>,64>>), CAST<uint<4>>(v284)))));
             (vector.ref.elem(composite.ref.elem(v283, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v284)) := (( *vector.ref.elem(composite.ref.elem(v283, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v284)))+( *v285)));
         }(v1, 0);
-        (v8 := fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v408, int<4> v409){
-            return ( *vector.ref.elem(composite.ref.elem(v408, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v409)));
+        (v8 := fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v403, int<4> v404){
+            return ( *vector.ref.elem(composite.ref.elem(v403, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v404)));
         }(v1, 0));
         if(real.ne(( *v8), 0.0)) {
             (v9 := (((1.0e-6*CAST<real<8>>(524288))*((14.8157+(7.19641*log(CAST<real<8>>(524288))))+((5.23518+(7.21113*log(CAST<real<8>>(524288))))*CAST<real<8>>(( *composite.ref.elem(v1, niter, type<int<4>>))))))/( *v8)));
         } else {
             (v9 := 0.0);
         };
-        fun(ref<array<char,1>> v411, char v412, int<4> v413, int<4> v414, int<4> v415, int<4> v416, int<4> v417, real<8> v418, real<8> v419, ref<array<char,1>> v420, int<4> v421, ref<array<char,1>> v422, ref<array<char,1>> v423, ref<array<char,1>> v424, ref<array<char,1>> v425, ref<array<char,1>> v426, ref<array<char,1>> v427, ref<array<char,1>> v428, ref<array<char,1>> v429, ref<array<char,1>> v430){
-            decl ref<array<char,1>> v431 = string.as.char.pointer("1000");
-            printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v411)));
-            printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((CAST<int<4>>(v412))));
-            if(((v414==0)&&bind(){fun(int<4> v432)return (v432==0)(v415)})) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v413))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v413, v414, v415)));
-            printf(string.as.char.pointer(" Iterations      =             %12d\n"), varlist.pack((v416)));
-            printf(string.as.char.pointer(" Threads         =             %12d\n"), varlist.pack((v417)));
+        fun(ref<array<char,1>> v406, char v407, int<4> v408, int<4> v409, int<4> v410, int<4> v411, int<4> v412, real<8> v413, real<8> v414, ref<array<char,1>> v415, int<4> v416, ref<array<char,1>> v417, ref<array<char,1>> v418, ref<array<char,1>> v419, ref<array<char,1>> v420, ref<array<char,1>> v421, ref<array<char,1>> v422, ref<array<char,1>> v423, ref<array<char,1>> v424, ref<array<char,1>> v425){
+            decl ref<array<char,1>> v426 = string.as.char.pointer("1000");
+            printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v406)));
+            printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((CAST<int<4>>(v407))));
+            if(((v409==0)&&bind(){fun(int<4> v427)return (v427==0)(v410)})) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v408))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v408, v409, v410)));
+            printf(string.as.char.pointer(" Iterations      =             %12d\n"), varlist.pack((v411)));
+            printf(string.as.char.pointer(" Threads         =             %12d\n"), varlist.pack((v412)));
             printf(string.as.char.pointer(" Time in seconds =             %12.2f\n"), varlist.pack((0.0)));
             printf(string.as.char.pointer(" Mop/s total     =             %12.2f\n"), varlist.pack((0.0)));
-            printf(string.as.char.pointer(" Operation type  = %24s\n"), varlist.pack((v420)));
-            if(int.ne(v421, 0)) printf(string.as.char.pointer(" Verification    =               SUCCESSFUL\n"), varlist.pack(())) else printf(string.as.char.pointer(" Verification    =             UNSUCCESSFUL\n"), varlist.pack(()));
-            printf(string.as.char.pointer(" Version         =             %12s\n"), varlist.pack((v422)));
-            printf(string.as.char.pointer(" Compile date    =             %12s\n"), varlist.pack((v423)));
+            printf(string.as.char.pointer(" Operation type  = %24s\n"), varlist.pack((v415)));
+            if(int.ne(v416, 0)) printf(string.as.char.pointer(" Verification    =               SUCCESSFUL\n"), varlist.pack(())) else printf(string.as.char.pointer(" Verification    =             UNSUCCESSFUL\n"), varlist.pack(()));
+            printf(string.as.char.pointer(" Version         =             %12s\n"), varlist.pack((v417)));
+            printf(string.as.char.pointer(" Compile date    =             %12s\n"), varlist.pack((v418)));
             printf(string.as.char.pointer("\n Compile options:\n"), varlist.pack(()));
-            printf(string.as.char.pointer("    CC           = %s\n"), varlist.pack((v424)));
-            printf(string.as.char.pointer("    CLINK        = %s\n"), varlist.pack((v425)));
-            printf(string.as.char.pointer("    C_LIB        = %s\n"), varlist.pack((v426)));
-            printf(string.as.char.pointer("    C_INC        = %s\n"), varlist.pack((v427)));
-            printf(string.as.char.pointer("    CFLAGS       = %s\n"), varlist.pack((v428)));
-            printf(string.as.char.pointer("    CLINKFLAGS   = %s\n"), varlist.pack((v429)));
-            printf(string.as.char.pointer("    RAND         = %s\n"), varlist.pack((v430)));
+            printf(string.as.char.pointer("    CC           = %s\n"), varlist.pack((v419)));
+            printf(string.as.char.pointer("    CLINK        = %s\n"), varlist.pack((v420)));
+            printf(string.as.char.pointer("    C_LIB        = %s\n"), varlist.pack((v421)));
+            printf(string.as.char.pointer("    C_INC        = %s\n"), varlist.pack((v422)));
+            printf(string.as.char.pointer("    CFLAGS       = %s\n"), varlist.pack((v423)));
+            printf(string.as.char.pointer("    CLINKFLAGS   = %s\n"), varlist.pack((v424)));
+            printf(string.as.char.pointer("    RAND         = %s\n"), varlist.pack((v425)));
         }(string.as.char.pointer("FT"), ( *v11), 128, 128, 32, ( *composite.ref.elem(v1, niter, type<int<4>>)), ( *v7), ( *v8), ( *v9), string.as.char.pointer("          floating point"), ( *v10), string.as.char.pointer("2.3"), string.as.char.pointer("02 Dec 2010"), string.as.char.pointer("cc"), string.as.char.pointer("cc"), string.as.char.pointer("-lm"), string.as.char.pointer("-I../common"), string.as.char.pointer("-O3 "), string.as.char.pointer("-lm"), string.as.char.pointer("randdp"));
-        if((0==1)) fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v435){
-            decl ref<int<4>> v436 = ( var(0));
-            decl ref<vector<array<char,1>,7>> v437 = ( var([vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), ...]));
+        if((0==1)) fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v430){
+            decl ref<int<4>> v431 = ( var(0));
+            decl ref<vector<array<char,1>,7>> v432 = ( var([vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), vector.to.array([' ', ' ', ' ', ' ', ' ', ...]), ...]));
             {
-                for(decl int<4> v439 = 0 .. 7 : 1) {
-                    if(real.ne(fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v408, int<4> v409){
-                        return ( *vector.ref.elem(composite.ref.elem(v408, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v409)));
-                    }(v435, v439), 0.0)) {
-                        printf(string.as.char.pointer("timer %2d(%16s( :%10.6f\n"), varlist.pack((v439, vector.ref.elem(v437, CAST<uint<4>>(v439)), fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v408, int<4> v409){
-                            return ( *vector.ref.elem(composite.ref.elem(v408, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v409)));
-                        }(v435, v439))));
+                for(decl int<4> v434 = 0 .. 7 : 1) {
+                    if(real.ne(fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v403, int<4> v404){
+                        return ( *vector.ref.elem(composite.ref.elem(v403, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v404)));
+                    }(v430, v434), 0.0)) {
+                        printf(string.as.char.pointer("timer %2d(%16s( :%10.6f\n"), varlist.pack((v434, vector.ref.elem(v432, CAST<uint<4>>(v434)), fun(ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v403, int<4> v404){
+                            return ( *vector.ref.elem(composite.ref.elem(v403, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v404)));
+                        }(v430, v434))));
                     } else { };
                 };
-                (v436 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((7-0))/CAST<real<8>>(1))))*1)));
+                (v431 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((7-0))/CAST<real<8>>(1))))*1)));
             };
         }(v1) else { };
     }

@@ -129,8 +129,9 @@ using namespace poly;
 
 const std::string SCoP::toString() const {
 	std::ostringstream ss;
-	ss << "SCoP {" << std::endl;
-	ss << "\tIterationVector: " << iterVec;
+	ss << "SCoP {\\n";
+	ss << "\tIterationVector: " << iterVec << "\\n";
+	ss << "}";
 	return ss.str();
 }
 
@@ -278,7 +279,6 @@ public:
 	}
 	
 };
-
 
 ScopList mark(const core::NodePtr& root, bool interproc) {
 	ScopList ret;

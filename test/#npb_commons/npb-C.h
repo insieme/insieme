@@ -25,7 +25,13 @@ typedef struct { double real; double imag; } dcomplex;
 #define csub(c,a,b) (c.real = a.real - b.real, c.imag = a.imag - b.imag)
 #define cmul(c,a,b) (c.real = a.real * b.real - a.imag * b.imag, \
                      c.imag = a.real * b.imag + a.imag * b.real)
-#define crmul(c,a,b) (c.real = a.real * b, c.imag = a.imag * b)
+
+// #define crmul(c,a,b) ( c.real = a.real * b, c.imag = a.imag * b )    // old definition
+
+#define crmul(c,a,b) ( _crmul(&c,&a,b) )
+// Added to fix the out of memory bug occurring in the generated code because of the space needed for 
+// allocating ref.var due to the use of the comma operator inside a macro. 
+double _crmul(dcomplex* c, dcomplex* a, int b) { c->real = a->real * b; return c->imag = a->imag * b; }
 
 extern double randlc(double *, double);
 extern void vranlc(int, double *, double, double *);
