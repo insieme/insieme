@@ -192,8 +192,8 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 			}
 		
-			insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);
-			std::cout << "SCOP Analysis: " << sl.size() << std::endl;
+			//insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);
+			//std::cout << "SCOP Analysis: " << sl.size() << std::endl;
 
 			InverseStmtMap stmtMap;
 			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
