@@ -198,6 +198,7 @@ public:
 		// not a ScopRegion, therefore we can rethrow the exeption and invalidate
 		// this region
 		if (!(isThenSCOP && isElseSCOP)) { throw NotASCoP(ifStmt); }
+
 		// check the condition expression
 		std::set<Constraint>&& c = extractFromCondition(ret, ifStmt->getCondition());
 

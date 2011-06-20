@@ -46,6 +46,7 @@
 #include "insieme/utils/printable.h"
 
 #include "boost/operators.hpp"
+#include "boost/optional.hpp"
 
 namespace insieme {
 namespace core {
@@ -481,6 +482,54 @@ private:
 struct EqualityConstraint : public Constraint {
 	EqualityConstraint(const AffineFunction& af, const Constraint::Type& type=Constraint::EQ) : 
 		Constraint(af, type) { assert(type == Constraint::EQ); }	
+};
+
+// forward declaration for the constraint visitor
+class ConstraintVisitor;
+
+class ConstraintCombiner {
+public:
+	enum Type { RAW, POS, NEG, AND, OR };
+	const Type& getType() const { return type; } 
+
+	virtual void Accept(ConstraintVisitor& ) const = 0;	
+protected:
+	ConstraintCombiner(const Type& type) : type(type) { }
+private:
+	Type type;
+};
+
+typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
+
+class RawConstraintCombiner : public ConstraintCombiner {
+
+	RawConstraintCombiner(const Constraint& constraint) : 
+		ConstraintCombiner(ConstraintCombiner::RAW), constraint(constraint) { }
+
+	void Accept(ConstraintVisitor& ) const { }
+
+private:
+	Constraint constraint; 
+};
+
+class UnaryConstraintCombiner : public ConstraintCombiner {
+	ConstraintCombinerPtr subComb;
+public:
+	UnaryConstraintCombiner(const ConstraintCombinerPtr& comb, bool negate=false) :
+		ConstraintCombiner(negate?NEG:POS), subComb(comb) { }
+	
+	void Accept(ConstraintVisitor& ) const { }
+};
+
+class BinaryConstraintCombiner : public ConstraintCombiner {
+	std::pair<ConstraintCombinerPtr, ConstraintCombinerPtr> constraints;
+
+public:
+	BinaryConstraintCombiner(const ConstraintCombinerPtr& lhs, 
+			const ConstraintCombinerPtr& rhs, const ConstraintCombiner::Type& type) : 
+		ConstraintCombiner(type), constraints( std::make_pair(lhs, rhs) ) { }
+
+	void Accept(ConstraintVisitor& ) const { }
 };
 
 // Defines a list of constraints stored in a vector
