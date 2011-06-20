@@ -141,6 +141,7 @@ AST_BASE(Node)
 // --- Supporting Nodes ---
 //
 
+AST_TERMINAL(Comment, Node)
 AST_TERMINAL(Identifier, Node)
 AST_TERMINAL(OpaqueCode, Node)
 
@@ -157,8 +158,12 @@ ABSTRACT(Type)
 AST_TERMINAL(PrimitiveType, Type)
 AST_TERMINAL(PointerType, Type)
 AST_TERMINAL(VectorType, Type)
-AST_TERMINAL(StructType, Type)
-AST_TERMINAL(UnionType, Type)
+
+AST_NODE(NamedCompositeType, Type)
+ABSTRACT(NamedCompositeType)
+
+AST_TERMINAL(StructType, NamedCompositeType)
+AST_TERMINAL(UnionType, NamedCompositeType)
 
 //
 // --- Statements ---
@@ -202,18 +207,18 @@ AST_TERMINAL(Parentheses, Expression)
 AST_NODE(Declaration, Node)
 ABSTRACT(Declaration)
 
-AST_TERMINAL(TypePrototype, Declaration)
-AST_TERMINAL(TypeDef, Declaration)
+AST_TERMINAL(TypeDeclaration, Declaration)
 AST_TERMINAL(FunctionPrototype, Declaration)
-AST_TERMINAL(Function, Declaration)
 
 //
-// --- Program ---
+// --- Definitions ---
 //
 
-AST_TERMINAL(Program, Node)
+AST_NODE(Definition, Node)
+ABSTRACT(Definition)
 
-
+AST_TERMINAL(TypeDefinition, Definition)
+AST_TERMINAL(Function, Definition)
 
 
 // ------------------------- END: AST NODE DEFINITONS ----------------------------

@@ -34,44 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/utils/test/test_utils.h"
-#include "insieme/utils/compiler/compiler.h"
-
-#include "insieme/frontend/frontend.h"
-#include "insieme/core/ast_node.h"
-#include "insieme/core/program.h"
-#include "insieme/backend/full_backend.h"
+#pragma once
 
 namespace insieme {
-namespace backend {
+namespace core {
 
 
-TEST(FullBackend, HelloWorld) {
+	// ---------------- Pointers and Addresses ----------------------
 
-	core::NodeManager manager;
+	// forward declaration of pointer and address templates
+	template<typename T> class Pointer;
+	template<typename T> class Address;
 
-	// load hello world test case
-	auto testCase = utils::test::getCase("hello_world");
-	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
+	/**
+	 * Adds forward declarations for all AST node types. Further, for each
+	 * type a type definition for a corresponding annotated pointer is added.
+	 */
+	#define NODE(NAME) \
+		class NAME; \
+		typedef Pointer<const NAME> NAME ## Ptr; \
+		typedef Address<const NAME> NAME ## Address;
 
-	// convert test case into IR using the frontend
-	auto code = frontend::ConversionJob(manager, testCase->getFiles(), testCase->getIncludeDirs()).execute();
-	ASSERT_TRUE(code) << "Unable to load input code!";
+		// take all nodes from within the definition file
+		#include "insieme/core/ast_nodes.def"
 
-	// create target code using real backend
-	auto target = backend::FullBackend::getDefault()->convert(code);
+	#undef NODE
 
-	// check target code
-//	EXPECT_EQ("", toString(*target));
 
-	// see whether target code can be compiled
-	// TODO: compile target code => test result
-//	EXPECT_TRUE(utils::compiler::compile(*target));
+	// ---------------- Supporting Utilities ----------------------
 
-}
+	class ASTBuilder;
+	class NodeManager;
+	class NodeMapping;
 
-} // end namespace backend
+	namespace lang {
+		class BasicGenerator;
+	} // end namespace lang
+
+
+} // end namespace core
 } // end namespace insieme
-

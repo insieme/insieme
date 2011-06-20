@@ -51,12 +51,16 @@
 #include "insieme/core/checks/typechecks.h"
 #include "insieme/core/checks/imperativechecks.h"
 
+#include "insieme/simple_backend/simple_backend.h"
+
+#include "insieme/utils/compiler/compiler.h"
 #include "insieme/utils/test/test_utils.h"
 #include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/timer.h"
+
 
 #ifdef USE_XML
 #include "insieme/xml/xml_utils.h"
@@ -220,6 +224,37 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+
+// ---------------------------------- Check the simple backend -------------------------------------
+
+// the type definition (specifying the parameter type)
+class SimpleBackendIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(SimpleBackendIntegrationTest, CompileableCode) {
+	core::NodeManager manager;
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+
+	// load the code using the frontend
+	core::ProgramPtr code = load(manager, testCase);
+
+	// create target code using simple backend
+	auto target = simple_backend::SimpleBackend::getDefault()->convert(code);
+
+	// test whether result can be compiled
+	auto compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-I/home/herbert/insieme/code/simple_backend/include/insieme/simple_backend/runtime");
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
+}
+
+// instantiate the test case
+//INSTANTIATE_TEST_CASE_P(SimpleBackendIntegrationCheck, SimpleBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
 
 //// ------------------------------------ Semantic Checks -------------------------------------------
 //

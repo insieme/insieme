@@ -34,44 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
-
-#include "insieme/utils/test/test_utils.h"
-#include "insieme/utils/compiler/compiler.h"
-
-#include "insieme/frontend/frontend.h"
-#include "insieme/core/ast_node.h"
-#include "insieme/core/program.h"
-#include "insieme/backend/full_backend.h"
+#pragma once
 
 namespace insieme {
 namespace backend {
 
+	class FunctionManager {
 
-TEST(FullBackend, HelloWorld) {
+	};
 
-	core::NodeManager manager;
-
-	// load hello world test case
-	auto testCase = utils::test::getCase("hello_world");
-	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
-
-	// convert test case into IR using the frontend
-	auto code = frontend::ConversionJob(manager, testCase->getFiles(), testCase->getIncludeDirs()).execute();
-	ASSERT_TRUE(code) << "Unable to load input code!";
-
-	// create target code using real backend
-	auto target = backend::FullBackend::getDefault()->convert(code);
-
-	// check target code
-//	EXPECT_EQ("", toString(*target));
-
-	// see whether target code can be compiled
-	// TODO: compile target code => test result
-//	EXPECT_TRUE(utils::compiler::compile(*target));
-
-}
 
 } // end namespace backend
 } // end namespace insieme
-

@@ -34,44 +34,43 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/backend/converter.h"
 
-#include "insieme/utils/test/test_utils.h"
-#include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/timer.h"
+#include "insieme/utils/logging.h"
 
-#include "insieme/frontend/frontend.h"
-#include "insieme/core/ast_node.h"
-#include "insieme/core/program.h"
-#include "insieme/backend/full_backend.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/preprocessor.h"
+#include "insieme/backend/c_ast/c_code.h"
 
 namespace insieme {
 namespace backend {
 
+	backend::TargetCodePtr Converter::convert(const core::NodePtr& code) {
 
-TEST(FullBackend, HelloWorld) {
 
-	core::NodeManager manager;
+		// conduct pre-processing
+		utils::Timer timer = insieme::utils::Timer("Backend.Preprocessing");
 
-	// load hello world test case
-	auto testCase = utils::test::getCase("hello_world");
-	ASSERT_TRUE(testCase) << "Could not load hello world test case!";
+		// TODO: make pre-processor an option
 
-	// convert test case into IR using the frontend
-	auto code = frontend::ConversionJob(manager, testCase->getFiles(), testCase->getIncludeDirs()).execute();
-	ASSERT_TRUE(code) << "Unable to load input code!";
+		// pre-process program
+		core::NodePtr processed = getPreProcessor().preprocess(getNodeManager(), code);
 
-	// create target code using real backend
-	auto target = backend::FullBackend::getDefault()->convert(code);
+		timer.stop();
+		LOG(INFO) << timer;
 
-	// check target code
-//	EXPECT_EQ("", toString(*target));
+		timer = insieme::utils::Timer("Backend.Conversions");
 
-	// see whether target code can be compiled
-	// TODO: compile target code => test result
-//	EXPECT_TRUE(utils::compiler::compile(*target));
+		// convert IR node target code
+		auto res = getStmtConverter().convert(processed);
 
-}
+		timer.stop();
+		LOG(INFO) << timer;
+
+		// job done!
+		return res;
+	}
 
 } // end namespace backend
 } // end namespace insieme
-

@@ -24,7 +24,7 @@ add_library(insieme_simple_backend ${LINKING_TYPE} ${insieme_simple_backend_srcs
 target_link_libraries(insieme_simple_backend insieme_utils)
 target_link_libraries(insieme_simple_backend insieme_core)
 target_link_libraries(insieme_simple_backend insieme_c_info)
-# target_link_libraries(insieme_simple_backend insieme_backend)
+target_link_libraries(insieme_simple_backend insieme_backend)
 # target_link_libraries( insieme_simple_backend ${Boost_SYSTEM_LIBRARY})
 # target_link_libraries( insieme_simple_backend ${Boost_FILESYSTEM_LIBRARY})
 
@@ -43,7 +43,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_c_info)
 	target_link_libraries(${case_name} insieme_utils)
-	# target_link_libraries(${case_name} insieme_backend)
+	target_link_libraries(${case_name} insieme_backend)
 	target_link_libraries(${case_name} insieme_simple_backend)
 	target_link_libraries(${case_name} ${pthread_LIB})
 	

@@ -50,25 +50,10 @@
 
 #include "insieme/core/lang/basic.h"
 
+#include "insieme/core/forward_decls.h"
+
 namespace insieme {
 namespace core {
-
-template<typename T> class Pointer;
-template<typename T> class Address;
-
-/**
- * Adds forward declarations for all AST node types. Further, for each
- * type a type definition for a corresponding annotated pointer is added.
- */
-#define NODE(NAME) \
-	class NAME; \
-	typedef Pointer<const NAME> NAME ## Ptr; \
-	typedef Address<const NAME> NAME ## Address;
-
-	// take all nodes from within the definition file
-	#include "insieme/core/ast_nodes.def"
-
-#undef NODE
 
 /**
  * Typedefs for some widely used base type collections.

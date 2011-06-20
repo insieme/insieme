@@ -68,11 +68,11 @@ namespace c_ast {
 	class CCode : public TargetCode {
 
 		/**
-		 * The one "root" code fragment representing the resulting target code. The
-		 * code represented by this instance is the transitive closure of the dependencies
-		 * defined by the given code fragment.
+		 * A list of seeds for the graph of fragments the represented target code is consisting of.
+		 * The code represented by this instance is the transitive closure of the dependencies
+		 * defined by the given code fragments.
 		 */
-		CodeFragmentPtr root;
+		const vector<CodeFragmentPtr> fragments;
 
 	public:
 
@@ -80,10 +80,19 @@ namespace c_ast {
 		 * Creates a new C Code instance representing a conversion from the given
 		 * source node to the given target code fragment.
 		 *
-		 * @param source the IR node the source is based on
+		 * @param source the IR node this code has been generated from
 		 * @param code the root element of the resulting target code fragment
 		 */
 		CCode(const core::NodePtr& source, const CodeFragmentPtr& root);
+
+		/**
+		 * Creates a new C Code instance representing a conversion from the given
+		 * source node to the transitive closure of the given fragments.
+		 *
+		 * @param source the IR node this code has been generated from
+		 * @param fragments seeds / entry points of the represented program
+		 */
+		CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments);
 
 		/**
 		 * Allows this code fragment to be printed to some output stream according
@@ -92,6 +101,11 @@ namespace c_ast {
 		virtual std::ostream& printTo(std::ostream& out) const;
 
 	};
+
+	/**
+	 * Define a pointer type for a C based target code.
+	 */
+	typedef std::shared_ptr<CCode> CCodePtr;
 
 	/**
 	 * An abstract base class for various kinds of specialized code fragments. This base class
@@ -133,11 +147,18 @@ namespace c_ast {
 		void addDependency(const CodeFragmentPtr& fragment);
 
 		/**
-		 * Adds a list of dependencies to this fragment.
+		 * Adds the fragment pointers present within the given container to the
+		 * set of dependencies defined for this code fragment.
 		 *
 		 * @param fragments the list of fragments to be depending on
 		 */
-		void addDependencies(const std::vector<CodeFragmentPtr>& fragments);
+		template<typename Container>
+		void addDependencies(const Container& fragments) {
+			// just add all dependencies
+			for_each(fragments, [&](const CodeFragmentPtr& cur) {
+				this->addDependency(cur);
+			});
+		}
 
 		/**
 		 * Obtains list of all code fragments this fragment is depending on.
@@ -162,46 +183,44 @@ namespace c_ast {
 	class CCodeFragment : public CodeFragment {
 
 		/**
-		 * The code encapsulated by this fragment.
+		 * A shared pointer referencing the node manager used for maintaining the nodes
+		 * forming the C AST describing the represented target code.
 		 */
-		NodePtr code;
+		const SharedCNodeManager cNodeManager;
 
 		/**
-		 * The name of this fragment. The name will be used to generate a comment within the target code.
+		 * The code encapsulated by this fragment.
 		 */
-		const std::string name;
+		const NodePtr code;
 
 	public:
 
 		/**
-		 * Creates a new code fragment without any assigned code
-		 *
-		 * @param name the name of the new fragment
-		 */
-		CCodeFragment(const std::string& name) : name(name){ }
-
-		/**
 		 * Creates a new code fragment encapsulating the given code fragment.
 		 *
+		 * @param nodeManager the node manager managing the life-span of the given C AST node
 		 * @param code the code this fragment is covering
-		 * @param name the name of the new fragment
 		 */
-		CCodeFragment(const NodePtr& code, const std::string& name) : code(code), name(name){ }
-
-		/**
-		 * A static factory method creating a new code fragment based on the given name.
-		 *
-		 * @param name the name of the new fragment
-		 */
-		static CCodeFragmentPtr createNew(const std::string& name);
+		CCodeFragment(const SharedCNodeManager& nodeManager, const NodePtr& code) : cNodeManager(nodeManager), code(code) { }
 
 		/**
 		 * A static factory method creating a new code fragment based on the given code and name.
 		 *
+		 * @param nodeManager the node manager managing the life-span of the given C AST node
 		 * @param code the code forming the body of the resulting fragment
-		 * @param name the name of the new fragment
 		 */
-		static CCodeFragmentPtr createNew(const NodePtr& code, const std::string& name);
+		static CCodeFragmentPtr createNew(const SharedCNodeManager& nodeManager, const NodePtr& code) {
+			return std::make_shared<CCodeFragment>(nodeManager, code);
+		}
+
+		/**
+		 * Obtains a reference to the node manager managing the life cycle of the contained C AST nodes.
+		 *
+		 * @return a shared pointer to the requested node manager
+		 */
+		const SharedCNodeManager getCNodeManager() const {
+			return cNodeManager;
+		}
 
 		/**
 		 * Obtains a reference to the code buffer defining the body of this code fragment.
@@ -209,20 +228,6 @@ namespace c_ast {
 		 * @return a constant reference to the represented code body
 		 */
 		const NodePtr& getCode() { return code; }
-
-		/**
-		 * Updates the code covered by this code fragment.
-		 *
-		 * @param newCode the code to replace the currently covered code
-		 */
-		void setCode(const NodePtr& newCode) { code = newCode; }
-
-		/**
-		 * Obtains the name of this code fragment.
-		 *
-		 * @return the name of this fragment
-		 */
-		const std::string& getName() { return name; }
 
 		/**
 		 * Prints the code covered by this fragment to the given output stream.

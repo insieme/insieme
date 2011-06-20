@@ -79,11 +79,11 @@ TEST(C_AST, FragmentDependencyResolution) {
 	codeC->addDependency(codeB);
 	codeD->addDependency(codeC);
 
-	EXPECT_EQ("A\nB\nC\nD\n", toString(CCode(core::NodePtr(), codeD)));
+	EXPECT_EQ("ABCD\n", toString(CCode(core::NodePtr(), codeD)));
 
 	// add additional edge (should not change anything)
 	codeD->addDependency(codeA);
-	EXPECT_EQ("A\nB\nC\nD\n", toString(CCode(core::NodePtr(), codeD)));
+	EXPECT_EQ("ABCD\n", toString(CCode(core::NodePtr(), codeD)));
 
 }
 

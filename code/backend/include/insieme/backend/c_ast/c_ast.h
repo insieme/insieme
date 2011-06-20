@@ -41,8 +41,12 @@
 #include <vector>
 #include <cassert>
 #include <map>
+#include <memory>
+
+#include <boost/utility.hpp>
 
 #include "insieme/utils/pointer.h"
+#include "insieme/utils/id_generator.h"
 
 namespace insieme {
 namespace backend {
@@ -74,12 +78,17 @@ namespace c_ast {
 
 	// -- Utilities ------------------------------
 
-	class CNodeManager {
+	class CNodeManager;
+	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+
+	class CNodeManager : private boost::noncopyable {
 
 		vector<NodePtr> nodes;
 		std::map<string, IdentifierPtr> identMap;
 
 	public:
+
+		CNodeManager() : nodes(), identMap() {}
 
 		~CNodeManager();
 
@@ -93,6 +102,10 @@ namespace c_ast {
 			return res;
 		}
 
+		static SharedCNodeManager createShared() {
+			return std::make_shared<CNodeManager>();
+		}
+
 	};
 
 	// -- Basic ----------------------------------
@@ -101,8 +114,25 @@ namespace c_ast {
 		const NodeType type;
 		CNodeManager* manager;
 
+		/**
+		 * The type used for representing equality IDs.
+		 */
+		typedef uint64_t EqualityID;
+
+		/**
+		 * A static generator for generating equality class IDs
+		 */
+		static utils::SimpleIDGenerator<EqualityID> equalityClassIDGenerator;
+
+		/**
+		 * The ID of the equality class of this node. This ID is used to significantly
+		 * speed up the equality check.
+		 */
+		mutable EqualityID equalityID;
+
+
 	public:
-		Node(NodeType type) : type(type) {}
+		Node(NodeType type) : type(type), equalityID(0) {}
 		virtual ~Node() {};
 
 		NodeType getType() const { return type; }
@@ -112,6 +142,12 @@ namespace c_ast {
 			assert(manager && "Manager uninitialized!");
 			return manager;
 		}
+
+		bool operator==(const Node& other) const;
+
+	private:
+
+		virtual bool equals(const Node& other) const=0;
 	};
 
 	struct Identifier : public Node {
@@ -120,12 +156,21 @@ namespace c_ast {
 
 		bool operator==(Identifier& other) const { return name == other.name; }
 		bool operator<(Identifier& other) const { return name < other.name; }
+
+		virtual bool equals(const Node& other) const;
+	};
+
+	struct Comment : public Node {
+		const string comment;
+		Comment(const string& comment) : Node(NT_Comment), comment(comment) {}
+		virtual bool equals(const Node& other) const;
 	};
 
 	struct OpaqueCode : public Node {
 		string code;
 		OpaqueCode(const string& code) : Node(NT_OpaqueCode), code(code) {};
 		OpaqueCode(const string&& code) : Node(NT_OpaqueCode), code(code) {};
+		virtual bool equals(const Node& other) const;
 	};
 
 	// -- Types ----------------------------------
@@ -137,17 +182,20 @@ namespace c_ast {
 	struct PrimitiveType : public Type {
 		IdentifierPtr name;
 		PrimitiveType(IdentifierPtr name) : Type(NT_PrimitiveType), name(name) {}
+		virtual bool equals(const Node& other) const;
 	};
 
 	struct PointerType : public Type {
 		TypePtr elementType;
 		PointerType(TypePtr elementType) : Type(NT_PointerType), elementType(elementType) {}
+		virtual bool equals(const Node& other) const;
 	};
 
 	struct VectorType : public Type {
 		TypePtr elementType;
 		ExpressionPtr size;
 		VectorType(TypePtr elementType, ExpressionPtr size) : Type(NT_VectorType), elementType(elementType), size(size) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct NamedCompositeType : public Type {
@@ -155,6 +203,7 @@ namespace c_ast {
 		vector<pair<IdentifierPtr, TypePtr>> elements;
 		NamedCompositeType(NodeType type, const IdentifierPtr name)
 			: Type(type), name(name) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct StructType : public NamedCompositeType {
@@ -173,15 +222,17 @@ namespace c_ast {
 
 
 	struct VarDecl : public Statement {
-		VariablePtr var;
-		ExpressionPtr init;
+		const VariablePtr var;
+		const ExpressionPtr init;
 		VarDecl(VariablePtr var, ExpressionPtr init)
 			: Statement(NT_VarDecl), var(var), init(init) {};
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct Compound : public Statement {
 		const vector<StatementPtr> statements;
 		Compound() : Statement(NT_Compound) {};
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct If : public Statement {
@@ -191,6 +242,7 @@ namespace c_ast {
 		If() : Statement(NT_Compound), condition(0), thenStmt(0), elseStmt(0) {};
 		If(ExpressionPtr condition, StatementPtr thenStmt, StatementPtr elseStmt)
 			: Statement(NT_Compound), condition(condition), thenStmt(thenStmt), elseStmt(elseStmt) {};
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct Switch : public Statement {
@@ -198,6 +250,7 @@ namespace c_ast {
 		vector<pair<ExpressionPtr, StatementPtr>> cases;
 		ExpressionPtr defaultBranch;
 		Switch(ExpressionPtr value) : Statement(NT_Switch), value(value) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct For : public Statement {
@@ -207,6 +260,7 @@ namespace c_ast {
 		StatementPtr body;
 		For(ExpressionPtr init, ExpressionPtr check, ExpressionPtr step, StatementPtr body)
 			: Statement(NT_For), init(init), check(check), step(step), body(body) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct While : public Statement {
@@ -214,19 +268,23 @@ namespace c_ast {
 		StatementPtr body;
 		While(ExpressionPtr condition, StatementPtr body)
 			: Statement(NT_While), condition(condition), body(body) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct Continue : public Statement {
 		Continue() : Statement(NT_Continue) {}
+		virtual bool equals(const Node& node) const { return true; }
 	};
 
 	struct Break : public Statement {
 		Break() : Statement(NT_Break) {}
+		virtual bool equals(const Node& node) const { return true; }
 	};
 
 	struct Return : public Statement {
 		ExpressionPtr value;
 		Return(ExpressionPtr value) : Statement(NT_Return), value(value) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	// -- Expressions -----------------------------
@@ -238,18 +296,21 @@ namespace c_ast {
 	struct Literal : public Expression {
 		string value;
 		Literal(const string& value) : Expression(NT_Literal), value(value) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct Variable : public Expression {
 		TypePtr type;
 		IdentifierPtr name;
 		Variable(TypePtr type, IdentifierPtr name) : Expression(NT_Variable), type(type), name(name) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct Initializer : public Expression {
 		TypePtr type;
 		vector<ExpressionPtr> values;
 		Initializer(TypePtr type) : Expression(NT_Initializer), type(type) {};
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct UnaryOperation : public Expression {
@@ -274,6 +335,7 @@ namespace c_ast {
 		UnaryOperation(UnaryOp operation, NodePtr operand)
 			: Expression(NT_UnaryOperation), operation(operation), operand(operand) {}
 
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct BinaryOperation : public Expression {
@@ -320,6 +382,7 @@ namespace c_ast {
 		BinaryOperation(BinaryOp operation, NodePtr operandA, NodePtr operandB)
 			: Expression(NT_BinaryOperation), operation(operation), operandA(operandA), operandB(operandB) {}
 
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct TernaryOperation : public Expression {
@@ -335,6 +398,8 @@ namespace c_ast {
 		TernaryOperation(TernaryOp operation, NodePtr operandA, NodePtr operandB, NodePtr operandC)
 			: Expression(NT_TernaryOperation), operation(operation),
 			  operandA(operandA), operandB(operandB), operandC(operandC) {}
+
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct Call : public Expression {
@@ -342,11 +407,13 @@ namespace c_ast {
 		vector<ExpressionPtr> arguments;
 
 		Call(IdentifierPtr function) : Expression(NT_Call), function(function) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct Parentheses : public Expression {
 		ExpressionPtr expression;
 		Parentheses(ExpressionPtr expression) : Expression(NT_Parentheses), expression(expression) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	// -- Declarations ----------------------------
@@ -355,41 +422,46 @@ namespace c_ast {
 		Declaration(NodeType type) : Node(type) {};
 	};
 
-	struct TypePrototype : public Declaration {
+	struct TypeDeclaration : public Declaration {
 		TypePtr type;
-		TypePrototype(TypePtr type) : Declaration(NT_TypePrototype), type(type) {}
-	};
-
-	struct TypeDef : public Declaration {
-		TypePtr type;
-		IdentifierPtr name;
-		TypeDef(TypePtr type, IdentifierPtr name)
-			: Declaration(NT_TypeDef), type(type), name(name) {}
-	};
-
-	struct Function : public Declaration {
-		TypePtr returnType;
-		IdentifierPtr name;
-		vector<VariablePtr> parameter;
-		StatementPtr body;
-		Function(TypePtr returnType, IdentifierPtr name, StatementPtr body)
-					: Declaration(NT_Function), returnType(returnType), name(name), body(body) {};
-		Function(TypePtr returnType, IdentifierPtr name, const vector<VariablePtr> params, StatementPtr body)
-			: Declaration(NT_Function), returnType(returnType), name(name), parameter(params), body(body) {};
+		TypeDeclaration(TypePtr type) : Declaration(NT_TypeDeclaration), type(type) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	struct FunctionPrototype : public Declaration {
 		FunctionPtr function;
 		FunctionPrototype(FunctionPtr function) : Declaration(NT_FunctionPrototype), function(function) {}
+		virtual bool equals(const Node& node) const;
 	};
 
-	// -- Program ---------------------------------
+	// -- Definitions ----------------------------
 
-	class Program : public Node {
-		vector<string> includes;
-		vector<DeclarationPtr> declarations;
-		Program() : Node(NT_Program) {}
+	struct Definition : public Node {
+		Definition(NodeType type) : Node(type) {};
 	};
+
+	struct TypeDefinition : public Definition {
+		TypePtr type;
+		IdentifierPtr name;
+		TypeDefinition(TypePtr type)
+			: Definition(NT_TypeDefinition), type(type), name(0) {}
+		TypeDefinition(TypePtr type, IdentifierPtr name)
+			: Definition(NT_TypeDefinition), type(type), name(name) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct Function : public Definition {
+		TypePtr returnType;
+		IdentifierPtr name;
+		vector<VariablePtr> parameter;
+		StatementPtr body;
+		Function(TypePtr returnType, IdentifierPtr name, StatementPtr body)
+					: Definition(NT_Function), returnType(returnType), name(name), body(body) {};
+		Function(TypePtr returnType, IdentifierPtr name, const vector<VariablePtr> params, StatementPtr body)
+			: Definition(NT_Function), returnType(returnType), name(name), parameter(params), body(body) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 
 } // end namespace c_ast
 } // end namespace backend
