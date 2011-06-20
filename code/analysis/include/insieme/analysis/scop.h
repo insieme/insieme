@@ -49,16 +49,16 @@ namespace scop {
  * Stores the information related to a SCoP (Static Control Part) region of a
  * program. 
  */
-class SCoP: public core::NodeAnnotation {
+class ScopRegion: public core::NodeAnnotation {
 	poly::IterationVector iterVec;
 
 public:
 	static const string NAME;
-	static const utils::StringKey<SCoP> KEY;
+	static const utils::StringKey<ScopRegion> KEY;
 
-	SCoP(const poly::IterationVector& iterVec): core::NodeAnnotation(), iterVec(iterVec) { } 
+	ScopRegion(const poly::IterationVector& iterVec): core::NodeAnnotation(), iterVec(iterVec) { } 
 
-	const std::string& getAnnotationName() const {return NAME;}
+	const std::string& getAnnotationName() const { return NAME; }
 
 	const std::string toString() const;
 
@@ -70,7 +70,7 @@ public:
 
 	const poly::IterationVector& getIterationVector() const { return iterVec; }
 };
-typedef std::vector<SCoP> ScopList;
+typedef std::vector<std::shared_ptr<ScopRegion>> ScopList;
 
 /**
  * Finds and marks the SCoPs contained in the root subtree and returns a list of

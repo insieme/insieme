@@ -48,7 +48,7 @@
 using namespace insieme::core;
 using namespace insieme::analysis;
 
-TEST(SCoP, CompoundStmt) {
+TEST(ScopRegion, CompoundStmt) {
 	
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
@@ -62,8 +62,8 @@ TEST(SCoP, CompoundStmt) {
 	// Mark scops in this code snippet
 	scop::mark(compStmt);
 
-	EXPECT_TRUE(compStmt->hasAnnotation(scop::SCoP::KEY));
-	scop::SCoP& ann = *compStmt->getAnnotation(scop::SCoP::KEY);
+	EXPECT_TRUE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& ann = *compStmt->getAnnotation(scop::ScopRegion::KEY);
 	
 	const poly::IterationVector& iterVec = ann.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
@@ -76,7 +76,7 @@ TEST(SCoP, CompoundStmt) {
 	EXPECT_EQ("(|v1,v3|1)", ss.str());
 }
 
-TEST(SCoP, IfStmt) {
+TEST(ScopRegion, IfStmt) {
 	
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
@@ -91,8 +91,8 @@ TEST(SCoP, IfStmt) {
 	// Mark scops in this code snippet
 	scop::mark(ifStmt);
 
-	EXPECT_TRUE(ifStmt->hasAnnotation(scop::SCoP::KEY));
-	scop::SCoP& ann = *ifStmt->getAnnotation(scop::SCoP::KEY);
+	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
 
 	poly::IterationVector iterVec = ann.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
@@ -104,10 +104,10 @@ TEST(SCoP, IfStmt) {
 		ss << ann.getIterationVector();
 		EXPECT_EQ("(|v7,v8,v4,v5|1)", ss.str());
 	}
-	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
-	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::SCoP::KEY));
+	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
 
-	ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
+	ann = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
 	iterVec = ann.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 
@@ -120,7 +120,7 @@ TEST(SCoP, IfStmt) {
 	}
 }
 
-TEST(SCoP, SimpleForStmt) {
+TEST(ScopRegion, SimpleForStmt) {
 	
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
@@ -129,46 +129,40 @@ TEST(SCoP, SimpleForStmt) {
 		for(decl int<4>:i = 10 .. 50 : -1) { \
 			(op<array.subscript.1D>(array<int<4>,1>:v, (i+int<4>:b))); \
 		}") );
-	std::cout << *forStmt << std::endl;
+	// std::cout << *forStmt << std::endl;
 	scop::mark(forStmt);
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::SCoP::KEY));
-	scop::SCoP& ann = *forStmt->getAnnotation(scop::SCoP::KEY);
+	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
     std::cout << ann.getIterationVector() << std::endl;
 
-	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::SCoP::KEY));
+	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 	
 }
 
-TEST(SCoP, ForStmt) {
+TEST(ScopRegion, ForStmt) {
 	
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : -1) { \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (i+int<4>:b))); \
+		for(decl int<4>:i = 10 .. 50 : 1) { \
+			(op<array.subscript.1D>(array<int<4>,1>:v, (i*int<4>:b))); \
 			if ((i > 25)) { \
-				(int<4>:h = (op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:n*2))));\
+				(int<4>:h = (op<array.subscript.1D>(array<int<4>,1>:v, ((int<4>:n+i)-1))));\
 			};\
 		}") );
-	std::cout << *forStmt << std::endl;
+	// std::cout << *forStmt << std::endl;
 	scop::mark(forStmt);
 
-	EXPECT_TRUE(forStmt->hasAnnotation(scop::SCoP::KEY));
-	scop::SCoP& ann = *forStmt->getAnnotation(scop::SCoP::KEY);
-    std::cout << ann.getIterationVector() << std::endl;
+	EXPECT_FALSE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
 	IfStmtPtr ifStmt = static_pointer_cast<const IfStmt>(
-			static_pointer_cast<const CompoundStmt>(forStmt->getBody())->getStatements().back());
-	
-	EXPECT_TRUE(ifStmt->hasAnnotation(scop::SCoP::KEY));
-	ann = *ifStmt->getThenBody()->getAnnotation(scop::SCoP::KEY);
-	std::cout << ann.getIterationVector() << std::endl;
+		static_pointer_cast<const CompoundStmt>(forStmt->getBody())->getStatements().back());
 
-	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::SCoP::KEY));
-
-	// ann = *ifStmt->getElseBody()->getAnnotation(scop::SCoP::KEY);
-	// std::cout << ann.getIterationVector() << std::endl;
-
+	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
+	EXPECT_EQ(static_cast<size_t>(3), ann.getIterationVector().size());
+	EXPECT_EQ(static_cast<size_t>(0), ann.getIterationVector().getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(2), ann.getIterationVector().getParameterNum());
 }
 
