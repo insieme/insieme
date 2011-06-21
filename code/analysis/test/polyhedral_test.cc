@@ -257,6 +257,33 @@ TEST(Constraint, Creation) {
 	}
 }
 
+TEST(Constraint, Combiner) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	poly::AffineFunction af(iterVec);
+	af.setCoefficient(poly::Iterator(iter1), 0);
+	af.setCoefficient(poly::Parameter(param),2);
+	af.setCoefficient(poly::Iterator(iter2), 1);
+	af.setConstantPart(10);
+
+	poly::EqualityConstraint c1(af);
+
+	poly::AffineFunction af2(iterVec);
+	af2.setCoefficient(poly::Iterator(iter1), 2);
+	af2.setCoefficient(poly::Parameter(param),3);
+	af2.setCoefficient(poly::Iterator(iter2), 0);
+	af2.setConstantPart(10);
+	
+	poly::Constraint c2(af2, poly::Constraint::LT);
+
+	poly::ConstraintCombinerPtr ptr = 
+		poly::makeDisjunction( poly::makeCombiner(c1), poly::negate(c2) );
+
+	std::cout << *ptr << std::endl;
+
+}
+
 TEST(IterationDomain, Creation) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;

@@ -90,8 +90,9 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 				{
 					ConstraintCombinerPtr&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
 					ConstraintCombinerPtr&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
-					return makeConstraint( 
-						(BasicGenerator::LAnd ? ConstraintCombiner::AND : ConstraintCombiner::OR), lhs, rhs);
+
+					if (op == BasicGenerator::LAnd)		return makeConjunction(lhs, rhs);
+					else 								return makeDisjunction(lhs, rhs);
 				}
 			case BasicGenerator::LNot:
 				 return std::make_shared<UnaryConstraintCombiner>( extractFromCondition(iv, callExpr->getArgument(0)), true );
@@ -261,7 +262,7 @@ public:
 			std::for_each(compStmt->getStatements().cbegin(), compStmt->getStatements().cend(), 
 				[&](const StatementPtr& cur) { 
 					if (cur->hasAnnotation(ScopRegion::KEY)) { 
-						scopList.push_back(cur->getAnnotation(ScopRegion::KEY)); 
+						scopList.push_back( cur->getAnnotation(ScopRegion::KEY) ); 
 					}	
 				} 
 			);
@@ -296,7 +297,8 @@ public:
 			// affine linear function. If not, then this branch is not a ScopRegion
 			// and all the code regions embodying this statement has to be
 			// marked as non-ScopRegion. 
-			assert(callExpr->getArguments().size() == 2 && "Subscript expression with more than 2 arguments.");
+			assert(callExpr->getArguments().size() == 2 && 
+					"Subscript expression with more than 2 arguments.");
 			IterationVector&& subIV = visit(callExpr->getArgument(0));
 		
 			IterationVector it;

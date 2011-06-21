@@ -484,30 +484,47 @@ struct EqualityConstraint : public Constraint {
 		Constraint(af, type) { assert(type == Constraint::EQ); }	
 };
 
-// forward declaration for the constraint visitor
-class ConstraintVisitor;
+//forward declaration for the Constraint combiner 
+class ConstraintCombiner;
 
-class ConstraintCombiner {
+typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
+
+
+// forward declaration for the Constraint visitor 
+struct ConstraintVisitor; 
+
+/**
+ * This class has the purpose to create conjuctions or disjunctions of
+ * constraints. This allows to represent the domain spawned by control 
+ * operations with a composed conditional expression
+ */
+class ConstraintCombiner : public utils::Printable {
 public:
 	enum Type { RAW, POS, NEG, AND, OR };
-	const Type& getType() const { return type; } 
+	const Type& getType() const { return type; }
 
-	virtual void Accept(ConstraintVisitor& ) const = 0;	
+	virtual void accept(ConstraintVisitor& v) const = 0;
+
+	std::ostream& printTo(std::ostream& out) const;
+
 protected:
 	ConstraintCombiner(const Type& type) : type(type) { }
 private:
 	Type type;
 };
 
-typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
-
+/**
+ * This class is a wrapper for a plain Constraint.
+ */
 class RawConstraintCombiner : public ConstraintCombiner {
 	Constraint constraint; 
 public:
 	RawConstraintCombiner(const Constraint& constraint) : 
 		ConstraintCombiner(ConstraintCombiner::RAW), constraint(constraint) { }
-
-	void Accept(ConstraintVisitor& ) const { }
+	
+	const Constraint& getConstraint() const { return constraint; }
+	
+	void accept(ConstraintVisitor& v) const;
 };
 
 class UnaryConstraintCombiner : public ConstraintCombiner {
@@ -516,7 +533,9 @@ public:
 	UnaryConstraintCombiner(const ConstraintCombinerPtr& comb, bool negate=false) :
 		ConstraintCombiner( negate?NEG:POS ), subComb( comb ) { }
 	
-	void Accept(ConstraintVisitor& ) const { }
+	const ConstraintCombinerPtr& getSubConstraint() const { return subComb; }
+
+	void accept(ConstraintVisitor& v) const;
 };
 
 class BinaryConstraintCombiner : public ConstraintCombiner {
@@ -527,32 +546,63 @@ public:
 			const ConstraintCombinerPtr& rhs, const ConstraintCombiner::Type& type) : 
 		ConstraintCombiner(type), constraints( std::make_pair(lhs, rhs) ) { }
 
-	void Accept(ConstraintVisitor& ) const { }
+	void accept(ConstraintVisitor& v) const;
+
+	inline const ConstraintCombinerPtr& getLHS() const { return constraints.first; }
+	inline const ConstraintCombinerPtr& getRHS() const { return constraints.second; }
+
+};
+
+struct ConstraintVisitor {
+
+	virtual void visit(const RawConstraintCombiner& rcc) { }
+
+	virtual void visit(const UnaryConstraintCombiner& ucc) {
+		ucc.getSubConstraint()->accept(*this);
+	}
+
+	virtual void visit(const BinaryConstraintCombiner& bcc) {
+		bcc.getLHS()->accept(*this);
+		bcc.getRHS()->accept(*this);
+	}
 };
 
 namespace {
 
-template <class... T>
-ConstraintCombinerPtr 
-makeConstraint(const ConstraintCombiner::Type& type, const ConstraintCombinerPtr& head, const T&... args) {
-	return std::make_shared<BinaryConstraintCombiner>( head, makeConstaint(args...), type );
-}
+template <class... All>
+class Combiner;
 
-template <>
-ConstraintCombinerPtr 
-makeConstraint(const ConstraintCombiner::Type& type, const ConstraintCombinerPtr& c1, const ConstraintCombinerPtr& c2) {
-	return std::make_shared<BinaryConstraintCombiner>( c1, c2, type );
-}
+template <class Head, class... Tail>
+struct Combiner<Head, Tail...> {
+
+	static ConstraintCombinerPtr make(const ConstraintCombiner::Type& type, const Head& head, const Tail&... args) {
+		return std::make_shared<BinaryConstraintCombiner>( head, Combiner<Tail...>::make(type, args...), type );
+	}
+
+};
+
+template <class Head>
+struct Combiner<Head> {
+	static ConstraintCombinerPtr make(const ConstraintCombiner::Type& type, const Head& head) { return head; }
+};
 
 } // end anonymous namespace 
 
-template <class ...T>
-ConstraintCombinerPtr makeConjunction(const T& ... args) { return makeConstraint(ConstraintCombiner::AND, args...); }
+template <class ...All>
+ConstraintCombinerPtr makeConjunction(const All& ... args) { 
+	return Combiner<All...>::make(ConstraintCombiner::AND, args...); 
+}
 
-template <class ...T>
-ConstraintCombinerPtr makeDisjunction(const T& ... args) { return makeConstraint(ConstraintCombiner::OR, args...); }
+template <class ...All>
+ConstraintCombinerPtr makeDisjunction(const All&... args) { 
+	return Combiner<All...>::make(ConstraintCombiner::OR, args...); 
+}
 
+ConstraintCombinerPtr negate(const ConstraintCombinerPtr& cc);
 
+ConstraintCombinerPtr negate(const Constraint& c);
+
+ConstraintCombinerPtr makeCombiner(const Constraint& c);
 
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;
@@ -681,5 +731,6 @@ struct ScatteringFunction : public ConstraintSet<EqualityConstraint> {
 
 namespace std {
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::poly::AffineFunction::Term& c);
-}
+} // end std namespace 
+
 
