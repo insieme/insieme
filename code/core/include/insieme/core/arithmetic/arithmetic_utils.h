@@ -76,9 +76,13 @@ namespace arithmetic {
 	 * a formula should be converted into one.
 	 */
 	class NotAFormulaException : public std::exception {
-		virtual const char* what() const throw() {
-			return "Cannot convert given expression - not a formula!";
-		}
+		NodePtr expr;
+
+	public:
+		NotAFormulaException(const NodePtr& expr) : expr(expr) { }
+
+		virtual const char* what() const throw();
+		virtual ~NotAFormulaException() throw() { }
 	};
 
 } // end namespace arithmetic

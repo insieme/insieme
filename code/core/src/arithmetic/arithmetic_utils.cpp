@@ -43,10 +43,17 @@
 
 #include "insieme/utils/numeric_cast.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace core {
 namespace arithmetic {
 
+const char* NotAFormulaException::what() const throw() {	
+	std::ostringstream ss;
+	ss << "Cannot convert expression '" << *expr << "', not a formula!";
+	return ss.str().c_str();
+}
 
 namespace {
 
@@ -75,9 +82,20 @@ namespace {
 		Formula visitCallExpr(const CallExprPtr& call) {
 			checkType(call);
 
+			// Handling of deref expressions, which like cast expressions
+			// should be not considered in this phase
+
+			if (core::analysis::isCallOf(call, lang.getRefDeref())) {
+				// we assume a deref operator is always applied to a variable
+				if ( VariablePtr&& var = dynamic_pointer_cast<const Variable>(call->getArgument(0)) ) {
+					return var;
+				}
+				return visit(call->getArgument(0));
+			}
+
 			// check number of arguments
 			if (call->getArguments().size() != static_cast<std::size_t>(2)) {
-				throw NotAFormulaException();
+				throw NotAFormulaException(call);
 			}
 
 			// check function
@@ -87,17 +105,17 @@ namespace {
 			if (lang.isSignedIntDiv(fun) || lang.isUnsignedIntDiv(fun)) {
 				ExpressionPtr argA = call->getArgument(0);
 				if (argA->getNodeType() != NT_Literal) {
-					throw NotAFormulaException();
+					throw NotAFormulaException(call);
 				}
 				LiteralPtr lit = static_pointer_cast<const Literal>(argA);
 				if (!lang.isInt(lit->getType()) || lit->getValue() != "1") {
-					throw NotAFormulaException();
+					throw NotAFormulaException(call);
 				}
 
 				// convert second parameter
 				Formula f = visit(call->getArgument(1));
 				if (f.getTerms().size() > static_cast<std::size_t>(1)) {
-					throw NotAFormulaException();
+					throw NotAFormulaException(call);
 				}
 
 				// return 1/second argument
@@ -119,7 +137,7 @@ namespace {
 			}
 
 			// no supported formula
-			throw NotAFormulaException();
+			throw NotAFormulaException(call);
 		}
 
 		Formula visitCastExpr(const CastExprPtr& cur) {
@@ -128,7 +146,7 @@ namespace {
 		}
 
 		Formula visitNode(const NodePtr& cur) {
-			throw NotAFormulaException();
+			throw NotAFormulaException(cur);
 		}
 
 	private:
@@ -136,7 +154,7 @@ namespace {
 		void checkType(const ExpressionPtr& expr) {
 			// check that current expression is a integer expression
 			if (!lang.isInt(expr->getType())) {
-				throw NotAFormulaException();
+				throw NotAFormulaException(expr);
 			}
 		}
 

@@ -63,7 +63,7 @@ public:
 };
 
 class BasicGenerator : boost::noncopyable {
-	mutable NodeManager& nm;
+	NodeManager& nm;
 	struct BasicGeneratorImpl;
 	mutable BasicGeneratorImpl* pimpl;
 	class SubTypeLattice;

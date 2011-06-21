@@ -60,16 +60,16 @@ class NotASCoP : public std::exception {
 public:
 	NotASCoP( const NodePtr& root ) : std::exception(), root(root) { }
 
-	const char* what() const throw() { 
+	virtual const char* what() const throw() { 
 		std::ostringstream ss;
-		ss << "Node " << *root << " is not a Static Control Part";
+		ss << "Node '" << *root << "' is not a Static Control Part";
 		return ss.str().c_str();
 	}
 
-	~NotASCoP() throw() { }
+	virtual ~NotASCoP() throw() { }
 };
 
-std::set<Constraint> extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
+ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
 
 	NodeManager& mgr = cond->getNodeManager();
     if (cond->getNodeType() == NT_CallExpr) {
@@ -79,8 +79,6 @@ std::set<Constraint> extractFromCondition(IterationVector& iv, const ExpressionP
 		{
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
-			std::set<Constraint> constraints;
-
 			// First of all we check whether this condition is a composed by
 			// multiple conditions connected through || or && statements 
 			BasicGenerator::Operator&& op = 
@@ -88,22 +86,15 @@ std::set<Constraint> extractFromCondition(IterationVector& iv, const ExpressionP
 
 			switch (op) {
 			case BasicGenerator::LOr:
-				assert(false && "Logical OR not supported yet.");
 			case BasicGenerator::LAnd:
 				{
-					std::set<Constraint>&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
-					if (op == BasicGenerator::LOr) {
-						// because we can only represent conjuctions of
-						// constraints, we apply demorgan rule to transform a
-						// logical or to be expressed using logical and
-						
-					}
-					std::copy(lhs.begin(), lhs.end(), std::inserter(constraints, constraints.begin()));
-					
-					std::set<Constraint>&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
-					std::copy(rhs.begin(), rhs.end(), std::inserter(constraints, constraints.begin()));
-					return constraints;
+					ConstraintCombinerPtr&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
+					ConstraintCombinerPtr&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
+					return makeConstraint( 
+						(BasicGenerator::LAnd ? ConstraintCombiner::AND : ConstraintCombiner::OR), lhs, rhs);
 				}
+			case BasicGenerator::LNot:
+				 return std::make_shared<UnaryConstraintCombiner>( extractFromCondition(iv, callExpr->getArgument(0)), true );
 			default:
 				break;
 			}
@@ -130,11 +121,9 @@ std::set<Constraint> extractFromCondition(IterationVector& iv, const ExpressionP
 					default:
 						assert(false && "Operation not supported!");
 				}
-				constraints.insert( Constraint(af, type) );
+				return std::make_shared<RawConstraintCombiner>( Constraint(af, type) );
 
 			} catch (const NotAffineExpr& e) { throw NotASCoP(cond); }
-
-			return constraints;
 		}
 	}
 	assert(false);
@@ -200,7 +189,7 @@ public:
 		if (!(isThenSCOP && isElseSCOP)) { throw NotASCoP(ifStmt); }
 
 		// check the condition expression
-		std::set<Constraint>&& c = extractFromCondition(ret, ifStmt->getCondition());
+		ConstraintCombinerPtr&& comb = extractFromCondition(ret, ifStmt->getCondition());
 
 		// if no exception has been thrown we are sure the sub else and then
 		// tree are ScopRegions, therefore this node can be marked as SCoP as well.

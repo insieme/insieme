@@ -337,7 +337,7 @@ IterationVector merge(const IterationVector& a, const IterationVector& b);
  */
 class AffineFunction : public utils::Printable, public boost::equality_comparable<AffineFunction> { 
 	// Iteration Vector to which this function refers to 
-	mutable const IterationVector& iterVec;
+	const IterationVector& iterVec;
 
 	// List of integer coefficients (the polyhedral model does not allow to
 	// represent non integer coefficients)
@@ -502,21 +502,19 @@ private:
 typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
 
 class RawConstraintCombiner : public ConstraintCombiner {
-
+	Constraint constraint; 
+public:
 	RawConstraintCombiner(const Constraint& constraint) : 
 		ConstraintCombiner(ConstraintCombiner::RAW), constraint(constraint) { }
 
 	void Accept(ConstraintVisitor& ) const { }
-
-private:
-	Constraint constraint; 
 };
 
 class UnaryConstraintCombiner : public ConstraintCombiner {
 	ConstraintCombinerPtr subComb;
 public:
 	UnaryConstraintCombiner(const ConstraintCombinerPtr& comb, bool negate=false) :
-		ConstraintCombiner(negate?NEG:POS), subComb(comb) { }
+		ConstraintCombiner( negate?NEG:POS ), subComb( comb ) { }
 	
 	void Accept(ConstraintVisitor& ) const { }
 };
@@ -531,6 +529,30 @@ public:
 
 	void Accept(ConstraintVisitor& ) const { }
 };
+
+namespace {
+
+template <class... T>
+ConstraintCombinerPtr 
+makeConstraint(const ConstraintCombiner::Type& type, const ConstraintCombinerPtr& head, const T&... args) {
+	return std::make_shared<BinaryConstraintCombiner>( head, makeConstaint(args...), type );
+}
+
+template <>
+ConstraintCombinerPtr 
+makeConstraint(const ConstraintCombiner::Type& type, const ConstraintCombinerPtr& c1, const ConstraintCombinerPtr& c2) {
+	return std::make_shared<BinaryConstraintCombiner>( c1, c2, type );
+}
+
+} // end anonymous namespace 
+
+template <class ...T>
+ConstraintCombinerPtr makeConjunction(const T& ... args) { return makeConstraint(ConstraintCombiner::AND, args...); }
+
+template <class ...T>
+ConstraintCombinerPtr makeDisjunction(const T& ... args) { return makeConstraint(ConstraintCombiner::OR, args...); }
+
+
 
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;
