@@ -51,12 +51,13 @@ namespace scop {
  */
 class ScopRegion: public core::NodeAnnotation {
 	poly::IterationVector iterVec;
-
+	poly::ConstraintCombinerPtr constraints;
 public:
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> KEY;
 
-	ScopRegion(const poly::IterationVector& iterVec): core::NodeAnnotation(), iterVec(iterVec) { } 
+	ScopRegion(const poly::IterationVector& iv, const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr() ): 
+		core::NodeAnnotation(), iterVec(iv), constraints(poly::cloneConstraint(iterVec, comb)) { } 
 
 	const std::string& getAnnotationName() const { return NAME; }
 
@@ -70,6 +71,36 @@ public:
 
 	const poly::IterationVector& getIterationVector() const { return iterVec; }
 };
+
+/**
+ * AccessFunction : this annotation is used to annotate array subscript
+ * expressions with the equality constraint resulting from the access function. 
+ *
+ * for example the subscript operation A[i+j-N] will generate an equality constraint
+ * of the type i+j-N==0. Constraint which is used to annotate the expression.
+ */
+class AccessFunction: public core::NodeAnnotation {
+	poly::IterationVector iterVec;
+	poly::EqualityConstraint  eqCons;
+public:
+	static const string NAME;
+	static const utils::StringKey<AccessFunction> KEY;
+
+	AccessFunction(const poly::IterationVector& iv, const poly::EqualityConstraint& eqCons) : 
+		core::NodeAnnotation(), iterVec(iv), eqCons( poly::AffineFunction(iterVec, eqCons.getAffineFunction()) ) { }
+
+	const std::string& getAnnotationName() const { return NAME; }
+
+	const utils::AnnotationKey* getKey() const { return &KEY; }
+
+	const std::string toString() const; 
+	
+	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const { 
+		return false; 
+	}
+
+};
+
 typedef std::vector<std::shared_ptr<ScopRegion>> ScopList;
 
 /**

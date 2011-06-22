@@ -248,7 +248,7 @@ public:
 	 * @param after the node state after the transformation, which might have to be updated
 	 * @return true if a migration took place, false otherwise
 	 */
-	virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const =0;
+	virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const = 0;
 };
 
 /**
