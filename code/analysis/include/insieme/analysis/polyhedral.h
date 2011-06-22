@@ -178,7 +178,8 @@ struct Constant : public Element {
  * the iteration domain) we chose a representation which allows the size 
  * of the vector to grow without invalidating already generated polyhedron.
  */
-class IterationVector : public utils::Printable, public boost::equality_comparable<IterationVector> {
+class IterationVector : public utils::Printable, 
+	public boost::equality_comparable<IterationVector> {
 
 	typedef std::vector<Iterator> IterVec;
 	IterVec iters;					// ordered list of iterators
@@ -489,7 +490,6 @@ class ConstraintCombiner;
 
 typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
 
-
 // forward declaration for the Constraint visitor 
 struct ConstraintVisitor; 
 
@@ -604,6 +604,8 @@ ConstraintCombinerPtr negate(const Constraint& c);
 
 ConstraintCombinerPtr makeCombiner(const Constraint& c);
 
+ConstraintCombinerPtr cloneConstraint(const IterationVector& iterVec, const ConstraintCombinerPtr& cc);
+
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;
 
@@ -684,30 +686,17 @@ public:
 // the set of integer points of an N-dimensional plane are delimited by affine
 // linear functions which define a convex region, therefore the polyhedron. 
 
-struct IterationDomain : public ConstraintSet<Constraint> {
-	IterationDomain(const IterationVector& iterVec, const ConstraintList& clist) : 
-		ConstraintSet<Constraint>(iterVec, clist) { }
+struct IterationDomain {
+	IterationDomain(const IterationVector& iterVec, const ConstraintCombinerPtr& combiner) : 
+		iterVec(iterVec), constraints(combiner) { }
 
 	std::ostream& printTo(std::ostream& out) {
-		out << "IterationDomain: ";
-	   	ConstraintSet<Constraint>::printTo(out);
-		return out;
+		return out << "Iteration Domain: \n\t IV: " << iterVec << "\n\tCONS: [ " << *constraints << " ]";
 	}
 
-};
-
-// Access functions are defined by a set of equalities which defined the way
-// arrays are accessed. 
-struct AccessFunction : public ConstraintSet<EqualityConstraint> { 
-	
-	AccessFunction(const IterationVector& iterVec, const std::vector<EqualityConstraint>& clist) :
-		ConstraintSet<EqualityConstraint>(iterVec, clist) { }
-
-	std::ostream& printTo(std::ostream& out) {
-		out << "AccessFunctions: ";
-	   	ConstraintSet<EqualityConstraint>::printTo(out);
-		return out;
-	}
+private:
+	IterationVector 		iterVec;
+	ConstraintCombinerPtr	constraints; 
 };
 
 // Scheduling functions defines the order of statements in the program
