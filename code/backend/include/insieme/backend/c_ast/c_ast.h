@@ -185,6 +185,12 @@ namespace c_ast {
 		virtual bool equals(const Node& other) const;
 	};
 
+	struct NamedType : public Type {
+		IdentifierPtr name;
+		NamedType(IdentifierPtr name) : Type(NT_NamedType), name(name) {}
+		virtual bool equals(const Node& other) const;
+	};
+
 	struct PointerType : public Type {
 		TypePtr elementType;
 		PointerType(TypePtr elementType) : Type(NT_PointerType), elementType(elementType) {}
@@ -212,6 +218,16 @@ namespace c_ast {
 
 	struct UnionType : public NamedCompositeType {
 		UnionType(IdentifierPtr name) : NamedCompositeType(NT_UnionType, name) {}
+	};
+
+	struct FunctionType : public Type {
+		TypePtr returnType;
+		vector<TypePtr> parameterTypes;
+		FunctionType(const TypePtr& returnType)
+					: Type(NT_FunctionType), returnType(returnType), parameterTypes() {}
+		FunctionType(const TypePtr& returnType, const vector<TypePtr>& parameter)
+			: Type(NT_FunctionType), returnType(returnType), parameterTypes(parameter) {}
+		virtual bool equals(const Node& node) const;
 	};
 
 	// -- Statements -----------------------------
@@ -308,8 +324,9 @@ namespace c_ast {
 
 	struct Initializer : public Expression {
 		TypePtr type;
-		vector<ExpressionPtr> values;
+		vector<NodePtr> values;
 		Initializer(TypePtr type) : Expression(NT_Initializer), type(type) {};
+		Initializer(TypePtr type, const vector<NodePtr>& values) : Expression(NT_Initializer), type(type), values(values) {};
 		virtual bool equals(const Node& node) const;
 	};
 

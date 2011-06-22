@@ -161,6 +161,13 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>&>::type static_p
 	return *(reinterpret_cast<Ptr<B>* >(&src));
 }
 
+// the same as above, only for constant pointers
+template<typename B, typename T>
+inline typename boost::enable_if<boost::is_base_of<T,B>, const Ptr<B>&>::type static_pointer_cast(const Ptr<T>& src) {
+	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
+	return *(reinterpret_cast<const Ptr<B>* >(&src));
+}
+
 template<typename T>
 std::ostream& operator<<(std::ostream& out, const Ptr<T>& ptr) {
 	out << "P(";
