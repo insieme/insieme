@@ -116,7 +116,7 @@ TEST_P(TypeVariableDeductionTest, DeriveTypes) {
 //	core::NodeManager& manager = testGlobalManager;
 
 	// disable logger output
-	Logger::get(std::cerr, ERROR, 0);
+	Logger::get(std::cerr, DEBUG, 1);
 
 	// obtain test case
 	utils::test::IntegrationTestCase testCase = GetParam();
@@ -186,10 +186,9 @@ class FrontendIntegrationTest : public ::testing::TestWithParam<IntegrationTestC
 // define the test case pattern
 TEST_P(FrontendIntegrationTest, SemanticChecks) {
 	core::NodeManager manager;
-
+	
 	// obtain test case
 	utils::test::IntegrationTestCase testCase = GetParam();
-
 	SCOPED_TRACE("Testing Case: " + testCase.getName());
 
 	// load the code using the frontend

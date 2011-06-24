@@ -121,6 +121,9 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	 */
 	FunctionDecl* def = const_cast<FunctionDecl*>( funcDecl );
 	const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
+	assert(clangTU && "Translation unit for function not found.");
+	const TranslationUnit* oldTU = mFact.currTU;
+
 	mFact.setTranslationUnit( Program::getTranslationUnit(clangTU) );
 
 	// Extract globals starting from this entry point
@@ -152,7 +155,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
     }
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
-
+	mFact.currTU = oldTU;
 	return mProgram;
 }
 
