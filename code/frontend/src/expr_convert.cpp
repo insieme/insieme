@@ -855,6 +855,8 @@ public:
 
 			// collects the type of each argument of the expression
 			ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+			
+			assert( convFact.currTU && "Translation unit not set.");
 
 			const TranslationUnit* oldTU = convFact.currTU;
 			const FunctionDecl* definition = NULL;
@@ -867,12 +869,15 @@ public:
 				 * if the function is not defined in this translation unit, maybe it is defined in another we already
 				 * loaded use the clang indexer to lookup the definition for this function declarations
 				 */
-				const clang::idx::TranslationUnit* clangTU = convFact.getTranslationUnitForDefinition(funcDecl);
+				FunctionDecl* fd = funcDecl;
+				const clang::idx::TranslationUnit* clangTU = convFact.getTranslationUnitForDefinition(fd);
 
-				if ( clangTU ) { convFact.setTranslationUnit( Program::getTranslationUnit(clangTU) ); }
+				if ( clangTU ) { 
+					convFact.currTU = &Program::getTranslationUnit(clangTU); 
+				}
 				
-				if ( funcDecl->isThisDeclarationADefinition() ) {
-					definition = funcDecl;
+				if ( clangTU && fd->hasBody() ) { 
+					definition = fd; 
 				}
 			}
 
@@ -910,6 +915,7 @@ public:
 					);
 				// handle eventual pragmas attached to the Clang node
 				core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
+				convFact.currTU = oldTU;
 				return annotatedNode;
 			}
 
@@ -955,6 +961,8 @@ public:
 								);
 					// handle eventual pragmas attached to the Clang node
 					core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, callExpr, convFact);
+
+					convFact.currTU = oldTU;
 					return annotatedNode;
 				}
 			}
@@ -962,6 +970,7 @@ public:
 			assert(definition && "No definition found for function");
 			core::ExpressionPtr lambdaExpr =
 					core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(definition) );
+
 			convFact.currTU = oldTU;
 			irNode = builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
@@ -1789,8 +1798,8 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* funcDecl, bool isEntryPoint) {
 	// the function is not extern, a lambdaExpr has to be created
-	assert(funcDecl->hasBody() && "Function has no body!");
-	assert(currTU);
+	assert(currTU && funcDecl->hasBody() && "Function has no body!");
+
 	VLOG(1) << "~ Converting function: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 
 	VLOG(1) << "#----------------------------------------------------------------------------------#";
@@ -1810,18 +1819,22 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
-	// retrieve the strongly connected components for this type
-	std::set<const FunctionDecl*>&& components = exprConv->funcDepGraph.getStronglyConnectedComponents( funcDecl );
-
+	// We are resolving a recursive function and we are recurring trying to
+	// solve a dependent function. Check if we already solved this function by
+	// looking into the lambda cache.
 	if ( ctx.isResolvingRecFuncBody ) {
 		// check if we already resolved this function 
 		// look up the lambda cache to see if this function has been
 		// already converted into an IR lambda expression. 
 		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find( funcDecl );
-		if ( fit != ctx.lambdaExprCache.end() ) {
-			return fit->second;
+
+		if ( fit != ctx.lambdaExprCache.end() ) { 
+			return fit->second; 
 		}
 	}
+
+	// retrieve the strongly connected components for this type
+	std::set<const FunctionDecl*>&& components = exprConv->funcDepGraph.getStronglyConnectedComponents( funcDecl );
 
 	// save the current translation unit 
 	const TranslationUnit* oldTU = currTU;
@@ -1830,21 +1843,20 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	std::for_each(subComponents.begin(), subComponents.end(), 
 		[&](const FunctionDecl* cur){ 
 			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
-			const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(decl);
+			const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 			
 			if ( clangTU ) {
 				// update the translation unit
-				setTranslationUnit( Program::getTranslationUnit(clangTU) );
-			}
-
-			// look up the lambda cache to see if this function has been
-			// already converted into an IR lambda expression. 
-			ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
-			if ( fit == ctx.lambdaExprCache.end() ) {
-				// perfrom the conversion only if this is the first time this
-				// function is encountred 
-				convertFunctionDecl(decl, false); 
-				ctx.recVarExprMap.clear();
+				this->currTU = &Program::getTranslationUnit(clangTU);
+				// look up the lambda cache to see if this function has been
+				// already converted into an IR lambda expression. 
+				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
+				if ( fit == ctx.lambdaExprCache.end() ) {
+					// perfrom the conversion only if this is the first time this
+					// function is encountred 
+					convertFunctionDecl(decl, false); 
+					ctx.recVarExprMap.clear();
+				}
 			}
 		}
 	);
@@ -2013,6 +2025,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
         ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
 
         return attachFuncAnnotations(retLambdaExpr, funcDecl);
+		return retLambdaExpr;
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
@@ -2095,10 +2108,23 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		[ this, &definition ] (std::set<const FunctionDecl*>::value_type fd) {
 			auto fit = this->ctx.recVarExprMap.find(fd);
 			assert(fit != this->ctx.recVarExprMap.end());
-			core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
-			ctx.lambdaExprCache.insert( std::make_pair(fd, func) );
+			
+			FunctionDecl* decl = const_cast<FunctionDecl*>(fd);
+			const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
+			
+			assert ( clangTU );
+			// save old TU
+			const TranslationUnit* oldTU = this->currTU;
 
-			func = this->attachFuncAnnotations(func, fd);
+			// update the translation unit
+			this->currTU = &Program::getTranslationUnit(clangTU);
+			
+			core::ExpressionPtr&& func = builder.lambdaExpr(fit->second, definition);
+			ctx.lambdaExprCache.insert( std::make_pair(decl, func) );
+
+			func = this->attachFuncAnnotations(func, decl);
+
+			currTU = oldTU;
 		}
 	);
 	VLOG(2) << "Converted Into: " << *retLambdaExpr;

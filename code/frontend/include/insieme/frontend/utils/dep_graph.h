@@ -194,7 +194,6 @@ private:
 		rootMap.resize( num_vertices(graph) );
 		numComponents = boost::strong_components(graph, &strongComponents[0], boost::root_map(&rootMap[0]));
 
-		std::copy(strongComponents.begin(), strongComponents.end(), std::ostream_iterator<int>(std::cout, ", ") );
 		dirtyFlag = false;
 	}
 
