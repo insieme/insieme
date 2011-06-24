@@ -135,9 +135,7 @@ void insieme_init_context(irt_context* context) {
 	cl_uint num = irt_ocl_get_num_devices();
 	for (uint i = 0; i < num; ++i){	
 		irt_ocl_device* dev = irt_ocl_get_device(i);
-		printf("Compiling OpenCL program in \"");
-		irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
-		printf("\"\n");
+		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
 		cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", IRT_OCL_SOURCE);
 		//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
 		clReleaseProgram(program);
@@ -286,9 +284,7 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	double** C = (double**)blockC->data;
 	
 	irt_ocl_device* dev = irt_ocl_get_device(0);
-	printf("Running Opencl Kernel in \"");
-	irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
-	printf("\"\n");
+	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 	
 	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
 	//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
