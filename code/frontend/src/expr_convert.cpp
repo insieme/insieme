@@ -957,14 +957,6 @@ public:
 							wrapVariable(callExpr->getArg(0))
 						);
 				}
-
-                //-----------------------------------------------------------------------------------------------------
-                //                          Handle of OpenCL built-in functions
-                //-----------------------------------------------------------------------------------------------------
-                // clEnqueueWriteBuffer()
-                if ( funcDecl->getNameAsString() == "clEnqueueWriteBuffer") {
-                    std::cerr << "FOUND clEnqueueWriteBuffer " << callExpr->getNumArgs() << std::endl;
-                }
 			}
 
 			ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);

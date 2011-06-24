@@ -157,12 +157,12 @@ public:
 };
 
 typedef std::shared_ptr<Handler> HandlerPtr;
-typedef boost::unordered_map<string, HandlerPtr, boost::hash<string>> HandlerTable;
-typedef boost::unordered_map<core::VariablePtr, core::VariablePtr> ClmemTable;
-typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
-typedef boost::unordered_map<string, core::ExpressionPtr> KernelNames;
-typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr> KernelLambdas;
-typedef boost::unordered_map<core::ExpressionPtr, vector<core::DeclarationStmtPtr> > LocalMemDecls;
+typedef boost::unordered_map<string, HandlerPtr, boost::hash<string> > HandlerTable;
+typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;
+typedef insieme::utils::map::PointerMap<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
+typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
+typedef insieme::utils::map::PointerMap<core::ExpressionPtr, core::LambdaExprPtr> KernelLambdas;
+typedef insieme::utils::map::PointerMap<core::ExpressionPtr, vector<core::DeclarationStmtPtr> > LocalMemDecls;
 
 template<typename Lambda>
 HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct,
@@ -234,12 +234,16 @@ public:
 class Host2ndPass {
 	KernelNames& kernelNames;
 	KernelLambdas kernelLambdas;
+	ClmemTable& cl_mems;
+	const core::ASTBuilder& builder;
 
 public:
-	Host2ndPass(KernelNames& oclKernelNames, ClmemTable clMemTable, core::ASTBuilder& build) :
-		kernelNames(oclKernelNames) {
+	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, core::ASTBuilder& build) :
+		kernelNames(oclKernelNames), cl_mems(clMemTable), builder(build) {
 	}
 	void mapNamesToLambdas(const vector<core::ExpressionPtr>& kernelEntries);
+
+	ClmemTable& getCleanedStructures();
 
 	KernelNames& getKernelNames() {
 		return kernelNames;
@@ -272,7 +276,7 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 
 	// takes the expression size which describes the work size for the clEnqueueNDRange and embed it in an IR function which returns a
 	// vector<uint<4>, 3>, always awaited by the kernel function. The elements with index greater or equal to workDim will always be set
-	// to 1, regardles of the argument size
+	// to 1, regardless of the argument size
 	const core::ExpressionPtr anythingToVec3(core::ExpressionPtr workDim,
 			core::ExpressionPtr size);
 
