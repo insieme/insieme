@@ -1033,7 +1033,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
 		if(fun == BASIC.getRefAssign()) {
-			std::cout << "*********************************" << callExpr->getArgument(1) << std::endl;
 			// get rid of some not needed functions
 			if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
 				// check if it is embedded in a ref.deref
