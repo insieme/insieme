@@ -84,13 +84,13 @@ static void _irt_cl_print_device_infos(cl_device_id* id) {
 	IRT_ASSERT(id != NULL, IRT_ERR_OCL, "Error: invalid device");
 	for (cl_uint i = 0; i < IRT_CL_NUM_DEVICE_PARAMS; i++) {
 		IRT_INFO("%-25s = \"", _irt_cl_device_params[i].name_string);
-		_irt_cl_print_device_info(id, _irt_cl_device_params[i].name);
+		_irt_cl_print_device_info(id, "", _irt_cl_device_params[i].name, "");
 		IRT_INFO("\"\n");
 	}
 	IRT_INFO("\n");
 }
 
-static void _irt_cl_print_device_info(cl_device_id* id, cl_device_info param_name){
+static void _irt_cl_print_device_info(cl_device_id* id, char* prefix, cl_device_info param_name, char* suffix){
 	size_t cl_param_size;
 	char* cl_param_value;
 	cl_int err_code;
@@ -99,7 +99,7 @@ static void _irt_cl_print_device_info(cl_device_id* id, cl_device_info param_nam
 	cl_param_value = alloca (cl_param_size);
 	err_code = clGetDeviceInfo(*id, param_name, cl_param_size, cl_param_value, NULL);
 	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
-	IRT_INFO("%s", cl_param_value);
+	IRT_INFO("%s%s%s", prefix, cl_param_value, suffix);
 }
 
 cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type){
@@ -349,8 +349,8 @@ void irt_ocl_print_device_infos(irt_ocl_device* dev) {
 	_irt_cl_print_device_infos(&(dev->cl_device));
 }
 
-void irt_ocl_print_device_info(irt_ocl_device* dev, cl_device_info param_name){
-	_irt_cl_print_device_info(&(dev->cl_device), param_name);
+void irt_ocl_print_device_info(irt_ocl_device* dev, char* prefix, cl_device_info param_name, char* suffix){
+	_irt_cl_print_device_info(&(dev->cl_device), prefix, param_name, suffix);
 }
 
 float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag) {

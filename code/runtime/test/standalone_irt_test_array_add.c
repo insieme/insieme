@@ -187,9 +187,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	uint64* output = (uint64*)outputblock->data;
 
 	irt_ocl_device* dev = irt_ocl_get_device(0);
-	printf("Running Opencl Kernel in \"");
-	irt_ocl_print_device_info(dev, CL_DEVICE_NAME);
-	printf("\"\n");
+	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 	
 	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl" , "", IRT_OCL_BINARY);
 	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "vector_add");
