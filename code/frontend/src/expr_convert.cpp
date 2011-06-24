@@ -494,29 +494,8 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 			return builder.callExpr( gen.getScalarToArray(), subExpr);
 		}
 	}
-	
-	// [  ]
-	//
-	//if ( trgTy->getNodeType() == core::NT_RefType ) {
-		//core::ExpressionPtr ret = expr;
-		//core::LiteralPtr saveOp;
-		//if(expr->getNodeType() == core::NT_CallExpr && core::analysis::isCallOf(ret, gen.getRefVar())) {
-			//saveOp = gen.getRefVar();
-			//ret = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);
-		//} 
-		//if(expr->getNodeType() == core::NT_CallExpr && core::analysis::isCallOf(ret, gen.getRefNew())) {
-			//saveOp = gen.getRefNew();
-			//ret = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);
-		//} 
-		//assert(saveOp);
-		//return builder.callExpr( trgTy, saveOp, makeHerbertHappy(builder, 
-					//core::static_pointer_cast<const core::RefType>(trgTy)->getElementType(), 
-					//ret	)
-				//);
-	//}
-	
+
 	return builder.castExpr(trgTy, expr);
-	
 	//LOG(ERROR) << ": converting expression '" << *expr << "' of type '" << *expr->getType() << "' to type '" 
 			   //<< *trgTy << "' not yet supported!";
 	//assert(false && "Cast conversion not supported!");
@@ -528,6 +507,8 @@ namespace insieme {
 namespace frontend {
 
 namespace utils {
+
+namespace {
 
 struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
@@ -544,29 +525,39 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		return callGraph;
 	}
 
-	void VisitCallExpr (clang::CallExpr* callExpr) {
-
-		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
-			const clang::FunctionDecl* def = NULL;
+	void addFunctionDecl(FunctionDecl* funcDecl) {
+		const clang::FunctionDecl* def = NULL;
+		/*
+		 * this will find function definitions if they are declared in  the same translation unit
+		 * (also defined as static)
+		 */
+		if ( !funcDecl->hasBody(def) ) {
 			/*
-			 * this will find function definitions if they are declared in  the same translation unit
-			 * (also defined as static)
+			 * if the function is not defined in this translation unit, maybe it is defined in another we already
+			 * loaded use the clang indexer to lookup the definition for this function declarations
 			 */
-			if ( !funcDecl->hasBody(def) ) {
-				/*
-				 * if the function is not defined in this translation unit, maybe it is defined in another we already
-				 * loaded use the clang indexer to lookup the definition for this function declarations
-				 */
-				clang::idx::Entity&& funcEntity = clang::idx::Entity::get( funcDecl, indexer.getProgram() );
-				conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
-				if ( ret.first ) {
-					def = ret.first;
-				}
-			}
+			clang::idx::Entity&& funcEntity = clang::idx::Entity::get( funcDecl, indexer.getProgram() );
+			conversion::ConversionFactory::TranslationUnitPair&& ret = indexer.getDefinitionFor(funcEntity);
+			if ( ret.first ) { def = ret.first;	}
+		}
 
-			if ( def ) { callGraph.insert(def); }
+		if ( def ) { callGraph.insert(def); }
+	}
+
+	void VisitCallExpr (clang::CallExpr* callExpr) {
+		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
+			addFunctionDecl(funcDecl);
 		}
 		VisitStmt(callExpr);
+	}
+
+	void VisitDeclRefExpr(DeclRefExpr* expr) {
+		// if this variable is used to invoke a function (therefore is a
+		// function pointer) and it has been defined here, we add a potentially
+		// dependency to the current definition 
+		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(expr->getDecl()) ) {
+			addFunctionDecl(funcDecl);
+		}
 	}
 
 	void VisitStmt (clang::Stmt* stmt) {
@@ -574,6 +565,8 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 			[ this ](clang::Stmt* curr) { if(curr) this->Visit(curr); });
 	}
 };
+
+} // end anonymous namespace 
 
 /**
  * In order for DepGraph to build the dependency graph for functions the clang indexer is needed,
@@ -754,61 +747,6 @@ public:
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//						   IMPLICIT CAST EXPRESSION
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	//core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* implCastExpr) {
-	    //START_LOG_EXPR_CONVERSION(implCastExpr);
-		//const core::lang::BasicGenerator& gen = convFact.mgr.getBasicGenerator();
-
-		//core::TypePtr&& type = convFact.convertType( GET_TYPE_PTR(implCastExpr) );
-		//core::ExpressionPtr&& subExpr = Visit(implCastExpr->getSubExpr());
-
-		//core::ExpressionPtr&& nonRefExpr = convFact.tryDeref(subExpr);
-		//// if the cast is to a pointer type and the subexpr is a 0 it should be replaced with a null literal
-		//if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && 
-				//(*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) ) 
-		//{
-			//return gen.getNull();
-		//}
-
-		//if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) ) && 
-				//gen.isNull(subExpr) ) 
-		//{
-			//return subExpr;
-		//}
-
-		//// Mallocs/Allocs are replaced with ref.new expression
-		//if (core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr) ) {
-			//return retExpr;
-		//}
-
-		//// If the subexpression is a string, remove the implicit casts
-		//if ( convFact.mgr.basic.isString(subExpr->getType()) ) {
-			//return subExpr;
-		//}
-
-		//// if the subexpression is an array or a vector, remove all the C implicit casts
-		//if ( nonRefExpr->getType()->getNodeType() == core::NT_ArrayType ||
-				//nonRefExpr->getType()->getNodeType() == core::NT_VectorType ) {
-			//return subExpr;
-		//}
-
-		//// In the case the target type of the cast is not a reftype we deref the subexpression
-		//if ( !convFact.builder.getBasicGenerator().isNull(nonRefExpr) && type->getNodeType() != core::NT_RefType ) {
-			//subExpr = nonRefExpr;
-		//}
-
-		//// LOG(DEBUG) << *subExpr << "(" << *subExpr->getType() << ") -> " << *type;
-		//// Convert casts form scalars to vectors to vector init exrpessions
-		//subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
-
-        //core::ExpressionPtr&& retExpr =
-        		//(type != subExpr->getType() ? convFact.builder.castExpr( type, subExpr ) : subExpr);
-		//END_LOG_EXPR_CONVERSION(retExpr);
-		//return retExpr;
-	//}
-
-	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//								CAST EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCastExpr(clang::CastExpr* castExpr) {
@@ -859,16 +797,14 @@ public:
 			// check whether it is a truncation
 			if (gen.isReal(sourceType->getElementType()) && gen.isSignedInt(type)) {
 				const core::GenericTypePtr& intType = static_pointer_cast<const core::GenericType>(type);
-				return convFact.builder.callExpr(type, gen.getRealToInt(), nonRefExpr, gen.getIntTypeParamLiteral(intType->getIntTypeParameter()[0]));
+				return convFact.builder.callExpr(type, 
+						gen.getRealToInt(), nonRefExpr, 
+						gen.getIntTypeParamLiteral(intType->getIntTypeParameter()[0])
+					);
 			}
 
 			return subExpr;  // do not treat ref types
 		}
-
-		// In the case the target type of the cast is not a reftype we deref the subexpression
-		//if(!gen.isNull(subExpr) && type->getNodeType() != core::NT_RefType) {
-			//subExpr = convFact.tryDeref(subExpr);
-		//}
 
 		// LOG(DEBUG) << *subExpr << " -> " << *type;
 		// Convert casts form scalars to vectors to vector init exrpessions
@@ -931,14 +867,12 @@ public:
 				 * if the function is not defined in this translation unit, maybe it is defined in another we already
 				 * loaded use the clang indexer to lookup the definition for this function declarations
 				 */
-				clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, convFact.program.getClangProgram());
-				ConversionFactory::TranslationUnitPair&& ret =
-						convFact.program.getClangIndexer().getDefinitionFor(funcEntity);
+				const clang::idx::TranslationUnit* clangTU = convFact.getTranslationUnitForDefinition(funcDecl);
 
-				if ( ret.first ) {
-					definition = ret.first;
-					assert(ret.second && "Error while loading translation unit for function definition");
-					convFact.currTU = &Program::getTranslationUnit(ret.second);
+				if ( clangTU ) { convFact.setTranslationUnit( Program::getTranslationUnit(clangTU) ); }
+				
+				if ( funcDecl->isThisDeclarationADefinition() ) {
+					definition = funcDecl;
 				}
 			}
 
@@ -1827,33 +1761,7 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 		retExpr = builder.callExpr(builder.refType(retExpr->getType()), mgr.basic.getRefNew(), retExpr);
 	}
 
-	// in the case the array is allocated in the global struct, the type is not ref and the assignment 
-	// of null becomes the initialization of the array with no elements
-	//if ( mgr.getBasicGenerator().isNull(retExpr) &&  type->getNodeType() == core::NT_ArrayType ) {
-		//const core::TypePtr& subTy = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
-		//return builder.callExpr(
-				//type, mgr.basic.getArrayCreate1D(), 
-				//mgr.basic.getTypeLiteral(subTy),
-				//builder.literal("0", mgr.basic.getUInt8())
-			//);
-
-	//}	
-
-	//if ( !(core::analysis::isCallOf(retExpr, mgr.basic.getRefVar()) ||
-		   //core::analysis::isCallOf(retExpr, mgr.basic.getRefNew())) ) {
-
-		//if( retExpr->getType()->getNodeType() == core::NT_RefType && type->getNodeType() == core::NT_RefType ) {
-			//const core::TypePtr& subTy =
-					//core::static_pointer_cast<const core::RefType>(retExpr->getType())->getElementType();
-			//if ( !(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType) )
-				//retExpr = builder.refVar( tryDeref(retExpr) );
-		//} else if ( type->getNodeType() == core::NT_RefType ) {
-			//retExpr = builder.refVar( retExpr );
-		//}
-	//}
-	retExpr = castToType(type, retExpr);
-
-	return retExpr;
+	return castToType(type, retExpr);
 }
 
 
@@ -1904,6 +1812,45 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// retrieve the strongly connected components for this type
 	std::set<const FunctionDecl*>&& components = exprConv->funcDepGraph.getStronglyConnectedComponents( funcDecl );
+
+	if ( ctx.isResolvingRecFuncBody ) {
+		// check if we already resolved this function 
+		// look up the lambda cache to see if this function has been
+		// already converted into an IR lambda expression. 
+		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find( funcDecl );
+		if ( fit != ctx.lambdaExprCache.end() ) {
+			return fit->second;
+		}
+	}
+
+	// save the current translation unit 
+	const TranslationUnit* oldTU = currTU;
+	std::set<const FunctionDecl*>&& subComponents = exprConv->funcDepGraph.getSubComponents( funcDecl );
+
+	std::for_each(subComponents.begin(), subComponents.end(), 
+		[&](const FunctionDecl* cur){ 
+			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
+			const clang::idx::TranslationUnit* clangTU = getTranslationUnitForDefinition(decl);
+			
+			if ( clangTU ) {
+				// update the translation unit
+				setTranslationUnit( Program::getTranslationUnit(clangTU) );
+			}
+
+			// look up the lambda cache to see if this function has been
+			// already converted into an IR lambda expression. 
+			ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
+			if ( fit == ctx.lambdaExprCache.end() ) {
+				// perfrom the conversion only if this is the first time this
+				// function is encountred 
+				convertFunctionDecl(decl, false); 
+				ctx.recVarExprMap.clear();
+			}
+		}
+	);
+
+	// reset the translation unit
+	currTU = oldTU;
 
 	if ( !components.empty() ) {
 		// we are dealing with a recursive type
@@ -2154,6 +2101,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			func = this->attachFuncAnnotations(func, fd);
 		}
 	);
+	VLOG(2) << "Converted Into: " << *retLambdaExpr;
+
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
 }
 

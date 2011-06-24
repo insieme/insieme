@@ -131,8 +131,7 @@ public:
 		VertexTy v = fit.second;
 
 		// We update the information of strongly connected components in the case the graph has been changed
-		if(dirtyFlag)
-			updateStrongComponents();
+		updateStrongComponents();
 
 		// We return a set of Types which are connected with the input type t
 		std::set<T> ret;
@@ -142,8 +141,32 @@ public:
 			if((i != v && strongComponents[i] == strongComponents[v]) || (i == v && boost::edge(v, v, graph).second)) {
 				// in the case we are comparing the same node, we add it to the result only if there is an explicit
 				// link from the node to itself
-				ret.insert(node[i]);
+				ret.insert( node[i] );
 			}
+
+		return ret;
+	}
+
+	std::set<T> getSubComponents(const T& t) {
+		// update the strong components
+		getStronglyConnectedComponents(t);
+		
+		// before resolving this component we have to resolve all the
+		// components with an ID with is smaller than the current. For 
+		// each of these components, we return the root node 
+		auto&& fit = find(t);
+		assert(fit.first && "Type node is not in the graph");
+		VertexTy v = fit.second;
+
+		std::set<T> ret;
+		size_t compID = strongComponents[v];
+
+		typename boost::property_map<NodeDepGraph, T NodeProperty::*>::type node = get(&NodeProperty::node, graph);
+		for(size_t idx=0; idx<compID; ++idx) {
+			auto fidx = std::find(strongComponents.begin(), strongComponents.end(), idx);
+			assert(fidx != strongComponents.end());
+			ret.insert( node[rootMap[std::distance(strongComponents.begin(), fidx)]] );
+		}
 
 		return ret;
 	}
@@ -164,9 +187,14 @@ private:
 	 * the dirtyFlag is true).
 	 */
 	void updateStrongComponents() {
+		if ( !dirtyFlag ) 
+			return ;
+
 		strongComponents.resize( num_vertices(graph) );
 		rootMap.resize( num_vertices(graph) );
 		numComponents = boost::strong_components(graph, &strongComponents[0], boost::root_map(&rootMap[0]));
+
+		std::copy(strongComponents.begin(), strongComponents.end(), std::ostream_iterator<int>(std::cout, ", ") );
 		dirtyFlag = false;
 	}
 

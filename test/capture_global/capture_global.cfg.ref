@@ -8,14 +8,14 @@ digraph G {
 6[shape=diamond,label="ENTRY"];
 7[shape=diamond,label="EXIT"];
 8[shape=box,label="[B8]\l0: ref.deref(...)\lT: RETURN\l"];
-10[shape=box,label="[B10]\l0: composite.ref.elem(v10, count, type<int<4>>)\l"];
+10[shape=box,label="[B10]\l0: composite.ref.elem(v8, count, type<int<4>>)\l"];
 11[shape=box,label="[B11]\l0: ref.assign(..., ...)\l"];
 12[shape=box,label="[B12]\l0: ref.assign(..., 0)\l"];
-13[shape=box,label="[B13]\l0: composite.ref.elem(v10, reset_count, type<int<4>>)\l"];
+13[shape=box,label="[B13]\l0: composite.ref.elem(v8, reset_count, type<int<4>>)\l"];
 14[shape=box,label="[B14]\l0: int.add(..., 1)\l"];
 15[shape=box,label="[B15]\l0: ref.deref(...)\l"];
-16[shape=box,label="[B16]\l0: composite.ref.elem(v10, reset_count, type<int<4>>)\l"];
-18[shape=box,label="[B18]\l0: composite.ref.elem(v10, count, type<int<4>>)\l"];
+16[shape=box,label="[B16]\l0: composite.ref.elem(v8, reset_count, type<int<4>>)\l"];
+18[shape=box,label="[B18]\l0: composite.ref.elem(v8, count, type<int<4>>)\l"];
 19[shape=box,label="CALL"];
 20[shape=box,label="RET"];
 23[shape=box,label="[B23]\l0: printf(..., ...)\l"];

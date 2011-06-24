@@ -4,7 +4,7 @@ digraph G {
 2[shape=box,label="[B2]\l0: printf(..., ...)\l"];
 3[shape=box,label="[B3]\l"];
 4[shape=box,label="[B4]\l0: string.as.char.pointer(\"res=%d\n\")\l"];
-5[shape=box,label="[B5]\l0: varlist.pack((fun{...}(v1, v1)))\l"];
+5[shape=box,label="[B5]\l0: varlist.pack((fun{...}(v6, v6)))\l"];
 2->1 [label=""];
 4->2 [label="0"];
 3->4 [label=""];
