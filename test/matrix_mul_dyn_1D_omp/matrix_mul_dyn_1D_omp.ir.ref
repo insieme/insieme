@@ -2,68 +2,68 @@
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<array<real<8>,1>> v1 = fun(uint<4> v2, uint<4> v3){
-            return  new(array.create.1D(type<real<8>>, v2*v3*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
+        decl ref<array<real<8>,1>> v7 = fun(uint<4> v1, uint<4> v2){
+            return  new(array.create.1D(type<real<8>>, v1*v2*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
         }(1000, 1000);
-        decl ref<array<real<8>,1>> v5 = fun(uint<4> v2, uint<4> v3){
-            return  new(array.create.1D(type<real<8>>, v2*v3*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
+        decl ref<array<real<8>,1>> v8 = fun(uint<4> v1, uint<4> v2){
+            return  new(array.create.1D(type<real<8>>, v1*v2*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
         }(1000, 1000);
-        decl ref<array<real<8>,1>> v6 = fun(uint<4> v2, uint<4> v3){
-            return  new(array.create.1D(type<real<8>>, v2*v3*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
+        decl ref<array<real<8>,1>> v9 = fun(uint<4> v1, uint<4> v2){
+            return  new(array.create.1D(type<real<8>>, v1*v2*sizeof(type<real<8>>)/sizeof(type<real<8>>)));
         }(1000, 1000);
         {
-            for(decl int<4> v10 = 0 .. 1000 : 1) {
-                for(decl int<4> v9 = 0 .. 1000 : 1) {
-                    array.ref.elem.1D(v1, v10*1000+v9) := v10*v9;
+            for(decl int<4> v13 = 0 .. 1000 : 1) {
+                for(decl int<4> v12 = 0 .. 1000 : 1) {
+                    array.ref.elem.1D(v7, v13*1000+v12) := v13*v12;
                 };
             };
-            for(decl int<4> v16 = 0 .. 1000 : 1) {
-                for(decl int<4> v15 = 0 .. 1000 : 1) {
-                    array.ref.elem.1D(v5, v16*1000+v15) := ite(v16==v15, bind(){fun()return 1()}, bind(){fun()return 0()});
+            for(decl int<4> v19 = 0 .. 1000 : 1) {
+                for(decl int<4> v18 = 0 .. 1000 : 1) {
+                    array.ref.elem.1D(v8, v19*1000+v18) := ite(v19==v18, bind(){fun()return 1()}, bind(){fun()return 0()});
                 };
             };
-            for(decl int<4> v23 = 0 .. 1000 : 1) {
-                for(decl int<4> v22 = 0 .. 1000 : 1) {
-                    decl ref<real<8>> v17 =  var(0);
-                    for(decl int<4> v21 = 0 .. 1000 : 1) {
-                        v17 := v17+array.ref.elem.1D(v1, v23*1000+v21)*array.ref.elem.1D(v5, v21*1000+v22);
+            for(decl int<4> v26 = 0 .. 1000 : 1) {
+                for(decl int<4> v25 = 0 .. 1000 : 1) {
+                    decl ref<real<8>> v20 =  var(0);
+                    for(decl int<4> v24 = 0 .. 1000 : 1) {
+                        v20 := v20+array.ref.elem.1D(v7, v26*1000+v24)*array.ref.elem.1D(v8, v24*1000+v25);
                     };
-                    array.ref.elem.1D(v6, v23*1000+v22) := v17;
+                    array.ref.elem.1D(v9, v26*1000+v25) := v20;
                 };
             };
         };
-        decl ref<int<4>> v24 =  var(1);
-        for(decl int<4> v36 = 0 .. 1000 : 1) {
-            for(decl int<4> v29 = 0 .. ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(array.ref.elem.1D(v1, v36*1000+v29), array.ref.elem.1D(v6, v36*1000+v29))) {
-                    v24 := 0;
+        decl ref<int<4>> v27 =  var(1);
+        for(decl int<4> v39 = 0 .. 1000 : 1) {
+            for(decl int<4> v32 = 0 .. ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(array.ref.elem.1D(v7, v39*1000+v32), array.ref.elem.1D(v9, v39*1000+v32))) {
+                    v27 := 0;
                 } else { };
             };
-            for(decl int<4> v35 = ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite(1000>1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(array.ref.elem.1D(v6, v36*1000+v35), 0)) {
-                    v24 := 0;
+            for(decl int<4> v38 = ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite(1000>1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(array.ref.elem.1D(v9, v39*1000+v38), 0)) {
+                    v27 := 0;
                 } else { };
             };
         };
-        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(v24, 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
-        fun(ref<array<real<8>,1>> v39){
-            decl ref<ref<array<real<8>,1>>> v40 =  var(v39);
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(v27, 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+        fun(ref<array<real<8>,1>> v4){
+            decl ref<ref<array<real<8>,1>>> v5 =  var(v4);
             {
-                 del(v40);
+                 del(v5);
             };
-        }(v1);
-        fun(ref<array<real<8>,1>> v39){
-            decl ref<ref<array<real<8>,1>>> v40 =  var(v39);
+        }(v7);
+        fun(ref<array<real<8>,1>> v4){
+            decl ref<ref<array<real<8>,1>>> v5 =  var(v4);
             {
-                 del(v40);
+                 del(v5);
             };
-        }(v5);
-        fun(ref<array<real<8>,1>> v39){
-            decl ref<ref<array<real<8>,1>>> v40 =  var(v39);
+        }(v8);
+        fun(ref<array<real<8>,1>> v4){
+            decl ref<ref<array<real<8>,1>>> v5 =  var(v4);
             {
-                 del(v40);
+                 del(v5);
             };
-        }(v6);
+        }(v9);
     }
 
 
@@ -73,67 +73,67 @@ fun(){
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<array<real<8>,1>> v1 = fun(uint<4> v2, uint<4> v3){
-            return ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v2*v3))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
+        decl ref<array<real<8>,1>> v7 = fun(uint<4> v1, uint<4> v2){
+            return ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v1*v2))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
         }(CAST<uint<4>>(1000), CAST<uint<4>>(1000));
-        decl ref<array<real<8>,1>> v5 = fun(uint<4> v2, uint<4> v3){
-            return ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v2*v3))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
+        decl ref<array<real<8>,1>> v8 = fun(uint<4> v1, uint<4> v2){
+            return ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v1*v2))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
         }(CAST<uint<4>>(1000), CAST<uint<4>>(1000));
-        decl ref<array<real<8>,1>> v6 = fun(uint<4> v2, uint<4> v3){
-            return ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v2*v3))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
+        decl ref<array<real<8>,1>> v9 = fun(uint<4> v1, uint<4> v2){
+            return ( new(array.create.1D(type<real<8>>, ((CAST<uint<8>>((v1*v2))*sizeof(type<real<8>>))/sizeof(type<real<8>>)))));
         }(CAST<uint<4>>(1000), CAST<uint<4>>(1000));
         <m id=4>{
-            <m id=1>for(decl int<4> v10 = 0 .. 1000 : 1) {
-                for(decl int<4> v9 = 0 .. 1000 : 1) {
-                    (array.ref.elem.1D(v1, CAST<uint<4>>(((v10*1000)+v9))) := CAST<real<8>>((v10*v9)));
+            <m id=1>for(decl int<4> v13 = 0 .. 1000 : 1) {
+                for(decl int<4> v12 = 0 .. 1000 : 1) {
+                    (array.ref.elem.1D(v7, CAST<uint<4>>(((v13*1000)+v12))) := CAST<real<8>>((v13*v12)));
                 };
             }</m>;
-            <m id=2>for(decl int<4> v16 = 0 .. 1000 : 1) {
-                for(decl int<4> v15 = 0 .. 1000 : 1) {
-                    (array.ref.elem.1D(v5, CAST<uint<4>>(((v16*1000)+v15))) := CAST<real<8>>(ite((v16==v15), bind(){fun()return 1()}, bind(){fun()return 0()})));
+            <m id=2>for(decl int<4> v19 = 0 .. 1000 : 1) {
+                for(decl int<4> v18 = 0 .. 1000 : 1) {
+                    (array.ref.elem.1D(v8, CAST<uint<4>>(((v19*1000)+v18))) := CAST<real<8>>(ite((v19==v18), bind(){fun()return 1()}, bind(){fun()return 0()})));
                 };
             }</m>;
-            <m id=3>for(decl int<4> v23 = 0 .. 1000 : 1) {
-                for(decl int<4> v22 = 0 .. 1000 : 1) {
-                    decl ref<real<8>> v17 = ( var(CAST<real<8>>(0)));
-                    for(decl int<4> v21 = 0 .. 1000 : 1) {
-                        (v17 := (( *v17)+(( *array.ref.elem.1D(v1, CAST<uint<4>>(((v23*1000)+v21))))*( *array.ref.elem.1D(v5, CAST<uint<4>>(((v21*1000)+v22)))))));
+            <m id=3>for(decl int<4> v26 = 0 .. 1000 : 1) {
+                for(decl int<4> v25 = 0 .. 1000 : 1) {
+                    decl ref<real<8>> v20 = ( var(CAST<real<8>>(0)));
+                    for(decl int<4> v24 = 0 .. 1000 : 1) {
+                        (v20 := (( *v20)+(( *array.ref.elem.1D(v7, CAST<uint<4>>(((v26*1000)+v24))))*( *array.ref.elem.1D(v8, CAST<uint<4>>(((v24*1000)+v25)))))));
                     };
-                    (array.ref.elem.1D(v6, CAST<uint<4>>(((v23*1000)+v22))) := ( *v17));
+                    (array.ref.elem.1D(v9, CAST<uint<4>>(((v26*1000)+v25))) := ( *v20));
                 };
             }</m>;
         }</m>;
-        decl ref<int<4>> v24 = ( var(1));
-        for(decl int<4> v36 = 0 .. 1000 : 1) {
-            for(decl int<4> v29 = 0 .. ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(( *array.ref.elem.1D(v1, CAST<uint<4>>(((v36*1000)+v29)))), ( *array.ref.elem.1D(v6, CAST<uint<4>>(((v36*1000)+v29)))))) {
-                    (v24 := 0);
+        decl ref<int<4>> v27 = ( var(1));
+        for(decl int<4> v39 = 0 .. 1000 : 1) {
+            for(decl int<4> v32 = 0 .. ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *array.ref.elem.1D(v7, CAST<uint<4>>(((v39*1000)+v32)))), ( *array.ref.elem.1D(v9, CAST<uint<4>>(((v39*1000)+v32)))))) {
+                    (v27 := 0);
                 } else { };
             };
-            for(decl int<4> v35 = ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite((1000>1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(( *array.ref.elem.1D(v6, CAST<uint<4>>(((v36*1000)+v35)))), CAST<real<8>>(0))) {
-                    (v24 := 0);
+            for(decl int<4> v38 = ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite((1000>1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *array.ref.elem.1D(v9, CAST<uint<4>>(((v39*1000)+v38)))), CAST<real<8>>(0))) {
+                    (v27 := 0);
                 } else { };
             };
         };
-        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(( *v24), 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
-        fun(ref<array<real<8>,1>> v39){
-            decl ref<ref<array<real<8>,1>>> v40 = ( var(v39));
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(( *v27), 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+        fun(ref<array<real<8>,1>> v4){
+            decl ref<ref<array<real<8>,1>>> v5 = ( var(v4));
             {
-                ( del(v40));
+                ( del(v5));
             };
-        }(v1);
-        fun(ref<array<real<8>,1>> v39){
-            decl ref<ref<array<real<8>,1>>> v40 = ( var(v39));
+        }(v7);
+        fun(ref<array<real<8>,1>> v4){
+            decl ref<ref<array<real<8>,1>>> v5 = ( var(v4));
             {
-                ( del(v40));
+                ( del(v5));
             };
-        }(v5);
-        fun(ref<array<real<8>,1>> v39){
-            decl ref<ref<array<real<8>,1>>> v40 = ( var(v39));
+        }(v8);
+        fun(ref<array<real<8>,1>> v4){
+            decl ref<ref<array<real<8>,1>>> v5 = ( var(v4));
             {
-                ( del(v40));
+                ( del(v5));
             };
-        }(v6);
+        }(v9);
     }
 

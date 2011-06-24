@@ -96,22 +96,41 @@ namespace frontend {
 namespace conversion {
 
 
+const clang::idx::TranslationUnit* ConversionFactory::getTranslationUnitForDefinition(FunctionDecl*& funcDecl) {
+	/*
+	 * if the function is not defined in this translation unit, maybe it is defined in another we already
+	 * loaded use the clang indexer to lookup the definition for this function declarations
+	 */
+	clang::idx::Entity&& funcEntity = clang::idx::Entity::get(funcDecl, program.getClangProgram());
+	ConversionFactory::TranslationUnitPair&& ret = program.getClangIndexer().getDefinitionFor(funcEntity);
+	
+	// function declaration not found. return the current translation unit
+	if ( !ret.first ) { return NULL; }
+
+	assert(ret.first && ret.second && "Translation unit for function not found");
+
+	// update the funcDecl pointer to point to the correct function declaration 
+	funcDecl = ret.first;
+	return ret.second;
+}
+
 core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* funcDecl, bool isMain) {
 	/*
 	 * Handling of the translation unit: we have to make sure to load the translation unit where the function is
 	 * defined before starting the parser otherwise reading literals results in wrong values.
 	 */
-	clang::idx::Entity&& funcEntity =
-			clang::idx::Entity::get( const_cast<FunctionDecl*>(funcDecl), mProg.getClangProgram() );
-	ConversionFactory::TranslationUnitPair&& ret = mProg.getClangIndexer().getDefinitionFor(funcEntity);
-	assert(ret.first && ret.second && "Translation unit for function not found");
+	FunctionDecl* def = const_cast<FunctionDecl*>( funcDecl );
+	const clang::idx::TranslationUnit* clangTU = mFact.getTranslationUnitForDefinition(def);
+	assert(clangTU && "Translation unit for function not found.");
+	const TranslationUnit* oldTU = mFact.currTU;
 
-	// Set the current translation unit to the one where funcDecl is defined
-	mFact.currTU = &mProg.getTranslationUnit(ret.second);
+	mFact.setTranslationUnit( Program::getTranslationUnit(clangTU) );
 
+	// Extract globals starting from this entry point
 	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(ret.second, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
-	globColl(funcDecl);
+	analysis::GlobalVarCollector globColl(clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+	globColl(def);
+
 	VLOG(1) << globColl;
 	VLOG(2) <<  mFact.ctx.globalStruct.first;
 
@@ -121,7 +140,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	}
 
 	const core::ExpressionPtr& expr =
-			core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(funcDecl, true));
+			core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(def, true));
 	
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
 
@@ -136,7 +155,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
     }
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
 	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
-
+	mFact.currTU = oldTU;
 	return mProgram;
 }
 

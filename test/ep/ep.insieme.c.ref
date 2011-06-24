@@ -143,7 +143,7 @@ void vranlc(int n, __insieme_type_3* x_seed, double a, __insieme_type_3* y){
 	((a2) = (a-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(a1))));
 	((x) = (((*x_seed).data[0])));
 	{
-		for(int var_54 = 1; var_54 < (n+1); var_54 += 1) {
+		for(int var_75 = 1; var_75 < (n+1); var_75 += 1) {
 			((t1) = (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*(x)));
 			((x1) = ((double)(((int)(t1)))));
 			((x2) = ((x)-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(x1))));
@@ -153,7 +153,7 @@ void vranlc(int n, __insieme_type_3* x_seed, double a, __insieme_type_3* y){
 			((t3) = ((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*(z))+((a2)*(x2))));
 			((t4) = ((double)(((int)(((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*(t3)))))));
 			((x) = ((t3)-((((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0))*(t4))));
-			((((*y).data[((unsigned int)(var_54))])) = ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*(x)));
+			((((*y).data[((unsigned int)(var_75))])) = ((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5))*(x)));
 		};
 		((i) = (1+(((int)(ceil((((double)(((n+1)-1)))/((double)(1))))))*1)));
 	};
@@ -341,7 +341,7 @@ int main(int __argc, char** __argv) {
 		printf(((char*)((*(&((__insieme_type_1){"\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - EP Benchmark\n"}))).data)), 0);
 		sprintf(((char*)((*((&((__insieme_type_1){(size).data})))).data)), ((char*)((*(&((__insieme_type_1){"%12.0f"}))).data)), pow(2.0, ((double)((25+1)))));
 		{
-			for(int var_37 = (((int)(0))-13); var_37 < ((((int)(0))-1)+1); var_37 += 1)  { if(((((size).data[((unsigned int)((((int)(0))-var_37)))]))=='.')) { ((((size).data[((unsigned int)((((int)(0))-var_37)))])) = ' '); }; };
+			for(int var_112 = (((int)(0))-13); var_112 < ((((int)(0))-1)+1); var_112 += 1)  { if(((((size).data[((unsigned int)((((int)(0))-var_112)))]))=='.')) { ((((size).data[((unsigned int)((((int)(0))-var_112)))])) = ' '); }; };
 			((j) = (13+(((int)(ceil((((double)((((((int)(0))-1)+1)-13)))/((double)(1))))))*1)));
 		};
 		printf(((char*)((*(&((__insieme_type_1){" Number of random numbers generated: %13s\n"}))).data)), ((size)).data);
@@ -350,7 +350,7 @@ int main(int __argc, char** __argv) {
 		vranlc(0, (&((__insieme_type_3){&((dum).data[((unsigned int)(0))])})), (((dum).data[((unsigned int)(1))])), (&((__insieme_type_3){&((dum).data[((unsigned int)(2))])})));
 		((((dum).data[((unsigned int)(0))])) = randlc((&((__insieme_type_3){&((dum).data[((unsigned int)(1))])})), (((dum).data[((unsigned int)(2))]))));
 		{
-			for(int var_69 = 0; var_69 < (2*(1<<16)); var_69 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_69))])) = (((double)(0))-1.0e99)); };
+			for(int var_114 = 0; var_114 < (2*(1<<16)); var_114 += 1)  { ((((*(&((__GLOBAL__).x))).data[((unsigned int)(var_114))])) = (((double)(0))-1.0e99)); };
 			((i) = (0+(((int)(ceil((((double)(((2*(1<<16))-0)))/((double)(1))))))*1)));
 		};
 		((Mops) = log(sqrt(fabs((((1.0>1.0))?(1.0):(1.0))))));
@@ -361,7 +361,7 @@ int main(int __argc, char** __argv) {
 		vranlc(0, (&((__insieme_type_3){&t1})), 1220703125.0, (&((__GLOBAL__).x)));
 		((t1) = 1220703125.0);
 		{
-			for(int var_86 = 1; var_86 < ((16+1)+1); var_86 += 1)  { ((t2) = randlc((&((__insieme_type_3){&t1})), (t1))); };
+			for(int var_118 = 1; var_118 < ((16+1)+1); var_118 += 1)  { ((t2) = randlc((&((__insieme_type_3){&t1})), (t1))); };
 			((i) = (1+(((int)(ceil((((double)((((16+1)+1)-1)))/((double)(1))))))*1)));
 		};
 		((an) = (t1));
@@ -370,7 +370,7 @@ int main(int __argc, char** __argv) {
 		((sx) = 0.0);
 		((sy) = 0.0);
 		{
-			for(int var_88 = 0; var_88 < ((10-1)+1); var_88 += 1)  { ((((*(&((__GLOBAL__).q))).data[((unsigned int)(var_88))])) = 0.0); };
+			for(int var_120 = 0; var_120 < ((10-1)+1); var_120 += 1)  { ((((*(&((__GLOBAL__).q))).data[((unsigned int)(var_120))])) = 0.0); };
 			((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 		};
 		((k_offset) = (((int)(0))-1));
@@ -387,16 +387,16 @@ int main(int __argc, char** __argv) {
 			int l = 0;
 			__insieme_type_4 qq;
 			{
-				for(int var_101 = 0; var_101 < 10; var_101 += 1)  { ((((qq).data[((unsigned int)(var_101))])) = 0.0); };
+				for(int var_133 = 0; var_133 < 10; var_133 += 1)  { ((((qq).data[((unsigned int)(var_133))])) = 0.0); };
 				((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
 			};
 			{
-				for(int var_116 = 1; var_116 < ((np)+1); var_116 += 1) {
-					((kk) = ((k_offset)+var_116));
+				for(int var_143 = 1; var_143 < ((np)+1); var_143 += 1) {
+					((kk) = ((k_offset)+var_143));
 					((t1) = 271828183.0);
 					((t2) = (an));
 					{
-						for(int var_103 = 1; var_103 < (100+1); var_103 += 1) {
+						for(int var_135 = 1; var_135 < (100+1); var_135 += 1) {
 							((ik) = ((kk)/2));
 							if(((2*(ik))!=(kk))) { ((t3) = randlc((&((__insieme_type_3){&t1})), (t2))); };
 							if(((ik)==0)) { break; };
@@ -410,9 +410,9 @@ int main(int __argc, char** __argv) {
 					if((0==1)) { timer_stop(3); };
 					if((0==1)) { timer_start(2); };
 					{
-						for(int var_114 = 0; var_114 < (1<<16); var_114 += 1) {
-							((x1) = ((2.0*(((*(&((__GLOBAL__).x))).data[((unsigned int)((2*var_114)))])))-1.0));
-							((x2) = ((2.0*(((*(&((__GLOBAL__).x))).data[((unsigned int)(((2*var_114)+1)))])))-1.0));
+						for(int var_141 = 0; var_141 < (1<<16); var_141 += 1) {
+							((x1) = ((2.0*(((*(&((__GLOBAL__).x))).data[((unsigned int)((2*var_141)))])))-1.0));
+							((x2) = ((2.0*(((*(&((__GLOBAL__).x))).data[((unsigned int)(((2*var_141)+1)))])))-1.0));
 							((t1) = (((x1)*(x1))+((x2)*(x2))));
 							if(((t1)<=1.0)){
 								((t2) = sqrt((((((double)(0))-2.0)*log((t1)))/(t1))));
@@ -431,12 +431,12 @@ int main(int __argc, char** __argv) {
 				((k) = (1+(((int)(ceil((((double)((((np)+1)-1)))/((double)(1))))))*1)));
 			};
 			 { {
-				for(int var_118 = 0; var_118 < ((10-1)+1); var_118 += 1)  { ((((*(&((__GLOBAL__).q))).data[((unsigned int)(var_118))])) = ((((*(&((__GLOBAL__).q))).data[((unsigned int)(var_118))]))+(((qq).data[((unsigned int)(var_118))])))); };
+				for(int var_145 = 0; var_145 < ((10-1)+1); var_145 += 1)  { ((((*(&((__GLOBAL__).q))).data[((unsigned int)(var_145))])) = ((((*(&((__GLOBAL__).q))).data[((unsigned int)(var_145))]))+(((qq).data[((unsigned int)(var_145))])))); };
 				((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 			}; };
 		};
 		{
-			for(int var_120 = 0; var_120 < ((10-1)+1); var_120 += 1)  { ((gc) = ((gc)+(((*(&((__GLOBAL__).q))).data[((unsigned int)(var_120))])))); };
+			for(int var_147 = 0; var_147 < ((10-1)+1); var_147 += 1)  { ((gc) = ((gc)+(((*(&((__GLOBAL__).q))).data[((unsigned int)(var_147))])))); };
 			((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 		};
 		timer_stop(1);
@@ -446,7 +446,7 @@ int main(int __argc, char** __argv) {
 		((Mops) = ((pow(2.0, ((double)((25+1))))/(tm))/1000000.0));
 		printf(((char*)((*(&((__insieme_type_1){"EP Benchmark Results: \nCPU Time = %10.4f\nN = 2^%5d\nNo. Gaussian Pairs = %15.0f\nSums = %25.15e %25.15e\nCounts:\n"}))).data)), 0.0, 25, (gc), (sx), (sy));
 		{
-			for(int var_135 = 0; var_135 < ((10-1)+1); var_135 += 1)  { printf(((char*)((*(&((__insieme_type_1){"%3d %15.0f\n"}))).data)), var_135, (((*(&((__GLOBAL__).q))).data[((unsigned int)(var_135))]))); };
+			for(int var_159 = 0; var_159 < ((10-1)+1); var_159 += 1)  { printf(((char*)((*(&((__insieme_type_1){"%3d %15.0f\n"}))).data)), var_159, (((*(&((__GLOBAL__).q))).data[((unsigned int)(var_159))]))); };
 			((i) = (0+(((int)(ceil((((double)((((10-1)+1)-0)))/((double)(1))))))*1)));
 		};
 		c_print_results(&((__insieme_type_1){"EP"}), 'W', (25+1), 0, 0, (nit), (nthreads), (tm), (Mops), &((__insieme_type_1){"Random numbers generated"}), (verified), &((__insieme_type_1){"2.3"}), &((__insieme_type_1){"03 Dec 2010"}), &((__insieme_type_1){"cc"}), &((__insieme_type_1){"cc"}), &((__insieme_type_1){"-lm"}), &((__insieme_type_1){"-I../common"}), &((__insieme_type_1){"-O3 "}), &((__insieme_type_1){"-lm"}), &((__insieme_type_1){"randdp"}));

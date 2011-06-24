@@ -36,15 +36,15 @@ static double ceil_wrap(void* _closure, double var_30) { return ceil(var_30); }
 
 // start code fragment :: Definition of func ... type: ((int<4>)->int<4>) //
 int func(int k){
-	int var_19 = k;
+	int var_3 = k;
 	{
 		{
-			for(int var_21 = (var_19); var_21 < 10; var_21 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), var_21); };
-			((var_19) = ((var_19)+(((int)(ceil((((double)((10-(var_19))))/((double)(1))))))*1)));
+			for(int var_5 = (var_3); var_5 < 10; var_5 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), var_5); };
+			((var_3) = ((var_3)+(((int)(ceil((((double)((10-(var_3))))/((double)(1))))))*1)));
 		};
 		{
-			for(int var_23 = (((int)(0))-10); var_23 < ((((int)(0))-0)+1); var_23 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-var_23)); };
-			((var_19) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
+			for(int var_7 = (((int)(0))-10); var_7 < ((((int)(0))-0)+1); var_7 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-var_7)); };
+			((var_3) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 		};
 	};
 }
@@ -52,7 +52,7 @@ static int func_wrap(void* _closure, int k) { return func(k); }
 
 // start code fragment :: Definition of func2 ... type: (()->unit) //
 void func2() { {
-	for(int var_27 = (((int)(0))-10); var_27 < ((((int)(0))-0)+1); var_27 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-var_27)); };
+	for(int var_11 = (((int)(0))-10); var_11 < ((((int)(0))-0)+1); var_11 += 1)  { printf(((char*)((*(&((__insieme_type_1){"k=%d\n"}))).data)), (((int)(0))-var_11)); };
 	((*(&((__GLOBAL__).i))) = (10+(((int)(ceil((((double)((((((int)(0))-0)+1)-10)))/((double)(1))))))*1)));
 }; }
 static void func2_wrap(void* _closure) { func2(); }
@@ -73,9 +73,9 @@ int main(int __argc, char** __argv) {
 		((*(&((__GLOBAL__).N))) = 10);
 		((*(&((__GLOBAL__).i))) = 0);
 		int a = 10;
-		for(int var_6 = 0; var_6 < (a); var_6 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), var_6); };
-		for(int var_8 = (((int)(0))-(a)); var_8 < ((((int)(0))-0)+1); var_8 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-var_8)); };
-		for(int var_10 = (((int)(0))-(*(&((__GLOBAL__).N)))); var_10 < (((int)(0))-0); var_10 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-var_10)); };
+		for(int var_17 = 0; var_17 < (a); var_17 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), var_17); };
+		for(int var_19 = (((int)(0))-(a)); var_19 < ((((int)(0))-0)+1); var_19 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-var_19)); };
+		for(int var_21 = (((int)(0))-(*(&((__GLOBAL__).N)))); var_21 < (((int)(0))-0); var_21 += 1)  { printf(((char*)((*(&((__insieme_type_1){"idx=%d"}))).data)), (((int)(0))-var_21)); };
 		{
 			int idx = a;
 			while(((*(&((__GLOBAL__).N)))>0)) {
@@ -84,11 +84,11 @@ int main(int __argc, char** __argv) {
 			};
 		};
 		{
-			for(int var_13 = (((int)(0))-15); var_13 < ((((int)(0))-0)+1); var_13 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (((int)(0))-var_13)); };
+			for(int var_24 = (((int)(0))-15); var_24 < ((((int)(0))-0)+1); var_24 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), (((int)(0))-var_24)); };
 			((a) = (15+(((int)(ceil((((double)((((((int)(0))-0)+1)-15)))/((double)(3))))))*3)));
 		};
 		{
-			for(int var_15 = 1; var_15 < 15; var_15 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), var_15); };
+			for(int var_26 = 1; var_26 < 15; var_26 += 3)  { printf(((char*)((*(&((__insieme_type_1){"a=%d\n"}))).data)), var_26); };
 			((a) = (1+(((int)(ceil((((double)((15-1)))/((double)(3))))))*3)));
 		};
 		{
