@@ -202,6 +202,10 @@ namespace backend {
 			return config;
 		}
 
+		const ConverterConfig& getConfig() const {
+			return config;
+		}
+
 		void setConfig(const ConverterConfig& newConfig) {
 			config = newConfig;
 		}

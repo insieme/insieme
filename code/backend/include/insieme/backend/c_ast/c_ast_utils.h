@@ -41,6 +41,8 @@
 #include <vector>
 #include <cassert>
 
+#include "insieme/utils/container_utils.h"
+
 namespace insieme {
 namespace backend {
 namespace c_ast {
@@ -119,8 +121,17 @@ namespace c_ast {
 		return binaryOp(BinaryOperation::Cast, type, expr);
 	}
 
+	inline ExpressionPtr access(NodePtr expr, const string& element) {
+		return binaryOp(BinaryOperation::MemberAccess, expr, expr->getManager()->create(element));
+	}
+
 	inline ExpressionPtr access(NodePtr expr, IdentifierPtr element) {
 		return binaryOp(BinaryOperation::MemberAccess, expr, element);
+	}
+
+	template<typename ... E>
+	inline ExpressionPtr init(TypePtr type, E ... elements) {
+		return type->getManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(elements...));
 	}
 
 } // end namespace c_ast

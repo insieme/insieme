@@ -71,8 +71,18 @@ namespace c_ast {
 
 	};
 
+	string toC(const NodePtr& node);
 
-	string toString(const NodePtr& node);
+
+	struct ParameterPrinter : public utils::Printable {
+		const c_ast::TypePtr type;
+		const c_ast::IdentifierPtr name;
+	public:
+		ParameterPrinter(const TypePtr& type, const IdentifierPtr& name) : type(type), name(name) {}
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
+
 
 } // end namespace c_ast
 } // end namespace backend
