@@ -884,10 +884,11 @@ for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr>& var) {
 				copyAnnotations(var.second, replacement);
 				var.second = static_pointer_cast<const Variable>(replacement);
 				//			cl_mems[var.first] = var.second;//dynamic_pointer_cast<const Variable>(replacement);
+				std::cout << "Struct after cleaning: \n" << newEntries << std::endl;
 			}
 		});
 
-return cl_mems;
+	return cl_mems;
 }
 
 void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg) {
@@ -1009,6 +1010,32 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
 		const VariablePtr& var = decl->getVariable();
 		if(cl_mems[var]) {
+			if(const StructTypePtr& sType = dynamic_pointer_cast<const StructType>(cl_mems[var]->getType())) {
+				// throw elements which are not any more in the struct out of the initialization expression
+				// look into ref.new
+				if(const CallExprPtr& refNew = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
+					if(refNew->getFunctionExpr() == BASIC.getRefNew() || refNew->getFunctionExpr() == BASIC.getRefVar()) {
+						if(const StructExprPtr& oldInit = dynamic_pointer_cast<const StructExpr>(refNew->getArgument(0))) {
+							core::StructExpr::Members newInitMembers;
+							core::NamedCompositeType::Entries newMembers = sType->getEntries();
+							size_t i = 0;
+							for_each(oldInit->getMembers(), [&](core::StructExpr::Member oldInitMember) {
+								// assuming that the order of the (exisiting) elements in newMembers and oldMember is the same,
+								// we always have to compare only one element
+								if(oldInitMember.first == newMembers.at(i).first) {
+									newInitMembers.push_back(oldInitMember);
+									++i;
+								}
+							});
+							// create a new Declaration Statement which's init expression contains only the remaining fields
+							const CallExprPtr& alloc = builder.callExpr(refNew->getFunctionExpr(), builder.structExpr(newInitMembers));
+							std::cout << "\nasdf\n" << newInitMembers << "\nasdf\n";
+							return builder.declarationStmt(cl_mems[var], alloc);
+						}
+					}
+				}
+			}
+
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(this->resolveElement(decl->getInitialization()))) {
 				if(initFct->getArgument(0) == builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem"))))) {
 					// overwrite default initialization to cl_mem with default initialization to array<whatever>
@@ -1166,7 +1193,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					const core::TypePtr& memberTy = static_pointer_cast<const NamedCompositeType>(newType)->getTypeOfMember(oldId);
 
 					if(!memberTy) { // someone requested a field which has been removed from the struct -> should have been deleted
-					//						return callExpr; // TODO remove debug return
+											return newCall; // TODO remove debug return
 						LOG(ERROR) << "Call returning a " << oldType << " has not been removed\n";
 						assert(memberTy && "Function tries to store cl_* type in a struct");
 					}
@@ -1212,9 +1239,7 @@ const ProgramPtr& progWithKernels = interProg->addEntryPoints(builder.getNodeMan
 Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
 oh2nd.mapNamesToLambdas(kernelEntries);
 
-ClmemTable& cl_mems = oh2nd.getCleanedStructures();
-
-HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
+HostMapper3rdPass ohm3rd(builder, oh2nd.getCleanedStructures(), oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
 	oh2nd.getKernelLambdas());
 /*	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
  mProgram = newProg;
