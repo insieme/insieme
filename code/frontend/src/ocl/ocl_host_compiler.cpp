@@ -518,6 +518,12 @@ const core::TypePtr getNonRefType(const ExpressionPtr& refExpr) {
 	return refExpr->getType();
 }
 
+const core::TypePtr getNonRefType(const TypePtr& refType) {
+	if (const RefTypePtr& ref = dynamic_pointer_cast<const RefType>(refType))
+		return ref->getElementType();
+	return refType;
+}
+
 HandlerPtr& HostMapper::findHandler(const string& fctName) {
 	// for performance reasons working with function prefixes is only enabled for cl* functions
 	if (fctName.substr(0, 2).find("cl") == string::npos)
@@ -714,7 +720,7 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 						assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
 						VariablePtr newStruct;
 						// check if struct is already part of the replacement map
-						if(cl_mems[struct_] != static_cast<long int>(0)) {
+						if(cl_mems.find(struct_) != cl_mems.end()) {
 							// get the variable out of the struct
 
 							newStruct = cl_mems[struct_];
@@ -884,7 +890,6 @@ for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr>& var) {
 				copyAnnotations(var.second, replacement);
 				var.second = static_pointer_cast<const Variable>(replacement);
 				//			cl_mems[var.first] = var.second;//dynamic_pointer_cast<const Variable>(replacement);
-				std::cout << "Struct after cleaning: \n" << newEntries << std::endl;
 			}
 		});
 
@@ -1002,14 +1007,14 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	}
 
 	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
-		if(cl_mems[var]) {
+		if(cl_mems.find(var) != cl_mems.end()) {
 			return cl_mems[var];
 		}
 	}
 
 	if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
 		const VariablePtr& var = decl->getVariable();
-		if(cl_mems[var]) {
+		if(cl_mems.find(var) != cl_mems.end()) {
 			if(const StructTypePtr& sType = dynamic_pointer_cast<const StructType>(cl_mems[var]->getType())) {
 				// throw elements which are not any more in the struct out of the initialization expression
 				// look into ref.new
@@ -1019,18 +1024,25 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							core::StructExpr::Members newInitMembers;
 							core::NamedCompositeType::Entries newMembers = sType->getEntries();
 							size_t i = 0;
+
 							for_each(oldInit->getMembers(), [&](core::StructExpr::Member oldInitMember) {
 								// assuming that the order of the (exisiting) elements in newMembers and oldMember is the same,
 								// we always have to compare only one element
 								if(oldInitMember.first == newMembers.at(i).first) {
-									newInitMembers.push_back(oldInitMember);
+									// check if the type of the init expression is the same as the type of the field (type of field may changed)
+									if(newMembers.at(i).second != oldInitMember.second->getType()) {
+										// always init as undefined in this case
+										const TypePtr& initType = /*getNonRefType*/(newMembers.at(i).second);
+										core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
+												builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(initType)));
+										newInitMembers.push_back(newInitMember);
+									} else
+										newInitMembers.push_back(oldInitMember);
 									++i;
 								}
 							});
 							// create a new Declaration Statement which's init expression contains only the remaining fields
-							const CallExprPtr& alloc = builder.callExpr(refNew->getFunctionExpr(), builder.structExpr(newInitMembers));
-							std::cout << "\nasdf\n" << newInitMembers << "\nasdf\n";
-							return builder.declarationStmt(cl_mems[var], alloc);
+							return builder.declarationStmt(cl_mems[var], builder.structExpr(newInitMembers));
 						}
 					}
 				}
@@ -1224,40 +1236,53 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 }
 
 ProgramPtr HostCompiler::compile() {
-//    HostVisitor oclHostVisitor(builder, mProgram);
-HostMapper oclHostMapper(builder, mProgram);
+	//    HostVisitor oclHostVisitor(builder, mProgram);
+	HostMapper oclHostMapper(builder, mProgram);
 
-const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
-assert(interProg && "First pass of OclHostCompiler corrupted the program");
+	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
+	assert(interProg && "First pass of OclHostCompiler corrupted the program");
 
-LOG(INFO) << "Adding " << oclHostMapper.getKernelArgs().size() << " kernels to host Program... ";
+	LOG(INFO) << "Adding " << oclHostMapper.getKernelArgs().size() << " kernels to host Program... ";
 
-const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
+	const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
 
-const ProgramPtr& progWithKernels = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
+	const ProgramPtr& progWithKernels = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 
-Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
-oh2nd.mapNamesToLambdas(kernelEntries);
+	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
+	oh2nd.mapNamesToLambdas(kernelEntries);
 
-HostMapper3rdPass ohm3rd(builder, oh2nd.getCleanedStructures(), oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
-	oh2nd.getKernelLambdas());
-/*	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
- mProgram = newProg;
- return newProg;
- } else
- assert(newProg && "Second pass of OclHostCompiler corrupted the program");
- */
-NodePtr fu = ohm3rd.mapElement(0, progWithKernels);
-insieme::utils::map::PointerMap<NodePtr, NodePtr> tmp;// = reinterpret_cast<insieme::utils::map::PointerMap<NodePtr, NodePtr> >(oclHostMapper.getClMemMapping());
-/*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){ tmp[t.first] = t.second;});*/
+	ClmemTable cl_mems = oh2nd.getCleanedStructures();
+	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
+		oh2nd.getKernelLambdas());
 
-if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(fu)) {//core::transform::replaceAll(builder.getNodeManager(), fu, tmp))) {
-mProgram = newProg;
-//			return newProg;
-} else
-assert(newProg && "Second pass of OclHostCompiler corrupted the program");
+	/*	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
+	 mProgram = newProg;
+	 return newProg;
+	 } else
+	 assert(newProg && "Second pass of OclHostCompiler corrupted the program");
+	 */
 
-return mProgram;
+	NodePtr fu = ohm3rd.mapElement(0, progWithKernels);
+
+	insieme::utils::map::PointerMap<NodePtr, NodePtr> tmp;// = reinterpret_cast<insieme::utils::map::PointerMap<NodePtr, NodePtr> >(oclHostMapper.getClMemMapping());
+	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
+		tmp[t.first] = t.second;
+		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
+			// replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
+			// HIGHLY experimental and untested
+			tmp[t.first->getType()] = t.second->getType();
+//			std::cout << "Replacing ALL \n" << t.first << "\nwith\n" << t.second << "\n";
+		}
+	});
+
+
+	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), fu, tmp))) {
+	mProgram = newProg;
+	//			return newProg;
+	} else
+	assert(newProg && "Second pass of OclHostCompiler corrupted the program");
+
+	return mProgram;
 }
 
 } //namespace ocl
