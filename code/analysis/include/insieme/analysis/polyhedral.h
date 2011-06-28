@@ -336,7 +336,8 @@ IterationVector merge(const IterationVector& a, const IterationVector& b);
  * parameters are always append, we can easily create the new coefficient matrix
  * for the mutated iteration vector, thanks to the sep member.  
  */
-class AffineFunction : public utils::Printable, public boost::equality_comparable<AffineFunction> { 
+class AffineFunction : public utils::Printable, 
+	public boost::equality_comparable<AffineFunction> { 
 	// Iteration Vector to which this function refers to 
 	const IterationVector& iterVec;
 
@@ -407,7 +408,7 @@ public:
 	void setCoefficient(const Iterator& iter, int coeff) {
 		size_t idx = iterVec.getIdx(iter);
 		assert(idx<sep && 
-				"Iterator vector has been updated before the affine function has been created."); 
+			"Iterator vector has been updated before the affine function has been created."); 
 			// FIXME define exception class
 		coeffs[idx] = coeff;
 	}
@@ -416,7 +417,7 @@ public:
 	void setCoefficient(const Parameter& param, int coeff) {
 		size_t idx = iterVec.getIdx(param);
 		assert(idx<coeffs.size()-1 && 
-				"Iterator vector has been updated before the affine function has been created."); 
+			"Iterator vector has been updated before the affine function has been created."); 
 			// FIXME define exception class
 		coeffs[idx] = coeff;
 	}
@@ -487,83 +488,107 @@ struct EqualityConstraint : public Constraint {
 
 //forward declaration for the Constraint combiner 
 class ConstraintCombiner;
-
 typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
 
 // forward declaration for the Constraint visitor 
 struct ConstraintVisitor; 
 
 /**
- * This class has the purpose to create conjuctions or disjunctions of
+ * This class has the purpose to create conjunctions and/or disjunctions of
  * constraints. This allows to represent the domain spawned by control 
  * operations with a composed conditional expression
  */
 class ConstraintCombiner : public utils::Printable {
 public:
-	enum Type { RAW, POS, NEG, AND, OR };
-	const Type& getType() const { return type; }
-
 	virtual void accept(ConstraintVisitor& v) const = 0;
 
 	std::ostream& printTo(std::ostream& out) const;
-
 protected:
-	ConstraintCombiner(const Type& type) : type(type) { }
+	// we don't allow user to directly create a plain Combiner from scratch
+	ConstraintCombiner() { }
 private:
-	Type type;
 };
 
 /**
- * This class is a wrapper for a plain Constraint.
+ * This class is a wrapper for a plain Constraint. Utilized to combine
+ * constraints in a composite like structure.
  */
 class RawConstraintCombiner : public ConstraintCombiner {
 	Constraint constraint; 
 public:
 	RawConstraintCombiner(const Constraint& constraint) : 
-		ConstraintCombiner(ConstraintCombiner::RAW), constraint(constraint) { }
+		ConstraintCombiner(), constraint(constraint) { }
 	
+	// Returns the constraint embodied in this wrapper class
 	const Constraint& getConstraint() const { return constraint; }
 	
 	void accept(ConstraintVisitor& v) const;
 };
 
-class UnaryConstraintCombiner : public ConstraintCombiner {
+/**
+ * This class represents the negation of a constraint. 
+ */
+class NegatedConstraintCombiner : public ConstraintCombiner {
 	ConstraintCombinerPtr subComb;
 public:
-	UnaryConstraintCombiner(const ConstraintCombinerPtr& comb, bool negate=false) :
-		ConstraintCombiner( negate?NEG:POS ), subComb( comb ) { }
-	
+	NegatedConstraintCombiner(const ConstraintCombinerPtr& comb) :
+		ConstraintCombiner( ), subComb( comb ) { }
+
+	// Returns the negated constraint 
 	const ConstraintCombinerPtr& getSubConstraint() const { return subComb; }
 
 	void accept(ConstraintVisitor& v) const;
 };
 
+/**
+ * This class represent the combination of two constraints which can be either
+ * a combined through a AND or a OR operator. 
+ */
 class BinaryConstraintCombiner : public ConstraintCombiner {
-	std::pair<ConstraintCombinerPtr, ConstraintCombinerPtr> constraints;
-
 public:
-	BinaryConstraintCombiner(const ConstraintCombinerPtr& lhs, 
-			const ConstraintCombinerPtr& rhs, const ConstraintCombiner::Type& type) : 
-		ConstraintCombiner(type), constraints( std::make_pair(lhs, rhs) ) { }
+	enum Type { AND, OR };
+
+	BinaryConstraintCombiner(const Type& type, const ConstraintCombinerPtr& lhs, 
+			const ConstraintCombinerPtr& rhs) : 
+		ConstraintCombiner(), type(type), lhs(lhs), rhs(rhs) { }
 
 	void accept(ConstraintVisitor& v) const;
 
-	inline const ConstraintCombinerPtr& getLHS() const { return constraints.first; }
-	inline const ConstraintCombinerPtr& getRHS() const { return constraints.second; }
+	inline const ConstraintCombinerPtr& getLHS() const { return lhs; }
+	inline const ConstraintCombinerPtr& getRHS() const { return rhs; }
 
+	// Return the type of the constraint
+	const Type& getType() const { return type; }
+
+	bool isConjunction() const { return type == AND; }
+	bool isDisjunction() const { return type == OR; }
+
+private:
+	Type type;
+	ConstraintCombinerPtr lhs, rhs;
 };
 
+/** 
+ * Visitor class used to visit a combination of constraints. Because
+ * constraints are combined together in a composite (tree like) structure, it
+ * is therefore easier to visit the structure by means of a visitor. 
+ *
+ * The implementation of the visitor is based on double-dispatch. 
+ */
 struct ConstraintVisitor {
-
+	
+	// Visits a raw node (which contains a raw constraint)
 	virtual void visit(const RawConstraintCombiner& rcc) { }
-
-	virtual void visit(const UnaryConstraintCombiner& ucc) {
+	
+	// Visits a negated constraints 
+	virtual void visit(const NegatedConstraintCombiner& ucc) {
 		ucc.getSubConstraint()->accept(*this);
 	}
 
+	// Visits a combination of constraints which can either be a conjunction or
+	// a disjunction 
 	virtual void visit(const BinaryConstraintCombiner& bcc) {
-		bcc.getLHS()->accept(*this);
-		bcc.getRHS()->accept(*this);
+		bcc.getLHS()->accept(*this); bcc.getRHS()->accept(*this);
 	}
 };
 
@@ -572,34 +597,46 @@ namespace {
 template <class... All>
 class Combiner;
 
+// Combiner class takes a list of constraints and assembles them together
+// either in a conjunction or a disjunction (depending on the provided type)
+// and returns a pointer to the combiner containing the constraints 
 template <class Head, class... Tail>
 struct Combiner<Head, Tail...> {
-
-	static ConstraintCombinerPtr make(const ConstraintCombiner::Type& type, const Head& head, const Tail&... args) {
-		return std::make_shared<BinaryConstraintCombiner>( head, Combiner<Tail...>::make(type, args...), type );
+	static ConstraintCombinerPtr make(const BinaryConstraintCombiner::Type& type, 
+			const Head& head, const Tail&... args) 
+	{
+		return std::make_shared<BinaryConstraintCombiner>( type, head, 
+				Combiner<Tail...>::make(type, args...) 
+			);
 	}
-
 };
 
+/** 
+ * This specialization represent the where only 1 constraint is remaining
+ */
 template <class Head>
 struct Combiner<Head> {
-	static ConstraintCombinerPtr make(const ConstraintCombiner::Type& type, const Head& head) { return head; }
+	static ConstraintCombinerPtr make(const BinaryConstraintCombiner::Type& type, const Head& head) { 
+		return head; 
+	}
 };
 
 } // end anonymous namespace 
 
 template <class ...All>
 ConstraintCombinerPtr makeConjunction(const All& ... args) { 
-	return Combiner<All...>::make(ConstraintCombiner::AND, args...); 
+	return Combiner<All...>::make(BinaryConstraintCombiner::AND, args...); 
 }
 
 template <class ...All>
 ConstraintCombinerPtr makeDisjunction(const All&... args) { 
-	return Combiner<All...>::make(ConstraintCombiner::OR, args...); 
+	return Combiner<All...>::make(BinaryConstraintCombiner::OR, args...); 
 }
 
+// Utility function to create negation of constraints. Both of plain
+// constraints (by wrapping them on a raw constraint first) and negation of
+// constraints 
 ConstraintCombinerPtr negate(const ConstraintCombinerPtr& cc);
-
 ConstraintCombinerPtr negate(const Constraint& c);
 
 ConstraintCombinerPtr makeCombiner(const Constraint& c);
@@ -609,89 +646,15 @@ ConstraintCombinerPtr cloneConstraint(const IterationVector& iterVec, const Cons
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;
 
-// This class models a list of constraints which are used to compose both
-// Iteration domains, scattering functions and accessing functions 
-//
-// A constraint set is an atomic instance, once is constructed cannot be
-// modified. Therefore the list of constraints has to be provided to the
-// constructor. This allows to unify the different iteration vectors used to
-// define each constraint into an homogeneous iteration vector which will be
-// used to represent the domain matrix for this iteration domain. 
-
-template <class T>
-class ConstraintSet : public utils::Printable {
-public:
-	typedef std::set<T> Constraints; 
-private:
-	const IterationVector iterVec;
-	const Constraints constraints; 
-
-	static Constraints changeBaseVector(const IterationVector& newVec, const std::vector<T>& constraints) {
-		Constraints ret;
-		std::for_each(constraints.begin(), constraints.end(), 
-			[&](const Constraint& cur) {
-				if (newVec != cur.getAffineFunction().iterVec) {
-					throw "Iteration vectors are not compatible!";
-				}
-				ret.insert( T(AffineFunction(newVec, cur.getAffineFunction()), cur.getType()) );
-			}
-		);
-		return ret;
-	}
-
-public:
-	ConstraintSet(const IterationVector& vec, const std::vector<T>& cons) : 
-		iterVec(vec), constraints(changeBaseVector(iterVec, cons)) { }
-
-	class iterator : public boost::forward_iterator_helper<iterator, T> {
-		const Constraints& list;
-		typename Constraints::const_iterator it;
-	public:
-		iterator(const Constraints& list, const typename Constraints::const_iterator& begin) : 
-			list(list), it(begin) { }
-
-		iterator& operator++() { 
-			if (it==list.end()) { throw "Iterator not valid!"; } 
-			++it;
-			return *this; 
-		}
-
-		const Constraint& operator*() const { 
-			if ( it==list.end() ) { throw "Iterator not valid!"; } 
-			return *it;
-		}
-
-		bool operator==(const iterator& other) const {
-			return &list == &other.list && it != other.it;
-		}
-	};
-
-	iterator begin() const { return iterator(constraints, constraints.begin()); }
-	iterator end() const { return iterator(constraints, constraints.end()); }
-
-	const IterationVector& getIterationVector() const { return iterVec; }
-	size_t size() const { return constraints.size(); }
-
-	// Implements the Printable interface 
-	std::ostream& printTo(std::ostream& out) const { 
-		out << "{" << std::endl;
-		std::for_each(constraints.begin(), constraints.end(), [&](const Constraint& cur){ 
-			out << "\t" << cur << std::endl;
-		});
-		return out << "}";
-	}
-};
-
 // The iteration domain is the class which defines the shape of the polyhedron,
 // the set of integer points of an N-dimensional plane are delimited by affine
 // linear functions which define a convex region, therefore the polyhedron. 
-
 struct IterationDomain {
 	IterationDomain(const IterationVector& iterVec, const ConstraintCombinerPtr& combiner) : 
 		iterVec(iterVec), constraints(combiner) { }
 
 	std::ostream& printTo(std::ostream& out) {
-		return out << "Iteration Domain: \n\t IV: " << iterVec << "\n\tCONS: [ " << *constraints << " ]";
+		return out << "Iteration Domain: \n\tIV: " << iterVec << "\n\tCONS: [ " << *constraints << " ]";
 	}
 
 private:
@@ -700,18 +663,18 @@ private:
 };
 
 // Scheduling functions defines the order of statements in the program
-struct ScatteringFunction : public ConstraintSet<EqualityConstraint> { 
-	
-	ScatteringFunction(const IterationVector& iterVec, const std::vector<EqualityConstraint>& clist) :
-		ConstraintSet<EqualityConstraint>(iterVec, clist) { }
-	
-	std::ostream& printTo(std::ostream& out) {
-		out << "ScatteringFunction: ";
-	   	ConstraintSet<EqualityConstraint>::printTo(out);
-		return out;
-	}
-
-};
+// struct ScatteringFunction  { 
+//	
+//	ScatteringFunction(const IterationVector& iterVec, const std::vector<EqualityConstraint>& clist) :
+//		ConstraintSet<EqualityConstraint>(iterVec, clist) { }
+//	
+//	std::ostream& printTo(std::ostream& out) {
+//		out << "ScatteringFunction: ";
+//	   	ConstraintSet<EqualityConstraint>::printTo(out);
+//		return out;
+//	}
+//
+//};
 
 } // end poly namespace
 } // end analysis namespace
