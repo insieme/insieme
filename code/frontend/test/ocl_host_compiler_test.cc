@@ -78,13 +78,12 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	LOG(INFO) << "Done.";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	fe::ocl::HostCompiler hc(program, manager);
-	hc.compile();
+//	fe::ocl::HostCompiler hc(program, manager);
+//	hc.compile();
 
-	core::printer::PrettyPrinter pp(program);
+	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;
-
 	//    LOG(INFO) << pp;
 
 	auto errors = core::check(program, insieme::core::checks::getFullCheck());
