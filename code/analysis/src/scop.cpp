@@ -235,10 +235,10 @@ public:
 
 		// check the condition expression
 		ConstraintCombinerPtr&& comb = extractFromCondition(ret, ifStmt->getCondition());
-		
+
 		// if no exception has been thrown we are sure the sub else and then
 		// tree are ScopRegions, therefore this node can be marked as SCoP as well.
-		ifStmt->getThenBody()->addAnnotation( std::make_shared<ScopRegion>(ret, comb, thenScops) ); 
+		ifStmt->getThenBody()->addAnnotation( std::make_shared<ScopRegion>(ret, comb, thenScops) );
 		subScops.push_back( ifStmt->getThenBody() );
 		
 		// the else body is annotated with the negated domain
@@ -349,7 +349,7 @@ public:
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
 			// we have to check whether assignments to iterators or parameters
 			// occurrs
-				
+			
 		}
 
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
