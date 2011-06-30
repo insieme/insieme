@@ -733,19 +733,37 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 						StructType::Entries entries = structType->getEntries(); // actual fields of the struct
 						StructType::Entries newEntries;
 
+						// check if CL_MEM_USE_HOST_PTR flag was set and host_ptr was a global variable
+						bool useHostPtr = false;
+						if(const CallExprPtr& creToHostField = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(0))) {
+							std::cout << "Is a call: " << creToHostField << std::endl;
+							if(creToHostField->getFunctionExpr() == BASIC.getCompositeRefElem()) {
+								// in this case replace the identifier of the cl_mem object with the one of the host_ptr
+								useHostPtr = true;
+								replacements[cre->getArgument(1)] = creToHostField->getArgument(1);
+								std::cout << "IS cre!\n";
+							} else
+								assert(false && "If a cl_mem variable at global scope/in a struct uses the CL_MEM_USE_HOST_PTR flag at create buffer, the host_ptr\
+										must be in the global scope/the same struct too");
+						}
+
 						for_each(entries, [&](std::pair<IdentifierPtr, TypePtr> entry) {
-									if(entry.first == toChange) {
+								if(entry.first == toChange) {
+									if(!useHostPtr)
 										newEntries.push_back(std::make_pair(entry.first, newType));
-									} else {
-										newEntries.push_back(entry);
-									}
-								});
+								} else {
+									newEntries.push_back(entry);
+								}
+							});
 
 						// update struct in replacement map
 						NodePtr&& replacement = builder.variable(builder.refType(builder.structType(newEntries)));
 
 						copyAnnotations(struct_, replacement);
 						cl_mems[struct_] = dynamic_pointer_cast<const Variable>(replacement);
+
+						if(useHostPtr)
+							return BASIC.getNoOp();
 
 						const CallExprPtr& structAccess = builder.callExpr(BASIC.getCompositeRefElem(), struct_,
 								cre->getArgument(1), BASIC.getTypeLiteral(newType));
@@ -782,7 +800,7 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 					NodePtr ret;
 
 					if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(newCall->getArgument(0))) {
-						// use the host variable because CL_MEM_USE_HOST_PTR wasn't set
+						// use the host variable because CL_MEM_USE_HOST_PTR was set
 						cl_mems[lhs] = var;
 						// TODO check if err argument has been passed and set variable to 0
 						ret = BASIC.getNoOp();
@@ -963,45 +981,44 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	if(RefTypePtr ref = dynamic_pointer_cast<const RefType>(param->getType())) {
 		init = builder.deref(param);
 		//        argTy = ref->getElementType();
-}
-
-TypePtr fieldTy;
-if(const ArrayTypePtr& array = dynamic_pointer_cast<const ArrayType>(init->getType()))
-fieldTy = array->getElementType();
-
-if(const VectorTypePtr& vector = dynamic_pointer_cast<const VectorType>(init->getType()))
-fieldTy = vector->getElementType();
-
-DeclarationStmtPtr vDecl;
-if(wd == 1) {
-	if(fieldTy)
-	init = builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0"));
-	if(init->getType() != BASIC.getUInt4()) {
-		init = builder.castExpr(BASIC.getUInt4(), init);
 	}
-	vDecl = builder.declarationStmt(vecTy,
-			builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
-} else {
-	assert(fieldTy && "Size argument of multidimensional group is no vector or array");
 
-	vector<ExpressionPtr> subscripts;
-	subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0")));
-	subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "1")));
-	subscripts.push_back(wd == 3 ? (ExpressionPtr)builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "2")) :
-			(ExpressionPtr)builder.literal(BASIC.getUInt4(), "1"));
+	TypePtr fieldTy;
+	if(const ArrayTypePtr& array = dynamic_pointer_cast<const ArrayType>(init->getType()))
+	fieldTy = array->getElementType();
 
-	for_each(subscripts, [&](ExpressionPtr& r) {
-				if(r->getType() != BASIC.getUInt4())
-				r = builder.castExpr(BASIC.getUInt4(), r);
-			});
+	if(const VectorTypePtr& vector = dynamic_pointer_cast<const VectorType>(init->getType()))
+	fieldTy = vector->getElementType();
 
-	vDecl = builder.declarationStmt(vecTy, builder.vectorExpr(subscripts));
-}
+	DeclarationStmtPtr vDecl;
+	if(wd == 1) {
+		if(fieldTy)
+		init = builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0"));
+		if(init->getType() != BASIC.getUInt4()) {
+			init = builder.castExpr(BASIC.getUInt4(), init);
+		}
+		vDecl = builder.declarationStmt(vecTy,
+				builder.vectorExpr(toVector<ExpressionPtr>(init, builder.literal(BASIC.getUInt4(), "1"), builder.literal(BASIC.getUInt4(), "1"))));
+	} else {
+		assert(fieldTy && "Size argument of multidimensional group is no vector or array");
 
-FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
-return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
-						builder.returnStmt(vDecl->getVariable()))), arg);
+		vector<ExpressionPtr> subscripts;
+		subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "0")));
+		subscripts.push_back(builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "1")));
+		subscripts.push_back(wd == 3 ? (ExpressionPtr)builder.callExpr(fieldTy, BASIC.getArraySubscript1D(), init, builder.literal(BASIC.getUInt8(), "2")) :
+				(ExpressionPtr)builder.literal(BASIC.getUInt4(), "1"));
 
+		for_each(subscripts, [&](ExpressionPtr& r) {
+					if(r->getType() != BASIC.getUInt4())
+					r = builder.castExpr(BASIC.getUInt4(), r);
+				});
+
+		vDecl = builder.declarationStmt(vecTy, builder.vectorExpr(subscripts));
+	}
+
+	FunctionTypePtr fctTy = builder.functionType(toVector(argTy), vecTy);
+	return builder.callExpr(vecTy, builder.lambdaExpr(fctTy, toVector(param) , builder.compoundStmt(vDecl,
+							builder.returnStmt(vDecl->getVariable()))), arg);
 }
 
 const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
@@ -1009,6 +1026,10 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if (element->getNodeCategory() == NodeCategory::NC_Type) {
 		return element;//->substitute(builder.getNodeManager(), *this);
 	}
+
+	// TODO make more efficient
+	if(replacements.find(element) != replacements.end())
+		return replacements[element];
 
 	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
 		if(cl_mems.find(var) != cl_mems.end()) {
@@ -1149,7 +1170,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 								// local args are declared in localMemDecls
 								for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
 											if(arg == decl->getVariable()) {
-												//                                params.push_back(decl->getVariable());
+//                                params.push_back(decl->getVariable());
 												// will be declared inside wrapper function
 												local = true;
 											}
@@ -1202,20 +1223,24 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					const LiteralPtr& oldIdLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(1));
 					const LiteralPtr& oldTypeLit = dynamic_pointer_cast<const Literal>(callExpr->getArgument(2));
 					assert(oldIdLit && oldTypeLit && "Second and third argument of composite.ref.elem must be a literals");
-					const IdentifierPtr& oldId = builder.identifier(oldIdLit->getValue());
+					// check if the field has been replaced with another field of the same struct with a different identifier
+					const LiteralPtr& newIdLit = replacements.find(oldIdLit) != replacements.end() ?
+							static_pointer_cast<const Literal>(replacements[oldIdLit]) : oldIdLit;
+					const IdentifierPtr& id = builder.identifier(newIdLit->getValue());
 					const TypePtr& oldType = dynamic_pointer_cast<const GenericType>(oldTypeLit->getType())->getTypeParameter().at(0);
+					for_each(replacements, [&](std::pair<const NodePtr, NodePtr> n) {
+						std::cout << n.first << " == " << oldIdLit << " -> " << (n.first == oldIdLit) << std::endl;
+					});
 
-					const core::TypePtr& memberTy = static_pointer_cast<const NamedCompositeType>(newType)->getTypeOfMember(oldId);
-
-					if(!memberTy) { // someone requested a field which has been removed from the struct -> should have been deleted
-											return newCall; // TODO remove debug return
-						LOG(ERROR) << "Call returning a " << oldType << " has not been removed\n";
-						assert(memberTy && "Function tries to store cl_* type in a struct");
+					const core::TypePtr& memberTy = static_pointer_cast<const NamedCompositeType>(newType)->getTypeOfMember(id);
+std::cout << callExpr << "struggling with the memberTy\n" << newCall << std::endl;
+					if(!memberTy) { // someone requested a field which has been removed from the struct -> will be deleted anyways
+						return newCall;
 					}
 
 					if(memberTy != oldType) { // need to update the type argument of the call
 						NodePtr retExpr = builder.callExpr( builder.refType(memberTy), BASIC.getCompositeRefElem(),
-								toVector<ExpressionPtr>(newCall->getArgument(0), BASIC.getIdentifierLiteral(oldId), BASIC.getTypeLiteral(memberTy) ));
+								toVector<ExpressionPtr>(newCall->getArgument(0), newIdLit, BASIC.getTypeLiteral(memberTy) ));
 
 						copyAnnotations(newCall, retExpr);
 						return retExpr;
@@ -1253,7 +1278,7 @@ ProgramPtr HostCompiler::compile() {
 
 	ClmemTable cl_mems = oh2nd.getCleanedStructures();
 	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
-		oh2nd.getKernelLambdas());
+		oh2nd.getKernelLambdas(), oclHostMapper.getReplacements());
 
 	/*	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
 	 mProgram = newProg;
@@ -1264,8 +1289,9 @@ ProgramPtr HostCompiler::compile() {
 
 	NodePtr fu = ohm3rd.mapElement(0, progWithKernels);
 
-	insieme::utils::map::PointerMap<NodePtr, NodePtr> tmp;// = reinterpret_cast<insieme::utils::map::PointerMap<NodePtr, NodePtr> >(oclHostMapper.getClMemMapping());
-	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
+	insieme::utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
+	std::cout << "REplacements: " << tmp << std::endl;
+/*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 		tmp[t.first] = t.second;
 		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
 			// replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
@@ -1274,7 +1300,7 @@ ProgramPtr HostCompiler::compile() {
 //			std::cout << "Replacing ALL \n" << t.first << "\nwith\n" << t.second << "\n";
 		}
 	});
-
+*/
 	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), fu, tmp))) {
 		mProgram = newProg;
 	//			return newProg;

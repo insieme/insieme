@@ -195,6 +195,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	KernelNames kernelNames;
 	vector<core::ExpressionPtr> kernelEntries;
 	LocalMemDecls localMemDecls;
+	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	core::ProgramPtr& mProgram;
 
 	// check if the call is a call to ref.assign
@@ -224,6 +225,7 @@ public:
 	KernelArgs& getKernelArgs() { return kernelArgs; }
 	KernelNames& getKernelNames() { return kernelNames; }
 	LocalMemDecls& getLocalMemDecls() {	return localMemDecls; }
+	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& getReplacements() { return replacements; }
 };
 
 /*
@@ -267,8 +269,9 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	LocalMemDecls& localMemDecls;
 	KernelNames& kernelNames;
 	KernelLambdas& kernelLambdas;
+	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 
-	core::ExpressionPtr create3Dvec;
+//	core::ExpressionPtr create3Dvec;
 
 	// get a VariablePtr which is hidden under the stuff added by the frontend if ther is a cast to (void*) in the C input
 	// the variable is stored in the passed argument arg
@@ -282,9 +285,9 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 
 public:
 	HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
-			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas) :
+			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> oclReplacements) :
 		builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs),	localMemDecls(oclLocalMemDecls), kernelNames(oclKernelNames),
-			kernelLambdas(oclKernelLambdas) { }
+			kernelLambdas(oclKernelLambdas), replacements(oclReplacements) { }
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
 
