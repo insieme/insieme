@@ -37,26 +37,15 @@
 #pragma once
 
 #include <memory>
+#include <set>
 
 #include "insieme/backend/converter.h"
+#include "insieme/backend/c_ast/forward_decls.h"
 
 #include "insieme/core/ast_visitor.h"
 
 namespace insieme {
 namespace backend {
-
-	namespace c_ast {
-
-		class Node;
-		typedef Ptr<Node> NodePtr;
-
-		class CNodeManager;
-		typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
-
-		class CCode;
-		typedef std::shared_ptr<CCode> CCodePtr;
-
-	}
 
 	// a forward declaration - implementation is hidden
 	class StmtConversionContext;
@@ -72,6 +61,8 @@ namespace backend {
 			: core::ASTVisitor<c_ast::NodePtr, core::Pointer, StmtConversionContext&>(true), converter(converter) {}
 
 		c_ast::CCodePtr convert(const core::NodePtr& node);
+
+		c_ast::NodePtr convert(const core::NodePtr& node, std::set<c_ast::CodeFragmentPtr>& dependencies);
 
 	protected:
 
@@ -131,6 +122,28 @@ namespace backend {
 		c_ast::NodePtr visitVariable(const core::VariablePtr& ptr, StmtConversionContext& context);
 
 		c_ast::NodePtr visitVectorExpr(const core::VectorExprPtr& ptr, StmtConversionContext& context);
+
+		////////////////////////////////////////////////////////////////////////// Utilities
+
+		template<typename T>
+		Ptr<T> convert(const core::NodePtr& node, StmtConversionContext& context) {
+			auto res = visit(node, context);
+			assert(dynamic_pointer_cast<T>(res) && "Invalid specified type!");
+			return static_pointer_cast<T>(res);
+		}
+
+		c_ast::TypePtr convertType(const core::TypePtr& type, StmtConversionContext& context) {
+			return convert<c_ast::Type>(type, context);
+		}
+
+		c_ast::ExpressionPtr convertExpression(const core::ExpressionPtr& expr, StmtConversionContext& context) {
+			return convert<c_ast::Expression>(expr, context);
+		}
+
+		c_ast::StatementPtr convertStmt(const core::StatementPtr& stmt, StmtConversionContext& context) {
+			return convert<c_ast::Statement>(stmt, context);
+		}
+
 	};
 
 

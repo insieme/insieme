@@ -250,8 +250,9 @@ AffineFunction::AffineFunction(const IterationVector& newIterVec, const AffineFu
 	iterVec(newIterVec)
 {
 	// check weather the 2 iteration vectors are compatible. 
-	if(iterVec != other.iterVec) 
+	if(iterVec != other.iterVec) {
 		throw "Operation not allowed, iteration vectors are different";
+	}
 
 	// FIXME: allow the copy of iteration vector which are not perfectly the
 	// same but have the same structure 
@@ -320,7 +321,6 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 }
 
 //====== AffineFunction::iterator =================================================
-
 AffineFunction::iterator& AffineFunction::iterator::operator++() { 
 	if ( iterPos == iterVec.size() )
 		throw "Iterator not valid.";
@@ -349,8 +349,10 @@ std::ostream& Constraint::printTo(std::ostream& out) const {
 
 //===== ConstraintCombiner ======================================================
 void RawConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
-void UnaryConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
+void NegatedConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
 void BinaryConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
+
+namespace {
 
 // Visits the constraints and prints the expression to a provided output stream
 struct ConstraintPrinter : public ConstraintVisitor {
@@ -359,21 +361,21 @@ struct ConstraintPrinter : public ConstraintVisitor {
 
 	ConstraintPrinter(std::ostream& out) : out(out) { }
 
-	void visit(const RawConstraintCombiner& rcc) { out << rcc.getConstraint(); }
+	void visit(const RawConstraintCombiner& rcc) { out << "(" << rcc.getConstraint() << ")"; }
 
-	virtual void visit(const UnaryConstraintCombiner& ucc) {
-		if( ucc.getType() == ConstraintCombiner::NEG ) { out << "NOT("; }
-		ConstraintVisitor::visit(ucc);
-		if( ucc.getType() == ConstraintCombiner::NEG ) { out << ")"; }
+	virtual void visit(const NegatedConstraintCombiner& ucc) {
+		out << "NOT"; ConstraintVisitor::visit(ucc);
 	}
 
 	virtual void visit(const BinaryConstraintCombiner& bcc) {
 		bcc.getLHS()->accept(*this);
-		out << ((bcc.getType() == ConstraintCombiner::AND) ? " AND " : " OR ");
+		out << (bcc.isConjunction() ? " AND " : " OR ");
 		bcc.getRHS()->accept(*this);
 	}
 
 };
+
+} // end anonymous namespace
 
 std::ostream& ConstraintCombiner::printTo(std::ostream& out) const {
 	ConstraintPrinter vis(out);
@@ -382,15 +384,60 @@ std::ostream& ConstraintCombiner::printTo(std::ostream& out) const {
 } 
 
 ConstraintCombinerPtr negate(const ConstraintCombinerPtr& cc) {
-	return std::make_shared<UnaryConstraintCombiner>( cc, true );
+	return std::make_shared<NegatedConstraintCombiner>( cc );
 }
 
 ConstraintCombinerPtr negate(const Constraint& c) {
-	return std::make_shared<UnaryConstraintCombiner>( makeCombiner(c), true );
+	return std::make_shared<NegatedConstraintCombiner>( makeCombiner(c) );
 }
 
 ConstraintCombinerPtr makeCombiner(const Constraint& constr) {
 	return std::make_shared<RawConstraintCombiner>(constr);
+}
+
+namespace {
+
+// because Constraints are represented on the basis of an iteration vector
+// which is shared among the constraints componing a constraint combiner, when
+// a combiner is stored, the iteration vector has to be changed. 
+struct ConstraintCloner : public ConstraintVisitor {
+	ConstraintCombinerPtr newCC;
+	const IterationVector& iv;
+
+	ConstraintCloner(const IterationVector& iv) : iv(iv) { }
+
+	void visit(const RawConstraintCombiner& rcc) { 
+		const Constraint& c = rcc.getConstraint();
+		newCC = std::make_shared<RawConstraintCombiner>( 
+				Constraint( AffineFunction(iv, c.getAffineFunction()), c.getType() ) 
+			); 
+	}
+
+	virtual void visit(const NegatedConstraintCombiner& ucc) {
+		ConstraintVisitor::visit(ucc);
+		newCC = std::make_shared<NegatedConstraintCombiner>(newCC);
+	}
+
+	virtual void visit(const BinaryConstraintCombiner& bcc) {
+		bcc.getLHS()->accept(*this);
+		ConstraintCombinerPtr lhs = newCC;
+
+		bcc.getRHS()->accept(*this);
+		ConstraintCombinerPtr rhs = newCC;
+
+		newCC = std::make_shared<BinaryConstraintCombiner>( bcc.getType(), lhs, rhs );
+	}
+
+};
+
+} // end anonymous namespace 
+
+ConstraintCombinerPtr cloneConstraint(const IterationVector& iterVec, const ConstraintCombinerPtr& old) {
+	if (!old) { return ConstraintCombinerPtr(); }
+
+	ConstraintCloner cc(iterVec);
+	old->accept(cc);
+	return cc.newCC;
 }
 
 } // end poly namesapce 

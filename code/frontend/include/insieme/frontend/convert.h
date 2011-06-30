@@ -244,6 +244,15 @@ public:
 	void setTranslationUnit(const TranslationUnit& tu) { currTU = &tu; }
 
 	/**
+	 * Because when literals are read from a function declaration we need to
+	 * set manually the translation unit which contains the definition of the
+	 * function, this method helps in setting the translation unit correctly.
+	 *
+	 * Returns the previous translation unit in the case it has to be set back. 
+	 */
+	const clang::idx::TranslationUnit* getTranslationUnitForDefinition(clang::FunctionDecl*& fd); 
+
+	/**
 	 * Returns a map which associates a statement of the clang AST to a pragma (if any)
 	 * @return The statement to pragma multimap
 	 */
@@ -311,7 +320,6 @@ public:
 	 * @return a non RefType IR expression
 	 */
 	core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr) const;
-
 
 	core::ExpressionPtr castToType(const core::TypePtr& trgTy, const core::ExpressionPtr& expr) const;
 	// typedef std::function<core::ExpressionPtr (core::NodeManager&, const clang::CallExpr*)> CustomFunctionHandler;

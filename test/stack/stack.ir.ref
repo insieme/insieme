@@ -2,51 +2,51 @@
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<int<4>> v1 =  var(0);
-        decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v2 =  var(undefined(type<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>));
-        v2 := fun(){
-            decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v3 =  new(array.create.1D(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>, sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)/sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)));
-            composite.ref.elem(array.ref.elem.1D(v3, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := get.null(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>);
-            return v3;
+        decl ref<int<4>> v15 =  var(0);
+        decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v16 =  var(undefined(type<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>));
+        v16 := fun(){
+            decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v13 =  new(array.create.1D(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>, sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)/sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)));
+            composite.ref.elem(array.ref.elem.1D(v13, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := get.null(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>);
+            return v13;
         }();
         {
-            for(decl int<4> v10 = 0 .. 10 : 1) {
-                printf(string.as.char.pointer("Pushing %d\n"), varlist.pack((v10)));
+            for(decl int<4> v18 = 0 .. 10 : 1) {
+                printf(string.as.char.pointer("Pushing %d\n"), varlist.pack((v18)));
                 fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v5, int<4> v6){
                     decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v7 =  new(array.create.1D(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>, sizeof(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>)/sizeof(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>)));
                     composite.ref.elem(array.ref.elem.1D(v7, 0), value, type<int<4>>) := v6;
                     composite.ref.elem(array.ref.elem.1D(v7, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := composite.ref.elem(array.ref.elem.1D(v5, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
                     composite.ref.elem(array.ref.elem.1D(v5, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := v7;
-                }(v2, v10);
+                }(v16, v18);
             };
-            v1 := 0+ceil(10-0/1)*1;
+            v15 := 0+ceil(10-0/1)*1;
         };
         {
-            for(decl int<4> v16 = 0 .. 5 : 1) {
-                printf(string.as.char.pointer("Poping  %d\n"), varlist.pack((fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v11){
-                    if(!!is.null(composite.ref.elem(array.ref.elem.1D(v11, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>))) {
+            for(decl int<4> v20 = 0 .. 5 : 1) {
+                printf(string.as.char.pointer("Poping  %d\n"), varlist.pack((fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v9){
+                    if(!!is.null(composite.ref.elem(array.ref.elem.1D(v9, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>))) {
                         return 0-1;
                     } else { };
-                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v12 = composite.ref.elem(array.ref.elem.1D(v11, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
-                    decl ref<int<4>> v13 = composite.ref.elem(array.ref.elem.1D(v12, 0), value, type<int<4>>);
-                    composite.ref.elem(array.ref.elem.1D(v11, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := composite.ref.elem(array.ref.elem.1D(v12, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
-                     del(v12);
-                    return v13;
-                }(v2))));
+                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v10 = composite.ref.elem(array.ref.elem.1D(v9, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
+                    decl ref<int<4>> v11 = composite.ref.elem(array.ref.elem.1D(v10, 0), value, type<int<4>>);
+                    composite.ref.elem(array.ref.elem.1D(v9, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := composite.ref.elem(array.ref.elem.1D(v10, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
+                     del(v10);
+                    return v11;
+                }(v16))));
             };
-            v1 := 0+ceil(5-0/1)*1;
+            v15 := 0+ceil(5-0/1)*1;
         };
-        fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v17){
-            decl ref<ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>> v19 =  var(v17);
+        fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v1){
+            decl ref<ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>> v3 =  var(v1);
             {
-                while(!is.null(composite.ref.elem(array.ref.elem.1D(v19, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>))) {
-                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v18 = composite.ref.elem(array.ref.elem.1D(v19, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
-                    composite.ref.elem(array.ref.elem.1D(v19, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := composite.ref.elem(array.ref.elem.1D(v18, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
-                     del(v18);
+                while(!is.null(composite.ref.elem(array.ref.elem.1D(v3, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>))) {
+                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v2 = composite.ref.elem(array.ref.elem.1D(v3, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
+                    composite.ref.elem(array.ref.elem.1D(v3, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := composite.ref.elem(array.ref.elem.1D(v2, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
+                     del(v2);
                 };
-                 del(v19);
+                 del(v3);
             };
-        }(v2);
+        }(v16);
         return 0;
     }
 
@@ -57,51 +57,51 @@ fun(){
 // Inspire Program 
 //  Entry Point: 
 fun(){
-        decl ref<int<4>> v1 = ( var(0));
-        decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v2 = ( var(undefined(type<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>)));
-        (v2 := ( *fun(){
-            decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v3 = ( new(array.create.1D(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>, (sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)/sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)))));
-            (composite.ref.elem(array.ref.elem.1D(v3, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := get.null(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>));
-            return v3;
+        decl ref<int<4>> v15 = ( var(0));
+        decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v16 = ( var(undefined(type<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>)));
+        (v16 := ( *fun(){
+            decl ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v13 = ( new(array.create.1D(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>, (sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)/sizeof(type<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>>)))));
+            (composite.ref.elem(array.ref.elem.1D(v13, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := get.null(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>));
+            return v13;
         }()));
         {
-            for(decl int<4> v10 = 0 .. 10 : 1) {
-                printf(string.as.char.pointer("Pushing %d\n"), varlist.pack((v10)));
+            for(decl int<4> v18 = 0 .. 10 : 1) {
+                printf(string.as.char.pointer("Pushing %d\n"), varlist.pack((v18)));
                 fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v5, int<4> v6){
                     decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v7 = ( new(array.create.1D(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>, (sizeof(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>)/sizeof(type<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>}>)))));
                     (composite.ref.elem(array.ref.elem.1D(v7, 0), value, type<int<4>>) := v6);
                     (composite.ref.elem(array.ref.elem.1D(v7, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := ( *composite.ref.elem(array.ref.elem.1D(v5, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>)));
                     (composite.ref.elem(array.ref.elem.1D(v5, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := ( *v7));
-                }(v2, v10);
+                }(v16, v18);
             };
-            (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((10-0))/CAST<real<8>>(1))))*1)));
+            (v15 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((10-0))/CAST<real<8>>(1))))*1)));
         };
         {
-            for(decl int<4> v16 = 0 .. 5 : 1) {
-                printf(string.as.char.pointer("Poping  %d\n"), varlist.pack((fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v11){
-                    if((!(!is.null(( *composite.ref.elem(array.ref.elem.1D(v11, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>)))))) {
+            for(decl int<4> v20 = 0 .. 5 : 1) {
+                printf(string.as.char.pointer("Poping  %d\n"), varlist.pack((fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v9){
+                    if((!(!is.null(( *composite.ref.elem(array.ref.elem.1D(v9, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>)))))) {
                         return (CAST<int<4>>(0)-1);
                     } else { };
-                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v12 = composite.ref.elem(array.ref.elem.1D(v11, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
-                    decl ref<int<4>> v13 = composite.ref.elem(array.ref.elem.1D(v12, 0), value, type<int<4>>);
-                    (composite.ref.elem(array.ref.elem.1D(v11, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := ( *composite.ref.elem(array.ref.elem.1D(v12, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>)));
-                    ( del(v12));
-                    return ( *v13);
-                }(v2))));
+                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v10 = composite.ref.elem(array.ref.elem.1D(v9, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
+                    decl ref<int<4>> v11 = composite.ref.elem(array.ref.elem.1D(v10, 0), value, type<int<4>>);
+                    (composite.ref.elem(array.ref.elem.1D(v9, 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := ( *composite.ref.elem(array.ref.elem.1D(v10, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>)));
+                    ( del(v10));
+                    return ( *v11);
+                }(v16))));
             };
-            (v1 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
+            (v15 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
         };
-        fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v17){
-            decl ref<ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>> v19 = ( var(v17));
+        fun(ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> v1){
+            decl ref<ref<array<struct<top:array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>> v3 = ( var(v1));
             {
-                while((!is.null(( *composite.ref.elem(array.ref.elem.1D(( *v19), 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>))))) {
-                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v18 = composite.ref.elem(array.ref.elem.1D(( *v19), 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
-                    (composite.ref.elem(array.ref.elem.1D(( *v19), 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := ( *composite.ref.elem(array.ref.elem.1D(v18, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>)));
-                    ( del(v18));
+                while((!is.null(( *composite.ref.elem(array.ref.elem.1D(( *v3), 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>))))) {
+                    decl ref<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> v2 = composite.ref.elem(array.ref.elem.1D(( *v3), 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>);
+                    (composite.ref.elem(array.ref.elem.1D(( *v3), 0), top, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>) := ( *composite.ref.elem(array.ref.elem.1D(v2, 0), next, type<array<rec 'elem{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>)));
+                    ( del(v2));
                 };
-                ( del(v19));
+                ( del(v3));
             };
-        }(v2);
+        }(v16);
         return 0;
     }
 

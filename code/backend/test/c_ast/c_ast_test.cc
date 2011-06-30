@@ -44,6 +44,10 @@ namespace insieme {
 namespace backend {
 namespace c_ast {
 
+// a small test verifying that the given substr is contained within the given string
+bool containsSubString(const string& str, const string& substr) {
+	return str.find(substr) != string::npos;
+}
 
 TEST(C_AST, Basic) {
 
@@ -53,7 +57,7 @@ TEST(C_AST, Basic) {
 
 	TypePtr intType = basics.getIntType();
 	EXPECT_TRUE(intType);
-	EXPECT_EQ("int", toString(intType));
+	EXPECT_EQ("int", toC(intType));
 
 	VariablePtr x = var(intType, "x");
 	VariablePtr y = var(intType, "y");
@@ -61,16 +65,74 @@ TEST(C_AST, Basic) {
 
 	EXPECT_EQ("x", x->name->name);
 
-	EXPECT_EQ("x", toString(x));
-	EXPECT_EQ("y", toString(y));
-	EXPECT_EQ("x+y", toString(sum));
+	EXPECT_EQ("x", toC(x));
+	EXPECT_EQ("y", toC(y));
+	EXPECT_EQ("x+y", toC(sum));
 
 	sum = add(sum, x);
-	EXPECT_EQ("x+y+x", toString(sum));
+	EXPECT_EQ("x+y+x", toC(sum));
 
 	sum = add(sum, parenthese(add(x,y)));
-	EXPECT_EQ("x+y+x+(x+y)", toString(sum));
+	EXPECT_EQ("x+y+x+(x+y)", toC(sum));
 
+}
+
+TEST(C_AST_Printer, ParameterFormatting) {
+
+
+	CNodeManager manager;
+	CBasics basics(manager);
+
+	TypePtr type;
+
+	StructTypePtr structType = manager.create<StructType>(manager.create("XY"));
+
+	type = basics.getIntType();
+	structType->elements.push_back(var(type, "x1"));
+
+	type = manager.create<PointerType>(type);
+	structType->elements.push_back(var(type, "x2"));
+
+	structType->elements.push_back(var(manager.create<PointerType>(type), "x3"));
+
+	structType->elements.push_back(var(manager.create<VectorType>(basics.getIntType(), manager.create<Literal>("3")), "x4"));
+
+	type = manager.create<VectorType>(type, manager.create<Literal>("3"));
+	structType->elements.push_back(var(type, "x5"));
+
+	type = manager.create<VectorType>(type, manager.create<Literal>("5"));
+	structType->elements.push_back(var(type, "x6"));
+
+	type = manager.create<PointerType>(type);
+	structType->elements.push_back(var(type, "x7"));
+
+	type = manager.create<PointerType>(type);
+	structType->elements.push_back(var(type, "x8"));
+
+	type = manager.create<VectorType>(type, manager.create<Literal>("7"));
+	structType->elements.push_back(var(type, "x9"));
+
+	NodePtr def = manager.create<TypeDefinition>(structType, manager.create("Z"));
+
+	auto code = toC(def);
+	EXPECT_PRED2(containsSubString, code, "int x1");
+	EXPECT_PRED2(containsSubString, code, "int* x2");
+	EXPECT_PRED2(containsSubString, code, "int** x3");
+	EXPECT_PRED2(containsSubString, code, "int x4[3]");
+	EXPECT_PRED2(containsSubString, code, "int* x5[3]");
+	EXPECT_PRED2(containsSubString, code, "int* x6[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int*(* x7)[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int*(** x8)[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int*(** x9[7])[5][3]");
+
+}
+
+int f(int(*fun)(int, int)) {
+	return fun(1,2);
+}
+
+int f(int(*(*fun)[4])(int, int)) {
+	return (*fun)[1](1,2);
 }
 
 } // end namespace c_ast

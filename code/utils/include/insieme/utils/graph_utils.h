@@ -296,7 +296,7 @@ namespace graph {
 			vertex_descriptor&& v = boost::add_vertex(graph);
 
 			// link vertex with descriptor (via vertex map)
-			auto res = vertexMap.insert(std::make_pair(vertex, v));
+			vertexMap.insert(std::make_pair(vertex, v));
 
 			// link descriptor with vertex (via node property)
 			graph[v] = vertex;

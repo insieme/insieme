@@ -85,6 +85,11 @@ namespace c_ast {
 				return PrintWrapper(*this, node);
 			}
 
+			template<typename ... A>
+			ParameterPrinter printParam(A ... param) {
+				return ParameterPrinter(param...);
+			}
+
 			std::ostream& newLine(std::ostream& out) {
 				return out << "\n" << times(indentStep, indent);
 			}
@@ -97,11 +102,6 @@ namespace c_ast {
 				indent--;
 				assert(indent >= 0 && "Should never become < 0");
 			}
-
-			std::ostream& formatParameter(const c_ast::TypePtr& type, const c_ast::IdentifierPtr& name, std::ostream& out) {
-				return out << print(type) << " " << print(name);
-			}
-
 
 			#define PRINT(name) std::ostream& print ## name (name ## Ptr node, std::ostream& out)
 
@@ -118,6 +118,18 @@ namespace c_ast {
 			}
 
 			PRINT(PrimitiveType) {
+				switch(node->type) {
+				case PrimitiveType::VOID : return out << "void";
+				case PrimitiveType::INT : return out << "int";
+				case PrimitiveType::UNSIGNED : return out << "unsigned";
+				case PrimitiveType::FLOAT : return out << "float";
+				case PrimitiveType::DOUBLE : return out << "double";
+				}
+				assert(false && "Unsupported primitive type!");
+				return out << "/* unsupported primitive type */";
+			}
+
+			PRINT(NamedType) {
 				return out << print(node->name);
 			}
 
@@ -126,11 +138,7 @@ namespace c_ast {
 			}
 
 			PRINT(VectorType) {
-				print(node->elementType);
-				out << "[";
-				print(node->size);
-				out << "]";
-				return out;
+				return out << print(node->elementType) << "[" << print(node->size) << "]";
 			}
 
 			PRINT(StructType) {
@@ -139,6 +147,13 @@ namespace c_ast {
 
 			PRINT(UnionType) {
 				return out << "union " << print(node->name);
+			}
+
+			PRINT(FunctionType) {
+				return out << print(node->returnType) << "(" <<
+						join(",", node->parameterTypes, [&](std::ostream& out, const TypePtr& cur) {
+								out << print(cur);
+				}) << ")";
 			}
 
 			PRINT(VarDecl) {
@@ -159,8 +174,7 @@ namespace c_ast {
 
 				std::size_t size = node->statements.size();
 				for (std::size_t i=0; i<size; i++) {
-					print(node->statements[i]);
-					out << ";";
+					out << print(node->statements[i]) << ";";
 					if (i < size-1) newLine(out);
 				}
 
@@ -253,18 +267,10 @@ namespace c_ast {
 			}
 
 			PRINT(Initializer) {
-				out << "((";
-				print(node->type);
-				out << "){";
-
-				std::size_t size = node->values.size();
-				for(std::size_t i = 0; i<size; i++) {
-					print(node->values[i]);
-					if (i < size-1) out << ", ";
-				}
-				out << "})";
-
-				return out;
+				return out << "(" << print(node->type) << "){"
+						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+				}) << "}";
 			}
 
 			PRINT(UnaryOperation) {
@@ -322,6 +328,7 @@ namespace c_ast {
 					case BinaryOperation::BitwiseLeftShiftAssign: 	op = "<<="; break;
 					case BinaryOperation::BitwiseRightShiftAssign: 	op = ">>="; break;
 					case BinaryOperation::MemberAccess: 			op = "."; break;
+					case BinaryOperation::IndirectMemberAccess:		op = "->"; break;
 
 					// special handling for subscript and cast
 					case BinaryOperation::Subscript: print(node->operandA); out << "["; print(node->operandB); return out << "]";
@@ -352,17 +359,11 @@ namespace c_ast {
 			}
 
 			PRINT(Call) {
-
-				printIdentifier(node->function, out);
-				out << "(";
-
-				std::size_t size = node->arguments.size();
-				for(std::size_t i = 0; i<size; i++) {
-					print(node->arguments[i]);
-					if (i < size-1) out << ", ";
-				}
-
-				return out << ")";
+				// <function> ( <arguments> )
+				return out << print(node->function) << "("
+						<< join(", ", node->arguments, [&](std::ostream& out, const ExpressionPtr& cur) {
+							out << print(cur);
+				}) << ")";
 			}
 
 			PRINT(Parentheses) {
@@ -371,11 +372,13 @@ namespace c_ast {
 
 			PRINT(TypeDeclaration) {
 				print(node->type);
-				return out << ";\n";
+				return out << ";";
 			}
 
 			PRINT(FunctionPrototype) {
-				return out << "TODO";
+				// <returnType> name ( <parameter list> );
+				FunctionPtr fun =  node->function;
+				return out << print(fun->returnType) << " " << print(fun->name) << "(" << printParam(fun->parameter) << ");";
 			}
 
 			PRINT(TypeDefinition) {
@@ -391,8 +394,8 @@ namespace c_ast {
 				out << print(node->type);
 				if (c_ast::NamedCompositeTypePtr composite = dynamic_pointer_cast<c_ast::NamedCompositeType>(node->type)) {
 					out << " {\n    " << join(";\n    ", composite->elements,
-							[&](std::ostream& out, const pair<c_ast::IdentifierPtr, c_ast::TypePtr>& cur) {
-								this->formatParameter(cur.second, cur.first, out);
+							[&](std::ostream& out, const VariablePtr& cur) {
+								out << printParam(cur);
 					}) << ";\n}";
 				}
 
@@ -400,11 +403,26 @@ namespace c_ast {
 				if (explicitTypeDef) {
 					out << " " << print(node->name);
 				}
-				return out << ";\n";
+				return out << ";";
 			}
 
 			PRINT(Function) {
-				return out << "TODO";
+				// <returnType> name ( <parameter list> ) <body> \n
+				if (node->flags & Function::STATIC) {
+					out << "static ";
+				}
+				if (node->flags & Function::INLINE) {
+					out << "inline ";
+				}
+
+				out << print(node->returnType) << " " << print(node->name) << "(" << printParam(node->parameter) << ") ";
+
+				c_ast::StatementPtr body = node->body;
+				if (node->body->getType() != c_ast::NT_Compound) {
+					body = body->getManager()->create<c_ast::Compound>(toVector<c_ast::StatementPtr>(body));
+				}
+
+				return out << print(body);
 			}
 
 			#undef PRINT
@@ -416,7 +434,115 @@ namespace c_ast {
 			return printer.print(node, out);
 		}
 
+		struct TypeLevel {
+			unsigned pointerCounter;
+			vector<ExpressionPtr> subscripts;
+			vector<TypePtr> parameters;
+			TypeLevel() : pointerCounter(0) {}
+		};
 
+		typedef vector<TypeLevel> TypeNesting;
+		typedef TypeNesting::const_iterator NestIterator;
+
+		TypePtr computeNesting(TypeNesting& data, const TypePtr& type) {
+			// check whether there is something to do
+			if (type->getType() != NT_PointerType && type->getType() != NT_VectorType && type->getType() != NT_FunctionType) {
+				return type;
+			}
+
+			TypePtr cur = type;
+			TypeLevel res;
+
+			// collect vector sizes
+			while(cur->getType() == NT_VectorType) {
+				VectorTypePtr vectorType = static_pointer_cast<VectorType>(cur);
+				res.subscripts.push_back(vectorType->size);
+				cur = vectorType->elementType;
+			}
+
+			// collect function parameters
+			if (cur->getType() == NT_FunctionType) {
+				// if vectors have already been processed => continue with next level
+				if (!res.subscripts.empty()) {
+					auto innermost = computeNesting(data, cur);
+					data.push_back(res);
+					return innermost;
+				}
+
+				FunctionTypePtr funType = static_pointer_cast<FunctionType>(cur);
+				copy(funType->parameterTypes, std::back_inserter(res.parameters));
+
+				cur = funType->returnType;
+			}
+
+			// count pointers
+			while(cur->getType() == NT_PointerType) {
+				res.pointerCounter++;
+				cur = static_pointer_cast<PointerType>(cur)->elementType;
+			}
+
+			// resolve rest recursively
+			auto innermost = computeNesting(data, cur);
+
+			// add pair to result
+			data.push_back(res);
+
+			return innermost;
+		}
+
+		std::ostream& printTypeNest(std::ostream& out, NestIterator start, NestIterator end, const IdentifierPtr& name) {
+			// terminal case ...
+			if (start == end) {
+				return out << " " << CPrint(name);
+			}
+
+			// print pointers ...
+			const TypeLevel& cur = *start;
+			out << times("*", cur.pointerCounter);
+
+			++start;
+			if (start != end) {
+				out << "(";
+
+				// print nested recursively
+				printTypeNest(out, start, end, name);
+
+				out << ")";
+			} else {
+				out << " " << CPrint(name);
+			}
+
+			// check whether one or the other is empty
+			assert(!(!cur.parameters.empty() && !cur.subscripts.empty()) && "Only one component may be non-empty!");
+
+			// print vector sizes
+			out << join("", cur.subscripts, [&](std::ostream& out, const ExpressionPtr& cur) {
+				out << "[" << CPrint(cur) << "]";
+			});
+
+
+			// print parameter list
+			if (!cur.parameters.empty()) {
+				out << "(" << join(",", cur.parameters, [&](std::ostream& out, const TypePtr& cur) {
+					out << CPrint(cur);
+				}) << ")";
+			}
+
+			return out;
+		}
+
+
+	}
+
+
+	std::ostream& ParameterPrinter::printTo(std::ostream& out) const {
+		return out << join(", ", params, [](std::ostream& out, const c_ast::VariablePtr& var) {
+			// special handling for pointer to vectors
+			TypeNesting nesting;
+			TypePtr innermost = computeNesting(nesting, var->type);
+			out << CPrint(innermost);
+			printTypeNest(out, nesting.begin(), nesting.end(), var->name);
+		});
 	}
 
 
@@ -425,8 +551,14 @@ namespace c_ast {
 		return CPrinter().print(fragment, out);
 	}
 
-	string toString(const NodePtr& node) {
+	string toC(const NodePtr& node) {
+		if (!node) return "/* null */";
 		return ::toString(CPrint(node));
+	}
+
+	string toC(const c_ast::CodeFragmentPtr& fragment) {
+		if (!fragment) return "/* null */";
+		return ::toString(*fragment);
 	}
 
 } // end namespace c_ast

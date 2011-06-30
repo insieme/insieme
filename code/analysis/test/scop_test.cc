@@ -62,18 +62,7 @@ TEST(ScopRegion, CompoundStmt) {
 	// Mark scops in this code snippet
 	scop::mark(compStmt);
 
-	EXPECT_TRUE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& ann = *compStmt->getAnnotation(scop::ScopRegion::KEY);
-	
-	const poly::IterationVector& iterVec = ann.getIterationVector();
-	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
-
-	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
-	EXPECT_EQ(static_cast<size_t>(2), iterVec.getParameterNum());
-
-	std::ostringstream ss;
-	ss << ann.getIterationVector();
-	EXPECT_EQ("(|v1,v3|1)", ss.str());
+	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
 }
 
 TEST(ScopRegion, IfStmt) {
@@ -91,8 +80,8 @@ TEST(ScopRegion, IfStmt) {
 	// Mark scops in this code snippet
 	scop::mark(ifStmt);
 
-	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
+	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& ann = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
 
 	poly::IterationVector iterVec = ann.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
@@ -104,20 +93,30 @@ TEST(ScopRegion, IfStmt) {
 		ss << ann.getIterationVector();
 		EXPECT_EQ("(|v7,v8,v4,v5|1)", ss.str());
 	}
-	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
+	{ 
+		std::ostringstream ss;
+		ss << *ann.getConstraints();
+		EXPECT_EQ("(0*v7 + 0*v8 + 1*v4 + -1*v5 + 0*1 <= 0)", ss.str());
+	}
 	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
-
 	ann = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
 	iterVec = ann.getIterationVector();
-	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
 
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
-	EXPECT_EQ(static_cast<size_t>(2), iterVec.getParameterNum());
+	EXPECT_EQ(static_cast<size_t>(4), iterVec.getParameterNum());
  	{	
 		std::ostringstream ss;
 		ss << ann.getIterationVector();
-		EXPECT_EQ("(|v7,v8|1)", ss.str());
+		EXPECT_EQ("(|v7,v8,v4,v5|1)", ss.str());
 	}
+	{ 
+		std::ostringstream ss;
+		ss << *ann.getConstraints();
+		EXPECT_EQ("NOT(0*v7 + 0*v8 + 1*v4 + -1*v5 + 0*1 <= 0)", ss.str());
+	}
+
+
 }
 
 TEST(ScopRegion, SimpleForStmt) {
@@ -134,10 +133,23 @@ TEST(ScopRegion, SimpleForStmt) {
 
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
-    std::cout << ann.getIterationVector() << std::endl;
 
-	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
-	
+	poly::IterationVector iterVec = ann.getIterationVector();
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(1), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(1), iterVec.getParameterNum());
+
+	{	
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v9|v11|1)", ss.str());
+	}
+	{ 
+		std::ostringstream ss;
+		ss << *ann.getConstraints();
+		EXPECT_EQ("(1*v9 + 0*v11 + -10*1 >= 0) AND (1*v9 + 0*v11 + -50*1 < 0)", ss.str());
+	}
+	EXPECT_FALSE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 }
 
 TEST(ScopRegion, ForStmt) {
@@ -159,11 +171,31 @@ TEST(ScopRegion, ForStmt) {
 	IfStmtPtr ifStmt = static_pointer_cast<const IfStmt>(
 		static_pointer_cast<const CompoundStmt>(forStmt->getBody())->getStatements().back());
 
-	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
-	EXPECT_EQ(static_cast<size_t>(3), ann.getIterationVector().size());
-	EXPECT_EQ(static_cast<size_t>(0), ann.getIterationVector().getIteratorNum());
-	EXPECT_EQ(static_cast<size_t>(2), ann.getIterationVector().getParameterNum());
+	EXPECT_FALSE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
+
+	// check the then body
+	scop::ScopRegion& ann = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
+	poly::IterationVector iterVec = ann.getIterationVector(); 
+
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(2), iterVec.getParameterNum());
+	
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(|v12,v16|1)", ss.str());
+	}
+
+	{
+		std::ostringstream ss;
+		ss << *ann.getConstraints();
+		EXPECT_EQ("(1*v12 + 0*v16 + -25*1 > 0)", ss.str());
+	}
+
+
+
 }
 
 

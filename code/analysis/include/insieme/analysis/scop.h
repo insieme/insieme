@@ -50,13 +50,29 @@ namespace scop {
  * program. 
  */
 class ScopRegion: public core::NodeAnnotation {
-	poly::IterationVector iterVec;
-
 public:
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> KEY;
 
-	ScopRegion(const poly::IterationVector& iterVec): core::NodeAnnotation(), iterVec(iterVec) { } 
+	typedef std::vector<core::StatementPtr> StmtList;
+
+	// Define the type of access for arrays instances which can either be 
+	// a USE (when the array value is read) or a DEF in the case the array
+	// element is written. 
+	enum AccessType { USE, DEF };
+
+	typedef std::pair<core::ExpressionPtr, AccessType> AccessRef;
+
+	// Set of array accesses which appears strictly within this SCoP, array
+	// access in sub SCoPs will be directly referred from sub SCoPs. 
+	typedef std::set<AccessRef> AccessRefSet; 
+	
+	ScopRegion(const poly::IterationVector& iv, 
+			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),
+			const StmtList& subScops = StmtList()) : 
+		core::NodeAnnotation(), iterVec(iv), 
+		constraints(poly::cloneConstraint(iterVec, comb)),
+		subScops(subScops) { } 
 
 	const std::string& getAnnotationName() const { return NAME; }
 
@@ -64,19 +80,79 @@ public:
 
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const { 
+	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
+			const core::NodePtr& after) const 
+	{ 
 		return false; 
 	}
-
+	
+	/**
+	 * Return the iteration vector which is spawned by this region, and on
+	 * which the associated constraints are based on.
+	 */
 	const poly::IterationVector& getIterationVector() const { return iterVec; }
+	
+	/** 
+	 * Retrieves the constraint combiner associated to this ScopRegion.
+	 */
+	const poly::ConstraintCombinerPtr getConstraints() const { return constraints; }
+
+private:
+	// Iteration Vector on which constraints are defined 
+	poly::IterationVector iterVec;
+
+	// List of constraints which this SCoP defines 
+	poly::ConstraintCombinerPtr constraints;
+
+	// Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are
+	// ordered in terms of their relative position inside the current SCoP
+	// 
+	// In the case there are no sub SCoPs for the current SCoP, the list of 
+	// sub sub SCoPs is empty
+	StmtList subScops;
+
+	// Access informations 
+	AccessRefSet accesses;
 };
-typedef std::vector<std::shared_ptr<ScopRegion>> ScopList;
+
+/**
+ * AccessFunction : this annotation is used to annotate array subscript
+ * expressions with the equality constraint resulting from the access function. 
+ *
+ * for example the subscript operation A[i+j-N] will generate an equality constraint
+ * of the type i+j-N==0. Constraint which is used to annotate the expression.
+ */
+class AccessFunction: public core::NodeAnnotation {
+	poly::IterationVector iterVec;
+	poly::EqualityConstraint  eqCons;
+public:
+	static const string NAME;
+	static const utils::StringKey<AccessFunction> KEY;
+
+	AccessFunction(const poly::IterationVector& iv, const poly::EqualityConstraint& eqCons) : 
+		core::NodeAnnotation(), iterVec(iv), 
+		eqCons( poly::AffineFunction(iterVec, eqCons.getAffineFunction()) ) { }
+
+	const std::string& getAnnotationName() const { return NAME; }
+
+	const utils::AnnotationKey* getKey() const { return &KEY; }
+
+	const std::string toString() const; 
+	
+	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
+			const core::NodePtr& after) const 
+	{ 
+		return false; 
+	}
+};
+
+typedef std::vector< std::pair<core::NodePtr, poly::IterationVector> > ScopList;
 
 /**
  * Finds and marks the SCoPs contained in the root subtree and returns a list of
  * found SCoPs (an empty list in the case no SCoP was found). 
  */ 
-ScopList mark(const core::NodePtr& root, bool interproc=false);
+ScopList mark(const core::NodePtr& root);
 
 } // end namespace scop
 } // end namespace analysis

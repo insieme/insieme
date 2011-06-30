@@ -54,6 +54,9 @@ namespace backend {
 	class TypeInfo;
 	class FunctionTypeInfo;
 	class RefTypeInfo;
+	class ArrayTypeInfo;
+	class VectorTypeInfo;
+	class ChannelTypeInfo;
 
 	namespace detail {
 		class TypeInfoStore;
@@ -75,6 +78,12 @@ namespace backend {
 		virtual const FunctionTypeInfo& getTypeInfo(const core::FunctionTypePtr&);
 
 		virtual const RefTypeInfo& getTypeInfo(const core::RefTypePtr&);
+
+		virtual const ArrayTypeInfo& getTypeInfo(const core::ArrayTypePtr& type);
+
+		virtual const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
+
+		virtual const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
 	};
 
 
@@ -83,7 +92,7 @@ namespace backend {
 	 * node pointer. Elements of this type are used to realize variable and parameter
 	 * declarations and conversions between plain C and Inspire types.
 	 */
-	typedef std::function<c_ast::NodePtr(const c_ast::NodePtr&, c_ast::SharedCNodeManager&)> NodeConverter;
+	typedef std::function<c_ast::ExpressionPtr(c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr&)> NodeConverter;
 
 	struct TypeInfo {
 
@@ -119,10 +128,6 @@ namespace backend {
 		//		- caller name
 		//		- references to code fragments of utilities
 
-		c_ast::IdentifierPtr closureName;
-
-		c_ast::CodeFragmentPtr closure;
-
 		c_ast::IdentifierPtr callerName;
 
 		c_ast::CodeFragmentPtr caller;
@@ -140,7 +145,29 @@ namespace backend {
 
 	};
 
+	struct ArrayTypeInfo : public TypeInfo {
+		// to be included
+		//		- constructor
 
+		c_ast::IdentifierPtr constructorName;
+
+		c_ast::CodeFragmentPtr constructor;
+	};
+
+	struct VectorTypeInfo : public TypeInfo {
+		// to be included
+		//		- init uniform operator
+
+		c_ast::IdentifierPtr initUniformName;
+
+		c_ast::CodeFragmentPtr initUniform;
+
+	};
+
+	struct ChannelTypeInfo : public TypeInfo {
+		// to be included
+		//		- read and write operations?
+	};
 
 
 } // end namespace backend

@@ -1,24 +1,24 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v2, ref<array<array<char,1>,1>> v3){
+fun(int<4> v10, ref<array<array<char,1>,1>> v11){
         decl ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v1 =  new(struct{count:=0, a:=vector.init.uniform(0, 50), reset_count:=1});
         for(decl int<4> v13 = 0 .. 10 : 1) {
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v4, int<4> v5){
-                int.postInc(vector.ref.elem(composite.ref.elem(v4, a, type<vector<int<4>,50>>), v5));
-                composite.ref.elem(v4, count, type<int<4>>) := composite.ref.elem(v4, count, type<int<4>>)+v5;
-                return composite.ref.elem(v4, count, type<int<4>>);
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v2, int<4> v3){
+                int.postInc(vector.ref.elem(composite.ref.elem(v2, a, type<vector<int<4>,50>>), v3));
+                composite.ref.elem(v2, count, type<int<4>>) := composite.ref.elem(v2, count, type<int<4>>)+v3;
+                return composite.ref.elem(v2, count, type<int<4>>);
             }(v1, 2))));
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v7, int<4> v8){
-                int.postDec(vector.ref.elem(composite.ref.elem(v7, a, type<vector<int<4>,50>>), v8));
-                composite.ref.elem(v7, count, type<int<4>>) := composite.ref.elem(v7, count, type<int<4>>)-v8;
-                return composite.ref.elem(v7, count, type<int<4>>);
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v5, int<4> v6){
+                int.postDec(vector.ref.elem(composite.ref.elem(v5, a, type<vector<int<4>,50>>), v6));
+                composite.ref.elem(v5, count, type<int<4>>) := composite.ref.elem(v5, count, type<int<4>>)-v6;
+                return composite.ref.elem(v5, count, type<int<4>>);
             }(v1, 1))));
             if(v13==5) {
-                fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v10){
-                    composite.ref.elem(v10, count, type<int<4>>) := 0;
-                    composite.ref.elem(v10, reset_count, type<int<4>>) := composite.ref.elem(v10, reset_count, type<int<4>>)+1;
-                    return composite.ref.elem(v10, count, type<int<4>>);
+                fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v8){
+                    composite.ref.elem(v8, count, type<int<4>>) := 0;
+                    composite.ref.elem(v8, reset_count, type<int<4>>) := composite.ref.elem(v8, reset_count, type<int<4>>)+1;
+                    return composite.ref.elem(v8, count, type<int<4>>);
                 }(v1);
             } else { };
         };
@@ -31,24 +31,24 @@ fun(int<4> v2, ref<array<array<char,1>,1>> v3){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v2, ref<array<array<char,1>,1>> v3){
+fun(int<4> v10, ref<array<array<char,1>,1>> v11){
         decl ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v1 = ( new(struct{count:=0, a:=vector.init.uniform(0, 50), reset_count:=1}));
         for(decl int<4> v13 = 0 .. 10 : 1) {
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v4, int<4> v5){
-                int.postInc(vector.ref.elem(composite.ref.elem(v4, a, type<vector<int<4>,50>>), CAST<uint<4>>(v5)));
-                (composite.ref.elem(v4, count, type<int<4>>) := (( *composite.ref.elem(v4, count, type<int<4>>))+v5));
-                return ( *composite.ref.elem(v4, count, type<int<4>>));
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v2, int<4> v3){
+                int.postInc(vector.ref.elem(composite.ref.elem(v2, a, type<vector<int<4>,50>>), CAST<uint<4>>(v3)));
+                (composite.ref.elem(v2, count, type<int<4>>) := (( *composite.ref.elem(v2, count, type<int<4>>))+v3));
+                return ( *composite.ref.elem(v2, count, type<int<4>>));
             }(v1, 2))));
-            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v7, int<4> v8){
-                int.postDec(vector.ref.elem(composite.ref.elem(v7, a, type<vector<int<4>,50>>), CAST<uint<4>>(v8)));
-                (composite.ref.elem(v7, count, type<int<4>>) := (( *composite.ref.elem(v7, count, type<int<4>>))-v8));
-                return ( *composite.ref.elem(v7, count, type<int<4>>));
+            printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v5, int<4> v6){
+                int.postDec(vector.ref.elem(composite.ref.elem(v5, a, type<vector<int<4>,50>>), CAST<uint<4>>(v6)));
+                (composite.ref.elem(v5, count, type<int<4>>) := (( *composite.ref.elem(v5, count, type<int<4>>))-v6));
+                return ( *composite.ref.elem(v5, count, type<int<4>>));
             }(v1, 1))));
             if((v13==5)) {
-                fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v10){
-                    (composite.ref.elem(v10, count, type<int<4>>) := 0);
-                    (composite.ref.elem(v10, reset_count, type<int<4>>) := (( *composite.ref.elem(v10, reset_count, type<int<4>>))+1));
-                    return ( *composite.ref.elem(v10, count, type<int<4>>));
+                fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v8){
+                    (composite.ref.elem(v8, count, type<int<4>>) := 0);
+                    (composite.ref.elem(v8, reset_count, type<int<4>>) := (( *composite.ref.elem(v8, reset_count, type<int<4>>))+1));
+                    return ( *composite.ref.elem(v8, count, type<int<4>>));
                 }(v1);
             } else { };
         };

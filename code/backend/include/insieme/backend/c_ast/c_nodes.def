@@ -156,8 +156,10 @@ ABSTRACT(Type)
 
 // and type constructors ...
 AST_TERMINAL(PrimitiveType, Type)
+AST_TERMINAL(NamedType, Type)
 AST_TERMINAL(PointerType, Type)
 AST_TERMINAL(VectorType, Type)
+AST_TERMINAL(FunctionType, Type)
 
 AST_NODE(NamedCompositeType, Type)
 ABSTRACT(NamedCompositeType)

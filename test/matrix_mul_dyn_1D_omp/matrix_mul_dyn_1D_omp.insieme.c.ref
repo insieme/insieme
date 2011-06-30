@@ -103,7 +103,7 @@ struct __insieme_pfor_body_7_fun_capture {
 };
 
 // start code fragment :: Definition of __insieme_supp_8 ... type: ((ref<array<real<8>,1>>,int<4>)->unit) //
-void __insieme_supp_8(__insieme_type_0* var_49, int var_48) { for(int var_9 = 0; var_9 < 1000; var_9 += 1)  { ((((*var_49).data[((unsigned int)(((var_48*1000)+var_9)))])) = ((double)((var_48*var_9)))); }; }
+void __insieme_supp_8(__insieme_type_0* var_49, int var_48) { for(int var_12 = 0; var_12 < 1000; var_12 += 1)  { ((((*var_49).data[((unsigned int)(((var_48*1000)+var_12)))])) = ((double)((var_48*var_12)))); }; }
 static void __insieme_supp_8_wrap(void* _closure, __insieme_type_0* var_49, int var_48) { __insieme_supp_8(var_49, var_48); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_7_fun //
@@ -124,7 +124,7 @@ struct __insieme_pfor_body_9_fun_capture {
 };
 
 // start code fragment :: Definition of __insieme_supp_10 ... type: ((ref<array<real<8>,1>>,int<4>)->unit) //
-void __insieme_supp_10(__insieme_type_0* var_53, int var_52) { for(int var_15 = 0; var_15 < 1000; var_15 += 1)  { ((((*var_53).data[((unsigned int)(((var_52*1000)+var_15)))])) = ((double)((((var_52==var_15))?(1):(0))))); }; }
+void __insieme_supp_10(__insieme_type_0* var_53, int var_52) { for(int var_18 = 0; var_18 < 1000; var_18 += 1)  { ((((*var_53).data[((unsigned int)(((var_52*1000)+var_18)))])) = ((double)((((var_52==var_18))?(1):(0))))); }; }
 static void __insieme_supp_10_wrap(void* _closure, __insieme_type_0* var_53, int var_52) { __insieme_supp_10(var_53, var_52); }
 
 // start code fragment :: function for pfor-body __insieme_pfor_body_9_fun //
@@ -147,10 +147,10 @@ struct __insieme_pfor_body_11_fun_capture {
 };
 
 // start code fragment :: Definition of __insieme_supp_12 ... type: ((ref<array<real<8>,1>>,ref<array<real<8>,1>>,ref<array<real<8>,1>>,int<4>)->unit) //
-void __insieme_supp_12(__insieme_type_0* var_59, __insieme_type_0* var_58, __insieme_type_0* var_57, int var_56) { for(int var_22 = 0; var_22 < 1000; var_22 += 1) {
+void __insieme_supp_12(__insieme_type_0* var_59, __insieme_type_0* var_58, __insieme_type_0* var_57, int var_56) { for(int var_25 = 0; var_25 < 1000; var_25 += 1) {
 	double sum = ((double)(0));
-	for(int var_21 = 0; var_21 < 1000; var_21 += 1)  { ((sum) = ((sum)+((((*var_57).data[((unsigned int)(((var_56*1000)+var_21)))]))*(((*var_58).data[((unsigned int)(((var_21*1000)+var_22)))]))))); };
-	((((*var_59).data[((unsigned int)(((var_56*1000)+var_22)))])) = (sum));
+	for(int var_24 = 0; var_24 < 1000; var_24 += 1)  { ((sum) = ((sum)+((((*var_57).data[((unsigned int)(((var_56*1000)+var_24)))]))*(((*var_58).data[((unsigned int)(((var_24*1000)+var_25)))]))))); };
+	((((*var_59).data[((unsigned int)(((var_56*1000)+var_25)))])) = (sum));
 }; }
 static void __insieme_supp_12_wrap(void* _closure, __insieme_type_0* var_59, __insieme_type_0* var_58, __insieme_type_0* var_57, int var_56) { __insieme_supp_12(var_59, var_58, var_57, var_56); }
 
@@ -237,7 +237,7 @@ static inline __insieme_type_18 __insieme_type_18_init_uniform(char value) {
 
 // start code fragment :: Definition of freeMatrix ... type: ((ref<array<real<8>,1>>)->unit) //
 void freeMatrix(__insieme_type_0* matrix){
-	__insieme_type_0* var_40 = matrix;
+	__insieme_type_0* var_5 = matrix;
 	 { ; };
 }
 static void freeMatrix_wrap(void* _closure, __insieme_type_0* matrix) { freeMatrix(matrix); }
@@ -250,9 +250,9 @@ int main() {
 		__insieme_type_0 C = *createMatrix(((unsigned int)(1000)), ((unsigned int)(1000)));
 		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_2)),&((struct __insieme_job_2){sizeof(struct __insieme_job_2),1,isbr_getMaxThreads(),&fun__insieme_job_2,&A,&B,&C}),sizeof(struct __insieme_job_2))));
 		int success = 1;
-		for(int var_36 = 0; var_36 < 1000; var_36 += 1) {
-			for(int var_29 = 0; var_29 < (((1000<1000))?(1000):(1000)); var_29 += 1)  { if(((((A).data[((unsigned int)(((var_36*1000)+var_29)))]))!=(((C).data[((unsigned int)(((var_36*1000)+var_29)))])))) { ((success) = 0); }; };
-			for(int var_35 = (((1000<1000))?(1000):(1000)); var_35 < (((1000>1000))?(1000):(1000)); var_35 += 1)  { if(((((C).data[((unsigned int)(((var_36*1000)+var_35)))]))!=((double)(0)))) { ((success) = 0); }; };
+		for(int var_39 = 0; var_39 < 1000; var_39 += 1) {
+			for(int var_32 = 0; var_32 < (((1000<1000))?(1000):(1000)); var_32 += 1)  { if(((((A).data[((unsigned int)(((var_39*1000)+var_32)))]))!=(((C).data[((unsigned int)(((var_39*1000)+var_32)))])))) { ((success) = 0); }; };
+			for(int var_38 = (((1000<1000))?(1000):(1000)); var_38 < (((1000>1000))?(1000):(1000)); var_38 += 1)  { if(((((C).data[((unsigned int)(((var_39*1000)+var_38)))]))!=((double)(0)))) { ((success) = 0); }; };
 		};
 		printf(((char*)((*(&((__insieme_type_15){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_15){(((__insieme_type_17){{'O', 'K', '\0'}})).data}))):((((__insieme_type_15){(((__insieme_type_18){{'E', 'R', 'R', '\0'}})).data}))))).data);
 		freeMatrix(&A);

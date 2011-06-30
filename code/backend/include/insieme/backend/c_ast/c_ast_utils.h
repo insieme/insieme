@@ -41,6 +41,8 @@
 #include <vector>
 #include <cassert>
 
+#include "insieme/utils/container_utils.h"
+
 namespace insieme {
 namespace backend {
 namespace c_ast {
@@ -58,7 +60,7 @@ namespace c_ast {
 		}
 
 		TypePtr getIntType() {
-			return manager.create<PrimitiveType>(getIdentifier("int"));
+			return manager.create<PrimitiveType>(PrimitiveType::INT);
 		}
 
 	};
@@ -66,10 +68,22 @@ namespace c_ast {
 
 	// --- create literals and variables ------------------------
 
-	inline VariablePtr var(TypePtr& type, const string& name) {
+	inline VariablePtr var(const TypePtr& type, const IdentifierPtr& name) {
+		assert(type && type->getManager() && name->getManager() && type->getManager() == name->getManager() && "Expected consistent managers!");
+		CNodeManager* manager = type->getManager();
+		return manager->create<Variable>(type, name);
+	}
+
+	inline VariablePtr var(const TypePtr& type, const string& name) {
 		assert(type && type->getManager() && "Expected type to be present!");
 		CNodeManager* manager = type->getManager();
-		return manager->create<Variable>(type, manager->create(name));
+		return var(type, manager->create(name));
+	}
+
+	inline LiteralPtr lit(const TypePtr& type, const string& value) {
+		assert(type && type->getManager() && "Expected type to be present!");
+		CNodeManager* manager = type->getManager();
+		return manager->create<Literal>(value);
 	}
 
 	// --- create a pair of parentheses -------------------------
@@ -83,12 +97,28 @@ namespace c_ast {
 
 	// -- Unary Operations --------------------------------------
 
+	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {
+		assert(a && a->getManager() && "There should be a manager!");
+		return a->getManager()->create<UnaryOperation>(op, a);
+	}
+
+	inline ExpressionPtr deref(NodePtr expr) {
+		return unaryOp(UnaryOperation::Indirection, expr);
+	}
+
+	inline ExpressionPtr ref(NodePtr expr) {
+		return unaryOp(UnaryOperation::Reference, expr);
+	}
 
 	// -- Binary Operations -------------------------------------
 
 	inline ExpressionPtr binaryOp(BinaryOperation::BinaryOp op, NodePtr a, NodePtr b) {
 		assert(a && b && a->getManager() && a->getManager() == b->getManager() && "Manager should match!");
 		return a->getManager()->create<BinaryOperation>(op, a, b);
+	}
+
+	inline ExpressionPtr assign(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::Assignment, a, b);
 	}
 
 	inline ExpressionPtr add(ExpressionPtr a, ExpressionPtr b) {
@@ -119,8 +149,47 @@ namespace c_ast {
 		return binaryOp(BinaryOperation::Cast, type, expr);
 	}
 
+	inline ExpressionPtr access(NodePtr expr, const string& element) {
+		return binaryOp(BinaryOperation::MemberAccess, expr, expr->getManager()->create(element));
+	}
+
 	inline ExpressionPtr access(NodePtr expr, IdentifierPtr element) {
 		return binaryOp(BinaryOperation::MemberAccess, expr, element);
+	}
+
+	inline ExpressionPtr indirectAccess(NodePtr expr, const string& element) {
+		return binaryOp(BinaryOperation::IndirectMemberAccess, expr, expr->getManager()->create(element));
+	}
+
+	inline ExpressionPtr indirectAccess(NodePtr expr, IdentifierPtr element) {
+		return binaryOp(BinaryOperation::IndirectMemberAccess, expr, element);
+	}
+
+	inline ExpressionPtr indirectAccess(NodePtr expr, VariablePtr element) {
+		return binaryOp(BinaryOperation::IndirectMemberAccess, expr, element);
+	}
+
+	template<typename ... E>
+	inline InitializerPtr init(TypePtr type, E ... elements) {
+		return type->getManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(elements...));
+	}
+
+	// -- Statements -------------------------------------
+
+	inline StatementPtr ret(StatementPtr stmt) {
+		assert(dynamic_pointer_cast<Expression>(stmt) && "Handed in statement is not an expression!");
+		return stmt->getManager()->create<Return>(static_pointer_cast<Expression>(stmt));
+	}
+
+	template<typename ... E>
+	inline CompoundPtr compound(StatementPtr first, E ... rest) {
+		return first->getManager()->create<Compound>(first, rest...);
+	}
+
+	// -- Some tests ----------------------------------------
+
+	inline bool isVoid(TypePtr type) {
+		return type->getType() == NT_PrimitiveType && static_pointer_cast<const PrimitiveType>(type)->type == PrimitiveType::VOID;
 	}
 
 } // end namespace c_ast

@@ -160,7 +160,12 @@ namespace c_ast {
 
 	bool PrimitiveType::equals(const Node& other) const {
 		assert(dynamic_cast<const PrimitiveType*>(&other));
-		return *name == *static_cast<const PrimitiveType&>(other).name;
+		return type == static_cast<const PrimitiveType&>(other).type;
+	}
+
+	bool NamedType::equals(const Node& other) const {
+		assert(dynamic_cast<const NamedType*>(&other));
+		return *name == *static_cast<const NamedType&>(other).name;
 	}
 
 	bool PointerType::equals(const Node& other) const {
@@ -177,7 +182,13 @@ namespace c_ast {
 	bool NamedCompositeType::equals(const Node& node) const {
 		assert(dynamic_cast<const NamedCompositeType*>(&node));
 		auto other = static_cast<const NamedCompositeType&>(node);
-		return *name == *other.name && ::equals(elements, other.elements, equal_pointer_pair<IdentifierPtr, TypePtr>());
+		return *name == *other.name && ::equals(elements, other.elements, equal_target<VariablePtr>());
+	}
+
+	bool FunctionType::equals(const Node& node) const {
+		assert(dynamic_cast<const FunctionType*>(&node));
+		auto other = static_cast<const FunctionType&>(node);
+		return *returnType == *other.returnType && ::equals(parameterTypes, other.parameterTypes, equal_target<TypePtr>());
 	}
 
 	bool VarDecl::equals(const Node& node) const {
@@ -238,7 +249,7 @@ namespace c_ast {
 	bool Initializer::equals(const Node& node) const {
 		assert(dynamic_cast<const Initializer*>(&node));
 		auto other = static_cast<const Initializer&>(node);
-		return *type==*other.type && ::equals(values, other.values, equal_target<ExpressionPtr>());
+		return *type==*other.type && ::equals(values, other.values, equal_target<NodePtr>());
 	}
 
 	bool UnaryOperation::equals(const Node& node) const {

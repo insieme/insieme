@@ -102,11 +102,11 @@ static int pop_wrap(void* _closure, Stack* stack) { return pop(stack); }
 
 // start code fragment :: Definition of dumpStack ... type: ((ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>)->unit) //
 void dumpStack(Stack* stack){
-	Stack* var_19 = stack;
+	Stack* var_3 = stack;
 	{
-		while((!((*(&((((*(var_19)).data[0])).top))).data==0))) {
-			__insieme_type_1 tmp = *(&((((*(var_19)).data[0])).top));
-			((*(&((((*(var_19)).data[0])).top))) = (*(&((((tmp).data[0])).next))));
+		while((!((*(&((((*(var_3)).data[0])).top))).data==0))) {
+			__insieme_type_1 tmp = *(&((((*(var_3)).data[0])).top));
+			((*(&((((*(var_3)).data[0])).top))) = (*(&((((tmp).data[0])).next))));
 			;
 		};
 		;
@@ -121,14 +121,14 @@ int main() {
 		Stack stack;
 		((stack) = (*newStack()));
 		{
-			for(int var_10 = 0; var_10 < 10; var_10 += 1) {
-				printf(((char*)((*(&((__insieme_type_3){"Pushing %d\n"}))).data)), var_10);
-				push(&stack, var_10);
+			for(int var_18 = 0; var_18 < 10; var_18 += 1) {
+				printf(((char*)((*(&((__insieme_type_3){"Pushing %d\n"}))).data)), var_18);
+				push(&stack, var_18);
 			};
 			((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
 		};
 		{
-			for(int var_16 = 0; var_16 < 5; var_16 += 1)  { printf(((char*)((*(&((__insieme_type_3){"Poping  %d\n"}))).data)), pop(&stack)); };
+			for(int var_20 = 0; var_20 < 5; var_20 += 1)  { printf(((char*)((*(&((__insieme_type_3){"Poping  %d\n"}))).data)), pop(&stack)); };
 			((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
 		};
 		dumpStack(&stack);

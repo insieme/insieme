@@ -320,23 +320,23 @@ TEST(IterationDomain, Creation) {
 		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
 	}
 
-	poly::IterationDomain it(iterVec, cl);
-	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
-	iterVec.add(poly::Parameter(param2));
-	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
+	//poly::IterationDomain it(iterVec, cl);
+	//VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
+	//iterVec.add(poly::Parameter(param2));
+	//EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
 
-	{
-		std::ostringstream ss;
-		iterVec.printTo(ss);
-		EXPECT_EQ("(v1,v2|v3,v4|1)", ss.str());
-	}
+	//{
+	//	std::ostringstream ss;
+	//	iterVec.printTo(ss);
+	//	EXPECT_EQ("(v1,v2|v3,v4|1)", ss.str());
+	//}
 
-	{
-		std::ostringstream ss;
-		it.getIterationVector().printTo(ss);
-		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
-	}
+	//{
+	//	std::ostringstream ss;
+	//	it.getIterationVector().printTo(ss);
+	//	EXPECT_EQ("(v1,v2|v3|1)", ss.str());
+	//}
 	// check weather these 2 affine functions are the same... even thought the
 	// underlying iteration vector has been changed
-	EXPECT_EQ(af, (*it.begin()).getAffineFunction());
+	//EXPECT_EQ(af, (*it.begin()).getAffineFunction());
 }

@@ -5,13 +5,13 @@ digraph G {
 3[shape=box,label="[B3]\l0: printf(..., ...)\l"];
 4[shape=box,label="[B4]\l0: printf(..., ...)\l"];
 5[shape=box,label="[B5]\l0: string.as.char.pointer(\"odd(x)=%s\n\")\l"];
-6[shape=box,label="[B6]\l0: varlist.pack((ite(int.ne(fun{...}(CAST<uint<4>>(( *v3))), 0), bind(){fun{...}()}, bind(){fun{...}()})))\l"];
+6[shape=box,label="[B6]\l0: varlist.pack((ite(int.ne(fun{...}(CAST<uint<4>>(( *v15))), 0), bind(){fun{...}()}, bind(){fun{...}()})))\l"];
 7[shape=box,label="[B7]\l0: printf(..., ...)\l"];
 8[shape=box,label="[B8]\l0: string.as.char.pointer(\"even(x)=%s\n\")\l"];
-9[shape=box,label="[B9]\l0: varlist.pack((ite(int.ne(fun{...}(CAST<uint<4>>(( *v3))), 0), bind(){fun{...}()}, bind(){fun{...}()})))\l"];
-10[shape=box,label="[B10]\l0: decl v3 = ...\l"];
+9[shape=box,label="[B9]\l0: varlist.pack((ite(int.ne(fun{...}(CAST<uint<4>>(( *v15))), 0), bind(){fun{...}()}, bind(){fun{...}()})))\l"];
+10[shape=box,label="[B10]\l0: decl v15 = ...\l"];
 11[shape=box,label="[B11]\l0: string.as.char.pointer(\"x=%d\n\")\l"];
-12[shape=box,label="[B12]\l0: varlist.pack((( *v3)))\l"];
+12[shape=box,label="[B12]\l0: varlist.pack((( *v15)))\l"];
 13[shape=box,label="[B13]\l0: ref.var(10)\l"];
 2->1 [label=""];
 3->2 [label=""];

@@ -95,6 +95,20 @@ paired_iterator<A, B> make_paired_iterator(A a, B b) {
 	return paired_iterator<A,B>(a, b);
 }
 
+template<
+	typename ContainerA,
+	typename ContainerB,
+	typename IterA = typename ContainerA::const_iterator,
+	typename IterB = typename ContainerB::const_iterator,
+	typename ResIter = paired_iterator<IterA, IterB>
+>
+std::pair<ResIter, ResIter> make_paired_range(const ContainerA& first, const ContainerB& second) {
+	return std::make_pair(
+			paired_iterator<IterA,IterB>(first.begin(), second.begin()),
+			paired_iterator<IterA,IterB>(first.end(), second.end())
+	);
+}
+
 
 // -----------------------------------------------------------------------
 //                 Cartesian Product Iterator
