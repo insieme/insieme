@@ -69,7 +69,7 @@ void irt_scheduling_init_worker(irt_worker* self) {
 void irt_scheduling_loop(irt_worker* self) {
 	while(self->state != IRT_WORKER_STATE_STOP) {
 		// try to take a ready WI from the pool
-		irt_work_item* next_wi = _irt_get_ready_wi_from_pool(&self->sched_data.pool);
+		irt_work_item* next_wi = irt_work_item_deque_pop_front(&self->sched_data.pool);
 		if(next_wi != NULL) {
 			_irt_worker_switch_to_wi(self, next_wi);
 			continue;
@@ -97,6 +97,18 @@ void irt_scheduling_loop(irt_worker* self) {
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	irt_work_item_cdeque_insert_front(&target->sched_data.queue, wi);
+}
+
+irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {
+	if(target->sched_data.queue.size >= irt_g_worker_count) {
+		_irt_worker_run_optional_wi(target, wi);
+		return wi;
+	}
+	else {
+		irt_work_item *real_wi = irt_wi_create(wi->range, wi->impl_id, wi->parameters);
+		irt_scheduling_assign_wi(target, real_wi);
+		return real_wi;
+	}
 }
 
 void irt_scheduling_yield(irt_worker* self, irt_work_item* yielding_wi) {

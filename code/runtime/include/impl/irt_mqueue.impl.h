@@ -48,11 +48,11 @@ void irt_mqueue_init() {
 	attr.mq_flags = O_NONBLOCK;
 	attr.mq_maxmsg = IRT_MQUEUE_MAXMSGS;
 	attr.mq_msgsize = IRT_MQUEUE_MAXMSGSIZE;
-	irt_g_message_queue = mq_open(IRT_MQUEUE_NAME, O_RDWR | O_CREAT | O_NONBLOCK | O_EXCL, 0666, &attr);
+	irt_g_message_queue = mq_open(IRT_MQUEUE_NAME, O_RDWR | O_CREAT | O_NONBLOCK | O_EXCL, 0777, &attr); // TODO fix rights
 	if(irt_g_message_queue == -1 && errno == EEXIST) { // MQ still exists, close and reopen (to purge messages)
 		IRT_WARN("Message queue %s exists, trying to unlink and reopen. Make sure that you haven't started multiple instances of the IR.", IRT_MQUEUE_NAME);
 		irt_g_message_queue = mq_open(IRT_MQUEUE_NAME, O_RDWR | O_CREAT | O_NONBLOCK, 0666, &attr);
-		IRT_ASSERT(mq_unlink(IRT_MQUEUE_NAME) == 0, IRT_ERR_IO, "Could not unlink existing message queue " IRT_MQUEUE_NAME ".\n");
+		IRT_ASSERT(mq_unlink(IRT_MQUEUE_NAME) == 0, IRT_ERR_IO, "Could not unlink existing message queue " IRT_MQUEUE_NAME ".\nError string: %s\n", strerror(errno));
 		irt_g_message_queue = mq_open(IRT_MQUEUE_NAME, O_RDWR | O_CREAT | O_NONBLOCK | O_EXCL, 0666, &attr);
 	}
 	IRT_ASSERT(irt_g_message_queue != -1, IRT_ERR_IO, "Could not open message queue %s.\nError string: %s\n", IRT_MQUEUE_NAME, strerror(errno));

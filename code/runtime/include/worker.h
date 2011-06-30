@@ -60,8 +60,12 @@ struct _irt_worker {
 	minlwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
-	irt_worker_state state; // used to ensure all workers start at the same time
+	irt_worker_state state;
 	irt_worker_scheduling_data sched_data;
+	irt_work_item lazy_wi;
+	uint64 lazy_count;
+	// memory reuse stuff
+	irt_wi_event_register *wi_ev_register_list;
 };
 
 /* ------------------------------ operations ----- */
@@ -73,3 +77,4 @@ static inline irt_worker* irt_worker_get_current() {
 irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
 
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
+void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);

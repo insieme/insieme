@@ -41,16 +41,20 @@
 IRT_DEFINE_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
 IRT_DEFINE_COUNTED_DEQUE(work_item, sched_data.work_deque_next, sched_data.work_deque_prev);
 
-static inline irt_work_item* _irt_get_ready_wi_from_pool(irt_work_item_deque* pool) {
-	irt_work_item* next_wi = pool->start;
-	while(next_wi != NULL) {
-		if(next_wi->ready_check.fun(next_wi)) {
-			next_wi = irt_work_item_deque_take_elem(pool, next_wi); 
-			if(next_wi) break;
-			else return _irt_get_ready_wi_from_pool(pool); // wi was stolen, retry
-		} else {
-			next_wi = next_wi->sched_data.work_deque_next;
-		}
-	}
-	return next_wi;
+//static inline irt_work_item* _irt_get_ready_wi_from_pool(irt_work_item_deque* pool) {
+//	irt_work_item* next_wi = pool->start;
+//	while(next_wi != NULL) {
+//		if(next_wi->ready_check.fun(next_wi)) {
+//			next_wi = irt_work_item_deque_take_elem(pool, next_wi); 
+//			if(next_wi) break;
+//			else return _irt_get_ready_wi_from_pool(pool); // wi was stolen, retry
+//		} else {
+//			next_wi = next_wi->sched_data.work_deque_next;
+//		}
+//	}
+//	return next_wi;
+//}
+
+static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi) {
+	irt_work_item_deque_insert_back(&target->sched_data.pool, wi);
 }

@@ -77,6 +77,17 @@ void irt_scheduling_init_worker(irt_worker* self);
  */
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi);
 
+/* Continues execution of already started wi on target. Since different
+ * scheduling policies may manage wis differently, this needs to be provided
+ * by the scheduling policy.
+ */
+static inline void irt_scheduling_continue_wi(irt_worker* target, irt_work_item* wi);
+
+/* Either runs wi directly on the current worker, or acts identically to
+ * irt_scheduling_assign_wi. The decision depends on the scheduling policy.
+ */
+irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi);
+
 /* Work item yielding_wi yields on self.
  * Precondition: yielding_wi is self's current_wi
  */
