@@ -133,20 +133,13 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 	assert(false);
 }
 
-/**
- * This visitor detects if an expression contains the use of an array. 
- * This is accomplished looking for subscript expressions. 
- *
- * Because a generic expression can use several arrays, the analysis must be
- * able to detect all the array references and for each of them return
- * information about the dimensionality and a pointer to expression utilized to
- * access the independent dimensions. 
- */
-struct DetectArrayUse : public ASTVisitor<> {
-	
-// TODO: do me	
-
-};
+AffineFunction extractAccessExpression(IterationVector& iterVec, const ExpressionPtr& expr) {
+	try {
+		AffineFunction af(iterVec, expr);
+		//expr->addAnnotation( std::make_shared<AccessFunction>( iterVec, EqualityConstraint(af) ) );
+		return af;
+	} catch(const NotAffineExpr& e) { throw NotASCoP(expr); }
+}
 
 } // end namespace anonymous 
 
@@ -250,7 +243,33 @@ public:
 	IterationVector visitForStmt(const ForStmtPtr& forStmt) {
 		subScops.clear();
 		IterationVector&& bodyIV = visit(forStmt->getBody());
-		
+
+		// Visit the access functions for the array which are accessed (read or written) in the body
+		// of this for statement, also skip the visit of statements which have been already detected
+		// as SCoPs and therefore we already collected information about def-uses in a previous
+		// iteration
+		RefList&& refs = collectDefUse( forStmt->getBody(), StatementSet(subScops.begin(), subScops.end()) );
+	
+		// For now we only consider array access. 
+		//
+		// FIXME: In the future also scalars should be properly handled using technique like scalar
+		// arrays and so forth
+		std::for_each(refs.arrays_begin(), refs.arrays_end(),
+			[&](const Ref& cur) { 
+				assert(cur.getType() == Ref::ARRAY); 
+				const ArrayRef& arrRef = static_cast<const ArrayRef&>(cur);
+				std::for_each(arrRef.getIndexExpressions().begin(), arrRef.getIndexExpressions().end(), 
+					[&](const ExpressionPtr& cur){	
+						IterationVector iv;	
+						AffineFunction af = extractAccessExpression(iv, cur);
+						cur->addAnnotation( std::make_shared<AccessFunction>( iv, EqualityConstraint(af) ) );
+
+						bodyIV = merge(bodyIV, iv);
+					}
+				);
+			} 
+		);
+
 		IterationVector ret;
 
 		const DeclarationStmtPtr& decl = forStmt->getDeclaration();
@@ -285,6 +304,7 @@ public:
 			// add this statement as a subscope
 			subScops.push_back(forStmt);
 
+		
 		} catch (const NotAffineExpr& e) { 
 			// one of the expressions are not affine constraints, therefore we
 			// set this loop to be a non ScopRegion
@@ -344,45 +364,45 @@ public:
 		return bodyIV;
 	}
 
-	IterationVector visitCallExpr(const CallExprPtr& callExpr) { 
-		const NodeManager& mgr = callExpr->getNodeManager();
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
-			// we have to check whether assignments to iterators or parameters
-			// occurrs
+	//IterationVector visitCallExpr(const CallExprPtr& callExpr) { 
+		//const NodeManager& mgr = callExpr->getNodeManager();
+		//if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
+			//// we have to check whether assignments to iterators or parameters
+			//// occurrs
 			
-		}
+		//}
 
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
-			core::analysis::isCallOf(callExpr, mgr.basic.getArrayRefElem1D()) || 
-			core::analysis::isCallOf(callExpr, mgr.basic.getVectorRefElem()) ) 
-		{
-			// This is a subscript expression and therefore the function
-			// used to access the array has to analyzed to check if it is an
-			// affine linear function. If not, then this branch is not a ScopRegion
-			// and all the code regions embodying this statement has to be
-			// marked as non-ScopRegion. 
-			assert(callExpr->getArguments().size() == 2 && 
-					"Subscript expression with more than 2 arguments.");
-			IterationVector&& subIV = visit(callExpr->getArgument(0));
+		//if (core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
+			//core::analysis::isCallOf(callExpr, mgr.basic.getArrayRefElem1D()) || 
+			//core::analysis::isCallOf(callExpr, mgr.basic.getVectorRefElem()) ) 
+		//{
+			//// This is a subscript expression and therefore the function
+			//// used to access the array has to analyzed to check if it is an
+			//// affine linear function. If not, then this branch is not a ScopRegion
+			//// and all the code regions embodying this statement has to be
+			//// marked as non-ScopRegion. 
+			//assert(callExpr->getArguments().size() == 2 && 
+					//"Subscript expression with more than 2 arguments.");
+			//IterationVector&& subIV = visit(callExpr->getArgument(0));
 		
-			IterationVector it;
-			try {
-				AffineFunction af(it, callExpr->getArgument(1));
-					callExpr->getArgument(1)->addAnnotation( 
-						std::make_shared<AccessFunction>( it, EqualityConstraint(af) ) 
-					);
-			} catch(const NotAffineExpr& e) { throw NotASCoP(callExpr); }
+			//IterationVector it;
+			//try {
+				//AffineFunction af(it, callExpr->getArgument(1));
+					//callExpr->getArgument(1)->addAnnotation( 
+						//std::make_shared<AccessFunction>( it, EqualityConstraint(af) ) 
+					//);
+			//} catch(const NotAffineExpr& e) { throw NotASCoP(callExpr); }
 
-			it = merge(subIV, it);	
-			return it;
-		}
+			//it = merge(subIV, it);	
+			//return it;
+		//}
 		
-        IterationVector ret;
-		const std::vector<ExpressionPtr>& args = callExpr->getArguments();
-		std::for_each(args.begin(), args.end(), 
-			[&](const ExpressionPtr& cur) { ret = merge(ret, this->visit(cur)); } );
-		return ret;
-	}
+        //IterationVector ret;
+		//const std::vector<ExpressionPtr>& args = callExpr->getArguments();
+		//std::for_each(args.begin(), args.end(), 
+			//[&](const ExpressionPtr& cur) { ret = merge(ret, this->visit(cur)); } );
+		//return ret;
+	//}
 
 	IterationVector visitProgram(const ProgramPtr& prog) { 
 		for_each(prog->getEntryPoints().cbegin(), prog->getEntryPoints().cend(), 

@@ -59,7 +59,7 @@ TEST(DefUseCollect, Scalar) {
 		}"
 	);
 
-	RefSet&& refs = collectDefUse(compStmt);
+	RefList&& refs = collectDefUse(compStmt);
 	EXPECT_EQ(static_cast<size_t>(3), refs.size());
 
 	// all the refs are usages 
@@ -83,7 +83,7 @@ TEST(DefUseCollect, SimpleArray) {
 		);
 		// std::cout << *compStmt << std::endl;
 
-		RefSet&& refs = collectDefUse(compStmt);
+		RefList&& refs = collectDefUse(compStmt);
 		EXPECT_EQ(static_cast<size_t>(2), refs.size());
 
 		// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
@@ -116,7 +116,7 @@ TEST(DefUseCollect, Assignment) {
 		);
 		// std::cout << *compStmt << std::endl;
 
-		RefSet&& refs = collectDefUse(compStmt);
+		RefList&& refs = collectDefUse(compStmt);
 		EXPECT_EQ(static_cast<size_t>(1), refs.size());
 		const Ref& ref = **refs.begin();
 		EXPECT_TRUE(ref.getUsage() == Ref::DEF);
@@ -143,10 +143,10 @@ TEST(DefUseCollect, ArrayAccess) {
 		);
 		// std::cout << *compStmt << std::endl;
 
-		RefSet&& refs = collectDefUse(compStmt);
+		RefList&& refs = collectDefUse(compStmt);
 		EXPECT_EQ(static_cast<size_t>(2), refs.size());
 
-		for_each(refs.arrays_begin(Ref::ANY_USE), refs.arrays_end(Ref::ANY_USE),
+		for_each(refs.arrays_begin(), refs.arrays_end(),
 			[](const Ref& cur){
 				EXPECT_TRUE(cur.getUsage() == Ref::USE);
 			}
@@ -172,10 +172,10 @@ TEST(DefUseCollect, ArrayAssignment) {
 		);
 		// std::cout << *compStmt << std::endl;
 
-		RefSet&& refs = collectDefUse(compStmt);
+		RefList&& refs = collectDefUse(compStmt);
 		EXPECT_EQ(static_cast<size_t>(3), refs.size());
 
-		RefSet::ref_iterator it = refs.arrays_begin(Ref::ANY_USE), end = refs.arrays_end(Ref::ANY_USE);
+		RefList::ref_iterator it = refs.arrays_begin(), end = refs.arrays_end();
 		EXPECT_TRUE(it->getUsage() == Ref::USE);
 		++it;
 		EXPECT_TRUE(it->getUsage() == Ref::DEF);

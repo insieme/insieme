@@ -38,6 +38,7 @@
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/set_utils.h"
 #include <vector>
 #include <set>
 #include <memory>
@@ -45,6 +46,12 @@
 #include "boost/operators.hpp"
 
 namespace insieme {
+
+namespace core {
+typedef std::vector<StatementPtr> StatementList;
+typedef insieme::utils::set::PointerSet<StatementPtr> StatementSet;
+}// end core namespace 
+
 namespace analysis {
 
 /** 
@@ -59,7 +66,7 @@ struct Ref : public utils::Printable {
 	// 	DEF: the variable is being redefined (declaration and assignment), this means that the
 	// 	     memory associated to that variable is being written 
 	// 	UNKNOWN: the variable is being used as input parameter to a function which can either read
-	// 	         or modify the value. UNKNWON type of usages can be refined through advanced dataflow
+	// 	         or modify the value. UNKNOWN type of usages can be refined through advanced dataflow
 	// 	         analysis
 	// 	ANY: utilized in the RefList class to iterate through any type of usage
 	enum UseType { ANY_USE=-1, DEF, USE, UNKNOWN };
@@ -111,36 +118,18 @@ private:
 typedef std::shared_ptr<Ref> RefPtr; 
 
 // Store the set of refs found by the visitor 
-class RefSet: public std::vector<RefPtr> {
+class RefList: public std::vector<RefPtr> {
 	
 public:
 	class ref_iterator : public boost::forward_iterator_helper<ref_iterator, const Ref> { 
 		
-		RefSet::const_iterator it, end;
+		RefList::const_iterator it, end;
 		Ref::RefType type;
 		Ref::UseType usage; 
 
-		void inc(bool first=false) {
-			// iterator not valid, therefore increment not allowed
-			if (it == end) { return; }
-
-			if (first && (type == Ref::ANY_REF || (*it)->getType() == type) && 
-					(usage == Ref::ANY_USE || (*it)->getUsage() == usage)
-				)
-			{
-				return; // don't move the iterator
-			}
-			
-			++it;
-
-			while(it != end && (type != Ref::ANY_REF && (*it)->getType() != type) && 
-					(usage != Ref::ANY_USE && (*it)->getUsage() != usage)) 
-			{
-				++it;
-			}
-		}
+		void inc(bool first=false);
 	public:
-		ref_iterator(RefSet::const_iterator begin, RefSet::const_iterator end, 
+		ref_iterator(RefList::const_iterator begin, RefList::const_iterator end, 
 				Ref::RefType type=Ref::ANY_REF, Ref::UseType usage=Ref::ANY_USE) : 
 			it(begin), end(end), type(type), usage(usage) { inc(true); }
 
@@ -150,18 +139,22 @@ public:
 		bool operator==(const ref_iterator& rhs) const { return it == rhs.it && usage == rhs.usage && type == rhs.type; }
 	};
 
-	RefSet::ref_iterator arrays_begin(const Ref::UseType& usage) { return ref_iterator(begin(), end(), Ref::ARRAY, usage); }
-	RefSet::ref_iterator arrays_end(const Ref::UseType& usage) { return ref_iterator(end(), end(), Ref::ARRAY, usage); }
+	RefList::ref_iterator arrays_begin(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(begin(), end(), Ref::ARRAY, usage); }
+	RefList::ref_iterator arrays_end(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(end(), end(), Ref::ARRAY, usage); }
 
-	RefSet::ref_iterator vars_begin(const Ref::UseType& usage) { return ref_iterator(begin(), end(), Ref::VAR, usage); }
-	RefSet::ref_iterator vars_end(const Ref::UseType& usage) { return ref_iterator(end(), end(), Ref::VAR, usage); }
+	RefList::ref_iterator vars_begin(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(begin(), end(), Ref::VAR, usage); }
+	RefList::ref_iterator vars_end(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(end(), end(), Ref::VAR, usage); }
 
 	// add iterators for members/callexpr
 };
 
 // Main entry method, visits the IR starting from the root node collecting refs. The list of
-// detected refs is returned to the caller. 
-RefSet collectDefUse(const core::NodePtr& root);
+// detected refs is returned to the caller.
+//
+// The method also takes a set of statements which should not be skipped during the analysis. This
+// is useful in the case the def-use analysis has been performed on a sub tree of the current root
+// and we want to perform the analysis only on the remaining part of the tree 
+RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipList = core::StatementSet());
 
 } // end namespace analysis 
 } // end namesapce insieme 

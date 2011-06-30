@@ -193,8 +193,8 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 			}
 		
-	//		insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);
-	//		std::cout << "SCOP Analysis: " << sl.size() << std::endl;
+			insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);
+			std::cout << "SCOP Analysis: " << sl.size() << std::endl;
 			//analysis::RefSet&& refs = analysis::collectDefUse(program);
 			//std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
 					//std::cout << *cur << std::endl; 

@@ -114,11 +114,13 @@ namespace {
  */
 class DefUseCollect : public core::ASTVisitor<> {
 	
-	RefSet& refSet;
+	RefList& refSet;
 	Ref::UseType usage;
 
 	typedef std::vector<core::ExpressionPtr> ExpressionList;
 	std::stack<ExpressionList> idxStack;
+
+	const core::StatementSet& skipStmts;
 
 	void addVariable(const core::ExpressionPtr& var, const Ref::RefType& refType=Ref::VAR) {
 		const core::TypePtr& type = var->getType(); 
@@ -140,8 +142,10 @@ class DefUseCollect : public core::ASTVisitor<> {
 	}
 
 public:
-	DefUseCollect(RefSet& refSet) : core::ASTVisitor<>(false), refSet(refSet), usage(Ref::USE) { 
-		idxStack.push( ExpressionList() ); // initialize the stack of array index expressions
+	DefUseCollect(RefList& refSet, const core::StatementSet& skipStmts) : 
+		core::ASTVisitor<>(false), refSet(refSet), usage(Ref::USE), skipStmts(skipStmts) 
+	{ 
+			idxStack.push( ExpressionList() ); // initialize the stack of array index expressions
 	}
 
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
@@ -243,18 +247,46 @@ public:
 		usage = saveUsage;
 	}
 
+	void visitStatement(const core::StatementPtr& stmt) {
+		if ( skipStmts.find(stmt) == skipStmts.end() ) {
+			visitNode(stmt);
+		}
+	}
+
 	// Generic method which recursively visit IR nodes 
 	void visitNode(const core::NodePtr& node) {
 		const core::Node::ChildList& cl = node->getChildList();
-		std::for_each( cl.begin(), cl.end(), [&](const core::NodePtr& cur) { this->visit(cur); } );
+		std::for_each( cl.begin(), cl.end(), [&](const core::NodePtr& cur) { 
+				this->visit(cur); 
+		} );
 	}
 };
 
 } // end anonymous namespace 
 
-RefSet collectDefUse(const core::NodePtr& root) { 
-	RefSet ret;
-	DefUseCollect duCollVis(ret);
+void RefList::ref_iterator::inc(bool first) {
+	// iterator not valid, therefore increment not allowed
+	if (it == end) { return; }
+
+	if (first && (type == Ref::ANY_REF || (*it)->getType() == type) && 
+			(usage == Ref::ANY_USE || (*it)->getUsage() == usage)
+		)
+	{
+		return; // don't increase the iterator
+	}
+	
+	++it;
+
+	while(it != end &&	!(type == Ref::ANY_REF || (*it)->getType() == type) && 
+			 			 (usage == Ref::ANY_USE || (*it)->getUsage() == usage)) 
+	{
+		++it;
+	}
+}
+
+RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipStmt) { 
+	RefList ret;
+	DefUseCollect duCollVis(ret, skipStmt);
 	duCollVis.visit(root);
 	return ret;
 }

@@ -55,7 +55,15 @@ namespace utils {
 namespace set {
 
 template<class Ptr>
-class PointerSet : public boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> { };
+class PointerSet : public boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>> { 
+
+public:
+	PointerSet() : boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>() { }
+
+	template <class IterT>
+	PointerSet(const IterT& begin, const IterT& end) : boost::unordered_set<Ptr, hash_target<Ptr>, equal_target<Ptr>>(begin, end) { } 
+
+};
 
 template<class Ptr>
 class PointerMultiSet : public boost::unordered_multiset<Ptr, hash_target<Ptr>, equal_target<Ptr>> { };
