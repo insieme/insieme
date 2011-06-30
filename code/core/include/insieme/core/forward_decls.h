@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include "insieme/core/ast_pointer.h"
+
 namespace insieme {
 namespace core {
 

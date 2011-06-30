@@ -96,7 +96,9 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 					else 								return makeDisjunction(lhs, rhs);
 				}
 			case BasicGenerator::LNot:
-				 return std::make_shared<UnaryConstraintCombiner>( extractFromCondition(iv, callExpr->getArgument(0)), true );
+				 return std::make_shared<NegatedConstraintCombiner>( 
+						 extractFromCondition(iv, callExpr->getArgument(0))
+					);
 			default:
 				break;
 			}
@@ -131,28 +133,49 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 	assert(false);
 }
 
+/**
+ * This visitor detects if an expression contains the use of an array. 
+ * This is accomplished looking for subscript expressions. 
+ *
+ * Because a generic expression can use several arrays, the analysis must be
+ * able to detect all the array references and for each of them return
+ * information about the dimensionality and a pointer to expression utilized to
+ * access the independent dimensions. 
+ */
+struct DetectArrayUse : public ASTVisitor<> {
+	
+// TODO: do me	
+
+};
+
 } // end namespace anonymous 
 
 namespace insieme {
 namespace analysis {
 namespace scop {
 
-const string ScopRegion::NAME = "SCoPAnnotation";
-const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
-
-const string AccessFunction::NAME = "AccessFuncAnn";
-const utils::StringKey<AccessFunction> AccessFunction::KEY("AccessFuncAnnKey");
-
 using namespace core;
 using namespace poly;
+
+//===== ScopRegion ===============================================================
+const string ScopRegion::NAME = "SCoPAnnotation";
+const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
 
 const std::string ScopRegion::toString() const {
 	std::ostringstream ss;
 	ss << "IterationVector: " << iterVec << "\\n";
-	ss << "Constraints: " << *constraints;
+	if (constraints) {
+		ss << "Constraints: " << *constraints;
+	}
+	if (!subScops.empty()) {
+		ss << " SubScops: " << subScops.size();
+	}
 	return ss.str();
 }
 
+//===== AccessFunction ============================================================
+const string AccessFunction::NAME = "AccessFuncAnn";
+const utils::StringKey<AccessFunction> AccessFunction::KEY("AccessFuncAnnKey");
 
 const std::string AccessFunction::toString() const {
 	std::ostringstream ss;
@@ -160,40 +183,51 @@ const std::string AccessFunction::toString() const {
 	return ss.str();
 }
 
-class ScopVisitor : public core::ASTVisitor<IterationVector> {
 
+//===== ScopVisitor ===============================================================
+
+class ScopVisitor : public core::ASTVisitor<IterationVector> {
 	ScopList& scopList;
-	core::NodePtr scopBeign;
-    bool analyzeCond;
+
+	ScopRegion::StmtList subScops;
 
 public:
-	ScopVisitor(ScopList& scopList) : ASTVisitor<IterationVector>(false), scopList(scopList), analyzeCond(false) { }
+	ScopVisitor(ScopList& scopList) : ASTVisitor<IterationVector>(false), scopList(scopList) { }
 
 	IterationVector visitIfStmt(const IfStmtPtr& ifStmt) {
-		IterationVector ret;
+		IterationVector ret, saveThen, saveElse;
+		ScopRegion::StmtList thenScops, elseScops;
 		bool isThenSCOP = true, isElseSCOP = true;
+
 		try {
+			subScops.clear();
 			// check the then body
 			ret = merge(ret, visit(ifStmt->getThenBody()));
+			// save the sub scops of the then body
+			thenScops = subScops;
+			saveThen = ret;
 		} catch (const NotASCoP& e) { isThenSCOP = false; }
 
 		try {
+			subScops.clear();
 			// check the else body
 			ret = merge(ret, visit(ifStmt->getElseBody()));
+			// save the sub scops of the else body
+			elseScops = subScops; 
+			saveElse = ret;
 		} catch (const NotASCoP& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
 			// then is a root of a ScopRegion, we add it to the list of scops
-			assert( ifStmt->getThenBody()->hasAnnotation(ScopRegion::KEY) && "SCoP region missing annotation");
-			scopList.push_back( ifStmt->getThenBody()->getAnnotation(ScopRegion::KEY) );
+			scopList.push_back( std::make_pair(ifStmt->getThenBody(), saveThen) );
 		}
 
 		if ( !isThenSCOP && isElseSCOP ) {
 			// else is a root of a ScopRegion, we add it to the list of scops
-			assert( ifStmt->getElseBody()->hasAnnotation(ScopRegion::KEY) && "SCoP region missing annotation");
-			scopList.push_back( ifStmt->getElseBody()->getAnnotation(ScopRegion::KEY) );
+			scopList.push_back( std::make_pair(ifStmt->getElseBody(), saveElse) );
 		}
 
+		subScops.clear();
 		// if either one of the branches is not a ScopRegion it means the if stmt is
 		// not a ScopRegion, therefore we can rethrow the exeption and invalidate
 		// this region
@@ -204,11 +238,17 @@ public:
 
 		// if no exception has been thrown we are sure the sub else and then
 		// tree are ScopRegions, therefore this node can be marked as SCoP as well.
-		ifStmt->addAnnotation( std::make_shared<ScopRegion>( ret, comb ) );
+		ifStmt->getThenBody()->addAnnotation( std::make_shared<ScopRegion>(ret, comb, thenScops) );
+		subScops.push_back( ifStmt->getThenBody() );
+		
+		// the else body is annotated with the negated domain
+		ifStmt->getElseBody()->addAnnotation( std::make_shared<ScopRegion>(ret, negate(comb), elseScops) );
+		subScops.push_back( ifStmt->getElseBody() );
 		return ret;
 	}
 
 	IterationVector visitForStmt(const ForStmtPtr& forStmt) {
+		subScops.clear();
 		IterationVector&& bodyIV = visit(forStmt->getBody());
 		
 		IterationVector ret;
@@ -226,26 +266,30 @@ public:
 			// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 			// Check the lower bound of the loop
 			AffineFunction lb(ret, 
-				builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), decl->getInitialization())	
-			);
+					builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), decl->getInitialization())	
+				);
 
 			// check the upper bound of the loop
 			AffineFunction ub(ret, 
-				builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), forStmt->getEnd())
-			);
+					builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), forStmt->getEnd())
+				);
 			// set the constraint: iter >= lb && iter < ub
-			cons = makeConjunction( makeCombiner(Constraint(lb, Constraint::GE)), makeCombiner(Constraint(ub, Constraint::LT)) );
-
+			cons = makeConjunction( 
+					makeCombiner(Constraint(lb, Constraint::GE)), makeCombiner(Constraint(ub, Constraint::LT)) 
+				);
 			ret = merge(ret,bodyIV);
 
-			forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons) ); 
+			forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, subScops) ); 
+
+			subScops.clear();
+			// add this statement as a subscope
+			subScops.push_back(forStmt);
 
 		} catch (const NotAffineExpr& e) { 
 			// one of the expressions are not affine constraints, therefore we
 			// set this loop to be a non ScopRegion
 			throw NotASCoP(forStmt);
 		}
-
 		return ret;
 	}
 
@@ -257,14 +301,24 @@ public:
 	IterationVector visitCompoundStmt(const CompoundStmtPtr& compStmt) {
 		IterationVector ret;
 		bool isSCOP = true;
+		
+		ScopRegion::StmtList scops;
+
 		for_each(compStmt->getStatements().cbegin(), compStmt->getStatements().cend(), 
 			[&](const StatementPtr& cur) { 
 				try {
+					// clear Sub scops
+					subScops.clear();
 					ret = merge(ret, this->visit(cur));	
+					// copy the sub spawned scops 
+					std::copy(subScops.begin(), subScops.end(), std::back_inserter(scops));
 				} catch(const NotASCoP& e) { isSCOP = false; }
 			} 
 		);
-		
+
+		// make the SCoPs available for the parent node 	
+		subScops = scops;
+
 		if (!isSCOP) { 
 			// one of the statements in this compound statement broke a ScopRegion
 			// therefore we add to the scop list the roots for valid ScopRegions
@@ -272,17 +326,15 @@ public:
 			std::for_each(compStmt->getStatements().cbegin(), compStmt->getStatements().cend(), 
 				[&](const StatementPtr& cur) { 
 					if (cur->hasAnnotation(ScopRegion::KEY)) { 
-						scopList.push_back( cur->getAnnotation(ScopRegion::KEY) ); 
-					}	
+						scopList.push_back( 
+							std::make_pair(cur, cur->getAnnotation(ScopRegion::KEY)->getIterationVector()) 
+						); 
+					}
 				} 
 			);
 
 			throw NotASCoP(compStmt); 
 		}
-
-		// we don't need to mark compound statements as they do not cause
-		// changes in terms of iteration domain or constraints 
-		compStmt->addAnnotation( std::make_shared<ScopRegion>(ret) ); 
 		return ret;
 	}
 
@@ -296,7 +348,8 @@ public:
 		const NodeManager& mgr = callExpr->getNodeManager();
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
 			// we have to check whether assignments to iterators or parameters
-				
+			// occurrs
+			
 		}
 
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
@@ -315,12 +368,12 @@ public:
 			IterationVector it;
 			try {
 				AffineFunction af(it, callExpr->getArgument(1));
-				it = merge(subIV, it);
-				callExpr->getArgument(1)->addAnnotation( 
-					std::make_shared<AccessFunction>( it, EqualityConstraint(af) ) 
-				);
+					callExpr->getArgument(1)->addAnnotation( 
+						std::make_shared<AccessFunction>( it, EqualityConstraint(af) ) 
+					);
 			} catch(const NotAffineExpr& e) { throw NotASCoP(callExpr); }
 
+			it = merge(subIV, it);	
 			return it;
 		}
 		
@@ -350,15 +403,16 @@ public:
 	
 };
 
-ScopList mark(const core::NodePtr& root, bool interproc) {
+ScopList mark(const core::NodePtr& root) {
 	ScopList ret;
-		ScopVisitor sv(ret);
-		try {
-			sv.visit(root);
-			// if no exception was thrown it means the entire region is a ScopRegion	
-			// therefore we add this node to the Scop list
-			// ret.push_back(i);	
-		} catch (const NotASCoP& e) { }
+	ScopVisitor sv(ret);
+	try {
+		IterationVector iterVec = sv.visit(root);
+		// if no exception was thrown it means the entire region is a ScopRegion	
+		// therefore we add this node to the Scop list
+		ret.push_back( std::make_pair(root, iterVec) );	
+	} catch (const NotASCoP& e) { }
+
 	return ret;     
 }
 
