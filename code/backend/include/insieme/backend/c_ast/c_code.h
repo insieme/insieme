@@ -189,9 +189,10 @@ namespace c_ast {
 		const SharedCNodeManager cNodeManager;
 
 		/**
-		 * The code encapsulated by this fragment.
+		 * The code encapsulated by this fragment. The fragment may represent an abitrary sequence of
+		 * definitions / comments.
 		 */
-		const NodePtr code;
+		vector<NodePtr> code;
 
 	public:
 
@@ -201,15 +202,34 @@ namespace c_ast {
 		 * @param nodeManager the node manager managing the life-span of the given C AST node
 		 * @param code the code this fragment is covering
 		 */
-		CCodeFragment(const SharedCNodeManager& nodeManager, const NodePtr& code) : cNodeManager(nodeManager), code(code) { }
+		CCodeFragment(const SharedCNodeManager& nodeManager, const NodePtr& code) : cNodeManager(nodeManager), code(toVector(code)) { }
+
+		/**
+		 * Creates a new code fragment encapsulating the given code fragments.
+		 *
+		 * * @param nodeManager the node manager managing the life-span of the given C AST nodes
+		 * @param code the code this fragment is covering
+		 */
+		CCodeFragment(const SharedCNodeManager& nodeManager, const vector<NodePtr>& code) : cNodeManager(nodeManager), code(code) { }
+
+		/**
+		 * A static factory method creating a new code fragment based on the given code snippets.
+		 *
+		 * @param nodeManager the node manager managing the life-span of the given C AST node
+		 * @param code the code snippets to be combined to a code fragment
+		 */
+		template<typename ... Nodes>
+		static CCodeFragmentPtr createNew(const SharedCNodeManager& nodeManager, const Nodes& ... code) {
+			return std::make_shared<CCodeFragment>(nodeManager, toVector<NodePtr>(code...));
+		}
 
 		/**
 		 * A static factory method creating a new code fragment based on the given code and name.
 		 *
 		 * @param nodeManager the node manager managing the life-span of the given C AST node
-		 * @param code the code forming the body of the resulting fragment
+		 * @param code the code snippets to be combined to a code fragment
 		 */
-		static CCodeFragmentPtr createNew(const SharedCNodeManager& nodeManager, const NodePtr& code) {
+		static CCodeFragmentPtr createNew(const SharedCNodeManager& nodeManager, const vector<NodePtr>& code) {
 			return std::make_shared<CCodeFragment>(nodeManager, code);
 		}
 
@@ -227,7 +247,14 @@ namespace c_ast {
 		 *
 		 * @return a constant reference to the represented code body
 		 */
-		const NodePtr& getCode() { return code; }
+		const vector<NodePtr>& getCode() const { return code; }
+
+		/**
+		 * Obtains a reference to the code buffer defining the body of this code fragment.
+		 *
+		 * @return a constant reference to the represented code body
+		 */
+		vector<NodePtr>& getCode() { return code; }
 
 		/**
 		 * Prints the code covered by this fragment to the given output stream.

@@ -63,12 +63,11 @@ public:
 
 class ParseException : std::exception {
     string err;
-
+public :
 	const char* what() const throw() {
 		return ("IR Parsing failed\n" + err).c_str();
 	}
 
-public:
     ParseException() : err("") {}
 
     ParseException(string errMsg) : err(errMsg) {}

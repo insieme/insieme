@@ -41,6 +41,8 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/analysis/polyhedral.h"
 
+#include "insieme/analysis/defuse_collect.h"
+
 namespace insieme {
 namespace analysis {
 namespace scop {
@@ -56,16 +58,9 @@ public:
 
 	typedef std::vector<core::StatementPtr> StmtList;
 
-	// Define the type of access for arrays instances which can either be 
-	// a USE (when the array value is read) or a DEF in the case the array
-	// element is written. 
-	enum AccessType { USE, DEF };
-
-	typedef std::pair<core::ExpressionPtr, AccessType> AccessRef;
-
 	// Set of array accesses which appears strictly within this SCoP, array
 	// access in sub SCoPs will be directly referred from sub SCoPs. 
-	typedef std::set<AccessRef> AccessRefSet; 
+	typedef std::set<RefPtr> AccessRefSet; 
 	
 	ScopRegion(const poly::IterationVector& iv, 
 			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),

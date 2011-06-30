@@ -36,8 +36,6 @@
 
 #include "insieme/backend/statement_converter.h"
 
-#include <set>
-
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_code.h"
@@ -50,15 +48,16 @@ namespace backend {
 
 	struct StmtConversionContext {
 		c_ast::SharedCNodeManager cNodeManager;
-		std::set<c_ast::CodeFragmentPtr> dependencies;
-		StmtConversionContext(const c_ast::SharedCNodeManager& manager) : cNodeManager(manager) {}
+		std::set<c_ast::CodeFragmentPtr>& dependencies;
+		StmtConversionContext(const c_ast::SharedCNodeManager& manager, std::set<c_ast::CodeFragmentPtr>& dependencies)
+			: cNodeManager(manager), dependencies(dependencies) {}
 	};
 
 
 	namespace {
 
-		c_ast::CodeFragmentPtr toCodeFragment(StmtConversionContext context, c_ast::NodePtr code) {
-			c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.cNodeManager, code);
+		c_ast::CCodeFragmentPtr toCodeFragment(StmtConversionContext context, c_ast::NodePtr code) {
+			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.cNodeManager, code);
 			fragment->addDependencies(context.dependencies);
 			return fragment;
 		}
@@ -68,14 +67,19 @@ namespace backend {
 
 	// --------------- conversion operations -------------------
 
+	c_ast::NodePtr StmtConverter::convert(const core::NodePtr& node, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+		// create a context for the conversion and conduct procedure
+		StmtConversionContext context(converter.getCNodeManager(), dependencies);
+		return visit(node, context);
+	}
+
 	c_ast::CCodePtr StmtConverter::convert(const core::NodePtr& node) {
 
-		// convert content
-		StmtConversionContext context(converter.getCNodeManager());
-		c_ast::NodePtr code = visit(node, context);
-
 		// construct target code
-		return std::make_shared<c_ast::CCode>(node, toCodeFragment(context, code));
+		std::set<c_ast::CodeFragmentPtr> dependencies;
+		auto fragment = c_ast::CCodeFragment::createNew(converter.getCNodeManager(), convert(node, dependencies));
+		fragment->addDependencies(dependencies);
+		return std::make_shared<c_ast::CCode>(node, fragment);
 	}
 
 	c_ast::NodePtr StmtConverter::visitNode(const core::NodePtr& node, StmtConversionContext& context) {
@@ -93,7 +97,8 @@ namespace backend {
 		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
 
 			// create a new context
-			StmtConversionContext entryContext(manager);
+			std::set<c_ast::CodeFragmentPtr> dependencies;
+			StmtConversionContext entryContext(manager, dependencies);
 
 			// create new fragment
 			auto fragment = toCodeFragment(entryContext, this->visit(entryPoint, entryContext));
@@ -110,7 +115,9 @@ namespace backend {
 
 	////////////////////////////////////////////////////////////////////////// Expressions
 
-	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("/*UNSUPPORTED*/");
+	}
 
 	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
 
@@ -146,7 +153,9 @@ namespace backend {
 //		return visitNode(ptr, context);
 	}
 
-	c_ast::NodePtr StmtConverter::visitLiteral(const core::LiteralPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitLiteral(const core::LiteralPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+	}
 
 	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
 
@@ -183,7 +192,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitWhileStmt(const core::WhileStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
 
-	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, StmtConversionContext& context) {
+		// wrap sub-expression into return expression
+		return context.cNodeManager->create<c_ast::Return>(convertExpression(ptr->getReturnExpr(), context));
+	}
 
 	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
 

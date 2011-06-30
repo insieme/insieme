@@ -48,6 +48,8 @@
 #include "insieme/utils/pointer.h"
 #include "insieme/utils/id_generator.h"
 
+#include "insieme/backend/c_ast/forward_decls.h"
+
 namespace insieme {
 namespace backend {
 namespace c_ast {
@@ -56,57 +58,6 @@ namespace c_ast {
 	using std::vector;
 	using std::pair;
 
-	/**
-	 * Adds forward declarations for all C AST node types. Further, for each
-	 * type a type definition for a corresponding annotated pointer is added.
-	 */
-	#define NODE(NAME) \
-	class NAME; \
-	typedef Ptr<NAME> NAME ## Ptr; \
-	// take all nodes from within the definition file
-	#include "insieme/backend/c_ast/c_nodes.def"
-	#undef NODE
-
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/backend/c_ast/c_nodes.def"
-	};
-	#undef CONCRETE
-
-
-
-	// -- Utilities ------------------------------
-
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
-
-	class CNodeManager : private boost::noncopyable {
-
-		vector<NodePtr> nodes;
-		std::map<string, IdentifierPtr> identMap;
-
-	public:
-
-		CNodeManager() : nodes(), identMap() {}
-
-		~CNodeManager();
-
-		IdentifierPtr create(const string& name);
-
-		template<typename T, typename ... Args>
-		Ptr<T> create(Args ... args) {
-			T* res = new T(args...);
-			res->setManager(this);
-			nodes.push_back(res);
-			return res;
-		}
-
-		static SharedCNodeManager createShared() {
-			return std::make_shared<CNodeManager>();
-		}
-
-	};
 
 	// -- Basic ----------------------------------
 
@@ -180,8 +131,11 @@ namespace c_ast {
 	};
 
 	struct PrimitiveType : public Type {
-		IdentifierPtr name;
-		PrimitiveType(IdentifierPtr name) : Type(NT_PrimitiveType), name(name) {}
+		enum CType {
+			VOID, UNSIGNED, INT, FLOAT, DOUBLE
+		};
+		const CType type;
+		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
 		virtual bool equals(const Node& other) const;
 	};
 
@@ -206,7 +160,7 @@ namespace c_ast {
 
 	struct NamedCompositeType : public Type {
 		IdentifierPtr name;
-		vector<pair<IdentifierPtr, TypePtr>> elements;
+		vector<VariablePtr> elements;
 		NamedCompositeType(NodeType type, const IdentifierPtr name)
 			: Type(type), name(name) {}
 		virtual bool equals(const Node& node) const;
@@ -248,6 +202,10 @@ namespace c_ast {
 	struct Compound : public Statement {
 		const vector<StatementPtr> statements;
 		Compound() : Statement(NT_Compound) {};
+		Compound(const vector<StatementPtr>& stmts) : Statement(NT_Compound), statements(stmts) {};
+
+		template<typename ... E>
+		Compound(E ... stmts) : Statement(NT_Compound), statements(toVector(stmts...)) {};
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -388,6 +346,7 @@ namespace c_ast {
 			BitwiseLeftShiftAssign,
 			BitwiseRightShiftAssign,
 			MemberAccess,
+			IndirectMemberAccess,
 			Subscript,
 			Cast,
 		};
@@ -420,10 +379,10 @@ namespace c_ast {
 	};
 
 	struct Call : public Expression {
-		IdentifierPtr function;
+		NodePtr function;
 		vector<ExpressionPtr> arguments;
 
-		Call(IdentifierPtr function) : Expression(NT_Call), function(function) {}
+		Call(NodePtr function) : Expression(NT_Call), function(function) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -468,15 +427,57 @@ namespace c_ast {
 	};
 
 	struct Function : public Definition {
+		enum Modifier {
+			STATIC = 1<<0,
+			INLINE = 1<<1
+		};
+		unsigned flags;
 		TypePtr returnType;
 		IdentifierPtr name;
 		vector<VariablePtr> parameter;
 		StatementPtr body;
 		Function(TypePtr returnType, IdentifierPtr name, StatementPtr body)
-					: Definition(NT_Function), returnType(returnType), name(name), body(body) {};
+					: Definition(NT_Function), flags(0), returnType(returnType), name(name), body(body) {};
 		Function(TypePtr returnType, IdentifierPtr name, const vector<VariablePtr> params, StatementPtr body)
-			: Definition(NT_Function), returnType(returnType), name(name), parameter(params), body(body) {};
+			: Definition(NT_Function), flags(0), returnType(returnType), name(name), parameter(params), body(body) {};
+		Function(unsigned flags, TypePtr returnType, IdentifierPtr name, const vector<VariablePtr> params, StatementPtr body)
+					: Definition(NT_Function), flags(flags), returnType(returnType), name(name), parameter(params), body(body) {};
 		virtual bool equals(const Node& node) const;
+	};
+
+
+	// -- Utilities ------------------------------
+
+	class CNodeManager;
+	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+
+	class CNodeManager : private boost::noncopyable {
+
+		vector<NodePtr> nodes;
+		std::map<string, IdentifierPtr> identMap;
+
+	public:
+
+		CNodeManager() : nodes(), identMap() {}
+
+		~CNodeManager();
+
+		IdentifierPtr create(const string& name = "");
+
+		PrimitiveTypePtr create(const PrimitiveType::CType type);
+
+		template<typename T, typename ... Args>
+		Ptr<T> create(Args ... args) {
+			T* res = new T(args...);
+			res->setManager(this);
+			nodes.push_back(res);
+			return res;
+		}
+
+		static SharedCNodeManager createShared() {
+			return std::make_shared<CNodeManager>();
+		}
+
 	};
 
 

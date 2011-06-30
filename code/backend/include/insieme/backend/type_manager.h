@@ -92,7 +92,7 @@ namespace backend {
 	 * node pointer. Elements of this type are used to realize variable and parameter
 	 * declarations and conversions between plain C and Inspire types.
 	 */
-	typedef std::function<c_ast::NodePtr(const c_ast::NodePtr&, c_ast::SharedCNodeManager&)> NodeConverter;
+	typedef std::function<c_ast::ExpressionPtr(c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr&)> NodeConverter;
 
 	struct TypeInfo {
 

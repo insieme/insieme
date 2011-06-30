@@ -48,12 +48,14 @@
 #include "utils/timing.h"
 #include "impl/work_group.impl.h"
 
-#define NUM_ITER 1000000
-#define NUM_LEVELS 1
+#define NUM_REPEATS 10
+#define NUM_ITER 1000
+#define NUM_LEVELS 2
 
 typedef struct _insieme_wi_bench_params {
 	irt_type_id type_id;
 	uint64 count;
+	uint64 *check;
 } insieme_wi_bench_params;
 
 irt_type g_insieme_type_table[] = {
@@ -65,14 +67,17 @@ irt_type g_insieme_type_table[] = {
 
 void insieme_wi_startup_implementation(irt_work_item* wi);
 void insieme_wi_bench_implementation(irt_work_item* wi);
+void insieme_wi_opt_bench_implementation(irt_work_item* wi);
 
 irt_wi_implementation_variant g_insieme_wi_startup_variants[] = { { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_startup_implementation, 0, NULL, 0, NULL } };
 
 irt_wi_implementation_variant g_insieme_wi_bench_variants[] = { { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_bench_implementation, 0, NULL, 0, NULL } };
+irt_wi_implementation_variant g_insieme_wi_opt_bench_variants[] = { { IRT_WI_IMPL_SHARED_MEM, &insieme_wi_opt_bench_implementation, 0, NULL, 0, NULL } };
 
 irt_wi_implementation g_insieme_impl_table[] = {
 	{ 1, g_insieme_wi_startup_variants },
-	{ 1, g_insieme_wi_bench_variants }
+	{ 1, g_insieme_wi_bench_variants },
+	{ 1, g_insieme_wi_opt_bench_variants }
 };
 
 // initialization
@@ -89,21 +94,39 @@ void insieme_cleanup_context(irt_context* context) {
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
 	
-	uint64 start_time = irt_time_ms();
+	{
+		uint64 start_time = irt_time_ms();
+		uint64 check_val = 0;
+		insieme_wi_bench_params bench_params = { 1, NUM_LEVELS, &check_val };
+		for(int i=0; i<NUM_REPEATS; ++i) {
+			irt_work_item* bench_wi = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
+			irt_scheduling_assign_wi(irt_worker_get_current(), bench_wi);
+			irt_wi_join(bench_wi);
+		}
+		uint64 total_time = irt_time_ms() - start_time;
+		uint64 total_wis = pow(NUM_ITER, NUM_LEVELS);
+		uint64 wis_per_sec = (uint64)(total_wis/((double)total_time/1000.0));
+		printf("======================\n= manual irt wi benchmark done\n");
+		printf("= number of wis executed: %lu\n", check_val);
+		printf("= time taken: %lu\n", total_time);
+		printf("= wis/s: %lu\n======================\n", wis_per_sec);
+	}
 
-	insieme_wi_bench_params bench_params = { 1, NUM_LEVELS };
-	irt_work_item* bench_wi = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
-	irt_scheduling_assign_wi(irt_worker_get_current(), bench_wi);
-
-	irt_wi_join(bench_wi);
-
-	uint64 total_time = irt_time_ms() - start_time;
-	uint64 total_wis = pow(NUM_ITER, NUM_LEVELS);
-	uint64 wis_per_sec = (uint64)(total_wis/((double)total_time/1000.0));
-
-	printf("======================\n= manual irt wi benchmark done\n");
-	printf("= time taken: %lu\n", total_time);
-	printf("= wis/s: %lu\n======================\n", wis_per_sec);
+	//{
+	//	uint64 start_time = irt_time_ms();
+	//	uint64 check_val = 0;
+	//	insieme_wi_bench_params bench_params = { 1, NUM_LEVELS, &check_val };
+	//	irt_work_item* bench_wi = irt_wi_create(irt_g_wi_range_one_elem, 2, (irt_lw_data_item*)&bench_params);
+	//	irt_scheduling_assign_wi(irt_worker_get_current(), bench_wi);
+	//	irt_wi_join(bench_wi);
+	//	uint64 total_time = irt_time_ms() - start_time;
+	//	uint64 total_wis = pow(NUM_ITER, NUM_LEVELS);
+	//	uint64 wis_per_sec = (uint64)(total_wis/((double)total_time/1000.0));
+	//	printf("======================\n= manual irt optional wi benchmark done\n");
+	//	printf("= number of wis executed: %lu\n", check_val);
+	//	printf("= time taken: %lu\n", total_time);
+	//	printf("= optional wis/s: %lu\n======================\n", wis_per_sec);
+	//}
 
 	irt_wi_end(wi);
 }
@@ -112,7 +135,7 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 	insieme_wi_bench_params *params = (insieme_wi_bench_params*)wi->parameters;
 
 	if(params->count>0) {
-		insieme_wi_bench_params bench_params = { 1, params->count-1 };
+		insieme_wi_bench_params bench_params = { 1, params->count-1, params->check };
 		irt_work_item **bench_wis = (irt_work_item**)malloc(NUM_ITER*sizeof(irt_work_item*));
 		for(int i=0; i<NUM_ITER; ++i) {
 			bench_wis[i] = irt_wi_create(irt_g_wi_range_one_elem, 1, (irt_lw_data_item*)&bench_params);
@@ -126,6 +149,27 @@ void insieme_wi_bench_implementation(irt_work_item* wi) {
 
 		free(bench_wis);
 	}
+	irt_atomic_inc(params->check);
 	irt_wi_end(wi);
 }
 
+void insieme_wi_opt_bench_implementation(irt_work_item* wi) {
+	insieme_wi_bench_params *params = (insieme_wi_bench_params*)wi->parameters;
+
+	if(params->count>0) {
+		insieme_wi_bench_params bench_params = { 1, params->count-1, params->check };
+		irt_work_item **bench_wis = (irt_work_item**)malloc(NUM_ITER*sizeof(irt_work_item*));
+		for(int i=0; i<NUM_ITER; ++i) {
+			bench_wis[i] = irt_wi_run_optional(irt_g_wi_range_one_elem, 2, (irt_lw_data_item*)&bench_params);
+		}
+
+		//irt_wi_multi_join(NUM_ITER, bench_wis);
+		for(int i=0; i<NUM_ITER; ++i) {
+			irt_wi_join(bench_wis[i]);
+		}
+
+		free(bench_wis);
+	}
+	irt_atomic_inc(params->check);
+	irt_wi_end(wi);
+}

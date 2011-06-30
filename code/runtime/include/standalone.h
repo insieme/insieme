@@ -54,6 +54,7 @@ irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 
 IRT_CREATE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
+IRT_CREATE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
 void irt_init_globals() {
 	// not using IRT_ASSERT since environment is not yet set up
@@ -67,6 +68,7 @@ void irt_init_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 	irt_data_item_table_init();
 	irt_context_table_init();
+	irt_wi_event_register_table_init();
 }
 void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();

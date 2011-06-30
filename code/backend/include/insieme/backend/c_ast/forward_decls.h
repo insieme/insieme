@@ -36,18 +36,44 @@
 
 #pragma once
 
-#include "utils/deques.h"
-#include "utils/counted_deques.h"
+#include "insieme/utils/pointer.h"
 
-IRT_DECLARE_DEQUE(work_item);
-IRT_DECLARE_COUNTED_DEQUE(work_item);
+namespace insieme {
+namespace backend {
+namespace c_ast {
 
-typedef struct _irt_worker_queue_pool_base {
-	irt_work_item_cdeque queue;
-	irt_work_item_deque pool;
-} irt_worker_queue_pool_base;
+	/**
+	 * Adds forward declarations for all C AST node types. Further, for each
+	 * type a type definition for a corresponding annotated pointer is added.
+	 */
+	#define NODE(NAME) \
+	class NAME; \
+	typedef Ptr<NAME> NAME ## Ptr; \
+	// take all nodes from within the definition file
+	#include "insieme/backend/c_ast/c_nodes.def"
+	#undef NODE
 
-typedef struct _irt_wi_queue_pool_base {
-	struct _irt_work_item* work_deque_next;
-	struct _irt_work_item* work_deque_prev;
-} irt_wi_queue_pool_base;
+	#define CONCRETE(name) NT_ ## name,
+	enum NodeType {
+		// the necessary information is obtained from the node-definition file
+		#include "insieme/backend/c_ast/c_nodes.def"
+	};
+	#undef CONCRETE
+
+
+	class CNodeManager;
+	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+
+	class CCode;
+	typedef std::shared_ptr<CCode> CCodePtr;
+
+	class CodeFragment;
+	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
+
+	class CCodeFragment;
+	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
+
+
+} // end namespace c_ast
+} // end namespace backend
+} // end namespace insieme

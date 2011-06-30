@@ -92,6 +92,8 @@ static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 void irt_wi_destroy(irt_work_item* wi);
 
+irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
+
 void irt_wi_join(irt_work_item* wi);
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis); // bad idea
 void irt_wi_end(irt_work_item* wi);
