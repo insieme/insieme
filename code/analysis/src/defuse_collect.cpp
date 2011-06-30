@@ -57,6 +57,7 @@ std::ostream& Ref::printTo(std::ostream& out) const {
 	case Ref::DEF: 		out << "[DEF]"; break;
 	case Ref::USE:		out << "[USE]"; break;
 	case Ref::UNKNOWN:	out << "[UNKNOWN]"; break;
+	case Ref::ANY_USE:	assert(false);
 	}
 	out << " - ";
 	switch(type) {
@@ -64,6 +65,7 @@ std::ostream& Ref::printTo(std::ostream& out) const {
 	case Ref::ARRAY:	out << "<ARRAY> "; break;
 	case Ref::MEMBER:	out << "<MEMBER>"; break;
 	case Ref::CALL: 	out << "<CALL>  "; break;
+	case Ref::ANY_REF:  assert(false);
 	}
 	return out << " : " << *baseExpr << " {" << &baseExpr << "}";
 }
@@ -127,14 +129,14 @@ class DefUseCollect : public core::ASTVisitor<> {
 		const core::TypePtr& subType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
 		if (subType->getNodeType() == core::NT_ArrayType || subType->getNodeType() == core::NT_VectorType) { 
 			// In the case the sub type is a vector type, it means this is an array reference 
-			refSet.insert( std::make_shared<ArrayRef>(var, 
+			refSet.push_back( std::make_shared<ArrayRef>(var, 
 					ExpressionList(idxStack.top().rbegin(), idxStack.top().rend()),  // copy the index expressions in reverse order
 					usage) 
 				);
 			idxStack.top() = ExpressionList();	// reset the expresion list 
 			return ;
 		} 
-		refSet.insert( std::make_shared<Ref>(refType, var, usage) );
+		refSet.push_back( std::make_shared<Ref>(refType, var, usage) );
 	}
 
 public:

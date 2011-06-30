@@ -72,30 +72,33 @@ TEST(DefUseCollect, Scalar) {
 TEST(DefUseCollect, SimpleArray) {
 	
 	NodeManager mgr;
-	parse::IRParser parser(mgr);
-	// even if the expression is completely wrong (because it works with refs),
-	// still valid as a test case 
-    auto compStmt = parser.parseStatement(
-		"{\
-			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:a+ref<int<4>>:b)));\
-		}"
-	);
-	// std::cout << *compStmt << std::endl;
+	try{
+		parse::IRParser parser(mgr);
+		// even if the expression is completely wrong (because it works with refs),
+		// still valid as a test case 
+		auto compStmt = parser.parseStatement(
+			"{\
+				(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:a+ref<int<4>>:b)));\
+			}"
+		);
+		// std::cout << *compStmt << std::endl;
 
-	RefSet&& refs = collectDefUse(compStmt);
-	EXPECT_EQ(static_cast<size_t>(2), refs.size());
+		RefSet&& refs = collectDefUse(compStmt);
+		EXPECT_EQ(static_cast<size_t>(2), refs.size());
 
-	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
+		// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
 
-	// all the refs are usages 
-	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ 
-			EXPECT_TRUE(cur->getUsage() == Ref::USE);
-			if (cur->getType() == Ref::ARRAY) {
-				EXPECT_EQ(static_cast<size_t>(1), static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
-			} else {
-				EXPECT_TRUE(cur->getType() == Ref::VAR);
-			}
-		});
+		// all the refs are usages 
+		std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ 
+				EXPECT_TRUE(cur->getUsage() == Ref::USE);
+				if (cur->getType() == Ref::ARRAY) {
+					EXPECT_EQ(static_cast<size_t>(1), static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
+				} else {
+					EXPECT_TRUE(cur->getType() == Ref::VAR);
+				}
+			});
+
+	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
 
 }
 
@@ -103,23 +106,83 @@ TEST(DefUseCollect, Assignment) {
 	
 	NodeManager mgr;
 	parse::IRParser parser(mgr);
+	try { 
+		// even if the expression is completely wrong (because it works with refs),
+		// still valid as a test case 
+		auto compStmt = parser.parseStatement(
+			"{\
+				(ref<int<4>>:a = int<4>:c);\
+			}"
+		);
+		// std::cout << *compStmt << std::endl;
+
+		RefSet&& refs = collectDefUse(compStmt);
+		EXPECT_EQ(static_cast<size_t>(1), refs.size());
+		const Ref& ref = **refs.begin();
+		EXPECT_TRUE(ref.getUsage() == Ref::DEF);
+
+	//	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
+		
+		EXPECT_TRUE(ref.getType() == Ref::VAR);
+
+	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+
+}
+
+TEST(DefUseCollect, ArrayAccess) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
 	// even if the expression is completely wrong (because it works with refs),
 	// still valid as a test case 
-    auto compStmt = parser.parseStatement(
-		"{\
-			(ref<int<4>>:a = int<4>:c);\
-		}"
-	);
-	// std::cout << *compStmt << std::endl;
+	try {
+		auto compStmt = parser.parseStatement(
+			"{\
+				(op<vector.ref.elem>(ref<vector<int<4>,10>>:a, (op<array.ref.elem.1D>(ref<array<int<4>,1>>:c, int<4>:b))));\
+			}"
+		);
+		// std::cout << *compStmt << std::endl;
 
-	RefSet&& refs = collectDefUse(compStmt);
-	EXPECT_EQ(static_cast<size_t>(1), refs.size());
-	const Ref& ref = **refs.begin();
-	EXPECT_TRUE(ref.getUsage() == Ref::DEF);
+		RefSet&& refs = collectDefUse(compStmt);
+		EXPECT_EQ(static_cast<size_t>(2), refs.size());
 
-//	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
+		for_each(refs.arrays_begin(Ref::ANY_USE), refs.arrays_end(Ref::ANY_USE),
+			[](const Ref& cur){
+				EXPECT_TRUE(cur.getUsage() == Ref::USE);
+			}
+		);
+
+	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
 	
-	EXPECT_TRUE(ref.getType() == Ref::VAR);
+	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+
+}
+
+TEST(DefUseCollect, ArrayAssignment) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	// even if the expression is completely wrong (because it works with refs),
+	// still valid as a test case 
+	try {
+		auto compStmt = parser.parseStatement(
+			"{\
+				((op<vector.ref.elem>(ref<vector<int<4>,10>>:a, (op<array.ref.elem.1D>(ref<array<int<4>,1>>:c, int<4>:b)))) = ref<int<4>>:d);\
+			}"
+		);
+		// std::cout << *compStmt << std::endl;
+
+		RefSet&& refs = collectDefUse(compStmt);
+		EXPECT_EQ(static_cast<size_t>(3), refs.size());
+
+		RefSet::ref_iterator it = refs.arrays_begin(Ref::ANY_USE), end = refs.arrays_end(Ref::ANY_USE);
+		EXPECT_TRUE(it->getUsage() == Ref::USE);
+		++it;
+		EXPECT_TRUE(it->getUsage() == Ref::DEF);
+
+	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
+	
+	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
 
 }
 

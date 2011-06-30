@@ -42,6 +42,8 @@
 #include <set>
 #include <memory>
 
+#include "boost/operators.hpp"
+
 namespace insieme {
 namespace analysis {
 
@@ -59,13 +61,15 @@ struct Ref : public utils::Printable {
 	// 	UNKNOWN: the variable is being used as input parameter to a function which can either read
 	// 	         or modify the value. UNKNWON type of usages can be refined through advanced dataflow
 	// 	         analysis
-	enum UseType { DEF, USE, UNKNOWN };
+	// 	ANY: utilized in the RefList class to iterate through any type of usage
+	enum UseType { ANY_USE=-1, DEF, USE, UNKNOWN };
 
 	// Possible type of references are:
 	// VAR:    reference to scalar variables 
 	// ARRAY:  reference to arrays 
 	// CALL:   return value of a function returning a reference 
-	enum RefType { VAR, ARRAY, MEMBER, CALL };
+	// ANY:    used in the RefList class in order to iterate through any reference type 
+	enum RefType { ANY_REF=-1, VAR, ARRAY, MEMBER, CALL };
 
 	Ref(const RefType& type, const core::ExpressionPtr& var, const UseType& usage = USE);
 
@@ -107,7 +111,53 @@ private:
 typedef std::shared_ptr<Ref> RefPtr; 
 
 // Store the set of refs found by the visitor 
-typedef std::set<RefPtr> RefSet;
+class RefSet: public std::vector<RefPtr> {
+	
+public:
+	class ref_iterator : public boost::forward_iterator_helper<ref_iterator, const Ref> { 
+		
+		RefSet::const_iterator it, end;
+		Ref::RefType type;
+		Ref::UseType usage; 
+
+		void inc(bool first=false) {
+			// iterator not valid, therefore increment not allowed
+			if (it == end) { return; }
+
+			if (first && (type == Ref::ANY_REF || (*it)->getType() == type) && 
+					(usage == Ref::ANY_USE || (*it)->getUsage() == usage)
+				)
+			{
+				return; // don't move the iterator
+			}
+			
+			++it;
+
+			while(it != end && (type != Ref::ANY_REF && (*it)->getType() != type) && 
+					(usage != Ref::ANY_USE && (*it)->getUsage() != usage)) 
+			{
+				++it;
+			}
+		}
+	public:
+		ref_iterator(RefSet::const_iterator begin, RefSet::const_iterator end, 
+				Ref::RefType type=Ref::ANY_REF, Ref::UseType usage=Ref::ANY_USE) : 
+			it(begin), end(end), type(type), usage(usage) { inc(true); }
+
+		const Ref& operator*() const { assert(it != end && "Iterator out of bounds"); return **it; }	
+		iterator& operator++() { inc(); return *this; }
+
+		bool operator==(const ref_iterator& rhs) const { return it == rhs.it && usage == rhs.usage && type == rhs.type; }
+	};
+
+	RefSet::ref_iterator arrays_begin(const Ref::UseType& usage) { return ref_iterator(begin(), end(), Ref::ARRAY, usage); }
+	RefSet::ref_iterator arrays_end(const Ref::UseType& usage) { return ref_iterator(end(), end(), Ref::ARRAY, usage); }
+
+	RefSet::ref_iterator vars_begin(const Ref::UseType& usage) { return ref_iterator(begin(), end(), Ref::VAR, usage); }
+	RefSet::ref_iterator vars_end(const Ref::UseType& usage) { return ref_iterator(end(), end(), Ref::VAR, usage); }
+
+	// add iterators for members/callexpr
+};
 
 // Main entry method, visits the IR starting from the root node collecting refs. The list of
 // detected refs is returned to the caller. 
