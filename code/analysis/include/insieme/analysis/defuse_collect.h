@@ -51,6 +51,7 @@ namespace analysis {
  * member or the return value of a call expression returning a ref. 
  */
 struct Ref : public utils::Printable {
+
 	// possible usage of a variable can be of three types: 
 	// 	USE: the variable is being accessed, therefore the memory location is read and not modified 
 	// 	DEF: the variable is being redefined (declaration and assignment), this means that the
@@ -60,30 +61,47 @@ struct Ref : public utils::Printable {
 	// 	         analysis
 	enum UseType { DEF, USE, UNKNOWN };
 
+	// Possible type of references are:
+	// VAR:    reference to scalar variables 
+	// ARRAY:  reference to arrays 
+	// CALL:   return value of a function returning a reference 
+	enum RefType { VAR, ARRAY, MEMBER, CALL };
+
+	Ref(const RefType& type, const core::ExpressionPtr& var, const UseType& usage = USE);
+
+	std::ostream& printTo(std::ostream& out) const;
+
+	const UseType& getUsage() const { return usage; }
+	
+	const RefType& getType() const { return type; }
+
+private:
+	// Define the type of this reference 
+	RefType type;
+
 	// Points to the base expression: 
 	// 	 this can be either a scalar variable, an array or a call to a function 
 	core::ExpressionPtr baseExpr;
 
 	// Define the use for this expression  
 	UseType usage; 
-
-	Ref(const core::ExpressionPtr& var, const UseType& usage = USE);
-
-	std::ostream& printTo(std::ostream& out) const;
-
-	const UseType& getUsage() const { return usage; }
 };
 
 // In the case of arrays (or vectors), we also store the list of expressions used to index each of the
 // array dimensions
 struct ArrayRef : public Ref { 
 	
-	std::vector<core::ExpressionPtr> idxExpr; 
+	typedef std::vector<core::ExpressionPtr> ExpressionList;  
 
-	ArrayRef(const core::ExpressionPtr& arrayVar, const std::vector<core::ExpressionPtr>& idxExpr, const UseType& usage = USE) :
-		Ref(arrayVar, usage), idxExpr(idxExpr) { }
+	ArrayRef(const core::ExpressionPtr& arrayVar, const ExpressionList& idxExpr, const UseType& usage = USE) :
+		Ref(Ref::ARRAY, arrayVar, usage), idxExpr(idxExpr) { }
 
 	std::ostream& printTo(std::ostream& out) const;	
+
+	const ExpressionList& getIndexExpressions() const { return idxExpr; }
+
+private:
+	ExpressionList idxExpr;
 };
 
 typedef std::shared_ptr<Ref> RefPtr; 

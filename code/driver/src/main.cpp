@@ -197,8 +197,8 @@ int main(int argc, char** argv) {
 	//		std::cout << "SCOP Analysis: " << sl.size() << std::endl;
 			//analysis::RefSet&& refs = analysis::collectDefUse(program);
 			//std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
-			//		std::cout << *cur << std::endl; 
-		//		});
+					//std::cout << *cur << std::endl; 
+				//});
 			InverseStmtMap stmtMap;
 			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
 				using namespace insieme::core::printer;

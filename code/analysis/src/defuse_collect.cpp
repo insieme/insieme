@@ -44,41 +44,62 @@
 namespace insieme {
 namespace analysis {
 
-Ref::Ref(const core::ExpressionPtr& var, const UseType& usage) : baseExpr(var), usage(usage) { 
+//===== Ref =========================================================================================
+
+Ref::Ref(const RefType& type, const core::ExpressionPtr& var, const UseType& usage) : 
+	type(type), baseExpr(var), usage(usage) 
+{ 
 	assert(var->getType()->getNodeType() == core::NT_RefType && "TYpe of base expression must be of RefType"); 
 }
 
 std::ostream& Ref::printTo(std::ostream& out) const {
-	if (baseExpr->getNodeType() == core::NT_CallExpr) {
-		// the only call expression which is allowed is a composite member access.
-		core::NodeManager& mgr = baseExpr->getNodeManager();
-		assert (core::analysis::isCallOf(baseExpr, mgr.basic.getCompositeMemberAccess()) || 
-			core::analysis::isCallOf(baseExpr, mgr.basic.getCompositeRefElem() ) );
-		const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(baseExpr);
-		out << "{" << *callExpr->getArgument(0)->getType() << "." << *callExpr->getArgument(1) << "}";
-	} else {
-		out << *baseExpr;
-	}
-	out << " [";
 	switch (usage) {
-	case Ref::DEF:
-		out << "DEF";
-		break;
-	case Ref::USE:
-		out << "USE";
-		break;
-	case Ref::UNKNOWN:
-		out << "UNKNOWN";
-		break;
+	case Ref::DEF: 		out << "[DEF]"; break;
+	case Ref::USE:		out << "[USE]"; break;
+	case Ref::UNKNOWN:	out << "[UNKNOWN]"; break;
 	}
-	return out << "]";
+	out << " - ";
+	switch(type) {
+	case Ref::VAR:		out << "<VAR>   "; break;
+	case Ref::ARRAY:	out << "<ARRAY> "; break;
+	case Ref::MEMBER:	out << "<MEMBER>"; break;
+	case Ref::CALL: 	out << "<CALL>  "; break;
+	}
+	return out << " : " << *baseExpr << " {" << &baseExpr << "}";
 }
+
+//===== ArrayRef =======================================================================================
 
 std::ostream& ArrayRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);
 	return out << " IDX: {" << 
 		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ jout << *cur; } ) << "}";
 }
+
+//===== MemberRef =====================================================================================
+
+//MemberRef::MemberRef(const core::ExpressionPtr& memberAcc, const UseType& usage) : Ref(Ref::MEMBER, memberAcc, usage) { 
+	//assert (memberAcc->getNodeType() == core::NT_CallExpr);
+
+	//core::NodeManager& mgr = memberAcc->getNodeManager();
+	//assert (core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeMemberAccess()) || 
+		//core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeRefElem() ) );
+
+	//// initialize the value of the literal
+	//const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(memberAcc);
+	//identifier = core::static_pointer_cast<const core::Literal>(callExpr->getArgument(1));
+
+	//// initialize the value of the named composite type 
+	//const core::TypePtr& refType = callExpr->getArgument(0)->getType();
+	//assert(refType->getNodeType() == core::NT_RefType);
+
+	//type = core::static_pointer_cast<const core::NamedCompositeType>(
+			//core::static_pointer_cast<const core::RefType>(refType)->getElementType() );
+//}
+
+//std::string MemberRef::baseExprToStr() const {
+	//return type->toString() + "." + identifier->toString();
+//}
 
 namespace {
 
@@ -97,14 +118,14 @@ class DefUseCollect : public core::ASTVisitor<> {
 	typedef std::vector<core::ExpressionPtr> ExpressionList;
 	std::stack<ExpressionList> idxStack;
 
-	void addVariable(const core::ExpressionPtr& var) {
+	void addVariable(const core::ExpressionPtr& var, const Ref::RefType& refType=Ref::VAR) {
 		const core::TypePtr& type = var->getType(); 
 		
 		// If the variable is not a ref we are not interested in its usage 
 		if (type->getNodeType() != core::NT_RefType) { return; }
 	
 		const core::TypePtr& subType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
-		if (subType->getNodeType() == core::NT_ArrayType || subType->getNodeType() == core::NT_VectorType) {
+		if (subType->getNodeType() == core::NT_ArrayType || subType->getNodeType() == core::NT_VectorType) { 
 			// In the case the sub type is a vector type, it means this is an array reference 
 			refSet.insert( std::make_shared<ArrayRef>(var, 
 					ExpressionList(idxStack.top().rbegin(), idxStack.top().rend()),  // copy the index expressions in reverse order
@@ -112,12 +133,12 @@ class DefUseCollect : public core::ASTVisitor<> {
 				);
 			idxStack.top() = ExpressionList();	// reset the expresion list 
 			return ;
-		}
-		refSet.insert( std::make_shared<Ref>(var, usage) );
+		} 
+		refSet.insert( std::make_shared<Ref>(refType, var, usage) );
 	}
 
 public:
-	DefUseCollect(RefSet& refSet) : core::ASTVisitor<>(false), refSet(refSet), usage(Ref::UNKNOWN) { 
+	DefUseCollect(RefSet& refSet) : core::ASTVisitor<>(false), refSet(refSet), usage(Ref::USE) { 
 		idxStack.push( ExpressionList() ); // initialize the stack of array index expressions
 	}
 
@@ -150,7 +171,7 @@ public:
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getCompositeMemberAccess()) || 
 			core::analysis::isCallOf(callExpr, mgr.basic.getCompositeRefElem() ) ) {
 
-			addVariable(callExpr);
+			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
 			visit(callExpr->getArgument(0));
@@ -177,12 +198,26 @@ public:
 			return;
 		}
 
+		// List the IR literals which do not alterate the usage of a variable  
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefDeref())) {
 			usage = Ref::USE;
 			visit( callExpr->getArgument(0) );
 			usage = saveUsage;
 			return;
 		}
+
+		// List the IR literals which do not alterate the usage of a variable and therefore are used
+		// to convert a ref into another ref 
+		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefVectorToRefArray()) ||
+			core::analysis::isCallOf(callExpr, mgr.basic.getStringToCharPointer()) ) 
+		{
+			visit( callExpr->getArgument(0) );
+			return;
+		}
+
+		// This call expression could return a reference to a variable which can be either used or
+		// defined. Therefore we have to add this usage to the list of usages 
+		addVariable(callExpr, Ref::CALL);
 
 		usage = Ref::UNKNOWN;
 		visitNode(callExpr);
@@ -203,7 +238,6 @@ public:
 		);
 		usage = Ref::USE;
 		visit(lambda->getBody());
-
 		usage = saveUsage;
 	}
 
