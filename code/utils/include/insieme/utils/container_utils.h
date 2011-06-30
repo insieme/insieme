@@ -41,6 +41,7 @@
 #include <unordered_set>
 #include <vector>
 #include <list>
+#include <utility>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/iterator/transform_iterator.hpp>
@@ -97,6 +98,14 @@ inline Container transform(const Container& c, const Functor& f) {
 template<typename Container, typename OutputIterator, typename Functor>
 inline void transform(Container& c, OutputIterator out, const Functor& f) {
 	std::transform(c.begin(), c.end(), out, f);
+}
+
+/**
+ * Convenience function for std::transform.
+ */
+template<typename Iterator, typename OutputIterator, typename Functor>
+inline void transform_range(const std::pair<Iterator,Iterator>& range, OutputIterator out, const Functor& f) {
+	std::transform(range.first, range.second, out, f);
 }
 
 /**
@@ -179,7 +188,7 @@ typename enable_if<is_convertible<B,T>, void>::type addAll(vector<T>& target, co
 		return;
 	}
 	// add all elements of the source to the end of the target
-	copy(source.cbegin(), source.cend(), back_inserter(target));
+	target.insert(target.end(), source.begin(), source.end());
 }
 
 

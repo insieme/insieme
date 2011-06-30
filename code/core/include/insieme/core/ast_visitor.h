@@ -91,6 +91,11 @@ public:
 	ASTVisitor(bool visitTypes) : visitTypes(visitTypes) {}
 
 	/**
+	 * A virtual destructor to support handling proper sub-types.
+	 */
+	virtual ~ASTVisitor() {};
+
+	/**
 	 * Instructs this visitor to visit / process the given element.
 	 *
 	 * @param element the element to be visited / processed

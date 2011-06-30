@@ -36,56 +36,42 @@
 
 #pragma once
 
-#include "insieme/backend/c_ast/c_ast.h"
-#include "insieme/backend/c_ast/c_code.h"
-
-#include "insieme/utils/printable.h"
-
+#include "insieme/utils/pointer.h"
 
 namespace insieme {
 namespace backend {
 namespace c_ast {
 
 	/**
-	 * A class capable of printing a C AST to some output stream.
-	 *
-	 * Usage:  out << CPrint(fragment);
+	 * Adds forward declarations for all C AST node types. Further, for each
+	 * type a type definition for a corresponding annotated pointer is added.
 	 */
-	class CPrint : public utils::Printable {
+	#define NODE(NAME) \
+	class NAME; \
+	typedef Ptr<NAME> NAME ## Ptr; \
+	// take all nodes from within the definition file
+	#include "insieme/backend/c_ast/c_nodes.def"
+	#undef NODE
 
-		/**
-		 * The C code fragment to be printed.
-		 */
-		const NodePtr fragment;
-
-	public:
-
-		/**
-		 * A simple constructor allowing to specify the fragment to be printed.
-		 */
-		CPrint(const NodePtr fragment) : fragment(fragment) {}
-
-		/**
-		 * Prints the fragment set up within the constructor to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
-
+	#define CONCRETE(name) NT_ ## name,
+	enum NodeType {
+		// the necessary information is obtained from the node-definition file
+		#include "insieme/backend/c_ast/c_nodes.def"
 	};
+	#undef CONCRETE
 
-	string toC(const NodePtr& node);
 
-	string toC(const c_ast::CodeFragmentPtr& fragment);
+	class CNodeManager;
+	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
 
-	struct ParameterPrinter : public utils::Printable {
-		const vector<c_ast::VariablePtr> params;
-	public:
-		ParameterPrinter(const TypePtr& type, const IdentifierPtr& name)
-			: params(toVector(type->getManager()->create<c_ast::Variable>(type, name))) {}
-		ParameterPrinter(const VariablePtr& param) : params(toVector(param)) {}
-		ParameterPrinter(const vector<VariablePtr>& params) : params(params) {}
+	class CCode;
+	typedef std::shared_ptr<CCode> CCodePtr;
 
-		virtual std::ostream& printTo(std::ostream& out) const;
-	};
+	class CodeFragment;
+	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
+
+	class CCodeFragment;
+	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
 
 
 } // end namespace c_ast
