@@ -88,29 +88,29 @@ TEST(C_AST_Printer, ParameterFormatting) {
 	StructTypePtr structType = manager.create<StructType>(manager.create("XY"));
 
 	type = basics.getIntType();
-	structType->elements.push_back(std::make_pair(manager.create("x1"), type));
+	structType->elements.push_back(var(type, "x1"));
 
 	type = manager.create<PointerType>(type);
-	structType->elements.push_back(std::make_pair(manager.create("x2"), type));
+	structType->elements.push_back(var(type, "x2"));
 
-	structType->elements.push_back(std::make_pair(manager.create("x3"), manager.create<PointerType>(type)));
+	structType->elements.push_back(var(manager.create<PointerType>(type), "x3"));
 
-	structType->elements.push_back(std::make_pair(manager.create("x4"), manager.create<VectorType>(basics.getIntType(), manager.create<Literal>("3"))));
+	structType->elements.push_back(var(manager.create<VectorType>(basics.getIntType(), manager.create<Literal>("3")), "x4"));
 
 	type = manager.create<VectorType>(type, manager.create<Literal>("3"));
-	structType->elements.push_back(std::make_pair(manager.create("x5"), type));
+	structType->elements.push_back(var(type, "x5"));
 
 	type = manager.create<VectorType>(type, manager.create<Literal>("5"));
-	structType->elements.push_back(std::make_pair(manager.create("x6"), type));
+	structType->elements.push_back(var(type, "x6"));
 
 	type = manager.create<PointerType>(type);
-	structType->elements.push_back(std::make_pair(manager.create("x7"), type));
+	structType->elements.push_back(var(type, "x7"));
 
 	type = manager.create<PointerType>(type);
-	structType->elements.push_back(std::make_pair(manager.create("x8"), type));
+	structType->elements.push_back(var(type, "x8"));
 
 	type = manager.create<VectorType>(type, manager.create<Literal>("7"));
-	structType->elements.push_back(std::make_pair(manager.create("x9"), type));
+	structType->elements.push_back(var(type, "x9"));
 
 	NodePtr def = manager.create<TypeDefinition>(structType, manager.create("Z"));
 

@@ -47,6 +47,7 @@
 #include "work_group.h"
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"
+#include "impl/irt_events.impl.h"
 
 
 static inline irt_work_item* irt_wi_get_current() {
@@ -107,6 +108,15 @@ void irt_wi_destroy(irt_work_item* wi) {
 	_irt_wi_recycle(wi);
 }
 
+irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	irt_worker *worker = irt_worker_get_current();
+	irt_work_item *wi = &worker->lazy_wi;
+	wi->range = range;
+	wi->impl_id = impl_id;
+	wi->parameters = params;
+	return irt_scheduling_optional_wi(worker, wi);
+}
+
 bool _irt_wi_done_check(irt_work_item* wi) {
 	return ((irt_work_item*)(wi->ready_check.data))->state == IRT_WI_STATE_DONE;
 }
@@ -126,12 +136,26 @@ bool _irt_wi_multi_done_check(irt_work_item* wi) {
 	return true;
 }
 
+typedef struct __irt_wi_join_event_data {
+	irt_work_item* joining_wi;
+	irt_worker* join_to;
+} _irt_wi_join_event_data;
+bool _irt_wi_join_event(irt_wi_event_register* source_event_register, void *user_data) {
+	_irt_wi_join_event_data* join_data = (_irt_wi_join_event_data*)user_data;
+	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
+	return false;
+}
+
 void irt_wi_join(irt_work_item* wi) {
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* swi = self->cur_wi;
-	swi->ready_check.fun = &_irt_wi_done_check;
-	swi->ready_check.data = wi;
-	irt_scheduling_yield(self, swi);
+	_irt_wi_join_event_data clo = {swi, self};
+	irt_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
+	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
+	if(occ==0) { // if not completed, suspend this wi
+		self->cur_wi = NULL;
+		lwt_continue(&self->basestack, &swi->stack_ptr);
+	}
 }
 void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
 	irt_worker* self = irt_worker_get_current();
@@ -143,9 +167,14 @@ void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
 }
 
 void irt_wi_end(irt_work_item* wi) {
-	wi->state = IRT_WI_STATE_DONE;
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
+	if(worker->lazy_count>0) {
+		// ending wi was lazily executed
+		worker->lazy_count--;
+		return;
+	}
+	wi->state = IRT_WI_STATE_DONE;
 	worker->cur_wi = NULL;
 	if(irt_wi_is_fragment(wi)) {
 		// ended wi was a fragment
@@ -154,6 +183,7 @@ void irt_wi_end(irt_work_item* wi) {
 		irt_atomic_fetch_and_sub(&source->num_fragments, 1);
 		if(source->num_fragments == 0) irt_wi_end(source);
 	}
+	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }

@@ -89,7 +89,7 @@ namespace backend {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager;
+		FunctionManager functionManager(converter);
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;

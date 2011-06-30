@@ -36,18 +36,39 @@
 
 #pragma once
 
-#include "utils/deques.h"
-#include "utils/counted_deques.h"
+#include "declarations.h"
 
-IRT_DECLARE_DEQUE(work_item);
-IRT_DECLARE_COUNTED_DEQUE(work_item);
+#include "utils/lookup_tables.h"
 
-typedef struct _irt_worker_queue_pool_base {
-	irt_work_item_cdeque queue;
-	irt_work_item_deque pool;
-} irt_worker_queue_pool_base;
+IRT_MAKE_ID_TYPE(wi_event_register);
 
-typedef struct _irt_wi_queue_pool_base {
-	struct _irt_work_item* work_deque_next;
-	struct _irt_work_item* work_deque_prev;
-} irt_wi_queue_pool_base;
+typedef bool (irt_event_lambda_func)(irt_wi_event_register* source_event_register, void *user_data);
+
+typedef struct _irt_event_lambda {
+	irt_event_lambda_func *func;
+	void *data;
+	struct _irt_event_lambda *next;
+} irt_event_lambda;
+
+typedef enum _irt_wi_event_code {
+	IRT_WI_EV_COMPLETED, 
+	IRT_WI_EV_NUM // sentinel
+} irt_wi_event_code;
+
+struct _irt_wi_event_register {
+	irt_wi_event_register_id id;
+	uint32 occurence_count[IRT_WI_EV_NUM];
+	irt_event_lambda *handler[IRT_WI_EV_NUM];
+	pthread_spinlock_t lock;
+	struct _irt_wi_event_register *lookup_table_next;
+};
+
+IRT_DEFINE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
+
+/* Registers a new event handler for the work item identified by wi_id, for the event event_code
+ * If the event has already occurred the event handler will be executed immediately */
+uint32 irt_wi_event_check_and_register(irt_work_item_id wi_id, irt_wi_event_code event_code, irt_event_lambda *handler);
+
+/* Triggers the event event_code on work item wi_id. 
+ * This will execute (and potentially remove) all the associated event handlers */
+void irt_wi_event_trigger(irt_work_item_id wi_id, irt_wi_event_code event_code);

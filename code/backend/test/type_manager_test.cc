@@ -71,10 +71,6 @@ bool notContainsSubString(const string& str, const string& substr) {
 	return !containsSubString(str, substr);
 }
 
-string toC(const c_ast::CodeFragmentPtr& fragment) {
-	return toString(*fragment);
-}
-
 
 TEST(TypeManager, Basic) {
 
@@ -94,15 +90,16 @@ TEST(TypeManager, Basic) {
 	TypeManager typeManager(converter);
 
 	TypeInfo info;
-	auto lit = cManager->create("X");
+	auto lit = cManager->create<c_ast::Literal>("X");
+
 
 	core::TypePtr type = basic.getInt4();
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("int", toC(info.lValueType));
 	EXPECT_EQ("int", toC(info.rValueType));
 	EXPECT_EQ("int", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE(info.definition);
 	EXPECT_FALSE(info.declaration);
 
@@ -111,8 +108,8 @@ TEST(TypeManager, Basic) {
 	EXPECT_EQ("long", toC(info.lValueType));
 	EXPECT_EQ("long", toC(info.rValueType));
 	EXPECT_EQ("long", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE(info.definition);
 	EXPECT_FALSE(info.declaration);
 
@@ -121,8 +118,8 @@ TEST(TypeManager, Basic) {
 	EXPECT_EQ("float", toC(info.lValueType));
 	EXPECT_EQ("float", toC(info.rValueType));
 	EXPECT_EQ("float", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE(info.definition);
 	EXPECT_FALSE(info.declaration);
 
@@ -132,8 +129,8 @@ TEST(TypeManager, Basic) {
 	EXPECT_EQ("double", toC(info.lValueType));
 	EXPECT_EQ("double", toC(info.rValueType));
 	EXPECT_EQ("double", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE(info.definition);
 	EXPECT_FALSE(info.declaration);
 
@@ -142,8 +139,8 @@ TEST(TypeManager, Basic) {
 	EXPECT_EQ("bool", toC(info.lValueType));
 	EXPECT_EQ("bool", toC(info.rValueType));
 	EXPECT_EQ("bool", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE(info.definition == info.declaration);
@@ -169,16 +166,15 @@ TEST(TypeManager, StructTypes) {
 	TypeManager typeManager(converter);
 
 	TypeInfo info;
-	auto lit = cManager->create("X");
-
+	auto lit = cManager->create<c_ast::Literal>("X");
 
 	core::TypePtr type = builder.structType(core::NamedCompositeType::Entries());
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("struct name", toC(info.lValueType));
 	EXPECT_EQ("struct name", toC(info.rValueType));
 	EXPECT_EQ("struct name", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 
@@ -191,8 +187,8 @@ TEST(TypeManager, StructTypes) {
 	EXPECT_EQ("struct name", toC(info.lValueType));
 	EXPECT_EQ("struct name", toC(info.rValueType));
 	EXPECT_EQ("struct name", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
@@ -227,16 +223,15 @@ TEST(TypeManager, RefTypes) {
 	TypeManager typeManager(converter);
 
 	RefTypeInfo info;
-	auto lit = cManager->create("X");
-
+	auto lit = cManager->create<c_ast::Literal>("X");
 
 	core::RefTypePtr type = builder.refType(basic.getInt4());
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("int", toC(info.lValueType));
 	EXPECT_EQ("int*", toC(info.rValueType));
 	EXPECT_EQ("int*", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE((bool)info.declaration);
 	EXPECT_FALSE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -248,8 +243,8 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("long", toC(info.lValueType));
 	EXPECT_EQ("long*", toC(info.rValueType));
 	EXPECT_EQ("long*", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE((bool)info.declaration);
 	EXPECT_FALSE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -261,8 +256,8 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("float", toC(info.lValueType));
 	EXPECT_EQ("float*", toC(info.rValueType));
 	EXPECT_EQ("float*", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_FALSE((bool)info.declaration);
 	EXPECT_FALSE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -274,8 +269,8 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("struct name", toC(info.lValueType));
 	EXPECT_EQ("struct name*", toC(info.rValueType));
 	EXPECT_EQ("struct name*", toC(info.externalType));
-	EXPECT_EQ("X", toC(info.externalize(lit, cManager)));
-	EXPECT_EQ("X", toC(info.internalize(lit, cManager)));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -294,7 +289,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("int*", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(lit, cManager)));
+	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -308,7 +303,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("int**", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(lit, cManager)));
+	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -322,7 +317,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("int[4]", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(lit, cManager)));
+	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -336,7 +331,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("name[4]", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(lit, cManager)));
+	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);

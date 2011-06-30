@@ -194,7 +194,7 @@ namespace backend {
 
 	namespace detail {
 
-		c_ast::NodePtr NoOp(const c_ast::NodePtr& node, c_ast::SharedCNodeManager&) {
+		c_ast::ExpressionPtr NoOp(c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
 			return node;
 		}
 
@@ -213,7 +213,7 @@ namespace backend {
 		template<typename T = TypeInfo>
 		T* createInfo(c_ast::CNodeManager& nodeManager, const string& name) {
 			c_ast::IdentifierPtr ident = nodeManager.create(name);
-			c_ast::TypePtr type = nodeManager.create<c_ast::PrimitiveType>(ident);
+			c_ast::TypePtr type = nodeManager.create<c_ast::NamedType>(ident);
 			return createInfo<T>(type);
 		}
 
@@ -359,11 +359,10 @@ namespace backend {
 
 			if (basic.isBool(ptr)) {
 
-				c_ast::IdentifierPtr identInt = manager.create("int");
-				c_ast::TypePtr intType = manager.create<c_ast::PrimitiveType>(identInt);
-				c_ast::IdentifierPtr identBool = manager.create("bool");
-				c_ast::TypePtr boolType = manager.create<c_ast::PrimitiveType>(identBool);
+				c_ast::TypePtr intType = manager.create<c_ast::PrimitiveType>(c_ast::PrimitiveType::INT);
 
+				c_ast::IdentifierPtr identBool = manager.create("bool");
+				c_ast::TypePtr boolType = manager.create<c_ast::NamedType>(identBool);
 				c_ast::TypeDefinitionPtr def = manager.create<c_ast::TypeDefinition>(intType, identBool);
 				c_ast::CCodeFragmentPtr definition = c_ast::CCodeFragment::createNew(converter.getCNodeManager(), def);
 
@@ -416,7 +415,7 @@ namespace backend {
 				c_ast::IdentifierPtr name = manager->create(entry.first->getName());
 				const TypeInfo* info = resolveType(entry.second);
 				c_ast::TypePtr elementType = info->rValueType;
-				type->elements.push_back(std::make_pair(name, elementType));
+				type->elements.push_back(var(elementType, name));
 
 				// remember definitons
 				if (info->definition) {
@@ -494,26 +493,26 @@ namespace backend {
 			c_ast::IdentifierPtr dataPointerName = manager->create("data");
 
 			// create externalizer
-			res->externalize = [dataPointerName](const c_ast::NodePtr& node, c_ast::SharedCNodeManager& manager) {
+			res->externalize = [dataPointerName](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return access(node, dataPointerName);
 			};
 
 			// create internalizer
-			res->internalize = [arrayType](const c_ast::NodePtr& node, c_ast::SharedCNodeManager& manager) {
+			res->internalize = [arrayType](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return init(arrayType, node);
 			};
 
 			// create declaration = definition ... create struct
 			c_ast::StructTypePtr arrayStructType = manager->create<c_ast::StructType>(structName);
-			arrayStructType->elements.push_back(std::make_pair(dataPointerName, dataPointer));
+			arrayStructType->elements.push_back(var(dataPointer, dataPointerName));
 
 			// add size element - if requested
 			if (supportSize) {
 				c_ast::IdentifierPtr sizeName = manager->create("size");
-				c_ast::TypePtr sizeType = manager->create<c_ast::PrimitiveType>(manager->create("unsigned"));
+				c_ast::TypePtr sizeType = manager->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UNSIGNED);
 				c_ast::LiteralPtr dimensions = manager->create<c_ast::Literal>(boost::lexical_cast<string>(dim));
 				sizeType = manager->create<c_ast::VectorType>(sizeType, dimensions);
-				arrayStructType->elements.push_back(std::make_pair(sizeName, sizeType));
+				arrayStructType->elements.push_back(var(sizeType, sizeName));
 			}
 
 			c_ast::NodePtr definition = manager->create<c_ast::TypeDefinition>(arrayStructType, name);
@@ -613,18 +612,18 @@ namespace backend {
 			c_ast::IdentifierPtr dataElementName = manager->create("data");
 
 			// create externalizer
-			res->externalize = [dataElementName](const c_ast::NodePtr& node, c_ast::SharedCNodeManager& manager) {
+			res->externalize = [dataElementName](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return access(node, dataElementName);
 			};
 
 			// create internalizer
-			res->internalize = [vectorType](const c_ast::NodePtr& node, c_ast::SharedCNodeManager& manager) {
+			res->internalize = [vectorType](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return init(vectorType, node);
 			};
 
 			// create declaration = definition ... create struct
 			c_ast::StructTypePtr vectorStructType = manager->create<c_ast::StructType>(structName);
-			vectorStructType->elements.push_back(std::make_pair(dataElementName, pureVectorType));
+			vectorStructType->elements.push_back(var(pureVectorType, dataElementName));
 
 			c_ast::NodePtr definition = manager->create<c_ast::TypeDefinition>(vectorStructType, name);
 			res->declaration = c_ast::CCodeFragment::createNew(manager, definition);
@@ -640,10 +639,12 @@ namespace backend {
 
 			// ---------------------- add init uniform ---------------------
 
+			c_ast::VariablePtr valueParam = manager->create<c_ast::Variable>(elementTypeInfo->lValueType, manager->create("value"));
+
 			std::stringstream code;
 			code << "/* A constructor initializing a vector of type " << vectorName << " = "<< toString(*ptr) << " uniformly */ \n"
 					"static inline " << vectorName << " " << initUniformName << "("
-							<< c_ast::ParameterPrinter(elementTypeInfo->lValueType, manager->create("value")) << ") {\n"
+							<< c_ast::ParameterPrinter(valueParam) << ") {\n"
 					"    " << vectorName << " res;\n"
 					"    for(int i=0; i<" << size << ";++i) {\n"
 					"        res.data[i] = value;\n"
@@ -706,21 +707,21 @@ namespace backend {
 				res->internalize = &NoOp;
 			} else {
 				// requires a cast
-				res->externalize = [res](const c_ast::NodePtr& node, c_ast::SharedCNodeManager&) {
+				res->externalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					return c_ast::cast(res->externalType, node);
 				};
-				res->internalize = [res](const c_ast::NodePtr& node, c_ast::SharedCNodeManager&) {
+				res->internalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					return c_ast::cast(res->rValueType, node);
 				};
 			}
 
 			// special treatment for exporting arrays and vectors
 			if (elementNodeType == core::NT_ArrayType || elementNodeType == core::NT_VectorType) {
-				res->externalize = [res](const c_ast::NodePtr& node, c_ast::SharedCNodeManager& manager) {
+				res->externalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// generated code: ((externalName)X.data)
 					return c_ast::access(node, manager->create("data"));
 				};
-				res->internalize = [res](const c_ast::NodePtr& node, c_ast::SharedCNodeManager&) {
+				res->internalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					assert(false && "Not implemented");
 					// TODO: call constructor for underlying array type
 					return c_ast::cast(res->rValueType, node);
@@ -797,12 +798,7 @@ namespace backend {
 
 
 			// construct the function type => struct including a function pointer
-			structType->elements.push_back(
-					std::make_pair(
-							manager->create("call"),
-							manager->create<c_ast::PointerType>(functionType)
-					)
-			);
+			structType->elements.push_back(var(manager->create<c_ast::PointerType>(functionType), "call"));
 			res->declaration = c_ast::CCodeFragment::createNew(manager, manager->create<c_ast::TypeDefinition>(structType, manager->create(name)));
 			res->declaration->addDependencies(dependencies);
 			res->definition = res->declaration;

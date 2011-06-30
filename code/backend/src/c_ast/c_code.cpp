@@ -166,11 +166,11 @@ namespace c_ast {
 	}
 
 	std::ostream& CCodeFragment::printTo(std::ostream& out) const {
-		// check whether code is set
-		if (!code) { return out; }
-
 		// use C-AST printer to generate code
-		return out << CPrint(code);
+		for_each(code, [&](const c_ast::NodePtr& cur) {
+			out << CPrint(cur) << "\n";
+		});
+		return out;
 	}
 
 	CodeFragmentPtr DummyFragment::createNew(const vector<CodeFragmentPtr>& dependencies) {

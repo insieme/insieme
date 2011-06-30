@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/backend/c_ast/c_ast.h"
+#include "insieme/backend/c_ast/c_code.h"
 
 #include "insieme/utils/printable.h"
 
@@ -73,12 +74,15 @@ namespace c_ast {
 
 	string toC(const NodePtr& node);
 
+	string toC(const c_ast::CodeFragmentPtr& fragment);
 
 	struct ParameterPrinter : public utils::Printable {
-		const c_ast::TypePtr type;
-		const c_ast::IdentifierPtr name;
+		const vector<c_ast::VariablePtr> params;
 	public:
-		ParameterPrinter(const TypePtr& type, const IdentifierPtr& name) : type(type), name(name) {}
+		ParameterPrinter(const TypePtr& type, const IdentifierPtr& name)
+			: params(toVector(type->getManager()->create<c_ast::Variable>(type, name))) {}
+		ParameterPrinter(const VariablePtr& param) : params(toVector(param)) {}
+		ParameterPrinter(const vector<VariablePtr>& params) : params(params) {}
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};

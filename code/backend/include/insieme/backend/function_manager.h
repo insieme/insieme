@@ -36,13 +36,103 @@
 
 #pragma once
 
+#include "insieme/core/forward_decls.h"
+
+#include "insieme/backend/c_ast/c_code.h"
+
 namespace insieme {
 namespace backend {
 
+	class Converter;
+	class FunctionInfo;
+	class LambdaInfo;
+	class BindInfo;
+
+	namespace detail {
+		class FunctionInfoStore;
+	}
+
 	class FunctionManager {
+
+		const Converter& converter;
+
+		detail::FunctionInfoStore* store;
+
+	public:
+
+		FunctionManager(const Converter& converter);
+
+		~FunctionManager();
+
+		const FunctionInfo& getInfo(const core::LiteralPtr& literal);
+
+		const LambdaInfo& getInfo(const core::LambdaExprPtr& lambda);
+
+		const BindInfo& getInfo(const core::BindExprPtr& bind);
+
+//		const c_ast::NodePtr getCallable(const core::LiteralPtr& literal);
+//
+//		const c_ast::NodePtr getCallable(const core::LambdaExprPtr& lambda);
+//
+//		const c_ast::NodePtr getCallable(const core::BindExprPtr& bind);
+
+		const c_ast::NodePtr getValue(const core::LiteralPtr& literal);
+
+		const c_ast::NodePtr getValue(const core::LambdaExprPtr& literal);
+
+		const c_ast::NodePtr getValue(const core::BindExprPtr& literal);
 
 	};
 
+
+	struct ElementInfo {
+
+		virtual ~ElementInfo() {}
+	};
+
+	struct FunctionInfo : public ElementInfo {
+
+		// to be included:
+		// 		- the C-AST function represented
+		//		- prototype
+		//		- definition
+		//		- lambdaWrapper
+
+		c_ast::FunctionPtr function;
+
+		c_ast::CodeFragmentPtr prototype;
+
+		c_ast::CodeFragmentPtr lambdaWrapper;
+
+
+	};
+
+	struct LambdaInfo : public FunctionInfo {
+
+		// to be included
+		// 		- the definition of the function
+
+		c_ast::CodeFragmentPtr definition;
+
+	};
+
+	struct BindInfo : public ElementInfo {
+
+		// to be included
+		//		- the closure type definition
+		//		- the mapper function definition
+		//		- the constructor
+
+		c_ast::IdentifierPtr closureName;
+
+		c_ast::TypePtr closureType;
+
+		c_ast::CodeFragmentPtr definitions;
+
+		c_ast::IdentifierPtr mapperName;
+
+		c_ast::IdentifierPtr constructorName;
+	};
 
 } // end namespace backend
 } // end namespace insieme

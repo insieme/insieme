@@ -97,6 +97,14 @@ void* _irt_worker_func(void *argvp) {
 	self->state = IRT_WORKER_STATE_CREATED;
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
+	// init lazy wi
+	memset(&self->lazy_wi, 0, sizeof(irt_work_item));
+	self->lazy_wi.id.cached = &self->lazy_wi;
+	self->lazy_wi.state = IRT_WI_STATE_DONE;
+	self->lazy_count = 0;
+	// init reuse lists
+	self->wi_ev_register_list = NULL; // prepare some?
+
 	arg->ready = true;
 
 	while(!self->state == IRT_WORKER_STATE_START) { pthread_yield(); } // MARK busy wait
@@ -129,6 +137,25 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	}
+}
+
+void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi) {
+	irt_work_item *cur_wi = self->cur_wi;
+	// store current wi data
+	irt_lw_data_item* params = cur_wi->parameters;
+	irt_work_item_range range = cur_wi->range;
+	irt_wi_implementation_id impl_id = cur_wi->impl_id;
+	// set new wi data
+	cur_wi->parameters = wi->parameters;
+	cur_wi->range = wi->range;
+	cur_wi->impl_id = wi->impl_id;
+	// call wi
+	self->lazy_count++;
+	(irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation)(cur_wi);
+	// restore data
+	cur_wi->parameters = params;
+	cur_wi->range = range;
+	cur_wi->impl_id = impl_id;
 }
 
 irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {

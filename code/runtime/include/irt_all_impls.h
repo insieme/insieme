@@ -43,10 +43,11 @@
 #include "impl/irt_scheduling.impl.h"
 #include "impl/irt_mqueue.impl.h"
 #include "impl/data_item.impl.h"
+#include "impl/work_group.impl.h"
+#include "impl/irt_events.impl.h"
 #include "irt_types.h"
 #include "wi_implementation.h"
 #include "utils/timing.h"
-#include "impl/work_group.impl.h"
 #include "runtime.h"
 
 #ifdef USE_OPENCL 
