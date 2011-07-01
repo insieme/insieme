@@ -200,7 +200,7 @@ namespace c_ast {
 	bool Compound::equals(const Node& node) const {
 		assert(dynamic_cast<const Compound*>(&node));
 		auto other = static_cast<const Compound&>(node);
-		return ::equals(statements, other.statements, equal_target<StatementPtr>());
+		return ::equals(statements, other.statements, equal_target<NodePtr>());
 	}
 
 	bool If::equals(const Node& node) const {

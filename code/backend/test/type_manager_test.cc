@@ -571,15 +571,27 @@ TEST(TypeManager, FunctionTypes) {
 	EXPECT_EQ("name", toC(info.rValueType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
+	EXPECT_TRUE((bool)info.callerName);
+	EXPECT_TRUE((bool)info.caller);
+	EXPECT_TRUE((bool)info.constructorName);
+	EXPECT_TRUE((bool)info.constructor);
+
+	EXPECT_EQ("name_call", toC(info.callerName));
+	EXPECT_EQ("name_ctr", toC(info.constructorName));
+
 	EXPECT_PRED2(containsSubString, toC(info.definition), "struct _name");
 	EXPECT_PRED2(containsSubString, toC(info.definition), "float(* call)(struct _name*,int,bool);");
 
 	EXPECT_PRED2(containsSubString, toC(info.caller), "static inline float name_call(name* closure, int p1, bool p2) {\n    return closure->call(closure, p1, p2);\n}\n");
 
-	EXPECT_TRUE((bool)info.callerName);
-	EXPECT_TRUE((bool)info.caller);
+	EXPECT_PRED2(containsSubString, toC(info.constructor),
+			"static inline name* name_ctr(name* target, float(* call)(struct _name*,int,bool)) {\n"
+			"    *target = (name){call};\n"
+			"    return target;\n"
+			"}");
 
 	EXPECT_TRUE(contains(info.caller->getDependencies(), info.definition));
+	EXPECT_TRUE(contains(info.constructor->getDependencies(), info.definition));
 }
 
 TEST(TypeManager, RecursiveTypes) {

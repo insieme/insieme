@@ -194,7 +194,7 @@ namespace backend {
 
 	namespace detail {
 
-		c_ast::ExpressionPtr NoOp(c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
+		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
 			return node;
 		}
 
@@ -493,12 +493,12 @@ namespace backend {
 			c_ast::IdentifierPtr dataPointerName = manager->create("data");
 
 			// create externalizer
-			res->externalize = [dataPointerName](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+			res->externalize = [dataPointerName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return access(node, dataPointerName);
 			};
 
 			// create internalizer
-			res->internalize = [arrayType](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+			res->internalize = [arrayType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return init(arrayType, node);
 			};
 
@@ -612,12 +612,12 @@ namespace backend {
 			c_ast::IdentifierPtr dataElementName = manager->create("data");
 
 			// create externalizer
-			res->externalize = [dataElementName](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+			res->externalize = [dataElementName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return access(node, dataElementName);
 			};
 
 			// create internalizer
-			res->internalize = [vectorType](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+			res->internalize = [vectorType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 				return init(vectorType, node);
 			};
 
@@ -707,21 +707,21 @@ namespace backend {
 				res->internalize = &NoOp;
 			} else {
 				// requires a cast
-				res->externalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					return c_ast::cast(res->externalType, node);
 				};
-				res->internalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					return c_ast::cast(res->rValueType, node);
 				};
 			}
 
 			// special treatment for exporting arrays and vectors
 			if (elementNodeType == core::NT_ArrayType || elementNodeType == core::NT_VectorType) {
-				res->externalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// generated code: ((externalName)X.data)
 					return c_ast::access(node, manager->create("data"));
 				};
-				res->internalize = [res](c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
+				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					assert(false && "Not implemented");
 					// TODO: call constructor for underlying array type
 					return c_ast::cast(res->rValueType, node);
@@ -798,7 +798,8 @@ namespace backend {
 
 
 			// construct the function type => struct including a function pointer
-			structType->elements.push_back(var(manager->create<c_ast::PointerType>(functionType), "call"));
+			c_ast::VariablePtr varCall = var(manager->create<c_ast::PointerType>(functionType), "call");
+			structType->elements.push_back(varCall);
 			res->declaration = c_ast::CCodeFragment::createNew(manager, manager->create<c_ast::TypeDefinition>(structType, manager->create(name)));
 			res->declaration->addDependencies(dependencies);
 			res->definition = res->declaration;
@@ -854,6 +855,33 @@ namespace backend {
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
 			res->caller = c_ast::CCodeFragment::createNew(manager, cCode);
 			res->caller->addDependency(res->definition);
+
+
+			// ---------------- add constructor ------------------------
+
+			// Shape of the constructor:
+			//
+			//  	static inline functorName* name_ctr(functorName* target, caller* call) {
+			//			*target = (functorName){call};
+			//			return target;
+			//		}
+
+			res->constructorName = manager->create(ctrName);
+
+			c_ast::FunctionPtr constructor = manager->create<c_ast::Function>();
+
+			constructor->returnType = manager->create<c_ast::PointerType>(res->rValueType);
+			constructor->name = res->constructorName;
+			constructor->flags = c_ast::Function::STATIC | c_ast::Function::INLINE;
+			c_ast::VariablePtr varTarget = c_ast::var(constructor->returnType, "target");
+			constructor->parameter.push_back(varTarget);
+			constructor->parameter.push_back(varCall);
+
+			c_ast::StatementPtr assign = c_ast::assign(c_ast::deref(varTarget), c_ast::init(res->rValueType, varCall));
+			constructor->body = c_ast::compound(assign, c_ast::ret(varTarget));
+
+			res->constructor = c_ast::CCodeFragment::createNew(manager, constructor);
+			res->constructor->addDependency(res->definition);
 
 			// done
 			return res;

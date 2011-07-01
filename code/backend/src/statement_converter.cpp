@@ -36,6 +36,9 @@
 
 #include "insieme/backend/statement_converter.h"
 
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/function_manager.h"
+
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_code.h"
@@ -93,6 +96,8 @@ namespace backend {
 		// get shared C Node Manager reference
 		const c_ast::SharedCNodeManager& manager = context.cNodeManager;
 
+
+
 		// program is not producing any C code => just dependencies
 		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
 
@@ -100,8 +105,15 @@ namespace backend {
 			std::set<c_ast::CodeFragmentPtr> dependencies;
 			StmtConversionContext entryContext(manager, dependencies);
 
-			// create new fragment
-			auto fragment = toCodeFragment(entryContext, this->visit(entryPoint, entryContext));
+			c_ast::CodeFragmentPtr fragment;
+			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
+				// handle function-entry point specially
+				core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(entryPoint);
+				fragment = converter.getFunctionManager().getInfo(lambda).definition;
+			} else {
+				// use default conversion
+				fragment = toCodeFragment(entryContext, this->visit(entryPoint, entryContext));
+			}
 
 			// add converted fragment to dependency list
 			context.dependencies.insert(fragment);
@@ -109,65 +121,72 @@ namespace backend {
 		});
 
 		// create empty node (program does not represent any code)
-		return 0;
+		return manager->create<c_ast::OpaqueCode>("");
 	}
 
 
 	////////////////////////////////////////////////////////////////////////// Expressions
 
 	c_ast::NodePtr StmtConverter::visitCallExpr(const core::CallExprPtr& ptr, StmtConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Literal>("/*UNSUPPORTED*/");
+		// handled by the function manager
+		return converter.getFunctionManager().getCall(ptr, context.dependencies);
 	}
 
-	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitBindExpr(const core::BindExprPtr& ptr, StmtConversionContext& context) {
+		// handled by the function manager
+		return converter.getFunctionManager().getValue(ptr, context.dependencies);
+	}
 
-	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitCastExpr(const core::CastExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("UNSUPPORTED");
+	}
 
-	c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitJobExpr(const core::JobExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("UNSUPPORTED");
+	}
 
 	c_ast::NodePtr StmtConverter::visitLambdaExpr(const core::LambdaExprPtr& ptr, StmtConversionContext& context) {
-
-		// obtain function manager reference
-		FunctionManager& funManager = converter.getFunctionManager();
-
-		// create function
-
-//		CodeFragmentPtr& code = currentCodeFragment;
-//
-//		// obtain name of resulting function type and add cast
-//		FunctionTypePtr funType = static_pointer_cast<const FunctionType>(ptr->getType());
-//		const TypeManager::FunctionTypeInfo& info = cc.getTypeManager().getFunctionTypeInfo(funType);
-//		const string& name = info.closureName;
-//		code << "(" << name << "*)" << name << "_ctr(";
-//
-//		// allocate memory
-//		code << "(" << name << "*)alloca(sizeof(" + name + ")),";
-//		code << "&" << funManager.getFunctionName(currentCodeFragment, ptr);
-//		code << "_wrap)";
-
-		// get reference to C node manager
-		const c_ast::SharedCNodeManager& astManager = context.cNodeManager;
-
-		return astManager->create<c_ast::Comment>("I owe you a lambda!");
-
-//		return visitNode(ptr, context);
+		// handled by the function manager
+		return converter.getFunctionManager().getValue(ptr, context.dependencies);
 	}
 
 	c_ast::NodePtr StmtConverter::visitLiteral(const core::LiteralPtr& ptr, StmtConversionContext& context) {
+		// Function literals are handled by function manager
+		if (ptr->getType()->getNodeType() == core::NT_FunctionType) {
+			return converter.getFunctionManager().getValue(ptr, context.dependencies);
+		}
+
+		// the rest is just converted into a ordinary literal
 		return converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
 	}
 
-	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("UNSUPPORTED");
+	}
 
-	c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("UNSUPPORTED");
+	}
 
-	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("UNSUPPORTED");
+	}
 
-	c_ast::NodePtr StmtConverter::visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("UNSUPPORTED");
+	}
 
-	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, StmtConversionContext& context) {
+		// TODO: use variable manager to resolve variable (context specific)
 
-	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+		// for now, just add a hack
+		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
+		return c_ast::var(type, format("v%d", ptr->getId()));
+	}
+
+	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Literal>("UNSUPPORTED");
+	}
 
 	c_ast::NodePtr StmtConverter::visitMarkerExpr(const core::MarkerExprPtr& ptr, StmtConversionContext& context) {
 		// markers are just ignored
@@ -178,26 +197,42 @@ namespace backend {
 
 	////////////////////////////////////////////////////////////////////////// Statements
 
-	c_ast::NodePtr StmtConverter::visitBreakStmt(const core::BreakStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitBreakStmt(const core::BreakStmtPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Break>();
+	}
 
-	c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, StmtConversionContext& context) {
+		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("UNSUPPORTED"));
+	}
 
-	c_ast::NodePtr StmtConverter::visitContinueStmt(const core::ContinueStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitContinueStmt(const core::ContinueStmtPtr& ptr, StmtConversionContext& context) {
+		return converter.getCNodeManager()->create<c_ast::Continue>();
+	}
 
-	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, StmtConversionContext& context) {
+		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("UNSUPPORTED"));
+	}
 
-	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, StmtConversionContext& context) {
+		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("UNSUPPORTED"));
+	}
 
-	c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, StmtConversionContext& context) {
+		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("UNSUPPORTED"));
+	}
 
-	c_ast::NodePtr StmtConverter::visitWhileStmt(const core::WhileStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitWhileStmt(const core::WhileStmtPtr& ptr, StmtConversionContext& context) {
+		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("UNSUPPORTED"));
+	}
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, StmtConversionContext& context) {
 		// wrap sub-expression into return expression
 		return context.cNodeManager->create<c_ast::Return>(convertExpression(ptr->getReturnExpr(), context));
 	}
 
-	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, StmtConversionContext& context) { return visitNode(ptr, context); }
+	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, StmtConversionContext& context) {
+		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("UNSUPPORTED"));
+	}
 
 	c_ast::NodePtr StmtConverter::visitMarkerStmt(const core::MarkerStmtPtr& ptr, StmtConversionContext& context) {
 		// markers are just ignored

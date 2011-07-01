@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <set>
+
 #include "insieme/core/forward_decls.h"
 
 #include "insieme/backend/c_ast/c_code.h"
@@ -70,17 +72,11 @@ namespace backend {
 
 		const BindInfo& getInfo(const core::BindExprPtr& bind);
 
-//		const c_ast::NodePtr getCallable(const core::LiteralPtr& literal);
-//
-//		const c_ast::NodePtr getCallable(const core::LambdaExprPtr& lambda);
-//
-//		const c_ast::NodePtr getCallable(const core::BindExprPtr& bind);
+		const c_ast::NodePtr getCall(const core::CallExprPtr& call, std::set<c_ast::CodeFragmentPtr>& dependencies);
 
-		const c_ast::NodePtr getValue(const core::LiteralPtr& literal);
+		const c_ast::ExpressionPtr getValue(const core::ExpressionPtr& fun, std::set<c_ast::CodeFragmentPtr>& dependencies);
 
-		const c_ast::NodePtr getValue(const core::LambdaExprPtr& literal);
-
-		const c_ast::NodePtr getValue(const core::BindExprPtr& literal);
+		const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, std::set<c_ast::CodeFragmentPtr>& dependencies);
 
 	};
 
@@ -102,8 +98,9 @@ namespace backend {
 
 		c_ast::CodeFragmentPtr prototype;
 
-		c_ast::CodeFragmentPtr lambdaWrapper;
+		c_ast::IdentifierPtr lambdaWrapperName;
 
+		c_ast::CodeFragmentPtr lambdaWrapper;
 
 	};
 

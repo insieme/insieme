@@ -65,6 +65,11 @@ namespace c_ast {
 
 	};
 
+	// --- types ------------------------------------------------
+
+	inline PointerTypePtr ptr(const TypePtr& type) {
+		return type->getManager()->create<c_ast::PointerType>(type);
+	}
 
 	// --- create literals and variables ------------------------
 
@@ -94,6 +99,11 @@ namespace c_ast {
 	}
 
 	// --- all kind of overloaded operators ---
+
+	template<typename ... E>
+	inline CallPtr call(NodePtr fun, E ... args) {
+		return fun->getManager()->create<c_ast::Call>(fun, args ...);
+	}
 
 	// -- Unary Operations --------------------------------------
 
@@ -182,7 +192,7 @@ namespace c_ast {
 	}
 
 	template<typename ... E>
-	inline CompoundPtr compound(StatementPtr first, E ... rest) {
+	inline CompoundPtr compound(NodePtr first, E ... rest) {
 		return first->getManager()->create<Compound>(first, rest...);
 	}
 
