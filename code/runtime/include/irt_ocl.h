@@ -79,32 +79,48 @@ static void _irt_cl_release_device(cl_context context, cl_command_queue queue);
 static void _irt_cl_print_device_infos(cl_device_id* device);
 static void _irt_cl_print_device_info(cl_device_id* device, char* prefix, cl_device_info param_name, char* suffix);
 
+static cl_mem _irt_cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size);
+
 static char* _irt_load_program_source (const char* filename, size_t* filesize);
 static void _irt_save_program_binary (cl_program program, const char* binary_filename);
 static const char* _irt_error_string (cl_int err_code);
 
 //-------------------
 
+typedef struct _irt_ocl_buffer {
+	cl_mem cl_mem;
+	size_t size;
+	struct _irt_ocl_buffer* next;
+} irt_ocl_buffer;
+
 #define DEVICE_TYPE (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_CPU)
 
-typedef struct _irt_ocl_device{
+typedef struct _irt_ocl_device {
+	// generic info
 	cl_device_id cl_device;
 	cl_context cl_context;
 	cl_command_queue cl_queue;
+	
+	// buffers info
+	cl_ulong cl_mem_size;
+	cl_ulong cl_mem_available;
+	irt_ocl_buffer* cl_buffer;
+
 } irt_ocl_device;
 
 irt_ocl_device* devices;
 cl_uint num_devices;
 
-
 typedef enum {IRT_OCL_SOURCE, IRT_OCL_BINARY, IRT_OCL_NO_CACHE} irt_ocl_create_kernel_flag;  
 typedef enum {IRT_OCL_SEC, IRT_OCL_MILLI, IRT_OCL_NANO} irt_ocl_profile_event_flag;
 
 void irt_ocl_init_devices();
-void irt_ocl_finalize_devices();
+void irt_ocl_release_devices();
 
 cl_uint irt_ocl_get_num_devices();
 irt_ocl_device* irt_ocl_get_device(cl_uint id);
+
+irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size);
 
 void irt_ocl_print_device_info(irt_ocl_device* dev, char* prefix, cl_device_info param_name, char* suffix);
 void irt_ocl_print_device_infos(irt_ocl_device* dev);

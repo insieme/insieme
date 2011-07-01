@@ -80,7 +80,7 @@ void irt_term_handler(int signal) {
 }
 void irt_exit_handler() {
 #ifdef USE_OPENCL
-	irt_ocl_finalize_devices();	
+	irt_ocl_release_devices();	
 #endif
 	irt_cleanup_globals();
 	free(irt_g_workers);
