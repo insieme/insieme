@@ -59,15 +59,15 @@ public:
 
 	// Set of array accesses which appears strictly within this SCoP, array
 	// access in sub SCoPs will be directly referred from sub SCoPs. 
-	// typedef std::set<AccessRef> AccessRefSet; 
-
+	typedef std::set<RefPtr> AccessRefSet; 
 
 	ScopRegion( const poly::IterationVector& iv, 
 			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),
-			const StmtList& subScops = StmtList() ) : 
+			const StmtList& subScops = StmtList(),
+			const AccessRefSet& accesses = AccessRefSet() ) : 
 		core::NodeAnnotation(), iterVec(iv), 
 		constraints(poly::cloneConstraint(iterVec, comb)),
-		subScops(subScops) { } 
+		subScops(subScops), accesses(accesses) { } 
 
 	const std::string& getAnnotationName() const { return NAME; }
 
@@ -107,7 +107,7 @@ private:
 	StmtList subScops;
 
 	// Access informations 
-	// AccessRefSet accesses;
+	AccessRefSet accesses;
 };
 
 /**

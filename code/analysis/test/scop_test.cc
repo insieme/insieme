@@ -56,7 +56,7 @@ TEST(ScopRegion, CompoundStmt) {
     auto compStmt = parser.parseStatement(
 		"{\
 			decl int<4>:b = 20; \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a+b)));\
+			(op<array.subscript.1D>(ref<array<int<4>,1>>:v, (int<4>:a+b)));\
 		}"
 	);
 	// Mark scops in this code snippet
@@ -72,9 +72,9 @@ TEST(ScopRegion, IfStmt) {
 
     auto ifStmt = static_pointer_cast<const IfStmt>( parser.parseStatement("\
 		if((int<4>:c <= int<4>:d)){ \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a-int<4>:b))); \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:a-int<4>:b))); \
 		} else { \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (int<4>:a+int<4>:b))); \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:a+int<4>:b))); \
 		}") );
 	// std::cout << *ifStmt << std::endl;
 	// Mark scops in this code snippet
@@ -82,7 +82,7 @@ TEST(ScopRegion, IfStmt) {
 
 	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
-
+	
 	poly::IterationVector iterVec = ann.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
 
@@ -126,7 +126,7 @@ TEST(ScopRegion, SimpleForStmt) {
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
 		for(decl int<4>:i = 10 .. 50 : -1) { \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (i+int<4>:b))); \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
 		}") );
 	// std::cout << *forStmt << std::endl;
 	scop::mark(forStmt);
@@ -159,9 +159,9 @@ TEST(ScopRegion, ForStmt) {
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
 		for(decl int<4>:i = 10 .. 50 : 1) { \
-			(op<array.subscript.1D>(array<int<4>,1>:v, (i*int<4>:b))); \
+			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i*ref<int<4>>:b))); \
 			if ((i > 25)) { \
-				(int<4>:h = (op<array.subscript.1D>(array<int<4>,1>:v, ((int<4>:n+i)-1))));\
+				(int<4>:h = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1))));\
 			};\
 		}") );
 	// std::cout << *forStmt << std::endl;

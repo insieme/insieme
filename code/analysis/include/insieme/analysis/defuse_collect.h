@@ -54,6 +54,10 @@ typedef insieme::utils::set::PointerSet<StatementPtr> StatementSet;
 
 namespace analysis {
 
+class Ref;
+
+typedef std::shared_ptr<Ref> RefPtr; 
+
 /** 
  * Class Ref represent a generic IR ref which can be either assigned or read. In this context 
  * a Ref can be either a scalar variable, an array or a vector (having a ref type), a struct/class
@@ -101,6 +105,9 @@ private:
 	UseType usage; 
 };
 
+class ScalarRef;
+typedef std::shared_ptr<ScalarRef> ScalarRefPtr;
+
 // Thsi class represents a reference to a scalar variable. Because the baseExpr points to the
 // variable, we can safely cast the base expression to a variable reference  
 struct ScalarRef : public Ref {
@@ -110,6 +117,9 @@ struct ScalarRef : public Ref {
 	const core::VariablePtr& getVariable() const;
 	std::ostream& printTo(std::ostream& out) const;
 };
+
+class MemberRef;
+typedef std::shared_ptr<MemberRef> MemberRefPtr;
 
 // This class represents a reference to a struct member. It provides utility methods to easily
 // access to the field name being accessed and the type of the composite 
@@ -126,6 +136,9 @@ private:
 	core::LiteralPtr 			identifier;
 };
 
+class ArrayRef;
+typedef std::shared_ptr<ArrayRef> ArrayRefPtr;
+
 // In the case of arrays (or vectors), we also store the list of expressions used to index each of the
 // array dimensions. The baseExpr is used to point at the entire array subscript expression. 
 struct ArrayRef : public Ref { 
@@ -140,12 +153,15 @@ struct ArrayRef : public Ref {
 
 	const ExpressionList& getIndexExpressions() const { return idxExpr; }
 	
-	const core::ExpressionPtr& getSubscriptExpression() const { return exprPtr; }
+	const core::ExpressionPtr& getSubscriptExpression() const { return !exprPtr ? baseExpr : exprPtr; }
 
 private:
 	core::ExpressionPtr exprPtr;
 	ExpressionList 		idxExpr;
 };
+
+class CallRef;
+typedef std::shared_ptr<CallRef> CallRefPtr;
 
 // This class represents a reference to a struct member. It provides utility methods to easily
 // access to the field name being accessed and the type of the composite 
@@ -158,14 +174,13 @@ struct CallRef: public Ref {
 	const core::CallExprPtr& getCallExpr() const;
 };
 
-typedef std::shared_ptr<Ref> RefPtr; 
 
 // Store the set of refs found by the visitor 
 class RefList: public std::vector<RefPtr> {
 	
 public:
 	template <class T>
-	class ref_iterator : public boost::forward_iterator_helper<ref_iterator<T>, const T> { 
+	class ref_iterator : public boost::forward_iterator_helper<ref_iterator<T>, const std::shared_ptr<T>> { 
 		
 		RefList::const_iterator it, end;
 		Ref::RefType type;
@@ -188,9 +203,9 @@ public:
 				Ref::RefType type=Ref::ANY_REF, Ref::UseType usage=Ref::ANY_USE) : 
 			it(begin), end(end), type(type), usage(usage) { inc(true); }
 
-		const T& operator*() const { 
-			assert(it != end && dynamic_cast<const T*>(&**it) && "Iterator out of bounds"); 
-			return static_cast<const T&>(**it);
+		const std::shared_ptr<T> operator*() const { 
+			assert(it != end && "Iterator out of bounds"); 
+			return std::static_pointer_cast<T>(*it);
 		}
 
 		ref_iterator<T>& operator++() { inc(); return *this; }

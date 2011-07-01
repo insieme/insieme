@@ -100,8 +100,8 @@ std::ostream& ArrayRef::printTo(std::ostream& out) const {
 	out << "(" << *baseExpr << ")";
 	out << " IDX: {" << 
 		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ jout << *cur; } ) << "}";
-	if (!idxExpr.empty())
-		out << "\n\tSurrounding expr: " << *exprPtr;
+	//if (!idxExpr.empty())
+    //	out << "\n\tSurrounding expr: " << *exprPtr;
 	return out;
 }
 

@@ -133,11 +133,13 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 	assert(false);
 }
 
-AffineFunction extractAccessExpression(IterationVector& iterVec, const ExpressionPtr& expr) {
+IterationVector markAccessExpression(const ExpressionPtr& expr) {
 	try {
-		AffineFunction af(iterVec, expr);
-		//expr->addAnnotation( std::make_shared<AccessFunction>( iterVec, EqualityConstraint(af) ) );
-		return af;
+		IterationVector it;
+		expr->addAnnotation( 
+			std::make_shared<insieme::analysis::scop::AccessFunction>( it, EqualityConstraint( AffineFunction(it, expr) ) ) 
+		);
+		return it;
 	} catch(const NotAffineExpr& e) { throw NotASCoP(expr); }
 }
 
@@ -156,13 +158,18 @@ const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
 
 const std::string ScopRegion::toString() const {
 	std::ostringstream ss;
-	ss << "IterationVector: " << iterVec << "\\n";
+	ss << "IterationVector: " << iterVec;
 	if (constraints) {
-		ss << "Constraints: " << *constraints;
+		ss << "\\nConstraints: " << *constraints;
 	}
 	if (!subScops.empty()) {
-		ss << " SubScops: " << subScops.size();
+		ss << "\\nSubScops: " << subScops.size();
 	}
+	if (!accesses.empty()) {
+		ss << "\\nAccesses: " << accesses.size() << "{" << 
+		join(",", accesses, [&](std::ostream& jout, const RefPtr& cur){ jout << *cur; } ) << "}";
+	}
+
 	return ss.str();
 }
 
@@ -189,6 +196,7 @@ public:
 
 	IterationVector visitIfStmt(const IfStmtPtr& ifStmt) {
 		IterationVector ret, saveThen, saveElse;
+		RefList thenRefs, elseRefs;
 		ScopRegion::StmtList thenScops, elseScops;
 		bool isThenSCOP = true, isElseSCOP = true;
 
@@ -196,18 +204,52 @@ public:
 			subScops.clear();
 			// check the then body
 			ret = merge(ret, visit(ifStmt->getThenBody()));
+			
+			RefList&& refs = collectDefUse( ifStmt->getThenBody(), StatementSet(subScops.begin(), subScops.end()) );
+			
+			// For now we only consider array access. 
+			//
+			// FIXME: In the future also scalars should be properly handled using technique like scalar
+			// arrays and so forth
+			std::for_each(refs.arrays_begin(), refs.arrays_end(),
+				[&](const ArrayRefPtr& cur) { 
+					const ExpressionList& idxExprs = cur->getIndexExpressions();
+					std::for_each(idxExprs.begin(), idxExprs.end(), 
+						[&](const ExpressionPtr& cur){	ret = merge(ret, markAccessExpression(cur)); }
+					);
+				} 
+			);
+
 			// save the sub scops of the then body
 			thenScops = subScops;
 			saveThen = ret;
+			thenRefs = refs;
 		} catch (const NotASCoP& e) { isThenSCOP = false; }
-
+		
 		try {
 			subScops.clear();
 			// check the else body
 			ret = merge(ret, visit(ifStmt->getElseBody()));
+
+			RefList&& refs = collectDefUse( ifStmt->getElseBody(), StatementSet(subScops.begin(), subScops.end()) );
+			
+			// For now we only consider array access. 
+			//
+			// FIXME: In the future also scalars should be properly handled using technique like scalar
+			// arrays and so forth
+			std::for_each(refs.arrays_begin(), refs.arrays_end(),
+				[&](const ArrayRefPtr& cur) { 
+					const ExpressionList& idxExprs = cur->getIndexExpressions();
+					std::for_each(idxExprs.begin(), idxExprs.end(), 
+						[&](const ExpressionPtr& cur){	ret = merge(ret, markAccessExpression(cur)); }
+					);
+				} 
+			);
+
 			// save the sub scops of the else body
 			elseScops = subScops; 
 			saveElse = ret;
+			elseRefs = refs;
 		} catch (const NotASCoP& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
@@ -231,11 +273,15 @@ public:
 
 		// if no exception has been thrown we are sure the sub else and then
 		// tree are ScopRegions, therefore this node can be marked as SCoP as well.
-		ifStmt->getThenBody()->addAnnotation( std::make_shared<ScopRegion>(ret, comb, thenScops) );
+		ifStmt->getThenBody()->addAnnotation( std::make_shared<ScopRegion>(ret, comb, thenScops, 
+				ScopRegion::AccessRefSet(thenRefs.arrays_begin(), thenRefs.arrays_end()) 
+				));
 		subScops.push_back( ifStmt->getThenBody() );
 		
 		// the else body is annotated with the negated domain
-		ifStmt->getElseBody()->addAnnotation( std::make_shared<ScopRegion>(ret, negate(comb), elseScops) );
+		ifStmt->getElseBody()->addAnnotation( std::make_shared<ScopRegion>(ret, negate(comb), elseScops, 
+				ScopRegion::AccessRefSet(elseRefs.arrays_begin(), elseRefs.arrays_end()) 
+				));
 		subScops.push_back( ifStmt->getElseBody() );
 		return ret;
 	}
@@ -249,21 +295,16 @@ public:
 		// as SCoPs and therefore we already collected information about def-uses in a previous
 		// iteration
 		RefList&& refs = collectDefUse( forStmt->getBody(), StatementSet(subScops.begin(), subScops.end()) );
-	
+		
 		// For now we only consider array access. 
 		//
 		// FIXME: In the future also scalars should be properly handled using technique like scalar
 		// arrays and so forth
 		std::for_each(refs.arrays_begin(), refs.arrays_end(),
-			[&](const ArrayRef& cur) { 
-				std::for_each(cur.getIndexExpressions().begin(), cur.getIndexExpressions().end(), 
-					[&](const ExpressionPtr& cur){	
-						IterationVector iv;	
-						AffineFunction af = extractAccessExpression(iv, cur);
-						cur->addAnnotation( std::make_shared<AccessFunction>( iv, EqualityConstraint(af) ) );
-
-						bodyIV = merge(bodyIV, iv);
-					}
+			[&](const ArrayRefPtr& cur) { 
+				const ExpressionList& idxExprs = cur->getIndexExpressions();
+				std::for_each(idxExprs.begin(), idxExprs.end(), 
+					[&](const ExpressionPtr& cur){	bodyIV = merge(bodyIV, markAccessExpression(cur)); }
 				);
 			} 
 		);
@@ -296,7 +337,11 @@ public:
 				);
 			ret = merge(ret,bodyIV);
 
-			forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, subScops) ); 
+			forStmt->addAnnotation( 
+				std::make_shared<ScopRegion>(ret, cons, subScops, 
+					ScopRegion::AccessRefSet(refs.arrays_begin(), refs.arrays_end())
+				) 
+			); 
 
 			subScops.clear();
 			// add this statement as a subscope
@@ -356,49 +401,28 @@ public:
 	}
 
 	IterationVector visitLambda(const LambdaPtr& lambda) {	
+		if ( lambda->hasAnnotation(ScopRegion::KEY) ) {
+			// if the SCopRegion annotation is already attached, it means we already visited this
+			// function, therefore we can return the iteration vector already precomputed 
+			return std::static_pointer_cast<ScopRegion>(lambda->getAnnotation(ScopRegion::KEY))->getIterationVector();
+		}
+		// otherwise we have to visit the body and attach the ScopRegion annotation 
 		IterationVector&& bodyIV = visit(lambda->getBody());
 		lambda->addAnnotation( std::make_shared<ScopRegion>(bodyIV) );
 		return bodyIV;
 	}
 
-	//IterationVector visitCallExpr(const CallExprPtr& callExpr) { 
-		//const NodeManager& mgr = callExpr->getNodeManager();
-		//if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
-			//// we have to check whether assignments to iterators or parameters
-			//// occurrs
+	//IterationVector visitCallExpr(const CallExprPtr& callExpr) {
+		//// if we have a call to a lambda we have to take care of setting the constraints which
+		//// enforce the fact that call expression arguments are assigned to the formal parameters fo
+		//// the function. therefore for a call expression f(a,b) of a function int f(int d, int e) 
+		//// the two constraints (d == a) and (e == b) needs to be generated 
+		//const ExpressionPtr& func = callExpr->getFunctionExpr();
+
+		//IterationVector&& ret = visit(func);
+		//if (func->getNodeType() == NT_LambdaExpr) {
 			
 		//}
-
-		//if (core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
-			//core::analysis::isCallOf(callExpr, mgr.basic.getArrayRefElem1D()) || 
-			//core::analysis::isCallOf(callExpr, mgr.basic.getVectorRefElem()) ) 
-		//{
-			//// This is a subscript expression and therefore the function
-			//// used to access the array has to analyzed to check if it is an
-			//// affine linear function. If not, then this branch is not a ScopRegion
-			//// and all the code regions embodying this statement has to be
-			//// marked as non-ScopRegion. 
-			//assert(callExpr->getArguments().size() == 2 && 
-					//"Subscript expression with more than 2 arguments.");
-			//IterationVector&& subIV = visit(callExpr->getArgument(0));
-		
-			//IterationVector it;
-			//try {
-				//AffineFunction af(it, callExpr->getArgument(1));
-					//callExpr->getArgument(1)->addAnnotation( 
-						//std::make_shared<AccessFunction>( it, EqualityConstraint(af) ) 
-					//);
-			//} catch(const NotAffineExpr& e) { throw NotASCoP(callExpr); }
-
-			//it = merge(subIV, it);	
-			//return it;
-		//}
-		
-        //IterationVector ret;
-		//const std::vector<ExpressionPtr>& args = callExpr->getArguments();
-		//std::for_each(args.begin(), args.end(), 
-			//[&](const ExpressionPtr& cur) { ret = merge(ret, this->visit(cur)); } );
-		//return ret;
 	//}
 
 	IterationVector visitProgram(const ProgramPtr& prog) { 

@@ -147,8 +147,8 @@ TEST(DefUseCollect, ArrayAccess) {
 		EXPECT_EQ(static_cast<size_t>(2), refs.size());
 
 		for_each(refs.arrays_begin(), refs.arrays_end(),
-			[](const Ref& cur){
-				EXPECT_TRUE(cur.getUsage() == Ref::USE);
+			[](const RefPtr& cur){
+				EXPECT_TRUE(cur->getUsage() == Ref::USE);
 			}
 		);
 
@@ -176,9 +176,9 @@ TEST(DefUseCollect, ArrayAssignment) {
 		EXPECT_EQ(static_cast<size_t>(3), refs.size());
 
 		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
-		EXPECT_TRUE(it->getUsage() == Ref::USE);
+		EXPECT_TRUE((*it)->getUsage() == Ref::USE);
 		++it;
-		EXPECT_TRUE(it->getUsage() == Ref::DEF);
+		EXPECT_TRUE((*it)->getUsage() == Ref::DEF);
 
 	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
 	
