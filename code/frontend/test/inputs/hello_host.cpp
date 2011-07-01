@@ -37,10 +37,11 @@
 #include "CL/cl.h"
 //#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
 cl_program program = NULL;
-cl_event event = NULL;
-cl_mem dev_ptr1 = NULL;
 cl_context gcontext = NULL;
 cl_command_queue gqueue = NULL;
+short* short_host_ptr;
+cl_mem dev_ptr1 = NULL;
+cl_event event = NULL;
 
 //#pragma insieme mark
 int main(int argc, char **argv) {
@@ -60,7 +61,7 @@ int main(int argc, char **argv) {
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	cl_mem dev_ptr4;
 
-	dev_ptr1 = clCreateBuffer(gcontext, CL_MEM_READ_ONLY , 100 * sizeof(cl_short), host_ptr, &err);
+	dev_ptr1 = clCreateBuffer(gcontext, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, 100 * sizeof(cl_short), short_host_ptr, &err);
 	dev_ptr4 = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
 	clEnqueueWriteBuffer(gqueue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
