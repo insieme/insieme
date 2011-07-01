@@ -255,10 +255,8 @@ public:
 		// FIXME: In the future also scalars should be properly handled using technique like scalar
 		// arrays and so forth
 		std::for_each(refs.arrays_begin(), refs.arrays_end(),
-			[&](const Ref& cur) { 
-				assert(cur.getType() == Ref::ARRAY); 
-				const ArrayRef& arrRef = static_cast<const ArrayRef&>(cur);
-				std::for_each(arrRef.getIndexExpressions().begin(), arrRef.getIndexExpressions().end(), 
+			[&](const ArrayRef& cur) { 
+				std::for_each(cur.getIndexExpressions().begin(), cur.getIndexExpressions().end(), 
 					[&](const ExpressionPtr& cur){	
 						IterationVector iv;	
 						AffineFunction af = extractAccessExpression(iv, cur);
@@ -303,7 +301,6 @@ public:
 			subScops.clear();
 			// add this statement as a subscope
 			subScops.push_back(forStmt);
-
 		
 		} catch (const NotAffineExpr& e) { 
 			// one of the expressions are not affine constraints, therefore we

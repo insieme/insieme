@@ -175,7 +175,7 @@ TEST(DefUseCollect, ArrayAssignment) {
 		RefList&& refs = collectDefUse(compStmt);
 		EXPECT_EQ(static_cast<size_t>(3), refs.size());
 
-		RefList::ref_iterator it = refs.arrays_begin(), end = refs.arrays_end();
+		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
 		EXPECT_TRUE(it->getUsage() == Ref::USE);
 		++it;
 		EXPECT_TRUE(it->getUsage() == Ref::DEF);

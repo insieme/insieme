@@ -78,41 +78,84 @@ struct Ref : public utils::Printable {
 	// ANY:    used in the RefList class in order to iterate through any reference type 
 	enum RefType { ANY_REF=-1, VAR, ARRAY, MEMBER, CALL };
 
-	Ref(const RefType& type, const core::ExpressionPtr& var, const UseType& usage = USE);
-
 	std::ostream& printTo(std::ostream& out) const;
 
 	const UseType& getUsage() const { return usage; }
 	
 	const RefType& getType() const { return type; }
 
-private:
-	// Define the type of this reference 
-	RefType type;
+	const core::ExpressionPtr& getBaseExpression() const { return baseExpr; }
 
+protected:
+	Ref(const RefType& type, const core::ExpressionPtr& expr, const UseType& usage = USE);
+	
 	// Points to the base expression: 
 	// 	 this can be either a scalar variable, an array or a call to a function 
 	core::ExpressionPtr baseExpr;
+
+private:
+	// Define the type of this reference 
+	RefType type;
 
 	// Define the use for this expression  
 	UseType usage; 
 };
 
+// Thsi class represents a reference to a scalar variable. Because the baseExpr points to the
+// variable, we can safely cast the base expression to a variable reference  
+struct ScalarRef : public Ref {
+
+	ScalarRef(const core::VariablePtr& var, const Ref::UseType& usage);
+
+	const core::VariablePtr& getVariable() const;
+	std::ostream& printTo(std::ostream& out) const;
+};
+
+// This class represents a reference to a struct member. It provides utility methods to easily
+// access to the field name being accessed and the type of the composite 
+struct MemberRef: public Ref {
+
+	MemberRef(const core::ExpressionPtr& memberAcc, const UseType& usage);
+
+	const core::NamedCompositeTypePtr& getCompositeType() const { return type; }
+	const core::LiteralPtr& getIdentifier() const { return identifier; }
+
+	std::ostream& printTo(std::ostream& out) const;
+private:
+	core::NamedCompositeTypePtr	type;
+	core::LiteralPtr 			identifier;
+};
+
 // In the case of arrays (or vectors), we also store the list of expressions used to index each of the
-// array dimensions
+// array dimensions. The baseExpr is used to point at the entire array subscript expression. 
 struct ArrayRef : public Ref { 
 	
 	typedef std::vector<core::ExpressionPtr> ExpressionList;  
 
-	ArrayRef(const core::ExpressionPtr& arrayVar, const ExpressionList& idxExpr, const UseType& usage = USE) :
-		Ref(Ref::ARRAY, arrayVar, usage), idxExpr(idxExpr) { }
+	ArrayRef(const core::ExpressionPtr& arrayVar, const ExpressionList& idxExpr, 
+			const core::ExpressionPtr& exprPtr, const UseType& usage = USE) :
+		Ref(Ref::ARRAY, arrayVar, usage), exprPtr(exprPtr), idxExpr(idxExpr) { }
 
 	std::ostream& printTo(std::ostream& out) const;	
 
 	const ExpressionList& getIndexExpressions() const { return idxExpr; }
+	
+	const core::ExpressionPtr& getSubscriptExpression() const { return exprPtr; }
 
 private:
-	ExpressionList idxExpr;
+	core::ExpressionPtr exprPtr;
+	ExpressionList 		idxExpr;
+};
+
+// This class represents a reference to a struct member. It provides utility methods to easily
+// access to the field name being accessed and the type of the composite 
+struct CallRef: public Ref {
+
+	CallRef(const core::CallExprPtr& callExpr, const UseType& usage);
+
+	std::ostream& printTo(std::ostream& out) const;
+
+	const core::CallExprPtr& getCallExpr() const;
 };
 
 typedef std::shared_ptr<Ref> RefPtr; 
@@ -121,29 +164,78 @@ typedef std::shared_ptr<Ref> RefPtr;
 class RefList: public std::vector<RefPtr> {
 	
 public:
-	class ref_iterator : public boost::forward_iterator_helper<ref_iterator, const Ref> { 
+	template <class T>
+	class ref_iterator : public boost::forward_iterator_helper<ref_iterator<T>, const T> { 
 		
 		RefList::const_iterator it, end;
 		Ref::RefType type;
 		Ref::UseType usage; 
 
-		void inc(bool first=false);
+		void inc(bool first=false) {
+			// iterator not valid, therefore increment not allowed
+			if (it == end) { return; }
+
+			if (first && (type == Ref::ANY_REF || (*it)->getType() == type) && 
+					(usage == Ref::ANY_USE || (*it)->getUsage() == usage) )	
+			{ return; }
+			++it; // increment the iterator
+			while(it != end &&	!(type == Ref::ANY_REF || (*it)->getType() == type) && 
+								 (usage == Ref::ANY_USE || (*it)->getUsage() == usage)) 
+			{ ++it; } // increment until we find an element which satisfy the filter
+		}
 	public:
 		ref_iterator(RefList::const_iterator begin, RefList::const_iterator end, 
 				Ref::RefType type=Ref::ANY_REF, Ref::UseType usage=Ref::ANY_USE) : 
 			it(begin), end(end), type(type), usage(usage) { inc(true); }
 
-		const Ref& operator*() const { assert(it != end && "Iterator out of bounds"); return **it; }	
-		iterator& operator++() { inc(); return *this; }
+		const T& operator*() const { 
+			assert(it != end && dynamic_cast<const T*>(&**it) && "Iterator out of bounds"); 
+			return static_cast<const T&>(**it);
+		}
 
-		bool operator==(const ref_iterator& rhs) const { return it == rhs.it && usage == rhs.usage && type == rhs.type; }
+		ref_iterator<T>& operator++() { inc(); return *this; }
+
+		bool operator==(const ref_iterator<T>& rhs) const { return it == rhs.it && usage == rhs.usage && type == rhs.type; }
 	};
+	// Iterates through all the references 
+	RefList::ref_iterator<Ref> refs_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<Ref>(begin(), end(), Ref::VAR, usage);
+	}
+	RefList::ref_iterator<Ref> refs_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<Ref>(end(), end(), Ref::VAR, usage); 
+	}
 
-	RefList::ref_iterator arrays_begin(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(begin(), end(), Ref::ARRAY, usage); }
-	RefList::ref_iterator arrays_end(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(end(), end(), Ref::ARRAY, usage); }
+	// Iterates through the scalar references only 
+	RefList::ref_iterator<ScalarRef> scalars_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<ScalarRef>(begin(), end(), Ref::VAR, usage); 
+	}
+	RefList::ref_iterator<ScalarRef> scalars_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<ScalarRef>(end(), end(), Ref::VAR, usage); 
+	}
 
-	RefList::ref_iterator vars_begin(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(begin(), end(), Ref::VAR, usage); }
-	RefList::ref_iterator vars_end(const Ref::UseType& usage=Ref::ANY_USE) { return ref_iterator(end(), end(), Ref::VAR, usage); }
+	// Iterates through the array references only 
+	RefList::ref_iterator<ArrayRef> arrays_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<ArrayRef>(begin(), end(), Ref::ARRAY, usage); 
+	}
+	RefList::ref_iterator<ArrayRef> arrays_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<ArrayRef>(end(), end(), Ref::ARRAY, usage); 
+	}
+
+	// Iterates through the Member references only 
+	RefList::ref_iterator<MemberRef> members_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<MemberRef>(begin(), end(), Ref::MEMBER, usage); 
+	}
+	RefList::ref_iterator<MemberRef> members_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<MemberRef>(end(), end(), Ref::MEMBER, usage); 
+	}
+
+	// Iterates through the call expr references only 
+	RefList::ref_iterator<CallRef> calls_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<CallRef>(begin(), end(), Ref::CALL, usage); 
+	}
+	RefList::ref_iterator<CallRef> calls_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+		return ref_iterator<CallRef>(end(), end(), Ref::CALL, usage); 
+	}
 
 	// add iterators for members/callexpr
 };

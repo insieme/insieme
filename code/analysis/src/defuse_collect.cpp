@@ -41,67 +41,105 @@
 
 #include <stack>
 
+namespace {
+
+using namespace insieme::analysis;
+
+std::string refTypeToStr(const Ref::RefType& type) { 
+	switch(type) {
+	case Ref::VAR:		return "SCALAR"; 
+	case Ref::ARRAY:	return "ARRAY"; 
+	case Ref::MEMBER:	return "MEMBER"; 
+	case Ref::CALL: 	return "CALL"; 
+	default:  			assert(false);
+	}
+}
+
+std::string usageTypeToStr(const Ref::UseType& usage) {
+	switch (usage) {
+	case Ref::DEF: 		return "DEF"; 
+	case Ref::USE:		return "USE"; 
+	case Ref::UNKNOWN:	return "UNKNOWN"; 
+	default:			assert(false);
+	}
+}
+
+} // end anonymous namespace 
 namespace insieme {
 namespace analysis {
 
 //===== Ref =========================================================================================
 
 Ref::Ref(const RefType& type, const core::ExpressionPtr& var, const UseType& usage) : 
-	type(type), baseExpr(var), usage(usage) 
+	 baseExpr(var), type(type), usage(usage) 
 { 
 	assert(var->getType()->getNodeType() == core::NT_RefType && "TYpe of base expression must be of RefType"); 
 }
 
 std::ostream& Ref::printTo(std::ostream& out) const {
-	switch (usage) {
-	case Ref::DEF: 		out << "[DEF]"; break;
-	case Ref::USE:		out << "[USE]"; break;
-	case Ref::UNKNOWN:	out << "[UNKNOWN]"; break;
-	case Ref::ANY_USE:	assert(false);
-	}
-	out << " - ";
-	switch(type) {
-	case Ref::VAR:		out << "<VAR>   "; break;
-	case Ref::ARRAY:	out << "<ARRAY> "; break;
-	case Ref::MEMBER:	out << "<MEMBER>"; break;
-	case Ref::CALL: 	out << "<CALL>  "; break;
-	case Ref::ANY_REF:  assert(false);
-	}
-	return out << " : " << *baseExpr << " {" << &baseExpr << "}";
+	return out << "[" << usageTypeToStr(getUsage()) << "] - " << refTypeToStr(getType());
+}
+
+//===== ScalarRef =======================================================================================
+
+ScalarRef::ScalarRef(const core::VariablePtr& var, const Ref::UseType& usage) : Ref(Ref::VAR, var, usage) { }
+
+const core::VariablePtr& ScalarRef::getVariable() const { 
+	return core::static_pointer_cast<const core::Variable>(baseExpr);
+}
+
+std::ostream& ScalarRef::printTo(std::ostream& out) const {
+	Ref::printTo(out);
+	return out << "(" << *baseExpr << ")";
 }
 
 //===== ArrayRef =======================================================================================
 
 std::ostream& ArrayRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);
-	return out << " IDX: {" << 
+	out << "(" << *baseExpr << ")";
+	out << " IDX: {" << 
 		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ jout << *cur; } ) << "}";
+	if (!idxExpr.empty())
+		out << "\n\tSurrounding expr: " << *exprPtr;
+	return out;
 }
 
 //===== MemberRef =====================================================================================
 
-//MemberRef::MemberRef(const core::ExpressionPtr& memberAcc, const UseType& usage) : Ref(Ref::MEMBER, memberAcc, usage) { 
-	//assert (memberAcc->getNodeType() == core::NT_CallExpr);
+MemberRef::MemberRef(const core::ExpressionPtr& memberAcc, const UseType& usage) : Ref(Ref::MEMBER, memberAcc, usage) { 
+	assert (memberAcc->getNodeType() == core::NT_CallExpr);
 
-	//core::NodeManager& mgr = memberAcc->getNodeManager();
-	//assert (core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeMemberAccess()) || 
-		//core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeRefElem() ) );
+	core::NodeManager& mgr = memberAcc->getNodeManager();
+	assert (core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeMemberAccess()) || 
+		core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeRefElem() ) );
 
-	//// initialize the value of the literal
-	//const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(memberAcc);
-	//identifier = core::static_pointer_cast<const core::Literal>(callExpr->getArgument(1));
+	// initialize the value of the literal
+	const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(memberAcc);
+	identifier = core::static_pointer_cast<const core::Literal>(callExpr->getArgument(1));
 
-	//// initialize the value of the named composite type 
-	//const core::TypePtr& refType = callExpr->getArgument(0)->getType();
-	//assert(refType->getNodeType() == core::NT_RefType);
+	// initialize the value of the named composite type 
+	const core::TypePtr& refType = callExpr->getArgument(0)->getType();
+	assert(refType->getNodeType() == core::NT_RefType);
 
-	//type = core::static_pointer_cast<const core::NamedCompositeType>(
-			//core::static_pointer_cast<const core::RefType>(refType)->getElementType() );
-//}
+	type = core::static_pointer_cast<const core::NamedCompositeType>(
+			core::static_pointer_cast<const core::RefType>(refType)->getElementType() );
+}
 
-//std::string MemberRef::baseExprToStr() const {
-	//return type->toString() + "." + identifier->toString();
-//}
+std::ostream& MemberRef::printTo(std::ostream& out) const {
+	Ref::printTo(out);
+	return out << "(" << *type << "." << *identifier << ")";
+}
+
+//===== CallRef =====================================================================================
+CallRef::CallRef(const core::CallExprPtr& callExpr, const UseType& usage) : Ref::Ref(Ref::CALL, callExpr, usage) { }
+
+const core::CallExprPtr& CallRef::getCallExpr() const { return core::static_pointer_cast<const core::CallExpr>(baseExpr); }
+
+std::ostream& CallRef::printTo(std::ostream& out) const {
+	Ref::printTo(out);
+	return out << " (" << *core::static_pointer_cast<const core::CallExpr>(baseExpr)->getFunctionExpr() << "(...)" << ")";
+}
 
 namespace {
 
@@ -110,7 +148,6 @@ namespace {
  * in expressions. The main goal of this class is to determine whether a variable is used or
  * defined. In case of arrays references also a pointer to the expressions utilized to index each
  * array dimension needs to be stored. 
- *
  */
 class DefUseCollect : public core::ASTVisitor<> {
 	
@@ -118,7 +155,8 @@ class DefUseCollect : public core::ASTVisitor<> {
 	Ref::UseType usage;
 
 	typedef std::vector<core::ExpressionPtr> ExpressionList;
-	std::stack<ExpressionList> idxStack;
+	typedef std::pair<core::ExpressionPtr, ExpressionList> SubscriptContext;
+	std::stack<SubscriptContext> idxStack;
 
 	const core::StatementSet& skipStmts;
 
@@ -131,21 +169,37 @@ class DefUseCollect : public core::ASTVisitor<> {
 		const core::TypePtr& subType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
 		if (subType->getNodeType() == core::NT_ArrayType || subType->getNodeType() == core::NT_VectorType) { 
 			// In the case the sub type is a vector type, it means this is an array reference 
-			refSet.push_back( std::make_shared<ArrayRef>(var, 
-					ExpressionList(idxStack.top().rbegin(), idxStack.top().rend()),  // copy the index expressions in reverse order
+			SubscriptContext& subCtx = idxStack.top();
+			refSet.push_back( 
+				std::make_shared<ArrayRef>(var, 
+					// copy the index expressions in reverse order
+					ExpressionList(subCtx.second.rbegin(), subCtx.second.rend()),
+					subCtx.first,
 					usage) 
 				);
-			idxStack.top() = ExpressionList();	// reset the expresion list 
+			idxStack.top() = SubscriptContext();	// reset the expresion list 
 			return ;
 		} 
-		refSet.push_back( std::make_shared<Ref>(refType, var, usage) );
+
+		if (refType == Ref::MEMBER ) {
+			refSet.push_back( std::make_shared<MemberRef>(var, usage) );
+			return;
+		}
+		if ( refType == Ref::CALL ) {
+			assert(var->getNodeType() == core::NT_CallExpr && "Expected call expression");
+			refSet.push_back( std::make_shared<CallRef>(core::static_pointer_cast<const core::CallExpr>(var), usage) );
+			return;
+		}
+
+		assert(var->getNodeType() == core::NT_Variable && "Expected scalar variable");
+		refSet.push_back( std::make_shared<ScalarRef>(core::static_pointer_cast<const core::Variable>(var), usage) );
 	}
 
 public:
 	DefUseCollect(RefList& refSet, const core::StatementSet& skipStmts) : 
 		core::ASTVisitor<>(false), refSet(refSet), usage(Ref::USE), skipStmts(skipStmts) 
 	{ 
-			idxStack.push( ExpressionList() ); // initialize the stack of array index expressions
+			idxStack.push( SubscriptContext() ); // initialize the stack of array index expressions
 	}
 
 	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
@@ -193,13 +247,17 @@ public:
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 			
 			// Visit the index expression
-			idxStack.push( ExpressionList() );
+			idxStack.push( SubscriptContext() );
 			visit( callExpr->getArgument(1) );
 			idxStack.pop();
 	
 			usage = saveUsage; // restore the previous usage 
 			assert(idxStack.size() > 0);
-			idxStack.top().push_back( callExpr->getArgument(1) );
+			SubscriptContext& subCtx = idxStack.top();
+			// if the start of the subscript expression is not set, this is the start
+			if (!subCtx.first) { subCtx.first = callExpr; }
+			subCtx.second.push_back( callExpr->getArgument(1) );
+
 			visit( callExpr->getArgument(0) );
 			return;
 		}
@@ -263,26 +321,6 @@ public:
 };
 
 } // end anonymous namespace 
-
-void RefList::ref_iterator::inc(bool first) {
-	// iterator not valid, therefore increment not allowed
-	if (it == end) { return; }
-
-	if (first && (type == Ref::ANY_REF || (*it)->getType() == type) && 
-			(usage == Ref::ANY_USE || (*it)->getUsage() == usage)
-		)
-	{
-		return; // don't increase the iterator
-	}
-	
-	++it;
-
-	while(it != end &&	!(type == Ref::ANY_REF || (*it)->getType() == type) && 
-			 			 (usage == Ref::ANY_USE || (*it)->getUsage() == usage)) 
-	{
-		++it;
-	}
-}
 
 RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipStmt) { 
 	RefList ret;
