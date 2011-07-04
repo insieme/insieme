@@ -148,6 +148,24 @@ IterationVector merge(const IterationVector& a, const IterationVector& b) {
 	return ret;
 }
 
+const IndexTransMap transform(const IterationVector& trg, const IterationVector& src) {
+	assert(trg.size() >= src.size()); //TODO: convert into an exception
+
+	IndexTransMap transMap;
+	std::for_each(src.begin(), src.end(), [&](const Element& cur) {
+			int idx = 0;
+			if (cur.getType() != Element::CONST) {
+				idx = trg.getIdx( static_cast<const Variable&>(cur).getVariable() ); 
+			} else {
+				idx = trg.getIdx(cur);
+			}
+			assert( idx != -1 && static_cast<size_t>(idx) < trg.size() );
+			transMap.push_back( idx ); 
+		});
+	assert(transMap.size() == src.size());
+	return transMap;
+}
+
 //====== IterationVector::iterator =============================================
 
 void IterationVector::iterator::inc(size_t n) {
@@ -246,20 +264,20 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	});
 }
 
-AffineFunction::AffineFunction(const IterationVector& newIterVec, const AffineFunction& other) : 
-	iterVec(newIterVec)
-{
-	// check weather the 2 iteration vectors are compatible. 
-	if(iterVec != other.iterVec) {
-		throw "Operation not allowed, iteration vectors are different";
-	}
+//AffineFunction::AffineFunction(const IterationVector& newIterVec, const AffineFunction& other) : 
+	//iterVec(newIterVec)
+//{
+	//// check weather the 2 iteration vectors are compatible. 
+	//if(iterVec != other.iterVec) {
+		//assert(false && "Operation not allowed");
+	//}
 
-	// FIXME: allow the copy of iteration vector which are not perfectly the
-	// same but have the same structure 
+	//// FIXME: allow the copy of iteration vector which are not perfectly the
+	//// same but have the same structure 
 	
-	coeffs = other.coeffs;
-	sep = other.sep;
-}
+	//coeffs = other.coeffs;
+	//sep = other.sep;
+//}
 
 int AffineFunction::idxConv(size_t idx) const {
 
@@ -275,17 +293,34 @@ int AffineFunction::idxConv(size_t idx) const {
 	return -1;
 }
 
+struct IteratorFilter : public boost::forward_iterator_helper<IteratorFilter, AffineFunction::Term> {
+
+	void inc(bool first=false) {  
+		if (!first) { ++iter; }
+		while( iter != end && (*iter).second == 0 ) { ++iter; }
+	}
+
+	IteratorFilter(AffineFunction::iterator iter, AffineFunction::iterator end) : iter(iter), end(end) { inc(true); }
+	
+	AffineFunction::Term operator*() const { return *iter; }
+
+	IteratorFilter operator++() { inc(); return *this; }
+
+	bool operator==(const IteratorFilter& other) const { return other.iter == iter; }
+
+	AffineFunction::iterator iter, end;
+};
+
 std::ostream& AffineFunction::printTo(std::ostream& out) const { 
-	return out << join(" + ", begin(), end(), [&](std::ostream& jout, const Term& cur){ jout << cur; } );
+	return out << join(" + ", IteratorFilter(begin(), end()), 
+			IteratorFilter(end(),end()), [&](std::ostream& jout, const Term& cur){ jout << cur; } );
 }
 
 int AffineFunction::getCoeff(const core::VariablePtr& var) const {
 	int idx = iterVec.getIdx(var);
-	// In the case the variable is not in the iteration vector, throw an
-	// exception
-	if (idx == -1) {
-		throw VariableNotFound(var); 
-	}
+	// In the case the variable is not in the iteration vector, throw an exception
+	if (idx == -1) { throw VariableNotFound(var); }
+
 	idx = idxConv(idx);
 	return idx==-1?0:coeffs[idx];
 }
@@ -320,6 +355,24 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 	return true;
 }
 
+AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {
+	assert(iterVec.size() >= this->iterVec.size());
+	
+	IndexTransMap idxMapCpy = idxMap;
+	if ( idxMap.empty() ) {
+		idxMapCpy = transform(iterVec, this->iterVec);
+	}
+	AffineFunction ret(iterVec);
+	std::fill(ret.coeffs.begin(), ret.coeffs.end(), 0);
+
+	for(size_t it=0; it<this->iterVec.size(); ++it) { 
+		int idx = idxConv(it);
+		ret.coeffs[idxMapCpy[it]] = (idx != -1) ? this->coeffs[idx] : 0;
+	}
+
+	return ret;
+}
+
 //====== AffineFunction::iterator =================================================
 AffineFunction::iterator& AffineFunction::iterator::operator++() { 
 	if ( iterPos == iterVec.size() )
@@ -347,6 +400,11 @@ std::ostream& Constraint::printTo(std::ostream& out) const {
 	return out << " 0";
 }
 
+
+Constraint Constraint::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {
+	return Constraint( af.toBase(iterVec, idxMap), type );
+}
+
 //===== ConstraintCombiner ======================================================
 void RawConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
 void NegatedConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
@@ -368,9 +426,11 @@ struct ConstraintPrinter : public ConstraintVisitor {
 	}
 
 	virtual void visit(const BinaryConstraintCombiner& bcc) {
+		out << "(";
 		bcc.getLHS()->accept(*this);
 		out << (bcc.isConjunction() ? " AND " : " OR ");
 		bcc.getRHS()->accept(*this);
+		out << ")";
 	}
 
 };
@@ -408,9 +468,7 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 	void visit(const RawConstraintCombiner& rcc) { 
 		const Constraint& c = rcc.getConstraint();
-		newCC = std::make_shared<RawConstraintCombiner>( 
-				Constraint( AffineFunction(iv, c.getAffineFunction()), c.getType() ) 
-			); 
+		newCC = std::make_shared<RawConstraintCombiner>( c.toBase(iv) ); 
 	}
 
 	virtual void visit(const NegatedConstraintCombiner& ucc) {
