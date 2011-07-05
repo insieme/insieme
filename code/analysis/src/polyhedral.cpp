@@ -37,6 +37,8 @@
 #include "insieme/analysis/polyhedral.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/utils/iterator_utils.h"
+
 #include <iomanip>
 
 namespace insieme {
@@ -112,10 +114,9 @@ bool IterationVector::operator==(const IterationVector& other) const {
 	return std::equal(begin(), end(), other.begin());
 }
 
-// An iteration vector is represented by three main components, the iterators,
-// the parameters and the constant part. The vector is printed displaying the
-// comma separated list of iterators and parameters divided by the '|'
-// separator. 
+// An iteration vector is represented by three main components, the iterators, the parameters and
+// the constant part. The vector is printed displaying the comma separated list of iterators and
+// parameters divided by the '|' separator. 
 std::ostream& IterationVector::printTo(std::ostream& out) const {
 	out << "(" << join(",", iter_begin(), iter_end(), [&](std::ostream& jout, const Element& cur){ jout << cur; } );
 	out << "|";
@@ -140,9 +141,10 @@ void merge_add(IterationVector& dest, typename std::vector<T>::const_iterator aB
 IterationVector merge(const IterationVector& a, const IterationVector& b) {
 	IterationVector ret;
 
-	// because the two iteration vectors are built bottom-up, the iterators in a will not be b and viceversa
-	// having the same iterators would mean the same variable has been used as loop iterator index in 1  statement
-	// as a parameter in another, therefore we can safely remove the iterators and merge the set of parameters. 
+	// because the two iteration vectors are built bottom-up, the iterators in a will not be b and
+	// viceversa having the same iterators would mean the same variable has been used as loop
+	// iterator index in 1  statement as a parameter in another, therefore we can safely remove the
+	// iterators and merge the set of parameters. 
 	merge_add<Iterator>(ret, a.iter_begin(), a.iter_end(), b.iter_begin(), b.iter_end());	
 	merge_add<Parameter>(ret, a.param_begin(), a.param_end(), b.param_begin(), b.param_end());	
 	return ret;
@@ -229,11 +231,10 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	assert( formula.isLinear() && "Expression is not an affine linear function.");
 	
 	const std::vector<Formula::Term>& terms = formula.getTerms();
-	// we have to updated the iteration vector by adding eventual parameters
-	// which are being used by this function. Because by looking to an
-	// expression we cannot determine if a variable is an iterator or a
-	// parameter we assume that variables in this expression which do not appear
-	// in the iteration domain are parameters.
+	// we have to updated the iteration vector by adding eventual parameters which are being used by
+	// this function. Because by looking to an expression we cannot determine if a variable is an
+	// iterator or a parameter we assume that variables in this expression which do not appear in
+	// the iteration domain are parameters.
 	for_each( terms.begin(), terms.end(), [&](const Formula::Term& cur){ 
 		const Product& prod = cur.first;
 		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
@@ -247,8 +248,8 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 		}
 	});
 
-	// now the iteration vector is inlined with the Formula object extracted
-	// from the expression, the size of the coefficient vector can be set.
+	// now the iteration vector is inlined with the Formula object extracted from the expression,
+	// the size of the coefficient vector can be set.
 	coeffs.resize(iterVec.size());
 	for_each( terms.begin(), terms.end(), [&](const Formula::Term& cur){ 
 		const Product& prod = cur.first;
@@ -293,27 +294,10 @@ int AffineFunction::idxConv(size_t idx) const {
 	return -1;
 }
 
-struct IteratorFilter : public boost::forward_iterator_helper<IteratorFilter, AffineFunction::Term> {
-
-	void inc(bool first=false) {  
-		if (!first) { ++iter; }
-		while( iter != end && (*iter).second == 0 ) { ++iter; }
-	}
-
-	IteratorFilter(AffineFunction::iterator iter, AffineFunction::iterator end) : iter(iter), end(end) { inc(true); }
-	
-	AffineFunction::Term operator*() const { return *iter; }
-
-	IteratorFilter operator++() { inc(); return *this; }
-
-	bool operator==(const IteratorFilter& other) const { return other.iter == iter; }
-
-	AffineFunction::iterator iter, end;
-};
-
 std::ostream& AffineFunction::printTo(std::ostream& out) const { 
-	return out << join(" + ", IteratorFilter(begin(), end()), 
-			IteratorFilter(end(),end()), [&](std::ostream& jout, const Term& cur){ jout << cur; } );
+	// Filters out all the elements with a coefficient equal to 0
+	auto&& filtered = filterIterator<iterator, Term, Term*, Term>(begin(), end(), [](const Term& cur) -> bool { return cur.second == 0; }); 	
+	return out << join(" + ", filtered.first, filtered.second, [&](std::ostream& jout, const Term& cur) { jout << cur; } );
 }
 
 int AffineFunction::getCoeff(const core::VariablePtr& var) const {
@@ -326,14 +310,13 @@ int AffineFunction::getCoeff(const core::VariablePtr& var) const {
 }
 
 bool AffineFunction::operator==(const AffineFunction& other) const {
-	// in the case the iteration vector is the same, then we look at the
-	// coefficients and the separator value to determine if the two functions
-	// are the same.
+	// in the case the iteration vector is the same, then we look at the coefficients and the
+	// separator value to determine if the two functions are the same.
 	if(iterVec == other.iterVec)
 		return sep == other.sep && std::equal(coeffs.begin(), coeffs.end(), other.coeffs.begin());
 
-	// if the two iteration vector are not the same we need to determine if at
-	// least the position for which a coefficient is specified is the same 	
+	// if the two iteration vector are not the same we need to determine if at least the position
+	// for which a coefficient is specified is the same 	
 	iterator thisIt = begin(), otherIt = other.begin(); 
 	while( thisIt!=end() ) {
 		if( ((*thisIt).first.getType() == Element::PARAM && (*otherIt).first.getType() == Element::ITER) || 
@@ -374,10 +357,11 @@ AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const Inde
 }
 
 //====== AffineFunction::iterator =================================================
+
 AffineFunction::iterator& AffineFunction::iterator::operator++() { 
 	if ( iterPos == iterVec.size() )
 		throw "Iterator not valid.";
-
+	
 	iterPos++;
 	return *this;
 }
@@ -387,7 +371,7 @@ AffineFunction::Term AffineFunction::iterator::operator*() const {
 		throw "Iterator not valid.";
 
 	int idx = af.idxConv(iterPos);
-	return Term(iterVec[iterPos], idx==-1?0:af.coeffs[idx]);
+	return Term(iterVec[iterPos], idx==-1?0:af.coeffs[idx]);	
 }
 
 //===== constraint ==============================================================
@@ -457,9 +441,9 @@ ConstraintCombinerPtr makeCombiner(const Constraint& constr) {
 
 namespace {
 
-// because Constraints are represented on the basis of an iteration vector
-// which is shared among the constraints componing a constraint combiner, when
-// a combiner is stored, the iteration vector has to be changed. 
+// because Constraints are represented on the basis of an iteration vector which is shared among the
+// constraints componing a constraint combiner, when a combiner is stored, the iteration vector has
+// to be changed. 
 struct ConstraintCloner : public ConstraintVisitor {
 	ConstraintCombinerPtr newCC;
 	const IterationVector& iv;
