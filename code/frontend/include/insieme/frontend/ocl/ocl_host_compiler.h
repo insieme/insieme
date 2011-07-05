@@ -211,8 +211,8 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	template<typename Enum>
 	std::set<Enum> getFlags(const core::ExpressionPtr& flagExpr);
 
-	bool translateClCreateBuffer(const core::VariablePtr& var, const core::CallExprPtr& fun, const core::CallExprPtr& newRhs, core::NodePtr& ret);
-	bool handleClCreateKernel(const core::VariablePtr& var, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName);
+	bool translateClCreateBuffer(const core::ExpressionPtr& var, const core::CallExprPtr& fun, const core::CallExprPtr& newRhs, core::NodePtr& ret);
+	bool handleClCreateKernel(const core::ExpressionPtr& expr, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName);
 	bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
 
 public:

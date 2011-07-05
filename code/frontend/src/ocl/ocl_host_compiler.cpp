@@ -329,7 +329,9 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			args.push_back(node->getArgument(4));
 			ExpressionPtr retVal = builder.callExpr(builder.arrayType(type), fun, args);
 			return retVal;
-	); ADD_Handler(builder, "clEnqueueWriteBuffer",
+	);
+
+	ADD_Handler(builder, "clEnqueueWriteBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
@@ -383,7 +385,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 				DeclarationStmtPtr localDecl = builder.declarationStmt(localMem, builder.callExpr(BASIC.getRefVar(),
 								builder.callExpr(BASIC.getArrayCreate1D(), BASIC.getTypeLiteral(type), size)));
 				// should I really have access to private members or HostMapper here or is this a compiler bug?
-				localMemDecls[kernel].push_back(localDecl);
+				localMemDecls[node->getArgument(0)].push_back(localDecl);
 				arg = localMem;
 			}
 
@@ -393,13 +395,13 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			if(const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : arg2)) {
 				// use the literal as index for the argument
 				unsigned int pos = atoi(idx->getValue().c_str());
-				if(kernelArgs[kernel].size() <= pos)
-				kernelArgs[kernel].resize(pos+1);
+				if(kernelArgs[node->getArgument(0)].size() <= pos)
+					kernelArgs[node->getArgument(0)].resize(pos+1);
 
-				kernelArgs[kernel].at(pos) = arg;
+				kernelArgs[node->getArgument(0)].at(pos) = arg;
 			} else {
 				// use one argument after another
-				kernelArgs[kernel].push_back(arg);
+				kernelArgs[node->getArgument(0)].push_back(arg);
 			}
 			return builder.intLit(0); // returning CL_SUCCESS
 	);
@@ -515,8 +517,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	ADD_Handler(builder, "clCreateContext", return node;);
 	ADD_Handler(builder, "clCreateCommandQueue", return node;);
 	ADD_Handler(builder, "clCreateKernel", return node;);
-}
-;
+};
 
 void copyAnnotations(const NodePtr& source, NodePtr& sink) {
 	unsigned int i = 0; // normal iterator and for_each loop leads to infinity loop, go
@@ -587,8 +588,8 @@ std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
 	return flags;
 }
 
-bool HostMapper::handleClCreateKernel(const VariablePtr& var, const ExpressionPtr& call, const ExpressionPtr& fieldName) {
-	TypePtr type = getNonRefType(var);
+bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const ExpressionPtr& call, const ExpressionPtr& fieldName) {
+	TypePtr type = getNonRefType(expr);
 	// if it is a struct we have to check the field
 	if (const StructTypePtr st = dynamic_pointer_cast<const StructType>(type)) {
 		//TODO if one puts more than one kernel inside a struct (s)he should be hit in the face
@@ -603,19 +604,28 @@ bool HostMapper::handleClCreateKernel(const VariablePtr& var, const ExpressionPt
 		}
 	}
 
-	if(type == builder.arrayType(builder.genericType("_cl_kernel"))) {
+	// if it is an array we have to pass the entire subscript call
+	if( const VectorTypePtr vt = dynamic_pointer_cast<const VectorType>(type)) {
+		type = vt->getElementType();
+	}
+	if( const ArrayTypePtr at = dynamic_pointer_cast<const ArrayType>(type)) {
+		// since all cl_* types are pointers, an array would have two nested arrays
+		if(at->getElementType() == NT_ArrayType) {
+			type = at->getElementType();
+		}
+	}
 
+	if(type == builder.arrayType(builder.genericType("_cl_kernel"))) {
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(call)) {//!
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
 			if(fun->getValue() == "clCreateKernel" ) {
 				ExpressionPtr kn = newCall->getArgument(1);
-				// usually kernel name is enbedded in a "string.as.char.pointer" call"
+				// usually kernel name is embedded in a "string.as.char.pointer" call"
 				if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
 				kn = sacp->getArgument(0);
 				if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
 					string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
-
-					kernelNames[name] = var;
+					kernelNames[name] = expr;
 				}
 
 				return true;
@@ -708,15 +718,16 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 	}
 
 	if(fun == BASIC.getRefAssign()) {
+		ExpressionPtr lhs = callExpr->getArgument(0);
 		// on the left hand side we'll either have a variable or a struct, probably holding a reference to the global array
 		// for the latter case we have to handle it differently
-		if(const CallExprPtr& cre = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0))) {
-			if(cre->getFunctionExpr() == BASIC.getCompositeRefElem()) {
+		if(const CallExprPtr& lhsCall = dynamic_pointer_cast<const CallExpr>(lhs)) {
+			if(lhsCall->getFunctionExpr() == BASIC.getCompositeRefElem()) {
 				if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
-					if(cre->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
+					if(lhsCall->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
 						TypePtr newType = newCall->getType();
 
-						const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(cre->getArgument(0));
+						const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
 						assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
 						VariablePtr newStruct;
 						// check if struct is already part of the replacement map
@@ -726,7 +737,7 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 						} else
 							newStruct = struct_;
 
-						LiteralPtr id = dynamic_pointer_cast<const Literal>(cre->getArgument(1));
+						LiteralPtr id = dynamic_pointer_cast<const Literal>(lhsCall->getArgument(1));
 						assert(id && "Second argument of composite.ref.elem has unexpected type, should be a literal");
 						IdentifierPtr toChange = builder.identifier(id->getValue());
 						StructTypePtr structType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct));
@@ -736,12 +747,10 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 						// check if CL_MEM_USE_HOST_PTR flag was set and host_ptr was a global variable
 						bool useHostPtr = false;
 						if(const CallExprPtr& creToHostField = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(0))) {
-							std::cout << "Is a call: " << creToHostField << std::endl;
 							if(creToHostField->getFunctionExpr() == BASIC.getCompositeRefElem()) {
 								// in this case replace the identifier of the cl_mem object with the one of the host_ptr
 								useHostPtr = true;
-								replacements[cre->getArgument(1)] = creToHostField->getArgument(1);
-								std::cout << "IS cre!\n";
+								replacements[lhsCall->getArgument(1)] = creToHostField->getArgument(1);
 							} else
 								assert(false && "If a cl_mem variable at global scope/in a struct uses the CL_MEM_USE_HOST_PTR flag at create buffer, the host_ptr\
 										must be in the global scope/the same struct too");
@@ -766,48 +775,53 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 							return BASIC.getNoOp();
 
 						const CallExprPtr& structAccess = builder.callExpr(BASIC.getCompositeRefElem(), struct_,
-								cre->getArgument(1), BASIC.getTypeLiteral(newType));
+								lhsCall->getArgument(1), BASIC.getTypeLiteral(newType));
 						return builder.callExpr(BASIC.getRefAssign(), structAccess, newCall);
 					}
 
-					if(cre->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))) {
+					if(lhsCall->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_kernel")))) {
 						if(const CallExprPtr& cre = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0)))
 							if(cre->getFunctionExpr() == BASIC.getCompositeRefElem())
 								if(const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(cre->getArgument(0))){
-									if(handleClCreateKernel(struct_, newCall, cre->getArgument(1)))
+									if(handleClCreateKernel(cre, newCall, cre->getArgument(1)))
 										return BASIC.getNoOp();
 								}
 					}
 				}
 
-				if(lookForKernelFilePragma(cre->getType(), callExpr->getArgument(1))) {
+				if(lookForKernelFilePragma(lhsCall->getType(), callExpr->getArgument(1))) {
 					return BASIC.getNoOp();
 				}
 			}
+			// also if the variable is an array we will have a function call on the left hand side
+			if(lhsCall->getFunctionExpr() == BASIC.getArrayRefElem1D() || lhsCall->getFunctionExpr() ==  BASIC.getVectorRefElem()) {
+				//prepare stuff for VariablePtr section
+				lhs = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
+			}
 		}
 
-		if(const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
+		if(const VariablePtr& lhsVar = dynamic_pointer_cast<const Variable>(lhs)) {
 			// handling clCreateBuffer
-			if(lhs->getType() == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
+			if(lhsVar->getType()->toString().find("array<_cl_mem,1>") != string::npos) {// == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
 				NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
 				// check if data has to be copied to a new array
 				if(const CallExprPtr& newCall = checkAssignment(createBuffer)) {
 
 					TypePtr newType = builder.refType(newCall->getType());
 					// check if variable has already been put into replacement map with a different type
-					if(cl_mems.find(lhs) != cl_mems.end())
-						assert((cl_mems[lhs]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+					if(cl_mems.find(lhsVar) != cl_mems.end())
+						assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
 					NodePtr ret;
 
 					if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(newCall->getArgument(0))) {
 						// use the host variable because CL_MEM_USE_HOST_PTR was set
-						cl_mems[lhs] = var;
+						cl_mems[lhsVar] = var;
 						// TODO check if err argument has been passed and set variable to 0
 						ret = BASIC.getNoOp();
 					} else {
 						const VariablePtr& newVar = builder.variable(newType);
-						cl_mems[lhs] = newVar;
-						ret = builder.callExpr(BASIC.getRefAssign(), lhs, newCall);
+						cl_mems[lhsVar] = newVar;
+						ret = builder.callExpr(BASIC.getRefAssign(), /*lhs*/newVar, newCall);
 					}
 
 					copyAnnotations(callExpr, ret);
@@ -817,19 +831,21 @@ if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) 
 				if(const VariablePtr clMemReplacement = dynamic_pointer_cast<const Variable>(createBuffer)) {
 					TypePtr newType = clMemReplacement->getType();
 
-					if(cl_mems[lhs] != static_cast<long int>(0))
-					assert((cl_mems[lhs]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+					if(cl_mems[lhsVar] != static_cast<long int>(0))
+					assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
 
-					cl_mems[lhs] = clMemReplacement;
+					cl_mems[lhsVar] = clMemReplacement;
 					return BASIC.getNoOp();
 				}
 			}
 
-			if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this)))
-			if(handleClCreateKernel(lhs, newCall, NULL))
-			return BASIC.getNoOp();
+			if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
+				if(handleClCreateKernel(callExpr->getArgument(0), newCall, NULL)) {
+					return BASIC.getNoOp();
+				}
+			}
 
-			if(lookForKernelFilePragma(lhs->getType(), callExpr->getArgument(1))) {
+			if(lookForKernelFilePragma(lhsVar->getType(), callExpr->getArgument(1))) {
 				return BASIC.getNoOp();
 			}
 		}
@@ -1120,12 +1136,14 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					ExpressionPtr k = callExpr->getArgument(1);
 
 					// check if argument is a call to composite.ref.elem
-					if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(k))
-						k = cre->getArgument(0);
+//					if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(k))
+	//					k = cre->getArgument(0);
+
 					// get corresponding lambda expression
 					LambdaExprPtr lambda = kernelLambdas[k];
 					assert(lambda && "No lambda expression for kernel call found");
 					vector<ExpressionPtr>& args = kernelArgs[k];
+
 					assert(args.size() > 0 && "No arguments for call to kernel function found");
 
 					// make a three element vector out of the global and local size
@@ -1134,14 +1152,15 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 					vector<ExpressionPtr> newArgs;
 					// construct call to kernel function
-					if(localMemDecls[k].size() == 0) {
+					if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
 						// if there is no local memory in argument, the arguments can simply be copyied
 						for_each(args, [&](ExpressionPtr& arg) {
-									//global and private memory arguments must be variables
-									getVarOutOfCrazyInspireConstruct(arg);
+								assert(!!arg && "Kernel has illegal global memory argument");
+								//global and private memory arguments must be variables
+								getVarOutOfCrazyInspireConstruct(arg);
 
-									newArgs.push_back(dynamic_pointer_cast<const Expression>(this->resolveElement(arg)));
-								});
+								newArgs.push_back(dynamic_pointer_cast<const Expression>(this->resolveElement(arg)));
+							});
 
 						// add global and local size to arguments
 						newArgs.push_back(global);
@@ -1155,39 +1174,42 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 					vector<StatementPtr> declsAndKernelCall;
 					for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
-								declsAndKernelCall.push_back(decl);
-							});
+							assert(!!decl && "Kernel has illegal local memory argument");
+							declsAndKernelCall.push_back(decl);
+						});
 
 					vector<VariablePtr> params;
 					vector<ExpressionPtr> innerArgs;
 					vector<TypePtr> wrapperInterface;
 
 					for_each(args, [&](ExpressionPtr& arg) {
-								bool local = false;
-								//global and private memory arguments must be variables
-								getVarOutOfCrazyInspireConstruct(arg);
+							assert(!!arg && "Kernel has illegal global memory argument");
+							bool local = false;
+							//global and private memory arguments must be variables
+							getVarOutOfCrazyInspireConstruct(arg);
 
-								// local args are declared in localMemDecls
-								for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
-											if(arg == decl->getVariable()) {
+							// local args are declared in localMemDecls
+							for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
+									assert(!!decl && "Kernel has illegal local memory argument");
+									if(arg == decl->getVariable()) {
 //                                params.push_back(decl->getVariable());
-												// will be declared inside wrapper function
-												local = true;
-											}
-										});
-								if(!local) {
-									// global and private memory arguments will be passed to the wrapper function as agrument
-									ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
-									assert(newArg && "Argument of kernel function must be an Expression");
-									newArgs.push_back(newArg);
-									wrapperInterface.push_back(newArg->getType());
+										// will be declared inside wrapper function
+										local = true;
+									}
+								});
+							if(!local) {
+								// global and private memory arguments will be passed to the wrapper function as agrument
+								ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
+								assert(!!newArg && "Argument of kernel function must be an Expression");
+								newArgs.push_back(newArg);
+								wrapperInterface.push_back(newArg->getType());
 
-									// kernel funtion will take a new variable as argument
-									params.push_back(builder.variable(newArg->getType()));
-								}
-								// the kernel call will use the params of the outer call as arguments, they must be an expression
-								innerArgs.push_back(params.back());
-							});
+								// kernel funtion will take a new variable as argument
+								params.push_back(builder.variable(newArg->getType()));
+							}
+							// the kernel call will use the params of the outer call as arguments, they must be an expression
+							innerArgs.push_back(params.back());
+						});
 
 					// add global and local size to arguments
 					TypePtr vec3type = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
@@ -1229,11 +1251,9 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					const IdentifierPtr& id = builder.identifier(newIdLit->getValue());
 					const TypePtr& oldType = dynamic_pointer_cast<const GenericType>(oldTypeLit->getType())->getTypeParameter().at(0);
 					for_each(replacements, [&](std::pair<const NodePtr, NodePtr> n) {
-						std::cout << n.first << " == " << oldIdLit << " -> " << (n.first == oldIdLit) << std::endl;
 					});
 
 					const core::TypePtr& memberTy = static_pointer_cast<const NamedCompositeType>(newType)->getTypeOfMember(id);
-std::cout << callExpr << "struggling with the memberTy\n" << newCall << std::endl;
 					if(!memberTy) { // someone requested a field which has been removed from the struct -> will be deleted anyways
 						return newCall;
 					}
@@ -1290,7 +1310,6 @@ ProgramPtr HostCompiler::compile() {
 	NodePtr fu = ohm3rd.mapElement(0, progWithKernels);
 
 	insieme::utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
-	std::cout << "REplacements: " << tmp << std::endl;
 /*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 		tmp[t.first] = t.second;
 		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {

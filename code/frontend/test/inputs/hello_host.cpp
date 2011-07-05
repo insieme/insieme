@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 	cl_device_id device;
 	cl_command_queue queue;
 	cl_context context;
-	cl_kernel kernel;
+	cl_kernel kernel[2];
 
 	context = clCreateContext(0, 1, &device, NULL, NULL, &err);
 	gcontext = clCreateContext(0, 1, &device, NULL, NULL, &err);
@@ -75,16 +75,16 @@ int main(int argc, char **argv) {
 #pragma insieme kernelFile "hello.cl"
 	program = clCreateProgramWithSource(context, 1, (const char**) &kernelSrc, &kernelLength, &err);
 
-	kernel = clCreateKernel(program, "hello", &err);
-	err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void*) &dev_ptr1);
-	err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void*) &dev_ptr2);
+	kernel[1] = clCreateKernel(program, "hello", &err);
+	err = clSetKernelArg(kernel[1], 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	err = clSetKernelArg(kernel[1], 1, sizeof(cl_mem), (void*) &dev_ptr2);
 	// local memory
-	clSetKernelArg(kernel, 2, sizeof(float) * 42, 0);
+	clSetKernelArg(kernel[1], 2, sizeof(float) * 42, 0);
 
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
 
-	err = clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
+	err = clEnqueueNDRangeKernel(queue, kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);
 
@@ -101,8 +101,11 @@ int main(int argc, char **argv) {
 	clReleaseMemObject(dev_ptr3);
 	clReleaseMemObject(dev_ptr4);
 
+	clReleaseCommandQueue(queue);
+	clReleaseCommandQueue(gqueue);
+	clReleaseContext(context);
 	clReleaseEvent(event);
-	clReleaseKernel(kernel);
+	clReleaseKernel(kernel[0]);
 
 	return 0;
 }
