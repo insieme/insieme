@@ -446,13 +446,20 @@ namespace {
 // to be changed. 
 struct ConstraintCloner : public ConstraintVisitor {
 	ConstraintCombinerPtr newCC;
-	const IterationVector& iv;
+	const IterationVector& trg;
+	const IterationVector* src;
+	IndexTransMap transMap;
 
-	ConstraintCloner(const IterationVector& iv) : iv(iv) { }
+	ConstraintCloner(const IterationVector& trg) : trg(trg), src(NULL) { }
 
 	void visit(const RawConstraintCombiner& rcc) { 
 		const Constraint& c = rcc.getConstraint();
-		newCC = std::make_shared<RawConstraintCombiner>( c.toBase(iv) ); 
+		if (transMap.empty() ) {
+			src = &c.getAffineFunction().getIterationVector();
+			transMap = transform( trg, *src );
+		}
+		assert(c.getAffineFunction().getIterationVector() == *src);
+		newCC = std::make_shared<RawConstraintCombiner>( c.toBase(trg, transMap) ); 
 	}
 
 	virtual void visit(const NegatedConstraintCombiner& ucc) {
@@ -474,10 +481,10 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 } // end anonymous namespace 
 
-ConstraintCombinerPtr cloneConstraint(const IterationVector& iterVec, const ConstraintCombinerPtr& old) {
+ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& old) {
 	if (!old) { return ConstraintCombinerPtr(); }
-
-	ConstraintCloner cc(iterVec);
+	
+	ConstraintCloner cc(trgVec);
 	old->accept(cc);
 	return cc.newCC;
 }

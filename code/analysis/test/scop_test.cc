@@ -91,7 +91,7 @@ TEST(ScopRegion, IfStmt) {
 	{	
 		std::ostringstream ss;
 		ss << ann.getIterationVector();
-		EXPECT_EQ("(|v7,v8,v4,v5|1)", ss.str());
+		EXPECT_EQ("(|v4,v5,v7,v8|1)", ss.str());
 	}
 	{ 
 		std::ostringstream ss;
@@ -108,7 +108,7 @@ TEST(ScopRegion, IfStmt) {
  	{	
 		std::ostringstream ss;
 		ss << ann.getIterationVector();
-		EXPECT_EQ("(|v7,v8,v4,v5|1)", ss.str());
+		EXPECT_EQ("(|v4,v5,v7,v8|1)", ss.str());
 	}
 	{ 
 		std::ostringstream ss;

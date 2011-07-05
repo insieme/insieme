@@ -165,10 +165,9 @@ struct CFGBuilder: public ASTVisitor< void > {
 		if ( entry == succ )	return;
 
 		if ( cfg->getBlock(succ).empty() ) {
-			// If the first statement of a root element is a function call
-			// we end up with an empty statement at the top of the CFG, we
-			// want to remove that block and connect the outgoing edges to
-			// the entry node
+			// If the first statement of a root element is a function call we end up with an empty
+			// statement at the top of the CFG, we want to remove that block and connect the
+			// outgoing edges to the entry node
 			const cfg::Block* b = &cfg->getBlock(succ);
 			cfg->replaceNode(succ, entry);
 			delete b;
@@ -193,9 +192,9 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	void resetCurrBlock(){ currBlock = NULL; }
 
-	// Appends the block currently referred by currBlock pointer to the graph if it is pending. 
+	// Appends the block currently referred by currBlock pointer to the graph if it is pending.
 	// This requires to add a node to the CFG and connect it to the current head of the CFG which is
-	// referred by the succ variable. The pointer to the head (succ) will be then updated to point 
+	// referred by the succ variable. The pointer to the head (succ) will be then updated to point
 	// to the node just inserted. 
 	void appendPendingBlock(bool soft=true) {
 
@@ -810,9 +809,9 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 					if (curr->getNodeType() == NT_CallExpr) {
 						const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(curr);
 						out << *callExpr->getFunctionExpr() << "(";
-						// for each argument we have to check if we spawned a block to evaluate it or not
-						// in positive case we just write a reference to the block containing the evaluation
-						// of the argument 
+						// for each argument we have to check if we spawned a block to evaluate it
+						// or not in positive case we just write a reference to the block containing
+						// the evaluation of the argument 
 						const CFG& cfg = block.getParentCFG();
 						const vector<ExpressionPtr>& args = callExpr->getArguments();
 						auto predIT = cfg.predecessors_begin( block ), end = cfg.predecessors_end( block );

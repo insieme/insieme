@@ -193,15 +193,15 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 			}
 		
-			//insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);
+   /*         insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);*/
 			//std::cout << "SCOP Analysis: " << sl.size() << std::endl;
 			//std::for_each(sl.begin(), sl.end(),
 				//[](const insieme::analysis::scop::ScopList::value_type& cur){ insieme::analysis::scop::printSCoP(std::cout, cur.first); });
 
-			// analysis::RefList&& refs = analysis::collectDefUse(program);
-			// std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
-			//		std::cout << *cur << std::endl; 
-			//	});
+			 //analysis::RefList&& refs = analysis::collectDefUse(program);
+			 //std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
+					//std::cout << *cur << std::endl; 
+			/*});*/
 			InverseStmtMap stmtMap;
 			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
 				using namespace insieme::core::printer;
