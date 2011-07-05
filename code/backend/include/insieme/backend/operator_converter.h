@@ -34,54 +34,28 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/utils/test/test_utils.h"
+#include <functional>
 
-#include <iostream>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include "insieme/backend/c_ast/forward_decls.h"
 
+#include "insieme/core/forward_decls.h"
+#include "insieme/core/expressions.h"
 
-#include "insieme/utils/container_utils.h"
-
-using namespace insieme::utils;
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
-namespace utils {
-namespace test {
+namespace backend {
 
+	class Converter;
+	class ConversionContext;
 
-TEST(TestUtilsTest, getList) {
+	typedef c_ast::ExpressionPtr(* OperatorConverter)(ConversionContext&, const core::CallExprPtr&);
 
-	namespace fs = boost::filesystem;
+	typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
 
-	auto res = getAllCases();
+	OperatorConverterTable getBasicOperatorTable(const core::lang::BasicGenerator& basic);
 
-	// check the existens of the referenced files
-	for_each(res, [](const IntegrationTestCase& cur) {
-		SCOPED_TRACE(cur.getName());
-
-		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
-		for_each(cur.getFiles(), [](const string& cur){
-			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
-			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
-		});
-
-		for_each(cur.getIncludeDirs(), [](const string& cur){
-			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
-			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
-		});
-	});
-
-	// should also work a second time
-	auto numTests = res.size();
-	res = getAllCases();
-	EXPECT_EQ(numTests, res.size());
-}
-
-
-
-} // end namespace test
-} // end namespace utils
+} // end namespace backend
 } // end namespace insieme

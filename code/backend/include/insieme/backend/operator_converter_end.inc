@@ -34,53 +34,8 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * Undefines the definition made within the operator_converter_begin.inc
+ */
 
-#include <set>
-#include <memory>
-
-#include "insieme/utils/pointer.h"
-
-namespace insieme {
-namespace backend {
-namespace c_ast {
-
-	/**
-	 * Adds forward declarations for all C AST node types. Further, for each
-	 * type a type definition for a corresponding annotated pointer is added.
-	 */
-	#define NODE(NAME) \
-	class NAME; \
-	typedef Ptr<NAME> NAME ## Ptr; \
-	// take all nodes from within the definition file
-	#include "insieme/backend/c_ast/c_nodes.def"
-	#undef NODE
-
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/backend/c_ast/c_nodes.def"
-	};
-	#undef CONCRETE
-
-
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
-
-	class CCode;
-	typedef std::shared_ptr<CCode> CCodePtr;
-
-	class CodeFragment;
-	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
-
-	class CCodeFragment;
-	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
-
-	class IncludeFragment;
-	typedef std::shared_ptr<IncludeFragment> IncludeFragmentPtr;
-
-	typedef std::set<CodeFragmentPtr> DependencySet;
-
-} // end namespace c_ast
-} // end namespace backend
-} // end namespace insieme
+#undef OP_CONVERTER

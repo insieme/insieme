@@ -50,6 +50,8 @@
 
 #include "insieme/core/types.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace backend {
 
@@ -133,6 +135,7 @@ namespace backend {
 
 			TypeInfo* resolveInternal(const core::TypePtr& type);
 
+			TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
 			TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
 
 			TypeInfo* resolveNamedCompositType(const core::NamedCompositeTypePtr&, bool);
@@ -281,8 +284,11 @@ namespace backend {
 			case core::NT_RecType:
 				info = resolveRecType(static_pointer_cast<const core::RecType>(type)); break;
 //			case core::NT_ChannelType:
+			case core::NT_TypeVariable:
+				info = resolveTypeVariable(static_pointer_cast<const core::TypeVariable>(type)); break;
 			default:
 				// this should not happen ...
+				LOG(FATAL) << "Unsupported IR Type encountered: " << type;
 				assert(false && "Unsupported IR type encountered!");
 				info = createUnsupportedInfo(*converter.getCNodeManager()); break;
 			}
@@ -294,6 +300,10 @@ namespace backend {
 			return info;
 		}
 
+		TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+			return createInfo(manager, "<" + ptr->getVarName() + ">");
+		}
 
 		TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr)  {
 
@@ -352,7 +362,7 @@ namespace backend {
 			}
 
 			if (basic.isVarList(ptr)) {
-				return createInfo(manager, "...");
+				return createInfo(manager.create<c_ast::VarArgsType>());
 			}
 
 			// ------------- boolean ------------------
@@ -494,7 +504,7 @@ namespace backend {
 
 			// create externalizer
 			res->externalize = [dataPointerName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-				return access(node, dataPointerName);
+				return access(parenthese(node), dataPointerName);
 			};
 
 			// create internalizer
@@ -719,12 +729,11 @@ namespace backend {
 			if (elementNodeType == core::NT_ArrayType || elementNodeType == core::NT_VectorType) {
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// generated code: ((externalName)X.data)
-					return c_ast::access(node, manager->create("data"));
+					return c_ast::access(c_ast::parenthese(c_ast::deref(node)), manager->create("data"));
 				};
 				res->internalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-					assert(false && "Not implemented");
-					// TODO: call constructor for underlying array type
-					return c_ast::cast(res->rValueType, node);
+					// generate initializser: (arraytype){node}
+					return c_ast::init(res->rValueType, node);
 				};
 			}
 

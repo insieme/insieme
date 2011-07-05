@@ -34,53 +34,54 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <set>
-#include <memory>
+#include "insieme/utils/test/integration_tests.h"
 
-#include "insieme/utils/pointer.h"
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+
+
+#include "insieme/utils/container_utils.h"
+
+using namespace insieme::utils;
 
 namespace insieme {
-namespace backend {
-namespace c_ast {
-
-	/**
-	 * Adds forward declarations for all C AST node types. Further, for each
-	 * type a type definition for a corresponding annotated pointer is added.
-	 */
-	#define NODE(NAME) \
-	class NAME; \
-	typedef Ptr<NAME> NAME ## Ptr; \
-	// take all nodes from within the definition file
-	#include "insieme/backend/c_ast/c_nodes.def"
-	#undef NODE
-
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/backend/c_ast/c_nodes.def"
-	};
-	#undef CONCRETE
+namespace utils {
+namespace test {
 
 
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+TEST(TestUtilsTest, getList) {
 
-	class CCode;
-	typedef std::shared_ptr<CCode> CCodePtr;
+	namespace fs = boost::filesystem;
 
-	class CodeFragment;
-	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
+	auto res = getAllCases();
 
-	class CCodeFragment;
-	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
+	// check the existens of the referenced files
+	for_each(res, [](const IntegrationTestCase& cur) {
+		SCOPED_TRACE(cur.getName());
 
-	class IncludeFragment;
-	typedef std::shared_ptr<IncludeFragment> IncludeFragmentPtr;
+		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
+		for_each(cur.getFiles(), [](const string& cur){
+			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
+			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+		});
 
-	typedef std::set<CodeFragmentPtr> DependencySet;
+		for_each(cur.getIncludeDirs(), [](const string& cur){
+			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
+			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+		});
+	});
 
-} // end namespace c_ast
-} // end namespace backend
+	// should also work a second time
+	auto numTests = res.size();
+	res = getAllCases();
+	EXPECT_EQ(numTests, res.size());
+}
+
+
+
+} // end namespace test
+} // end namespace utils
 } // end namespace insieme

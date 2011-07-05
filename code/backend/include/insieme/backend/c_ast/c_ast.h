@@ -185,6 +185,11 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct VarArgsType : public Type {
+		VarArgsType() : Type(NT_VarArgsType) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	// -- Statements -----------------------------
 
 	struct Statement : public Node {
@@ -296,8 +301,8 @@ namespace c_ast {
 			UnaryMinus,
 			PrefixInc,
 			PrefixDec,
-			PostFixInc,
-			PostFixDec,
+			PostfixInc,
+			PostfixDec,
 			LogicNot,
 			BitwiseNot,
 			Indirection,

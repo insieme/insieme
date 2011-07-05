@@ -40,109 +40,105 @@
 #include <set>
 
 #include "insieme/backend/converter.h"
-#include "insieme/backend/c_ast/forward_decls.h"
+#include "insieme/backend/c_ast/c_ast.h"
 
 #include "insieme/core/ast_visitor.h"
 
 namespace insieme {
 namespace backend {
 
-	// a forward declaration - implementation is hidden
-	class StmtConversionContext;
 
-
-	class StmtConverter : public core::ASTVisitor<c_ast::NodePtr, core::Pointer, StmtConversionContext&> {
+	class StmtConverter : public core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&> {
 
 		const Converter& converter;
 
 	public:
 
 		StmtConverter(const Converter& converter)
-			: core::ASTVisitor<c_ast::NodePtr, core::Pointer, StmtConversionContext&>(true), converter(converter) {}
+			: core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true), converter(converter) {}
 
-		c_ast::CCodePtr convert(const core::NodePtr& node);
-
-		c_ast::NodePtr convert(const core::NodePtr& node, std::set<c_ast::CodeFragmentPtr>& dependencies);
-
-	protected:
-
-		////////////////////////////////////////////////////////////////////////// Basic Elements
-
-		c_ast::NodePtr visitNode(const core::NodePtr& node, StmtConversionContext& context);
-
-		c_ast::NodePtr visitProgram(const core::ProgramPtr& node, StmtConversionContext& context);
-
-		////////////////////////////////////////////////////////////////////////// Statements
-
-		c_ast::NodePtr visitBreakStmt(const core::BreakStmtPtr&, StmtConversionContext& context);
-
-		c_ast::NodePtr visitCompoundStmt(const core::CompoundStmtPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitContinueStmt(const core::ContinueStmtPtr&, StmtConversionContext& context);
-
-		c_ast::NodePtr visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitForStmt(const core::ForStmtPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitIfStmt(const core::IfStmtPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitWhileStmt(const core::WhileStmtPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitReturnStmt(const core::ReturnStmtPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitSwitchStmt(const core::SwitchStmtPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitMarkerStmt(const core::MarkerStmtPtr& ptr, StmtConversionContext& context);
-
-
-		////////////////////////////////////////////////////////////////////////// Expressions
-
-		c_ast::NodePtr visitCallExpr(const core::CallExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitBindExpr(const core::BindExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitCastExpr(const core::CastExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitJobExpr(const core::JobExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitLambdaExpr(const core::LambdaExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitLiteral(const core::LiteralPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitMarkerExpr(const core::MarkerExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitStructExpr(const core::StructExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitUnionExpr(const core::UnionExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitTupleExpr(const core::TupleExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitVariable(const core::VariablePtr& ptr, StmtConversionContext& context);
-
-		c_ast::NodePtr visitVectorExpr(const core::VectorExprPtr& ptr, StmtConversionContext& context);
+		c_ast::NodePtr convert(ConversionContext& context, const core::NodePtr& node);
 
 		////////////////////////////////////////////////////////////////////////// Utilities
 
 		template<typename T>
-		Ptr<T> convert(const core::NodePtr& node, StmtConversionContext& context) {
+		Ptr<T> convert(ConversionContext& context, const core::NodePtr& node) {
 			auto res = visit(node, context);
 			assert(dynamic_pointer_cast<T>(res) && "Invalid specified type!");
 			return static_pointer_cast<T>(res);
 		}
 
-		c_ast::TypePtr convertType(const core::TypePtr& type, StmtConversionContext& context) {
-			return convert<c_ast::Type>(type, context);
+		c_ast::TypePtr convertType(ConversionContext& context, const core::TypePtr& type) {
+			return convert<c_ast::Type>(context, type);
 		}
 
-		c_ast::ExpressionPtr convertExpression(const core::ExpressionPtr& expr, StmtConversionContext& context) {
-			return convert<c_ast::Expression>(expr, context);
+		c_ast::ExpressionPtr convertExpression(ConversionContext& context, const core::ExpressionPtr& expr) {
+			return convert<c_ast::Expression>(context, expr);
 		}
 
-		c_ast::StatementPtr convertStmt(const core::StatementPtr& stmt, StmtConversionContext& context) {
-			return convert<c_ast::Statement>(stmt, context);
+		c_ast::StatementPtr convertStmt(ConversionContext& context, const core::StatementPtr& stmt) {
+			return convert<c_ast::Statement>(context, stmt);
 		}
+	protected:
+
+		////////////////////////////////////////////////////////////////////////// Basic Elements
+
+		c_ast::NodePtr visitNode(const core::NodePtr& node, ConversionContext& context);
+
+		c_ast::NodePtr visitType(const core::TypePtr& type, ConversionContext& context);
+
+		c_ast::NodePtr visitProgram(const core::ProgramPtr& node, ConversionContext& context);
+
+		////////////////////////////////////////////////////////////////////////// Statements
+
+		c_ast::NodePtr visitBreakStmt(const core::BreakStmtPtr&, ConversionContext& context);
+
+		c_ast::NodePtr visitCompoundStmt(const core::CompoundStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitContinueStmt(const core::ContinueStmtPtr&, ConversionContext& context);
+
+		c_ast::NodePtr visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitIfStmt(const core::IfStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitWhileStmt(const core::WhileStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitMarkerStmt(const core::MarkerStmtPtr& ptr, ConversionContext& context);
+
+
+		////////////////////////////////////////////////////////////////////////// Expressions
+
+		c_ast::NodePtr visitCallExpr(const core::CallExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitBindExpr(const core::BindExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitCastExpr(const core::CastExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitJobExpr(const core::JobExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitLambdaExpr(const core::LambdaExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitLiteral(const core::LiteralPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitMarkerExpr(const core::MarkerExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitVariable(const core::VariablePtr& ptr, ConversionContext& context);
+
+		c_ast::NodePtr visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context);
 
 	};
 

@@ -36,105 +36,24 @@
 
 #pragma once
 
-#include <boost/optional.hpp>
+#include <string>
 
-#include "insieme/utils/string_utils.h"
-#include "insieme/utils/printable.h"
+using std::string;
 
-namespace insieme {
-namespace utils {
-namespace test {
+// -- A set of useful functions when implementing test cases -------------
 
-	using std::vector;
+/**
+ * Tests whether the given string contains the given sub-string.
+ *
+ * @param str the string searching in
+ * @param substr the string searching for
+ */
+bool containsSubString(const string& str, const string& substr);
 
-	/**
-	 * Instances of this class represent integration test cases within
-	 */
-	class IntegrationTestCase : public Printable {
-
-		/**
-		 * The name of this test case.
-		 */
-		string name;
-
-		/**
-		 * The input files of this test case.
-		 */
-		vector<string> files;
-
-		/**
-		 * Extra include directories to be considered.
-		 */
-		vector<string> includeDirs;
-
-	public:
-
-		/**
-		 * Creates a new test case based on the given arguments.
-		 */
-		IntegrationTestCase(const string& name, const vector<string>& files, const vector<string>& includeDirs)
-			: name(name), files(files), includeDirs(includeDirs) {}
-
-		/**
-		 * Obtains the name of this test case.
-		 */
-		const string& getName() const {
-			return name;
-		}
-
-		/**
-		 * Obtains the files this test case is consisting of.
-		 */
-		const vector<string>& getFiles() const {
-			return files;
-		}
-
-		/**
-		 * Obtains the list of include directories.
-		 */
-		const vector<string>& getIncludeDirs() const {
-			return includeDirs;
-		}
-
-		/**
-		 * Allows to print this test case to some stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << name;
-		}
-
-		/**
-		 * An equality operator for integration test case instances.
-		 */
-		bool operator==(const IntegrationTestCase& other) const {
-			return name == other.name;
-		}
-
-		/**
-		 * A comparison operator for integration test case instances.
-		 */
-		bool operator<(const IntegrationTestCase& other) const {
-			return name < other.name;
-		}
-
-	};
-
-	// an optional type wrapping a test case
-	typedef boost::optional<IntegrationTestCase> IntegrationTestCaseOpt;
-
-	/**
-	 * Obtains a full list of all test cases available within the system.
-	 */
-	const vector<IntegrationTestCase>& getAllCases();
-
-	/**
-	 * Obtains the test case matching the given name.
-	 *
-	 * @param name the name of the test case looking for
-	 * @return an optional representing the test case or being uninitialized if there is no such test case.
-	 */
-	const IntegrationTestCaseOpt getCase(const string& name);
-
-} // end namespace test
-} // end namespace utils
-} // end namespace insieme
+/**
+ * Tests whether the given string does not contain the given sub-string.
+ *
+ * @param str the string searching in
+ * @param substr the string searching for
+ */
+bool notContainsSubString(const string& str, const string& substr);

@@ -45,6 +45,7 @@
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/statement_converter.h"
+#include "insieme/backend/variable_manager.h"
 
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
@@ -119,12 +120,14 @@ TEST(FunctionManager, Literals) {
 
 	EXPECT_EQ("myFun_wrap", toC(info.lambdaWrapperName));
 
-	EXPECT_EQ("int myFun(float p1, bool p2);\n", toC(info.prototype));
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "int myFun(float p1, bool p2);");
 	EXPECT_EQ("int myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
 
 	// check get value (value to be used when passing function as an argument)
-	std::set<c_ast::CodeFragmentPtr> dependencies;
-	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &myFun_wrap)", toC(funManager.getValue(literal, dependencies)));
+	VariableManager varManager;
+	c_ast::DependencySet dependencies;
+	ConversionContext context(converter, dependencies, varManager);
+	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &myFun_wrap)", toC(funManager.getValue(literal, context)));
 	EXPECT_TRUE(dependencies.find(info.lambdaWrapper) != dependencies.end());
 
 	// TODO: check the call creation
@@ -190,16 +193,18 @@ TEST(FunctionManager, Lambda) {
 	EXPECT_TRUE((bool)info.lambdaWrapperName);
 
 	EXPECT_EQ("name_wrap", toC(info.lambdaWrapperName));
-	EXPECT_PRED2(containsSubString, toC(info.prototype), "int name(float p1, bool p2)");
-	EXPECT_PRED2(containsSubString, toC(info.definition), "int name(float p1, bool p2) {\n    return 12;\n}");
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "int name(float name, bool name)");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "int name(float name, bool name) {\n    return 12;\n}");
 	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "int name_wrap(name* closure, float p1, bool p2) {\n    return name(p1, p2);\n}");
 
 	// since function is not recursive, no seperation of prototype and definition should be required
 	EXPECT_EQ(info.prototype, info.definition);
 
 	// check get value (value to be used when passing function as an argument)
-	std::set<c_ast::CodeFragmentPtr> dependencies;
-	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &name_wrap)", toC(funManager.getValue(lambda, dependencies)));
+	VariableManager varManager;
+	c_ast::DependencySet dependencies;
+	ConversionContext context(converter, dependencies, varManager);
+	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &name_wrap)", toC(funManager.getValue(lambda, context)));
 	EXPECT_TRUE(dependencies.find(info.lambdaWrapper) != dependencies.end());
 
 	// TODO: check for call
@@ -271,7 +276,7 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	EXPECT_TRUE((bool)info.lambdaWrapper);
 
 	EXPECT_PRED2(containsSubString, toC(info.prototype), "bool name(int p1);");
-	EXPECT_PRED2(containsSubString, toC(info.definition), "bool name(int p1) {\n");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "bool name(int name) {\n");
 	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "bool name_wrap(name* closure, int p1) {\n    return name(p1);\n}");
 
 	// TODO: check create call and get value
@@ -311,7 +316,7 @@ TEST(FunctionManager, Bind) {
 
 	core::VariablePtr p1 = builder.variable(int4, 1);
 	core::VariablePtr p2 = builder.variable(real4, 2);
-	core::VariablePtr p3 = builder.variable(refInt4, 3);
+	core::LiteralPtr  p3 = builder.literal(refInt4, "v3");
 
 	core::LiteralPtr fun = builder.literal(builder.functionType(toVector(real4, refInt4, int4), boolean), "fun");
 	core::CallExprPtr call = builder.callExpr(boolean, fun, p2, p3, p1);
@@ -352,7 +357,7 @@ TEST(FunctionManager, Bind) {
 
 	EXPECT_PRED2(containsSubString, def,
 		"static inline name_closure* name_ctr(name_closure* closure, name* nested, int* c2) {\n"
-		"    *closure = (name_closure){&name_mapper, nested, c2};\n"
+		"    *(closure) = (name_closure){&name_mapper, nested, c2};\n"
 		"    return closure;\n"
 		"}"
 	);
@@ -361,10 +366,13 @@ TEST(FunctionManager, Bind) {
 	toString(c_ast::CCode(bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
-	std::set<c_ast::CodeFragmentPtr> dependencies;
+	VariableManager varManager;
+	c_ast::DependencySet dependencies;
+	ConversionContext context(converter, dependencies, varManager);
+
 	EXPECT_EQ(
 			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name*)alloca(sizeof(name)), &fun_wrap), v3)",
-			toC(funManager.getValue(bind, dependencies))
+			toC(funManager.getValue(bind, context))
 	);
 	EXPECT_TRUE(dependencies.find(info.definitions) != dependencies.end());
 

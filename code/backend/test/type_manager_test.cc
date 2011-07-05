@@ -46,6 +46,8 @@
 
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
+#include "insieme/utils/test/test_utils.h"
+
 
 namespace insieme {
 namespace backend {
@@ -58,17 +60,6 @@ namespace {
 			return "name";
 		}
 	};
-}
-
-
-// a small test verifying that the given substr is contained within the given string
-bool containsSubString(const string& str, const string& substr) {
-	return str.find(substr) != string::npos;
-}
-
-// a small test verifying that the given substr is contained within the given string
-bool notContainsSubString(const string& str, const string& substr) {
-	return !containsSubString(str, substr);
 }
 
 
@@ -145,7 +136,7 @@ TEST(TypeManager, Basic) {
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE(info.definition == info.declaration);
 
-	EXPECT_EQ("typedef int bool;\n", toC(info.definition));
+	EXPECT_PRED2(containsSubString, toC(info.definition), "typedef int bool;");
 }
 
 TEST(TypeManager, StructTypes) {
@@ -289,7 +280,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("int*", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("(*(X)).data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -303,7 +294,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("int**", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("(*(X)).data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -317,7 +308,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("int[4]", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("(*(X)).data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -331,7 +322,7 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("name", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("name[4]", toC(info.externalType));
-	EXPECT_EQ("X.data", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("(*(X)).data", toC(info.externalize(cManager, lit)));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.newOperator);
@@ -586,7 +577,7 @@ TEST(TypeManager, FunctionTypes) {
 
 	EXPECT_PRED2(containsSubString, toC(info.constructor),
 			"static inline name* name_ctr(name* target, float(* call)(struct _name*,int,bool)) {\n"
-			"    *target = (name){call};\n"
+			"    *(target) = (name){call};\n"
 			"    return target;\n"
 			"}");
 

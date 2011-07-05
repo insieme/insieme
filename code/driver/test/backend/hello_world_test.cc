@@ -36,12 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/utils/test/test_utils.h"
+#include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/frontend/frontend.h"
 #include "insieme/core/ast_node.h"
 #include "insieme/core/program.h"
+#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/backend/full_backend.h"
 
 namespace insieme {
@@ -64,11 +65,12 @@ TEST(FullBackend, HelloWorld) {
 	auto target = backend::FullBackend::getDefault()->convert(code);
 
 	// check target code
+//	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
 //	EXPECT_EQ("", toString(*target));
 
 	// see whether target code can be compiled
 	// TODO: compile target code => test result
-//	EXPECT_TRUE(utils::compiler::compile(*target));
+	EXPECT_TRUE(utils::compiler::compile(*target));
 
 }
 

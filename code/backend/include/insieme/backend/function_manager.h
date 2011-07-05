@@ -41,11 +41,13 @@
 #include "insieme/core/forward_decls.h"
 
 #include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/operator_converter.h"
 
 namespace insieme {
 namespace backend {
 
 	class Converter;
+	class ConversionContext;
 	class FunctionInfo;
 	class LambdaInfo;
 	class BindInfo;
@@ -60,9 +62,13 @@ namespace backend {
 
 		detail::FunctionInfoStore* store;
 
+		const OperatorConverterTable operatorTable;
+
 	public:
 
 		FunctionManager(const Converter& converter);
+
+		FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable);
 
 		~FunctionManager();
 
@@ -72,11 +78,11 @@ namespace backend {
 
 		const BindInfo& getInfo(const core::BindExprPtr& bind);
 
-		const c_ast::NodePtr getCall(const core::CallExprPtr& call, std::set<c_ast::CodeFragmentPtr>& dependencies);
+		const c_ast::NodePtr getCall(const core::CallExprPtr& call, ConversionContext& context);
 
-		const c_ast::ExpressionPtr getValue(const core::ExpressionPtr& fun, std::set<c_ast::CodeFragmentPtr>& dependencies);
+		const c_ast::ExpressionPtr getValue(const core::ExpressionPtr& fun, ConversionContext& context);
 
-		const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, std::set<c_ast::CodeFragmentPtr>& dependencies);
+		const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, ConversionContext& context);
 
 	};
 

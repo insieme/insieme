@@ -112,12 +112,44 @@ namespace c_ast {
 		return a->getManager()->create<UnaryOperation>(op, a);
 	}
 
-	inline ExpressionPtr deref(NodePtr expr) {
+	inline ExpressionPtr deref(IdentifierPtr expr) {
 		return unaryOp(UnaryOperation::Indirection, expr);
 	}
 
-	inline ExpressionPtr ref(NodePtr expr) {
+	inline ExpressionPtr deref(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::Indirection, parenthese(expr));
+	}
+
+	inline ExpressionPtr ref(IdentifierPtr expr) {
 		return unaryOp(UnaryOperation::Reference, expr);
+	}
+
+	inline ExpressionPtr ref(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::Reference, parenthese(expr));
+	}
+
+	inline ExpressionPtr logicNot(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::LogicNot, expr);
+	}
+
+	inline ExpressionPtr bitwiseNot(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::BitwiseNot, expr);
+	}
+
+	inline ExpressionPtr preInc(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::PrefixInc, expr);
+	}
+
+	inline ExpressionPtr preDec(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::PrefixDec, expr);
+	}
+
+	inline ExpressionPtr postInc(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::PostfixInc, expr);
+	}
+
+	inline ExpressionPtr postDec(ExpressionPtr expr) {
+		return unaryOp(UnaryOperation::PostfixDec, expr);
 	}
 
 	// -- Binary Operations -------------------------------------
@@ -151,8 +183,56 @@ namespace c_ast {
 		return binaryOp(BinaryOperation::Modulo, a, b);
 	}
 
-	inline ExpressionPtr logAnd(ExpressionPtr a, ExpressionPtr b) {
+	inline ExpressionPtr logicAnd(ExpressionPtr a, ExpressionPtr b) {
 		return binaryOp(BinaryOperation::LogicAnd, a, b);
+	}
+
+	inline ExpressionPtr logicOr(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::LogicOr, a, b);
+	}
+
+	inline ExpressionPtr bitwiseAnd(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::BitwiseAnd, a, b);
+	}
+
+	inline ExpressionPtr bitwiseOr(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::BitwiseOr, a, b);
+	}
+
+	inline ExpressionPtr bitwiseXor(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::BitwiseXOr, a, b);
+	}
+
+	inline ExpressionPtr lShift(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::BitwiseLeftShift, a, b);
+	}
+
+	inline ExpressionPtr rShift(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::BitwiseRightShift, a, b);
+	}
+
+	inline ExpressionPtr eq(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::Equal, a, b);
+	}
+
+	inline ExpressionPtr ne(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::NotEqual, a, b);
+	}
+
+	inline ExpressionPtr ge(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::GreaterOrEqual, a, b);
+	}
+
+	inline ExpressionPtr gt(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::GreaterThan, a, b);
+	}
+
+	inline ExpressionPtr le(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::LessOrEqual, a, b);
+	}
+
+	inline ExpressionPtr lt(ExpressionPtr a, ExpressionPtr b) {
+		return binaryOp(BinaryOperation::LessThan, a, b);
 	}
 
 	inline ExpressionPtr cast(TypePtr type, NodePtr expr) {
@@ -177,6 +257,10 @@ namespace c_ast {
 
 	inline ExpressionPtr indirectAccess(NodePtr expr, VariablePtr element) {
 		return binaryOp(BinaryOperation::IndirectMemberAccess, expr, element);
+	}
+
+	inline ExpressionPtr subscript(ExpressionPtr expr, NodePtr subscript) {
+		return binaryOp(BinaryOperation::Subscript, parenthese(expr), subscript);
 	}
 
 	template<typename ... E>

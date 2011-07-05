@@ -34,53 +34,43 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+/**
+ * This include file defines some macros simplifying the specification of operator converters.
+ */
 
-#include <set>
-#include <memory>
+/**
+ * This macro allows to access an argument of the call to be processed by the formatter. 
+ * The indexing starts with 0. The result will be an ExpressionPtr. If there is no such argument,
+ * the pointer will be null.
+ * 
+ * @param N the index of the argument to be obtained 
+ */
+#define ARG(N) call->getArgument(N)
 
-#include "insieme/utils/pointer.h"
+#define CONVERT_TYPE(Node) context.getConverter().getStmtConverter().convertType(context, Node)
+#define CONVERT_EXPR(Node) context.getConverter().getStmtConverter().convertExpression(context, Node)
+#define CONVERT_STMT(Node) context.getConverter().getStmtConverter().convertStatement(context, Node)
 
-namespace insieme {
-namespace backend {
-namespace c_ast {
+/**
+ * A macro triggering the deceding into an argument. This will result in the printing of the code
+ * required for evaluating the corresponding argument.
+ * 
+ * @param N the index of the argument to be printed 
+ */
+#define CONVERT_ARG(N) CONVERT_EXPR(ARG(N))
 
-	/**
-	 * Adds forward declarations for all C AST node types. Further, for each
-	 * type a type definition for a corresponding annotated pointer is added.
-	 */
-	#define NODE(NAME) \
-	class NAME; \
-	typedef Ptr<NAME> NAME ## Ptr; \
-	// take all nodes from within the definition file
-	#include "insieme/backend/c_ast/c_nodes.def"
-	#undef NODE
+/**
+ * A macro triggering the conversion of the type of the current call.
+ */
+#define CONVERT_RES_TYPE CONVERT_TYPE(call->getType())
 
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/backend/c_ast/c_nodes.def"
-	};
-	#undef CONCRETE
-
-
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
-
-	class CCode;
-	typedef std::shared_ptr<CCode> CCodePtr;
-
-	class CodeFragment;
-	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
-
-	class CCodeFragment;
-	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
-
-	class IncludeFragment;
-	typedef std::shared_ptr<IncludeFragment> IncludeFragmentPtr;
-
-	typedef std::set<CodeFragmentPtr> DependencySet;
-
-} // end namespace c_ast
-} // end namespace backend
-} // end namespace insieme
+/**
+ * Creates a new operator converter conducting the given conversion.
+ * 
+ * @param FORMAT the function body realizing the formatting 
+ */
+#define OP_CONVERTER(Conversion) \
+		&(((struct { \
+			int dummy; \
+			static c_ast::ExpressionPtr f(ConversionContext& context, const core::CallExprPtr& call) Conversion \
+		 }){0}).f)	

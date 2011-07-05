@@ -34,53 +34,48 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/backend/variable_manager.h"
 
-#include <set>
-#include <memory>
+#include "insieme/core/expressions.h"
 
-#include "insieme/utils/pointer.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/name_manager.h"
+
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
-namespace c_ast {
 
-	/**
-	 * Adds forward declarations for all C AST node types. Further, for each
-	 * type a type definition for a corresponding annotated pointer is added.
-	 */
-	#define NODE(NAME) \
-	class NAME; \
-	typedef Ptr<NAME> NAME ## Ptr; \
-	// take all nodes from within the definition file
-	#include "insieme/backend/c_ast/c_nodes.def"
-	#undef NODE
+	const VariableInfo& VariableManager::getInfos(const core::VariablePtr& var) const {
+		// find requested variable within info
+		auto pos = infos.find(var);
+		if (pos != infos.end()) {
+			return pos->second;
+		}
 
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/backend/c_ast/c_nodes.def"
-	};
-	#undef CONCRETE
+		LOG(WARNING) << "Requesting info for unknown variable " << *var << " - returning default data ...";
 
+		assert(pos != infos.end() && "Requested variable infos for unknown variable!");
+		return pos->second;
+	}
 
-	class CNodeManager;
-	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
+	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location) {
 
-	class CCode;
-	typedef std::shared_ptr<CCode> CCodePtr;
+		VariableInfo& info = infos[var];
 
-	class CodeFragment;
-	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
+		// obtain type
+		info.typeInfo = &converter.getTypeManager().getTypeInfo(var->getType());
 
-	class CCodeFragment;
-	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
+		// obtain name and type of the variable
+		c_ast::TypePtr type = (location == VariableInfo::DIRECT)?info.typeInfo->lValueType:info.typeInfo->rValueType;
+		c_ast::IdentifierPtr name = converter.getCNodeManager()->create(converter.getNameManager().getName(var));
 
-	class IncludeFragment;
-	typedef std::shared_ptr<IncludeFragment> IncludeFragmentPtr;
+		info.var = c_ast::var(type, name);
+		info.location = location;
 
-	typedef std::set<CodeFragmentPtr> DependencySet;
+		return info;
+	}
 
-} // end namespace c_ast
 } // end namespace backend
 } // end namespace insieme
