@@ -92,6 +92,15 @@ public:
 	 */
 	const poly::ConstraintCombinerPtr getConstraints() const { return constraints; }
 
+	const AccessRefSet& getDirectAccesses() const { return accesses; }
+
+	typedef std::tuple<RefPtr, poly::IterationDomain, std::vector<poly::ConstraintCombinerPtr>> Access;
+	typedef std::vector<Access> AccessList;
+
+	const AccessList listAccesses() const;
+
+	const StmtList& getSubScops() const { return subScops; }
+
 private:
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;
@@ -118,15 +127,15 @@ private:
  * of the type i+j-N==0. Constraint which is used to annotate the expression.
  */
 class AccessFunction: public core::NodeAnnotation {
-	poly::IterationVector iterVec;
-	poly::EqualityConstraint  eqCons;
+	poly::IterationVector 	iterVec;
+	poly::Constraint  		eqCons;
 public:
 	static const string NAME;
 	static const utils::StringKey<AccessFunction> KEY;
 
 	AccessFunction(const poly::IterationVector& iv, const poly::EqualityConstraint& eqCons) : 
 		core::NodeAnnotation(), iterVec(iv), 
-		eqCons( poly::AffineFunction(iterVec, eqCons.getAffineFunction()) ) { }
+		eqCons( eqCons.toBase(iterVec) ) { }
 
 	const std::string& getAnnotationName() const { return NAME; }
 
@@ -134,6 +143,8 @@ public:
 
 	const std::string toString() const; 
 	
+	const poly::Constraint& getAccessConstraint() const { return eqCons; }
+
 	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
 			const core::NodePtr& after) const 
 	{ 
@@ -148,6 +159,16 @@ typedef std::vector< std::pair<core::NodePtr, poly::IterationVector> > ScopList;
  * found SCoPs (an empty list in the case no SCoP was found). 
  */ 
 ScopList mark(const core::NodePtr& root);
+
+/**
+ * printSCoP is a debug function which is used mainly as a proof of concept for the mechanism which
+ * is used to support SCoPs. The function prints all the infromation related to a SCoP, i.e. for
+ * each of the accesses existing in the SCoP the iteration domain associated to it and the access
+ * function.
+ */
+void printSCoP(std::ostream& out, const core::NodePtr& scop);
+
+
 
 } // end namespace scop
 } // end namespace analysis

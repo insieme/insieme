@@ -107,7 +107,9 @@ namespace backend {
 			FunctionCodeInfo resolveFunction(const c_ast::IdentifierPtr name,
 					const core::FunctionTypePtr& funType, const core::StatementPtr& body, bool external);
 			c_ast::CodeFragmentPtr resolvePrototype(const c_ast::FunctionPtr& function);
-			c_ast::CodeFragmentPtr resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType);
+
+			std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
+			resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType);
 
 		};
 
@@ -133,34 +135,131 @@ namespace backend {
 		return *(store->resolve(bind));
 	}
 
-//	const c_ast::NodePtr FunctionManager::getCallable(const core::LiteralPtr& literal) {
-//		assert(false && "Not implemented yet!");
-//		return converter.getCNodeManager()->create<c_ast::Comment>("Not implemented yet!");
-//	}
-//
-//	const c_ast::NodePtr FunctionManager::getCallable(const core::LambdaExprPtr& lambda) {
-//		assert(false && "Not implemented yet!");
-//		return converter.getCNodeManager()->create<c_ast::Comment>("Not implemented yet!");
-//	}
-//
-//	const c_ast::NodePtr FunctionManager::getCallable(const core::BindExprPtr& bind) {
-//		assert(false && "Not implemented yet!");
-//		return converter.getCNodeManager()->create<c_ast::Comment>("Not implemented yet!");
-//	}
+	namespace {
 
-	const c_ast::NodePtr FunctionManager::getValue(const core::LiteralPtr& literal) {
-		assert(false && "Not implemented yet!");
-		return converter.getCNodeManager()->create<c_ast::Comment>("Not implemented yet!");
+		const c_ast::ExpressionPtr getValueInternal(const c_ast::SharedCNodeManager& manager, TypeManager& typeManager,
+				const core::ExpressionPtr& expr, const FunctionInfo& info, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+
+			// The value of a literal is created by instantiating a closure covering the literal
+			// This looks as follows:
+			//		<closure_name>_ctr((closure_name*)alloca(sizeof(closure_name)), &literal_wrapper)
+
+			// collect information regarding result
+			const FunctionTypeInfo& typeInfo = typeManager.getTypeInfo(static_pointer_cast<const core::FunctionType>(expr->getType()));
+
+			c_ast::TypePtr closureType = typeInfo.rValueType;
+
+			// add dependencies
+			dependencies.insert(typeInfo.definition);
+			dependencies.insert(typeInfo.constructor);
+			dependencies.insert(info.lambdaWrapper);
+
+			// build the value
+			c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(closureType),
+					c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, closureType)));
+			return c_ast::call(typeInfo.constructorName, alloc, c_ast::ref(info.lambdaWrapperName));
+		}
+
+		void appendAsArguments(c_ast::CallPtr& call, const vector<core::ExpressionPtr>& arguments,
+				const Converter& converter, std::set<c_ast::CodeFragmentPtr>& dependencies, bool external) {
+
+			// collect some manager references
+			const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
+			StmtConverter& stmtConverter = converter.getStmtConverter();
+			TypeManager& typeManager = converter.getTypeManager();
+
+			// append as arguments
+			::transform(arguments, std::back_inserter(call->arguments),
+					[&](const core::ExpressionPtr& cur)->c_ast::ExpressionPtr {
+						c_ast::ExpressionPtr res = static_pointer_cast<c_ast::Expression>(stmtConverter.convert(cur, dependencies));
+						return (external)?typeManager.getTypeInfo(cur->getType()).externalize(manager, res):res;
+					}
+			);
+		}
+
 	}
 
-	const c_ast::NodePtr FunctionManager::getValue(const core::LambdaExprPtr& literal) {
-		assert(false && "Not implemented yet!");
-		return converter.getCNodeManager()->create<c_ast::Comment>("Not implemented yet!");
+
+	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& call, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+
+		// the generic fall-back solution:
+		//		get function as a value and call it using the function-type's caller function
+
+		core::ExpressionPtr fun = call->getFunctionExpr();
+		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
+
+		c_ast::NodePtr value = getValue(call->getFunctionExpr(), dependencies);
+
+		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(funType);
+
+		c_ast::CallPtr res = c_ast::call(typeInfo.callerName);
+		appendAsArguments(res, call->getArguments(), converter, dependencies, false);
+		return res;
 	}
 
-	const c_ast::NodePtr FunctionManager::getValue(const core::BindExprPtr& literal) {
-		assert(false && "Not implemented yet!");
-		return converter.getCNodeManager()->create<c_ast::Comment>("Not implemented yet!");
+
+
+
+
+	const c_ast::ExpressionPtr FunctionManager::getValue(const core::ExpressionPtr& fun, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+		auto manager = converter.getCNodeManager();
+
+		// handle according to node type
+		switch(fun->getNodeType()) {
+		case core::NT_BindExpr: {
+			return getValue(static_pointer_cast<const core::BindExpr>(fun), dependencies);
+		}
+		case core::NT_Literal: {
+			core::LiteralPtr literal = static_pointer_cast<const core::Literal>(fun);
+			return getValueInternal(manager, converter.getTypeManager(), literal, getInfo(literal), dependencies);
+		}
+		case core::NT_LambdaExpr: {
+			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
+			return getValueInternal(manager, converter.getTypeManager(), lambda, getInfo(lambda), dependencies);
+		}
+		case core::NT_Variable: {
+			// variable is already representing a value
+			c_ast::NodePtr res = converter.getStmtConverter().convert(fun, dependencies);
+			return static_pointer_cast<c_ast::Expression>(res);
+		}
+		default:
+			assert(false && "Unexpected Node Type!");
+			return c_ast::ExpressionPtr();
+		}
+
+	}
+
+	const c_ast::ExpressionPtr FunctionManager::getValue(const core::BindExprPtr& bind, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+		auto manager = converter.getCNodeManager();
+
+		// create a value instance by initializing the bind closure using its constructor
+
+		// collect some information
+		const BindInfo& info = getInfo(bind);
+		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(static_pointer_cast<const core::FunctionType>(bind->getType()));
+
+		// add dependencies
+		dependencies.insert(typeInfo.definition);
+		dependencies.insert(typeInfo.constructor);
+		dependencies.insert(info.definitions);
+
+
+		// allocate memory for the bind expression
+		c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(info.closureType),
+				c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, info.closureType)));
+
+		// create nested closure
+		c_ast::ExpressionPtr nested = getValue(bind->getCall()->getFunctionExpr(), dependencies);
+
+		//  create constructor call
+		c_ast::CallPtr res = c_ast::call(info.constructorName, alloc, nested);
+
+		// add captured expressions
+		auto boundExpression = bind->getBoundExpressions();
+		appendAsArguments(res, boundExpression, converter, dependencies, false);
+
+		// done
+		return res;
 	}
 
 
@@ -223,7 +322,9 @@ namespace backend {
 
 			// -------------------------- add lambda wrapper ---------------------------
 
-			res->lambdaWrapper = resolveLambdaWrapper(fun.function, funType);
+			auto wrapper = resolveLambdaWrapper(fun.function, funType);
+			res->lambdaWrapperName = wrapper.first;
+			res->lambdaWrapper = wrapper.second;
 			res->lambdaWrapper->addDependencies(fun.prototypeDependencies);
 			res->lambdaWrapper->addDependency(res->prototype);
 
@@ -435,7 +536,9 @@ namespace backend {
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
 				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
 
-				info->lambdaWrapper = resolveLambdaWrapper(codeInfo.function, funType);
+				auto wrapper = resolveLambdaWrapper(codeInfo.function, funType);
+				info->lambdaWrapperName = wrapper.first;
+				info->lambdaWrapper = wrapper.second;
 				info->lambdaWrapper->addDependency(info->prototype);
 
 				// obtain current lambda and add lambda info
@@ -522,7 +625,8 @@ namespace backend {
 			return res;
 		}
 
-		c_ast::CodeFragmentPtr FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType) {
+		std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
+		FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType) {
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -565,7 +669,7 @@ namespace backend {
 			c_ast::CodeFragmentPtr res = c_ast::CCodeFragment::createNew(manager, wrapper);
 			res->addDependency(funTypeInfo.definition);
 
-			return res;
+			return std::make_pair(name, res);
 		}
 
 

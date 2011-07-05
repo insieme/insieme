@@ -292,7 +292,7 @@ public:
 
 	// Returns an iterator over the Elements of this iteration vector,
 	// the elements are returned according to the order defined as follows:
-	// (iter0, iter1 ... iterN, param0, param1, ... paramM, 1)
+	// (iter0, iter1 ... iterN | param0, param1, ... paramM | 1)
 	iterator begin() const { return iterator(*this, iters.begin(), params.begin()); }
 	iterator end() const { return iterator(*this, iters.end(), params.end(), false); }
 
@@ -317,6 +317,19 @@ public:
 // Merges two iteration vectors (a and b) to create a new iteration vector which 
 // contains both the elements of a and b. 
 IterationVector merge(const IterationVector& a, const IterationVector& b); 
+
+typedef std::vector<size_t> IndexTransMap;
+
+/**
+ * Creates a transformation map which maps the index in the iteration vector src into positions into
+ * iteration vector trg. This map can be used to efficiently convert AffineFunction expressed in the
+ * base of src vector in the new base (trg vector).
+ *
+ * Src must be <= than trg and all the element present in src must appear in trg. In contrary case
+ * an exception will be thrown. The size of the returned transformation map is always equal to the
+ * size of the src iteration vector.
+ */
+const IndexTransMap transform(const IterationVector& trg, const IterationVector& src);
 
 /**
  * AffineFunction represents an affine function based on an iteration vector. An
@@ -400,7 +413,7 @@ public:
 	// Creates a copy of this affine function based on a different iteration
 	// vector. This is necessary when composing constrains for building
 	// iteration domains 
-	AffineFunction(const IterationVector& newIterVec, const AffineFunction& other);
+	// AffineFunction(const IterationVector& newIterVec, const AffineFunction& other);
 
 	AffineFunction(const AffineFunction& other) : iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
 
@@ -437,6 +450,17 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	bool operator==(const AffineFunction& other) const;
+
+	/**
+	 * Creates a copy of this affine function using another iteration vector as a base. This method
+	 * can be invoked both providing a transformation map. In the case the transfomration map is not
+	 * provided, it will be recomputed by the method. 
+	 *
+	 * The created affine function will be based on the iteration vector (iterVec), meaning that the
+	 * user is responsable for the instance of iterVec to remain alive as long as the created Affine
+	 * function is utilized. 
+	 */
+	AffineFunction toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
 };
 
 // A constraint is a linear affine expression limiting the polyhedron. A set of
@@ -476,6 +500,9 @@ struct Constraint : public utils::Printable,
 		}
 		return af.size() < other.af.size(); 
 	}
+
+	Constraint toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const;
+
 private:
 	const AffineFunction af;
 	const Type type;
@@ -649,11 +676,11 @@ typedef std::vector<Constraint> ConstraintList;
 // The iteration domain is the class which defines the shape of the polyhedron,
 // the set of integer points of an N-dimensional plane are delimited by affine
 // linear functions which define a convex region, therefore the polyhedron. 
-struct IterationDomain {
+struct IterationDomain : public utils::Printable {
 	IterationDomain(const IterationVector& iterVec, const ConstraintCombinerPtr& combiner) : 
 		iterVec(iterVec), constraints(combiner) { }
 
-	std::ostream& printTo(std::ostream& out) {
+	std::ostream& printTo(std::ostream& out) const {
 		return out << "Iteration Domain: \n\tIV: " << iterVec << "\n\tCONS: [ " << *constraints << " ]";
 	}
 

@@ -90,6 +90,8 @@ TEST(FunctionManager, Literals) {
 	converter.setCNodeManager(cManager);
 
 	FunctionManager funManager(converter);
+	converter.setFunctionManager(&funManager);
+
 
 	// create a function type
 	core::TypePtr int4 = basic.getInt4();
@@ -112,13 +114,20 @@ TEST(FunctionManager, Literals) {
 
 	EXPECT_EQ("myFun", toC(info.function->name));
 	EXPECT_TRUE((bool)info.prototype);
+	EXPECT_TRUE((bool)info.lambdaWrapperName);
 	EXPECT_TRUE((bool)info.lambdaWrapper);
+
+	EXPECT_EQ("myFun_wrap", toC(info.lambdaWrapperName));
 
 	EXPECT_EQ("int myFun(float p1, bool p2);\n", toC(info.prototype));
 	EXPECT_EQ("int myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
 
-	// TODO: check create call and get value
+	// check get value (value to be used when passing function as an argument)
+	std::set<c_ast::CodeFragmentPtr> dependencies;
+	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &myFun_wrap)", toC(funManager.getValue(literal, dependencies)));
+	EXPECT_TRUE(dependencies.find(info.lambdaWrapper) != dependencies.end());
 
+	// TODO: check the call creation
 }
 
 
@@ -143,8 +152,9 @@ TEST(FunctionManager, Lambda) {
 	StmtConverter stmtConverter(converter);
 	converter.setStmtConverter(&stmtConverter);
 
-
 	FunctionManager funManager(converter);
+	converter.setFunctionManager(&funManager);
+
 
 	// create a function type
 	core::TypePtr int4 = basic.getInt4();
@@ -177,7 +187,9 @@ TEST(FunctionManager, Lambda) {
 	EXPECT_TRUE((bool)info.prototype);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.lambdaWrapper);
+	EXPECT_TRUE((bool)info.lambdaWrapperName);
 
+	EXPECT_EQ("name_wrap", toC(info.lambdaWrapperName));
 	EXPECT_PRED2(containsSubString, toC(info.prototype), "int name(float p1, bool p2)");
 	EXPECT_PRED2(containsSubString, toC(info.definition), "int name(float p1, bool p2) {\n    return 12;\n}");
 	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "int name_wrap(name* closure, float p1, bool p2) {\n    return name(p1, p2);\n}");
@@ -185,7 +197,12 @@ TEST(FunctionManager, Lambda) {
 	// since function is not recursive, no seperation of prototype and definition should be required
 	EXPECT_EQ(info.prototype, info.definition);
 
-	// TODO: check create call and get value
+	// check get value (value to be used when passing function as an argument)
+	std::set<c_ast::CodeFragmentPtr> dependencies;
+	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &name_wrap)", toC(funManager.getValue(lambda, dependencies)));
+	EXPECT_TRUE(dependencies.find(info.lambdaWrapper) != dependencies.end());
+
+	// TODO: check for call
 }
 
 
@@ -210,8 +227,8 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	StmtConverter stmtConverter(converter);
 	converter.setStmtConverter(&stmtConverter);
 
-
 	FunctionManager funManager(converter);
+	converter.setFunctionManager(&funManager);
 
 	// create a function type
 	core::TypePtr int4 = basic.getInt4();
@@ -342,6 +359,14 @@ TEST(FunctionManager, Bind) {
 
 	// full code example - just make sure that no dependency cycle has been produced
 	toString(c_ast::CCode(bind, info.definitions));
+
+	// check get value (value to be used when passing function as an argument)
+	std::set<c_ast::CodeFragmentPtr> dependencies;
+	EXPECT_EQ(
+			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name*)alloca(sizeof(name)), &fun_wrap), v3)",
+			toC(funManager.getValue(bind, dependencies))
+	);
+	EXPECT_TRUE(dependencies.find(info.definitions) != dependencies.end());
 
 }
 

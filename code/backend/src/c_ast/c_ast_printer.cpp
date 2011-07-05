@@ -419,7 +419,7 @@ namespace c_ast {
 
 				c_ast::StatementPtr body = node->body;
 				if (node->body->getType() != c_ast::NT_Compound) {
-					body = body->getManager()->create<c_ast::Compound>(toVector<c_ast::StatementPtr>(body));
+					body = body->getManager()->create<c_ast::Compound>(body);
 				}
 
 				return out << print(body);

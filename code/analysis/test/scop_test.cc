@@ -96,7 +96,7 @@ TEST(ScopRegion, IfStmt) {
 	{ 
 		std::ostringstream ss;
 		ss << *ann.getConstraints();
-		EXPECT_EQ("(0*v7 + 0*v8 + 1*v4 + -1*v5 + 0*1 <= 0)", ss.str());
+		EXPECT_EQ("(1*v4 + -1*v5 <= 0)", ss.str());
 	}
 	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
 	ann = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
@@ -113,9 +113,8 @@ TEST(ScopRegion, IfStmt) {
 	{ 
 		std::ostringstream ss;
 		ss << *ann.getConstraints();
-		EXPECT_EQ("NOT(0*v7 + 0*v8 + 1*v4 + -1*v5 + 0*1 <= 0)", ss.str());
+		EXPECT_EQ("NOT(1*v4 + -1*v5 <= 0)", ss.str());
 	}
-
 
 }
 
@@ -147,7 +146,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	{ 
 		std::ostringstream ss;
 		ss << *ann.getConstraints();
-		EXPECT_EQ("(1*v9 + 0*v11 + -10*1 >= 0) AND (1*v9 + 0*v11 + -50*1 < 0)", ss.str());
+		EXPECT_EQ("((1*v9 + -10*1 >= 0) AND (1*v9 + -50*1 < 0))", ss.str());
 	}
 	EXPECT_FALSE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 }
@@ -191,7 +190,7 @@ TEST(ScopRegion, ForStmt) {
 	{
 		std::ostringstream ss;
 		ss << *ann.getConstraints();
-		EXPECT_EQ("(1*v12 + 0*v16 + -25*1 > 0)", ss.str());
+		EXPECT_EQ("(1*v12 + -25*1 > 0)", ss.str());
 	}
 
 

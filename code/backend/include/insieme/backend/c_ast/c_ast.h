@@ -47,6 +47,7 @@
 
 #include "insieme/utils/pointer.h"
 #include "insieme/utils/id_generator.h"
+#include "insieme/utils/container_utils.h"
 
 #include "insieme/backend/c_ast/forward_decls.h"
 
@@ -200,12 +201,12 @@ namespace c_ast {
 	};
 
 	struct Compound : public Statement {
-		const vector<StatementPtr> statements;
+		vector<NodePtr> statements;
 		Compound() : Statement(NT_Compound) {};
-		Compound(const vector<StatementPtr>& stmts) : Statement(NT_Compound), statements(stmts) {};
+		Compound(const vector<NodePtr>& stmts) : Statement(NT_Compound), statements(stmts) {};
 
 		template<typename ... E>
-		Compound(E ... stmts) : Statement(NT_Compound), statements(toVector(stmts...)) {};
+		Compound(E ... stmts) : Statement(NT_Compound), statements(toVector<NodePtr>(stmts...)) {};
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -383,6 +384,11 @@ namespace c_ast {
 		vector<ExpressionPtr> arguments;
 
 		Call(NodePtr function) : Expression(NT_Call), function(function) {}
+
+		template<typename ... E>
+		Call(NodePtr function, E ... args)
+			: Expression(NT_Call), function(function), arguments(toVector<ExpressionPtr>(args...)) {}
+
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -436,6 +442,7 @@ namespace c_ast {
 		IdentifierPtr name;
 		vector<VariablePtr> parameter;
 		StatementPtr body;
+		Function() : Definition(NT_Function), flags(0) {};
 		Function(TypePtr returnType, IdentifierPtr name, StatementPtr body)
 					: Definition(NT_Function), flags(0), returnType(returnType), name(name), body(body) {};
 		Function(TypePtr returnType, IdentifierPtr name, const vector<VariablePtr> params, StatementPtr body)
