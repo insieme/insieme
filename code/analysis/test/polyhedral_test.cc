@@ -171,7 +171,7 @@ TEST(AffineFunction, Creation) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("0*v1 + 1*v2 + 2*v3 + 10*1", ss.str());
+		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
 	}
 
 	EXPECT_EQ(0, af.getCoeff(iter1));
@@ -191,7 +191,7 @@ TEST(AffineFunction, Creation) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("0*v1 + 1*v2 + 2*v3 + 0*v4 + 10*1", ss.str());
+		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
 	}
 }
 
@@ -218,7 +218,7 @@ TEST(AffineFunction, CreationFromExpr) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("1*v1 + 1*v3 + 0*1", ss.str());
+		EXPECT_EQ("1*v1 + 1*v3", ss.str());
 	}
 
 	iterVec.add( poly::Iterator(iter2) );
@@ -234,7 +234,7 @@ TEST(AffineFunction, CreationFromExpr) {
 	{
 		std::ostringstream ss;
 		af.printTo(ss);
-		EXPECT_EQ("1*v1 + 0*v2 + 1*v3 + 0*v4 + 0*1", ss.str());
+		EXPECT_EQ("1*v1 + 1*v3", ss.str());
 	}
 
 }
@@ -253,7 +253,7 @@ TEST(Constraint, Creation) {
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
-		EXPECT_EQ("0*v1 + 1*v2 + 2*v3 + 10*1 == 0", ss.str());
+		EXPECT_EQ("1*v2 + 2*v3 + 10*1 == 0", ss.str());
 	}
 }
 
@@ -339,4 +339,42 @@ TEST(IterationDomain, Creation) {
 	// check weather these 2 affine functions are the same... even thought the
 	// underlying iteration vector has been changed
 	//EXPECT_EQ(af, (*it.begin()).getAffineFunction());
+}
+
+
+TEST(AffineFunction, ChangeBase) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	poly::AffineFunction af(iterVec);
+	af.setCoefficient(poly::Iterator(iter1), 0);
+	af.setCoefficient(poly::Parameter(param),2);
+	af.setCoefficient(poly::Iterator(iter2), 1);
+	af.setConstantPart(10);
+
+	{
+		std::ostringstream ss;
+		af.printTo(ss);
+		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
+	}
+
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Iterator(param) ); 
+	iterVec1.add( poly::Iterator(iter2) ); 
+	// std::cout << iterVec1 << std::endl;
+
+	const poly::IndexTransMap&& map = poly::transform(iterVec1, iterVec);
+	EXPECT_EQ(map, poly::IndexTransMap({0,2,1,3}));
+
+	poly::AffineFunction&& converted = af.toBase(iterVec1, map);
+	{
+		std::ostringstream ss;
+		converted.printTo(ss);
+		EXPECT_EQ("2*v3 + 1*v2 + 10*1", ss.str());
+	}
+
+	poly::AffineFunction&& converted2 = af.toBase(iterVec1);
+	EXPECT_EQ(converted, converted2);
+
 }

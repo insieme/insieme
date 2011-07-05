@@ -46,7 +46,9 @@
 namespace {
 using namespace insieme::core;
 using namespace insieme::core::lang;
+using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
+using namespace insieme::analysis::scop;
 
 // Expection which is thrown when a particular tree is defined to be not 
 // a static control part. This exception has to be forwarded until the 
@@ -143,56 +145,33 @@ IterationVector markAccessExpression(const ExpressionPtr& expr) {
 	} catch(const NotAffineExpr& e) { throw NotASCoP(expr); }
 }
 
-} // end namespace anonymous 
-
-namespace insieme {
-namespace analysis {
-namespace scop {
-
-using namespace core;
-using namespace poly;
-
-//===== ScopRegion ===============================================================
-const string ScopRegion::NAME = "SCoPAnnotation";
-const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
-
-const std::string ScopRegion::toString() const {
-	std::ostringstream ss;
-	ss << "IterationVector: " << iterVec;
-	if (constraints) {
-		ss << "\\nConstraints: " << *constraints;
-	}
-	if (!subScops.empty()) {
-		ss << "\\nSubScops: " << subScops.size();
-	}
-	if (!accesses.empty()) {
-		ss << "\\nAccesses: " << accesses.size() << "{" << 
-		join(",", accesses, [&](std::ostream& jout, const RefPtr& cur){ jout << *cur; } ) << "}";
-	}
-
-	return ss.str();
-}
-
-//===== AccessFunction ============================================================
-const string AccessFunction::NAME = "AccessFuncAnn";
-const utils::StringKey<AccessFunction> AccessFunction::KEY("AccessFuncAnnKey");
-
-const std::string AccessFunction::toString() const {
-	std::ostringstream ss;
-	ss << "IV: " << iterVec << ", CONS: " << eqCons;
-	return ss.str();
-}
-
-
 //===== ScopVisitor ===============================================================
 
-class ScopVisitor : public core::ASTVisitor<IterationVector> {
+struct ScopVisitor : public ASTVisitor<IterationVector> {
 	ScopList& scopList;
-
 	ScopRegion::StmtList subScops;
 
-public:
 	ScopVisitor(ScopList& scopList) : ASTVisitor<IterationVector>(false), scopList(scopList) { }
+
+	RefList visitBody(IterationVector& iterVec, const StatementPtr& body) { 
+		iterVec = merge(iterVec, visit(body));
+		
+		RefList&& refs = collectDefUse( body, StatementSet(subScops.begin(), subScops.end()) );
+		
+		// For now we only consider array access. 
+		//
+		// FIXME: In the future also scalars should be properly handled using technique like scalar
+		// arrays and so forth
+		std::for_each(refs.arrays_begin(), refs.arrays_end(),
+			[&](const ArrayRefPtr& cur) { 
+				const ExpressionList& idxExprs = cur->getIndexExpressions();
+				std::for_each(idxExprs.begin(), idxExprs.end(), 
+					[&](const ExpressionPtr& cur){	iterVec = merge(iterVec, markAccessExpression(cur)); }
+				);
+			} 
+		);
+		return refs;
+	}
 
 	IterationVector visitIfStmt(const IfStmtPtr& ifStmt) {
 		IterationVector ret, saveThen, saveElse;
@@ -203,53 +182,22 @@ public:
 		try {
 			subScops.clear();
 			// check the then body
-			ret = merge(ret, visit(ifStmt->getThenBody()));
-			
-			RefList&& refs = collectDefUse( ifStmt->getThenBody(), StatementSet(subScops.begin(), subScops.end()) );
-			
-			// For now we only consider array access. 
-			//
-			// FIXME: In the future also scalars should be properly handled using technique like scalar
-			// arrays and so forth
-			std::for_each(refs.arrays_begin(), refs.arrays_end(),
-				[&](const ArrayRefPtr& cur) { 
-					const ExpressionList& idxExprs = cur->getIndexExpressions();
-					std::for_each(idxExprs.begin(), idxExprs.end(), 
-						[&](const ExpressionPtr& cur){	ret = merge(ret, markAccessExpression(cur)); }
-					);
-				} 
-			);
-
+			thenRefs = visitBody( ret, ifStmt->getThenBody() );
 			// save the sub scops of the then body
 			thenScops = subScops;
 			saveThen = ret;
-			thenRefs = refs;
 		} catch (const NotASCoP& e) { isThenSCOP = false; }
-		
+
+		// reset the value of the iteration vector 
+		ret = IterationVector();
+
 		try {
 			subScops.clear();
 			// check the else body
-			ret = merge(ret, visit(ifStmt->getElseBody()));
-
-			RefList&& refs = collectDefUse( ifStmt->getElseBody(), StatementSet(subScops.begin(), subScops.end()) );
-			
-			// For now we only consider array access. 
-			//
-			// FIXME: In the future also scalars should be properly handled using technique like scalar
-			// arrays and so forth
-			std::for_each(refs.arrays_begin(), refs.arrays_end(),
-				[&](const ArrayRefPtr& cur) { 
-					const ExpressionList& idxExprs = cur->getIndexExpressions();
-					std::for_each(idxExprs.begin(), idxExprs.end(), 
-						[&](const ExpressionPtr& cur){	ret = merge(ret, markAccessExpression(cur)); }
-					);
-				} 
-			);
-
+			elseRefs = visitBody( ret, ifStmt->getElseBody() );
 			// save the sub scops of the else body
 			elseScops = subScops; 
 			saveElse = ret;
-			elseRefs = refs;
 		} catch (const NotASCoP& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
@@ -268,14 +216,20 @@ public:
 		// this region
 		if (!(isThenSCOP && isElseSCOP)) { throw NotASCoP(ifStmt); }
 
+		// reset the value of the iteration vector 
+		ret = IterationVector();
 		// check the condition expression
 		ConstraintCombinerPtr&& comb = extractFromCondition(ret, ifStmt->getCondition());
 
+		ret = merge(ret, merge(saveThen, saveElse));
+
 		// if no exception has been thrown we are sure the sub else and then
 		// tree are ScopRegions, therefore this node can be marked as SCoP as well.
-		ifStmt->getThenBody()->addAnnotation( std::make_shared<ScopRegion>(ret, comb, thenScops, 
+		ifStmt->getThenBody()->addAnnotation( 
+			std::make_shared<ScopRegion>(ret, comb, thenScops, 
 				ScopRegion::AccessRefSet(thenRefs.arrays_begin(), thenRefs.arrays_end()) 
-				));
+			)
+		);
 		subScops.push_back( ifStmt->getThenBody() );
 		
 		// the else body is annotated with the negated domain
@@ -288,29 +242,11 @@ public:
 
 	IterationVector visitForStmt(const ForStmtPtr& forStmt) {
 		subScops.clear();
-		IterationVector&& bodyIV = visit(forStmt->getBody());
 
-		// Visit the access functions for the array which are accessed (read or written) in the body
-		// of this for statement, also skip the visit of statements which have been already detected
-		// as SCoPs and therefore we already collected information about def-uses in a previous
-		// iteration
-		RefList&& refs = collectDefUse( forStmt->getBody(), StatementSet(subScops.begin(), subScops.end()) );
+		IterationVector bodyIV;
+		RefList&& refs = visitBody( bodyIV, forStmt->getBody() );
 		
-		// For now we only consider array access. 
-		//
-		// FIXME: In the future also scalars should be properly handled using technique like scalar
-		// arrays and so forth
-		std::for_each(refs.arrays_begin(), refs.arrays_end(),
-			[&](const ArrayRefPtr& cur) { 
-				const ExpressionList& idxExprs = cur->getIndexExpressions();
-				std::for_each(idxExprs.begin(), idxExprs.end(), 
-					[&](const ExpressionPtr& cur){	bodyIV = merge(bodyIV, markAccessExpression(cur)); }
-				);
-			} 
-		);
-
 		IterationVector ret;
-
 		const DeclarationStmtPtr& decl = forStmt->getDeclaration();
 		ret.add( Iterator(decl->getVariable()) ); 
 		
@@ -408,7 +344,9 @@ public:
 		}
 		// otherwise we have to visit the body and attach the ScopRegion annotation 
 		IterationVector&& bodyIV = visit(lambda->getBody());
-		lambda->addAnnotation( std::make_shared<ScopRegion>(bodyIV) );
+		lambda->addAnnotation( std::make_shared<ScopRegion>(bodyIV, ConstraintCombinerPtr(), subScops) );
+		scopList.push_back( std::make_pair(lambda, bodyIV) );
+
 		return bodyIV;
 	}
 
@@ -444,18 +382,133 @@ public:
 	
 };
 
+} // end namespace anonymous 
+
+namespace insieme {
+namespace analysis {
+namespace scop {
+
+using namespace core;
+using namespace poly;
+
+//===== ScopRegion ===============================================================
+const string ScopRegion::NAME = "SCoPAnnotation";
+const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
+
+const std::string ScopRegion::toString() const {
+	std::ostringstream ss;
+	ss << "IterationVector: " << iterVec;
+	if (constraints) {
+		ss << "\\nConstraints: " << *constraints;
+	}
+	if (!subScops.empty()) {
+		ss << "\\nSubScops: " << subScops.size();
+	}
+	if (!accesses.empty()) {
+		ss << "\\nAccesses: " << accesses.size() << "{" << 
+		join(",", accesses, [&](std::ostream& jout, const RefPtr& cur){ jout << *cur; } ) << "}";
+	}
+
+	return ss.str();
+}
+
+namespace {
+
+// Recursively visit ScopRegion appending constraints related to the current domain. Accesses found
+// in the region are appended to the accessList object
+void visitScop(const poly::IterationVector& iterVec, const poly::ConstraintCombinerPtr& parentDomain, 
+		const ScopRegion& region, ScopRegion::AccessList& accessList) 
+{
+	// assert( parentDomain->getIterationVector() == iterVec );
+
+	poly::ConstraintCombinerPtr currDomain = poly::cloneConstraint(iterVec, region.getConstraints());
+	if (parentDomain) {
+		currDomain = poly::makeConjunction(parentDomain, currDomain); 
+	}
+	
+	// for every access in this region, convert the affine constraint to the new iteration vector 
+	std::for_each(region.getDirectAccesses().begin(), region.getDirectAccesses().end(), 
+		[&](const RefPtr& cur) { 
+			if ( cur->getType() == Ref::ARRAY ) {
+				std::vector<poly::ConstraintCombinerPtr> idx;
+				const ArrayRef& array = static_cast<const ArrayRef&>(*cur);
+				std::for_each(array.getIndexExpressions().begin(), array.getIndexExpressions().end(), 
+					[&](const ExpressionPtr& cur) { 
+						assert(cur->hasAnnotation(scop::AccessFunction::KEY));
+						scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
+						idx.push_back( poly::makeCombiner( ann.getAccessConstraint().toBase(iterVec) ) );
+					}
+				);
+				accessList.push_back( std::make_tuple(cur, poly::IterationDomain(iterVec, currDomain), idx) ); 
+				return;
+			}
+			// accessList.push_back( std::make_tuple(cur, poly::IterationDomain(iterVec, currDomain), std::vector<poly::AffineFunction>()) ); 
+		} ); 
+	
+	// for every nested scop we visit it
+	std::for_each(region.getSubScops().begin(), region.getSubScops().end(), 
+		[&] (const core::StatementPtr& cur) { 
+			assert(cur->hasAnnotation(ScopRegion::KEY));
+			visitScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), accessList); 
+		}
+	);
+}
+
+} // end anonymous namespace 
+
+
+const ScopRegion::AccessList ScopRegion::listAccesses() const {
+	ScopRegion::AccessList ret;
+	
+	visitScop(iterVec, constraints, *this, ret);
+	return ret;
+}
+
+//===== AccessFunction ============================================================
+const string AccessFunction::NAME = "AccessFuncAnn";
+const utils::StringKey<AccessFunction> AccessFunction::KEY("AccessFuncAnnKey");
+
+const std::string AccessFunction::toString() const {
+	std::ostringstream ss;
+	ss << "IV: " << iterVec << ", CONS: " << eqCons;
+	return ss.str();
+}
+
+//===== mark ======================================================================
 ScopList mark(const core::NodePtr& root) {
 	ScopList ret;
 	ScopVisitor sv(ret);
 	try {
-		IterationVector iterVec = sv.visit(root);
-		// if no exception was thrown it means the entire region is a ScopRegion	
-		// therefore we add this node to the Scop list
-		ret.push_back( std::make_pair(root, iterVec) );	
+		sv.visit(root);
 	} catch (const NotASCoP& e) { }
 
 	return ret;     
 }
+
+
+//===== printSCoP ===================================================================
+void printSCoP(std::ostream& out, const core::NodePtr& scop) {
+	out << "SCoP: ";
+	// check whether the IR node has a SCoP annotation
+	if( !scop->hasAnnotation( ScopRegion::KEY ) ) {
+		out << "{ }\n";
+		return ;
+	}
+	
+	const ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
+	const ScopRegion::AccessList& acc = ann.listAccesses();
+
+	std::for_each(acc.begin(), acc.end(), [&](const ScopRegion::Access& cur){
+		const Ref& ref = *std::get<0>(cur);
+		out << "\n\tACCESS: [" << ref.getUsage() << "] " << *ref.getBaseExpression(); 
+		out << "\n\t" << std::get<1>(cur);
+		out << "\n\tIDX: " << join(";", std::get<2>(cur), 
+			[&](std::ostream& jout, const poly::ConstraintCombinerPtr& cur){ jout << *cur; } );
+	 	out << std::endl;
+	});
+}
+
+
 
 } // end namespace scop
 } // end namespace analysis

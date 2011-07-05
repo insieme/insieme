@@ -292,7 +292,7 @@ public:
 
 	// Returns an iterator over the Elements of this iteration vector,
 	// the elements are returned according to the order defined as follows:
-	// (iter0, iter1 ... iterN, param0, param1, ... paramM, 1)
+	// (iter0, iter1 ... iterN | param0, param1, ... paramM | 1)
 	iterator begin() const { return iterator(*this, iters.begin(), params.begin()); }
 	iterator end() const { return iterator(*this, iters.end(), params.end(), false); }
 
@@ -318,47 +318,55 @@ public:
 // contains both the elements of a and b. 
 IterationVector merge(const IterationVector& a, const IterationVector& b); 
 
+typedef std::vector<size_t> IndexTransMap;
+
+/**
+ * Creates a transformation map which maps the index in the iteration vector src into positions into
+ * iteration vector trg. This map can be used to efficiently convert AffineFunction expressed in the
+ * base of src vector in the new base (trg vector).
+ *
+ * Src must be <= than trg and all the element present in src must appear in trg. In contrary case
+ * an exception will be thrown. The size of the returned transformation map is always equal to the
+ * size of the src iteration vector.
+ */
+const IndexTransMap transform(const IterationVector& trg, const IterationVector& src);
+
 /**
  * AffineFunction represents an affine function based on an iteration vector. An
  * affine linear function is a function in the form:
  *
  * 3 * a + 2 * b ... + 0 
  *
- * Variables are either iterators or parameters. The representation is done
- * keeping a vector of coefficients referring to an iteration vector. For
- * example considering the iteration vector of the form (a, b, ... 1), the
- * coefficient matrix we need to store to represent the previous affine function
- * is: (3, 2, ... 0). 
+ * Variables are either iterators or parameters. The representation is done keeping a vector of
+ * coefficients referring to an iteration vector. For example considering the iteration vector of
+ * the form (a, b, ... 1), the coefficient matrix we need to store to represent the previous affine
+ * function is: (3, 2, ... 0). 
  *
- * Because we want to be able to change the dimensions of the iteration vector
- * during the construction of a SCoP, the affine function should refer to an
- * iteration vector which size may change. But because new iterators or
- * parameters are always append, we can easily create the new coefficient matrix
- * for the mutated iteration vector, thanks to the sep member.  
+ * Because we want to be able to change the dimensions of the iteration vector during the
+ * construction of a SCoP, the affine function should refer to an iteration vector which size may
+ * change. But because new iterators or parameters are always append, we can easily create the new
+ * coefficient matrix for the mutated iteration vector, thanks to the sep member.  
  */
 class AffineFunction : public utils::Printable, 
 	public boost::equality_comparable<AffineFunction> { 
 	// Iteration Vector to which this function refers to 
 	const IterationVector& iterVec;
 
-	// List of integer coefficients (the polyhedral model does not allow to
-	// represent non integer coefficients)
+	// List of integer coefficients (the polyhedral model does not allow to represent non integer
+	// coefficients)
 	std::vector<int> coeffs;
 
-	// Keeps the information of the number of iterators the iteration vector had
-	// when this affine function was created. This will allow us to produce the
-	// updated coefficient matrix in the case new parameters or iterators are
-	// added to the iterVec. 
+	// Keeps the information of the number of iterators the iteration vector had when this affine
+	// function was created. This will allow us to produce the updated coefficient matrix in the
+	// case new parameters or iterators are added to the iterVec. 
  	size_t sep;
 
 	/**
-	 * Converts an index in the iteration vector pointing to element E to an index 
-	 * on the coefficient vector which points to the coefficient value associated 
-	 * to element E.
+	 * Converts an index in the iteration vector pointing to element E to an index on the
+	 * coefficient vector which points to the coefficient value associated to element E.
 	 *
-	 * Returns -1 in the case E was created after this instance of affine
-	 * function is generated. In that case the coefficient value for the index
-	 * is by default zero.  
+	 * Returns -1 in the case E was created after this instance of affine function is generated. In
+	 * that case the coefficient value for the index is by default zero.  
 	 */
 	int idxConv(size_t idx) const;
 	
@@ -400,9 +408,11 @@ public:
 	// Creates a copy of this affine function based on a different iteration
 	// vector. This is necessary when composing constrains for building
 	// iteration domains 
-	AffineFunction(const IterationVector& newIterVec, const AffineFunction& other);
+	// AffineFunction(const IterationVector& newIterVec, const AffineFunction& other);
 
 	AffineFunction(const AffineFunction& other) : iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
+
+	const IterationVector& getIterationVector() const { return iterVec; }
 
 	// Set a coefficient for an iterator. 
 	void setCoefficient(const Iterator& iter, int coeff) {
@@ -437,6 +447,17 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	bool operator==(const AffineFunction& other) const;
+
+	/**
+	 * Creates a copy of this affine function using another iteration vector as a base. This method
+	 * can be invoked both providing a transformation map. In the case the transfomration map is not
+	 * provided, it will be recomputed by the method. 
+	 *
+	 * The created affine function will be based on the iteration vector (iterVec), meaning that the
+	 * user is responsable for the instance of iterVec to remain alive as long as the created Affine
+	 * function is utilized. 
+	 */
+	AffineFunction toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
 };
 
 // A constraint is a linear affine expression limiting the polyhedron. A set of
@@ -452,11 +473,10 @@ struct Constraint : public utils::Printable,
 	// 		EQ -> f(x) == 0, NE -> f(x) != 0, GT -> f(x)  > 0
 	// 		LT -> f(x)  < 0, GE -> f(x) >= 0, LE -> f(x) <= 0
 	//
-	// Usually underlying libraries require all the constraints to be in a
-	// specific for, i.e. f(x) >= 0, but newer libraries like ISL allows for
-	// representation of more complex relationships, therefore we keep at this
-	// stage the constraints in this form and let the backend deal with the
-	// representation in the chosen library. 
+	// Usually underlying libraries require all the constraints to be in a specific for, i.e. f(x)
+	// >= 0, but newer libraries like ISL allows for representation of more complex relationships,
+	// therefore we keep at this stage the constraints in this form and let the backend deal with
+	// the representation in the chosen library. 
 	enum Type { GT, LT, EQ, NE, GE, LE };	
 
 	Constraint(const AffineFunction& af, const Type& type) : af(af), type(type) { }
@@ -476,6 +496,9 @@ struct Constraint : public utils::Printable,
 		}
 		return af.size() < other.af.size(); 
 	}
+
+	Constraint toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const;
+
 private:
 	const AffineFunction af;
 	const Type type;
@@ -494,9 +517,8 @@ typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr;
 struct ConstraintVisitor; 
 
 /**
- * This class has the purpose to create conjunctions and/or disjunctions of
- * constraints. This allows to represent the domain spawned by control 
- * operations with a composed conditional expression
+ * This class has the purpose to create conjunctions and/or disjunctions of constraints. This allows
+ * to represent the domain spawned by control operations with a composed conditional expression
  */
 class ConstraintCombiner : public utils::Printable {
 public:
@@ -510,8 +532,8 @@ private:
 };
 
 /**
- * This class is a wrapper for a plain Constraint. Utilized to combine
- * constraints in a composite like structure.
+ * This class is a wrapper for a plain Constraint. Utilized to combine constraints in a composite
+ * like structure.
  */
 class RawConstraintCombiner : public ConstraintCombiner {
 	Constraint constraint; 
@@ -541,8 +563,8 @@ public:
 };
 
 /**
- * This class represent the combination of two constraints which can be either
- * a combined through a AND or a OR operator. 
+ * This class represent the combination of two constraints which can be either a combined through a
+ * AND or a OR operator. 
  */
 class BinaryConstraintCombiner : public ConstraintCombiner {
 public:
@@ -569,9 +591,9 @@ private:
 };
 
 /** 
- * Visitor class used to visit a combination of constraints. Because
- * constraints are combined together in a composite (tree like) structure, it
- * is therefore easier to visit the structure by means of a visitor. 
+ * Visitor class used to visit a combination of constraints. Because constraints are combined
+ * together in a composite (tree like) structure, it is therefore easier to visit the structure by
+ * means of a visitor. 
  *
  * The implementation of the visitor is based on double-dispatch. 
  */
@@ -597,9 +619,9 @@ namespace {
 template <class... All>
 class Combiner;
 
-// Combiner class takes a list of constraints and assembles them together
-// either in a conjunction or a disjunction (depending on the provided type)
-// and returns a pointer to the combiner containing the constraints 
+// Combiner class takes a list of constraints and assembles them together either in a conjunction or
+// a disjunction (depending on the provided type) and returns a pointer to the combiner containing
+// the constraints 
 template <class Head, class... Tail>
 struct Combiner<Head, Tail...> {
 	static ConstraintCombinerPtr make(const BinaryConstraintCombiner::Type& type, 
@@ -633,15 +655,14 @@ ConstraintCombinerPtr makeDisjunction(const All&... args) {
 	return Combiner<All...>::make(BinaryConstraintCombiner::OR, args...); 
 }
 
-// Utility function to create negation of constraints. Both of plain
-// constraints (by wrapping them on a raw constraint first) and negation of
-// constraints 
+// Utility function to create negation of constraints. Both of plain constraints (by wrapping them
+// on a raw constraint first) and negation of constraints 
 ConstraintCombinerPtr negate(const ConstraintCombinerPtr& cc);
 ConstraintCombinerPtr negate(const Constraint& c);
 
 ConstraintCombinerPtr makeCombiner(const Constraint& c);
 
-ConstraintCombinerPtr cloneConstraint(const IterationVector& iterVec, const ConstraintCombinerPtr& cc);
+ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& cc);
 
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;
@@ -649,11 +670,11 @@ typedef std::vector<Constraint> ConstraintList;
 // The iteration domain is the class which defines the shape of the polyhedron,
 // the set of integer points of an N-dimensional plane are delimited by affine
 // linear functions which define a convex region, therefore the polyhedron. 
-struct IterationDomain {
+struct IterationDomain : public utils::Printable {
 	IterationDomain(const IterationVector& iterVec, const ConstraintCombinerPtr& combiner) : 
 		iterVec(iterVec), constraints(combiner) { }
 
-	std::ostream& printTo(std::ostream& out) {
+	std::ostream& printTo(std::ostream& out) const {
 		return out << "Iteration Domain: \n\tIV: " << iterVec << "\n\tCONS: [ " << *constraints << " ]";
 	}
 

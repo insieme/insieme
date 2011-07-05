@@ -79,3 +79,18 @@ TEST(IteratorUtils, ProductIterator) {
 
 	EXPECT_EQ(ss.str(), "15:A--26:A--15:B--26:B--15:C--26:C--");
 }
+
+TEST(IteratorUtils, IteratorFilter) {
+	
+	vector<int> a = { 10, 0, 20, 0, 30, 0, 40 };
+	auto twin = filterIterator(a.begin(), a.end(), [](const int& cur) -> bool { return !cur; } );
+	
+	vector<int> fa(twin.first, twin.second);
+	EXPECT_EQ(static_cast<size_t>(4), fa.size());
+
+	EXPECT_EQ(static_cast<size_t>(10), fa[0]);
+	EXPECT_EQ(static_cast<size_t>(20), fa[1]);
+	EXPECT_EQ(static_cast<size_t>(30), fa[2]);
+	EXPECT_EQ(static_cast<size_t>(40), fa[3]);
+	
+}

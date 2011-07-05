@@ -39,6 +39,14 @@
 #include <utility>
 #include <iterator>
 
+#include <functional>
+#include "boost/operators.hpp"
+
+template <class T>
+struct Twin : public std::pair<T,T> { 
+	Twin(const T& first, const T& second) : std::pair<T,T>(first, second) { }
+};
+
 template<
 	typename ITypeA,
 	typename ITypeB,
@@ -102,8 +110,8 @@ template<
 	typename IterB = typename ContainerB::const_iterator,
 	typename ResIter = paired_iterator<IterA, IterB>
 >
-std::pair<ResIter, ResIter> make_paired_range(const ContainerA& first, const ContainerB& second) {
-	return std::make_pair(
+Twin<ResIter> make_paired_range(const ContainerA& first, const ContainerB& second) {
+	return Twin<ResIter> (
 			paired_iterator<IterA,IterB>(first.begin(), second.begin()),
 			paired_iterator<IterA,IterB>(first.end(), second.end())
 	);
@@ -177,9 +185,62 @@ template<
 	typename IterB = typename ContainerB::const_iterator,
 	typename ResIter = product_iterator<IterA, IterB>
 >
-std::pair<ResIter, ResIter> make_product_range(const ContainerA& first, const ContainerB& second) {
-	return std::make_pair(
+Twin<ResIter> make_product_range(const ContainerA& first, const ContainerB& second) {
+	return Twin<ResIter>(
 			ResIter(first.begin(), first.end(), second.begin(), second.end()),
 			ResIter(first.end(), first.end(), second.end(), second.end())
 	);
 }
+
+template <
+	class IterT, 
+	class ValT = typename IterT::value_type,
+	class PtrT = typename IterT::value_type*, 
+	class RefT = typename IterT::value_type&
+>
+struct IteratorFilter : 
+	public boost::forward_iterator_helper<
+		IteratorFilter<IterT, ValT, PtrT, RefT>, 
+		ValT, 
+		typename IterT::difference_type,
+		PtrT,
+		RefT > 
+{
+
+	typedef std::function<bool (const ValT&)> Filter;
+
+	IteratorFilter(const IterT& begin, const IterT& end, const Filter& filter) : 
+		iter(begin), end(end), filter(filter) { inc(true); }
+
+	RefT operator*() const { return *iter; }
+
+	IteratorFilter operator++() { inc(); return *this; }
+	
+	bool operator==(const IteratorFilter<IterT,ValT,PtrT,RefT>& other) const { return other.iter == iter; }
+
+private:
+	IterT iter, end;
+	Filter filter;
+	
+	void inc(bool first=false) { 
+		if (!first) { ++iter; }
+		while( iter!=end && filter(*iter) ) { ++iter; }
+	}
+
+};
+
+template < 
+	class IterT, 
+	class ValT = typename IterT::value_type,
+	class PtrT = typename IterT::value_type*, 
+	class RefT = typename IterT::value_type&
+> 
+Twin<IteratorFilter<IterT,ValT,PtrT,RefT>> filterIterator(const IterT& begin, const IterT& end, 
+		const typename IteratorFilter<IterT,ValT,PtrT,RefT>::Filter& filter) 
+{
+	return Twin<IteratorFilter<IterT,ValT,PtrT,RefT>>( 
+			IteratorFilter<IterT,ValT,PtrT,RefT>(begin, end, filter), 
+			IteratorFilter<IterT,ValT,PtrT,RefT>(end, end, filter) 
+		);
+}
+
