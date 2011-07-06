@@ -47,7 +47,7 @@
 
 #include <pthread.h>
 
-#define PTHREADCHECK(_test) assert(_test==0)
+#define PTHREADCHECK(_test) { int res = _test; assert(res==0); }
 
 #define NUMTHREADS_ENVVAR "ISBR_NUMTHREADS"
 

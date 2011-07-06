@@ -77,5 +77,10 @@ namespace backend {
 		return info;
 	}
 
+	void VariableManager::remInfo(const core::VariablePtr& var) {
+		// just delete from internal map
+		infos.erase(var);
+	}
+
 } // end namespace backend
 } // end namespace insieme

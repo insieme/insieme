@@ -45,6 +45,7 @@
 
 #include "insieme/backend/variable_manager.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -154,19 +155,53 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Literal>("STRUCT-UNSUPPORTED");
+		// to be created: an initialization of the corresponding struct
+		//     (<type>){<list of members>}
+
+		// get type and create empty init expression
+		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
+		c_ast::InitializerPtr init = c_ast::init(type);
+
+		// append initialization values
+		::transform(ptr->getMembers(), std::back_inserter(init->values),
+				[&](const core::StructExpr::Member& cur) {
+					return convert(context, cur.second);
+		});
+
+		// return completed
+		return init;
 	}
 
 	c_ast::NodePtr StmtConverter::visitUnionExpr(const core::UnionExprPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Literal>("UNION-UNSUPPORTED");
+		// to be created: an initialization of the corresponding union
+		//     (<type>){<single member>}
+
+		// get type and create init expression
+		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
+		return c_ast::init(type, convert(context, ptr->getMember()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitTupleExpr(const core::TupleExprPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Literal>("TUPLE-UNSUPPORTED");
+		// to be created: an initialization of the corresponding struct
+		//     (<type>){<list of members>}
+
+		// get type and create empty init expression
+		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
+		c_ast::InitializerPtr init = c_ast::init(type);
+
+		// append initialization values
+		::transform(ptr->getExpressions(), std::back_inserter(init->values),
+				[&](const core::ExpressionPtr& cur) {
+					return convert(context, cur);
+		});
+
+		// return completed
+		return init;
 	}
 
 	c_ast::NodePtr StmtConverter::visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Literal>("MEMBER-ACCESS-UNSUPPORTED");
+		// simply return a C-AST structure accessing the requested member
+		return c_ast::access(convert(context, ptr->getSubExpression()), ptr->getMemberName()->getName());
 	}
 
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
@@ -176,7 +211,23 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {
-		return converter.getCNodeManager()->create<c_ast::Literal>("VECTOR-UNSUPPORTED");
+		// to be created: an initialization of the corresponding struct - where one value is a vector
+		//     (<type>){(<vector type>){<list of members>}}
+
+		// get type and create empty init expression
+		const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+		c_ast::TypePtr type = info.rValueType;
+		c_ast::TypePtr vectorType = info.externalType;
+
+		// create inner vector init and append initialization values
+		c_ast::InitializerPtr vectorInit = c_ast::init(vectorType);
+		::transform(ptr->getExpressions(), std::back_inserter(vectorInit->values),
+				[&](const core::ExpressionPtr& cur) {
+					return convert(context, cur);
+		});
+
+		// create and return out initializer
+		return c_ast::init(type, vectorInit);
 	}
 
 	c_ast::NodePtr StmtConverter::visitMarkerExpr(const core::MarkerExprPtr& ptr, ConversionContext& context) {
@@ -206,19 +257,78 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitDeclarationStmt(const core::DeclarationStmtPtr& ptr, ConversionContext& context) {
-		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("DECL-UNSUPPORTED"));
+
+		// goal: create a variable declaration and register new variable within variable manager
+
+		auto& basic = converter.getNodeManager().getBasicGenerator();
+		auto manager = converter.getCNodeManager();
+
+		core::VariablePtr var = ptr->getVariable();
+		core::ExpressionPtr init = ptr->getInitialization();
+
+		// decide storage location of variable
+		VariableInfo::MemoryLocation location = VariableInfo::NONE;
+		if (core::analysis::hasRefType(var)) {
+			if (core::analysis::isCallOf(init, basic.getRefVar())) {
+				location = VariableInfo::DIRECT;
+			} else {
+				location = VariableInfo::INDIRECT;
+			}
+		}
+
+		// register variable information
+		const VariableInfo& info = context.getVariableManager().addInfo(converter, var, location);
+
+		// TODO: handle initUndefine and init struct cases
+
+		// create declaration statement
+		return manager->create<c_ast::VarDecl>(info.var, convertExpression(context, init));
 	}
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
-		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("FOR-UNSUPPORTED"));
+
+		auto manager = converter.getCNodeManager();
+
+		auto varManager = context.getVariableManager();
+		auto var = ptr->getDeclaration()->getVariable();
+
+		// get induction variable info
+		const VariableInfo& info = varManager.addInfo(converter, var, VariableInfo::NONE);
+
+		// create init, check, step and body
+		c_ast::VarDeclPtr init = manager->create<c_ast::VarDecl>(info.var, convertExpression(context, ptr->getDeclaration()->getInitialization()));
+		c_ast::ExpressionPtr check = c_ast::lt(info.var, convertExpression(context, ptr->getEnd()));
+		c_ast::ExpressionPtr step = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info.var, convertExpression(context, ptr->getStep()));
+		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
+
+		// remove variable info since no longer in scope
+		varManager.remInfo(var);
+
+		// combine all into a for
+		return manager->create<c_ast::For>(init, check, step, body);
 	}
 
 	c_ast::NodePtr StmtConverter::visitIfStmt(const core::IfStmtPtr& ptr, ConversionContext& context) {
-		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("IF-UNSUPPORTED"));
+
+		auto manager = converter.getCNodeManager();
+
+		// create condition, then and else branch
+		c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
+		c_ast::StatementPtr thenBranch = convertStmt(context, ptr->getThenBody());
+		c_ast::StatementPtr elseBranch = convertStmt(context, ptr->getElseBody());
+
+		return manager->create<c_ast::If>(condition, thenBranch, elseBranch);
 	}
 
 	c_ast::NodePtr StmtConverter::visitWhileStmt(const core::WhileStmtPtr& ptr, ConversionContext& context) {
-		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("WHILE-UNSUPPORTED"));
+
+		auto manager = converter.getCNodeManager();
+
+		// create condition, then and else branch
+		c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
+		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
+
+		return manager->create<c_ast::While>(condition, body);
 	}
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
@@ -227,7 +337,22 @@ namespace backend {
 	}
 
 	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context) {
-		return c_ast::compound(converter.getCNodeManager()->create<c_ast::Comment>("SWITCH-UNSUPPORTED"));
+
+		auto manager = converter.getCNodeManager();
+
+		// create empty switch ...
+		c_ast::SwitchPtr res = manager->create<c_ast::Switch>(convertExpression(context, ptr->getSwitchExpr()));
+
+		// add cases ..
+		::transform(ptr->getCases(), std::back_inserter(res->cases), [&](const core::SwitchStmt::Case& cur) {
+			return std::make_pair(convertExpression(context, cur.first), convertStmt(context, cur.second));
+		});
+
+		// add default ..
+		res->defaultBranch = convertStmt(context, ptr->getDefaultCase());
+
+		// .. and done
+		return res;
 	}
 
 	c_ast::NodePtr StmtConverter::visitMarkerStmt(const core::MarkerStmtPtr& ptr, ConversionContext& context) {

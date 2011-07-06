@@ -71,6 +71,7 @@ namespace backend {
 
 		const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location);
 
+		void remInfo(const core::VariablePtr& var);
 	};
 
 } // end namespace backend
