@@ -228,17 +228,17 @@ namespace c_ast {
 	struct Switch : public Statement {
 		ExpressionPtr value;
 		vector<pair<ExpressionPtr, StatementPtr>> cases;
-		ExpressionPtr defaultBranch;
+		StatementPtr defaultBranch;
 		Switch(ExpressionPtr value) : Statement(NT_Switch), value(value) {}
 		virtual bool equals(const Node& node) const;
 	};
 
 	struct For : public Statement {
-		ExpressionPtr init;
-		ExpressionPtr check;
-		ExpressionPtr step;
+		StatementPtr init;
+		StatementPtr check;
+		StatementPtr step;
 		StatementPtr body;
-		For(ExpressionPtr init, ExpressionPtr check, ExpressionPtr step, StatementPtr body)
+		For(StatementPtr init, StatementPtr check, StatementPtr step, StatementPtr body)
 			: Statement(NT_For), init(init), check(check), step(step), body(body) {}
 		virtual bool equals(const Node& node) const;
 	};
