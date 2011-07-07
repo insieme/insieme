@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/scop.h"
-#include "insieme/analysis/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"

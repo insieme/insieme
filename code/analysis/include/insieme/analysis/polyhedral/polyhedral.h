@@ -82,13 +82,12 @@ struct IteratorNotValid : public std::logic_error {
 };
 
 /**
- * Element defines an element appearing in the iteration vector which can be
- * either an iterator or a global parameter.In the IR they are both 
- * represented using a Variable.
+ * Element defines an element appearing in the iteration vector which can be either an iterator or a
+ * global parameter.In the IR they are both represented using a Variable.
  *
- * It is important for the polyhedral model to be able to distinguish 
- * between an iterator and a parameter, this is required later in the 
- * creation of the sets and relationships representing the polyhedron. 
+ * It is important for the polyhedral model to be able to distinguish between an iterator and a
+ * parameter, this is required later in the creation of the sets and relationships representing the
+ * polyhedron. 
  */
 struct Element : public utils::Printable, public boost::equality_comparable<Element> { 
 	// The type of a vector element is either an Iterator or a Parameter
@@ -96,7 +95,7 @@ struct Element : public utils::Printable, public boost::equality_comparable<Elem
 	
 	Element(const Type& type) : type(type) { }
 
-	Type getType() const { return type; }
+	inline Type getType() const { return type; }
 	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	bool operator==(const Element& other) const;
@@ -106,8 +105,8 @@ private:
 };
 
 /** 
- * A Variable in a wrapper for an IR Variable. We use the wrapper in order to
- * solve error with the resolution of the == operator by the compiler. 
+ * A Variable in a wrapper for an IR Variable. We use the wrapper in order to solve error with the
+ * resolution of the == operator by the compiler. 
  */
 class Variable : public Element {
 	core::VariablePtr var;
@@ -118,9 +117,9 @@ public:
 };
 
 /** 
- * An Iterator is a variable in the iteration vector which refers to a loop
- * iterator. Iterators are always listed at the beginning of the iterator vector
- * and their order refers to the nesting levels. 
+ * An Iterator is a variable in the iteration vector which refers to a loop iterator. Iterators are
+ * always listed at the beginning of the iterator vector and their order refers to the nesting
+ * levels. 
  */
 struct Iterator : public Variable {
 	Iterator(const core::VariablePtr& var) : Variable(Element::ITER, var) { } 
@@ -130,10 +129,9 @@ struct Iterator : public Variable {
 };
 
 /**
- * A Parameter refers to variable which are global constant in the SCoP. This
- * means that these variables are not loop iterators. In the IR these variables
- * are still represented as Variable, so we use the same base class as
- * Iterators.  
+ * A Parameter refers to variable which are global constant in the SCoP. This means that these
+ * variables are not loop iterators. In the IR these variables are still represented as Variable, so
+ * we use the same base class as Iterators.  
  */
 struct Parameter : public Variable {
 	Parameter(const core::VariablePtr& var) : Variable(Element::PARAM, var) { }	
@@ -143,9 +141,9 @@ struct Parameter : public Variable {
 };
 
 /** 
- * The constant part of an iteration domain is by default the last element of
- * the vector and fixed to 1. We define a class to hold this value in order to
- * make easier the representation of an iterator domain. 
+ * The constant part of an iteration domain is by default the last element of the vector and fixed
+ * to 1. We define a class to hold this value in order to make easier the representation of an
+ * iterator domain. 
  * */
 struct Constant : public Element {
 	Constant() : Element(Element::CONST) { }
@@ -156,27 +154,25 @@ struct Constant : public Element {
 };
 
 /**
- * An iteration vector is an order set of elements (either iterators or 
- * parameters) which defines the position of a specific variable in the 
- * domain matrix and transformation matrix which is built on top of this 
- * vector. 
+ * An iteration vector is an order set of elements (either iterators or parameters) which defines
+ * the position of a specific variable in the domain matrix and transformation matrix which is built
+ * on top of this vector. 
  *
- * The order of the variables in the vector is usually required (by the 
- * polyhedral libraries) to be ordered in the following way: 
+ * The order of the variables in the vector is usually required (by the polyhedral libraries) to be
+ * ordered in the following way: 
  *
  * (iter0,...iterN | param0, ..., paramM | 1)
  *
- * Which defines an iteration vector of size N+M+1, the first N elements 
- * are iterators, followed by M parameters and the last element is the 
- * constant part always set to 1. 
+ * Which defines an iteration vector of size N+M+1, the first N elements are iterators, followed by
+ * M parameters and the last element is the constant part always set to 1. 
  *
- * Each Polyhedral data structure needs to refer to this array to know the 
- * element associated to a particular position. 
+ * Each Polyhedral data structure needs to refer to this array to know the element associated to a
+ * particular position. 
  *
- * Because when the iteration vector is built we don't know the exact size of N
- * and M (because we may encounter new iterators or parameters as we build 
- * the iteration domain) we chose a representation which allows the size 
- * of the vector to grow without invalidating already generated polyhedron.
+ * Because when the iteration vector is built we don't know the exact size of N and M (because we
+ * may encounter new iterators or parameters as we build the iteration domain) we chose a
+ * representation which allows the size of the vector to grow without invalidating already generated
+ * polyhedron.
  */
 class IterationVector : public utils::Printable, 
 	public boost::equality_comparable<IterationVector> {
@@ -210,10 +206,9 @@ class IterationVector : public utils::Printable,
 public:
 
 	/**
-	 * Class utilized to build iterators over an iteration vector. Because the
-	 * internal representation of the iteration vector is non linear in memory
-	 * the iterator can be used to access all the element of the iterator in
-	 * using the iterator interface. 
+	 * Class utilized to build iterators over an iteration vector. Because the internal
+	 * representation of the iteration vector is non linear in memory the iterator can be used to
+	 * access all the element of the iterator in using the iterator interface. 
 	 * */
 	class iterator : public boost::random_access_iterator_helper<iterator, Element> {
 
@@ -249,14 +244,13 @@ public:
 	IterationVector() { }
 
 	/**
-	 * Appends an iterator to the list of iterators for this iteration 
-	 * vector, and returns its position in the iteration vector. 
+	 * Appends an iterator to the list of iterators for this iteration vector, and returns its
+	 * position in the iteration vector. 
 	 *
-	 * In the case the iterator is already present, the index of the 
-	 * element is returned. 
+	 * In the case the iterator is already present, the index of the element is returned. 
 	 */
-	size_t add(const Iterator& iter) { return addTo(iter, iters); }
-	size_t add(const Parameter& param) { return addTo(param, params) + iters.size(); }
+	inline size_t add(const Iterator& iter) { return addTo(iter, iters); }
+	inline size_t add(const Parameter& param) { return addTo(param, params) + iters.size(); }
 
 	size_t add(const Element& elem) { 
 		return elem.getType() == Element::ITER ? 
@@ -271,9 +265,8 @@ public:
 	int getIdx(const Element& elem) const; 
 
 	/** 
-	 * Search for a Variable inside this iteration vector, check if the variable
-	 * is within the iterators and the parameters, it returns -1 id the variable
-	 * was not found
+	 * Search for a Variable inside this iteration vector, check if the variable is within the
+	 * iterators and the parameters, it returns -1 id the variable was not found
 	 * */
 	int getIdx(const core::VariablePtr& var) const {
 		int idx = getIdx( Iterator(var) );
@@ -285,26 +278,26 @@ public:
 	}
 
 	// Retrieve the overall size for this iteration vector
-	size_t size() const { return iters.size() + params.size() + 1; }
+	inline size_t size() const { return iters.size() + params.size() + 1; }
 	// Retrieve the number of iterators and parameters for this iteration vector
-	size_t getIteratorNum() const { return iters.size(); }
-	size_t getParameterNum() const { return params.size(); }
+	inline size_t getIteratorNum() const { return iters.size(); }
+	inline size_t getParameterNum() const { return params.size(); }
 
 	// Returns an iterator over the Elements of this iteration vector,
 	// the elements are returned according to the order defined as follows:
 	// (iter0, iter1 ... iterN | param0, param1, ... paramM | 1)
-	iterator begin() const { return iterator(*this, iters.begin(), params.begin()); }
-	iterator end() const { return iterator(*this, iters.end(), params.end(), false); }
+	inline iterator begin() const { return iterator(*this, iters.begin(), params.begin()); }
+	inline iterator end() const { return iterator(*this, iters.end(), params.end(), false); }
 
 	// Returns an iterator over the iterators of this iteration vector:
 	// (iter0, iter1, ... iterN)
-	iter_iterator iter_begin() const { return iters.begin(); }
-	iter_iterator iter_end() const { return iters.end(); }
+	inline iter_iterator iter_begin() const { return iters.begin(); }
+	inline iter_iterator iter_end() const { return iters.end(); }
 
 	// Returns an iterator over the parameters of this iteration vector:
 	// (param0, param1, ... paramM)
-	param_iterator param_begin() const { return params.begin(); }
-	param_iterator param_end() const { return params.end(); }
+	inline param_iterator param_begin() const { return params.begin(); }
+	inline param_iterator param_end() const { return params.end(); }
 
 	const Element& operator[](size_t idx) const;
 
@@ -314,8 +307,8 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-// Merges two iteration vectors (a and b) to create a new iteration vector which 
-// contains both the elements of a and b. 
+// Merges two iteration vectors (a and b) to create a new iteration vector which contains both the
+// elements of a and b. 
 IterationVector merge(const IterationVector& a, const IterationVector& b); 
 
 typedef std::vector<size_t> IndexTransMap;
@@ -412,7 +405,7 @@ public:
 
 	AffineFunction(const AffineFunction& other) : iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
 
-	const IterationVector& getIterationVector() const { return iterVec; }
+	inline const IterationVector& getIterationVector() const { return iterVec; }
 
 	// Set a coefficient for an iterator. 
 	void setCoefficient(const Iterator& iter, int coeff) {
@@ -439,9 +432,9 @@ public:
 	iterator end() const { return iterator(iterVec, *this, iterVec.size()); }
 
 	int getCoeff(const core::VariablePtr& var) const;
-	int getConstCoeff() const { return coeffs.back(); }
+	inline int getConstCoeff() const { return coeffs.back(); }
 
-	size_t size() const { return iterVec.size(); } 
+	inline size_t size() const { return iterVec.size(); } 
 
 	// Implements the Printable interface 
 	std::ostream& printTo(std::ostream& out) const;
@@ -457,32 +450,37 @@ public:
 	 * user is responsable for the instance of iterVec to remain alive as long as the created Affine
 	 * function is utilized. 
 	 */
-	AffineFunction toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
+	AffineFunction 
+	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
 };
 
-// A constraint is a linear affine expression limiting the polyhedron. A set of
-// constraints will define an iteration domain which is our polyhedron. A
-// constraint is usually represented as an inequality, i.e. f(x) <= 0, however
-// we allow here for a more general representation allowing any sort of
-// constraint (==, !=, <, >, <= and >=) to be represented. 
+/**
+ * A constraint is a linear affine expression limiting the polyhedron. A set of constraints will
+ * define an iteration domain which is our polyhedron. A constraint is usually represented as an
+ * inequality, i.e. f(x) <= 0, however we allow here for a more general representation allowing any
+ * sort of constraint (==, !=, <, >, <= and >=) to be represented. 
+ */
 struct Constraint : public utils::Printable, 
 	public boost::equality_comparable<Constraint>,
 	public boost::less_than_comparable<Constraint> 
 {
-	// Define the possible type of expressions: 
-	// 		EQ -> f(x) == 0, NE -> f(x) != 0, GT -> f(x)  > 0
-	// 		LT -> f(x)  < 0, GE -> f(x) >= 0, LE -> f(x) <= 0
-	//
-	// Usually underlying libraries require all the constraints to be in a specific for, i.e. f(x)
-	// >= 0, but newer libraries like ISL allows for representation of more complex relationships,
-	// therefore we keep at this stage the constraints in this form and let the backend deal with
-	// the representation in the chosen library. 
-	enum Type { GT, LT, EQ, NE, GE, LE };	
+	/**
+	 * Define the possible type of expressions: 
+	 * 		EQ -> f(x) == 0, NE -> f(x) != 0, GT -> f(x)  > 0
+	 * 		LT -> f(x)  < 0, GE -> f(x) >= 0, LE -> f(x) <= 0
+	 *
+	 * 		Usually underlying libraries require all the constraints to be in a specific for, i.e. f(x)
+	 * 		>= 0, but newer libraries like ISL allows for representation of more complex relationships,
+	 * 		therefore we keep at this stage the constraints in this form and let the backend deal with
+	 * 		the representation in the chosen library. 
+	 */
+	 enum Type { GT, LT, EQ, NE, GE, LE };	
 
 	Constraint(const AffineFunction& af, const Type& type) : af(af), type(type) { }
 
-	Type getType() const { return type; }
-	const AffineFunction& getAffineFunction() const { return af; }
+	inline Type getType() const { return type; }
+
+	inline const AffineFunction& getAffineFunction() const { return af; }
 
 	std::ostream& printTo(std::ostream& out) const; 
 
@@ -490,26 +488,23 @@ struct Constraint : public utils::Printable,
 		return af==other.af && type==other.type;
 	}
 
-	bool operator<(const Constraint& other) const {
-		if (af.size() == other.af.size()) {
-			return type < other.type;
-		}
-		return af.size() < other.af.size(); 
-	}
+	bool operator<(const Constraint& other) const;
 
-	Constraint toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const;
+	Constraint 
+	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const;
 
 private:
 	const AffineFunction af;
 	const Type type;
 };
 
-struct EqualityConstraint : public Constraint {
-	EqualityConstraint(const AffineFunction& af, const Constraint::Type& type=Constraint::EQ) : 
-		Constraint(af, type) { assert(type == Constraint::EQ); }	
-};
+//===== ConstraintCombiner ========================================================================
 
-//forward declaration for the Constraint combiner 
+// The constraint combiner has the task to combine multiple constraints into conjunctions (AND) or
+// disjunctions (OR) of constraints which can be either in positive form of negated. Because
+// arbitrary nested structures are possible, we built a binary tree containing constraints. 
+//
+// Forward declaration for the Constraint combiner 
 class ConstraintCombiner;
 typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
 
@@ -520,15 +515,11 @@ struct ConstraintVisitor;
  * This class has the purpose to create conjunctions and/or disjunctions of constraints. This allows
  * to represent the domain spawned by control operations with a composed conditional expression
  */
-class ConstraintCombiner : public utils::Printable {
-public:
-	virtual void accept(ConstraintVisitor& v) const = 0;
+struct ConstraintCombiner : public utils::Printable {
+	// implements a simple double dispatch visitor for the Composite  
+	virtual void accept(ConstraintVisitor& v) const = 0; 
 
 	std::ostream& printTo(std::ostream& out) const;
-protected:
-	// we don't allow user to directly create a plain Combiner from scratch
-	ConstraintCombiner() { }
-private:
 };
 
 /**
@@ -542,7 +533,7 @@ public:
 		ConstraintCombiner(), constraint(constraint) { }
 	
 	// Returns the constraint embodied in this wrapper class
-	const Constraint& getConstraint() const { return constraint; }
+	inline const Constraint& getConstraint() const { return constraint; }
 	
 	void accept(ConstraintVisitor& v) const;
 };
@@ -557,7 +548,7 @@ public:
 		ConstraintCombiner( ), subComb( comb ) { }
 
 	// Returns the negated constraint 
-	const ConstraintCombinerPtr& getSubConstraint() const { return subComb; }
+	inline const ConstraintCombinerPtr& getSubConstraint() const { return subComb; }
 
 	void accept(ConstraintVisitor& v) const;
 };
@@ -580,10 +571,10 @@ public:
 	inline const ConstraintCombinerPtr& getRHS() const { return rhs; }
 
 	// Return the type of the constraint
-	const Type& getType() const { return type; }
+	inline const Type& getType() const { return type; }
 
-	bool isConjunction() const { return type == AND; }
-	bool isDisjunction() const { return type == OR; }
+	inline bool isConjunction() const { return type == AND; }
+	inline bool isDisjunction() const { return type == OR; }
 
 private:
 	Type type;
@@ -624,9 +615,8 @@ class Combiner;
 // the constraints 
 template <class Head, class... Tail>
 struct Combiner<Head, Tail...> {
-	static ConstraintCombinerPtr make(const BinaryConstraintCombiner::Type& type, 
-			const Head& head, const Tail&... args) 
-	{
+	static ConstraintCombinerPtr 
+	make(const BinaryConstraintCombiner::Type& type, const Head& head, const Tail&... args) {
 		return std::make_shared<BinaryConstraintCombiner>( type, head, 
 				Combiner<Tail...>::make(type, args...) 
 			);
@@ -662,14 +652,15 @@ ConstraintCombinerPtr negate(const Constraint& c);
 
 ConstraintCombinerPtr makeCombiner(const Constraint& c);
 
+// Makes a copy of the constraint cc changing the base vector to the iteration vector trgVec. 
 ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& cc);
 
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;
 
-// The iteration domain is the class which defines the shape of the polyhedron,
-// the set of integer points of an N-dimensional plane are delimited by affine
-// linear functions which define a convex region, therefore the polyhedron. 
+// The iteration domain is the class which defines the shape of the polyhedron, the set of integer
+// points of an N-dimensional plane are delimited by affine linear functions which define a convex
+// region, therefore the polyhedron. 
 struct IterationDomain : public utils::Printable {
 	IterationDomain(const IterationVector& iterVec, const ConstraintCombinerPtr& combiner) : 
 		iterVec(iterVec), constraints(combiner) { }

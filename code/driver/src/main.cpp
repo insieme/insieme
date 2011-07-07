@@ -74,7 +74,7 @@
 #include "insieme/xml/xml_utils.h"
 #endif
 
-#include "insieme/analysis/scop.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
 
 using namespace std;

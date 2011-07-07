@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/polyhedral.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/iterator_utils.h"
@@ -44,15 +44,14 @@
 namespace insieme {
 namespace analysis {
 namespace poly {
-//====== Exceptions ==========================================================
+//====== Exceptions ===============================================================================
 NotAffineExpr::NotAffineExpr(const core::ExpressionPtr& expr): 
 		std::logic_error("Expression is not linear and affine"), expr(expr) { }
 
 VariableNotFound::VariableNotFound(const core::VariablePtr& var) : 
 		std::logic_error("Variable not found in the iteration vector."), var(var) { }
 
-
-//====== Element =============================================================
+//====== Element ==================================================================================
 
 bool Element::operator==(const Element& other) const {
 	if (this == &other) { return true; }
@@ -79,8 +78,7 @@ std::ostream& Iterator::printTo(std::ostream& out) const { return out << *getVar
 
 std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getVariable(); }
 
-
-//====== IterationVector ======================================================
+//====== IterationVector ==========================================================================
 
 int IterationVector::getIdx(const Element& elem) const {
 	if (const Iterator* iter = dynamic_cast<const Iterator*>(&elem)) {
@@ -109,8 +107,7 @@ bool IterationVector::operator==(const IterationVector& other) const {
 	if (this == &other) {
 		return true;
 	}
-	// check weather the two iterators contain the same elements in the same
-	// order
+	// check weather the two iterators contain the same elements in the same order
 	return std::equal(begin(), end(), other.begin());
 }
 
@@ -118,22 +115,31 @@ bool IterationVector::operator==(const IterationVector& other) const {
 // the constant part. The vector is printed displaying the comma separated list of iterators and
 // parameters divided by the '|' separator. 
 std::ostream& IterationVector::printTo(std::ostream& out) const {
-	out << "(" << join(",", iter_begin(), iter_end(), [&](std::ostream& jout, const Element& cur){ jout << cur; } );
+	out << "(" << join(",", iter_begin(), iter_end(), 
+			[&](std::ostream& jout, const Element& cur){ jout << cur; } 
+		);
 	out << "|";
-	out << join(",", param_begin(), param_end(), [&](std::ostream& jout, const Element& cur){ jout << cur; } );
+	out << join(",", param_begin(), param_end(), 
+			[&](std::ostream& jout, const Element& cur){ jout << cur; } 
+		);
 	out << "|1)";
 	return out;
 }
 
 template <class T>
-void merge_add(IterationVector& dest, typename std::vector<T>::const_iterator aBegin, 
-		typename std::vector<T>::const_iterator aEnd, typename std::vector<T>::const_iterator bBegin, 
-		typename std::vector<T>::const_iterator bEnd) {
+void merge_add(IterationVector& dest, 
+		typename std::vector<T>::const_iterator aBegin, 
+		typename std::vector<T>::const_iterator aEnd, 
+		typename std::vector<T>::const_iterator bBegin, 
+		typename std::vector<T>::const_iterator bEnd ) 
+{
 	std::set<T> varSet;
     std::set_union(aBegin, aEnd, bBegin, bEnd, std::inserter(varSet, varSet.begin()));
 	std::for_each(varSet.begin(), varSet.end(), [&dest](const T& cur) { 
-			if (dest.getIdx(static_cast<const poly::Variable&>(cur).getVariable()) == -1) { dest.add(cur); }
-		} );
+		if ( dest.getIdx(static_cast<const poly::Variable&>(cur).getVariable()) == -1 ) { 
+			dest.add(cur); 
+		}
+	} );
 }
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which contains
@@ -168,7 +174,7 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 	return transMap;
 }
 
-//====== IterationVector::iterator =============================================
+//====== IterationVector::iterator ================================================================
 
 void IterationVector::iterator::inc(size_t n) {
 	if (!valid || n==0) return;
@@ -209,7 +215,7 @@ const Element& IterationVector::iterator::operator*() const {
 	return iterVec.constant;
 }
 
-//====== AffineFunction ========================================================
+//====== AffineFunction ===========================================================================
 
 AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr) : 
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
@@ -296,8 +302,12 @@ int AffineFunction::idxConv(size_t idx) const {
 
 std::ostream& AffineFunction::printTo(std::ostream& out) const { 
 	// Filters out all the elements with a coefficient equal to 0
-	auto&& filtered = filterIterator<iterator, Term, Term*, Term>(begin(), end(), [](const Term& cur) -> bool { return cur.second == 0; }); 	
-	return out << join(" + ", filtered.first, filtered.second, [&](std::ostream& jout, const Term& cur) { jout << cur; } );
+	auto&& filtered = filterIterator<iterator, Term, Term*, Term>(begin(), end(), 
+			[](const Term& cur) -> bool { return cur.second == 0; }
+		); 	
+	return out << join(" + ", filtered.first, filtered.second, 
+			[&](std::ostream& jout, const Term& cur) { jout << cur; } 
+		);
 }
 
 int AffineFunction::getCoeff(const core::VariablePtr& var) const {
@@ -319,21 +329,25 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 	// for which a coefficient is specified is the same 	
 	iterator thisIt = begin(), otherIt = other.begin(); 
 	while( thisIt!=end() ) {
-		if( ((*thisIt).first.getType() == Element::PARAM && (*otherIt).first.getType() == Element::ITER) || 
-			((*thisIt).first.getType() == Element::CONST && (*otherIt).first.getType() != Element::CONST) ) {
+		if ( ((*thisIt).first.getType() == Element::PARAM && 
+				(*otherIt).first.getType() == Element::ITER) || 
+			((*thisIt).first.getType() == Element::CONST && 
+			 	(*otherIt).first.getType() != Element::CONST) ) 
+		{
 			if ((*otherIt).second != 0) { return false; }
 			++otherIt;
-		} else if( ((*thisIt).first.getType() == Element::ITER && (*otherIt).first.getType() == Element::PARAM) || 
-			((*thisIt).first.getType() != Element::CONST && (*otherIt).first.getType() == Element::CONST) )	{
+		} else if ( ((*thisIt).first.getType() == Element::ITER && 
+				(*otherIt).first.getType() == Element::PARAM) || 
+			((*thisIt).first.getType() != Element::CONST &&
+			 	(*otherIt).first.getType() == Element::CONST) )	
+		{
 			if ((*thisIt).second != 0) { return false; }
 			++thisIt;
-		} else if(*thisIt==*otherIt) {
+		} else if (*thisIt == *otherIt) {
 			// iterators aligned 
 			++thisIt;
 			++otherIt;
-		} else {
-			return false;
-		}
+		} else return false;
 	}	
 	return true;
 }
@@ -356,25 +370,23 @@ AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const Inde
 	return ret;
 }
 
-//====== AffineFunction::iterator =================================================
+//====== AffineFunction::iterator =================================================================
 
 AffineFunction::iterator& AffineFunction::iterator::operator++() { 
-	if ( iterPos == iterVec.size() )
-		throw "Iterator not valid.";
+	if ( iterPos == iterVec.size() )	throw "Iterator not valid.";
 	
 	iterPos++;
 	return *this;
 }
 
 AffineFunction::Term AffineFunction::iterator::operator*() const {  
-	if ( iterPos == iterVec.size() )
-		throw "Iterator not valid.";
+	if ( iterPos == iterVec.size() )	throw "Iterator not valid.";
 
 	int idx = af.idxConv(iterPos);
 	return Term(iterVec[iterPos], idx==-1?0:af.coeffs[idx]);	
 }
 
-//===== constraint ==============================================================
+//===== constraint ================================================================================
 std::ostream& Constraint::printTo(std::ostream& out) const { 
 	out << af << " ";
 	switch(type) {
@@ -384,18 +396,24 @@ std::ostream& Constraint::printTo(std::ostream& out) const {
 	return out << " 0";
 }
 
+bool Constraint::operator<(const Constraint& other) const {
+	if (af.size() == other.af.size()) {	return type < other.type; }
+	return af.size() < other.af.size(); 
+}
 
 Constraint Constraint::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {
 	return Constraint( af.toBase(iterVec, idxMap), type );
 }
 
-//===== ConstraintCombiner ======================================================
+//===== ConstraintCombiner ========================================================================
+
 void RawConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
 void NegatedConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
 void BinaryConstraintCombiner::accept(ConstraintVisitor& v) const { v.visit(*this); }
 
 namespace {
 
+//===== ConstraintPrinter =========================================================================
 // Visits the constraints and prints the expression to a provided output stream
 struct ConstraintPrinter : public ConstraintVisitor {
 	
@@ -441,6 +459,7 @@ ConstraintCombinerPtr makeCombiner(const Constraint& constr) {
 
 namespace {
 
+//===== ConstraintCloner ==========================================================================
 // because Constraints are represented on the basis of an iteration vector which is shared among the
 // constraints componing a constraint combiner, when a combiner is stored, the iteration vector has
 // to be changed. 
@@ -476,7 +495,6 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 		newCC = std::make_shared<BinaryConstraintCombiner>( bcc.getType(), lhs, rhs );
 	}
-
 };
 
 } // end anonymous namespace 
