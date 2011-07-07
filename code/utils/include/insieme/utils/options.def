@@ -50,6 +50,8 @@ FLAG("benchmark-core,B", 	"benchmark-core", 		BenchmarkCore, false, "runs some s
 
 FLAG("show-line-no,",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
 
+FLAG("mark-scop,",       	"mark-scop",            MarkScop,		false,	"Mark Static Control Parts int the IR")
+
 //OPTION(opt_name, opt_id, var_name, var_type, var_help)
 OPTION("log-level,L",		"log-level",				LogLevel,		std::string,				"Log level: DEBUG|INFO|WARN|ERROR|FATAL")
 OPTION("input-file", 		"input-file", 			InputFiles, 	std::vector<std::string>, 	"input file(s)")

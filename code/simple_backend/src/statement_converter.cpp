@@ -123,7 +123,7 @@ namespace simple_backend {
 		// add basic includes
 		res.push_back("#include <alloca.h>");
 		res.push_back("#include <stddef.h>");
-		res.push_back("#include <stdlib.h>");
+		// res.push_back("#include <stdlib.h>");
 
 		// including this header will result into problems on a 32 bit system
 		//  - reason: memset / memcpy uses size_t, which is fixed to 64 bit within insieme

@@ -141,10 +141,11 @@ template <class BuilderTy>
 void visitAnnotationList(BuilderTy& builder, size_t parentId, const core::Node::annotation_map_type& map) {
 	for(core::Node::annotation_map_type::const_iterator it = map.begin(), end = map.end(); it != end; ++it) {
 		size_t annotationId = (size_t)&*it->second;
-		std::string label = it->second->getAnnotationName();
-		if(!it->second->toString().empty())
-			label = "\"" + label + " \\n[" + it->second->toString() + "]\"";
-		builder.addNode( AnnotationNode(annotationId,label) );
+		
+		std::ostringstream ss;
+		ss << "\"" << it->second->getAnnotationName() << "\\n[" << *it->second << "]\"";
+		builder.addNode( AnnotationNode(annotationId,ss.str()) );
+
 		DotLink l1(parentId, annotationId, "");
 		l1[NodeProperty::DIRECTION] = "none";
 		l1[NodeProperty::STYLE] = "dashed";

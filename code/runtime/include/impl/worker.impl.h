@@ -172,3 +172,15 @@ irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity) {
 
 	return arg.generated;
 }
+
+void _irt_worker_cancel_all_others() {
+	irt_worker *self = irt_worker_get_current(), *cur;
+	for(int i=0; i<irt_g_worker_count; ++i) {
+		cur = irt_g_workers[i];
+		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
+			cur->state = IRT_WORKER_STATE_STOP;
+			pthread_cancel(cur->pthread);
+		}
+	}
+	
+}

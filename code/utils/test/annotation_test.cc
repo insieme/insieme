@@ -75,6 +75,8 @@ namespace {
 		const std::string& getAnnotationName() const {
 			 return NAME;
 		}
+
+		std::ostream& printTo(std::ostream& out) const { return out << NAME; }
 	};
 
 	// initalization of the dummy key

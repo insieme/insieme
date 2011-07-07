@@ -63,6 +63,7 @@ irt_deque_test* make_item(float val) {
 	return item;
 }
 
+
 TEST(deques, mass_parallel_ops) {
 	for(int j=0; j<PARALLEL_ITERATIONS; ++j) {
 		irt_deque_test_deque q;
