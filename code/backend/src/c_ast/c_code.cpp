@@ -36,11 +36,15 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 
+#include <fstream>
+
 #include <boost/graph/topological_sort.hpp>
 #include <boost/graph/adjacency_list.hpp>
 
 #include "insieme/backend/c_ast/c_ast_printer.h"
 #include "insieme/utils/container_utils.h"
+
+#include "insieme/utils/graph_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -113,6 +117,22 @@ namespace c_ast {
 				::transform(vertexOrder, std::back_inserter(result), [&](const Vertex& curV) {
 					return graph[curV];
 				});
+
+
+				// TODO: remove this debug print
+//				std::fstream outFile("graph.dot", std::fstream::out | std::fstream::trunc);
+//				boost::write_graphviz(outFile, graph, [&](std::ostream& out, const Vertex& v) {
+//					string label = toString(*graph[v]);
+//					boost::replace_all(label, "\n", " ");
+//					const int limit = 40;
+//					if (label.size() > limit) {
+//						label = label.substr(0,limit) + "...";
+//					}
+//					out << "[label=\"" << label << "\"]";
+//				});
+//				boost::write_graphviz(outFile, graph, insieme::utils::graph::label_printer<Graph, print<deref<CodeFragmentPtr>>>(graph, print<deref<CodeFragmentPtr>>()));
+//				outFile.close();
+
 				return result;
 
 			} catch(not_a_dag e) {
@@ -129,11 +149,11 @@ namespace c_ast {
 	}
 
 
-	CCode::CCode(const core::NodePtr& source, const CodeFragmentPtr& root, const vector<string>& includes)
-		: TargetCode(source), fragments(toVector(root)), includes(includes) { }
+	CCode::CCode(const core::NodePtr& source, const CodeFragmentPtr& root)
+		: TargetCode(source), fragments(toVector(root)) { }
 
-	CCode::CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments, const vector<string>& includes)
-		: TargetCode(source), fragments(fragments), includes(includes) { }
+	CCode::CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments)
+		: TargetCode(source), fragments(fragments) { }
 
 	std::ostream& CCode::printTo(std::ostream& out) const {
 
@@ -145,13 +165,25 @@ namespace c_ast {
 		out << " * --------------------------------------------------------------------- \n";
 		out << " */\n";
 
-		// add includes
+		// get list of fragments to be printed
+		auto list = getOrderedFragments(fragments);
+
+		// collect and add includes
+		std::set<string> includes;
+		for_each(list, [&](const CodeFragmentPtr& cur) {
+			includes.insert(cur->getIncludes().begin(), cur->getIncludes().end());
+		});
 		for_each(includes, [&](const string& cur) {
-			out << "#include " << cur << "\n";
+			if (cur[0] == '<' || cur[0] == '"') {
+				out << "#include " << cur << "\n";
+			} else {
+				out << "#include <" << cur << ">\n";
+			}
 		});
 
+		out << "\n";
+
 		// print topological sorted list of fragments
-		auto list = getOrderedFragments(fragments);
 		for_each(list, [&out](const CodeFragmentPtr& cur) {
 			out << *cur;
 		});

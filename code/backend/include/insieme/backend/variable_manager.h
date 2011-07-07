@@ -38,12 +38,14 @@
 
 #include "insieme/backend/c_ast/forward_decls.h"
 
-#include "insieme/backend/type_manager.h"
-
+#include "insieme/core/expressions.h"
 #include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace backend {
+
+	class Converter;
+	struct TypeInfo;
 
 	struct VariableInfo {
 
@@ -67,7 +69,7 @@ namespace backend {
 
 		VariableManager() : infos() {};
 
-		const VariableInfo& getInfos(const core::VariablePtr& var) const;
+		const VariableInfo& getInfo(const core::VariablePtr& var) const;
 
 		const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location);
 

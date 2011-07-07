@@ -41,6 +41,7 @@
 #include <vector>
 #include <cassert>
 
+#include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/utils/container_utils.h"
 
 namespace insieme {
@@ -95,6 +96,9 @@ namespace c_ast {
 
 	inline ParenthesesPtr parenthese(ExpressionPtr expr) {
 		assert(expr && expr->getManager() && "There should be a manager!");
+		if (expr->getType() == NT_Parentheses) {
+			return static_pointer_cast<Parentheses>(expr);
+		}
 		return expr->getManager()->create<Parentheses>(expr);
 	}
 
@@ -137,19 +141,23 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr preInc(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PrefixInc, expr);
+		return unaryOp(UnaryOperation::PrefixInc, parenthese(expr));
 	}
 
 	inline ExpressionPtr preDec(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PrefixDec, expr);
+		return unaryOp(UnaryOperation::PrefixDec, parenthese(expr));
 	}
 
 	inline ExpressionPtr postInc(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PostfixInc, expr);
+		return unaryOp(UnaryOperation::PostfixInc, parenthese(expr));
 	}
 
 	inline ExpressionPtr postDec(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PostfixDec, expr);
+		return unaryOp(UnaryOperation::PostfixDec, parenthese(expr));
+	}
+
+	inline ExpressionPtr sizeOf(NodePtr element) {
+		return unaryOp(UnaryOperation::SizeOf, element);
 	}
 
 	// -- Binary Operations -------------------------------------
@@ -239,12 +247,12 @@ namespace c_ast {
 		return binaryOp(BinaryOperation::Cast, type, expr);
 	}
 
-	inline ExpressionPtr access(NodePtr expr, const string& element) {
-		return binaryOp(BinaryOperation::MemberAccess, expr, expr->getManager()->create(element));
+	inline ExpressionPtr access(ExpressionPtr expr, const string& element) {
+		return binaryOp(BinaryOperation::MemberAccess, parenthese(expr), expr->getManager()->create(element));
 	}
 
-	inline ExpressionPtr access(NodePtr expr, IdentifierPtr element) {
-		return binaryOp(BinaryOperation::MemberAccess, expr, element);
+	inline ExpressionPtr access(ExpressionPtr expr, NodePtr element) {
+		return binaryOp(BinaryOperation::MemberAccess, parenthese(expr), element);
 	}
 
 	inline ExpressionPtr indirectAccess(NodePtr expr, const string& element) {

@@ -68,6 +68,7 @@ namespace backend {
 			c_ast::FunctionPtr function;
 			std::set<c_ast::CodeFragmentPtr> prototypeDependencies;
 			std::set<c_ast::CodeFragmentPtr> definitionDependencies;
+			std::set<string> includes;
 		};
 
 		class FunctionInfoStore {
@@ -163,8 +164,11 @@ namespace backend {
 			dependencies.insert(typeInfo.constructor);
 			dependencies.insert(info.lambdaWrapper);
 
+			// add include for alloca
+			context.getIncludes().insert("alloca.h");
+
 			// build the value
-			auto manager = context.getCNodeManager();
+			auto manager = converter.getCNodeManager();
 			c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(closureType),
 					c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, closureType)));
 			return c_ast::call(typeInfo.constructorName, alloc, c_ast::ref(info.lambdaWrapperName));
@@ -175,7 +179,7 @@ namespace backend {
 
 			// collect some manager references
 			const Converter& converter = context.getConverter();
-			const c_ast::SharedCNodeManager& manager = context.getCNodeManager();
+			const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
 			StmtConverter& stmtConverter = converter.getStmtConverter();
 			TypeManager& typeManager = converter.getTypeManager();
 
@@ -409,6 +413,8 @@ namespace backend {
 			res->mapperName = manager->create(name + "_mapper");
 			res->constructorName = manager->create(name + "_ctr");
 
+			// get the name of the inner struct
+			c_ast::IdentifierPtr innerStructName = manager->create("_" + name + "_closure");
 
 			// create a map between expressions in the IR and parameter / captured variable names in C
 			utils::map::PointerMap<core::ExpressionPtr, c_ast::VariablePtr> variableMap;
@@ -438,13 +444,16 @@ namespace backend {
 
 			// ----------- define closure type ---------------
 
+			// create closure struct
+			c_ast::StructTypePtr closureStruct = manager->create<c_ast::StructType>(innerStructName);
+
 			// get function type of mapper
 			core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(bind->getType());
 			const FunctionTypeInfo& funInfo = typeManager.getTypeInfo(funType);
 
 			// construct variable / struct entry pointing to the function to be called when processing the closure
 			c_ast::FunctionTypePtr mapperType = manager->create<c_ast::FunctionType>(typeManager.getTypeInfo(funType->getReturnType()).rValueType);
-			mapperType->parameterTypes.push_back(manager->create<c_ast::PointerType>(funInfo.rValueType));
+			mapperType->parameterTypes.push_back(manager->create<c_ast::PointerType>(closureStruct));
 			for_each(parameter, [&](const core::VariablePtr& var) {
 				mapperType->parameterTypes.push_back(typeManager.getTypeInfo(var->getType()).rValueType);
 			});
@@ -458,8 +467,7 @@ namespace backend {
 			// define variable / struct entry pointing to the nested closure variable
 			c_ast::VariablePtr varNested = c_ast::var(nestedClosureType, "nested");
 
-			// create closure struct
-			c_ast::StructTypePtr closureStruct = manager->create<c_ast::StructType>(manager->create());
+			// finally, add fields to struct
 			closureStruct->elements.push_back(varCall);
 			closureStruct->elements.push_back(varNested);
 			addAll(closureStruct->elements, varsCaptured);
@@ -537,6 +545,7 @@ namespace backend {
 					closure, mapper, constructor,
 					manager->create<c_ast::Comment>("--  End  - Bind Constructs ------------------------------------------------------------"));
 
+			res->definitions->addDependency(funInfo.declaration);
 			res->definitions->addDependency(nestedClosureInfo.definition);
 			res->definitions->addDependency(nestedClosureInfo.caller);
 
@@ -610,6 +619,9 @@ namespace backend {
 				// add prototype to prototype block
 				declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));
 				declarations->addDependencies(codeInfo.prototypeDependencies);
+
+				// add includes
+				declarations->addIncludes(codeInfo.includes);
 			});
 
 
@@ -635,6 +647,9 @@ namespace backend {
 
 				// add code dependencies
 				definitions->addDependencies(codeInfo.definitionDependencies);
+
+				// add includes
+				definitions->addIncludes(codeInfo.includes);
 			});
 
 		}
@@ -684,17 +699,18 @@ namespace backend {
 			if (lambda) {
 
 				// set up variable manager
-				VariableManager varManager;
-
+				ConversionContext innerContext(converter);
 				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
-					varManager.addInfo(converter, cur, (cur->getType()->getNodeType() == core::NT_RefType)?VariableInfo::INDIRECT:VariableInfo::NONE);
+					innerContext.getVariableManager().addInfo(converter, cur, (cur->getType()->getNodeType() == core::NT_RefType)?VariableInfo::INDIRECT:VariableInfo::NONE);
 				});
 
-
 				// convert the body code fragment and collect dependencies
-				ConversionContext context(converter, res.definitionDependencies, varManager);
-				c_ast::NodePtr code = converter.getStmtConverter().convert(context, lambda->getBody());
+				c_ast::NodePtr code = converter.getStmtConverter().convert(innerContext, lambda->getBody());
 				cBody = static_pointer_cast<c_ast::Statement>(code);
+				res.definitionDependencies.insert(innerContext.getDependencies().begin(), innerContext.getDependencies().end());
+
+				// also attach includes
+				res.includes = innerContext.getIncludes();
 			}
 
 			// create function
