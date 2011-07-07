@@ -1,0 +1,227 @@
+// -------------- Pretty Print Inspire --------------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v53 =  var(12);
+        decl ref<int<4>> v54 =  var(12);
+        v53 := v54 := 60;
+        decl ref<real<8>> v55 =  var(800);
+        decl ref<real<8>> v56 =  var(0.02);
+        decl ref<real<8>> v57 =  var(0.08);
+        decl ref<uint<4>> v58 =  var(4);
+        decl ref<vector<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,4>> v59 =  var([struct{type:=0, pos:=[0, 0], mult:=0.01, size:=v56}, struct{type:=1, pos:=[1, 0], mult:=v57, size:=v56}, struct{type:=1, pos:=[0-0.5, 0.866025404], mult:=v57, size:=v56}, struct{type:=1, pos:=[0-0.5, 0-0.866025404], mult:=v57, size:=v56}]);
+        decl ref<real<8>> v60 =  var(0.01);
+        decl ref<real<8>> v61 =  var(0.01);
+        decl ref<real<8>> v62 =  var(0.3);
+        decl ref<uint<4>> v63 =  var(400);
+        decl ref<uint<4>> v64 =  var(100000);
+        decl ref<real<8>> v65 =  var(0.01);
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v66 =  var(fun(int<4> v1, int<4> v2){
+            decl ref<array<uint<4>,1>> v3 =  new(array.create.1D(type<uint<4>>, sizeof(type<uint<4>>)*v1*v2/sizeof(type<uint<4>>)));
+            decl ref<array<array<uint<4>,1>,1>> v4 =  new(array.create.1D(type<array<uint<4>,1>>, sizeof(type<array<uint<4>,1>>)*v1/sizeof(type<array<uint<4>,1>>)));
+            for(decl int<4> v6 = 0 .. v1 : 1) {
+                array.ref.elem.1D(v4, v6) := scalar.to.array(array.ref.elem.1D(v3, v6*v1));
+            };
+            return struct{data:=v4, x:=v1, y:=v2};
+        }(v53, v54));
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v67 =  var(fun(int<4> v1, int<4> v2){
+            decl ref<array<uint<4>,1>> v3 =  new(array.create.1D(type<uint<4>>, sizeof(type<uint<4>>)*v1*v2/sizeof(type<uint<4>>)));
+            decl ref<array<array<uint<4>,1>,1>> v4 =  new(array.create.1D(type<array<uint<4>,1>>, sizeof(type<array<uint<4>,1>>)*v1/sizeof(type<array<uint<4>,1>>)));
+            for(decl int<4> v6 = 0 .. v1 : 1) {
+                array.ref.elem.1D(v4, v6) := scalar.to.array(array.ref.elem.1D(v3, v6*v1));
+            };
+            return struct{data:=v4, x:=v1, y:=v2};
+        }(v53, v54));
+        for(decl int<4> v74 = 0 .. v53 : 1) {
+            for(decl int<4> v73 = 0 .. v54 : 1) {
+                decl ref<real<8>> v68 =  var(0-1.0+v74/v53-1*2.0*v55);
+                decl ref<real<8>> v70 =  var(0-1.0+v73/v54-1*2.0*v55);
+                decl ref<struct<target:uint<4>,numSteps:uint<4>>> v72 =  var(fun(real<8> v17, real<8> v18, ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v19, uint<4> v20, real<8> v21, real<8> v22, real<8> v23, uint<4> v24, uint<4> v25, real<8> v26){
+                    decl ref<vector<real<8>,2>> v27 =  var([v17, v18]);
+                    decl ref<vector<real<8>,2>> v28 =  var([0, 0]);
+                    decl ref<vector<real<8>,2>> v29 =  var([0, 0]);
+                    decl ref<vector<real<8>,2>> v30 =  var([0, 0]);
+                    decl ref<vector<real<8>,2>> v31 =  var([0, 0]);
+                    decl ref<real<8>> v32 =  var(sqrt(v21));
+                    for(decl uint<4> v51 = 0 .. v25 : 1) {
+                        vector.ref.elem(v27, 0) := vector.ref.elem(v27, 0)+vector.ref.elem(v28, 0)*v21+v32*2.0/3.0*vector.ref.elem(v29, 0)-1.0/6.0*vector.ref.elem(v31, 0);
+                        vector.ref.elem(v27, 1) := vector.ref.elem(v27, 1)+vector.ref.elem(v28, 1)*v21+v32*2.0/3.0*vector.ref.elem(v29, 1)-1.0/6.0*vector.ref.elem(v31, 1);
+                        vector.ref.elem(v30, 0) := 0;
+                        vector.ref.elem(v30, 1) := 0;
+                        for(decl uint<4> v44 = 0 .. v20 : 1) {
+                            decl ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v33 = scalar.to.array(array.ref.elem.1D(v19, v44));
+                            decl ref<vector<real<8>,2>> v35 =  var([vector.ref.elem(v27, 0)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 0), vector.ref.elem(v27, 1)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 1)]);
+                            if(composite.ref.elem(array.ref.elem.1D(v33, 0), type, type<int<4>>)==0) {
+                                vector.ref.elem(v30, 0) := vector.ref.elem(v30, 0)-composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>)*vector.ref.elem(v35, 0);
+                                vector.ref.elem(v30, 1) := vector.ref.elem(v30, 1)-composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>)*vector.ref.elem(v35, 1);
+                            } else {
+                                decl ref<real<8>> v36 =  var(sqrt(vector.ref.elem(v27, 0)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 0)*vector.ref.elem(v27, 0)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 0)+vector.ref.elem(v27, 1)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 1)*vector.ref.elem(v27, 1)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 1)+v23*v23));
+                                vector.ref.elem(v30, 0) := vector.ref.elem(v30, 0)-composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>)/v36*v36*v36*vector.ref.elem(v35, 0);
+                                vector.ref.elem(v30, 1) := vector.ref.elem(v30, 1)-composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>)/v36*v36*v36*vector.ref.elem(v35, 1);
+                            };
+                            if(v51>v24&&bind(){fun(ref<vector<real<8>,2>> v38, ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v39)return sqrt(vector.ref.elem(v38, 0)*vector.ref.elem(v38, 0)+vector.ref.elem(v38, 1)*vector.ref.elem(v38, 1))<composite.ref.elem(array.ref.elem.1D(v39, 0), size, type<real<8>>)(v35, v33)}&&bind(){fun(ref<vector<real<8>,2>> v41, real<8> v42)return sqrt(vector.ref.elem(v41, 0)*vector.ref.elem(v41, 0)+vector.ref.elem(v41, 1)*vector.ref.elem(v41, 1))<v42(v28, v26)}) {
+                                return struct{target:=v44, numSteps:=v51};
+                            } else { };
+                        };
+                        vector.ref.elem(v30, 0) := vector.ref.elem(v30, 0)-vector.ref.elem(v28, 0)*v22;
+                        vector.ref.elem(v30, 1) := vector.ref.elem(v30, 1)-vector.ref.elem(v28, 1)*v22;
+                        vector.ref.elem(v28, 0) := vector.ref.elem(v28, 0)+v21*1.0/3.0*vector.ref.elem(v30, 0)+5.0/6.0*vector.ref.elem(v29, 0)-1.0/6.0*vector.ref.elem(v31, 0);
+                        vector.ref.elem(v28, 1) := vector.ref.elem(v28, 1)+v21*1.0/3.0*vector.ref.elem(v30, 1)+5.0/6.0*vector.ref.elem(v29, 1)-1.0/6.0*vector.ref.elem(v31, 1);
+                        fun(ref<vector<real<8>,2>> v45, ref<vector<real<8>,2>> v46){
+                            vector.ref.elem(v46, 0) := vector.ref.elem(v45, 0);
+                            vector.ref.elem(v46, 1) := vector.ref.elem(v45, 1);
+                        }(v29, v31);
+                        fun(ref<vector<real<8>,2>> v48, ref<vector<real<8>,2>> v49){
+                            vector.ref.elem(v48, 0) := vector.ref.elem(v49, 0);
+                            vector.ref.elem(v48, 1) := vector.ref.elem(v49, 1);
+                        }(v29, v30);
+                    };
+                    return struct{target:=v20+1, numSteps:=v25};
+                }(v68, v70, ref.vector.to.ref.array(v59), v58, v60, v61, v62, v63, v64, v65));
+                array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v66, data, type<array<array<uint<4>,1>,1>>), v74), v73) := composite.ref.elem(v72, target, type<uint<4>>);
+                array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v67, data, type<array<array<uint<4>,1>,1>>), v74), v73) := composite.ref.elem(v72, numSteps, type<uint<4>>);
+            };
+        };
+        fun(struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v10){
+            for(decl int<4> v15 = 0 .. v10.x : 1) {
+                for(decl int<4> v14 = 0 .. v10.y : 1) {
+                    {
+                        decl int<4> v13 = v10.data[v15][v14];
+                        switch(v13) {
+                            case 0: printf(string.as.char.pointer(" "), varlist.pack(()))
+                            case 1: printf(string.as.char.pointer("A"), varlist.pack(()))
+                            case 2: printf(string.as.char.pointer("B"), varlist.pack(()))
+                            case 3: printf(string.as.char.pointer("C"), varlist.pack(()))
+                            case 4: printf(string.as.char.pointer("X"), varlist.pack(()))
+                            default: { }
+                        };
+                    };
+                };
+                printf(string.as.char.pointer("\n"), varlist.pack(()));
+            };
+        }(v66);
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v8){
+             del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>), 0));
+             del(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>));
+        }(scalar.to.array(v66));
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v8){
+             del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>), 0));
+             del(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>));
+        }(scalar.to.array(v67));
+    }
+
+
+
+
+// --------- Pretty Print Inspire - Detail ----------
+// Inspire Program 
+//  Entry Point: 
+fun(){
+        decl ref<int<4>> v53 = ( var(12));
+        decl ref<int<4>> v54 = ( var(12));
+        (v53 := CAST<int<4>>((v54 := 60)));
+        decl ref<real<8>> v55 = ( var(CAST<real<8>>(800)));
+        decl ref<real<8>> v56 = ( var(0.02));
+        decl ref<real<8>> v57 = ( var(0.08));
+        decl ref<uint<4>> v58 = ( var(CAST<uint<4>>(4)));
+        decl ref<vector<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,4>> v59 = ( var([struct{type:=0, pos:=[CAST<real<8>>(0), CAST<real<8>>(0)], mult:=0.01, size:=( *v56)}, struct{type:=1, pos:=[CAST<real<8>>(1), CAST<real<8>>(0)], mult:=( *v57), size:=( *v56)}, struct{type:=1, pos:=[(CAST<real<8>>(0)-0.5), 0.866025404], mult:=( *v57), size:=( *v56)}, struct{type:=1, pos:=[(CAST<real<8>>(0)-0.5), (CAST<real<8>>(0)-0.866025404)], mult:=( *v57), size:=( *v56)}]));
+        decl ref<real<8>> v60 = ( var(0.01));
+        decl ref<real<8>> v61 = ( var(0.01));
+        decl ref<real<8>> v62 = ( var(0.3));
+        decl ref<uint<4>> v63 = ( var(CAST<uint<4>>(400)));
+        decl ref<uint<4>> v64 = ( var(CAST<uint<4>>(100000)));
+        decl ref<real<8>> v65 = ( var(0.01));
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v66 = ( var(fun(int<4> v1, int<4> v2){
+            decl ref<array<uint<4>,1>> v3 = ( new(array.create.1D(type<uint<4>>, (((sizeof(type<uint<4>>)*CAST<uint<8>>(v1))*CAST<uint<8>>(v2))/sizeof(type<uint<4>>)))));
+            decl ref<array<array<uint<4>,1>,1>> v4 = ( new(array.create.1D(type<array<uint<4>,1>>, ((sizeof(type<array<uint<4>,1>>)*CAST<uint<8>>(v1))/sizeof(type<array<uint<4>,1>>)))));
+            for(decl int<4> v6 = 0 .. v1 : 1) {
+                (array.ref.elem.1D(v4, CAST<uint<4>>(v6)) := ( *scalar.to.array(array.ref.elem.1D(v3, CAST<uint<4>>((v6*v1))))));
+            };
+            return struct{data:=( *v4), x:=v1, y:=v2};
+        }(( *v53), ( *v54))));
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v67 = ( var(fun(int<4> v1, int<4> v2){
+            decl ref<array<uint<4>,1>> v3 = ( new(array.create.1D(type<uint<4>>, (((sizeof(type<uint<4>>)*CAST<uint<8>>(v1))*CAST<uint<8>>(v2))/sizeof(type<uint<4>>)))));
+            decl ref<array<array<uint<4>,1>,1>> v4 = ( new(array.create.1D(type<array<uint<4>,1>>, ((sizeof(type<array<uint<4>,1>>)*CAST<uint<8>>(v1))/sizeof(type<array<uint<4>,1>>)))));
+            for(decl int<4> v6 = 0 .. v1 : 1) {
+                (array.ref.elem.1D(v4, CAST<uint<4>>(v6)) := ( *scalar.to.array(array.ref.elem.1D(v3, CAST<uint<4>>((v6*v1))))));
+            };
+            return struct{data:=( *v4), x:=v1, y:=v2};
+        }(( *v53), ( *v54))));
+        <m id=1>for(decl int<4> v74 = 0 .. ( *v53) : 1) {
+            for(decl int<4> v73 = 0 .. ( *v54) : 1) {
+                decl ref<real<8>> v68 = ( var((((CAST<real<8>>(0)-1.0)+((CAST<real<8>>(v74)/CAST<real<8>>((( *v53)-1)))*2.0))*( *v55))));
+                decl ref<real<8>> v70 = ( var((((CAST<real<8>>(0)-1.0)+((CAST<real<8>>(v73)/CAST<real<8>>((( *v54)-1)))*2.0))*( *v55))));
+                decl ref<struct<target:uint<4>,numSteps:uint<4>>> v72 = ( var(fun(real<8> v17, real<8> v18, ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v19, uint<4> v20, real<8> v21, real<8> v22, real<8> v23, uint<4> v24, uint<4> v25, real<8> v26){
+                    decl ref<vector<real<8>,2>> v27 = ( var([v17, v18]));
+                    decl ref<vector<real<8>,2>> v28 = ( var([CAST<real<8>>(0), CAST<real<8>>(0)]));
+                    decl ref<vector<real<8>,2>> v29 = ( var([CAST<real<8>>(0), CAST<real<8>>(0)]));
+                    decl ref<vector<real<8>,2>> v30 = ( var([CAST<real<8>>(0), CAST<real<8>>(0)]));
+                    decl ref<vector<real<8>,2>> v31 = ( var([CAST<real<8>>(0), CAST<real<8>>(0)]));
+                    decl ref<real<8>> v32 = ( var(sqrt(v21)));
+                    for(decl uint<4> v51 = CAST<uint<4>>(0) .. v25 : 1) {
+                        (vector.ref.elem(v27, CAST<uint<4>>(0)) := (( *vector.ref.elem(v27, CAST<uint<4>>(0)))+((( *vector.ref.elem(v28, CAST<uint<4>>(0)))*v21)+(( *v32)*(((2.0/3.0)*( *vector.ref.elem(v29, CAST<uint<4>>(0))))-((1.0/6.0)*( *vector.ref.elem(v31, CAST<uint<4>>(0)))))))));
+                        (vector.ref.elem(v27, CAST<uint<4>>(1)) := (( *vector.ref.elem(v27, CAST<uint<4>>(1)))+((( *vector.ref.elem(v28, CAST<uint<4>>(1)))*v21)+(( *v32)*(((2.0/3.0)*( *vector.ref.elem(v29, CAST<uint<4>>(1))))-((1.0/6.0)*( *vector.ref.elem(v31, CAST<uint<4>>(1)))))))));
+                        (vector.ref.elem(v30, CAST<uint<4>>(0)) := CAST<real<8>>(0));
+                        (vector.ref.elem(v30, CAST<uint<4>>(1)) := CAST<real<8>>(0));
+                        for(decl uint<4> v44 = CAST<uint<4>>(0) .. v20 : 1) {
+                            decl ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v33 = scalar.to.array(array.ref.elem.1D(v19, CAST<uint<4>>(v44)));
+                            decl ref<vector<real<8>,2>> v35 = ( var([(( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)))), (( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))]));
+                            if((( *composite.ref.elem(array.ref.elem.1D(v33, 0), type, type<int<4>>))==CAST<int<4>>(CAST<uint<4>>(0)))) {
+                                (vector.ref.elem(v30, CAST<uint<4>>(0)) := (( *vector.ref.elem(v30, CAST<uint<4>>(0)))-(( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))*( *vector.ref.elem(v35, CAST<uint<4>>(0))))));
+                                (vector.ref.elem(v30, CAST<uint<4>>(1)) := (( *vector.ref.elem(v30, CAST<uint<4>>(1)))-(( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))*( *vector.ref.elem(v35, CAST<uint<4>>(1))))));
+                            } else {
+                                decl ref<real<8>> v36 = ( var(sqrt(((((( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0))))*(( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)))))+((( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))*(( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))))+(v23*v23)))));
+                                (vector.ref.elem(v30, CAST<uint<4>>(0)) := (( *vector.ref.elem(v30, CAST<uint<4>>(0)))-((( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))/((( *v36)*( *v36))*( *v36)))*( *vector.ref.elem(v35, CAST<uint<4>>(0))))));
+                                (vector.ref.elem(v30, CAST<uint<4>>(1)) := (( *vector.ref.elem(v30, CAST<uint<4>>(1)))-((( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))/((( *v36)*( *v36))*( *v36)))*( *vector.ref.elem(v35, CAST<uint<4>>(1))))));
+                            };
+                            if((((v51>v24)&&bind(){fun(ref<vector<real<8>,2>> v38, ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v39)return (sqrt(((( *vector.ref.elem(v38, CAST<uint<4>>(0)))*( *vector.ref.elem(v38, CAST<uint<4>>(0))))+(( *vector.ref.elem(v38, CAST<uint<4>>(1)))*( *vector.ref.elem(v38, CAST<uint<4>>(1))))))<( *composite.ref.elem(array.ref.elem.1D(v39, 0), size, type<real<8>>)))(v35, v33)})&&bind(){fun(ref<vector<real<8>,2>> v41, real<8> v42)return (sqrt(((( *vector.ref.elem(v41, CAST<uint<4>>(0)))*( *vector.ref.elem(v41, CAST<uint<4>>(0))))+(( *vector.ref.elem(v41, CAST<uint<4>>(1)))*( *vector.ref.elem(v41, CAST<uint<4>>(1))))))<v42)(v28, v26)})) {
+                                return struct{target:=v44, numSteps:=v51};
+                            } else { };
+                        };
+                        (vector.ref.elem(v30, CAST<uint<4>>(0)) := (( *vector.ref.elem(v30, CAST<uint<4>>(0)))-(( *vector.ref.elem(v28, CAST<uint<4>>(0)))*v22)));
+                        (vector.ref.elem(v30, CAST<uint<4>>(1)) := (( *vector.ref.elem(v30, CAST<uint<4>>(1)))-(( *vector.ref.elem(v28, CAST<uint<4>>(1)))*v22)));
+                        (vector.ref.elem(v28, CAST<uint<4>>(0)) := (( *vector.ref.elem(v28, CAST<uint<4>>(0)))+(v21*((((1.0/3.0)*( *vector.ref.elem(v30, CAST<uint<4>>(0))))+((5.0/6.0)*( *vector.ref.elem(v29, CAST<uint<4>>(0)))))-((1.0/6.0)*( *vector.ref.elem(v31, CAST<uint<4>>(0))))))));
+                        (vector.ref.elem(v28, CAST<uint<4>>(1)) := (( *vector.ref.elem(v28, CAST<uint<4>>(1)))+(v21*((((1.0/3.0)*( *vector.ref.elem(v30, CAST<uint<4>>(1))))+((5.0/6.0)*( *vector.ref.elem(v29, CAST<uint<4>>(1)))))-((1.0/6.0)*( *vector.ref.elem(v31, CAST<uint<4>>(1))))))));
+                        fun(ref<vector<real<8>,2>> v45, ref<vector<real<8>,2>> v46){
+                            (vector.ref.elem(v46, CAST<uint<4>>(0)) := ( *vector.ref.elem(v45, CAST<uint<4>>(0))));
+                            (vector.ref.elem(v46, CAST<uint<4>>(1)) := ( *vector.ref.elem(v45, CAST<uint<4>>(1))));
+                        }(v29, v31);
+                        fun(ref<vector<real<8>,2>> v48, ref<vector<real<8>,2>> v49){
+                            (vector.ref.elem(v48, CAST<uint<4>>(0)) := ( *vector.ref.elem(v49, CAST<uint<4>>(0))));
+                            (vector.ref.elem(v48, CAST<uint<4>>(1)) := ( *vector.ref.elem(v49, CAST<uint<4>>(1))));
+                        }(v29, v30);
+                    };
+                    return struct{target:=(v20+CAST<uint<4>>(1)), numSteps:=v25};
+                }(( *v68), ( *v70), ref.vector.to.ref.array(v59), ( *v58), ( *v60), ( *v61), ( *v62), ( *v63), ( *v64), ( *v65))));
+                (array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v66, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(v74)), CAST<uint<4>>(v73)) := ( *composite.ref.elem(v72, target, type<uint<4>>)));
+                (array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v67, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(v74)), CAST<uint<4>>(v73)) := ( *composite.ref.elem(v72, numSteps, type<uint<4>>)));
+            };
+        }</m>;
+        fun(struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v10){
+            for(decl int<4> v15 = 0 .. v10.x : 1) {
+                for(decl int<4> v14 = 0 .. v10.y : 1) {
+                    {
+                        decl int<4> v13 = CAST<int<4>>(((v10.data[CAST<uint<4>>(v15)])[CAST<uint<4>>(v14)]));
+                        switch(v13) {
+                            case CAST<uint<4>>(0): printf(string.as.char.pointer(" "), varlist.pack(()))
+                            case CAST<uint<4>>(1): printf(string.as.char.pointer("A"), varlist.pack(()))
+                            case CAST<uint<4>>(2): printf(string.as.char.pointer("B"), varlist.pack(()))
+                            case CAST<uint<4>>(3): printf(string.as.char.pointer("C"), varlist.pack(()))
+                            case CAST<uint<4>>(4): printf(string.as.char.pointer("X"), varlist.pack(()))
+                            default: { }
+                        };
+                    };
+                };
+                printf(string.as.char.pointer("\n"), varlist.pack(()));
+            };
+        }(( *v66));
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v8){
+            ( del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(0))));
+            ( del(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>)));
+        }(scalar.to.array(v66));
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v8){
+            ( del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(0))));
+            ( del(composite.ref.elem(array.ref.elem.1D(v8, 0), data, type<array<array<uint<4>,1>,1>>)));
+        }(scalar.to.array(v67));
+    }
+

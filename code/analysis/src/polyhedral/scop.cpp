@@ -242,7 +242,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 		// therefore this node can be marked as SCoP as well.
 		ifStmt->getThenBody()->addAnnotation( 
 			std::make_shared<ScopRegion>(ret, comb, thenScops, 
-				ScopRegion::AccessRefSet(thenRefs.arrays_begin(), thenRefs.arrays_end()) 
+				ScopRegion::AccessRefList(thenRefs.arrays_begin(), thenRefs.arrays_end()) 
 			)
 		);
 		// Add the then body to the list of subscops to which the parent will point at
@@ -251,7 +251,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 		// the else body is annotated with the negated domain
 		ifStmt->getElseBody()->addAnnotation( 
 			std::make_shared<ScopRegion>(ret, negate(comb), elseScops, 
-				ScopRegion::AccessRefSet(elseRefs.arrays_begin(), elseRefs.arrays_end()) 
+				ScopRegion::AccessRefList(elseRefs.arrays_begin(), elseRefs.arrays_end()) 
 			)
 		);
 		// Add the else body to the list of subscops to which the parent will point at
@@ -294,7 +294,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 
 			forStmt->addAnnotation( 
 				std::make_shared<ScopRegion>(ret, cons, subScops, 
-					ScopRegion::AccessRefSet(refs.arrays_begin(), refs.arrays_end())
+					ScopRegion::AccessRefList(refs.arrays_begin(), refs.arrays_end())
 				) 
 			); 
 
@@ -413,21 +413,20 @@ using namespace poly;
 const string ScopRegion::NAME = "SCoPAnnotation";
 const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
 
-const std::string ScopRegion::toString() const {
-	std::ostringstream ss;
-	ss << "IterationVector: " << iterVec;
+std::ostream& ScopRegion::printTo(std::ostream& out) const {
+	out << "IterationVector: " << iterVec;
 	if (constraints) {
-		ss << "\\nConstraints: " << *constraints;
+		out << "\\nConstraints: " << *constraints;
 	}
 	if (!subScops.empty()) {
-		ss << "\\nSubScops: " << subScops.size();
+		out << "\\nSubScops: " << subScops.size();
 	}
 	if (!accesses.empty()) {
-		ss << "\\nAccesses: " << accesses.size() << "{" << 
-		join(",", accesses, [&](std::ostream& jout, const RefPtr& cur){ jout << *cur; } ) << "}";
+		out << "\\nAccesses: " << accesses.size() << "{" 
+			<< join(",", accesses, [&](std::ostream& jout, const RefPtr& cur){ jout << *cur; } ) 
+			<< "}";
 	}
-
-	return ss.str();
+	return out;
 }
 
 namespace {
@@ -435,7 +434,7 @@ namespace {
 // Recursively visit ScopRegion appending constraints related to the current domain. Accesses found
 // in the region are appended to the accessList object
 void visitScop(const poly::IterationVector& iterVec, const poly::ConstraintCombinerPtr& parentDomain, 
-		const ScopRegion& region, ScopRegion::AccessList& accessList) 
+		const ScopRegion& region, ScopRegion::AccessInfoList& accessList) 
 {
 	// assert( parentDomain->getIterationVector() == iterVec );
 
@@ -475,8 +474,8 @@ void visitScop(const poly::IterationVector& iterVec, const poly::ConstraintCombi
 } // end anonymous namespace 
 
 
-const ScopRegion::AccessList ScopRegion::listAccesses() const {
-	ScopRegion::AccessList ret;
+const ScopRegion::AccessInfoList ScopRegion::listAccesses() const {
+	ScopRegion::AccessInfoList ret;
 	
 	visitScop(iterVec, constraints, *this, ret);
 	return ret;
@@ -486,10 +485,8 @@ const ScopRegion::AccessList ScopRegion::listAccesses() const {
 const string AccessFunction::NAME = "AccessFuncAnn";
 const utils::StringKey<AccessFunction> AccessFunction::KEY("AccessFuncAnnKey");
 
-const std::string AccessFunction::toString() const {
-	std::ostringstream ss;
-	ss << "IV: " << iterVec << ", CONS: " << eqCons;
-	return ss.str();
+std::ostream& AccessFunction::printTo(std::ostream& out) const {
+	return out << "IV: " << iterVec << ", CONS: " << eqCons;
 }
 
 //===== mark ======================================================================
@@ -514,9 +511,9 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	}
 	
 	const ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
-	const ScopRegion::AccessList& acc = ann.listAccesses();
+	const ScopRegion::AccessInfoList& acc = ann.listAccesses();
 
-	std::for_each(acc.begin(), acc.end(), [&](const ScopRegion::Access& cur){
+	std::for_each(acc.begin(), acc.end(), [&](const ScopRegion::AccessInfo& cur){
 		const Ref& ref = *std::get<0>(cur);
 		out << "\n\tACCESS: [" << ref.getUsage() << "] " << *ref.getBaseExpression(); 
 		out << "\n\t" << std::get<1>(cur);

@@ -32,9 +32,9 @@ Image create_image(int x, int y) {
 	return (Image){index, x, y};
 }
 
-void delete_image(Image image) {
-	free(image.data[0]);
-	free(image.data);
+void delete_image(Image* image) {
+	free(image->data[0]);
+	free(image->data);
 }
 
 void print_target_image_ASCII(Image image, unsigned sources) {
@@ -64,7 +64,7 @@ typedef struct {
 
 
 #define sqr(x) (x)*(x)
-#define ABS(x) sqrt( sqr(x[0]) + sqr(x[1]) ) 
+#define ABS(x) sqrt( sqr(x[0]) + sqr(x[1]) )
 #define DIST(x, y) sqrt(sqr((x)[0]-(y)[0])+sqr((x)[1]-(y)[1]))
 #define ASS(x, y) ((x)[0] = (y)[0], (x)[1] = (y)[1])
 
@@ -73,7 +73,7 @@ typedef struct {
 	ull numSteps;
 } Trace;
 
-Trace getTarget(double i, double j, 
+Trace getTarget(double i, double j,
 	Source* sources, unsigned num_sources,
 	double dt, double friction, double height,
 	unsigned min_steps, ull max_steps,
@@ -84,32 +84,32 @@ Trace getTarget(double i, double j,
 	double vel[2] = {0,0};  // the velocity
 
 	// acceleration
-	double acc[2] = {0,0};	
+	double acc[2] = {0,0};
 	double acc_new[2] = {0,0};
-	double acc_old[2] = {0,0}; 
+	double acc_old[2] = {0,0};
 
 	// some loop-invariant "constants"
-	double sqrt_dt = sqrt(dt); 
+	double sqrt_dt = sqrt(dt);
 
 	// iterate until close to a source and velocity is small
 	for (ull step = 0; step < max_steps; ++step) {
 
 		// ----- update position -----
-		pos[0] += vel[0] * dt + sqrt_dt * (2.0/3.0 * acc[0] - 1.0/6.0 * acc_old[0]);	
+		pos[0] += vel[0] * dt + sqrt_dt * (2.0/3.0 * acc[0] - 1.0/6.0 * acc_old[0]);
 		pos[1] += vel[1] * dt + sqrt_dt * (2.0/3.0 * acc[1] - 1.0/6.0 * acc_old[1]);
 
-		acc_new[0] = 0;				
+		acc_new[0] = 0;
 		acc_new[1] = 0;
-		
+
 		// 1) calculate forces (proportional to the inverse square of the distance)
 		for (unsigned i = 0; i < num_sources; i++) {
-			Source* cur = &(sources[i]); 
+			Source* cur = &(sources[i]);
 
 			double r[2] = { pos[0] - cur->pos[0], pos[1] - cur->pos[1] };
 
 			if (cur->type == Linear) {
 				// Hooke's law (pulling back the pendulum to (0,0)
-				
+
 				// add effect to forces
 				acc_new[0] -= cur->mult * r[0];
 				acc_new[1] -= cur->mult * r[1];
@@ -120,7 +120,7 @@ Trace getTarget(double i, double j,
 				double dist = sqrt ( sqr(pos[0] - cur->pos[0]) +
 									 sqr(pos[1] - cur->pos[1]) +
 									 sqr(height) );
-			
+
 				// add effect to forces
 				acc_new[0] -= (cur->mult / (dist*dist*dist)) * r[0];
 				acc_new[1] -= (cur->mult / (dist*dist*dist)) * r[1];
@@ -266,18 +266,21 @@ int main(int argc, char** argv) {
 	Image dist = create_image(x,y);
 
 	// compute target magnet for each point
-	#pragma omp parallel for
-	for(int i=0; i<x; i++) {
-		for(int j=0; j<y; j++) {
-			double curX = (-1.0 + (double)i/(double)(x-1) * 2.0) * scale;
-			double curY = (-1.0 + (double)j/(double)(y-1) * 2.0) * scale;
+	#pragma omp parallel
+	{
+		#pragma omp for
+		for(int i=0; i<x; i++) {
+			for (int j=0; j<y; j++) {
+				double curX = (-1.0 + (double)i/(double)(x-1) * 2.0) * scale;
+				double curY = (-1.0 + (double)j/(double)(y-1) * 2.0) * scale;
 
-			Trace res = getTarget(curX, curY,
-						sources, num_sources, dt, friction,
-						height, min_steps, max_steps, abortVelocity);
+				Trace res = getTarget(curX, curY,
+							sources, num_sources, dt, friction,
+							height, min_steps, max_steps, abortVelocity);
 
-			POS(image,i,j) = res.target;
-			POS(dist, i,j) = res.numSteps;
+				POS(image,i,j) = res.target;
+				POS(dist, i,j) = res.numSteps;
+			}
 		}
 	}
 	ull maxSteps = 0;
@@ -293,8 +296,8 @@ int main(int argc, char** argv) {
 	print_target_image_ASCII(image, num_sources);
 	write_image(image, dist, "out.bmp", minSteps, maxSteps);
 
-	delete_image(image);
-	delete_image(dist);
+	delete_image(&image);
+	delete_image(&dist);
 }
 
 
@@ -306,7 +309,7 @@ int main(int argc, char** argv) {
 typedef struct {
   unsigned char magic[2];
 } bmp_magic;
- 
+
 typedef struct {
   uint32_t filesz;
   uint16_t creator1;
@@ -403,7 +406,7 @@ void write_image(Image target, Image dist, char* filename, ull minSteps, ull max
 		while (c%4) {
 			fwrite(&pad, 1, 1, out);
 			c++;
-		}	
+		}
 	}
 
 	// done

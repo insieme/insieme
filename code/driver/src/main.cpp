@@ -192,12 +192,15 @@ int main(int argc, char** argv) {
 				timer.stop();
 				LOG(INFO) << timer;
 			}
-		
-   /*         insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);*/
-			//std::cout << "SCOP Analysis: " << sl.size() << std::endl;
-			//std::for_each(sl.begin(), sl.end(),
-				//[](const insieme::analysis::scop::ScopList::value_type& cur){ insieme::analysis::scop::printSCoP(std::cout, cur.first); });
 
+			if (CommandLineOptions::BenchmarkCore) {
+		    	insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);
+				std::cout << "SCOP Analysis: " << sl.size() << std::endl;
+				std::for_each(sl.begin(), sl.end(),	
+					[](const insieme::analysis::scop::ScopList::value_type& cur){ 
+						insieme::analysis::scop::printSCoP(std::cout, cur.first); 
+					});
+			}
 			 //analysis::RefList&& refs = analysis::collectDefUse(program);
 			 //std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
 					//std::cout << *cur << std::endl; 
