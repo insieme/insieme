@@ -42,7 +42,7 @@ void print_target_image_ASCII(Image image, unsigned sources) {
 		for (int j=0; j<image.y; j++) {
 			if(POS(image,i,j) == 0) printf(" ");
 			else if(POS(image,i,j) == sources) printf("X");
-			else printf("%c", 'A'+POS(image,i,j)-1);
+			else printf("%c", ((int)'A')+POS(image,i,j)-1);
 		}	
 		printf("\n");
 	}
@@ -220,7 +220,8 @@ int main(int argc, char** argv) {
 	if(argc>1) {
 		FILE *fp;
 		char file[FILE_BUF];
-		if((fp = fopen(argv[1], "r")) == NULL) {
+		fp = fopen(argv[1], "r");
+		if(fp == NULL) {
 			printf("Cannot open file.\n");
 			exit(1);
 		}
@@ -233,7 +234,7 @@ int main(int argc, char** argv) {
 		settings = readSettings(line);
 		sources = (Source*)calloc(settings.numSources, sizeof(Source));
 		for(int i = 0; i<settings.numSources;) {
-			line = strtok(next+1, "\n\r");
+			line = strtok(&next[1], "\n\r");
 			next = strchr(line, '\0');
 			if(line[0] != '#') {
 				sources[i++] = readSource(line);
