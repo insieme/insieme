@@ -265,9 +265,9 @@ int main(int argc, char** argv) {
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			};
 
-//			if(CommandLineOptions::CheckSema) {
-//				checker();
-//			}
+			if(CommandLineOptions::CheckSema) {
+				checker();
+			}
 
 			// run OMP frontend
 			if(CommandLineOptions::OMPSema) {
