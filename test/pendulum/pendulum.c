@@ -207,8 +207,8 @@ int main() {
 		}
 	}
 
-//	print_target_image_ASCII(image);
-	write_image(image, dist, "out.bmp");
+	print_target_image_ASCII(image);
+//	write_image(image, dist, "out.bmp");
 
 	delete_image(image);
 	delete_image(dist);
