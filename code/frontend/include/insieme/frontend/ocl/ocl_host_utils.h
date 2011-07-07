@@ -36,33 +36,37 @@
 
 #pragma once
 
-#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/parser/ir_parse.h"
-
-#include "insieme/frontend/program.h"
-#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
+// shortcut
+#define BASIC builder.getNodeManager().basic
+
 
 /*
- * provides interface to the OpenCL host compiler
+ * Function to get the type of an Expression
+ * If it is a ref-type, it's element type is returned
  */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
+const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr);
+/*
+ * Returns either the type itself or the element type, in case that it is a referenceType
+ */
+const core::TypePtr getNonRefType(const core::TypePtr& refType);
 
-public:
-	HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr) :
-		mProgram(program), builder(mgr) {
-	}
+/*
+ * Builds a ref.deref call around an expression if the it is of ref-type
+ */
+core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
 
-	core::ProgramPtr compile();
-};
+
+/*
+ * Function to copy all annotations form one NodePtr to another
+ */
+void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink);
+
 
 } //namespace ocl
 } //namespace frontend
