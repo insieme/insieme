@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <pthread.h>
+
 /** Starts the runtime in standalone mode and executes work item 0.
   * Returns once that wi has finished.
   * worker_count : number of workers to start
@@ -46,6 +48,7 @@ void irt_runtime_standalone(uint32 worker_count, irt_type* type_table, irt_wi_im
 
 // globals
 pthread_key_t irt_g_error_key;
+pthread_mutex_t irt_g_error_mutex;
 pthread_key_t irt_g_worker_key;
 mqd_t irt_g_message_queue;
 uint32 irt_g_worker_count;
@@ -65,6 +68,7 @@ void irt_init_globals() {
 		fprintf(stderr, "Could not create pthread key(s). Aborting.\n");
 		exit(-1);
 	}
+	pthread_mutex_init(&irt_g_error_mutex, NULL);
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_init();
 	irt_data_item_table_init();
 	irt_context_table_init();
@@ -72,6 +76,12 @@ void irt_init_globals() {
 }
 void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
+	irt_data_item_table_cleanup();
+	irt_context_table_cleanup();
+	irt_wi_event_register_table_cleanup();
+	pthread_mutex_destroy(&irt_g_error_mutex);
+	pthread_key_delete(irt_g_error_key);
+	pthread_key_delete(irt_g_worker_key);
 }
 
 // exit handling
@@ -85,6 +95,17 @@ void irt_exit_handler() {
 	irt_cleanup_globals();
 	free(irt_g_workers);
 	IRT_INFO("\nInsieme runtime exiting.\n");
+}
+
+// error handling
+void irt_error_handler(int signal) {
+	pthread_mutex_lock(&irt_g_error_mutex); // not unlocked
+	_irt_worker_cancel_all_others();
+	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
+	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", (void*)pthread_self(), irt_errcode_string(error->errcode));
+	fprintf(stderr, "Additional information:\n");
+	irt_print_error_info(stderr, error);
+	exit(-error->errcode);
 }
 
 void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
