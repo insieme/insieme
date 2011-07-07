@@ -29,9 +29,9 @@ Image create_image(int x, int y) {
 	return (Image){index, x, y};
 }
 
-void delete_image(Image image) {
-	free(image.data[0]);
-	free(image.data);
+void delete_image(Image* image) {
+	free(image->data[0]);
+	free(image->data);
 }
 
 void print_target_image_ASCII(Image image) {
@@ -210,8 +210,8 @@ int main() {
 	print_target_image_ASCII(image);
 //	write_image(image, dist, "out.bmp");
 
-	delete_image(image);
-	delete_image(dist);
+	delete_image(&image);
+	delete_image(&dist);
 }
 
 
