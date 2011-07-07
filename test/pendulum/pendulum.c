@@ -3,11 +3,14 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 #define POS(Image, X, Y) Image.data[(X)][(Y)]
 
-#define MIN_STEPS 400
-#define MAX_STEPS 100000
+#define FILE_BUF 512*8
+
+typedef unsigned long long ull;
+typedef unsigned char uchar;
 
 // -- Image Handling -----------------------------------
 
@@ -34,23 +37,18 @@ void delete_image(Image image) {
 	free(image.data);
 }
 
-void print_target_image_ASCII(Image image) {
+void print_target_image_ASCII(Image image, unsigned sources) {
 	for (int i=0; i<image.x; i++) {
 		for (int j=0; j<image.y; j++) {
-			switch(POS(image,i,j)) {
-			case 0: printf(" "); break;
-			case 1: printf("A"); break;
-			case 2: printf("B"); break;
-			case 3: printf("C"); break;
-			case 4: printf("X"); break;
-			}
-			
+			if(POS(image,i,j) == 0) printf(" ");
+			else if(POS(image,i,j) == sources) printf("X");
+			else printf("%c", 'A'+POS(image,i,j)-1);
 		}	
 		printf("\n");
 	}
 }
 
-void write_image(Image target, Image dist, char* filename);
+void write_image(Image target, Image dist, char* filename, ull minSteps, ull maxSteps);
 
 
 // -- Sources Handling -----------------------------------
@@ -72,13 +70,13 @@ typedef struct {
 
 typedef struct {
 	unsigned target;
-	unsigned numSteps;
+	ull numSteps;
 } Trace;
 
 Trace getTarget(double i, double j, 
 	Source* sources, unsigned num_sources,
 	double dt, double friction, double height,
-	unsigned min_steps, unsigned max_steps,
+	unsigned min_steps, ull max_steps,
 	double abortVelocity) {
 
 	// pendulum properties pendulum
@@ -94,7 +92,7 @@ Trace getTarget(double i, double j,
 	double sqrt_dt = sqrt(dt); 
 
 	// iterate until close to a source and velocity is small
-	for (unsigned step = 0; step < max_steps; ++step) {
+	for (ull step = 0; step < max_steps; ++step) {
 
 		// ----- update position -----
 		pos[0] += vel[0] * dt + sqrt_dt * (2.0/3.0 * acc[0] - 1.0/6.0 * acc_old[0]);	
@@ -150,43 +148,119 @@ Trace getTarget(double i, double j,
 	}
 
 	// undecided after MAX number of steps => return num_sources + 1
-	return (Trace){num_sources + 1, max_steps};
+	return (Trace){num_sources, max_steps};
 }
 
-int main() {
 
-	// set up resolution
-	int x = 12;
-	int y = 12;
+// -- Input File Handling -----------------------------------
 
-//	x = y = 12;
-	x = y = 60;
-//	x = y = 128;
-//	x = y = 256;
-//	x = y = 1024;
-//	x = y = 2048;
+typedef struct {
+	unsigned numSources;
+	int x;
+	int y;
+	double scale;
+	double dt;
+	double friction;
+	double height;
+	double abortVelocity;
+	unsigned minSteps;
+	ull maxSteps;
+} Settings;
 
-	double scale = 800;
+Settings readSettings(char* line) {
+	Settings settings;
+	char *token = strtok(line, " ,");
+	settings.numSources = atoi(token);
+	token = strtok(NULL, " ,");
+	settings.x = atoi(token);
+	token = strtok(NULL, " ,");
+	settings.y = atoi(token);
+	token = strtok(NULL, " ,");
+	settings.scale = atof(token);
+	token = strtok(NULL, " ,");
+	settings.dt = atof(token);
+	token = strtok(NULL, " ,");
+	settings.friction = atof(token);
+	token = strtok(NULL, " ,");
+	settings.height = atof(token);
+	token = strtok(NULL, " ,");
+	settings.abortVelocity = atof(token);
+	token = strtok(NULL, " ,");
+	settings.minSteps = atoi(token);
+	token = strtok(NULL, " ,");
+	settings.maxSteps = atol(token);
+	return settings;
+}
 
-	double magSize = 0.02;
-	double magPower = 0.08;
-//	double magPower = 0.2;
+Source readSource(char* line) {
+	Source src;
+	char *token = strtok(line, " ,");
+	if(strcmp(token, "Linear") == 0) src.type = Linear;
+	else src.type = Magnet;
+	token = strtok(NULL, " ,");
+	src.pos[0] = atof(token);
+	token = strtok(NULL, " ,");
+	src.pos[1] = atof(token);
+	token = strtok(NULL, " ,");
+	src.mult = atof(token);
+	token = strtok(NULL, " ,");
+	src.size = atof(token);
+	return src;
+}
 
-	unsigned num_sources = 4;
-	Source sources[] = {
-		(Source){Linear, {0, 0}, 0.01, magSize},
-		(Source){Magnet, {1, 0}, magPower, magSize},
-		(Source){Magnet, {-0.5, +0.866025404}, magPower, magSize},
-		(Source){Magnet, {-0.5, -0.866025404}, magPower, magSize},
-	};
 
-	double dt = 0.01;
-	double friction = 0.01;
-	double height = 0.3;
-	unsigned min_steps = MIN_STEPS;
-	unsigned max_steps = MAX_STEPS;
-	double abortVelocity = 0.01;
+// -- Main -----------------------------------
 
+int main(int argc, char** argv) {
+	
+	Settings settings = {4, 60, 60, 800.0, 0.01, 0.01, 0.3, 0.01, 400, 100000};
+	Source *sources;
+	
+	// read input file
+	if(argc>1) {
+		FILE *fp;
+		char file[FILE_BUF];
+		if((fp = fopen(argv[1], "r")) == NULL) {
+			printf("Cannot open file.\n");
+			exit(1);
+		}
+		fread(file, 1, FILE_BUF, fp);
+		fclose(fp);
+		
+		char *line = strtok(file, "\n\r");
+		while(line[0] == '#') line = strtok(NULL, "\n\r");
+		char *next = strchr(line, '\0');
+		settings = readSettings(line);
+		sources = (Source*)calloc(settings.numSources, sizeof(Source));
+		for(int i = 0; i<settings.numSources;) {
+			line = strtok(next+1, "\n\r");
+			next = strchr(line, '\0');
+			if(line[0] != '#') {
+				sources[i++] = readSource(line);
+			}
+		}
+	}
+	else { // use default input
+		sources = (Source[]){
+			(Source){Linear,  {0, 0}, 0.01, 0.02},
+			(Source){Magnet, {1, 0}, 0.08, 0.02},
+			(Source){Magnet, {-0.5, +0.866025404}, 0.08, 0.02},
+			(Source){Magnet, {-0.5, -0.866025404}, 0.08, 0.02},
+		};
+	}
+
+	// migrate settings
+	unsigned num_sources = settings.numSources;
+	int x = settings.x;
+	int y = settings.y;
+	double scale = settings.scale;
+	double dt = settings.dt;
+	double friction = settings.friction;
+	double height = settings.height;
+	unsigned min_steps = settings.minSteps;
+	ull max_steps = settings.maxSteps;
+	double abortVelocity = settings.abortVelocity;
+	
 
 	Image image = create_image(x,y);
 	Image dist = create_image(x,y);
@@ -194,7 +268,7 @@ int main() {
 	// compute target magnet for each point
 	#pragma omp parallel for
 	for(int i=0; i<x; i++) {
-		for (int j=0; j<y; j++) {
+		for(int j=0; j<y; j++) {
 			double curX = (-1.0 + (double)i/(double)(x-1) * 2.0) * scale;
 			double curY = (-1.0 + (double)j/(double)(y-1) * 2.0) * scale;
 
@@ -206,9 +280,18 @@ int main() {
 			POS(dist, i,j) = res.numSteps;
 		}
 	}
+	ull maxSteps = 0;
+	ull minSteps = max_steps;
+	for(int i=0; i<x; i++) {
+		for(int j=0; j<y; j++) {
+			maxSteps =  POS(dist, i,j) > maxSteps ? POS(dist, i,j) : maxSteps;
+			minSteps =  POS(dist, i,j) < minSteps ? POS(dist, i,j) : minSteps;
+		}
+	}
+	printf("Number of steps calculated: %llu .. %llu\n", minSteps, maxSteps);
 
-	print_target_image_ASCII(image);
-//	write_image(image, dist, "out.bmp");
+	print_target_image_ASCII(image, num_sources);
+	write_image(image, dist, "out.bmp", minSteps, maxSteps);
 
 	delete_image(image);
 	delete_image(dist);
@@ -248,31 +331,34 @@ typedef struct {
 
 #pragma pack(1)
 typedef struct {
-	char r;
-	char g;
-	char b;
+	uchar r;
+	uchar g;
+	uchar b;
 } Color;
 
 
-Color getColor(unsigned target, unsigned distance) {
+Color getColor(unsigned target, unsigned distance, ull minSteps, ull maxSteps) {
 	Color color;
 	switch(target) {
 	case 0: color = (Color){255,255,255}; break;
 	case 1: color = (Color){255,0,0}; break;
 	case 2: color = (Color){0,255,0}; break;
 	case 3: color = (Color){0,0,255}; break;
+	case 4: color = (Color){255,255,0}; break;
+	case 5: color = (Color){0,255,255}; break;
+	case 6: color = (Color){255,0,255}; break;
 	default: color = (Color){0,0,0}; break;
 	}
-
-//	double factor = (distance - MIN_STEPS)/(MAX_STEPS/1000-MIN_STEPS);
-//	factor = (factor > 1.0)?1.0:((factor < 0.0)?0.0:factor);
-//	color.r = (char)(color.r * factor);
-//	color.g = (char)(color.g * factor);
-//	color.b = (char)(color.b * factor);
+	
+	double factor = 1.0 - (distance-minSteps)/(double)(maxSteps-minSteps);
+	//factor = (factor > 1.0)?1.0:((factor < 0.0)?0.0:factor);
+	color.r = (uchar)(color.r * factor);
+	color.g = (uchar)(color.g * factor);
+	color.b = (uchar)(color.b * factor);
 	return color;
 }
 
-void write_image(Image target, Image dist, char* filename) {
+void write_image(Image target, Image dist, char* filename, ull minSteps, ull maxSteps) {
 
 
 	FILE* out = fopen(filename, "wb");
@@ -309,7 +395,7 @@ void write_image(Image target, Image dist, char* filename) {
 	// write data
 	for (int i=0; i<target.x; i++) {
 		for (int j=0; j<target.y; j++) {
-			Color color = getColor(POS(target,i,j), POS(dist,i,j));
+			Color color = getColor(POS(target,i,j), POS(dist,i,j), minSteps, maxSteps);
 			fwrite(&color, sizeof(Color), 1, out);
 		}
 		char pad = 0;
