@@ -34,36 +34,54 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/parser/ir_parse.h"
+#include "insieme/utils/test/integration_tests.h"
 
-#include "insieme/frontend/program.h"
-#include "insieme/utils/logging.h"
+#include <iostream>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+
+
+#include "insieme/utils/container_utils.h"
+
+using namespace insieme::utils;
 
 namespace insieme {
-namespace frontend {
-namespace ocl {
+namespace utils {
+namespace test {
 
 
-/*
- * provides interface to the OpenCL host compiler
- */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
+TEST(TestUtilsTest, getList) {
 
-public:
-	HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr) :
-		mProgram(program), builder(mgr) {
-	}
+	namespace fs = boost::filesystem;
 
-	core::ProgramPtr compile();
-};
+	auto res = getAllCases();
 
-} //namespace ocl
-} //namespace frontend
-} //namespace insieme
+	// check the existens of the referenced files
+	for_each(res, [](const IntegrationTestCase& cur) {
+		SCOPED_TRACE(cur.getName());
+
+		EXPECT_GE(cur.getFiles().size(), static_cast<std::size_t>(1));
+		for_each(cur.getFiles(), [](const string& cur){
+			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of file " << cur;
+			EXPECT_FALSE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+		});
+
+		for_each(cur.getIncludeDirs(), [](const string& cur){
+			EXPECT_TRUE(fs::exists( cur )) << "Testing existens of directory " << cur;
+			EXPECT_TRUE(fs::is_directory( cur )) << "Checking whether " << cur << " is a directory.";
+		});
+	});
+
+	// should also work a second time
+	auto numTests = res.size();
+	res = getAllCases();
+	EXPECT_EQ(numTests, res.size());
+}
+
+
+
+} // end namespace test
+} // end namespace utils
+} // end namespace insieme

@@ -42,8 +42,9 @@
 #include "runtime.h"
 
 extern pthread_key_t irt_g_error_key;
-extern pthread_key_t irt_g_worker_key;
+extern pthread_mutex_t irt_g_error_mutex;
 
+extern pthread_key_t irt_g_worker_key;
 extern uint32 irt_g_worker_count;
 struct _irt_worker;
 extern struct _irt_worker **irt_g_workers;

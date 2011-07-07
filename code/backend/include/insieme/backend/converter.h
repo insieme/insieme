@@ -40,6 +40,7 @@
 #include <memory>
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/backend/c_ast/forward_decls.h"
 
 namespace insieme {
 namespace backend {
@@ -57,13 +58,6 @@ namespace backend {
 
 	class TargetCode;
 	typedef std::shared_ptr<TargetCode> TargetCodePtr;
-
-	namespace c_ast {
-
-		class CNodeManager;
-		typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
-
-	}
 
 
 	struct ConverterConfig {
@@ -144,15 +138,6 @@ namespace backend {
 			typeManager = manager;
 		}
 
-		VariableManager& getVariableManager() const {
-			assert(variableManager);
-			return *variableManager;
-		}
-
-		void setVariableManager(VariableManager* manager) {
-			variableManager = manager;
-		}
-
 		StmtConverter& getStmtConverter() const {
 			assert(stmtConverter);
 			return *stmtConverter;
@@ -208,6 +193,46 @@ namespace backend {
 
 		void setConfig(const ConverterConfig& newConfig) {
 			config = newConfig;
+		}
+
+	};
+
+	class ConversionContext {
+
+		/**
+		 * A reference to the converter processing the current conversion.
+		 */
+		const Converter& converter;
+
+		/**
+		 * A reference to a set of dependencies aggregated during the conversion.
+		 */
+		c_ast::DependencySet& dependencies;
+
+		/**
+		 * A variable manager maintaining the variables of the current scope.
+		 */
+		VariableManager& variableManager;
+
+	public:
+
+		ConversionContext(const Converter& converter, c_ast::DependencySet& dependencies, VariableManager& variableManager)
+			: converter(converter), dependencies(dependencies), variableManager(variableManager) {}
+
+		const Converter& getConverter() const {
+			return converter;
+		}
+
+		c_ast::DependencySet& getDependencies() {
+			return dependencies;
+		}
+
+		VariableManager& getVariableManager() {
+			return variableManager;
+		}
+
+		const c_ast::SharedCNodeManager& getCNodeManager() const {
+			return converter.getCNodeManager();
 		}
 
 	};

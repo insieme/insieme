@@ -34,36 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/backend/variable_manager.h"
 
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/expressions.h"
 
-#include "insieme/frontend/program.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/converter.h"
+#include "insieme/backend/name_manager.h"
+
 #include "insieme/utils/logging.h"
 
 namespace insieme {
-namespace frontend {
-namespace ocl {
+namespace backend {
 
+	const VariableInfo& VariableManager::getInfos(const core::VariablePtr& var) const {
+		// find requested variable within info
+		auto pos = infos.find(var);
+		if (pos != infos.end()) {
+			return pos->second;
+		}
 
-/*
- * provides interface to the OpenCL host compiler
- */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
+		LOG(WARNING) << "Requesting info for unknown variable " << *var << " - returning default data ...";
 
-public:
-	HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr) :
-		mProgram(program), builder(mgr) {
+		assert(pos != infos.end() && "Requested variable infos for unknown variable!");
+		return pos->second;
 	}
 
-	core::ProgramPtr compile();
-};
+	const VariableInfo& VariableManager::addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location) {
 
-} //namespace ocl
-} //namespace frontend
-} //namespace insieme
+		VariableInfo& info = infos[var];
+
+		// obtain type
+		info.typeInfo = &converter.getTypeManager().getTypeInfo(var->getType());
+
+		// obtain name and type of the variable
+		c_ast::TypePtr type = (location == VariableInfo::DIRECT)?info.typeInfo->lValueType:info.typeInfo->rValueType;
+		c_ast::IdentifierPtr name = converter.getCNodeManager()->create(converter.getNameManager().getName(var));
+
+		info.var = c_ast::var(type, name);
+		info.location = location;
+
+		return info;
+	}
+
+	void VariableManager::remInfo(const core::VariablePtr& var) {
+		// just delete from internal map
+		infos.erase(var);
+	}
+
+} // end namespace backend
+} // end namespace insieme

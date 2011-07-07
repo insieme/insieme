@@ -34,36 +34,8 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/parser/ir_parse.h"
-
-#include "insieme/frontend/program.h"
-#include "insieme/utils/logging.h"
-
-namespace insieme {
-namespace frontend {
-namespace ocl {
-
-
-/*
- * provides interface to the OpenCL host compiler
+/**
+ * Undefines the definition made within the operator_converter_begin.inc
  */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
 
-public:
-	HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr) :
-		mProgram(program), builder(mgr) {
-	}
-
-	core::ProgramPtr compile();
-};
-
-} //namespace ocl
-} //namespace frontend
-} //namespace insieme
+#undef OP_CONVERTER

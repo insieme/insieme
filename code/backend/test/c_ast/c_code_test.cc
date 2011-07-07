@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/backend/c_ast/c_code.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -66,7 +67,7 @@ TEST(C_AST, FragmentDependencyResolution) {
 	// create a simple code fragment
 	CodeFragmentPtr code = getTextFragment("A");
 
-	EXPECT_EQ("A\n", toString(CCode(core::NodePtr(), code)));
+	EXPECT_PRED2(containsSubString, toString(CCode(core::NodePtr(), code)), "A");
 
 	// add something with dependencies
 
@@ -79,11 +80,11 @@ TEST(C_AST, FragmentDependencyResolution) {
 	codeC->addDependency(codeB);
 	codeD->addDependency(codeC);
 
-	EXPECT_EQ("ABCD\n", toString(CCode(core::NodePtr(), codeD)));
+	EXPECT_PRED2(containsSubString, toString(CCode(core::NodePtr(), codeD)), "ABCD");
 
 	// add additional edge (should not change anything)
 	codeD->addDependency(codeA);
-	EXPECT_EQ("ABCD\n", toString(CCode(core::NodePtr(), codeD)));
+	EXPECT_PRED2(containsSubString, toString(CCode(core::NodePtr(), codeD)), "ABCD");
 
 }
 

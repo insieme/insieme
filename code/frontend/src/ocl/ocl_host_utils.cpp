@@ -34,35 +34,58 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/parser/ir_parse.h"
-
-#include "insieme/frontend/program.h"
-#include "insieme/utils/logging.h"
+#include "insieme/frontend/ocl/ocl_host_utils.h"
 
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
+// shortcut
+#define BASIC builder.getNodeManager().basic
+
 
 /*
- * provides interface to the OpenCL host compiler
+ * Function to get the type of an Expression
+ * If it is a ref-type, it's element type is returned
  */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
+const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr) {
+	if (const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(refExpr->getType()))
+		return ref->getElementType();
+	return refExpr->getType();
+}
 
-public:
-	HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr) :
-		mProgram(program), builder(mgr) {
+/*
+ * Returns either the type itself or the element type, in case that it is a referenceType
+ */
+const core::TypePtr getNonRefType(const core::TypePtr& refType) {
+	if (const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(refType))
+		return ref->getElementType();
+	return refType;
+}
+
+/*
+ * Builds a ref.deref call around an expression if the it is of ref-type
+ */
+core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBuilder& builder) {
+	// core::ExpressionPtr retExpr = expr;
+	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
+		return builder.callExpr(refTy->getElementType(), BASIC.getRefDeref(), expr);
 	}
+	return expr;
+}
 
-	core::ProgramPtr compile();
-};
+
+
+/*
+ * Function to copy all annotations form one NodePtr to another
+ */
+void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink) {
+	unsigned int i = 0; // normal iterator and for_each loop leads to infinity loop, go
+	for (auto I = source->getAnnotations().begin(); i < source->getAnnotations().size(); ++I, ++i)
+		sink->addAnnotation(I->second);
+}
+
+
 
 } //namespace ocl
 } //namespace frontend

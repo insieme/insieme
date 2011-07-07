@@ -37,16 +37,21 @@
 #include "insieme/backend/function_manager.h"
 
 #include <set>
+#include <functional>
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/name_manager.h"
+#include "insieme/backend/variable_manager.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/core/expressions.h"
+#include "insieme/core/analysis/ir_utils.h"
+
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
@@ -105,8 +110,7 @@ namespace backend {
 			// -------- utilities -----------
 
 			FunctionCodeInfo resolveFunction(const c_ast::IdentifierPtr name,
-					const core::FunctionTypePtr& funType, const core::StatementPtr& body, bool external);
-			c_ast::CodeFragmentPtr resolvePrototype(const c_ast::FunctionPtr& function);
+					const core::FunctionTypePtr& funType, const core::LambdaPtr& lambda, bool external);
 
 			std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
 			resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType);
@@ -117,7 +121,11 @@ namespace backend {
 
 
 	FunctionManager::FunctionManager(const Converter& converter)
-		: converter(converter), store(new detail::FunctionInfoStore(converter)) {}
+		: converter(converter), store(new detail::FunctionInfoStore(converter)),
+		  operatorTable(getBasicOperatorTable(converter.getNodeManager().getBasicGenerator())) {}
+
+	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable)
+		: converter(converter), store(new detail::FunctionInfoStore(converter)), operatorTable(operatorTable) {}
 
 	FunctionManager::~FunctionManager() {
 		delete store;
@@ -137,89 +145,140 @@ namespace backend {
 
 	namespace {
 
-		const c_ast::ExpressionPtr getValueInternal(const c_ast::SharedCNodeManager& manager, TypeManager& typeManager,
-				const core::ExpressionPtr& expr, const FunctionInfo& info, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+		const c_ast::ExpressionPtr getValueInternal(ConversionContext& context, const core::ExpressionPtr& expr, const FunctionInfo& info) {
 
 			// The value of a literal is created by instantiating a closure covering the literal
 			// This looks as follows:
 			//		<closure_name>_ctr((closure_name*)alloca(sizeof(closure_name)), &literal_wrapper)
 
 			// collect information regarding result
-			const FunctionTypeInfo& typeInfo = typeManager.getTypeInfo(static_pointer_cast<const core::FunctionType>(expr->getType()));
+			const Converter& converter = context.getConverter();
+			const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(static_pointer_cast<const core::FunctionType>(expr->getType()));
 
 			c_ast::TypePtr closureType = typeInfo.rValueType;
 
 			// add dependencies
+			c_ast::DependencySet& dependencies = context.getDependencies();
 			dependencies.insert(typeInfo.definition);
 			dependencies.insert(typeInfo.constructor);
 			dependencies.insert(info.lambdaWrapper);
 
 			// build the value
+			auto manager = context.getCNodeManager();
 			c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(closureType),
 					c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, closureType)));
 			return c_ast::call(typeInfo.constructorName, alloc, c_ast::ref(info.lambdaWrapperName));
 		}
 
-		void appendAsArguments(c_ast::CallPtr& call, const vector<core::ExpressionPtr>& arguments,
-				const Converter& converter, std::set<c_ast::CodeFragmentPtr>& dependencies, bool external) {
+
+		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const vector<core::ExpressionPtr>& arguments, bool external) {
 
 			// collect some manager references
-			const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
+			const Converter& converter = context.getConverter();
+			const c_ast::SharedCNodeManager& manager = context.getCNodeManager();
 			StmtConverter& stmtConverter = converter.getStmtConverter();
 			TypeManager& typeManager = converter.getTypeManager();
 
-			// append as arguments
-			::transform(arguments, std::back_inserter(call->arguments),
-					[&](const core::ExpressionPtr& cur)->c_ast::ExpressionPtr {
-						c_ast::ExpressionPtr res = static_pointer_cast<c_ast::Expression>(stmtConverter.convert(cur, dependencies));
-						return (external)?typeManager.getTypeInfo(cur->getType()).externalize(manager, res):res;
-					}
-			);
+			auto varlistPack = converter.getNodeManager().getBasicGenerator().getVarlistPack();
+
+			// create a recursive lambda appending arguments to the caller (descent into varlist-pack calls)
+			std::function<void(const core::ExpressionPtr& argument)> append;
+			auto recLambda = [&](const core::ExpressionPtr& cur) {
+
+				// test if current argument is a variable argument list
+				if (core::analysis::isCallOf(cur, varlistPack)) {
+					// inline arguments of varlist-pack call => append arguments directly
+					const vector<core::ExpressionPtr>& packed = static_pointer_cast<const core::CallExpr>(cur)->getArguments();
+
+					for_each(static_pointer_cast<const core::TupleExpr>(packed[0])->getExpressions(),
+							[&](const core::ExpressionPtr& cur) {
+								append(cur);
+					});
+					return;
+				}
+
+				// simply append the argument (externalize if necessary)
+				c_ast::ExpressionPtr res = stmtConverter.convertExpression(context, cur);
+				call->arguments.push_back((external)?typeManager.getTypeInfo(cur->getType()).externalize(manager, res):res);
+
+			};
+			append = recLambda;
+
+			// invoke append for all arguments
+			for_each(arguments, [&](const core::ExpressionPtr& cur) {
+				append(cur);
+			});
 		}
 
 	}
 
+	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& call, ConversionContext& context) {
 
-	const c_ast::NodePtr FunctionManager::getCall(const core::CallExprPtr& call, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+		// extract target function
+		core::ExpressionPtr fun = call->getFunctionExpr();
+
+		// 1) see whether call is call to a known operator
+		auto pos = operatorTable.find(fun);
+		if (pos != operatorTable.end()) {
+			// use operator converter
+			return pos->second(context, call);
+		}
+
+		// 2) test whether target is a literal => external function, direct call
+		if (fun->getNodeType() == core::NT_Literal) {
+			// obtain literal information
+			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
+
+			// produce call to external literal
+			c_ast::CallPtr res = c_ast::call(info.function->name);
+			appendAsArguments(context, res, call->getArguments(), true);
+
+			// add dependencies
+			context.getDependencies().insert(info.prototype);
+
+			// return external function call
+			return res;
+		}
+
 
 		// the generic fall-back solution:
 		//		get function as a value and call it using the function-type's caller function
 
-		core::ExpressionPtr fun = call->getFunctionExpr();
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 
-		c_ast::NodePtr value = getValue(call->getFunctionExpr(), dependencies);
+		c_ast::ExpressionPtr value = getValue(call->getFunctionExpr(), context);
 
 		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(funType);
+		c_ast::CallPtr res = c_ast::call(typeInfo.callerName, value);
+		appendAsArguments(context, res, call->getArguments(), false);
 
-		c_ast::CallPtr res = c_ast::call(typeInfo.callerName);
-		appendAsArguments(res, call->getArguments(), converter, dependencies, false);
+		// add dependencies
+		context.getDependencies().insert(typeInfo.caller);
+
 		return res;
 	}
 
 
 
-
-
-	const c_ast::ExpressionPtr FunctionManager::getValue(const core::ExpressionPtr& fun, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+	const c_ast::ExpressionPtr FunctionManager::getValue(const core::ExpressionPtr& fun, ConversionContext& context) {
 		auto manager = converter.getCNodeManager();
 
 		// handle according to node type
 		switch(fun->getNodeType()) {
 		case core::NT_BindExpr: {
-			return getValue(static_pointer_cast<const core::BindExpr>(fun), dependencies);
+			return getValue(static_pointer_cast<const core::BindExpr>(fun), context);
 		}
 		case core::NT_Literal: {
 			core::LiteralPtr literal = static_pointer_cast<const core::Literal>(fun);
-			return getValueInternal(manager, converter.getTypeManager(), literal, getInfo(literal), dependencies);
+			return getValueInternal(context, fun, getInfo(literal));
 		}
 		case core::NT_LambdaExpr: {
 			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
-			return getValueInternal(manager, converter.getTypeManager(), lambda, getInfo(lambda), dependencies);
+			return getValueInternal(context, fun, getInfo(lambda));
 		}
 		case core::NT_Variable: {
 			// variable is already representing a value
-			c_ast::NodePtr res = converter.getStmtConverter().convert(fun, dependencies);
+			c_ast::NodePtr res = converter.getStmtConverter().convert(context, fun);
 			return static_pointer_cast<c_ast::Expression>(res);
 		}
 		default:
@@ -229,7 +288,7 @@ namespace backend {
 
 	}
 
-	const c_ast::ExpressionPtr FunctionManager::getValue(const core::BindExprPtr& bind, std::set<c_ast::CodeFragmentPtr>& dependencies) {
+	const c_ast::ExpressionPtr FunctionManager::getValue(const core::BindExprPtr& bind, ConversionContext& context) {
 		auto manager = converter.getCNodeManager();
 
 		// create a value instance by initializing the bind closure using its constructor
@@ -239,6 +298,7 @@ namespace backend {
 		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(static_pointer_cast<const core::FunctionType>(bind->getType()));
 
 		// add dependencies
+		c_ast::DependencySet& dependencies = context.getDependencies();
 		dependencies.insert(typeInfo.definition);
 		dependencies.insert(typeInfo.constructor);
 		dependencies.insert(info.definitions);
@@ -249,14 +309,14 @@ namespace backend {
 				c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, info.closureType)));
 
 		// create nested closure
-		c_ast::ExpressionPtr nested = getValue(bind->getCall()->getFunctionExpr(), dependencies);
+		c_ast::ExpressionPtr nested = getValue(bind->getCall()->getFunctionExpr(), context);
 
 		//  create constructor call
 		c_ast::CallPtr res = c_ast::call(info.constructorName, alloc, nested);
 
 		// add captured expressions
 		auto boundExpression = bind->getBoundExpressions();
-		appendAsArguments(res, boundExpression, converter, dependencies, false);
+		appendAsArguments(context, res, boundExpression, false);
 
 		// done
 		return res;
@@ -311,13 +371,14 @@ namespace backend {
 
 			FunctionCodeInfo fun = resolveFunction(
 					manager->create(literal->getValue()),
-					funType, core::StatementPtr(), true);
+					funType, core::LambdaPtr(), true);
 
 			res->function = fun.function;
 
 			// ------------------------ add prototype -------------------------
 
-			res->prototype = resolvePrototype(fun.function);
+			c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
+			res->prototype = c_ast::CCodeFragment::createNew(manager, code);
 			res->prototype->addDependencies(fun.prototypeDependencies);
 
 			// -------------------------- add lambda wrapper ---------------------------
@@ -502,7 +563,6 @@ namespace backend {
 			// create definition and declaration block
 			c_ast::CCodeFragmentPtr declarations = c_ast::CCodeFragment::createNew(cManager);
 			c_ast::CCodeFragmentPtr definitions = c_ast::CCodeFragment::createNew(cManager);
-			definitions->addDependency(declarations);
 
 			declarations->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Prototypes ----------"));
 			definitions->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Definitions ---------"));
@@ -529,10 +589,12 @@ namespace backend {
 				// if not recursive, skip prototype
 				if (!lambda->isRecursive()) {
 					info->prototype = definitions;
+				} else {
+					definitions->addDependency(declarations);
 				}
 
 				// create dummy function ... no body
-				core::StatementPtr body;
+				core::LambdaPtr body;
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
 				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
 
@@ -547,6 +609,7 @@ namespace backend {
 
 				// add prototype to prototype block
 				declarations->getCode().push_back(cManager->create<c_ast::FunctionPrototype>(codeInfo.function));
+				declarations->addDependencies(codeInfo.prototypeDependencies);
 			});
 
 
@@ -560,9 +623,8 @@ namespace backend {
 				core::LambdaExprPtr unrolled = lambdaDefinition->unrollOnce(manager, lambda->getVariable());
 
 				// create dummy function ... no body
-				core::StatementPtr body = unrolled->getBody();
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
-				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
+				FunctionCodeInfo codeInfo = resolveFunction(name, funType, unrolled->getLambda(), false);
 
 				// add function
 				LambdaInfo* info = static_cast<LambdaInfo*>(funInfos[lambda]);
@@ -570,42 +632,68 @@ namespace backend {
 
 				// add definition to definition block
 				definitions->getCode().push_back(codeInfo.function);
+
+				// add code dependencies
+				definitions->addDependencies(codeInfo.definitionDependencies);
 			});
 
 		}
 
 
 		FunctionCodeInfo FunctionInfoStore::resolveFunction(const c_ast::IdentifierPtr name,
-							const core::FunctionTypePtr& funType, const core::StatementPtr& body, bool external) {
+							const core::FunctionTypePtr& funType, const core::LambdaPtr& lambda, bool external) {
 
 			FunctionCodeInfo res;
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
 
-			// resolve return type
+			// get other managers
 			TypeManager& typeManager = converter.getTypeManager();
+			NameManager& nameManager = converter.getNameManager();
+
+			// resolve return type
 			const TypeInfo& returnTypeInfo = typeManager.getTypeInfo(funType->getReturnType());
 			res.prototypeDependencies.insert(returnTypeInfo.definition);
 			c_ast::TypePtr returnType = (external)?returnTypeInfo.externalType:returnTypeInfo.rValueType;
 
+
 			// resolve parameters
-			int counter = 1;
+			int counter = 0;
 			vector<c_ast::VariablePtr> parameter;
 			for_each(funType->getParameterTypes(), [&](const core::TypePtr& cur) {
 				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
 				res.prototypeDependencies.insert(paramTypeInfo.definition);
 
 				c_ast::TypePtr paramType = (external)?paramTypeInfo.externalType:paramTypeInfo.rValueType;
-				parameter.push_back(manager->create<c_ast::Variable>(paramType, manager->create(format("p%d", counter++))));
+
+				string paramName;
+				if (lambda) {
+					paramName = nameManager.getName(lambda->getParameterList()[counter]);
+				} else {
+					paramName = format("p%d", counter+1);
+				}
+				parameter.push_back(c_ast::var(paramType, manager->create(paramName)));
+
+				counter++;
 			});
 
-			// resolve body (there is no body, so this is quite easy)
+			// resolve body
 			c_ast::StatementPtr cBody;
 			res.definitionDependencies.insert(res.prototypeDependencies.begin(), res.prototypeDependencies.end());
-			if (body) {
+			if (lambda) {
+
+				// set up variable manager
+				VariableManager varManager;
+
+				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
+					varManager.addInfo(converter, cur, (cur->getType()->getNodeType() == core::NT_RefType)?VariableInfo::INDIRECT:VariableInfo::NONE);
+				});
+
+
 				// convert the body code fragment and collect dependencies
-				c_ast::NodePtr code = converter.getStmtConverter().convert(body, res.definitionDependencies);
+				ConversionContext context(converter, res.definitionDependencies, varManager);
+				c_ast::NodePtr code = converter.getStmtConverter().convert(context, lambda->getBody());
 				cBody = static_pointer_cast<c_ast::Statement>(code);
 			}
 
@@ -614,16 +702,6 @@ namespace backend {
 			return res;
 		}
 
-
-		c_ast::CodeFragmentPtr FunctionInfoStore::resolvePrototype(const c_ast::FunctionPtr& function) {
-
-			// get C node manager
-			auto manager = converter.getCNodeManager();
-
-			c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(function);
-			c_ast::CodeFragmentPtr res = c_ast::CCodeFragment::createNew(manager, code);
-			return res;
-		}
 
 		std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
 		FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType) {
@@ -645,7 +723,14 @@ namespace backend {
 					manager->create<c_ast::PointerType>(funTypeInfo.rValueType),
 					manager->create("closure"))
 			);
-			copy(function->parameter, std::back_inserter(parameter));
+
+			// resolve parameters
+			int counter = 1;
+			::transform(funType->getParameterTypes(), std::back_inserter(parameter),
+					[&](const core::TypePtr& cur) {
+						const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
+						return c_ast::var(paramTypeInfo.rValueType, manager->create(format("p%d", counter++)));
+			});
 
 			// pick a name for the wrapper
 			c_ast::IdentifierPtr name = manager->create(function->name->name + "_wrap");

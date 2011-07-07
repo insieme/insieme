@@ -74,7 +74,7 @@
 #include "insieme/xml/xml_utils.h"
 #endif
 
-#include "insieme/analysis/scop.h"
+#include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
 
 using namespace std;
@@ -193,15 +193,15 @@ int main(int argc, char** argv) {
 				LOG(INFO) << timer;
 			}
 		
-			// insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);
-			// std::cout << "SCOP Analysis: " << sl.size() << std::endl;
-			// std::for_each(sl.begin(), sl.end(),
-			// 	[](const insieme::analysis::scop::ScopList::value_type& cur){ insieme::analysis::scop::printSCoP(std::cout, cur.first); });
+   /*         insieme::analysis::scop::ScopList sl = insieme::analysis::scop::mark(program);*/
+			//std::cout << "SCOP Analysis: " << sl.size() << std::endl;
+			//std::for_each(sl.begin(), sl.end(),
+				//[](const insieme::analysis::scop::ScopList::value_type& cur){ insieme::analysis::scop::printSCoP(std::cout, cur.first); });
 
-			// analysis::RefList&& refs = analysis::collectDefUse(program);
-			// std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
-			//		std::cout << *cur << std::endl; 
-			//	});
+			 //analysis::RefList&& refs = analysis::collectDefUse(program);
+			 //std::for_each(refs.begin(), refs.end(), [](const analysis::RefPtr& cur){ 
+					//std::cout << *cur << std::endl; 
+			/*});*/
 			InverseStmtMap stmtMap;
 			if(CommandLineOptions::PrettyPrint || !CommandLineOptions::DumpIR.empty()) {
 				using namespace insieme::core::printer;
@@ -265,9 +265,9 @@ int main(int argc, char** argv) {
 				LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 			};
 
-//			if(CommandLineOptions::CheckSema) {
-//				checker();
-//			}
+			if(CommandLineOptions::CheckSema) {
+				checker();
+			}
 
 			// run OMP frontend
 			if(CommandLineOptions::OMPSema) {
@@ -369,6 +369,11 @@ int main(int argc, char** argv) {
 				backend = insieme::simple_backend::SimpleBackend::getDefault();
 			}
 
+			// ###################################################
+			// TODO: remove this
+			// enforces the usage of the full backend for testing
+			//backend = insieme::backend::FullBackend::getDefault();
+			// ###################################################
 
 			insieme::utils::Timer timer(backendName);
 

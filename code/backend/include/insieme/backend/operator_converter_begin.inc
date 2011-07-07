@@ -34,36 +34,43 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/parser/ir_parse.h"
-
-#include "insieme/frontend/program.h"
-#include "insieme/utils/logging.h"
-
-namespace insieme {
-namespace frontend {
-namespace ocl {
-
-
-/*
- * provides interface to the OpenCL host compiler
+/**
+ * This include file defines some macros simplifying the specification of operator converters.
  */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
 
-public:
-	HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr) :
-		mProgram(program), builder(mgr) {
-	}
+/**
+ * This macro allows to access an argument of the call to be processed by the formatter. 
+ * The indexing starts with 0. The result will be an ExpressionPtr. If there is no such argument,
+ * the pointer will be null.
+ * 
+ * @param N the index of the argument to be obtained 
+ */
+#define ARG(N) call->getArgument(N)
 
-	core::ProgramPtr compile();
-};
+#define CONVERT_TYPE(Node) context.getConverter().getStmtConverter().convertType(context, Node)
+#define CONVERT_EXPR(Node) context.getConverter().getStmtConverter().convertExpression(context, Node)
+#define CONVERT_STMT(Node) context.getConverter().getStmtConverter().convertStatement(context, Node)
 
-} //namespace ocl
-} //namespace frontend
-} //namespace insieme
+/**
+ * A macro triggering the deceding into an argument. This will result in the printing of the code
+ * required for evaluating the corresponding argument.
+ * 
+ * @param N the index of the argument to be printed 
+ */
+#define CONVERT_ARG(N) CONVERT_EXPR(ARG(N))
+
+/**
+ * A macro triggering the conversion of the type of the current call.
+ */
+#define CONVERT_RES_TYPE CONVERT_TYPE(call->getType())
+
+/**
+ * Creates a new operator converter conducting the given conversion.
+ * 
+ * @param FORMAT the function body realizing the formatting 
+ */
+#define OP_CONVERTER(Conversion) \
+		&(((struct { \
+			int dummy; \
+			static c_ast::ExpressionPtr f(ConversionContext& context, const core::CallExprPtr& call) Conversion \
+		 }){0}).f)	

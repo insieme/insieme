@@ -72,6 +72,14 @@ namespace backend {
 		// create and set up the converter
 		Converter converter(config);
 
+		// set up the node manager (for temporals)
+		core::NodeManager& nodeManager = code->getNodeManager();
+		converter.setNodeManager(&nodeManager);
+
+		// set up the shared C node manager (for the result)
+		c_ast::SharedCNodeManager cNodeManager = c_ast::CNodeManager::createShared();
+		converter.setCNodeManager(cNodeManager);
+
 		// set up pre-processing
 		NoPreProcessing preprocessor;
 		converter.setPreProcessor(&preprocessor);
@@ -83,23 +91,14 @@ namespace backend {
 		TypeManager typeManager(converter);
 		converter.setTypeManager(&typeManager);
 
-		VariableManager variableManager;
-		converter.setVariableManager(&variableManager);
-
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter);
+		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager.getBasicGenerator()));
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;
 		converter.setParallelManager(&parallelManager);
-
-		core::NodeManager& nodeManager = code->getNodeManager();
-		converter.setNodeManager(&nodeManager);
-
-		c_ast::SharedCNodeManager cNodeManager = c_ast::CNodeManager::createShared();
-		converter.setCNodeManager(cNodeManager);
 
 		// conduct conversion
 		return converter.convert(code);

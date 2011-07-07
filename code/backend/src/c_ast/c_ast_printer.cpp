@@ -156,6 +156,10 @@ namespace c_ast {
 				}) << ")";
 			}
 
+			PRINT(VarArgsType) {
+				return out << "...";
+			}
+
 			PRINT(VarDecl) {
 				// print a variable declaration
 				out << print(node->var->type) << " " << print(node->var->name);
@@ -281,8 +285,8 @@ namespace c_ast {
 					case UnaryOperation::UnaryMinus: 	return out << "-" << print(node->operand);
 					case UnaryOperation::PrefixInc: 	return out << "++" << print(node->operand);
 					case UnaryOperation::PrefixDec: 	return out << "--" << print(node->operand);
-					case UnaryOperation::PostFixInc: 	return out << print(node->operand) << "++";
-					case UnaryOperation::PostFixDec: 	return out << print(node->operand) << "--";
+					case UnaryOperation::PostfixInc: 	return out << print(node->operand) << "++";
+					case UnaryOperation::PostfixDec: 	return out << print(node->operand) << "--";
 					case UnaryOperation::LogicNot: 		return out << "!" << print(node->operand);
 					case UnaryOperation::BitwiseNot: 	return out << "~" << print(node->operand);
 					case UnaryOperation::Indirection: 	return out << "*" << print(node->operand);
@@ -331,7 +335,7 @@ namespace c_ast {
 					case BinaryOperation::IndirectMemberAccess:		op = "->"; break;
 
 					// special handling for subscript and cast
-					case BinaryOperation::Subscript: print(node->operandA); out << "["; print(node->operandB); return out << "]";
+					case BinaryOperation::Subscript: return out << print(node->operandA) << "[" << print(node->operandB) << "]";
 					case BinaryOperation::Cast: return out << "(" << print(node->operandA) << ")" << print(node->operandB);
 
 				}
@@ -372,13 +376,13 @@ namespace c_ast {
 
 			PRINT(TypeDeclaration) {
 				print(node->type);
-				return out << ";";
+				return out << ";\n";
 			}
 
 			PRINT(FunctionPrototype) {
 				// <returnType> name ( <parameter list> );
 				FunctionPtr fun =  node->function;
-				return out << print(fun->returnType) << " " << print(fun->name) << "(" << printParam(fun->parameter) << ");";
+				return out << print(fun->returnType) << " " << print(fun->name) << "(" << printParam(fun->parameter) << ");\n";
 			}
 
 			PRINT(TypeDefinition) {
@@ -403,7 +407,7 @@ namespace c_ast {
 				if (explicitTypeDef) {
 					out << " " << print(node->name);
 				}
-				return out << ";";
+				return out << ";\n";
 			}
 
 			PRINT(Function) {
@@ -536,7 +540,15 @@ namespace c_ast {
 
 
 	std::ostream& ParameterPrinter::printTo(std::ostream& out) const {
+		c_ast::VariablePtr var;
 		return out << join(", ", params, [](std::ostream& out, const c_ast::VariablePtr& var) {
+
+			// special handling for varargs
+			if (var->type->getType() == c_ast::NT_VarArgsType) {
+				out << "...";
+				return;
+			}
+
 			// special handling for pointer to vectors
 			TypeNesting nesting;
 			TypePtr innermost = computeNesting(nesting, var->type);

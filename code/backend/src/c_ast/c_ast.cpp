@@ -191,6 +191,11 @@ namespace c_ast {
 		return *returnType == *other.returnType && ::equals(parameterTypes, other.parameterTypes, equal_target<TypePtr>());
 	}
 
+	bool VarArgsType::equals(const Node& node) const {
+		assert(dynamic_cast<const VarArgsType*>(&node));
+		return true;
+	}
+
 	bool VarDecl::equals(const Node& node) const {
 		assert(dynamic_cast<const VarDecl*>(&node));
 		auto other = static_cast<const VarDecl&>(node);

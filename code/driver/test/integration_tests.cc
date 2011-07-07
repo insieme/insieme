@@ -54,7 +54,7 @@
 #include "insieme/simple_backend/simple_backend.h"
 
 #include "insieme/utils/compiler/compiler.h"
-#include "insieme/utils/test/test_utils.h"
+#include "insieme/utils/test/integration_tests.h"
 #include "insieme/utils/cmd_line_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"

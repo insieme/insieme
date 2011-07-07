@@ -39,14 +39,17 @@
 #include "insieme/utils/timer.h"
 #include "insieme/utils/logging.h"
 
-#include "insieme/backend/statement_converter.h"
-#include "insieme/backend/preprocessor.h"
 #include "insieme/backend/c_ast/c_code.h"
+
+#include "insieme/backend/preprocessor.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/variable_manager.h"
+
 
 namespace insieme {
 namespace backend {
 
-	backend::TargetCodePtr Converter::convert(const core::NodePtr& code) {
+	backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {
 
 
 		// conduct pre-processing
@@ -55,15 +58,28 @@ namespace backend {
 		// TODO: make pre-processor an option
 
 		// pre-process program
-		core::NodePtr processed = getPreProcessor().preprocess(getNodeManager(), code);
+		core::NodePtr processed = getPreProcessor().preprocess(getNodeManager(), source);
 
 		timer.stop();
 		LOG(INFO) << timer;
 
 		timer = insieme::utils::Timer("Backend.Conversions");
 
+		// create a context
+		vector<string> includes;
+		c_ast::DependencySet dependencies;
+		VariableManager varManager;
+		ConversionContext context(*this, dependencies, varManager);
+
 		// convert IR node target code
-		auto res = getStmtConverter().convert(processed);
+		auto code = getStmtConverter().convert(context, processed);
+
+		// create a code fragment out of it
+		c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(getCNodeManager(), code);
+		fragment->addDependencies(dependencies);
+
+		// create C code
+		auto res = c_ast::CCode::createNew(source, fragment, includes);
 
 		timer.stop();
 		LOG(INFO) << timer;
@@ -71,6 +87,7 @@ namespace backend {
 		// job done!
 		return res;
 	}
+
 
 } // end namespace backend
 } // end namespace insieme

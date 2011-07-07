@@ -85,11 +85,3 @@ void irt_print_error_info(FILE* target, irt_error* error) {
 		fprintf(target, "%s", (char*)error+sizeof(irt_error));
 	}
 }
-
-void irt_error_handler(int signal) {
-	irt_error* error = (irt_error*)pthread_getspecific(irt_g_error_key);
-	fprintf(stderr, "Insieme Runtime Error recieved (thread %p): %s\n", (void*)pthread_self(), irt_errcode_string(error->errcode));
-	fprintf(stderr, "Additional information:\n");
-	irt_print_error_info(stderr, error);
-	exit(-error->errcode);
-}

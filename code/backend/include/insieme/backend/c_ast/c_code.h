@@ -38,6 +38,7 @@
 
 #include <memory>
 #include <string>
+#include <set>
 
 #include "insieme/backend/backend.h"
 #include "insieme/backend/c_ast/c_ast.h"
@@ -57,11 +58,6 @@ namespace backend {
 namespace c_ast {
 
 
-	// forward declaration for fragments
-	class CodeFragment;
-	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
-
-
 	/**
 	 * A class representing a C based target code.
 	 */
@@ -74,6 +70,11 @@ namespace c_ast {
 		 */
 		const vector<CodeFragmentPtr> fragments;
 
+		/**
+		 * The list of files / headers to be included by the resulting target code.
+		 */
+		const vector<string> includes;
+
 	public:
 
 		/**
@@ -82,8 +83,9 @@ namespace c_ast {
 		 *
 		 * @param source the IR node this code has been generated from
 		 * @param code the root element of the resulting target code fragment
+		 * @param includes the list of includes to be added during code generation
 		 */
-		CCode(const core::NodePtr& source, const CodeFragmentPtr& root);
+		CCode(const core::NodePtr& source, const CodeFragmentPtr& root, const vector<string>& includes = vector<string>());
 
 		/**
 		 * Creates a new C Code instance representing a conversion from the given
@@ -91,8 +93,31 @@ namespace c_ast {
 		 *
 		 * @param source the IR node this code has been generated from
 		 * @param fragments seeds / entry points of the represented program
+		 * @param includes the list of includes to be added during code generation
 		 */
-		CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments);
+		CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments, const vector<string>& includes = vector<string>());
+
+		/**
+		 * Creates a new C code instance representing a translation of the given source to the given code fragment.
+		 *
+		 * @param source the source of the translation, hence the internal IR representation.
+		 * @param fragment the code fragment forming the root of the DAG of code fragments representing the result
+		 * @param includes the list of includes to be added during code generation
+		 */
+		static CCodePtr createNew(const core::NodePtr& source, CodeFragmentPtr& fragment, const vector<string>& includes) {
+			return std::make_shared<CCode>(source, fragment, includes);
+		}
+
+		/**
+		 * Creates a new C code instance representing a translation of the given source to the given code fragments.
+		 *
+		 * @param source the source of the translation, hence the internal IR representation.
+		 * @param fragments the code fragment forming the root elements of the DAG of code fragments representing the result
+		 * @param includes the list of includes to be added during code generation
+		 */
+		static CCodePtr createNew(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments, const vector<string>& includes) {
+			return std::make_shared<CCode>(source, fragments, includes);
+		}
 
 		/**
 		 * Allows this code fragment to be printed to some output stream according
@@ -103,21 +128,16 @@ namespace c_ast {
 	};
 
 	/**
-	 * Define a pointer type for a C based target code.
-	 */
-	typedef std::shared_ptr<CCode> CCodePtr;
-
-	/**
 	 * An abstract base class for various kinds of specialized code fragments. This base class
 	 * defines an interface for code fragments to be handled uniformly.
 	 */
 	class CodeFragment : public utils::Printable {
 
 		/**
-		 * The list of code fragments this fragment is depending on. The dependencies should form
+		 * The set of code fragments this fragment is depending on. The dependencies should form
 		 * a DAG and a topological order of this DAG is used when generating the resulting code.
 		 */
-		std::vector<CodeFragmentPtr> dependencies;
+		DependencySet dependencies;
 
 	public:
 
@@ -132,7 +152,7 @@ namespace c_ast {
 		 *
 		 * @param dependencies the code fragments this fragment is depending on - default: empty list
 		 */
-		CodeFragment(const vector<CodeFragmentPtr>& dependencies) : dependencies(dependencies) {}
+		CodeFragment(const DependencySet& dependencies) : dependencies(dependencies) {}
 
 		/**
 		 * A virtual destructor to support proper sub-type handling.
@@ -154,7 +174,7 @@ namespace c_ast {
 		 */
 		template<typename Container>
 		void addDependencies(const Container& fragments) {
-			// just add all dependencies
+			// just add all dependencies (the add dependency is filtering null pointer)
 			for_each(fragments, [&](const CodeFragmentPtr& cur) {
 				this->addDependency(cur);
 			});
@@ -165,14 +185,9 @@ namespace c_ast {
 		 *
 		 * @return a list of all fragments depending on.
 		 */
-		const std::vector<CodeFragmentPtr>& getDependencies() const { return dependencies; };
+		const DependencySet& getDependencies() const { return dependencies; };
 
 	};
-
-
-	// a type definition for a pointer to a C code fragment
-	class CCodeFragment;
-	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
 
 	/**
 	 * A code fragment is a top-level piece of code within the resulting C program. It encapsulate a
@@ -279,14 +294,14 @@ namespace c_ast {
 		 *
 		 * @param dependencies a list of fragments this new fragment should depend on
 		 */
-		DummyFragment(const vector<CodeFragmentPtr>& dependencies = vector<CodeFragmentPtr>()) : CodeFragment(dependencies) {}
+		DummyFragment(const DependencySet& dependencies = DependencySet()) : CodeFragment(dependencies) {}
 
 		/**
 		 * A static factory method creating a new dummy-code fragment based on the given name.
 		 *
 		 * @param name the name of the new fragment
 		 */
-		static CodeFragmentPtr createNew(const vector<CodeFragmentPtr>& dependencies = vector<CodeFragmentPtr>());
+		static CodeFragmentPtr createNew(const DependencySet& dependencies = DependencySet());
 
 		/**
 		 * Prints a dummy code fragment (nothing to print).
@@ -296,6 +311,44 @@ namespace c_ast {
 			return out;
 		}
 	};
+
+//	/**
+//	 * A special kind of code fragment representing a include directive.
+//	 */
+//	class IncludeFragment : public CodeFragment {
+//
+//		/**
+//		 * The file to be included.
+//		 */
+//		const string file;
+//
+//	public:
+//
+//		/**
+//		 * Creates a new fragment of this type including the given file name.
+//		 *
+//		 * @param file the file to be included.
+//		 */
+//		IncludeFragment(const string& file) : CodeFragment() {}
+//
+//		/**
+//		 * Creates a new shared instance of this code fragment including the given file.
+//		 *
+//		 * @param file the file to be included
+//		 */
+//		static IncludeFragmentPtr createNew(const string& file);
+//
+//		/**
+//		 *
+//		 */
+//		virtual std::ostream& printTo(std::ostream& out) const {
+//			if (file[0] == '<' || file[0] == '"') {
+//				return out << "#include " << file << "\n";
+//			}
+//			return out << "#include <" << file << ">\n";
+//		}
+//
+//	};
 
 
 } // end namespace c_ast

@@ -37,6 +37,8 @@
 #pragma once
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/types.h"
 
 namespace insieme {
 namespace core {
@@ -70,6 +72,36 @@ bool isRefOf(const NodePtr& candidate, const NodePtr& type);
  */
 bool isRefOf(const NodePtr& candidate, const NodeType kind);
 
+/**
+ * A simple helper utility to test whether the given type is a reference type.
+ * In this particular case, the answer can be determined statically.
+ *
+ * @param refType the type to be tested.
+ * @return true - always.
+ */
+static inline bool isRefType(const RefTypePtr& refType) {
+	return true;
+}
+
+/**
+ * A simple helper utility to test whether the given type is a reference type.
+ *
+ * @param type the type to be tested.
+ * @return true if the given type is a reference type, false otherwise
+ */
+static inline bool isRefType(const TypePtr& type) {
+	return type->getNodeType() == core::NT_RefType;
+}
+
+/**
+ * Determines whether the given expression has is of a reference type.
+ *
+ * @param expr the expression to be tested
+ * @return true if so, false otherwise
+ */
+static inline bool hasRefType(const ExpressionPtr& expr) {
+	return isRefType(expr->getType());
+}
 
 } // end namespace utils
 } // end namespace core

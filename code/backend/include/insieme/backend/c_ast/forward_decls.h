@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include <set>
+#include <memory>
+
 #include "insieme/utils/pointer.h"
 
 namespace insieme {
@@ -73,6 +76,10 @@ namespace c_ast {
 	class CCodeFragment;
 	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
 
+	class IncludeFragment;
+	typedef std::shared_ptr<IncludeFragment> IncludeFragmentPtr;
+
+	typedef std::set<CodeFragmentPtr> DependencySet;
 
 } // end namespace c_ast
 } // end namespace backend

@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
@@ -249,7 +249,7 @@ TEST(Constraint, Creation) {
 	af.setCoefficient(poly::Iterator(iter2), 1);
 	af.setConstantPart(10);
 
-	poly::EqualityConstraint c(af);
+	poly::Constraint c(af, poly::Constraint::EQ);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
@@ -267,7 +267,7 @@ TEST(Constraint, Combiner) {
 	af.setCoefficient(poly::Iterator(iter2), 1);
 	af.setConstantPart(10);
 
-	poly::EqualityConstraint c1(af);
+	poly::Constraint c1(af, poly::Constraint::EQ);
 
 	poly::AffineFunction af2(iterVec);
 	af2.setCoefficient(poly::Iterator(iter1), 2);

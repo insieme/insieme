@@ -87,8 +87,9 @@ void DependencyGraph<const clang::Type*>::Handle(const clang::Type* type,
 			fieldType = refTy->getPointeeType().getTypePtr();
 
 		if( const TagType* tagTy = dyn_cast<TagType>(fieldType) ) {
-			assert(isa<RecordDecl>(tagTy->getDecl()));
-			addNode( tagTy, &v );
+			if ( isa<RecordDecl>(tagTy->getDecl()) ) {
+				addNode( tagTy, &v );
+			}
 		}
 	}
 }

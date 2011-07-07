@@ -34,8 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/analysis/scop.h"
-#include "insieme/analysis/polyhedral.h"
+#include "insieme/analysis/polyhedral/scop.h"
 
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -50,14 +49,14 @@ using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 using namespace insieme::analysis::scop;
 
-// Expection which is thrown when a particular tree is defined to be not 
-// a static control part. This exception has to be forwarded until the 
-// root containing this node which has to be defined as a non ScopRegion
-//
-// Because this exception is only used within the implementation of the ScopRegion
-// visitor, it is defined in the anonymous namespace and therefore not visible
-// outside this translation unit.
-//
+/**
+ * Expection which is thrown when a particular tree is defined to be not a static control part. This
+ * exception has to be forwarded until the root containing this node which has to be defined as a
+ * non ScopRegion
+ * 
+ * Because this exception is only used within the implementation of the ScopRegion visitor, it is
+ * defined in the anonymous namespace and therefore not visible outside this translation unit.
+ */
 class NotASCoP : public std::exception {
 	const NodePtr& root;
 public:
@@ -82,8 +81,8 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 		{
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
-			// First of all we check whether this condition is a composed by
-			// multiple conditions connected through || or && statements 
+			// First of all we check whether this condition is a composed by multiple conditions
+			// connected through || or && statements 
 			BasicGenerator::Operator&& op = 
 				mgr.basic.getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
 
@@ -104,9 +103,8 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 			default:
 				break;
 			}
-			// A constraints is normalized having a 0 on the right side,
-			// therefore we build a temporary expression by subtracting the rhs
-			// to the lhs, Example: 
+			// A constraints is normalized having a 0 on the right side, therefore we build a
+			// temporary expression by subtracting the rhs to the lhs, Example: 
 			//
 			// if (a<b) { }    ->    if( a-b<0 ) { }
 			try {
@@ -138,11 +136,13 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 IterationVector markAccessExpression(const ExpressionPtr& expr) {
 	try {
 		IterationVector it;
-		expr->addAnnotation( 
-			std::make_shared<insieme::analysis::scop::AccessFunction>( it, EqualityConstraint( AffineFunction(it, expr) ) ) 
+		expr->addAnnotation(
+			std::make_shared<AccessFunction>( it, Constraint( AffineFunction(it, expr), Constraint::EQ ) ) 
 		);
 		return it;
-	} catch(const NotAffineExpr& e) { throw NotASCoP(expr); }
+	} catch(const NotAffineExpr& e) { 
+		throw NotASCoP(expr); 
+	}
 }
 
 //===== ScopVisitor ===============================================================
@@ -153,6 +153,40 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 
 	ScopVisitor(ScopList& scopList) : ASTVisitor<IterationVector>(false), scopList(scopList) { }
 
+	// Visit the body of a SCoP. This requires to collect the iteration vector for the body and
+	// eventual ref access statements existing in the body. For each array access we extract the
+	// equality constraint used for accessing each dimension of the array and store it in the
+	// AccessFunction annotation.
+	RefList visitBody(IterationVector& iterVec, const StatementPtr& body) { 
+		iterVec = merge(iterVec, visit(body));
+		
+		RefList&& refs = collectDefUse( body, StatementSet(subScops.begin(), subScops.end()) );
+		
+		// For now we only consider array access. 
+		//
+		// FIXME: In the future also scalars should be properly handled using technique like scalar
+		// arrays and so forth
+		std::for_each(refs.arrays_begin(), refs.arrays_end(),
+			[&](const ArrayRefPtr& cur) { 
+				const ExpressionList& idxExprs = cur->getIndexExpressions();
+				std::for_each(idxExprs.begin(), idxExprs.end(), 
+					[&](const ExpressionPtr& cur) { 
+						iterVec = merge(iterVec, markAccessExpression(cur));
+				});
+			});
+		return refs;
+	}
+
+	/*
+	 * Visit of If Statements: 
+	 *   Visits the then and else body checking whether they are SCoPs. In the case both the
+	 *   branches are SCoPs the condition is evaluated and a constraint created out of it. Two
+	 *   annotations will be then created, one with the positive condition and the second one with
+	 *   the negated condition which will be attached respectively to the then and the else body of
+	 *   the if statement. In the case one of the two branches is not a SCoP, the SCoP branch is
+	 *   inserted in the list of root scops (scopList) and the NotAScop exception thrown to the
+	 *   parent node. 
+	 */
 	IterationVector visitIfStmt(const IfStmtPtr& ifStmt) {
 		IterationVector ret, saveThen, saveElse;
 		RefList thenRefs, elseRefs;
@@ -162,53 +196,22 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 		try {
 			subScops.clear();
 			// check the then body
-			ret = merge(ret, visit(ifStmt->getThenBody()));
-			
-			RefList&& refs = collectDefUse( ifStmt->getThenBody(), StatementSet(subScops.begin(), subScops.end()) );
-			
-			// For now we only consider array access. 
-			//
-			// FIXME: In the future also scalars should be properly handled using technique like scalar
-			// arrays and so forth
-			std::for_each(refs.arrays_begin(), refs.arrays_end(),
-				[&](const ArrayRefPtr& cur) { 
-					const ExpressionList& idxExprs = cur->getIndexExpressions();
-					std::for_each(idxExprs.begin(), idxExprs.end(), 
-						[&](const ExpressionPtr& cur){	ret = merge(ret, markAccessExpression(cur)); }
-					);
-				} 
-			);
-
+			thenRefs = visitBody( ret, ifStmt->getThenBody() );
 			// save the sub scops of the then body
 			thenScops = subScops;
 			saveThen = ret;
-			thenRefs = refs;
 		} catch (const NotASCoP& e) { isThenSCOP = false; }
-		
+
+		// reset the value of the iteration vector 
+		ret = IterationVector();
+
 		try {
 			subScops.clear();
 			// check the else body
-			ret = merge(ret, visit(ifStmt->getElseBody()));
-
-			RefList&& refs = collectDefUse( ifStmt->getElseBody(), StatementSet(subScops.begin(), subScops.end()) );
-			
-			// For now we only consider array access. 
-			//
-			// FIXME: In the future also scalars should be properly handled using technique like scalar
-			// arrays and so forth
-			std::for_each(refs.arrays_begin(), refs.arrays_end(),
-				[&](const ArrayRefPtr& cur) { 
-					const ExpressionList& idxExprs = cur->getIndexExpressions();
-					std::for_each(idxExprs.begin(), idxExprs.end(), 
-						[&](const ExpressionPtr& cur){	ret = merge(ret, markAccessExpression(cur)); }
-					);
-				} 
-			);
-
+			elseRefs = visitBody( ret, ifStmt->getElseBody() );
 			// save the sub scops of the else body
 			elseScops = subScops; 
 			saveElse = ret;
-			elseRefs = refs;
 		} catch (const NotASCoP& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
@@ -222,54 +225,47 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 		}
 
 		subScops.clear();
-		// if either one of the branches is not a ScopRegion it means the if stmt is
-		// not a ScopRegion, therefore we can rethrow the exeption and invalidate
-		// this region
+		// if either one of the branches is not a ScopRegion it means the if statement is not a
+		// ScopRegion, therefore we can re-throw the exception and invalidate this region
 		if (!(isThenSCOP && isElseSCOP)) { throw NotASCoP(ifStmt); }
 
+		// reset the value of the iteration vector 
+		ret = IterationVector();
 		// check the condition expression
 		ConstraintCombinerPtr&& comb = extractFromCondition(ret, ifStmt->getCondition());
 
-		// if no exception has been thrown we are sure the sub else and then
-		// tree are ScopRegions, therefore this node can be marked as SCoP as well.
-		ifStmt->getThenBody()->addAnnotation( std::make_shared<ScopRegion>(ret, comb, thenScops, 
+		// At this point we are sure that both the then, else body are SCoPs and the condition of
+		// this If statement is also an affine linear function. 
+		ret = merge(ret, merge(saveThen, saveElse));
+
+		// if no exception has been thrown we are sure the sub else and then tree are ScopRegions,
+		// therefore this node can be marked as SCoP as well.
+		ifStmt->getThenBody()->addAnnotation( 
+			std::make_shared<ScopRegion>(ret, comb, thenScops, 
 				ScopRegion::AccessRefSet(thenRefs.arrays_begin(), thenRefs.arrays_end()) 
-				));
+			)
+		);
+		// Add the then body to the list of subscops to which the parent will point at
 		subScops.push_back( ifStmt->getThenBody() );
 		
 		// the else body is annotated with the negated domain
-		ifStmt->getElseBody()->addAnnotation( std::make_shared<ScopRegion>(ret, negate(comb), elseScops, 
+		ifStmt->getElseBody()->addAnnotation( 
+			std::make_shared<ScopRegion>(ret, negate(comb), elseScops, 
 				ScopRegion::AccessRefSet(elseRefs.arrays_begin(), elseRefs.arrays_end()) 
-				));
+			)
+		);
+		// Add the else body to the list of subscops to which the parent will point at
 		subScops.push_back( ifStmt->getElseBody() );
 		return ret;
 	}
 
 	IterationVector visitForStmt(const ForStmtPtr& forStmt) {
 		subScops.clear();
-		IterationVector&& bodyIV = visit(forStmt->getBody());
 
-		// Visit the access functions for the array which are accessed (read or written) in the body
-		// of this for statement, also skip the visit of statements which have been already detected
-		// as SCoPs and therefore we already collected information about def-uses in a previous
-		// iteration
-		RefList&& refs = collectDefUse( forStmt->getBody(), StatementSet(subScops.begin(), subScops.end()) );
+		IterationVector bodyIV;
+		RefList&& refs = visitBody( bodyIV, forStmt->getBody() );
 		
-		// For now we only consider array access. 
-		//
-		// FIXME: In the future also scalars should be properly handled using technique like scalar
-		// arrays and so forth
-		std::for_each(refs.arrays_begin(), refs.arrays_end(),
-			[&](const ArrayRefPtr& cur) { 
-				const ExpressionList& idxExprs = cur->getIndexExpressions();
-				std::for_each(idxExprs.begin(), idxExprs.end(), 
-					[&](const ExpressionPtr& cur){	bodyIV = merge(bodyIV, markAccessExpression(cur)); }
-				);
-			} 
-		);
-
 		IterationVector ret;
-
 		const DeclarationStmtPtr& decl = forStmt->getDeclaration();
 		ret.add( Iterator(decl->getVariable()) ); 
 		
@@ -303,20 +299,20 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 			); 
 
 			subScops.clear();
-			// add this statement as a subscope
+			// add this statement as a subscop
 			subScops.push_back(forStmt);
 		
 		} catch (const NotAffineExpr& e) { 
-			// one of the expressions are not affine constraints, therefore we
-			// set this loop to be a non ScopRegion
+			// one of the expressions are not affine constraints, therefore we set this loop to be a
+			// non ScopRegion
 			throw NotASCoP(forStmt);
 		}
 		return ret;
 	}
 
-	// While stmts cannot be represented in the polyhedral form (at least in
-	// the general case). In the future we may develop a more advanced analysis
-	// capable of representing while loops in the polyhedral model 
+	// While stmts cannot be represented in the polyhedral form (at least in the general case). In
+	// the future we may develop a more advanced analysis capable of representing while loops in the
+	// polyhedral model 
 	IterationVector visitWhileStmt(const WhileStmtPtr& whileStmt) { throw NotASCoP( whileStmt ); }
 
 	IterationVector visitCompoundStmt(const CompoundStmtPtr& compStmt) {
@@ -341,9 +337,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector> {
 		subScops = scops;
 
 		if (!isSCOP) { 
-			// one of the statements in this compound statement broke a ScopRegion
-			// therefore we add to the scop list the roots for valid ScopRegions
-			// inside this compound statement 
+			// one of the statements in this compound statement broke a ScopRegion therefore we add
+			// to the scop list the roots for valid ScopRegions inside this compound statement 
 			std::for_each(compStmt->getStatements().cbegin(), compStmt->getStatements().cend(), 
 				[&](const StatementPtr& cur) { 
 					if (cur->hasAnnotation(ScopRegion::KEY)) { 
@@ -470,11 +465,11 @@ void visitScop(const poly::IterationVector& iterVec, const poly::ConstraintCombi
 	
 	// for every nested scop we visit it
 	std::for_each(region.getSubScops().begin(), region.getSubScops().end(), 
-			[&](const core::StatementPtr& cur) { 
-				assert(cur->hasAnnotation(ScopRegion::KEY));
-				visitScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), accessList); 
-			}
-		);
+		[&] (const core::StatementPtr& cur) { 
+			assert(cur->hasAnnotation(ScopRegion::KEY));
+			visitScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), accessList); 
+		}
+	);
 }
 
 } // end anonymous namespace 
@@ -523,9 +518,10 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 
 	std::for_each(acc.begin(), acc.end(), [&](const ScopRegion::Access& cur){
 		const Ref& ref = *std::get<0>(cur);
-		out << "\n\tACCESS: [" << ref.getType() << "] " << *ref.getBaseExpression(); 
+		out << "\n\tACCESS: [" << ref.getUsage() << "] " << *ref.getBaseExpression(); 
 		out << "\n\t" << std::get<1>(cur);
-		out << "\n\tIDX: " << join(";", std::get<2>(cur), [&](std::ostream& jout, const poly::ConstraintCombinerPtr& cur){ jout << *cur; } );
+		out << "\n\tIDX: " << join(";", std::get<2>(cur), 
+			[&](std::ostream& jout, const poly::ConstraintCombinerPtr& cur){ jout << *cur; } );
 	 	out << std::endl;
 	});
 }

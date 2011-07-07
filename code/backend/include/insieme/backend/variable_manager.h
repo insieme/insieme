@@ -36,13 +36,43 @@
 
 #pragma once
 
+#include "insieme/backend/c_ast/forward_decls.h"
+
+#include "insieme/backend/type_manager.h"
+
+#include "insieme/utils/map_utils.h"
+
 namespace insieme {
 namespace backend {
 
-	class VariableManager {
+	struct VariableInfo {
+
+		enum MemoryLocation {
+			NONE,		/* < the variable is not a reference type */
+			DIRECT, 	/* < the variable represents the corresponding memory cell directly (e.g. a local variable) */
+			INDIRECT 	/* < the variable is a pointer to the actually represented memory cell */
+		};
+
+		const TypeInfo* typeInfo;
+		c_ast::VariablePtr var;
+		MemoryLocation location;
 
 	};
 
+	class VariableManager {
+
+		utils::map::PointerMap<core::VariablePtr, VariableInfo> infos;
+
+	public:
+
+		VariableManager() : infos() {};
+
+		const VariableInfo& getInfos(const core::VariablePtr& var) const;
+
+		const VariableInfo& addInfo(const Converter& converter, const core::VariablePtr& var, VariableInfo::MemoryLocation location);
+
+		void remInfo(const core::VariablePtr& var);
+	};
 
 } // end namespace backend
 } // end namespace insieme
