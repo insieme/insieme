@@ -369,6 +369,11 @@ int main(int argc, char** argv) {
 				backend = insieme::simple_backend::SimpleBackend::getDefault();
 			}
 
+			// ###################################################
+			// TODO: remove this
+			// enforces the usage of the full backend for testing
+			//backend = insieme::backend::FullBackend::getDefault();
+			// ###################################################
 
 			insieme::utils::Timer timer(backendName);
 
