@@ -319,7 +319,8 @@ LITERAL(IntTypeParamToInt, 	"int.type.param.to.int", 	"(intTypeParam<#n>)->int<8
 
 // Arrays -------------------------------------------------------------------------------------------------------------
 
-GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArrayLength1D, ArrayLengthND, ArraySubscript1D, ArraySubscriptND)
+GROUP(ArrayOp, ArrayCreate1D, ArrayCreateND, ArrayLength1D, ArrayLengthND, ArraySubscript1D, ArraySubscriptND, ArrayRefElem1D, ArrayRefElemND,
+		ArrayProjection1D, ArrayProjectionND, ArrayRefProjection1D, ArrayRefProjectionND)
 
 LITERAL(ArrayCreate1D, 		"array.create.1D", 		"(type<'elem>, uint<8>) -> array<'elem,1>")
 LITERAL(ArrayCreateND, 		"array.create.ND", 		"(type<'elem>, vector<uint<8>,#n>) -> array<'elem,#n>")
@@ -354,7 +355,8 @@ LITERAL(PtrEq,			"ptr.eq",				"(array<'a,1>, array<'a,1>) -> bool")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 
-GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorPointwise, VectorReduction)
+GROUP(VectorOp, VectorSubscript, VectorInitUniform, VectorInitUndefined, VectorRefElem, VectorPointwise, VectorPointwiseUnary, VectorReduction, VectorPermute,
+		VectorProjection, VectorRefProjection, RefVectorToRefArray)
 
 // deprecated
 LITERAL(VectorSubscript,      	"vector.subscript",      	"(vector<'elem,#l>, uint<#a>) -> 'elem")
@@ -381,7 +383,7 @@ LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>
 							 
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
-GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND)
+GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND, VectorRefElem)
 
 // Struct and Unions --------------------------------------------------------------------------------------------------
 // first argument has to be a struct or a union, 'b has to be the type of the requested member
