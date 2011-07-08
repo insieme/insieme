@@ -46,6 +46,8 @@
 
 #include "insieme/utils/graph_utils.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace backend {
 namespace c_ast {
@@ -209,7 +211,8 @@ namespace c_ast {
 	void CodeFragment::addRequirement(const CodeFragmentPtr& fragment) {
 		// only add if it is not a null pointer and not self
 		if (fragment && this != &*fragment) {
-			requirements.insert(fragment);
+			LOG(FATAL) << " # WARNING #  -  Requirements are not supported to avoid cycles of shared pointers -  # WARNING #";
+			// requirements.insert(fragment);
 		}
 	}
 
