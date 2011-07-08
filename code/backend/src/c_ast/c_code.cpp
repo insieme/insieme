@@ -84,6 +84,11 @@ namespace c_ast {
 				add_edge(v,u,graph);
 			});
 
+			// add requirements (no dependency here)
+			for_each(cur->getRequirements(), [&](const CodeFragmentPtr& req) {
+				addFragment(req, graph, vertexMap);
+			});
+
 			// return vertex ID of added node
 			return v;
 		}
@@ -201,6 +206,13 @@ namespace c_ast {
 		}
 	}
 
+	void CodeFragment::addRequirement(const CodeFragmentPtr& fragment) {
+		// only add if it is not a null pointer and not self
+		if (fragment && this != &*fragment) {
+			requirements.insert(fragment);
+		}
+	}
+
 	std::ostream& CCodeFragment::printTo(std::ostream& out) const {
 		// use C-AST printer to generate code
 		for_each(code, [&](const c_ast::NodePtr& cur) {
@@ -209,7 +221,7 @@ namespace c_ast {
 		return out;
 	}
 
-	CodeFragmentPtr DummyFragment::createNew(const DependencySet& dependencies) {
+	CodeFragmentPtr DummyFragment::createNew(const FragmentSet& dependencies) {
 		return std::make_shared<DummyFragment>(dependencies);
 	}
 

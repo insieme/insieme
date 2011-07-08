@@ -74,6 +74,7 @@ namespace backend {
 		// create a code fragment out of it
 		c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(getCNodeManager(), code);
 		fragment->addDependencies(context.getDependencies());
+		fragment->addRequirements(context.getRequirements());
 		fragment->addIncludes(context.getIncludes());
 
 		// create C code

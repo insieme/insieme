@@ -213,26 +213,6 @@ namespace backend {
 
 		});
 
-//		// special handling of derefing result of ref.new or ref.var => bogus
-//		ExpressionPtr arg = ARG(0);
-//		if (core::analysis::isCallOf(arg, basic.getRefVar()) || core::analysis::isCallOf(arg, basic.getRefNew())) {
-//			// skip ref.var / ref.new
-//			CallExprPtr call = static_pointer_cast<const CallExpr>(arg);
-//			STMT_CONVERTER.convert(call->getArgument(0));
-//		} else {
-//			// just add deref
-//			OUT("*");
-//			VISIT_ARG(0);
-//		}
-
-//		LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
-//		LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
-//		LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
-//		LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
-//		LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
-//		LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
-//		LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
-
 
 		// -- strings --
 
@@ -253,12 +233,31 @@ namespace backend {
 			return c_ast::ref(c_ast::subscript(c_ast::access(c_ast::parenthese(c_ast::deref(CONVERT_ARG(0))), "data"), CONVERT_ARG(1)));
 		});
 
-//		LITERAL(ArraySubscript1D, 	"array.subscript.1D", 	"(array<'elem,1>, uint<8>) -> 'elem")
-//		LITERAL(ArraySubscriptND, 	"array.subscript.ND", 	"(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
-//
-//		LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
-//		LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
+		res[basic.getScalarToArray()] = OP_CONVERTER({
+			// initialize an array instance
+			//   Operator Type: (ref<'a>) -> ref<array<'a,1>>
+			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
+			context.getDependencies().insert(info.definition);
+			c_ast::InitializerPtr res = c_ast::init(info.rValueType, CONVERT_ARG(0));
+			if (context.getConverter().getConfig().supportArrayLength) {
+				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{1}"));
+			}
+			return c_ast::ref(res);
+		});
 
+		// -- vectors --
+
+		res[basic.getVectorToArray()] = OP_CONVERTER({
+			// initialize an array instance
+			//   Operator Type: (vector<'elem,#l>) -> array<'elem,1>
+			const TypeInfo& info = GET_TYPE_INFO(call->getType());
+			context.getDependencies().insert(info.definition);
+			c_ast::InitializerPtr res = c_ast::init(info.rValueType, c_ast::access(CONVERT_ARG(0), "data"));
+			if (context.getConverter().getConfig().supportArrayLength) {
+				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{1}"));
+			}
+			return res;
+		});
 
 
 		// -- structs --
@@ -270,6 +269,15 @@ namespace backend {
 			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), CONVERT_ARG(1)));
 		});
 
+
+		// -- others --
+
+		res[basic.getIfThenElse()] = OP_CONVERTER({
+			// IF-THEN-ELSE literal: (bool, () -> 'b, () -> 'b) -> 'b")
+			core::CallExprPtr callA = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(1), vector<core::ExpressionPtr>());
+			core::CallExprPtr callB = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(2), vector<core::ExpressionPtr>());
+			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(callA), CONVERT_EXPR(callB));
+		});
 
 		// table complete => return table
 		return res;

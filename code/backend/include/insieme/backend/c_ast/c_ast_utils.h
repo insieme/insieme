@@ -276,6 +276,17 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::Initializer>(type, toVector<c_ast::NodePtr>(elements...));
 	}
 
+	// -- Ternary Operations -------------------------------------
+
+	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, NodePtr a, NodePtr b, NodePtr c) {
+		assert(a && b && c && a->getManager() && a->getManager() == b->getManager() && a->getManager() == c->getManager() && "Manager should match!");
+		return a->getManager()->create<TernaryOperation>(op, a, b, c);
+	}
+
+	inline ExpressionPtr ite(ExpressionPtr condition, ExpressionPtr thenValue, ExpressionPtr elseValue) {
+		return ternaryOp(TernaryOperation::TernaryCondition, condition, thenValue, elseValue);
+	}
+
 	// -- Statements -------------------------------------
 
 	inline StatementPtr ret(StatementPtr stmt) {

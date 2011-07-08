@@ -66,8 +66,8 @@ namespace backend {
 
 		struct FunctionCodeInfo {
 			c_ast::FunctionPtr function;
-			std::set<c_ast::CodeFragmentPtr> prototypeDependencies;
-			std::set<c_ast::CodeFragmentPtr> definitionDependencies;
+			c_ast::FragmentSet prototypeDependencies;
+			c_ast::FragmentSet definitionDependencies;
 			std::set<string> includes;
 		};
 
@@ -114,7 +114,7 @@ namespace backend {
 					const core::FunctionTypePtr& funType, const core::LambdaPtr& lambda, bool external);
 
 			std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
-			resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType);
+			resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType, bool external);
 
 		};
 
@@ -157,9 +157,11 @@ namespace backend {
 			const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(static_pointer_cast<const core::FunctionType>(expr->getType()));
 
 			c_ast::TypePtr closureType = typeInfo.rValueType;
+			assert(typeInfo.rValueType->getType() == c_ast::NT_PointerType && "Expected function type to be a pointer!");
+			closureType = static_pointer_cast<c_ast::PointerType>(closureType)->elementType;
 
 			// add dependencies
-			c_ast::DependencySet& dependencies = context.getDependencies();
+			c_ast::FragmentSet& dependencies = context.getDependencies();
 			dependencies.insert(typeInfo.definition);
 			dependencies.insert(typeInfo.constructor);
 			dependencies.insert(info.lambdaWrapper);
@@ -253,7 +255,7 @@ namespace backend {
 		c_ast::ExpressionPtr value = getValue(call->getFunctionExpr(), context);
 
 		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(funType);
-		c_ast::CallPtr res = c_ast::call(typeInfo.callerName, value);
+		c_ast::CallPtr res = c_ast::call(typeInfo.callerName, c_ast::cast(typeInfo.rValueType,value));
 		appendAsArguments(context, res, call->getArguments(), false);
 
 		// add dependencies
@@ -302,7 +304,7 @@ namespace backend {
 		const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(static_pointer_cast<const core::FunctionType>(bind->getType()));
 
 		// add dependencies
-		c_ast::DependencySet& dependencies = context.getDependencies();
+		c_ast::FragmentSet& dependencies = context.getDependencies();
 		dependencies.insert(typeInfo.definition);
 		dependencies.insert(typeInfo.constructor);
 		dependencies.insert(info.definitions);
@@ -387,7 +389,7 @@ namespace backend {
 
 			// -------------------------- add lambda wrapper ---------------------------
 
-			auto wrapper = resolveLambdaWrapper(fun.function, funType);
+			auto wrapper = resolveLambdaWrapper(fun.function, funType, true);
 			res->lambdaWrapperName = wrapper.first;
 			res->lambdaWrapper = wrapper.second;
 			res->lambdaWrapper->addDependencies(fun.prototypeDependencies);
@@ -462,10 +464,9 @@ namespace backend {
 			// get generic type of nested closure
 			core::FunctionTypePtr nestedFunType = static_pointer_cast<const core::FunctionType>(bind->getCall()->getFunctionExpr()->getType());
 			const FunctionTypeInfo& nestedClosureInfo = typeManager.getTypeInfo(nestedFunType);
-			c_ast::TypePtr nestedClosureType = manager->create<c_ast::PointerType>(nestedClosureInfo.rValueType);
 
 			// define variable / struct entry pointing to the nested closure variable
-			c_ast::VariablePtr varNested = c_ast::var(nestedClosureType, "nested");
+			c_ast::VariablePtr varNested = c_ast::var(nestedClosureInfo.rValueType, "nested");
 
 			// finally, add fields to struct
 			closureStruct->elements.push_back(varCall);
@@ -607,10 +608,11 @@ namespace backend {
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
 				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
 
-				auto wrapper = resolveLambdaWrapper(codeInfo.function, funType);
+				auto wrapper = resolveLambdaWrapper(codeInfo.function, funType, false);
 				info->lambdaWrapperName = wrapper.first;
 				info->lambdaWrapper = wrapper.second;
 				info->lambdaWrapper->addDependency(info->prototype);
+				info->lambdaWrapper->addRequirement(info->definition);
 
 				// obtain current lambda and add lambda info
 				auto res = funInfos.insert(std::make_pair(lambda, info));
@@ -699,18 +701,18 @@ namespace backend {
 			if (lambda) {
 
 				// set up variable manager
-				ConversionContext innerContext(converter);
+				ConversionContext context(converter);
 				for_each(lambda->getParameterList(), [&](const core::VariablePtr& cur) {
-					innerContext.getVariableManager().addInfo(converter, cur, (cur->getType()->getNodeType() == core::NT_RefType)?VariableInfo::INDIRECT:VariableInfo::NONE);
+					context.getVariableManager().addInfo(converter, cur, (cur->getType()->getNodeType() == core::NT_RefType)?VariableInfo::INDIRECT:VariableInfo::NONE);
 				});
 
 				// convert the body code fragment and collect dependencies
-				c_ast::NodePtr code = converter.getStmtConverter().convert(innerContext, lambda->getBody());
+				c_ast::NodePtr code = converter.getStmtConverter().convert(context, lambda->getBody());
 				cBody = static_pointer_cast<c_ast::Statement>(code);
-				res.definitionDependencies.insert(innerContext.getDependencies().begin(), innerContext.getDependencies().end());
+				res.definitionDependencies.insert(context.getDependencies().begin(), context.getDependencies().end());
 
 				// also attach includes
-				res.includes = innerContext.getIncludes();
+				res.includes = context.getIncludes();
 			}
 
 			// create function
@@ -720,7 +722,7 @@ namespace backend {
 
 
 		std::pair<c_ast::IdentifierPtr, c_ast::CodeFragmentPtr>
-		FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType) {
+		FunctionInfoStore::resolveLambdaWrapper(const c_ast::FunctionPtr& function, const core::FunctionTypePtr& funType, bool external) {
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
@@ -735,10 +737,7 @@ namespace backend {
 			vector<c_ast::VariablePtr> parameter;
 
 			// first parameter is the closure
-			parameter.push_back(manager->create<c_ast::Variable>(
-					manager->create<c_ast::PointerType>(funTypeInfo.rValueType),
-					manager->create("closure"))
-			);
+			parameter.push_back(c_ast::var(funTypeInfo.rValueType, manager->create("closure")));
 
 			// resolve parameters
 			int counter = 1;
@@ -754,8 +753,11 @@ namespace backend {
 			// create a function body (call to the function including wrappers)
 			c_ast::CallPtr call = manager->create<c_ast::Call>(function->name);
 			::transform_range(make_paired_range(funType->getParameterTypes(), function->parameter), std::back_inserter(call->arguments),
-					[&](const std::pair<core::TypePtr, c_ast::VariablePtr>& cur) {
-						return typeManager.getTypeInfo(cur.first).externalize(manager, cur.second);
+					[&](const std::pair<core::TypePtr, c_ast::VariablePtr>& cur)->c_ast::ExpressionPtr {
+						if (external) {
+							return typeManager.getTypeInfo(cur.first).externalize(manager, cur.second);
+						}
+						return cur.second;
 			});
 
 			c_ast::StatementPtr body = typeManager.getTypeInfo(funType->getReturnType()).internalize(manager, call);
