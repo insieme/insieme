@@ -739,7 +739,7 @@ namespace backend {
 
 			// the declaration / definition of the sub-type is also the declaration / definition of the pointer type
 			res->declaration = subType->declaration;
-			res->definition = subType->definition;
+			res->definition = subType->declaration;
 
 
 			// ---------------- add a new operator ------------------------

@@ -558,8 +558,8 @@ TEST(TypeManager, FunctionTypes) {
 	type = builder.functionType(toVector(typeA, typeB), typeC);
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
-	EXPECT_EQ("name", toC(info.lValueType));
-	EXPECT_EQ("name", toC(info.rValueType));
+	EXPECT_EQ("name*", toC(info.lValueType));
+	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.callerName);
