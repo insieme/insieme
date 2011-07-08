@@ -124,11 +124,9 @@ TEST(FunctionManager, Literals) {
 	EXPECT_EQ("int myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
 
 	// check get value (value to be used when passing function as an argument)
-	VariableManager varManager;
-	c_ast::DependencySet dependencies;
-	ConversionContext context(converter, dependencies, varManager);
+	ConversionContext context(converter);
 	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &myFun_wrap)", toC(funManager.getValue(literal, context)));
-	EXPECT_TRUE(dependencies.find(info.lambdaWrapper) != dependencies.end());
+	EXPECT_TRUE(context.getDependencies().find(info.lambdaWrapper) != context.getDependencies().end());
 
 	// TODO: check the call creation
 }
@@ -201,11 +199,9 @@ TEST(FunctionManager, Lambda) {
 	EXPECT_EQ(info.prototype, info.definition);
 
 	// check get value (value to be used when passing function as an argument)
-	VariableManager varManager;
-	c_ast::DependencySet dependencies;
-	ConversionContext context(converter, dependencies, varManager);
+	ConversionContext context(converter);
 	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &name_wrap)", toC(funManager.getValue(lambda, context)));
-	EXPECT_TRUE(dependencies.find(info.lambdaWrapper) != dependencies.end());
+	EXPECT_TRUE(context.getDependencies().find(info.lambdaWrapper) != context.getDependencies().end());
 
 	// TODO: check for call
 }
@@ -344,7 +340,7 @@ TEST(FunctionManager, Bind) {
 	EXPECT_EQ("name_closure", toC(info.closureType));
 
 	string def = toC(info.definitions);
-	EXPECT_PRED2(containsSubString, def, "bool(* call)(name*,float,int);");
+	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,float,int);");
 	EXPECT_PRED2(containsSubString, def, "name* nested;");
 	EXPECT_PRED2(containsSubString, def, "int* c2;");
 	EXPECT_PRED2(containsSubString, def, "} name_closure;");
@@ -366,15 +362,13 @@ TEST(FunctionManager, Bind) {
 	toString(c_ast::CCode(bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
-	VariableManager varManager;
-	c_ast::DependencySet dependencies;
-	ConversionContext context(converter, dependencies, varManager);
+	ConversionContext context(converter);
 
 	EXPECT_EQ(
 			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name*)alloca(sizeof(name)), &fun_wrap), v3)",
 			toC(funManager.getValue(bind, context))
 	);
-	EXPECT_TRUE(dependencies.find(info.definitions) != dependencies.end());
+	EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());
 
 }
 

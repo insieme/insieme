@@ -218,19 +218,20 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	//cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "vector_add");
 
-	unsigned int mem_size_input = sizeof(insieme_struct1) * wi->range.end;
-	unsigned int mem_size_output = sizeof(uint64) * wi->range.end;
+	cl_long len_input = (wi->range.end - wi->range.begin);
+	cl_long len_output = (wi->range.end - wi->range.begin);
 
+	unsigned int mem_size_input = sizeof(insieme_struct1) * len_input;
+	unsigned int mem_size_output = sizeof(uint64) * len_output;
+
+	irt_ocl_buffer* buff_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
+	irt_ocl_buffer* buff_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_output);
+
+	cl_mem d_input = buff_input->cl_mem;
+	cl_mem d_output = buff_output->cl_mem;
+	
 	cl_int errcode;
-	cl_mem d_input = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_input, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of input\n");	
-	
-	cl_mem d_output= clCreateBuffer(dev->cl_context, CL_MEM_WRITE_ONLY, mem_size_output, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of output\n");
-		
-	cl_event event_write_input, event_read_output, event_kernel;
-	
-	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_input, CL_FALSE, 0, mem_size_input, input, 0, NULL, &event_write_input);
+	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_input, CL_FALSE, 0, mem_size_input, &input[wi->range.begin], 0, NULL, NULL);
 	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of input, %d\n", errcode);
 	
 	errcode  = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&d_input);
@@ -239,7 +240,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	errcode  = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&d_output);
 	if (errcode != CL_SUCCESS) printf("Error Second Arg\n");
 	
-	errcode  = clSetKernelArg(kernel, 2, sizeof(cl_long), (void *)&wi->range.end);
+	errcode  = clSetKernelArg(kernel, 2, sizeof(cl_long), (void *)&len_input);
 	if (errcode != CL_SUCCESS) printf("Error Third Arg\n");
 
 	size_t szLocalWorkSize = 256;
@@ -248,32 +249,23 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 		multiplier += 1;
 	}
 	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
-
-	clEnqueueNDRangeKernel(dev->cl_queue, kernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 1, &event_write_input, &event_kernel);
-	errcode = clEnqueueReadBuffer(dev->cl_queue, d_output, CL_TRUE, 0, mem_size_output, output, 1, &event_kernel, &event_read_output); // sync copy FIXME
-	//clFinish(dev->cl_queue);
+	clEnqueueNDRangeKernel(dev->cl_queue, kernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 0, NULL, NULL);
+	errcode = clEnqueueReadBuffer(dev->cl_queue, d_output, CL_TRUE, 0, mem_size_output, &output[wi->range.begin], 0, NULL, NULL);
 	if (errcode != CL_SUCCESS) printf("Error in clEnqueueReadBuffer of output, %d\n", errcode);
-
-	errcode = clReleaseEvent(event_write_input);
-	errcode |= clReleaseEvent(event_read_output);
-	errcode |= clReleaseEvent(event_kernel);
-	if (errcode != CL_SUCCESS) printf("Error Releasing Event\n");
-	errcode = clReleaseMemObject(d_input);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_input\n");
-	errcode = clReleaseMemObject(d_output);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_output\n");
+	//clFinish(dev->cl_queue); // ??	
+	irt_ocl_release_buffer(buff_input);
+	irt_ocl_release_buffer(buff_output);
 	
 	errcode = clReleaseKernel(kernel);
 	if (errcode != CL_SUCCESS) printf("Error Releasing kernel\n");
 	
 	errcode = clReleaseProgram(program);
 	if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
-		
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);
 	irt_di_destroy(outputdata);
-
+	
 	irt_wi_end(wi);
 	#endif
 }

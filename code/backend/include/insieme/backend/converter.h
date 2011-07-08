@@ -39,8 +39,12 @@
 #include <cassert>
 #include <memory>
 
+#include <boost/noncopyable.hpp>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/backend/c_ast/forward_decls.h"
+
+#include "insieme/backend/variable_manager.h"
 
 namespace insieme {
 namespace backend {
@@ -197,7 +201,7 @@ namespace backend {
 
 	};
 
-	class ConversionContext {
+	class ConversionContext :  public boost::noncopyable {
 
 		/**
 		 * A reference to the converter processing the current conversion.
@@ -206,33 +210,59 @@ namespace backend {
 
 		/**
 		 * A reference to a set of dependencies aggregated during the conversion.
+		 * Dependencies are defining the set of code fragments to be necessarily placed
+		 * before the current code fragment within the resulting output code.
 		 */
-		c_ast::DependencySet& dependencies;
+		c_ast::FragmentSet dependencies;
+
+		/**
+		 * A reference to a set of requirements aggregated during the conversion.
+		 * Requirements are fragments which have to be present at some point within the
+		 * output code.
+		 */
+		c_ast::FragmentSet requirements;
 
 		/**
 		 * A variable manager maintaining the variables of the current scope.
 		 */
-		VariableManager& variableManager;
+		VariableManager variableManager;
+
+		/**
+		 * The list of includes depending on.
+		 */
+		std::set<string> includes;
 
 	public:
 
-		ConversionContext(const Converter& converter, c_ast::DependencySet& dependencies, VariableManager& variableManager)
-			: converter(converter), dependencies(dependencies), variableManager(variableManager) {}
+		ConversionContext(const Converter& converter)
+			: converter(converter), dependencies(), requirements(), variableManager(), includes() {}
 
 		const Converter& getConverter() const {
 			return converter;
 		}
 
-		c_ast::DependencySet& getDependencies() {
+		c_ast::FragmentSet& getDependencies() {
 			return dependencies;
+		}
+
+		const c_ast::FragmentSet& getDependencies() const {
+			return dependencies;
+		}
+
+		c_ast::FragmentSet& getRequirements() {
+			return requirements;
+		}
+
+		const c_ast::FragmentSet& getRequirements() const {
+			return requirements;
 		}
 
 		VariableManager& getVariableManager() {
 			return variableManager;
 		}
 
-		const c_ast::SharedCNodeManager& getCNodeManager() const {
-			return converter.getCNodeManager();
+		std::set<string>& getIncludes() {
+			return includes;
 		}
 
 	};

@@ -41,20 +41,21 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
+#include "insieme/backend/type_manager.h"
 
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
 
-	const VariableInfo& VariableManager::getInfos(const core::VariablePtr& var) const {
+	const VariableInfo& VariableManager::getInfo(const core::VariablePtr& var) const {
 		// find requested variable within info
 		auto pos = infos.find(var);
 		if (pos != infos.end()) {
 			return pos->second;
 		}
 
-		LOG(WARNING) << "Requesting info for unknown variable " << *var << " - returning default data ...";
+		LOG(FATAL) << "Requesting info for unknown variable " << *var << "!!!";
 
 		assert(pos != infos.end() && "Requested variable infos for unknown variable!");
 		return pos->second;

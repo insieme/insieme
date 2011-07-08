@@ -66,20 +66,19 @@ namespace backend {
 		timer = insieme::utils::Timer("Backend.Conversions");
 
 		// create a context
-		vector<string> includes;
-		c_ast::DependencySet dependencies;
-		VariableManager varManager;
-		ConversionContext context(*this, dependencies, varManager);
+		ConversionContext context(*this);
 
 		// convert IR node target code
 		auto code = getStmtConverter().convert(context, processed);
 
 		// create a code fragment out of it
 		c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(getCNodeManager(), code);
-		fragment->addDependencies(dependencies);
+		fragment->addDependencies(context.getDependencies());
+		fragment->addRequirements(context.getRequirements());
+		fragment->addIncludes(context.getIncludes());
 
 		// create C code
-		auto res = c_ast::CCode::createNew(source, fragment, includes);
+		auto res = c_ast::CCode::createNew(source, fragment);
 
 		timer.stop();
 		LOG(INFO) << timer;

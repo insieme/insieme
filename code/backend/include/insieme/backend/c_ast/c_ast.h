@@ -294,6 +294,13 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct VectorInit : public Expression {
+		vector<NodePtr> values;
+		VectorInit() : Expression(NT_VectorInit) {};
+		VectorInit(const vector<NodePtr>& values) : Expression(NT_VectorInit), values(values) {};
+		virtual bool equals(const Node& node) const;
+	};
+
 	struct UnaryOperation : public Expression {
 
 		enum UnaryOp {

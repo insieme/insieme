@@ -47,6 +47,8 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace backend {
 
@@ -54,8 +56,8 @@ namespace backend {
 
 	namespace {
 
-		c_ast::CCodeFragmentPtr toCodeFragment(ConversionContext context, c_ast::NodePtr code) {
-			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getCNodeManager(), code);
+		c_ast::CCodeFragmentPtr toCodeFragment(const ConversionContext& context, c_ast::NodePtr code) {
+			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getConverter().getCNodeManager(), code);
 			fragment->addDependencies(context.getDependencies());
 			return fragment;
 		}
@@ -95,9 +97,7 @@ namespace backend {
 		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
 
 			// create a new context
-			VariableManager varManager;
-			c_ast::DependencySet dependencies;
-			ConversionContext entryContext(converter, dependencies, varManager);
+			ConversionContext entryContext(converter);
 
 			c_ast::CodeFragmentPtr fragment;
 			if (entryPoint->getNodeType() == core::NT_LambdaExpr) {
@@ -201,26 +201,26 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, ConversionContext& context) {
 		// simply return a C-AST structure accessing the requested member
-		return c_ast::access(convert(context, ptr->getSubExpression()), ptr->getMemberName()->getName());
+		return c_ast::access(convertExpression(context, ptr->getSubExpression()), ptr->getMemberName()->getName());
 	}
 
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
 		// just look up variable within variable manager and return variable token ...
-		const VariableInfo& info = context.getVariableManager().getInfos(ptr);
-		return info.var;
+		const VariableInfo& info = context.getVariableManager().getInfo(ptr);
+		return (info.location == VariableInfo::DIRECT)?c_ast::ref(info.var):info.var;
 	}
 
 	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {
 		// to be created: an initialization of the corresponding struct - where one value is a vector
-		//     (<type>){(<vector type>){<list of members>}}
+		//     (<type>){{<list of members>}}
 
 		// get type and create empty init expression
 		const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
 		c_ast::TypePtr type = info.rValueType;
-		c_ast::TypePtr vectorType = info.externalType;
+		context.getDependencies().insert(info.definition);
 
 		// create inner vector init and append initialization values
-		c_ast::InitializerPtr vectorInit = c_ast::init(vectorType);
+		c_ast::VectorInitPtr vectorInit = context.getConverter().getCNodeManager()->create<c_ast::VectorInit>();
 		::transform(ptr->getExpressions(), std::back_inserter(vectorInit->values),
 				[&](const core::ExpressionPtr& cur) {
 					return convert(context, cur);
@@ -289,7 +289,7 @@ namespace backend {
 
 		auto manager = converter.getCNodeManager();
 
-		auto varManager = context.getVariableManager();
+		VariableManager& varManager = context.getVariableManager();
 		auto var = ptr->getDeclaration()->getVariable();
 
 		// get induction variable info
@@ -333,7 +333,7 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
-		return context.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
+		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
 	}
 
 	c_ast::NodePtr StmtConverter::visitSwitchStmt(const core::SwitchStmtPtr& ptr, ConversionContext& context) {

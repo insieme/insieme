@@ -47,9 +47,16 @@
  */
 #define ARG(N) call->getArgument(N)
 
+#define NODE_MANAGER context.getConverter().getNodeManager()
+#define C_NODE_MANAGER context.getConverter().getCNodeManager()
+
 #define CONVERT_TYPE(Node) context.getConverter().getStmtConverter().convertType(context, Node)
 #define CONVERT_EXPR(Node) context.getConverter().getStmtConverter().convertExpression(context, Node)
 #define CONVERT_STMT(Node) context.getConverter().getStmtConverter().convertStatement(context, Node)
+
+#define LANG_BASIC context.getConverter().getNodeManager().getBasicGenerator()
+
+#define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(Type)
 
 /**
  * A macro triggering the deceding into an argument. This will result in the printing of the code

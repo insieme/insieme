@@ -40,12 +40,39 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/statement_converter.h"
+#include "insieme/backend/type_manager.h"
+
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 #include "insieme/backend/operator_converter_begin.inc"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace backend {
+
+	namespace {
+
+
+		c_ast::ExpressionPtr getAssignmentTarget(ConversionContext& context, const core::ExpressionPtr& expr) {
+
+			// convert expression
+			c_ast::ExpressionPtr res = context.getConverter().getStmtConverter().convertExpression(context, expr);
+
+			// special handling for variables representing data indirectly
+			if (expr->getNodeType() == core::NT_Variable) {
+				core::VariablePtr var = static_pointer_cast<const core::Variable>(expr);
+
+				if (context.getVariableManager().getInfo(var).location == VariableInfo::INDIRECT) {
+					return res;
+				}
+			}
+
+			// a deref is required (implicit in C)
+			return c_ast::deref(res);
+		}
+
+	}
 
 
 	OperatorConverterTable getBasicOperatorTable(const core::lang::BasicGenerator& basic) {
@@ -87,10 +114,10 @@ namespace backend {
 		res[basic.getUnsignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getUnsignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getUnsignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(CONVERT_ARG(0)); });
-		res[basic.getUnsignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(CONVERT_ARG(0)); });
-		res[basic.getUnsignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(CONVERT_ARG(0)); });
-		res[basic.getUnsignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(CONVERT_ARG(0)); });
+		res[basic.getUnsignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getUnsignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getUnsignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getUnsignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
 
 		res[basic.getUnsignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getUnsignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -116,10 +143,10 @@ namespace backend {
 		res[basic.getSignedIntLShift()] = OP_CONVERTER({ return c_ast::lShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntRShift()] = OP_CONVERTER({ return c_ast::rShift(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-		res[basic.getSignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(CONVERT_ARG(0)); });
-		res[basic.getSignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(CONVERT_ARG(0)); });
-		res[basic.getSignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(CONVERT_ARG(0)); });
-		res[basic.getSignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(CONVERT_ARG(0)); });
+		res[basic.getSignedIntPreInc()]  = OP_CONVERTER({ return c_ast::preInc(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getSignedIntPostInc()] = OP_CONVERTER({ return c_ast::postInc(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getSignedIntPreDec()]  = OP_CONVERTER({ return c_ast::preDec(getAssignmentTarget(context, ARG(0))); });
+		res[basic.getSignedIntPostDec()] = OP_CONVERTER({ return c_ast::postDec(getAssignmentTarget(context, ARG(0))); });
 
 		res[basic.getSignedIntEq()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getSignedIntNe()] = OP_CONVERTER({ return c_ast::ne(CONVERT_ARG(0), CONVERT_ARG(1)); });
@@ -160,30 +187,31 @@ namespace backend {
 
 		res[basic.getRefVar()]    = OP_CONVERTER({ return CONVERT_ARG(0); });
 		res[basic.getRefDeref()]  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
-		res[basic.getRefAssign()] = OP_CONVERTER({ return c_ast::assign(CONVERT_ARG(0), CONVERT_ARG(1)); });
-
-
 		res[basic.getRefEqual()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 
-//		// special handling of derefing result of ref.new or ref.var => bogus
-//		ExpressionPtr arg = ARG(0);
-//		if (core::analysis::isCallOf(arg, basic.getRefVar()) || core::analysis::isCallOf(arg, basic.getRefNew())) {
-//			// skip ref.var / ref.new
-//			CallExprPtr call = static_pointer_cast<const CallExpr>(arg);
-//			STMT_CONVERTER.convert(call->getArgument(0));
-//		} else {
-//			// just add deref
-//			OUT("*");
-//			VISIT_ARG(0);
-//		}
+		res[basic.getRefAssign()] = OP_CONVERTER({
+			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
+		});
 
-//		LITERAL(RefVar,    		"ref.var",    			"('a) -> ref<'a>")
-//		LITERAL(RefNew,    		"ref.new",    			"('a) -> ref<'a>")
-//		LITERAL(RefDelete, 		"ref.delete", 			"(ref<'a>) -> unit")
-//		LITERAL(RefEqual,  		"ref.eq",				"(ref<'a>, ref<'a>) -> bool")
-//		LITERAL(RefAssign, 		"ref.assign", 			"(ref<'a>,'a) -> unit")
-//		LITERAL(RefDeref,  		"ref.deref",  			"(ref<'a>) -> 'a")
-//		LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
+		res[basic.getRefNew()] = OP_CONVERTER( {
+
+			// get result type information
+			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
+			const RefTypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(resType);
+
+			// special handling for requesting a un-initialized memory cell
+			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getUndefined())) {
+				context.getIncludes().insert(string("stdlib.h"));
+
+				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
+				return c_ast::call(context.getConverter().getCNodeManager()->create("malloc"), size);
+			}
+
+			// use a call to the ref_new operator of the ref type
+			context.getDependencies().insert(info.newOperator);
+			return c_ast::call(info.newOperatorName, CONVERT_ARG(0));
+
+		});
 
 
 		// -- strings --
@@ -205,13 +233,51 @@ namespace backend {
 			return c_ast::ref(c_ast::subscript(c_ast::access(c_ast::parenthese(c_ast::deref(CONVERT_ARG(0))), "data"), CONVERT_ARG(1)));
 		});
 
-//		LITERAL(ArraySubscript1D, 	"array.subscript.1D", 	"(array<'elem,1>, uint<8>) -> 'elem")
-//		LITERAL(ArraySubscriptND, 	"array.subscript.ND", 	"(array<'elem,#n>, vector<uint<8>,#n>) -> 'elem")
-//
-//		LITERAL(ArrayRefElem1D, 	"array.ref.elem.1D", 	"(ref<array<'elem,1>>, uint<8>) -> ref<'elem>")
-//		LITERAL(ArrayRefElemND, 	"array.ref.elem.ND", 	"(ref<array<'elem,#n>>, vector<uint<8>,#n>) -> ref<'elem>")
+		res[basic.getScalarToArray()] = OP_CONVERTER({
+			// initialize an array instance
+			//   Operator Type: (ref<'a>) -> ref<array<'a,1>>
+			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
+			context.getDependencies().insert(info.definition);
+			c_ast::InitializerPtr res = c_ast::init(info.rValueType, CONVERT_ARG(0));
+			if (context.getConverter().getConfig().supportArrayLength) {
+				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{1}"));
+			}
+			return c_ast::ref(res);
+		});
+
+		// -- vectors --
+
+		res[basic.getVectorToArray()] = OP_CONVERTER({
+			// initialize an array instance
+			//   Operator Type: (vector<'elem,#l>) -> array<'elem,1>
+			const TypeInfo& info = GET_TYPE_INFO(call->getType());
+			context.getDependencies().insert(info.definition);
+			c_ast::InitializerPtr res = c_ast::init(info.rValueType, c_ast::access(CONVERT_ARG(0), "data"));
+			if (context.getConverter().getConfig().supportArrayLength) {
+				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{1}"));
+			}
+			return res;
+		});
 
 
+		// -- structs --
+
+		res[basic.getCompositeRefElem()] = OP_CONVERTER({
+			// signature of operation:
+			//		(ref<'a>, identifier, type<'b>) -> ref<'b>
+
+			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), CONVERT_ARG(1)));
+		});
+
+
+		// -- others --
+
+		res[basic.getIfThenElse()] = OP_CONVERTER({
+			// IF-THEN-ELSE literal: (bool, () -> 'b, () -> 'b) -> 'b")
+			core::CallExprPtr callA = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(1), vector<core::ExpressionPtr>());
+			core::CallExprPtr callB = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(2), vector<core::ExpressionPtr>());
+			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(callA), CONVERT_EXPR(callB));
+		});
 
 		// table complete => return table
 		return res;

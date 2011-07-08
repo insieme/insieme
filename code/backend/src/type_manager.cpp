@@ -737,12 +737,9 @@ namespace backend {
 				};
 			}
 
-			// add a declaration dependency if necessary
-			if(subType->declaration) {
-				// add a declaration for the pointer too ...
-				res->declaration = subType->declaration;
-				res->definition = subType->declaration;
-			}
+			// the declaration / definition of the sub-type is also the declaration / definition of the pointer type
+			res->declaration = subType->declaration;
+			res->definition = subType->declaration;
 
 
 			// ---------------- add a new operator ------------------------
@@ -765,6 +762,12 @@ namespace backend {
 			// attach the new operator
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
 			res->newOperator = c_ast::CCodeFragment::createNew(manager, cCode);
+
+			// add dependencies
+			res->newOperator->addDependency(subType->definition);
+
+			// add include for malloc
+			res->newOperator->addInclude(string("stdlib.h"));
 
 			// done
 			return res;
@@ -798,23 +801,30 @@ namespace backend {
 			functionType->parameterTypes.push_back(structPointerType);
 
 			// add remaining parameters
-			vector<c_ast::CodeFragmentPtr> dependencies;
+			vector<c_ast::CodeFragmentPtr> declDependencies;
+			vector<c_ast::CodeFragmentPtr> defDependencies;
 			for_each(ptr->getParameterTypes(), [&](const core::TypePtr& cur) {
 				TypeInfo* info = resolveType(cur);
 				functionType->parameterTypes.push_back(info->rValueType);
-				dependencies.push_back(info->declaration);
+				declDependencies.push_back(info->declaration);
+				defDependencies.push_back(info->definition);
 			});
+
+			// add result type dependencies
+			declDependencies.push_back(resolveType(ptr->getReturnType())->declaration);
+			defDependencies.push_back(resolveType(ptr->getReturnType())->definition);
 
 
 			// construct the function type => struct including a function pointer
-			c_ast::VariablePtr varCall = var(manager->create<c_ast::PointerType>(functionType), "call");
+			c_ast::VariablePtr varCall = var(c_ast::ptr(functionType), "call");
 			structType->elements.push_back(varCall);
 			res->declaration = c_ast::CCodeFragment::createNew(manager, manager->create<c_ast::TypeDefinition>(structType, manager->create(name)));
-			res->declaration->addDependencies(dependencies);
+			res->declaration->addDependencies(declDependencies);
 			res->definition = res->declaration;
 
 			// R / L value names
-			res->rValueType = manager->create<c_ast::NamedType>(manager->create(name));
+			c_ast::TypePtr namedType = manager->create<c_ast::NamedType>(manager->create(name));
+			res->rValueType = c_ast::ptr(namedType);
 			res->lValueType = res->rValueType;
 
 			// external type handling
@@ -864,7 +874,7 @@ namespace backend {
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
 			res->caller = c_ast::CCodeFragment::createNew(manager, cCode);
 			res->caller->addDependency(res->definition);
-
+			res->caller->addDependencies(defDependencies);
 
 			// ---------------- add constructor ------------------------
 
@@ -879,18 +889,19 @@ namespace backend {
 
 			c_ast::FunctionPtr constructor = manager->create<c_ast::Function>();
 
-			constructor->returnType = manager->create<c_ast::PointerType>(res->rValueType);
+			constructor->returnType = res->rValueType;
 			constructor->name = res->constructorName;
 			constructor->flags = c_ast::Function::STATIC | c_ast::Function::INLINE;
 			c_ast::VariablePtr varTarget = c_ast::var(constructor->returnType, "target");
 			constructor->parameter.push_back(varTarget);
 			constructor->parameter.push_back(varCall);
 
-			c_ast::StatementPtr assign = c_ast::assign(c_ast::deref(varTarget), c_ast::init(res->rValueType, varCall));
+			c_ast::StatementPtr assign = c_ast::assign(c_ast::deref(varTarget), c_ast::init(namedType, varCall));
 			constructor->body = c_ast::compound(assign, c_ast::ret(varTarget));
 
 			res->constructor = c_ast::CCodeFragment::createNew(manager, constructor);
 			res->constructor->addDependency(res->definition);
+			res->constructor->addDependencies(defDependencies);
 
 			// done
 			return res;

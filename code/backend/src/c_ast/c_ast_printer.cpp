@@ -231,23 +231,14 @@ namespace c_ast {
 			}
 
 			PRINT(For) {
-				out << "for (";
-				print(node->init);
-				out << "; ";
-				print(node->check);
-				out << "; ";
-				print(node->step);
-				out << ") ";
-				print(node->body);
-				return out;
+				return out << "for (" << print(node->init) << "; "
+						   << print(node->check) << "; "
+						   << print(node->step) << ") "
+						   << print(node->body);
 			}
 
 			PRINT(While) {
-				out << "while (";
-				print(node->condition);
-				out << ") ";
-				print(node->body);
-				return out;
+				return out << "while (" << print(node->condition) << ") " << print(node->body);
 			}
 
 			PRINT(Continue) {
@@ -272,6 +263,13 @@ namespace c_ast {
 
 			PRINT(Initializer) {
 				return out << "(" << print(node->type) << "){"
+						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+				}) << "}";
+			}
+
+			PRINT(VectorInit) {
+				return out << "{"
 						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
 							out << print(cur);
 				}) << "}";
@@ -349,12 +347,7 @@ namespace c_ast {
 
 				switch (node->operation) {
 				case TernaryOperation::TernaryCondition : {
-					print(node->operandA);
-					out << "?";
-					print(node->operandB);
-					out << ":";
-					print(node->operandC);
-					return out;
+					return out << print(node->operandA) << "?" << print(node->operandB) << ":" << print(node->operandC);
 				}
 				}
 
@@ -375,8 +368,7 @@ namespace c_ast {
 			}
 
 			PRINT(TypeDeclaration) {
-				print(node->type);
-				return out << ";\n";
+				return out << print(node->type) << ";\n";
 			}
 
 			PRINT(FunctionPrototype) {
