@@ -75,7 +75,6 @@ static _irt_cl_device_param _irt_cl_device_params[] = {
 
 static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
 static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
-static void _irt_cl_release_device(cl_context context, cl_command_queue queue);  
 static void _irt_cl_print_device_infos(cl_device_id* device);
 static void _irt_cl_print_device_info(cl_device_id* device, char* prefix, cl_device_info param_name, char* suffix);
 
@@ -89,6 +88,7 @@ static const char* _irt_error_string (cl_int err_code);
 
 typedef struct _irt_ocl_buffer {
 	cl_mem cl_mem;
+	bool used;
 	size_t size;
 	struct _irt_ocl_buffer* next;
 } irt_ocl_buffer;
@@ -102,8 +102,10 @@ typedef struct _irt_ocl_device {
 	cl_command_queue cl_queue;
 	
 	// buffers info
-	cl_ulong cl_mem_size;
-	cl_ulong cl_mem_available;
+	cl_ulong cl_mem_size; // memory of the device
+	cl_ulong cl_mem_available; // memory still available, reduced after each buffer allocation 
+	cl_ulong cl_max_buffer_size; // max size of a buffer
+	pthread_spinlock_t cl_buffer_lock;
 	irt_ocl_buffer* cl_buffer;
 
 } irt_ocl_device;
@@ -121,6 +123,7 @@ cl_uint irt_ocl_get_num_devices();
 irt_ocl_device* irt_ocl_get_device(cl_uint id);
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size);
+void irt_ocl_release_buffer(irt_ocl_buffer* buf);
 
 void irt_ocl_print_device_info(irt_ocl_device* dev, char* prefix, cl_device_info param_name, char* suffix);
 void irt_ocl_print_device_infos(irt_ocl_device* dev);

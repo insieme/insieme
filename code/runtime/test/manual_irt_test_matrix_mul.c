@@ -136,8 +136,8 @@ void insieme_init_context(irt_context* context) {
 	for (uint i = 0; i < num; ++i){	
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
-		//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", IRT_OCL_SOURCE);
-		cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
+		cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", IRT_OCL_SOURCE);
+		//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
 		clReleaseProgram(program);
 	}
 	#endif
@@ -216,7 +216,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_mul_implementation2(irt_work_item* wi) {
+void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
@@ -259,7 +259,7 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_mul_implementation1(irt_work_item* wi) {
+void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
@@ -286,8 +286,8 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	irt_ocl_device* dev = irt_ocl_get_device(0);
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 	
-	//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
-	cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
+	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
+	//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "matrix_mul");
 
 	cl_long hA = (subrange[0].end-subrange[0].begin);
@@ -305,18 +305,16 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	unsigned int mem_size_B = sizeof(double) * len_B;
 	unsigned int mem_size_C = sizeof(double) * len_C;
 
-	cl_int errcode;
-	cl_mem d_A = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_A, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of A\n");
+	irt_ocl_buffer* buff_A = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_A);
+	irt_ocl_buffer* buff_B = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_B);
+	irt_ocl_buffer* buff_C = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_C);	
+
+	cl_mem d_A = buff_A->cl_mem;
+	cl_mem d_B = buff_B->cl_mem;
+	cl_mem d_C = buff_C->cl_mem;
 	
-	cl_mem d_B = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_B, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of B\n");
-	
-	cl_mem d_C = clCreateBuffer(dev->cl_context, CL_MEM_WRITE_ONLY, mem_size_C, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of C\n");
-	
-	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_A, CL_FALSE, subrange[0].begin, mem_size_A, &A[0][0], 0, NULL, NULL);	
-	//errcode = clEnqueueWriteBuffer(dev->cl_queue, d_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin][0], 0, NULL, NULL);
+	cl_int errcode; 
+	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin][0], 0, NULL, NULL);
 	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of A, %d\n", errcode);
 	
 	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_B, CL_FALSE, 0, mem_size_B, &B[0][0], 0, NULL, NULL);
@@ -359,18 +357,12 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	errcode = clEnqueueNDRangeKernel(dev->cl_queue, kernel, 2, NULL, szGlobalWorkSize, szLocalWorkSize, 0, NULL, NULL);
 	if (errcode != CL_SUCCESS) printf("Error in clEnqueueNDRangeKernel, %d\n", errcode);
 	
-	errcode = clEnqueueReadBuffer(dev->cl_queue, d_C, CL_TRUE, subrange[0].begin, mem_size_C, &C[0][0], 0, NULL, NULL);	
-	//errcode = clEnqueueReadBuffer(dev->cl_queue, d_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin][0], 0, NULL, NULL); 
+	errcode = clEnqueueReadBuffer(dev->cl_queue, d_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin][0], 0, NULL, NULL); 
 	if (errcode != CL_SUCCESS) printf("Error in clEnqueueReadBuffer of C, %d\n", errcode);
-
-	errcode = clReleaseMemObject(d_A);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_A\n");
 	
-	errcode = clReleaseMemObject(d_B);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_B\n");
-
-	errcode = clReleaseMemObject(d_C);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_C\n");
+	irt_ocl_release_buffer(buff_A);
+	irt_ocl_release_buffer(buff_B);
+	irt_ocl_release_buffer(buff_C);		
 	
 	errcode = clReleaseKernel(kernel);
 	if (errcode != CL_SUCCESS) printf("Error Releasing kernel\n");
@@ -389,7 +381,7 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	#endif
 }
 
-void insieme_wi_mul_implementation3(irt_work_item* wi) { // working on AMD CPU, NVIDIA GPU
+/*void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
@@ -416,8 +408,8 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) { // working on AMD CPU, 
 	irt_ocl_device* dev = irt_ocl_get_device(0);
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 	
-	//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
-	cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
+	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
+	//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "matrix_mul");
 
 	cl_long hA = (subrange[0].end-subrange[0].begin);
@@ -435,25 +427,22 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) { // working on AMD CPU, 
 	unsigned int mem_size_B = sizeof(double) * len_B;
 	unsigned int mem_size_C = sizeof(double) * len_C;
 
+	irt_ocl_buffer* buff_A1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_A);
+	irt_ocl_buffer* buff_B1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_B);
+	irt_ocl_buffer* buff_C1 = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_C);
+	irt_ocl_buffer* buff_A2 = irt_ocl_create_buffer(dev, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_A);
+	irt_ocl_buffer* buff_B2 = irt_ocl_create_buffer(dev, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_B);
+	irt_ocl_buffer* buff_C2 = irt_ocl_create_buffer(dev, CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, mem_size_C);
+			
+	cl_mem d_A = buff_A1->cl_mem;
+	cl_mem d_B = buff_B1->cl_mem;
+	cl_mem d_C = buff_C1->cl_mem;
+	cl_mem h_A = buff_A2->cl_mem;
+	cl_mem h_B = buff_B2->cl_mem;
+	cl_mem h_C = buff_C2->cl_mem;	
+
 	cl_int errcode;
-	cl_mem d_A = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_A, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of dev A\n");
-	
-	cl_mem d_B = clCreateBuffer(dev->cl_context, CL_MEM_READ_ONLY, mem_size_B, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of dev B\n");
-	
-	cl_mem d_C = clCreateBuffer(dev->cl_context, CL_MEM_WRITE_ONLY, mem_size_C, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of dev C\n");
-	
-	cl_mem h_A = clCreateBuffer(dev->cl_context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_A, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of host A\n");
-	
-	cl_mem h_B = clCreateBuffer(dev->cl_context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_B, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of host B\n");
-	
-	cl_mem h_C = clCreateBuffer(dev->cl_context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, mem_size_C, NULL, &errcode);
-	if (errcode != CL_SUCCESS) printf("Error in clCreateBuffer of host C\n");
-	
+
 	double* Data_A = clEnqueueMapBuffer(dev->cl_queue, h_A, CL_TRUE, CL_MAP_WRITE, 0, mem_size_A, 0, NULL, NULL, &errcode);
 	if (errcode != CL_SUCCESS) printf("Error in clEnqueueMapBuffer of host A\n");	
 	
@@ -478,12 +467,12 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) { // working on AMD CPU, 
 	if (errcode != CL_SUCCESS) printf("Error in clEnqueueCopyBuffer of B, %d\n", errcode);
 
 	
-	/*errcode = clEnqueueWriteBuffer(dev->cl_queue, d_A, CL_FALSE, 0, mem_size_A, &Data_A[0], 0, NULL, NULL);
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of A, %d\n", errcode);
+	//errcode = clEnqueueWriteBuffer(dev->cl_queue, d_A, CL_FALSE, 0, mem_size_A, &Data_A[0], 0, NULL, NULL);
+	//if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of A, %d\n", errcode);
 	
-	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_B, CL_FALSE, 0, mem_size_B, &Data_B[0], 0, NULL, NULL);
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of B, %d\n", errcode);
-	*/
+	//errcode = clEnqueueWriteBuffer(dev->cl_queue, d_B, CL_FALSE, 0, mem_size_B, &Data_B[0], 0, NULL, NULL);
+	//if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of B, %d\n", errcode);
+	
 	errcode  = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&d_A);
 	if (errcode != CL_SUCCESS) printf("Error Arg d_A\n");
 
@@ -534,25 +523,14 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) { // working on AMD CPU, 
 
 	errcode = clEnqueueUnmapMemObject(dev->cl_queue, h_C, Data_C, 0, NULL, NULL);
 	 if (errcode != CL_SUCCESS) printf("Error Unmap C\n");
-	
-	errcode = clReleaseMemObject(d_A);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_A\n");
-	
-	errcode = clReleaseMemObject(d_B);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_B\n");
 
-	errcode = clReleaseMemObject(d_C);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_C\n");
-
-	errcode = clReleaseMemObject(h_A);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_A\n");
+	irt_ocl_release_buffer(buff_A1);
+	irt_ocl_release_buffer(buff_B1);
+	irt_ocl_release_buffer(buff_C1);
+	irt_ocl_release_buffer(buff_A2);
+	irt_ocl_release_buffer(buff_B2);
+	irt_ocl_release_buffer(buff_C2);		
 	
-	errcode = clReleaseMemObject(h_B);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_B\n");
-
-	errcode = clReleaseMemObject(h_C);
-	if (errcode != CL_SUCCESS) printf("Error Releasing d_C\n");
-		
 	errcode = clReleaseKernel(kernel);
 	if (errcode != CL_SUCCESS) printf("Error Releasing kernel\n");
 	
@@ -568,7 +546,7 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) { // working on AMD CPU, 
 
 	irt_wi_end(wi);
 	#endif
-}
+}*/
 
 void insieme_wi_mul_datareq(irt_work_item* wi, irt_wi_di_requirement* requirements) {
 

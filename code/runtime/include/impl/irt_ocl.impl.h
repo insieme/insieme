@@ -113,13 +113,7 @@ static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_
 	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices: \"%s\"", _irt_error_string(err_code)); 
 }
 
-static void _irt_cl_release_device(cl_context context, cl_command_queue queue) {
-	cl_int err_code;
-	err_code = clReleaseCommandQueue(queue);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing command queue: \"%s\"", _irt_error_string(err_code));
-	err_code = clReleaseContext(context);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context: \"%s\"", _irt_error_string(err_code));
-}
+
 
 /* 
  * =====================================================================================
@@ -333,12 +327,19 @@ void irt_ocl_init_devices(){
 						dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, 0, &status); //FIXME: CL_QUEUE_PROFILING_ENABLE, &status);
 						IRT_ASSERT(status == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue: \"%s\"", _irt_error_string(status));
 						
-						cl_ulong cl_max_mem_alloc;
-						cl_int err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &cl_max_mem_alloc, NULL);
+						cl_ulong cl_global_mem_size;
+						cl_int err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &cl_global_mem_size, NULL);
 						IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
-						dev->cl_mem_size = cl_max_mem_alloc;
-						dev->cl_mem_available = cl_max_mem_alloc;
+
+						cl_ulong cl_max_buffer_size;
+						err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &cl_max_buffer_size, NULL);
+						IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
+
+						dev->cl_mem_size = cl_global_mem_size;
+						dev->cl_mem_available = cl_global_mem_size;
+						dev->cl_max_buffer_size = cl_max_buffer_size;
 						dev->cl_buffer = NULL;
+						pthread_spin_init(&(dev->cl_buffer_lock), 0);
 					}
 				}
 			}
@@ -347,11 +348,26 @@ void irt_ocl_init_devices(){
 }
 
 void irt_ocl_release_devices() {
+	cl_int err_code;
 	for (int i = 0; i < num_devices; ++i) {
 		irt_ocl_device* dev = &devices[i];
-		_irt_cl_release_device(dev->cl_context, dev->cl_queue);
-		//irt_ocl_buffer* buf = dev->cl_buffer; FIXME: release of the buffers free(buf)
-		//for	 
+		// release the buffer_lock
+		pthread_spin_destroy(&(dev->cl_buffer_lock));
+		// release the buffer list 
+		irt_ocl_buffer* tmp = dev->cl_buffer;
+		while(tmp){
+			dev->cl_buffer = (dev->cl_buffer)->next;
+			err_code = clReleaseMemObject(tmp->cl_mem);
+			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
+			free(tmp);
+			tmp = dev->cl_buffer;
+		}
+		// release the queue
+		err_code = clReleaseCommandQueue(dev->cl_queue);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing command queue: \"%s\"", _irt_error_string(err_code));
+		// release the context
+		err_code = clReleaseContext(dev->cl_context);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context: \"%s\"", _irt_error_string(err_code));
 	}
 	free(devices);
 }
@@ -367,19 +383,49 @@ irt_ocl_device* irt_ocl_get_device(cl_uint id){
 }
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size){
-	IRT_ASSERT(size < dev->cl_mem_available, IRT_ERR_OCL, "Error creating buffer: \"Not enough memory\""); // FIXME: here don't have to fail
-	//FIXME: add some policy to free buffer...
+	IRT_ASSERT(size <= dev->cl_max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
+	//printf("Available Memory: %lu   Request Memory: %lu\n", dev->cl_mem_available, size);
+	if (size > dev->cl_mem_available) {
+		pthread_spin_lock(&(dev->cl_buffer_lock));
+		//printf(" Need to free some buffer\n");
 
+		irt_ocl_buffer* ptr = dev->cl_buffer;
+		irt_ocl_buffer* prev = NULL;
+		while (ptr) {
+			if ((ptr->size > size) && (ptr->used == false)) 
+				break;
+			prev = ptr;
+			ptr = ptr->next;
+		}
+		if (ptr) printf("YES %lu < %lu %u\n", ptr->size, size, ptr->used);
+		IRT_ASSERT(ptr != NULL, IRT_ERR_OCL, "Error creating buffer: \"Not enough memory\""); // FIXME: assert if an element is not found
+		// FIXME: maybe more than one element can be released
+		if (!prev) {
+			dev->cl_buffer = NULL;
+		} else {
+			prev->next = ptr->next;
+		}
+		// free the selected buffer
+		cl_int err_code = clReleaseMemObject(ptr->cl_mem);
+		dev->cl_mem_available += ptr->size;
+		//printf("Released Buffer: %lu  Available Memory:%lu\n", ptr->size, dev->cl_mem_available);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
+		free(ptr);
+		pthread_spin_unlock(&(dev->cl_buffer_lock));
+	}
+	
 	// create buffer
 	irt_ocl_buffer* buf = (irt_ocl_buffer*)malloc(sizeof(irt_ocl_buffer));
 	buf->cl_mem = _irt_cl_create_buffer(dev->cl_context, flags, size);
+	buf->used = true;
 	buf->size = size;
 	buf->next = NULL;
-
+	
 	// add buffer to the list
+	pthread_spin_lock(&(dev->cl_buffer_lock));
 	irt_ocl_buffer* ptr = dev->cl_buffer;
 	irt_ocl_buffer* prev = NULL;
-	while(ptr && (ptr->size < size)){
+	while(ptr && (ptr->size <= size)){
 		prev = ptr;
 		ptr = ptr->next;
 	}
@@ -391,7 +437,26 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 		buf->next = prev->next;
 		prev->next = buf;
 	}
+	//update the available memory
+	dev->cl_mem_available -= size;
+	pthread_spin_unlock(&(dev->cl_buffer_lock));
+
+	// print buffer list status
+	/*printf("LIST BEGIN\n");
+	irt_ocl_buffer* test = dev->cl_buffer;
+	while (test) {
+		printf("Value: %lu\n", test->size);
+		test = test->next;
+	}
+	printf("LIST END\n");*/
+	//
+
 	return buf;
+}
+
+void irt_ocl_release_buffer(irt_ocl_buffer* buf){
+	IRT_ASSERT(buf != NULL && buf->used == true, IRT_ERR_OCL, "Error releasing buffer");
+	buf->used = false;
 }
 
 void irt_ocl_print_device_infos(irt_ocl_device* dev) {
