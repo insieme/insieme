@@ -210,8 +210,17 @@ namespace backend {
 
 		/**
 		 * A reference to a set of dependencies aggregated during the conversion.
+		 * Dependencies are defining the set of code fragments to be necessarily placed
+		 * before the current code fragment within the resulting output code.
 		 */
-		c_ast::DependencySet dependencies;
+		c_ast::FragmentSet dependencies;
+
+		/**
+		 * A reference to a set of requirements aggregated during the conversion.
+		 * Requirements are fragments which have to be present at some point within the
+		 * output code.
+		 */
+		c_ast::FragmentSet requirements;
 
 		/**
 		 * A variable manager maintaining the variables of the current scope.
@@ -226,18 +235,26 @@ namespace backend {
 	public:
 
 		ConversionContext(const Converter& converter)
-			: converter(converter), dependencies(), variableManager(), includes() {}
+			: converter(converter), dependencies(), requirements(), variableManager(), includes() {}
 
 		const Converter& getConverter() const {
 			return converter;
 		}
 
-		c_ast::DependencySet& getDependencies() {
+		c_ast::FragmentSet& getDependencies() {
 			return dependencies;
 		}
 
-		const c_ast::DependencySet& getDependencies() const {
+		const c_ast::FragmentSet& getDependencies() const {
 			return dependencies;
+		}
+
+		c_ast::FragmentSet& getRequirements() {
+			return requirements;
+		}
+
+		const c_ast::FragmentSet& getRequirements() const {
+			return requirements;
 		}
 
 		VariableManager& getVariableManager() {

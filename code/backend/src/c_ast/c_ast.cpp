@@ -257,6 +257,12 @@ namespace c_ast {
 		return *type==*other.type && ::equals(values, other.values, equal_target<NodePtr>());
 	}
 
+	bool VectorInit::equals(const Node& node) const {
+		assert(dynamic_cast<const VectorInit*>(&node));
+		auto other = static_cast<const VectorInit&>(node);
+		return ::equals(values, other.values, equal_target<NodePtr>());
+	}
+
 	bool UnaryOperation::equals(const Node& node) const {
 		assert(dynamic_cast<const UnaryOperation*>(&node));
 		auto other = static_cast<const UnaryOperation&>(node);

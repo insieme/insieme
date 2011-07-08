@@ -212,15 +212,15 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitVectorExpr(const core::VectorExprPtr& ptr, ConversionContext& context) {
 		// to be created: an initialization of the corresponding struct - where one value is a vector
-		//     (<type>){(<vector type>){<list of members>}}
+		//     (<type>){{<list of members>}}
 
 		// get type and create empty init expression
 		const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
 		c_ast::TypePtr type = info.rValueType;
-		c_ast::TypePtr vectorType = info.externalType;
+		context.getDependencies().insert(info.definition);
 
 		// create inner vector init and append initialization values
-		c_ast::InitializerPtr vectorInit = c_ast::init(vectorType);
+		c_ast::VectorInitPtr vectorInit = context.getConverter().getCNodeManager()->create<c_ast::VectorInit>();
 		::transform(ptr->getExpressions(), std::back_inserter(vectorInit->values),
 				[&](const core::ExpressionPtr& cur) {
 					return convert(context, cur);

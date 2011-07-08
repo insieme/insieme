@@ -268,6 +268,13 @@ namespace c_ast {
 				}) << "}";
 			}
 
+			PRINT(VectorInit) {
+				return out << "{"
+						<< join(", ", node->values, [&](std::ostream& out, const NodePtr& cur) {
+							out << print(cur);
+				}) << "}";
+			}
+
 			PRINT(UnaryOperation) {
 
 				// handle operations
@@ -340,12 +347,7 @@ namespace c_ast {
 
 				switch (node->operation) {
 				case TernaryOperation::TernaryCondition : {
-					print(node->operandA);
-					out << "?";
-					print(node->operandB);
-					out << ":";
-					print(node->operandC);
-					return out;
+					return out << print(node->operandA) << "?" << print(node->operandB) << ":" << print(node->operandC);
 				}
 				}
 

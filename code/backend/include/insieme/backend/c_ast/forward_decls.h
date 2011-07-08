@@ -79,7 +79,7 @@ namespace c_ast {
 	class IncludeFragment;
 	typedef std::shared_ptr<IncludeFragment> IncludeFragmentPtr;
 
-	typedef std::set<CodeFragmentPtr> DependencySet;
+	typedef std::set<CodeFragmentPtr> FragmentSet;
 
 } // end namespace c_ast
 } // end namespace backend
