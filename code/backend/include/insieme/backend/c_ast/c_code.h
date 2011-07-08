@@ -70,11 +70,6 @@ namespace c_ast {
 		 */
 		const vector<CodeFragmentPtr> fragments;
 
-		/**
-		 * The list of files / headers to be included by the resulting target code.
-		 */
-		const vector<string> includes;
-
 	public:
 
 		/**
@@ -83,9 +78,8 @@ namespace c_ast {
 		 *
 		 * @param source the IR node this code has been generated from
 		 * @param code the root element of the resulting target code fragment
-		 * @param includes the list of includes to be added during code generation
 		 */
-		CCode(const core::NodePtr& source, const CodeFragmentPtr& root, const vector<string>& includes = vector<string>());
+		CCode(const core::NodePtr& source, const CodeFragmentPtr& root);
 
 		/**
 		 * Creates a new C Code instance representing a conversion from the given
@@ -93,19 +87,17 @@ namespace c_ast {
 		 *
 		 * @param source the IR node this code has been generated from
 		 * @param fragments seeds / entry points of the represented program
-		 * @param includes the list of includes to be added during code generation
 		 */
-		CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments, const vector<string>& includes = vector<string>());
+		CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments);
 
 		/**
 		 * Creates a new C code instance representing a translation of the given source to the given code fragment.
 		 *
 		 * @param source the source of the translation, hence the internal IR representation.
 		 * @param fragment the code fragment forming the root of the DAG of code fragments representing the result
-		 * @param includes the list of includes to be added during code generation
 		 */
-		static CCodePtr createNew(const core::NodePtr& source, CodeFragmentPtr& fragment, const vector<string>& includes) {
-			return std::make_shared<CCode>(source, fragment, includes);
+		static CCodePtr createNew(const core::NodePtr& source, CodeFragmentPtr& fragment) {
+			return std::make_shared<CCode>(source, fragment);
 		}
 
 		/**
@@ -113,10 +105,9 @@ namespace c_ast {
 		 *
 		 * @param source the source of the translation, hence the internal IR representation.
 		 * @param fragments the code fragment forming the root elements of the DAG of code fragments representing the result
-		 * @param includes the list of includes to be added during code generation
 		 */
-		static CCodePtr createNew(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments, const vector<string>& includes) {
-			return std::make_shared<CCode>(source, fragments, includes);
+		static CCodePtr createNew(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments) {
+			return std::make_shared<CCode>(source, fragments);
 		}
 
 		/**
@@ -139,12 +130,17 @@ namespace c_ast {
 		 */
 		DependencySet dependencies;
 
+		/**
+		 * The list of files / headers to be included by the resulting target code.
+		 */
+		std::set<string> includes;
+
 	public:
 
 		/**
 		 * A default constructor creating a code fragment without any dependencies.
 		 */
-		CodeFragment() : dependencies() {}
+		CodeFragment() : dependencies(), includes() {}
 
 		/**
 		 * A constructor for a code fragment initializing its internal dependencies base
@@ -186,6 +182,34 @@ namespace c_ast {
 		 * @return a list of all fragments depending on.
 		 */
 		const DependencySet& getDependencies() const { return dependencies; };
+
+		/**
+		 * Obtains the set of includes currently required by this code fragment.
+		 *
+		 * @return the list of includes currently required by this code fragment.
+		 */
+		const std::set<string>& getIncludes() const { return includes; };
+
+		/**
+		 * Add a new include file to the set of required includes.
+		 *
+		 * @param include the file to be included
+		 */
+		void addInclude(const string& include) {
+			// add include
+			includes.insert(include);
+		}
+
+		/**
+		 * Adds a list of includes to the includes required by this code fragment.
+		 *
+		 * @param newIncludes the includes to be added
+		 */
+		template<typename Container>
+		void addIncludes(const Container& newIncludes) {
+			// insert all includes
+			includes.insert(newIncludes.begin(), newIncludes.end());
+		}
 
 	};
 

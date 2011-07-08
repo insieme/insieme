@@ -63,7 +63,7 @@ namespace utils {
  * @see SimpleKey<T>
  * @see StringKey
  */
-class AnnotationKey : public HashableImmutableData<AnnotationKey> {
+class AnnotationKey : public HashableImmutableData<AnnotationKey>, public utils::Printable {
 protected:
 
 	/**
@@ -75,7 +75,7 @@ protected:
 /**
  * An abstract base class for any kind of annotation to be attached to a AST node or pointer.
  */
-class Annotation {
+class Annotation : public utils::Printable {
 
 public:
 
@@ -95,10 +95,7 @@ public:
 	 */
 	virtual const std::string& getAnnotationName() const = 0;
 
-	/**
-	 * Returns a string representation for this annotation, by default it returns the annotation name
-	 */
-	virtual const std::string toString() const { return std::string(); };
+	virtual std::ostream& printTo(std::ostream& out) const { return out << getAnnotationName(); }
 
 	/**
 	 * Checks whether this annotation is equivalent to the given annotation. The default
@@ -371,7 +368,7 @@ private:
  * @tparam Comparator the comparator to be used to compare instances of the key type
  */
 template<typename T, typename AnnotationType=Annotation, typename Comparator = std::equal_to<T>>
-class SimpleKey : public AnnotationKey, public utils::Printable {
+class SimpleKey : public AnnotationKey {
 public:
 
 	/**

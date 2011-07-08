@@ -51,6 +51,8 @@
 #define CONVERT_EXPR(Node) context.getConverter().getStmtConverter().convertExpression(context, Node)
 #define CONVERT_STMT(Node) context.getConverter().getStmtConverter().convertStatement(context, Node)
 
+#define LANG_BASIC context.getConverter().getNodeManager().getBasicGenerator()
+
 /**
  * A macro triggering the deceding into an argument. This will result in the printing of the code
  * required for evaluating the corresponding argument.

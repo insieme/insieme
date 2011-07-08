@@ -103,6 +103,15 @@ static inline bool hasRefType(const ExpressionPtr& expr) {
 	return isRefType(expr->getType());
 }
 
+static inline TypePtr getReferencedType(const RefTypePtr& type) {
+	return type->getElementType();
+}
+
+static inline TypePtr getReferencedType(const TypePtr& type) {
+	return getReferencedType(static_pointer_cast<const RefType>(type));
+}
+
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

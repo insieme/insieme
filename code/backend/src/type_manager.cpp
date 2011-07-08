@@ -737,12 +737,9 @@ namespace backend {
 				};
 			}
 
-			// add a declaration dependency if necessary
-			if(subType->declaration) {
-				// add a declaration for the pointer too ...
-				res->declaration = subType->declaration;
-				res->definition = subType->declaration;
-			}
+			// the declaration / definition of the sub-type is also the declaration / definition of the pointer type
+			res->declaration = subType->declaration;
+			res->definition = subType->declaration;
 
 
 			// ---------------- add a new operator ------------------------
@@ -765,6 +762,12 @@ namespace backend {
 			// attach the new operator
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
 			res->newOperator = c_ast::CCodeFragment::createNew(manager, cCode);
+
+			// add dependencies
+			res->newOperator->addDependency(subType->definition);
+
+			// add include for malloc
+			res->newOperator->addInclude(string("stdlib.h"));
 
 			// done
 			return res;
@@ -804,6 +807,9 @@ namespace backend {
 				functionType->parameterTypes.push_back(info->rValueType);
 				dependencies.push_back(info->declaration);
 			});
+
+			// add result type dependencies
+			dependencies.push_back(resolveType(ptr->getReturnType())->declaration);
 
 
 			// construct the function type => struct including a function pointer

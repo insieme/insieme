@@ -39,8 +39,12 @@
 #include <cassert>
 #include <memory>
 
+#include <boost/noncopyable.hpp>
+
 #include "insieme/core/forward_decls.h"
 #include "insieme/backend/c_ast/forward_decls.h"
+
+#include "insieme/backend/variable_manager.h"
 
 namespace insieme {
 namespace backend {
@@ -197,7 +201,7 @@ namespace backend {
 
 	};
 
-	class ConversionContext {
+	class ConversionContext :  public boost::noncopyable {
 
 		/**
 		 * A reference to the converter processing the current conversion.
@@ -207,17 +211,22 @@ namespace backend {
 		/**
 		 * A reference to a set of dependencies aggregated during the conversion.
 		 */
-		c_ast::DependencySet& dependencies;
+		c_ast::DependencySet dependencies;
 
 		/**
 		 * A variable manager maintaining the variables of the current scope.
 		 */
-		VariableManager& variableManager;
+		VariableManager variableManager;
+
+		/**
+		 * The list of includes depending on.
+		 */
+		std::set<string> includes;
 
 	public:
 
-		ConversionContext(const Converter& converter, c_ast::DependencySet& dependencies, VariableManager& variableManager)
-			: converter(converter), dependencies(dependencies), variableManager(variableManager) {}
+		ConversionContext(const Converter& converter)
+			: converter(converter), dependencies(), variableManager(), includes() {}
 
 		const Converter& getConverter() const {
 			return converter;
@@ -227,12 +236,16 @@ namespace backend {
 			return dependencies;
 		}
 
+		const c_ast::DependencySet& getDependencies() const {
+			return dependencies;
+		}
+
 		VariableManager& getVariableManager() {
 			return variableManager;
 		}
 
-		const c_ast::SharedCNodeManager& getCNodeManager() const {
-			return converter.getCNodeManager();
+		std::set<string>& getIncludes() {
+			return includes;
 		}
 
 	};

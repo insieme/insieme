@@ -48,17 +48,19 @@ namespace analysis {
 namespace scop {
 
 //===== ScopRegion ================================================================================
-// Stores the information related to a SCoP (Static Control Part) region of a program.
-// The IterationVector which is valid within the SCoP body and the set of constraints which define
-// the entry point for this SCoP.
-//
-// This annotation is attached to every node introducing changes to the iteration domain. Nodes
-// which carries ScopAnnotations are: ForLoops, IfStmt and LambdaExpr. 
-//
-// Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this region (if present)
-// and the list of ref accesses directly present in this region. Accesses in the sub region are not
-// directly listed in the current region but retrieval is possible via the aforementioned pointer to
-// the sub scops. 
+/* 
+ * Stores the information related to a SCoP (Static Control Part) region of a program.
+ * The IterationVector which is valid within the SCoP body and the set of constraints which define
+ * the entry point for this SCoP.
+ *
+ * This annotation is attached to every node introducing changes to the iteration domain. Nodes
+ * which carries ScopAnnotations are: ForLoops, IfStmt and LambdaExpr. 
+ *
+ * Each ScopAnnotation keeps a list of references to Sub SCoPs contained in this region (if present)
+ * and the list of ref accesses directly present in this region. Accesses in the sub region are not
+ * directly listed in the current region but retrieval is possible via the aforementioned pointer to
+ * the sub scops. 
+ */
 class ScopRegion: public core::NodeAnnotation {
 public:
 	static const string NAME;
@@ -68,21 +70,23 @@ public:
 
 	// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 	// be directly referred from sub SCoPs. 
-	typedef std::set<RefPtr> AccessRefSet; 
+	//
+	// The accesses are ordered by the appearance in the SCoP
+	typedef std::vector<RefPtr> AccessRefList; 
 
 	ScopRegion( const poly::IterationVector& iv, 
 			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),
 			const StmtList& subScops = StmtList(),
-			const AccessRefSet& accesses = AccessRefSet() ) : 
+			const AccessRefList& accesses = AccessRefList() ) : 
 		core::NodeAnnotation(), 
 		iterVec(iv), 
-		constraints(poly::cloneConstraint(iterVec, comb)), // Switch the base to the this->iterVec 
+		constraints (poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
 		subScops(subScops), 
 		accesses(accesses) { } 
 
-	inline const std::string& getAnnotationName() const { return NAME; }
+	virtual std::ostream& printTo(std::ostream& out) const;
 
-	const std::string toString() const;
+	inline const std::string& getAnnotationName() const { return NAME; }
 
 	inline const utils::AnnotationKey* getKey() const { return &KEY; }
 
@@ -108,13 +112,24 @@ public:
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	inline const AccessRefSet& getDirectAccesses() const { return accesses; }
+	inline const AccessRefList& getDirectAccesses() const { return accesses; }
 
-	typedef std::tuple<RefPtr, poly::IterationDomain, std::vector<poly::ConstraintCombinerPtr>> Access;
-	typedef std::vector<Access> AccessList;
+	/** 
+	 * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
+	 * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
+	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
+	 * access is defined and the access functions for each dimensions.
+	 */
+	typedef std::tuple<RefPtr, poly::IterationDomain, std::vector<poly::ConstraintCombinerPtr>> AccessInfo;
 
-	const AccessList listAccesses() const;
+	typedef std::vector<AccessInfo> AccessInfoList;
 
+	const AccessInfoList listAccesses() const;
+
+	/** 
+	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
+	 * current iteration domain
+	 */
 	const StmtList& getSubScops() const { return subScops; }
 
 private:
@@ -124,14 +139,16 @@ private:
 	// List of constraints which this SCoP defines 
 	poly::ConstraintCombinerPtr constraints;
 
-	// Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their
-	// relative position inside the current SCoP
-	// 
-	// In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
+	/**
+	 * Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their
+	 * relative position inside the current SCoP
+	 *  
+	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
+	 */
 	StmtList subScops;
 
 	// Access informations 
-	AccessRefSet accesses;
+	AccessRefList accesses;
 };
 
 /**
@@ -157,13 +174,12 @@ public:
 
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	const std::string toString() const; 
-	
+	virtual std::ostream& printTo(std::ostream& out) const;
+
 	const poly::Constraint& getAccessConstraint() const { return eqCons; }
 
 	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
-			const core::NodePtr& after) const 
-	{ 
+			const core::NodePtr& after) const { 
 		return false; 
 	}
 };
@@ -171,8 +187,8 @@ public:
 typedef std::vector< std::pair<core::NodePtr, poly::IterationVector> > ScopList;
 
 /**
- * Finds and marks the SCoPs contained in the root subtree and returns a list of
- * found SCoPs (an empty list in the case no SCoP was found). 
+ * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an
+ * empty list in the case no SCoP was found). 
  */ 
 ScopList mark(const core::NodePtr& root);
 
