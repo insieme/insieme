@@ -34,17 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_node.h"
-
-#include "insieme/core/transform/node_replacer.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
-
 #include "insieme/frontend/ocl/ocl_host_passes.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/core/transform/node_replacer.h"
+
 
 namespace ba = boost::algorithm;
-namespace iocl = insieme::ocl;
 
 namespace insieme {
 namespace frontend {
@@ -206,20 +201,48 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				}
 			}
 
+
+			// check if the init funcition of the variable is still of cl_mem type
+			TypePtr oldType = decl->getInitialization()->getType();
+
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(this->resolveElement(decl->getInitialization()))) {
-				if(initFct->getArgument(0) == builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem")))) // default init
-						|| initFct->getArgument(0) == builder.castExpr(builder.arrayType(builder.genericType("_cl_mem")),
-								builder.callExpr(BASIC.getGetNull(), BASIC.getTypeLiteral(BASIC.getInt8())))) { // init with NULL
+				LiteralPtr typeLiteral;
+				if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(initFct->getArgument(0))) { // default init
+					if(undefined->getFunctionExpr() == BASIC.getUndefined()) {
+						typeLiteral = dynamic_pointer_cast<const Literal>(undefined->getArgument(0));
+						assert(typeLiteral && "Unexpected argument when initializing variable with undefined");
+						oldType = static_pointer_cast<const Type>(typeLiteral->getType()->getChildList().at(0));
+					}
+				}
+
+				if(const CastExprPtr& castToClMem = dynamic_pointer_cast<const CastExpr>(initFct->getArgument(0))) {
+					oldType = (castToClMem->getType());
+					assert(oldType && "Unexpected argument when initializing variable by cast");
+				}
+
+			}
+
+
+			if(oldType->toString().find("array<_cl_mem,1>") != string::npos) {
+				// get new element type
+				while(const SingleElementTypePtr & interType = dynamic_pointer_cast<const SingleElementType>(oldType) )
+					oldType = interType->getElementType();
+
+//				if(initFct->getArgument(0) == builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem")))) // default init
+//						|| initFct->getArgument(0) == builder.castExpr(builder.arrayType(builder.genericType("_cl_mem")),
+//								builder.callExpr(BASIC.getGetNull(), BASIC.getTypeLiteral(BASIC.getInt8())))) { // init with NULL
 					// overwrite default initialization to cl_mem with default initialization to array<whatever>
-					TypePtr newType;
+					TypePtr newType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), oldType,
+							builder.genericType("_cl_mem"),	cl_mems[var]->getType()));
 					if(const RefTypePtr& rt = dynamic_pointer_cast<const RefType>(cl_mems[var]->getType()))
-					newType = rt->getElementType();
+						newType = rt->getElementType();
 					else
-					newType = cl_mems[var]->getType();
+						newType = cl_mems[var]->getType();
+
 					NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
 					copyAnnotations(decl, ret);
 					return ret;
-				}
+			//	}
 			}
 		} else {
 // remove delarations of opencl type variables. Should not be used any more
@@ -387,9 +410,28 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				}
 
 			}
+			// check if return type of array/vector subscript calls are still valid
+			if(BASIC.isSubscriptOperator(newCall->getFunctionExpr()))
+				if(newCall->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
+					if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>(getNonRefType(newCall->getArgument(0)))) {
+/*						if(BASIC.isArrayOp(newCall->getFunctionExpr()))
+							std::cout << "ARRRARY" << std::endl;
+						else if(BASIC.isVectorOp(newCall->getFunctionExpr()))
+							std::cout << "VECTOR" << std::endl;
+						else
+							std::cout << "NOTHING" << newCall->getFunctionExpr() << std::endl;*/
+						const TypePtr& oldType = getNonRefType(newCall);
+						if(seType->getElementType() != oldType) {
+							TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), newCall->getType(),
+									oldType, seType->getElementType()));
+							return builder.callExpr(newRetType, newCall->getFunctionExpr(), newCall->getArguments());
+						}
+					}
+				}
 		}
 
 	}
+
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
 	copyAnnotations(element, ret);
 	return ret;

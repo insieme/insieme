@@ -34,17 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/expressions.h"
 #include "insieme/core/ast_node.h"
-
-#include "insieme/core/transform/node_replacer.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
-
-#include "insieme/c_info/naming.h"
-#include "insieme/c_info/location.h"
 #include "insieme/frontend/ocl/ocl_host_passes.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
-#include "insieme/frontend/clang_config.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include <fstream>
 
@@ -583,7 +577,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 	}
 	if( const ArrayTypePtr at = dynamic_pointer_cast<const ArrayType>(type)) {
 		// since all cl_* types are pointers, an array would have two nested arrays
-		if(at->getElementType() == NT_ArrayType) {
+		if(at->getElementType()->getNodeType() == NT_ArrayType) {
 			type = at->getElementType();
 		}
 	}
@@ -777,12 +771,15 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				// handling clCreateBuffer
 				if(lhsVar->getType()->toString().find("array<_cl_mem,1>") != string::npos) {// == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
 					NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
+					bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
 					// check if data has to be copied to a new array
 					if(const CallExprPtr& newCall = checkAssignment(createBuffer)) {
 
-						TypePtr newType = builder.refType(newCall->getType());
+						// exchange the _cl_mem type with the new type, gathered from the clCreateBuffer call
+						TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhs->getType(),
+								callExpr->getArgument(1)->getType(), newCall->getType()));
 						// check if variable has already been put into replacement map with a different type
-						if(cl_mems.find(lhsVar) != cl_mems.end())
+						if(alreadyThere)
 							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
 						NodePtr ret;
 
@@ -792,9 +789,16 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 							// TODO check if err argument has been passed and set variable to 0
 							ret = BASIC.getNoOp();
 						} else {
-							const VariablePtr& newVar = builder.variable(newType);
-							cl_mems[lhsVar] = newVar;
-							ret = builder.callExpr(BASIC.getRefAssign(), /*lhs*/newVar, newCall);
+							if(!alreadyThere) {
+								const VariablePtr& newVar = builder.variable(newType);
+								cl_mems[lhsVar] = newVar;
+							}
+							// replace the variable and the type in the lhs of the assignmend
+							ExpressionPtr newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(),
+									callExpr->getArgument(0), lhsVar, cl_mems[lhsVar]));
+							newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(), newLhs,
+									callExpr->getArgument(1)->getType(), newCall->getType()));
+							ret = builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), newLhs, newCall);
 						}
 
 						copyAnnotations(callExpr, ret);
@@ -804,8 +808,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					if(const VariablePtr clMemReplacement = dynamic_pointer_cast<const Variable>(createBuffer)) {
 						TypePtr newType = clMemReplacement->getType();
 
-						if(cl_mems[lhsVar] != static_cast<long int>(0))
-						assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+						if(alreadyThere)
+							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
 
 						cl_mems[lhsVar] = clMemReplacement;
 						return BASIC.getNoOp();

@@ -36,12 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/parser/ir_parse.h"
-
 #include "insieme/frontend/program.h"
-#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace frontend {

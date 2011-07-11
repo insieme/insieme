@@ -34,22 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_node.h"
-
-#include "insieme/core/transform/node_replacer.h"
-#include "insieme/frontend/ocl/ocl_host_utils.h"
-
 #include "insieme/c_info/naming.h"
-#include "insieme/c_info/location.h"
+#include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_passes.h"
 #include "insieme/frontend/ocl/ocl_annotations.h"
-#include "insieme/frontend/clang_config.h"
-
-#include <fstream>
 
 namespace ba = boost::algorithm;
-namespace iocl = insieme::ocl;
 
 namespace insieme {
 namespace frontend {
