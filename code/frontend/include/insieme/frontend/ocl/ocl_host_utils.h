@@ -45,6 +45,11 @@ namespace ocl {
 // shortcut
 #define BASIC builder.getNodeManager().basic
 
+/*
+ *  get a VariablePtr which is hidden under the stuff added by the frontend if ther is a cast to (void*) in the C input
+ *  the variable is stored in the passed argument arg
+ */
+void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg, const core::ASTBuilder& builder);
 
 /*
  * Function to get the type of an Expression

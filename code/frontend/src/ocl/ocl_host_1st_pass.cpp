@@ -168,23 +168,24 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 	}
 
 	while (const CallExprPtr& mul = dynamic_pointer_cast<const CallExpr> (uncasted)) {
-		for (int i = 0; i < 2; ++i) {
-			// get rid of casts
-			core::NodePtr arg = mul->getArgument(i);
-			while (arg->getNodeType() == core::NT_CastExpr) {
-				arg = arg->getChildList().at(1);
-			}
-			if (const CallExprPtr& sizeof_ = dynamic_pointer_cast<const CallExpr>(arg)) {
-				if (sizeof_->toString().substr(0, 6).find("sizeof") != string::npos) {
-					// extract the type to be allocated
-					type = dynamic_pointer_cast<const Type> (sizeof_->getArgument(0)->getType()->getChildList().at(0));
-					// extract the number of elements to be allocated
-					size = mul->getArgument(1 - i);
-					return true;
+		if(mul->getArguments().size() == 2)
+			for (int i = 0; i < 2; ++i) {
+				// get rid of casts
+				core::NodePtr arg = mul->getArgument(i);
+				while (arg->getNodeType() == core::NT_CastExpr) {
+					arg = arg->getChildList().at(1);
+				}
+				if (const CallExprPtr& sizeof_ = dynamic_pointer_cast<const CallExpr>(arg)) {
+					if (sizeof_->toString().substr(0, 6).find("sizeof") != string::npos) {
+						// extract the type to be allocated
+						type = dynamic_pointer_cast<const Type> (sizeof_->getArgument(0)->getType()->getChildList().at(0));
+						// extract the number of elements to be allocated
+						size = mul->getArgument(1 - i);
+						return true;
+					}
 				}
 			}
-		}
-		uncasted = mul->getArgument(0);
+			uncasted = mul->getArgument(0);
 	}
 	return false;
 }
@@ -262,7 +263,10 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 }
 
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
-	builder(build), o2i(build.getNodeManager()), mProgram(program) {
+	builder(build), o2i(build.getNodeManager()), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
+			boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
+			boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::hasher(),
+			equal_variables(build)) {
 	ADD_Handler(builder, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
@@ -337,6 +341,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	);
 
 	ADD_Handler(builder, "clSetKernelArg",
+std::cout << "Setting kernel arg\n";
 			// arg_index must either be an integer literal or all arguments have to be specified in the right order in the source code
 			ExpressionPtr kernel = node->getArgument(0);
 			// check if kernel argument is in a struct, if yes, use the struct-variable
@@ -362,6 +367,17 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 				arg = localMem;
 			}
 
+			// if the argument is a scalar, we have to deref it
+			// TODO test propperly
+			if(const CallExprPtr& sizeof_ = dynamic_pointer_cast<const CallExpr>(node->getArgument(2))) {
+				if(sizeof_->getFunctionExpr() == BASIC.getSizeof()) {
+					if(sizeof_->getArgument(0)->getType() != BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem")))->getType()) {
+						getVarOutOfCrazyInspireConstruct(arg, builder);
+						arg = tryDeref(arg, builder);
+					}
+				}
+			}
+
 			const ExpressionPtr& arg2 = node->getArgument(1);
 			// check if the index argument is a (casted) integer literal
 			const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(arg2);
@@ -376,6 +392,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 				// use one argument after another
 				kernelArgs[node->getArgument(0)].push_back(arg);
 			}
+
 			return builder.intLit(0); // returning CL_SUCCESS
 	);
 
@@ -406,9 +423,12 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	);
 
 	ADD_Handler(builder, "clEnqueueNDRangeKernel",
+std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>nKernels " << kernelArgs << std::endl;
 			// get argument vector
 			ExpressionPtr k = node->getArgument(1);
+std::cout << "\nKernel before: " << k << std::endl << std::endl;
 			tryStructExtract(k, builder);
+std::cout << "Kernel after: " << k << std::endl << std::endl;
 			std::vector<core::ExpressionPtr> args = kernelArgs[k];
 			assert(args.size() > 0u && "Cannot find any arguments for kernel function");
 			// adding global and local size to the argument vector
