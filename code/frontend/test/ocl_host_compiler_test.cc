@@ -73,7 +73,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
 	fe::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host_s.cpp");
+	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
 	program = prog.convert();
 	LOG(INFO) << "Done.";
 
