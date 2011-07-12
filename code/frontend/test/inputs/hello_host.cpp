@@ -46,15 +46,15 @@ cl_event event = NULL;
 //#pragma insieme mark
 int main(int argc, char **argv) {
 	cl_int err;
-	cl_device_id device;
-	cl_command_queue queue;
+	cl_device_id* device;// = (cl_device_id*)malloc(sizeof(cl_device_id*));
+	cl_command_queue* queue;
 	cl_context context;
 	cl_kernel kernel[2];
 
-	context = clCreateContext(0, 1, &device, NULL, NULL, &err);
-	gcontext = clCreateContext(0, 1, &device, NULL, NULL, &err);
-	queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
-	gqueue = clCreateCommandQueue(gcontext, device, CL_QUEUE_PROFILING_ENABLE, &err);
+	context = clCreateContext(0, 1, &device[0], NULL, NULL, &err);
+	gcontext = clCreateContext(0, 1, device, NULL, NULL, &err);
+	queue[0] = clCreateCommandQueue(context, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
+	gqueue = clCreateCommandQueue(gcontext, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
 
 	float* host_ptr;
 	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
@@ -81,16 +81,19 @@ int main(int argc, char **argv) {
 	err = clSetKernelArg(kernel[1], 1, sizeof(cl_mem), (void*) &dev_ptr4[1]);
 	// local memory
 	clSetKernelArg(kernel[1], 2, sizeof(float) * 42, 0);
+	// private memory
+	cl_int ta = 7;
+	clSetKernelArg(kernel[1] , 3, sizeof(cl_int), &ta);
 
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
 
-	err = clEnqueueNDRangeKernel(queue, kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
+	err = clEnqueueNDRangeKernel(queue[0], kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
 
 	err = clWaitForEvents(1, &event);
 
-	clEnqueueReadBuffer(queue, dev_ptr4[1], CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
-	clFinish(queue);
+	clEnqueueReadBuffer(queue[0], dev_ptr4[1], CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	clFinish(queue[0]);
 
 	cl_ulong start, end;
     clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
@@ -100,14 +103,15 @@ int main(int argc, char **argv) {
 	clReleaseMemObject(dev_ptr1);
 	clReleaseMemObject(dev_ptr2);
 	clReleaseMemObject(dev_ptr3);
-//TODO	for(int i = 1; i < 2; ++i)
-//		clReleaseMemObject(dev_ptr4[i]);
+	for(int i = 1; i < 2; ++i)
+		clReleaseMemObject(dev_ptr4[i]);
 
-	clReleaseCommandQueue(queue);
+	clReleaseCommandQueue(queue[0]);
 	clReleaseCommandQueue(gqueue);
 	clReleaseContext(context);
 	clReleaseEvent(event);
 	clReleaseKernel(kernel[0]);
+//	free(device);
 
 	return 0;
 }
