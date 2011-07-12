@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/analysis/polyhedral.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme {
 namespace analysis {
@@ -72,9 +72,9 @@ private:
 	const IterationVector& iterVec; 
 };
 
-Set union(const Set& lhs, const Set& rhs);
+// Set union(const Set& lhs, const Set& rhs);
 
-Set intersect(const Set& lhs, const Set& rhs);
+// Set intersect(const Set& lhs, const Set& rhs);
 
 Set negate(const Set& lhs, const Set& rhs);
 

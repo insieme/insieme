@@ -70,6 +70,14 @@ find_library(xerces_LIB NAMES xerces-c PATHS $ENV{XERCES_HOME}/lib)
 # lookup perl
 find_package( Perl )
 
+# lookup ISL library
+#Fix LLVM path
+if(NOT DEFINED ISL_HOME)
+	set (ISL_HOME $ENV{ISL_HOME})
+endif()
+include_directories( ${ISL_HOME}/include )
+find_library(isl_LIB NAMES isl PATHS ${ISL_HOME}/lib)
+
 # lookup pthread library
 find_library(pthread_LIB pthread)
 # http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/
