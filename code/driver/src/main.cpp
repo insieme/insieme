@@ -358,7 +358,7 @@ void doCleanup(core::ProgramPtr& program) {
 }
 
 //***************************************************************************************
-// Check Semantics
+// Feature Extractor
 //***************************************************************************************
 void featureExtract(const core::ProgramPtr& program) {
 	if (!CommandLineOptions::FeatureExtract) { return; }
