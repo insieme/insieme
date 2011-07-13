@@ -48,6 +48,7 @@ FLAG("opencl,OCL", 			"opencl", 				OpenCL, false, "produces code by OpenCL back
 FLAG("omega,X", 			"omega", 				OmegaBackend, 	false, 	"run the Omega modul")
 FLAG("benchmark-core,B", 	"benchmark-core", 		BenchmarkCore, 	false, "runs some standard-core operations on the IR representation")
 FLAG("test,T", 				"test", 				Test, 			false, "Enable the test function which should test some pre-released features of insieme")
+FLAG("feat-extract,f",		"feat-extract",			FeatureExtract,	false,	"Enables feature extraction")
 
 FLAG("show-line-no,",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
 
