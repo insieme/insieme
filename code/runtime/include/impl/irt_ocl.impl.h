@@ -504,7 +504,7 @@ float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_com
 	return time;
 }
 
-cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
+irt_ocl_kernel*  irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
 	cl_program program = NULL;
 	size_t filesize = 0;
 	cl_int status;
@@ -591,20 +591,20 @@ cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, c
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(err_code));		
 	}
 
-	return program;
-}
-
-irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, cl_program program, const char* kernel_name) {
-	cl_int status;
-	irt_ocl_kernel* kernel = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel));
-	kernel->cl_kernel = clCreateKernel(program, kernel_name, &status);
-	IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel: \"%s\"", _irt_error_string(status));
-	kernel->type = IRT_OCL_TASK;
-	kernel->work_dim = 0;
-	kernel->global_work_size = 0;
-	kernel->local_work_size = 0;
-	kernel->dev = dev;
-	return kernel;
+	irt_ocl_kernel* kernel = NULL;
+	if ((kernel_name != NULL) && (*kernel_name != 0)) {
+		kernel = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel));
+		kernel->cl_kernel = clCreateKernel(program, kernel_name, &status);
+		IRT_ASSERT(status == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel: \"%s\"", _irt_error_string(status));
+		kernel->type = IRT_OCL_TASK;
+		kernel->work_dim = 0;
+		kernel->global_work_size = 0;
+		kernel->local_work_size = 0;
+		kernel->dev = dev;
+	}
+	err_code = clReleaseProgram(program);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));	
+	return kernel; // I want only to compile the program, with kernel name = ""
 }
 
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {

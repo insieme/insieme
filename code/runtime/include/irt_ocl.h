@@ -135,8 +135,6 @@ void irt_ocl_print_device_infos(irt_ocl_device* dev);
 float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag);
 float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag);
 
-cl_program  irt_ocl_create_program(irt_ocl_device* dev, const char* file_name, const char* build_options, irt_ocl_create_kernel_flag flag);
-
 typedef enum {IRT_OCL_NDRANGE, IRT_OCL_TASK} irt_ocl_kernel_type;
 
 typedef struct _irt_ocl_kernel {
@@ -149,7 +147,6 @@ typedef struct _irt_ocl_kernel {
 	irt_ocl_device* dev;
 } irt_ocl_kernel;
 
-irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, cl_program program, const char* kernel_name);
+irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
-void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...);

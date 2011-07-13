@@ -136,9 +136,9 @@ void insieme_init_context(irt_context* context) {
 	for (uint i = 0; i < num; ++i){	
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
+		//FIXME modify this line
 		//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", IRT_OCL_SOURCE);
-		cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
-		clReleaseProgram(program);
+		irt_ocl_create_kernel(dev, "./test_matrix_mul.cl", "", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
 	}
 	#endif
 
@@ -286,15 +286,9 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	irt_ocl_device* dev = irt_ocl_get_device(1);
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 	
-	//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
-	cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
-	irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, program, "matrix_mul");
+	//irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "matrix_mul", "", IRT_OCL_BINARY);
+	irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "./test_matrix_mul.cl", "matrix_mul", "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 	
-	//remove
-	cl_int errcode = clReleaseProgram(program);
-	if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
-
-
 	cl_long hA = (subrange[0].end-subrange[0].begin);
 	cl_long wA = (subrange[1].end-subrange[1].begin);
 	cl_long hB = (fullrange[0].end-fullrange[0].begin);
@@ -348,9 +342,6 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	irt_ocl_release_buffer(buff_B);
 	irt_ocl_release_buffer(buff_C);
 	irt_ocl_release_kernel(kernel);	
-
-	//cl_int errcode = clReleaseProgram(program);
-	//if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
 
 	irt_di_free(blockA);
 	irt_di_free(blockB);
