@@ -136,8 +136,8 @@ void insieme_init_context(irt_context* context) {
 	for (uint i = 0; i < num; ++i){	
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
-		cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", IRT_OCL_SOURCE);
-		//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
+		//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", IRT_OCL_SOURCE);
+		cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
 		clReleaseProgram(program);
 	}
 	#endif
@@ -216,7 +216,7 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_mul_implementation1(irt_work_item* wi) {
+void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
 
@@ -259,7 +259,7 @@ void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	irt_wi_end(wi);
 }
 
-void insieme_wi_mul_implementation2(irt_work_item* wi) {
+void insieme_wi_mul_implementation1(irt_work_item* wi) {
 	#ifdef USE_OPENCL
 	// get parameters
 	insieme_wi_mul_params *params = (insieme_wi_mul_params*)wi->parameters;
@@ -283,12 +283,17 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	double** B = (double**)blockB->data;
 	double** C = (double**)blockC->data;
 	
-	irt_ocl_device* dev = irt_ocl_get_device(0);
+	irt_ocl_device* dev = irt_ocl_get_device(1);
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 	
-	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
-	//cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
-	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "matrix_mul");
+	//cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "", IRT_OCL_BINARY);
+	cl_program program = irt_ocl_create_program(dev, "./test_matrix_mul.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
+	irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, program, "matrix_mul");
+	
+	//remove
+	cl_int errcode = clReleaseProgram(program);
+	if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
+
 
 	cl_long hA = (subrange[0].end-subrange[0].begin);
 	cl_long wA = (subrange[1].end-subrange[1].begin);
@@ -307,38 +312,12 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 
 	irt_ocl_buffer* buff_A = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_A);
 	irt_ocl_buffer* buff_B = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_B);
-	irt_ocl_buffer* buff_C = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_C);	
+	irt_ocl_buffer* buff_C = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_C);
 
-	cl_mem d_A = buff_A->cl_mem;
-	cl_mem d_B = buff_B->cl_mem;
-	cl_mem d_C = buff_C->cl_mem;
-	
-	cl_int errcode; 
-	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin][0], 0, NULL, NULL);
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of A, %d\n", errcode);
-	
-	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_B, CL_FALSE, 0, mem_size_B, &B[0][0], 0, NULL, NULL);
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of B, %d\n", errcode);
+	irt_ocl_write_buffer(buff_A, CL_FALSE, mem_size_A, &A[subrange[0].begin][0]);
+	irt_ocl_write_buffer(buff_B, CL_FALSE, mem_size_B, &B[0][0]);
 
-	errcode  = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&d_A);
-	if (errcode != CL_SUCCESS) printf("Error Arg d_A\n");
-
-	errcode  = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&d_B);
-	if (errcode != CL_SUCCESS) printf("Error Arg d_B\n");
-	
-	errcode  = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&d_C);
-	if (errcode != CL_SUCCESS) printf("Error Arg d_C\n");
-
-	errcode  = clSetKernelArg(kernel, 3, sizeof(cl_long), (void *)&hA);
-	if (errcode != CL_SUCCESS) printf("Error Arg Ax\n");
-
-	errcode  = clSetKernelArg(kernel, 4, sizeof(cl_long), (void *)&wA); 
-	if (errcode != CL_SUCCESS) printf("Error Arg Ay\n");
-	
-	errcode  = clSetKernelArg(kernel, 5, sizeof(cl_long), (void *)&wB);
-	if (errcode != CL_SUCCESS) printf("Error Arg By\n");
-	
-	size_t localWS = 16; 
+	size_t localWS = 16;
 	float multiplier = hA/(float)localWS;
 	if(multiplier > (int)multiplier){
 		multiplier += 1;
@@ -352,23 +331,26 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	size_t globalw = (int)multiplier * localWS;
 
 	size_t szLocalWorkSize[2] = {localWS, localWS};
-	size_t szGlobalWorkSize[2] = {globalh, globalw}; 
+	size_t szGlobalWorkSize[2] = {globalh, globalw};
+	
+	irt_ocl_set_kernel_ndrange(kernel, 2, szGlobalWorkSize, szLocalWorkSize);
 
-	errcode = clEnqueueNDRangeKernel(dev->cl_queue, kernel, 2, NULL, szGlobalWorkSize, szLocalWorkSize, 0, NULL, NULL);
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueNDRangeKernel, %d\n", errcode);
-	
-	errcode = clEnqueueReadBuffer(dev->cl_queue, d_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin][0], 0, NULL, NULL); 
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueReadBuffer of C, %d\n", errcode);
-	
+	irt_ocl_run_kernel(kernel, 6, 	sizeof(cl_mem), (void *)&(buff_A->cl_mem),
+					sizeof(cl_mem), (void *)&(buff_B->cl_mem),
+					sizeof(cl_mem), (void *)&(buff_C->cl_mem), 
+					sizeof(cl_long), (void *)&hA,
+					sizeof(cl_long), (void *)&wA,
+					sizeof(cl_long), (void *)&wB);
+
+	irt_ocl_read_buffer(buff_C, CL_TRUE, mem_size_C, &C[subrange[0].begin][0]);
+
 	irt_ocl_release_buffer(buff_A);
 	irt_ocl_release_buffer(buff_B);
-	irt_ocl_release_buffer(buff_C);		
-	
-	errcode = clReleaseKernel(kernel);
-	if (errcode != CL_SUCCESS) printf("Error Releasing kernel\n");
-	
-	errcode = clReleaseProgram(program);
-	if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
+	irt_ocl_release_buffer(buff_C);
+	irt_ocl_release_kernel(kernel);	
+
+	//cl_int errcode = clReleaseProgram(program);
+	//if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
 
 	irt_di_free(blockA);
 	irt_di_free(blockB);

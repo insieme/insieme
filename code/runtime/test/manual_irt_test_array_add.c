@@ -216,7 +216,8 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	
 	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl" , "", IRT_OCL_BINARY);
 	//cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
-	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "vector_add");
+	irt_ocl_kernel* k = irt_ocl_create_kernel(dev, program, "vector_add");
+	cl_kernel kernel = k->cl_kernel;
 
 	cl_long len_input = (wi->range.end - wi->range.begin);
 	cl_long len_output = (wi->range.end - wi->range.begin);
