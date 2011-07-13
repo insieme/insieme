@@ -34,31 +34,50 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
+#pragma once
 
-uint toll(uint x) {
-	return x;
-}
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
-#pragma insieme mark
-__kernel void hello(__global short* g, __global float* g2, __local float* l, int tollesArg) {
-	float x = 0.5;
-	__local float y;// = g;
-//    __global float4* p = (float4*)g;
-	y = x;//
-//   toll(i);
-	x = 2.0f;
+namespace insieme {
+namespace analysis {
+namespace poly {
 
-	int gid = get_global_id(0);
-/*    uint lid = get_local_id(0);
-	 l[lid] = g[gid];
-	 l[2*lid] = g[gid+i];
-/*
-	 barrier(CLK_LOCAL_MEM_FENCE);
-	 x.x = l[i];
-	 x.y = native_sin(l[lid+i]);
+/** 
+ * Stores eventual context information to keep the state of the underlying library implementation 
+ */
+struct Context { 
+	Context();
+	virtual ~Context();
+};
 
-	 x = x+y;
+/**
+ * Generic implementation of a the concept of a set which is natively supported by polyhedral
+ * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
+ * union, difference, etc...)
+ */
+struct Set {
 
-	 g[gid] = x.x * x.y;*/
-}
+	// Creates an empty Set based on the dimensionality of the given iteration vector. 
+	// Once creates, the iteration vector on which the set is based cannot been changed. 
+	Set(const Context& ctx, const IterationVector& iterVec);
+	
+	// Adds a new constraint to this set. 
+	//
+	// The iteration vector on which c is expressed must be compatibile with the iterVec
+	void addConstraint(const Constraint& c); 
+
+	~Set();
+private:
+	const Context& ctx;
+	const IterationVector& iterVec; 
+};
+
+// Set union(const Set& lhs, const Set& rhs);
+
+// Set intersect(const Set& lhs, const Set& rhs);
+
+Set negate(const Set& lhs, const Set& rhs);
+
+} // end poly namespace
+} // end analysis namespace 
+} // end insieme namespace 
