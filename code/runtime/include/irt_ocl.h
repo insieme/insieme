@@ -119,15 +119,18 @@ typedef enum {IRT_OCL_SOURCE, IRT_OCL_BINARY, IRT_OCL_NO_CACHE} irt_ocl_create_k
 typedef enum {IRT_OCL_SEC, IRT_OCL_MILLI, IRT_OCL_NANO} irt_ocl_profile_event_flag;
 
 void irt_ocl_init_devices();
-void irt_ocl_release_devices();
-
 cl_uint irt_ocl_get_num_devices();
 irt_ocl_device* irt_ocl_get_device(cl_uint id);
+void irt_ocl_release_devices();
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size);
-void irt_ocl_release_buffer(irt_ocl_buffer* buf);
-void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr);
 void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr);
+void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr);
+void irt_ocl_copy_buffer(irt_ocl_buffer* src_buf, irt_ocl_buffer* dest_buf, size_t size);
+void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size);
+void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
+void irt_ocl_release_buffer(irt_ocl_buffer* buf);
+
 
 void irt_ocl_print_device_info(irt_ocl_device* dev, char* prefix, cl_device_info param_name, char* suffix);
 void irt_ocl_print_device_infos(irt_ocl_device* dev);
@@ -148,5 +151,6 @@ typedef struct _irt_ocl_kernel {
 } irt_ocl_kernel;
 
 irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
-void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
+void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...);
+void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
