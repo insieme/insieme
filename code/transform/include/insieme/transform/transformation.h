@@ -36,33 +36,132 @@
 
 #pragma once
 
-
 #include <memory>
-
+#include <vector>
+#include "insieme/core/ast_address.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 
-namespace core {
-	class Node;
-	template<class T> class Pointer;
-	typedef Pointer<Node> NodePtr;
-}
-
 namespace transform {
 
-
 	class Transformation {
-
 	public:
-
-		virtual core::NodePtr apply(const core::NodePtr& target) =0;
-		virtual bool checkPrecondition(const core::NodePtr& target) =0;
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after) =0;
-
+		virtual core::NodeAddress apply(const core::NodeAddress& target) =0;
+		virtual bool checkPrecondition(const core::NodeAddress& target) =0;
+		virtual bool checkPostcondition(const core::NodeAddress& before, const core::NodeAddress& after) =0;
 	};
-
 
 	typedef std::shared_ptr<Transformation> TransformationPtr;
 
+	// ------------------------------------------------------------
+	class RepresentationType {
+	protected: 
+		std::string name;
+
+	public:
+		virtual std::string getName() { return name; }
+		};
+
+	class ParameterType {
+	protected: 
+		std::string name;
+		ParameterType* supertype;
+		RepresentationType* representationtype;
+
+	public:
+		virtual std::string getName() { return name; }
+		virtual ParameterType* getSuperType() { return supertype; }
+		virtual RepresentationType* getRepresentationType() { return representationtype; }
+		};
+	// ------------------------------------------------------------
+
+	// ------------------------------------------------------------
+	class Representation {
+	public:
+		virtual RepresentationType* getRepresentationType() =0;
+		};
+
+	class Parameter {
+	public:
+		virtual ParameterType* getType() =0;
+		};
+	// ------------------------------------------------------------
+
+	// ------------------------------------------------------------
+	class IntegerRepresentationType: public RepresentationType { 
+		public: IntegerRepresentationType(); 
+		};
+
+	class IntegerParameterType: public ParameterType { 
+		public: IntegerParameterType(); 
+		};
+
+	class UnrollingDepthParameterType: public ParameterType { 
+		public: UnrollingDepthParameterType(); 
+		};
+	// ------------------------------------------------------------
+
+	// ------------------------------------------------------------
+	class Types {
+	public:
+		static IntegerRepresentationType* integerRepresentationType;
+		static IntegerParameterType* integerParameterType;
+		static UnrollingDepthParameterType* unrollingDepthParameterType;
+		};
+	// ------------------------------------------------------------
+
+	// ------------------------------------------------------------
+	class IntegerRepresentation: public Representation {
+	// ------------------------------------------------------------
+		protected:
+		IntegerRepresentation(int i):i(i) { }
+
+		virtual RepresentationType* getRepresentationType() {
+			return Types::integerRepresentationType;
+			}
+		int i;
+		};
+	// ------------------------------------------------------------
+	class IntegerParameter: public IntegerRepresentation, public Parameter {
+	// ------------------------------------------------------------
+		protected:
+		IntegerParameter(int i):IntegerRepresentation(i) { }
+
+		virtual ParameterType* getType() {
+			return Types::integerParameterType;
+			}
+		};
+	// ------------------------------------------------------------
+	class UnrollingDepthParameter: public IntegerParameter {
+	// ------------------------------------------------------------
+		public:
+		UnrollingDepthParameter(int i):IntegerParameter(i) { }
+
+		virtual ParameterType* getType() {
+			return Types::unrollingDepthParameterType;
+			}
+		};
+
+	// ------------------------------------------------------------
+	class LoopUnrolling: public Transformation {
+
+		UnrollingDepthParameter* d; 
+
+		public:
+		LoopUnrolling(UnrollingDepthParameter* d):d(d) { } 
+
+ 		std::vector<Parameter*> getParameters() { 
+			return std::vector<Parameter*>({d});
+			}
+
+		virtual core::NodeAddress apply(const core::NodeAddress& target) { return core::NodeAddress(); };
+		virtual bool checkPrecondition(const core::NodeAddress& target) { return false; };
+		virtual bool checkPostcondition(const core::NodeAddress& before) { return false; };
+
+		};
+
+	// ------------------------------------------------------------
 }
+
 }
