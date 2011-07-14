@@ -483,9 +483,14 @@ public:
                 args.second = bind->getCall()->getArguments();
                 bindArgs = bind->getParameters();
             } else {
-                core::VariablePtr tmpVar = builder.variable(fun->getParameterList().at(0)->getType());
+            	for_each(fun->getParameterList(), [&](core::VariablePtr arg) {
+            		core::VariablePtr tmpVar = builder.variable(arg->getType());
+            		ADD_PARAM(args, arg, tmpVar);
+            		bindArgs.push_back(tmpVar);
+            	});
+/*                core::VariablePtr tmpVar = builder.variable(fun->getParameterList().at(0)->getType());
                 ADD_PARAM(args, fun->getParameterList().at(0), tmpVar);
-                bindArgs.push_back(tmpVar);
+                bindArgs.push_back(tmpVar);*/
             }
 
             // add needed variables to the capture list
@@ -502,7 +507,6 @@ public:
                 ADD_PARAM(args, lambdaData.localRange, kd.localRange);
             }
             core::TypePtr retTy = dynamic_pointer_cast<const core::FunctionType>(fun->getType())->getReturnType();
-
             return builder.bindExpr(bindArgs, builder.callExpr(builder.lambdaExpr(retTy, newBody, args.first), args.second));
         }
 
@@ -1053,7 +1057,6 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
 
 //    OclVisitor ov(builder, mProgram);
 //    core::visitAll(core::ProgramAddress(mProgram), ov);
-
     OclMapper oclAnnotationExpander(builder);
 
     const core::NodePtr progNode = oclAnnotationExpander.mapElement(0, mProgram);
