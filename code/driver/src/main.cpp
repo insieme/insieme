@@ -73,6 +73,7 @@
 #include "insieme/analysis/cfg.h"
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
+#include "insieme/analysis/features_collect.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -363,6 +364,7 @@ void doCleanup(core::ProgramPtr& program) {
 void featureExtract(const core::ProgramPtr& program) {
 	if (!CommandLineOptions::FeatureExtract) { return; }
 	LOG(INFO) << "Feature extract mode";
+	analysis::collectFeatures(program);
 	return;
 }
 
