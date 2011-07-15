@@ -43,12 +43,9 @@ namespace insieme {
 namespace analysis {
 
 using namespace features;
-using namespace std;
+//using namespace std;
 
 void collectFeatures(const core::ProgramPtr& program) {
-	TestVisitor visitor;
-	visitor.visit(program);
-	cout << "TESTER "<< visitor.countExpressions << endl;
 	return;
 }
 
