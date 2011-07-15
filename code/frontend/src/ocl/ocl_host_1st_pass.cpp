@@ -264,9 +264,8 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build.getNodeManager()), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
-			boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
-			boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::hasher(),
-			equal_variables(build)) {
+		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
+		hash_target_specialized(build),	equal_variables(build)) {
 	ADD_Handler(builder, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
@@ -341,7 +340,6 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	);
 
 	ADD_Handler(builder, "clSetKernelArg",
-std::cout << "Setting kernel arg\n";
 			// arg_index must either be an integer literal or all arguments have to be specified in the right order in the source code
 			ExpressionPtr kernel = node->getArgument(0);
 			// check if kernel argument is in a struct, if yes, use the struct-variable
@@ -392,7 +390,6 @@ std::cout << "Setting kernel arg\n";
 				// use one argument after another
 				kernelArgs[node->getArgument(0)].push_back(arg);
 			}
-
 			return builder.intLit(0); // returning CL_SUCCESS
 	);
 
@@ -423,14 +420,13 @@ std::cout << "Setting kernel arg\n";
 	);
 
 	ADD_Handler(builder, "clEnqueueNDRangeKernel",
-std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>nKernels " << kernelArgs << std::endl;
 			// get argument vector
 			ExpressionPtr k = node->getArgument(1);
-std::cout << "\nKernel before: " << k << std::endl << std::endl;
+
 			tryStructExtract(k, builder);
-std::cout << "Kernel after: " << k << std::endl << std::endl;
+			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
+
 			std::vector<core::ExpressionPtr> args = kernelArgs[k];
-			assert(args.size() > 0u && "Cannot find any arguments for kernel function");
 			// adding global and local size to the argument vector
 			args.push_back(node->getArgument(4) );
 			args.push_back(node->getArgument(5) );

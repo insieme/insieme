@@ -278,13 +278,15 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					// check if argument is a call to composite.ref.elem
 //					if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(k))
 	//					k = cre->getArgument(0);
-
+std::cout <<  kernelLambdas << std::endl << k << std::endl;
 					// get corresponding lambda expression
 					LambdaExprPtr lambda = kernelLambdas[k];
 					assert(lambda && "No lambda expression for kernel call found");
-					vector<ExpressionPtr>& args = kernelArgs[k];
 
-					assert(args.size() > 0 && "No arguments for call to kernel function found");
+std::cout << "Devcon 4\n";
+					assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
+std::cout << "Devcon 5\n";
+					vector<ExpressionPtr>& args = kernelArgs[k];
 
 					// make a three element vector out of the global and local size
 					const ExpressionPtr global = anythingToVec3(newCall->getArgument(2), newCall->getArgument(4));
