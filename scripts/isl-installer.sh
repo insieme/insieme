@@ -1,4 +1,4 @@
-PREFIX=$HOME/software/isl-lib
+PREFIX=/insieme-libs/isl-lib
 echo "#### Downloading ISL library ####"
 wget http://www.kotnet.org/~skimo/isl/isl-0.06.tar.bz2
 tar -xf isl-0.06.tar.bz2
