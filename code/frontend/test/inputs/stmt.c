@@ -362,6 +362,10 @@ void vector_stmt_test() {
 	"(vector.ref.elem(vector.ref.elem(v1, CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
 	b[1][1] = 0;
 
+	#pragma test \
+	"decl ref<vector<int<4>,10>> v1 = ( var(vector.init.uniform(0, 10)))"
+	int vec[10] = {0};
+
 	//#pragma test \
 	//"fun(ref<array<array<int<4>,1>,1>> v2){ }(ref.vector.to.ref.array(v1))"
 	//evil(b);
