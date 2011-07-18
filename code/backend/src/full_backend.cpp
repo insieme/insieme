@@ -76,9 +76,9 @@ namespace backend {
 		core::NodeManager& nodeManager = code->getNodeManager();
 		converter.setNodeManager(&nodeManager);
 
-		// set up the shared C node manager (for the result)
-		c_ast::SharedCNodeManager cNodeManager = c_ast::CNodeManager::createShared();
-		converter.setCNodeManager(cNodeManager);
+		// set up the shared code fragment manager (for the result)
+		c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+		converter.setFragmentManager(fragmentManager);
 
 		// set up pre-processing
 		NoPreProcessing preprocessor;

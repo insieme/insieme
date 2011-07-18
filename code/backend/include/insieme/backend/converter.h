@@ -95,7 +95,7 @@ namespace backend {
 		core::NodeManager* nodeManager;
 
 		// NOTE: shared pointer, since it has to survive the conversion process
-		c_ast::SharedCNodeManager cNodeManager;
+		c_ast::SharedCodeFragmentManager fragmentManager;
 
 
 		// ----------- Overall Conversion Configuration ----------------
@@ -178,14 +178,16 @@ namespace backend {
 			nodeManager = manager;
 		}
 
-		const c_ast::SharedCNodeManager& getCNodeManager() const {
-			assert(cNodeManager);
-			return cNodeManager;
+		const c_ast::SharedCodeFragmentManager& getFragmentManager() const {
+			assert(fragmentManager);
+			return fragmentManager;
 		}
 
-		void setCNodeManager(const c_ast::SharedCNodeManager& manager) {
-			cNodeManager = manager;
+		void setFragmentManager(const c_ast::SharedCodeFragmentManager& manager) {
+			fragmentManager = manager;
 		}
+
+		const c_ast::SharedCNodeManager& getCNodeManager() const;
 
 		ConverterConfig& getConfig() {
 			return config;

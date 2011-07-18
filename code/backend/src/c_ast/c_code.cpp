@@ -156,11 +156,11 @@ namespace c_ast {
 	}
 
 
-	CCode::CCode(const core::NodePtr& source, const CodeFragmentPtr& root)
-		: TargetCode(source), fragments(toVector(root)) { }
+	CCode::CCode(const SharedCodeFragmentManager& manager, const core::NodePtr& source, const CodeFragmentPtr& root)
+		: TargetCode(source), fragmentManager(manager), fragments(toVector(root)) { }
 
-	CCode::CCode(const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments)
-		: TargetCode(source), fragments(fragments) { }
+	CCode::CCode(const SharedCodeFragmentManager& manager, const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments)
+		: TargetCode(source), fragmentManager(manager), fragments(fragments) { }
 
 	std::ostream& CCode::printTo(std::ostream& out) const {
 
@@ -198,6 +198,14 @@ namespace c_ast {
 
 	}
 
+	// -- Code Fragment Manager -------------------------------------------------
+
+	CodeFragmentManager::~CodeFragmentManager() {
+		for_each(fragments, [](const CodeFragment* cur){
+			delete cur;
+		});
+	}
+
 
 	// -- Code Fragment Definitions ---------------------------------------------
 
@@ -211,8 +219,7 @@ namespace c_ast {
 	void CodeFragment::addRequirement(const CodeFragmentPtr& fragment) {
 		// only add if it is not a null pointer and not self
 		if (fragment && this != &*fragment) {
-			LOG(FATAL) << " # WARNING #  -  Requirements are not supported to avoid cycles of shared pointers -  # WARNING #";
-			// requirements.insert(fragment);
+			requirements.insert(fragment);
 		}
 	}
 
@@ -224,8 +231,8 @@ namespace c_ast {
 		return out;
 	}
 
-	CodeFragmentPtr DummyFragment::createNew(const FragmentSet& dependencies) {
-		return std::make_shared<DummyFragment>(dependencies);
+	CodeFragmentPtr DummyFragment::createNew(const SharedCodeFragmentManager& manager, const FragmentSet& dependencies) {
+		return manager->create<DummyFragment>(dependencies);
 	}
 
 

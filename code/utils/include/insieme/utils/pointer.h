@@ -126,11 +126,28 @@ public:
 		return ptr == NULL && other.ptr == NULL;
 	}
 	
+	/**
+	 * Inequality is implemented by simply negating the result of the equality test.
+	 *
+	 * @param other the pointer to be compared with
+	 * @return true if not equivalent, false otherwise
+	 */
 	template<typename A>
 	bool operator!=(const Ptr<A>& other) const {
 		return !(*this == other);
 	}
 
+	/**
+	 * Implements the less-than relation ship between pointers. A pointer is smaller than another pointer if the address
+	 * it is pointing to is less than the other pointers address. The type will not be considered for this comparison.
+	 *
+	 * @param other the pointer to be compared with
+	 * @return true if this pointer references a address being less than the address referenced by the given pointer.
+	 */
+	template<typename A>
+	bool operator<(const Ptr<A>& other) const {
+		return ptr < other.ptr;
+	}
 };
 
 /**

@@ -57,7 +57,7 @@ namespace backend {
 	namespace {
 
 		c_ast::CCodeFragmentPtr toCodeFragment(const ConversionContext& context, c_ast::NodePtr code) {
-			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getConverter().getCNodeManager(), code);
+			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getConverter().getFragmentManager(), code);
 			fragment->addDependencies(context.getDependencies());
 			return fragment;
 		}

@@ -384,7 +384,7 @@ namespace backend {
 			// ------------------------ add prototype -------------------------
 
 			c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
-			res->prototype = c_ast::CCodeFragment::createNew(manager, code);
+			res->prototype = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), code);
 			res->prototype->addDependencies(fun.prototypeDependencies);
 
 			// -------------------------- add lambda wrapper ---------------------------
@@ -541,7 +541,7 @@ namespace backend {
 			}
 
 			// attach definitions of closure, mapper and constructor
-			res->definitions = c_ast::CCodeFragment::createNew(manager,
+			res->definitions = c_ast::CCodeFragment::createNew(converter.getFragmentManager(),
 					manager->create<c_ast::Comment>("-- Begin - Bind Constructs ------------------------------------------------------------"),
 					closure, mapper, constructor,
 					manager->create<c_ast::Comment>("--  End  - Bind Constructs ------------------------------------------------------------"));
@@ -568,11 +568,12 @@ namespace backend {
 			// prepare some manager
 			NameManager& nameManager = converter.getNameManager();
 			core::NodeManager& manager = converter.getNodeManager();
-			auto cManager = converter.getCNodeManager();
+			auto& cManager = converter.getCNodeManager();
+			auto& fragmentManager = converter.getFragmentManager();
 
 			// create definition and declaration block
-			c_ast::CCodeFragmentPtr declarations = c_ast::CCodeFragment::createNew(cManager);
-			c_ast::CCodeFragmentPtr definitions = c_ast::CCodeFragment::createNew(cManager);
+			c_ast::CCodeFragmentPtr declarations = c_ast::CCodeFragment::createNew(fragmentManager);
+			c_ast::CCodeFragmentPtr definitions = c_ast::CCodeFragment::createNew(fragmentManager);
 
 			declarations->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Prototypes ----------"));
 			definitions->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Definitions ---------"));
@@ -769,7 +770,7 @@ namespace backend {
 					function->returnType, name, parameter, body
 			);
 
-			c_ast::CodeFragmentPtr res = c_ast::CCodeFragment::createNew(manager, wrapper);
+			c_ast::CodeFragmentPtr res = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), wrapper);
 			res->addDependency(funTypeInfo.definition);
 
 			return std::make_pair(name, res);

@@ -72,19 +72,25 @@ namespace backend {
 		auto code = getStmtConverter().convert(context, processed);
 
 		// create a code fragment out of it
-		c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(getCNodeManager(), code);
+		c_ast::CodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(fragmentManager, code);
 		fragment->addDependencies(context.getDependencies());
 		fragment->addRequirements(context.getRequirements());
 		fragment->addIncludes(context.getIncludes());
 
 		// create C code
-		auto res = c_ast::CCode::createNew(source, fragment);
+		auto res = c_ast::CCode::createNew(fragmentManager, source, fragment);
 
 		timer.stop();
 		LOG(INFO) << timer;
 
 		// job done!
 		return res;
+	}
+
+
+	const c_ast::SharedCNodeManager& Converter::getCNodeManager() const {
+		assert(fragmentManager);
+		return fragmentManager->getNodeManager();
 	}
 
 

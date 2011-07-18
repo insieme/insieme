@@ -374,7 +374,7 @@ namespace backend {
 				c_ast::IdentifierPtr identBool = manager.create("bool");
 				c_ast::TypePtr boolType = manager.create<c_ast::NamedType>(identBool);
 				c_ast::TypeDefinitionPtr def = manager.create<c_ast::TypeDefinition>(intType, identBool);
-				c_ast::CCodeFragmentPtr definition = c_ast::CCodeFragment::createNew(converter.getCNodeManager(), def);
+				c_ast::CCodeFragmentPtr definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
 
 				return createInfo(boolType, definition);
 			}
@@ -402,6 +402,7 @@ namespace backend {
 
 			// get C node manager
 			auto manager = converter.getCNodeManager();
+			auto fragmentManager = converter.getFragmentManager();
 
 			// fetch a name for the composed type
 			string name = converter.getNameManager().getName(ptr, "userdefined_type");
@@ -435,11 +436,11 @@ namespace backend {
 
 			// create declaration of named composite type
 			auto declCode = manager->create<c_ast::TypeDeclaration>(type);
-			c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(manager, declCode);
+			c_ast::CodeFragmentPtr declaration = c_ast::CCodeFragment::createNew(fragmentManager, declCode);
 
 			// create definition of named composite type
 			auto defCode = manager->create<c_ast::TypeDefinition>(type);
-			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(manager, defCode);
+			c_ast::CodeFragmentPtr definition = c_ast::CCodeFragment::createNew(fragmentManager, defCode);
 			definition->addDependencies(definitions);
 
 			// create resulting type info
@@ -527,7 +528,7 @@ namespace backend {
 
 			c_ast::NodePtr definition = manager->create<c_ast::TypeDefinition>(arrayStructType, name);
 
-			res->declaration = c_ast::CCodeFragment::createNew(manager, definition);
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), definition);
 			res->definition = res->declaration;
 			res->declaration->addDependency(elementTypeInfo->definition);
 
@@ -571,7 +572,7 @@ namespace backend {
 
 			// attach the new operator
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->constructor = c_ast::CCodeFragment::createNew(manager, cCode);
+			res->constructor = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
 			res->constructor->addDependency(res->definition);
 
 			return res;
@@ -636,7 +637,7 @@ namespace backend {
 			vectorStructType->elements.push_back(var(pureVectorType, dataElementName));
 
 			c_ast::NodePtr definition = manager->create<c_ast::TypeDefinition>(vectorStructType, name);
-			res->declaration = c_ast::CCodeFragment::createNew(manager, definition);
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), definition);
 			res->definition = res->declaration;
 			res->declaration->addDependency(elementTypeInfo->definition);
 
@@ -664,7 +665,7 @@ namespace backend {
 
 			// attach the init operator
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->initUniform = c_ast::CCodeFragment::createNew(manager, cCode);
+			res->initUniform = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
 			res->initUniform->addDependency(res->definition);
 
 			// done
@@ -761,7 +762,7 @@ namespace backend {
 
 			// attach the new operator
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->newOperator = c_ast::CCodeFragment::createNew(manager, cCode);
+			res->newOperator = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
 
 			// add dependencies
 			res->newOperator->addDependency(subType->definition);
@@ -818,7 +819,7 @@ namespace backend {
 			// construct the function type => struct including a function pointer
 			c_ast::VariablePtr varCall = var(c_ast::ptr(functionType), "call");
 			structType->elements.push_back(varCall);
-			res->declaration = c_ast::CCodeFragment::createNew(manager, manager->create<c_ast::TypeDefinition>(structType, manager->create(name)));
+			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), manager->create<c_ast::TypeDefinition>(structType, manager->create(name)));
 			res->declaration->addDependencies(declDependencies);
 			res->definition = res->declaration;
 
@@ -872,7 +873,7 @@ namespace backend {
 
 			// attach the new operator
 			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->caller = c_ast::CCodeFragment::createNew(manager, cCode);
+			res->caller = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
 			res->caller->addDependency(res->definition);
 			res->caller->addDependencies(defDependencies);
 
@@ -899,7 +900,7 @@ namespace backend {
 			c_ast::StatementPtr assign = c_ast::assign(c_ast::deref(varTarget), c_ast::init(namedType, varCall));
 			constructor->body = c_ast::compound(assign, c_ast::ret(varTarget));
 
-			res->constructor = c_ast::CCodeFragment::createNew(manager, constructor);
+			res->constructor = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), constructor);
 			res->constructor->addDependency(res->definition);
 			res->constructor->addDependencies(defDependencies);
 
@@ -946,7 +947,7 @@ namespace backend {
 				}
 
 				TypeInfo* info = new TypeInfo();
-				info->declaration = c_ast::CCodeFragment::createNew(manager, manager->create<c_ast::TypeDeclaration>(cType));
+				info->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), manager->create<c_ast::TypeDeclaration>(cType));
 				info->lValueType = cType;
 				info->rValueType = cType;
 				info->externalType = cType;

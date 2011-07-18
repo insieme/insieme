@@ -71,12 +71,13 @@ TEST(TypeManager, Basic) {
 
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -147,12 +148,13 @@ TEST(TypeManager, StructTypes) {
 
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -204,12 +206,13 @@ TEST(TypeManager, RefTypes) {
 
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -339,13 +342,14 @@ TEST(TypeManager, ArrayTypes) {
 
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.getConfig().supportArrayLength = true;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -417,13 +421,14 @@ TEST(TypeManager, ArrayTypesNoSize) {
 
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.getConfig().supportArrayLength = false;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -452,12 +457,13 @@ TEST(TypeManager, VectorTypes) {
 
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -534,12 +540,13 @@ TEST(TypeManager, FunctionTypes) {
 
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -592,12 +599,13 @@ TEST(TypeManager, RecursiveTypes) {
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 
@@ -642,12 +650,13 @@ TEST(TypeManager, MutalRecursiveTypes) {
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
 
 	Converter converter;
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 

@@ -81,14 +81,14 @@ TEST(FunctionManager, Literals) {
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
 
 	Converter converter;
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	FunctionManager funManager(converter);
 	converter.setFunctionManager(&funManager);
@@ -144,8 +144,8 @@ TEST(FunctionManager, Lambda) {
 	TestNameManager nameManager;
 	converter.setNameManager(&nameManager);
 
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
-	converter.setCNodeManager(cManager);
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
@@ -219,8 +219,8 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	TestNameManager nameManager;
 	converter.setNameManager(&nameManager);
 
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
-	converter.setCNodeManager(cManager);
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
@@ -291,8 +291,8 @@ TEST(FunctionManager, Bind) {
 	TestNameManager nameManager;
 	converter.setNameManager(&nameManager);
 
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
-	converter.setCNodeManager(cManager);
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
@@ -359,7 +359,7 @@ TEST(FunctionManager, Bind) {
 	);
 
 	// full code example - just make sure that no dependency cycle has been produced
-	toString(c_ast::CCode(bind, info.definitions));
+	toString(c_ast::CCode(fragmentManager, bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
 	ConversionContext context(converter);
