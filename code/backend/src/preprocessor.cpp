@@ -36,16 +36,117 @@
 
 #include "insieme/backend/preprocessor.h"
 
+#include "insieme/backend/ir_extensions.h"
+
 #include "insieme/core/ast_node.h"
+#include "insieme/core/ast_builder.h"
+
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/transform/manipulation.h"
+#include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 namespace backend {
 
 
+	core::NodePtr PreProcessingSequence::preprocess(core::NodeManager& manager, const core::NodePtr& code) {
+
+		// start by copying code to given target manager
+		core::NodePtr res = manager.get(code);
+
+		// apply sequence of pre-processing steps
+		for_each(preprocessor, [&](const PreProcessorPtr& cur) {
+			res = cur->preprocess(manager, res);
+		});
+
+		// return final result
+		return res;
+	}
+
+
+	// ------- concrete pre-processing step implementations ---------
+
 	core::NodePtr NoPreProcessing::preprocess(core::NodeManager& manager, const core::NodePtr& code) {
 		// just copy to target manager
 		return manager.get(code);
 	}
+
+
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      ITE to lazy-ITE Convertion
+	// --------------------------------------------------------------------------------------------------------------
+
+	class ITEConverter : public core::transform::CachedNodeMapping {
+
+		const core::LiteralPtr ITE;
+		const IRExtensions extensions;
+
+	public:
+
+		ITEConverter(core::NodeManager& manager) :
+			ITE(manager.basic.getIfThenElse()),  extensions(manager) {};
+
+		/**
+		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
+		 * the resulting call.
+		 */
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+			// do not touch types ...
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+			// apply recursively - bottom up
+			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+
+			// check current node
+			if (!core::analysis::isCallOf(res, ITE)) {
+				// no change required
+				return res;
+			}
+
+			// exchange ITE call
+			core::ASTBuilder builder(res->getNodeManager());
+			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
+			const vector<core::ExpressionPtr>& args = call->getArguments();
+			res = builder.callExpr(extensions.lazyITE, args[0], evalLazy(args[1]), evalLazy(args[2]));
+
+			// migrate annotations
+			core::transform::utils::migrateAnnotations(ptr, res);
+
+			// done
+			return res;
+		}
+
+	private:
+
+		/**
+		 * A utility method for inlining the evaluation of lazy functions.
+		 */
+		core::ExpressionPtr evalLazy(const core::ExpressionPtr& lazy) {
+
+			core::NodeManager& manager = lazy->getNodeManager();
+
+			core::FunctionTypePtr funType = core::dynamic_pointer_cast<const core::FunctionType>(lazy->getType());
+			assert(funType && "Illegal lazy type!");
+
+			// form call expression
+			core::CallExprPtr call = core::CallExpr::get(manager, funType->getReturnType(), lazy, toVector<core::ExpressionPtr>());
+			return core::transform::tryInlineToExpr(manager, call);
+		}
+	};
+
+
+
+	core::NodePtr IfThenElseInlining::preprocess(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		ITEConverter converter(manager);
+		return converter.map(code);
+	}
+
+
 
 } // end namespace backend
 } // end namespace insieme

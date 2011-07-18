@@ -34,28 +34,47 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/backend/ir_extensions.h"
 
-#include <functional>
-
-#include "insieme/backend/c_ast/forward_decls.h"
-
-#include "insieme/core/forward_decls.h"
-#include "insieme/core/expressions.h"
-
-#include "insieme/utils/map_utils.h"
+#include "insieme/core/ast_builder.h"
 
 namespace insieme {
 namespace backend {
 
-	class Converter;
-	class ConversionContext;
+	namespace {
 
-	typedef c_ast::ExpressionPtr(* OperatorConverter)(ConversionContext&, const core::CallExprPtr&);
+		/**
+		 * A factory method producing the lazy-ITE operator. The lazy-ITE operator
+		 * is the internal counterpart to the ?: operator of C / C++.
+		 */
+		core::LiteralPtr createLazyITE(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
 
-	typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
+			// construct type
+			core::TypePtr boolean = builder.getBasicGenerator().getBool();
+			core::TypePtr alpha = builder.typeVariable("a");
+			core::FunctionTypePtr funType = builder.functionType(toVector(boolean, alpha, alpha), alpha);
 
-	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager);
+			return builder.literal(funType, "lazyITE");
+		}
 
-} // end namespace backend
+		core::LiteralPtr createInitGlobals(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			// construct type ('a)->unit
+			core::TypePtr alpha = builder.typeVariable("a");
+			core::TypePtr unit = builder.getBasicGenerator().getUnit();
+			core::FunctionTypePtr funType = builder.functionType(toVector(alpha), unit);
+
+			return builder.literal(funType, "initGlobals");
+		}
+
+	}
+
+	const string IRExtensions::GLOBAL_ID = "__GLOBAL__";
+
+	IRExtensions::IRExtensions(core::NodeManager& manager) :
+			lazyITE(createLazyITE(manager)), initGlobals(createInitGlobals(manager)) { }
+
+} // end namespace simple_backend
 } // end namespace insieme

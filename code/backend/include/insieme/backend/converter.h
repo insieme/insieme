@@ -51,6 +51,7 @@ namespace backend {
 
 	// forward declaration of preprocessor
 	class PreProcessor;
+	typedef std::shared_ptr<PreProcessor> PreProcessorPtr;
 
 	// forward declaration of involved managers
 	class NameManager;
@@ -79,7 +80,7 @@ namespace backend {
 
 		// ------- The Preprocessor applied before the conversion -----------
 
-		PreProcessor* preProcessor;
+		PreProcessorPtr preProcessor;
 
 		// ------- Manager involved in the conversion process -----------
 
@@ -106,21 +107,21 @@ namespace backend {
 	public:
 
 		Converter() :
-			preProcessor(0), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(ConverterConfig::getDefault()) {}
 
 		Converter(const ConverterConfig& config) :
-			preProcessor(0), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(config) {}
 
 		backend::TargetCodePtr convert(const core::NodePtr& code);
 
-		PreProcessor& getPreProcessor() const {
+		const PreProcessorPtr& getPreProcessor() const {
 			assert(preProcessor);
-			return *preProcessor;
+			return preProcessor;
 		}
 
-		void setPreProcessor(PreProcessor* newPreProcessor) {
+		void setPreProcessor(PreProcessorPtr newPreProcessor) {
 			preProcessor = newPreProcessor;
 		}
 

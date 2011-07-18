@@ -36,26 +36,43 @@
 
 #pragma once
 
-#include <functional>
-
-#include "insieme/backend/c_ast/forward_decls.h"
-
-#include "insieme/core/forward_decls.h"
 #include "insieme/core/expressions.h"
-
-#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace backend {
 
-	class Converter;
-	class ConversionContext;
+	/**
+	 * This class offers a list of IR extensions required within the backend. Such
+	 * extensions include additional literals representing i.g. C operators or procedures of the
+	 * runtime interface.
+	 */
+	class IRExtensions {
+	public:
 
-	typedef c_ast::ExpressionPtr(* OperatorConverter)(ConversionContext&, const core::CallExprPtr&);
+		/**
+		 * The name of the global literal introduced by the preprocessor.
+		 */
+		static const string GLOBAL_ID;
 
-	typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
+		/**
+		 * Creates a new instance of this IRExtension set. The given manager is used to construct
+		 * the included literals.
+		 *
+		 * @param manager the manager to be used to construct the required types and literals
+		 */
+		IRExtensions(core::NodeManager& manager);
 
-	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager);
+		/**
+		 * A special literal representing a lazy-evaluating if-then-else operator.
+		 */
+		const core::LiteralPtr lazyITE;
 
-} // end namespace backend
+		/**
+		 * A special literal representing a function causing the initialization of the global variables.
+		 */
+		const core::LiteralPtr initGlobals;
+	};
+
+
+} // end namespace simple_backend
 } // end namespace insieme

@@ -49,6 +49,7 @@
 namespace insieme {
 namespace backend {
 
+
 	backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {
 
 
@@ -58,7 +59,7 @@ namespace backend {
 		// TODO: make pre-processor an option
 
 		// pre-process program
-		core::NodePtr processed = getPreProcessor().preprocess(getNodeManager(), source);
+		core::NodePtr processed = getPreProcessor()->preprocess(getNodeManager(), source);
 
 		timer.stop();
 		LOG(INFO) << timer;

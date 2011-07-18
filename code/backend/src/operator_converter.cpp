@@ -41,6 +41,7 @@
 #include "insieme/backend/converter.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/type_manager.h"
+#include "insieme/backend/ir_extensions.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
@@ -75,7 +76,8 @@ namespace backend {
 	}
 
 
-	OperatorConverterTable getBasicOperatorTable(const core::lang::BasicGenerator& basic) {
+	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager) {
+		const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
 
 		OperatorConverterTable res;
 
@@ -184,15 +186,19 @@ namespace backend {
 
 		// -- references --
 
-
-		res[basic.getRefVar()]    = OP_CONVERTER({ return CONVERT_ARG(0); });
-		res[basic.getRefDeref()]  = OP_CONVERTER({ return c_ast::deref(CONVERT_ARG(0)); });
 		res[basic.getRefEqual()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
+		res[basic.getRefDeref()] = OP_CONVERTER({
+			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
+			context.getDependencies().insert(info.definition);
+			return c_ast::deref(CONVERT_ARG(0));
+		});
 
 		res[basic.getRefAssign()] = OP_CONVERTER({
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
 		});
 
+		res[basic.getRefVar()] = OP_CONVERTER({ return CONVERT_ARG(0); });
 		res[basic.getRefNew()] = OP_CONVERTER( {
 
 			// get result type information
@@ -266,6 +272,12 @@ namespace backend {
 			// signature of operation:
 			//		(ref<'a>, identifier, type<'b>) -> ref<'b>
 
+			// add a dependency to the accessed type definition before accessing the type
+			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
+			context.getDependencies().insert(info.definition);
+
+			// access the type
 			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), CONVERT_ARG(1)));
 		});
 
@@ -277,6 +289,15 @@ namespace backend {
 			core::CallExprPtr callA = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(1), vector<core::ExpressionPtr>());
 			core::CallExprPtr callB = core::CallExpr::get(NODE_MANAGER, call->getType(), ARG(2), vector<core::ExpressionPtr>());
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_EXPR(callA), CONVERT_EXPR(callB));
+		});
+
+
+		// -- IR extensions --
+
+		IRExtensions ext(manager);
+		res[ext.lazyITE] = OP_CONVERTER({
+			// simple translation of lazy ITE into C/C++ ?: operators
+			return c_ast::ite(CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2));
 		});
 
 		// table complete => return table

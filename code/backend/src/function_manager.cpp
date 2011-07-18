@@ -123,7 +123,7 @@ namespace backend {
 
 	FunctionManager::FunctionManager(const Converter& converter)
 		: converter(converter), store(new detail::FunctionInfoStore(converter)),
-		  operatorTable(getBasicOperatorTable(converter.getNodeManager().getBasicGenerator())) {}
+		  operatorTable(getBasicOperatorTable(converter.getNodeManager())) {}
 
 	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable)
 		: converter(converter), store(new detail::FunctionInfoStore(converter)), operatorTable(operatorTable) {}

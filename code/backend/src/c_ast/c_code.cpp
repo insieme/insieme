@@ -194,7 +194,7 @@ namespace c_ast {
 		for_each(list, [&out](const CodeFragmentPtr& cur) {
 			out << *cur;
 		});
-		return out;
+		return out << "\n";
 
 	}
 

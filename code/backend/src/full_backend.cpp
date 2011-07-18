@@ -58,6 +58,10 @@
 namespace insieme {
 namespace backend {
 
+	namespace {
+		PreProcessorPtr getDefaultPreProcessor();
+	}
+
 
 	FullBackendPtr FullBackend::getDefault() {
 		return std::make_shared<FullBackend>();
@@ -82,7 +86,7 @@ namespace backend {
 
 		// set up pre-processing
 		NoPreProcessing preprocessor;
-		converter.setPreProcessor(&preprocessor);
+		converter.setPreProcessor(getDefaultPreProcessor());
 
 		// Prepare managers
 		SimpleNameManager nameManager;
@@ -94,7 +98,7 @@ namespace backend {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager.getBasicGenerator()));
+		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager));
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;
@@ -102,6 +106,17 @@ namespace backend {
 
 		// conduct conversion
 		return converter.convert(code);
+	}
+
+
+	namespace {
+
+		PreProcessorPtr getDefaultPreProcessor() {
+			return makePreProcessor<PreProcessingSequence>(
+					makePreProcessor<IfThenElseInlining>()
+			);
+		}
+
 	}
 
 } // end namespace backend
