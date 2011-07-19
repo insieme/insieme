@@ -59,6 +59,12 @@ protected:
 	 * The conversion context this manager is part of.
 	 */
 	Converter& cc;
+
+	/**
+	 *  
+	 */
+
+	bool createWrapper;
 	
 	/**
 	 * A map linking lambda nodes to prototype declarations within the program code.
@@ -92,7 +98,7 @@ public:
 	/**
 	 * A constructor for this manager being initialized with the conversion context.
 	 */
-	FunctionManager(Converter& conversionContext) : cc(conversionContext) { }
+	FunctionManager(Converter& conversionContext, bool wrapper = true) : cc(conversionContext), createWrapper(wrapper) { }
 
 	/**
 	 * A virtual destructor introduced to support proper sub-classing.
