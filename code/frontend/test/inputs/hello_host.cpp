@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
 
 	char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
 
-#pragma insieme kernelFile "hello.cl"
+	#pragma insieme kernelFile "hello.cl"
 	program = clCreateProgramWithSource(context, 1, (const char**) &kernelSrc, &kernelLength, &err);
 
 	kernel[1] = clCreateKernel(program, "hello", &err);
@@ -96,8 +96,8 @@ int main(int argc, char **argv) {
 	clFinish(queue[0]);
 
 	cl_ulong start, end;
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
-    clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
+	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
+	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
 
 
 	clReleaseMemObject(dev_ptr1);
