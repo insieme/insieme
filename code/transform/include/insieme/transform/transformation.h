@@ -105,9 +105,9 @@ namespace transform {
 	// ------------------------------------------------------------
 	class Types {
 	public:
-		static IntegerRepresentationType* integerRepresentationType;
-		static IntegerParameterType* integerParameterType;
-		static UnrollingDepthParameterType* unrollingDepthParameterType;
+		static IntegerRepresentationType integerRepresentationType;
+		static IntegerParameterType integerParameterType;
+		static UnrollingDepthParameterType unrollingDepthParameterType;
 		};
 	// ------------------------------------------------------------
 
@@ -118,7 +118,7 @@ namespace transform {
 		IntegerRepresentation(int i):i(i) { }
 
 		virtual RepresentationType* getRepresentationType() {
-			return Types::integerRepresentationType;
+			return &Types::integerRepresentationType;
 			}
 		int i;
 		};
@@ -129,7 +129,7 @@ namespace transform {
 		IntegerParameter(int i):IntegerRepresentation(i) { }
 
 		virtual ParameterType* getType() {
-			return Types::integerParameterType;
+			return &Types::integerParameterType;
 			}
 		};
 	// ------------------------------------------------------------
@@ -139,7 +139,7 @@ namespace transform {
 		UnrollingDepthParameter(int i):IntegerParameter(i) { }
 
 		virtual ParameterType* getType() {
-			return Types::unrollingDepthParameterType;
+			return &Types::unrollingDepthParameterType;
 			}
 		};
 

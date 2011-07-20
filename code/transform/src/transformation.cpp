@@ -52,20 +52,20 @@ namespace transform {
 	// ------------------------------------------------------------
 		name = "integer";
 		supertype = NULL;
-		representationtype = Types::integerRepresentationType;
+		representationtype = &Types::integerRepresentationType;
 		}
 	// ------------------------------------------------------------
 	UnrollingDepthParameterType::UnrollingDepthParameterType() {
 	// ------------------------------------------------------------
 		name = "unrolling_depth";
-		supertype = Types::integerParameterType;
+		supertype = &Types::integerParameterType;
 		representationtype = supertype->getRepresentationType();
 		}
 	// ------------------------------------------------------------
 
-		IntegerRepresentationType* Types::integerRepresentationType = new IntegerRepresentationType;
-		IntegerParameterType* Types::integerParameterType  = new IntegerParameterType;
-		UnrollingDepthParameterType* Types::unrollingDepthParameterType = new UnrollingDepthParameterType;
+		IntegerRepresentationType Types::integerRepresentationType;
+		IntegerParameterType Types::integerParameterType;
+		UnrollingDepthParameterType Types::unrollingDepthParameterType;
 
 		// UnrollingDepthParameter* defaultUnrollingDepth = new UnrollingDepthParameter(0); 
 		// Transformation* descrLoopUnrolling = new LoopUnrolling(defaultUnrollingDepth);
