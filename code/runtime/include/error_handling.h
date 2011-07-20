@@ -41,7 +41,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-//#define IRT_VERBOSE
+//#define IRT_VERBOSE 0
 
 #define IRT_SIG_ERR SIGUSR1
 
@@ -82,6 +82,7 @@ if(!(__condition)) { \
 	printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
 	printf(__message "\n", ##__VA_ARGS__); \
 }
+#define IRT_DEBUG_ONLY(__code__) __code__
 #else
 #define IRT_DEBUG(__message, ...)
 #endif
@@ -91,6 +92,7 @@ if(!(__condition)) { \
 #define IRT_WARN(__message, ...)
 #define IRT_INFO(__message, ...)
 #define IRT_DEBUG(__message, ...)
+#define IRT_DEBUG_ONLY(__code__)
 #endif
 
 #ifdef IRT_VERBOSE
