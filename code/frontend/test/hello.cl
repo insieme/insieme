@@ -44,21 +44,19 @@ uint toll(uint x) {
 __kernel void hello(__global short* g, __global float* g2, __local float* l, int tollesArg) {
 	float x = 0.5;
 	__local float y;// = g;
-//    __global float4* p = (float4*)g;
-	y = x;//
-//   toll(i);
+	// __global float4* p = (float4*)g;
+	y = x;
+	//toll(i);
 	x = 2.0f;
 
 	int gid = get_global_id(0);
-/*    uint lid = get_local_id(0);
-	 l[lid] = g[gid];
-	 l[2*lid] = g[gid+i];
-/*
-	 barrier(CLK_LOCAL_MEM_FENCE);
-	 x.x = l[i];
-	 x.y = native_sin(l[lid+i]);
-
-	 x = x+y;
-
-	 g[gid] = x.x * x.y;*/
+	/* uint lid = get_local_id(0);
+	l[lid] = g[gid];
+	l[2*lid] = g[gid+i];
+	
+	barrier(CLK_LOCAL_MEM_FENCE);
+	x.x = l[i];
+	x.y = native_sin(l[lid+i]);
+	x = x+y;
+	g[gid] = x.x * x.y;*/
 }
