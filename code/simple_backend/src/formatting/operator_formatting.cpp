@@ -333,7 +333,7 @@ namespace formatting {
 		ADD_FORMATTER_DETAIL(res, basic.getVectorSubscript(), false, {
 				bool isRef = call->getType()->getNodeType() == NT_RefType;
 				if (isRef) OUT("&(");
-				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
+				VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]");
 				if (isRef) OUT(")");
 		});
 

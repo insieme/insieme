@@ -46,16 +46,17 @@ namespace transform {
 	 * An enumeration of optional preprocessing steps.
 	 */
 	enum PreProcessorSteps {
-		INSTANTIATE_GENERIC_LAMBDAS 		= 1 << 0,
-		INLINE_IF_THEN_ELSE					= 1 << 1,
-		RESTORE_GLOBALS						= 1 << 2,
+		INSTANTIATE_POINTWISE				= 1 << 0,
+		INSTANTIATE_GENERIC_LAMBDAS 		= 1 << 1,
+		INLINE_IF_THEN_ELSE					= 1 << 2,
+		RESTORE_GLOBALS						= 1 << 3,
 	};
 
 
 	/**
 	 * The default selection of steps => all steps.
 	 */
-	const int ALL_STEPS = INSTANTIATE_GENERIC_LAMBDAS | INLINE_IF_THEN_ELSE | RESTORE_GLOBALS;
+	const int ALL_STEPS = INSTANTIATE_POINTWISE | INSTANTIATE_GENERIC_LAMBDAS | INLINE_IF_THEN_ELSE | RESTORE_GLOBALS;
 
 	/**
 	 * This function is applying pre-processing steps on the given code. The pre-processing includes
