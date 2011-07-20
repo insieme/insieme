@@ -41,7 +41,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#define IRT_VERBOSE 1
+//#define IRT_VERBOSE 0
 
 #define IRT_SIG_ERR SIGUSR1
 
