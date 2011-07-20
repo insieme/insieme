@@ -101,27 +101,25 @@ TEST(OpenCLBackend, Basic) {
 namespace fe = insieme::frontend;
 
 TEST(OpenCLBackend, HelloCLTest) {
-    NodeManager manager;
-    ProgramPtr program = Program::create(manager);
+	NodeManager manager;
+	ProgramPtr program = Program::create(manager);
 
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
-//	CommandLineOptions::IncludePaths.push_back(std::string("/home/klaus/insieme/test/ocl_kernel/"));
-	CommandLineOptions::Defs.push_back("INSIEME");
-//	std::cout << "Converting input program '" << string(SRC_DIR) << "hello.cl" << "' to IR...\n";
-	std::cout << "Converting input program '" << string(SRC_DIR) << "../../../test/ocl_kernel/runTestKernels.c" << "' to IR...\n";
+	CommandLineOptions::Defs.push_back("INSIEME");	
+
+	std::cout << "Converting input program '" << string(SRC_DIR) << "hello.cl" << "' to IR...\n";
 	insieme::frontend::Program prog(manager);
 
 	std::cout << SRC_DIR << std::endl;
-	prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
-//	prog.addTranslationUnit(string(SRC_DIR) + "../../../test/ocl_kernel/runTestKernels.c");
+	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");	
+	//prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
 	program = prog.convert();
 	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
 	fe::ocl::HostCompiler hc(program, manager);
 	hc.compile();
-
 
 	insieme::core::printer::PrettyPrinter pp(program);
 	std::cout << "Printing the IR: " << pp;

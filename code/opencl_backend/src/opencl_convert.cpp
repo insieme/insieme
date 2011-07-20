@@ -315,7 +315,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				for (auto&& iter = localNewValues.begin(); iter != localNewValues.end(); ++iter, ++iter2){
 					unsigned newName = (*iter)->getId(); 
 					unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
-					LOG(INFO) << newName << " " << oldName << '\n'; 
+					//LOG(INFO) << newName << " " << oldName << '\n'; 
 					backwardVarNameMap.insert(std::make_pair(newName, oldName));
 					forwardVarNameMap.insert(std::make_pair(oldName, newName));
 					qualifierMap.insert(std::make_pair(newName, *iter));
@@ -426,10 +426,8 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 		if (lambda) {
 			const CompoundStmtPtr& comp = dynamic_pointer_cast<const CompoundStmt> (lambda->getBody());
 			if (comp){
-				LOG(INFO) << "QUI SIAMO DENTRO COMP\n";
 				int size = comp->getStatements().size();
 				if (size > 2) { // FIXME: improve the pattern :)
-					LOG(INFO) << "DENTRO get_global_id\n";
 					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
 					const DeclarationStmtPtr& dec2 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[1]);
 					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[2]);
@@ -438,13 +436,11 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId()) &&
 						analysis::isCallOf(dec2->getInitialization(), builder.getBasicGenerator().getGetThreadId())
 					) {
-						LOG(INFO) << "DENTRO get_global_id 2\n";
 						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
 						core::TypeList tList;
 						tList.push_back(t);
 						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
 						CallExprPtr call = builder.callExpr(t, lit, ptr->getArguments());
-						LOG(INFO) << "DENTRO get_global_id 3\n";
 						simple_backend::StmtConverter::visitCallExpr(call);
 						return;
 					}
