@@ -135,6 +135,33 @@ TEST(FunctionCall, Pointwise) {
 }
 
 
+TEST(FunctionCall, TypeLiterals) {
+    core::NodeManager manager;
+    core::parse::IRParser parser(manager);
+
+    // create a function accepting a type literal
+
+    core::ProgramPtr program = parser.parseProgram("main: fun ()->int<4>:\
+                mainfct in { ()->int<4>:mainfct = ()->int<4>{ { \
+                    (fun(type<'a>:dtype) -> int<4> {{ \
+                        return 0; \
+                    }}(lit<type<real<4> >, type(real(4)) >) ); \
+                    return 0; \
+                } } }");
+
+    std::cout << "Program: " << *program << std::endl;
+
+    auto converted = simple_backend::SimpleBackend::getDefault()->convert(program);
+
+    std::cout << "Converted: \n" << *converted << std::endl;
+
+    string code = toString(*converted);
+    EXPECT_FALSE(code.find("<?>") != string::npos);
+
+    // test contracted form
+    EXPECT_PRED2(containsSubString, code, "__insieme_supp_0(int");
+}
+
 
 } // namespace backend
 } // namespace insieme

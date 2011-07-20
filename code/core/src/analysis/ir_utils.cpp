@@ -110,6 +110,24 @@ bool isRefOf(const NodePtr& candidate, const NodeType kind) {
 	return static_pointer_cast<const RefType>(candidate)->getElementType()->getNodeType() == kind;
 }
 
+bool isTypeLiteralType(const GenericTypePtr& type) {
+	// check family name as well as type and name of parameters
+	return type->getFamilyName() == "type"
+			&& type->getTypeParameter().size() == static_cast<std::size_t>(1)
+			&& type->getIntTypeParameter().empty();
+}
+
+bool isTypeLiteralType(const TypePtr& type) {
+
+	// check node type
+	if (type->getNodeType() != core::NT_GenericType) {
+		return false;
+	}
+
+	// forward test
+	return isTypeLiteralType(static_pointer_cast<const core::GenericType>(type));
+}
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

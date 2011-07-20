@@ -116,6 +116,24 @@ static inline TypePtr getReferencedType(const TypePtr& type) {
 	return getReferencedType(static_pointer_cast<const RefType>(type));
 }
 
+/**
+ * Tests whether the given type is a type used for type literals. Hence, whether
+ * the type is of the from type<'a> where 'a may be a variable or concrete type.
+ *
+ * @param type the type to be tested
+ * @return true if the given type is a type literal type, false otherwise
+ */
+bool isTypeLiteralType(const GenericTypePtr& type);
+
+
+/**
+ * Tests whether the given type is a type used for type literals. Hence, whether
+ * the type is of the from type<'a> where 'a may be a variable or concrete type.
+ *
+ * @param type the type to be tested
+ * @return true if the given type is a type literal type, false otherwise
+ */
+bool isTypeLiteralType(const TypePtr& type);
 
 } // end namespace utils
 } // end namespace core

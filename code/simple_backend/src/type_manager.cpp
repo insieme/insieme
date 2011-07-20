@@ -39,6 +39,7 @@
 #include "insieme/simple_backend/backend_convert.h"
 
 #include "insieme/core/types.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -212,6 +213,11 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 	}
 	if(basic.isThreadGroup(ptr)) {
 		return toTypeInfo("isbr_ThreadGroup");
+	}
+
+	if(core::analysis::isTypeLiteralType(ptr)) {
+		// this is a type literal => handle as int
+		return toTypeInfo("int");
 	}
 
 	//assert(0 && "Unhandled generic type.");

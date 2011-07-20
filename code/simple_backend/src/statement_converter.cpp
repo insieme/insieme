@@ -721,6 +721,12 @@ namespace simple_backend {
 			currentCodeFragment->addDependency(globals);
 		}
 
+		// special handling for type literals
+		if (core::analysis::isTypeLiteralType(ptr->getType())) {
+			currentCodeFragment << "0";
+			return;
+		}
+
 		// just print the value represented by the literal
 		currentCodeFragment << ptr->getValue();
 	}
