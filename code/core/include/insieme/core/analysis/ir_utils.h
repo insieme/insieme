@@ -55,6 +55,11 @@ namespace analysis {
 bool isCallOf(const NodePtr& candidate, const NodePtr& function);
 
 /**
+ * Tests whether the given node is representing a NoOP.
+ */
+bool isNoOp(const StatementPtr& candidate);
+
+/**
  * Tests whether the given node is representing a reference type to the given type.
  *
  * @param candidate the node to be tested

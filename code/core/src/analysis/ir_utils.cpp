@@ -62,6 +62,22 @@ bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
 	return *(static_pointer_cast<const CallExpr>(candidate)->getFunctionExpr()) == *function;
 }
 
+bool isNoOp(const StatementPtr& candidate) {
+
+	// check for null
+	if (!candidate) {
+		return false;
+	}
+
+	// check type of statement => must be a compound statement
+	if (candidate->getNodeType() != NT_CompoundStmt) {
+		return false;
+	}
+
+	// must be an empty compound statement
+	return static_pointer_cast<const CompoundStmt>(candidate)->getStatements().empty();
+}
+
 bool isRefOf(const NodePtr& candidate, const NodePtr& type) {
 
 	// check for null

@@ -584,7 +584,7 @@ TEST(TypeManager, FunctionTypes) {
 
 	EXPECT_PRED2(containsSubString, toC(info.constructor),
 			"static inline name* name_ctr(name* target, float(* call)(struct _name*,int,bool)) {\n"
-			"    *(target) = (name){call};\n"
+			"    (*target) = ((name){call});\n"
 			"    return target;\n"
 			"}");
 

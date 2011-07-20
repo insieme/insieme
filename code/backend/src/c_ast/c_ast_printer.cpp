@@ -190,15 +190,26 @@ namespace c_ast {
 			}
 
 			PRINT(If) {
-				out << "if (";
-				print(node->condition);
-				out << ") ";
-				print(node->thenStmt);
-				if (node->elseStmt) {
-					out << " else ";
-					print(node->elseStmt);
+
+				c_ast::StatementPtr thenStmt = node->thenStmt;
+				c_ast::StatementPtr elseStmt = node->elseStmt;
+
+				// wrap then stmt into compound block if necessary
+				if (thenStmt->getType() != c_ast::NT_Compound) {
+					thenStmt = thenStmt->getManager()->create<c_ast::Compound>(thenStmt);
 				}
-				return out;
+				out << "if (" << print(node->condition) << ") " << print(thenStmt);
+
+				// skip else stmt if not present
+				if (!node->elseStmt) {
+					return out;
+				}
+
+				// wrap else stmt into compound block if necessary
+				if (elseStmt->getType() != c_ast::NT_Compound) {
+					elseStmt = elseStmt->getManager()->create<c_ast::Compound>(elseStmt);
+				}
+				return out << " else " << print(elseStmt);
 			}
 
 			PRINT(Switch) {

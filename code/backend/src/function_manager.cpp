@@ -246,8 +246,24 @@ namespace backend {
 			return res;
 		}
 
+		// 3) test whether target is a lambda => call lambda directly, without creating a closure
+		if (fun->getNodeType() == core::NT_LambdaExpr) {
+			// obtain lambda information
+			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
 
-		// the generic fall-back solution:
+			// produce call to internal lambda
+			c_ast::CallPtr res = c_ast::call(info.function->name);
+			appendAsArguments(context, res, call->getArguments(), false);
+
+			// add dependencies and requirements
+			context.getDependencies().insert(info.prototype);
+			context.getRequirements().insert(info.definition);
+
+			// return internal function call
+			return res;
+		}
+
+		// Finally: the generic fall-back solution:
 		//		get function as a value and call it using the function-type's caller function
 
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
@@ -282,12 +298,15 @@ namespace backend {
 			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
 			return getValueInternal(context, fun, getInfo(lambda));
 		}
-		case core::NT_Variable: {
+		case core::NT_Variable:
+		case core::NT_CallExpr:
+		{
 			// variable is already representing a value
 			c_ast::NodePtr res = converter.getStmtConverter().convert(context, fun);
 			return static_pointer_cast<c_ast::Expression>(res);
 		}
 		default:
+			LOG(FATAL) << "Encountered unsupported node: " << *fun;
 			assert(false && "Unexpected Node Type!");
 			return c_ast::ExpressionPtr();
 		}
@@ -575,6 +594,9 @@ namespace backend {
 			c_ast::CCodeFragmentPtr declarations = c_ast::CCodeFragment::createNew(fragmentManager);
 			c_ast::CCodeFragmentPtr definitions = c_ast::CCodeFragment::createNew(fragmentManager);
 
+			// add requirement for definition once been declared
+			declarations->addRequirement(definitions);
+
 			declarations->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Prototypes ----------"));
 			definitions->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Definitions ---------"));
 
@@ -608,6 +630,7 @@ namespace backend {
 				core::LambdaPtr body;
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
 				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
+				info->function = codeInfo.function;
 
 				auto wrapper = resolveLambdaWrapper(codeInfo.function, funType, false);
 				info->lambdaWrapperName = wrapper.first;

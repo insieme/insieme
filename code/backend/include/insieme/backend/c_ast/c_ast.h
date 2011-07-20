@@ -200,6 +200,8 @@ namespace c_ast {
 	struct VarDecl : public Statement {
 		const VariablePtr var;
 		const ExpressionPtr init;
+		VarDecl(VariablePtr var)
+			: Statement(NT_VarDecl), var(var), init() {};
 		VarDecl(VariablePtr var, ExpressionPtr init)
 			: Statement(NT_VarDecl), var(var), init(init) {};
 		virtual bool equals(const Node& node) const;
@@ -219,9 +221,9 @@ namespace c_ast {
 		ExpressionPtr condition;
 		StatementPtr thenStmt;
 		StatementPtr elseStmt;
-		If() : Statement(NT_Compound), condition(0), thenStmt(0), elseStmt(0) {};
+		If() : Statement(NT_If), condition(0), thenStmt(0), elseStmt(0) {};
 		If(ExpressionPtr condition, StatementPtr thenStmt, StatementPtr elseStmt)
-			: Statement(NT_Compound), condition(condition), thenStmt(thenStmt), elseStmt(elseStmt) {};
+			: Statement(NT_If), condition(condition), thenStmt(thenStmt), elseStmt(elseStmt) {};
 		virtual bool equals(const Node& node) const;
 	};
 

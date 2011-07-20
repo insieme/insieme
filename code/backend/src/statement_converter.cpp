@@ -245,9 +245,9 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, ConversionContext& context) {
 		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
-		::transform(ptr->getStatements(), std::back_inserter(res->statements),
-				[&](const core::StatementPtr& cur) {
-					return this->visit(cur, context);
+		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
+			c_ast::NodePtr stmt = this->visit(cur,context);
+			if (stmt) { res->statements.push_back(stmt); }
 		});
 		return res;
 	}
@@ -278,6 +278,18 @@ namespace backend {
 
 		// register variable information
 		const VariableInfo& info = context.getVariableManager().addInfo(converter, var, location);
+
+		// add code dependency
+		context.getDependencies().insert(info.typeInfo->definition);
+
+		// test whether initialization is required ...
+		if (core::analysis::isCallOf(init, basic.getRefVar()) || core::analysis::isCallOf(init, basic.getRefNew())) {
+			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
+			if (core::analysis::isCallOf(call->getArgument(0), basic.getUndefined())) {
+				// => undefined initialization, hence no initialization!
+				return manager->create<c_ast::VarDecl>(info.var);
+			}
+		}
 
 		// TODO: handle initUndefine and init struct cases
 
@@ -315,7 +327,8 @@ namespace backend {
 		// create condition, then and else branch
 		c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
 		c_ast::StatementPtr thenBranch = convertStmt(context, ptr->getThenBody());
-		c_ast::StatementPtr elseBranch = convertStmt(context, ptr->getElseBody());
+		c_ast::StatementPtr elseBranch = (core::analysis::isNoOp(ptr->getElseBody()))
+				?c_ast::StatementPtr():convertStmt(context, ptr->getElseBody());
 
 		return manager->create<c_ast::If>(condition, thenBranch, elseBranch);
 	}

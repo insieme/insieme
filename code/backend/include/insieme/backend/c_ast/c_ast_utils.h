@@ -94,12 +94,27 @@ namespace c_ast {
 
 	// --- create a pair of parentheses -------------------------
 
-	inline ParenthesesPtr parenthese(ExpressionPtr expr) {
+	inline ExpressionPtr parenthese(ExpressionPtr expr) {
 		assert(expr && expr->getManager() && "There should be a manager!");
-		if (expr->getType() == NT_Parentheses) {
-			return static_pointer_cast<Parentheses>(expr);
+		switch(expr->getType()) {
+		case NT_Parentheses:
+		case NT_Variable:
+		case NT_Identifier:
+		case NT_Call:
+			// those do not need (extra) parentheses
+			return expr;
+		default: {}
 		}
 		return expr->getManager()->create<Parentheses>(expr);
+	}
+
+	inline NodePtr parenthese(NodePtr node) {
+		// only expressions need to be encapsulated using parentheses
+		if (ExpressionPtr expr = dynamic_pointer_cast<const Expression>(node)) {
+			return parenthese(expr);
+		}
+		// no parentheses required for the rest
+		return node;
 	}
 
 	// --- all kind of overloaded operators ---
@@ -113,7 +128,7 @@ namespace c_ast {
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {
 		assert(a && a->getManager() && "There should be a manager!");
-		return a->getManager()->create<UnaryOperation>(op, a);
+		return a->getManager()->create<UnaryOperation>(op, parenthese(a));
 	}
 
 	inline ExpressionPtr deref(IdentifierPtr expr) {
@@ -121,7 +136,7 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr deref(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::Indirection, parenthese(expr));
+		return unaryOp(UnaryOperation::Indirection, expr);
 	}
 
 	inline ExpressionPtr ref(IdentifierPtr expr) {
@@ -129,7 +144,7 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr ref(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::Reference, parenthese(expr));
+		return unaryOp(UnaryOperation::Reference, expr);
 	}
 
 	inline ExpressionPtr logicNot(ExpressionPtr expr) {
@@ -141,19 +156,19 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr preInc(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PrefixInc, parenthese(expr));
+		return unaryOp(UnaryOperation::PrefixInc, expr);
 	}
 
 	inline ExpressionPtr preDec(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PrefixDec, parenthese(expr));
+		return unaryOp(UnaryOperation::PrefixDec, expr);
 	}
 
 	inline ExpressionPtr postInc(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PostfixInc, parenthese(expr));
+		return unaryOp(UnaryOperation::PostfixInc, expr);
 	}
 
 	inline ExpressionPtr postDec(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PostfixDec, parenthese(expr));
+		return unaryOp(UnaryOperation::PostfixDec, expr);
 	}
 
 	inline ExpressionPtr sizeOf(NodePtr element) {
@@ -164,7 +179,7 @@ namespace c_ast {
 
 	inline ExpressionPtr binaryOp(BinaryOperation::BinaryOp op, NodePtr a, NodePtr b) {
 		assert(a && b && a->getManager() && a->getManager() == b->getManager() && "Manager should match!");
-		return a->getManager()->create<BinaryOperation>(op, a, b);
+		return a->getManager()->create<BinaryOperation>(op, parenthese(a), parenthese(b));
 	}
 
 	inline ExpressionPtr assign(ExpressionPtr a, ExpressionPtr b) {
@@ -248,11 +263,11 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr access(ExpressionPtr expr, const string& element) {
-		return binaryOp(BinaryOperation::MemberAccess, parenthese(expr), expr->getManager()->create(element));
+		return binaryOp(BinaryOperation::MemberAccess, expr, expr->getManager()->create(element));
 	}
 
 	inline ExpressionPtr access(ExpressionPtr expr, NodePtr element) {
-		return binaryOp(BinaryOperation::MemberAccess, parenthese(expr), element);
+		return binaryOp(BinaryOperation::MemberAccess, expr, element);
 	}
 
 	inline ExpressionPtr indirectAccess(NodePtr expr, const string& element) {
@@ -268,7 +283,7 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr subscript(ExpressionPtr expr, NodePtr subscript) {
-		return binaryOp(BinaryOperation::Subscript, parenthese(expr), subscript);
+		return binaryOp(BinaryOperation::Subscript, expr, subscript);
 	}
 
 	template<typename ... E>
@@ -278,9 +293,9 @@ namespace c_ast {
 
 	// -- Ternary Operations -------------------------------------
 
-	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, NodePtr a, NodePtr b, NodePtr c) {
+	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, ExpressionPtr a, ExpressionPtr b, ExpressionPtr c) {
 		assert(a && b && c && a->getManager() && a->getManager() == b->getManager() && a->getManager() == c->getManager() && "Manager should match!");
-		return a->getManager()->create<TernaryOperation>(op, a, b, c);
+		return a->getManager()->create<TernaryOperation>(op, parenthese(a), parenthese(b), parenthese(c));
 	}
 
 	inline ExpressionPtr ite(ExpressionPtr condition, ExpressionPtr thenValue, ExpressionPtr elseValue) {

@@ -57,6 +57,7 @@
 #define LANG_BASIC context.getConverter().getNodeManager().getBasicGenerator()
 
 #define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(Type)
+#define GET_VAR_INFO(Var) context.getVariableManager().getInfo(Var)
 
 /**
  * A macro triggering the deceding into an argument. This will result in the printing of the code
