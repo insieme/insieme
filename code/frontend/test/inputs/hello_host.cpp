@@ -59,11 +59,11 @@ int main(int argc, char **argv) {
 	float* host_ptr;
 	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
-	cl_mem dev_ptr4[2];
+	cl_mem dev_ptr4;
 
 	dev_ptr1 = clCreateBuffer(gcontext, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, 100 * sizeof(cl_short), short_host_ptr, &err);
-	dev_ptr4[0] = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
-	dev_ptr4[1] = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
+	dev_ptr4 = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
+//	dev_ptr4[1] = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
 	clEnqueueWriteBuffer(gqueue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
 	kernel[1] = clCreateKernel(program, "hello", &err);
 	err = clSetKernelArg(kernel[1], 0, sizeof(cl_mem), (void*) &dev_ptr1);
-	err = clSetKernelArg(kernel[1], 1, sizeof(cl_mem), (void*) &dev_ptr4[1]);
+	err = clSetKernelArg(kernel[1], 1, sizeof(cl_mem), (void*) &dev_ptr4);
 	// local memory
 	clSetKernelArg(kernel[1], 2, sizeof(float) * 42, 0);
 	// private memory
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 
 	err = clWaitForEvents(1, &event);
 
-	clEnqueueReadBuffer(queue[0], dev_ptr4[1], CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	clEnqueueReadBuffer(queue[0], dev_ptr4, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 	clFinish(queue[0]);
 
 	cl_ulong start, end;
@@ -103,8 +103,8 @@ int main(int argc, char **argv) {
 	clReleaseMemObject(dev_ptr1);
 	clReleaseMemObject(dev_ptr2);
 	clReleaseMemObject(dev_ptr3);
-	for(int i = 1; i < 2; ++i)
-		clReleaseMemObject(dev_ptr4[i]);
+//	for(int i = 1; i < 2; ++i)
+		clReleaseMemObject(dev_ptr4);
 
 	clReleaseCommandQueue(queue[0]);
 	clReleaseCommandQueue(gqueue);

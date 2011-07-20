@@ -103,10 +103,7 @@ backend::TargetCodePtr OpenCLBackend::convert(const NodePtr& source) const {
 
 OclStmtConvert::OclStmtConvert(Converter& conversionContext, const simple_backend::formatting::FormatTable& formats) : simple_backend::StmtConverter(conversionContext, formats) { }
 
-OclFunctionManager::OclFunctionManager(Converter& conversionContext) : FunctionManager(conversionContext) { }
-
-
-
+OclFunctionManager::OclFunctionManager(Converter& conversionContext, bool wrapper) : FunctionManager(conversionContext, wrapper) { }
 
 
 //// ------------------------------------ OclFunctionManager ---------------------------- ////
@@ -191,7 +188,7 @@ void addBuiltinAnnotation(ASTBuilder& builder, qualifierMapType& qualifierMap, V
 }
 
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
-	/*ASTBuilder builder(ptr->getNodeManager());
+	ASTBuilder builder(ptr->getNodeManager());
 	if(ptr->hasAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "Function with some Opencl Annotation...\n";
 		BaseAnnotationPtr&& annotations = ptr->getAnnotation(BaseAnnotation::KEY);
@@ -200,7 +197,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 			iter < annotations->getAnnotationListEnd(); ++iter) {
 			if(KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<KernelFctAnnotation>(*iter)) {
 				LOG(INFO) << "Function with kernel annotation...\n";
-				
+					
 				const LambdaPtr& oldLambda = ptr->getLambda();
 				const Lambda::ParamList& oldParams = oldLambda->getParameterList();
 				const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(oldLambda->getBody());
@@ -215,11 +212,14 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				// add builtin annotation for get_global_size & get_local_size to the variable
 				addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-2), "get_global_size");
 				addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-1), "get_local_size");
-				
+					
 				// new functionType
 				const core::TypeList& oldArgs = oldFuncType->getParameterTypes();
-				const core::TypePtr& retType = oldFuncType->getReturnType();
-				assert(retType->getNodeManager().basic.isUnit(retType) && "Return type of kernel functions must be void.");
+				
+				//const core::TypePtr& retType = oldFuncType->getReturnType();
+				// set the return type of the kernel to void
+				const core::TypePtr& retType = (builder.getNodeManager()).basic.getUnit();
+
 				TypeList newArgs;
 				for (uint i = 0; i < oldArgs.size()-2; i++){
 					newArgs.push_back(oldArgs.at(i));
@@ -283,7 +283,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				// declarations that we want to add to the body of the function
 				vector<DeclarationStmtPtr> newBodyDecls;
-
+				
 				for_each(localJobDecls, [&](const DeclarationStmtPtr& curDecl) {
 					unsigned newName = (curDecl->getVariable())->getId(); 
 					if (dynamic_pointer_cast<const Variable>(curDecl->getInitialization())){
@@ -319,17 +319,9 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					backwardVarNameMap.insert(std::make_pair(newName, oldName));
 					forwardVarNameMap.insert(std::make_pair(oldName, newName));
 					qualifierMap.insert(std::make_pair(newName, *iter));
-				}*/
-				
-				// PRINT
-				/*LOG(INFO) << "Qui ci arrivo" << std::endl;
-				for (varNameMapType::const_iterator it = forwardVarNameMap.begin(); it != end; ++it)
-				{
-					std::cout << it->first << " -> " << it->second<< '\n';
 				}
-				*/
 				
-				/*Lambda::ParamList newParams;
+				Lambda::ParamList newParams;
 				for (uint i = 0; i < oldParams.size()-2; i++){
 					unsigned oldName = (oldParams.at(i))->getId();
 					unsigned newName = getVarName(forwardVarNameMap, oldName);
@@ -385,9 +377,9 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 			}
 		}
 	}
-	else {*/
+	else {
 		simple_backend::StmtConverter::visitLambdaExpr(ptr);
-	//}
+	}
 }
 
 void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
@@ -429,50 +421,52 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 				}
 			}
 		}
-		// check for get_local_id & get_global_id
-		// TODO: commented out during removal of capture init type => consider bind now
-//		const CaptureInitExprPtr& cap = dynamic_pointer_cast<const CaptureInitExpr>(ptr->getFunctionExpr());
-//		if (cap){
-//			const CompoundStmtPtr& comp = dynamic_pointer_cast<const CompoundStmt>
-//						(dynamic_pointer_cast<const LambdaExpr>(cap->getLambda())->getBody());
-//			if (comp){
-//				int size = comp->getStatements().size();
-//				if (size > 2) { // FIXME: improve the pattern :)
-//					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
-//					const DeclarationStmtPtr& dec2 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[1]);
-//					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[2]);
-//
-//					if (dec1 && dec2 && swt &&
-//						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId()) &&
-//						analysis::isCallOf(dec2->getInitialization(), builder.getBasicGenerator().getGetThreadId())
-//					) {
-//						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
-//						core::TypeList tList;
-//						tList.push_back(t);
-//						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
-//						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
-//						simple_backend::StmtConverter::visitCallExpr(call);
-//						return;
-//					}
-//				}
-//				else if (size > 1) { // FIXME: improve the pattern :)
-//					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
-//					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[1]);
-//
-//					if (dec1 && swt &&
-//						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId())
-//					) {
-//						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
-//						core::TypeList tList;
-//						tList.push_back(t);
-//						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_local_id");
-//						CallExprPtr call = builder.callExpr(lit, ptr->getArguments());
-//						simple_backend::StmtConverter::visitCallExpr(call);
-//						return;
-//					}
-//				}
-//			}
-//		}
+		//check for get_local_id & get_global_id
+		const LambdaExprPtr& lambda = dynamic_pointer_cast<const LambdaExpr>(ptr->getFunctionExpr());
+		if (lambda) {
+			const CompoundStmtPtr& comp = dynamic_pointer_cast<const CompoundStmt> (lambda->getBody());
+			if (comp){
+				LOG(INFO) << "QUI SIAMO DENTRO COMP\n";
+				int size = comp->getStatements().size();
+				if (size > 2) { // FIXME: improve the pattern :)
+					LOG(INFO) << "DENTRO get_global_id\n";
+					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
+					const DeclarationStmtPtr& dec2 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[1]);
+					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[2]);
+
+					if (dec1 && dec2 && swt &&
+						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId()) &&
+						analysis::isCallOf(dec2->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+					) {
+						LOG(INFO) << "DENTRO get_global_id 2\n";
+						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+						core::TypeList tList;
+						tList.push_back(t);
+						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
+						CallExprPtr call = builder.callExpr(t, lit, ptr->getArguments());
+						LOG(INFO) << "DENTRO get_global_id 3\n";
+						simple_backend::StmtConverter::visitCallExpr(call);
+						return;
+					}
+				}
+				else if (size > 1) { // FIXME: improve the pattern :)
+					const DeclarationStmtPtr& dec1 = dynamic_pointer_cast<const DeclarationStmt>((*comp)[0]);
+					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[1]);
+
+					if (dec1 && swt &&
+						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+					) {
+						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+						core::TypeList tList;
+						tList.push_back(t);
+						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_local_id");
+						CallExprPtr call = builder.callExpr(t, lit, ptr->getArguments());
+						simple_backend::StmtConverter::visitCallExpr(call);
+						return;
+					}
+				}
+			}
+		}
 	}
 	simple_backend::StmtConverter::visitCallExpr(ptr);
 }

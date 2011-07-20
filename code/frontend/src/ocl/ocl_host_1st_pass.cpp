@@ -84,8 +84,7 @@ const ProgramPtr& loadKernelsFromFile(string path, const ASTBuilder& builder) {
 		path = root;
 	}
 
-	LOG(INFO)
-		<< "Converting kernel file '" << path << "' to IR...";
+	LOG(INFO) << "Converting kernel file '" << path << "' to IR...";
 
 	frontend::Program fkernels(builder.getNodeManager());
 	fkernels.addTranslationUnit(path);
@@ -423,7 +422,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			// get argument vector
 			ExpressionPtr k = node->getArgument(1);
 
-			tryStructExtract(k, builder);
+//			tryStructExtract(k, builder);
 			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
 
 			std::vector<core::ExpressionPtr> args = kernelArgs[k];

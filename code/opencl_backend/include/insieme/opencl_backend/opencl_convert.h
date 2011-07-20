@@ -56,7 +56,7 @@ public:
 
 class OclFunctionManager : public simple_backend::FunctionManager {
 public:
-	OclFunctionManager(simple_backend::Converter& conversionContext);
+	OclFunctionManager(simple_backend::Converter& conversionContext, bool wrapper = false);
 
 	virtual void appendFunctionParameter(const simple_backend::CodeFragmentPtr& fragment, const core::VariablePtr& param);
 	virtual void addFunctionPrefix(const simple_backend::CodeFragmentPtr& fragment, const core::LambdaPtr& lambda);
