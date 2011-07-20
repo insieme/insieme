@@ -1,6 +1,6 @@
 #pragma once
 
-#include <CL/opencl.h>
+#include <CL/cl.h>
 
 #include "errutils.h"
 

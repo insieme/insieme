@@ -89,9 +89,19 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 			param = builder.variable(argTy);
 			arg = toArray->getArgument(0);
 		} else if(toArray->getFunctionExpr() == BASIC.getRefVectorToRefArray()) {
-			argTy = toArray->getArgument(0)->getType();
-			param = builder.variable(argTy);
 			arg = toArray->getArgument(0);
+			argTy = arg->getType();
+			param = builder.variable(argTy);
+		} else if(toArray->getFunctionExpr() == BASIC.getRefVar() ) {
+			if(const CallExprPtr& vta = dynamic_pointer_cast<const CallExpr>(toArray->getArgument(0))) {
+	// throw away ref.var
+	// TODO only a dirty fix, check it
+				if(vta->getFunctionExpr() == BASIC.getVectorToArray()) {
+					arg = vta->getArgument(0);
+					argTy = arg->getType();
+					param = builder.variable(argTy);
+				}
+			}
 		} else {
 			std::cerr << "Unexpected Function: " << toArray << " of type " << toArray->getArgument(0)->getType() << std::endl;
 			assert(false && "Unexpected function in OpenCL size argument");
@@ -278,14 +288,12 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					// check if argument is a call to composite.ref.elem
 //					if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(k))
 	//					k = cre->getArgument(0);
-std::cout <<  kernelLambdas << std::endl << k << std::endl;
+
 					// get corresponding lambda expression
 					LambdaExprPtr lambda = kernelLambdas[k];
 					assert(lambda && "No lambda expression for kernel call found");
 
-std::cout << "Devcon 4\n";
 					assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
-std::cout << "Devcon 5\n";
 					vector<ExpressionPtr>& args = kernelArgs[k];
 
 					// make a three element vector out of the global and local size
