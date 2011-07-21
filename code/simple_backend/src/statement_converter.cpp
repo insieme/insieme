@@ -241,91 +241,91 @@ namespace simple_backend {
 		// TODO: remove second clause when frontend is fixed ...
 
 		// check whether program is a main program
-		if (program->isMain() || utils::isMainProgram(program)) {
-
-			// create main program + argument wrapper (if necessary)
-			CodeFragmentPtr code = CodeFragment::createNew("main function");
-
-			// add argument conversion
-			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
-			if (main->getParameterList().empty()) {
-
-				// handle main with no arguments
-				code << "int main() {" << CodeBuffer::indR << "\n";
-				convert(main->getBody(), code);
-				code << CodeBuffer::indL << ";\n}\n";
-
-				// make current code fragment depending on the main function
-				getCurrentCodeFragment()->addDependency(code);
-				return;
-			}
-
-			// create procedure header
-			code << "int main(int __argc, char** __argv) {" << CodeBuffer::indR << "\n";
-			code << "\n// encapsulating arguments within Insieme Types ...\n";
-
-			// declare parameter
-			const VariablePtr& argc = main->getParameterList()[0];
-			const VariablePtr& argv = main->getParameterList()[1];
-
-			VariableManager::VariableInfo info;
-			info.location = VariableManager::STACK;
-			cc.getVariableManager().addInfo(argc, info);
-			cc.getVariableManager().addInfo(argv, info);
-
-			cc.getNameManager().setName(argc, "argc");
-			cc.getNameManager().setName(argv, "argv");
-
-			const RefTypePtr argvType = static_pointer_cast<const RefType>(main->getParameterList()[1]->getType());
-			const ArrayTypePtr aaCharType = static_pointer_cast<const ArrayType>(argvType->getElementType());
-			const ArrayTypePtr aCharType = static_pointer_cast<const ArrayType>(aaCharType->getElementType());
-
-			string charArrayArrayName = cc.getTypeManager().getTypeName(code, aaCharType, true);
-			string charArrayName = cc.getTypeManager().getTypeName(code, aCharType, true);
-
-			// check whether the arrays length should be supported
-			bool useSize = cc.isSupportArrayLength();
-
-			code << "int argc = __argc;\n";
-			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc)" << ((useSize)?", {argc}":"") << "};\n";
-
-			// create a literal for the strlen function
-			ASTBuilder builder(cc.getNodeManager());
-			FunctionTypePtr strLenType = builder.functionType(
-					toVector<TypePtr>(builder.refType(aCharType)),
-					builder.getBasicGenerator().getUInt8());
-
-			if (useSize) {
-				LiteralPtr strlen = builder.literal(strLenType, "strlen");
-				string strlenName = cc.getFunctionManager().getFunctionName(code, strlen);
-
-				// initialize argument vector data structure
-				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
-				code << "argv.data[i] = (" << charArrayName << "){__argv[i],{" << strlenName << "(__argv[i])+1}};" << CodeBuffer::indL;
-				code << "\n}\n";
-			} else {
-				// initialize argument vector data structure
-				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
-				code << "argv.data[i] = (" << charArrayName << "){__argv[i]};" << CodeBuffer::indL;
-				code << "\n}\n";
-			}
-
-
-			// add body
-			code << "\n// ---- begin of actual code body ----\n";
-
-			convert(main->getBody(), code);
-
-			code << "\n// ----  end of actual code body  ----\n";
-
-			// complete procedure
-			code << CodeBuffer::indL << "\n";
-			code << "}\n\n";
-
-			// make current code fragment depending on the main function
-			getCurrentCodeFragment()->addDependency(code);
-
-		} else {
+//		if (program->isMain() || utils::isMainProgram(program)) {
+//
+//			// create main program + argument wrapper (if necessary)
+//			CodeFragmentPtr code = CodeFragment::createNew("main function");
+//
+//			// add argument conversion
+//			LambdaExprPtr main = static_pointer_cast<const LambdaExpr>(program->getEntryPoints()[0]);
+//			if (main->getParameterList().empty()) {
+//
+//				// handle main with no arguments
+//				code << "int main() {" << CodeBuffer::indR << "\n";
+//				convert(main->getBody(), code);
+//				code << CodeBuffer::indL << ";\n}\n";
+//
+//				// make current code fragment depending on the main function
+//				getCurrentCodeFragment()->addDependency(code);
+//				return;
+//			}
+//
+//			// create procedure header
+//			code << "int main(int __argc, char** __argv) {" << CodeBuffer::indR << "\n";
+//			code << "\n// encapsulating arguments within Insieme Types ...\n";
+//
+//			// declare parameter
+//			const VariablePtr& argc = main->getParameterList()[0];
+//			const VariablePtr& argv = main->getParameterList()[1];
+//
+//			VariableManager::VariableInfo info;
+//			info.location = VariableManager::STACK;
+//			cc.getVariableManager().addInfo(argc, info);
+//			cc.getVariableManager().addInfo(argv, info);
+//
+//			cc.getNameManager().setName(argc, "argc");
+//			cc.getNameManager().setName(argv, "argv");
+//
+//			const RefTypePtr argvType = static_pointer_cast<const RefType>(main->getParameterList()[1]->getType());
+//			const ArrayTypePtr aaCharType = static_pointer_cast<const ArrayType>(argvType->getElementType());
+//			const ArrayTypePtr aCharType = static_pointer_cast<const ArrayType>(aaCharType->getElementType());
+//
+//			string charArrayArrayName = cc.getTypeManager().getTypeName(code, aaCharType, true);
+//			string charArrayName = cc.getTypeManager().getTypeName(code, aCharType, true);
+//
+//			// check whether the arrays length should be supported
+//			bool useSize = cc.isSupportArrayLength();
+//
+//			code << "int argc = __argc;\n";
+//			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc)" << ((useSize)?", {argc}":"") << "};\n";
+//
+//			// create a literal for the strlen function
+//			ASTBuilder builder(cc.getNodeManager());
+//			FunctionTypePtr strLenType = builder.functionType(
+//					toVector<TypePtr>(builder.refType(aCharType)),
+//					builder.getBasicGenerator().getUInt8());
+//
+//			if (useSize) {
+//				LiteralPtr strlen = builder.literal(strLenType, "strlen");
+//				string strlenName = cc.getFunctionManager().getFunctionName(code, strlen);
+//
+//				// initialize argument vector data structure
+//				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
+//				code << "argv.data[i] = (" << charArrayName << "){__argv[i],{" << strlenName << "(__argv[i])+1}};" << CodeBuffer::indL;
+//				code << "\n}\n";
+//			} else {
+//				// initialize argument vector data structure
+//				code << "for(int i=0; i<argc; ++i) {" << CodeBuffer::indR << "\n";
+//				code << "argv.data[i] = (" << charArrayName << "){__argv[i]};" << CodeBuffer::indL;
+//				code << "\n}\n";
+//			}
+//
+//
+//			// add body
+//			code << "\n// ---- begin of actual code body ----\n";
+//
+//			convert(main->getBody(), code);
+//
+//			code << "\n// ----  end of actual code body  ----\n";
+//
+//			// complete procedure
+//			code << CodeBuffer::indL << "\n";
+//			code << "}\n\n";
+//
+//			// make current code fragment depending on the main function
+//			getCurrentCodeFragment()->addDependency(code);
+//
+//		} else {
 
 			// TODO: add wrapper for external access
 
@@ -334,7 +334,7 @@ namespace simple_backend {
 				// add entry point
 				this->convert(cur);
 			});
-		}
+//		}
 	}
 
 	////////////////////////////////////////////////////////////////////////// Statements
@@ -422,9 +422,6 @@ namespace simple_backend {
 			CallExprPtr call = static_pointer_cast<const CallExpr>(ptr->getInitialization());
 			visit(call->getArguments()[0]);
 		} else {
-			if (var->getType()->getNodeType() == NT_RefType && !core::analysis::isCallOf(ptr->getInitialization(), cc.getLangBasic().getRefNew())) {
-				code << "*"; // dereference the produced value
-			}
 			visit(ptr->getInitialization());
 		}
 	}
@@ -630,7 +627,7 @@ namespace simple_backend {
 				code << ")";
 
 				if (internalize) {
-					code << (cc.isSupportArrayLength()?",{1}})":"})");
+					code << "})";
 				}
 				return;
 			}

@@ -36,6 +36,11 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
+#include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/test/test_config.h"
+
 #include "insieme/simple_backend/backend_convert.h"
 
 #include "insieme/core/program.h"
@@ -129,9 +134,12 @@ TEST(FunctionCall, Pointwise) {
     string code = toString(*converted);
     EXPECT_FALSE(code.find("<?>") != string::npos);
 
-    // test contracted form
-    EXPECT_PRED2(containsSubString, code, "((__insieme_type_1){{(var_");
-    EXPECT_PRED2(containsSubString, code, ".data[0]+var_");
+    // try compiling the code fragment
+    utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-I " SRC_ROOT_DIR "simple_backend/include/insieme/simple_backend/runtime/");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
 
@@ -158,8 +166,12 @@ TEST(FunctionCall, TypeLiterals) {
     string code = toString(*converted);
     EXPECT_FALSE(code.find("<?>") != string::npos);
 
-    // test contracted form
-    EXPECT_PRED2(containsSubString, code, "__insieme_supp_0(int");
+    // try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-I " SRC_ROOT_DIR "simple_backend/include/insieme/simple_backend/runtime/");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
 }
 
 

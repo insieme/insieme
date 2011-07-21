@@ -161,11 +161,7 @@ namespace formatting {
 
 				OUT("(");
 				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
-				if (CONTEXT.isSupportArrayLength()) {
-					OUT("){0,{0}}");
-				} else {
-					OUT("){0}");
-				}
+				OUT("){0}");
 		});
 
 		ADD_FORMATTER(res, basic.getPtrEq(), {
@@ -195,42 +191,35 @@ namespace formatting {
 
 		ADD_FORMATTER(res, basic.getScalarToArray(), {
 				// get name of resulting type
-				TypeManager& typeManager = CONTEXT.getTypeManager();
-
-				const TypePtr& type = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
-				const string& name = typeManager.getTypeInfo(CODE, type).lValueName;
-				OUT("&((");
-				OUT(name);
-				OUT("){");
+//				TypeManager& typeManager = CONTEXT.getTypeManager();
+//
+//				const TypePtr& type = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
+//				const string& name = typeManager.getTypeInfo(CODE, type).lValueName;
+//				OUT("&((");
+//				OUT(name);
+//				OUT("){");
 				VISIT_ARG(0);
-				if (CONTEXT.isSupportArrayLength()) {
-					OUT(",{1}})");
-				} else {
-					OUT("})");
-				}
+//				OUT("})");
 		});
 
 		ADD_FORMATTER(res, basic.getVectorToArray(), {
 				// get name of resulting type
-				TypeManager& typeManager = CONTEXT.getTypeManager();
+//				TypeManager& typeManager = CONTEXT.getTypeManager();
+//
+//				core::NodeManager& manager = CALL->getNodeManager();
+//				core::ASTBuilder builder(manager);
+//
+//				const TypePtr array = call->getType();
+//				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
+//				OUT("((");
+//				OUT(name);
+//				OUT("){(");
+//				VISIT_ARG(0);
+//				OUT(").data})");
 
-				core::NodeManager& manager = CALL->getNodeManager();
-				core::ASTBuilder builder(manager);
-
-				const TypePtr array = call->getType();
-				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
-				OUT("((");
-				OUT(name);
-				OUT("){(");
+				OUT("(");
 				VISIT_ARG(0);
-				if (CONTEXT.isSupportArrayLength()) {
-					OUT(").data,{");
-					const VectorTypePtr& vector = static_pointer_cast<const core::VectorType>(call->getArguments()[0]->getType());
-					OUT(*vector->getSize());
-					OUT("}})");
-				} else {
-					OUT(").data})");
-				}
+				OUT(").data");
 		});
 
 		ADD_FORMATTER(res, basic.getRefVectorToRefArray(), {
@@ -247,15 +236,7 @@ namespace formatting {
 				OUT(name);
 				OUT("){(*");
 				VISIT_ARG(0);
-				if (CONTEXT.isSupportArrayLength()) {
-					OUT(").data,{");
-					const RefTypePtr& refType = static_pointer_cast<const core::RefType>(call->getArguments()[0]->getType());
-					const VectorTypePtr& vector = static_pointer_cast<const core::VectorType>(refType->getElementType());
-					OUT(*vector->getSize());
-					OUT("}})");
-				} else {
-					OUT(").data})");
-				}
+				OUT(").data})");
 		});
 
 		ADD_FORMATTER(res, basic.getVectorReduction(), {
@@ -316,14 +297,16 @@ namespace formatting {
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArraySubscript1D(), false, {
-				bool isRef = call->getType()->getNodeType() == NT_RefType;
-				if (isRef) OUT("&(");
-				VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]");
-				if (isRef) OUT(")");
+//				bool isRef = call->getType()->getNodeType() == NT_RefType;
+//				if (isRef) OUT("&(");
+//				VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]");
+//				if (isRef) OUT(")");
+				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefElem1D(), false, {
-				OUT("&((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
+//				OUT("&((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
+				OUT("(*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {
@@ -470,14 +453,14 @@ namespace formatting {
 		// string conversion
 		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, {
 
-				core::ASTBuilder builder(CONTEXT.getNodeManager());
-				TypePtr array = builder.arrayType(CONTEXT.getLangBasic().getChar());
-
-				OUT("&((");
-				OUT(CONTEXT.getTypeManager().getTypeName(CODE, array, true));
-				OUT("){");
+//				core::ASTBuilder builder(CONTEXT.getNodeManager());
+//				TypePtr array = builder.arrayType(CONTEXT.getLangBasic().getChar());
+//
+//				OUT("&((");
+//				OUT(CONTEXT.getTypeManager().getTypeName(CODE, array, true));
+//				OUT("){");
 				VISIT_ARG(0);
-				OUT("})");
+//				OUT("})");
 		});
 
 		ADD_FORMATTER(res, extended.lazyITE, {

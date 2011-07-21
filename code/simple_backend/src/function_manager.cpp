@@ -51,9 +51,6 @@ namespace {
 
 		auto parameter = funType->getParameterTypes();
 
-//		if (!captures.empty()) {
-//			ss << "void *" << ((!arguments.empty())?", ":"");
-//		}
 		ss << join(", ", parameter, [&](std::ostream& out, const TypePtr& cur) {
 			out << typeManager.getTypeName(context, cur);
 		});
