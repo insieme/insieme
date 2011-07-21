@@ -48,7 +48,7 @@ void basic_type_test() {
 	#pragma test "ref<char> v1 = ref.var('a')"
 	char d = 'a';
 
-//	#pragma test "ref<array<ref<'a>,1>> v4 = ref.var(null)"
+	#pragma test "ref<anyRef> v1 = ref.var(null)"
 	void* e;
 
 	#pragma test "ref<real<4>> v1 = ref.var(0.00f)"
@@ -69,13 +69,13 @@ void basic_type_test() {
 	#pragma test "ref<vector<vector<real<4>,1>,2>> v1 = ref.var({vector.init.uniform(cast<real<4>>(0), 1),vector.init.uniform(cast<real<4>>(0), 1)})"
 	float vvvv[][1] = { {0}, {0} };
 
-	#pragma test "ref<array<int<4>,1>> v1 = ref.var(get.null(int<4>))"	
+	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(get.null(array<int<4>,1>))"
 	int* b1 = 0;
 
-	#pragma test "ref<array<array<array<int<4>,1>,1>,1>> v1 = ref.var(get.null(array<array<int<4>,1>,1>))"
+	#pragma test "ref<ref<array<ref<array<ref<array<int<4>,1>>,1>>,1>>> v1 = ref.var(get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
 	int*** c1 = 0;
 
-	#pragma test "ref.assign(v1, get.null(array<array<int<4>,1>,1>))"
+	#pragma test "ref.assign(v1, get.null(array<ref<array<ref<array<int<4>,1>>,1>>,1>))"
 	c1 = 0; 
 
 	//#pragma test "ref<vector<char,10>> v1 = ref.var(\"Hello Mum\")"
@@ -102,7 +102,7 @@ void test_func() {
 }
 
 // Self recursive struct
-#pragma test "rec 'PersonList.{'PersonList=struct<name:array<char,1>,age:int<4>,next:array<'PersonList,1>>}"
+#pragma test "rec 'PersonList.{'PersonList=struct<name:ref<array<char,1>>,age:int<4>,next:ref<array<'PersonList,1>>>}"
 struct PersonList {
 	// cppcheck-suppress unusedStructMember
 	char* name;
@@ -117,7 +117,7 @@ struct A;
 struct B;
 struct C;
 
-#pragma test "rec 'A.{'A=struct<b:array<'B,1>,c:array<'C,1>>, 'B=struct<b:array<'C,1>>, 'C=struct<a:array<'A,1>,b:array<'B,1>>}"
+#pragma test "rec 'A.{'A=struct<b:ref<array<'B,1>>,c:ref<array<'C,1>>>, 'B=struct<b:ref<array<'C,1>>>, 'C=struct<a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
 struct A {
 	// cppcheck-suppress unusedStructMember
 	struct B* b;
@@ -125,13 +125,13 @@ struct A {
 	struct C* c;
 };
 
-#pragma test "rec 'B.{'A=struct<b:array<'B,1>,c:array<'C,1>>, 'B=struct<b:array<'C,1>>, 'C=struct<a:array<'A,1>,b:array<'B,1>>}"
+#pragma test "rec 'B.{'A=struct<b:ref<array<'B,1>>,c:ref<array<'C,1>>>, 'B=struct<b:ref<array<'C,1>>>, 'C=struct<a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
 struct B {
 	// cppcheck-suppress unusedStructMember
 	struct C* b;
 };
 
-#pragma test "rec 'C.{'A=struct<b:array<'B,1>,c:array<'C,1>>, 'B=struct<b:array<'C,1>>, 'C=struct<a:array<'A,1>,b:array<'B,1>>}"
+#pragma test "rec 'C.{'A=struct<b:ref<array<'B,1>>,c:ref<array<'C,1>>>, 'B=struct<b:ref<array<'C,1>>>, 'C=struct<a:ref<array<'A,1>>,b:ref<array<'B,1>>>}"
 struct C {
 	// cppcheck-suppress unusedStructMember
 	struct A* a;
@@ -145,19 +145,19 @@ struct B1;
 struct C1;
 struct D1;
 
-#pragma test "struct<b:array<rec 'B1.{'B1=struct<b:array<'C1,1>>, 'C1=struct<b:array<'B1,1>,d:array<struct<val:int<4>>,1>>},1>>"
+#pragma test "struct<b:ref<array<rec 'B1.{'B1=struct<b:ref<array<'C1,1>>>, 'C1=struct<b:ref<array<'B1,1>>,d:ref<array<struct<val:int<4>>,1>>>},1>>>"
 struct A1 {
 	// cppcheck-suppress unusedStructMember
 	struct B1* b;
 };
 
-#pragma test "rec 'B1.{'B1=struct<b:array<'C1,1>>, 'C1=struct<b:array<'B1,1>,d:array<struct<val:int<4>>,1>>}"
+#pragma test "rec 'B1.{'B1=struct<b:ref<array<'C1,1>>>, 'C1=struct<b:ref<array<'B1,1>>,d:ref<array<struct<val:int<4>>,1>>>}"
 struct B1 {
 	// cppcheck-suppress unusedStructMember
 	struct C1* b;
 };
 
-#pragma test "rec 'C1.{'B1=struct<b:array<'C1,1>>, 'C1=struct<b:array<'B1,1>,d:array<struct<val:int<4>>,1>>}"
+#pragma test "rec 'C1.{'B1=struct<b:ref<array<'C1,1>>>, 'C1=struct<b:ref<array<'B1,1>>,d:ref<array<struct<val:int<4>>,1>>>}"
 struct C1 {
 	// cppcheck-suppress unusedStructMember
 	struct B1* b;
@@ -173,9 +173,9 @@ struct D1 {
 
 void* malloc(int);
 
-int mem_alloc() {
+void mem_alloc() {
 
-	#pragma test "ref<array<int<4>,1>> v1 = ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>))))"
+	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>)))))"
 	int* a = malloc(4);
 
 
@@ -183,10 +183,11 @@ int mem_alloc() {
 
 enum E{ ON, OFF=10 };
 
-int test_enum() {
+void test_enum() {
 	#pragma test "ref<int<4>> v1 = ref.var(0)"
 	enum E a = ON;
 	#pragma test "ref<int<4>> v1 = ref.var(10)"
 	enum E b = OFF;
 }
+
 

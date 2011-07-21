@@ -190,7 +190,7 @@ public:
 	// constant size. For example, the canonical type for 'int A[4 + 4*100]' is
 	// a ConstantArrayType where the element type is 'int' and the size is 404
 	//
-	// The IR representation for such array will be: vector<ref<int<4>>,404>
+	// The IR representation for such array will be: vector<int<4>,404>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitConstantArrayType(const ConstantArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
@@ -221,7 +221,7 @@ public:
 	// 'int A[]' has an IncompleteArrayType where the element type is 'int'
 	// and the size is unspecified.
 	//
-	// The representation for such array will be: ref<array<int<4>>>
+	// The representation for such array will be: ref<array<int<4>,1>>
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitIncompleteArrayType(const IncompleteArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
@@ -255,7 +255,7 @@ public:
 	// type dynamically:
 	//				void foo(int x) { int Y[x]; ++x; int Z[x]; }
 	//
-	// he representation for such array will be: array<ref<int<4>>>( expr() )
+	// he representation for such array will be: array<int<4>,1>( expr() )
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitVariableArrayType(const VariableArrayType* arrTy) {
 		START_LOG_TYPE_CONVERSION( arrTy );
@@ -620,6 +620,18 @@ public:
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							POINTER TYPE (FIXME)
+	// Pointer types need to be converted into reference types within the IR.
+	// Essentially there are two options. If the pointer is pointing to a single
+	// element, e.g. int* pointing to one integer, the resulting type should be
+	//		pointer to scalar (rvalue):   int*  ---->   ref<int<4>>
+	//		pointer to scalar (lvalue):   int*  ---->   ref<ref<int<4>>>
+	//
+	// However, if the target is an array of values, the result should be
+	//		pointer to array (rvalue):   int*  ---->   ref<array<int<4>,1>>
+	//		pointer to array (lvalue):   int*  ---->   ref<ref<array<int<4>,1>>>
+	//
+	// Since the actual case can not be determined based on the type, the
+	// more general case (the array case) has to be conservatively considered.
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitPointerType(const PointerType* pointerTy) {
 		START_LOG_TYPE_CONVERSION(pointerTy);
@@ -631,7 +643,7 @@ public:
 			return convFact.mgr.basic.getAnyRef();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::TypePtr&& retTy = convFact.builder.arrayType( subTy );
+		core::TypePtr&& retTy = convFact.builder.refType(convFact.builder.arrayType( subTy ));
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

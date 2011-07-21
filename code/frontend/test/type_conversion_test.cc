@@ -130,7 +130,7 @@ TEST(TypeConversion, HandlePointerType) {
 
 	TypePtr insiemeTy = convFactory.convertType( pointerTy.getTypePtr() );
 	EXPECT_TRUE(insiemeTy);
-	EXPECT_EQ("array<int<4>,1>", insiemeTy->toString());
+	EXPECT_EQ("ref<array<int<4>,1>>", insiemeTy->toString());
 
 	operator delete (intTy);
 }
@@ -380,7 +380,7 @@ TEST(TypeConversion, HandleArrayType) {
 		QualType arrayTy = ctx.getIncompleteArrayType(ctx.getPointerType(QualType(charTy, 0)), clang::ArrayType::Normal, 0);
 		TypePtr insiemeTy = convFactory.convertType( arrayTy.getTypePtr() );
 		EXPECT_TRUE(insiemeTy);
-		EXPECT_EQ("array<array<char,1>,1>", insiemeTy->toString());
+		EXPECT_EQ("array<ref<array<char,1>>,1>", insiemeTy->toString());
 	}
 	operator delete (charTy);
 

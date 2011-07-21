@@ -158,15 +158,19 @@ handleMemAlloc(const core::ASTBuilder& builder, const core::TypePtr& type, const
 
 				const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 				// The type of the cast should be ref<array<'a>>, and the sizeof('a) need to be derived
-				assert(type->getNodeType() == core::NT_ArrayType);
-				const core::TypePtr& elemType = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
+				assert(type->getNodeType() == core::NT_RefType);
+				assert(core::analysis::getReferencedType(type)->getNodeType() == core::NT_ArrayType);
+				const core::TypePtr& elemType =
+						core::static_pointer_cast<const core::ArrayType>(
+								core::static_pointer_cast<const core::RefType>(type)->getElementType()
+						)->getElementType();
 
 				/*
 				 * The number of elements to be allocated of type 'targetType' is:
 				 * 		-> 	expr / sizeof(targetType)
 				 */
 				core::CallExprPtr&& size = builder.callExpr(
-					gen.getUnsignedIntDiv(), callExpr->getArguments().front(), getSizeOfType(builder, elemType)
+					gen.getUInt8(), gen.getUnsignedIntDiv(), callExpr->getArguments().front(), getSizeOfType(builder, elemType)
 				);
 
 				assert(elemType->getNodeType() != core::NT_RefType);
@@ -318,7 +322,7 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	if ( gen.isAnyRef(trgTy) && (*expr == *builder.literal(argTy,"0")) ) {
 		// FIXME: not sure about this being correct, we have to get a ref from a null in order to convert it to 
 		// the anyref value
-		return convertExprTo(builder, trgTy, builder.refVar( builder.callExpr( gen.getGetNull(), gen.getTypeLiteral(argTy) )) );
+		return convertExprTo(builder, trgTy, builder.callExpr( gen.getGetNull(), gen.getTypeLiteral(argTy) ) );
 	}
 
 	// [ ref<'a> -> 'a ]
@@ -638,6 +642,25 @@ class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConvert
 		return convFact.convertExpr(expr);
 	}
 
+	core::ExpressionPtr asLValue(const core::ExpressionPtr& value) {
+		// remove the top-level deref if present (implied by assignment operator)
+		const core::lang::BasicGenerator& gen = convFact.builder.getBasicGenerator();
+		if (core::analysis::isCallOf(value, gen.getRefDeref())) {
+			return static_pointer_cast<const core::CallExpr>(value)->getArgument(0);
+		}
+		return value;
+	}
+
+	core::ExpressionPtr asRValue(const core::ExpressionPtr& value) {
+		// adds a deref to expression in case expression is of a ref type
+		if (core::analysis::isRefType(value->getType())) {
+			return convFact.builder.deref(value);
+		}
+		return value;
+	}
+
+
+
 public:
 
 	// CallGraph for functions, used to resolved eventual recursive functions
@@ -761,10 +784,10 @@ public:
 		// if the cast is to a 'void*' type then we simply skip it
 		if( gen.isAnyRef(type) ) { return subExpr; }
 
-		if ( ( type->getNodeType() == core::NT_ArrayType ) && 
+		if ( ( type->getNodeType() == core::NT_RefType ) &&
 				(*subExpr == *convFact.builder.literal(subExpr->getType(),"0")) ) 
 		{
-			const core::TypePtr& subType = core::static_pointer_cast<const core::ArrayType>(type)->getElementType();
+			const core::TypePtr& subType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
 			return convFact.builder.callExpr(gen.getGetNull(), gen.getTypeLiteral(subType));
 		}
 
@@ -1038,7 +1061,7 @@ public:
 		START_LOG_EXPR_CONVERSION(membExpr);
 		const core::ASTBuilder& builder = convFact.builder;
 
-		core::ExpressionPtr&& base = Visit(membExpr->getBase());
+		core::ExpressionPtr&& base = asLValue(Visit(membExpr->getBase()));
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		if(membExpr->isArrow()) {
 			/*
@@ -1046,7 +1069,7 @@ public:
 			 * C pointers)
 			 */
 			assert( base->getType()->getNodeType() == core::NT_RefType);
-			base = getCArrayElemRef(builder, base);
+			base = asLValue(getCArrayElemRef(builder, asRValue(base)));
 		}
 
 		core::IdentifierPtr ident = builder.identifier(membExpr->getMemberDecl()->getNameAsString());
@@ -1218,9 +1241,12 @@ public:
 			 */
 			lhs = wrapVariable(binOp->getLHS());
 
+			// remove implicit dereferencing of left hand side => handled by assignment construct
+			lhs = asLValue(lhs);
+
 			// This is an assignment, we have to make sure the LHS operation is of type ref<a'>
 			assert( core::dynamic_pointer_cast<const core::RefType>(lhs->getType()) &&
-					"LHS operand must be of type ref<a'>."
+					"LHS operand must be of type ref<'a>."
 				);
 
 			rhs = convFact.castToType(core::static_pointer_cast<const core::RefType>(lhs->getType())->getElementType(), rhs);	
@@ -1352,19 +1378,19 @@ public:
 		// ++a ==> ( a=a+1, a)
 		// --a
 		case UO_PreDec:
-			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreDec);
+			subExpr = encloseIncrementOperator(asLValue(subExpr), core::lang::BasicGenerator::PreDec);
 			break;
 		// a--
 		case UO_PostDec:
-			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostDec);
+			subExpr = encloseIncrementOperator(asLValue(subExpr), core::lang::BasicGenerator::PostDec);
 			break;
 		// a++
 		case UO_PreInc:
-			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PreInc);
+			subExpr = encloseIncrementOperator(asLValue(subExpr), core::lang::BasicGenerator::PreInc);
 			break;
 		// ++a
 		case UO_PostInc:
-			subExpr = encloseIncrementOperator(subExpr, core::lang::BasicGenerator::PostInc);
+			subExpr = encloseIncrementOperator(asLValue(subExpr), core::lang::BasicGenerator::PostInc);
 			break;
 		// &a
 		case UO_AddrOf:
@@ -1382,12 +1408,20 @@ public:
 				break;
 			}
 
+			// address-of requires argument to be of l-value type
+			subExpr = asLValue(subExpr);
+
 			assert(subExpr->getType()->getNodeType() == core::NT_RefType);
 			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  subExpr );
 			break;
 		}
 		// *a
 		case UO_Deref: {
+			// obtain lValue version if necessary & possible
+			if (subExpr->getType()->getNodeType() != core::NT_RefType) {
+				subExpr = asLValue(subExpr);
+			}
+
 			assert(subExpr->getType()->getNodeType() == core::NT_RefType &&
 					"Impossible to apply * operator to an R-Value");
 			
@@ -1488,10 +1522,16 @@ public:
 		}
 
 		// IDX
-		core::ExpressionPtr&& idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
+		core::ExpressionPtr idx = convFact.tryDeref( Visit( arraySubExpr->getIdx() ) );
+		if (!gen.isUInt4(idx->getType())) {
+			idx = convFact.builder.castExpr(gen.getUInt4(), idx);
+		}
 
 		// BASE
-		core::ExpressionPtr&& base = Visit( baseExpr );
+		core::ExpressionPtr base = Visit( baseExpr );
+		if (base->getType()->getNodeType() != core::NT_RefType) {
+			base = asLValue(base); // if there is a L-value version of base, use it (conservative)
+		}
 
 		core::TypePtr opType;
 		core::LiteralPtr op;
@@ -1528,7 +1568,7 @@ public:
 		}
 
 		core::ExpressionPtr&& retExpr =
-				convFact.builder.callExpr( opType, op, base, convFact.builder.castExpr(gen.getUInt4(), idx) );
+				convFact.builder.callExpr( opType, op, base, idx);
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, arraySubExpr, convFact);
@@ -1602,6 +1642,10 @@ public:
 			// todo: C++ check whether this is a reference to a class field, or method (function).
 			assert(false && "DeclRefExpr not supported!");
 		}
+
+		// In C the deref operation is always implicit when reading a variable. Before
+		// writing to a variable, the deref will be removed.
+		retExpr = asRValue(retExpr);
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, declRef, convFact);
@@ -1769,6 +1813,11 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 
 	if ( core::analysis::isCallOf(retExpr, mgr.basic.getArrayCreate1D()) ) {
 		retExpr = builder.callExpr(builder.refType(retExpr->getType()), mgr.basic.getRefNew(), retExpr);
+	}
+
+	// if result is a reference type => create new local variable
+	if (type->getNodeType() == core::NT_RefType) {
+		return builder.callExpr(type, mgr.basic.getRefVar(), retExpr);
 	}
 
 	return castToType(type, retExpr);

@@ -66,35 +66,35 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	//    string kernelSrc = SRC_DIR + "../../frontend/test/hello.cl" + string(SRC_DIR) + "";
 	//    CommandLineOptions::Defs.push_back("KERNEL=\"/home/klaus/insieme/code/frontend/test/hello.cl\"");
 
-	CommandLineOptions::Verbosity = 2;
-	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
-
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
-	fe::Program prog(manager);
-
-	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
-	program = prog.convert();
-	LOG(INFO) << "Done.";
-
-	LOG(INFO) << "Starting OpenCL host code transformations";
-	fe::ocl::HostCompiler hc(program, manager);
-	hc.compile();
-
-	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-
-	LOG(INFO) << "Printing the IR: " << pp;
-	//    LOG(INFO) << pp;
-
-	auto errors = core::check(program, insieme::core::checks::getFullCheck());
-	std::sort(errors.begin(), errors.end());
-	for_each(errors, [](const core::Message& cur) {
-		LOG(INFO) << cur << std::endl;
-		/*        core::NodeAddress address = cur.getAddress();
-		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
-		 std::cout << "\t Context: " <<
-		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
-		 */
-	});
+//	CommandLineOptions::Verbosity = 2;
+//	core::NodeManager manager;
+//	core::ProgramPtr program = core::Program::create(manager);
+//
+//	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
+//	fe::Program prog(manager);
+//
+//	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
+//	program = prog.convert();
+//	LOG(INFO) << "Done.";
+//
+//	LOG(INFO) << "Starting OpenCL host code transformations";
+//	fe::ocl::HostCompiler hc(program, manager);
+//	hc.compile();
+//
+//	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+//
+//	LOG(INFO) << "Printing the IR: " << pp;
+//	//    LOG(INFO) << pp;
+//
+//	auto errors = core::check(program, insieme::core::checks::getFullCheck());
+//	std::sort(errors.begin(), errors.end());
+//	for_each(errors, [](const core::Message& cur) {
+//		LOG(INFO) << cur << std::endl;
+//		/*        core::NodeAddress address = cur.getAddress();
+//		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
+//		 std::cout << "\t Context: " <<
+//		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
+//		 */
+//	});
 
 }
