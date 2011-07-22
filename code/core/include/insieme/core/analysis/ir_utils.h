@@ -44,6 +44,14 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+/**
+ * Tests whether the call referenced by the given pointer is a call to the given function.
+ *
+ * @param candidate the node to be tested
+ * @param function the function to be tested for
+ * @return true if so, false otherwise
+ */
+bool isCallOf(const CallExprPtr& candidate, const NodePtr& function);
 
 /**
  * Tests whether the node referenced by the given pointer is a call to the given function.

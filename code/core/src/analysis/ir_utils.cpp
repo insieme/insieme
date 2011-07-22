@@ -46,6 +46,17 @@ namespace core {
 namespace analysis {
 
 
+bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
+
+	// check for null
+	if (!candidate) {
+		return false;
+	}
+
+	// check invoked function
+	return *(candidate->getFunctionExpr()) == *function;
+}
+
 bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
 
 	// check for null
@@ -59,7 +70,7 @@ bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
 	}
 
 	// check invoked function
-	return *(static_pointer_cast<const CallExpr>(candidate)->getFunctionExpr()) == *function;
+	return isCallOf(static_pointer_cast<const CallExpr>(candidate), function);
 }
 
 bool isNoOp(const StatementPtr& candidate) {

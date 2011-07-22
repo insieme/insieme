@@ -122,7 +122,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (*retType != *resType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
-						format("Invalid return type - expected: %s, actual: %s - function type: %s",
+						format("Invalid result type of call expression - expected: %s, actual: %s - function type: %s",
 								toString(*retType).c_str(),
 								toString(*resType).c_str(),
                                 toString(*functionType).c_str()),

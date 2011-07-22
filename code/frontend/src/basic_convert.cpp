@@ -512,7 +512,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
-
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
 		// this variable is extern

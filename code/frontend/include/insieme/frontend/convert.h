@@ -116,6 +116,11 @@ class ConversionFactory : public boost::noncopyable {
 		// This variable points to the current mu variable representing the start of the recursion
 		core::VariablePtr currVar;
 
+		// This variable stores the list of parameters passed as an argument to the currently processed
+		// function.
+		typedef const vector<core::VariablePtr>* ParameterList;
+		ParameterList curParameter;
+
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// 						Recursive Type resolution
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -156,7 +161,7 @@ class ConversionFactory : public boost::noncopyable {
 		WrapRefMap wrapRefMap;
 
 		ConversionContext() :
-			isRecSubFunc(false), isResolvingRecFuncBody(false), isRecSubType(false), isResolvingFunctionType(false) { }
+			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false) { }
 	};
 
 	ConversionContext 		ctx;
