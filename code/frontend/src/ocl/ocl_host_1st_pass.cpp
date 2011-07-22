@@ -495,6 +495,11 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			return builder.intLit(0);
 	);
 
+	ADD_Handler(builder, "clUnloadCompiler",
+			// return cl_success
+			return builder.intLit(0);
+	);
+
 	// DEPRECATED, but used in the NVIDIA examples
 	ADD_Handler(builder, "clSetCommandQueueProperty",
 			// return cl_success
