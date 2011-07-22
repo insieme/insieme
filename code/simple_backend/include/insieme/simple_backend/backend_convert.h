@@ -83,15 +83,12 @@ namespace simple_backend {
 		JobManager* jobManager;
 		core::NodeManager* nodeManager;
 
-		// A list of options influencing the code generation
-		const bool supportArrayLength;
-
 	public:
 
 		/**
 		 * A default constructor for this converter. All internal managers will be set to null.
 		 */
-		Converter(bool supportArrayLength = false) : supportArrayLength(supportArrayLength) {}
+		Converter() {}
 
 		/**
 		 * A constructor allowing the explicit creation of a converter of this type. The given manager are used for
@@ -105,7 +102,7 @@ namespace simple_backend {
 		 * @param nodeManager the node manager to be used for creating and maintaining intermediate IR nodes
 		 */
 		Converter(StmtConverter& stmtConverter, NameManager& nameManager, TypeManager& typeManager, VariableManager& varManager, FunctionManager& funcMan, core::NodeManager& nodeManager)
-			: stmtConverter(&stmtConverter), nameManager(&nameManager), typeManager(&typeManager), variableManager(&varManager), functionManager(&funcMan), nodeManager(&nodeManager), supportArrayLength(true) { }
+			: stmtConverter(&stmtConverter), nameManager(&nameManager), typeManager(&typeManager), variableManager(&varManager), functionManager(&funcMan), nodeManager(&nodeManager) { }
 
 
 		/**
@@ -182,10 +179,6 @@ namespace simple_backend {
 		const core::lang::BasicGenerator& getLangBasic() const {
 			assert(nodeManager);
 			return nodeManager->basic;
-		}
-
-		const bool isSupportArrayLength() const {
-			return supportArrayLength;
 		}
 
 	};

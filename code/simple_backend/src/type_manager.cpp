@@ -323,16 +323,23 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 		lvalue = lvalue + "*";
 	}
 
+	auto nodeType = ptr->getElementType()->getNodeType();
+	if (nodeType == NT_ArrayType) {
+		// no distinction between r / l value representation
+		rvalue = lvalue;
+	}
+
 	// special handling of references to vectors and arrays
 	string externalName = subType.externName;
-	auto nodeType = ptr->getElementType()->getNodeType();
 	if (nodeType != NT_ArrayType && nodeType != NT_VectorType) {
 		 externalName = externalName + "*";
 	}
 
 	string externalization = "((" + externalName + ")(%s))";
-	if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
+	if (nodeType == NT_VectorType) {
 		externalization = "((" + externalName + ")((*(%s)).data))";
+	} else if (nodeType == NT_ArrayType) {
+		externalization = "%s";
 	}
 
 	// ---------------- add a new operator ------------------------
@@ -405,12 +412,6 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
 			externalName, externalName + " %s", "(%s).data", code);
 
-//	TODO: remove if vector-is-a-struct works out!
-//	// default handling
-//	TypeManager::TypeInfo res = resolveRefOrVectorOrArrayType(ptr);
-//	res.rValueName = Entry::UNSUPPORTED;
-//	res.paramPattern = Entry::UNSUPPORTED;
-//	return res;
 }
 
 TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
@@ -425,11 +426,7 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 		dim = static_pointer_cast<const ConcreteIntTypeParam>(dimPtr)->getValue();
 	}
 
-	// otherwise: create a struct representing the array type
-
-	// fetch name for the array type
-	string name = getNameManager().getName(ptr);
-
+	// array types are represented via pointers to the element types
 
 	// look up element type info
 	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
@@ -440,18 +437,8 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 		return pos->second;
 	}
 
-	// create a new code fragment for the struct definition
-	CodeFragmentPtr definition = CodeFragment::createNew("array type definition of " + name + " <=> " + toString(*ptr));
-	definition->addDependency(elementTypeInfo.declaration);
-
-	// see whether the size should be stored within an array
-	bool useSize = converter.isSupportArrayLength();
-
-	// add array-struct definition
-	definition << "typedef struct _" << name << " { \n";
-	definition << "    " << elementTypeInfo.lValueName << times("*", dim) << " data;\n";
-	if (useSize) definition << "    " << "unsigned size[" << dim << "];\n";
-	definition << "} " + name + ";\n";
+	// create the name of the resulting array (element name followed by *)
+	string name = elementTypeInfo.externName + toString(times("*", dim));
 
 	// ---------------------- add constructor ---------------------
 	CodeFragmentPtr utils = CodeFragment::createNew("array type utils of " + name + " <=> " + toString(*ptr));
@@ -462,7 +449,7 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	for (unsigned i=0; i<dim; i++) {
 		utils << "unsigned s" << (i+1);
 		if (i!=dim-1) {
-			definition << ",";
+			utils << ",";
 		}
 	}
 	utils << ") {\n";
@@ -470,25 +457,11 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	for (unsigned i=0; i<dim; i++) {
 		utils << "*s" << (i+1);
 	}
-	utils << ")";
-
-	if (useSize) {
-		utils << ",{";
-		for (unsigned i=0; i<dim; i++) {
-			utils << "s" << (i+1);
-			if (i!=dim-1) {
-				utils << ",";
-			}
-		}
-		utils << "}";
-	}
-
-	utils << "});\n}\n";
+	utils << ")});\n}\n";
 
 	string externalName = elementTypeInfo.externName + toString(times("*", dim));
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
-			externalName, externalName + " %s", "(%s).data", definition, definition, utils);
-
+			name, name + " %s", "%s", CodeFragmentPtr(), CodeFragmentPtr(),utils);
 }
 
 TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {
