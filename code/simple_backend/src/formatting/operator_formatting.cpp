@@ -116,9 +116,9 @@ namespace formatting {
 
 				CODE->addDependency(info.utilities);
 
-				CODE << "_ref_new_" << CONTEXT.getNameManager().getName(resType) << "(";
+//				CODE << "_ref_new_" << CONTEXT.getNameManager().getName(resType) << "(";
 				VISIT_ARG(0);
-				CODE << ")";
+//				CODE << ")";
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getRefDelete(), false, {
@@ -136,39 +136,26 @@ namespace formatting {
 				const TypePtr& type = ARG(0)->getType();
 				assert(type->getNodeType() == NT_RefType && "Cannot free a non-ref type!");
 
-				OUT("free((*");
+				OUT("free(");
 				VISIT_ARG(0);
-				OUT(")");
-
-				const TypePtr& elementType = static_pointer_cast<const RefType>(type)->getElementType();
-				auto elementNodeType = elementType->getNodeType();
-				if (elementNodeType == NT_ArrayType) {
-					OUT(".data");
-				}
 				OUT(")");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getIsNull(), false, {
 				OUT("(");
 				VISIT_ARG(0);
-				OUT(".data==0)");
+				OUT("==0)");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getGetNull(), false, {
-
-				// the name of the result type
-				const TypePtr& resType = CALL->getType();
-
-				OUT("(");
-				OUT(CONTEXT.getTypeManager().getTypeName(CODE, resType));
-				OUT("){0}");
+				// this is just 0 (the rest is implicit in C)
+				OUT("0");
 		});
 
 		ADD_FORMATTER(res, basic.getPtrEq(), {
 				VISIT_ARG(0);
-				OUT(".data == ");
+				OUT(" == ");
 				VISIT_ARG(1);
-				OUT(".data");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getRefToAnyRef(), false, {
@@ -232,7 +219,8 @@ namespace formatting {
 				const TypePtr array = call->getType();
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
 
-				OUT("&((");
+//				OUT("&((");
+				OUT("((");
 				OUT(name);
 				OUT("){(*");
 				VISIT_ARG(0);
@@ -288,12 +276,18 @@ namespace formatting {
 				const TypeManager::TypeInfo& info = CONTEXT.getTypeManager().getTypeInfo(CODE, CALL->getType());
 				const string& typeName = info.rValueName;
 
-				CODE->addDependency(info.utilities);
+				const core::TypePtr elementType = static_pointer_cast<const core::ArrayType>(CALL->getType())->getElementType();
+				const TypeManager::TypeInfo& elemInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, CALL->getType());
+				const string& elementName = elemInfo.rValueName;
 
+				CODE->addDependency(info.utilities);
+				OUT("((");
 				OUT(typeName);
-				OUT("_ctr(");
+				OUT("){malloc(sizeof(");
+				OUT(elementName);
+				OUT(")*");
 				VISIT_ARG(1);
-				OUT(")");
+				OUT(")})");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArraySubscript1D(), false, {
@@ -306,7 +300,7 @@ namespace formatting {
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefElem1D(), false, {
 //				OUT("&((*"); VISIT_ARG(0); OUT(").data["); VISIT_ARG(1); OUT("]"); OUT(")");
-				OUT("(*"); VISIT_ARG(0); OUT(")["); VISIT_ARG(1); OUT("]");
+				OUT("&("); VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("])");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefProjection1D(), false, {

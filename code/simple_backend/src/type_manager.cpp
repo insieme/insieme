@@ -319,9 +319,9 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	TypeInfo subType = resolveType(ptr->getElementType());
 	string lvalue = subType.lValueName;
 	string rvalue = subType.lValueName + "*";
-	if (ptr->getElementType()->getNodeType() == NT_RefType) {
-		lvalue = lvalue + "*";
-	}
+//	if (ptr->getElementType()->getNodeType() == NT_RefType) {
+//		lvalue = lvalue + "*";
+//	}
 
 	auto nodeType = ptr->getElementType()->getNodeType();
 	if (nodeType == NT_ArrayType) {
@@ -344,26 +344,24 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 
 	// ---------------- add a new operator ------------------------
 
-	CodeFragmentPtr code = CodeFragment::createNew("New operator for type " + toString(*ptr));
-	code->addDependency(subType.definition);
-
-	// add struct definition
-	string name = getNameManager().getName(ptr);
-	const string& result = rvalue;
-	const string& value = subType.lValueName;
-
-	code << "static inline " << result << " _ref_new_" << name << "(" << value << " value) {\n";
-	code << "    " << result << " res = malloc(sizeof(" << value << "));\n";
-	code << "    *res = value;\n";
-	code << "    return res;\n";
-	code << "}\n\n";
+	CodeFragmentPtr code;
+//	CodeFragmentPtr code = CodeFragment::createNew("New operator for type " + toString(*ptr));
+//	code->addDependency(subType.definition);
+//
+//	// add struct definition
+//	string name = getNameManager().getName(ptr);
+//	const string& result = rvalue;
+//	const string& value = subType.lValueName;
+//
+//	code << "static inline " << result << " _ref_new_" << name << "(" << value << " value) {\n";
+//	code << "    " << result << " res = malloc(sizeof(" << value << "));\n";
+//	code << "    *res = value;\n";
+//	code << "    return res;\n";
+//	code << "}\n\n";
 
 
 	return TypeManager::TypeInfo(lvalue, rvalue, lvalue + " %s", rvalue + " %s",
 			externalName, externalName + " %s", externalization, subType.definition, subType.definition, code);
-
-//	TODO: if
-//	return resolveRefOrVectorOrArrayType(ptr);
 }
 
 
@@ -438,30 +436,39 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 	}
 
 	// create the name of the resulting array (element name followed by *)
-	string name = elementTypeInfo.externName + toString(times("*", dim));
+	string name = elementTypeInfo.rValueName + toString(times("*", dim));
 
 	// ---------------------- add constructor ---------------------
-	CodeFragmentPtr utils = CodeFragment::createNew("array type utils of " + name + " <=> " + toString(*ptr));
-	utils->addDependency(elementTypeInfo.definition);
+	CodeFragmentPtr utils;
+//	CodeFragmentPtr utils = CodeFragment::createNew("array type utils of " + name + " <=> " + toString(*ptr));
+//	utils->addDependency(elementTypeInfo.definition);
+//
+//	utils << "// A constructor for the array type " << name << "\n";
+//	utils << "static inline " << name << " " << name << "_ctr(";
+//	for (unsigned i=0; i<dim; i++) {
+//		utils << "unsigned s" << (i+1);
+//		if (i!=dim-1) {
+//			utils << ",";
+//		}
+//	}
+//	utils << ") {\n";
+//	utils << "    return ((" << name << "){malloc(sizeof(" << elementTypeInfo.lValueName << ")";
+//	for (unsigned i=0; i<dim; i++) {
+//		utils << "*s" << (i+1);
+//	}
+//	utils << ")});\n}\n";
 
-	utils << "// A constructor for the array type " << name << "\n";
-	utils << "static inline " << name << " " << name << "_ctr(";
-	for (unsigned i=0; i<dim; i++) {
-		utils << "unsigned s" << (i+1);
-		if (i!=dim-1) {
-			utils << ",";
-		}
+	// add dependency to definition (only if not recursive - to avoid dependency loops)
+	CodeFragmentPtr decl;
+	CodeFragmentPtr def;
+	if (ptr->getElementType()->getNodeType() != core::NT_RecType) {
+		decl = elementTypeInfo.declaration;
+		def = elementTypeInfo.definition;
 	}
-	utils << ") {\n";
-	utils << "    return ((" << name << "){malloc(sizeof(" << elementTypeInfo.lValueName << ")";
-	for (unsigned i=0; i<dim; i++) {
-		utils << "*s" << (i+1);
-	}
-	utils << ")});\n}\n";
 
 	string externalName = elementTypeInfo.externName + toString(times("*", dim));
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
-			name, name + " %s", "%s", CodeFragmentPtr(), CodeFragmentPtr(),utils);
+			name, name + " %s", "%s", decl, def, utils);
 }
 
 TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {

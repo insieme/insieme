@@ -607,16 +607,16 @@ namespace simple_backend {
 			case NT_Literal: {
 
 				// TODO: internalize results using general mechanism
-				bool internalize = false;
-				TypePtr returnType = funType->getReturnType();
-				if (returnType->getNodeType() == NT_RefType) {
-					TypePtr elementType = static_pointer_cast<const RefType>(returnType)->getElementType();
-					if (elementType->getNodeType() == NT_ArrayType) {
-						internalize = true;
-						// add conversion
-						code << "&((" << cc.getTypeManager().getTypeName(code, elementType) << "){";
-					}
-				}
+//				bool internalize = false;
+//				TypePtr returnType = funType->getReturnType();
+//				if (returnType->getNodeType() == NT_RefType) {
+//					TypePtr elementType = static_pointer_cast<const RefType>(returnType)->getElementType();
+//					if (elementType->getNodeType() == NT_ArrayType) {
+//						internalize = true;
+//						// add conversion
+//						code << "&((" << cc.getTypeManager().getTypeName(code, elementType) << "){";
+//					}
+//				}
 
 				code << cc.getFunctionManager().getFunctionName(code, static_pointer_cast<const Literal>(funExp));
 				code << "(";
@@ -626,9 +626,9 @@ namespace simple_backend {
 				functionalJoin([&]{ code << ", "; }, args, parameterExternalizer);
 				code << ")";
 
-				if (internalize) {
-					code << "})";
-				}
+//				if (internalize) {
+//					code << "})";
+//				}
 				return;
 			}
 

@@ -197,6 +197,15 @@ TEST(TypeManager, RefTypes) {
 	EXPECT_EQ("int* %s", info.declPattern);
 	EXPECT_EQ("int* %s", info.paramPattern);
 
+	// ref/ref/array combination
+	type = builder.refType(builder.refType(builder.arrayType(basic.getInt4())));
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("ref<ref<array<int<4>,1>>>", toString(*type));
+	EXPECT_EQ("int*", info.lValueName);
+	EXPECT_EQ("int**", info.rValueName);
+	EXPECT_EQ("int* %s", info.declPattern);
+	EXPECT_EQ("int** %s", info.paramPattern);
+
 	// ref/array - multidimensional
 	type = builder.refType(builder.arrayType(basic.getInt4(), size2));
 	info = typeManager.getTypeInfo(fragment, type);
