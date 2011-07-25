@@ -703,7 +703,7 @@ void XmlUtil::convertIrToDom(const NodePtr& node) {
 	rootNode << nodePtr;
 
 	XmlVisitor visitor(doc);
-	visitAllOnce(node, visitor);
+	visitDepthFirstOnce(node, visitor);
 }
 
 XmlElementPtr XmlConverter::irToDomAnnotation (const Annotation& ann, xercesc::DOMDocument* doc) const {

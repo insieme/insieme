@@ -778,7 +778,7 @@ bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
 	}, false);
 
 	// run visitor => if interrupted, the definition is recursive
-	return visitAllInterruptable(lambda, detector);
+	return visitDepthFirstInterruptable(lambda, detector);
 }
 
 namespace {

@@ -152,7 +152,7 @@ TEST(OclCompilerTest, HelloCLTest) {
     LOG(INFO) << "Printing the IR: " << pp;
 
     OclTestVisitor otv;
-    core::visitAll(program, otv);
+    core::visitDepthFirst(program, otv);
 
 
 //    LOG(INFO) << pp;

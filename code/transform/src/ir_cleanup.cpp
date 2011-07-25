@@ -76,7 +76,7 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	utils::set::PointerSet<StructTypePtr> structs;
 
 	// search for the property
-	visitAllOnce(node, makeLambdaVisitor([&](const NodePtr& cur){
+	visitDepthFirstOnce(node, makeLambdaVisitor([&](const NodePtr& cur){
 		if (cur->getNodeType() != NT_StructType) {
 			return;
 		}
@@ -92,7 +92,7 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	// Step 2) collect addresses of nodes accessing array types
 	utils::set::PointerSet<MemberAccessExprAddress> accesses;
 	{
-		visitAllNodes(NodeAddress(node), [&](const NodeAddress& cur){
+		visitDepthFirst(NodeAddress(node), [&](const NodeAddress& cur){
 			if (cur->getNodeType() != NT_MemberAccessExpr) {
 				return;
 			}
