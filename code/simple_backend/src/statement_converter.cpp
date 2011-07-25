@@ -174,6 +174,14 @@ namespace simple_backend {
 			const IdentifierPtr& name = cur.first;
 			ExpressionPtr value = cur.second;
 
+			// remove leading var calls
+			if (core::analysis::isCallOf(value, cc.getLangBasic().getRefVar())) {
+				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
+				if (core::analysis::isCallOf(value, cc.getLangBasic().getRefDeref())) {
+					value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
+				}
+			}
+
 			// remove leading var/new calls
 			if (analysis::isCallOf(value, basic.getRefNew()) || analysis::isCallOf(value, basic.getRefVar())) {
 				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
@@ -792,7 +800,11 @@ namespace simple_backend {
 		for_each(ptr->getMembers(), [&](const StructExpr::Member& cur) {
 			// skip ref.var if present
 			if (core::analysis::isCallOf(cur.second, cc.getLangBasic().getRefVar())) {
-				this->visit(static_pointer_cast<const CallExpr>(cur.second)->getArguments()[0]);
+				core::ExpressionPtr arg = static_pointer_cast<const CallExpr>(cur.second)->getArgument(0);
+				if (core::analysis::isCallOf(arg, cc.getLangBasic().getRefDeref())) {
+					arg = static_pointer_cast<const CallExpr>(arg)->getArgument(0);
+				}
+				this->visit(arg);
 			} else {
 				this->visit(cur.second);
 			}

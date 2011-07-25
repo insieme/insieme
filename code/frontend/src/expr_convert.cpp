@@ -344,6 +344,11 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 			return builder.callExpr( gen.getStringToCharPointer(), expr );
 		} 
 
+		// if last call was a deref (*) => undo call
+		if ( core::analysis::isCallOf(expr, gen.getRefDeref()) ) {
+			return static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);
+		}
+
 		// call the function recursively
 		return builder.refVar( convertExprTo(builder, subTy, expr) );
 	}

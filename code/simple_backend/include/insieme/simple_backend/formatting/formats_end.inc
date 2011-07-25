@@ -44,6 +44,7 @@
 
 #undef OUT
 #undef ARG
+#undef VISIT
 #undef VISIT_ARG
 
 #undef ADD_FORMATTER

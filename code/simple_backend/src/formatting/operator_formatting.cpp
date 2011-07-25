@@ -295,7 +295,13 @@ namespace formatting {
 //				if (isRef) OUT("&(");
 //				VISIT_ARG(0); OUT(".data["); VISIT_ARG(1); OUT("]");
 //				if (isRef) OUT(")");
-				VISIT_ARG(0); OUT("["); VISIT_ARG(1); OUT("]");
+
+				if (core::analysis::isCallOf(ARG(0), basic.getRefDeref())) {
+					VISIT(static_pointer_cast<const core::CallExpr>(ARG(0))->getArgument(0));
+				} else {
+					VISIT_ARG(0);
+				}
+				OUT("["); VISIT_ARG(1); OUT("]");
 		});
 
 		ADD_FORMATTER_DETAIL(res, basic.getArrayRefElem1D(), false, {
@@ -627,6 +633,11 @@ namespace formatting {
 			}
 
 			// TODO: use memset for other initializations => see memset!!
+
+			if (!isNew) {
+				converter.convert(initValue);
+				return;
+			}
 
 			code << "((" << resTypeName << ")";
 			code << "memcpy(";
