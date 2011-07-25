@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v13, ref<array<array<char,1>,1>> v14){
+fun(int<4> v13, ref<array<ref<array<char,1>>,1>> v14){
         decl ref<struct<N:int<4>,i:int<4>>> v1 =  new(struct{N:=10, i:=0});
         decl ref<int<4>> v15 =  var(10);
         for(decl int<4> v17 = 0 .. v15 : 1) {
@@ -14,7 +14,7 @@ fun(int<4> v13, ref<array<array<char,1>,1>> v14){
             printf(string.as.char.pointer("idx=%d"), varlist.pack((0-v21)));
         };
         {
-            decl ref<int<4>> v22 = v15;
+            decl ref<int<4>> v22 =  var(v15);
             while(composite.ref.elem(v1, N, type<int<4>>)>0) {
                 {
                     printf(string.as.char.pointer("idx=%d"), varlist.pack((v15)));
@@ -83,7 +83,7 @@ fun(int<4> v13, ref<array<array<char,1>,1>> v14){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v13, ref<array<array<char,1>,1>> v14){
+fun(int<4> v13, ref<array<ref<array<char,1>>,1>> v14){
         decl ref<struct<N:int<4>,i:int<4>>> v1 = ( new(struct{N:=10, i:=0}));
         decl ref<int<4>> v15 = ( var(10));
         for(decl int<4> v17 = 0 .. ( *v15) : 1) {
@@ -96,7 +96,7 @@ fun(int<4> v13, ref<array<array<char,1>,1>> v14){
             printf(string.as.char.pointer("idx=%d"), varlist.pack(((CAST<int<4>>(0)-v21))));
         };
         {
-            decl ref<int<4>> v22 = v15;
+            decl ref<int<4>> v22 = ( var(( *v15)));
             while((( *composite.ref.elem(v1, N, type<int<4>>))>0)) {
                 {
                     printf(string.as.char.pointer("idx=%d"), varlist.pack((( *v15))));

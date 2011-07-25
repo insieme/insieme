@@ -7,24 +7,14 @@
 #define false 0
 #define null 0
 
-// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<int<4>,50> //
 typedef struct ___insieme_type_1 { 
-    char* data;
+    int data[50];
 } __insieme_type_1;
 
-// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
-typedef struct ___insieme_type_0 { 
-    __insieme_type_1* data;
-} __insieme_type_0;
-
-// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<int<4>,50> //
-typedef struct ___insieme_type_2 { 
-    int data[50];
-} __insieme_type_2;
-
-// A constructor initializing a vector of the type __insieme_type_2 uniformly
-static inline __insieme_type_2 __insieme_type_2_init_uniform(int value) {
-	__insieme_type_2 res;
+// A constructor initializing a vector of the type __insieme_type_1 uniformly
+static inline __insieme_type_1 __insieme_type_1_init_uniform(int value) {
+	__insieme_type_1 res;
 	for (int i=0; i<50;++i) {
 	    res.data[i] = value;
 	}
@@ -35,63 +25,47 @@ static inline __insieme_type_2 __insieme_type_2_init_uniform(int value) {
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
     int count;
-    __insieme_type_2 a;
+    __insieme_type_1 a;
     int reset_count;
 };
-
-// start code fragment :: global data //
-struct __insieme_globals __GLOBAL__;
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: Definition of inc ... type: ((int<4>)->int<4>) //
-int inc(int step){
-	((((*(&((__GLOBAL__).a))).data[((unsigned int)(step))]))++);
-	((*(&((__GLOBAL__).count))) = ((*(&((__GLOBAL__).count)))+step));
-	return (*(&((__GLOBAL__).count)));
+// start code fragment :: Definition of inc ... type: ((ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>>,int<4>)->int<4>) //
+int inc(struct __insieme_globals* var_2, int step){
+	((((*(&((*var_2).a))).data[((unsigned int)(step))]))++);
+	((*(&((*var_2).count))) = ((*(&((*var_2).count)))+step));
+	return (*(&((*var_2).count)));
 }
-static int inc_wrap(void* _closure, int step) { return inc(step); }
+static int inc_wrap(void* _closure, struct __insieme_globals* var_2, int step) { return inc(var_2, step); }
 
-// start code fragment :: Definition of dec ... type: ((int<4>)->int<4>) //
-int dec(int step){
-	((((*(&((__GLOBAL__).a))).data[((unsigned int)(step))]))--);
-	((*(&((__GLOBAL__).count))) = ((*(&((__GLOBAL__).count)))-step));
-	return (*(&((__GLOBAL__).count)));
+// start code fragment :: Definition of dec ... type: ((ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>>,int<4>)->int<4>) //
+int dec(struct __insieme_globals* var_5, int step){
+	((((*(&((*var_5).a))).data[((unsigned int)(step))]))--);
+	((*(&((*var_5).count))) = ((*(&((*var_5).count)))-step));
+	return (*(&((*var_5).count)));
 }
-static int dec_wrap(void* _closure, int step) { return dec(step); }
+static int dec_wrap(void* _closure, struct __insieme_globals* var_5, int step) { return dec(var_5, step); }
 
-// start code fragment :: Definition of reset ... type: (()->int<4>) //
-int reset(){
-	((*(&((__GLOBAL__).count))) = 0);
-	((*(&((__GLOBAL__).reset_count))) = ((*(&((__GLOBAL__).reset_count)))+1));
-	return (*(&((__GLOBAL__).count)));
+// start code fragment :: Definition of reset ... type: ((ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>>)->int<4>) //
+int reset(struct __insieme_globals* var_8){
+	((*(&((*var_8).count))) = 0);
+	((*(&((*var_8).reset_count))) = ((*(&((*var_8).reset_count)))+1));
+	return (*(&((*var_8).count)));
 }
-static int reset_wrap(void* _closure) { return reset(); }
+static int reset_wrap(void* _closure, struct __insieme_globals* var_8) { return reset(var_8); }
 
-// start code fragment :: main function //
-int main(int __argc, char** __argv) {
-	
-	// encapsulating arguments within Insieme Types ...
-	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
-	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i]};
-	}
-	
-	// ---- begin of actual code body ----
-	{
-		;
-		((*(&((__GLOBAL__).count))) = 0);
-		((*(&((__GLOBAL__).reset_count))) = 1);
-		for(int var_13 = 0; var_13 < 10; var_13 += 1) {
-			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), inc(2));
-			printf(((char*)((*(&((__insieme_type_1){"count=%2d\n"}))).data)), dec(1));
-			if((var_13==5)) { reset(); };
-		};
-		return 0;
-	}
-	// ----  end of actual code body  ----
-	
+// start code fragment :: Definition of main ... type: ((int<4>,ref<array<ref<array<char,1>>,1>>)->int<4>) //
+int main(int argc, char** argv){
+	struct __insieme_globals* var_1 = malloc(sizeof(struct __insieme_globals));
+	((*(&((*var_1).count))) = 0);
+	((*(&((*var_1).reset_count))) = 1);
+	for(int var_13 = 0; var_13 < 10; var_13 += 1) {
+		printf("count=%2d\n", inc(var_1, 2));
+		printf("count=%2d\n", dec(var_1, 1));
+		if((var_13==5)) { reset(var_1); };
+	};
+	return 0;
 }
-
+static int main_wrap(void* _closure, int argc, char** argv) { return main(argc, argv); }

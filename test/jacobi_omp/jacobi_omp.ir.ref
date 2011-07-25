@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v4, ref<array<array<char,1>,1>> v5){
+fun(int<4> v4, ref<array<ref<array<char,1>>,1>> v5){
         decl ref<int<8>> v6 =  var(0);
         decl ref<int<8>> v7 =  var(0);
         decl ref<real<8>> v8 =  var(0.0);
@@ -15,15 +15,15 @@ fun(int<4> v4, ref<array<array<char,1>,1>> v5){
         if(v4>2) {
             v11 := atoi(array.ref.elem.1D(v5, 1));
         } else { };
-        decl ref<array<real<4>,1>> v12 =  var(undefined(type<array<real<4>,1>>));
-        decl ref<array<real<4>,1>> v13 =  var(undefined(type<array<real<4>,1>>));
-        decl ref<array<real<4>,1>> v14 =  var(undefined(type<array<real<4>,1>>));
-        decl ref<array<real<4>,1>> v15 =  var(undefined(type<array<real<4>,1>>));
+        decl ref<ref<array<real<4>,1>>> v12 =  var(undefined(type<ref<array<real<4>,1>>>));
+        decl ref<ref<array<real<4>,1>>> v13 =  var(undefined(type<ref<array<real<4>,1>>>));
+        decl ref<ref<array<real<4>,1>>> v14 =  var(undefined(type<ref<array<real<4>,1>>>));
+        decl ref<ref<array<real<4>,1>>> v15 =  var(undefined(type<ref<array<real<4>,1>>>));
         v12 :=  new(array.create.1D(type<real<4>>, v10*v10*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
         v13 :=  new(array.create.1D(type<real<4>>, v10*v10*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
         v14 :=  new(array.create.1D(type<real<4>>, v10*v10*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
         v15 :=  new(array.create.1D(type<real<4>>, v10*v10*sizeof(type<real<4>>)/sizeof(type<real<4>>)));
-        if(!!is.null(v12)&&bind(){fun(ref<array<real<4>,1>> v16)return !is.null(v16)(v13)}&&bind(){fun(ref<array<real<4>,1>> v18)return !is.null(v18)(v14)}&&bind(){fun(ref<array<real<4>,1>> v20)return !is.null(v20)(v15)}) {
+        if(!!is.null(v12)&&bind(){fun(ref<ref<array<real<4>,1>>> v16)return !is.null(v16)(v13)}&&bind(){fun(ref<ref<array<real<4>,1>>> v18)return !is.null(v18)(v14)}&&bind(){fun(ref<ref<array<real<4>,1>>> v20)return !is.null(v20)(v15)}) {
             printf(string.as.char.pointer("Error allocating arrays\n"), varlist.pack(()));
         } else { };
         memset(ref.to.anyref(v12), 0, v10*v10*sizeof(type<real<4>>));
@@ -80,7 +80,7 @@ fun(int<4> v4, ref<array<array<char,1>,1>> v5){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v4, ref<array<array<char,1>,1>> v5){
+fun(int<4> v4, ref<array<ref<array<char,1>>,1>> v5){
         decl ref<int<8>> v6 = ( var(0));
         decl ref<int<8>> v7 = ( var(0));
         decl ref<real<8>> v8 = ( var(0.0));
@@ -88,28 +88,28 @@ fun(int<4> v4, ref<array<array<char,1>,1>> v5){
         (v6 := clock());
         decl ref<int<4>> v10 = ( var(650));
         if((v4>1)) {
-            (v10 := atoi(array.ref.elem.1D(v5, CAST<uint<4>>(1))));
+            (v10 := atoi(( *array.ref.elem.1D(v5, CAST<uint<4>>(1)))));
         } else { };
         decl ref<int<4>> v11 = ( var(100));
         if((v4>2)) {
-            (v11 := atoi(array.ref.elem.1D(v5, CAST<uint<4>>(1))));
+            (v11 := atoi(( *array.ref.elem.1D(v5, CAST<uint<4>>(1)))));
         } else { };
-        decl ref<array<real<4>,1>> v12 = ( var(undefined(type<array<real<4>,1>>)));
-        decl ref<array<real<4>,1>> v13 = ( var(undefined(type<array<real<4>,1>>)));
-        decl ref<array<real<4>,1>> v14 = ( var(undefined(type<array<real<4>,1>>)));
-        decl ref<array<real<4>,1>> v15 = ( var(undefined(type<array<real<4>,1>>)));
-        (v12 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
-        (v13 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
-        (v14 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
-        (v15 := ( *( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>)))))));
-        if((!((((!is.null(( *v12)))&&bind(){fun(ref<array<real<4>,1>> v16)return (!is.null(( *v16)))(v13)})&&bind(){fun(ref<array<real<4>,1>> v18)return (!is.null(( *v18)))(v14)})&&bind(){fun(ref<array<real<4>,1>> v20)return (!is.null(( *v20)))(v15)}))) {
+        decl ref<ref<array<real<4>,1>>> v12 = ( var(undefined(type<ref<array<real<4>,1>>>)));
+        decl ref<ref<array<real<4>,1>>> v13 = ( var(undefined(type<ref<array<real<4>,1>>>)));
+        decl ref<ref<array<real<4>,1>>> v14 = ( var(undefined(type<ref<array<real<4>,1>>>)));
+        decl ref<ref<array<real<4>,1>>> v15 = ( var(undefined(type<ref<array<real<4>,1>>>)));
+        (v12 := ( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>))))));
+        (v13 := ( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>))))));
+        (v14 := ( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>))))));
+        (v15 := ( new(array.create.1D(type<real<4>>, ((CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>))/sizeof(type<real<4>>))))));
+        if((!((((!is.null(( *v12)))&&bind(){fun(ref<ref<array<real<4>,1>>> v16)return (!is.null(( *v16)))(v13)})&&bind(){fun(ref<ref<array<real<4>,1>>> v18)return (!is.null(( *v18)))(v14)})&&bind(){fun(ref<ref<array<real<4>,1>>> v20)return (!is.null(( *v20)))(v15)}))) {
             printf(string.as.char.pointer("Error allocating arrays\n"), varlist.pack(()));
         } else { };
-        memset(ref.to.anyref(v12), 0, (CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>)));
-        memset(ref.to.anyref(v14), 0, (CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>)));
+        memset(ref.to.anyref(( *v12)), 0, (CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>)));
+        memset(ref.to.anyref(( *v14)), 0, (CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>)));
         for(decl int<4> v25 = 0 .. ( *v10) : 1) 
             for(decl int<4> v24 = 0 .. ( *v10) : 1) 
-                (array.ref.elem.1D(v14, CAST<uint<4>>(((v25*( *v10))+v24))) := CAST<real<4>>(fun(int<4> v1, int<4> v2){
+                (array.ref.elem.1D(( *v14), CAST<uint<4>>(((v25*( *v10))+v24))) := CAST<real<4>>(fun(int<4> v1, int<4> v2){
                     return (CAST<real<8>>(40)*sin(CAST<real<8>>(((16*((2*v1)-1))*v2))));
                 }(v25, v24)))
             
@@ -126,30 +126,30 @@ fun(int<4> v4, ref<array<array<char,1>,1>> v5){
             <m id=2>{
                 <m id=1>for(decl int<4> v34 = 1 .. (( *v10)-1) : 1) {
                     for(decl int<4> v33 = 1 .. (( *v10)-1) : 1) {
-                        (array.ref.elem.1D(v13, CAST<uint<4>>(((v34*( *v10))+v33))) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *array.ref.elem.1D(v12, CAST<uint<4>>((((v34-1)*( *v10))+v33))))+( *array.ref.elem.1D(v12, CAST<uint<4>>((((v34*( *v10))+v33)+1)))))+( *array.ref.elem.1D(v12, CAST<uint<4>>((((v34*( *v10))+v33)-1)))))+( *array.ref.elem.1D(v12, CAST<uint<4>>((((v34+1)*( *v10))+v33))))))-(( *v30)*CAST<real<8>>(( *array.ref.elem.1D(v14, CAST<uint<4>>(((v34*( *v10))+v33))))))))));
+                        (array.ref.elem.1D(( *v13), CAST<uint<4>>(((v34*( *v10))+v33))) := CAST<real<4>>(((CAST<real<8>>(1)/CAST<real<8>>(4))*(CAST<real<8>>((((( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v34-1)*( *v10))+v33))))+( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v34*( *v10))+v33)+1)))))+( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v34*( *v10))+v33)-1)))))+( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v34+1)*( *v10))+v33))))))-(( *v30)*CAST<real<8>>(( *array.ref.elem.1D(( *v14), CAST<uint<4>>(((v34*( *v10))+v33))))))))));
                     };
                 }</m>;
             }</m>;
-            memcpy(ref.to.anyref(v12), ref.to.anyref(v13), (CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>)));
+            memcpy(ref.to.anyref(( *v12)), ref.to.anyref(( *v13)), (CAST<uint<8>>((( *v10)*( *v10)))*sizeof(type<real<4>>)));
             for(decl int<4> v38 = 1 .. (( *v10)-1) : 1) {
                 for(decl int<4> v37 = 1 .. (( *v10)-1) : 1) 
-                    (array.ref.elem.1D(v15, CAST<uint<4>>(((v38*( *v10))+v37))) := (((((( *array.ref.elem.1D(v14, CAST<uint<4>>(((v38*( *v10))+v37))))-(CAST<real<4>>(4)*( *array.ref.elem.1D(v12, CAST<uint<4>>(((v38*( *v10))+v37))))))+( *array.ref.elem.1D(v12, CAST<uint<4>>((((v38-1)*( *v10))+v37)))))+( *array.ref.elem.1D(v12, CAST<uint<4>>((((v38+1)*( *v10))+v37)))))+( *array.ref.elem.1D(v12, CAST<uint<4>>((((v38*( *v10))+v37)-1)))))+( *array.ref.elem.1D(v12, CAST<uint<4>>((((v38*( *v10))+v37)+1))))))
+                    (array.ref.elem.1D(( *v15), CAST<uint<4>>(((v38*( *v10))+v37))) := (((((( *array.ref.elem.1D(( *v14), CAST<uint<4>>(((v38*( *v10))+v37))))-(CAST<real<4>>(4)*( *array.ref.elem.1D(( *v12), CAST<uint<4>>(((v38*( *v10))+v37))))))+( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v38-1)*( *v10))+v37)))))+( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v38+1)*( *v10))+v37)))))+( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v38*( *v10))+v37)-1)))))+( *array.ref.elem.1D(( *v12), CAST<uint<4>>((((v38*( *v10))+v37)+1))))))
                 ;
             };
             decl ref<real<8>> v39 = ( var(CAST<real<8>>(0)));
             for(decl int<4> v43 = 1 .. (( *v10)-1) : 1) {
                 for(decl int<4> v42 = 1 .. (( *v10)-1) : 1) {
-                    (v39 := (( *v39)+pow(CAST<real<8>>(( *array.ref.elem.1D(v15, CAST<uint<4>>(((v43*( *v10))+v42))))), CAST<real<8>>(2))));
+                    (v39 := (( *v39)+pow(CAST<real<8>>(( *array.ref.elem.1D(( *v15), CAST<uint<4>>(((v43*( *v10))+v42))))), CAST<real<8>>(2))));
                 };
             };
             (v29 := (sqrt(( *v39))/CAST<real<8>>((( *v10)-1))));
         };
         (v7 := clock());
         (v9 := (CAST<real<8>>((( *v7)-( *v6)))/CAST<real<8>>(1000000l)));
-        ( del(v12));
-        ( del(v13));
-        ( del(v14));
-        ( del(v15));
+        ( del(( *v12)));
+        ( del(( *v13)));
+        ( del(( *v14)));
+        ( del(( *v15)));
         printf(string.as.char.pointer("Job Done! - residuo: %lf\n"), varlist.pack((( *v29))));
     }
 

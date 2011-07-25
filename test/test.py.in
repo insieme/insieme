@@ -61,10 +61,11 @@ def check_for_error(test_case, ret):
 	if verbose:
 		# print the entire output
 		sys.stderr.write(ret)
+		return True
 	elif ret:
 		# print only first 15 lines
 		lines = ret.splitlines();
-		for i in range(min(len(lines), 15)):
+		for i in range(min(len(lines), 1500)):
 			sys.stderr.write( str(lines[i]) )
 			sys.stderr.write("\n")
 

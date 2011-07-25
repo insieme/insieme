@@ -7,50 +7,22 @@
 #define false 0
 #define null 0
 
-// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
-typedef struct ___insieme_type_1 { 
-    char* data;
-} __insieme_type_1;
-
-// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
-typedef struct ___insieme_type_0 { 
-    __insieme_type_1* data;
-} __insieme_type_0;
-
-// start code fragment :: array type definition of __insieme_type_3 <=> array<int<4>,1> //
-typedef struct ___insieme_type_3 { 
-    int* data;
-} __insieme_type_3;
-
 // start code fragment :: Definition of f ... type: ((ref<array<int<4>,1>>)->int<4>) //
-int f(__insieme_type_3* a) { return ((((*a).data[0]))++); }
-static int f_wrap(void* _closure, __insieme_type_3* a) { return f(a); }
+int f(int* a) { return (((a[0]))++); }
+static int f_wrap(void* _closure, int* a) { return f(a); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: main function //
-int main(int __argc, char** __argv) {
-	
-	// encapsulating arguments within Insieme Types ...
-	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
-	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i]};
-	}
-	
-	// ---- begin of actual code body ----
+// start code fragment :: Definition of main ... type: ((int<4>,ref<array<ref<array<char,1>>,1>>)->int<4>) //
+int main(int argc, char** argv){
+	int var_6 = argc;
 	{
-		int var_6 = argc;
-		{
-			int a = 0;
-			f((&((__insieme_type_3){&a})));
-			f((&((__insieme_type_3){&var_6})));
-			printf(((char*)((*(&((__insieme_type_1){"%d\n"}))).data)), (var_6));((var_6) = (a));
-			printf(((char*)((*(&((__insieme_type_1){"%d\n"}))).data)), (var_6));
-		};
-	}
-	// ----  end of actual code body  ----
-	
+		int a = 0;
+		f((&a));
+		f((&var_6));
+		printf("%d\n", (var_6));((var_6) = (a));
+		printf("%d\n", (var_6));
+	};
 }
-
+static int main_wrap(void* _closure, int argc, char** argv) { return main(argc, argv); }

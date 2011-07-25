@@ -7,16 +7,6 @@
 #define false 0
 #define null 0
 
-// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
-typedef struct ___insieme_type_1 { 
-    char* data;
-} __insieme_type_1;
-
-// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
-typedef struct ___insieme_type_0 { 
-    __insieme_type_1* data;
-} __insieme_type_0;
-
 // start code fragment :: type_declaration_Settings //
 struct Settings { 
     unsigned int numSources;
@@ -31,14 +21,14 @@ struct Settings {
     unsigned long maxSteps;
 };
 
-// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<real<8>,2> //
-typedef struct ___insieme_type_4 { 
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<8>,2> //
+typedef struct ___insieme_type_1 { 
     double data[2];
-} __insieme_type_4;
+} __insieme_type_1;
 
-// A constructor initializing a vector of the type __insieme_type_4 uniformly
-static inline __insieme_type_4 __insieme_type_4_init_uniform(double value) {
-	__insieme_type_4 res;
+// A constructor initializing a vector of the type __insieme_type_1 uniformly
+static inline __insieme_type_1 __insieme_type_1_init_uniform(double value) {
+	__insieme_type_1 res;
 	for (int i=0; i<2;++i) {
 	    res.data[i] = value;
 	}
@@ -49,32 +39,19 @@ static inline __insieme_type_4 __insieme_type_4_init_uniform(double value) {
 // start code fragment :: type_declaration_Source //
 struct Source { 
     int type;
-    __insieme_type_4 pos;
+    __insieme_type_1 pos;
     double mult;
     double size;
 };
 
-// start code fragment :: array type definition of __insieme_type_3 <=> array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1> //
-typedef struct ___insieme_type_3 { 
-    struct Source* data;
-} __insieme_type_3;
-
-// start code fragment :: Prototype of struct FILE //
-struct FILE;
-
-// start code fragment :: array type definition of __insieme_type_6 <=> array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1> //
-typedef struct ___insieme_type_6 { 
-    struct FILE* data;
-} __insieme_type_6;
-
-// start code fragment :: vector_type_declaration of __insieme_type_12 <=> vector<char,4096> //
-typedef struct ___insieme_type_12 { 
+// start code fragment :: vector_type_declaration of __insieme_type_5 <=> vector<char,4096> //
+typedef struct ___insieme_type_5 { 
     char data[4096];
-} __insieme_type_12;
+} __insieme_type_5;
 
-// A constructor initializing a vector of the type __insieme_type_12 uniformly
-static inline __insieme_type_12 __insieme_type_12_init_uniform(char value) {
-	__insieme_type_12 res;
+// A constructor initializing a vector of the type __insieme_type_5 uniformly
+static inline __insieme_type_5 __insieme_type_5_init_uniform(char value) {
+	__insieme_type_5 res;
 	for (int i=0; i<4096;++i) {
 	    res.data[i] = value;
 	}
@@ -82,9 +59,9 @@ static inline __insieme_type_12 __insieme_type_12_init_uniform(char value) {
 }
 
 
-// start code fragment :: Prototype for external function: fopen ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>) //
+// start code fragment :: Prototype for external function: fopen ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>) //
 struct FILE* fopen(char*, char*);
-static __insieme_type_6* fopen_wrap(void* _closure, __insieme_type_1* var_163, __insieme_type_1* var_164) { return &((__insieme_type_6){fopen(((char*)((*(var_163)).data)), ((char*)((*(var_164)).data)))}); }
+static struct FILE* fopen_wrap(void* _closure, char* var_163, char* var_164) { return fopen(var_163, var_164); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -93,95 +70,89 @@ int printf(char*, ...);
 void exit(int);
 static void exit_wrap(void* _closure, int var_165) { exit(var_165); }
 
-// start code fragment :: Prototype for external function: fread ... type: ((anyRef,uint<8>,uint<8>,ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->uint<8>) //
+// start code fragment :: Prototype for external function: fread ... type: ((anyRef,uint<8>,uint<8>,ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>)->uint<8>) //
 unsigned long fread(void*, unsigned long, unsigned long, struct FILE*);
-static unsigned long fread_wrap(void* _closure, void* var_166, unsigned long var_167, unsigned long var_168, __insieme_type_6* var_169) { return fread(var_166, var_167, var_168, ((struct FILE*)((*(var_169)).data))); }
+static unsigned long fread_wrap(void* _closure, void* var_166, unsigned long var_167, unsigned long var_168, struct FILE* var_169) { return fread(var_166, var_167, var_168, var_169); }
 
-// start code fragment :: Prototype for external function: fclose ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->int<4>) //
+// start code fragment :: Prototype for external function: fclose ... type: ((ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>)->int<4>) //
 int fclose(struct FILE*);
-static int fclose_wrap(void* _closure, __insieme_type_6* var_170) { return fclose(((struct FILE*)((*(var_170)).data))); }
+static int fclose_wrap(void* _closure, struct FILE* var_170) { return fclose(var_170); }
 
 // start code fragment :: Prototype for external function: strtok ... type: ((ref<array<char,1>>,ref<array<char,1>>)->ref<array<char,1>>) //
 char* strtok(char*, char*);
-static __insieme_type_1* strtok_wrap(void* _closure, __insieme_type_1* var_171, __insieme_type_1* var_172) { return &((__insieme_type_1){strtok(((char*)((*(var_171)).data)), ((char*)((*(var_172)).data)))}); }
+static char* strtok_wrap(void* _closure, char* var_171, char* var_172) { return strtok(var_171, var_172); }
 
 // start code fragment :: Prototype for external function: strchr ... type: ((ref<array<char,1>>,int<4>)->ref<array<char,1>>) //
 char* strchr(char*, int);
-static __insieme_type_1* strchr_wrap(void* _closure, __insieme_type_1* var_173, int var_174) { return &((__insieme_type_1){strchr(((char*)((*(var_173)).data)), var_174)}); }
+static char* strchr_wrap(void* _closure, char* var_173, int var_174) { return strchr(var_173, var_174); }
 
 // start code fragment :: Prototype for external function: atoi ... type: ((ref<array<char,1>>)->int<4>) //
-static int atoi_wrap(void* _closure, __insieme_type_1* var_175) { return atoi(((char*)((*(var_175)).data))); }
+static int atoi_wrap(void* _closure, char* var_175) { return atoi(var_175); }
 
 // start code fragment :: Prototype for external function: atof ... type: ((ref<array<char,1>>)->real<8>) //
 double atof(char*);
-static double atof_wrap(void* _closure, __insieme_type_1* var_176) { return atof(((char*)((*(var_176)).data))); }
+static double atof_wrap(void* _closure, char* var_176) { return atof(var_176); }
 
 // start code fragment :: Prototype for external function: atol ... type: ((ref<array<char,1>>)->int<8>) //
 long atol(char*);
-static long atol_wrap(void* _closure, __insieme_type_1* var_177) { return atol(((char*)((*(var_177)).data))); }
+static long atol_wrap(void* _closure, char* var_177) { return atol(var_177); }
 
 // start code fragment :: Definition of readSettings ... type: ((ref<array<char,1>>)->struct<numSources:uint<4>,x:int<4>,y:int<4>,scale:real<8>,dt:real<8>,friction:real<8>,height:real<8>,abortVelocity:real<8>,minSteps:uint<4>,maxSteps:uint<8>>) //
-struct Settings readSettings(__insieme_type_1* line){
+struct Settings readSettings(char* line){
 	struct Settings settings;
-	__insieme_type_1 token = ((__insieme_type_1){strtok(((char*)((*(line)).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))});
-	((*(&((settings).numSources))) = ((unsigned int)(atoi(((char*)((*(&token)).data))))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).x))) = atoi(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).y))) = atoi(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).scale))) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).dt))) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).friction))) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).height))) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).abortVelocity))) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).minSteps))) = ((unsigned int)(atoi(((char*)((*(&token)).data))))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((settings).maxSteps))) = ((unsigned long)(atol(((char*)((*(&token)).data))))));
+	char* token = strtok(line, " ,");
+	((*(&((settings).numSources))) = ((unsigned int)(atoi((token)))));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).x))) = atoi((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).y))) = atoi((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).scale))) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).dt))) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).friction))) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).height))) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).abortVelocity))) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).minSteps))) = ((unsigned int)(atoi((token)))));
+	((token) = strtok(0, " ,"));
+	((*(&((settings).maxSteps))) = ((unsigned long)(atol((token)))));
 	return (settings);
 }
-static struct Settings readSettings_wrap(void* _closure, __insieme_type_1* line) { return readSettings(line); }
-
-// start code fragment :: array type utils of __insieme_type_3 <=> array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1> //
-// A constructor for the array type __insieme_type_3
-static inline __insieme_type_3 __insieme_type_3_ctr(unsigned s1) {
-    return ((__insieme_type_3){malloc(sizeof(struct Source)*s1)});
-}
+static struct Settings readSettings_wrap(void* _closure, char* line) { return readSettings(line); }
 
 // start code fragment :: Prototype for external function: strcmp ... type: ((ref<array<char,1>>,ref<array<char,1>>)->int<4>) //
 int strcmp(char*, char*);
-static int strcmp_wrap(void* _closure, __insieme_type_1* var_178, __insieme_type_1* var_179) { return strcmp(((char*)((*(var_178)).data)), ((char*)((*(var_179)).data))); }
+static int strcmp_wrap(void* _closure, char* var_178, char* var_179) { return strcmp(var_178, var_179); }
 
 // start code fragment :: Definition of readSource ... type: ((ref<array<char,1>>)->struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>) //
-struct Source readSource(__insieme_type_1* line){
+struct Source readSource(char* line){
 	struct Source src;
-	__insieme_type_1 token = ((__insieme_type_1){strtok(((char*)((*(line)).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))});
-	if((strcmp(((char*)((*(&token)).data)), ((char*)((*(&((__insieme_type_1){"Linear"}))).data)))==0)) { ((*(&((src).type))) = 0); } else  { ((*(&((src).type))) = 1); };
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((((*(&((src).pos))).data[((unsigned int)(0))])) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((((*(&((src).pos))).data[((unsigned int)(1))])) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((src).mult))) = atof(((char*)((*(&token)).data))));
-	((token) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){" ,"}))).data)))})));
-	((*(&((src).size))) = atof(((char*)((*(&token)).data))));
+	char* token = strtok(line, " ,");
+	if((strcmp((token), "Linear")==0)) { ((*(&((src).type))) = 0); } else  { ((*(&((src).type))) = 1); };
+	((token) = strtok(0, " ,"));
+	((((*(&((src).pos))).data[((unsigned int)(0))])) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((((*(&((src).pos))).data[((unsigned int)(1))])) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((src).mult))) = atof((token)));
+	((token) = strtok(0, " ,"));
+	((*(&((src).size))) = atof((token)));
 	return (src);
 }
-static struct Source readSource_wrap(void* _closure, __insieme_type_1* line) { return readSource(line); }
+static struct Source readSource_wrap(void* _closure, char* line) { return readSource(line); }
 
-// start code fragment :: vector_type_declaration of __insieme_type_17 <=> vector<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,4> //
-typedef struct ___insieme_type_17 { 
+// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,4> //
+typedef struct ___insieme_type_6 { 
     struct Source data[4];
-} __insieme_type_17;
+} __insieme_type_6;
 
-// A constructor initializing a vector of the type __insieme_type_17 uniformly
-static inline __insieme_type_17 __insieme_type_17_init_uniform(struct Source value) {
-	__insieme_type_17 res;
+// A constructor initializing a vector of the type __insieme_type_6 uniformly
+static inline __insieme_type_6 __insieme_type_6_init_uniform(struct Source value) {
+	__insieme_type_6 res;
 	for (int i=0; i<4;++i) {
 	    res.data[i] = value;
 	}
@@ -189,65 +160,27 @@ static inline __insieme_type_17 __insieme_type_17_init_uniform(struct Source val
 }
 
 
-// start code fragment :: array type definition of __insieme_type_22 <=> array<uint<4>,1> //
-typedef struct ___insieme_type_22 { 
-    unsigned int* data;
-} __insieme_type_22;
-
-// start code fragment :: array type definition of __insieme_type_21 <=> array<array<uint<4>,1>,1> //
-typedef struct ___insieme_type_21 { 
-    __insieme_type_22* data;
-} __insieme_type_21;
-
 // start code fragment :: type_declaration_Image //
 struct Image { 
-    __insieme_type_21 data;
+    unsigned int** data;
     int x;
     int y;
 };
 
-// start code fragment :: New operator for type ref<array<uint<4>,1>> //
-static inline __insieme_type_22* _ref_new___insieme_type_24(__insieme_type_22 value) {
-    __insieme_type_22* res = malloc(sizeof(__insieme_type_22));
-    *res = value;
-    return res;
-}
-
-
-// start code fragment :: array type utils of __insieme_type_22 <=> array<uint<4>,1> //
-// A constructor for the array type __insieme_type_22
-static inline __insieme_type_22 __insieme_type_22_ctr(unsigned s1) {
-    return ((__insieme_type_22){malloc(sizeof(unsigned int)*s1)});
-}
-
-// start code fragment :: New operator for type ref<array<array<uint<4>,1>,1>> //
-static inline __insieme_type_21* _ref_new___insieme_type_25(__insieme_type_21 value) {
-    __insieme_type_21* res = malloc(sizeof(__insieme_type_21));
-    *res = value;
-    return res;
-}
-
-
-// start code fragment :: array type utils of __insieme_type_21 <=> array<array<uint<4>,1>,1> //
-// A constructor for the array type __insieme_type_21
-static inline __insieme_type_21 __insieme_type_21_ctr(unsigned s1) {
-    return ((__insieme_type_21){malloc(sizeof(__insieme_type_22)*s1)});
-}
-
-// start code fragment :: Definition of create_image ... type: ((int<4>,int<4>)->struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>) //
+// start code fragment :: Definition of create_image ... type: ((int<4>,int<4>)->struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>) //
 struct Image create_image(int x, int y){
-	__insieme_type_22* block = _ref_new___insieme_type_24((__insieme_type_22_ctr((((sizeof(unsigned int)*((unsigned long)(x)))*((unsigned long)(y)))/sizeof(unsigned int)))));
-	__insieme_type_21* index = _ref_new___insieme_type_25((__insieme_type_21_ctr(((sizeof(__insieme_type_22)*((unsigned long)(x)))/sizeof(__insieme_type_22)))));
-	for(int var_15 = 0; var_15 < x; var_15 += 1)  { ((((*index).data[((unsigned int)(var_15))])) = (*(&((__insieme_type_22){&((*block).data[((unsigned int)((var_15*x)))])})))); };
-	return ((struct Image){(*index),
+	unsigned int* block = (((unsigned int*){malloc(sizeof(unsigned int*)*(((sizeof(unsigned int)*((unsigned long)(x)))*((unsigned long)(y)))/sizeof(unsigned int)))}));
+	unsigned int** index = (((unsigned int**){malloc(sizeof(unsigned int**)*((sizeof(unsigned int*)*((unsigned long)(x)))/sizeof(unsigned int*)))}));
+	for(int var_15 = 0; var_15 < x; var_15 += 1)  { ((((index)[((unsigned int)(var_15))])) = (&((block)[((unsigned int)((var_15*x)))]))); };
+	return ((struct Image){(index),
 		x,
 		y
 	});
 }
 static struct Image create_image_wrap(void* _closure, int x, int y) { return create_image(x, y); }
 
-// start code fragment :: struct for job __insieme_job_26 //
-struct __insieme_job_26 { 
+// start code fragment :: struct for job __insieme_job_7 //
+struct __insieme_job_7 { 
 	unsigned structSize;
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
@@ -257,96 +190,96 @@ struct __insieme_job_26 {
 	unsigned int* var_182;
 	double* var_183;
 	int* var_184;
-	int* var_185;
-	struct Image* var_186;
-	__insieme_type_3* var_187;
-	double* var_188;
-	struct Image* var_189;
-	unsigned int* var_190;
-	double* var_191;
+	struct Image* var_185;
+	int* var_186;
+	double* var_187;
+	struct Image* var_188;
+	unsigned int* var_189;
+	double* var_190;
+	struct Source** var_191;
 	double* var_192;
 };
 
-// start code fragment :: Definitions for function type: __insieme_funType_27 //
+// start code fragment :: Definitions for function type: __insieme_funType_8 //
 //
 // -------------------- Begin of constructs for function type (()->unit)---------------------
-// Base-struct of describing closures of type __insieme_funType_27 <-> (()->unit)
-typedef struct ___insieme_funType_27 { 
+// Base-struct of describing closures of type __insieme_funType_8 <-> (()->unit)
+typedef struct ___insieme_funType_8 { 
     void(*call)(void*);
-} __insieme_funType_27;
+} __insieme_funType_8;
 
-// Type safe function for invoking closures of type __insieme_funType_27
-static inline void __insieme_funType_27_call(__insieme_funType_27* closure) {  closure->call(closure); }
+// Type safe function for invoking closures of type __insieme_funType_8
+static inline void __insieme_funType_8_call(__insieme_funType_8* closure) {  closure->call(closure); }
 
 // A constructor for closures wrapping pure functions of type (()->unit)
-static inline __insieme_funType_27* __insieme_funType_27_ctr(__insieme_funType_27* target, void(*call)(void*)) {
-	*target = (__insieme_funType_27){call};
+static inline __insieme_funType_8* __insieme_funType_8_ctr(__insieme_funType_8* target, void(*call)(void*)) {
+	*target = (__insieme_funType_8){call};
 	return target;
 }
 // ----------------------- end of constructs for function (()->unit)-----------------------
 
-// start code fragment :: Definitions for function type: __insieme_funType_29 //
+// start code fragment :: Definitions for function type: __insieme_funType_10 //
 //
-// -------------------- Begin of constructs for function type ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<int<4>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>,ref<real<8>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<real<8>>)->unit)---------------------
-// Base-struct of describing closures of type __insieme_funType_29 <-> ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<int<4>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>,ref<real<8>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<real<8>>)->unit)
-typedef struct ___insieme_funType_29 { 
-    void(*call)(void*, unsigned long*, double*, unsigned int*, double*, int*, int*, struct Image*, __insieme_type_3*, double*, struct Image*, unsigned int*, double*, double*);
-} __insieme_funType_29;
+// -------------------- Begin of constructs for function type ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<int<4>>,ref<real<8>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>,ref<real<8>>)->unit)---------------------
+// Base-struct of describing closures of type __insieme_funType_10 <-> ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<int<4>>,ref<real<8>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>,ref<real<8>>)->unit)
+typedef struct ___insieme_funType_10 { 
+    void(*call)(void*, unsigned long*, double*, unsigned int*, double*, int*, struct Image*, int*, double*, struct Image*, unsigned int*, double*, struct Source**, double*);
+} __insieme_funType_10;
 
-// Type safe function for invoking closures of type __insieme_funType_29
-static inline void __insieme_funType_29_call(__insieme_funType_29* closure, unsigned long* p1, double* p2, unsigned int* p3, double* p4, int* p5, int* p6, struct Image* p7, __insieme_type_3* p8, double* p9, struct Image* p10, unsigned int* p11, double* p12, double* p13) {  closure->call(closure, p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13); }
+// Type safe function for invoking closures of type __insieme_funType_10
+static inline void __insieme_funType_10_call(__insieme_funType_10* closure, unsigned long* p1, double* p2, unsigned int* p3, double* p4, int* p5, struct Image* p6, int* p7, double* p8, struct Image* p9, unsigned int* p10, double* p11, struct Source** p12, double* p13) {  closure->call(closure, p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13); }
 
-// A constructor for closures wrapping pure functions of type ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<int<4>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>,ref<real<8>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<real<8>>)->unit)
-static inline __insieme_funType_29* __insieme_funType_29_ctr(__insieme_funType_29* target, void(*call)(void*, unsigned long*, double*, unsigned int*, double*, int*, int*, struct Image*, __insieme_type_3*, double*, struct Image*, unsigned int*, double*, double*)) {
-	*target = (__insieme_funType_29){call};
+// A constructor for closures wrapping pure functions of type ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<int<4>>,ref<real<8>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>,ref<real<8>>)->unit)
+static inline __insieme_funType_10* __insieme_funType_10_ctr(__insieme_funType_10* target, void(*call)(void*, unsigned long*, double*, unsigned int*, double*, int*, struct Image*, int*, double*, struct Image*, unsigned int*, double*, struct Source**, double*)) {
+	*target = (__insieme_funType_10){call};
 	return target;
 }
-// ----------------------- end of constructs for function ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<int<4>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>,ref<real<8>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<real<8>>)->unit)-----------------------
+// ----------------------- end of constructs for function ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<int<4>>,ref<real<8>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>,ref<real<8>>)->unit)-----------------------
 
-// start code fragment :: Definition of __insieme_closure_28 ... type: (()->unit) //
+// start code fragment :: Definition of __insieme_closure_9 ... type: (()->unit) //
 // -- Begin - Closure Constructs ------------------------------------------------------------
 // struct definition a closure of type (()->unit)
-typedef struct ___insieme_closure_28 {
+typedef struct ___insieme_closure_9 {
     void(*call)(void*);
-    __insieme_funType_29* nested;
+    __insieme_funType_10* nested;
     unsigned long* c1;
     double* c2;
     unsigned int* c3;
     double* c4;
     int* c5;
-    int* c6;
-    struct Image* c7;
-    __insieme_type_3* c8;
-    double* c9;
-    struct Image* c10;
-    unsigned int* c11;
-    double* c12;
+    struct Image* c6;
+    int* c7;
+    double* c8;
+    struct Image* c9;
+    unsigned int* c10;
+    double* c11;
+    struct Source** c12;
     double* c13;
-} __insieme_closure_28;
+} __insieme_closure_9;
 
-static inline void __insieme_closure_28_bind(__insieme_closure_28* closure) {  closure->nested->call(closure->nested, closure->c1,closure->c2,closure->c3,closure->c4,closure->c5,closure->c6,closure->c7,closure->c8,closure->c9,closure->c10,closure->c11,closure->c12,closure->c13); }
+static inline void __insieme_closure_9_bind(__insieme_closure_9* closure) {  closure->nested->call(closure->nested, closure->c1,closure->c2,closure->c3,closure->c4,closure->c5,closure->c6,closure->c7,closure->c8,closure->c9,closure->c10,closure->c11,closure->c12,closure->c13); }
 
-static inline __insieme_closure_28* __insieme_closure_28_ctr(__insieme_closure_28* closure, __insieme_funType_29* nested, unsigned long* c1, double* c2, unsigned int* c3, double* c4, int* c5, int* c6, struct Image* c7, __insieme_type_3* c8, double* c9, struct Image* c10, unsigned int* c11, double* c12, double* c13) {
-    *closure = (__insieme_closure_28){&__insieme_closure_28_bind, nested, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13};
+static inline __insieme_closure_9* __insieme_closure_9_ctr(__insieme_closure_9* closure, __insieme_funType_10* nested, unsigned long* c1, double* c2, unsigned int* c3, double* c4, int* c5, struct Image* c6, int* c7, double* c8, struct Image* c9, unsigned int* c10, double* c11, struct Source** c12, double* c13) {
+    *closure = (__insieme_closure_9){&__insieme_closure_9_bind, nested, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13};
     return closure;
 }
 // -- End - Closure Constructs --------------------------------------------------------------
 
-// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_31_fun //
-struct __insieme_pfor_body_31_fun_capture {
-	struct Image* var_133;
+// start code fragment :: capture-struct for pfor-body __insieme_pfor_body_12_fun //
+struct __insieme_pfor_body_12_fun_capture {
 	unsigned int* var_137;
 	int* var_142;
 	unsigned int* var_144;
+	struct Image* var_133;
 	double* var_141;
 	double* var_138;
-	double* var_135;
 	struct Image* var_134;
+	double* var_135;
 	double* var_139;
-	__insieme_type_3* var_145;
 	double* var_140;
 	unsigned long* var_136;
 	int* var_143;
+	struct Source** var_145;
 };
 
 // start code fragment :: type_declaration_Trace //
@@ -359,27 +292,27 @@ struct Trace {
 double sqrt(double);
 static double sqrt_wrap(void* _closure, double var_207) { return sqrt(var_207); }
 
-// start code fragment :: Definition of __insieme_supp_35 ... type: ((ref<vector<real<8>,2>>,ref<vector<real<8>,2>>)->unit) //
-void __insieme_supp_35(__insieme_type_4* var_45, __insieme_type_4* var_46){
+// start code fragment :: Definition of __insieme_supp_14 ... type: ((ref<vector<real<8>,2>>,ref<vector<real<8>,2>>)->unit) //
+void __insieme_supp_14(__insieme_type_1* var_45, __insieme_type_1* var_46){
 	((((*var_46).data[((unsigned int)(0))])) = (((*var_45).data[((unsigned int)(0))])));
 	((((*var_46).data[((unsigned int)(1))])) = (((*var_45).data[((unsigned int)(1))])));
 }
-static void __insieme_supp_35_wrap(void* _closure, __insieme_type_4* var_45, __insieme_type_4* var_46) { __insieme_supp_35(var_45, var_46); }
+static void __insieme_supp_14_wrap(void* _closure, __insieme_type_1* var_45, __insieme_type_1* var_46) { __insieme_supp_14(var_45, var_46); }
 
-// start code fragment :: Definition of __insieme_supp_36 ... type: ((ref<vector<real<8>,2>>,ref<vector<real<8>,2>>)->unit) //
-void __insieme_supp_36(__insieme_type_4* var_48, __insieme_type_4* var_49){
+// start code fragment :: Definition of __insieme_supp_15 ... type: ((ref<vector<real<8>,2>>,ref<vector<real<8>,2>>)->unit) //
+void __insieme_supp_15(__insieme_type_1* var_48, __insieme_type_1* var_49){
 	((((*var_48).data[((unsigned int)(0))])) = (((*var_49).data[((unsigned int)(0))])));
 	((((*var_48).data[((unsigned int)(1))])) = (((*var_49).data[((unsigned int)(1))])));
 }
-static void __insieme_supp_36_wrap(void* _closure, __insieme_type_4* var_48, __insieme_type_4* var_49) { __insieme_supp_36(var_48, var_49); }
+static void __insieme_supp_15_wrap(void* _closure, __insieme_type_1* var_48, __insieme_type_1* var_49) { __insieme_supp_15(var_48, var_49); }
 
 // start code fragment :: Definition of getTarget ... type: ((real<8>,real<8>,ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>,uint<4>,real<8>,real<8>,real<8>,uint<4>,uint<8>,real<8>)->struct<target:uint<4>,numSteps:uint<8>>) //
-struct Trace getTarget(double i, double j, __insieme_type_3* sources, unsigned int num_sources, double dt, double friction, double height, unsigned int min_steps, unsigned long max_steps, double abortVelocity){
-	__insieme_type_4 pos = ((__insieme_type_4){{i, j}});
-	__insieme_type_4 vel = ((__insieme_type_4){{((double)(0)), ((double)(0))}});
-	__insieme_type_4 acc = ((__insieme_type_4){{((double)(0)), ((double)(0))}});
-	__insieme_type_4 acc_new = ((__insieme_type_4){{((double)(0)), ((double)(0))}});
-	__insieme_type_4 acc_old = ((__insieme_type_4){{((double)(0)), ((double)(0))}});
+struct Trace getTarget(double i, double j, struct Source* sources, unsigned int num_sources, double dt, double friction, double height, unsigned int min_steps, unsigned long max_steps, double abortVelocity){
+	__insieme_type_1 pos = ((__insieme_type_1){{i, j}});
+	__insieme_type_1 vel = ((__insieme_type_1){{((double)(0)), ((double)(0))}});
+	__insieme_type_1 acc = ((__insieme_type_1){{((double)(0)), ((double)(0))}});
+	__insieme_type_1 acc_new = ((__insieme_type_1){{((double)(0)), ((double)(0))}});
+	__insieme_type_1 acc_old = ((__insieme_type_1){{((double)(0)), ((double)(0))}});
 	double sqrt_dt = sqrt(dt);
 	for(unsigned long var_51 = ((unsigned long)(0)); var_51 < max_steps; var_51 += 1) {
 		((((pos).data[((unsigned int)(0))])) = ((((pos).data[((unsigned int)(0))]))+(((((vel).data[((unsigned int)(0))]))*dt)+((sqrt_dt)*(((2.0/3.0)*(((acc).data[((unsigned int)(0))])))-((1.0/6.0)*(((acc_old).data[((unsigned int)(0))]))))))));
@@ -387,17 +320,17 @@ struct Trace getTarget(double i, double j, __insieme_type_3* sources, unsigned i
 		((((acc_new).data[((unsigned int)(0))])) = ((double)(0)));
 		((((acc_new).data[((unsigned int)(1))])) = ((double)(0)));
 		for(unsigned int var_44 = ((unsigned int)(0)); var_44 < num_sources; var_44 += 1) {
-			__insieme_type_3 cur = *(&((__insieme_type_3){&((*sources).data[((unsigned int)(var_44))])}));
-			__insieme_type_4 r = ((__insieme_type_4){{((((pos).data[((unsigned int)(0))]))-(((*(&((((cur).data[0])).pos))).data[((unsigned int)(0))]))), ((((pos).data[((unsigned int)(1))]))-(((*(&((((cur).data[0])).pos))).data[((unsigned int)(1))])))}});
-			if(((*(&((((cur).data[0])).type)))==((int)(((unsigned int)(0)))))){
-				((((acc_new).data[((unsigned int)(0))])) = ((((acc_new).data[((unsigned int)(0))]))-((*(&((((cur).data[0])).mult)))*(((r).data[((unsigned int)(0))])))));
-				((((acc_new).data[((unsigned int)(1))])) = ((((acc_new).data[((unsigned int)(1))]))-((*(&((((cur).data[0])).mult)))*(((r).data[((unsigned int)(1))])))));
+			struct Source* cur = (&(sources[var_44]));
+			__insieme_type_1 r = ((__insieme_type_1){{((((pos).data[((unsigned int)(0))]))-(((*(&((((cur)[0])).pos))).data[((unsigned int)(0))]))), ((((pos).data[((unsigned int)(1))]))-(((*(&((((cur)[0])).pos))).data[((unsigned int)(1))])))}});
+			if((((unsigned int)((*(&((((cur)[0])).type)))))==((unsigned int)(0)))){
+				((((acc_new).data[((unsigned int)(0))])) = ((((acc_new).data[((unsigned int)(0))]))-((*(&((((cur)[0])).mult)))*(((r).data[((unsigned int)(0))])))));
+				((((acc_new).data[((unsigned int)(1))])) = ((((acc_new).data[((unsigned int)(1))]))-((*(&((((cur)[0])).mult)))*(((r).data[((unsigned int)(1))])))));
 			} else {
-				double dist = sqrt((((((((pos).data[((unsigned int)(0))]))-(((*(&((((cur).data[0])).pos))).data[((unsigned int)(0))])))*((((pos).data[((unsigned int)(0))]))-(((*(&((((cur).data[0])).pos))).data[((unsigned int)(0))]))))+(((((pos).data[((unsigned int)(1))]))-(((*(&((((cur).data[0])).pos))).data[((unsigned int)(1))])))*((((pos).data[((unsigned int)(1))]))-(((*(&((((cur).data[0])).pos))).data[((unsigned int)(1))])))))+(height*height)));
-				((((acc_new).data[((unsigned int)(0))])) = ((((acc_new).data[((unsigned int)(0))]))-(((*(&((((cur).data[0])).mult)))/(((dist)*(dist))*(dist)))*(((r).data[((unsigned int)(0))])))));
-				((((acc_new).data[((unsigned int)(1))])) = ((((acc_new).data[((unsigned int)(1))]))-(((*(&((((cur).data[0])).mult)))/(((dist)*(dist))*(dist)))*(((r).data[((unsigned int)(1))])))));
+				double dist = sqrt((((((((pos).data[((unsigned int)(0))]))-(((*(&((((cur)[0])).pos))).data[((unsigned int)(0))])))*((((pos).data[((unsigned int)(0))]))-(((*(&((((cur)[0])).pos))).data[((unsigned int)(0))]))))+(((((pos).data[((unsigned int)(1))]))-(((*(&((((cur)[0])).pos))).data[((unsigned int)(1))])))*((((pos).data[((unsigned int)(1))]))-(((*(&((((cur)[0])).pos))).data[((unsigned int)(1))])))))+(height*height)));
+				((((acc_new).data[((unsigned int)(0))])) = ((((acc_new).data[((unsigned int)(0))]))-(((*(&((((cur)[0])).mult)))/(((dist)*(dist))*(dist)))*(((r).data[((unsigned int)(0))])))));
+				((((acc_new).data[((unsigned int)(1))])) = ((((acc_new).data[((unsigned int)(1))]))-(((*(&((((cur)[0])).mult)))/(((dist)*(dist))*(dist)))*(((r).data[((unsigned int)(1))])))));
 			};
-			if((((var_51>((unsigned long)(min_steps)))&&(sqrt((((((r).data[((unsigned int)(0))]))*(((r).data[((unsigned int)(0))])))+((((r).data[((unsigned int)(1))]))*(((r).data[((unsigned int)(1))])))))<(*(&((((cur).data[0])).size)))))&&(sqrt((((((vel).data[((unsigned int)(0))]))*(((vel).data[((unsigned int)(0))])))+((((vel).data[((unsigned int)(1))]))*(((vel).data[((unsigned int)(1))])))))<abortVelocity))) { return ((struct Trace){var_44,
+			if((((var_51>((unsigned long)(min_steps)))&&(sqrt((((((r).data[((unsigned int)(0))]))*(((r).data[((unsigned int)(0))])))+((((r).data[((unsigned int)(1))]))*(((r).data[((unsigned int)(1))])))))<(*(&((((cur)[0])).size)))))&&(sqrt((((((vel).data[((unsigned int)(0))]))*(((vel).data[((unsigned int)(0))])))+((((vel).data[((unsigned int)(1))]))*(((vel).data[((unsigned int)(1))])))))<abortVelocity))) { return ((struct Trace){var_44,
 				var_51
 			}); };
 		};
@@ -405,93 +338,93 @@ struct Trace getTarget(double i, double j, __insieme_type_3* sources, unsigned i
 		((((acc_new).data[((unsigned int)(1))])) = ((((acc_new).data[((unsigned int)(1))]))-((((vel).data[((unsigned int)(1))]))*friction)));
 		((((vel).data[((unsigned int)(0))])) = ((((vel).data[((unsigned int)(0))]))+(dt*((((1.0/3.0)*(((acc_new).data[((unsigned int)(0))])))+((5.0/6.0)*(((acc).data[((unsigned int)(0))]))))-((1.0/6.0)*(((acc_old).data[((unsigned int)(0))])))))));
 		((((vel).data[((unsigned int)(1))])) = ((((vel).data[((unsigned int)(1))]))+(dt*((((1.0/3.0)*(((acc_new).data[((unsigned int)(1))])))+((5.0/6.0)*(((acc).data[((unsigned int)(1))]))))-((1.0/6.0)*(((acc_old).data[((unsigned int)(1))])))))));
-		__insieme_supp_35(&acc, &acc_old);
-		__insieme_supp_36(&acc, &acc_new);
+		__insieme_supp_14(&acc, &acc_old);
+		__insieme_supp_15(&acc, &acc_new);
 	};
 	return ((struct Trace){num_sources,
 		max_steps
 	});
 }
-static struct Trace getTarget_wrap(void* _closure, double i, double j, __insieme_type_3* sources, unsigned int num_sources, double dt, double friction, double height, unsigned int min_steps, unsigned long max_steps, double abortVelocity) { return getTarget(i, j, sources, num_sources, dt, friction, height, min_steps, max_steps, abortVelocity); }
+static struct Trace getTarget_wrap(void* _closure, double i, double j, struct Source* sources, unsigned int num_sources, double dt, double friction, double height, unsigned int min_steps, unsigned long max_steps, double abortVelocity) { return getTarget(i, j, sources, num_sources, dt, friction, height, min_steps, max_steps, abortVelocity); }
 
-// start code fragment :: Definition of __insieme_supp_32 ... type: ((ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<int<4>>,ref<uint<4>>,ref<real<8>>,ref<real<8>>,ref<real<8>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<real<8>>,ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>,ref<real<8>>,ref<uint<8>>,ref<int<4>>,int<4>)->unit) //
-void __insieme_supp_32(struct Image* var_161, unsigned int* var_157, int* var_152, unsigned int* var_150, double* var_153, double* var_156, double* var_159, struct Image* var_160, double* var_155, __insieme_type_3* var_149, double* var_154, unsigned long* var_158, int* var_151, int var_148) { for(int var_112 = 0; var_112 < (*var_152); var_112 += 1) {
+// start code fragment :: Definition of __insieme_supp_13 ... type: ((ref<uint<4>>,ref<int<4>>,ref<uint<4>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<real<8>>,ref<real<8>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<real<8>>,ref<real<8>>,ref<real<8>>,ref<uint<8>>,ref<int<4>>,ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>,int<4>)->unit) //
+void __insieme_supp_13(unsigned int* var_157, int* var_152, unsigned int* var_150, struct Image* var_161, double* var_153, double* var_156, struct Image* var_160, double* var_159, double* var_155, double* var_154, unsigned long* var_158, int* var_151, struct Source** var_149, int var_148) { for(int var_112 = 0; var_112 < (*var_152); var_112 += 1) {
 	double curX = (((((double)(0))-1.0)+((((double)(var_148))/((double)(((*var_151)-1))))*2.0))*(*var_153));
 	double curY = (((((double)(0))-1.0)+((((double)(var_112))/((double)(((*var_152)-1))))*2.0))*(*var_153));
-	struct Trace res = getTarget((curX), (curY), var_149, (*var_150), (*var_154), (*var_155), (*var_156), (*var_157), (*var_158), (*var_159));
-	((((((*(&((*var_160).data))).data[((unsigned int)(var_148))])).data[((unsigned int)(var_112))])) = (*(&((res).target))));
-	((((((*(&((*var_161).data))).data[((unsigned int)(var_148))])).data[((unsigned int)(var_112))])) = ((unsigned int)((*(&((res).numSteps))))));
+	struct Trace res = getTarget((curX), (curY), (*var_149), (*var_150), (*var_154), (*var_155), (*var_156), (*var_157), (*var_158), (*var_159));
+	((((((*(&((*var_160).data)))[((unsigned int)(var_148))]))[((unsigned int)(var_112))])) = (*(&((res).target))));
+	((((((*(&((*var_161).data)))[((unsigned int)(var_148))]))[((unsigned int)(var_112))])) = ((unsigned int)((*(&((res).numSteps))))));
 }; }
-static void __insieme_supp_32_wrap(void* _closure, struct Image* var_161, unsigned int* var_157, int* var_152, unsigned int* var_150, double* var_153, double* var_156, double* var_159, struct Image* var_160, double* var_155, __insieme_type_3* var_149, double* var_154, unsigned long* var_158, int* var_151, int var_148) { __insieme_supp_32(var_161, var_157, var_152, var_150, var_153, var_156, var_159, var_160, var_155, var_149, var_154, var_158, var_151, var_148); }
+static void __insieme_supp_13_wrap(void* _closure, unsigned int* var_157, int* var_152, unsigned int* var_150, struct Image* var_161, double* var_153, double* var_156, struct Image* var_160, double* var_159, double* var_155, double* var_154, unsigned long* var_158, int* var_151, struct Source** var_149, int var_148) { __insieme_supp_13(var_157, var_152, var_150, var_161, var_153, var_156, var_160, var_159, var_155, var_154, var_158, var_151, var_149, var_148); }
 
-// start code fragment :: function for pfor-body __insieme_pfor_body_31_fun //
-void __insieme_pfor_body_31_fun(const isbr_PForRange range) {
+// start code fragment :: function for pfor-body __insieme_pfor_body_12_fun //
+void __insieme_pfor_body_12_fun(const isbr_PForRange range) {
 	// ----- captured variables -----
-	struct Image* var_193 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_133;
-	unsigned int* var_194 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_137;
-	int* var_195 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_142;
-	unsigned int* var_196 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_144;
-	double* var_197 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_141;
-	double* var_198 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_138;
-	double* var_199 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_135;
-	struct Image* var_200 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_134;
-	double* var_201 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_139;
-	__insieme_type_3* var_202 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_145;
-	double* var_203 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_140;
-	unsigned long* var_204 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_136;
-	int* var_205 = ((struct __insieme_pfor_body_31_fun_capture*)(range.context))->var_143;
+	unsigned int* var_193 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_137;
+	int* var_194 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_142;
+	unsigned int* var_195 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_144;
+	struct Image* var_196 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_133;
+	double* var_197 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_141;
+	double* var_198 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_138;
+	struct Image* var_199 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_134;
+	double* var_200 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_135;
+	double* var_201 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_139;
+	double* var_202 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_140;
+	unsigned long* var_203 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_136;
+	int* var_204 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_143;
+	struct Source** var_205 = ((struct __insieme_pfor_body_12_fun_capture*)(range.context))->var_145;
 	
 	// ----- process iterations -----
 	for(int __it = range.start; __it<range.end; __it+=range.step) {
-		__insieme_supp_32(var_193, var_194, var_195, var_196, var_197, var_198, var_199, var_200, var_201, var_202, var_203, var_204, var_205, __it);
+		__insieme_supp_13(var_193, var_194, var_195, var_196, var_197, var_198, var_199, var_200, var_201, var_202, var_203, var_204, var_205, __it);
 	}
 	
 }
 
-// start code fragment :: Definition of __insieme_supp_30 ... type: ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<int<4>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>,ref<real<8>>,ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<real<8>>)->unit) //
-void __insieme_supp_30(unsigned long* var_136, double* var_135, unsigned int* var_144, double* var_139, int* var_142, int* var_143, struct Image* var_133, __insieme_type_3* var_145, double* var_140, struct Image* var_134, unsigned int* var_137, double* var_138, double* var_141) { {
-	isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, (*var_143), 1, &((struct __insieme_pfor_body_31_fun_capture){var_133, var_137, var_142, var_144, var_141, var_138, var_135, var_134, var_139, var_145, var_140, var_136, var_143})},&__insieme_pfor_body_31_fun);
+// start code fragment :: Definition of __insieme_supp_11 ... type: ((ref<uint<8>>,ref<real<8>>,ref<uint<4>>,ref<real<8>>,ref<int<4>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<int<4>>,ref<real<8>>,ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>>,ref<uint<4>>,ref<real<8>>,ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>,ref<real<8>>)->unit) //
+void __insieme_supp_11(unsigned long* var_136, double* var_135, unsigned int* var_144, double* var_139, int* var_142, struct Image* var_133, int* var_143, double* var_140, struct Image* var_134, unsigned int* var_137, double* var_138, struct Source** var_145, double* var_141) { {
+	isbr_pfor(isbr_getThreadGroup(0),(isbr_PForRange){0, (*var_143), 1, &((struct __insieme_pfor_body_12_fun_capture){var_137, var_142, var_144, var_133, var_141, var_138, var_134, var_135, var_139, var_140, var_136, var_143, var_145})},&__insieme_pfor_body_12_fun);
 	isbr_barrier(isbr_getThreadGroup(0));
 }; }
-static void __insieme_supp_30_wrap(void* _closure, unsigned long* var_136, double* var_135, unsigned int* var_144, double* var_139, int* var_142, int* var_143, struct Image* var_133, __insieme_type_3* var_145, double* var_140, struct Image* var_134, unsigned int* var_137, double* var_138, double* var_141) { __insieme_supp_30(var_136, var_135, var_144, var_139, var_142, var_143, var_133, var_145, var_140, var_134, var_137, var_138, var_141); }
+static void __insieme_supp_11_wrap(void* _closure, unsigned long* var_136, double* var_135, unsigned int* var_144, double* var_139, int* var_142, struct Image* var_133, int* var_143, double* var_140, struct Image* var_134, unsigned int* var_137, double* var_138, struct Source** var_145, double* var_141) { __insieme_supp_11(var_136, var_135, var_144, var_139, var_142, var_133, var_143, var_140, var_134, var_137, var_138, var_145, var_141); }
 
-// start code fragment :: function for job __insieme_job_26 //
-void fun__insieme_job_26(isbr_JobArgs* args) {
+// start code fragment :: function for job __insieme_job_7 //
+void fun__insieme_job_7(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
-	unsigned long* var_180 = ((struct __insieme_job_26*)args)->var_180;
-	double* var_181 = ((struct __insieme_job_26*)args)->var_181;
-	unsigned int* var_182 = ((struct __insieme_job_26*)args)->var_182;
-	double* var_183 = ((struct __insieme_job_26*)args)->var_183;
-	int* var_184 = ((struct __insieme_job_26*)args)->var_184;
-	int* var_185 = ((struct __insieme_job_26*)args)->var_185;
-	struct Image* var_186 = ((struct __insieme_job_26*)args)->var_186;
-	__insieme_type_3* var_187 = ((struct __insieme_job_26*)args)->var_187;
-	double* var_188 = ((struct __insieme_job_26*)args)->var_188;
-	struct Image* var_189 = ((struct __insieme_job_26*)args)->var_189;
-	unsigned int* var_190 = ((struct __insieme_job_26*)args)->var_190;
-	double* var_191 = ((struct __insieme_job_26*)args)->var_191;
-	double* var_192 = ((struct __insieme_job_26*)args)->var_192;
+	unsigned long* var_180 = ((struct __insieme_job_7*)args)->var_180;
+	double* var_181 = ((struct __insieme_job_7*)args)->var_181;
+	unsigned int* var_182 = ((struct __insieme_job_7*)args)->var_182;
+	double* var_183 = ((struct __insieme_job_7*)args)->var_183;
+	int* var_184 = ((struct __insieme_job_7*)args)->var_184;
+	struct Image* var_185 = ((struct __insieme_job_7*)args)->var_185;
+	int* var_186 = ((struct __insieme_job_7*)args)->var_186;
+	double* var_187 = ((struct __insieme_job_7*)args)->var_187;
+	struct Image* var_188 = ((struct __insieme_job_7*)args)->var_188;
+	unsigned int* var_189 = ((struct __insieme_job_7*)args)->var_189;
+	double* var_190 = ((struct __insieme_job_7*)args)->var_190;
+	struct Source** var_191 = ((struct __insieme_job_7*)args)->var_191;
+	double* var_192 = ((struct __insieme_job_7*)args)->var_192;
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
-	__insieme_funType_27_call((__insieme_funType_27*)__insieme_closure_28_ctr((__insieme_closure_28*)alloca(sizeof(__insieme_closure_28)),(__insieme_funType_29*)__insieme_funType_29_ctr((__insieme_funType_29*)alloca(sizeof(__insieme_funType_29)),&__insieme_supp_30_wrap), var_180, var_181, var_182, var_183, var_184, var_185, var_186, var_187, var_188, var_189, var_190, var_191, var_192));
+	__insieme_funType_8_call((__insieme_funType_8*)__insieme_closure_9_ctr((__insieme_closure_9*)alloca(sizeof(__insieme_closure_9)),(__insieme_funType_10*)__insieme_funType_10_ctr((__insieme_funType_10*)alloca(sizeof(__insieme_funType_10)),&__insieme_supp_11_wrap), var_180, var_181, var_182, var_183, var_184, var_185, var_186, var_187, var_188, var_189, var_190, var_191, var_192));
 }
 
-// start code fragment :: Definition of print_target_image_ASCII ... type: ((struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,uint<4>)->unit) //
+// start code fragment :: Definition of print_target_image_ASCII ... type: ((struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,uint<4>)->unit) //
 void print_target_image_ASCII(struct Image image, unsigned int sources) { for(int var_8 = 0; var_8 < (image.x); var_8 += 1) {
-	for(int var_7 = 0; var_7 < (image.y); var_7 += 1)  { if(((image.data).data[((unsigned int)(var_8))].data[((unsigned int)(var_7))]==((unsigned int)(0)))) { printf(((char*)((*(&((__insieme_type_1){" "}))).data)), 0); } else  { if(((image.data).data[((unsigned int)(var_8))].data[((unsigned int)(var_7))]==sources)) { printf(((char*)((*(&((__insieme_type_1){"X"}))).data)), 0); } else  { printf(((char*)((*(&((__insieme_type_1){"%c"}))).data)), ((((unsigned int)(((int)('A'))))+(image.data).data[((unsigned int)(var_8))].data[((unsigned int)(var_7))])-((unsigned int)(1)))); }; }; };
-	printf(((char*)((*(&((__insieme_type_1){"\n"}))).data)), 0);
+	for(int var_7 = 0; var_7 < (image.y); var_7 += 1)  { if(((image.data)[((unsigned int)(var_8))][((unsigned int)(var_7))]==((unsigned int)(0)))) { printf(" ", 0); } else  { if(((image.data)[((unsigned int)(var_8))][((unsigned int)(var_7))]==sources)) { printf("X", 0); } else  { printf("%c", ((((unsigned int)(((int)('A'))))+(image.data)[((unsigned int)(var_8))][((unsigned int)(var_7))])-((unsigned int)(1)))); }; }; };
+	printf("\n", 0);
 }; }
 static void print_target_image_ASCII_wrap(void* _closure, struct Image image, unsigned int sources) { print_target_image_ASCII(image, sources); }
 
-// start code fragment :: vector_type_declaration of __insieme_type_37 <=> vector<uint<1>,2> //
-typedef struct ___insieme_type_37 { 
+// start code fragment :: vector_type_declaration of __insieme_type_16 <=> vector<uint<1>,2> //
+typedef struct ___insieme_type_16 { 
     unsigned char data[2];
-} __insieme_type_37;
+} __insieme_type_16;
 
-// A constructor initializing a vector of the type __insieme_type_37 uniformly
-static inline __insieme_type_37 __insieme_type_37_init_uniform(unsigned char value) {
-	__insieme_type_37 res;
+// A constructor initializing a vector of the type __insieme_type_16 uniformly
+static inline __insieme_type_16 __insieme_type_16_init_uniform(unsigned char value) {
+	__insieme_type_16 res;
 	for (int i=0; i<2;++i) {
 	    res.data[i] = value;
 	}
@@ -501,17 +434,12 @@ static inline __insieme_type_37 __insieme_type_37_init_uniform(unsigned char val
 
 // start code fragment :: type_declaration_bmp_magic //
 struct bmp_magic { 
-    __insieme_type_37 magic;
+    __insieme_type_16 magic;
 };
 
-// start code fragment :: Prototype for external function: fwrite ... type: ((anyRef,uint<8>,uint<8>,ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)->uint<8>) //
+// start code fragment :: Prototype for external function: fwrite ... type: ((anyRef,uint<8>,uint<8>,ref<array<rec '_IO_FILE.{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>)->uint<8>) //
 unsigned long fwrite(void*, unsigned long, unsigned long, struct FILE*);
-static unsigned long fwrite_wrap(void* _closure, void* var_208, unsigned long var_209, unsigned long var_210, __insieme_type_6* var_211) { return fwrite(var_208, var_209, var_210, ((struct FILE*)((*(var_211)).data))); }
-
-// start code fragment :: array type definition of __insieme_type_39 <=> array<struct<magic:vector<uint<1>,2>>,1> //
-typedef struct ___insieme_type_39 { 
-    struct bmp_magic* data;
-} __insieme_type_39;
+static unsigned long fwrite_wrap(void* _closure, void* var_208, unsigned long var_209, unsigned long var_210, struct FILE* var_211) { return fwrite(var_208, var_209, var_210, var_211); }
 
 // start code fragment :: type_declaration_bmp_header //
 struct bmp_header { 
@@ -542,16 +470,6 @@ struct Color {
     unsigned char g;
     unsigned char b;
 };
-
-// start code fragment :: array type definition of __insieme_type_42 <=> array<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>,1> //
-typedef struct ___insieme_type_42 { 
-    struct bmp_header* data;
-} __insieme_type_42;
-
-// start code fragment :: array type definition of __insieme_type_45 <=> array<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>,1> //
-typedef struct ___insieme_type_45 { 
-    struct bmp_info_header* data;
-} __insieme_type_45;
 
 // start code fragment :: Definition of getColor ... type: ((uint<4>,uint<4>,uint<8>,uint<8>)->struct<r:uint<1>,g:uint<1>,b:uint<1>>) //
 struct Color getColor(unsigned int target, unsigned int distance, unsigned long minSteps, unsigned long maxSteps){
@@ -597,34 +515,29 @@ struct Color getColor(unsigned int target, unsigned int distance, unsigned long 
 		};
 	};
 	double factor = (1.0-(((double)((((unsigned long)(distance))-minSteps)))/((double)((maxSteps-minSteps)))));
-	((*(&((color).r))) = ((unsigned char)((((double)((*(&((color).r)))))*(factor)))));
-	((*(&((color).g))) = ((unsigned char)((((double)((*(&((color).g)))))*(factor)))));
-	((*(&((color).b))) = ((unsigned char)((((double)((*(&((color).b)))))*(factor)))));
+	((*(&((color).r))) = ((unsigned char)((((double)(((int)((*(&((color).r)))))))*(factor)))));
+	((*(&((color).g))) = ((unsigned char)((((double)(((int)((*(&((color).g)))))))*(factor)))));
+	((*(&((color).b))) = ((unsigned char)((((double)(((int)((*(&((color).b)))))))*(factor)))));
 	return (color);
 }
 static struct Color getColor_wrap(void* _closure, unsigned int target, unsigned int distance, unsigned long minSteps, unsigned long maxSteps) { return getColor(target, distance, minSteps, maxSteps); }
 
-// start code fragment :: array type definition of __insieme_type_48 <=> array<struct<r:uint<1>,g:uint<1>,b:uint<1>>,1> //
-typedef struct ___insieme_type_48 { 
-    struct Color* data;
-} __insieme_type_48;
-
-// start code fragment :: Definition of write_image ... type: ((struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,ref<array<char,1>>,uint<8>,uint<8>)->unit) //
-void write_image(struct Image target, struct Image dist, __insieme_type_1* filename, unsigned long minSteps, unsigned long maxSteps){
-	__insieme_type_6 out = ((__insieme_type_6){fopen(((char*)((*(filename)).data)), ((char*)((*(&((__insieme_type_1){"wb"}))).data)))});
-	if((!(!((out).data==0)))){
-		printf(((char*)((*(&((__insieme_type_1){"Error opening output file!\n"}))).data)), 0);
+// start code fragment :: Definition of write_image ... type: ((struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,ref<array<char,1>>,uint<8>,uint<8>)->unit) //
+void write_image(struct Image target, struct Image dist, char* filename, unsigned long minSteps, unsigned long maxSteps){
+	struct FILE* out = fopen(filename, "wb");
+	if((!(!((out)==0)))){
+		printf("Error opening output file!\n", 0);
 		return;
 	};
-	struct bmp_magic magic = ((struct bmp_magic){((__insieme_type_37){{((unsigned char)(0x42)), ((unsigned char)(0x4D))}})
+	struct bmp_magic magic = ((struct bmp_magic){((__insieme_type_16){{((unsigned char)(0x42)), ((unsigned char)(0x4D))}})
 	});
-	fwrite((void*)((struct bmp_magic*)((*((&((__insieme_type_39){&magic})))).data)), sizeof(struct bmp_magic), ((unsigned long)(1)), ((struct FILE*)((*(&out)).data)));
+	fwrite((void*)(&magic), sizeof(struct bmp_magic), ((unsigned long)(1)), (out));
 	struct bmp_header header;
 	((*(&((header).bmp_offset))) = ((unsigned int)(((sizeof(struct bmp_magic)+sizeof(struct bmp_header))+sizeof(struct bmp_info_header)))));
-	((*(&((header).filesz))) = ((*(&((header).bmp_offset)))+((unsigned int)(((sizeof(struct Color)*((unsigned long)((target.x))))*((unsigned long)((target.y))))))));
+	((*(&((header).filesz))) = ((unsigned int)((((unsigned long)((*(&((header).bmp_offset)))))+((sizeof(struct Color)*((unsigned long)((target.x))))*((unsigned long)((target.y))))))));
 	((*(&((header).creator1))) = ((unsigned short)(0)));
 	((*(&((header).creator2))) = ((unsigned short)(0)));
-	fwrite((void*)((struct bmp_header*)((*((&((__insieme_type_42){&header})))).data)), sizeof(struct bmp_header), ((unsigned long)(1)), ((struct FILE*)((*(&out)).data)));
+	fwrite((void*)(&header), sizeof(struct bmp_header), ((unsigned long)(1)), (out));
 	struct bmp_info_header info;
 	((*(&((info).header_sz))) = ((unsigned int)(40)));
 	((*(&((info).width))) = (target.x));
@@ -637,125 +550,107 @@ void write_image(struct Image target, struct Image dist, __insieme_type_1* filen
 	((*(&((info).vres))) = 1000);
 	((*(&((info).ncolors))) = ((unsigned int)(0)));
 	((*(&((info).nimpcolors))) = ((unsigned int)(0)));
-	fwrite((void*)((struct bmp_info_header*)((*((&((__insieme_type_45){&info})))).data)), sizeof(struct bmp_info_header), ((unsigned long)(1)), ((struct FILE*)((*(&out)).data)));
+	fwrite((void*)(&info), sizeof(struct bmp_info_header), ((unsigned long)(1)), (out));
 	for(int var_84 = 0; var_84 < (target.x); var_84 += 1) {
 		for(int var_81 = 0; var_81 < (target.y); var_81 += 1) {
-			struct Color color = getColor((target.data).data[((unsigned int)(var_84))].data[((unsigned int)(var_81))], (dist.data).data[((unsigned int)(var_84))].data[((unsigned int)(var_81))], minSteps, maxSteps);
-			fwrite((void*)((struct Color*)((*((&((__insieme_type_48){&color})))).data)), sizeof(struct Color), ((unsigned long)(1)), ((struct FILE*)((*(&out)).data)));
+			struct Color color = getColor((target.data)[((unsigned int)(var_84))][((unsigned int)(var_81))], (dist.data)[((unsigned int)(var_84))][((unsigned int)(var_81))], minSteps, maxSteps);
+			fwrite((void*)(&color), sizeof(struct Color), ((unsigned long)(1)), (out));
 		};
 		char pad = ((char)(0));
 		int c = (3*(target.y));
 		while((((c)%4)!=0)) {
-			fwrite((void*)((char*)((*((&((__insieme_type_1){&pad})))).data)), ((unsigned long)(1)), ((unsigned long)(1)), ((struct FILE*)((*(&out)).data)));
+			fwrite((void*)(&pad), ((unsigned long)(1)), ((unsigned long)(1)), (out));
 			((c)++);
 		};
 	};
-	fclose(((struct FILE*)((*(&out)).data)));
+	fclose((out));
 }
-static void write_image_wrap(void* _closure, struct Image target, struct Image dist, __insieme_type_1* filename, unsigned long minSteps, unsigned long maxSteps) { write_image(target, dist, filename, minSteps, maxSteps); }
+static void write_image_wrap(void* _closure, struct Image target, struct Image dist, char* filename, unsigned long minSteps, unsigned long maxSteps) { write_image(target, dist, filename, minSteps, maxSteps); }
 
-// start code fragment :: array type definition of __insieme_type_51 <=> array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1> //
-typedef struct ___insieme_type_51 { 
-    struct Image* data;
-} __insieme_type_51;
-
-// start code fragment :: Definition of delete_image ... type: ((ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>>)->unit) //
-void delete_image(__insieme_type_51* image){
-	free((((*(&((((*image).data[0])).data))).data[((unsigned int)(0))])).data);
-	free((*(&((((*image).data[0])).data))).data);
+// start code fragment :: Definition of delete_image ... type: ((ref<array<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,1>>)->unit) //
+void delete_image(struct Image* image){
+	free((((*(&(((image[0])).data)))[((unsigned int)(0))])));
+	free((*(&(((image[0])).data))));
 }
-static void delete_image_wrap(void* _closure, __insieme_type_51* image) { delete_image(image); }
+static void delete_image_wrap(void* _closure, struct Image* image) { delete_image(image); }
 
-// start code fragment :: main function //
-int main(int __argc, char** __argv) {
-	
-	// encapsulating arguments within Insieme Types ...
-	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
-	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i]};
-	}
-	
-	// ---- begin of actual code body ----
-	{
-		struct Settings settings = ((struct Settings){((unsigned int)(4)),
-			60,
-			60,
-			800.0,
-			0.01,
-			0.01,
-			0.3,
-			0.01,
-			((unsigned int)(400)),
-			((unsigned long)(100000))
-		});
-		__insieme_type_3 sources;
-		if((argc>1)){
-			__insieme_type_6 fp;
-			__insieme_type_12 file;
-			((fp) = (((__insieme_type_6){fopen(((char*)((*(&((argv).data[((unsigned int)(1))]))).data)), ((char*)((*(&((__insieme_type_1){"r"}))).data)))})));
-			if(((fp).data == (__insieme_type_6){0}.data)){
-				printf(((char*)((*(&((__insieme_type_1){"Cannot open file.\n"}))).data)), 0);
-				exit(1);
+// start code fragment :: Definition of main ... type: ((int<4>,ref<array<ref<array<char,1>>,1>>)->int<4>) //
+int main(int argc, char** argv){
+	struct Settings settings = ((struct Settings){((unsigned int)(4)),
+		60,
+		60,
+		800.0,
+		0.01,
+		0.01,
+		0.3,
+		0.01,
+		((unsigned int)(400)),
+		((unsigned long)(100000))
+	});
+	struct Source* sources;
+	if((argc>1)){
+		struct FILE* fp;
+		__insieme_type_5 file;
+		((fp) = fopen(((argv[((unsigned int)(1))])), "r"));
+		if(((fp) == 0)){
+			printf("Cannot open file.\n", 0);
+			exit(1);
+		};
+		fread((void*)((char*)((*(&file)).data)), ((unsigned long)(1)), ((unsigned long)((512*8))), (fp));
+		fclose((fp));
+		char* line = strtok((((char*){(file).data})), "\n\r");
+		while((((int)((((line)[((unsigned int)(0))]))))==35))  { ((line) = strtok(0, "\n\r")); };
+		char* next = strchr((line), 0);
+		((settings) = readSettings((line)));
+		((sources) = (((struct Source*){malloc(sizeof(struct Source*)*(((unsigned long)((*(&((settings).numSources)))))/sizeof(struct Source)))})));
+		{
+			int i = 0;
+			while((((unsigned int)((i)))<(*(&((settings).numSources))))) {
+				((line) = strtok((&((next)[((unsigned int)(1))])), "\n\r"));
+				((next) = strchr((line), 0));
+				if((((int)((((line)[((unsigned int)(0))]))))!=35)) { ((((sources)[((unsigned int)(((i)++)))])) = readSource((line))); };
 			};
-			fread((void*)((char*)((*(&file)).data)), ((unsigned long)(1)), ((unsigned long)((512*8))), ((struct FILE*)((*(&fp)).data)));
-			fclose(((struct FILE*)((*(&fp)).data)));
-			__insieme_type_1 line = ((__insieme_type_1){strtok(((char*)((*((&((__insieme_type_1){(file).data})))).data)), ((char*)((*(&((__insieme_type_1){"\n\r"}))).data)))});
-			while(((((line).data[((unsigned int)(0))]))=='#'))  { ((line) = (((__insieme_type_1){strtok(((char*)((*(((__insieme_type_1*)memcpy(alloca(sizeof(__insieme_type_1)), &((__insieme_type_1){0}), sizeof(__insieme_type_1))))).data)), ((char*)((*(&((__insieme_type_1){"\n\r"}))).data)))}))); };
-			__insieme_type_1 next = ((__insieme_type_1){strchr(((char*)((*(&line)).data)), 0)});
-			((settings) = readSettings(&line));
-			((sources) = ((__insieme_type_3_ctr((((unsigned long)((*(&((settings).numSources)))))/sizeof(struct Source))))));
-			{
-				int i = 0;
-				while(((i)<((int)((*(&((settings).numSources))))))) {
-					((line) = (((__insieme_type_1){strtok(((char*)((*((&((__insieme_type_1){&((next).data[((unsigned int)(1))])})))).data)), ((char*)((*(&((__insieme_type_1){"\n\r"}))).data)))})));
-					((next) = (((__insieme_type_1){strchr(((char*)((*(&line)).data)), 0)})));
-					if(((((line).data[((unsigned int)(0))]))!='#')) { ((((sources).data[((unsigned int)(((i)++)))])) = readSource(&line)); };
-				};
-			};
-		} else  { ((sources) = (((__insieme_type_3){(((__insieme_type_17){{((struct Source){0,
-			((__insieme_type_4){{((double)(0)), ((double)(0))}}),
-			0.01,
-			0.02
-		}), ((struct Source){1,
-			((__insieme_type_4){{((double)(1)), ((double)(0))}}),
-			0.08,
-			0.02
-		}), ((struct Source){1,
-			((__insieme_type_4){{(((double)(0))-0.5), 0.866025404}}),
-			0.08,
-			0.02
-		}), ((struct Source){1,
-			((__insieme_type_4){{(((double)(0))-0.5), (((double)(0))-0.866025404)}}),
-			0.08,
-			0.02
-		})}})).data}))); };
-		unsigned int num_sources = *(&((settings).numSources));
-		int x = *(&((settings).x));
-		int y = *(&((settings).y));
-		double scale = *(&((settings).scale));
-		double dt = *(&((settings).dt));
-		double friction = *(&((settings).friction));
-		double height = *(&((settings).height));
-		unsigned int min_steps = *(&((settings).minSteps));
-		unsigned long max_steps = *(&((settings).maxSteps));
-		double abortVelocity = *(&((settings).abortVelocity));
-		struct Image image = create_image((x), (y));
-		struct Image dist = create_image((x), (y));
-		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_26)),&((struct __insieme_job_26){sizeof(struct __insieme_job_26),1,isbr_getMaxThreads(),&fun__insieme_job_26,&max_steps,&abortVelocity,&num_sources,&friction,&y,&x,&dist,&sources,&dt,&image,&min_steps,&height,&scale}),sizeof(struct __insieme_job_26))));
-		unsigned long maxSteps = ((unsigned long)(0));
-		unsigned long minSteps = max_steps;
-		for(int var_131 = 0; var_131 < (x); var_131 += 1)  { for(int var_130 = 0; var_130 < (y); var_130 += 1) {
-			((maxSteps) = ((((((((*(&((dist).data))).data[((unsigned int)(var_131))])).data[((unsigned int)(var_130))]))>((unsigned int)((maxSteps)))))?(((unsigned long)((((((*(&((dist).data))).data[((unsigned int)((var_131)))])).data[((unsigned int)((var_130)))]))))):((maxSteps))));
-			((minSteps) = ((((((((*(&((dist).data))).data[((unsigned int)(var_131))])).data[((unsigned int)(var_130))]))<((unsigned int)((minSteps)))))?(((unsigned long)((((((*(&((dist).data))).data[((unsigned int)((var_131)))])).data[((unsigned int)((var_130)))]))))):((minSteps))));
-		}; };
-		printf(((char*)((*(&((__insieme_type_1){"Number of steps calculated: %llu .. %llu\n"}))).data)), (minSteps), (maxSteps));
-		print_target_image_ASCII((image), (num_sources));
-		write_image((image), (dist), &((__insieme_type_1){"out.bmp"}), (minSteps), (maxSteps));
-		delete_image((&((__insieme_type_51){&image})));
-		delete_image((&((__insieme_type_51){&dist})));
-	}
-	// ----  end of actual code body  ----
-	
+		};
+	} else  { ((sources) = ((((__insieme_type_6){{((struct Source){0,
+		((__insieme_type_1){{((double)(0)), ((double)(0))}}),
+		0.01,
+		0.02
+	}), ((struct Source){1,
+		((__insieme_type_1){{((double)(1)), ((double)(0))}}),
+		0.08,
+		0.02
+	}), ((struct Source){1,
+		((__insieme_type_1){{(((double)(0))-0.5), 0.866025404}}),
+		0.08,
+		0.02
+	}), ((struct Source){1,
+		((__insieme_type_1){{(((double)(0))-0.5), (((double)(0))-0.866025404)}}),
+		0.08,
+		0.02
+	})}})).data)); };
+	unsigned int num_sources = (*(&((settings).numSources)));
+	int x = (*(&((settings).x)));
+	int y = (*(&((settings).y)));
+	double scale = (*(&((settings).scale)));
+	double dt = (*(&((settings).dt)));
+	double friction = (*(&((settings).friction)));
+	double height = (*(&((settings).height)));
+	unsigned int min_steps = (*(&((settings).minSteps)));
+	unsigned long max_steps = (*(&((settings).maxSteps)));
+	double abortVelocity = (*(&((settings).abortVelocity)));
+	struct Image image = create_image((x), (y));
+	struct Image dist = create_image((x), (y));
+	isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_7)),&((struct __insieme_job_7){sizeof(struct __insieme_job_7),1,isbr_getMaxThreads(),&fun__insieme_job_7,&max_steps,&abortVelocity,&num_sources,&friction,&y,&dist,&x,&dt,&image,&min_steps,&height,&sources,&scale}),sizeof(struct __insieme_job_7))));
+	unsigned long maxSteps = ((unsigned long)(0));
+	unsigned long minSteps = (max_steps);
+	for(int var_131 = 0; var_131 < (x); var_131 += 1)  { for(int var_130 = 0; var_130 < (y); var_130 += 1) {
+		((maxSteps) = (((((unsigned long)((((((*(&((dist).data)))[((unsigned int)(var_131))]))[((unsigned int)(var_130))]))))>(maxSteps)))?(((unsigned long)((((((*(&((dist).data)))[((unsigned int)((var_131)))]))[((unsigned int)((var_130)))]))))):((maxSteps))));
+		((minSteps) = (((((unsigned long)((((((*(&((dist).data)))[((unsigned int)(var_131))]))[((unsigned int)(var_130))]))))<(minSteps)))?(((unsigned long)((((((*(&((dist).data)))[((unsigned int)((var_131)))]))[((unsigned int)((var_130)))]))))):((minSteps))));
+	}; };
+	printf("Number of steps calculated: %llu .. %llu\n", (minSteps), (maxSteps));
+	print_target_image_ASCII((image), (num_sources));
+	write_image((image), (dist), "out.bmp", (minSteps), (maxSteps));
+	delete_image((&image));
+	delete_image((&dist));
 }
-
+static int main_wrap(void* _closure, int argc, char** argv) { return main(argc, argv); }

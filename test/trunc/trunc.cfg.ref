@@ -11,7 +11,7 @@ digraph G {
 10[shape=box,label="[B10]\l0: string.as.char.pointer(\"After: %f\n\")\l"];
 11[shape=box,label="[B11]\l0: varlist.pack((( *v2)))\l"];
 13[shape=box,label="[B13]\l0: CAST<real<8>>\l"];
-14[shape=box,label="[B14]\l0: real.to.int(..., 4)\l"];
+14[shape=box,label="[B14]\l0: CAST<int<4>>\l"];
 15[shape=box,label="[B15]\l0: ref.deref(v1)\l"];
 16[shape=box,label="[B16]\l0: printf(..., ...)\l"];
 17[shape=box,label="[B17]\l0: ref.assign(v2, ...)\l"];
@@ -36,7 +36,7 @@ digraph G {
 9->11 [label=""];
 13->9 [label="1"];
 14->13 [label="1"];
-15->14 [label="0"];
+15->14 [label="1"];
 16->15 [label=""];
 18->16 [label="0"];
 17->18 [label=""];

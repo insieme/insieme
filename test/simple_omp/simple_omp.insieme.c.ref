@@ -7,70 +7,64 @@
 #define false 0
 #define null 0
 
-// start code fragment :: struct for job __insieme_job_0 //
-struct __insieme_job_0 { 
+// start code fragment :: struct for job __insieme_job_1 //
+struct __insieme_job_1 { 
 	unsigned structSize;
 	unsigned min, max;
 	void (*fun)(isbr_JobArgs*);
 	// ---- additional captured variables -----
 };
 
-// start code fragment :: Definitions for function type: __insieme_funType_1 //
+// start code fragment :: Definitions for function type: __insieme_funType_2 //
 //
 // -------------------- Begin of constructs for function type (()->unit)---------------------
-// Base-struct of describing closures of type __insieme_funType_1 <-> (()->unit)
-typedef struct ___insieme_funType_1 { 
+// Base-struct of describing closures of type __insieme_funType_2 <-> (()->unit)
+typedef struct ___insieme_funType_2 { 
     void(*call)(void*);
-} __insieme_funType_1;
+} __insieme_funType_2;
 
-// Type safe function for invoking closures of type __insieme_funType_1
-static inline void __insieme_funType_1_call(__insieme_funType_1* closure) {  closure->call(closure); }
+// Type safe function for invoking closures of type __insieme_funType_2
+static inline void __insieme_funType_2_call(__insieme_funType_2* closure) {  closure->call(closure); }
 
 // A constructor for closures wrapping pure functions of type (()->unit)
-static inline __insieme_funType_1* __insieme_funType_1_ctr(__insieme_funType_1* target, void(*call)(void*)) {
-	*target = (__insieme_funType_1){call};
+static inline __insieme_funType_2* __insieme_funType_2_ctr(__insieme_funType_2* target, void(*call)(void*)) {
+	*target = (__insieme_funType_2){call};
 	return target;
 }
 // ----------------------- end of constructs for function (()->unit)-----------------------
 
-// start code fragment :: Definition of __insieme_closure_2 ... type: (()->unit) //
+// start code fragment :: Definition of __insieme_closure_3 ... type: (()->unit) //
 // -- Begin - Closure Constructs ------------------------------------------------------------
 // struct definition a closure of type (()->unit)
-typedef struct ___insieme_closure_2 {
+typedef struct ___insieme_closure_3 {
     void(*call)(void*);
-    __insieme_funType_1* nested;
-} __insieme_closure_2;
+    __insieme_funType_2* nested;
+} __insieme_closure_3;
 
-static inline void __insieme_closure_2_bind(__insieme_closure_2* closure) {  closure->nested->call(closure->nested); }
+static inline void __insieme_closure_3_bind(__insieme_closure_3* closure) {  closure->nested->call(closure->nested); }
 
-static inline __insieme_closure_2* __insieme_closure_2_ctr(__insieme_closure_2* closure, __insieme_funType_1* nested) {
-    *closure = (__insieme_closure_2){&__insieme_closure_2_bind, nested};
+static inline __insieme_closure_3* __insieme_closure_3_ctr(__insieme_closure_3* closure, __insieme_funType_2* nested) {
+    *closure = (__insieme_closure_3){&__insieme_closure_3_bind, nested};
     return closure;
 }
 // -- End - Closure Constructs --------------------------------------------------------------
 
-// start code fragment :: array type definition of __insieme_type_4 <=> array<char,1> //
-typedef struct ___insieme_type_4 { 
-    char* data;
-} __insieme_type_4;
-
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->unit) //
 void printf(char*, ...);
 
-// start code fragment :: Definition of __insieme_supp_3 ... type: (()->unit) //
-void __insieme_supp_3() { printf(((char*)((*(&((__insieme_type_4){"hello world\n"}))).data)), 0); }
-static void __insieme_supp_3_wrap(void* _closure) { __insieme_supp_3(); }
+// start code fragment :: Definition of __insieme_supp_4 ... type: (()->unit) //
+void __insieme_supp_4() { printf("hello world\n", 0); }
+static void __insieme_supp_4_wrap(void* _closure) { __insieme_supp_4(); }
 
-// start code fragment :: function for job __insieme_job_0 //
-void fun__insieme_job_0(isbr_JobArgs* args) {
+// start code fragment :: function for job __insieme_job_1 //
+void fun__insieme_job_1(isbr_JobArgs* args) {
 	// ----------- Unpacking local scope variables ----------
 	// ---------- Unpacking auto-captured variables ---------
 	// ------------------ Processing Guards -----------------
 	// ------------------ Default processing -----------------
-	__insieme_funType_1_call((__insieme_funType_1*)__insieme_closure_2_ctr((__insieme_closure_2*)alloca(sizeof(__insieme_closure_2)),(__insieme_funType_1*)__insieme_funType_1_ctr((__insieme_funType_1*)alloca(sizeof(__insieme_funType_1)),&__insieme_supp_3_wrap)));
+	__insieme_funType_2_call((__insieme_funType_2*)__insieme_closure_3_ctr((__insieme_closure_3*)alloca(sizeof(__insieme_closure_3)),(__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&__insieme_supp_4_wrap)));
 }
 
-// start code fragment :: main function //
-int main() {
-	 { isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_0)),&((struct __insieme_job_0){sizeof(struct __insieme_job_0),1,isbr_getMaxThreads(),&fun__insieme_job_0}),sizeof(struct __insieme_job_0)))); };
-}
+// start code fragment :: Definition of main ... type: (()->int<4>) //
+int main() { isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_1)),&((struct __insieme_job_1){sizeof(struct __insieme_job_1),1,isbr_getMaxThreads(),&fun__insieme_job_1}),sizeof(struct __insieme_job_1)))); }
+static int main_wrap(void* _closure) { return main(); }

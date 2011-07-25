@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v59, ref<array<array<char,1>,1>> v60){
+fun(int<4> v59, ref<array<ref<array<char,1>>,1>> v60){
         decl ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v1 =  new(struct{naa:=0, nzz:=0, firstrow:=0, lastrow:=0, firstcol:=0, lastcol:=0, colidx:=vector.init.uniform(0, 637001), rowstr:=vector.init.uniform(0, 7002), iv:=vector.init.uniform(0, 14002), arow:=vector.init.uniform(0, 637001), acol:=vector.init.uniform(0, 637001), v:=vector.init.uniform(0.0, 7002), aelt:=vector.init.uniform(0.0, 637001), a:=vector.init.uniform(0.0, 637001), x:=vector.init.uniform(0.0, 7003), z:=vector.init.uniform(0.0, 7003), p:=vector.init.uniform(0.0, 7003), q:=vector.init.uniform(0.0, 7003), r:=vector.init.uniform(0.0, 7003), w:=vector.init.uniform(0.0, 7003), amult:=0.0, tran:=0.0, d:=0.0, sum:=0.0, rho:=0.0, rho0:=0.0, alpha:=0.0, beta:=0.0, start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=0-1});
         decl ref<int<4>> v61 =  var(0);
         decl ref<int<4>> v62 =  var(0);
@@ -58,10 +58,10 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
             decl ref<real<8>> v11 =  var(0.0);
             decl ref<real<8>> v12 =  var(0.0);
             v4 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v3;
-            v8 := real.to.int(v4, 4);
+            v8 := v4;
             v9 := v3-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v8;
             v4 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*array.ref.elem.1D(v2, 0);
-            v10 := real.to.int(v4, 4);
+            v10 := v4;
             v11 := array.ref.elem.1D(v2, 0)-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v10;
             v4 := v8*v11+v9*v10;
             v5 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v4;
@@ -124,10 +124,10 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
                                 decl ref<real<8>> v11 =  var(0.0);
                                 decl ref<real<8>> v12 =  var(0.0);
                                 v4 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v3;
-                                v8 := real.to.int(v4, 4);
+                                v8 := v4;
                                 v9 := v3-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v8;
                                 v4 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*array.ref.elem.1D(v2, 0);
-                                v10 := real.to.int(v4, 4);
+                                v10 := v4;
                                 v11 := array.ref.elem.1D(v2, 0)-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v10;
                                 v4 := v8*v11+v9*v10;
                                 v5 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v4;
@@ -148,10 +148,10 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
                                 decl ref<real<8>> v11 =  var(0.0);
                                 decl ref<real<8>> v12 =  var(0.0);
                                 v4 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v3;
-                                v8 := real.to.int(v4, 4);
+                                v8 := v4;
                                 v9 := v3-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v8;
                                 v4 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*array.ref.elem.1D(v2, 0);
-                                v10 := real.to.int(v4, 4);
+                                v10 := v4;
                                 v11 := array.ref.elem.1D(v2, 0)-2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*2.0*v10;
                                 v4 := v8*v11+v9*v10;
                                 v5 := 0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*0.5*v4;
@@ -510,20 +510,20 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
             };
             v66 := 0.0;
         };
-        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v53, int<4> v54){
-            vector.ref.elem(composite.ref.elem(v53, elapsed, type<vector<real<8>,64>>), v54) := 0.0;
+        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v38, int<4> v39){
+            vector.ref.elem(composite.ref.elem(v38, elapsed, type<vector<real<8>,64>>), v39) := 0.0;
         }(v1, 1);
-        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v56, int<4> v57){
-            vector.ref.elem(composite.ref.elem(v56, start, type<vector<real<8>,64>>), v57) := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v42){
-                decl ref<real<8>> v43 =  var(0.0);
-                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v38, ref<array<real<8>,1>> v39){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v40 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
-                    gettimeofday(scalar.to.array(v40),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
-                    if(composite.ref.elem(v38, sec, type<int<4>>)<0) composite.ref.elem(v38, sec, type<int<4>>) := composite.ref.elem(v40, tv_sec, type<int<8>>) else { };
-                    array.ref.elem.1D(v39, 0) := composite.ref.elem(v40, tv_sec, type<int<8>>)-composite.ref.elem(v38, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v40, tv_usec, type<int<8>>);
-                }(v42, scalar.to.array(v43));
-                return v43;
-            }(v56);
+        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v48, int<4> v49){
+            vector.ref.elem(composite.ref.elem(v48, start, type<vector<real<8>,64>>), v49) := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v45){
+                decl ref<real<8>> v46 =  var(0.0);
+                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v41, ref<array<real<8>,1>> v42){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v43 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
+                    gettimeofday(scalar.to.array(v43), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
+                    if(composite.ref.elem(v41, sec, type<int<4>>)<0) composite.ref.elem(v41, sec, type<int<4>>) := composite.ref.elem(v43, tv_sec, type<int<8>>) else { };
+                    array.ref.elem.1D(v42, 0) := composite.ref.elem(v43, tv_sec, type<int<8>>)-composite.ref.elem(v41, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v43, tv_usec, type<int<8>>);
+                }(v45, scalar.to.array(v46));
+                return v46;
+            }(v48);
         }(v1, 1);
         {
             {
@@ -675,28 +675,28 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
                 v64 := 1+ceil(15+1-1/1)*1;
             };
         };
-        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v45, int<4> v46){
-            decl ref<real<8>> v47 =  var(0.0);
-            decl ref<real<8>> v48 =  var(0.0);
-            v48 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v42){
-                decl ref<real<8>> v43 =  var(0.0);
-                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v38, ref<array<real<8>,1>> v39){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v40 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
-                    gettimeofday(scalar.to.array(v40),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
-                    if(composite.ref.elem(v38, sec, type<int<4>>)<0) composite.ref.elem(v38, sec, type<int<4>>) := composite.ref.elem(v40, tv_sec, type<int<8>>) else { };
-                    array.ref.elem.1D(v39, 0) := composite.ref.elem(v40, tv_sec, type<int<8>>)-composite.ref.elem(v38, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v40, tv_usec, type<int<8>>);
-                }(v42, scalar.to.array(v43));
-                return v43;
-            }(v45);
-            v47 := v48-vector.ref.elem(composite.ref.elem(v45, start, type<vector<real<8>,64>>), v46);
-            vector.ref.elem(composite.ref.elem(v45, elapsed, type<vector<real<8>,64>>), v46) := vector.ref.elem(composite.ref.elem(v45, elapsed, type<vector<real<8>,64>>), v46)+v47;
+        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v51, int<4> v52){
+            decl ref<real<8>> v53 =  var(0.0);
+            decl ref<real<8>> v54 =  var(0.0);
+            v54 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v45){
+                decl ref<real<8>> v46 =  var(0.0);
+                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v41, ref<array<real<8>,1>> v42){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v43 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
+                    gettimeofday(scalar.to.array(v43), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
+                    if(composite.ref.elem(v41, sec, type<int<4>>)<0) composite.ref.elem(v41, sec, type<int<4>>) := composite.ref.elem(v43, tv_sec, type<int<8>>) else { };
+                    array.ref.elem.1D(v42, 0) := composite.ref.elem(v43, tv_sec, type<int<8>>)-composite.ref.elem(v41, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v43, tv_usec, type<int<8>>);
+                }(v45, scalar.to.array(v46));
+                return v46;
+            }(v51);
+            v53 := v54-vector.ref.elem(composite.ref.elem(v51, start, type<vector<real<8>,64>>), v52);
+            vector.ref.elem(composite.ref.elem(v51, elapsed, type<vector<real<8>,64>>), v52) := vector.ref.elem(composite.ref.elem(v51, elapsed, type<vector<real<8>,64>>), v52)+v53;
         }(v1, 1);
-        v70 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v50, int<4> v51){
-            return vector.ref.elem(composite.ref.elem(v50, elapsed, type<vector<real<8>,64>>), v51);
+        v70 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v56, int<4> v57){
+            return vector.ref.elem(composite.ref.elem(v56, elapsed, type<vector<real<8>,64>>), v57);
         }(v1, 1);
         printf(string.as.char.pointer(" Benchmark completed\n"), varlist.pack(()));
         v75 := 1.0e-10;
-        if(v72!='U') {
+        if(int.ne(v72, 85)) {
             if(fabs(v66-v74)<=v75) {
                 v73 := 1;
                 printf(string.as.char.pointer(" VERIFICATION SUCCESSFUL\n"), varlist.pack(()));
@@ -719,7 +719,7 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
             v71 := 0.0;
         };
         fun(ref<array<char,1>> v14, char v15, int<4> v16, int<4> v17, int<4> v18, int<4> v19, int<4> v20, real<8> v21, real<8> v22, ref<array<char,1>> v23, int<4> v24, ref<array<char,1>> v25, ref<array<char,1>> v26, ref<array<char,1>> v27, ref<array<char,1>> v28, ref<array<char,1>> v29, ref<array<char,1>> v30, ref<array<char,1>> v31, ref<array<char,1>> v32, ref<array<char,1>> v33){
-            decl ref<array<char,1>> v34 = string.as.char.pointer("1000");
+            decl ref<ref<array<char,1>>> v34 =  var(string.as.char.pointer("1000"));
             printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v14)));
             printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((v15)));
             if(v17==0&&bind(){fun(int<4> v35)return v35==0(v18)}) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v16))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v16, v17, v18)));
@@ -748,7 +748,7 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v59, ref<array<array<char,1>,1>> v60){
+fun(int<4> v59, ref<array<ref<array<char,1>>,1>> v60){
         decl ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v1 = ( new(struct{naa:=0, nzz:=0, firstrow:=0, lastrow:=0, firstcol:=0, lastcol:=0, colidx:=vector.init.uniform(0, 637001), rowstr:=vector.init.uniform(0, 7002), iv:=vector.init.uniform(0, 14002), arow:=vector.init.uniform(0, 637001), acol:=vector.init.uniform(0, 637001), v:=vector.init.uniform(0.0, 7002), aelt:=vector.init.uniform(0.0, 637001), a:=vector.init.uniform(0.0, 637001), x:=vector.init.uniform(0.0, 7003), z:=vector.init.uniform(0.0, 7003), p:=vector.init.uniform(0.0, 7003), q:=vector.init.uniform(0.0, 7003), r:=vector.init.uniform(0.0, 7003), w:=vector.init.uniform(0.0, 7003), amult:=0.0, tran:=0.0, d:=0.0, sum:=0.0, rho:=0.0, rho0:=0.0, alpha:=0.0, beta:=0.0, start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1)}));
         decl ref<int<4>> v61 = ( var(0));
         decl ref<int<4>> v62 = ( var(0));
@@ -805,10 +805,10 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
             decl ref<real<8>> v11 = ( var(0.0));
             decl ref<real<8>> v12 = ( var(0.0));
             (v4 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*v3));
-            (v8 := CAST<real<8>>(real.to.int(( *v4), 4)));
+            (v8 := CAST<real<8>>(CAST<int<4>>(( *v4))));
             (v9 := (v3-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v8))));
             (v4 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *array.ref.elem.1D(v2, 0))));
-            (v10 := CAST<real<8>>(real.to.int(( *v4), 4)));
+            (v10 := CAST<real<8>>(CAST<int<4>>(( *v4))));
             (v11 := (( *array.ref.elem.1D(v2, 0))-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v10))));
             (v4 := ((( *v8)*( *v11))+(( *v9)*( *v10))));
             (v5 := CAST<real<8>>(CAST<int<4>>((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *v4)))));
@@ -871,10 +871,10 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
                                 decl ref<real<8>> v11 = ( var(0.0));
                                 decl ref<real<8>> v12 = ( var(0.0));
                                 (v4 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*v3));
-                                (v8 := CAST<real<8>>(real.to.int(( *v4), 4)));
+                                (v8 := CAST<real<8>>(CAST<int<4>>(( *v4))));
                                 (v9 := (v3-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v8))));
                                 (v4 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *array.ref.elem.1D(v2, 0))));
-                                (v10 := CAST<real<8>>(real.to.int(( *v4), 4)));
+                                (v10 := CAST<real<8>>(CAST<int<4>>(( *v4))));
                                 (v11 := (( *array.ref.elem.1D(v2, 0))-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v10))));
                                 (v4 := ((( *v8)*( *v11))+(( *v9)*( *v10))));
                                 (v5 := CAST<real<8>>(CAST<int<4>>((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *v4)))));
@@ -895,10 +895,10 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
                                 decl ref<real<8>> v11 = ( var(0.0));
                                 decl ref<real<8>> v12 = ( var(0.0));
                                 (v4 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*v3));
-                                (v8 := CAST<real<8>>(real.to.int(( *v4), 4)));
+                                (v8 := CAST<real<8>>(CAST<int<4>>(( *v4))));
                                 (v9 := (v3-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v8))));
                                 (v4 := (((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *array.ref.elem.1D(v2, 0))));
-                                (v10 := CAST<real<8>>(real.to.int(( *v4), 4)));
+                                (v10 := CAST<real<8>>(CAST<int<4>>(( *v4))));
                                 (v11 := (( *array.ref.elem.1D(v2, 0))-(((((((((((((((((((((((2.0*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*2.0)*( *v10))));
                                 (v4 := ((( *v8)*( *v11))+(( *v9)*( *v10))));
                                 (v5 := CAST<real<8>>(CAST<int<4>>((((((((((((((((((((((((0.5*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*0.5)*( *v4)))));
@@ -1257,20 +1257,20 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
             };
             <m id=7>(v66 := 0.0)</m>;
         }</m>;
-        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v53, int<4> v54){
-            (vector.ref.elem(composite.ref.elem(v53, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v54)) := 0.0);
+        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v38, int<4> v39){
+            (vector.ref.elem(composite.ref.elem(v38, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v39)) := 0.0);
         }(v1, 1);
-        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v56, int<4> v57){
-            (vector.ref.elem(composite.ref.elem(v56, start, type<vector<real<8>,64>>), CAST<uint<4>>(v57)) := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v42){
-                decl ref<real<8>> v43 = ( var(0.0));
-                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v38, ref<array<real<8>,1>> v39){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v40 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
-                    gettimeofday(scalar.to.array(v40), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
-                    if((( *composite.ref.elem(v38, sec, type<int<4>>))<0)) (composite.ref.elem(v38, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v40, tv_sec, type<int<8>>)))) else { };
-                    (array.ref.elem.1D(v39, 0) := (CAST<real<8>>((( *composite.ref.elem(v40, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v38, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v40, tv_usec, type<int<8>>))))));
-                }(v42, scalar.to.array(v43));
-                return ( *v43);
-            }(v56));
+        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v48, int<4> v49){
+            (vector.ref.elem(composite.ref.elem(v48, start, type<vector<real<8>,64>>), CAST<uint<4>>(v49)) := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v45){
+                decl ref<real<8>> v46 = ( var(0.0));
+                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v41, ref<array<real<8>,1>> v42){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v43 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
+                    gettimeofday(scalar.to.array(v43), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
+                    if((( *composite.ref.elem(v41, sec, type<int<4>>))<0)) (composite.ref.elem(v41, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v43, tv_sec, type<int<8>>)))) else { };
+                    (array.ref.elem.1D(v42, 0) := (CAST<real<8>>((( *composite.ref.elem(v43, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v41, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v43, tv_usec, type<int<8>>))))));
+                }(v45, scalar.to.array(v46));
+                return ( *v46);
+            }(v48));
         }(v1, 1);
         <m id=30>{
             {
@@ -1422,28 +1422,28 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
                 (v64 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((15+1)-1))/CAST<real<8>>(1))))*1)));
             };
         }</m>;
-        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v45, int<4> v46){
-            decl ref<real<8>> v47 = ( var(0.0));
-            decl ref<real<8>> v48 = ( var(0.0));
-            (v48 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v42){
-                decl ref<real<8>> v43 = ( var(0.0));
-                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v38, ref<array<real<8>,1>> v39){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v40 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
-                    gettimeofday(scalar.to.array(v40), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
-                    if((( *composite.ref.elem(v38, sec, type<int<4>>))<0)) (composite.ref.elem(v38, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v40, tv_sec, type<int<8>>)))) else { };
-                    (array.ref.elem.1D(v39, 0) := (CAST<real<8>>((( *composite.ref.elem(v40, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v38, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v40, tv_usec, type<int<8>>))))));
-                }(v42, scalar.to.array(v43));
-                return ( *v43);
-            }(v45));
-            (v47 := (( *v48)-( *vector.ref.elem(composite.ref.elem(v45, start, type<vector<real<8>,64>>), CAST<uint<4>>(v46)))));
-            (vector.ref.elem(composite.ref.elem(v45, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v46)) := (( *vector.ref.elem(composite.ref.elem(v45, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v46)))+( *v47)));
+        fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v51, int<4> v52){
+            decl ref<real<8>> v53 = ( var(0.0));
+            decl ref<real<8>> v54 = ( var(0.0));
+            (v54 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v45){
+                decl ref<real<8>> v46 = ( var(0.0));
+                fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v41, ref<array<real<8>,1>> v42){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v43 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
+                    gettimeofday(scalar.to.array(v43), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
+                    if((( *composite.ref.elem(v41, sec, type<int<4>>))<0)) (composite.ref.elem(v41, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v43, tv_sec, type<int<8>>)))) else { };
+                    (array.ref.elem.1D(v42, 0) := (CAST<real<8>>((( *composite.ref.elem(v43, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v41, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v43, tv_usec, type<int<8>>))))));
+                }(v45, scalar.to.array(v46));
+                return ( *v46);
+            }(v51));
+            (v53 := (( *v54)-( *vector.ref.elem(composite.ref.elem(v51, start, type<vector<real<8>,64>>), CAST<uint<4>>(v52)))));
+            (vector.ref.elem(composite.ref.elem(v51, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v52)) := (( *vector.ref.elem(composite.ref.elem(v51, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v52)))+( *v53)));
         }(v1, 1);
-        (v70 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v50, int<4> v51){
-            return ( *vector.ref.elem(composite.ref.elem(v50, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v51)));
+        (v70 := fun(ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>> v56, int<4> v57){
+            return ( *vector.ref.elem(composite.ref.elem(v56, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v57)));
         }(v1, 1));
         printf(string.as.char.pointer(" Benchmark completed\n"), varlist.pack(()));
         (v75 := 1.0e-10);
-        if((( *v72)!='U')) {
+        if(int.ne(CAST<int<4>>(( *v72)), 85)) {
             if((fabs((( *v66)-( *v74)))<=( *v75))) {
                 (v73 := 1);
                 printf(string.as.char.pointer(" VERIFICATION SUCCESSFUL\n"), varlist.pack(()));
@@ -1466,7 +1466,7 @@ fun(int<4> v59, ref<array<array<char,1>,1>> v60){
             (v71 := 0.0);
         };
         fun(ref<array<char,1>> v14, char v15, int<4> v16, int<4> v17, int<4> v18, int<4> v19, int<4> v20, real<8> v21, real<8> v22, ref<array<char,1>> v23, int<4> v24, ref<array<char,1>> v25, ref<array<char,1>> v26, ref<array<char,1>> v27, ref<array<char,1>> v28, ref<array<char,1>> v29, ref<array<char,1>> v30, ref<array<char,1>> v31, ref<array<char,1>> v32, ref<array<char,1>> v33){
-            decl ref<array<char,1>> v34 = string.as.char.pointer("1000");
+            decl ref<ref<array<char,1>>> v34 = ( var(string.as.char.pointer("1000")));
             printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v14)));
             printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((CAST<int<4>>(v15))));
             if(((v17==0)&&bind(){fun(int<4> v35)return (v35==0)(v18)})) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v16))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v16, v17, v18)));

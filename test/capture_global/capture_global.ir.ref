@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v10, ref<array<array<char,1>,1>> v11){
+fun(int<4> v10, ref<array<ref<array<char,1>>,1>> v11){
         decl ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v1 =  new(struct{count:=0, a:=vector.init.uniform(0, 50), reset_count:=1});
         for(decl int<4> v13 = 0 .. 10 : 1) {
             printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v2, int<4> v3){
@@ -31,7 +31,7 @@ fun(int<4> v10, ref<array<array<char,1>,1>> v11){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v10, ref<array<array<char,1>,1>> v11){
+fun(int<4> v10, ref<array<ref<array<char,1>>,1>> v11){
         decl ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v1 = ( new(struct{count:=0, a:=vector.init.uniform(0, 50), reset_count:=1}));
         for(decl int<4> v13 = 0 .. 10 : 1) {
             printf(string.as.char.pointer("count=%2d\n"), varlist.pack((fun(ref<struct<count:int<4>,a:vector<int<4>,50>,reset_count:int<4>>> v2, int<4> v3){
