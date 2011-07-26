@@ -280,7 +280,9 @@ namespace arithmetic {
 		 *
 		 * @return true if so, false otherwise
 		 */
-		bool isZero() const { return terms.empty(); }
+		bool isZero() const { return terms.empty() ||
+				(terms.size() == static_cast<std::size_t>(1) && terms[0].first.isOne() && terms[0].second == 0);
+		}
 
 		/**
 		 * Checks whether this formula represents one.
