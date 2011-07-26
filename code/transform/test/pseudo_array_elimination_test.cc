@@ -36,32 +36,39 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/core/statements.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/transform/ir_cleanup.h"
+#include "insieme/core/parser/ir_parse.h"
+#include "insieme/utils/logging.h"
+
+using namespace insieme::utils::log;
 
 namespace insieme {
+	using namespace core;
+	using namespace core::parse;
+
 namespace transform {
-namespace pattern {
 
-	TEST(Tree, Basic) {
+TEST(PseudoArrayElimination, Basic) {
 
-		TreePtr tree = makeTree();
-		EXPECT_EQ("()", toString(tree));
+	NodeManager manager;
+	
+	StatementPtr stmt = parseStatement(manager, 
+		"fun () -> unit {{ \
+			decl array<int<4>, 1>:arr = (op<array.create.1D>(lit<type<int<4> >, int>, lit<uint<8>, 1>)); \
+		}}");
 
-		tree = makeTree(tree, tree, tree);
-		EXPECT_EQ("((),(),())", toString(tree));
+	
+	LOG(INFO) << printer::PrettyPrinter(stmt);
 
-		tree = makeTree(tree, makeTree());
-		EXPECT_EQ("(((),(),()),())", toString(tree));
+	eliminatePseudoArrays(stmt);
 
-		tree = makeTree('a');
-		EXPECT_EQ("a", toString(tree));
+	//EXPECT_EQ("(a,b,())", toString(tree));
 
-		tree = makeTree(tree, makeTree('b'), makeTree());
-		EXPECT_EQ("(a,b,())", toString(tree));
+}
 
-	}
-
-} // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
 
