@@ -58,7 +58,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	ProgramPtr result = prog;
 	for(;;) {
 		SemaVisitor v(resultStorage);
-		core::visitAllInterruptable(core::ProgramAddress(result), v);
+		core::visitDepthFirstInterruptable(core::ProgramAddress(result), v);
 		if(v.getReplacement()) result = v.getReplacement();
 		else break;	
 	}

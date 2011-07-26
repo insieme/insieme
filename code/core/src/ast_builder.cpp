@@ -103,7 +103,7 @@ namespace {
 
 	utils::set::PointerSet<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
-		visitAllPrunable(root, visitor);
+		visitDepthFirstPrunable(root, visitor);
 
 		utils::set::PointerSet<VariablePtr> nonDecls;
 		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),

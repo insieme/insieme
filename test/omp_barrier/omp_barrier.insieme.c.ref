@@ -69,11 +69,6 @@ static inline __insieme_closure_3* __insieme_closure_3_ctr(__insieme_closure_3* 
 }
 // -- End - Closure Constructs --------------------------------------------------------------
 
-// start code fragment :: array type definition of __insieme_type_6 <=> array<char,1> //
-typedef struct ___insieme_type_6 { 
-    char* data;
-} __insieme_type_6;
-
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
@@ -81,7 +76,7 @@ int printf(char*, ...);
 void __insieme_supp_5(int* var_3){
 	((*var_3)++);
 	isbr_barrier(isbr_getThreadGroup(0));
-	printf(((char*)((*(&((__insieme_type_6){"i: %d\n"}))).data)), (*var_3));
+	printf("i: %d\n", (*var_3));
 }
 static void __insieme_supp_5_wrap(void* _closure, int* var_3) { __insieme_supp_5(var_3); }
 
@@ -95,10 +90,9 @@ void fun__insieme_job_1(isbr_JobArgs* args) {
 	__insieme_funType_2_call((__insieme_funType_2*)__insieme_closure_3_ctr((__insieme_closure_3*)alloca(sizeof(__insieme_closure_3)),(__insieme_funType_4*)__insieme_funType_4_ctr((__insieme_funType_4*)alloca(sizeof(__insieme_funType_4)),&__insieme_supp_5_wrap), var_5));
 }
 
-// start code fragment :: main function //
-int main() {
-	{
-		int i = 0;
-		isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_1)),&((struct __insieme_job_1){sizeof(struct __insieme_job_1),1,isbr_getMaxThreads(),&fun__insieme_job_1,&i}),sizeof(struct __insieme_job_1))));
-	};
+// start code fragment :: Definition of main ... type: (()->int<4>) //
+int main(){
+	int i = 0;
+	isbr_merge(isbr_parallel(memcpy(malloc(sizeof(struct __insieme_job_1)),&((struct __insieme_job_1){sizeof(struct __insieme_job_1),1,isbr_getMaxThreads(),&fun__insieme_job_1,&i}),sizeof(struct __insieme_job_1))));
 }
+static int main_wrap(void* _closure) { return main(); }

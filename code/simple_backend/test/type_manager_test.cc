@@ -271,7 +271,7 @@ TEST(TypeManager, ArrayTypes) {
 	EXPECT_EQ("struct name*", info.rValueName);
 	EXPECT_EQ("struct name* %s", info.declPattern);
 	EXPECT_EQ("struct name* %s", info.paramPattern);
-	EXPECT_FALSE((bool)info.definition);
+	EXPECT_TRUE((bool)info.definition);
 
 	type = builder.arrayType(basic.getInt8(), builder.concreteIntTypeParam(2));
 	info = typeManager.getTypeInfo(fragment, type);

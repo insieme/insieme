@@ -1,14 +1,14 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v7, ref<array<array<char,1>,1>> v8){
+fun(int<4> v7, ref<array<ref<array<char,1>>,1>> v8){
         decl ref<struct<name:vector<char,30>,age:uint<4>>> v9 =  var(fun(){
             decl ref<struct<name:vector<char,30>,age:uint<4>>> v1 =  var(undefined(type<struct<name:vector<char,30>,age:uint<4>>>));
             strcpy(ref.vector.to.ref.array(composite.ref.elem(v1, name, type<vector<char,30>>)), string.as.char.pointer("John Doe"));
             composite.ref.elem(v1, age, type<uint<4>>) := 101;
         }());
         return fun(struct<name:vector<char,30>,age:uint<4>> v3){
-            return bool.to.int(v3.age>=10&&bind(){fun(struct<name:vector<char,30>,age:uint<4>> v4)return v4.age<20(v3)});
+            return bool.to.int(composite.member.access(v3, age, type<uint<4>>)>=10&&bind(){fun(struct<name:vector<char,30>,age:uint<4>> v4)return composite.member.access(v4, age, type<uint<4>>)<20(v3)});
         }(v9);
     }
 
@@ -18,14 +18,14 @@ fun(int<4> v7, ref<array<array<char,1>,1>> v8){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v7, ref<array<array<char,1>,1>> v8){
+fun(int<4> v7, ref<array<ref<array<char,1>>,1>> v8){
         decl ref<struct<name:vector<char,30>,age:uint<4>>> v9 = ( var(fun(){
             decl ref<struct<name:vector<char,30>,age:uint<4>>> v1 = ( var(undefined(type<struct<name:vector<char,30>,age:uint<4>>>)));
             strcpy(ref.vector.to.ref.array(composite.ref.elem(v1, name, type<vector<char,30>>)), string.as.char.pointer("John Doe"));
             (composite.ref.elem(v1, age, type<uint<4>>) := CAST<uint<4>>(101));
         }()));
         return fun(struct<name:vector<char,30>,age:uint<4>> v3){
-            return CAST<int<4>>(bool.to.int(((v3.age>=CAST<uint<4>>(10))&&bind(){fun(struct<name:vector<char,30>,age:uint<4>> v4)return (v4.age<CAST<uint<4>>(20))(v3)})));
+            return CAST<int<4>>(bool.to.int(((composite.member.access(v3, age, type<uint<4>>)>=CAST<uint<4>>(10))&&bind(){fun(struct<name:vector<char,30>,age:uint<4>> v4)return (composite.member.access(v4, age, type<uint<4>>)<CAST<uint<4>>(20))(v3)})));
         }(( *v9));
     }
 

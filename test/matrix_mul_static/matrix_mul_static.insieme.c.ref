@@ -7,14 +7,14 @@
 #define false 0
 #define null 0
 
-// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<real<8>,1000> //
-typedef struct ___insieme_type_1 { 
+// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<real<8>,1000> //
+typedef struct ___insieme_type_2 { 
     double data[1000];
-} __insieme_type_1;
+} __insieme_type_2;
 
-// A constructor initializing a vector of the type __insieme_type_1 uniformly
-static inline __insieme_type_1 __insieme_type_1_init_uniform(double value) {
-	__insieme_type_1 res;
+// A constructor initializing a vector of the type __insieme_type_2 uniformly
+static inline __insieme_type_2 __insieme_type_2_init_uniform(double value) {
+	__insieme_type_2 res;
 	for (int i=0; i<1000;++i) {
 	    res.data[i] = value;
 	}
@@ -22,14 +22,14 @@ static inline __insieme_type_1 __insieme_type_1_init_uniform(double value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_0 <=> vector<vector<real<8>,1000>,1000> //
-typedef struct ___insieme_type_0 { 
-    __insieme_type_1 data[1000];
-} __insieme_type_0;
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<vector<real<8>,1000>,1000> //
+typedef struct ___insieme_type_1 { 
+    __insieme_type_2 data[1000];
+} __insieme_type_1;
 
-// A constructor initializing a vector of the type __insieme_type_0 uniformly
-static inline __insieme_type_0 __insieme_type_0_init_uniform(__insieme_type_1 value) {
-	__insieme_type_0 res;
+// A constructor initializing a vector of the type __insieme_type_1 uniformly
+static inline __insieme_type_1 __insieme_type_1_init_uniform(__insieme_type_2 value) {
+	__insieme_type_1 res;
 	for (int i=0; i<1000;++i) {
 	    res.data[i] = value;
 	}
@@ -39,30 +39,25 @@ static inline __insieme_type_0 __insieme_type_0_init_uniform(__insieme_type_1 va
 
 // start code fragment :: type_declaration___insieme_globals //
 struct __insieme_globals { 
-    __insieme_type_0 A;
-    __insieme_type_0 B;
-    __insieme_type_0 C;
+    __insieme_type_1 A;
+    __insieme_type_1 B;
+    __insieme_type_1 C;
 };
 
 // start code fragment :: global data //
 struct __insieme_globals __GLOBAL__;
 
-// start code fragment :: array type definition of __insieme_type_4 <=> array<char,1> //
-typedef struct ___insieme_type_4 { 
-    char* data;
-} __insieme_type_4;
-
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: vector_type_declaration of __insieme_type_6 <=> vector<char,3> //
-typedef struct ___insieme_type_6 { 
+// start code fragment :: vector_type_declaration of __insieme_type_3 <=> vector<char,3> //
+typedef struct ___insieme_type_3 { 
     char data[3];
-} __insieme_type_6;
+} __insieme_type_3;
 
-// A constructor initializing a vector of the type __insieme_type_6 uniformly
-static inline __insieme_type_6 __insieme_type_6_init_uniform(char value) {
-	__insieme_type_6 res;
+// A constructor initializing a vector of the type __insieme_type_3 uniformly
+static inline __insieme_type_3 __insieme_type_3_init_uniform(char value) {
+	__insieme_type_3 res;
 	for (int i=0; i<3;++i) {
 	    res.data[i] = value;
 	}
@@ -70,14 +65,14 @@ static inline __insieme_type_6 __insieme_type_6_init_uniform(char value) {
 }
 
 
-// start code fragment :: vector_type_declaration of __insieme_type_7 <=> vector<char,4> //
-typedef struct ___insieme_type_7 { 
+// start code fragment :: vector_type_declaration of __insieme_type_4 <=> vector<char,4> //
+typedef struct ___insieme_type_4 { 
     char data[4];
-} __insieme_type_7;
+} __insieme_type_4;
 
-// A constructor initializing a vector of the type __insieme_type_7 uniformly
-static inline __insieme_type_7 __insieme_type_7_init_uniform(char value) {
-	__insieme_type_7 res;
+// A constructor initializing a vector of the type __insieme_type_4 uniformly
+static inline __insieme_type_4 __insieme_type_4_init_uniform(char value) {
+	__insieme_type_4 res;
 	for (int i=0; i<4;++i) {
 	    res.data[i] = value;
 	}
@@ -85,24 +80,23 @@ static inline __insieme_type_7 __insieme_type_7_init_uniform(char value) {
 }
 
 
-// start code fragment :: main function //
-int main() {
+// start code fragment :: Definition of main ... type: (()->int<4>) //
+int main(){
+	;
 	{
-		;
-		{
-			for(int var_5 = 0; var_5 < 1000; var_5 += 1)  { for(int var_4 = 0; var_4 < 1000; var_4 += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_5))])).data[((unsigned int)(var_4))])) = ((double)((var_5*var_4)))); }; };
-			for(int var_11 = 0; var_11 < 1000; var_11 += 1)  { for(int var_10 = 0; var_10 < 1000; var_10 += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_11))])).data[((unsigned int)(var_10))])) = ((double)((((var_11==var_10))?(1):(0))))); }; };
-			for(int var_18 = 0; var_18 < 1000; var_18 += 1)  { for(int var_17 = 0; var_17 < 1000; var_17 += 1) {
-				double sum = ((double)(0));
-				for(int var_16 = 0; var_16 < 1000; var_16 += 1)  { ((sum) = ((sum)+((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_18))])).data[((unsigned int)(var_16))]))*(((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_16))])).data[((unsigned int)(var_17))]))))); };
-				((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_18))])).data[((unsigned int)(var_17))])) = (sum));
-			}; };
-		};
-		int success = 1;
-		for(int var_31 = 0; var_31 < 1000; var_31 += 1) {
-			for(int var_24 = 0; var_24 < (((1000<1000))?(1000):(1000)); var_24 += 1)  { if(((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_31))])).data[((unsigned int)(var_24))]))!=(((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_31))])).data[((unsigned int)(var_24))])))) { ((success) = 0); }; };
-			for(int var_30 = (((1000<1000))?(1000):(1000)); var_30 < (((1000>1000))?(1000):(1000)); var_30 += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_31))])).data[((unsigned int)(var_30))]))!=((double)(0)))) { ((success) = 0); }; };
-		};
-		printf(((char*)((*(&((__insieme_type_4){"Verification: %s\n"}))).data)), (((((success)!=0))?((((__insieme_type_4){(((__insieme_type_6){{'O', 'K', '\0'}})).data}))):((((__insieme_type_4){(((__insieme_type_7){{'E', 'R', 'R', '\0'}})).data}))))).data);
+		for(int var_5 = 0; var_5 < 1000; var_5 += 1)  { for(int var_4 = 0; var_4 < 1000; var_4 += 1)  { ((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_5))])).data[((unsigned int)(var_4))])) = ((double)((var_5*var_4)))); }; };
+		for(int var_13 = 0; var_13 < 1000; var_13 += 1)  { for(int var_12 = 0; var_12 < 1000; var_12 += 1)  { ((((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_13))])).data[((unsigned int)(var_12))])) = ((double)((((var_13==var_12))?(1):(0))))); }; };
+		for(int var_20 = 0; var_20 < 1000; var_20 += 1)  { for(int var_19 = 0; var_19 < 1000; var_19 += 1) {
+			double sum = ((double)(0));
+			for(int var_18 = 0; var_18 < 1000; var_18 += 1)  { ((sum) = ((sum)+((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_20))])).data[((unsigned int)(var_18))]))*(((((*(&((__GLOBAL__).B))).data[((unsigned int)(var_18))])).data[((unsigned int)(var_19))]))))); };
+			((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_20))])).data[((unsigned int)(var_19))])) = (sum));
+		}; };
 	};
+	int success = 1;
+	for(int var_33 = 0; var_33 < 1000; var_33 += 1) {
+		for(int var_26 = 0; var_26 < (((1000<1000))?(1000):(1000)); var_26 += 1)  { if(((((((*(&((__GLOBAL__).A))).data[((unsigned int)(var_33))])).data[((unsigned int)(var_26))]))!=(((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_33))])).data[((unsigned int)(var_26))])))) { ((success) = 0); }; };
+		for(int var_32 = (((1000<1000))?(1000):(1000)); var_32 < (((1000>1000))?(1000):(1000)); var_32 += 1)  { if(((((((*(&((__GLOBAL__).C))).data[((unsigned int)(var_33))])).data[((unsigned int)(var_32))]))!=((double)(0)))) { ((success) = 0); }; };
+	};
+	printf("Verification: %s\n", ((((success)!=0))?(((((__insieme_type_3){{'O', 'K', '\0'}})).data)):(((((__insieme_type_4){{'E', 'R', 'R', '\0'}})).data))));
 }
+static int main_wrap(void* _closure) { return main(); }

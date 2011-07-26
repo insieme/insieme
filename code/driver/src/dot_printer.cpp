@@ -491,7 +491,7 @@ std::shared_ptr<ASTPrinter> makeDotPrinter(std::ostream& out, const MessageList&
 
 void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out) {
 	out << "digraph inspire {" << std::endl;
-	insieme::core::visitAllOnce(root, *makeDotPrinter(out, errors));
+	insieme::core::visitDepthFirstOnce(root, *makeDotPrinter(out, errors));
 	out << "}" << std::endl;
 }
 }

@@ -643,7 +643,13 @@ public:
 			return convFact.mgr.basic.getAnyRef();
 		}
 		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		core::TypePtr&& retTy = convFact.builder.refType(convFact.builder.arrayType( subTy ));
+		core::TypePtr retTy;
+		if (subTy->getNodeType() == core::NT_FunctionType) {
+			// special handling for function types => no actual pointer required!
+			retTy = subTy;
+		} else {
+			retTy = convFact.builder.refType(convFact.builder.arrayType( subTy ));
+		}
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}

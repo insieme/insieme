@@ -40,6 +40,7 @@
 #include <cassert>
 
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace utils {
@@ -56,7 +57,7 @@ double Timer::getTime() const {
 }
 
 std::ostream& operator<<(std::ostream& out, const Timer& timer) {
-	std::string&& time = utils::numeric_cast<std::string>(timer.getTime());
+	std::string&& time = format("%.3f", timer.getTime());
 
 	std::string&& frame =  std::string(timer.mName.size() + time.size() + 14, '*');
 	out << std::endl << frame << std::endl;

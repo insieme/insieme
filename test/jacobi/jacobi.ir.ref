@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v4, ref<array<array<char,1>,1>> v5){
+fun(int<4> v4, ref<array<ref<array<char,1>>,1>> v5){
         decl ref<int<8>> v6 =  var(0);
         decl ref<int<8>> v7 =  var(0);
         decl ref<real<8>> v8 =  var(0.0);
@@ -58,7 +58,7 @@ fun(int<4> v4, ref<array<array<char,1>,1>> v5){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v4, ref<array<array<char,1>,1>> v5){
+fun(int<4> v4, ref<array<ref<array<char,1>>,1>> v5){
         decl ref<int<8>> v6 = ( var(0));
         decl ref<int<8>> v7 = ( var(0));
         decl ref<real<8>> v8 = ( var(0.0));

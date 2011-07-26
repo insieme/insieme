@@ -118,7 +118,7 @@ void doBenchmarkCore(NodeManager& mgr, const NodePtr& program) {
 	// Benchmark pointer-based visitor
 	measureTimeFor<void>("Benchmark.IterateAll.Pointer ", 
 		[&]() { 
-			core::visitAll(program, 
+			core::visitDepthFirst(program,
 				core::makeLambdaVisitor([&](const NodePtr& cur) { count++; }, true)
 			); 
 		}
@@ -130,7 +130,7 @@ void doBenchmarkCore(NodeManager& mgr, const NodePtr& program) {
 	count = 0;
 	measureTimeFor<void>("Benchmark.IterateAll.Address  ", 
 		[&]() { 
-			core::visitAll(core::ProgramAddress(program), 
+			core::visitDepthFirst(core::ProgramAddress(program),
 				core::makeLambdaVisitor([&](const NodeAddress& cur) { count++; }, true)
 			);
 		}
@@ -478,8 +478,8 @@ int main(int argc, char** argv) {
 			// ###################################################
 			// TODO: remove this
 			// enforces the usage of the full backend for testing
-			//backendName = "Full.Backend";
-			//backend = insieme::backend::FullBackend::getDefault();
+			backendName = "Full.Backend";
+			backend = insieme::backend::FullBackend::getDefault();
 			// ###################################################
 
 			insieme::utils::Timer timer(backendName);
@@ -524,7 +524,7 @@ bool checkForHashCollisions(const ProgramPtr& program) {
 
 	// create a set of all nodes
 	insieme::utils::set::PointerSet<NodePtr> allNodes;
-	insieme::core::visitAllOnce(program, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
+	insieme::core::visitDepthFirstOnce(program, insieme::core::makeLambdaVisitor([&allNodes](const NodePtr& cur) {
 		allNodes.insert(cur);
 	}, true));
 

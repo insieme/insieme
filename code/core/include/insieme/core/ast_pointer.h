@@ -49,6 +49,7 @@ namespace core {
 
 // Forward declaration of cast functor.
 struct StaticPointerCast;
+struct DynamicPointerCast;
 struct PointerChildFactory;
 
 template<typename T>
@@ -56,6 +57,7 @@ class Pointer : public Ptr<T> {
 public:
 
 	typedef StaticPointerCast StaticCast;
+	typedef DynamicPointerCast DynamicCast;
 	typedef PointerChildFactory ChildFactory;
 
 	Pointer() : Ptr<T>(NULL) {}
@@ -103,6 +105,18 @@ struct StaticPointerCast {
 	template<typename Target, typename Source>
 	const Pointer<Target>& operator()(const Pointer<Source>& value) const {
 		return static_pointer_cast<Target>(value);
+	}
+};
+
+/**
+ * A template version for a functor performing dynamic pointer casts on annotated pointer.
+ * The purpose of this struct is to allow the dynamic_pointer_cast function to be defined as
+ * a pointer conversion function required as a template parameter of the AST Visitor class.
+ */
+struct DynamicPointerCast {
+	template<typename Target, typename Source>
+	const Pointer<Target> operator()(const Pointer<Source>& value) const {
+		return dynamic_pointer_cast<Target>(value);
 	}
 };
 
