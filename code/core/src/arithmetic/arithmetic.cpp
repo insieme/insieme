@@ -243,7 +243,7 @@ namespace arithmetic {
 
 	Formula::Formula(const vector<Term>&& terms) : terms(terms) {};
 
-	Formula::Formula(int value) : terms(toVector(std::make_pair(Product(), value))) {};
+	Formula::Formula(int value) : terms((value==0)?vector<Term>():toVector(std::make_pair(Product(), value))) {};
 
 	Formula::Formula(const Product& product, int coefficient) : terms(toVector(std::make_pair(product, coefficient))) {
 		assert(coefficient != 0 && "Coefficient must be != 0!");

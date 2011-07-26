@@ -79,7 +79,9 @@ class ASTVisitor {
 	 */
 	const bool visitTypes;
 
-	// create cast functor instance
+	/**
+	 * A functor used to perform static casts on the handled pointer type.
+	 */
 	typename Ptr<const Node>::StaticCast cast;
 
 public:
@@ -105,7 +107,7 @@ public:
 	 * Instructs this visitor to visit / process the given element.
 	 *
 	 * @param element the element to be visited / processed
-	 * @param p the context paraemters for the visiting process
+	 * @param p the context parameters for the visiting process
 	 * @return the result of the visiting process
 	 */
 	virtual ReturnType visit(const Ptr<const Node>& element, P ... context) {
@@ -177,7 +179,11 @@ protected:
 
 
 /**
- * TODO: comment
+ * A lambda visitor is a wrapper for visitors consisting of a single visiting callback-routine. The routine
+ * may accept a pointer to an arbitrary sub-type of the node hierarchy and will only be invoked for the corresponding
+ * type.
+ *
+ * The lambda visitor mainly aims on offering a light-weight mean to create a visitor within user code.
  */
 template<
 	typename Lambda,
@@ -193,7 +199,9 @@ class LambdaVisitor : public ASTVisitor<ResultType, Ptr, P...> {
 	 */
 	Lambda lambda;
 
-	// create cast functor instance
+	/**
+	 * A functor used to perform dynamic casts on the handled pointer type.
+	 */
 	typename Ptr<const Node>::DynamicCast cast;
 
 public:
@@ -206,15 +214,24 @@ public:
 	LambdaVisitor(Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), lambda(lambda), cast() {};
 
 	/**
+	 * This method is overwritten since no dispatching has to be applied to nodes
+	 * visited by the lambda visitor.
+	 */
+	inline virtual ResultType visit(const Ptr<const Node>& element, P ... context) {
+		return LambdaVisitor::visitNode(element, context ...);
+	}
+
+	/**
 	 * Visits the given node and applies it to the maintained lambda.
 	 */
-	ResultType visitNode(const Ptr<const Node>& node, P ... context) {
+	inline ResultType visitNode(const Ptr<const Node>& node, P ... context) {
 
 		// check whether current node is of correct type
 		if (auto element = cast.TEMP_OP<const TargetType>(node)) {
 			return lambda(element, context ...);
 		}
 
+		// the element type does not match => lambda invocation is skipped
 		return ResultType();
 	}
 };
@@ -562,7 +579,7 @@ public:
 	 */
 	virtual void visit(const Ptr<const Node>& node, P...context) {
 
-		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		utils::set::PointerSet<Ptr<const Node>> all;
 		ASTVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 			// add current node to set ..
@@ -637,7 +654,7 @@ public:
 		// init interrupt flag
 		bool interrupted = false;
 
-		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		utils::set::PointerSet<Ptr<const Node>> all;
 		ASTVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
@@ -714,7 +731,7 @@ public:
 	 */
 	virtual void visit(const Ptr<const Node>& node, P...context) {
 
-		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		utils::set::PointerSet<Ptr<const Node>> all;
 		ASTVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 

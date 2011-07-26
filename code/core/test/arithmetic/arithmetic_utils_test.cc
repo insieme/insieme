@@ -54,6 +54,7 @@ TEST(ArithmeticUtilsTest, fromIR) {
 
 	TypePtr type = builder.getBasicGenerator().getInt4();
 
+	LiteralPtr zero = builder.intLit(0);
 	LiteralPtr one = builder.intLit(1);
 	LiteralPtr two = builder.intLit(2);
 	VariablePtr varA = builder.variable(type, 1);
@@ -61,8 +62,17 @@ TEST(ArithmeticUtilsTest, fromIR) {
 	VariablePtr varC = builder.variable(type, 3);
 
 	// test constants
+	EXPECT_EQ("0", toString(toFormula(zero)));
 	EXPECT_EQ("1", toString(toFormula(one)));
 	EXPECT_EQ("2", toString(toFormula(two)));
+
+	// test for zero
+	EXPECT_TRUE(toFormula(zero).isZero());
+	EXPECT_TRUE(toFormula(one).isOne());
+
+	EXPECT_FALSE(toFormula(zero).isOne());
+	EXPECT_FALSE(toFormula(one).isZero());
+
 
 	// test variables
 	EXPECT_EQ("v1", toString(toFormula(varA)));
