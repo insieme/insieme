@@ -183,5 +183,41 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 	return res;
 }
 
+class PseudoArrayEliminationMapping {
+public:
+	PseudoArrayEliminationMapping() {
+
+	}
+
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+	}
+};
+
+core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
+	// search for array variable declarations
+	visitAllNodes(NodeAddress(node), [&](const NodeAddress& curdecl) {
+		if(curdecl->getNodeType() != NT_DeclarationStmt) {
+			return;
+		}
+
+		DeclarationStmtAddress decl = static_address_cast<const DeclarationStmt>(curdecl);
+		auto var = decl->getVariable();
+		auto type = var->getType();
+
+		if(type == NT_ArrayType) {
+			// array variable, check indexing
+			visitAllNodes(decl, [&](const NodeAddress& curcall) {
+				if(curcall->getNodeType() != NT_CallExpr) {
+					return;
+				}
+
+				CallExprAddress call = static_address_cast<const CallExpr>(curcall);
+
+			} );
+		}
+	}, true);
+}
+
 } // end of namespace transform
 } // end of namespace insieme
