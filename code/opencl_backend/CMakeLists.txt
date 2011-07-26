@@ -48,4 +48,6 @@ foreach ( case_file ${test_cases})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-INSTALL(TARGETS insieme_opencl_backend LIBRARY DESTINATION lib)
+if(DO_INSTALL)
+	INSTALL(TARGETS insieme_opencl_backend LIBRARY DESTINATION lib)
+endif(DO_INSTALL)

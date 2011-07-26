@@ -48,6 +48,8 @@ foreach ( case_file ${test_cases} )
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-install (DIRECTORY ${insieme_utils_include_dir}/insieme DESTINATION include)
-INSTALL(TARGETS insieme_utils LIBRARY DESTINATION lib)
+if(DO_INSTALL)
+	install (DIRECTORY ${insieme_utils_include_dir}/insieme DESTINATION include)
+	INSTALL(TARGETS insieme_utils LIBRARY DESTINATION lib)
+endif(DO_INSTALL)
 

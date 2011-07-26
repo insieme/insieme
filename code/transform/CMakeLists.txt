@@ -44,4 +44,6 @@ foreach ( case_file ${test_cases})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-INSTALL(TARGETS insieme_transform LIBRARY DESTINATION lib)
+if(DO_INSTALL)
+	INSTALL(TARGETS insieme_transform LIBRARY DESTINATION lib)
+endif(DO_INSTALL)

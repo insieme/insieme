@@ -37,8 +37,10 @@
 #include "insieme/transform/ir_cleanup.h"
 
 #include "insieme/core/ast_visitor.h"
-#include "insieme/utils/set_utils.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
@@ -181,6 +183,76 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	// done
 	return res;
+}
+
+class PseudoArrayEliminationMapping {
+public:
+	PseudoArrayEliminationMapping() {
+
+	}
+
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+		return ptr;
+	}
+};
+
+core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
+	auto& mgr = node->getNodeManager();
+	auto& basic = mgr.basic;
+	ASTBuilder builder(mgr);
+
+	// search for array variable declarations
+	visitDepthFirstInterruptable(NodeAddress(node), [&](const DeclarationStmtAddress& curdecl) -> bool {
+		auto var = curdecl->getVariable();
+		auto type = var->getType();
+		auto init = curdecl->getInitialization();
+
+		unsigned numRefs = 0;
+		while(auto refType = dynamic_pointer_cast<const RefType>(type)) {
+			type = refType->getElementType();
+			numRefs++;
+		}
+
+		if(type->getNodeType() == NT_ArrayType) {
+			bool isPseudoArray = false;
+			// array variable, check indexing
+			//visitDepthFirstPrunable(curdecl, [&](const CallExprAddress& curcall) -> bool {
+			//	if(!isPseudoArray) return true; // stop iteration if determined that it's not a pseudo array
+			//	if(basic.isArrayRefElem1D(curcall.getAddressedNode())) {
+			//		try {
+			//			auto formula = arithmetic::toFormula(curcall->getArgument(1));
+			//			if(formula.isZero()) { // fine, array indexed at zero
+			//			} else {
+			//				isPseudoArray = false;
+			//			}
+			//		}
+			//		catch(arithmetic::NotAFormulaException e) {
+			//			isPseudoArray = false;
+			//		}
+			//	} else { // check if array is passed to a function
+			//		if(any(curcall->getArguments(), [&](const ExpressionPtr& arg) { return arg == var; })) {
+			//			isPseudoArray = false; // break off for now
+			//		}
+			//	}
+			//	return false;
+			//} );
+			if(CallExprPtr call = dynamic_pointer_cast<const CallExpr>(init)) {
+				if(basic.isArrayCreate1D(call->getFunctionExpr())) {
+					try {
+						auto formula = arithmetic::toFormula(call->getArgument(1));
+						if(formula.isOne()) {
+							isPseudoArray = true;
+						}
+					} catch(arithmetic::NotAFormulaException e) { /* nothing */ }
+				}
+			}
+			LOG(INFO) << "Array " << var << " is pseudo array: " << isPseudoArray;
+		}
+
+		return false;
+	});
+
+	return node;
 }
 
 } // end of namespace transform

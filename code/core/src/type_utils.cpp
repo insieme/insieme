@@ -877,8 +877,8 @@ TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB) {
 bool isGeneric(const TypePtr& type) {
 	// just use a interruptable visitor to check for type or integer param variables
 	return visitDepthFirstOnceInterruptable(type, makeLambdaVisitor([](const NodePtr& cur) {
-		// return false when a generic type has been found => interrupts the visiting process
-		return !(cur->getNodeType() == core::NT_TypeVariable || cur->getNodeType() == core::NT_VariableIntTypeParam);
+		// return true when a generic type has been found => interrupts the visiting process
+		return (cur->getNodeType() == core::NT_TypeVariable || cur->getNodeType() == core::NT_VariableIntTypeParam);
 	}, true));
 }
 
