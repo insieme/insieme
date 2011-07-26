@@ -46,10 +46,9 @@ namespace ocl {
 #define BASIC builder.getNodeManager().basic
 
 /*
- *  get a VariablePtr which is hidden under the stuff added by the frontend if ther is a cast to (void*) in the C input
- *  the variable is stored in the passed argument arg
+ *  get a VariablePtr which is hidden under the stuff added by the frontend if their is a cast to (void*) in the C input
  */
-void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg, const core::ASTBuilder& builder);
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder);
 
 /*
  * Function to get the type of an Expression
@@ -65,6 +64,12 @@ const core::TypePtr getNonRefType(const core::TypePtr& refType);
  * Builds a ref.deref call around an expression if the it is of ref-type
  */
 core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
+
+/*
+ * Returns either the expression itself or the first argument if expression was a call to function
+ */
+core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
+
 
 
 /*

@@ -46,16 +46,6 @@ namespace frontend {
 namespace ocl {
 using namespace insieme::core;
 
-/*
-void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg) {
-// remove stuff added by (void*)&
-	if(const CallExprPtr& refToAnyref = dynamic_pointer_cast<const CallExpr>(arg))
-		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef())
-			if(const CallExprPtr& scalarToArray = dynamic_pointer_cast<const CallExpr>(refToAnyref->getArgument(0)))
-				if(scalarToArray->getFunctionExpr() == BASIC.getScalarToArray())
-					arg = scalarToArray->getArgument(0);
-}
-*/
 /* Assumptions:
  * 1. the work dimension is a scalar in the arguments
  * 2. The cast to void* of the local/global size happens in the argument
@@ -171,6 +161,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
 		if(cl_mems.find(var) != cl_mems.end()) {
+//			std::cout << "cl_mems: " << cl_mems << std::endl;
 			return cl_mems[var];
 		}
 	}
@@ -248,7 +239,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						newType = rt->getElementType();
 					else
 						newType = cl_mems[var]->getType();
-
 					NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(newType))));
 					copyAnnotations(decl, ret);
 					return ret;
@@ -285,13 +275,14 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					// get kernel function
 					ExpressionPtr k = callExpr->getArgument(1);
 
-					// check if argument is a call to composite.ref.elem
-//					if(const CallExprPtr cre = dynamic_pointer_cast<const CallExpr>(k))
-	//					k = cre->getArgument(0);
+					// check if argument is a call to ref.deref
+					k = tryRemove(BASIC.getRefDeref(), k, builder);
 
 					// get corresponding lambda expression
+//equal_target<ExpressionPtr> cmp;
+//std::cout << "Arguments: " << kernelArgs << "\nk: " << k << " compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;
+					assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
 					LambdaExprPtr lambda = kernelLambdas[k];
-					assert(lambda && "No lambda expression for kernel call found");
 
 					assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
 					vector<ExpressionPtr>& args = kernelArgs[k];
@@ -307,9 +298,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						for_each(args, [&](ExpressionPtr& arg) {
 								assert(!!arg && "Kernel has illegal global memory argument");
 								//global and private memory arguments must be variables
-								getVarOutOfCrazyInspireConstruct(arg, builder);
-
-								newArgs.push_back(dynamic_pointer_cast<const Expression>(this->resolveElement(arg)));
+								arg = getVarOutOfCrazyInspireConstruct(arg, builder);
+								newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), dynamic_pointer_cast<const Expression>(this->resolveElement(arg))));
 							});
 
 						// add global and local size to arguments
@@ -336,12 +326,12 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							assert(!!arg && "Kernel has illegal global memory argument");
 							bool local = false;
 							//global and private memory arguments must be variables
-							getVarOutOfCrazyInspireConstruct(arg, builder);
+							std::cout << "before " << arg;
+							arg = getVarOutOfCrazyInspireConstruct(arg, builder);
 							// local args are declared in localMemDecls
 							for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
 									assert(!!decl && "Kernel has illegal local memory argument");
 									if(arg == decl->getVariable()) {
-//                                params.push_back(decl->getVariable());
 										// will be declared inside wrapper function
 										local = true;
 									}
@@ -350,14 +340,17 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 								// global and private memory arguments will be passed to the wrapper function as agrument
 								ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
 								assert(!!newArg && "Argument of kernel function must be an Expression");
-								newArgs.push_back(newArg);
-								wrapperInterface.push_back(newArg->getType());
+								newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), newArg));
+								wrapperInterface.push_back(newArgs.back()->getType());
 
 								// kernel funtion will take a new variable as argument
-								params.push_back(builder.variable(newArg->getType()));
+								params.push_back(builder.variable(newArgs.back()->getType()));
+								// the kernel call will use the params of the outer call as arguments, they must be an expression
+								innerArgs.push_back(params.back());
+							} else {
+								// furthermore we have to add local variables
+								innerArgs.push_back(arg);
 							}
-							// the kernel call will use the params of the outer call as arguments, they must be an expression
-							innerArgs.push_back(params.back());
 						});
 
 					// add global and local size to arguments
@@ -399,8 +392,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							static_pointer_cast<const Literal>(replacements[oldIdLit]) : oldIdLit;
 					const IdentifierPtr& id = builder.identifier(newIdLit->getValue());
 					const TypePtr& oldType = dynamic_pointer_cast<const GenericType>(oldTypeLit->getType())->getTypeParameter().at(0);
-					for_each(replacements, [&](std::pair<const NodePtr, NodePtr> n) {
-					});
+//					for_each(replacements, [&](std::pair<const NodePtr, NodePtr> n) {
+//					});
 
 					const core::TypePtr& memberTy = static_pointer_cast<const NamedCompositeType>(newType)->getTypeOfMember(id);
 					if(!memberTy) { // someone requested a field which has been removed from the struct -> will be deleted anyways
@@ -437,6 +430,14 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						}
 					}
 				}
+
+			// need to update type of delete operation for former cl_mem variables
+			if(newCall->getFunctionExpr() == BASIC.getRefDeref()) {
+				if(const RefTypePtr& argTy = dynamic_pointer_cast<const RefType>(newCall->getArgument(0)->getType())) {
+					if(newCall->getType() != argTy->getElementType())
+						return builder.callExpr(argTy->getElementType(), BASIC.getRefDeref(), newCall->getArgument(0));
+				}
+			}
 		}
 
 	}
