@@ -65,7 +65,9 @@ if (USE_XML)
 	endforeach(case_file)
 
 	# --- INSTALL --------------------------------------------------------------------
-	INSTALL(TARGETS insieme_xml LIBRARY DESTINATION lib)
+	if(DO_INSTALL)
+		INSTALL(TARGETS insieme_xml LIBRARY DESTINATION lib)
+	endif(DO_INSTALL)
 endif (USE_XML)
 
 

@@ -108,4 +108,6 @@ endforeach(case_file)
 
 
 # --- INSTALL --------------------------------------------------------------------
-INSTALL(TARGETS main DESTINATION bin)
+if(DO_INSTALL)
+	INSTALL(TARGETS main DESTINATION bin)
+endif(DO_INSTALL)

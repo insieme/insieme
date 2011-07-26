@@ -47,8 +47,9 @@ foreach ( case_file ${test_cases})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-install (DIRECTORY ${insieme_core_include_dir}/insieme DESTINATION include)
-# install (FILES include/insieme/core/transform/manipulation.h DESTINATION include/core/)
+if(DO_INSTALL)
+	install (DIRECTORY ${insieme_core_include_dir}/insieme DESTINATION include)
+	# install (FILES include/insieme/core/transform/manipulation.h DESTINATION include/core/)
 
-install(TARGETS insieme_core LIBRARY DESTINATION lib)
-
+	install(TARGETS insieme_core LIBRARY DESTINATION lib)
+endif(DO_INSTALL)
