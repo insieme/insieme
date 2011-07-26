@@ -601,21 +601,22 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 		}
 	}
 
-	if(getNonRefType(type) == builder.arrayType(builder.genericType("_cl_kernel"))) {
-		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(call)) {//!
-			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
-			if(fun->getValue() == "clCreateKernel" ) {
-				ExpressionPtr kn = newCall->getArgument(1);
-				// usually kernel name is embedded in a "string.as.char.pointer" call"
-				if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
-				kn = sacp->getArgument(0);
-				if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
-					string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
-					kernelNames[name] = expr;
-				}
+        if(getNonRefType(type) == builder.arrayType(builder.genericType("_cl_kernel"))) {
+                if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), call, builder))) {//!
+                        if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
+                            if(fun->getValue() == "clCreateKernel" ) {
+                                    ExpressionPtr kn = newCall->getArgument(1);
+                                    // usually kernel name is embedded in a "string.as.char.pointer" call"
+                                    if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
+                                    kn = sacp->getArgument(0);
+                                    if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
+                                            string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
+                                            kernelNames[name] = expr;
+                                    }
 
-				return true;
-			}
+                                    return true;
+                            }
+                        }
 		}
 	}
 	return false;
