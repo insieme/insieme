@@ -85,17 +85,17 @@ namespace {
 
 	    bool visitVariable(const core::VariablePtr& varExpr) {
 	    	usedVars.insert(varExpr);
-	    	return false;
+	    	return true;
 	    }
 
-	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return false; }
+	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return true; }
 
 	    bool visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
 	        declaredVars.insert( declStmt->getVariable() );
-	        return true;
+	        return false;
 	    }
 
-	    bool visitNode(const NodePtr& node) { return true; }
+	    bool visitNode(const NodePtr& node) { return false; }
 
 	    utils::set::PointerSet<VariablePtr> declaredVars;
 	    utils::set::PointerSet<VariablePtr> usedVars;

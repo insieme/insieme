@@ -331,7 +331,7 @@ public:
 /**
  * A special variant of a DepthFirst visitor which can be stopped during its DepthFirst
  * processing of an IR graph. To interrupt the DepthFirst visitor, the handed in sub-visitor
- * may simply return false. The result of the interrupted visitor is false if not interrupted,
+ * may simply return *true*. The result of the interrupted visitor is false if not interrupted,
  * true otherwise.
  */
 template<
@@ -377,7 +377,7 @@ public:
 		auto innerVisitor = makeLambdaVisitor([&, this](const Ptr<const Node>& cur,P...context)->bool {
 			// visit current (in case of a pre-order)
 			if (this->preorder) {
-				interrupted = interrupted || !this->subVisitor.visit(cur, context...);
+				interrupted = interrupted || this->subVisitor.visit(cur, context...);
 			}
 
 			// DepthFirstly visit all sub-nodes
@@ -388,7 +388,7 @@ public:
 
 			// visit current (in case of a post-order)
 			if (!this->preorder) {
-				interrupted = interrupted || !this->subVisitor.visit(cur, context...);
+				interrupted = interrupted || this->subVisitor.visit(cur, context...);
 			}
 
 			// return interruption state
@@ -408,8 +408,8 @@ public:
 
 /**
  * The DepthFirstPrunableASTVisitor provides a wrapper around an ordinary visitor which
- * will DepthFirstly iterated depth first, pre-order through every visited node. Thereby,
- * within every node, the sub-visitor's visit method will be invoked. The result of the
+ * will be iterated depth first, pre-order through every visited node. 
+ * Within every node, the sub-visitor's visit method will be invoked. The result of the
  * visit will be used to determine whether its child nodes should be visited.
  */
 template<
@@ -443,7 +443,7 @@ public:
 	void visitNode(const Ptr<const Node>& node, P...context) {
 
 		// visit current node
-		if(!subVisitor.visit(node, context...)) {
+		if(subVisitor.visit(node, context...)) {
 			// => visiting sub-nodes is not required
 			return;
 		}
@@ -459,10 +459,8 @@ public:
 
 
 /**
- * The DepthFirstProgramVisitor provides a wrapper around an ordinary visitor which
- * will DepthFirstly iterated depth first, pre-order through every visited node. Thereby,
- * within every node, the sub-visitor's visit method will be invoked. Further, the results
- * of the visited nodes may be combined using a generic result combinator.
+ * The BreadthFirstASTVisitor provides a wrapper around an ordinary visitor which
+ * will iterate breadth first, pre-order through every visited node.
  */
 template<
 	typename SubVisitorResultType,
@@ -599,8 +597,7 @@ public:
 };
 
 /**
- * This visitor is visiting all nodes within the AST in a DepthFirst manner. Thereby,
- * the visiting process can be aborted at any place.
+ * This visitor is visiting all nodes within the AST in a DepthFirst manner and can be aborted at any time.
  */
 template<
 	template<class Target> class Ptr = Pointer,
@@ -657,7 +654,7 @@ public:
 
 			if (this->preorder) {
 				// visit current node
-				interrupted = interrupted || !this->subVisitor.visit(node, context...);
+				interrupted = interrupted || this->subVisitor.visit(node, context...);
 			}
 
 			// visit all child nodes DepthFirstly
@@ -668,7 +665,7 @@ public:
 
 			if (!this->preorder) {
 				// visit current node
-				interrupted = interrupted || !this->subVisitor.visit(node, context...);
+				interrupted = interrupted || this->subVisitor.visit(node, context...);
 			}
 		}, this->isVisitingTypes());
 
@@ -728,7 +725,7 @@ public:
 			}
 
 			// visit current node
-			if (!this->subVisitor.visit(node, context...)) {
+			if (this->subVisitor.visit(node, context...)) {
 				// visitor decided not to visit child nodes
 				return;
 			}
@@ -890,7 +887,7 @@ inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, ASTVisitor<bool,
 
 template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-inline void visitDepthFirstInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
 	return visitDepthFirstInterruptable(root, makeLambdaVisitor(lambda, visitTypes), preorder);
 }
 

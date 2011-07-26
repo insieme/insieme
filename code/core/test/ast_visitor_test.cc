@@ -433,7 +433,7 @@ public:
 	InterruptingVisitor(int limit) : ASTVisitor<bool,Ptr>(true), counter(0), limit(limit) {};
 
 	bool visitNode(const Ptr<const Node>& node) {
-		return ++counter < limit;
+		return !(++counter < limit);
 	};
 
 	void reset() {
@@ -539,7 +539,7 @@ public:
 
 	bool visitNode(const NodeAddress& node) {
 		counter++;
-		return node.getDepth() < (std::size_t)depthLimit;
+		return ! (node.getDepth() < (std::size_t)depthLimit);
 	};
 
 	void reset() {

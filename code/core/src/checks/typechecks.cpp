@@ -175,7 +175,7 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 		if (cur->getNodeType() != NT_ReturnStmt) {
 			// abort if this node is a expression or type
 			NodeCategory category = cur->getNodeCategory();
-			return !(category == NC_Type || category == NC_Expression);
+			return (category == NC_Type || category == NC_Expression);
 		}
 
 		const ReturnStmtAddress& returnStmt = static_address_cast<const ReturnStmt>(cur);
@@ -189,7 +189,7 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 				Message::ERROR));
 		}
 
-		return false;
+		return true;
 	}, false);
 
 
