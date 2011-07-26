@@ -409,7 +409,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(node->getArgument(0))) {
 				//            std::cout << "PathVariable: " << pathVar << std::endl;
 				KernelCodeRetriver kcr(pathVar, node, builder);
-				visitAll(mProgram, kcr);
+				visitDepthFirst(mProgram, kcr);
 				string kernelFilePath = kcr.getKernelFilePath();
 				if(kernelFilePath.size() > 0)
 				kernels = loadKernelsFromFile(kernelFilePath, builder);

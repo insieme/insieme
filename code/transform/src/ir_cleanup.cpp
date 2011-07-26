@@ -76,7 +76,7 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	utils::set::PointerSet<StructTypePtr> structs;
 
 	// search for the property
-	visitAllOnce(node, makeLambdaVisitor([&](const NodePtr& cur){
+	visitDepthFirstOnce(node, makeLambdaVisitor([&](const NodePtr& cur){
 		if (cur->getNodeType() != NT_StructType) {
 			return;
 		}
@@ -92,7 +92,7 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	// Step 2) collect addresses of nodes accessing array types
 	utils::set::PointerSet<MemberAccessExprAddress> accesses;
 	{
-		visitAllNodes(NodeAddress(node), [&](const NodeAddress& cur){
+		visitDepthFirst(NodeAddress(node), [&](const NodeAddress& cur){
 			if (cur->getNodeType() != NT_MemberAccessExpr) {
 				return;
 			}
@@ -181,6 +181,42 @@ core::NodePtr cleanup(const core::NodePtr& node) {
 
 	// done
 	return res;
+}
+
+class PseudoArrayEliminationMapping {
+public:
+	PseudoArrayEliminationMapping() {
+
+	}
+
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+
+	}
+};
+
+core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
+	// search for array variable declarations
+	visitAllNodes(NodeAddress(node), [&](const NodeAddress& curdecl) {
+		if(curdecl->getNodeType() != NT_DeclarationStmt) {
+			return;
+		}
+
+		DeclarationStmtAddress decl = static_address_cast<const DeclarationStmt>(curdecl);
+		auto var = decl->getVariable();
+		auto type = var->getType();
+
+		if(type == NT_ArrayType) {
+			// array variable, check indexing
+			visitAllNodes(decl, [&](const NodeAddress& curcall) {
+				if(curcall->getNodeType() != NT_CallExpr) {
+					return;
+				}
+
+				CallExprAddress call = static_address_cast<const CallExpr>(curcall);
+
+			} );
+		}
+	}, true);
 }
 
 } // end of namespace transform

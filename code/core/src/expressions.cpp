@@ -770,15 +770,15 @@ bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
 	auto detector = makeLambdaVisitor([&defs](const NodePtr& node)->bool {
 		// check node type
 		if (node->getNodeType() != NT_Variable) {
-			return true;
+			return false;
 		}
 
 		// check whether the variable is a recursive function
-		return defs.find(static_pointer_cast<const Variable>(node)) == defs.end();
+		return defs.find(static_pointer_cast<const Variable>(node)) != defs.end();
 	}, false);
 
 	// run visitor => if interrupted, the definition is recursive
-	return visitAllInterruptable(lambda, detector);
+	return visitDepthFirstInterruptable(lambda, detector);
 }
 
 namespace {

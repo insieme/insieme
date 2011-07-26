@@ -85,17 +85,17 @@ namespace {
 
 	    bool visitVariable(const core::VariablePtr& varExpr) {
 	    	usedVars.insert(varExpr);
-	    	return false;
+	    	return true;
 	    }
 
-	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return false; }
+	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return true; }
 
 	    bool visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
 	        declaredVars.insert( declStmt->getVariable() );
-	        return true;
+	        return false;
 	    }
 
-	    bool visitNode(const NodePtr& node) { return true; }
+	    bool visitNode(const NodePtr& node) { return false; }
 
 	    utils::set::PointerSet<VariablePtr> declaredVars;
 	    utils::set::PointerSet<VariablePtr> usedVars;
@@ -103,7 +103,7 @@ namespace {
 
 	utils::set::PointerSet<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
-		visitAllPrunable(root, visitor);
+		visitDepthFirstPrunable(root, visitor);
 
 		utils::set::PointerSet<VariablePtr> nonDecls;
 		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),

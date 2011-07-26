@@ -34,26 +34,34 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/transform/pattern/structure.h"
 
 namespace insieme {
 namespace transform {
+namespace pattern {
 
-// TODO: model cleanup instances just like checks - to compose them
+	TEST(Tree, Basic) {
 
-/**
- * This simple method cleaning up the given IR sub-tree. It therefore uses
- * a set of default cleanup operations.
- */
-core::NodePtr cleanup(const core::NodePtr& node);
+		TreePtr tree = makeTree();
+		EXPECT_EQ("()", toString(tree));
 
-/**
- * This method replaces all arrays in the given sub-tree with scalars if they
- * are never used as arrays (ie. there are no index expression with a index other than 0)
- */
-core::NodePtr eliminatePseudoArrays(const core::NodePtr& node);
+		tree = makeTree(tree, tree, tree);
+		EXPECT_EQ("((),(),())", toString(tree));
 
-} // end of namespace transform
-} // end of namespace insieme
+		tree = makeTree(tree, makeTree());
+		EXPECT_EQ("(((),(),()),())", toString(tree));
+
+		tree = makeTree('a');
+		EXPECT_EQ("a", toString(tree));
+
+		tree = makeTree(tree, makeTree('b'), makeTree());
+		EXPECT_EQ("(a,b,())", toString(tree));
+
+	}
+
+} // end namespace pattern
+} // end namespace transform
+} // end namespace insieme
+

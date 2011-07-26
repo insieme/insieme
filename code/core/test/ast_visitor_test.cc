@@ -178,7 +178,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	NodeManager manager;
 	CountingVisitor visitor(true);
-	auto recVisitor = makeRecursiveVisitor(visitor);
+	auto recVisitor = makeDepthFirstVisitor(visitor);
 
 	ProgramPtr program = Program::create(manager);
 
@@ -229,7 +229,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	// ------ test for addresses ----
 	CountingAddressVisitor adrVisitor(true);
-	auto recAdrVisitor = makeRecursiveVisitor(adrVisitor);
+	auto recAdrVisitor = makeDepthFirstVisitor(adrVisitor);
 
 	adrVisitor.reset();
 	adrVisitor.visit(NodeAddress(ifStmt));
@@ -242,7 +242,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	// test without types
 	CountingVisitor noTypePtrVisitor(false);
-	auto recNoTypeVisitor = makeRecursiveVisitor(noTypePtrVisitor);
+	auto recNoTypeVisitor = makeDepthFirstVisitor(noTypePtrVisitor);
 
 	noTypePtrVisitor.reset();
 	noTypePtrVisitor.visit(ifStmt);
@@ -253,7 +253,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	EXPECT_EQ ( 4, noTypePtrVisitor.counter );
 
 	CountingAddressVisitor noTypeAdrVisitor(false);
-	auto recNoTypeAdrVisitor = makeRecursiveVisitor(noTypeAdrVisitor);
+	auto recNoTypeAdrVisitor = makeDepthFirstVisitor(noTypeAdrVisitor);
 
 	noTypeAdrVisitor.reset();
 	noTypeAdrVisitor.visit(NodeAddress(ifStmt));
@@ -308,12 +308,12 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 
 	res.clear();
 	EXPECT_TRUE ( equals(vector<NodePtr>(), res) );
-	visitAllBreadthFirst(typeA, collector);
+	visitBreadthFirst(typeA, collector);
 	EXPECT_TRUE ( equals(expected, res));
 
 	res.clear();
 	EXPECT_TRUE ( equals(vector<NodePtr>(), res) );
-	visitAllNodesBreadthFirst(typeA, [&res](const NodePtr& cur) {
+	visitBreadthFirst(typeA, [&res](const NodePtr& cur) {
 		res.push_back(cur);
 	}, true);
 	EXPECT_TRUE ( equals(expected, res));
@@ -340,19 +340,19 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 
 	// visit all recursively
 	res.clear();
-	auto recursive = makeRecursiveVisitor(collector);
+	auto recursive = makeDepthFirstVisitor(collector);
 	recursive.visit(type);
 
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
 
 	// visit all, only once
 	res.clear();
-	auto prefix = makeVisitOnceVisitor(collector);
+	auto prefix = makeDepthFirstOnceVisitor(collector);
 	prefix.visit(type);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();
-	auto postfix = makeVisitOnceVisitor(collector, false);
+	auto postfix = makeDepthFirstOnceVisitor(collector, false);
 	postfix.visit(type);
 
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
@@ -378,16 +378,16 @@ TEST(ASTVisitor, UtilitiesTest) {
 
 	// visit all recursively
 	res.clear();
-	visitAll(type, collector);
+	visitDepthFirst(type, collector);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
 
 	// visit all, only once
 	res.clear();
-	visitAllOnce(type, collector);
+	visitDepthFirstOnce(type, collector);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();
-	visitAllOnce(type, collector, false);
+	visitDepthFirstOnce(type, collector, false);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
 
 
@@ -397,28 +397,28 @@ TEST(ASTVisitor, UtilitiesTest) {
 
 	// visit all recursively
 	res.clear();
-	visitAllNodes(type, fun, true);
+	visitDepthFirst(type, fun, true, false);
+	EXPECT_TRUE ( equals(toVector<NodePtr>(), res));
+
+	res.clear();
+	visitDepthFirst(type, fun, true, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
 
 	res.clear();
-	visitAllNodes(type, fun, true);
-	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
-
-	res.clear();
-	visitAllNodes(type, fun, true, false);
+	visitDepthFirst(type, fun, false, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, shared, type), res));
 
 	// visit all, only once
 	res.clear();
-	visitAllNodesOnce(type, fun, true);
+	visitDepthFirstOnce(type, fun, true, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();
-	visitAllNodesOnce(type, fun, true, true);
+	visitDepthFirstOnce(type, fun, true, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
 
 	res.clear();
-	visitAllNodesOnce(type, fun, true, false);
+	visitDepthFirstOnce(type, fun, false, true);
 	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
 
 }
@@ -433,7 +433,7 @@ public:
 	InterruptingVisitor(int limit) : ASTVisitor<bool,Ptr>(true), counter(0), limit(limit) {};
 
 	bool visitNode(const Ptr<const Node>& node) {
-		return ++counter < limit;
+		return !(++counter < limit);
 	};
 
 	void reset() {
@@ -459,11 +459,11 @@ TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
 	);
 
 	limit3.reset();
-	EXPECT_TRUE(visitAllInterruptable(ifStmt, limit3));
+	EXPECT_TRUE(visitDepthFirstInterruptable(ifStmt, limit3));
 	EXPECT_EQ ( 3, limit3.counter );
 
 	limit10.reset();
-	EXPECT_FALSE(visitAllInterruptable(ifStmt, limit10));
+	EXPECT_FALSE(visitDepthFirstInterruptable(ifStmt, limit10));
 	EXPECT_EQ ( 6, limit10.counter );
 
 	// ------ test for addresses ----
@@ -471,12 +471,12 @@ TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
 	InterruptingVisitor<Address> limitA10(10);
 
 	limitA3.reset();
-	EXPECT_TRUE(visitAllInterruptable(NodeAddress(ifStmt), limitA3));
+	EXPECT_TRUE(visitDepthFirstInterruptable(NodeAddress(ifStmt), limitA3));
 	EXPECT_EQ ( 3, limitA3.counter );
 
 	limitA10.reset();
-	visitAllInterruptable(ifStmt, limit10);
-	EXPECT_FALSE(visitAllInterruptable(NodeAddress(ifStmt), limitA10));
+	visitDepthFirstInterruptable(ifStmt, limit10);
+	EXPECT_FALSE(visitDepthFirstInterruptable(NodeAddress(ifStmt), limitA10));
 	EXPECT_EQ ( 6, limitA10.counter );
 }
 
@@ -498,16 +498,16 @@ TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
 	);
 
 	limit3.reset();
-	EXPECT_TRUE(visitAllOnceInterruptable(ifStmt, limit3));
+	EXPECT_TRUE(visitDepthFirstOnceInterruptable(ifStmt, limit3));
 	EXPECT_EQ ( 3, limit3.counter );
 
 	limit10.reset();
-	EXPECT_FALSE(visitAllOnceInterruptable(ifStmt, limit10));
+	EXPECT_FALSE(visitDepthFirstOnceInterruptable(ifStmt, limit10));
 	EXPECT_EQ ( 5, limit10.counter );
 
 	// check number of nodes when visiting all nodes
 	limit10.reset();
-	visitAllOnce(ifStmt, limit10);
+	visitDepthFirstOnce(ifStmt, limit10);
 	EXPECT_EQ( 5, limit10.counter);
 
 	// ------ test for addresses ----
@@ -515,16 +515,16 @@ TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
 	InterruptingVisitor<Address> limitA10(10);
 
 	limitA3.reset();
-	EXPECT_TRUE(visitAllOnceInterruptable(NodeAddress(ifStmt), limitA3));
+	EXPECT_TRUE(visitDepthFirstOnceInterruptable(NodeAddress(ifStmt), limitA3));
 	EXPECT_EQ ( 3, limitA3.counter );
 
 	limitA10.reset();
-	EXPECT_FALSE(visitAllOnceInterruptable(NodeAddress(ifStmt), limitA10));
+	EXPECT_FALSE(visitDepthFirstOnceInterruptable(NodeAddress(ifStmt), limitA10));
 	EXPECT_EQ ( 5, limitA10.counter );
 
 	// check number of nodes when visiting all nodes
 	limitA10.reset();
-	visitAllOnce(NodeAddress(ifStmt), limitA10);
+	visitDepthFirstOnce(NodeAddress(ifStmt), limitA10);
 	EXPECT_EQ( 5, limitA10.counter);
 }
 
@@ -539,7 +539,7 @@ public:
 
 	bool visitNode(const NodeAddress& node) {
 		counter++;
-		return node.getDepth() < (std::size_t)depthLimit;
+		return ! (node.getDepth() < (std::size_t)depthLimit);
 	};
 
 	void reset() {
@@ -564,11 +564,11 @@ TEST(ASTVisitor, RecursivePrunableVisitorTest) {
 	PruningVisitor limitB(2);
 
 	limitA.reset();
-	visitAllPrunable(NodeAddress(ifStmt), limitA);
+	visitDepthFirstPrunable(NodeAddress(ifStmt), limitA);
 	EXPECT_EQ ( 1, limitA.counter );
 
 	limitB.reset();
-	visitAllPrunable(NodeAddress(ifStmt), limitB);
+	visitDepthFirstPrunable(NodeAddress(ifStmt), limitB);
 	EXPECT_EQ ( 4, limitB.counter );
 }
 
@@ -590,17 +590,55 @@ TEST(ASTVisitor, VisitOncePrunableVisitorTest) {
 	PruningVisitor limitB(2);
 
 	limitA.reset();
-	visitAllOncePrunable(NodeAddress(ifStmt), limitA);
+	visitDepthFirstOncePrunable(NodeAddress(ifStmt), limitA);
 	EXPECT_EQ ( 1, limitA.counter );
 
 	limitB.reset();
-	visitAllOncePrunable(NodeAddress(ifStmt), limitB);
+	visitDepthFirstOncePrunable(NodeAddress(ifStmt), limitB);
 	EXPECT_EQ ( 4, limitB.counter );
 
 	// check number of nodes when visiting all nodes
 	limitB.reset();
-	visitAllOnce(NodeAddress(ifStmt), limitB);
+	visitDepthFirstOnce(NodeAddress(ifStmt), limitB);
 	EXPECT_EQ( 5, limitB.counter);
+}
+
+
+TEST(ASTVisitor, SingleTypeLambdaVisitor) {
+
+	NodeManager manager;
+
+	GenericTypePtr type = GenericType::get(manager, "int");
+
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
+		CompoundStmt::get(manager)
+	);
+
+	// ------ test for addresses ----
+
+	{
+		int counter = 0;
+		auto visitor = makeLambdaVisitor([&counter](const LiteralPtr& cur) {
+			counter++;
+		});
+		visitDepthFirst(ifStmt, visitor);
+		EXPECT_EQ(counter, 2);
+	}
+
+	{
+		int counter = 0;
+		auto visitor = makeLambdaVisitor([&counter](const CompoundStmtPtr& cur) {
+			counter++;
+		});
+		visitDepthFirst(ifStmt, visitor);
+		EXPECT_EQ(counter, 1);
+	}
+
+
+
+
 }
 
 
@@ -630,7 +668,7 @@ TEST(ASTVisitor, ParameterTest) {
 
 	n = 0;
 	m = 0;
-	auto recVisitor = makeRecursiveVisitor(visitor);
+	auto recVisitor = makeDepthFirstVisitor(visitor);
 	recVisitor.visit(ifStmt, n, m);
 	EXPECT_EQ(6, n);
 	EXPECT_EQ(-6, m);

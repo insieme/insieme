@@ -28,7 +28,7 @@ target_link_libraries(insieme_opencl_backend insieme_c_info)
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-set ( ut_prefix  ut_sbe_ocl_ )
+set ( ut_prefix  ut_oclbe_ocl_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
@@ -48,4 +48,6 @@ foreach ( case_file ${test_cases})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-INSTALL(TARGETS insieme_opencl_backend LIBRARY DESTINATION lib)
+if(DO_INSTALL)
+	INSTALL(TARGETS insieme_opencl_backend LIBRARY DESTINATION lib)
+endif(DO_INSTALL)

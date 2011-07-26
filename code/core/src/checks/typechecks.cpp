@@ -169,13 +169,13 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 	const TypePtr& returnType = address->getType()->getReturnType();
 
 	// search for all return statements and check type
-	visitAllPrunable(address, makeLambdaVisitor([&](const NodeAddress& cur)->bool {
+	visitDepthFirstPrunable(address, [&](const NodeAddress& cur)->bool {
 
 		// check whether it is a a return statement
 		if (cur->getNodeType() != NT_ReturnStmt) {
 			// abort if this node is a expression or type
 			NodeCategory category = cur->getNodeCategory();
-			return !(category == NC_Type || category == NC_Expression);
+			return (category == NC_Type || category == NC_Expression);
 		}
 
 		const ReturnStmtAddress& returnStmt = static_address_cast<const ReturnStmt>(cur);
@@ -189,8 +189,8 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 				Message::ERROR));
 		}
 
-		return false;
-	}, false));
+		return true;
+	}, false);
 
 
 	// EC_TYPE_MISSING_RETURN_STMT,
