@@ -19,7 +19,7 @@ include_directories( ${insieme_opencl_backend_include_dir} )
 
 # Build the opencl library
 add_library(insieme_opencl_backend ${LINKING_TYPE} ${insieme_opencl_backend_srcs} ${insieme_opencl_backend_incs} )
-
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/opencl_backend_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/opencl_backend/opencl_backend_config.h)
 # add dependencies
 add_dependencies( insieme_opencl_backend insieme_simple_backend insieme_core insieme_c_info insieme_utils )
 target_link_libraries(insieme_opencl_backend insieme_c_info)
@@ -28,7 +28,7 @@ target_link_libraries(insieme_opencl_backend insieme_c_info)
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-set ( ut_prefix  ut_oclbe_ocl_ )
+set ( ut_prefix  ut_sbe_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )

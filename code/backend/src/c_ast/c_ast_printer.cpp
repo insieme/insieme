@@ -119,11 +119,18 @@ namespace c_ast {
 
 			PRINT(PrimitiveType) {
 				switch(node->type) {
-				case PrimitiveType::VOID : return out << "void";
-				case PrimitiveType::INT : return out << "int";
-				case PrimitiveType::UNSIGNED : return out << "unsigned";
-				case PrimitiveType::FLOAT : return out << "float";
-				case PrimitiveType::DOUBLE : return out << "double";
+				case PrimitiveType::Void : return out << "void";
+				case PrimitiveType::Bool : return out << "bool";
+				case PrimitiveType::Int8 : return out << "int8_t";
+				case PrimitiveType::Int16 : return out << "int16_t";
+				case PrimitiveType::Int32 : return out << "int32_t";
+				case PrimitiveType::Int64 : return out << "int64_t";
+				case PrimitiveType::UInt8 : return out << "uint8_t";
+				case PrimitiveType::UInt16 : return out << "uint16_t";
+				case PrimitiveType::UInt32 : return out << "uint32_t";
+				case PrimitiveType::UInt64 : return out << "uint64_t";
+				case PrimitiveType::Float : return out << "float";
+				case PrimitiveType::Double : return out << "double";
 				}
 				assert(false && "Unsupported primitive type!");
 				return out << "/* unsupported primitive type */";
@@ -213,26 +220,26 @@ namespace c_ast {
 			}
 
 			PRINT(Switch) {
-				out << "switch(";
-				print(node->value);
-				out << ") {";
+				out << "switch(" << print(node->value) << ") {";
 				incIndent();
 				newLine(out);
 
 				std::size_t size = node->cases.size();
 				for (std::size_t i=0; i<size; i++) {
 					const std::pair<ExpressionPtr, StatementPtr>& cur = node->cases[i];
-					out << "case ";
-					print(cur.first);
-					out << ": ";
-					print(cur.second);
+					out << "case " << print(cur.first) << ": " << print(cur.second);
+					if (cur.second->getType() != c_ast::NT_Compound) {
+						out << ";";
+					}
 					if (i < size-1) newLine(out);
 				}
 
 				if (node->defaultBranch) {
 					newLine(out);
-					out << "default: ";
-					print(node->defaultBranch);
+					out << "default: " << print(node->defaultBranch);
+					if (node->defaultBranch->getType() != c_ast::NT_Compound) {
+						out << ";";
+					}
 				}
 
 				decIndent();
@@ -261,7 +268,11 @@ namespace c_ast {
 			}
 
 			PRINT(Return) {
-				return out << "return " << print(node->value);
+				out << "return";
+				if (node->value) { // if there is a return value ...
+					out << " " << print(node->value);
+				}
+				return out;
 			}
 
 			PRINT(Literal) {

@@ -48,23 +48,6 @@ namespace insieme {
 namespace backend {
 namespace c_ast {
 
-	class CBasics {
-
-		CNodeManager& manager;
-
-	public:
-
-		CBasics(CNodeManager& manager) : manager(manager) {}
-
-		IdentifierPtr getIdentifier(const string& name) {
-			return manager.create(name);
-		}
-
-		TypePtr getIntType() {
-			return manager.create<PrimitiveType>(PrimitiveType::INT);
-		}
-
-	};
 
 	// --- types ------------------------------------------------
 
@@ -317,7 +300,7 @@ namespace c_ast {
 	// -- Some tests ----------------------------------------
 
 	inline bool isVoid(TypePtr type) {
-		return type->getType() == NT_PrimitiveType && static_pointer_cast<const PrimitiveType>(type)->type == PrimitiveType::VOID;
+		return type->getType() == NT_PrimitiveType && static_pointer_cast<const PrimitiveType>(type)->type == PrimitiveType::Void;
 	}
 
 } // end namespace c_ast

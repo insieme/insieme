@@ -1938,18 +1938,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
-	// We are resolving a recursive function and we are recurring trying to
-	// solve a dependent function. Check if we already solved this function by
-	// looking into the lambda cache.
-	if ( ctx.isResolvingRecFuncBody ) {
-		// check if we already resolved this function 
-		// look up the lambda cache to see if this function has been
-		// already converted into an IR lambda expression. 
-		ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find( funcDecl );
+	// check if we already resolved this function
+	// look up the lambda cache to see if this function has been
+	// already converted into an IR lambda expression.
+	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find( funcDecl );
 
-		if ( fit != ctx.lambdaExprCache.end() ) { 
-			return fit->second; 
-		}
+	if ( fit != ctx.lambdaExprCache.end() ) {
+		return fit->second;
 	}
 
 	// retrieve the strongly connected components for this type

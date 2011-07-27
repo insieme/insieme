@@ -66,12 +66,11 @@ namespace backend {
 
 
 	struct ConverterConfig {
-		bool supportArrayLength;
 
+		// - no configuration so far -
 
 		static ConverterConfig getDefault() {
 			ConverterConfig res;
-			res.supportArrayLength = false;
 			return res;
 		}
 	};

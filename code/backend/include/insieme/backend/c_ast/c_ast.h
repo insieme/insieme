@@ -133,7 +133,7 @@ namespace c_ast {
 
 	struct PrimitiveType : public Type {
 		enum CType {
-			VOID, UNSIGNED, INT, FLOAT, DOUBLE
+			Void, Bool, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double
 		};
 		const CType type;
 		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
@@ -265,7 +265,7 @@ namespace c_ast {
 
 	struct Return : public Statement {
 		ExpressionPtr value;
-		Return(ExpressionPtr value) : Statement(NT_Return), value(value) {}
+		Return(ExpressionPtr value = ExpressionPtr()) : Statement(NT_Return), value(value) {}
 		virtual bool equals(const Node& node) const;
 	};
 

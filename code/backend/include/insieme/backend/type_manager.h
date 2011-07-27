@@ -151,11 +151,7 @@ namespace backend {
 
 	struct ArrayTypeInfo : public TypeInfo {
 		// to be included
-		//		- constructor
-
-		c_ast::IdentifierPtr constructorName;
-
-		c_ast::CodeFragmentPtr constructor;
+		//		- nothing extra so far
 	};
 
 	struct VectorTypeInfo : public TypeInfo {

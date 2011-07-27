@@ -207,6 +207,15 @@ namespace backend {
 
 		res[basic.getRefEqual()] = OP_CONVERTER({ return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1)); });
 		res[basic.getRefDeref()] = OP_CONVERTER({
+
+			// special handling of derefing result of ref.new or ref.var => bogus
+			core::ExpressionPtr arg = ARG(0);
+			if (core::analysis::isCallOf(arg, LANG_BASIC.getRefVar()) || core::analysis::isCallOf(arg, LANG_BASIC.getRefNew())) {
+				// skip ref.var / ref.new => stupid
+				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(arg);
+				return CONVERT_EXPR(call->getArgument(0));
+			}
+
 			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
 			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
 			context.getDependencies().insert(info.definition);
@@ -217,8 +226,47 @@ namespace backend {
 			return c_ast::assign(getAssignmentTarget(context, ARG(0)), CONVERT_ARG(1));
 		});
 
-		res[basic.getRefVar()] = OP_CONVERTER({ return CONVERT_ARG(0); });
-		res[basic.getRefNew()] = OP_CONVERTER( {
+		res[basic.getRefVar()] = OP_CONVERTER({
+
+			// get some manager
+			const core::lang::BasicGenerator& basic = LANG_BASIC;
+
+			// extract type
+			core::ExpressionPtr initValue = call->getArgument(0);
+			core::TypePtr type = initValue->getType();
+			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
+			const TypeInfo& resTypeInfo = GET_TYPE_INFO(call->getType());
+
+			// create alloca reference
+			context.getIncludes().insert("alloca.h");
+
+			// allocate the memory
+			c_ast::ExpressionPtr res = c_ast::call(C_NODE_MANAGER->create("alloca"), c_ast::sizeOf(valueTypeInfo.rValueType));
+
+			// check whether new memory location needs to be initialized
+			if (!(core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||
+					core::analysis::isCallOf(initValue, basic.getUndefined()))) {
+
+				// in this cases, the data needs to be initialized
+				context.getIncludes().insert("string.h");
+
+				c_ast::ExpressionPtr initExpr = CONVERT_EXPR(initValue);
+				res = c_ast::call(C_NODE_MANAGER->create("memcpy"), res, c_ast::ref(initExpr), c_ast::sizeOf(valueTypeInfo.rValueType));
+
+				// special handling for arrays
+				if (type->getNodeType() == core::NT_ArrayType) {
+					// no out allocation required!
+					return initExpr;
+				}
+			}
+
+
+
+			// done
+			return c_ast::cast(resTypeInfo.rValueType, res);
+		});
+
+		res[basic.getRefNew()] = OP_CONVERTER({
 
 			// get result type information
 			core::RefTypePtr resType = static_pointer_cast<const core::RefType>(call->getType());
@@ -230,6 +278,12 @@ namespace backend {
 
 				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
 				return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
+			}
+
+			// special handling for arrays
+			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getArrayCreate1D())) {
+				// ref new can be skipped
+				return CONVERT_ARG(0);
 			}
 
 			// use a call to the ref_new operator of the ref type
@@ -244,7 +298,7 @@ namespace backend {
 			// do not free non-heap variables
 			if (ARG(0)->getNodeType() == core::NT_Variable) {
 				core::VariablePtr var = static_pointer_cast<const core::Variable>(ARG(0));
-				if (GET_VAR_INFO(var).location == VariableInfo::INDIRECT) {
+				if (GET_VAR_INFO(var).location != VariableInfo::INDIRECT) {
 					// return NULL pointer => no op
 					return c_ast::ExpressionPtr();
 				}
@@ -259,9 +313,8 @@ namespace backend {
 			// construct argument
 			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
 
-			// TODO: call array destructor instead!!
 			if (core::analysis::getReferencedType(ARG(0)->getType())->getNodeType() == core::NT_ArrayType) {
-				arg = c_ast::access(arg, "data");
+				// TODO: call array destructor instead!!
 			}
 
 			return c_ast::call(C_NODE_MANAGER->create("free"), arg);
@@ -270,7 +323,7 @@ namespace backend {
 		res[basic.getRefToAnyRef()] = OP_CONVERTER({
 			// operator signature: (ref<'a>) -> anyRef
 			// cast result to void* and externalize value
-			c_ast::TypePtr type = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::VOID));
+			c_ast::TypePtr type = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void));
 			c_ast::ExpressionPtr value = GET_TYPE_INFO(ARG(0)->getType()).externalize(C_NODE_MANAGER, CONVERT_ARG(0));
 			return c_ast::cast(type, value);
 		});
@@ -279,40 +332,44 @@ namespace backend {
 		// -- strings --
 
 		res[basic.getStringToCharPointer()] = OP_CONVERTER({
-			// resulting code:  &((<array_type>){string_pointer})
-			core::TypePtr array = static_pointer_cast<const core::RefType>(call->getType())->getElementType();
-			return c_ast::ref(c_ast::init(CONVERT_TYPE(array), CONVERT_ARG(0)));
+			// no special treatment required
+			return CONVERT_ARG(0);
 		});
 
 
 		// -- arrays --
 
 		res[basic.getArraySubscript1D()] = OP_CONVERTER({
-			return c_ast::subscript(c_ast::access(CONVERT_ARG(0), "data"), CONVERT_ARG(1));
+			// skip deref => included subscript operator
+			c_ast::ExpressionPtr target;
+			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefDeref())) {
+				target = CONVERT_EXPR(static_pointer_cast<const core::CallExpr>(ARG(0))->getArgument(0));
+			} else {
+				target = CONVERT_ARG(0);
+			}
+			return c_ast::subscript(target, CONVERT_ARG(1));
 		});
 
 		res[basic.getArrayRefElem1D()] = OP_CONVERTER({
-			return c_ast::ref(c_ast::subscript(c_ast::access(c_ast::parenthese(c_ast::deref(CONVERT_ARG(0))), "data"), CONVERT_ARG(1)));
+			// generated code &(X[Y])
+			return c_ast::ref(c_ast::subscript(CONVERT_ARG(0), CONVERT_ARG(1)));
 		});
 
 		res[basic.getScalarToArray()] = OP_CONVERTER({
 			// initialize an array instance
 			//   Operator Type: (ref<'a>) -> ref<array<'a,1>>
-			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
-			context.getDependencies().insert(info.definition);
-			c_ast::InitializerPtr res = c_ast::init(info.rValueType, CONVERT_ARG(0));
-			if (context.getConverter().getConfig().supportArrayLength) {
-				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{1}"));
-			}
-			return c_ast::ref(res);
+			// => requires no special treatment
+			return CONVERT_ARG(0);
 		});
 
 		res[basic.getArrayCreate1D()] = OP_CONVERTER({
-			// use constructor provided by type
 			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
-			const ArrayTypeInfo& info = GET_TYPE_INFO(static_pointer_cast<const core::ArrayType>(call->getType()));
-			context.getDependencies().insert(info.constructor);
-			return c_ast::call(info.constructorName, CONVERT_ARG(1));
+			// create new array on the heap using malloc
+			context.getIncludes().insert("stdlib.h");
+
+			const core::ArrayTypePtr& resType = static_pointer_cast<const core::ArrayType>(call->getType());
+			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType->getElementType())), CONVERT_ARG(1));
+			return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
 		});
 
 
@@ -321,13 +378,7 @@ namespace backend {
 		res[basic.getVectorToArray()] = OP_CONVERTER({
 			// initialize an array instance
 			//   Operator Type: (vector<'elem,#l>) -> array<'elem,1>
-			const TypeInfo& info = GET_TYPE_INFO(call->getType());
-			context.getDependencies().insert(info.definition);
-			c_ast::InitializerPtr res = c_ast::init(info.rValueType, c_ast::access(CONVERT_ARG(0), "data"));
-			if (context.getConverter().getConfig().supportArrayLength) {
-				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{1}"));
-			}
-			return res;
+			return c_ast::access(CONVERT_ARG(0), "data");
 		});
 
 		res[basic.getVectorRefElem()] = OP_CONVERTER({
@@ -354,23 +405,34 @@ namespace backend {
 			// Operator type: (ref<vector<'elem,#l>>) -> ref<array<'elem,1>>
 			const TypeInfo& info = GET_TYPE_INFO(core::analysis::getReferencedType(call->getType()));
 			context.getDependencies().insert(info.definition);
-			c_ast::InitializerPtr res = c_ast::init(info.rValueType, c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data"));
-			if (context.getConverter().getConfig().supportArrayLength) {
-				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{1}"));
-			}
-			return c_ast::ref(res);
+			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "data");
 		});
 
 
 		// -- structs --
+
+		res[basic.getCompositeMemberAccess()] = OP_CONVERTER({
+			// signature of operation:
+			//		('a, identifier, type<'b>) -> 'b
+
+			// add a dependency to the accessed type definition before accessing the type
+			const core::TypePtr structType = ARG(0)->getType();
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(structType);
+			context.getDependencies().insert(info.definition);
+
+			// create member access
+			assert(ARG(1)->getNodeType() == core::NT_Literal);
+			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getValue());
+			return c_ast::access(CONVERT_ARG(0), field);
+		});
 
 		res[basic.getCompositeRefElem()] = OP_CONVERTER({
 			// signature of operation:
 			//		(ref<'a>, identifier, type<'b>) -> ref<'b>
 
 			// add a dependency to the accessed type definition before accessing the type
-			const core::TypePtr elementType = core::analysis::getReferencedType(ARG(0)->getType());
-			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(elementType);
+			const core::TypePtr structType = core::analysis::getReferencedType(ARG(0)->getType());
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(structType);
 			context.getDependencies().insert(info.definition);
 
 			assert(ARG(1)->getNodeType() == core::NT_Literal);
@@ -385,30 +447,23 @@ namespace backend {
 
 		res[basic.getPtrEq()] = OP_CONVERTER({
 			// Operator Type:  (array<'a,1>, array<'a,1>) -> bool
-			// generated code: X.data == Y.data
-			return c_ast::eq(c_ast::access(CONVERT_ARG(0), "data"), c_ast::access(CONVERT_ARG(1), "data"));
+			// generated code: X == Y
+			return c_ast::eq(CONVERT_ARG(0), CONVERT_ARG(1));
 		});
 
 		res[basic.getGetNull()] = OP_CONVERTER({
 			// Operator Type:  (type<'a>) -> array<'a,1>
 			// generated code: (<target_type>){0}
 
-			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::INT);
-
-			const TypeInfo& info = GET_TYPE_INFO(call->getType());
-			context.getDependencies().insert(info.definition);
-			c_ast::InitializerPtr res = c_ast::init(info.rValueType, c_ast::lit(intType,"0"));
-			if (context.getConverter().getConfig().supportArrayLength) {
-				res->values.push_back(C_NODE_MANAGER->create<c_ast::OpaqueCode>("{0}"));
-			}
-			return res;
+			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
+			return c_ast::lit(intType,"0");
 		});
 
 		res[basic.getIsNull()] = OP_CONVERTER({
 			// Operator Type:  (array<'a,1>) -> bool
-			// generated code: X.data == 0
-			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::INT);
-			return c_ast::eq(c_ast::access(CONVERT_ARG(0), "data"), c_ast::lit(intType,"0"));
+			// generated code: X == 0
+			auto intType = C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Int32);
+			return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
 		});
 
 
@@ -443,7 +498,6 @@ namespace backend {
 		// table complete => return table
 		return res;
 	}
-
 
 
 } // end namespace backend

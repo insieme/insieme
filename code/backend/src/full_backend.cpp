@@ -70,8 +70,7 @@ namespace backend {
 	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
 
 		// basic setup
-		ConverterConfig config;
-		config.supportArrayLength = false;
+		ConverterConfig config = ConverterConfig::getDefault();
 
 		// create and set up the converter
 		Converter converter(config);

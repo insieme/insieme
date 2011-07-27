@@ -45,6 +45,7 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/variable_manager.h"
 
+#include "insieme/core/printer/pretty_printer.h"
 
 namespace insieme {
 namespace backend {
