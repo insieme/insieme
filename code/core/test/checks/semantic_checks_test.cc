@@ -34,49 +34,61 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/checks/ir_checks.h"
+#include <gtest/gtest.h>
 
-#include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/checks/typechecks.h"
+#include "insieme/core/ast_builder.h"
 #include "insieme/core/checks/semanticchecks.h"
-
+#include "insieme/core/parser/ir_parse.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
 namespace checks {
 
+bool containsMSG(const MessageList& list, const Message& msg) {
+	return contains(list, msg);
+}
 
-	CheckPtr getFullCheck() {
+TEST(ScalarArrayIndexRangeCheck, Basic) {
+	ASTBuilder builder;
+	NodeManager manager;
 
-		std::vector<CheckPtr> checks;
-		checks.push_back(make_check<KeywordCheck>());
-		checks.push_back(make_check<CallExprTypeCheck>());
-		checks.push_back(make_check<FunctionTypeCheck>());
-		checks.push_back(make_check<ReturnTypeCheck>());
-		checks.push_back(make_check<DeclarationStmtTypeCheck>());
-		checks.push_back(make_check<WhileConditionTypeCheck>());
-		checks.push_back(make_check<IfConditionTypeCheck>());
-		checks.push_back(make_check<SwitchExpressionTypeCheck>());
-		checks.push_back(make_check<MemberAccessElementTypeCheck>());
-		checks.push_back(make_check<BuiltInLiteralCheck>());
-		checks.push_back(make_check<RefCastCheck>());
-		checks.push_back(make_check<CastCheck>());
+	{
+		StatementPtr stmt_err = parse::parseStatement(manager, 
+			"fun () -> unit {{ \
+				decl ref<uint<8>>:i = 0; \
+				(fun (ref<array<uint<8>,1>>:arr) -> unit {{ \
+					decl uint<8>:b = 1; \
+					(op<array.ref.elem.1D>(arr, b)); \
+				}} ((op<scalar.to.array>(i)))); \
+			}}");
 
-		checks.push_back(make_check<UndeclaredVariableCheck>());
+		CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
 
-		checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
+		NodeAddress errorAdr(stmt_err);
+		errorAdr = errorAdr.getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(1).
+			getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(1).getAddressOfChild(2).getAddressOfChild(1);
 
-		// assemble the IR check list
-		CheckPtr recursive = makeVisitOnce(combine(checks));
-
-		return combine(
-				toVector<CheckPtr>(
-					recursive,
-					make_check<DeclaredOnceCheck>()
-				)
-		);
+		EXPECT_PRED2(containsMSG, check(stmt_err, scalarArrayIndexRangeCheck), 
+			Message(errorAdr, EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE, "", Message::WARNING));
 	}
+	{
+		StatementPtr stmt_pass = parse::parseStatement(manager, 
+			"fun () -> unit {{ \
+				decl ref<uint<8>>:i = 0; \
+				(fun (ref<array<uint<8>,1>>:arr) -> unit {{ \
+					decl uint<8>:b = 1; \
+					(op<array.ref.elem.1D>(arr, lit<uint<8>, 0>)); \
+				}} ((op<scalar.to.array>(i)))); \
+			}}");
 
-} // end namespace check
+		CheckPtr scalarArrayIndexRangeCheck = makeRecursive(make_check<ScalarArrayIndexRangeCheck>());
+		EXPECT_TRUE(check(stmt_pass, scalarArrayIndexRangeCheck).empty());
+	}
+}
+
+
+} // end namespace checks
 } // end namespace core
 } // end namespace insieme
+

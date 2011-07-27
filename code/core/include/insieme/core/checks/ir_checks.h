@@ -50,8 +50,9 @@ namespace checks {
 	 * Defines a list of Error Code classes
 	 */
 	enum {
-		EC_GROUP_TYPE 		= 1000,	/* < type based problems */
-		EC_GROUP_IMPERATIVE = 2000	/* < imperative program constructs based problems */
+		EC_GROUP_TYPE       = 1000,	/* < type based problems */
+		EC_GROUP_IMPERATIVE = 2000,	/* < imperative program constructs based problems */
+		EC_GROUP_SEMANTIC   = 3000	/* < imperative program constructs based problems */
 	};
 
 	/**
