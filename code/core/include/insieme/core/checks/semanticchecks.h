@@ -34,49 +34,30 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include "insieme/core/checks/ir_checks.h"
-
-#include "insieme/core/checks/imperativechecks.h"
-#include "insieme/core/checks/typechecks.h"
-#include "insieme/core/checks/semanticchecks.h"
-
 
 namespace insieme {
 namespace core {
 namespace checks {
 
+enum {
+	EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE = EC_GROUP_SEMANTIC + 1
+};
 
-	CheckPtr getFullCheck() {
+// defines macros for generating CHECK declarations
+#include "insieme/core/checks/check_macros.inc"
 
-		std::vector<CheckPtr> checks;
-		checks.push_back(make_check<KeywordCheck>());
-		checks.push_back(make_check<CallExprTypeCheck>());
-		checks.push_back(make_check<FunctionTypeCheck>());
-		checks.push_back(make_check<ReturnTypeCheck>());
-		checks.push_back(make_check<DeclarationStmtTypeCheck>());
-		checks.push_back(make_check<WhileConditionTypeCheck>());
-		checks.push_back(make_check<IfConditionTypeCheck>());
-		checks.push_back(make_check<SwitchExpressionTypeCheck>());
-		checks.push_back(make_check<MemberAccessElementTypeCheck>());
-		checks.push_back(make_check<BuiltInLiteralCheck>());
-		checks.push_back(make_check<RefCastCheck>());
-		checks.push_back(make_check<CastCheck>());
+/**
+ * This check verifies that array indices are in range. 
+ * Currently only implemented for single element arrays generated from scalars.
+ */
+SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
 
-		checks.push_back(make_check<UndeclaredVariableCheck>());
-
-		checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
-
-		// assemble the IR check list
-		CheckPtr recursive = makeVisitOnce(combine(checks));
-
-		return combine(
-				toVector<CheckPtr>(
-					recursive,
-					make_check<DeclaredOnceCheck>()
-				)
-		);
-	}
+#undef SIMPLE_CHECK
 
 } // end namespace check
 } // end namespace core
 } // end namespace insieme
+
