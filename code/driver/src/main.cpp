@@ -478,8 +478,8 @@ int main(int argc, char** argv) {
 			// ###################################################
 			// TODO: remove this
 			// enforces the usage of the full backend for testing
-			backendName = "Full.Backend";
-			backend = insieme::backend::FullBackend::getDefault();
+			//backendName = "Full.Backend";
+			//backend = insieme::backend::FullBackend::getDefault();
 			// ###################################################
 
 			insieme::utils::Timer timer(backendName);
