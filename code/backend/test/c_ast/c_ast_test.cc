@@ -53,11 +53,10 @@ TEST(C_AST, Basic) {
 
 	// create a simple expression
 	CNodeManager manager;
-	CBasics basics(manager);
 
-	TypePtr intType = basics.getIntType();
+	TypePtr intType = manager.create<PrimitiveType>(PrimitiveType::Int32);
 	EXPECT_TRUE(intType);
-	EXPECT_EQ("int", toC(intType));
+	EXPECT_EQ("int32_t", toC(intType));
 
 	VariablePtr x = var(intType, "x");
 	VariablePtr y = var(intType, "y");
@@ -81,13 +80,13 @@ TEST(C_AST_Printer, ParameterFormatting) {
 
 
 	CNodeManager manager;
-	CBasics basics(manager);
 
 	TypePtr type;
 
 	StructTypePtr structType = manager.create<StructType>(manager.create("XY"));
+	TypePtr intType = manager.create<PrimitiveType>(PrimitiveType::Int32);
 
-	type = basics.getIntType();
+	type = intType;
 	structType->elements.push_back(var(type, "x1"));
 
 	type = manager.create<PointerType>(type);
@@ -95,7 +94,7 @@ TEST(C_AST_Printer, ParameterFormatting) {
 
 	structType->elements.push_back(var(manager.create<PointerType>(type), "x3"));
 
-	structType->elements.push_back(var(manager.create<VectorType>(basics.getIntType(), manager.create<Literal>("3")), "x4"));
+	structType->elements.push_back(var(manager.create<VectorType>(intType, manager.create<Literal>("3")), "x4"));
 
 	type = manager.create<VectorType>(type, manager.create<Literal>("3"));
 	structType->elements.push_back(var(type, "x5"));
@@ -115,15 +114,15 @@ TEST(C_AST_Printer, ParameterFormatting) {
 	NodePtr def = manager.create<TypeDefinition>(structType, manager.create("Z"));
 
 	auto code = toC(def);
-	EXPECT_PRED2(containsSubString, code, "int x1");
-	EXPECT_PRED2(containsSubString, code, "int* x2");
-	EXPECT_PRED2(containsSubString, code, "int** x3");
-	EXPECT_PRED2(containsSubString, code, "int x4[3]");
-	EXPECT_PRED2(containsSubString, code, "int* x5[3]");
-	EXPECT_PRED2(containsSubString, code, "int* x6[5][3]");
-	EXPECT_PRED2(containsSubString, code, "int*(* x7)[5][3]");
-	EXPECT_PRED2(containsSubString, code, "int*(** x8)[5][3]");
-	EXPECT_PRED2(containsSubString, code, "int*(** x9[7])[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int32_t x1");
+	EXPECT_PRED2(containsSubString, code, "int32_t* x2");
+	EXPECT_PRED2(containsSubString, code, "int32_t** x3");
+	EXPECT_PRED2(containsSubString, code, "int32_t x4[3]");
+	EXPECT_PRED2(containsSubString, code, "int32_t* x5[3]");
+	EXPECT_PRED2(containsSubString, code, "int32_t* x6[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int32_t*(* x7)[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int32_t*(** x8)[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int32_t*(** x9[7])[5][3]");
 
 }
 

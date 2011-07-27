@@ -63,6 +63,19 @@ bool isCallOf(const CallExprPtr& candidate, const NodePtr& function);
 bool isCallOf(const NodePtr& candidate, const NodePtr& function);
 
 /**
+ * A utility function to extract an argument from the given call expression.
+ *
+ * @param call the call from which an argument should be extracted. The caller has to make
+ * 			sure that the given node is in deed a call expression.
+ * @param index the index of the requested argument
+ * @return the extracted argument
+ */
+static inline core::ExpressionPtr getArgument(const NodePtr& call, int index) {
+	assert(call->getNodeType() == core::NT_CallExpr && "Call has to be a call expression!");
+	return static_pointer_cast<const CallExpr>(call)->getArgument(index);
+}
+
+/**
  * Tests whether the given node is representing a NoOP.
  */
 bool isNoOp(const StatementPtr& candidate);

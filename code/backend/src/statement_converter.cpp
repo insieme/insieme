@@ -162,10 +162,21 @@ namespace backend {
 		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
 		c_ast::InitializerPtr init = c_ast::init(type);
 
+		// obatin some helper
+		auto& basic = converter.getNodeManager().getBasicGenerator();
+
 		// append initialization values
 		::transform(ptr->getMembers(), std::back_inserter(init->values),
 				[&](const core::StructExpr::Member& cur) {
-					return convert(context, cur.second);
+					core::ExpressionPtr arg = cur.second;
+					// skip ref.var if present
+					if (core::analysis::isCallOf(cur.second, basic.getRefVar())) {
+						arg = static_pointer_cast<const core::CallExpr>(cur.second)->getArgument(0);
+						if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
+							arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0);
+						}
+					}
+					return convert(context, arg);
 		});
 
 		// return completed
@@ -293,6 +304,11 @@ namespace backend {
 
 		// TODO: handle initUndefine and init struct cases
 
+		// drop ref.var ...
+		if (core::analysis::isCallOf(init, basic.getRefVar())) {
+			init = core::analysis::getArgument(init, 0);
+		}
+
 		// create declaration statement
 		return manager->create<c_ast::VarDecl>(info.var, convertExpression(context, init));
 	}
@@ -346,6 +362,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
+		if (context.getConverter().getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
+			// special handling for unit-return
+			return converter.getCNodeManager()->create<c_ast::Return>();
+		}
 		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
 	}
 

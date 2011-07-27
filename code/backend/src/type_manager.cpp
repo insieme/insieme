@@ -319,30 +319,37 @@ namespace backend {
 			}
 
 			// ------------ integers -------------
-			if (basic.isUInt1(ptr)) {
-				return createInfo(manager, "unsigned char");
-			}
-			if (basic.isUInt2(ptr)) {
-				return createInfo(manager, "unsigned short");
-			}
-			if (basic.isUInt4(ptr)) {
-				return createInfo(manager, "unsigned int");
-			}
-			if (basic.isUInt8(ptr)) {
-				return createInfo(manager, "unsigned long");
-			}
+			if (basic.isInt(ptr)) {
 
-			if (basic.isInt1(ptr)) {
-				return createInfo(manager, "char");
-			}
-			if (basic.isInt2(ptr)) {
-				return createInfo(manager, "short");
-			}
-			if (basic.isInt4(ptr)) {
-				return createInfo(manager, "int");
-			}
-			if (basic.isInt8(ptr)) {
-				return createInfo(manager, "long");
+				c_ast::PrimitiveType::CType type;
+
+				if (basic.isUInt1(ptr)) {
+					type = c_ast::PrimitiveType::UInt8;
+				} else if (basic.isUInt2(ptr)) {
+					type = c_ast::PrimitiveType::UInt16;
+				} else if (basic.isUInt4(ptr)) {
+					type = c_ast::PrimitiveType::UInt32;
+				} else if (basic.isUInt8(ptr)) {
+					type = c_ast::PrimitiveType::UInt64;
+				} else if (basic.isInt1(ptr)) {
+					type = c_ast::PrimitiveType::Int8;
+				} else if (basic.isInt2(ptr)) {
+					type = c_ast::PrimitiveType::Int16;
+				} else if (basic.isInt4(ptr)) {
+					type = c_ast::PrimitiveType::Int32;
+				} else if (basic.isInt8(ptr)) {
+					type = c_ast::PrimitiveType::Int64;
+				} else {
+					assert(false && "Unsupported Integer type encountered!");
+					type = c_ast::PrimitiveType::Int32;
+				}
+
+				// create primitive type + include dependency
+				c_ast::TypePtr intType = manager.create<c_ast::PrimitiveType>(type);
+				c_ast::CodeFragmentPtr definition = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+				definition->addInclude("stdint.h");
+
+				return createInfo(intType, definition);
 			}
 
 			// ------------ Floating Point -------------
@@ -369,12 +376,12 @@ namespace backend {
 
 			if (basic.isBool(ptr)) {
 
-				c_ast::TypePtr intType = manager.create<c_ast::PrimitiveType>(c_ast::PrimitiveType::INT);
+				// create bool type
+				c_ast::TypePtr boolType = manager.create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Bool);
 
-				c_ast::IdentifierPtr identBool = manager.create("bool");
-				c_ast::TypePtr boolType = manager.create<c_ast::NamedType>(identBool);
-				c_ast::TypeDefinitionPtr def = manager.create<c_ast::TypeDefinition>(intType, identBool);
-				c_ast::CCodeFragmentPtr definition = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def);
+				// add dependency to header
+				c_ast::CodeFragmentPtr definition = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+				definition->addInclude("stdbool.h");
 
 				return createInfo(boolType, definition);
 			}
@@ -469,9 +476,8 @@ namespace backend {
 				dim = static_pointer_cast<const core::ConcreteIntTypeParam>(dimPtr)->getValue();
 			}
 
-			bool supportSize = converter.getConfig().supportArrayLength;
 
-			// ----- create the struct representing the array type ------
+			// ----- create array type representation ------
 
 			const TypeInfo* elementTypeInfo = resolveType(ptr->getElementType());
 			assert(elementTypeInfo);
@@ -485,98 +491,28 @@ namespace backend {
 
 			// create array type information
 			ArrayTypeInfo* res = new ArrayTypeInfo();
-			string arrayName = converter.getNameManager().getName(ptr);
-			auto name = manager->create(arrayName);
-			auto structName = manager->create("_" + arrayName);
 
-			// create L / R value name
-			c_ast::NamedTypePtr arrayType = manager->create<c_ast::NamedType>(name);
+			// create C type (pointer to target type)
+			c_ast::TypePtr arrayType = elementTypeInfo->rValueType;
+			for (unsigned i=0; i<dim; i++) {
+				arrayType = c_ast::ptr(arrayType);
+			}
+
+			// set L / R value types
 			res->lValueType = arrayType;
 			res->rValueType = arrayType;
+			res->externalType = arrayType;
 
-			// create the external type
-			c_ast::TypePtr dataPointer = elementTypeInfo->lValueType;
-			for (unsigned i=0; i<dim; i++) {
-				dataPointer = manager->create<c_ast::PointerType>(dataPointer);
-			}
-			res->externalType = dataPointer;
+			// set externalizer / internalizer
+			res->externalize = &NoOp;
+			res->internalize = &NoOp;
 
-			c_ast::IdentifierPtr dataPointerName = manager->create("data");
+			// set declaration / definition (based on element type)
+			res->declaration = elementTypeInfo->declaration;
+			res->definition = elementTypeInfo->definition;
 
-			// create externalizer
-			res->externalize = [dataPointerName](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-				return access(parenthese(node), dataPointerName);
-			};
-
-			// create internalizer
-			res->internalize = [arrayType](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
-				return init(arrayType, node);
-			};
-
-			// create declaration = definition ... create struct
-			c_ast::StructTypePtr arrayStructType = manager->create<c_ast::StructType>(structName);
-			arrayStructType->elements.push_back(var(dataPointer, dataPointerName));
-
-			// add size element - if requested
-			if (supportSize) {
-				c_ast::IdentifierPtr sizeName = manager->create("size");
-				c_ast::TypePtr sizeType = manager->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::UNSIGNED);
-				c_ast::LiteralPtr dimensions = manager->create<c_ast::Literal>(boost::lexical_cast<string>(dim));
-				sizeType = manager->create<c_ast::VectorType>(sizeType, dimensions);
-				arrayStructType->elements.push_back(var(sizeType, sizeName));
-			}
-
-			c_ast::NodePtr definition = manager->create<c_ast::TypeDefinition>(arrayStructType, name);
-
-			res->declaration = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), definition);
-			res->definition = res->declaration;
-			res->declaration->addDependency(elementTypeInfo->definition);
-
-
-			// ---------------------- add constructor ---------------------
-
-			// todo: convert this to pure C-AST code
-			string ctrName = name->name + "_ctr";
-			res->constructorName = manager->create(ctrName);
-
-			std::stringstream code;
-			code << "/* A constructor for the array type " << arrayName << " = "<< toString(*ptr) << "*/ \n"
-					"static inline " << arrayName << " " << ctrName << "(";
-
-			for (unsigned i=0; i<dim; i++) {
-				code << "unsigned s" << (i+1);
-				if (i!=dim-1) {
-					code << ",";
-				}
-			}
-
-			code << ") {\n";
-			code << "    return ((" << arrayName << "){malloc(sizeof(" << c_ast::CPrint(elementTypeInfo->lValueType) << ")";
-			for (unsigned i=0; i<dim; i++) {
-				code << "*s" << (i+1);
-			}
-			code << ")";
-
-			if (supportSize) {
-				code << ",{";
-				for (unsigned i=0; i<dim; i++) {
-					code << "s" << (i+1);
-					if (i!=dim-1) {
-						code << ",";
-					}
-				}
-				code << "}";
-			}
-
-			code << "});\n}\n";
-
-			// attach the new operator
-			c_ast::OpaqueCodePtr cCode = manager->create<c_ast::OpaqueCode>(code.str());
-			res->constructor = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), cCode);
-			res->constructor->addDependency(res->definition);
-
+			// done
 			return res;
-
 		}
 
 		VectorTypeInfo* TypeInfoStore::resolveVectorType(const core::VectorTypePtr& ptr) {
@@ -696,15 +632,14 @@ namespace backend {
 
 			// produce R and L value type
 			res->lValueType = subType->lValueType;
-			res->rValueType = manager->create<c_ast::PointerType>(subType->lValueType);
-
-			// if child is already a ref => add pointer to R and L value
-			if (elementNodeType == core::NT_RefType) {
-				res->lValueType = manager->create<c_ast::PointerType>(subType->lValueType);
+			res->rValueType = c_ast::ptr(subType->lValueType);
+			if (elementNodeType == core::NT_ArrayType) {
+				// no distinction between r / l value representation
+				res->rValueType = res->lValueType;
 			}
 
 			// produce external type
-			res->externalType = manager->create<c_ast::PointerType>(subType->externalType);
+			res->externalType = c_ast::ptr(subType->externalType);
 
 			// special handling of references to vectors and arrays (implicit pointer in C)
 			if (elementNodeType == core::NT_ArrayType || elementNodeType == core::NT_VectorType) {
@@ -726,8 +661,8 @@ namespace backend {
 				};
 			}
 
-			// special treatment for exporting arrays and vectors
-			if (elementNodeType == core::NT_ArrayType || elementNodeType == core::NT_VectorType) {
+			// special treatment for exporting vectors
+			if (elementNodeType == core::NT_VectorType) {
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
 					// generated code: ((externalName)X.data)
 					return c_ast::access(c_ast::parenthese(c_ast::deref(node)), manager->create("data"));
