@@ -52,7 +52,7 @@ using namespace insieme::core;
 
 #define POINTER(type) builder.refType(builder.refType(builder.arrayType(type)))
 
-const ProgramPtr& loadKernelsFromFile(string path, const ASTBuilder& builder) {
+const ProgramPtr loadKernelsFromFile(string path, const ASTBuilder& builder) {
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
@@ -623,27 +623,27 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 }
 
 bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
-if(type == POINTER(builder.genericType("_cl_program"))) {
-	if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) {
-		if(iocl::KernelFileAnnotationPtr kfa =
-				dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
-			string path = kfa->getKernelPath();
-			//std::cerr << "Found OpenCL kernel file path: " << path;
-			if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
-			cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
-			if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
-				if(clCPWS->getValue() == "clCreateProgramWithSource") {
-					ProgramPtr kernels = loadKernelsFromFile(path, builder);
-					for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
+	if(type == POINTER(builder.genericType("_cl_program"))) {
+		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) {
+			if(iocl::KernelFileAnnotationPtr kfa =
+					dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
+				const string& path = kfa->getKernelPath();
+				//std::cerr << "Found OpenCL kernel file path: " << path;
+				if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
+					cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
+				if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
+					if(clCPWS->getValue() == "clCreateProgramWithSource") {
+						const ProgramPtr kernels = loadKernelsFromFile(path, builder);
+						for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
 								kernelEntries.push_back(kernel);
 							});
+					}
 				}
 			}
 		}
+		return true;
 	}
-	return true;
-}
-return false;
+	return false;
 }
 
 const NodePtr HostMapper::resolveElement(const NodePtr& element) {
