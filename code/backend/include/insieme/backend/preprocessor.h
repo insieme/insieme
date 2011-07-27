@@ -144,6 +144,14 @@ namespace backend {
 		virtual core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
+	/**
+	 * A pre-processor replacing all initZero calls with actual instantiated, equivalent zero values.
+	 */
+	class InitZeroSubstitution : public PreProcessor {
+	public:
+		virtual core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
 
 } // end namespace backend
 } // end namespace insieme

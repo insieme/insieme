@@ -112,7 +112,8 @@ namespace backend {
 
 		PreProcessorPtr getDefaultPreProcessor() {
 			return makePreProcessor<PreProcessingSequence>(
-					makePreProcessor<IfThenElseInlining>()
+					makePreProcessor<IfThenElseInlining>(),
+					makePreProcessor<InitZeroSubstitution>()
 			);
 		}
 

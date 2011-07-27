@@ -148,5 +148,92 @@ namespace backend {
 
 
 
+	// --------------------------------------------------------------------------------------------------------------
+	//      PreProcessor InitZero convert => replaces call by actual value
+	// --------------------------------------------------------------------------------------------------------------
+
+	class InitZeroReplacer : public core::transform::CachedNodeMapping {
+
+		const core::LiteralPtr initZero;
+		core::NodeManager& manager;
+		const core::lang::BasicGenerator& basic;
+
+	public:
+
+		InitZeroReplacer(core::NodeManager& manager) :
+			initZero(manager.basic.getInitZero()), manager(manager), basic(manager.getBasicGenerator()) {};
+
+		/**
+		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
+		 * the resulting call.
+		 */
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+			// do not touch types ...
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+			// apply recursively - bottom up
+			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+
+			// check current node
+			if (core::analysis::isCallOf(res, initZero)) {
+				// replace with equivalent zero value
+				core::NodePtr zero = getZero(static_pointer_cast<const core::Expression>(res)->getType());
+
+				// update result if zero computation was successfull
+				res = (zero)?zero:res;
+			}
+
+			// no change required
+			return res;
+		}
+
+	private:
+
+		/**
+		 * Obtains an expression of the given type representing zero.
+		 */
+		core::ExpressionPtr getZero(const core::TypePtr& type) {
+
+			// if it is an integer ...
+			if (basic.isInt(type)) {
+				return core::Literal::get(manager, type, "0");
+			}
+
+			// if it is a real ..
+			if (basic.isReal(type)) {
+				return core::Literal::get(manager, type, "0.0");
+			}
+
+			// if it is a struct ...
+			if (type->getNodeType() == core::NT_StructType) {
+
+				// extract type and resolve members recursively
+				core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+
+				core::StructExpr::Members members;
+				for_each(structType->getEntries(), [&](const core::StructType::Entry& cur) {
+					members.push_back(std::make_pair(cur.first, getZero(cur.second)));
+				});
+
+				return core::StructExpr::get(manager, members);
+			}
+
+			// fall-back => no default initalization possible
+			return core::ExpressionPtr();
+
+		}
+
+	};
+
+
+	core::NodePtr InitZeroSubstitution::preprocess(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		InitZeroReplacer converter(manager);
+		return converter.map(code);
+	}
+
+
 } // end namespace backend
 } // end namespace insieme

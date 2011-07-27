@@ -42,6 +42,7 @@
 #include <queue>
 #include <functional>
 
+#include <boost/type_traits/is_same.hpp>
 #include <boost/type_traits/is_polymorphic.hpp>
 
 #include "insieme/utils/functional_utils.h"
@@ -190,28 +191,43 @@ template<
 	typename ResultType = void,
 	template<class Target> class Ptr = Pointer,
 	typename TargetType = Node,
+	typename Filter = AcceptAll<const Ptr<const Node>&>,
 	typename ... P
 >
 class LambdaVisitor : public ASTVisitor<ResultType, Ptr, P...> {
-
-	/**
-	 * The lambda to be applied to all nodes ...
-	 */
-	Lambda lambda;
 
 	/**
 	 * A functor used to perform dynamic casts on the handled pointer type.
 	 */
 	typename Ptr<const Node>::DynamicCast cast;
 
+	/**
+	 * Instantiate the filter to be applied before visiting a node using the
+	 * given lambda visitor.
+	 */
+	Filter filter;
+
+	/**
+	 * The lambda to be applied to all nodes ...
+	 */
+	Lambda lambda;
+
 public:
 
 	/**
 	 * Create a new visitor based on the given lambda.
-	 * @param fun the function to be applied on all identified nodes
+	 * @param lambda the labmda to be applied on all adequate and accepted nodes
 	 * @param visitTypes to determine whether types should be visited as well
 	 */
-	LambdaVisitor(Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), lambda(lambda), cast() {};
+	LambdaVisitor(Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), lambda(lambda) {};
+
+	/**
+	 * Create a new visitor based on the given lambda.
+	 * @param filter a filter allowing to filter out nodes not to be visited
+	 * @param lambda the labmda to be applied on all adequate and accepted nodes
+	 * @param visitTypes to determine whether types should be visited as well
+	 */
+	LambdaVisitor(Filter& filter, Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), filter(filter), lambda(lambda) {};
 
 	/**
 	 * This method is overwritten since no dispatching has to be applied to nodes
@@ -228,7 +244,11 @@ public:
 
 		// check whether current node is of correct type
 		if (auto element = cast.TEMP_OP<const TargetType>(node)) {
-			return lambda(element, context ...);
+			// check filter and ...
+			if (filter(element)) {
+				// ... forward call if matching.
+				return lambda(element, context ...);
+			}
 		}
 
 		// the element type does not match => lambda invocation is skipped
@@ -244,30 +264,30 @@ namespace detail {
 	 * A trait supporting the identification of the type of a lambda and the resulting
 	 * visitor instance. The trait is only defined via its specializations.
 	 */
-	template<typename Lambda, typename Fun>
+	template<typename Filter, typename FilterFun, typename Lambda, typename LambdaFun>
 	struct lambda_visitor_trait_helper;
 
 	/**
 	 * A specialization handling lambdas dealing with node pointers.
 	 */
-	template<typename Lambda, typename R, typename C, typename T, typename ... P>
-	struct lambda_visitor_trait_helper<Lambda, R (C::*)( const Pointer<const T>&, P ... ) const> {
-		typedef LambdaVisitor<Lambda, R, Pointer, T, P...> visitorType;
+	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P>
+	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Pointer<const T>&) const, Lambda, R (C2::*)( const Pointer<const T>&, P ... ) const> {
+		typedef LambdaVisitor<Lambda, R, Pointer, T, Filter, P...> visitorType;
 	};
 
 	/**
 	 * A specialization handling lambdas dealing with node addresses.
 	 */
-	template<typename Lambda, typename R, typename C, typename T, typename ... P>
-	struct lambda_visitor_trait_helper<Lambda, R (C::*)( const Address<const T>&, P ... ) const> {
-		typedef LambdaVisitor<Lambda, R, Address, T, P...> visitorType;
+	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P>
+	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Address<const T>&) const, Lambda, R (C2::*)( const Address<const T>&, P ... ) const> {
+		typedef LambdaVisitor<Lambda, R, Address, T, Filter, P...> visitorType;
 	};
 
 	/**
 	 * A trait deducing the type of the resulting lambda visitor based on a given lambda.
 	 */
-	template<typename Lambda>
-	struct lambda_visitor_trait : public lambda_visitor_trait_helper<Lambda, decltype(&Lambda::operator())> {};
+	template<typename Filter, typename Lambda>
+	struct lambda_visitor_trait : public lambda_visitor_trait_helper<Filter, decltype(&Filter::operator()), Lambda, decltype(&Lambda::operator())> {};
 
 }
 
@@ -280,10 +300,33 @@ namespace detail {
  * @param visitTypes a flag determine whether the resulting visitor is visiting types as well
  * @return the resulting visitor.
  */
-template<typename Lambda, typename R = typename detail::lambda_visitor_trait<Lambda>::visitorType>
+template<
+	typename Lambda,
+	typename Filter = AcceptAll<typename lambda_traits<Lambda>::arg1_type>,
+	typename R = typename detail::lambda_visitor_trait<Filter, Lambda>::visitorType
+>
 inline R makeLambdaVisitor(Lambda lambda, bool visitTypes = false) {
 	return R(lambda, visitTypes);
 };
+
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * filter and if accepted, to the given lambda function.
+ *
+ * @param filter the filter to be applied before visiting the nodes
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @param visitTypes a flag determine whether the resulting visitor is visiting types as well
+ * @return the resulting visitor.
+ */
+template<
+	typename Filter, typename Lambda,
+	typename Switch = typename boost::disable_if<boost::is_same<Lambda, bool>>::type,
+	typename R = typename detail::lambda_visitor_trait<Filter, Lambda>::visitorType
+>
+inline R makeLambdaVisitor(Filter filter, Lambda lambda, bool visitTypes = false) {
+	return R(filter, lambda, visitTypes);
+};
+
 
 /**
  * The DepthFirstProgramVisitor provides a wrapper around an ordinary visitor which

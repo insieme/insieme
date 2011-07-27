@@ -636,9 +636,59 @@ TEST(ASTVisitor, SingleTypeLambdaVisitor) {
 		EXPECT_EQ(counter, 1);
 	}
 
+}
 
 
+bool filterLiteral(const LiteralPtr& cur) {
+	return cur->getValue() == "14";
+}
 
+TEST(ASTVisitor, FilteredLambdaVisitor) {
+
+	NodeManager manager;
+
+	GenericTypePtr type = GenericType::get(manager, "int");
+
+	IfStmtPtr ifStmt = IfStmt::get(manager,
+		Literal::get(manager, type, "12"),
+		Literal::get(manager, type, "14"),
+		CompoundStmt::get(manager)
+	);
+
+	// ------ test for addresses ----
+
+	auto filter =[](const LiteralPtr& cur) {
+		return cur->getValue() == "12";
+	};
+
+	{
+		int counter = 0;
+		auto visitor = makeLambdaVisitor(filter,[&counter](const LiteralPtr& cur) {
+			counter++;
+		});
+		visitDepthFirst(ifStmt, visitor);
+		EXPECT_EQ(counter, 1);
+	}
+
+	{
+		// without filter
+		int counter = 0;
+		auto visitor = makeLambdaVisitor([&counter](const LiteralPtr& cur) {
+			counter++;
+		});
+		visitDepthFirst(ifStmt, visitor);
+		EXPECT_EQ(counter, 2);
+	}
+
+	{
+		// with reject-all filter
+		int counter = 0;
+		auto visitor = makeLambdaVisitor(RejectAll<const LiteralPtr&>(), [&counter](const LiteralPtr& cur) {
+			counter++;
+		});
+		visitDepthFirst(ifStmt, visitor);
+		EXPECT_EQ(counter, 0);
+	}
 }
 
 
