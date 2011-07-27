@@ -70,7 +70,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::create(manager);
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.c" << "' to IR...";
 	fe::Program prog(manager);
 
 	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.c");
