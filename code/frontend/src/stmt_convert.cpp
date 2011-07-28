@@ -974,6 +974,10 @@ public:
 	FORWARD_VISITOR_CALL(MemberExpr)
 	FORWARD_VISITOR_CALL(CompoundLiteralExpr)
 
+	FORWARD_VISITOR_CALL(CXXConstructExpr)
+	FORWARD_VISITOR_CALL(CXXNewExpr)
+	FORWARD_VISITOR_CALL(CXXDeleteExpr)
+
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ] (Stmt* stmt) { this->Visit(stmt); });
 		return StmtWrapper();
