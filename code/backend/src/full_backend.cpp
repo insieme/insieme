@@ -97,7 +97,7 @@ namespace backend {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager));
+		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicIncludeTable());
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;

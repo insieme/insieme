@@ -59,6 +59,9 @@
 #define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(Type)
 #define GET_VAR_INFO(Var) context.getVariableManager().getInfo(Var)
 
+#define GET_HEADER_FOR(Fun) *(context.getConverter().getFunctionManager().getHeaderFor(Fun))
+#define ADD_HEADER_FOR(Fun) context.getIncludes().insert(GET_HEADER_FOR(Fun));
+
 /**
  * A macro triggering the deceding into an argument. This will result in the printing of the code
  * required for evaluating the corresponding argument.

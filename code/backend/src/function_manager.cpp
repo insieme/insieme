@@ -123,10 +123,11 @@ namespace backend {
 
 	FunctionManager::FunctionManager(const Converter& converter)
 		: converter(converter), store(new detail::FunctionInfoStore(converter)),
-		  operatorTable(getBasicOperatorTable(converter.getNodeManager())) {}
+		  operatorTable(getBasicOperatorTable(converter.getNodeManager())),
+		  includeTable(getBasicIncludeTable()) {}
 
-	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable)
-		: converter(converter), store(new detail::FunctionInfoStore(converter)), operatorTable(operatorTable) {}
+	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const IncludeTable& includeTable)
+		: converter(converter), store(new detail::FunctionInfoStore(converter)), operatorTable(operatorTable), includeTable(includeTable) {}
 
 	FunctionManager::~FunctionManager() {
 		delete store;
@@ -347,6 +348,15 @@ namespace backend {
 		return res;
 	}
 
+	const boost::optional<string> FunctionManager::getHeaderFor(const string& function) const {
+		// try looking up function within the include table
+		auto pos = includeTable.find(function);
+		if (pos != includeTable.end()) {
+			return pos->second;
+		}
+		// not found => return empty optional
+		return boost::optional<string>();
+	}
 
 	namespace detail {
 
@@ -402,9 +412,17 @@ namespace backend {
 
 			// ------------------------ add prototype -------------------------
 
-			c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
-			res->prototype = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), code);
-			res->prototype->addDependencies(fun.prototypeDependencies);
+			auto header = converter.getFunctionManager().getHeaderFor(literal->getValue());
+			if (header) {
+				// => use prototype of include file
+				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+				res->prototype->addInclude(*header);
+			} else {
+				// => add prototype for this literal
+				c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
+				res->prototype = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), code);
+				res->prototype->addDependencies(fun.prototypeDependencies);
+			}
 
 			// -------------------------- add lambda wrapper ---------------------------
 
@@ -799,8 +817,21 @@ namespace backend {
 			return std::make_pair(name, res);
 		}
 
-
 	}
+
+	IncludeTable getBasicIncludeTable() {
+		// create table
+		IncludeTable res;
+
+		// add function definitions from macro file
+		#define FUN(l,f) res[#f] = l;
+		#include "includes.def"
+		#undef FUN
+
+		// done
+		return res;
+	}
+
 
 } // end namespace backend
 } // end namespace insieme

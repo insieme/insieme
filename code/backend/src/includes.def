@@ -1,0 +1,95 @@
+/**
+ * Copyright (c) 2002-2013 Distributed and Parallel Systems Group,
+ *                Institute of Computer Science,
+ *               University of Innsbruck, Austria
+ *
+ * This file is part of the INSIEME Compiler and Runtime System.
+ *
+ * We provide the software of this file (below described as "INSIEME")
+ * under GPL Version 3.0 on an AS IS basis, and do not warrant its
+ * validity or performance.  We reserve the right to update, modify,
+ * or discontinue this software at any time.  We shall have no
+ * obligation to supply such updates or modifications or any other
+ * form of support to you.
+ *
+ * If you require different license terms for your intended use of the
+ * software, e.g. for proprietary commercial or industrial use, please
+ * contact us at:
+ *                   insieme@dps.uibk.ac.at
+ *
+ * We kindly ask you to acknowledge the use of this software in any
+ * publication or other disclosure of results by referring to the
+ * following citation:
+ *
+ * H. Jordan, P. Thoman, J. Durillo, S. Pellegrini, P. Gschwandtner,
+ * T. Fahringer, H. Moritsch. A Multi-Objective Auto-Tuning Framework
+ * for Parallel Codes, in Proc. of the Intl. Conference for High
+ * Performance Computing, Networking, Storage and Analysis (SC 2012),
+ * IEEE Computer Society Press, Nov. 2012, Salt Lake City, USA.
+ *
+ * All copyright notices must be kept intact.
+ *
+ * INSIEME depends on several third party software packages. Please 
+ * refer to http://www.dps.uibk.ac.at/insieme/license.html for details 
+ * regarding third party software licenses.
+ */
+
+/**
+ * A macro file defining relations between functions and types defined within various
+ * headers.
+ * 
+ * FUN(x,y)  ... states that header file x contains a declaration of y
+ * 
+ * NOT YET IMPLEMENTED: 
+ * TYPE(x,y) ... states that header file x contains a definition of type y
+ */
+
+// -----------------------------------
+#if ! defined FUN
+	#define FUN(X,Y)
+	#define __INTERNAL_FUN_DEFINITION
+#endif /* NODE definition */
+
+#if ! defined TYPE
+	#define TYPE(X,Y)
+	#define __INTERNAL_TYPE_DEFINITION
+#endif /* NODE definition */
+// -----------------------------------
+
+
+FUN("stdio.h", printf)
+FUN("stdio.h", fopen)
+FUN("stdio.h", fread)
+FUN("stdio.h", fgetc)
+FUN("stdio.h", fscanf)
+FUN("stdio.h", fwrite)
+FUN("stdio.h", fclose)
+
+FUN("stdlib.h", malloc)
+FUN("stdlib.h", calloc)
+FUN("stdlib.h", free)
+
+FUN("stdlib.h", atoi)
+FUN("stdlib.h", atol)
+FUN("stdlib.h", atof)
+
+FUN("alloca.h", alloca)
+
+FUN("string.h", memcpy)
+FUN("string.h", strcmp)
+FUN("string.h", strtok)
+FUN("string.h", strchr)
+FUN("string.h", strrchr)
+
+
+// -----------------------------------
+#ifdef __INTERNAL_FUN_DEFINITION
+	#undef __INTERNAL_FUN_DEFINITION
+	#undef FUN
+#endif
+
+#ifdef __INTERNAL_TYPE_DEFINITION
+	#undef __INTERNAL_TYPE_DEFINITION
+	#undef TYPE
+#endif
+// -----------------------------------
