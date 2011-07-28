@@ -157,7 +157,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
 //    LOG(INFO) << pp;
 
-    auto errors = core::check(program, insieme::core::checks::getFullCheck());
+    auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
     std::sort(errors.begin(), errors.end());
     for_each(errors, [](const core::Message& cur) {
         LOG(INFO) << cur << std::endl;

@@ -270,7 +270,7 @@ void markSCoPs(const ProgramPtr& program) {
 //***************************************************************************************
 // Check Semantics 
 //***************************************************************************************
-void checkSema(const core::ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
+void checkSema(const core::ProgramPtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
 	using namespace insieme::core::printer;
 
 	// Skip semantics checks if the flag is not set
@@ -280,33 +280,38 @@ void checkSema(const core::ProgramPtr& program, MessageList& errors, const Inver
 	insieme::utils::Timer timer("Checks");
 
 	measureTimeFor<void>("Semantic Checks ", 
-			[&]() { errors = check( program, core::checks::getFullCheck() ); } 
-		);
+		[&]() { list = check( program, core::checks::getFullCheck() ); }
+	);
 
+	auto errors = list.getAll();
 	std::sort(errors.begin(), errors.end());
-		for_each(errors, [&](const Message& cur) {
-			LOG(INFO) << cur;
-			NodeAddress address = cur.getAddress();
-			stringstream ss;
-			unsigned contextSize = 1;
-			do {
-				ss.str("");
-				ss.clear();
-				NodePtr&& context = address.getParentNode(
-						min((unsigned)contextSize, address.getDepth()-contextSize)
-					);
-				ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+	for_each(errors, [&](const Message& cur) {
+		LOG(INFO) << cur;
+		NodeAddress address = cur.getAddress();
+		stringstream ss;
+		unsigned contextSize = 1;
+		do {
+			ss.str("");
+			ss.clear();
+			NodePtr&& context = address.getParentNode(
+					min((unsigned)contextSize, address.getDepth()-contextSize)
+				);
+			ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
 
-				auto fit = stmtMap.find(address.getAddressedNode());
-				assert(fit != stmtMap.end());
+			auto fit = stmtMap.find(address.getAddressedNode());
+			if (fit != stmtMap.end()) {
 				LOG(INFO) << "Source Location: " << fit->second;
+			}
 
-			} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
-			LOG(INFO) << "\t Context: " << ss.str() << std::endl;
-		});
+		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
+		LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+	});
 
 	// In the case of semantic errors, quit
-	if ( !errors.empty() ) { exit(1); }
+	if ( !list.getErrors().empty() ) {
+		cerr << "---- Semantic errors encountered - compilation aborted!! ----\n";
+		exit(1);
+	}
 
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }

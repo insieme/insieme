@@ -44,7 +44,7 @@ namespace core {
 namespace checks {
 
 bool containsMSG(const MessageList& list, const Message& msg) {
-	return contains(list, msg);
+	return contains(list.getAll(), msg);
 }
 
 

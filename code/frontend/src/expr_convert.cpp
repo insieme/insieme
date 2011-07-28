@@ -51,6 +51,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -221,17 +222,22 @@ core::ExpressionPtr convertRefScalarToRefArray(const core::ASTBuilder& builder, 
 		core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
 
 		// check invoked function
+		try {
 
-		// if it is vector-ref-element:
-		if (basic.isVectorRefElem(call->getFunctionExpr())) {
-			// convert vector to array instead
-			return builder.callExpr(resType, basic.getRefVectorToRefArray(), call->getArgument(0));
-		}
+			// if it is vector-ref-element:
+			if (basic.isVectorRefElem(call->getFunctionExpr()) && core::arithmetic::toFormula(call->getArgument(1)).isZero()) {
+				// convert vector to array instead
+				return builder.callExpr(resType, basic.getRefVectorToRefArray(), call->getArgument(0));
+			}
 
-		// ... or array.ref.element ...
-		if (basic.isArrayRefElem1D(call->getFunctionExpr())) {
-			// skip this step!
-			return call->getArgument(0);
+			// ... or array.ref.element ...
+			if (basic.isArrayRefElem1D(call->getFunctionExpr()) && core::arithmetic::toFormula(call->getArgument(1)).isZero()) {
+				// skip this step!
+				return call->getArgument(0);
+			}
+
+		} catch (const core::arithmetic::NotAFormulaException& ne) {
+			// => subscript is not zero => use default handling
 		}
 	}
 
