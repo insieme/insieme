@@ -36,39 +36,15 @@
 
 #pragma once
 
-#include "insieme/backend/backend.h"
-
 namespace insieme {
 namespace backend {
+namespace runtime {
 
-	// A forward declaration of the full backend implementation
-	class FullBackend;
-	typedef std::shared_ptr<FullBackend> FullBackendPtr;
 
-	/**
-	 * The backend interface implementation facading the omega backend.
-	 */
-	class FullBackend : public Backend {
-	public:
 
-		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the full backend using the default configuration.
-		 *
-		 * @return a smart pointer to a fresh instance of the full backend
-		 */
-		static FullBackendPtr getDefault();
 
-		/**
-		 * The main facade function of the full backend. This function converts the given
-		 * IR representation into C99-target code interacting with the Insieme Runtime environment.
-		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
-		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
 
-	};
 
+} // end namespace runtime
 } // end namespace backend
 } // end namespace insieme

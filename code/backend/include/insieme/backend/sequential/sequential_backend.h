@@ -34,51 +34,45 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/frontend/frontend.h"
+#pragma once
 
-#include "insieme/frontend/program.h"
-
-#include "insieme/utils/container_utils.h"
-#include "insieme/utils/cmd_line_utils.h"
+#include "insieme/backend/backend.h"
 
 namespace insieme {
-namespace frontend {
+namespace backend {
+namespace sequential {
 
-const unsigned ConversionJob::DEFAULT_FLAGS = 0;
+	// A forward declaration of the sequential backend implementation
+	class SequentialBackend;
+	typedef std::shared_ptr<SequentialBackend> SequentialBackendPtr;
 
-ConversionJob::ConversionJob(core::NodeManager& manager, const string& file)
-	: manager(manager), files(toVector(file)), standard("c99"), flags(DEFAULT_FLAGS) {};
+	/**
+	 * The sequential backend aims on generating pure sequential code without
+	 * any dependencies to any runtime implementation.
+	 */
+	class SequentialBackend : public Backend {
+	public:
 
-ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& files, const vector<string>& includeDirs)
-	: manager(manager), files(files), includeDirs(includeDirs), standard("c99"), definitions(), flags(DEFAULT_FLAGS) {};
+		/**
+		 * A factory method obtaining a smart pointer referencing a
+		 * fresh instance of the sequential backend using the default configuration.
+		 *
+		 * @return a smart pointer to a fresh instance of the sequential backend
+		 */
+		static SequentialBackendPtr getDefault();
+
+		/**
+		 * The main facade function of the sequential backend. This function converts the given
+		 * IR representation into pure C99-target code.
+		 *
+		 * @param source the program to be converted
+		 * @return a pointer to the converted target code
+		 */
+		backend::TargetCodePtr convert(const core::NodePtr& source) const;
+
+	};
 
 
-core::ProgramPtr ConversionJob::execute() {
-
-	// since the frontend is using ugly ugly singletons, the configuration has to be updated ... ugly :)
-
-	// create the program parser
-	frontend::Program program(manager);
-
-	// set up the translation units
-	program.addTranslationUnits(files);
-
-	// setup the include directories
-	CommandLineOptions::IncludePaths = includeDirs;
-
-	// setup the standard
-	CommandLineOptions::STD = standard;
-
-	// setup definition
-	CommandLineOptions::Defs = definitions;
-
-	// setup additional flags
-	CommandLineOptions::OpenMP = hasOption(OpenMP);
-	CommandLineOptions::OpenCL = hasOption(OpenCL);
-
-	// convert the program
-	return program.convert();
 }
-
-} // end namespace frontend
-} // end namespace insieme
+}
+}

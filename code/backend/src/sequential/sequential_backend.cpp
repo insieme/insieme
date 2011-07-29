@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/full_backend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 
 #include <sstream>
 
@@ -58,18 +58,14 @@
 
 namespace insieme {
 namespace backend {
+namespace sequential {
 
-	namespace {
-		PreProcessorPtr getDefaultPreProcessor();
-		PostProcessorPtr getDefaultPostProcessor();
+
+	SequentialBackendPtr SequentialBackend::getDefault() {
+		return std::make_shared<SequentialBackend>();
 	}
 
-
-	FullBackendPtr FullBackend::getDefault() {
-		return std::make_shared<FullBackend>();
-	}
-
-	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
+	TargetCodePtr SequentialBackend::convert(const core::NodePtr& code) const {
 
 		// basic setup
 		ConverterConfig config = ConverterConfig::getDefault();
@@ -86,10 +82,16 @@ namespace backend {
 		converter.setFragmentManager(fragmentManager);
 
 		// set up pre-processing
-		converter.setPreProcessor(getDefaultPreProcessor());
+		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
+				makePreProcessor<IfThenElseInlining>(),
+				makePreProcessor<RestoreGlobals>(),
+				makePreProcessor<InitZeroSubstitution>()
+		);
+		converter.setPreProcessor(preprocessor);
 
 		// set up post-processing
-		converter.setPostProcessor(getDefaultPostProcessor());
+		PostProcessorPtr postprocessor = makePostProcessor<NoPostProcessing>();
+		converter.setPostProcessor(postprocessor);
 
 		// Prepare managers
 		SimpleNameManager nameManager;
@@ -111,23 +113,7 @@ namespace backend {
 		return converter.convert(code);
 	}
 
-
-	namespace {
-
-		PreProcessorPtr getDefaultPreProcessor() {
-			return makePreProcessor<PreProcessingSequence>(
-					makePreProcessor<IfThenElseInlining>(),
-					makePreProcessor<RestoreGlobals>(),
-					makePreProcessor<InitZeroSubstitution>()
-			);
-		}
-
-		PostProcessorPtr getDefaultPostProcessor() {
-			return makePostProcessor<NoPostProcessing>();
-		}
-
-	}
-
+} // end namespace sequential
 } // end namespace backend
 } // end namespace insieme
 
