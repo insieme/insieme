@@ -36,22 +36,51 @@
 
 #pragma once
 
-#include "insieme/backend/preprocessor.h"
+#include "insieme/core/expressions.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
 
 	/**
-	 * The work item extractor mainly consists of a pre-processing step which is
-	 * converting e.g. pfor and job expressions into equivalent runtime function calls.
+	 * This class offers a list of IR extensions required to model concepts within the
+	 * Insieme Runtime. The extensions include literals and types to model work items,
+	 * data items and additional runtime functionality.
 	 */
-	class WorkItemExtractor : public PreProcessor {
+	class Extensions {
 	public:
+
 		/**
-		 * An invocation of this method will conduct the necessary extractions.
+		 * Creates a new instance of this extension set. The given manager is used to construct
+		 * the contained literals and types.
+		 *
+		 * @param manager the manager to be used to construct the required types and literals
 		 */
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+		Extensions(core::NodeManager& manager);
+
+		/**
+		 * An invocation to this literal results in a no-op. However, context management routines
+		 * like the init / cleanup context functions as well as the type/implementation tables
+		 * required by the runtime will be initialized as a side effect. This instruction
+		 * will be implanted as the first instruction of the newly generated entry point during
+		 * the pre-processing.
+		 */
+		const core::LiteralPtr initContext;
+
+		/**
+		 * The type used internally to represent work items. The type is treated in an abstract
+		 * way and its actual implementation is imported via a runtime-include file.
+		 */
+		const core::TypePtr workItemType;
+
+		/**
+		 * The literal used as a wrapper for the work-item creation function within the runtime.
+		 */
+		const core::LiteralPtr createWorkItem;
+
+		const core::LiteralPtr submitWorkItem;
+
+		const core::LiteralPtr joinWorkItem;
 	};
 
 } // end namespace runtime

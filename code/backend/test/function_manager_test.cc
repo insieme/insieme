@@ -347,13 +347,13 @@ TEST(FunctionManager, Bind) {
 
 	EXPECT_PRED2(containsSubString, def,
 		"bool name_mapper(name_closure* closure, float c1, int32_t c3) {\n"
-		"    return (closure->nested)->call(closure->nested, c1, closure->c2, c3);\n"
+		"    return closure->nested->call(closure->nested, c1, closure->c2, c3);\n"
 		"}"
 	);
 
 	EXPECT_PRED2(containsSubString, def,
 		"static inline name_closure* name_ctr(name_closure* closure, name* nested, int32_t* c2) {\n"
-		"    (*closure) = ((name_closure){&name_mapper, nested, c2});\n"
+		"    *closure = (name_closure){&name_mapper, nested, c2};\n"
 		"    return closure;\n"
 		"}"
 	);

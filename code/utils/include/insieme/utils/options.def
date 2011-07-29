@@ -39,8 +39,8 @@ FLAG("help,h", 				"help", 				Help, 			false, 	"produce help message")
 FLAG("version,V", 			"version", 				Version, 		false, 	"print version string")
 
 // frontend options
-FLAG("omp-sema",			"OpenMP",	 			OpenMP, 		false,	"enable OpenMP semantics in frontend")
-FLAG("opencl", 				"OpenCL", 				OpenCL, 		false, 	"enable OpenCL semantics in frontend")
+FLAG("omp-sema",			"omp-sema",	 			OpenMP, 		false,	"enable OpenMP semantics in frontend")
+FLAG("opencl", 				"opencl", 				OpenCL, 		false, 	"enable OpenCL semantics in frontend")
 
 // core options
 FLAG("benchmark-core", 		"benchmark-core", 		BenchmarkCore, 	false, "runs some standard-core operations on the IR representation")

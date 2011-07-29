@@ -34,25 +34,25 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/backend/preprocessor.h"
+#include "insieme/backend/runtime/work_item_extractor.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
 
-	/**
-	 * The work item extractor mainly consists of a pre-processing step which is
-	 * converting e.g. pfor and job expressions into equivalent runtime function calls.
-	 */
-	class WorkItemExtractor : public PreProcessor {
-	public:
-		/**
-		 * An invocation of this method will conduct the necessary extractions.
-		 */
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+
+
+	core::NodePtr WorkItemExtractor::process(core::NodeManager& manager, const core::NodePtr& code) {
+
+		// TODO:
+		//    - convert entry points to work items
+		// 	  - create alternative main conducting a runtime call (+ initContext())
+		//	  - identification and creation of work items
+
+		// so far, nothing
+		return code;
+	}
+
 
 } // end namespace runtime
 } // end namespace backend

@@ -74,5 +74,5 @@ namespace backend {
 	};
 
 
-} // end namespace simple_backend
+} // end namespace backend
 } // end namespace insieme
