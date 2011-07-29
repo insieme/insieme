@@ -44,6 +44,7 @@
 #include "insieme/core/ast_node.h"
 
 #include "insieme/backend/preprocessor.h"
+#include "insieme/backend/postprocessor.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/variable_manager.h"
@@ -60,6 +61,7 @@ namespace backend {
 
 	namespace {
 		PreProcessorPtr getDefaultPreProcessor();
+		PostProcessorPtr getDefaultPostProcessor();
 	}
 
 
@@ -84,8 +86,10 @@ namespace backend {
 		converter.setFragmentManager(fragmentManager);
 
 		// set up pre-processing
-		NoPreProcessing preprocessor;
 		converter.setPreProcessor(getDefaultPreProcessor());
+
+		// set up post-processing
+		converter.setPostProcessor(getDefaultPostProcessor());
 
 		// Prepare managers
 		SimpleNameManager nameManager;
@@ -113,8 +117,13 @@ namespace backend {
 		PreProcessorPtr getDefaultPreProcessor() {
 			return makePreProcessor<PreProcessingSequence>(
 					makePreProcessor<IfThenElseInlining>(),
+					makePreProcessor<RestoreGlobals>(),
 					makePreProcessor<InitZeroSubstitution>()
 			);
+		}
+
+		PostProcessorPtr getDefaultPostProcessor() {
+			return makePostProcessor<NoPostProcessing>();
 		}
 
 	}

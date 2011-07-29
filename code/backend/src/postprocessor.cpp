@@ -34,63 +34,44 @@
  * regarding third party software licenses.
  */
 
-/**
- * A macro file defining relations between functions and types defined within various
- * headers.
- * 
- * FUN(x,y)  ... states that header file x contains a declaration of y
- * 
- * NOT YET IMPLEMENTED: 
- * TYPE(x,y) ... states that header file x contains a definition of type y
- */
+#include "insieme/backend/postprocessor.h"
 
-// -----------------------------------
-#if ! defined FUN
-	#define FUN(X,Y)
-	#define __INTERNAL_FUN_DEFINITION
-#endif /* NODE definition */
+#include "insieme/backend/c_ast/c_code.h"
 
-#if ! defined TYPE
-	#define TYPE(X,Y)
-	#define __INTERNAL_TYPE_DEFINITION
-#endif /* NODE definition */
-// -----------------------------------
+namespace insieme {
+namespace backend {
+
+	void applyToAll(const PostProcessorPtr& processor, vector<c_ast::CodeFragmentPtr>& fragments) {
+		// apply to all fragments ...
+		for_each(fragments, [&](const c_ast::CodeFragmentPtr& cur) {
+			// => test whether it is a C-code fragment
+			if (c_ast::CCodeFragmentPtr frag = dynamic_pointer_cast<c_ast::CCodeFragment>(cur)) {
+				frag->apply(processor);
+			}
+		});
+
+	}
 
 
-FUN("stdio.h", printf)
-FUN("stdio.h", fopen)
-FUN("stdio.h", fread)
-FUN("stdio.h", fgetc)
-FUN("stdio.h", fscanf)
-FUN("stdio.h", fwrite)
-FUN("stdio.h", fclose)
-FUN("stdio.h", sprintf)
+	c_ast::NodePtr PostProcessingSequence::process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) {
 
-FUN("stdlib.h", malloc)
-FUN("stdlib.h", calloc)
-FUN("stdlib.h", free)
+		c_ast::NodePtr res = code;
 
-FUN("stdlib.h", atoi)
-FUN("stdlib.h", atol)
-FUN("stdlib.h", atof)
+		// apply sequence of post-processing steps
+		for_each(processors, [&](const PostProcessorPtr& cur) {
+			res = cur->process(manager, res);
+		});
 
-FUN("alloca.h", alloca)
-
-FUN("string.h", memcpy)
-FUN("string.h", strcmp)
-FUN("string.h", strtok)
-FUN("string.h", strchr)
-FUN("string.h", strrchr)
+		// return final result
+		return res;
+	}
 
 
-// -----------------------------------
-#ifdef __INTERNAL_FUN_DEFINITION
-	#undef __INTERNAL_FUN_DEFINITION
-	#undef FUN
-#endif
+	c_ast::NodePtr NoPostProcessing::process(c_ast::CNodeManager& manager, const c_ast::NodePtr& code) {
+		// nothing to do
+		return code;
+	}
 
-#ifdef __INTERNAL_TYPE_DEFINITION
-	#undef __INTERNAL_TYPE_DEFINITION
-	#undef TYPE
-#endif
-// -----------------------------------
+
+} // end namespace backend
+} // end namespace insieme

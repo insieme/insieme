@@ -49,6 +49,7 @@
 
 #define NODE_MANAGER context.getConverter().getNodeManager()
 #define C_NODE_MANAGER context.getConverter().getCNodeManager()
+#define FRAGMENT_MANAGER context.getConverter().getFragmentManager()
 
 #define CONVERT_TYPE(Node) context.getConverter().getStmtConverter().convertType(context, Node)
 #define CONVERT_EXPR(Node) context.getConverter().getStmtConverter().convertExpression(context, Node)

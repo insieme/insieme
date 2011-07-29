@@ -185,7 +185,12 @@ namespace c_ast {
 
 				std::size_t size = node->statements.size();
 				for (std::size_t i=0; i<size; i++) {
-					out << print(node->statements[i]) << ";";
+					const NodePtr& cur = node->statements[i];
+					out << print(cur);
+//					auto type = cur->getType();
+//					if (type != NT_For && type != NT_While && type != NT_If && type != NT_Switch && type != NT_Compound) {
+						out << ";";
+//					}
 					if (i < size-1) newLine(out);
 				}
 
@@ -231,6 +236,7 @@ namespace c_ast {
 					if (cur.second->getType() != c_ast::NT_Compound) {
 						out << ";";
 					}
+					out << " break;";
 					if (i < size-1) newLine(out);
 				}
 

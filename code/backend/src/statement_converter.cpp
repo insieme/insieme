@@ -43,6 +43,7 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_code.h"
 
+#include "insieme/backend/ir_extensions.h"
 #include "insieme/backend/variable_manager.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -150,8 +151,22 @@ namespace backend {
 			return converter.getFunctionManager().getValue(ptr, context);
 		}
 
-		// the rest is just converted into a ordinary literal
-		return converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+		// convert literal
+		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+
+		// special handling for the global struct
+		if (ptr->getValue() == IRExtensions::GLOBAL_ID) {
+			if (ptr->getType()->getNodeType() == core::NT_RefType) {
+				res = c_ast::ref(res);
+			}
+
+			// add code dependency to global struct
+			assert(converter.getGlobalFragment() && "Global Fragment not yet initialized!");
+			context.getDependencies().insert(converter.getGlobalFragment());
+		}
+
+		// done
+		return res;
 	}
 
 	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
@@ -162,7 +177,7 @@ namespace backend {
 		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
 		c_ast::InitializerPtr init = c_ast::init(type);
 
-		// obatin some helper
+		// obtain some helper
 		auto& basic = converter.getNodeManager().getBasicGenerator();
 
 		// append initialization values

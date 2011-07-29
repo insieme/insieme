@@ -53,6 +53,9 @@ namespace backend {
 	class PreProcessor;
 	typedef std::shared_ptr<PreProcessor> PreProcessorPtr;
 
+	class PostProcessor;
+	typedef std::shared_ptr<PostProcessor> PostProcessorPtr;
+
 	// forward declaration of involved managers
 	class NameManager;
 	class TypeManager;
@@ -77,9 +80,10 @@ namespace backend {
 
 	class Converter {
 
-		// ------- The Preprocessor applied before the conversion -----------
+		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
 		PreProcessorPtr preProcessor;
+		PostProcessorPtr postProcessor;
 
 		// ------- Manager involved in the conversion process -----------
 
@@ -103,14 +107,19 @@ namespace backend {
 		ConverterConfig config;
 
 
+		/**
+		 * A Code Fragment containing global declarations.
+		 */
+		mutable c_ast::CodeFragmentPtr globalFragment;
+
 	public:
 
 		Converter() :
-			preProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(ConverterConfig::getDefault()) {}
 
 		Converter(const ConverterConfig& config) :
-			preProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(config) {}
 
 		backend::TargetCodePtr convert(const core::NodePtr& code);
@@ -122,6 +131,15 @@ namespace backend {
 
 		void setPreProcessor(PreProcessorPtr newPreProcessor) {
 			preProcessor = newPreProcessor;
+		}
+
+		const PostProcessorPtr& getPostProcessor() const {
+			assert(postProcessor);
+			return postProcessor;
+		}
+
+		void setPostProcessor(PostProcessorPtr newPostProcessor) {
+			postProcessor = newPostProcessor;
 		}
 
 		NameManager& getNameManager() const {
@@ -199,6 +217,17 @@ namespace backend {
 
 		void setConfig(const ConverterConfig& newConfig) {
 			config = newConfig;
+		}
+
+		// TODO: find a better place for this ...
+
+		const c_ast::CodeFragmentPtr& getGlobalFragment() const {
+			return globalFragment;
+		}
+
+		void setGlobalFragment(const c_ast::CodeFragmentPtr& globals) const {
+			assert(!globalFragment && "Global fragment has been set before!!");
+			globalFragment = globals;
 		}
 
 	};

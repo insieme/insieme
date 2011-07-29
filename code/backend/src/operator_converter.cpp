@@ -496,6 +496,31 @@ namespace backend {
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2));
 		});
 
+		res[ext.initGlobals] = OP_CONVERTER({
+
+			// ensure globals have not bee initialized before
+			assert(!context.getConverter().getGlobalFragment());
+
+			core::TypePtr globalType = ARG(0)->getType();
+			if (globalType->getNodeType() == core::NT_RefType) {
+				globalType = core::analysis::getReferencedType(globalType);
+			}
+
+			// get type of global struct
+			const TypeInfo& info = GET_TYPE_INFO(globalType);
+			c_ast::NodePtr decl = C_NODE_MANAGER->create<c_ast::VarDecl>(c_ast::var(info.lValueType, IRExtensions::GLOBAL_ID));
+
+			// create the global variable definition
+			c_ast::CodeFragmentPtr globals = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER, decl);
+			globals->addDependency(info.definition);
+
+			context.getConverter().setGlobalFragment(globals);
+			context.getDependencies().insert(globals);
+
+			// => no actual expression required her ...
+			return c_ast::ExpressionPtr();
+		});
+
 		// table complete => return table
 		return res;
 	}
