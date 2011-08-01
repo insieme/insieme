@@ -96,11 +96,32 @@ irt_wi_implementation g_insieme_impl_table[] = {
 	{ 2, g_insieme_wi_add_variants }
 };
 
+// initialization
+void insieme_init_context(irt_context* context) {
+	#ifdef USE_OPENCL
+	cl_uint num = irt_ocl_get_num_devices();
+	for (uint i = 0; i < num; ++i){	
+		irt_ocl_device* dev = irt_ocl_get_device(i);
+		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
+		irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "", "", IRT_OCL_SOURCE);
+		//irt_ocl_create_kernel(dev, "./test_array_add.cl", "", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
+	}
+	#endif
+
+	context->type_table = g_insieme_type_table;
+	context->impl_table = g_insieme_impl_table;
+}
+
+void insieme_cleanup_context(irt_context* context) {
+	// nothing
+	printf("Cleaning up standalone irt test array add\n");
+}
+
 
 int main(int argc, char **argv) {
-	uint32 wcount = 1;
+	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
-	irt_runtime_standalone(wcount, g_insieme_type_table, g_insieme_impl_table);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context);
 	return 0;
 }
 
@@ -178,57 +199,57 @@ void insieme_wi_add_implementation1(irt_work_item* wi) {
 
 void insieme_wi_add_implementation2(irt_work_item* wi) {
 	#ifdef USE_OPENCL
-	insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
-        irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
-        irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
-        irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
-        irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
-        insieme_struct1* input = (insieme_struct1*)inputblock->data;
-        uint64* output = (uint64*)outputblock->data;
+		insieme_wi_add_params *params = (insieme_wi_add_params*)wi->parameters;
+		irt_data_item* inputdata = irt_di_create_sub(irt_data_item_table_lookup(params->input), (irt_data_range*)(&wi->range));
+		irt_data_item* outputdata = irt_di_create_sub(irt_data_item_table_lookup(params->output), (irt_data_range*)(&wi->range));
+		irt_data_block* inputblock = irt_di_aquire(inputdata, IRT_DMODE_READ_ONLY);
+		irt_data_block* outputblock = irt_di_aquire(outputdata, IRT_DMODE_WRITE_ONLY);
+		insieme_struct1* input = (insieme_struct1*)inputblock->data;
+		uint64* output = (uint64*)outputblock->data;
 
-        irt_ocl_device* dev = irt_ocl_get_device(0);
-        irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
+		irt_ocl_device* dev = irt_ocl_get_device(0);
+		irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 
-        irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "vector_add", "", IRT_OCL_BINARY);
-        //irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "./test_array_add.cl", "vector_add", "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
+		irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "vector_add", "", IRT_OCL_BINARY);
+		//irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "./test_array_add.cl", "vector_add", "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 
-        cl_long len_input = (wi->range.end - wi->range.begin);
-        cl_long len_output = (wi->range.end - wi->range.begin);
+		cl_long len_input = (wi->range.end - wi->range.begin);
+		cl_long len_output = (wi->range.end - wi->range.begin);
 
-        unsigned int mem_size_input = sizeof(insieme_struct1) * len_input;
-        unsigned int mem_size_output = sizeof(uint64) * len_output;
+		unsigned int mem_size_input = sizeof(insieme_struct1) * len_input;
+		unsigned int mem_size_output = sizeof(uint64) * len_output;
 
-        irt_ocl_buffer* buf_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
-        irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_output);
+		irt_ocl_buffer* buf_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
+		irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_output);
 
-        irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);
+		irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);
 
-        size_t szLocalWorkSize = 256;
-        float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
-        if(multiplier > (int)multiplier){
-                multiplier += 1;
-        }
-        size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+		size_t szLocalWorkSize = 256;
+		float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
+		if(multiplier > (int)multiplier){
+				multiplier += 1;
+		}
+		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 
-        irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
+		irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
 
-        irt_ocl_run_kernel(kernel, 3,   sizeof(cl_mem), (void *)&(buf_input->cl_mem),
-                                        sizeof(cl_mem), (void *)&(buf_output->cl_mem),
-                                        sizeof(cl_long), (void *)&len_input);
+		irt_ocl_run_kernel(kernel, 3,   sizeof(cl_mem), (void *)&(buf_input->cl_mem),
+										sizeof(cl_mem), (void *)&(buf_output->cl_mem),
+										sizeof(cl_long), (void *)&len_input);
 
-        irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
-        //clFinish(dev->cl_queue); // ??        
+		irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
+		//clFinish(dev->cl_queue); // ??        
 
-        irt_ocl_release_buffer(buf_input);
-        irt_ocl_release_buffer(buf_output);
-        irt_ocl_release_kernel(kernel);
+		irt_ocl_release_buffer(buf_input);
+		irt_ocl_release_buffer(buf_output);
+		irt_ocl_release_kernel(kernel);
 	
-	irt_di_free(inputblock);
-	irt_di_free(outputblock);
-	irt_di_destroy(inputdata);
-	irt_di_destroy(outputdata);
+		irt_di_free(inputblock);
+		irt_di_free(outputblock);
+		irt_di_destroy(inputdata);
+		irt_di_destroy(outputdata);
 
-	irt_wi_end(wi);
+		irt_wi_end(wi);
 	#endif
 }
 

@@ -137,10 +137,14 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 	}
 }
 
-void irt_runtime_standalone(uint32 worker_count, irt_type* type_table, irt_wi_implementation* impl_table) {
+uint32 irt_get_default_worker_count() {
+	return 1;
+}
+
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count);
 	pthread_setspecific(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
-	irt_context* context = irt_context_create_standalone(type_table, impl_table);
+	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
