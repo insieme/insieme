@@ -112,7 +112,7 @@ TEST(OpenCLBackend, HelloCLTest) {
 	insieme::frontend::Program prog(manager);
 
 	std::cout << SRC_DIR << std::endl;
-	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");	
+	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.c");	
 	//prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
 	program = prog.convert();
 	std::cout << "Done.\n";
@@ -125,8 +125,10 @@ TEST(OpenCLBackend, HelloCLTest) {
 	std::cout << "Printing the IR: " << pp;
 	
 	std::cout << "Start OpenCL Backend visit\n";
-	auto backend = OpenCLBackend::getDefault();
+        #include "insieme/simple_backend/backend_convert.h"
+        auto backend = SimpleBackend::getDefault();//OpenCLBackend::getDefault();
 	auto converted = backend->convert(program);
 	std::cout << "Converted code:\n" << *converted;
+        std::cout << "CIAO!!";
 }
 
