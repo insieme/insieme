@@ -92,8 +92,8 @@ static inline __insieme_type_4 __insieme_type_4_init_uniform(double value) {
 
 
 // start code fragment :: Definition of timer_clear ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_clear(struct __insieme_globals* var_56, int n) { ((((*(&((*var_56).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_56, int n) { timer_clear(var_56, n); }
+void timer_clear(struct __insieme_globals* var_71, int n) { ((((*(&((*var_71).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_71, int n) { timer_clear(var_71, n); }
 
 // start code fragment :: type_declaration_timeval //
 struct timeval { 
@@ -112,25 +112,25 @@ int gettimeofday(struct timeval*, struct timezone*);
 static int gettimeofday_wrap(void* _closure, struct timeval* var_490, struct timezone* var_491) { return gettimeofday(var_490, var_491); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
-void wtime(struct __insieme_globals* var_59, double* t){
+void wtime(struct __insieme_globals* var_56, double* t){
 	struct timeval tv;
 	gettimeofday((&tv), 0);
-	if(((*(&((*var_59).sec)))<0)) { ((*(&((*var_59).sec))) = ((int)((*(&((tv).tv_sec)))))); };
-	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_59).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
+	if(((*(&((*var_56).sec)))<0)) { ((*(&((*var_56).sec))) = ((int)((*(&((tv).tv_sec)))))); };
+	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_56).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void wtime_wrap(void* _closure, struct __insieme_globals* var_59, double* t) { wtime(var_59, t); }
+static void wtime_wrap(void* _closure, struct __insieme_globals* var_56, double* t) { wtime(var_56, t); }
 
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
-double elapsed_time(struct __insieme_globals* var_63){
+double elapsed_time(struct __insieme_globals* var_60){
 	double t = 0.0;
-	wtime(var_63, (&t));
+	wtime(var_60, (&t));
 	return (t);
 }
-static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_63) { return elapsed_time(var_63); }
+static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_60) { return elapsed_time(var_60); }
 
 // start code fragment :: Definition of timer_start ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_start(struct __insieme_globals* var_66, int n) { ((((*(&((*var_66).start))).data[((unsigned int)(n))])) = elapsed_time(var_66)); }
-static void timer_start_wrap(void* _closure, struct __insieme_globals* var_66, int n) { timer_start(var_66, n); }
+void timer_start(struct __insieme_globals* var_74, int n) { ((((*(&((*var_74).start))).data[((unsigned int)(n))])) = elapsed_time(var_74)); }
+static void timer_start_wrap(void* _closure, struct __insieme_globals* var_74, int n) { timer_start(var_74, n); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
@@ -491,7 +491,7 @@ void zran3(struct __insieme_globals* var_164, double*** z, int n1, int n2, int n
 			{
 				for(int var_204 = 1; var_204 < (e2); var_204 += 1) {
 					((xx) = (x1));
-					vranlc((d1), (&xx), pow(5.0, ((double)(13))), (&(((((z[((unsigned int)(var_206))]))[((unsigned int)(var_204))]))[((unsigned int)(0))])));
+					vranlc((d1), (&xx), pow(5.0, ((double)(13))), ((((z[((unsigned int)(var_206))]))[((unsigned int)(var_204))])));
 					((rdummy) = randlc((&x1), (a1)));
 				};
 				((i2) = (1+(((int)(ceil((((double)(((e2)-1)))/((double)(1))))))*1)));
@@ -1002,18 +1002,18 @@ void mg3P(struct __insieme_globals* var_346, double**** u, double*** v, double**
 static void mg3P_wrap(void* _closure, struct __insieme_globals* var_346, double**** u, double*** v, double**** r, double* a, double* c, int n1, int n2, int n3, int k) { mg3P(var_346, u, v, r, a, c, n1, n2, n3, k); }
 
 // start code fragment :: Definition of timer_stop ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_stop(struct __insieme_globals* var_69, int n){
+void timer_stop(struct __insieme_globals* var_63, int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = elapsed_time(var_69));
-	((t) = ((now)-(((*(&((*var_69).start))).data[((unsigned int)(n))]))));
-	((((*(&((*var_69).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_69).elapsed))).data[((unsigned int)(n))]))+(t)));
+	((now) = elapsed_time(var_63));
+	((t) = ((now)-(((*(&((*var_63).start))).data[((unsigned int)(n))]))));
+	((((*(&((*var_63).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_63).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_69, int n) { timer_stop(var_69, n); }
+static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_63, int n) { timer_stop(var_63, n); }
 
 // start code fragment :: Definition of timer_read ... type: ((ref<struct<nx:vector<int<4>,12>,ny:vector<int<4>,12>,nz:vector<int<4>,12>,Class:char,debug_vec:vector<int<4>,8>,m1:vector<int<4>,12>,m2:vector<int<4>,12>,m3:vector<int<4>,12>,lt:int<4>,lb:int<4>,is1:int<4>,is2:int<4>,is3:int<4>,ie1:int<4>,ie2:int<4>,ie3:int<4>,s:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
-double timer_read(struct __insieme_globals* var_74, int n) { return (((*(&((*var_74).elapsed))).data[((unsigned int)(n))])); }
-static double timer_read_wrap(void* _closure, struct __insieme_globals* var_74, int n) { return timer_read(var_74, n); }
+double timer_read(struct __insieme_globals* var_68, int n) { return (((*(&((*var_68).elapsed))).data[((unsigned int)(n))])); }
+static double timer_read_wrap(void* _closure, struct __insieme_globals* var_68, int n) { return timer_read(var_68, n); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, char* optype, int passed_verification, char* npbversion, char* compiletime, char* cc, char* clink, char* c_lib, char* c_inc, char* cflags, char* clinkflags, char* rand){

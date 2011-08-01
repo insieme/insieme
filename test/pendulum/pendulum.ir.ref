@@ -1,43 +1,43 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
+fun(int<4> v86, ref<array<array<char,1>,1>> v87){
         decl ref<struct<numSources:uint<4>,x:int<4>,y:int<4>,scale:real<8>,dt:real<8>,friction:real<8>,height:real<8>,abortVelocity:real<8>,minSteps:uint<4>,maxSteps:uint<8>>> v88 =  var(struct{numSources:=4, x:=60, y:=60, scale:=800.0, dt:=0.01, friction:=0.01, height:=0.3, abortVelocity:=0.01, minSteps:=400, maxSteps:=100000});
-        decl ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>> v89 =  var(undefined(type<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>));
+        decl ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v89 =  var(undefined(type<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>));
         if(v86>1) {
-            decl ref<ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>> v90 =  var(undefined(type<ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>>));
+            decl ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>> v90 =  var(undefined(type<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>));
             decl ref<vector<char,4096>> v91 =  var(undefined(type<vector<char,4096>>));
             v90 := fopen(array.ref.elem.1D(v87, 1), string.as.char.pointer("r"));
-            if(ptr.eq(v90, get.null(type<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>))) {
+            if(ptr.eq(v90, get.null(type<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>}>))) {
                 printf(string.as.char.pointer("Cannot open file.\n"), varlist.pack(()));
                 exit(1);
             } else { };
             fread(ref.to.anyref(v91), 1, 512*8, v90);
             fclose(v90);
-            decl ref<ref<array<char,1>>> v92 =  var(strtok(ref.vector.to.ref.array(v91), string.as.char.pointer("\n\r")));
-            while(array.ref.elem.1D(v92, 0)==35) v92 := strtok(get.null(type<array<char,1>>), string.as.char.pointer("\n\r"));
-            decl ref<ref<array<char,1>>> v93 =  var(strchr(v92, 0));
+            decl ref<array<char,1>> v92 = strtok(ref.vector.to.ref.array(v91), string.as.char.pointer("\n\r"));
+            while(array.ref.elem.1D(v92, 0)=='#') v92 := strtok( var(get.null(type<char>)), string.as.char.pointer("\n\r"));
+            decl ref<array<char,1>> v93 = strchr(v92, 0);
             v88 := fun(ref<array<char,1>> v53){
                 decl ref<struct<numSources:uint<4>,x:int<4>,y:int<4>,scale:real<8>,dt:real<8>,friction:real<8>,height:real<8>,abortVelocity:real<8>,minSteps:uint<4>,maxSteps:uint<8>>> v54 =  var(undefined(type<struct<numSources:uint<4>,x:int<4>,y:int<4>,scale:real<8>,dt:real<8>,friction:real<8>,height:real<8>,abortVelocity:real<8>,minSteps:uint<4>,maxSteps:uint<8>>>));
-                decl ref<ref<array<char,1>>> v55 =  var(strtok(v53, string.as.char.pointer(" ,")));
+                decl ref<array<char,1>> v55 = strtok(v53, string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, numSources, type<uint<4>>) := atoi(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, x, type<int<4>>) := atoi(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, y, type<int<4>>) := atoi(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, scale, type<real<8>>) := atof(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, dt, type<real<8>>) := atof(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, friction, type<real<8>>) := atof(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, height, type<real<8>>) := atof(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, abortVelocity, type<real<8>>) := atof(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, minSteps, type<uint<4>>) := atoi(v55);
-                v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                v55 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                 composite.ref.elem(v54, maxSteps, type<uint<8>>) := atol(v55);
                 return v54;
             }(v92);
@@ -47,18 +47,18 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                 while(v94<composite.ref.elem(v88, numSources, type<uint<4>>)) {
                     v92 := strtok(scalar.to.array(array.ref.elem.1D(v93, 1)), string.as.char.pointer("\n\r"));
                     v93 := strchr(v92, 0);
-                    if(int.ne(array.ref.elem.1D(v92, 0), 35)) {
+                    if(array.ref.elem.1D(v92, 0)!='#') {
                         array.ref.elem.1D(v89, int.postInc(v94)) := fun(ref<array<char,1>> v57){
                             decl ref<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>> v58 =  var(undefined(type<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>>));
-                            decl ref<ref<array<char,1>>> v59 =  var(strtok(v57, string.as.char.pointer(" ,")));
+                            decl ref<array<char,1>> v59 = strtok(v57, string.as.char.pointer(" ,"));
                             if(strcmp(v59, string.as.char.pointer("Linear"))==0) composite.ref.elem(v58, type, type<int<4>>) := 0 else composite.ref.elem(v58, type, type<int<4>>) := 1;
-                            v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                            v59 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                             vector.ref.elem(composite.ref.elem(v58, pos, type<vector<real<8>,2>>), 0) := atof(v59);
-                            v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                            v59 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                             vector.ref.elem(composite.ref.elem(v58, pos, type<vector<real<8>,2>>), 1) := atof(v59);
-                            v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                            v59 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                             composite.ref.elem(v58, mult, type<real<8>>) := atof(v59);
-                            v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,"));
+                            v59 := strtok( var(get.null(type<char>)), string.as.char.pointer(" ,"));
                             composite.ref.elem(v58, size, type<real<8>>) := atof(v59);
                             return v58;
                         }(v92);
@@ -66,33 +66,33 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                 };
             };
         } else {
-            v89 :=  var(vector.to.array([struct{type:=0, pos:=[0, 0], mult:=0.01, size:=0.02}, struct{type:=1, pos:=[1, 0], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[0-0.5, 0.866025404], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[0-0.5, 0-0.866025404], mult:=0.08, size:=0.02}]));
+            v89 := vector.to.array([struct{type:=0, pos:=[0, 0], mult:=0.01, size:=0.02}, struct{type:=1, pos:=[1, 0], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[0-0.5, 0.866025404], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[0-0.5, 0-0.866025404], mult:=0.08, size:=0.02}]);
         };
-        decl ref<uint<4>> v95 =  var(composite.ref.elem(v88, numSources, type<uint<4>>));
-        decl ref<int<4>> v96 =  var(composite.ref.elem(v88, x, type<int<4>>));
-        decl ref<int<4>> v97 =  var(composite.ref.elem(v88, y, type<int<4>>));
-        decl ref<real<8>> v98 =  var(composite.ref.elem(v88, scale, type<real<8>>));
-        decl ref<real<8>> v99 =  var(composite.ref.elem(v88, dt, type<real<8>>));
-        decl ref<real<8>> v100 =  var(composite.ref.elem(v88, friction, type<real<8>>));
-        decl ref<real<8>> v101 =  var(composite.ref.elem(v88, height, type<real<8>>));
-        decl ref<uint<4>> v102 =  var(composite.ref.elem(v88, minSteps, type<uint<4>>));
-        decl ref<uint<8>> v103 =  var(composite.ref.elem(v88, maxSteps, type<uint<8>>));
-        decl ref<real<8>> v104 =  var(composite.ref.elem(v88, abortVelocity, type<real<8>>));
-        decl ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v105 =  var(fun(int<4> v10, int<4> v11){
-            decl ref<ref<array<uint<4>,1>>> v12 =  var( new(array.create.1D(type<uint<4>>, sizeof(type<uint<4>>)*v10*v11/sizeof(type<uint<4>>))));
-            decl ref<ref<array<ref<array<uint<4>,1>>,1>>> v13 =  var( new(array.create.1D(type<ref<array<uint<4>,1>>>, sizeof(type<array<uint<4>,1>>)*v10/sizeof(type<array<uint<4>,1>>))));
+        decl ref<uint<4>> v95 = composite.ref.elem(v88, numSources, type<uint<4>>);
+        decl ref<int<4>> v96 = composite.ref.elem(v88, x, type<int<4>>);
+        decl ref<int<4>> v97 = composite.ref.elem(v88, y, type<int<4>>);
+        decl ref<real<8>> v98 = composite.ref.elem(v88, scale, type<real<8>>);
+        decl ref<real<8>> v99 = composite.ref.elem(v88, dt, type<real<8>>);
+        decl ref<real<8>> v100 = composite.ref.elem(v88, friction, type<real<8>>);
+        decl ref<real<8>> v101 = composite.ref.elem(v88, height, type<real<8>>);
+        decl ref<uint<4>> v102 = composite.ref.elem(v88, minSteps, type<uint<4>>);
+        decl ref<uint<8>> v103 = composite.ref.elem(v88, maxSteps, type<uint<8>>);
+        decl ref<real<8>> v104 = composite.ref.elem(v88, abortVelocity, type<real<8>>);
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v105 =  var(fun(int<4> v10, int<4> v11){
+            decl ref<array<uint<4>,1>> v12 =  new(array.create.1D(type<uint<4>>, sizeof(type<uint<4>>)*v10*v11/sizeof(type<uint<4>>)));
+            decl ref<array<array<uint<4>,1>,1>> v13 =  new(array.create.1D(type<array<uint<4>,1>>, sizeof(type<array<uint<4>,1>>)*v10/sizeof(type<array<uint<4>,1>>)));
             for(decl int<4> v15 = 0 .. v10 : 1) {
                 array.ref.elem.1D(v13, v15) := scalar.to.array(array.ref.elem.1D(v12, v15*v10));
             };
-            return struct{data:= var(v13), x:=v10, y:=v11};
+            return struct{data:=v13, x:=v10, y:=v11};
         }(v96, v97));
-        decl ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v106 =  var(fun(int<4> v10, int<4> v11){
-            decl ref<ref<array<uint<4>,1>>> v12 =  var( new(array.create.1D(type<uint<4>>, sizeof(type<uint<4>>)*v10*v11/sizeof(type<uint<4>>))));
-            decl ref<ref<array<ref<array<uint<4>,1>>,1>>> v13 =  var( new(array.create.1D(type<ref<array<uint<4>,1>>>, sizeof(type<array<uint<4>,1>>)*v10/sizeof(type<array<uint<4>,1>>))));
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v106 =  var(fun(int<4> v10, int<4> v11){
+            decl ref<array<uint<4>,1>> v12 =  new(array.create.1D(type<uint<4>>, sizeof(type<uint<4>>)*v10*v11/sizeof(type<uint<4>>)));
+            decl ref<array<array<uint<4>,1>,1>> v13 =  new(array.create.1D(type<array<uint<4>,1>>, sizeof(type<array<uint<4>,1>>)*v10/sizeof(type<array<uint<4>,1>>)));
             for(decl int<4> v15 = 0 .. v10 : 1) {
                 array.ref.elem.1D(v13, v15) := scalar.to.array(array.ref.elem.1D(v12, v15*v10));
             };
-            return struct{data:= var(v13), x:=v10, y:=v11};
+            return struct{data:=v13, x:=v10, y:=v11};
         }(v96, v97));
         {
             for(decl int<4> v113 = 0 .. v96 : 1) {
@@ -112,7 +112,7 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                             vector.ref.elem(v30, 0) := 0;
                             vector.ref.elem(v30, 1) := 0;
                             for(decl uint<4> v44 = 0 .. v20 : 1) {
-                                decl ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>> v33 =  var(scalar.to.array(array.ref.elem.1D(v19, v44)));
+                                decl ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v33 = scalar.to.array(array.ref.elem.1D(v19, v44));
                                 decl ref<vector<real<8>,2>> v35 =  var([vector.ref.elem(v27, 0)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 0), vector.ref.elem(v27, 1)-vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), 1)]);
                                 if(composite.ref.elem(array.ref.elem.1D(v33, 0), type, type<int<4>>)==0) {
                                     vector.ref.elem(v30, 0) := vector.ref.elem(v30, 0)-composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>)*vector.ref.elem(v35, 0);
@@ -122,7 +122,7 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                                     vector.ref.elem(v30, 0) := vector.ref.elem(v30, 0)-composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>)/v36*v36*v36*vector.ref.elem(v35, 0);
                                     vector.ref.elem(v30, 1) := vector.ref.elem(v30, 1)-composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>)/v36*v36*v36*vector.ref.elem(v35, 1);
                                 };
-                                if(v51>v24&&bind(){fun(ref<vector<real<8>,2>> v38, ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>> v39)return sqrt(vector.ref.elem(v38, 0)*vector.ref.elem(v38, 0)+vector.ref.elem(v38, 1)*vector.ref.elem(v38, 1))<composite.ref.elem(array.ref.elem.1D(v39, 0), size, type<real<8>>)(v35, v33)}&&bind(){fun(ref<vector<real<8>,2>> v41, real<8> v42)return sqrt(vector.ref.elem(v41, 0)*vector.ref.elem(v41, 0)+vector.ref.elem(v41, 1)*vector.ref.elem(v41, 1))<v42(v28, v26)}) {
+                                if(v51>v24&&bind(){fun(ref<vector<real<8>,2>> v38, ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v39)return sqrt(vector.ref.elem(v38, 0)*vector.ref.elem(v38, 0)+vector.ref.elem(v38, 1)*vector.ref.elem(v38, 1))<composite.ref.elem(array.ref.elem.1D(v39, 0), size, type<real<8>>)(v35, v33)}&&bind(){fun(ref<vector<real<8>,2>> v41, real<8> v42)return sqrt(vector.ref.elem(v41, 0)*vector.ref.elem(v41, 0)+vector.ref.elem(v41, 1)*vector.ref.elem(v41, 1))<v42(v28, v26)}) {
                                     return struct{target:=v44, numSteps:=v51};
                                 } else { };
                             };
@@ -141,30 +141,30 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                         };
                         return struct{target:=v20, numSteps:=v25};
                     }(v107, v109, v89, v95, v99, v100, v101, v102, v103, v104));
-                    array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v105, data, type<ref<array<ref<array<uint<4>,1>>,1>>>), v113), v112) := composite.ref.elem(v111, target, type<uint<4>>);
-                    array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<ref<array<ref<array<uint<4>,1>>,1>>>), v113), v112) := composite.ref.elem(v111, numSteps, type<uint<8>>);
+                    array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v105, data, type<array<array<uint<4>,1>,1>>), v113), v112) := composite.ref.elem(v111, target, type<uint<4>>);
+                    array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<array<array<uint<4>,1>,1>>), v113), v112) := composite.ref.elem(v111, numSteps, type<uint<8>>);
                 };
             };
         };
         decl ref<uint<8>> v114 =  var(0);
-        decl ref<uint<8>> v115 =  var(v103);
+        decl ref<uint<8>> v115 = v103;
         for(decl int<4> v131 = 0 .. v96 : 1) {
             for(decl int<4> v130 = 0 .. v97 : 1) {
-                v114 := ite(array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<ref<array<ref<array<uint<4>,1>>,1>>>), v131), v130)>v114, bind(){fun(ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v120, ref<int<4>> v121, ref<int<4>> v122)return array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v120, data, type<ref<array<ref<array<uint<4>,1>>,1>>>), v122), v121)(v106,  var(v130),  var(v131))}, bind(){fun(ref<uint<8>> v118)return v118(v114)});
-                v115 := ite(array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<ref<array<ref<array<uint<4>,1>>,1>>>), v131), v130)<v115, bind(){fun(ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v126, ref<int<4>> v127, ref<int<4>> v128)return array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v126, data, type<ref<array<ref<array<uint<4>,1>>,1>>>), v128), v127)(v106,  var(v130),  var(v131))}, bind(){fun(ref<uint<8>> v124)return v124(v115)});
+                v114 := ite(array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<array<array<uint<4>,1>,1>>), v131), v130)>v114, bind(){fun(ref<int<4>> v120, ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v121, ref<int<4>> v122)return array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v121, data, type<array<array<uint<4>,1>,1>>), v122), v120)( var(v130), v106,  var(v131))}, bind(){fun(ref<uint<8>> v118)return v118(v114)});
+                v115 := ite(array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<array<array<uint<4>,1>,1>>), v131), v130)<v115, bind(){fun(ref<int<4>> v126, ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v127, ref<int<4>> v128)return array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v127, data, type<array<array<uint<4>,1>,1>>), v128), v126)( var(v130), v106,  var(v131))}, bind(){fun(ref<uint<8>> v124)return v124(v115)});
             };
         };
         printf(string.as.char.pointer("Number of steps calculated: %llu .. %llu\n"), varlist.pack((v115, v114)));
-        fun(struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>> v3, uint<4> v4){
-            for(decl int<4> v8 = 0 .. composite.member.access(v3, x, type<int<4>>) : 1) {
-                for(decl int<4> v7 = 0 .. composite.member.access(v3, y, type<int<4>>) : 1) {
-                    if(composite.member.access(v3, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)[v8][v7]==0) printf(string.as.char.pointer(" "), varlist.pack(())) else if(composite.member.access(v3, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)[v8][v7]==v4) printf(string.as.char.pointer("X"), varlist.pack(())) else printf(string.as.char.pointer("%c"), varlist.pack(('A'+composite.member.access(v3, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)[v8][v7]-1)));
+        fun(struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v3, uint<4> v4){
+            for(decl int<4> v8 = 0 .. v3.x : 1) {
+                for(decl int<4> v7 = 0 .. v3.y : 1) {
+                    if(v3.data[v8][v7]==0) printf(string.as.char.pointer(" "), varlist.pack(())) else if(v3.data[v8][v7]==v4) printf(string.as.char.pointer("X"), varlist.pack(())) else printf(string.as.char.pointer("%c"), varlist.pack(('A'+v3.data[v8][v7]-1)));
                 };
                 printf(string.as.char.pointer("\n"), varlist.pack(()));
             };
         }(v105, v95);
-        fun(struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>> v69, struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>> v70, ref<array<char,1>> v71, uint<8> v72, uint<8> v73){
-            decl ref<ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>> v74 =  var(fopen(v71, string.as.char.pointer("wb")));
+        fun(struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v69, struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v70, ref<array<char,1>> v71, uint<8> v72, uint<8> v73){
+            decl ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>> v74 = fopen(v71, string.as.char.pointer("wb"));
             if(!!is.null(v74)) {
                 printf(string.as.char.pointer("Error opening output file!\n"), varlist.pack(()));
                 return unit;
@@ -173,14 +173,14 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
             fwrite(ref.to.anyref(scalar.to.array(v75)), sizeof(type<struct<magic:vector<uint<1>,2>>>), 1, v74);
             decl ref<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>> v76 =  var(undefined(type<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>>));
             composite.ref.elem(v76, bmp_offset, type<uint<4>>) := sizeof(type<struct<magic:vector<uint<1>,2>>>)+sizeof(type<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>>)+sizeof(type<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>>);
-            composite.ref.elem(v76, filesz, type<uint<4>>) := composite.ref.elem(v76, bmp_offset, type<uint<4>>)+sizeof(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>)*composite.member.access(v69, x, type<int<4>>)*composite.member.access(v69, y, type<int<4>>);
+            composite.ref.elem(v76, filesz, type<uint<4>>) := composite.ref.elem(v76, bmp_offset, type<uint<4>>)+sizeof(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>)*v69.x*v69.y;
             composite.ref.elem(v76, creator1, type<uint<2>>) := 0;
             composite.ref.elem(v76, creator2, type<uint<2>>) := 0;
             fwrite(ref.to.anyref(scalar.to.array(v76)), sizeof(type<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>>), 1, v74);
             decl ref<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>> v77 =  var(undefined(type<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>>));
             composite.ref.elem(v77, header_sz, type<uint<4>>) := 40;
-            composite.ref.elem(v77, width, type<int<4>>) := composite.member.access(v69, x, type<int<4>>);
-            composite.ref.elem(v77, height, type<int<4>>) := composite.member.access(v69, y, type<int<4>>);
+            composite.ref.elem(v77, width, type<int<4>>) := v69.x;
+            composite.ref.elem(v77, height, type<int<4>>) := v69.y;
             composite.ref.elem(v77, nplanes, type<uint<2>>) := 1;
             composite.ref.elem(v77, bitspp, type<uint<2>>) := 24;
             composite.ref.elem(v77, compress_type, type<uint<4>>) := 0;
@@ -190,8 +190,8 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
             composite.ref.elem(v77, ncolors, type<uint<4>>) := 0;
             composite.ref.elem(v77, nimpcolors, type<uint<4>>) := 0;
             fwrite(ref.to.anyref(scalar.to.array(v77)), sizeof(type<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>>), 1, v74);
-            for(decl int<4> v84 = 0 .. composite.member.access(v69, x, type<int<4>>) : 1) {
-                for(decl int<4> v81 = 0 .. composite.member.access(v69, y, type<int<4>>) : 1) {
+            for(decl int<4> v84 = 0 .. v69.x : 1) {
+                for(decl int<4> v81 = 0 .. v69.y : 1) {
                     decl ref<struct<r:uint<1>,g:uint<1>,b:uint<1>>> v78 =  var(fun(uint<4> v61, uint<4> v62, uint<8> v63, uint<8> v64){
                         decl ref<struct<r:uint<1>,g:uint<1>,b:uint<1>>> v65 =  var(undefined(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>));
                         {
@@ -212,11 +212,11 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                         composite.ref.elem(v65, g, type<uint<1>>) := composite.ref.elem(v65, g, type<uint<1>>)*v67;
                         composite.ref.elem(v65, b, type<uint<1>>) := composite.ref.elem(v65, b, type<uint<1>>)*v67;
                         return v65;
-                    }(composite.member.access(v69, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)[v84][v81], composite.member.access(v70, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)[v84][v81], v72, v73));
+                    }(v69.data[v84][v81], v70.data[v84][v81], v72, v73));
                     fwrite(ref.to.anyref(scalar.to.array(v78)), sizeof(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>), 1, v74);
                 };
                 decl ref<char> v82 =  var(0);
-                decl ref<int<4>> v83 =  var(3*composite.member.access(v69, y, type<int<4>>));
+                decl ref<int<4>> v83 =  var(3*v69.y);
                 while(int.ne(v83%4, 0)) {
                     fwrite(ref.to.anyref(scalar.to.array(v82)), 1, 1, v74);
                     int.postInc(v83);
@@ -224,13 +224,13 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
             };
             fclose(v74);
         }(v105, v106, string.as.char.pointer("out.bmp"), v115, v114);
-        fun(ref<array<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,1>> v1){
-             del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>), 0));
-             del(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>));
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v1){
+             del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>), 0));
+             del(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>));
         }(scalar.to.array(v105));
-        fun(ref<array<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,1>> v1){
-             del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>), 0));
-             del(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>));
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v1){
+             del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>), 0));
+             del(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>));
         }(scalar.to.array(v106));
     }
 
@@ -240,98 +240,98 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
+fun(int<4> v86, ref<array<array<char,1>,1>> v87){
         decl ref<struct<numSources:uint<4>,x:int<4>,y:int<4>,scale:real<8>,dt:real<8>,friction:real<8>,height:real<8>,abortVelocity:real<8>,minSteps:uint<4>,maxSteps:uint<8>>> v88 = ( var(struct{numSources:=CAST<uint<4>>(4), x:=60, y:=60, scale:=800.0, dt:=0.01, friction:=0.01, height:=0.3, abortVelocity:=0.01, minSteps:=CAST<uint<4>>(400), maxSteps:=CAST<uint<8>>(100000)}));
-        decl ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>> v89 = ( var(undefined(type<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>>)));
+        decl ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v89 = ( var(undefined(type<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>)));
         if((v86>1)) {
-            decl ref<ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>> v90 = ( var(undefined(type<ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>>)));
+            decl ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>> v90 = ( var(undefined(type<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>>)));
             decl ref<vector<char,4096>> v91 = ( var(undefined(type<vector<char,4096>>)));
-            (v90 := fopen(( *array.ref.elem.1D(v87, CAST<uint<4>>(1))), string.as.char.pointer("r")));
-            if(ptr.eq(( *v90), get.null(type<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>))) {
+            (v90 := ( *fopen(array.ref.elem.1D(v87, CAST<uint<4>>(1)), string.as.char.pointer("r"))));
+            if(ptr.eq(( *v90), get.null(type<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>}>))) {
                 printf(string.as.char.pointer("Cannot open file.\n"), varlist.pack(()));
                 exit(1);
             } else { };
-            fread(ref.to.anyref(v91), CAST<uint<8>>(1), CAST<uint<8>>((512*8)), ( *v90));
-            fclose(( *v90));
-            decl ref<ref<array<char,1>>> v92 = ( var(strtok(ref.vector.to.ref.array(v91), string.as.char.pointer("\n\r"))));
-            while((CAST<int<4>>(( *array.ref.elem.1D(( *v92), CAST<uint<4>>(0))))==35)) (v92 := strtok(get.null(type<array<char,1>>), string.as.char.pointer("\n\r")));
-            decl ref<ref<array<char,1>>> v93 = ( var(strchr(( *v92), 0)));
+            fread(ref.to.anyref(v91), CAST<uint<8>>(1), CAST<uint<8>>((512*8)), v90);
+            fclose(v90);
+            decl ref<array<char,1>> v92 = strtok(ref.vector.to.ref.array(v91), string.as.char.pointer("\n\r"));
+            while((( *array.ref.elem.1D(v92, CAST<uint<4>>(0)))=='#')) (v92 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer("\n\r"))));
+            decl ref<array<char,1>> v93 = strchr(v92, 0);
             (v88 := fun(ref<array<char,1>> v53){
                 decl ref<struct<numSources:uint<4>,x:int<4>,y:int<4>,scale:real<8>,dt:real<8>,friction:real<8>,height:real<8>,abortVelocity:real<8>,minSteps:uint<4>,maxSteps:uint<8>>> v54 = ( var(undefined(type<struct<numSources:uint<4>,x:int<4>,y:int<4>,scale:real<8>,dt:real<8>,friction:real<8>,height:real<8>,abortVelocity:real<8>,minSteps:uint<4>,maxSteps:uint<8>>>)));
-                decl ref<ref<array<char,1>>> v55 = ( var(strtok(v53, string.as.char.pointer(" ,"))));
-                (composite.ref.elem(v54, numSources, type<uint<4>>) := CAST<uint<4>>(atoi(( *v55))));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, x, type<int<4>>) := atoi(( *v55)));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, y, type<int<4>>) := atoi(( *v55)));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, scale, type<real<8>>) := atof(( *v55)));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, dt, type<real<8>>) := atof(( *v55)));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, friction, type<real<8>>) := atof(( *v55)));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, height, type<real<8>>) := atof(( *v55)));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, abortVelocity, type<real<8>>) := atof(( *v55)));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, minSteps, type<uint<4>>) := CAST<uint<4>>(atoi(( *v55))));
-                (v55 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                (composite.ref.elem(v54, maxSteps, type<uint<8>>) := CAST<uint<8>>(atol(( *v55))));
+                decl ref<array<char,1>> v55 = strtok(v53, string.as.char.pointer(" ,"));
+                (composite.ref.elem(v54, numSources, type<uint<4>>) := CAST<uint<4>>(atoi(v55)));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, x, type<int<4>>) := atoi(v55));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, y, type<int<4>>) := atoi(v55));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, scale, type<real<8>>) := atof(v55));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, dt, type<real<8>>) := atof(v55));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, friction, type<real<8>>) := atof(v55));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, height, type<real<8>>) := atof(v55));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, abortVelocity, type<real<8>>) := atof(v55));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, minSteps, type<uint<4>>) := CAST<uint<4>>(atoi(v55)));
+                (v55 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                (composite.ref.elem(v54, maxSteps, type<uint<8>>) := CAST<uint<8>>(atol(v55)));
                 return ( *v54);
-            }(( *v92)));
-            (v89 := ( new(array.create.1D(type<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>>, (CAST<uint<8>>(( *composite.ref.elem(v88, numSources, type<uint<4>>)))/sizeof(type<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>>))))));
+            }(v92));
+            (v89 := ( *( new(array.create.1D(type<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>>, (CAST<uint<8>>(( *composite.ref.elem(v88, numSources, type<uint<4>>)))/sizeof(type<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>>)))))));
             {
                 decl ref<int<4>> v94 = ( var(0));
-                while((CAST<uint<4>>(( *v94))<( *composite.ref.elem(v88, numSources, type<uint<4>>)))) {
-                    (v92 := strtok(scalar.to.array(array.ref.elem.1D(( *v93), CAST<uint<4>>(1))), string.as.char.pointer("\n\r")));
-                    (v93 := strchr(( *v92), 0));
-                    if(int.ne(CAST<int<4>>(( *array.ref.elem.1D(( *v92), CAST<uint<4>>(0)))), 35)) {
-                        (array.ref.elem.1D(( *v89), CAST<uint<4>>(int.postInc(v94))) := fun(ref<array<char,1>> v57){
+                while((( *v94)<CAST<int<4>>(( *composite.ref.elem(v88, numSources, type<uint<4>>))))) {
+                    (v92 := ( *strtok(scalar.to.array(array.ref.elem.1D(v93, CAST<uint<4>>(1))), string.as.char.pointer("\n\r"))));
+                    (v93 := ( *strchr(v92, 0)));
+                    if((( *array.ref.elem.1D(v92, CAST<uint<4>>(0)))!='#')) {
+                        (array.ref.elem.1D(v89, CAST<uint<4>>(int.postInc(v94))) := fun(ref<array<char,1>> v57){
                             decl ref<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>> v58 = ( var(undefined(type<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>>)));
-                            decl ref<ref<array<char,1>>> v59 = ( var(strtok(v57, string.as.char.pointer(" ,"))));
-                            if((strcmp(( *v59), string.as.char.pointer("Linear"))==0)) (composite.ref.elem(v58, type, type<int<4>>) := 0) else (composite.ref.elem(v58, type, type<int<4>>) := 1);
-                            (v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                            (vector.ref.elem(composite.ref.elem(v58, pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)) := atof(( *v59)));
-                            (v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                            (vector.ref.elem(composite.ref.elem(v58, pos, type<vector<real<8>,2>>), CAST<uint<4>>(1)) := atof(( *v59)));
-                            (v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                            (composite.ref.elem(v58, mult, type<real<8>>) := atof(( *v59)));
-                            (v59 := strtok(get.null(type<array<char,1>>), string.as.char.pointer(" ,")));
-                            (composite.ref.elem(v58, size, type<real<8>>) := atof(( *v59)));
+                            decl ref<array<char,1>> v59 = strtok(v57, string.as.char.pointer(" ,"));
+                            if((strcmp(v59, string.as.char.pointer("Linear"))==0)) (composite.ref.elem(v58, type, type<int<4>>) := 0) else (composite.ref.elem(v58, type, type<int<4>>) := 1);
+                            (v59 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                            (vector.ref.elem(composite.ref.elem(v58, pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)) := atof(v59));
+                            (v59 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                            (vector.ref.elem(composite.ref.elem(v58, pos, type<vector<real<8>,2>>), CAST<uint<4>>(1)) := atof(v59));
+                            (v59 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                            (composite.ref.elem(v58, mult, type<real<8>>) := atof(v59));
+                            (v59 := ( *strtok(( var(get.null(type<char>))), string.as.char.pointer(" ,"))));
+                            (composite.ref.elem(v58, size, type<real<8>>) := atof(v59));
                             return ( *v58);
-                        }(( *v92)));
+                        }(v92));
                     } else { };
                 };
             };
         } else {
-            (v89 := ( var(vector.to.array([struct{type:=0, pos:=[CAST<real<8>>(0), CAST<real<8>>(0)], mult:=0.01, size:=0.02}, struct{type:=1, pos:=[CAST<real<8>>(1), CAST<real<8>>(0)], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[(CAST<real<8>>(0)-0.5), 0.866025404], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[(CAST<real<8>>(0)-0.5), (CAST<real<8>>(0)-0.866025404)], mult:=0.08, size:=0.02}]))));
+            (v89 := vector.to.array([struct{type:=0, pos:=[CAST<real<8>>(0), CAST<real<8>>(0)], mult:=0.01, size:=0.02}, struct{type:=1, pos:=[CAST<real<8>>(1), CAST<real<8>>(0)], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[(CAST<real<8>>(0)-0.5), 0.866025404], mult:=0.08, size:=0.02}, struct{type:=1, pos:=[(CAST<real<8>>(0)-0.5), (CAST<real<8>>(0)-0.866025404)], mult:=0.08, size:=0.02}]));
         };
-        decl ref<uint<4>> v95 = ( var(( *composite.ref.elem(v88, numSources, type<uint<4>>))));
-        decl ref<int<4>> v96 = ( var(( *composite.ref.elem(v88, x, type<int<4>>))));
-        decl ref<int<4>> v97 = ( var(( *composite.ref.elem(v88, y, type<int<4>>))));
-        decl ref<real<8>> v98 = ( var(( *composite.ref.elem(v88, scale, type<real<8>>))));
-        decl ref<real<8>> v99 = ( var(( *composite.ref.elem(v88, dt, type<real<8>>))));
-        decl ref<real<8>> v100 = ( var(( *composite.ref.elem(v88, friction, type<real<8>>))));
-        decl ref<real<8>> v101 = ( var(( *composite.ref.elem(v88, height, type<real<8>>))));
-        decl ref<uint<4>> v102 = ( var(( *composite.ref.elem(v88, minSteps, type<uint<4>>))));
-        decl ref<uint<8>> v103 = ( var(( *composite.ref.elem(v88, maxSteps, type<uint<8>>))));
-        decl ref<real<8>> v104 = ( var(( *composite.ref.elem(v88, abortVelocity, type<real<8>>))));
-        decl ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v105 = ( var(fun(int<4> v10, int<4> v11){
-            decl ref<ref<array<uint<4>,1>>> v12 = ( var(( new(array.create.1D(type<uint<4>>, (((sizeof(type<uint<4>>)*CAST<uint<8>>(v10))*CAST<uint<8>>(v11))/sizeof(type<uint<4>>)))))));
-            decl ref<ref<array<ref<array<uint<4>,1>>,1>>> v13 = ( var(( new(array.create.1D(type<ref<array<uint<4>,1>>>, ((sizeof(type<array<uint<4>,1>>)*CAST<uint<8>>(v10))/sizeof(type<array<uint<4>,1>>)))))));
+        decl ref<uint<4>> v95 = composite.ref.elem(v88, numSources, type<uint<4>>);
+        decl ref<int<4>> v96 = composite.ref.elem(v88, x, type<int<4>>);
+        decl ref<int<4>> v97 = composite.ref.elem(v88, y, type<int<4>>);
+        decl ref<real<8>> v98 = composite.ref.elem(v88, scale, type<real<8>>);
+        decl ref<real<8>> v99 = composite.ref.elem(v88, dt, type<real<8>>);
+        decl ref<real<8>> v100 = composite.ref.elem(v88, friction, type<real<8>>);
+        decl ref<real<8>> v101 = composite.ref.elem(v88, height, type<real<8>>);
+        decl ref<uint<4>> v102 = composite.ref.elem(v88, minSteps, type<uint<4>>);
+        decl ref<uint<8>> v103 = composite.ref.elem(v88, maxSteps, type<uint<8>>);
+        decl ref<real<8>> v104 = composite.ref.elem(v88, abortVelocity, type<real<8>>);
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v105 = ( var(fun(int<4> v10, int<4> v11){
+            decl ref<array<uint<4>,1>> v12 = ( new(array.create.1D(type<uint<4>>, (((sizeof(type<uint<4>>)*CAST<uint<8>>(v10))*CAST<uint<8>>(v11))/sizeof(type<uint<4>>)))));
+            decl ref<array<array<uint<4>,1>,1>> v13 = ( new(array.create.1D(type<array<uint<4>,1>>, ((sizeof(type<array<uint<4>,1>>)*CAST<uint<8>>(v10))/sizeof(type<array<uint<4>,1>>)))));
             for(decl int<4> v15 = 0 .. v10 : 1) {
-                (array.ref.elem.1D(( *v13), CAST<uint<4>>(v15)) := scalar.to.array(array.ref.elem.1D(( *v12), CAST<uint<4>>((v15*v10)))));
+                (array.ref.elem.1D(v13, CAST<uint<4>>(v15)) := ( *scalar.to.array(array.ref.elem.1D(v12, CAST<uint<4>>((v15*v10))))));
             };
-            return struct{data:=( var(( *( *v13)))), x:=v10, y:=v11};
+            return struct{data:=( *v13), x:=v10, y:=v11};
         }(( *v96), ( *v97))));
-        decl ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v106 = ( var(fun(int<4> v10, int<4> v11){
-            decl ref<ref<array<uint<4>,1>>> v12 = ( var(( new(array.create.1D(type<uint<4>>, (((sizeof(type<uint<4>>)*CAST<uint<8>>(v10))*CAST<uint<8>>(v11))/sizeof(type<uint<4>>)))))));
-            decl ref<ref<array<ref<array<uint<4>,1>>,1>>> v13 = ( var(( new(array.create.1D(type<ref<array<uint<4>,1>>>, ((sizeof(type<array<uint<4>,1>>)*CAST<uint<8>>(v10))/sizeof(type<array<uint<4>,1>>)))))));
+        decl ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v106 = ( var(fun(int<4> v10, int<4> v11){
+            decl ref<array<uint<4>,1>> v12 = ( new(array.create.1D(type<uint<4>>, (((sizeof(type<uint<4>>)*CAST<uint<8>>(v10))*CAST<uint<8>>(v11))/sizeof(type<uint<4>>)))));
+            decl ref<array<array<uint<4>,1>,1>> v13 = ( new(array.create.1D(type<array<uint<4>,1>>, ((sizeof(type<array<uint<4>,1>>)*CAST<uint<8>>(v10))/sizeof(type<array<uint<4>,1>>)))));
             for(decl int<4> v15 = 0 .. v10 : 1) {
-                (array.ref.elem.1D(( *v13), CAST<uint<4>>(v15)) := scalar.to.array(array.ref.elem.1D(( *v12), CAST<uint<4>>((v15*v10)))));
+                (array.ref.elem.1D(v13, CAST<uint<4>>(v15)) := ( *scalar.to.array(array.ref.elem.1D(v12, CAST<uint<4>>((v15*v10))))));
             };
-            return struct{data:=( var(( *( *v13)))), x:=v10, y:=v11};
+            return struct{data:=( *v13), x:=v10, y:=v11};
         }(( *v96), ( *v97))));
         <m id=2>{
             <m id=1>for(decl int<4> v113 = 0 .. ( *v96) : 1) {
@@ -351,17 +351,17 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                             (vector.ref.elem(v30, CAST<uint<4>>(0)) := CAST<real<8>>(0));
                             (vector.ref.elem(v30, CAST<uint<4>>(1)) := CAST<real<8>>(0));
                             for(decl uint<4> v44 = CAST<uint<4>>(0) .. v20 : 1) {
-                                decl ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>> v33 = ( var(scalar.to.array(array.ref.elem.1D(v19, v44))));
-                                decl ref<vector<real<8>,2>> v35 = ( var([(( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(( *v33), 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)))), (( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(( *v33), 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))]));
-                                if((CAST<uint<4>>(( *composite.ref.elem(array.ref.elem.1D(( *v33), 0), type, type<int<4>>)))==CAST<uint<4>>(0))) {
-                                    (vector.ref.elem(v30, CAST<uint<4>>(0)) := (( *vector.ref.elem(v30, CAST<uint<4>>(0)))-(( *composite.ref.elem(array.ref.elem.1D(( *v33), 0), mult, type<real<8>>))*( *vector.ref.elem(v35, CAST<uint<4>>(0))))));
-                                    (vector.ref.elem(v30, CAST<uint<4>>(1)) := (( *vector.ref.elem(v30, CAST<uint<4>>(1)))-(( *composite.ref.elem(array.ref.elem.1D(( *v33), 0), mult, type<real<8>>))*( *vector.ref.elem(v35, CAST<uint<4>>(1))))));
+                                decl ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v33 = scalar.to.array(array.ref.elem.1D(v19, CAST<uint<4>>(v44)));
+                                decl ref<vector<real<8>,2>> v35 = ( var([(( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)))), (( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))]));
+                                if((( *composite.ref.elem(array.ref.elem.1D(v33, 0), type, type<int<4>>))==CAST<int<4>>(CAST<uint<4>>(0)))) {
+                                    (vector.ref.elem(v30, CAST<uint<4>>(0)) := (( *vector.ref.elem(v30, CAST<uint<4>>(0)))-(( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))*( *vector.ref.elem(v35, CAST<uint<4>>(0))))));
+                                    (vector.ref.elem(v30, CAST<uint<4>>(1)) := (( *vector.ref.elem(v30, CAST<uint<4>>(1)))-(( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))*( *vector.ref.elem(v35, CAST<uint<4>>(1))))));
                                 } else {
-                                    decl ref<real<8>> v36 = ( var(sqrt(((((( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(( *v33), 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0))))*(( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(( *v33), 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)))))+((( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(( *v33), 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))*(( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(( *v33), 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))))+(v23*v23)))));
-                                    (vector.ref.elem(v30, CAST<uint<4>>(0)) := (( *vector.ref.elem(v30, CAST<uint<4>>(0)))-((( *composite.ref.elem(array.ref.elem.1D(( *v33), 0), mult, type<real<8>>))/((( *v36)*( *v36))*( *v36)))*( *vector.ref.elem(v35, CAST<uint<4>>(0))))));
-                                    (vector.ref.elem(v30, CAST<uint<4>>(1)) := (( *vector.ref.elem(v30, CAST<uint<4>>(1)))-((( *composite.ref.elem(array.ref.elem.1D(( *v33), 0), mult, type<real<8>>))/((( *v36)*( *v36))*( *v36)))*( *vector.ref.elem(v35, CAST<uint<4>>(1))))));
+                                    decl ref<real<8>> v36 = ( var(sqrt(((((( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0))))*(( *vector.ref.elem(v27, CAST<uint<4>>(0)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(0)))))+((( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))*(( *vector.ref.elem(v27, CAST<uint<4>>(1)))-( *vector.ref.elem(composite.ref.elem(array.ref.elem.1D(v33, 0), pos, type<vector<real<8>,2>>), CAST<uint<4>>(1))))))+(v23*v23)))));
+                                    (vector.ref.elem(v30, CAST<uint<4>>(0)) := (( *vector.ref.elem(v30, CAST<uint<4>>(0)))-((( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))/((( *v36)*( *v36))*( *v36)))*( *vector.ref.elem(v35, CAST<uint<4>>(0))))));
+                                    (vector.ref.elem(v30, CAST<uint<4>>(1)) := (( *vector.ref.elem(v30, CAST<uint<4>>(1)))-((( *composite.ref.elem(array.ref.elem.1D(v33, 0), mult, type<real<8>>))/((( *v36)*( *v36))*( *v36)))*( *vector.ref.elem(v35, CAST<uint<4>>(1))))));
                                 };
-                                if((((v51>CAST<uint<8>>(v24))&&bind(){fun(ref<vector<real<8>,2>> v38, ref<ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>>> v39)return (sqrt(((( *vector.ref.elem(v38, CAST<uint<4>>(0)))*( *vector.ref.elem(v38, CAST<uint<4>>(0))))+(( *vector.ref.elem(v38, CAST<uint<4>>(1)))*( *vector.ref.elem(v38, CAST<uint<4>>(1))))))<( *composite.ref.elem(array.ref.elem.1D(( *v39), 0), size, type<real<8>>)))(v35, v33)})&&bind(){fun(ref<vector<real<8>,2>> v41, real<8> v42)return (sqrt(((( *vector.ref.elem(v41, CAST<uint<4>>(0)))*( *vector.ref.elem(v41, CAST<uint<4>>(0))))+(( *vector.ref.elem(v41, CAST<uint<4>>(1)))*( *vector.ref.elem(v41, CAST<uint<4>>(1))))))<v42)(v28, v26)})) {
+                                if((((v51>CAST<uint<8>>(v24))&&bind(){fun(ref<vector<real<8>,2>> v38, ref<array<struct<type:int<4>,pos:vector<real<8>,2>,mult:real<8>,size:real<8>>,1>> v39)return (sqrt(((( *vector.ref.elem(v38, CAST<uint<4>>(0)))*( *vector.ref.elem(v38, CAST<uint<4>>(0))))+(( *vector.ref.elem(v38, CAST<uint<4>>(1)))*( *vector.ref.elem(v38, CAST<uint<4>>(1))))))<( *composite.ref.elem(array.ref.elem.1D(v39, 0), size, type<real<8>>)))(v35, v33)})&&bind(){fun(ref<vector<real<8>,2>> v41, real<8> v42)return (sqrt(((( *vector.ref.elem(v41, CAST<uint<4>>(0)))*( *vector.ref.elem(v41, CAST<uint<4>>(0))))+(( *vector.ref.elem(v41, CAST<uint<4>>(1)))*( *vector.ref.elem(v41, CAST<uint<4>>(1))))))<v42)(v28, v26)})) {
                                     return struct{target:=v44, numSteps:=v51};
                                 } else { };
                             };
@@ -379,47 +379,47 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                             }(v29, v30);
                         };
                         return struct{target:=v20, numSteps:=v25};
-                    }(( *v107), ( *v109), ( *v89), ( *v95), ( *v99), ( *v100), ( *v101), ( *v102), ( *v103), ( *v104))));
-                    (array.ref.elem.1D(( *array.ref.elem.1D(( *composite.ref.elem(v105, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(v113))), CAST<uint<4>>(v112)) := ( *composite.ref.elem(v111, target, type<uint<4>>)));
-                    (array.ref.elem.1D(( *array.ref.elem.1D(( *composite.ref.elem(v106, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(v113))), CAST<uint<4>>(v112)) := CAST<uint<4>>(( *composite.ref.elem(v111, numSteps, type<uint<8>>))));
+                    }(( *v107), ( *v109), v89, ( *v95), ( *v99), ( *v100), ( *v101), ( *v102), ( *v103), ( *v104))));
+                    (array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v105, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(v113)), CAST<uint<4>>(v112)) := ( *composite.ref.elem(v111, target, type<uint<4>>)));
+                    (array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(v113)), CAST<uint<4>>(v112)) := CAST<uint<4>>(( *composite.ref.elem(v111, numSteps, type<uint<8>>))));
                 };
             }</m>;
         }</m>;
         decl ref<uint<8>> v114 = ( var(CAST<uint<8>>(0)));
-        decl ref<uint<8>> v115 = ( var(( *v103)));
+        decl ref<uint<8>> v115 = v103;
         for(decl int<4> v131 = 0 .. ( *v96) : 1) {
             for(decl int<4> v130 = 0 .. ( *v97) : 1) {
-                (v114 := ite((CAST<uint<8>>(( *array.ref.elem.1D(( *array.ref.elem.1D(( *composite.ref.elem(v106, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(v131))), CAST<uint<4>>(v130))))>( *v114)), bind(){fun(ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v120, ref<int<4>> v121, ref<int<4>> v122)return CAST<uint<8>>(( *array.ref.elem.1D(( *array.ref.elem.1D(( *composite.ref.elem(v120, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(( *v122)))), CAST<uint<4>>(( *v121)))))(v106, ( var(v130)), ( var(v131)))}, bind(){fun(ref<uint<8>> v118)return ( *v118)(v114)}));
-                (v115 := ite((CAST<uint<8>>(( *array.ref.elem.1D(( *array.ref.elem.1D(( *composite.ref.elem(v106, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(v131))), CAST<uint<4>>(v130))))<( *v115)), bind(){fun(ref<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>> v126, ref<int<4>> v127, ref<int<4>> v128)return CAST<uint<8>>(( *array.ref.elem.1D(( *array.ref.elem.1D(( *composite.ref.elem(v126, data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(( *v128)))), CAST<uint<4>>(( *v127)))))(v106, ( var(v130)), ( var(v131)))}, bind(){fun(ref<uint<8>> v124)return ( *v124)(v115)}));
+                (v114 := ite((( *array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(v131)), CAST<uint<4>>(v130)))>CAST<uint<4>>(( *v114))), bind(){fun(ref<int<4>> v120, ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v121, ref<int<4>> v122)return CAST<uint<8>>(( *array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v121, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(( *v122))), CAST<uint<4>>(( *v120)))))(( var(v130)), v106, ( var(v131)))}, bind(){fun(ref<uint<8>> v118)return ( *v118)(v114)}));
+                (v115 := ite((( *array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v106, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(v131)), CAST<uint<4>>(v130)))<CAST<uint<4>>(( *v115))), bind(){fun(ref<int<4>> v126, ref<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>> v127, ref<int<4>> v128)return CAST<uint<8>>(( *array.ref.elem.1D(array.ref.elem.1D(composite.ref.elem(v127, data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(( *v128))), CAST<uint<4>>(( *v126)))))(( var(v130)), v106, ( var(v131)))}, bind(){fun(ref<uint<8>> v124)return ( *v124)(v115)}));
             };
         };
         printf(string.as.char.pointer("Number of steps calculated: %llu .. %llu\n"), varlist.pack((( *v115), ( *v114))));
-        fun(struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>> v3, uint<4> v4){
-            for(decl int<4> v8 = 0 .. composite.member.access(v3, x, type<int<4>>) : 1) {
-                for(decl int<4> v7 = 0 .. composite.member.access(v3, y, type<int<4>>) : 1) {
-                    if(((( *(( *composite.member.access(v3, data, type<ref<array<ref<array<uint<4>,1>>,1>>>))[CAST<uint<4>>(v8)]))[CAST<uint<4>>(v7)])==CAST<uint<4>>(0))) printf(string.as.char.pointer(" "), varlist.pack(())) else if(((( *(( *composite.member.access(v3, data, type<ref<array<ref<array<uint<4>,1>>,1>>>))[CAST<uint<4>>(v8)]))[CAST<uint<4>>(v7)])==v4)) printf(string.as.char.pointer("X"), varlist.pack(())) else printf(string.as.char.pointer("%c"), varlist.pack((((CAST<uint<4>>(CAST<int<4>>('A'))+(( *(( *composite.member.access(v3, data, type<ref<array<ref<array<uint<4>,1>>,1>>>))[CAST<uint<4>>(v8)]))[CAST<uint<4>>(v7)]))-CAST<uint<4>>(1)))));
+        fun(struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v3, uint<4> v4){
+            for(decl int<4> v8 = 0 .. v3.x : 1) {
+                for(decl int<4> v7 = 0 .. v3.y : 1) {
+                    if((((v3.data[CAST<uint<4>>(v8)])[CAST<uint<4>>(v7)])==CAST<uint<4>>(0))) printf(string.as.char.pointer(" "), varlist.pack(())) else if((((v3.data[CAST<uint<4>>(v8)])[CAST<uint<4>>(v7)])==v4)) printf(string.as.char.pointer("X"), varlist.pack(())) else printf(string.as.char.pointer("%c"), varlist.pack((((CAST<uint<4>>(CAST<int<4>>('A'))+((v3.data[CAST<uint<4>>(v8)])[CAST<uint<4>>(v7)]))-CAST<uint<4>>(1)))));
                 };
                 printf(string.as.char.pointer("\n"), varlist.pack(()));
             };
         }(( *v105), ( *v95));
-        fun(struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>> v69, struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>> v70, ref<array<char,1>> v71, uint<8> v72, uint<8> v73){
-            decl ref<ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:ref<array<char,1>>,_IO_read_end:ref<array<char,1>>,_IO_read_base:ref<array<char,1>>,_IO_write_base:ref<array<char,1>>,_IO_write_ptr:ref<array<char,1>>,_IO_write_end:ref<array<char,1>>,_IO_buf_base:ref<array<char,1>>,_IO_buf_end:ref<array<char,1>>,_IO_save_base:ref<array<char,1>>,_IO_backup_base:ref<array<char,1>>,_IO_save_end:ref<array<char,1>>,_markers:ref<array<'_IO_marker,1>>,_chain:ref<array<'_IO_FILE,1>>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:ref<array<'_IO_marker,1>>,_sbuf:ref<array<'_IO_FILE,1>>,_pos:int<4>>},1>>> v74 = ( var(fopen(v71, string.as.char.pointer("wb"))));
+        fun(struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v69, struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>> v70, ref<array<char,1>> v71, uint<8> v72, uint<8> v73){
+            decl ref<array<rec '_IO_FILE{'_IO_FILE=struct<_flags:int<4>,_IO_read_ptr:array<char,1>,_IO_read_end:array<char,1>,_IO_read_base:array<char,1>,_IO_write_base:array<char,1>,_IO_write_ptr:array<char,1>,_IO_write_end:array<char,1>,_IO_buf_base:array<char,1>,_IO_buf_end:array<char,1>,_IO_save_base:array<char,1>,_IO_backup_base:array<char,1>,_IO_save_end:array<char,1>,_markers:array<'_IO_marker,1>,_chain:array<'_IO_FILE,1>,_fileno:int<4>,_flags2:int<4>,_old_offset:int<8>,_cur_column:uint<2>,_vtable_offset:char,_shortbuf:vector<char,1>,_lock:anyRef,_offset:int<8>,__pad1:anyRef,__pad2:anyRef,__pad3:anyRef,__pad4:anyRef,__pad5:uint<8>,_mode:int<4>,_unused2:vector<char,20>>, '_IO_marker=struct<_next:array<'_IO_marker,1>,_sbuf:array<'_IO_FILE,1>,_pos:int<4>>},1>> v74 = fopen(v71, string.as.char.pointer("wb"));
             if((!(!is.null(( *v74))))) {
                 printf(string.as.char.pointer("Error opening output file!\n"), varlist.pack(()));
                 return unit;
             } else { };
             decl ref<struct<magic:vector<uint<1>,2>>> v75 = ( var(struct{magic:=[CAST<uint<1>>(0x42), CAST<uint<1>>(0x4D)]}));
-            fwrite(ref.to.anyref(scalar.to.array(v75)), sizeof(type<struct<magic:vector<uint<1>,2>>>), CAST<uint<8>>(1), ( *v74));
+            fwrite(ref.to.anyref(scalar.to.array(v75)), sizeof(type<struct<magic:vector<uint<1>,2>>>), CAST<uint<8>>(1), v74);
             decl ref<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>> v76 = ( var(undefined(type<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>>)));
             (composite.ref.elem(v76, bmp_offset, type<uint<4>>) := CAST<uint<4>>(((sizeof(type<struct<magic:vector<uint<1>,2>>>)+sizeof(type<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>>))+sizeof(type<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>>))));
-            (composite.ref.elem(v76, filesz, type<uint<4>>) := CAST<uint<4>>((CAST<uint<8>>(( *composite.ref.elem(v76, bmp_offset, type<uint<4>>)))+((sizeof(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>)*CAST<uint<8>>(composite.member.access(v69, x, type<int<4>>)))*CAST<uint<8>>(composite.member.access(v69, y, type<int<4>>))))));
+            (composite.ref.elem(v76, filesz, type<uint<4>>) := (( *composite.ref.elem(v76, bmp_offset, type<uint<4>>))+CAST<uint<4>>(((sizeof(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>)*CAST<uint<8>>(v69.x))*CAST<uint<8>>(v69.y)))));
             (composite.ref.elem(v76, creator1, type<uint<2>>) := CAST<uint<2>>(0));
             (composite.ref.elem(v76, creator2, type<uint<2>>) := CAST<uint<2>>(0));
-            fwrite(ref.to.anyref(scalar.to.array(v76)), sizeof(type<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>>), CAST<uint<8>>(1), ( *v74));
+            fwrite(ref.to.anyref(scalar.to.array(v76)), sizeof(type<struct<filesz:uint<4>,creator1:uint<2>,creator2:uint<2>,bmp_offset:uint<4>>>), CAST<uint<8>>(1), v74);
             decl ref<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>> v77 = ( var(undefined(type<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>>)));
             (composite.ref.elem(v77, header_sz, type<uint<4>>) := CAST<uint<4>>(40));
-            (composite.ref.elem(v77, width, type<int<4>>) := composite.member.access(v69, x, type<int<4>>));
-            (composite.ref.elem(v77, height, type<int<4>>) := composite.member.access(v69, y, type<int<4>>));
+            (composite.ref.elem(v77, width, type<int<4>>) := v69.x);
+            (composite.ref.elem(v77, height, type<int<4>>) := v69.y);
             (composite.ref.elem(v77, nplanes, type<uint<2>>) := CAST<uint<2>>(1));
             (composite.ref.elem(v77, bitspp, type<uint<2>>) := CAST<uint<2>>(24));
             (composite.ref.elem(v77, compress_type, type<uint<4>>) := CAST<uint<4>>(0));
@@ -428,9 +428,9 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
             (composite.ref.elem(v77, vres, type<int<4>>) := 1000);
             (composite.ref.elem(v77, ncolors, type<uint<4>>) := CAST<uint<4>>(0));
             (composite.ref.elem(v77, nimpcolors, type<uint<4>>) := CAST<uint<4>>(0));
-            fwrite(ref.to.anyref(scalar.to.array(v77)), sizeof(type<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>>), CAST<uint<8>>(1), ( *v74));
-            for(decl int<4> v84 = 0 .. composite.member.access(v69, x, type<int<4>>) : 1) {
-                for(decl int<4> v81 = 0 .. composite.member.access(v69, y, type<int<4>>) : 1) {
+            fwrite(ref.to.anyref(scalar.to.array(v77)), sizeof(type<struct<header_sz:uint<4>,width:int<4>,height:int<4>,nplanes:uint<2>,bitspp:uint<2>,compress_type:uint<4>,bmp_bytesz:uint<4>,hres:int<4>,vres:int<4>,ncolors:uint<4>,nimpcolors:uint<4>>>), CAST<uint<8>>(1), v74);
+            for(decl int<4> v84 = 0 .. v69.x : 1) {
+                for(decl int<4> v81 = 0 .. v69.y : 1) {
                     decl ref<struct<r:uint<1>,g:uint<1>,b:uint<1>>> v78 = ( var(fun(uint<4> v61, uint<4> v62, uint<8> v63, uint<8> v64){
                         decl ref<struct<r:uint<1>,g:uint<1>,b:uint<1>>> v65 = ( var(undefined(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>)));
                         {
@@ -447,29 +447,29 @@ fun(int<4> v86, ref<array<ref<array<char,1>>,1>> v87){
                             };
                         };
                         decl ref<real<8>> v67 = ( var((1.0-(CAST<real<8>>((CAST<uint<8>>(v62)-v63))/CAST<real<8>>((v64-v63))))));
-                        (composite.ref.elem(v65, r, type<uint<1>>) := CAST<uint<1>>((CAST<real<8>>(CAST<int<4>>(( *composite.ref.elem(v65, r, type<uint<1>>))))*( *v67))));
-                        (composite.ref.elem(v65, g, type<uint<1>>) := CAST<uint<1>>((CAST<real<8>>(CAST<int<4>>(( *composite.ref.elem(v65, g, type<uint<1>>))))*( *v67))));
-                        (composite.ref.elem(v65, b, type<uint<1>>) := CAST<uint<1>>((CAST<real<8>>(CAST<int<4>>(( *composite.ref.elem(v65, b, type<uint<1>>))))*( *v67))));
+                        (composite.ref.elem(v65, r, type<uint<1>>) := CAST<uint<1>>((CAST<real<8>>(( *composite.ref.elem(v65, r, type<uint<1>>)))*( *v67))));
+                        (composite.ref.elem(v65, g, type<uint<1>>) := CAST<uint<1>>((CAST<real<8>>(( *composite.ref.elem(v65, g, type<uint<1>>)))*( *v67))));
+                        (composite.ref.elem(v65, b, type<uint<1>>) := CAST<uint<1>>((CAST<real<8>>(( *composite.ref.elem(v65, b, type<uint<1>>)))*( *v67))));
                         return ( *v65);
-                    }((( *(( *composite.member.access(v69, data, type<ref<array<ref<array<uint<4>,1>>,1>>>))[CAST<uint<4>>(v84)]))[CAST<uint<4>>(v81)]), (( *(( *composite.member.access(v70, data, type<ref<array<ref<array<uint<4>,1>>,1>>>))[CAST<uint<4>>(v84)]))[CAST<uint<4>>(v81)]), v72, v73)));
-                    fwrite(ref.to.anyref(scalar.to.array(v78)), sizeof(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>), CAST<uint<8>>(1), ( *v74));
+                    }(((v69.data[CAST<uint<4>>(v84)])[CAST<uint<4>>(v81)]), ((v70.data[CAST<uint<4>>(v84)])[CAST<uint<4>>(v81)]), v72, v73)));
+                    fwrite(ref.to.anyref(scalar.to.array(v78)), sizeof(type<struct<r:uint<1>,g:uint<1>,b:uint<1>>>), CAST<uint<8>>(1), v74);
                 };
                 decl ref<char> v82 = ( var(CAST<char>(0)));
-                decl ref<int<4>> v83 = ( var((3*composite.member.access(v69, y, type<int<4>>))));
+                decl ref<int<4>> v83 = ( var((3*v69.y)));
                 while(int.ne((( *v83)%4), 0)) {
-                    fwrite(ref.to.anyref(scalar.to.array(v82)), CAST<uint<8>>(1), CAST<uint<8>>(1), ( *v74));
+                    fwrite(ref.to.anyref(scalar.to.array(v82)), CAST<uint<8>>(1), CAST<uint<8>>(1), v74);
                     int.postInc(v83);
                 };
             };
-            fclose(( *v74));
+            fclose(v74);
         }(( *v105), ( *v106), string.as.char.pointer("out.bmp"), ( *v115), ( *v114));
-        fun(ref<array<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,1>> v1){
-            ( del(( *array.ref.elem.1D(( *composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(0)))));
-            ( del(( *composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>))));
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v1){
+            ( del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(0))));
+            ( del(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>)));
         }(scalar.to.array(v105));
-        fun(ref<array<struct<data:ref<array<ref<array<uint<4>,1>>,1>>,x:int<4>,y:int<4>>,1>> v1){
-            ( del(( *array.ref.elem.1D(( *composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>)), CAST<uint<4>>(0)))));
-            ( del(( *composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<ref<array<ref<array<uint<4>,1>>,1>>>))));
+        fun(ref<array<struct<data:array<array<uint<4>,1>,1>,x:int<4>,y:int<4>>,1>> v1){
+            ( del(array.ref.elem.1D(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>), CAST<uint<4>>(0))));
+            ( del(composite.ref.elem(array.ref.elem.1D(v1, 0), data, type<array<array<uint<4>,1>,1>>)));
         }(scalar.to.array(v106));
     }
 

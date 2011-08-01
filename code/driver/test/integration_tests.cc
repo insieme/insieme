@@ -50,6 +50,7 @@
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/checks/typechecks.h"
 #include "insieme/core/checks/imperativechecks.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/simple_backend/simple_backend.h"
 
@@ -195,7 +196,7 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 	core::ProgramPtr code = load(manager, testCase);
 
 	// run semantic checks on loaded program
-	auto errors = core::check(code, core::checks::getFullCheck());
+	auto errors = core::check(code, core::checks::getFullCheck()).getErrors();
 
 	EXPECT_EQ(static_cast<std::size_t>(0), errors.size());
 	if (!errors.empty()) {
@@ -223,6 +224,90 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+// ---------------------------------- Check transfomations -------------------------------------
+
+//// the type definition (specifying the parameter type)
+//class TransformationIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+//
+//// define the test case pattern
+//TEST_P(TransformationIntegrationTest, SemanticChecks) {
+//	core::NodeManager mgr;
+//
+//	// obtain test case
+//	utils::test::IntegrationTestCase testCase = GetParam();
+//	SCOPED_TRACE("Testing Case: " + testCase.getName());
+//
+//	// load the code using the frontend
+//	core::ProgramPtr code = load(mgr, testCase);
+//
+//	// find array declarations
+//	auto& basic = mgr.basic;
+//	ASTBuilder builder(mgr);
+//
+//	// search for array variable declarations
+//	//visitDepthFirstInterruptable(NodeAddress(code), [&](const DeclarationStmtAddress& curdecl) -> bool {
+//	//	auto var = curdecl->getVariable();
+//	//	auto type = var->getType();
+//	//	auto init = curdecl->getInitialization();
+//
+//	//	unsigned numRefs = 0;
+//	//	while(auto refType = dynamic_pointer_cast<const RefType>(type)) {
+//	//		type = refType->getElementType();
+//	//		numRefs++;
+//	//	}
+//
+//	//	if(type->getNodeType() == NT_ArrayType) {
+//	//		LOG(INFO) << "**************************************\n====\narray (" << numRefs 
+//	//			<< " refs) initialized using:\n" << printer::PrettyPrinter(init) << "\n*********************\n";
+//	//	}
+//
+//	//	return false;
+//	//});
+//
+//	// search for calls to scalar.to.array
+//	visitDepthFirstInterruptable(NodeAddress(code), [&](const CallExprAddress& curcall) -> bool {
+//		for(int argIndex = 0; argIndex < curcall->getArguments().size(); ++argIndex) {
+//			if(CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curcall->getArgument(argIndex))) {
+//				if(basic.isScalarToArray(convertcall->getFunctionExpr())) {
+//					if(LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curcall->getFunctionExpr())) {
+//						VariablePtr param = called->getParameterList()[argIndex];
+//						LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
+//						visitDepthFirstInterruptable(NodeAddress(called->getBody()), [&](const VariableAddress& var) {
+//							if(var.getAddressedNode() == param) {
+//								if(CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode())) {
+//									if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
+//										try {
+//											auto formula = arithmetic::toFormula(usecall->getArgument(1));
+//											if(formula.isZero()) {
+//												//LOG(INFO) << "- used in array.ref.elem.1D: OK";
+//											} else {
+//												LOG(INFO) << "- used in array.ref.elem.1D with: " << formula;
+//												LOG(INFO) << "- context:\n" << printer::PrettyPrinter(called);
+//											}
+//										} catch(arithmetic::NotAFormulaException e) {
+//											LOG(INFO) << "- used in array.ref.elem.1D with non-formula: " << usecall;
+//										}
+//									} else {
+//										LOG(INFO) << "- used in unexpected call: " << usecall;
+//									}
+//								} else {
+//									LOG(INFO) << "****\n- used in non-call: " << printer::PrettyPrinter(var.getParentNode());
+//								}
+//							}
+//							return false;
+//						});
+//					}
+//				}
+//			}
+//		}
+//		return false;
+//	});
+//
+//}
+//
+//// instantiate the test case
+//INSTANTIATE_TEST_CASE_P(TransformationIntegrationCheck, TransformationIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
 // ---------------------------------- Check the simple backend -------------------------------------

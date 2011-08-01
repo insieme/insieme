@@ -252,6 +252,44 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 		return false;
 	});
 
+	//visitDepthFirstInterruptable(NodeAddress(node), [&](const CallExprAddress& curcall) -> bool {
+	//	for(int argIndex = 0; argIndex < curcall->getArguments().size(); ++argIndex) {
+	//		if(CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curcall->getArgument(argIndex))) {
+	//			if(basic.isScalarToArray(convertcall->getFunctionExpr())) {
+	//				//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
+	//				if(LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curcall->getFunctionExpr())) {
+	//					VariablePtr param = called->getParameterList()[argIndex];
+	//					visitDepthFirstInterruptable(NodeAddress(called), [&](const VariableAddress& var) {
+	//						if(var.getAddressedNode() == param) {
+	//							//LOG(INFO) << "****\n- used:\n " << printer::PrettyPrinter(var.getParentNode()) << "\n";
+	//							if(CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode())) {
+	//								if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
+	//									try {
+	//										auto formula = arithmetic::toFormula(usecall->getArgument(1));
+	//										if(formula.isZero()) {
+	//											LOG(INFO) << "- used in array.ref.elem.1D: OK";
+	//										} else {
+	//											LOG(INFO) << "- used in array.ref.elem.1D with: " << formula;
+	//										}
+	//									} catch(arithmetic::NotAFormulaException e) {
+	//										LOG(INFO) << "- used in array.ref.elem.1D with non-formula: " << usecall;
+	//									}
+	//								} else {
+	//									LOG(INFO) << "- used in unexpected call: " << usecall;
+	//								}
+	//							} else {
+	//								LOG(INFO) << "****\n- used in non-call: " << printer::PrettyPrinter(var.getParentNode());
+	//							}
+	//						}
+	//						return false
+	//					});
+	//				}
+	//			}
+	//		}
+	//	}
+	//	return false;
+	//});
+
 	return node;
 }
 

@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v12, ref<array<ref<array<char,1>>,1>> v13){
+fun(int<4> v12, ref<array<array<char,1>,1>> v13){
         decl ref<int<4>> v14 =  var(10);
         printf(string.as.char.pointer("x=%d\n"), varlist.pack((v14)));
         printf(string.as.char.pointer("fac(x)=%d\n"), varlist.pack((recFun v1 {
@@ -83,7 +83,7 @@ fun(int<4> v12, ref<array<ref<array<char,1>>,1>> v13){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v12, ref<array<ref<array<char,1>>,1>> v13){
+fun(int<4> v12, ref<array<array<char,1>,1>> v13){
         decl ref<int<4>> v14 = ( var(10));
         printf(string.as.char.pointer("x=%d\n"), varlist.pack((( *v14))));
         printf(string.as.char.pointer("fac(x)=%d\n"), varlist.pack((recFun v1 {

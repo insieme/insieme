@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, ref<array<ref<array<char,1>>,1>> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf(string.as.char.pointer("Hello"), varlist.pack(()));
         printf(string.as.char.pointer("Hello %s\n"), varlist.pack(("World")));
         printf(string.as.char.pointer("Integer:   %d\n"), varlist.pack((14)));
@@ -23,7 +23,7 @@ fun(int<4> v1, ref<array<ref<array<char,1>>,1>> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, ref<array<ref<array<char,1>>,1>> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         printf(string.as.char.pointer("Hello"), varlist.pack(()));
         printf(string.as.char.pointer("Hello %s\n"), varlist.pack(("World")));
         printf(string.as.char.pointer("Integer:   %d\n"), varlist.pack((14)));
@@ -35,7 +35,7 @@ fun(int<4> v1, ref<array<ref<array<char,1>>,1>> v2){
         printf(string.as.char.pointer("Unsigned:  %ld\n"), varlist.pack((2ul)));
         printf(string.as.char.pointer("Full:      %lld\n"), varlist.pack((0xFull)));
         decl ref<char> v3 = ( var('\0'));
-        printf(string.as.char.pointer("Full:      %c\n"), varlist.pack((CAST<int<4>>(( *v3)))));
+        printf(string.as.char.pointer("Full:      %c\n"), varlist.pack((( *v3))));
         return 0;
     }
 

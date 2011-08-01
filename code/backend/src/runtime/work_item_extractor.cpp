@@ -34,41 +34,26 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/backend/backend.h"
+#include "insieme/backend/runtime/work_item_extractor.h"
 
 namespace insieme {
 namespace backend {
+namespace runtime {
 
-	// A forward declaration of the full backend implementation
-	class FullBackend;
-	typedef std::shared_ptr<FullBackend> FullBackendPtr;
 
-	/**
-	 * The backend interface implementation facading the omega backend.
-	 */
-	class FullBackend : public Backend {
-	public:
 
-		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the full backend using the default configuration.
-		 *
-		 * @return a smart pointer to a fresh instance of the full backend
-		 */
-		static FullBackendPtr getDefault();
+	core::NodePtr WorkItemExtractor::process(core::NodeManager& manager, const core::NodePtr& code) {
 
-		/**
-		 * The main facade function of the full backend. This function converts the given
-		 * IR representation into C99-target code interacting with the Insieme Runtime environment.
-		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
-		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
+		// TODO:
+		//    - convert entry points to work items
+		// 	  - create alternative main conducting a runtime call (+ initContext())
+		//	  - identification and creation of work items
 
-	};
+		// so far, nothing
+		return code;
+	}
 
+
+} // end namespace runtime
 } // end namespace backend
 } // end namespace insieme

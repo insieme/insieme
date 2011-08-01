@@ -61,10 +61,9 @@ namespace backend {
 		core::LiteralPtr createInitGlobals(core::NodeManager& manager) {
 			core::ASTBuilder builder(manager);
 
-			// construct type ('a)->unit
-			core::TypePtr alpha = builder.typeVariable("a");
+			// construct type ()->unit
 			core::TypePtr unit = builder.getBasicGenerator().getUnit();
-			core::FunctionTypePtr funType = builder.functionType(toVector(alpha), unit);
+			core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(), unit);
 
 			return builder.literal(funType, "initGlobals");
 		}

@@ -34,86 +34,84 @@
  * regarding third party software licenses.
  */
 
-#include <CL/cl.h>
-#include <stdio.h>
+#include "CL/cl.h"
+//#include "/home/klaus/NVIDIA_GPU_Computing_SDK/OpenCL/common/inc/oclUtils.h"
+cl_program program = NULL;
+cl_context gcontext = NULL;
+cl_command_queue gqueue = NULL;
+short* short_host_ptr;
+cl_mem dev_ptr1 = NULL;
+cl_event event = NULL;
 
-#define NUM_DATA 100
+//#pragma insieme mark
+int main(int argc, char **argv) {
+	cl_int err;
+	cl_device_id* device;// = (cl_device_id*)malloc(sizeof(cl_device_id*));
+	cl_command_queue* queue;
+	cl_context context;
+	cl_kernel kernel[2];
 
-int main(int argc, char **argv)
-{
-        cl_int _err;
-        cl_platform_id platforms[100];
-        cl_uint platforms_n = 1;
-        clGetPlatformIDs(100, platforms, &platforms_n);
+	context = clCreateContext(0, 1, &device[0], NULL, NULL, &err);
+	gcontext = clCreateContext(0, 1, device, NULL, NULL, &err);
+	queue[0] = clCreateCommandQueue(context, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
+	gqueue = clCreateCommandQueue(gcontext, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
 
-        if (platforms_n == 0)
-                return 1;
+	float* host_ptr;
+	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
+	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
+	cl_mem dev_ptr4;
 
-        cl_device_id devices[100];
-        cl_uint devices_n = 1;
-        clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 100, devices, &devices_n);
+	dev_ptr1 = clCreateBuffer(gcontext, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, 100 * sizeof(cl_short), short_host_ptr, &err);
+	dev_ptr4 = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
+//	dev_ptr4[1] = clCreateBuffer(gcontext, CL_MEM_WRITE_ONLY, 100 * sizeof(cl_float), NULL, &err);
 
-        if (devices_n == 0)
-                return 1;
+	clEnqueueWriteBuffer(gqueue, dev_ptr1, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
 
-        cl_context context = clCreateContext(NULL, 1, devices, NULL, NULL, &_err);
+	size_t kernelLength = 10;
 
-        const char *program_source = NULL;
+	char* path = "hello.cl";
 
-        char* prova = NULL;
+	char* kernelSrc;// = oclLoadProgSource(path, "", &kernelLength);
 
-        cl_program program;
-        #pragma insieme kernelFile "hello.cl"
-        program = clCreateProgramWithSource(context, sizeof(program_source)/sizeof(*program_source), &program_source, NULL, &_err);
-        if (clBuildProgram(program, 1, devices, "", NULL, NULL) != CL_SUCCESS) {
-                char buffer[10240];
-                clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, NULL);
-                //fprintf(stderr, "CL Compilation failed:\n%s", buffer);
-        }
+	#pragma insieme kernelFile "hello.cl"
+	program = clCreateProgramWithSource(context, 1, (const char**) &kernelSrc, &kernelLength, &err);
 
-        cl_mem input_buffer;
-        input_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int)*NUM_DATA, NULL, &_err);
+	kernel[1] = clCreateKernel(program, "hello", &err);
+	err = clSetKernelArg(kernel[1], 0, sizeof(cl_mem), (void*) &dev_ptr1);
+	err = clSetKernelArg(kernel[1], 1, sizeof(cl_mem), (void*) &dev_ptr4);
+	// local memory
+	clSetKernelArg(kernel[1], 2, sizeof(float) * 42, 0);
+	// private memory
+	cl_int ta = 7;
+	clSetKernelArg(kernel[1] , 3, sizeof(cl_int), &ta);
 
-        cl_mem output_buffer;
-        output_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(int)*NUM_DATA, NULL, &_err);
+	size_t globalSize[] = { 8, 8 };
+	size_t localSize[] = { 3, 5, 6 };
 
-        int factor = 2;
+	err = clEnqueueNDRangeKernel(queue[0], kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
 
-        cl_kernel kernel = clCreateKernel(program, "hello", &_err);
-        clSetKernelArg(kernel, 0, sizeof(input_buffer), &input_buffer);
-        clSetKernelArg(kernel, 1, sizeof(output_buffer), &output_buffer);
-        clSetKernelArg(kernel, 2, sizeof(factor), &factor);
+	err = clWaitForEvents(1, &event);
 
-        cl_command_queue queue;
-        queue = clCreateCommandQueue(context, devices[0], 0, &_err);
+	clEnqueueReadBuffer(queue[0], dev_ptr4, CL_TRUE, 0, sizeof(cl_float) * 100, host_ptr, 0, NULL, NULL);
+	clFinish(queue[0]);
 
-        for (int i=0; i<NUM_DATA; i++) {
-                clEnqueueWriteBuffer(queue, input_buffer, CL_TRUE, i*sizeof(int), sizeof(int), &i, 0, NULL, NULL);
-        }
+	cl_ulong start, end;
+	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
+	clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
 
-        cl_event kernel_completion;
-        size_t global_work_size[1] = { NUM_DATA };
-        size_t local_work_size[1] = { 1 };
 
-        clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_work_size, local_work_size, 0, NULL, &kernel_completion);
-        clWaitForEvents(1, &kernel_completion);
-        clReleaseEvent(kernel_completion);
+	clReleaseMemObject(dev_ptr1);
+	clReleaseMemObject(dev_ptr2);
+	clReleaseMemObject(dev_ptr3);
+//	for(int i = 1; i < 2; ++i)
+		clReleaseMemObject(dev_ptr4);
 
-        printf("Result:");
-        for (int i=0; i<NUM_DATA; i++) {
-                int data;
-                clEnqueueReadBuffer(queue, output_buffer, CL_TRUE, i*sizeof(int), sizeof(int), &data, 0, NULL, NULL);
-                printf(" %d", data);
-        }
-        printf("\n");
+	clReleaseCommandQueue(queue[0]);
+	clReleaseCommandQueue(gqueue);
+	clReleaseContext(context);
+	clReleaseEvent(event);
+	clReleaseKernel(kernel[0]);
+//	free(device);
 
-        clReleaseMemObject(input_buffer);
-        clReleaseMemObject(output_buffer);
-
-        clReleaseKernel(kernel);
-        clReleaseProgram(program);
-        clReleaseContext(context);
-
-        return 0;
-
+	return 0;
 }

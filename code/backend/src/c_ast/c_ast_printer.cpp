@@ -40,6 +40,8 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
 
+#include "insieme/backend/c_ast/c_ast_utils.h"
+
 namespace insieme {
 namespace backend {
 namespace c_ast {
@@ -185,7 +187,12 @@ namespace c_ast {
 
 				std::size_t size = node->statements.size();
 				for (std::size_t i=0; i<size; i++) {
-					out << print(node->statements[i]) << ";";
+					const NodePtr& cur = node->statements[i];
+					out << print(cur);
+//					auto type = cur->getType();
+//					if (type != NT_For && type != NT_While && type != NT_If && type != NT_Switch && type != NT_Compound) {
+						out << ";";
+//					}
 					if (i < size-1) newLine(out);
 				}
 
@@ -231,6 +238,7 @@ namespace c_ast {
 					if (cur.second->getType() != c_ast::NT_Compound) {
 						out << ";";
 					}
+					out << " break;";
 					if (i < size-1) newLine(out);
 				}
 
@@ -249,10 +257,15 @@ namespace c_ast {
 			}
 
 			PRINT(For) {
-				return out << "for (" << print(node->init) << "; "
-						   << print(node->check) << "; "
-						   << print(node->step) << ") "
-						   << print(node->body);
+				out << "for (" << print(node->init) << "; "
+				    << print(node->check) << "; "
+				    << print(node->step) << ") ";
+
+				NodePtr body = node->body;
+				if (body->getType() != NT_Compound) {
+					body = c_ast::compound(body);
+				}
+				return out << print(body);
 			}
 
 			PRINT(While) {
@@ -328,16 +341,16 @@ namespace c_ast {
 					case BinaryOperation::Multiplication: 			op = "*"; break;
 					case BinaryOperation::Division: 				op = "/"; break;
 					case BinaryOperation::Modulo: 					op = "%"; break;
-					case BinaryOperation::Equal: 					op = "=="; break;
-					case BinaryOperation::NotEqual: 				op = "!="; break;
-					case BinaryOperation::GreaterThan: 				op = ">"; break;
-					case BinaryOperation::LessThan: 				op = "<"; break;
-					case BinaryOperation::GreaterOrEqual: 			op = ">="; break;
-					case BinaryOperation::LessOrEqual: 				op = "<="; break;
-					case BinaryOperation::LogicAnd: 				op = "&&"; break;
-					case BinaryOperation::LogicOr: 					op = "||"; break;
-					case BinaryOperation::BitwiseAnd: 				op = "&"; break;
-					case BinaryOperation::BitwiseOr: 				op = "|"; break;
+					case BinaryOperation::Equal: 					op = " == "; break;
+					case BinaryOperation::NotEqual: 				op = " != "; break;
+					case BinaryOperation::GreaterThan: 				op = " > "; break;
+					case BinaryOperation::LessThan: 				op = " < "; break;
+					case BinaryOperation::GreaterOrEqual: 			op = " >= "; break;
+					case BinaryOperation::LessOrEqual: 				op = " <= "; break;
+					case BinaryOperation::LogicAnd: 				op = " && "; break;
+					case BinaryOperation::LogicOr: 					op = " || "; break;
+					case BinaryOperation::BitwiseAnd: 				op = " & "; break;
+					case BinaryOperation::BitwiseOr: 				op = " | "; break;
 					case BinaryOperation::BitwiseXOr: 				op = "^"; break;
 					case BinaryOperation::BitwiseLeftShift: 		op = "<<"; break;
 					case BinaryOperation::BitwiseRightShift:		op = ">>"; break;
@@ -362,6 +375,17 @@ namespace c_ast {
 
 				assert(op != "" && "Invalid binary operation encountered!");
 
+				// avoid /* literal by composition of / and dereferencing *
+				if (node->operation == BinaryOperation::Division) {
+					if (node->operandB->getType() == NT_UnaryOperation) {
+						c_ast::UnaryOperationPtr opB = static_pointer_cast<const UnaryOperation>(node->operandB);
+						if (opB->operation == UnaryOperation::Indirection) {
+							return out << print(node->operandA) << op << " " << print(node->operandB);
+						}
+					}
+				}
+
+				// handle as usual
 				return out << print(node->operandA) << op << print(node->operandB);
 			}
 

@@ -146,6 +146,10 @@ CallExprPtr ASTBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.basic.getRefNew(), subExpr);
 }
 
+CallExprPtr ASTBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+	return callExpr(manager.basic.getUnit(), manager.basic.getRefAssign(), target, value);
+}
+
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
     // add a vector init expression if subExpr is of vector type
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
@@ -396,6 +400,34 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     // build the expression body
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
+
+ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+	core::TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_StructType);
+
+	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+	core::TypePtr memberType = structType->getTypeOfMember(member);
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getCompositeMemberAccess();
+	return callExpr(memberType, access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+}
+
+ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+	core::TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_RefType);
+
+	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
+	assert(elementType->getNodeType() == core::NT_StructType);
+
+	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(elementType);
+	core::TypePtr memberType = structType->getTypeOfMember(member);
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getCompositeRefElem();
+	return callExpr(refType(memberType), access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+}
+
 
 // ---------------------------- Utilities ---------------------------------------
 

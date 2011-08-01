@@ -9,35 +9,35 @@ fun(){
                     vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v5), v4) := v5*v4;
                 };
             };
-            for(decl int<4> v13 = 0 .. 1000 : 1) {
-                for(decl int<4> v12 = 0 .. 1000 : 1) {
-                    vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), v13), v12) := ite(v13==v12, bind(){fun()return 1()}, bind(){fun()return 0()});
+            for(decl int<4> v11 = 0 .. 1000 : 1) {
+                for(decl int<4> v10 = 0 .. 1000 : 1) {
+                    vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), v11), v10) := ite(v11==v10, bind(){fun()return 1()}, bind(){fun()return 0()});
                 };
             };
-            for(decl int<4> v20 = 0 .. 1000 : 1) {
-                for(decl int<4> v19 = 0 .. 1000 : 1) {
-                    decl ref<real<8>> v14 =  var(0);
-                    for(decl int<4> v18 = 0 .. 1000 : 1) {
-                        v14 := v14+vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v20), v18)*vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), v18), v19);
+            for(decl int<4> v18 = 0 .. 1000 : 1) {
+                for(decl int<4> v17 = 0 .. 1000 : 1) {
+                    decl ref<real<8>> v12 =  var(0);
+                    for(decl int<4> v16 = 0 .. 1000 : 1) {
+                        v12 := v12+vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v18), v16)*vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), v16), v17);
                     };
-                    vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v20), v19) := v14;
+                    vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v18), v17) := v12;
                 };
             };
         };
-        decl ref<int<4>> v21 =  var(1);
-        for(decl int<4> v33 = 0 .. 1000 : 1) {
-            for(decl int<4> v26 = 0 .. ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v33), v26), vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v33), v26))) {
-                    v21 := 0;
+        decl ref<int<4>> v19 =  var(1);
+        for(decl int<4> v31 = 0 .. 1000 : 1) {
+            for(decl int<4> v24 = 0 .. ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), v31), v24), vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v31), v24))) {
+                    v19 := 0;
                 } else { };
             };
-            for(decl int<4> v32 = ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite(1000>1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v33), v32), 0)) {
-                    v21 := 0;
+            for(decl int<4> v30 = ite(1000<1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite(1000>1000, bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), v31), v30), 0)) {
+                    v19 := 0;
                 } else { };
             };
         };
-        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(v21, 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(v19, 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
     }
 
 
@@ -54,34 +54,34 @@ fun(){
                     (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v5)), CAST<uint<4>>(v4)) := CAST<real<8>>((v5*v4)));
                 };
             }</m>;
-            <m id=2>for(decl int<4> v13 = 0 .. 1000 : 1) {
-                for(decl int<4> v12 = 0 .. 1000 : 1) {
-                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v13)), CAST<uint<4>>(v12)) := CAST<real<8>>(ite((v13==v12), bind(){fun()return 1()}, bind(){fun()return 0()})));
+            <m id=2>for(decl int<4> v11 = 0 .. 1000 : 1) {
+                for(decl int<4> v10 = 0 .. 1000 : 1) {
+                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v11)), CAST<uint<4>>(v10)) := CAST<real<8>>(ite((v11==v10), bind(){fun()return 1()}, bind(){fun()return 0()})));
                 };
             }</m>;
-            <m id=3>for(decl int<4> v20 = 0 .. 1000 : 1) {
-                for(decl int<4> v19 = 0 .. 1000 : 1) {
-                    decl ref<real<8>> v14 = ( var(CAST<real<8>>(0)));
-                    for(decl int<4> v18 = 0 .. 1000 : 1) {
-                        (v14 := (( *v14)+(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v20)), CAST<uint<4>>(v18)))*( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v18)), CAST<uint<4>>(v19))))));
+            <m id=3>for(decl int<4> v18 = 0 .. 1000 : 1) {
+                for(decl int<4> v17 = 0 .. 1000 : 1) {
+                    decl ref<real<8>> v12 = ( var(CAST<real<8>>(0)));
+                    for(decl int<4> v16 = 0 .. 1000 : 1) {
+                        (v12 := (( *v12)+(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v18)), CAST<uint<4>>(v16)))*( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, B, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v16)), CAST<uint<4>>(v17))))));
                     };
-                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v20)), CAST<uint<4>>(v19)) := ( *v14));
+                    (vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v18)), CAST<uint<4>>(v17)) := ( *v12));
                 };
             }</m>;
         }</m>;
-        decl ref<int<4>> v21 = ( var(1));
-        for(decl int<4> v33 = 0 .. 1000 : 1) {
-            for(decl int<4> v26 = 0 .. ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v33)), CAST<uint<4>>(v26))), ( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v33)), CAST<uint<4>>(v26))))) {
-                    (v21 := 0);
+        decl ref<int<4>> v19 = ( var(1));
+        for(decl int<4> v31 = 0 .. 1000 : 1) {
+            for(decl int<4> v24 = 0 .. ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, A, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v31)), CAST<uint<4>>(v24))), ( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v31)), CAST<uint<4>>(v24))))) {
+                    (v19 := 0);
                 } else { };
             };
-            for(decl int<4> v32 = ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite((1000>1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
-                if(real.ne(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v33)), CAST<uint<4>>(v32))), CAST<real<8>>(0))) {
-                    (v21 := 0);
+            for(decl int<4> v30 = ite((1000<1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) .. ite((1000>1000), bind(){fun()return 1000()}, bind(){fun()return 1000()}) : 1) {
+                if(real.ne(( *vector.ref.elem(vector.ref.elem(composite.ref.elem(v1, C, type<vector<vector<real<8>,1000>,1000>>), CAST<uint<4>>(v31)), CAST<uint<4>>(v30))), CAST<real<8>>(0))) {
+                    (v19 := 0);
                 } else { };
             };
         };
-        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(( *v21), 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
+        printf(string.as.char.pointer("Verification: %s\n"), varlist.pack((ite(int.ne(( *v19), 0), bind(){fun()return vector.to.array(['O', 'K', '\0'])()}, bind(){fun()return vector.to.array(['E', 'R', 'R', '\0'])()}))));
     }
 

@@ -85,7 +85,7 @@ static int f2_wrap(void* _closure, __insieme_type_1* fun) { return f2(fun); }
 // start code fragment :: Definition of main ... type: ((int<4>,ref<array<ref<array<char,1>>,1>>)->int<4>) //
 int main(int argc, char** argv){
 	__insieme_type_1 funcs = ((__insieme_type_1){{(__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&min_wrap), (__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&max_wrap), (__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&sum_wrap), (__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&avg_wrap)}});
-	for(int var_56 = 0; var_56 < 4; var_56 += 1)  { printf("Applying func: %d\n", __insieme_funType_2_call((((funcs).data[((unsigned int)(var_56))])), 10, 20)); };
+	for(int var_32 = 0; var_32 < 4; var_32 += 1)  { printf("Applying func: %d\n", __insieme_funType_2_call((((funcs).data[((unsigned int)(var_32))])), 10, 20)); };
 	f(((((__insieme_type_3){{2, 3, 4}})).data), 3);
 	if((!(2!=0))){};
 	__insieme_type_1 list = ((__insieme_type_1){{(__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&min_wrap), (__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&max_wrap), (__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&sum_wrap), (__insieme_funType_2*)__insieme_funType_2_ctr((__insieme_funType_2*)alloca(sizeof(__insieme_funType_2)),&avg_wrap)}});

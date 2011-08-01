@@ -41,6 +41,7 @@
 #include "insieme/backend/converter.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/type_manager.h"
+#include "insieme/backend/function_manager.h"
 #include "insieme/backend/ir_extensions.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -237,8 +238,8 @@ namespace backend {
 			const TypeInfo& valueTypeInfo = GET_TYPE_INFO(type);
 			const TypeInfo& resTypeInfo = GET_TYPE_INFO(call->getType());
 
-			// create alloca reference
-			context.getIncludes().insert("alloca.h");
+			// add header for alloca
+			ADD_HEADER_FOR("alloca");
 
 			// allocate the memory
 			c_ast::ExpressionPtr res = c_ast::call(C_NODE_MANAGER->create("alloca"), c_ast::sizeOf(valueTypeInfo.rValueType));
@@ -248,7 +249,7 @@ namespace backend {
 					core::analysis::isCallOf(initValue, basic.getUndefined()))) {
 
 				// in this cases, the data needs to be initialized
-				context.getIncludes().insert("string.h");
+				ADD_HEADER_FOR("memcpy");
 
 				c_ast::ExpressionPtr initExpr = CONVERT_EXPR(initValue);
 				res = c_ast::call(C_NODE_MANAGER->create("memcpy"), res, c_ast::ref(initExpr), c_ast::sizeOf(valueTypeInfo.rValueType));
@@ -274,7 +275,7 @@ namespace backend {
 
 			// special handling for requesting a un-initialized memory cell
 			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getUndefined())) {
-				context.getIncludes().insert(string("stdlib.h"));
+				ADD_HEADER_FOR("malloc");
 
 				c_ast::ExpressionPtr size = c_ast::sizeOf(CONVERT_TYPE(resType->getElementType()));
 				return c_ast::call(C_NODE_MANAGER->create("malloc"), size);
@@ -308,7 +309,7 @@ namespace backend {
 			assert(core::analysis::hasRefType(ARG(0)) && "Cannot free a non-ref type!");
 
 			// add dependency to stdlib.h (contains the free)
-			context.getIncludes().insert(string("stdlib.h"));
+			ADD_HEADER_FOR("free");
 
 			// construct argument
 			c_ast::ExpressionPtr arg = CONVERT_ARG(0);
@@ -365,7 +366,7 @@ namespace backend {
 		res[basic.getArrayCreate1D()] = OP_CONVERTER({
 			// type of Operator: (type<'elem>, uint<8>) -> array<'elem,1>
 			// create new array on the heap using malloc
-			context.getIncludes().insert("stdlib.h");
+			ADD_HEADER_FOR("malloc");
 
 			const core::ArrayTypePtr& resType = static_pointer_cast<const core::ArrayType>(call->getType());
 			c_ast::ExpressionPtr size = c_ast::mul(c_ast::sizeOf(CONVERT_TYPE(resType->getElementType())), CONVERT_ARG(1));
@@ -493,6 +494,31 @@ namespace backend {
 		res[ext.lazyITE] = OP_CONVERTER({
 			// simple translation of lazy ITE into C/C++ ?: operators
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2));
+		});
+
+		res[ext.initGlobals] = OP_CONVERTER({
+
+			// ensure globals have not bee initialized before
+			assert(!context.getConverter().getGlobalFragment());
+
+			core::TypePtr globalType = ARG(0)->getType();
+			if (globalType->getNodeType() == core::NT_RefType) {
+				globalType = core::analysis::getReferencedType(globalType);
+			}
+
+			// get type of global struct
+			const TypeInfo& info = GET_TYPE_INFO(globalType);
+			c_ast::NodePtr decl = C_NODE_MANAGER->create<c_ast::VarDecl>(c_ast::var(info.lValueType, IRExtensions::GLOBAL_ID));
+
+			// create the global variable definition
+			c_ast::CodeFragmentPtr globals = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER, decl);
+			globals->addDependency(info.definition);
+
+			context.getConverter().setGlobalFragment(globals);
+			context.getDependencies().insert(globals);
+
+			// => no actual expression required her ...
+			return c_ast::ExpressionPtr();
 		});
 
 		// table complete => return table

@@ -50,8 +50,8 @@ namespace core {
 
 
 class Message;
-typedef std::vector<Message> MessageList;
-typedef boost::optional<std::vector<Message>> OptionalMessageList;
+class MessageList;
+typedef boost::optional<MessageList> OptionalMessageList;
 
 void addAll(OptionalMessageList& target, const OptionalMessageList& list);
 void add(OptionalMessageList& target, const Message& msg);
@@ -210,6 +210,107 @@ public:
 	bool operator<(const Message& other) const;
 };
 
+
+/**
+ * A container for error and warning messages.
+ */
+class MessageList {
+	/**
+	 * The list of encountered errors.
+	 */
+	std::vector<Message> errors;
+
+	/**
+	 * The list of encountered warnings.
+	 */
+	std::vector<Message> warnings;
+
+public:
+
+	/**
+	 * A constructor for a message list allowing to specify an arbitrary
+	 * list of messages to be added to the resulting list.
+	 */
+	template<typename ... T>
+	MessageList(const T& ... mgs) {
+		auto msgs = toVector<Message>(mgs...);
+		for_each(msgs, [&](const Message& cur) { this->add(cur); });
+	}
+
+	/**
+	 * Obtains a list containing all encountered errors and warnings included
+	 * within this list.
+	 */
+	const std::vector<Message> getAll() const {
+		return concatenate<Message>(errors, warnings);
+	}
+
+	/**
+	 * Obtains a list containing all errors stored within this message list.
+	 */
+	const std::vector<Message>& getErrors() const { return errors; }
+
+	/**
+	 * Obtains a list containing all warnings stored within this message list.
+	 */
+	const std::vector<Message>& getWarnings() const { return warnings; }
+
+	/**
+	 * Append a new message to this message list.
+	 *
+	 * @param msg the message to be appended
+	 */
+	const void add(const Message& msg) {
+		switch(msg.getType()) {
+		case Message::ERROR: errors.push_back(msg); return;
+		case Message::WARNING: warnings.push_back(msg); return;
+		}
+		assert(false && "Invalid message type encountered!");
+	}
+
+	/**
+	 * Adds all messages from the given container to the given
+	 */
+	const void addAll(const MessageList& list) {
+		auto addFun = [&](const Message& cur) { this->add(cur); };
+		for_each(list.errors, addFun);
+		for_each(list.warnings, addFun);
+	}
+
+	/**
+	 * Tests whether this message list is empty.
+	 */
+	bool empty() const {
+		return errors.empty() && warnings.empty();
+	}
+
+	/**
+	 * Obtains the number of messages within this container.
+	 */
+	std::size_t size() const {
+		return errors.size() + warnings.size();
+	}
+
+	/**
+	 * Obtains direct access to one of the contained messages.
+	 */
+	const Message& operator[](std::size_t index) const {
+		assert(0 <= index && index < size());
+		if (index<errors.size()) {
+			return errors[index];
+		}
+		return warnings[index-errors.size()];
+	}
+
+	/**
+	 * Compares this message list with another message list.
+	 */
+	bool operator==(const MessageList& other) const {
+		return errors == other.errors && warnings == other.warnings;
+	}
+};
+
+
 } // end namespace core
 } // end namespace insieme
 
@@ -217,3 +318,8 @@ public:
  * Allows messages to be printed to an output stream.
  */
 std::ostream& operator<<(std::ostream& out, const insieme::core::Message& message);
+
+/**
+ * Allows message lists to be printed to an output stream.
+ */
+std::ostream& operator<<(std::ostream& out, const insieme::core::MessageList& messageList);

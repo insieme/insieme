@@ -272,6 +272,32 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 }
 
 
+
+OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress& address) {
+	OptionalMessageList res;
+
+	// extract type
+	core::StructTypePtr structType = static_pointer_cast<const StructType>(address->getType());
+
+	// check type of values within struct expression
+	for_each(address->getMembers(), [&](const core::StructExpr::Member& cur) {
+		core::TypePtr requiredType = structType->getTypeOfMember(cur.first);
+		core::TypePtr isType = cur.second->getType();
+
+		if (*requiredType != *isType) {
+			add(res, Message(address,
+				EC_TYPE_INVALID_INITIALIZATION_EXPR,
+				format("Invalid type of struct-member initalization - expected type: %s, actual: %s",
+						toString(*requiredType).c_str(),
+						toString(*isType).c_str()),
+				Message::ERROR));
+		}
+	});
+
+	return res;
+}
+
+
 namespace {
 
 

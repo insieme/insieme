@@ -164,7 +164,9 @@ void visitChildList(BuilderTy& builder,
 	});
 }
 
-void checkSemanticErrors(const MessageList& errors, DotNode& currNode, const core::NodePtr& node) {
+void checkSemanticErrors(const MessageList& list, DotNode& currNode, const core::NodePtr& node) {
+	auto errors = list.getAll();
+	std::sort(errors.begin(), errors.end());
 	std::for_each(errors.begin(), errors.end(), [&currNode, node](const Message& cur) {
 		if(*node == *cur.getAddress().getAddressedNode()) {
 			if(cur.getType() == core::Message::ERROR)

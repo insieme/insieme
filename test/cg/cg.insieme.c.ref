@@ -368,7 +368,7 @@ void makea(struct __insieme_globals* var_91, int n, int nz, double* a, int* coli
 	{
 		for(int var_164 = 1; var_164 < (n+1); var_164 += 1) {
 			((nzv) = nonzer);
-			sprnvc(var_91, n, (nzv), v, iv, (&(colidx[((unsigned int)(0))])), (&(colidx[((unsigned int)(n))])));
+			sprnvc(var_91, n, (nzv), v, iv, colidx, (&(colidx[((unsigned int)(n))])));
 			vecset(n, v, iv, (&nzv), var_164, 0.5);
 			{
 				for(int var_162 = 1; var_162 < ((nzv)+1); var_162 += 1) {
@@ -417,7 +417,7 @@ void makea(struct __insieme_globals* var_91, int n, int nz, double* a, int* coli
 		}; };
 		((i) = (firstrow+(((int)(ceil((((double)(((lastrow+1)-firstrow)))/((double)(1))))))*1)));
 	};
-	sparse(a, colidx, rowstr, n, arow, acol, aelt, firstrow, lastrow, v, (&(iv[((unsigned int)(0))])), (&(iv[((unsigned int)(n))])), (nnza));
+	sparse(a, colidx, rowstr, n, arow, acol, aelt, firstrow, lastrow, v, iv, (&(iv[((unsigned int)(n))])), (nnza));
 }
 static void makea_wrap(void* _closure, struct __insieme_globals* var_91, int n, int nz, double* a, int* colidx, int* rowstr, int nonzer, int firstrow, int lastrow, int firstcol, int lastcol, double rcond, int* arow, int* acol, double* aelt, double* v, int* iv, double shift) { makea(var_91, n, nz, a, colidx, rowstr, nonzer, firstrow, lastrow, firstcol, lastcol, rcond, arow, acol, aelt, v, iv, shift); }
 
@@ -525,8 +525,8 @@ void conj_grad(struct __insieme_globals* var_220, int* colidx, int* rowstr, doub
 static void conj_grad_wrap(void* _closure, struct __insieme_globals* var_220, int* colidx, int* rowstr, double* x, double* z, double* a, double* p, double* q, double* r, double* w, double* rnorm) { conj_grad(var_220, colidx, rowstr, x, z, a, p, q, r, w, rnorm); }
 
 // start code fragment :: Definition of timer_clear ... type: ((ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_clear(struct __insieme_globals* var_38, int n) { ((((*(&((*var_38).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_38, int n) { timer_clear(var_38, n); }
+void timer_clear(struct __insieme_globals* var_53, int n) { ((((*(&((*var_53).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_53, int n) { timer_clear(var_53, n); }
 
 // start code fragment :: type_declaration_timeval //
 struct timeval { 
@@ -545,39 +545,39 @@ int gettimeofday(struct timeval*, struct timezone*);
 static int gettimeofday_wrap(void* _closure, struct timeval* var_287, struct timezone* var_288) { return gettimeofday(var_287, var_288); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
-void wtime(struct __insieme_globals* var_41, double* t){
+void wtime(struct __insieme_globals* var_38, double* t){
 	struct timeval tv;
 	gettimeofday((&tv), 0);
-	if(((*(&((*var_41).sec)))<0)) { ((*(&((*var_41).sec))) = ((int)((*(&((tv).tv_sec)))))); };
-	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_41).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
+	if(((*(&((*var_38).sec)))<0)) { ((*(&((*var_38).sec))) = ((int)((*(&((tv).tv_sec)))))); };
+	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_38).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void wtime_wrap(void* _closure, struct __insieme_globals* var_41, double* t) { wtime(var_41, t); }
+static void wtime_wrap(void* _closure, struct __insieme_globals* var_38, double* t) { wtime(var_38, t); }
 
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
-double elapsed_time(struct __insieme_globals* var_45){
+double elapsed_time(struct __insieme_globals* var_42){
 	double t = 0.0;
-	wtime(var_45, (&t));
+	wtime(var_42, (&t));
 	return (t);
 }
-static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_45) { return elapsed_time(var_45); }
+static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_42) { return elapsed_time(var_42); }
 
 // start code fragment :: Definition of timer_start ... type: ((ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_start(struct __insieme_globals* var_48, int n) { ((((*(&((*var_48).start))).data[((unsigned int)(n))])) = elapsed_time(var_48)); }
-static void timer_start_wrap(void* _closure, struct __insieme_globals* var_48, int n) { timer_start(var_48, n); }
+void timer_start(struct __insieme_globals* var_56, int n) { ((((*(&((*var_56).start))).data[((unsigned int)(n))])) = elapsed_time(var_56)); }
+static void timer_start_wrap(void* _closure, struct __insieme_globals* var_56, int n) { timer_start(var_56, n); }
 
 // start code fragment :: Definition of timer_stop ... type: ((ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_stop(struct __insieme_globals* var_51, int n){
+void timer_stop(struct __insieme_globals* var_45, int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = elapsed_time(var_51));
-	((t) = ((now)-(((*(&((*var_51).start))).data[((unsigned int)(n))]))));
-	((((*(&((*var_51).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_51).elapsed))).data[((unsigned int)(n))]))+(t)));
+	((now) = elapsed_time(var_45));
+	((t) = ((now)-(((*(&((*var_45).start))).data[((unsigned int)(n))]))));
+	((((*(&((*var_45).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_45).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_51, int n) { timer_stop(var_51, n); }
+static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_45, int n) { timer_stop(var_45, n); }
 
 // start code fragment :: Definition of timer_read ... type: ((ref<struct<naa:int<4>,nzz:int<4>,firstrow:int<4>,lastrow:int<4>,firstcol:int<4>,lastcol:int<4>,colidx:vector<int<4>,637001>,rowstr:vector<int<4>,7002>,iv:vector<int<4>,14002>,arow:vector<int<4>,637001>,acol:vector<int<4>,637001>,v:vector<real<8>,7002>,aelt:vector<real<8>,637001>,a:vector<real<8>,637001>,x:vector<real<8>,7003>,z:vector<real<8>,7003>,p:vector<real<8>,7003>,q:vector<real<8>,7003>,r:vector<real<8>,7003>,w:vector<real<8>,7003>,amult:real<8>,tran:real<8>,d:real<8>,sum:real<8>,rho:real<8>,rho0:real<8>,alpha:real<8>,beta:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
-double timer_read(struct __insieme_globals* var_56, int n) { return (((*(&((*var_56).elapsed))).data[((unsigned int)(n))])); }
-static double timer_read_wrap(void* _closure, struct __insieme_globals* var_56, int n) { return timer_read(var_56, n); }
+double timer_read(struct __insieme_globals* var_50, int n) { return (((*(&((*var_50).elapsed))).data[((unsigned int)(n))])); }
+static double timer_read_wrap(void* _closure, struct __insieme_globals* var_50, int n) { return timer_read(var_50, n); }
 
 // start code fragment :: Prototype for external function: fabs ... type: ((real<8>)->real<8>) //
 double fabs(double);

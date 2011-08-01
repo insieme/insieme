@@ -51,6 +51,7 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -200,6 +201,48 @@ core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core
 		}
 	}
 	return expr;
+}
+
+/**
+ * This function tries to restructure the given expression of a reference to a scalar
+ * into a reference to an array - if possible without using the scalar.to.ref.array literal.
+ *
+ * @param expr the expression to be converted
+ * @return the rewritten, equivalent expression exposing a reference to an array
+ */
+core::ExpressionPtr convertRefScalarToRefArray(const core::ASTBuilder& builder, const core::ExpressionPtr& expr) {
+	assert(expr->getType()->getNodeType() == core::NT_RefType);
+
+	// construct result type
+	core::TypePtr resType = builder.refType(builder.arrayType(core::analysis::getReferencedType(expr->getType())));
+
+	// simple case distinction among structure of expression
+	if (expr->getNodeType() == core::NT_CallExpr) {
+		const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
+		core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
+
+		// check invoked function
+		try {
+
+			// if it is vector-ref-element:
+			if (basic.isVectorRefElem(call->getFunctionExpr()) && core::arithmetic::toFormula(call->getArgument(1)).isZero()) {
+				// convert vector to array instead
+				return builder.callExpr(resType, basic.getRefVectorToRefArray(), call->getArgument(0));
+			}
+
+			// ... or array.ref.element ...
+			if (basic.isArrayRefElem1D(call->getFunctionExpr()) && core::arithmetic::toFormula(call->getArgument(1)).isZero()) {
+				// skip this step!
+				return call->getArgument(0);
+			}
+
+		} catch (const core::arithmetic::NotAFormulaException& ne) {
+			// => subscript is not zero => use default handling
+		}
+	}
+
+	// fall-back solution => use scalar to array literal
+	return builder.callExpr(resType, builder.getBasicGenerator().getScalarToArray(), expr);
 }
 
 // This function performs the requires type conversion, from converting an expression. 
@@ -489,15 +532,15 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	// Use the scalarToArray literal to perform this kind of conversion
 	if ( trgTy->getNodeType() == core::NT_RefType ) {
 		assert( argTy->getNodeType() == core::NT_RefType );
-		const core::TypePtr& subTrgTy = core::static_pointer_cast<const core::RefType>(trgTy)->getElementType();
-		const core::TypePtr& argSubTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
+		const core::TypePtr& subTrgTy = core::analysis::getReferencedType(trgTy);
+		const core::TypePtr& argSubTy = core::analysis::getReferencedType(argTy);
 		if ( subTrgTy->getNodeType() == core::NT_ArrayType ) {
 			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
 			core::ExpressionPtr subExpr = expr;
 			if ( *arrTy->getElementType() != *argSubTy ) {
 				subExpr = convertExprTo(builder, arrTy->getElementType(), expr );
 			}
-			return builder.callExpr( gen.getScalarToArray(), subExpr);
+			return convertRefScalarToRefArray(builder, subExpr);
 		}
 	}
 
@@ -1125,6 +1168,32 @@ public:
 		assert(false && "CXXOperatorCallExpr not yet handled");
 	}
 
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX CONSTRUCTOR CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
+		assert(false && "VisitCXXConstructExpr not yet handled");
+		//return NULL;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX NEW CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
+		//assert(false && "VisitCXXNewExpr not yet handled");
+		return NULL;
+	}
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//						CXX DELETE CALL EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
+		//assert(false && "VisitCXXDeleteExpr not yet handled");
+		return NULL;
+	}
+
+
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							MEMBER EXPRESSION
 	//
@@ -1486,7 +1555,7 @@ public:
 			subExpr = asLValue(subExpr);
 
 			assert(subExpr->getType()->getNodeType() == core::NT_RefType);
-			subExpr = builder.callExpr( builder.getBasicGenerator().getScalarToArray(),  subExpr );
+			subExpr = convertRefScalarToRefArray(builder, subExpr);
 			break;
 		}
 		// *a

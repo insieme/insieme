@@ -112,9 +112,7 @@ core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::E
  * Function to copy all annotations form one NodePtr to another
  */
 void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink) {
-	unsigned int i = 0; // normal iterator and for_each loop leads to infinity loop, go
-	for (auto I = source->getAnnotations().begin(); i < source->getAnnotations().size(); ++I, ++i)
-		sink->addAnnotation(I->second);
+	sink->setAnnotations(source->getAnnotations());
 }
 
 
