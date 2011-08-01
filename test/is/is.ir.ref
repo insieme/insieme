@@ -1,8 +1,8 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
-        decl ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v1 =  new(struct{start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=0-1, B_test_index_array:=[41869, 812306, 5102857, 18232239, 26860214], B_test_rank_array:=[33422937, 10244, 59149, 33135281, 99], C_test_index_array:=[44172927, 72999161, 74326391, 129606274, 21736814], C_test_rank_array:=[61147, 882988, 266290, 133997595, 133525895], KS:=0, R23:=0.0, R46:=0.0, key_buff_ptr_global:= var(vector.to.array(vector.init.uniform(0, 1))), passed_verification:=0, key_array:=vector.init.uniform(0, 1048576), key_buff1:=vector.init.uniform(0, 1048576), key_buff2:=vector.init.uniform(0, 1048576), partial_verify_vals:=vector.init.uniform(0, 5), test_index_array:=vector.init.uniform(0, 5), test_rank_array:=vector.init.uniform(0, 5), S_test_index_array:=[48427, 17148, 23627, 62548, 4431], S_test_rank_array:=[0, 18, 346, 64917, 65463], W_test_index_array:=[357773, 934767, 875723, 898999, 404505], W_test_rank_array:=[1249, 11698, 1039987, 1043896, 1048018], A_test_index_array:=[2112377, 662041, 5336171, 3642833, 4250760], A_test_rank_array:=[104, 17523, 123928, 8288932, 8388264], T23:=0.0, T46:=0.0});
+fun(int<4> v123, ref<array<array<char,1>,1>> v124){
+        decl ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v1 =  new(struct{start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=0-1, B_test_index_array:=[41869, 812306, 5102857, 18232239, 26860214], B_test_rank_array:=[33422937, 10244, 59149, 33135281, 99], C_test_index_array:=[44172927, 72999161, 74326391, 129606274, 21736814], C_test_rank_array:=[61147, 882988, 266290, 133997595, 133525895], KS:=0, R23:=0.0, R46:=0.0, key_buff_ptr_global:=vector.to.array(vector.init.uniform(0, 1)), passed_verification:=0, key_array:=vector.init.uniform(0, 1048576), key_buff1:=vector.init.uniform(0, 1048576), key_buff2:=vector.init.uniform(0, 1048576), partial_verify_vals:=vector.init.uniform(0, 5), test_index_array:=vector.init.uniform(0, 5), test_rank_array:=vector.init.uniform(0, 5), S_test_index_array:=[48427, 17148, 23627, 62548, 4431], S_test_rank_array:=[0, 18, 346, 64917, 65463], W_test_index_array:=[357773, 934767, 875723, 898999, 404505], W_test_rank_array:=[1249, 11698, 1039987, 1043896, 1048018], A_test_index_array:=[2112377, 662041, 5336171, 3642833, 4250760], A_test_rank_array:=[104, 17523, 123928, 8288932, 8388264], T23:=0.0, T46:=0.0});
         decl ref<int<4>> v125 =  var(0);
         decl ref<int<4>> v126 =  var(0);
         decl ref<int<4>> v127 =  var(0);
@@ -42,10 +42,10 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
         printf(string.as.char.pointer("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n"), varlist.pack(()));
         printf(string.as.char.pointer(" Size:  %d  (class %c)\n"), varlist.pack((int.lshift(1, 20), 'W')));
         printf(string.as.char.pointer(" Iterations:   %d\n"), varlist.pack((10)));
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v26, int<4> v27){
-            vector.ref.elem(composite.ref.elem(v26, elapsed, type<vector<real<8>,64>>), v27) := 0.0;
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v41, int<4> v42){
+            vector.ref.elem(composite.ref.elem(v41, elapsed, type<vector<real<8>,64>>), v42) := 0.0;
         }(v1, 0);
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v66, real<8> v67, real<8> v68){
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v66, real<8> v67, real<8> v68){
             decl ref<real<8>> v73 =  var(v67);
             decl ref<real<8>> v74 =  var(v68);
             {
@@ -56,7 +56,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                 v72 := int.lshift(1, 16)/4;
                 {
                     for(decl int<4> v76 = 0 .. int.lshift(1, 20) : 1) {
-                        v69 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        v69 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 =  var(0.0);
                             decl ref<real<8>> v51 =  var(0.0);
                             decl ref<real<8>> v52 =  var(0.0);
@@ -90,11 +90,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 composite.ref.elem(v47, KS, type<int<4>>) := 1;
                             } else { };
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v49, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v54 := v60;
                             v55 := array.ref.elem.1D(v49, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v54;
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v48, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v56 := v60;
                             v57 := array.ref.elem.1D(v48, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v56;
                             v50 := v54*v57+v55*v56;
@@ -107,7 +107,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             array.ref.elem.1D(v48, 0) := v52-composite.ref.elem(v47, T46, type<real<8>>)*v53;
                             return composite.ref.elem(v47, R46, type<real<8>>)*array.ref.elem.1D(v48, 0);
                         }(v66, scalar.to.array(v73), scalar.to.array(v74));
-                        v69 := v69+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        v69 := v69+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 =  var(0.0);
                             decl ref<real<8>> v51 =  var(0.0);
                             decl ref<real<8>> v52 =  var(0.0);
@@ -141,11 +141,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 composite.ref.elem(v47, KS, type<int<4>>) := 1;
                             } else { };
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v49, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v54 := v60;
                             v55 := array.ref.elem.1D(v49, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v54;
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v48, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v56 := v60;
                             v57 := array.ref.elem.1D(v48, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v56;
                             v50 := v54*v57+v55*v56;
@@ -158,7 +158,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             array.ref.elem.1D(v48, 0) := v52-composite.ref.elem(v47, T46, type<real<8>>)*v53;
                             return composite.ref.elem(v47, R46, type<real<8>>)*array.ref.elem.1D(v48, 0);
                         }(v66, scalar.to.array(v73), scalar.to.array(v74));
-                        v69 := v69+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        v69 := v69+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 =  var(0.0);
                             decl ref<real<8>> v51 =  var(0.0);
                             decl ref<real<8>> v52 =  var(0.0);
@@ -192,11 +192,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 composite.ref.elem(v47, KS, type<int<4>>) := 1;
                             } else { };
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v49, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v54 := v60;
                             v55 := array.ref.elem.1D(v49, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v54;
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v48, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v56 := v60;
                             v57 := array.ref.elem.1D(v48, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v56;
                             v50 := v54*v57+v55*v56;
@@ -209,7 +209,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             array.ref.elem.1D(v48, 0) := v52-composite.ref.elem(v47, T46, type<real<8>>)*v53;
                             return composite.ref.elem(v47, R46, type<real<8>>)*array.ref.elem.1D(v48, 0);
                         }(v66, scalar.to.array(v73), scalar.to.array(v74));
-                        v69 := v69+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        v69 := v69+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 =  var(0.0);
                             decl ref<real<8>> v51 =  var(0.0);
                             decl ref<real<8>> v52 =  var(0.0);
@@ -243,11 +243,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 composite.ref.elem(v47, KS, type<int<4>>) := 1;
                             } else { };
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v49, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v54 := v60;
                             v55 := array.ref.elem.1D(v49, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v54;
                             v50 := composite.ref.elem(v47, R23, type<real<8>>)*array.ref.elem.1D(v48, 0);
-                            v60 := v50;
+                            v60 := real.to.int(v50, 4);
                             v56 := v60;
                             v57 := array.ref.elem.1D(v48, 0)-composite.ref.elem(v47, T23, type<real<8>>)*v56;
                             v50 := v54*v57+v55*v56;
@@ -266,7 +266,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                 };
             };
         }(v1, 314159265.00, 1220703125.00);
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
             decl ref<int<4>> v91 =  var(0);
             decl ref<int<4>> v92 =  var(0);
             decl ref<int<4>> v93 =  var(0);
@@ -378,27 +378,27 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                     };
                     v91 := 0+ceil(5-0/1)*1;
                 };
-                if(v90==10) composite.ref.elem(v89, key_buff_ptr_global, type<ref<array<int<4>,1>>>) := ref.vector.to.ref.array(composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>)) else { };
+                if(v90==10) composite.ref.elem(v89, key_buff_ptr_global, type<array<int<4>,1>>) := vector.to.array(composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>)) else { };
             };
         }(v1, 1);
         composite.ref.elem(v1, passed_verification, type<int<4>>) := 0;
         if('W'!='S') printf(string.as.char.pointer("\n   iteration\n"), varlist.pack(())) else { };
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v36, int<4> v37){
-            vector.ref.elem(composite.ref.elem(v36, start, type<vector<real<8>,64>>), v37) := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v33){
-                decl ref<real<8>> v34 =  var(0.0);
-                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v29, ref<array<real<8>,1>> v30){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v31 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
-                    gettimeofday(scalar.to.array(v31), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
-                    if(composite.ref.elem(v29, sec, type<int<4>>)<0) composite.ref.elem(v29, sec, type<int<4>>) := composite.ref.elem(v31, tv_sec, type<int<8>>) else { };
-                    array.ref.elem.1D(v30, 0) := composite.ref.elem(v31, tv_sec, type<int<8>>)-composite.ref.elem(v29, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v31, tv_usec, type<int<8>>);
-                }(v33, scalar.to.array(v34));
-                return v34;
-            }(v36);
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v44, int<4> v45){
+            vector.ref.elem(composite.ref.elem(v44, start, type<vector<real<8>,64>>), v45) := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v30){
+                decl ref<real<8>> v31 =  var(0.0);
+                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v26, ref<array<real<8>,1>> v27){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v28 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
+                    gettimeofday(scalar.to.array(v28),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
+                    if(composite.ref.elem(v26, sec, type<int<4>>)<0) composite.ref.elem(v26, sec, type<int<4>>) := composite.ref.elem(v28, tv_sec, type<int<8>>) else { };
+                    array.ref.elem.1D(v27, 0) := composite.ref.elem(v28, tv_sec, type<int<8>>)-composite.ref.elem(v26, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v28, tv_usec, type<int<8>>);
+                }(v30, scalar.to.array(v31));
+                return v31;
+            }(v44);
         }(v1, 0);
         {
             for(decl int<4> v135 = 1 .. 10+1 : 1) {
                 if('W'!='S') printf(string.as.char.pointer("        %d\n"), varlist.pack((v135))) else { };
-                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
+                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
                     decl ref<int<4>> v91 =  var(0);
                     decl ref<int<4>> v92 =  var(0);
                     decl ref<int<4>> v93 =  var(0);
@@ -510,32 +510,32 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             };
                             v91 := 0+ceil(5-0/1)*1;
                         };
-                        if(v90==10) composite.ref.elem(v89, key_buff_ptr_global, type<ref<array<int<4>,1>>>) := ref.vector.to.ref.array(composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>)) else { };
+                        if(v90==10) composite.ref.elem(v89, key_buff_ptr_global, type<array<int<4>,1>>) := vector.to.array(composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>)) else { };
                     };
                 }(v1, v135);
             };
             v126 := 1+ceil(10+1-1/1)*1;
         };
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v39, int<4> v40){
-            decl ref<real<8>> v41 =  var(0.0);
-            decl ref<real<8>> v42 =  var(0.0);
-            v42 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v33){
-                decl ref<real<8>> v34 =  var(0.0);
-                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v29, ref<array<real<8>,1>> v30){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v31 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
-                    gettimeofday(scalar.to.array(v31), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
-                    if(composite.ref.elem(v29, sec, type<int<4>>)<0) composite.ref.elem(v29, sec, type<int<4>>) := composite.ref.elem(v31, tv_sec, type<int<8>>) else { };
-                    array.ref.elem.1D(v30, 0) := composite.ref.elem(v31, tv_sec, type<int<8>>)-composite.ref.elem(v29, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v31, tv_usec, type<int<8>>);
-                }(v33, scalar.to.array(v34));
-                return v34;
-            }(v39);
-            v41 := v42-vector.ref.elem(composite.ref.elem(v39, start, type<vector<real<8>,64>>), v40);
-            vector.ref.elem(composite.ref.elem(v39, elapsed, type<vector<real<8>,64>>), v40) := vector.ref.elem(composite.ref.elem(v39, elapsed, type<vector<real<8>,64>>), v40)+v41;
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v33, int<4> v34){
+            decl ref<real<8>> v35 =  var(0.0);
+            decl ref<real<8>> v36 =  var(0.0);
+            v36 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v30){
+                decl ref<real<8>> v31 =  var(0.0);
+                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v26, ref<array<real<8>,1>> v27){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v28 =  var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>));
+                    gettimeofday(scalar.to.array(v28),  var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>)));
+                    if(composite.ref.elem(v26, sec, type<int<4>>)<0) composite.ref.elem(v26, sec, type<int<4>>) := composite.ref.elem(v28, tv_sec, type<int<8>>) else { };
+                    array.ref.elem.1D(v27, 0) := composite.ref.elem(v28, tv_sec, type<int<8>>)-composite.ref.elem(v26, sec, type<int<4>>)+1.0e-6*composite.ref.elem(v28, tv_usec, type<int<8>>);
+                }(v30, scalar.to.array(v31));
+                return v31;
+            }(v33);
+            v35 := v36-vector.ref.elem(composite.ref.elem(v33, start, type<vector<real<8>,64>>), v34);
+            vector.ref.elem(composite.ref.elem(v33, elapsed, type<vector<real<8>,64>>), v34) := vector.ref.elem(composite.ref.elem(v33, elapsed, type<vector<real<8>,64>>), v34)+v35;
         }(v1, 0);
-        v129 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v44, int<4> v45){
-            return vector.ref.elem(composite.ref.elem(v44, elapsed, type<vector<real<8>,64>>), v45);
+        v129 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v38, int<4> v39){
+            return vector.ref.elem(composite.ref.elem(v38, elapsed, type<vector<real<8>,64>>), v39);
         }(v1, 0);
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v78){
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v78){
             decl ref<int<4>> v79 =  var(0);
             decl ref<int<4>> v80 =  var(0);
             decl ref<int<4>> v81 =  var(0);
@@ -543,7 +543,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
             decl ref<int<4>> v83 =  var(0);
             {
                 for(decl int<4> v85 = 0 .. int.lshift(1, 20) : 1) 
-                    vector.ref.elem(composite.ref.elem(v78, key_array, type<vector<int<4>,1048576>>), int.preDec(array.ref.elem.1D(composite.ref.elem(v78, key_buff_ptr_global, type<ref<array<int<4>,1>>>), vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), v85)))) := vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), v85)
+                    vector.ref.elem(composite.ref.elem(v78, key_array, type<vector<int<4>,1048576>>), int.preDec(array.ref.elem.1D(composite.ref.elem(v78, key_buff_ptr_global, type<array<int<4>,1>>), vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), v85)))) := vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), v85)
                 ;
                 v79 := 0+ceil(int.lshift(1, 20)-0/1)*1;
             };
@@ -560,7 +560,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
         }(v1);
         if(int.ne(composite.ref.elem(v1, passed_verification, type<int<4>>), 5*10+1)) composite.ref.elem(v1, passed_verification, type<int<4>>) := 0 else { };
         fun(ref<array<char,1>> v2, char v3, int<4> v4, int<4> v5, int<4> v6, int<4> v7, int<4> v8, real<8> v9, real<8> v10, ref<array<char,1>> v11, int<4> v12, ref<array<char,1>> v13, ref<array<char,1>> v14, ref<array<char,1>> v15, ref<array<char,1>> v16, ref<array<char,1>> v17, ref<array<char,1>> v18, ref<array<char,1>> v19, ref<array<char,1>> v20, ref<array<char,1>> v21){
-            decl ref<ref<array<char,1>>> v22 =  var(string.as.char.pointer("1000"));
+            decl ref<array<char,1>> v22 = string.as.char.pointer("1000");
             printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v2)));
             printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((v3)));
             if(v5==0&&bind(){fun(int<4> v23)return v23==0(v6)}) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v4))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v4, v5, v6)));
@@ -589,8 +589,8 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
-        decl ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v1 = ( new(struct{start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1), B_test_index_array:=[41869, 812306, 5102857, 18232239, 26860214], B_test_rank_array:=[33422937, 10244, 59149, 33135281, 99], C_test_index_array:=[44172927, 72999161, 74326391, 129606274, 21736814], C_test_rank_array:=[61147, 882988, 266290, 133997595, 133525895], KS:=0, R23:=0.0, R46:=0.0, key_buff_ptr_global:=( var(vector.to.array(vector.init.uniform(0, 1)))), passed_verification:=0, key_array:=vector.init.uniform(0, 1048576), key_buff1:=vector.init.uniform(0, 1048576), key_buff2:=vector.init.uniform(0, 1048576), partial_verify_vals:=vector.init.uniform(0, 5), test_index_array:=vector.init.uniform(0, 5), test_rank_array:=vector.init.uniform(0, 5), S_test_index_array:=[48427, 17148, 23627, 62548, 4431], S_test_rank_array:=[0, 18, 346, 64917, 65463], W_test_index_array:=[357773, 934767, 875723, 898999, 404505], W_test_rank_array:=[1249, 11698, 1039987, 1043896, 1048018], A_test_index_array:=[2112377, 662041, 5336171, 3642833, 4250760], A_test_rank_array:=[104, 17523, 123928, 8288932, 8388264], T23:=0.0, T46:=0.0}));
+fun(int<4> v123, ref<array<array<char,1>,1>> v124){
+        decl ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v1 = ( new(struct{start:=vector.init.uniform(0.0, 64), elapsed:=vector.init.uniform(0.0, 64), sec:=(CAST<int<4>>(0)-1), B_test_index_array:=[41869, 812306, 5102857, 18232239, 26860214], B_test_rank_array:=[33422937, 10244, 59149, 33135281, 99], C_test_index_array:=[44172927, 72999161, 74326391, 129606274, 21736814], C_test_rank_array:=[61147, 882988, 266290, 133997595, 133525895], KS:=0, R23:=0.0, R46:=0.0, key_buff_ptr_global:=vector.to.array(vector.init.uniform(0, 1)), passed_verification:=0, key_array:=vector.init.uniform(0, 1048576), key_buff1:=vector.init.uniform(0, 1048576), key_buff2:=vector.init.uniform(0, 1048576), partial_verify_vals:=vector.init.uniform(0, 5), test_index_array:=vector.init.uniform(0, 5), test_rank_array:=vector.init.uniform(0, 5), S_test_index_array:=[48427, 17148, 23627, 62548, 4431], S_test_rank_array:=[0, 18, 346, 64917, 65463], W_test_index_array:=[357773, 934767, 875723, 898999, 404505], W_test_rank_array:=[1249, 11698, 1039987, 1043896, 1048018], A_test_index_array:=[2112377, 662041, 5336171, 3642833, 4250760], A_test_rank_array:=[104, 17523, 123928, 8288932, 8388264], T23:=0.0, T46:=0.0}));
         decl ref<int<4>> v125 = ( var(0));
         decl ref<int<4>> v126 = ( var(0));
         decl ref<int<4>> v127 = ( var(0));
@@ -630,10 +630,10 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
         printf(string.as.char.pointer("\n\n NAS Parallel Benchmarks 2.3 OpenMP C version - IS Benchmark\n\n"), varlist.pack(()));
         printf(string.as.char.pointer(" Size:  %d  (class %c)\n"), varlist.pack((int.lshift(1, 20), 'W')));
         printf(string.as.char.pointer(" Iterations:   %d\n"), varlist.pack((10)));
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v26, int<4> v27){
-            (vector.ref.elem(composite.ref.elem(v26, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v27)) := 0.0);
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v41, int<4> v42){
+            (vector.ref.elem(composite.ref.elem(v41, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v42)) := 0.0);
         }(v1, 0);
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v66, real<8> v67, real<8> v68){
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v66, real<8> v67, real<8> v68){
             decl ref<real<8>> v73 = ( var(v67));
             decl ref<real<8>> v74 = ( var(v68));
             {
@@ -644,7 +644,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                 (v72 := (int.lshift(1, 16)/4));
                 {
                     for(decl int<4> v76 = 0 .. int.lshift(1, 20) : 1) {
-                        (v69 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        (v69 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 = ( var(0.0));
                             decl ref<real<8>> v51 = ( var(0.0));
                             decl ref<real<8>> v52 = ( var(0.0));
@@ -678,11 +678,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 (composite.ref.elem(v47, KS, type<int<4>>) := 1);
                             } else { };
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v49, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v54 := CAST<real<8>>(( *v60)));
                             (v55 := (( *array.ref.elem.1D(v49, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v54))));
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v48, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v56 := CAST<real<8>>(( *v60)));
                             (v57 := (( *array.ref.elem.1D(v48, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v56))));
                             (v50 := ((( *v54)*( *v57))+(( *v55)*( *v56))));
@@ -695,7 +695,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             (array.ref.elem.1D(v48, 0) := (( *v52)-(( *composite.ref.elem(v47, T46, type<real<8>>))*( *v53))));
                             return (( *composite.ref.elem(v47, R46, type<real<8>>))*( *array.ref.elem.1D(v48, 0)));
                         }(v66, scalar.to.array(v73), scalar.to.array(v74)));
-                        (v69 := (( *v69)+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        (v69 := (( *v69)+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 = ( var(0.0));
                             decl ref<real<8>> v51 = ( var(0.0));
                             decl ref<real<8>> v52 = ( var(0.0));
@@ -729,11 +729,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 (composite.ref.elem(v47, KS, type<int<4>>) := 1);
                             } else { };
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v49, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v54 := CAST<real<8>>(( *v60)));
                             (v55 := (( *array.ref.elem.1D(v49, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v54))));
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v48, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v56 := CAST<real<8>>(( *v60)));
                             (v57 := (( *array.ref.elem.1D(v48, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v56))));
                             (v50 := ((( *v54)*( *v57))+(( *v55)*( *v56))));
@@ -746,7 +746,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             (array.ref.elem.1D(v48, 0) := (( *v52)-(( *composite.ref.elem(v47, T46, type<real<8>>))*( *v53))));
                             return (( *composite.ref.elem(v47, R46, type<real<8>>))*( *array.ref.elem.1D(v48, 0)));
                         }(v66, scalar.to.array(v73), scalar.to.array(v74))));
-                        (v69 := (( *v69)+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        (v69 := (( *v69)+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 = ( var(0.0));
                             decl ref<real<8>> v51 = ( var(0.0));
                             decl ref<real<8>> v52 = ( var(0.0));
@@ -780,11 +780,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 (composite.ref.elem(v47, KS, type<int<4>>) := 1);
                             } else { };
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v49, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v54 := CAST<real<8>>(( *v60)));
                             (v55 := (( *array.ref.elem.1D(v49, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v54))));
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v48, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v56 := CAST<real<8>>(( *v60)));
                             (v57 := (( *array.ref.elem.1D(v48, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v56))));
                             (v50 := ((( *v54)*( *v57))+(( *v55)*( *v56))));
@@ -797,7 +797,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             (array.ref.elem.1D(v48, 0) := (( *v52)-(( *composite.ref.elem(v47, T46, type<real<8>>))*( *v53))));
                             return (( *composite.ref.elem(v47, R46, type<real<8>>))*( *array.ref.elem.1D(v48, 0)));
                         }(v66, scalar.to.array(v73), scalar.to.array(v74))));
-                        (v69 := (( *v69)+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
+                        (v69 := (( *v69)+fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v47, ref<array<real<8>,1>> v48, ref<array<real<8>,1>> v49){
                             decl ref<real<8>> v50 = ( var(0.0));
                             decl ref<real<8>> v51 = ( var(0.0));
                             decl ref<real<8>> v52 = ( var(0.0));
@@ -831,11 +831,11 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                                 (composite.ref.elem(v47, KS, type<int<4>>) := 1);
                             } else { };
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v49, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v54 := CAST<real<8>>(( *v60)));
                             (v55 := (( *array.ref.elem.1D(v49, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v54))));
                             (v50 := (( *composite.ref.elem(v47, R23, type<real<8>>))*( *array.ref.elem.1D(v48, 0))));
-                            (v60 := CAST<int<4>>(( *v50)));
+                            (v60 := real.to.int(( *v50), 4));
                             (v56 := CAST<real<8>>(( *v60)));
                             (v57 := (( *array.ref.elem.1D(v48, 0))-(( *composite.ref.elem(v47, T23, type<real<8>>))*( *v56))));
                             (v50 := ((( *v54)*( *v57))+(( *v55)*( *v56))));
@@ -854,7 +854,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                 };
             };
         }(v1, 314159265.00, 1220703125.00);
-        <m id=1>fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
+        <m id=1>fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
             decl ref<int<4>> v91 = ( var(0));
             decl ref<int<4>> v92 = ( var(0));
             decl ref<int<4>> v93 = ( var(0));
@@ -966,27 +966,27 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                     };
                     (v91 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
                 };
-                if((v90==10)) (composite.ref.elem(v89, key_buff_ptr_global, type<ref<array<int<4>,1>>>) := ref.vector.to.ref.array(composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>))) else { };
+                if((v90==10)) (composite.ref.elem(v89, key_buff_ptr_global, type<array<int<4>,1>>) := vector.to.array(( *composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>)))) else { };
             }</m>;
         }(v1, 1)</m>;
         (composite.ref.elem(v1, passed_verification, type<int<4>>) := 0);
         if(('W'!='S')) printf(string.as.char.pointer("\n   iteration\n"), varlist.pack(())) else { };
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v36, int<4> v37){
-            (vector.ref.elem(composite.ref.elem(v36, start, type<vector<real<8>,64>>), CAST<uint<4>>(v37)) := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v33){
-                decl ref<real<8>> v34 = ( var(0.0));
-                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v29, ref<array<real<8>,1>> v30){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v31 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
-                    gettimeofday(scalar.to.array(v31), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
-                    if((( *composite.ref.elem(v29, sec, type<int<4>>))<0)) (composite.ref.elem(v29, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v31, tv_sec, type<int<8>>)))) else { };
-                    (array.ref.elem.1D(v30, 0) := (CAST<real<8>>((( *composite.ref.elem(v31, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v29, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v31, tv_usec, type<int<8>>))))));
-                }(v33, scalar.to.array(v34));
-                return ( *v34);
-            }(v36));
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v44, int<4> v45){
+            (vector.ref.elem(composite.ref.elem(v44, start, type<vector<real<8>,64>>), CAST<uint<4>>(v45)) := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v30){
+                decl ref<real<8>> v31 = ( var(0.0));
+                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v26, ref<array<real<8>,1>> v27){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v28 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
+                    gettimeofday(scalar.to.array(v28), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
+                    if((( *composite.ref.elem(v26, sec, type<int<4>>))<0)) (composite.ref.elem(v26, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v28, tv_sec, type<int<8>>)))) else { };
+                    (array.ref.elem.1D(v27, 0) := (CAST<real<8>>((( *composite.ref.elem(v28, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v26, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v28, tv_usec, type<int<8>>))))));
+                }(v30, scalar.to.array(v31));
+                return ( *v31);
+            }(v44));
         }(v1, 0);
         {
             <m id=7>for(decl int<4> v135 = 1 .. (10+1) : 1) {
                 <m id=6>if(('W'!='S')) printf(string.as.char.pointer("        %d\n"), varlist.pack((v135))) else { }</m>;
-                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
+                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v89, int<4> v90){
                     decl ref<int<4>> v91 = ( var(0));
                     decl ref<int<4>> v92 = ( var(0));
                     decl ref<int<4>> v93 = ( var(0));
@@ -1098,32 +1098,32 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
                             };
                             (v91 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((5-0))/CAST<real<8>>(1))))*1)));
                         };
-                        if((v90==10)) (composite.ref.elem(v89, key_buff_ptr_global, type<ref<array<int<4>,1>>>) := ref.vector.to.ref.array(composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>))) else { };
+                        if((v90==10)) (composite.ref.elem(v89, key_buff_ptr_global, type<array<int<4>,1>>) := vector.to.array(( *composite.ref.elem(v89, key_buff1, type<vector<int<4>,1048576>>)))) else { };
                     }</m>;
                 }(v1, v135);
             }</m>;
             (v126 := (1+(CAST<int<4>>(ceil((CAST<real<8>>(((10+1)-1))/CAST<real<8>>(1))))*1)));
         };
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v39, int<4> v40){
-            decl ref<real<8>> v41 = ( var(0.0));
-            decl ref<real<8>> v42 = ( var(0.0));
-            (v42 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v33){
-                decl ref<real<8>> v34 = ( var(0.0));
-                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v29, ref<array<real<8>,1>> v30){
-                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v31 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
-                    gettimeofday(scalar.to.array(v31), get.null(type<array<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>,1>>));
-                    if((( *composite.ref.elem(v29, sec, type<int<4>>))<0)) (composite.ref.elem(v29, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v31, tv_sec, type<int<8>>)))) else { };
-                    (array.ref.elem.1D(v30, 0) := (CAST<real<8>>((( *composite.ref.elem(v31, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v29, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v31, tv_usec, type<int<8>>))))));
-                }(v33, scalar.to.array(v34));
-                return ( *v34);
-            }(v39));
-            (v41 := (( *v42)-( *vector.ref.elem(composite.ref.elem(v39, start, type<vector<real<8>,64>>), CAST<uint<4>>(v40)))));
-            (vector.ref.elem(composite.ref.elem(v39, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v40)) := (( *vector.ref.elem(composite.ref.elem(v39, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v40)))+( *v41)));
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v33, int<4> v34){
+            decl ref<real<8>> v35 = ( var(0.0));
+            decl ref<real<8>> v36 = ( var(0.0));
+            (v36 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v30){
+                decl ref<real<8>> v31 = ( var(0.0));
+                fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v26, ref<array<real<8>,1>> v27){
+                    decl ref<struct<tv_sec:int<8>,tv_usec:int<8>>> v28 = ( var(undefined(type<struct<tv_sec:int<8>,tv_usec:int<8>>>)));
+                    gettimeofday(scalar.to.array(v28), ( var(get.null(type<struct<tz_minuteswest:int<4>,tz_dsttime:int<4>>>))));
+                    if((( *composite.ref.elem(v26, sec, type<int<4>>))<0)) (composite.ref.elem(v26, sec, type<int<4>>) := CAST<int<4>>(( *composite.ref.elem(v28, tv_sec, type<int<8>>)))) else { };
+                    (array.ref.elem.1D(v27, 0) := (CAST<real<8>>((( *composite.ref.elem(v28, tv_sec, type<int<8>>))-CAST<int<8>>(( *composite.ref.elem(v26, sec, type<int<4>>)))))+(1.0e-6*CAST<real<8>>(( *composite.ref.elem(v28, tv_usec, type<int<8>>))))));
+                }(v30, scalar.to.array(v31));
+                return ( *v31);
+            }(v33));
+            (v35 := (( *v36)-( *vector.ref.elem(composite.ref.elem(v33, start, type<vector<real<8>,64>>), CAST<uint<4>>(v34)))));
+            (vector.ref.elem(composite.ref.elem(v33, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v34)) := (( *vector.ref.elem(composite.ref.elem(v33, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v34)))+( *v35)));
         }(v1, 0);
-        (v129 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v44, int<4> v45){
-            return ( *vector.ref.elem(composite.ref.elem(v44, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v45)));
+        (v129 := fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v38, int<4> v39){
+            return ( *vector.ref.elem(composite.ref.elem(v38, elapsed, type<vector<real<8>,64>>), CAST<uint<4>>(v39)));
         }(v1, 0));
-        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:ref<array<int<4>,1>>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v78){
+        fun(ref<struct<start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>,B_test_index_array:vector<int<4>,5>,B_test_rank_array:vector<int<4>,5>,C_test_index_array:vector<int<4>,5>,C_test_rank_array:vector<int<4>,5>,KS:int<4>,R23:real<8>,R46:real<8>,key_buff_ptr_global:array<int<4>,1>,passed_verification:int<4>,key_array:vector<int<4>,1048576>,key_buff1:vector<int<4>,1048576>,key_buff2:vector<int<4>,1048576>,partial_verify_vals:vector<int<4>,5>,test_index_array:vector<int<4>,5>,test_rank_array:vector<int<4>,5>,S_test_index_array:vector<int<4>,5>,S_test_rank_array:vector<int<4>,5>,W_test_index_array:vector<int<4>,5>,W_test_rank_array:vector<int<4>,5>,A_test_index_array:vector<int<4>,5>,A_test_rank_array:vector<int<4>,5>,T23:real<8>,T46:real<8>>> v78){
             decl ref<int<4>> v79 = ( var(0));
             decl ref<int<4>> v80 = ( var(0));
             decl ref<int<4>> v81 = ( var(0));
@@ -1131,7 +1131,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
             decl ref<int<4>> v83 = ( var(0));
             {
                 for(decl int<4> v85 = 0 .. int.lshift(1, 20) : 1) 
-                    (vector.ref.elem(composite.ref.elem(v78, key_array, type<vector<int<4>,1048576>>), CAST<uint<4>>(int.preDec(array.ref.elem.1D(( *composite.ref.elem(v78, key_buff_ptr_global, type<ref<array<int<4>,1>>>)), CAST<uint<4>>(( *vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), CAST<uint<4>>(v85)))))))) := ( *vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), CAST<uint<4>>(v85))))
+                    (vector.ref.elem(composite.ref.elem(v78, key_array, type<vector<int<4>,1048576>>), CAST<uint<4>>(int.preDec(array.ref.elem.1D(composite.ref.elem(v78, key_buff_ptr_global, type<array<int<4>,1>>), CAST<uint<4>>(( *vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), CAST<uint<4>>(v85)))))))) := ( *vector.ref.elem(composite.ref.elem(v78, key_buff2, type<vector<int<4>,1048576>>), CAST<uint<4>>(v85))))
                 ;
                 (v79 := (0+(CAST<int<4>>(ceil((CAST<real<8>>((int.lshift(1, 20)-0))/CAST<real<8>>(1))))*1)));
             };
@@ -1148,7 +1148,7 @@ fun(int<4> v123, ref<array<ref<array<char,1>>,1>> v124){
         }(v1);
         if(int.ne(( *composite.ref.elem(v1, passed_verification, type<int<4>>)), ((5*10)+1))) (composite.ref.elem(v1, passed_verification, type<int<4>>) := 0) else { };
         fun(ref<array<char,1>> v2, char v3, int<4> v4, int<4> v5, int<4> v6, int<4> v7, int<4> v8, real<8> v9, real<8> v10, ref<array<char,1>> v11, int<4> v12, ref<array<char,1>> v13, ref<array<char,1>> v14, ref<array<char,1>> v15, ref<array<char,1>> v16, ref<array<char,1>> v17, ref<array<char,1>> v18, ref<array<char,1>> v19, ref<array<char,1>> v20, ref<array<char,1>> v21){
-            decl ref<ref<array<char,1>>> v22 = ( var(string.as.char.pointer("1000")));
+            decl ref<array<char,1>> v22 = string.as.char.pointer("1000");
             printf(string.as.char.pointer("\n\n %s Benchmark Completed\n"), varlist.pack((v2)));
             printf(string.as.char.pointer(" Class           =                        %c\n"), varlist.pack((CAST<int<4>>(v3))));
             if(((v5==0)&&bind(){fun(int<4> v23)return (v23==0)(v6)})) printf(string.as.char.pointer(" Size            =             %12d\n"), varlist.pack((v4))) else printf(string.as.char.pointer(" Size            =              %3dx%3dx%3d\n"), varlist.pack((v4, v5, v6)));

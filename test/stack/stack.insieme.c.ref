@@ -58,11 +58,11 @@ static int pop_wrap(void* _closure, struct stack* stack) { return pop(stack); }
 
 // start code fragment :: Definition of dumpStack ... type: ((ref<array<struct<top:ref<array<rec 'elem.{'elem=struct<value:int<4>,next:ref<array<'elem,1>>>},1>>>,1>>)->unit) //
 void dumpStack(struct stack* stack){
-	struct stack* var_5 = stack;
+	struct stack* var_3 = stack;
 	{
-		while((!((*(&((((var_5)[0])).top)))==0))) {
-			struct item* tmp = (*(&((((var_5)[0])).top)));
-			((*(&((((var_5)[0])).top))) = (*(&((((tmp)[0])).next))));
+		while((!((*(&((((var_3)[0])).top)))==0))) {
+			struct item* tmp = (*(&((((var_3)[0])).top)));
+			((*(&((((var_3)[0])).top))) = (*(&((((tmp)[0])).next))));
 			free((tmp));
 		};
 		;
