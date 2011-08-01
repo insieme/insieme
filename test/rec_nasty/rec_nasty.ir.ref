@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v10, ref<array<ref<array<char,1>>,1>> v11){
+fun(int<4> v10, ref<array<array<char,1>,1>> v11){
         printf(string.as.char.pointer("%d\n"), varlist.pack((recFun v5 {
             v5 = fun(int<4> v7){
                 if(v7>0) return v6(v7-1) else { };
@@ -32,7 +32,7 @@ fun(int<4> v10, ref<array<ref<array<char,1>>,1>> v11){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v10, ref<array<ref<array<char,1>>,1>> v11){
+fun(int<4> v10, ref<array<array<char,1>,1>> v11){
         printf(string.as.char.pointer("%d\n"), varlist.pack((recFun v5 {
             v5 = fun(int<4> v7){
                 if((v7>0)) return v6((v7-1)) else { };

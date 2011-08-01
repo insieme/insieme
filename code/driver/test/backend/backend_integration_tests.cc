@@ -53,7 +53,7 @@ namespace insieme {
 namespace backend {
 
 
-//TEST(FullBackend, HelloWorld) {
+TEST(FullBackend, HelloWorld) {
 //
 //	core::NodeManager manager;
 //
@@ -84,7 +84,7 @@ namespace backend {
 //	compiler.addFlag("-lm");
 //	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
 //
-//}
+}
 
 } // end namespace backend
 } // end namespace insieme

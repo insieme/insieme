@@ -1,29 +1,29 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, ref<array<ref<array<char,1>>,1>> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v3 =  var(666);
-        decl ref<ref<array<int<4>,1>>> v4 =  var(scalar.to.array(v3));
-        decl ref<ref<array<ref<array<int<4>,1>>,1>>> v5 =  var(scalar.to.array(v4));
-        decl ref<ref<array<int<4>,1>>> v6 =  var(array.ref.elem.1D(v5, 0));
+        decl ref<array<int<4>,1>> v4 = scalar.to.array(v3);
+        decl ref<array<array<int<4>,1>,1>> v5 = scalar.to.array(v4);
+        decl ref<array<int<4>,1>> v6 = array.ref.elem.1D(v5, 0);
         v4 := scalar.to.array(v3);
-        if(!is.null(v4)&&bind(){fun(ref<ref<array<int<4>,1>>> v7)return !ptr.eq(v7, get.null(type<array<int<4>,1>>))(v4)}) {
+        if(!is.null(v4)&&bind(){fun(ref<array<int<4>,1>> v7)return !ptr.eq(v7, get.null(type<int<4>>))(v4)}) {
             printf(string.as.char.pointer("CHECK!\n"), varlist.pack(()));
         } else { };
-        if(!!is.null(v4)||bind(){fun(ref<ref<array<int<4>,1>>> v9)return ptr.eq(v9, get.null(type<array<int<4>,1>>))(v4)}) {
+        if(!!is.null(v4)||bind(){fun(ref<array<int<4>,1>> v9)return ptr.eq(v9, get.null(type<int<4>>))(v4)}) {
             printf(string.as.char.pointer("DOES NOT CHECK\n"), varlist.pack(()));
         } else { };
-        if(array.ref.elem.1D(v4, 0)==v3||bind(){fun(ref<ref<array<int<4>,1>>> v11)return array.ref.elem.1D(v11, 0)==666(v4)}) {
+        if(array.ref.elem.1D(v4, 0)==v3||bind(){fun(ref<array<int<4>,1>> v11)return array.ref.elem.1D(v11, 0)==666(v4)}) {
             printf(string.as.char.pointer("WORKS!\n"), varlist.pack(()));
         } else { };
         if(int.ne(array.ref.elem.1D(array.ref.elem.1D(scalar.to.array(v4), 0), 0), v3)) {
             printf(string.as.char.pointer("DOES NOT WORK!\n"), varlist.pack(()));
         } else { };
-        if(ptr.eq(v4, array.ref.elem.1D(v5, 0))&&bind(){fun(ref<ref<array<int<4>,1>>> v13, ref<ref<array<int<4>,1>>> v14)return ptr.eq(v14, v13)(v4, v6)}) {
+        if(ptr.eq(v4, array.ref.elem.1D(v5, 0))&&bind(){fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14)return ptr.eq(v14, v13)(v4, v6)}) {
             printf(string.as.char.pointer("AWESOME\n"), varlist.pack(()));
         } else { };
         array.ref.elem.1D(v4, 0) := 0;
-        if(array.ref.elem.1D(v6, 0)==0&&bind(){fun(ref<ref<array<ref<array<int<4>,1>>,1>>> v16)return array.ref.elem.1D(array.ref.elem.1D(v16, 0), 0)==0(v5)}) {
+        if(array.ref.elem.1D(v6, 0)==0&&bind(){fun(ref<array<array<int<4>,1>,1>> v16)return array.ref.elem.1D(array.ref.elem.1D(v16, 0), 0)==0(v5)}) {
             printf(string.as.char.pointer("SUPER AWESOME\n"), varlist.pack(()));
         } else { };
     }
@@ -34,29 +34,29 @@ fun(int<4> v1, ref<array<ref<array<char,1>>,1>> v2){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v1, ref<array<ref<array<char,1>>,1>> v2){
+fun(int<4> v1, ref<array<array<char,1>,1>> v2){
         decl ref<int<4>> v3 = ( var(666));
-        decl ref<ref<array<int<4>,1>>> v4 = ( var(scalar.to.array(v3)));
-        decl ref<ref<array<ref<array<int<4>,1>>,1>>> v5 = ( var(scalar.to.array(v4)));
-        decl ref<ref<array<int<4>,1>>> v6 = ( var(( *array.ref.elem.1D(( *v5), 0))));
-        (v4 := scalar.to.array(v3));
-        if(((!is.null(( *v4)))&&bind(){fun(ref<ref<array<int<4>,1>>> v7)return (!ptr.eq(( *v7), get.null(type<array<int<4>,1>>)))(v4)})) {
+        decl ref<array<int<4>,1>> v4 = scalar.to.array(v3);
+        decl ref<array<array<int<4>,1>,1>> v5 = scalar.to.array(v4);
+        decl ref<array<int<4>,1>> v6 = array.ref.elem.1D(v5, 0);
+        (v4 := ( *scalar.to.array(v3)));
+        if(((!is.null(( *v4)))&&bind(){fun(ref<array<int<4>,1>> v7)return (!ptr.eq(( *v7), get.null(type<int<4>>)))(v4)})) {
             printf(string.as.char.pointer("CHECK!\n"), varlist.pack(()));
         } else { };
-        if(((!(!is.null(( *v4))))||bind(){fun(ref<ref<array<int<4>,1>>> v9)return ptr.eq(( *v9), get.null(type<array<int<4>,1>>))(v4)})) {
+        if(((!(!is.null(( *v4))))||bind(){fun(ref<array<int<4>,1>> v9)return ptr.eq(( *v9), get.null(type<int<4>>))(v4)})) {
             printf(string.as.char.pointer("DOES NOT CHECK\n"), varlist.pack(()));
         } else { };
-        if(((( *array.ref.elem.1D(( *v4), 0))==( *v3))||bind(){fun(ref<ref<array<int<4>,1>>> v11)return (( *array.ref.elem.1D(( *v11), 0))==666)(v4)})) {
+        if(((( *array.ref.elem.1D(v4, 0))==( *v3))||bind(){fun(ref<array<int<4>,1>> v11)return (( *array.ref.elem.1D(v11, 0))==666)(v4)})) {
             printf(string.as.char.pointer("WORKS!\n"), varlist.pack(()));
         } else { };
-        if(int.ne(( *array.ref.elem.1D(( *array.ref.elem.1D(scalar.to.array(v4), 0)), 0)), ( *v3))) {
+        if(int.ne(( *array.ref.elem.1D(array.ref.elem.1D(scalar.to.array(v4), 0), 0)), ( *v3))) {
             printf(string.as.char.pointer("DOES NOT WORK!\n"), varlist.pack(()));
         } else { };
-        if((ptr.eq(( *v4), ( *array.ref.elem.1D(( *v5), 0)))&&bind(){fun(ref<ref<array<int<4>,1>>> v13, ref<ref<array<int<4>,1>>> v14)return ptr.eq(( *v14), ( *v13))(v4, v6)})) {
+        if((ptr.eq(( *v4), ( *array.ref.elem.1D(v5, 0)))&&bind(){fun(ref<array<int<4>,1>> v13, ref<array<int<4>,1>> v14)return ptr.eq(( *v14), ( *v13))(v4, v6)})) {
             printf(string.as.char.pointer("AWESOME\n"), varlist.pack(()));
         } else { };
-        (array.ref.elem.1D(( *v4), 0) := 0);
-        if(((( *array.ref.elem.1D(( *v6), 0))==0)&&bind(){fun(ref<ref<array<ref<array<int<4>,1>>,1>>> v16)return (( *array.ref.elem.1D(( *array.ref.elem.1D(( *v16), 0)), 0))==0)(v5)})) {
+        (array.ref.elem.1D(v4, 0) := 0);
+        if(((( *array.ref.elem.1D(v6, 0))==0)&&bind(){fun(ref<array<array<int<4>,1>,1>> v16)return (( *array.ref.elem.1D(array.ref.elem.1D(v16, 0), 0))==0)(v5)})) {
             printf(string.as.char.pointer("SUPER AWESOME\n"), varlist.pack(()));
         } else { };
     }

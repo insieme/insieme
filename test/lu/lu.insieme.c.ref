@@ -274,7 +274,7 @@ void read_input(struct __insieme_globals* var_53){
 		while((fgetc((fp))!=10)) {};
 		while((fgetc((fp))!=10)) {};
 		while((fgetc((fp))!=10)) {};
-		fscanf((fp), "%lf%lf%lf%lf%lf", (&((*(&((*var_53).tolrsd))).data[((unsigned int)(0))])), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(1))])), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(2))])), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(3))])), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(4))])));
+		fscanf((fp), "%lf%lf%lf%lf%lf", (((double*){(*(&((*var_53).tolrsd))).data})), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(1))])), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(2))])), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(3))])), (&((*(&((*var_53).tolrsd))).data[((unsigned int)(4))])));
 		while((fgetc((fp))!=10)) {};
 		while((fgetc((fp))!=10)) {};
 		while((fgetc((fp))!=10)) {};
@@ -466,8 +466,8 @@ void setbv(struct __insieme_globals* var_88){
 			{
 				for(int var_107 = 0; var_107 < (*(&((*var_88).ny))); var_107 += 1) {
 					((jglob) = var_107);
-					exact(var_88, (iglob), (jglob), 0, (&((((((((*(&((*var_88).u))).data[((unsigned int)(var_109))])).data[((unsigned int)(var_107))])).data[((unsigned int)(0))])).data[((unsigned int)(0))])));
-					exact(var_88, (iglob), (jglob), ((*(&((*var_88).nz)))-1), (&((((((((*(&((*var_88).u))).data[((unsigned int)(var_109))])).data[((unsigned int)(var_107))])).data[((unsigned int)(((*(&((*var_88).nz)))-1)))])).data[((unsigned int)(0))])));
+					exact(var_88, (iglob), (jglob), 0, (((double*){(((((((*(&((*var_88).u))).data[((unsigned int)(var_109))])).data[((unsigned int)(var_107))])).data[((unsigned int)(0))])).data})));
+					exact(var_88, (iglob), (jglob), ((*(&((*var_88).nz)))-1), (((double*){(((((((*(&((*var_88).u))).data[((unsigned int)(var_109))])).data[((unsigned int)(var_107))])).data[((unsigned int)(((*(&((*var_88).nz)))-1)))])).data})));
 				};
 				((j) = (0+(((int)(ceil((((double)(((*(&((*var_88).ny)))-0)))/((double)(1))))))*1)));
 			};
@@ -478,7 +478,7 @@ void setbv(struct __insieme_globals* var_88){
 		for(int var_113 = 0; var_113 < (*(&((*var_88).nx))); var_113 += 1) {
 			((iglob) = var_113);
 			{
-				for(int var_111 = 0; var_111 < (*(&((*var_88).nz))); var_111 += 1)  { exact(var_88, (iglob), 0, var_111, (&((((((((*(&((*var_88).u))).data[((unsigned int)(var_113))])).data[((unsigned int)(0))])).data[((unsigned int)(var_111))])).data[((unsigned int)(0))]))); };
+				for(int var_111 = 0; var_111 < (*(&((*var_88).nz))); var_111 += 1)  { exact(var_88, (iglob), 0, var_111, (((double*){(((((((*(&((*var_88).u))).data[((unsigned int)(var_113))])).data[((unsigned int)(0))])).data[((unsigned int)(var_111))])).data}))); };
 				((k) = (0+(((int)(ceil((((double)(((*(&((*var_88).nz)))-0)))/((double)(1))))))*1)));
 			};
 		};
@@ -488,7 +488,7 @@ void setbv(struct __insieme_globals* var_88){
 		for(int var_117 = 0; var_117 < (*(&((*var_88).nx))); var_117 += 1) {
 			((iglob) = var_117);
 			{
-				for(int var_115 = 0; var_115 < (*(&((*var_88).nz))); var_115 += 1)  { exact(var_88, (iglob), ((*(&((*var_88).ny0)))-1), var_115, (&((((((((*(&((*var_88).u))).data[((unsigned int)(var_117))])).data[((unsigned int)(((*(&((*var_88).ny)))-1)))])).data[((unsigned int)(var_115))])).data[((unsigned int)(0))]))); };
+				for(int var_115 = 0; var_115 < (*(&((*var_88).nz))); var_115 += 1)  { exact(var_88, (iglob), ((*(&((*var_88).ny0)))-1), var_115, (((double*){(((((((*(&((*var_88).u))).data[((unsigned int)(var_117))])).data[((unsigned int)(((*(&((*var_88).ny)))-1)))])).data[((unsigned int)(var_115))])).data}))); };
 				((k) = (0+(((int)(ceil((((double)(((*(&((*var_88).nz)))-0)))/((double)(1))))))*1)));
 			};
 		};
@@ -498,7 +498,7 @@ void setbv(struct __insieme_globals* var_88){
 		for(int var_121 = 0; var_121 < (*(&((*var_88).ny))); var_121 += 1) {
 			((jglob) = var_121);
 			{
-				for(int var_119 = 0; var_119 < (*(&((*var_88).nz))); var_119 += 1)  { exact(var_88, 0, (jglob), var_119, (&((((((((*(&((*var_88).u))).data[((unsigned int)(0))])).data[((unsigned int)(var_121))])).data[((unsigned int)(var_119))])).data[((unsigned int)(0))]))); };
+				for(int var_119 = 0; var_119 < (*(&((*var_88).nz))); var_119 += 1)  { exact(var_88, 0, (jglob), var_119, (((double*){(((((((*(&((*var_88).u))).data[((unsigned int)(0))])).data[((unsigned int)(var_121))])).data[((unsigned int)(var_119))])).data}))); };
 				((k) = (0+(((int)(ceil((((double)(((*(&((*var_88).nz)))-0)))/((double)(1))))))*1)));
 			};
 		};
@@ -508,7 +508,7 @@ void setbv(struct __insieme_globals* var_88){
 		for(int var_125 = 0; var_125 < (*(&((*var_88).ny))); var_125 += 1) {
 			((jglob) = var_125);
 			{
-				for(int var_123 = 0; var_123 < (*(&((*var_88).nz))); var_123 += 1)  { exact(var_88, ((*(&((*var_88).nx0)))-1), (jglob), var_123, (&((((((((*(&((*var_88).u))).data[((unsigned int)(((*(&((*var_88).nx)))-1)))])).data[((unsigned int)(var_125))])).data[((unsigned int)(var_123))])).data[((unsigned int)(0))]))); };
+				for(int var_123 = 0; var_123 < (*(&((*var_88).nz))); var_123 += 1)  { exact(var_88, ((*(&((*var_88).nx0)))-1), (jglob), var_123, (((double*){(((((((*(&((*var_88).u))).data[((unsigned int)(((*(&((*var_88).nx)))-1)))])).data[((unsigned int)(var_125))])).data[((unsigned int)(var_123))])).data}))); };
 				((k) = (0+(((int)(ceil((((double)(((*(&((*var_88).nz)))-0)))/((double)(1))))))*1)));
 			};
 		};
@@ -1278,8 +1278,8 @@ void l2norm(int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __i
 static void l2norm_wrap(void* _closure, int nx0, int ny0, int nz0, int ist, int iend, int jst, int jend, __insieme_type_2* v, double* sum) { l2norm(nx0, ny0, nz0, ist, iend, jst, jend, v, sum); }
 
 // start code fragment :: Definition of timer_clear ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_clear(struct __insieme_globals* var_2, int n) { ((((*(&((*var_2).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_2, int n) { timer_clear(var_2, n); }
+void timer_clear(struct __insieme_globals* var_17, int n) { ((((*(&((*var_17).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_17, int n) { timer_clear(var_17, n); }
 
 // start code fragment :: type_declaration_timeval //
 struct timeval { 
@@ -1298,25 +1298,25 @@ int gettimeofday(struct timeval*, struct timezone*);
 static int gettimeofday_wrap(void* _closure, struct timeval* var_785, struct timezone* var_786) { return gettimeofday(var_785, var_786); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
-void wtime(struct __insieme_globals* var_5, double* t){
+void wtime(struct __insieme_globals* var_2, double* t){
 	struct timeval tv;
 	gettimeofday((&tv), 0);
-	if(((*(&((*var_5).sec)))<0)) { ((*(&((*var_5).sec))) = ((int)((*(&((tv).tv_sec)))))); };
-	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_5).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
+	if(((*(&((*var_2).sec)))<0)) { ((*(&((*var_2).sec))) = ((int)((*(&((tv).tv_sec)))))); };
+	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_2).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void wtime_wrap(void* _closure, struct __insieme_globals* var_5, double* t) { wtime(var_5, t); }
+static void wtime_wrap(void* _closure, struct __insieme_globals* var_2, double* t) { wtime(var_2, t); }
 
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
-double elapsed_time(struct __insieme_globals* var_9){
+double elapsed_time(struct __insieme_globals* var_6){
 	double t = 0.0;
-	wtime(var_9, (&t));
+	wtime(var_6, (&t));
 	return (t);
 }
-static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_9) { return elapsed_time(var_9); }
+static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_6) { return elapsed_time(var_6); }
 
 // start code fragment :: Definition of timer_start ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_start(struct __insieme_globals* var_12, int n) { ((((*(&((*var_12).start))).data[((unsigned int)(n))])) = elapsed_time(var_12)); }
-static void timer_start_wrap(void* _closure, struct __insieme_globals* var_12, int n) { timer_start(var_12, n); }
+void timer_start(struct __insieme_globals* var_20, int n) { ((((*(&((*var_20).start))).data[((unsigned int)(n))])) = elapsed_time(var_20)); }
+static void timer_start_wrap(void* _closure, struct __insieme_globals* var_20, int n) { timer_start(var_20, n); }
 
 // start code fragment :: Definition of jacld ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
 void jacld(struct __insieme_globals* var_480, int k){
@@ -1808,18 +1808,18 @@ void buts(int nx, int ny, int nz, int k, double omega, __insieme_type_2* v, __in
 static void buts_wrap(void* _closure, int nx, int ny, int nz, int k, double omega, __insieme_type_2* v, __insieme_type_3* tv, __insieme_type_6* d, __insieme_type_6* udx, __insieme_type_6* udy, __insieme_type_6* udz, int ist, int iend, int jst, int jend, int nx0, int ny0) { buts(nx, ny, nz, k, omega, v, tv, d, udx, udy, udz, ist, iend, jst, jend, nx0, ny0); }
 
 // start code fragment :: Definition of timer_stop ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_stop(struct __insieme_globals* var_15, int n){
+void timer_stop(struct __insieme_globals* var_9, int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = elapsed_time(var_15));
-	((t) = ((now)-(((*(&((*var_15).start))).data[((unsigned int)(n))]))));
-	((((*(&((*var_15).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_15).elapsed))).data[((unsigned int)(n))]))+(t)));
+	((now) = elapsed_time(var_9));
+	((t) = ((now)-(((*(&((*var_9).start))).data[((unsigned int)(n))]))));
+	((((*(&((*var_9).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_9).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_15, int n) { timer_stop(var_15, n); }
+static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_9, int n) { timer_stop(var_9, n); }
 
 // start code fragment :: Definition of timer_read ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
-double timer_read(struct __insieme_globals* var_20, int n) { return (((*(&((*var_20).elapsed))).data[((unsigned int)(n))])); }
-static double timer_read_wrap(void* _closure, struct __insieme_globals* var_20, int n) { return timer_read(var_20, n); }
+double timer_read(struct __insieme_globals* var_14, int n) { return (((*(&((*var_14).elapsed))).data[((unsigned int)(n))])); }
+static double timer_read_wrap(void* _closure, struct __insieme_globals* var_14, int n) { return timer_read(var_14, n); }
 
 // start code fragment :: Definition of ssor ... type: ((ref<struct<nx:int<4>,ny:int<4>,nz:int<4>,nx0:int<4>,ny0:int<4>,nz0:int<4>,ist:int<4>,iend:int<4>,jst:int<4>,jend:int<4>,ii1:int<4>,ii2:int<4>,ji1:int<4>,ji2:int<4>,ki1:int<4>,ki2:int<4>,dxi:real<8>,deta:real<8>,dzeta:real<8>,tx1:real<8>,tx2:real<8>,tx3:real<8>,ty1:real<8>,ty2:real<8>,ty3:real<8>,tz1:real<8>,tz2:real<8>,tz3:real<8>,dx1:real<8>,dx2:real<8>,dx3:real<8>,dx4:real<8>,dx5:real<8>,dy1:real<8>,dy2:real<8>,dy3:real<8>,dy4:real<8>,dy5:real<8>,dz1:real<8>,dz2:real<8>,dz3:real<8>,dz4:real<8>,dz5:real<8>,dssp:real<8>,u:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,rsd:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,frct:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,flux:vector<vector<vector<vector<real<8>,5>,33>,33>,33>,ipr:int<4>,inorm:int<4>,itmax:int<4>,dt:real<8>,omega:real<8>,tolrsd:vector<real<8>,5>,rsdnm:vector<real<8>,5>,errnm:vector<real<8>,5>,frc:real<8>,a:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,b:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,c:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,d:vector<vector<vector<vector<real<8>,5>,5>,33>,33>,ce:vector<vector<real<8>,13>,5>,maxtime:real<8>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->unit) //
 void ssor(struct __insieme_globals* var_298){

@@ -237,8 +237,8 @@ struct __insieme_globals {
 };
 
 // start code fragment :: Definition of timer_clear ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_clear(struct __insieme_globals* var_63, int n) { ((((*(&((*var_63).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_63, int n) { timer_clear(var_63, n); }
+void timer_clear(struct __insieme_globals* var_75, int n) { ((((*(&((*var_75).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_75, int n) { timer_clear(var_75, n); }
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
@@ -804,35 +804,35 @@ int gettimeofday(struct timeval*, struct timezone*);
 static int gettimeofday_wrap(void* _closure, struct timeval* var_442, struct timezone* var_443) { return gettimeofday(var_442, var_443); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
-void wtime(struct __insieme_globals* var_66, double* t){
+void wtime(struct __insieme_globals* var_63, double* t){
 	struct timeval tv;
 	gettimeofday((&tv), 0);
-	if(((*(&((*var_66).sec)))<0)) { ((*(&((*var_66).sec))) = ((int)((*(&((tv).tv_sec)))))); };
-	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_66).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
+	if(((*(&((*var_63).sec)))<0)) { ((*(&((*var_63).sec))) = ((int)((*(&((tv).tv_sec)))))); };
+	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_63).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void wtime_wrap(void* _closure, struct __insieme_globals* var_66, double* t) { wtime(var_66, t); }
+static void wtime_wrap(void* _closure, struct __insieme_globals* var_63, double* t) { wtime(var_63, t); }
 
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
-double elapsed_time(struct __insieme_globals* var_70){
+double elapsed_time(struct __insieme_globals* var_67){
 	double t = 0.0;
-	wtime(var_70, (&t));
+	wtime(var_67, (&t));
 	return (t);
 }
-static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_70) { return elapsed_time(var_70); }
+static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_67) { return elapsed_time(var_67); }
 
 // start code fragment :: Definition of timer_start ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_start(struct __insieme_globals* var_73, int n) { ((((*(&((*var_73).start))).data[((unsigned int)(n))])) = elapsed_time(var_73)); }
-static void timer_start_wrap(void* _closure, struct __insieme_globals* var_73, int n) { timer_start(var_73, n); }
+void timer_start(struct __insieme_globals* var_78, int n) { ((((*(&((*var_78).start))).data[((unsigned int)(n))])) = elapsed_time(var_78)); }
+static void timer_start_wrap(void* _closure, struct __insieme_globals* var_78, int n) { timer_start(var_78, n); }
 
 // start code fragment :: Definition of timer_stop ... type: ((ref<struct<fftblock:int<4>,fftblockpad:int<4>,dims:vector<vector<int<4>,3>,3>,xstart:vector<int<4>,3>,ystart:vector<int<4>,3>,zstart:vector<int<4>,3>,xend:vector<int<4>,3>,yend:vector<int<4>,3>,zend:vector<int<4>,3>,ex:vector<real<8>,50689>,u:vector<struct<real:real<8>,imag:real<8>>,128>,sums:vector<struct<real:real<8>,imag:real<8>>,7>,niter:int<4>,u0:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad1:vector<struct<real:real<8>,imag:real<8>>,3>,u1:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad2:vector<struct<real:real<8>,imag:real<8>>,3>,u2:vector<vector<vector<struct<real:real<8>,imag:real<8>>,128>,128>,32>,pad3:vector<struct<real:real<8>,imag:real<8>>,3>,indexmap:vector<vector<vector<int<4>,128>,128>,32>,tmp:vector<real<8>,32769>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_stop(struct __insieme_globals* var_76, int n){
+void timer_stop(struct __insieme_globals* var_70, int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = elapsed_time(var_76));
-	((t) = ((now)-(((*(&((*var_76).start))).data[((unsigned int)(n))]))));
-	((((*(&((*var_76).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_76).elapsed))).data[((unsigned int)(n))]))+(t)));
+	((now) = elapsed_time(var_70));
+	((t) = ((now)-(((*(&((*var_70).start))).data[((unsigned int)(n))]))));
+	((((*(&((*var_70).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_70).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_76, int n) { timer_stop(var_76, n); }
+static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_70, int n) { timer_stop(var_70, n); }
 
 // start code fragment :: Definition of _crmul ... type: ((ref<array<struct<real:real<8>,imag:real<8>>,1>>,ref<array<struct<real:real<8>,imag:real<8>>,1>>,int<4>)->real<8>) //
 double _crmul(struct dcomplex* c, struct dcomplex* a, int b){
