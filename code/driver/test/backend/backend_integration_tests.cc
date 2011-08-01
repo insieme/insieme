@@ -47,18 +47,18 @@
 #include "insieme/core/program.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/runtime/runtime_backend.h"
 
 namespace insieme {
 namespace backend {
 
 
-//TEST(FullBackend, HelloWorld) {
+TEST(FullBackend, HelloWorld) {
 //
 //	core::NodeManager manager;
 //
 //	// load hello world test case
-//	auto testCase = utils::test::getCase("func_pointer_simple");
+//	auto testCase = utils::test::getCase("hello_world");
 //	ASSERT_TRUE(testCase) << "Could not load test case!";
 //
 //	// convert test case into IR using the frontend
@@ -66,10 +66,10 @@ namespace backend {
 //	ASSERT_TRUE(code) << "Unable to load input code!";
 //
 //	// print IR code
-//	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
+////	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
 //
 //	// create target code using real backend
-//	auto target = backend::FullBackend::getDefault()->convert(code);
+//	auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
 //
 //	// check target code
 ////	EXPECT_EQ("", toString(*target));
@@ -83,8 +83,8 @@ namespace backend {
 //	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 //	compiler.addFlag("-lm");
 //	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
-//
-//}
+
+}
 
 } // end namespace backend
 } // end namespace insieme
