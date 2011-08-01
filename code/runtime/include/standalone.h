@@ -41,10 +41,10 @@
 /** Starts the runtime in standalone mode and executes work item 0.
   * Returns once that wi has finished.
   * worker_count : number of workers to start
-  * type_table : insieme type table for the generated context
-  * impl_table : work item implementation table for the generated context
+  * init_context_fun : fills type tables in context
+  * cleanup_context_fun : cleans up the context
   */
-void irt_runtime_standalone(uint32 worker_count, irt_type* type_table, irt_wi_implementation* impl_table);
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun);
 
 // globals
 pthread_key_t irt_g_error_key;
