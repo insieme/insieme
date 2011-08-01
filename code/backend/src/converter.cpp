@@ -42,6 +42,7 @@
 #include "insieme/backend/c_ast/c_code.h"
 
 #include "insieme/backend/preprocessor.h"
+#include "insieme/backend/postprocessor.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/variable_manager.h"
 
@@ -53,17 +54,18 @@ namespace backend {
 
 	backend::TargetCodePtr Converter::convert(const core::NodePtr& source) {
 
+		// -------------------------- PRE-PROCESSING ---------------------
 
-		// conduct pre-processing
 		utils::Timer timer = insieme::utils::Timer("Backend.Preprocessing");
 
-		// TODO: make pre-processor an option
-
 		// pre-process program
-		core::NodePtr processed = getPreProcessor()->preprocess(getNodeManager(), source);
+		core::NodePtr processed = getPreProcessor()->process(getNodeManager(), source);
 
 		timer.stop();
 		LOG(INFO) << timer;
+
+
+		// -------------------------- CONVERSION -------------------------
 
 		timer = insieme::utils::Timer("Backend.Conversions");
 
@@ -79,14 +81,27 @@ namespace backend {
 		fragment->addRequirements(context.getRequirements());
 		fragment->addIncludes(context.getIncludes());
 
-		// create C code
-		auto res = c_ast::CCode::createNew(fragmentManager, source, fragment);
+		vector<c_ast::CodeFragmentPtr> fragments = c_ast::getOrderedClosure(toVector(fragment));
 
 		timer.stop();
 		LOG(INFO) << timer;
 
-		// job done!
-		return res;
+
+		// ------------------------ POST-PROCESSING ----------------------
+
+		timer = insieme::utils::Timer("Backend.Postprocessing");
+
+		// apply post-processing passes
+		applyToAll(getPostProcessor(), fragments);
+
+		timer.stop();
+		LOG(INFO) << timer;
+
+
+		// --------------------------- Finalize --------------------------
+
+		// create resulting code fragment
+		return c_ast::CCode::createNew(fragmentManager, source, fragments);
 	}
 
 

@@ -69,10 +69,10 @@ TEST(C_AST, Basic) {
 	EXPECT_EQ("x+y", toC(sum));
 
 	sum = add(sum, x);
-	EXPECT_EQ("(x+y)+x", toC(sum));
+	EXPECT_EQ("x+y+x", toC(sum));
 
 	sum = add(sum, parenthese(add(x,y)));
-	EXPECT_EQ("((x+y)+x)+(x+y)", toC(sum));
+	EXPECT_EQ("x+y+x+(x+y)", toC(sum));
 
 }
 

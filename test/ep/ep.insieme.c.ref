@@ -182,8 +182,8 @@ double fabs(double);
 static double fabs_wrap(void* _closure, double var_170) { return fabs(var_170); }
 
 // start code fragment :: Definition of timer_clear ... type: ((ref<struct<_x:vector<real<8>,131073>,x:ref<array<real<8>,1>>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_clear(struct __insieme_globals* var_26, int n) { ((((*(&((*var_26).elapsed))).data[((unsigned int)(n))])) = 0.0); }
-static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_26, int n) { timer_clear(var_26, n); }
+void timer_clear(struct __insieme_globals* var_41, int n) { ((((*(&((*var_41).elapsed))).data[((unsigned int)(n))])) = 0.0); }
+static void timer_clear_wrap(void* _closure, struct __insieme_globals* var_41, int n) { timer_clear(var_41, n); }
 
 // start code fragment :: type_declaration_timeval //
 struct timeval { 
@@ -202,39 +202,39 @@ int gettimeofday(struct timeval*, struct timezone*);
 static int gettimeofday_wrap(void* _closure, struct timeval* var_171, struct timezone* var_172) { return gettimeofday(var_171, var_172); }
 
 // start code fragment :: Definition of wtime ... type: ((ref<struct<_x:vector<real<8>,131073>,x:ref<array<real<8>,1>>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,ref<array<real<8>,1>>)->unit) //
-void wtime(struct __insieme_globals* var_29, double* t){
+void wtime(struct __insieme_globals* var_26, double* t){
 	struct timeval tv;
 	gettimeofday((&tv), 0);
-	if(((*(&((*var_29).sec)))<0)) { ((*(&((*var_29).sec))) = ((int)((*(&((tv).tv_sec)))))); };
-	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_29).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
+	if(((*(&((*var_26).sec)))<0)) { ((*(&((*var_26).sec))) = ((int)((*(&((tv).tv_sec)))))); };
+	(((t[0])) = (((double)(((*(&((tv).tv_sec)))-((long)((*(&((*var_26).sec))))))))+(1.0e-6*((double)((*(&((tv).tv_usec))))))));
 }
-static void wtime_wrap(void* _closure, struct __insieme_globals* var_29, double* t) { wtime(var_29, t); }
+static void wtime_wrap(void* _closure, struct __insieme_globals* var_26, double* t) { wtime(var_26, t); }
 
 // start code fragment :: Definition of elapsed_time ... type: ((ref<struct<_x:vector<real<8>,131073>,x:ref<array<real<8>,1>>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>)->real<8>) //
-double elapsed_time(struct __insieme_globals* var_33){
+double elapsed_time(struct __insieme_globals* var_30){
 	double t = 0.0;
-	wtime(var_33, (&t));
+	wtime(var_30, (&t));
 	return (t);
 }
-static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_33) { return elapsed_time(var_33); }
+static double elapsed_time_wrap(void* _closure, struct __insieme_globals* var_30) { return elapsed_time(var_30); }
 
 // start code fragment :: Definition of timer_start ... type: ((ref<struct<_x:vector<real<8>,131073>,x:ref<array<real<8>,1>>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_start(struct __insieme_globals* var_36, int n) { ((((*(&((*var_36).start))).data[((unsigned int)(n))])) = elapsed_time(var_36)); }
-static void timer_start_wrap(void* _closure, struct __insieme_globals* var_36, int n) { timer_start(var_36, n); }
+void timer_start(struct __insieme_globals* var_44, int n) { ((((*(&((*var_44).start))).data[((unsigned int)(n))])) = elapsed_time(var_44)); }
+static void timer_start_wrap(void* _closure, struct __insieme_globals* var_44, int n) { timer_start(var_44, n); }
 
 // start code fragment :: Definition of timer_stop ... type: ((ref<struct<_x:vector<real<8>,131073>,x:ref<array<real<8>,1>>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->unit) //
-void timer_stop(struct __insieme_globals* var_39, int n){
+void timer_stop(struct __insieme_globals* var_33, int n){
 	double t = 0.0;
 	double now = 0.0;
-	((now) = elapsed_time(var_39));
-	((t) = ((now)-(((*(&((*var_39).start))).data[((unsigned int)(n))]))));
-	((((*(&((*var_39).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_39).elapsed))).data[((unsigned int)(n))]))+(t)));
+	((now) = elapsed_time(var_33));
+	((t) = ((now)-(((*(&((*var_33).start))).data[((unsigned int)(n))]))));
+	((((*(&((*var_33).elapsed))).data[((unsigned int)(n))])) = ((((*(&((*var_33).elapsed))).data[((unsigned int)(n))]))+(t)));
 }
-static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_39, int n) { timer_stop(var_39, n); }
+static void timer_stop_wrap(void* _closure, struct __insieme_globals* var_33, int n) { timer_stop(var_33, n); }
 
 // start code fragment :: Definition of timer_read ... type: ((ref<struct<_x:vector<real<8>,131073>,x:ref<array<real<8>,1>>,q:vector<real<8>,10>,start:vector<real<8>,64>,elapsed:vector<real<8>,64>,sec:int<4>>>,int<4>)->real<8>) //
-double timer_read(struct __insieme_globals* var_44, int n) { return (((*(&((*var_44).elapsed))).data[((unsigned int)(n))])); }
-static double timer_read_wrap(void* _closure, struct __insieme_globals* var_44, int n) { return timer_read(var_44, n); }
+double timer_read(struct __insieme_globals* var_38, int n) { return (((*(&((*var_38).elapsed))).data[((unsigned int)(n))])); }
+static double timer_read_wrap(void* _closure, struct __insieme_globals* var_38, int n) { return timer_read(var_38, n); }
 
 // start code fragment :: Definition of c_print_results ... type: ((ref<array<char,1>>,char,int<4>,int<4>,int<4>,int<4>,int<4>,real<8>,real<8>,ref<array<char,1>>,int<4>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>,ref<array<char,1>>)->unit) //
 void c_print_results(char* name, char class, int n1, int n2, int n3, int niter, int nthreads, double t, double mops, char* optype, int passed_verification, char* npbversion, char* compiletime, char* cc, char* clink, char* c_lib, char* c_inc, char* cflags, char* clinkflags, char* rand){
@@ -308,7 +308,7 @@ int main(int argc, char** argv){
 	printf(" Number of random numbers generated: %13s\n", ((size)).data);
 	((verified) = 0);
 	((np) = (1<<(25-16)));
-	vranlc(0, (&((dum).data[((unsigned int)(0))])), (((dum).data[((unsigned int)(1))])), (&((dum).data[((unsigned int)(2))])));
+	vranlc(0, (((double*){(dum).data})), (((dum).data[((unsigned int)(1))])), (&((dum).data[((unsigned int)(2))])));
 	((((dum).data[((unsigned int)(0))])) = randlc((&((dum).data[((unsigned int)(1))])), (((dum).data[((unsigned int)(2))]))));
 	{
 		for(int var_114 = 0; var_114 < (2*(1<<16)); var_114 += 1)  { ((((*(&((*var_1).x)))[((unsigned int)(var_114))])) = (((double)(0))-1.0e99)); };

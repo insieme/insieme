@@ -49,8 +49,10 @@
 
 #include "insieme/simple_backend/simple_backend.h"
 #include "insieme/opencl_backend/opencl_convert.h"
-#include "insieme/backend/full_backend.h"
 #include "insieme/simple_backend/rewrite.h"
+
+#include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 
 #include "insieme/transform/ir_cleanup.h"
 
@@ -270,7 +272,7 @@ void markSCoPs(const ProgramPtr& program) {
 //***************************************************************************************
 // Check Semantics 
 //***************************************************************************************
-void checkSema(const core::ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
+void checkSema(const core::ProgramPtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
 	using namespace insieme::core::printer;
 
 	// Skip semantics checks if the flag is not set
@@ -280,33 +282,38 @@ void checkSema(const core::ProgramPtr& program, MessageList& errors, const Inver
 	insieme::utils::Timer timer("Checks");
 
 	measureTimeFor<void>("Semantic Checks ", 
-			[&]() { errors = check( program, core::checks::getFullCheck() ); } 
-		);
+		[&]() { list = check( program, core::checks::getFullCheck() ); }
+	);
 
+	auto errors = list.getAll();
 	std::sort(errors.begin(), errors.end());
-		for_each(errors, [&](const Message& cur) {
-			LOG(INFO) << cur;
-			NodeAddress address = cur.getAddress();
-			stringstream ss;
-			unsigned contextSize = 1;
-			do {
-				ss.str("");
-				ss.clear();
-				NodePtr&& context = address.getParentNode(
-						min((unsigned)contextSize, address.getDepth()-contextSize)
-					);
-				ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+	for_each(errors, [&](const Message& cur) {
+		LOG(INFO) << cur;
+		NodeAddress address = cur.getAddress();
+		stringstream ss;
+		unsigned contextSize = 1;
+		do {
+			ss.str("");
+			ss.clear();
+			NodePtr&& context = address.getParentNode(
+					min((unsigned)contextSize, address.getDepth()-contextSize)
+				);
+			ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
 
-				auto fit = stmtMap.find(address.getAddressedNode());
-				assert(fit != stmtMap.end());
+			auto fit = stmtMap.find(address.getAddressedNode());
+			if (fit != stmtMap.end()) {
 				LOG(INFO) << "Source Location: " << fit->second;
+			}
 
-			} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
-			LOG(INFO) << "\t Context: " << ss.str() << std::endl;
-		});
+		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
+		LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+	});
 
 	// In the case of semantic errors, quit
-	if ( !errors.empty() ) { exit(1); }
+	if ( !list.getErrors().empty() ) {
+		cerr << "---- Semantic errors encountered - compilation aborted!! ----\n";
+		exit(1);
+	}
 
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
@@ -326,7 +333,7 @@ void showIR(const core::ProgramPtr& program, MessageList& errors) {
 }
 
 void applyOpenMPFrontend(core::ProgramPtr& program) {
-	if (!CommandLineOptions::OMPSema) { return; }
+	if (!CommandLineOptions::OpenMP) { return; }
 	
 	LOG(INFO) << "============================= OMP conversion ====================================";
 	program = measureTimeFor<core::ProgramPtr>("OpenMP ", 
@@ -375,7 +382,7 @@ void featureExtract(const core::ProgramPtr& program) {
  */
 int main(int argc, char** argv) {
 
-	CommandLineOptions::Parse(argc, argv);
+	CommandLineOptions::Parse(argc, argv, true);
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(CommandLineOptions::LogLevel));
 	LOG(INFO) << "Insieme compiler";
 
@@ -415,7 +422,7 @@ int main(int argc, char** argv) {
 			// run OMP frontend
 			applyOpenMPFrontend(program);
 			// check again if the OMP flag is on
-			if (CommandLineOptions::OMPSema) { checkSema(program, errors, stmtMap); }
+			if (CommandLineOptions::OpenMP) { checkSema(program, errors, stmtMap); }
 			
 			// IR statistics
 			showStatistics(program);
@@ -458,29 +465,49 @@ int main(int argc, char** argv) {
 		{
 			string backendName = "";
 			be::BackendPtr backend;
-			if (CommandLineOptions::OpenCL) {
-				backendName = "OpenCL.Backend";
 
-//TODO find the OpenCLChecker
-//				insieme::opencl_backend::OpenCLChecker oc;
-//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
-
-				// obtain open CL backend instance
-				backend = insieme::backend::ocl::OpenCLBackend::getDefault();
-			} else if (CommandLineOptions::OmegaBackend) {
-				backendName = "Full.Backend";
-				backend = insieme::backend::FullBackend::getDefault();
-			} else {
-				backendName = "Simple.Backend";
-				backend = insieme::simple_backend::SimpleBackend::getDefault();
+			char selection = 'p'; // default
+			if (!CommandLineOptions::Backend.empty()) {
+				selection = CommandLineOptions::Backend[0];
+				if (selection < 'a') { // to lower case
+					selection += 'a' - 'A';
+				}
 			}
 
 			// ###################################################
 			// TODO: remove this
 			// enforces the usage of the full backend for testing
-			//backendName = "Full.Backend";
-			//backend = insieme::backend::FullBackend::getDefault();
+//			selection = 'r';
 			// ###################################################
+
+
+			switch(selection) {
+				case 'o': {
+					backendName = "OpenCL.Backend";
+
+					//TODO find the OpenCLChecker
+					//				insieme::opencl_backend::OpenCLChecker oc;
+					//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
+
+					backend = insieme::backend::ocl::OpenCLBackend::getDefault();
+					break;
+				}
+				case 'r': {
+					backendName = "Runtime.Backend";
+					backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+					break;
+				}
+				case 's': {
+					backendName = "Sequential.Backend";
+					backend = insieme::backend::sequential::SequentialBackend::getDefault();
+					break;
+				}
+				case 'p':
+				default: {
+					backendName = "Simple.Backend";
+					backend = insieme::simple_backend::SimpleBackend::getDefault();
+				}
+			}
 
 			insieme::utils::Timer timer(backendName);
 

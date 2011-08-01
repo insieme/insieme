@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v11, ref<array<ref<array<char,1>>,1>> v12){
+fun(int<4> v11, ref<array<array<char,1>,1>> v12){
         decl ref<struct<a:vector<int<4>,10>>> v1 =  new(struct{a:=vector.init.uniform(0, 10)});
         fun(ref<struct<a:vector<int<4>,10>>> v2){
             for(decl int<4> v4 = 0 .. 10 : 1) {
@@ -23,7 +23,7 @@ fun(int<4> v11, ref<array<ref<array<char,1>>,1>> v12){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v11, ref<array<ref<array<char,1>>,1>> v12){
+fun(int<4> v11, ref<array<array<char,1>,1>> v12){
         decl ref<struct<a:vector<int<4>,10>>> v1 = ( new(struct{a:=vector.init.uniform(0, 10)}));
         fun(ref<struct<a:vector<int<4>,10>>> v2){
             for(decl int<4> v4 = 0 .. 10 : 1) {

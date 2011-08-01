@@ -219,22 +219,22 @@ void addAll(OptionalMessageList& target, const OptionalMessageList& list) {
 		target.reset( *list );
 		return;
 	}
-	::addAll(*target, *list);
+	target->addAll(*list);
 }
 
 void add(OptionalMessageList& target, const Message& msg) {
 	if (!target) {
-		target.reset( toVector(msg) );
+		target.reset( MessageList(msg) );
 		return;
 	}
-	target->push_back(msg);
+	target->add(msg);
 }
 
 MessageList check(const NodePtr& node, const CheckPtr& check) {
 
 	// check node for null
 	if (!node) {
-		return toVector(Message(NodeAddress(node), -1, "Checking Null node!", Message::WARNING));
+		return MessageList(Message(NodeAddress(node), -1, "Checking Null node!", Message::WARNING));
 	}
 
 	// collect messages ..
@@ -300,4 +300,8 @@ std::ostream& operator<<(std::ostream& out, const insieme::core::Message& messag
 	// .. and conclude with the message.
 	out << ") - MSG: " << message.getMessage();
 	return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const insieme::core::MessageList& messageList) {
+	return out << messageList.getAll();
 }

@@ -68,7 +68,7 @@ namespace backend {
 		 * @param code the code to be pre-processed
 		 * @return the result of the pre-processing step.
 		 */
-		virtual core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code) =0;
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code) =0;
 
 	};
 
@@ -119,7 +119,7 @@ namespace backend {
 		 * @param code the code to be pre-processed
 		 * @return the result of the pre-processing step.
 		 */
-		virtual core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 
 	};
 
@@ -132,7 +132,7 @@ namespace backend {
 	 */
 	class NoPreProcessing : public PreProcessor {
 	public:
-		virtual core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
 	/**
@@ -141,7 +141,7 @@ namespace backend {
 	 */
 	class IfThenElseInlining : public PreProcessor {
 	public:
-		virtual core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
 	/**
@@ -149,7 +149,16 @@ namespace backend {
 	 */
 	class InitZeroSubstitution : public PreProcessor {
 	public:
-		virtual core::NodePtr preprocess(core::NodeManager& manager, const core::NodePtr& code);
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+	/**
+	 * This pre-processor is restoring global variables by identifying the global struct and replacing it
+	 * with a literal substitution.
+	 */
+	class RestoreGlobals : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
 

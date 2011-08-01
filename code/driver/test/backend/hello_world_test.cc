@@ -43,7 +43,7 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/core/program.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/backend/full_backend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 
 namespace insieme {
 namespace backend {
@@ -62,7 +62,7 @@ TEST(FullBackend, HelloWorld) {
 	ASSERT_TRUE(code) << "Unable to load input code!";
 
 	// create target code using real backend
-	auto target = backend::FullBackend::getDefault()->convert(code);
+	auto target = backend::sequential::SequentialBackend::getDefault()->convert(code);
 
 	// check target code
 //	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));

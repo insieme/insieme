@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/full_backend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 
 #include <sstream>
 
@@ -44,6 +44,7 @@
 #include "insieme/core/ast_node.h"
 
 #include "insieme/backend/preprocessor.h"
+#include "insieme/backend/postprocessor.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/variable_manager.h"
@@ -57,17 +58,14 @@
 
 namespace insieme {
 namespace backend {
+namespace sequential {
 
-	namespace {
-		PreProcessorPtr getDefaultPreProcessor();
+
+	SequentialBackendPtr SequentialBackend::getDefault() {
+		return std::make_shared<SequentialBackend>();
 	}
 
-
-	FullBackendPtr FullBackend::getDefault() {
-		return std::make_shared<FullBackend>();
-	}
-
-	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
+	TargetCodePtr SequentialBackend::convert(const core::NodePtr& code) const {
 
 		// basic setup
 		ConverterConfig config = ConverterConfig::getDefault();
@@ -84,8 +82,16 @@ namespace backend {
 		converter.setFragmentManager(fragmentManager);
 
 		// set up pre-processing
-		NoPreProcessing preprocessor;
-		converter.setPreProcessor(getDefaultPreProcessor());
+		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
+				makePreProcessor<IfThenElseInlining>(),
+				makePreProcessor<RestoreGlobals>(),
+				makePreProcessor<InitZeroSubstitution>()
+		);
+		converter.setPreProcessor(preprocessor);
+
+		// set up post-processing
+		PostProcessorPtr postprocessor = makePostProcessor<NoPostProcessing>();
+		converter.setPostProcessor(postprocessor);
 
 		// Prepare managers
 		SimpleNameManager nameManager;
@@ -97,7 +103,7 @@ namespace backend {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager));
+		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicIncludeTable());
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;
@@ -107,18 +113,7 @@ namespace backend {
 		return converter.convert(code);
 	}
 
-
-	namespace {
-
-		PreProcessorPtr getDefaultPreProcessor() {
-			return makePreProcessor<PreProcessingSequence>(
-					makePreProcessor<IfThenElseInlining>(),
-					makePreProcessor<InitZeroSubstitution>()
-			);
-		}
-
-	}
-
+} // end namespace sequential
 } // end namespace backend
 } // end namespace insieme
 

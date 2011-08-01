@@ -7,7 +7,7 @@ fun(){
         v1 := 12.123;
         v2 := v1;
         printf(string.as.char.pointer("Before: %f\n"), varlist.pack((v2)));
-        v2 := v1;
+        v2 := real.to.int(v1, 4);
         printf(string.as.char.pointer("After: %f\n"), varlist.pack((v2)));
         decl ref<int<4>> v3 =  var(2);
         printf(string.as.char.pointer("Double: %f\n"), varlist.pack((v3*v1)));
@@ -25,7 +25,7 @@ fun(){
         (v1 := 12.123);
         (v2 := ( *v1));
         printf(string.as.char.pointer("Before: %f\n"), varlist.pack((( *v2))));
-        (v2 := CAST<real<8>>(CAST<int<4>>(( *v1))));
+        (v2 := CAST<real<8>>(real.to.int(( *v1), 4)));
         printf(string.as.char.pointer("After: %f\n"), varlist.pack((( *v2))));
         decl ref<int<4>> v3 = ( var(2));
         printf(string.as.char.pointer("Double: %f\n"), varlist.pack(((CAST<real<8>>(( *v3))*( *v1)))));

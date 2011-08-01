@@ -67,7 +67,7 @@ struct VariableResetHack {
 };
 
 void checkSemanticErrors(const NodePtr& node) {
-	MessageList&& msgList = check( node, checks::getFullCheck() );
+	auto msgList = check( node, checks::getFullCheck() ).getAll();
 	EXPECT_EQ(static_cast<unsigned int>(0), msgList.size());
 	std::sort(msgList.begin(), msgList.end());
 	std::for_each(msgList.begin(), msgList.end(), [&node](const Message& cur) {

@@ -1,7 +1,7 @@
 // -------------- Pretty Print Inspire --------------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v13, ref<array<ref<array<char,1>>,1>> v14){
+fun(int<4> v13, ref<array<array<char,1>,1>> v14){
         decl ref<struct<i:int<4>>> v1 =  new(struct{i:=0});
         decl ref<int<4>> v15 =  var(10);
         decl ref<struct<x:int<4>,y:int<4>>> v16 =  var(struct{x:=1, y:=1});
@@ -15,7 +15,7 @@ fun(int<4> v13, ref<array<ref<array<char,1>>,1>> v14){
             return int.postInc(composite.ref.elem(v6, i, type<int<4>>));
         }(v1, scalar.to.array(v15));
         fun(struct<x:int<4>,y:int<4>> v9){
-            return composite.member.access(v9, x, type<int<4>>);
+            return v9.x;
         }(v16);
         fun(ref<array<struct<x:int<4>,y:int<4>>,1>> v11){
             return composite.ref.elem(array.ref.elem.1D(v11, 0), x, type<int<4>>);
@@ -30,7 +30,7 @@ fun(int<4> v13, ref<array<ref<array<char,1>>,1>> v14){
 // --------- Pretty Print Inspire - Detail ----------
 // Inspire Program 
 //  Entry Point: 
-fun(int<4> v13, ref<array<ref<array<char,1>>,1>> v14){
+fun(int<4> v13, ref<array<array<char,1>,1>> v14){
         decl ref<struct<i:int<4>>> v1 = ( new(struct{i:=0}));
         decl ref<int<4>> v15 = ( var(10));
         decl ref<struct<x:int<4>,y:int<4>>> v16 = ( var(struct{x:=1, y:=1}));
@@ -44,7 +44,7 @@ fun(int<4> v13, ref<array<ref<array<char,1>>,1>> v14){
             return int.postInc(composite.ref.elem(v6, i, type<int<4>>));
         }(v1, scalar.to.array(v15));
         fun(struct<x:int<4>,y:int<4>> v9){
-            return composite.member.access(v9, x, type<int<4>>);
+            return v9.x;
         }(( *v16));
         fun(ref<array<struct<x:int<4>,y:int<4>>,1>> v11){
             return ( *composite.ref.elem(array.ref.elem.1D(v11, 0), x, type<int<4>>));
