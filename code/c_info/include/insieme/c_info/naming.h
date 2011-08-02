@@ -63,7 +63,7 @@ public:
 	const std::string& getName() const { return name; }
 	const std::string& getAnnotationName() const { return NAME; }
 
-	const std::string toString() const { return name; }
+	std::ostream& printTo(std::ostream& out) const { return out << name; }
 
 	const utils::AnnotationKey* getKey() const { return &KEY; }
 
