@@ -407,32 +407,22 @@ public:
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
-	// Set a coefficient for an iterator. 
-	void setCoefficient(const Iterator& iter, int coeff) {
-		size_t idx = iterVec.getIdx(iter);
-		assert(idx<sep && 
-			"Iterator vector has been updated before the affine function has been created."); 
-			// FIXME define exception class
-		coeffs[idx] = coeff;
+	// Setter and Getter for coefficient values. 
+	void setCoeff(const Element& iter, int coeff) {
+		coeffs[iterVec.getIdx(iter)] = coeff;
 	}
 
-	// Sets the coefficient value for a parameter
-	void setCoefficient(const Parameter& param, int coeff) {
-		size_t idx = iterVec.getIdx(param);
-		assert(idx<coeffs.size()-1 && 
-			"Iterator vector has been updated before the affine function has been created."); 
-			// FIXME define exception class
-		coeffs[idx] = coeff;
-	}
+	int getCoeff(const Element& iter) const;
 
-	// Set the constant part coefficient 
-	void setConstantPart(int coeff) { coeffs.back() = coeff; }
+	int getCoeff(const core::VariablePtr& var) const { 
+		int idx = iterVec.getIdx(var);
+		// In the case the variable is not in the iteration vector, throw an exception
+		if (idx == -1) { throw VariableNotFound(var); }
+		return getCoeff( iterVec[idx] );
+	}
 
 	iterator begin() const { return iterator(iterVec, *this); }
 	iterator end() const { return iterator(iterVec, *this, iterVec.size()); }
-
-	int getCoeff(const core::VariablePtr& var) const;
-	inline int getConstCoeff() const { return coeffs.back(); }
 
 	inline size_t size() const { return iterVec.size(); } 
 
@@ -492,6 +482,10 @@ struct Constraint : public utils::Printable,
 
 	Constraint 
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const;
+
+	// We normalize the constraint, usually required for libraries. 
+	// Equality constraints remains the same while inequalities must be rewritten to be GE (>=)
+	Constraint normalize() const;
 
 private:
 	const AffineFunction af;
