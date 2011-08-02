@@ -36,52 +36,21 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
+#include "insieme/backend/operator_converter.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
 
 	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * Insieme Runtime. The extensions include literals and types to model work items,
-	 * data items and additional runtime functionality.
+	 * Adds support for runtime-specific operators to the given operator converter
+	 * table.
+	 *
+	 * @param manager the node manager to be used to obtain instances of operators used as key within the given table
+	 * @param table the table to be extended
+	 * @return a reference to the handed in table
 	 */
-	class Extensions {
-	public:
-
-		/**
-		 * Creates a new instance of this extension set. The given manager is used to construct
-		 * the contained literals and types.
-		 *
-		 * @param manager the manager to be used to construct the required types and literals
-		 */
-		Extensions(core::NodeManager& manager);
-
-		/**
-		 * An invocation to this literal results in a no-op. However, context management routines
-		 * like the init / cleanup context functions as well as the type/implementation tables
-		 * required by the runtime will be initialized as a side effect. This instruction
-		 * will be implanted as the first instruction of the newly generated entry point during
-		 * the pre-processing.
-		 */
-		const core::LiteralPtr initContext;
-
-		/**
-		 * The type used internally to represent work items. The type is treated in an abstract
-		 * way and its actual implementation is imported via a runtime-include file.
-		 */
-		const core::TypePtr workItemType;
-
-		/**
-		 * The literal used as a wrapper for the work-item creation function within the runtime.
-		 */
-		const core::LiteralPtr createWorkItem;
-
-		const core::LiteralPtr submitWorkItem;
-
-		const core::LiteralPtr joinWorkItem;
-	};
+	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table);
 
 } // end namespace runtime
 } // end namespace backend

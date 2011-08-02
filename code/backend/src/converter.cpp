@@ -64,6 +64,8 @@ namespace backend {
 		timer.stop();
 		LOG(INFO) << timer;
 
+		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
 
 		// -------------------------- CONVERSION -------------------------
 
@@ -85,7 +87,6 @@ namespace backend {
 
 		timer.stop();
 		LOG(INFO) << timer;
-
 
 		// ------------------------ POST-PROCESSING ----------------------
 

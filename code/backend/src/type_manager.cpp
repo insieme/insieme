@@ -96,12 +96,14 @@ namespace backend {
 
 			const Converter& converter;
 
+			TypeIncludeTable includeTable;
+
 			utils::map::PointerMap<core::TypePtr, TypeInfoPtr> typeInfos;
 
 		public:
 
-			TypeInfoStore(const Converter& converter)
-				: converter(converter), typeInfos() {}
+			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable)
+				: converter(converter), includeTable(includeTable), typeInfos() {}
 
 			~TypeInfoStore() {
 				// free all stored type information instances
@@ -157,7 +159,11 @@ namespace backend {
 	}
 
 
-	TypeManager::TypeManager(const Converter& converter) : store(new detail::TypeInfoStore(converter)) {}
+	TypeManager::TypeManager(const Converter& converter)
+		: store(new detail::TypeInfoStore(converter, getBasicTypeIncludeTable())) {}
+
+	TypeManager::TypeManager(const Converter& converter, const TypeIncludeTable& includeTable)
+		: store(new detail::TypeInfoStore(converter, includeTable)) {}
 
 	TypeManager::~TypeManager() {
 		delete store;
@@ -221,6 +227,21 @@ namespace backend {
 		}
 
 		template<typename T = TypeInfo>
+		T* createInfo(const c_ast::SharedCodeFragmentManager& fragmentManager, const string& name, const string& includeFile) {
+			const c_ast::SharedCNodeManager& nodeManager = fragmentManager->getNodeManager();
+			c_ast::IdentifierPtr ident = nodeManager->create(name);
+			c_ast::TypePtr type = nodeManager->create<c_ast::NamedType>(ident);
+			T* res = createInfo<T>(type);
+
+			c_ast::CodeFragmentPtr decl = c_ast::DummyFragment::createNew(fragmentManager);
+			decl->addInclude(includeFile);
+			res->declaration = decl;
+			res->definition = decl;
+			return res;
+		}
+
+
+		template<typename T = TypeInfo>
 		T* createUnsupportedInfo(c_ast::CNodeManager& nodeManager) {
 			return createInfo<T>(nodeManager, "/* UNSUPPORTED TYPE */");
 		}
@@ -248,6 +269,16 @@ namespace backend {
 		}
 
 
+		string getName(const Converter& converter, const core::TypePtr& type) {
+			// for generic types it is clear
+			if (type->getNodeType() == core::NT_GenericType) {
+				return static_pointer_cast<const core::GenericType>(type)->getFamilyName();
+			}
+
+			// for other types, use name resolution
+			return converter.getNameManager().getName(type);
+		}
+
 
 		// --------------------- Type Specific Wrapper --------------------
 
@@ -260,6 +291,17 @@ namespace backend {
 			auto pos = typeInfos.find(type);
 			if (pos != typeInfos.end()) {
 				return pos->second;
+			}
+
+			// lookup type within include table
+			string name = getName(converter, type);
+			auto pos2 = includeTable.find(name);
+			if (pos2 != includeTable.end()) {
+				// create new info referencing a header file
+				const string& header = pos2->second;
+				TypeInfo* info = createInfo(converter.getFragmentManager(), name, header);
+				typeInfos.insert(std::make_pair(type, info));
+				return info;
 			}
 
 			// obtain type information
@@ -917,6 +959,19 @@ namespace backend {
 
 		}
 
+	}
+
+	TypeIncludeTable getBasicTypeIncludeTable() {
+		// create table
+		TypeIncludeTable res;
+
+		// add function definitions from macro file
+		#define TYPE(l,f) res[#f] = l;
+		#include "includes.def"
+		#undef TYPE
+
+		// done
+		return res;
 	}
 
 } // end namespace backend

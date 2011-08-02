@@ -53,6 +53,9 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/parallel_manager.h"
 
+#include "insieme/backend/runtime/runtime_operator.h"
+#include "insieme/backend/runtime/work_item_extractor.h"
+
 #include "insieme/backend/c_ast/c_code.h"
 
 
@@ -60,6 +63,13 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
+	namespace {
+
+		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
+
+		FunctionIncludeTable getFunctionIncludeTable();
+
+	}
 
 	RuntimeBackendPtr RuntimeBackend::getDefault() {
 		return std::make_shared<RuntimeBackend>();
@@ -85,7 +95,8 @@ namespace runtime {
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 				makePreProcessor<IfThenElseInlining>(),
 				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>()
+				makePreProcessor<InitZeroSubstitution>(),
+				makePreProcessor<runtime::WorkItemExtractor>()
 		);
 		converter.setPreProcessor(preprocessor);
 
@@ -103,7 +114,7 @@ namespace runtime {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicIncludeTable());
+		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;
@@ -111,6 +122,27 @@ namespace runtime {
 
 		// conduct conversion
 		return converter.convert(code);
+	}
+
+	namespace {
+
+		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res = getBasicOperatorTable(manager);
+			return addRuntimeSpecificOps(manager, res);
+		}
+
+		FunctionIncludeTable getFunctionIncludeTable() {
+			FunctionIncludeTable res = getBasicFunctionIncludeTable();
+
+			// add runtime-specific includes
+			res["irt_get_default_worker_count"] 	= "standalone.h";
+			res["irt_runtime_standalone"] 			= "standalone.h";
+
+
+			return res;
+		}
+
+
 	}
 
 } // end namespace sequential

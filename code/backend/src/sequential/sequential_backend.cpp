@@ -103,7 +103,7 @@ namespace sequential {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicIncludeTable());
+		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;

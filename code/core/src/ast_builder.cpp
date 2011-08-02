@@ -226,7 +226,7 @@ namespace {
 	}
 }
 
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
 	// use deduced return type to construct call
 	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
@@ -238,6 +238,9 @@ CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const Expres
 }
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
+	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
 }
 CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1));

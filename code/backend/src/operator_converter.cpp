@@ -46,10 +46,9 @@
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
-#include "insieme/backend/operator_converter_begin.inc"
-
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
+
 
 namespace insieme {
 namespace backend {
@@ -108,6 +107,7 @@ namespace backend {
 //			static int f(int a, int b) { return a; };
 //		}){0}).f);
 
+		#include "insieme/backend/operator_converter_begin.inc"
 
 		// -- booleans --
 		res[basic.getBoolLAnd()] = OP_CONVERTER({ return c_ast::logicAnd(CONVERT_ARG(0), CONVERT_EXPR(inlineLazy(ARG(1)))); });
@@ -520,6 +520,8 @@ namespace backend {
 			// => no actual expression required her ...
 			return c_ast::ExpressionPtr();
 		});
+
+		#include "insieme/backend/operator_converter_end.inc"
 
 		// table complete => return table
 		return res;

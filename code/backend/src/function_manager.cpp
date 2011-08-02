@@ -124,9 +124,9 @@ namespace backend {
 	FunctionManager::FunctionManager(const Converter& converter)
 		: converter(converter), store(new detail::FunctionInfoStore(converter)),
 		  operatorTable(getBasicOperatorTable(converter.getNodeManager())),
-		  includeTable(getBasicIncludeTable()) {}
+		  includeTable(getBasicFunctionIncludeTable()) {}
 
-	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const IncludeTable& includeTable)
+	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const FunctionIncludeTable& includeTable)
 		: converter(converter), store(new detail::FunctionInfoStore(converter)), operatorTable(operatorTable), includeTable(includeTable) {}
 
 	FunctionManager::~FunctionManager() {
@@ -819,9 +819,9 @@ namespace backend {
 
 	}
 
-	IncludeTable getBasicIncludeTable() {
+	FunctionIncludeTable getBasicFunctionIncludeTable() {
 		// create table
-		IncludeTable res;
+		FunctionIncludeTable res;
 
 		// add function definitions from macro file
 		#define FUN(l,f) res[#f] = l;

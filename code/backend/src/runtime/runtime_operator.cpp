@@ -34,63 +34,49 @@
  * regarding third party software licenses.
  */
 
-/**
- * A macro file defining relations between functions and types defined within various
- * headers.
- * 
- * FUN(x,y)  ... states that header file x contains a declaration of y
- * TYPE(x,y) ... states that header file x contains a definition of type y
- */
+#include "insieme/backend/runtime/runtime_operator.h"
 
-// -----------------------------------
-#if ! defined FUN
-	#define FUN(X,Y)
-	#define __INTERNAL_FUN_DEFINITION
-#endif /* NODE definition */
+#include "insieme/backend/converter.h"
 
-#if ! defined TYPE
-	#define TYPE(X,Y)
-	#define __INTERNAL_TYPE_DEFINITION
-#endif /* NODE definition */
-// -----------------------------------
+#include "insieme/backend/runtime/runtime_extensions.h"
+
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+
+namespace insieme {
+namespace backend {
+namespace runtime {
 
 
-FUN("stdio.h", printf)
-FUN("stdio.h", fopen)
-FUN("stdio.h", fread)
-FUN("stdio.h", fgetc)
-FUN("stdio.h", fscanf)
-FUN("stdio.h", fwrite)
-FUN("stdio.h", fclose)
-FUN("stdio.h", sprintf)
+	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
-TYPE("stdio.h", FILE)
+		Extensions ext(manager);
 
-FUN("stdlib.h", malloc)
-FUN("stdlib.h", calloc)
-FUN("stdlib.h", free)
+		#include "insieme/backend/operator_converter_begin.inc"
 
-FUN("stdlib.h", atoi)
-FUN("stdlib.h", atol)
-FUN("stdlib.h", atof)
+		table[ext.initRuntime] = OP_CONVERTER({
+			return c_ast::ExpressionPtr();
+		});
 
-FUN("alloca.h", alloca)
+		table[ext.initContext] = OP_CONVERTER({
+			// TODO: create init / cleanup function
+			return c_ast::ref(C_NODE_MANAGER->create("insieme_init_context"));
+		});
 
-FUN("string.h", memcpy)
-FUN("string.h", strcmp)
-FUN("string.h", strtok)
-FUN("string.h", strchr)
-FUN("string.h", strrchr)
+		table[ext.cleanupContext] = OP_CONVERTER({
+			return c_ast::ref(C_NODE_MANAGER->create("insieme_cleanup_context"));
+		});
+
+		table[ext.registerWorkItem] = OP_CONVERTER({
+			return c_ast::ExpressionPtr();
+		});
+
+		#include "insieme/backend/operator_converter_end.inc"
+
+		return table;
+	}
 
 
-// -----------------------------------
-#ifdef __INTERNAL_FUN_DEFINITION
-	#undef __INTERNAL_FUN_DEFINITION
-	#undef FUN
-#endif
-
-#ifdef __INTERNAL_TYPE_DEFINITION
-	#undef __INTERNAL_TYPE_DEFINITION
-	#undef TYPE
-#endif
-// -----------------------------------
+} // end namespace runtime
+} // end namespace backend
+} // end namespace insieme

@@ -135,6 +135,7 @@ public:
 	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const;
 
 	// Call Expressions
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
