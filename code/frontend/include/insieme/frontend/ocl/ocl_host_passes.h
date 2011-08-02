@@ -153,10 +153,45 @@ public:
 };
 
 /**
+ * This specialized hasher hashes array accesses to the same variable to the same bin
+ * regardless of the array index
+ */
+struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
+
+	core::ASTBuilder builder;
+
+	/**
+	 * Explicit Default constructor required by VC.
+	 */
+	hash_target_specialized(core::ASTBuilder build) : hash_target(), builder(build) {}
+
+	/**
+	 * Computes the hash value of the given pointer based on the target it is pointing to.
+	 */
+	std::size_t operator()(const core::ExpressionPtr expr) const {
+		if(!expr)
+			return 0;
+
+		const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(expr);
+
+		if(!call)
+			return hasher(*expr);
+
+//		while(const core::CallExprPtr& tmp = dynamic_pointer_cast<const core::CallExpr>(call->getArgument(0)))
+//			call = tmp;
+
+		if(builder.getNodeManager().basic.isSubscriptOperator(call->getFunctionExpr()))
+			return hasher(*call->getArgument(0));
+
+		return hasher(*expr);
+	}
+};
+
+/**
  * compares two Expressions. Returns true if they are equal or if they are both a SubscriptOperator on the same variable,
  * regardless of the index
  */
-struct equal_variables : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
+struct equal_variables {// : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
 	// needed to perform isSubscriptOperator()
 	core::ASTBuilder& builder;
 
@@ -170,17 +205,26 @@ struct equal_variables : public std::binary_function<const core::ExpressionPtr&,
 	 * @param y the pointer to the second element to be compared
 	 */
 	bool operator()(const core::ExpressionPtr& x, const core::ExpressionPtr& y) const {
-		if(x == y)
-			return true;
-		if(*x == *y)
+		if(x == y || *x == *y)
 			return true;
 
-		if(const core::CallExprPtr xExpr = dynamic_pointer_cast<const core::CallExpr>(x))
-			if(builder.getNodeManager().basic.isSubscriptOperator(xExpr->getFunctionExpr()))
-				if(const core::CallExprPtr yExpr = dynamic_pointer_cast<const core::CallExpr>(y))
-					if(builder.getNodeManager().basic.isSubscriptOperator(yExpr->getFunctionExpr()))
-						if(xExpr->getArgument(0) == yExpr->getArgument(0))
-							return true;
+		core::CallExprPtr xCall =  dynamic_pointer_cast<const core::CallExpr>(x);
+/*std::cout << "xCall: " << xCall << std::endl;
+		while(const core::CallExprPtr& xExpr = dynamic_pointer_cast<const core::CallExpr>(xCall->getArgument(0)))
+			xCall = xExpr;
+std::cout << "xExpr: " << xCall << std::endl;
+*/
+		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(x);
+/*std::cout << "yCall: " << yCall << std::endl;
+		while(const core::CallExprPtr& yExpr = dynamic_pointer_cast<const core::CallExpr>(yCall->getArgument(0)))
+			yCall = yExpr;
+std::cout << "yExpr: " << yCall << std::endl;
+*/
+		if(builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
+			if(builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
+				if(xCall->getArgument(0) == yCall->getArgument(0))
+					return true;
+
 
 		return false;
 	}
@@ -190,7 +234,8 @@ struct equal_variables : public std::binary_function<const core::ExpressionPtr&,
 typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string> > HandlerTable;
 typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;
-typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables> KernelArgs;
+typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target_specialized, equal_variables> KernelArgs;
+//typedef std::map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, equal_variables> KernelArgs;
 //typedef insieme::utils::map::PointerMap<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
 typedef insieme::utils::map::PointerMap<core::ExpressionPtr, core::LambdaExprPtr> KernelLambdas;

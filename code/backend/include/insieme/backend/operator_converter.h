@@ -55,7 +55,7 @@ namespace backend {
 
 	typedef utils::map::PointerMap<core::ExpressionPtr, OperatorConverter> OperatorConverterTable;
 
-	OperatorConverterTable getBasicOperatorTable(const core::lang::BasicGenerator& basic);
+	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager);
 
 } // end namespace backend
 } // end namespace insieme

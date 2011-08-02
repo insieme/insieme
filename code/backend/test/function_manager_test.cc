@@ -81,14 +81,14 @@ TEST(FunctionManager, Literals) {
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	TestNameManager nameManager;
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
 
 	Converter converter;
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
 	converter.setNameManager(&nameManager);
 	converter.setNodeManager(&nodeManager);
-	converter.setCNodeManager(cManager);
+	converter.setFragmentManager(fragmentManager);
 
 	FunctionManager funManager(converter);
 	converter.setFunctionManager(&funManager);
@@ -120,8 +120,8 @@ TEST(FunctionManager, Literals) {
 
 	EXPECT_EQ("myFun_wrap", toC(info.lambdaWrapperName));
 
-	EXPECT_PRED2(containsSubString, toC(info.prototype), "int myFun(float p1, bool p2);");
-	EXPECT_EQ("int myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "int32_t myFun(float p1, bool p2);");
+	EXPECT_EQ("int32_t myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
 
 	// check get value (value to be used when passing function as an argument)
 	ConversionContext context(converter);
@@ -144,8 +144,8 @@ TEST(FunctionManager, Lambda) {
 	TestNameManager nameManager;
 	converter.setNameManager(&nameManager);
 
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
-	converter.setCNodeManager(cManager);
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
@@ -191,9 +191,9 @@ TEST(FunctionManager, Lambda) {
 	EXPECT_TRUE((bool)info.lambdaWrapperName);
 
 	EXPECT_EQ("name_wrap", toC(info.lambdaWrapperName));
-	EXPECT_PRED2(containsSubString, toC(info.prototype), "int name(float name, bool name)");
-	EXPECT_PRED2(containsSubString, toC(info.definition), "int name(float name, bool name) {\n    return 12;\n}");
-	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "int name_wrap(name* closure, float p1, bool p2) {\n    return name(p1, p2);\n}");
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "int32_t name(float name, bool name)");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "int32_t name(float name, bool name) {\n    return 12;\n}");
+	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "int32_t name_wrap(name* closure, float p1, bool p2) {\n    return name(p1, p2);\n}");
 
 	// since function is not recursive, no seperation of prototype and definition should be required
 	EXPECT_EQ(info.prototype, info.definition);
@@ -219,8 +219,8 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	TestNameManager nameManager;
 	converter.setNameManager(&nameManager);
 
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
-	converter.setCNodeManager(cManager);
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
@@ -271,9 +271,9 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.lambdaWrapper);
 
-	EXPECT_PRED2(containsSubString, toC(info.prototype), "bool name(int p1);");
-	EXPECT_PRED2(containsSubString, toC(info.definition), "bool name(int name) {\n");
-	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "bool name_wrap(name* closure, int p1) {\n    return name(p1);\n}");
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "bool name(int32_t p1);");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "bool name(int32_t name) {\n");
+	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "bool name_wrap(name* closure, int32_t p1) {\n    return name(p1);\n}");
 
 	// TODO: check create call and get value
 }
@@ -291,8 +291,8 @@ TEST(FunctionManager, Bind) {
 	TestNameManager nameManager;
 	converter.setNameManager(&nameManager);
 
-	c_ast::SharedCNodeManager cManager = c_ast::CNodeManager::createShared();
-	converter.setCNodeManager(cManager);
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	converter.setFragmentManager(fragmentManager);
 
 	TypeManager typeManager(converter);
 	converter.setTypeManager(&typeManager);
@@ -340,26 +340,26 @@ TEST(FunctionManager, Bind) {
 	EXPECT_EQ("name_closure", toC(info.closureType));
 
 	string def = toC(info.definitions);
-	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,float,int);");
+	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,float,int32_t);");
 	EXPECT_PRED2(containsSubString, def, "name* nested;");
-	EXPECT_PRED2(containsSubString, def, "int* c2;");
+	EXPECT_PRED2(containsSubString, def, "int32_t* c2;");
 	EXPECT_PRED2(containsSubString, def, "} name_closure;");
 
 	EXPECT_PRED2(containsSubString, def,
-		"bool name_mapper(name_closure* closure, float c1, int c3) {\n"
+		"bool name_mapper(name_closure* closure, float c1, int32_t c3) {\n"
 		"    return closure->nested->call(closure->nested, c1, closure->c2, c3);\n"
 		"}"
 	);
 
 	EXPECT_PRED2(containsSubString, def,
-		"static inline name_closure* name_ctr(name_closure* closure, name* nested, int* c2) {\n"
-		"    *(closure) = (name_closure){&name_mapper, nested, c2};\n"
+		"static inline name_closure* name_ctr(name_closure* closure, name* nested, int32_t* c2) {\n"
+		"    *closure = (name_closure){&name_mapper, nested, c2};\n"
 		"    return closure;\n"
 		"}"
 	);
 
 	// full code example - just make sure that no dependency cycle has been produced
-	toString(c_ast::CCode(bind, info.definitions));
+	toString(c_ast::CCode(fragmentManager, bind, info.definitions));
 
 	// check get value (value to be used when passing function as an argument)
 	ConversionContext context(converter);

@@ -55,8 +55,8 @@ namespace {
 		}
 	};
 
-	CodeFragmentPtr getTextFragment(const string& text) {
-		return std::make_shared<TextFragment>(text);
+	CodeFragmentPtr getTextFragment(const SharedCodeFragmentManager& manager, const string& text) {
+		return manager->create<TextFragment>(text);
 	}
 
 }
@@ -64,27 +64,29 @@ namespace {
 
 TEST(C_AST, FragmentDependencyResolution) {
 
-	// create a simple code fragment
-	CodeFragmentPtr code = getTextFragment("A");
+	SharedCodeFragmentManager fragmentManager = CodeFragmentManager::createShared();
 
-	EXPECT_PRED2(containsSubString, toString(CCode(core::NodePtr(), code)), "A");
+	// create a simple code fragment
+	CodeFragmentPtr code = getTextFragment(fragmentManager, "A");
+
+	EXPECT_PRED2(containsSubString, toString(CCode(fragmentManager, core::NodePtr(), code)), "A");
 
 	// add something with dependencies
 
-	CodeFragmentPtr codeA = getTextFragment("A");
-	CodeFragmentPtr codeB = getTextFragment("B");
-	CodeFragmentPtr codeC = getTextFragment("C");
-	CodeFragmentPtr codeD = getTextFragment("D");
+	CodeFragmentPtr codeA = getTextFragment(fragmentManager, "A");
+	CodeFragmentPtr codeB = getTextFragment(fragmentManager, "B");
+	CodeFragmentPtr codeC = getTextFragment(fragmentManager, "C");
+	CodeFragmentPtr codeD = getTextFragment(fragmentManager, "D");
 
 	codeB->addDependency(codeA);
 	codeC->addDependency(codeB);
 	codeD->addDependency(codeC);
 
-	EXPECT_PRED2(containsSubString, toString(CCode(core::NodePtr(), codeD)), "ABCD");
+	EXPECT_PRED2(containsSubString, toString(CCode(fragmentManager, core::NodePtr(), codeD)), "ABCD");
 
 	// add additional edge (should not change anything)
 	codeD->addDependency(codeA);
-	EXPECT_PRED2(containsSubString, toString(CCode(core::NodePtr(), codeD)), "ABCD");
+	EXPECT_PRED2(containsSubString, toString(CCode(fragmentManager, core::NodePtr(), codeD)), "ABCD");
 
 }
 

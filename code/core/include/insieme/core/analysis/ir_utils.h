@@ -44,6 +44,14 @@ namespace insieme {
 namespace core {
 namespace analysis {
 
+/**
+ * Tests whether the call referenced by the given pointer is a call to the given function.
+ *
+ * @param candidate the node to be tested
+ * @param function the function to be tested for
+ * @return true if so, false otherwise
+ */
+bool isCallOf(const CallExprPtr& candidate, const NodePtr& function);
 
 /**
  * Tests whether the node referenced by the given pointer is a call to the given function.
@@ -53,6 +61,24 @@ namespace analysis {
  * @return true if so, false otherwise
  */
 bool isCallOf(const NodePtr& candidate, const NodePtr& function);
+
+/**
+ * A utility function to extract an argument from the given call expression.
+ *
+ * @param call the call from which an argument should be extracted. The caller has to make
+ * 			sure that the given node is in deed a call expression.
+ * @param index the index of the requested argument
+ * @return the extracted argument
+ */
+static inline core::ExpressionPtr getArgument(const NodePtr& call, int index) {
+	assert(call->getNodeType() == core::NT_CallExpr && "Call has to be a call expression!");
+	return static_pointer_cast<const CallExpr>(call)->getArgument(index);
+}
+
+/**
+ * Tests whether the given node is representing a NoOP.
+ */
+bool isNoOp(const StatementPtr& candidate);
 
 /**
  * Tests whether the given node is representing a reference type to the given type.
@@ -111,6 +137,24 @@ static inline TypePtr getReferencedType(const TypePtr& type) {
 	return getReferencedType(static_pointer_cast<const RefType>(type));
 }
 
+/**
+ * Tests whether the given type is a type used for type literals. Hence, whether
+ * the type is of the from type<'a> where 'a may be a variable or concrete type.
+ *
+ * @param type the type to be tested
+ * @return true if the given type is a type literal type, false otherwise
+ */
+bool isTypeLiteralType(const GenericTypePtr& type);
+
+
+/**
+ * Tests whether the given type is a type used for type literals. Hence, whether
+ * the type is of the from type<'a> where 'a may be a variable or concrete type.
+ *
+ * @param type the type to be tested
+ * @return true if the given type is a type literal type, false otherwise
+ */
+bool isTypeLiteralType(const TypePtr& type);
 
 } // end namespace utils
 } // end namespace core

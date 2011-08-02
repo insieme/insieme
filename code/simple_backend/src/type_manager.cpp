@@ -39,6 +39,7 @@
 #include "insieme/simple_backend/backend_convert.h"
 
 #include "insieme/core/types.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/c_info/naming.h"
 
@@ -214,6 +215,11 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 		return toTypeInfo("isbr_ThreadGroup");
 	}
 
+	if(core::analysis::isTypeLiteralType(ptr)) {
+		// this is a type literal => handle as int
+		return toTypeInfo("int");
+	}
+
 	//assert(0 && "Unhandled generic type.");
 	return toTypeInfo(string("[[unhandled_simple_type: ") + ptr->toString() + "]]");
 }
@@ -313,44 +319,49 @@ TypeManager::TypeInfo TypeManager::resolveRefType(const RefTypePtr& ptr) {
 	TypeInfo subType = resolveType(ptr->getElementType());
 	string lvalue = subType.lValueName;
 	string rvalue = subType.lValueName + "*";
-	if (ptr->getElementType()->getNodeType() == NT_RefType) {
-		lvalue = lvalue + "*";
+//	if (ptr->getElementType()->getNodeType() == NT_RefType) {
+//		lvalue = lvalue + "*";
+//	}
+
+	auto nodeType = ptr->getElementType()->getNodeType();
+	if (nodeType == NT_ArrayType) {
+		// no distinction between r / l value representation
+		rvalue = lvalue;
 	}
 
 	// special handling of references to vectors and arrays
 	string externalName = subType.externName;
-	auto nodeType = ptr->getElementType()->getNodeType();
 	if (nodeType != NT_ArrayType && nodeType != NT_VectorType) {
 		 externalName = externalName + "*";
 	}
 
 	string externalization = "((" + externalName + ")(%s))";
-	if (nodeType == NT_ArrayType || nodeType == NT_VectorType) {
+	if (nodeType == NT_VectorType) {
 		externalization = "((" + externalName + ")((*(%s)).data))";
+	} else if (nodeType == NT_ArrayType) {
+		externalization = "%s";
 	}
 
 	// ---------------- add a new operator ------------------------
 
-	CodeFragmentPtr code = CodeFragment::createNew("New operator for type " + toString(*ptr));
-	code->addDependency(subType.definition);
-
-	// add struct definition
-	string name = getNameManager().getName(ptr);
-	const string& result = rvalue;
-	const string& value = subType.lValueName;
-
-	code << "static inline " << result << " _ref_new_" << name << "(" << value << " value) {\n";
-	code << "    " << result << " res = malloc(sizeof(" << value << "));\n";
-	code << "    *res = value;\n";
-	code << "    return res;\n";
-	code << "}\n\n";
+	CodeFragmentPtr code;
+//	CodeFragmentPtr code = CodeFragment::createNew("New operator for type " + toString(*ptr));
+//	code->addDependency(subType.definition);
+//
+//	// add struct definition
+//	string name = getNameManager().getName(ptr);
+//	const string& result = rvalue;
+//	const string& value = subType.lValueName;
+//
+//	code << "static inline " << result << " _ref_new_" << name << "(" << value << " value) {\n";
+//	code << "    " << result << " res = malloc(sizeof(" << value << "));\n";
+//	code << "    *res = value;\n";
+//	code << "    return res;\n";
+//	code << "}\n\n";
 
 
 	return TypeManager::TypeInfo(lvalue, rvalue, lvalue + " %s", rvalue + " %s",
 			externalName, externalName + " %s", externalization, subType.definition, subType.definition, code);
-
-//	TODO: if
-//	return resolveRefOrVectorOrArrayType(ptr);
 }
 
 
@@ -399,12 +410,6 @@ TypeManager::TypeInfo TypeManager::resolveVectorType(const VectorTypePtr& ptr) {
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
 			externalName, externalName + " %s", "(%s).data", code);
 
-//	TODO: remove if vector-is-a-struct works out!
-//	// default handling
-//	TypeManager::TypeInfo res = resolveRefOrVectorOrArrayType(ptr);
-//	res.rValueName = Entry::UNSUPPORTED;
-//	res.paramPattern = Entry::UNSUPPORTED;
-//	return res;
 }
 
 TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
@@ -419,11 +424,7 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 		dim = static_pointer_cast<const ConcreteIntTypeParam>(dimPtr)->getValue();
 	}
 
-	// otherwise: create a struct representing the array type
-
-	// fetch name for the array type
-	string name = getNameManager().getName(ptr);
-
+	// array types are represented via pointers to the element types
 
 	// look up element type info
 	const TypeInfo& elementTypeInfo = resolveType(ptr->getElementType());
@@ -434,55 +435,40 @@ TypeManager::TypeInfo TypeManager::resolveArrayType(const ArrayTypePtr& ptr) {
 		return pos->second;
 	}
 
-	// create a new code fragment for the struct definition
-	CodeFragmentPtr definition = CodeFragment::createNew("array type definition of " + name + " <=> " + toString(*ptr));
-	definition->addDependency(elementTypeInfo.declaration);
-
-	// see whether the size should be stored within an array
-	bool useSize = converter.isSupportArrayLength();
-
-	// add array-struct definition
-	definition << "typedef struct _" << name << " { \n";
-	definition << "    " << elementTypeInfo.lValueName << times("*", dim) << " data;\n";
-	if (useSize) definition << "    " << "unsigned size[" << dim << "];\n";
-	definition << "} " + name + ";\n";
+	// create the name of the resulting array (element name followed by *)
+	string name = elementTypeInfo.rValueName + toString(times("*", dim));
 
 	// ---------------------- add constructor ---------------------
-	CodeFragmentPtr utils = CodeFragment::createNew("array type utils of " + name + " <=> " + toString(*ptr));
-	utils->addDependency(elementTypeInfo.definition);
+	CodeFragmentPtr utils;
+//	CodeFragmentPtr utils = CodeFragment::createNew("array type utils of " + name + " <=> " + toString(*ptr));
+//	utils->addDependency(elementTypeInfo.definition);
+//
+//	utils << "// A constructor for the array type " << name << "\n";
+//	utils << "static inline " << name << " " << name << "_ctr(";
+//	for (unsigned i=0; i<dim; i++) {
+//		utils << "unsigned s" << (i+1);
+//		if (i!=dim-1) {
+//			utils << ",";
+//		}
+//	}
+//	utils << ") {\n";
+//	utils << "    return ((" << name << "){malloc(sizeof(" << elementTypeInfo.lValueName << ")";
+//	for (unsigned i=0; i<dim; i++) {
+//		utils << "*s" << (i+1);
+//	}
+//	utils << ")});\n}\n";
 
-	utils << "// A constructor for the array type " << name << "\n";
-	utils << "static inline " << name << " " << name << "_ctr(";
-	for (unsigned i=0; i<dim; i++) {
-		utils << "unsigned s" << (i+1);
-		if (i!=dim-1) {
-			definition << ",";
-		}
+	// add dependency to definition (only if not recursive - to avoid dependency loops)
+	CodeFragmentPtr decl;
+	CodeFragmentPtr def;
+	if (ptr->getElementType()->getNodeType() != core::NT_RecType) {
+		decl = elementTypeInfo.declaration;
+		def = elementTypeInfo.definition;
 	}
-	utils << ") {\n";
-	utils << "    return ((" << name << "){malloc(sizeof(" << elementTypeInfo.lValueName << ")";
-	for (unsigned i=0; i<dim; i++) {
-		utils << "*s" << (i+1);
-	}
-	utils << ")";
-
-	if (useSize) {
-		utils << ",{";
-		for (unsigned i=0; i<dim; i++) {
-			utils << "s" << (i+1);
-			if (i!=dim-1) {
-				utils << ",";
-			}
-		}
-		utils << "}";
-	}
-
-	utils << "});\n}\n";
 
 	string externalName = elementTypeInfo.externName + toString(times("*", dim));
 	return TypeManager::TypeInfo(name, name, name + " %s", name + " %s",
-			externalName, externalName + " %s", "(%s).data", definition, definition, utils);
-
+			name, name + " %s", "%s", decl, def, utils);
 }
 
 TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedCompositeTypePtr& ptr, string prefix) {

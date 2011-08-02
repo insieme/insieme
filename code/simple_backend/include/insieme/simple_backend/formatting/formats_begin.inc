@@ -85,6 +85,14 @@
 #define VISIT_ARG(N) insieme::simple_backend::formatting::detail::visitArgument(converter, call, N)
 
 /**
+ * A macro triggering the deceding into an expression. This will result in the printing of the code
+ * required for evaluating the corresponding argument.
+ * 
+ * @param N the index of the argument to be printed 
+ */
+#define VISIT(E) converter.convert(E);
+
+/**
  * Registers a new formatter instance for the given literal.
  * 
  * @param table the table to which the formatter should be added

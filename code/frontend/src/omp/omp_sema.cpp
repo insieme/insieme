@@ -58,7 +58,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 	ProgramPtr result = prog;
 	for(;;) {
 		SemaVisitor v(resultStorage);
-		core::visitAllInterruptable(core::ProgramAddress(result), v);
+		core::visitDepthFirstInterruptable(core::ProgramAddress(result), v);
 		if(v.getReplacement()) result = v.getReplacement();
 		else break;	
 	}
@@ -66,7 +66,7 @@ const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager
 }
 
 bool SemaVisitor::visitNode(const NodeAddress& node) {
-	return true; // default behaviour: continue visiting
+	return false; // default behaviour: continue visiting
 }
 
 
@@ -75,10 +75,10 @@ bool SemaVisitor::visitCallExpr(const core::CallExprAddress& callExp) {
 		auto funName = litFunExp->getValueAs<string>();
 		if(funName == "omp_get_thread_num") {
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, callExp, build.getThreadId()));
-			return false;
+			return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 
@@ -104,9 +104,9 @@ bool SemaVisitor::visitMarkerStmt(const MarkerStmtAddress& mark) {
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, mark, newNode));
 			//LOG(INFO) << "Post replace: " << replacement;
 		});
-		return false;
+		return true;
 	}
-	return true;
+	return false;
 }
 
 bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
@@ -129,9 +129,9 @@ bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
 			} 
 			else assert(0 && "Unhandled OMP expression annotation.");
 		});
-		return false;
+		return true;
 	}
-	return true;
+	return false;
 }
 
 NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const ParallelPtr& par) {

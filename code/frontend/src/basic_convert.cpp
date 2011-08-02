@@ -367,13 +367,26 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     }
     // handle refs initialization
     if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
-        // initialize pointer/reference types with the null value
-    	const core::NodeType& nodeTy = refTy->getElementType()->getNodeType();
+    	// initialize pointer/reference types with undefined
+    	core::TypePtr elemType = refTy->getElementType();
 
-    	if(nodeTy == core::NT_ArrayType || nodeTy == core::NT_VectorType || nodeTy == core::NT_StructType)
-    		return builder.refNew( defaultInitVal(refTy->getElementType()) );
+    	core::ExpressionPtr initValue;
+    	if (elemType->getNodeType() == core::NT_RefType) {
+    		// ref<ref<...>> => this is a pointer, init with 0 (null)
+    		initValue = builder.callExpr(elemType, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(elemType));
+    	} else {
+    		initValue = defaultInitVal(elemType);
+    	}
 
-    	return builder.refVar( defaultInitVal(refTy->getElementType()) );
+    	return builder.refVar(initValue);
+
+//        // initialize pointer/reference types with the null value
+//    	const core::NodeType& nodeTy = refTy->getElementType()->getNodeType();
+//
+//    	if(nodeTy == core::NT_ArrayType || nodeTy == core::NT_VectorType || nodeTy == core::NT_StructType)
+//    		return builder.refNew( defaultInitVal(refTy->getElementType()) );
+//
+//    	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
     if ( mgr.basic.isString(type) ) {
@@ -427,6 +440,12 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 				//arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
 			//);
     }
+
+    // handle any-ref initialization
+    if ( mgr.basic.isAnyRef(type) ) {
+    	return mgr.basic.getNull();
+    }
+
 	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!"; 
     assert(false && "Default initialization type not defined");
 }
@@ -493,7 +512,6 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
-
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
 		// this variable is extern

@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/full_backend.h"
+#include "insieme/backend/runtime/runtime_backend.h"
 
 #include <sstream>
 
@@ -44,6 +44,7 @@
 #include "insieme/core/ast_node.h"
 
 #include "insieme/backend/preprocessor.h"
+#include "insieme/backend/postprocessor.h"
 #include "insieme/backend/converter.h"
 #include "insieme/backend/name_manager.h"
 #include "insieme/backend/variable_manager.h"
@@ -52,22 +53,32 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/parallel_manager.h"
 
+#include "insieme/backend/runtime/runtime_operator.h"
+#include "insieme/backend/runtime/work_item_extractor.h"
+
 #include "insieme/backend/c_ast/c_code.h"
 
 
 namespace insieme {
 namespace backend {
+namespace runtime {
 
+	namespace {
 
-	FullBackendPtr FullBackend::getDefault() {
-		return std::make_shared<FullBackend>();
+		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
+
+		FunctionIncludeTable getFunctionIncludeTable();
+
 	}
 
-	TargetCodePtr FullBackend::convert(const core::NodePtr& code) const {
+	RuntimeBackendPtr RuntimeBackend::getDefault() {
+		return std::make_shared<RuntimeBackend>();
+	}
+
+	TargetCodePtr RuntimeBackend::convert(const core::NodePtr& code) const {
 
 		// basic setup
-		ConverterConfig config;
-		config.supportArrayLength = false;
+		ConverterConfig config = ConverterConfig::getDefault();
 
 		// create and set up the converter
 		Converter converter(config);
@@ -76,13 +87,22 @@ namespace backend {
 		core::NodeManager& nodeManager = code->getNodeManager();
 		converter.setNodeManager(&nodeManager);
 
-		// set up the shared C node manager (for the result)
-		c_ast::SharedCNodeManager cNodeManager = c_ast::CNodeManager::createShared();
-		converter.setCNodeManager(cNodeManager);
+		// set up the shared code fragment manager (for the result)
+		c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+		converter.setFragmentManager(fragmentManager);
 
 		// set up pre-processing
-		NoPreProcessing preprocessor;
-		converter.setPreProcessor(&preprocessor);
+		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
+				makePreProcessor<IfThenElseInlining>(),
+				makePreProcessor<RestoreGlobals>(),
+				makePreProcessor<InitZeroSubstitution>(),
+				makePreProcessor<runtime::WorkItemExtractor>()
+		);
+		converter.setPreProcessor(preprocessor);
+
+		// set up post-processing
+		PostProcessorPtr postprocessor = makePostProcessor<NoPostProcessing>();
+		converter.setPostProcessor(postprocessor);
 
 		// Prepare managers
 		SimpleNameManager nameManager;
@@ -94,7 +114,7 @@ namespace backend {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager.getBasicGenerator()));
+		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;
@@ -104,6 +124,28 @@ namespace backend {
 		return converter.convert(code);
 	}
 
+	namespace {
+
+		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res = getBasicOperatorTable(manager);
+			return addRuntimeSpecificOps(manager, res);
+		}
+
+		FunctionIncludeTable getFunctionIncludeTable() {
+			FunctionIncludeTable res = getBasicFunctionIncludeTable();
+
+			// add runtime-specific includes
+			res["irt_get_default_worker_count"] 	= "standalone.h";
+			res["irt_runtime_standalone"] 			= "standalone.h";
+
+
+			return res;
+		}
+
+
+	}
+
+} // end namespace sequential
 } // end namespace backend
 } // end namespace insieme
 

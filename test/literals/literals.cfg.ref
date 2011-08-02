@@ -5,7 +5,7 @@ digraph G {
 3[shape=box,label="[B3]\l0: printf(..., ...)\l"];
 4[shape=box,label="[B4]\l0: decl v3 = ...\l"];
 5[shape=box,label="[B5]\l0: string.as.char.pointer(\"Full: %c\n\")\l"];
-6[shape=box,label="[B6]\l0: varlist.pack((( *v3)))\l"];
+6[shape=box,label="[B6]\l0: varlist.pack((CAST<int<4>>(( *v3))))\l"];
 7[shape=box,label="[B7]\l0: ref.var('\0')\l"];
 9[shape=box,label="[B9]\l0: printf(..., ...)\l"];
 10[shape=box,label="[B10]\l0: printf(..., ...)\l"];

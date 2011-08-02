@@ -123,10 +123,11 @@ namespace backend {
 
 	FunctionManager::FunctionManager(const Converter& converter)
 		: converter(converter), store(new detail::FunctionInfoStore(converter)),
-		  operatorTable(getBasicOperatorTable(converter.getNodeManager().getBasicGenerator())) {}
+		  operatorTable(getBasicOperatorTable(converter.getNodeManager())),
+		  includeTable(getBasicFunctionIncludeTable()) {}
 
-	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable)
-		: converter(converter), store(new detail::FunctionInfoStore(converter)), operatorTable(operatorTable) {}
+	FunctionManager::FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const FunctionIncludeTable& includeTable)
+		: converter(converter), store(new detail::FunctionInfoStore(converter)), operatorTable(operatorTable), includeTable(includeTable) {}
 
 	FunctionManager::~FunctionManager() {
 		delete store;
@@ -246,8 +247,24 @@ namespace backend {
 			return res;
 		}
 
+		// 3) test whether target is a lambda => call lambda directly, without creating a closure
+		if (fun->getNodeType() == core::NT_LambdaExpr) {
+			// obtain lambda information
+			const LambdaInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
 
-		// the generic fall-back solution:
+			// produce call to internal lambda
+			c_ast::CallPtr res = c_ast::call(info.function->name);
+			appendAsArguments(context, res, call->getArguments(), false);
+
+			// add dependencies and requirements
+			context.getDependencies().insert(info.prototype);
+			context.getRequirements().insert(info.definition);
+
+			// return internal function call
+			return res;
+		}
+
+		// Finally: the generic fall-back solution:
 		//		get function as a value and call it using the function-type's caller function
 
 		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
@@ -282,12 +299,15 @@ namespace backend {
 			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
 			return getValueInternal(context, fun, getInfo(lambda));
 		}
-		case core::NT_Variable: {
+		case core::NT_Variable:
+		case core::NT_CallExpr:
+		{
 			// variable is already representing a value
 			c_ast::NodePtr res = converter.getStmtConverter().convert(context, fun);
 			return static_pointer_cast<c_ast::Expression>(res);
 		}
 		default:
+			LOG(FATAL) << "Encountered unsupported node: " << *fun;
 			assert(false && "Unexpected Node Type!");
 			return c_ast::ExpressionPtr();
 		}
@@ -328,6 +348,15 @@ namespace backend {
 		return res;
 	}
 
+	const boost::optional<string> FunctionManager::getHeaderFor(const string& function) const {
+		// try looking up function within the include table
+		auto pos = includeTable.find(function);
+		if (pos != includeTable.end()) {
+			return pos->second;
+		}
+		// not found => return empty optional
+		return boost::optional<string>();
+	}
 
 	namespace detail {
 
@@ -383,9 +412,17 @@ namespace backend {
 
 			// ------------------------ add prototype -------------------------
 
-			c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
-			res->prototype = c_ast::CCodeFragment::createNew(manager, code);
-			res->prototype->addDependencies(fun.prototypeDependencies);
+			auto header = converter.getFunctionManager().getHeaderFor(literal->getValue());
+			if (header) {
+				// => use prototype of include file
+				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+				res->prototype->addInclude(*header);
+			} else {
+				// => add prototype for this literal
+				c_ast::FunctionPrototypePtr code = manager->create<c_ast::FunctionPrototype>(fun.function);
+				res->prototype = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), code);
+				res->prototype->addDependencies(fun.prototypeDependencies);
+			}
 
 			// -------------------------- add lambda wrapper ---------------------------
 
@@ -541,7 +578,7 @@ namespace backend {
 			}
 
 			// attach definitions of closure, mapper and constructor
-			res->definitions = c_ast::CCodeFragment::createNew(manager,
+			res->definitions = c_ast::CCodeFragment::createNew(converter.getFragmentManager(),
 					manager->create<c_ast::Comment>("-- Begin - Bind Constructs ------------------------------------------------------------"),
 					closure, mapper, constructor,
 					manager->create<c_ast::Comment>("--  End  - Bind Constructs ------------------------------------------------------------"));
@@ -568,11 +605,15 @@ namespace backend {
 			// prepare some manager
 			NameManager& nameManager = converter.getNameManager();
 			core::NodeManager& manager = converter.getNodeManager();
-			auto cManager = converter.getCNodeManager();
+			auto& cManager = converter.getCNodeManager();
+			auto& fragmentManager = converter.getFragmentManager();
 
 			// create definition and declaration block
-			c_ast::CCodeFragmentPtr declarations = c_ast::CCodeFragment::createNew(cManager);
-			c_ast::CCodeFragmentPtr definitions = c_ast::CCodeFragment::createNew(cManager);
+			c_ast::CCodeFragmentPtr declarations = c_ast::CCodeFragment::createNew(fragmentManager);
+			c_ast::CCodeFragmentPtr definitions = c_ast::CCodeFragment::createNew(fragmentManager);
+
+			// add requirement for definition once been declared
+			declarations->addRequirement(definitions);
 
 			declarations->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Prototypes ----------"));
 			definitions->getCode().push_back(cManager->create<c_ast::Comment>("------- Function Definitions ---------"));
@@ -607,6 +648,7 @@ namespace backend {
 				core::LambdaPtr body;
 				const core::FunctionTypePtr& funType = static_pointer_cast<const core::FunctionType>(lambda->getType());
 				FunctionCodeInfo codeInfo = resolveFunction(name, funType, body, false);
+				info->function = codeInfo.function;
 
 				auto wrapper = resolveLambdaWrapper(codeInfo.function, funType, false);
 				info->lambdaWrapperName = wrapper.first;
@@ -769,14 +811,27 @@ namespace backend {
 					function->returnType, name, parameter, body
 			);
 
-			c_ast::CodeFragmentPtr res = c_ast::CCodeFragment::createNew(manager, wrapper);
+			c_ast::CodeFragmentPtr res = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), wrapper);
 			res->addDependency(funTypeInfo.definition);
 
 			return std::make_pair(name, res);
 		}
 
-
 	}
+
+	FunctionIncludeTable getBasicFunctionIncludeTable() {
+		// create table
+		FunctionIncludeTable res;
+
+		// add function definitions from macro file
+		#define FUN(l,f) res[#f] = l;
+		#include "includes.def"
+		#undef FUN
+
+		// done
+		return res;
+	}
+
 
 } // end namespace backend
 } // end namespace insieme

@@ -1,4 +1,4 @@
-SIMPLE_BACKEND_RUNTIME_HOME=/insieme-dev/herbert/build_all/code/simple_backend/
+SIMPLE_BACKEND_RUNTIME_HOME=../../build_all/code/simple_backend/
 
 TIME_CMD=/usr/bin/time
 TIME_FORMAT="    Total Time: %E\tUSER: %U\tSYS: %S\tContextSwitches: %c"

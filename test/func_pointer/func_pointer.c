@@ -13,6 +13,10 @@ int f(int* v, int size) {
 		printf("%d,", v[i]);
 }
 
+int f2(int(*(*fun)[4])(int, int)) {
+	return (*fun)[1](1,2);
+}
+
 int main(int argc, char* argv[]) {
 	
 	int (*funcs[])(int, int) = { min, max, sum, avg };
@@ -25,4 +29,6 @@ int main(int argc, char* argv[]) {
 
 	if(!2) { }
 	
+	int(* list[4])(int,int) = {min, max, sum, avg};
+	printf("Sum: %d\n", f2(&list));
 }

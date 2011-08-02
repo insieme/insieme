@@ -241,6 +241,8 @@ BasicGenerator::Operator BasicGenerator::getOperator(const LiteralPtr& lit) cons
 	);
 	if (fit != opMap.end()) { return fit->first; }
 	assert(false && "Literal not found within the OperationMap, therefore not a valid IR literal expression");
+	// should never happen, but eliminates compiler warning in release mode
+	return BasicGenerator::Operator::Not;
 }
 // ----- extra material ---
 

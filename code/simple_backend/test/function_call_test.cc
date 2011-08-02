@@ -36,6 +36,11 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
+
+#include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/test/test_config.h"
+
 #include "insieme/simple_backend/backend_convert.h"
 
 #include "insieme/core/program.h"
@@ -45,6 +50,7 @@
 
 #include "insieme/utils/logging.h"
 #include "insieme/utils/compiler/compiler.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
 namespace backend {
@@ -62,12 +68,7 @@ TEST(FunctionCall, templates) {
                 \
                 return 0; \
             } } }");
-/*
-    (fun(array<'a, 1>:in) -> int<4> {{ \
-        decl array<'a, 1>:local = (op<undefined>(lit<type<array<'a> >, type(array('a)) > )); \
-        return 0; \
-    }}(lit<array<int<4>, 1>, x>)); \
-*/
+
 
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
@@ -86,9 +87,6 @@ TEST(FunctionCall, VectorReduction) {
     core::NodeManager manager;
     core::parse::IRParser parser(manager);
 
-//    core::ASTBuilder builder(manager);
-//    const core::lang::BasicGenerator& basic = manager.basic;
-
     // Operation: vector.reduction
     // Type: (vector<'elem,#l>, 'res, ('elem, 'res) -> 'res) -> 'res
 
@@ -99,33 +97,7 @@ TEST(FunctionCall, VectorReduction) {
                 }}() ); \
                 return 0; \
             } } }");
-/*
 
-    core::TypePtr int4 = basic.getInt4();
-    core::VectorTypePtr vectorType = builder.vectorType(int4, builder.concreteIntTypeParam(4));
-
-    core::ExpressionPtr vector = builder.vectorExpr(vectorType,
-    		toVector<core::ExpressionPtr>(
-    				builder.literal(int4, "1"),
-    				builder.literal(int4, "2"),
-    				builder.literal(int4, "3"),
-    				builder.literal(int4, "4")
-    		)
-    );
-
-    core::ExpressionPtr call = builder.callExpr(basic.getVectorReduction(), vector, builder.literal(int4, "0"), basic.getSignedIntAdd());
-
-    core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(), basic.getUnit());
-    core::ExpressionPtr lambda = builder.lambdaExpr(funType, toVector<core::VariablePtr>(), builder.returnStmt(call));
-
-    core::ProgramPtr program = builder.createProgram(toVector(lambda), true);
-*/
-/*
-    (fun(array<'a, 1>:in) -> int<4> {{ \
-        decl array<'a, 1>:local = (op<undefined>(lit<type<array<'a> >, type(array('a)) > )); \
-        return 0; \
-    }}(lit<array<int<4>, 1>, x>)); \
-*/
 
     LOG(INFO) << "Printing the IR: " << core::printer::PrettyPrinter(program);
 
@@ -138,8 +110,70 @@ TEST(FunctionCall, VectorReduction) {
     EXPECT_FALSE(code.find("<?>") != string::npos);
 
     // test contracted form
-    EXPECT_TRUE(code.find("return (((((0+1)+2)+3)+4));") != string::npos);
+    EXPECT_PRED2(containsSubString, code, "return (((((0+1)+2)+3)+4));");
 }
+
+
+
+TEST(FunctionCall, Pointwise) {
+    core::NodeManager manager;
+    core::parse::IRParser parser(manager);
+
+    // Operation: vector.pointwise
+    // Type: (('elem, 'elem) -> 'res) -> (vector<'elem,#l>, vector<'elem,#l>) -> vector<'res, #l>
+
+    core::ProgramPtr program = parser.parseProgram("main: fun ()->unit:\
+            mainfct in { ()->unit:mainfct = ()->unit{ { \
+    			((op<vector.pointwise>(op<int.add>))(vector<int<4>,4>(1,2,3,4), vector<int<4>,4>(5,6,7,8))); \
+            } } }");
+
+
+
+    auto converted = simple_backend::SimpleBackend::getDefault()->convert(program);
+
+    string code = toString(*converted);
+    EXPECT_FALSE(code.find("<?>") != string::npos);
+
+    // try compiling the code fragment
+    utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-I " SRC_ROOT_DIR "simple_backend/include/insieme/simple_backend/runtime/");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
+
+TEST(FunctionCall, TypeLiterals) {
+    core::NodeManager manager;
+    core::parse::IRParser parser(manager);
+
+    // create a function accepting a type literal
+
+    core::ProgramPtr program = parser.parseProgram("main: fun ()->int<4>:\
+                mainfct in { ()->int<4>:mainfct = ()->int<4>{ { \
+                    (fun(type<'a>:dtype) -> int<4> {{ \
+                        return 0; \
+                    }}(lit<type<real<4> >, type(real(4)) >) ); \
+                    return 0; \
+                } } }");
+
+    std::cout << "Program: " << *program << std::endl;
+
+    auto converted = simple_backend::SimpleBackend::getDefault()->convert(program);
+
+    std::cout << "Converted: \n" << *converted << std::endl;
+
+    string code = toString(*converted);
+    EXPECT_FALSE(code.find("<?>") != string::npos);
+
+    // try compiling the code fragment
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-lm");
+	compiler.addFlag("-I " SRC_ROOT_DIR "simple_backend/include/insieme/simple_backend/runtime/");
+	compiler.addFlag("-c"); // do not run the linker
+	EXPECT_TRUE(utils::compiler::compile(*converted, compiler));
+}
+
 
 } // namespace backend
 } // namespace insieme

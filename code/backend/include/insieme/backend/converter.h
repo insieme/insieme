@@ -51,6 +51,10 @@ namespace backend {
 
 	// forward declaration of preprocessor
 	class PreProcessor;
+	typedef std::shared_ptr<PreProcessor> PreProcessorPtr;
+
+	class PostProcessor;
+	typedef std::shared_ptr<PostProcessor> PostProcessorPtr;
 
 	// forward declaration of involved managers
 	class NameManager;
@@ -65,21 +69,21 @@ namespace backend {
 
 
 	struct ConverterConfig {
-		bool supportArrayLength;
 
+		// - no configuration so far -
 
 		static ConverterConfig getDefault() {
 			ConverterConfig res;
-			res.supportArrayLength = false;
 			return res;
 		}
 	};
 
 	class Converter {
 
-		// ------- The Preprocessor applied before the conversion -----------
+		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
-		PreProcessor* preProcessor;
+		PreProcessorPtr preProcessor;
+		PostProcessorPtr postProcessor;
 
 		// ------- Manager involved in the conversion process -----------
 
@@ -95,7 +99,7 @@ namespace backend {
 		core::NodeManager* nodeManager;
 
 		// NOTE: shared pointer, since it has to survive the conversion process
-		c_ast::SharedCNodeManager cNodeManager;
+		c_ast::SharedCodeFragmentManager fragmentManager;
 
 
 		// ----------- Overall Conversion Configuration ----------------
@@ -103,25 +107,39 @@ namespace backend {
 		ConverterConfig config;
 
 
+		/**
+		 * A Code Fragment containing global declarations.
+		 */
+		mutable c_ast::CodeFragmentPtr globalFragment;
+
 	public:
 
 		Converter() :
-			preProcessor(0), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(ConverterConfig::getDefault()) {}
 
 		Converter(const ConverterConfig& config) :
-			preProcessor(0), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(config) {}
 
 		backend::TargetCodePtr convert(const core::NodePtr& code);
 
-		PreProcessor& getPreProcessor() const {
+		const PreProcessorPtr& getPreProcessor() const {
 			assert(preProcessor);
-			return *preProcessor;
+			return preProcessor;
 		}
 
-		void setPreProcessor(PreProcessor* newPreProcessor) {
+		void setPreProcessor(PreProcessorPtr newPreProcessor) {
 			preProcessor = newPreProcessor;
+		}
+
+		const PostProcessorPtr& getPostProcessor() const {
+			assert(postProcessor);
+			return postProcessor;
+		}
+
+		void setPostProcessor(PostProcessorPtr newPostProcessor) {
+			postProcessor = newPostProcessor;
 		}
 
 		NameManager& getNameManager() const {
@@ -178,14 +196,16 @@ namespace backend {
 			nodeManager = manager;
 		}
 
-		const c_ast::SharedCNodeManager& getCNodeManager() const {
-			assert(cNodeManager);
-			return cNodeManager;
+		const c_ast::SharedCodeFragmentManager& getFragmentManager() const {
+			assert(fragmentManager);
+			return fragmentManager;
 		}
 
-		void setCNodeManager(const c_ast::SharedCNodeManager& manager) {
-			cNodeManager = manager;
+		void setFragmentManager(const c_ast::SharedCodeFragmentManager& manager) {
+			fragmentManager = manager;
 		}
+
+		const c_ast::SharedCNodeManager& getCNodeManager() const;
 
 		ConverterConfig& getConfig() {
 			return config;
@@ -197,6 +217,17 @@ namespace backend {
 
 		void setConfig(const ConverterConfig& newConfig) {
 			config = newConfig;
+		}
+
+		// TODO: find a better place for this ...
+
+		const c_ast::CodeFragmentPtr& getGlobalFragment() const {
+			return globalFragment;
+		}
+
+		void setGlobalFragment(const c_ast::CodeFragmentPtr& globals) const {
+			assert(!globalFragment && "Global fragment has been set before!!");
+			globalFragment = globals;
 		}
 
 	};

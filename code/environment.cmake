@@ -36,13 +36,17 @@ set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
 # ------------------------------------------------------------- configuration for platforms
-if(MSVC)   # Windows Visual Studios
+if(MSVC)   # Windows Visual Studio
 
   # MSVC can compile insieme statical only
-  set(LINKING_TYPE STATIC)
+  if(NOT LINKING_TYPE)
+	set(LINKING_TYPE STATIC)
+  endif(NOT LINKING_TYPE)
 
   # Therefore Boost needs to be linked statically
   set(Boost_USE_STATIC_LIBS ON)
+
+  set(DO_INSTALL FALSE)
 
 else(MSVC) # Linux or Cygwin/MinGW
 
@@ -51,6 +55,8 @@ else(MSVC) # Linux or Cygwin/MinGW
   	    set(LINKING_TYPE SHARED)
     endif(NOT LINKING_TYPE)
 
+  set(DO_INSTALL TRUE)
+  
 endif(MSVC)
 
 
@@ -77,6 +83,9 @@ if(NOT DEFINED ISL_HOME)
 endif()
 include_directories( ${ISL_HOME}/include )
 find_library(isl_LIB NAMES isl PATHS ${ISL_HOME}/lib)
+if(MSVC) 
+	set (isl_LIB dummy)
+endif(MSVC)
 
 # lookup pthread library
 find_library(pthread_LIB pthread)

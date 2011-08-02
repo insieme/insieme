@@ -49,6 +49,11 @@ namespace transform {
  */
 core::NodePtr cleanup(const core::NodePtr& node);
 
+/**
+ * This method replaces all arrays in the given sub-tree with scalars if they
+ * are never used as arrays (ie. there are no index expression with a index other than 0)
+ */
+core::NodePtr eliminatePseudoArrays(const core::NodePtr& node);
 
 } // end of namespace transform
 } // end of namespace insieme

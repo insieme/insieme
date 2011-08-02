@@ -521,30 +521,30 @@ namespace {
 		// do not visit types
 		LambdaDeltaVisitor() : ASTVisitor<bool, Address>(false) {}
 
-		bool visitNode(const NodeAddress& node) { return true; } // default behaviour: continue visiting
+		bool visitNode(const NodeAddress& node) { return false; } // default behaviour: continue visiting
 
 		bool visitDeclarationStmt(const DeclarationStmtAddress &decl) {
 			declared.insert(decl->getVariable());
-			return true;
+			return false;
 		}
 
 		bool visitVariable(const VariableAddress& var) {
 			auto vp = var.getAddressedNode();
 			if(declared.find(vp) == declared.end()) undeclared.insert(vp);
-			return true;
+			return false;
 		}
 
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
 		bool visitLambdaExpr(const LambdaExprAddress&) {
-			return false;
+			return true;
 		}
 	};
 
 	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, ASTBuilder::CaptureInits& captures,
 			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
-		visitAllPrunable(StatementAddress(root), ldv);
+		visitDepthFirstPrunable(StatementAddress(root), ldv);
 
 		// sort set to ensure code identity
 		std::vector<VariablePtr> undeclared(ldv.undeclared.cbegin(), ldv.undeclared.cend());

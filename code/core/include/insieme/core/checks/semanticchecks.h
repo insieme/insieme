@@ -36,39 +36,28 @@
 
 #pragma once
 
-#include "insieme/backend/backend.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
-namespace backend {
+namespace core {
+namespace checks {
 
-	// A forward declaration of the full backend implementation
-	class FullBackend;
-	typedef std::shared_ptr<FullBackend> FullBackendPtr;
+enum {
+	EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE = EC_GROUP_SEMANTIC + 1
+};
 
-	/**
-	 * The backend interface implementation facading the omega backend.
-	 */
-	class FullBackend : public Backend {
-	public:
+// defines macros for generating CHECK declarations
+#include "insieme/core/checks/check_macros.inc"
 
-		/**
-		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the full backend using the default configuration.
-		 *
-		 * @return a smart pointer to a fresh instance of the full backend
-		 */
-		static FullBackendPtr getDefault();
+/**
+ * This check verifies that array indices are in range. 
+ * Currently only implemented for single element arrays generated from scalars.
+ */
+SIMPLE_CHECK(ScalarArrayIndexRange, CallExpr, false);
 
-		/**
-		 * The main facade function of the full backend. This function converts the given
-		 * IR representation into C99-target code interacting with the Insieme Runtime environment.
-		 *
-		 * @param source the program to be converted
-		 * @return a pointer to the converted target code
-		 */
-		backend::TargetCodePtr convert(const core::NodePtr& source) const;
+#undef SIMPLE_CHECK
 
-	};
-
-} // end namespace backend
+} // end namespace check
+} // end namespace core
 } // end namespace insieme
+

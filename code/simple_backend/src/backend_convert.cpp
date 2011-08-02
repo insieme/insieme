@@ -86,24 +86,22 @@ using namespace utils::log;
 		/**
 		 * This method allows to print the result to an output stream.
 		 */
-		virtual std::ostream& printTo(std::ostream& out) const;
+		virtual std::ostream& printTo(std::ostream& out) const {
+
+			// print some general header information ...
+			out << "// --- Generated Inspire Code ---\n";
+
+			// print headers
+			for_each(headers, [&](const string& cur) {
+				out << cur << std::endl;
+			});
+
+			// add the program code
+			return ::operator<<(out, this->code);
+		}
 
 	};
 
-
-	std::ostream& ConvertedCode::printTo(std::ostream& out) const {
-
-		// print some general header information ...
-		out << "// --- Generated Inspire Code ---\n";
-
-		// print headers
-		for_each(headers, [&](const string& cur) {
-			out << cur << std::endl;
-		});
-
-		// add the program code
-		return ::operator<<(out, this->code);
-	}
 
 	backend::TargetCodePtr Converter::convert(const core::NodePtr& prog) {
 
@@ -121,7 +119,6 @@ using namespace utils::log;
 
 		timer.stop();
 		LOG(INFO) << timer;
-
 		timer = insieme::utils::Timer("SimpleBackend.Conversions");
 
 		// convert code

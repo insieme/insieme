@@ -192,19 +192,28 @@ TEST(TypeManager, RefTypes) {
 	type = builder.refType(builder.arrayType(basic.getInt4()));
 	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("ref<array<int<4>,1>>", toString(*type));
-	EXPECT_EQ("name", info.lValueName);
-	EXPECT_EQ("name*", info.rValueName);
-	EXPECT_EQ("name %s", info.declPattern);
-	EXPECT_EQ("name* %s", info.paramPattern);
+	EXPECT_EQ("int*", info.lValueName);
+	EXPECT_EQ("int*", info.rValueName);
+	EXPECT_EQ("int* %s", info.declPattern);
+	EXPECT_EQ("int* %s", info.paramPattern);
+
+	// ref/ref/array combination
+	type = builder.refType(builder.refType(builder.arrayType(basic.getInt4())));
+	info = typeManager.getTypeInfo(fragment, type);
+	EXPECT_EQ("ref<ref<array<int<4>,1>>>", toString(*type));
+	EXPECT_EQ("int*", info.lValueName);
+	EXPECT_EQ("int**", info.rValueName);
+	EXPECT_EQ("int* %s", info.declPattern);
+	EXPECT_EQ("int** %s", info.paramPattern);
 
 	// ref/array - multidimensional
 	type = builder.refType(builder.arrayType(basic.getInt4(), size2));
 	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("ref<array<int<4>,2>>", toString(*type));
-	EXPECT_EQ("name", info.lValueName);
-	EXPECT_EQ("name*", info.rValueName);
-	EXPECT_EQ("name %s", info.declPattern);
-	EXPECT_EQ("name* %s", info.paramPattern);
+	EXPECT_EQ("int**", info.lValueName);
+	EXPECT_EQ("int**", info.rValueName);
+	EXPECT_EQ("int** %s", info.declPattern);
+	EXPECT_EQ("int** %s", info.paramPattern);
 
 	// ref/vector combination
 	type = builder.refType(builder.vectorType(basic.getInt4(), size));
@@ -231,7 +240,7 @@ TEST(TypeManager, ArrayTypes) {
 	core::ASTBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
-	Converter converter(true);
+	Converter converter;
 	SimpleNameManager nameManager;
 	converter.setNameManager(&nameManager);
 	TypeManager typeManager(converter);
@@ -242,74 +251,37 @@ TEST(TypeManager, ArrayTypes) {
 
 	core::TypePtr type = builder.arrayType(basic.getInt4());
 	info = typeManager.getTypeInfo(fragment, type);
-	EXPECT_EQ("name", info.lValueName);
-	EXPECT_EQ("name", info.rValueName);
-	EXPECT_EQ("name %s", info.declPattern);
-	EXPECT_EQ("name %s", info.paramPattern);
-	EXPECT_TRUE((bool)info.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
-	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[1];");
-	EXPECT_PRED2(containsSubString, toString(info.definition), "int* data;");
+	EXPECT_EQ("int*", info.lValueName);
+	EXPECT_EQ("int*", info.rValueName);
+	EXPECT_EQ("int* %s", info.declPattern);
+	EXPECT_EQ("int* %s", info.paramPattern);
+	EXPECT_FALSE((bool)info.definition);
 
 	type = builder.arrayType(basic.getInt8());
 	info = typeManager.getTypeInfo(fragment, type);
-	EXPECT_EQ("name", info.lValueName);
-	EXPECT_EQ("name", info.rValueName);
-	EXPECT_EQ("name %s", info.declPattern);
-	EXPECT_EQ("name %s", info.paramPattern);
-	EXPECT_TRUE((bool)info.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
-	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[1];");
-	EXPECT_PRED2(containsSubString, toString(info.definition), "long* data;");
+	EXPECT_EQ("long*", info.lValueName);
+	EXPECT_EQ("long*", info.rValueName);
+	EXPECT_EQ("long* %s", info.declPattern);
+	EXPECT_EQ("long* %s", info.paramPattern);
+	EXPECT_FALSE((bool)info.definition);
 
 	type = builder.arrayType(builder.structType(core::NamedCompositeType::Entries()));
 	info = typeManager.getTypeInfo(fragment, type);
-	EXPECT_EQ("name", info.lValueName);
-	EXPECT_EQ("name", info.rValueName);
-	EXPECT_EQ("name %s", info.declPattern);
-	EXPECT_EQ("name %s", info.paramPattern);
+	EXPECT_EQ("struct name*", info.lValueName);
+	EXPECT_EQ("struct name*", info.rValueName);
+	EXPECT_EQ("struct name* %s", info.declPattern);
+	EXPECT_EQ("struct name* %s", info.paramPattern);
 	EXPECT_TRUE((bool)info.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
-	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[1];");
-	EXPECT_PRED2(containsSubString, toString(info.definition), "name* data;");
 
 	type = builder.arrayType(basic.getInt8(), builder.concreteIntTypeParam(2));
 	info = typeManager.getTypeInfo(fragment, type);
-	EXPECT_EQ("name", info.lValueName);
-	EXPECT_EQ("name", info.rValueName);
-	EXPECT_EQ("name %s", info.declPattern);
-	EXPECT_EQ("name %s", info.paramPattern);
-	EXPECT_TRUE((bool)info.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
-	EXPECT_PRED2(containsSubString, toString(info.definition), "unsigned size[2];");
-	EXPECT_PRED2(containsSubString, toString(info.definition), "long** data;");
+	EXPECT_EQ("long**", info.lValueName);
+	EXPECT_EQ("long**", info.rValueName);
+	EXPECT_EQ("long** %s", info.declPattern);
+	EXPECT_EQ("long** %s", info.paramPattern);
+	EXPECT_FALSE((bool)info.definition);
 }
 
-TEST(TypeManager, ArrayTypesNoSize) {
-
-	core::ASTBuilder builder;
-	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
-
-	Converter converter(false);
-	SimpleNameManager nameManager;
-	converter.setNameManager(&nameManager);
-	TypeManager typeManager(converter);
-
-	TypeManager::TypeInfo info;
-	CodeFragmentPtr fragment = CodeFragment::createNew("TestFragment");
-
-
-	core::TypePtr type = builder.arrayType(basic.getInt4());
-	info = typeManager.getTypeInfo(fragment, type);
-	EXPECT_EQ("name", info.lValueName);
-	EXPECT_EQ("name", info.rValueName);
-	EXPECT_EQ("name %s", info.declPattern);
-	EXPECT_EQ("name %s", info.paramPattern);
-	EXPECT_TRUE((bool)info.definition);
-	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
-	EXPECT_PRED2(notContainsSubString, toString(info.definition), "unsigned size[1];");
-	EXPECT_PRED2(containsSubString, toString(info.definition), "int* data;");
-}
 
 TEST(TypeManager, VectorTypes) {
 

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "CL/opencl.h"
+#include "CL/cl.h"
 #include "clutils.h"
 #include "errutils.h"
 #include "futils.h"
@@ -108,6 +108,7 @@ int main(int argc, char* argv[]) {
 	
 	// create the compute program
 	char *code = readFile(kernelFile);
+#pragma insieme kernelFile "test_kernels.c"
 	cl_program program = clCreateProgramWithSource(context, 1, (void*)&code, (intptr_t)NULL, errCode);
 	CLCHECK(_errCode);
 	free(code);	
@@ -123,7 +124,7 @@ int main(int argc, char* argv[]) {
     dgb = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(int) * nElem, NULL, errCode);
     CLCHECK(_errCode);
 	
-	for(size_t i = 0; i < (sizeof(kernelNames)/sizeof(char*)); ++i) {
+	for(size_t i = 0; i < 1; ++i){//(sizeof(kernelNames)/sizeof(char*)); ++i) {
 
 	    // copy data to mutable arrays
 //	    CLCHECK(clEnqueueWriteBuffer(queue, dc, CL_TRUE, 0, sizeof(float) * nElem, hc, 0, NULL, NULL));
@@ -131,8 +132,11 @@ int main(int argc, char* argv[]) {
 	    CLCHECK(clEnqueueWriteBuffer(queue, dgb, CL_TRUE, 0, sizeof(int) * nElem, hgb, 0, NULL, NULL));
 	    
 	    // get kernel
-        printf("\nRunning %s kernel... \n", kernelNames[i]);
-   	    cl_kernel kernel = clCreateKernel(program, kernelNames[i], errCode);
+//        printf("\nRunning %s kernel... \n", kernelNames[i]);
+//   	    cl_kernel kernel = clCreateKernel(program, kernelNames[i], errCode);
+        printf("\nRunning %s kernel... \n", "allMemArg");
+        cl_kernel kernel = clCreateKernel(program, "allMemArg", errCode);
+           	    
 	    CLCHECK(_errCode);
 	    
 	    // set up arguments

@@ -73,7 +73,7 @@ core::ProgramPtr ConversionJob::execute() {
 	CommandLineOptions::Defs = definitions;
 
 	// setup additional flags
-	CommandLineOptions::OMPSema = hasOption(OpenMP);
+	CommandLineOptions::OpenMP = hasOption(OpenMP);
 	CommandLineOptions::OpenCL = hasOption(OpenCL);
 
 	// convert the program

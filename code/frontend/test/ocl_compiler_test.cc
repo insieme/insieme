@@ -152,12 +152,12 @@ TEST(OclCompilerTest, HelloCLTest) {
     LOG(INFO) << "Printing the IR: " << pp;
 
     OclTestVisitor otv;
-    core::visitAll(program, otv);
+    core::visitDepthFirst(program, otv);
 
 
 //    LOG(INFO) << pp;
 
-    auto errors = core::check(program, insieme::core::checks::getFullCheck());
+    auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
     std::sort(errors.begin(), errors.end());
     for_each(errors, [](const core::Message& cur) {
         LOG(INFO) << cur << std::endl;

@@ -45,7 +45,9 @@ foreach ( case_file ${test_cases})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-#INSTALL(FILES include/insieme/backend/simple_backend.h DESTINATION include/insieme)
-INSTALL(TARGETS insieme_backend LIBRARY DESTINATION lib)
+if(DO_INSTALL)
+	#INSTALL(FILES include/insieme/backend/simple_backend.h DESTINATION include/insieme)
+	INSTALL(TARGETS insieme_backend LIBRARY DESTINATION lib)
+endif(DO_INSTALL)
 
 

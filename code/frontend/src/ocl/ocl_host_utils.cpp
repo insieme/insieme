@@ -43,13 +43,18 @@ namespace ocl {
 // shortcut
 #define BASIC builder.getNodeManager().basic
 
-void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg, const core::ASTBuilder& builder) {
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder) {
 // remove stuff added by (void*)&
 	if(const core::CallExprPtr& refToAnyref = dynamic_pointer_cast<const core::CallExpr>(arg))
 		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef())
-			if(const core::CallExprPtr& scalarToArray = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0)))
-				if(scalarToArray->getFunctionExpr() == BASIC.getScalarToArray())
-					arg = scalarToArray->getArgument(0);
+			if(const core::CallExprPtr& makingRef = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0))) {
+				if(makingRef->getFunctionExpr() == BASIC.getScalarToArray())
+					return makingRef->getArgument(0);
+				if(makingRef->getFunctionExpr() == BASIC.getRefDeref())
+					return makingRef->getArgument(0);
+			}
+
+	return arg;
 }
 
 
@@ -58,18 +63,22 @@ void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg, const core::ASTB
  * If it is a ref-type, it's element type is returned
  */
 const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr) {
-	if (const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(refExpr->getType()))
-		return ref->getElementType();
-	return refExpr->getType();
+	// TODO test quickfix
+	core::TypePtr type = refExpr->getType();
+	while (const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(type))
+		type = ref->getElementType();
+	return type;
 }
 
 /*
  * Returns either the type itself or the element type, in case that it is a referenceType
  */
 const core::TypePtr getNonRefType(const core::TypePtr& refType) {
-	if (const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(refType))
-		return ref->getElementType();
-	return refType;
+	// TODO test quickfix
+	core::TypePtr type = refType;
+	while(const core::RefTypePtr& ref = dynamic_pointer_cast<const core::RefType>(type))
+		type = ref->getElementType();
+	return type;
 }
 
 /*
@@ -83,15 +92,27 @@ core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBui
 	return expr;
 }
 
+/*
+ * Returns either the expression itself or the first argument if expression was a call to function
+ */
+core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::ASTBuilder& builder) {
+	core::ExpressionPtr e = expr;
+	while(const core::CallExprPtr& call = core::dynamic_pointer_cast<const core::CallExpr>(e)) {
+		if(call->getFunctionExpr() == function)
+			e = call->getArgument(0);
+		else
+			break;
+	}
+	return e;
+}
+
 
 
 /*
  * Function to copy all annotations form one NodePtr to another
  */
 void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink) {
-	unsigned int i = 0; // normal iterator and for_each loop leads to infinity loop, go
-	for (auto I = source->getAnnotations().begin(); i < source->getAnnotations().size(); ++I, ++i)
-		sink->addAnnotation(I->second);
+	sink->setAnnotations(source->getAnnotations());
 }
 
 

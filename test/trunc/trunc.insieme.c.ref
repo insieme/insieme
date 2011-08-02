@@ -7,25 +7,19 @@
 #define false 0
 #define null 0
 
-// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
-typedef struct ___insieme_type_1 { 
-    char* data;
-} __insieme_type_1;
-
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: main function //
-int main() {
-	{
-		double x = 0.0;
-		double y = 0.0;
-		((x) = 12.123);
-		((y) = (x));
-		printf(((char*)((*(&((__insieme_type_1){"Before: %f\n"}))).data)), (y));
-		((y) = ((double)(((int)(x)))));
-		printf(((char*)((*(&((__insieme_type_1){"After: %f\n"}))).data)), (y));
-		int k = 2;
-		printf(((char*)((*(&((__insieme_type_1){"Double: %f\n"}))).data)), (((double)((k)))*(x)));
-	};
+// start code fragment :: Definition of main ... type: (()->int<4>) //
+int main(){
+	double x = 0.0;
+	double y = 0.0;
+	((x) = 12.123);
+	((y) = (x));
+	printf("Before: %f\n", (y));
+	((y) = ((double)(((int)((x))))));
+	printf("After: %f\n", (y));
+	int k = 2;
+	printf("Double: %f\n", (((double)((k)))*(x)));
 }
+static int main_wrap(void* _closure) { return main(); }

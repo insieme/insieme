@@ -310,10 +310,10 @@ std::ostream& AffineFunction::printTo(std::ostream& out) const {
 		);
 }
 
-int AffineFunction::getCoeff(const core::VariablePtr& var) const {
-	int idx = iterVec.getIdx(var);
+int AffineFunction::getCoeff(const Element& elem) const {
+	int idx = iterVec.getIdx(elem);
 	// In the case the variable is not in the iteration vector, throw an exception
-	if (idx == -1) { throw VariableNotFound(var); }
+	assert (idx != -1 && "Element not in iteration vector");
 
 	idx = idxConv(idx);
 	return idx==-1?0:coeffs[idx];
@@ -386,7 +386,7 @@ AffineFunction::Term AffineFunction::iterator::operator*() const {
 	return Term(iterVec[iterPos], idx==-1?0:af.coeffs[idx]);	
 }
 
-//===== constraint ================================================================================
+//===== Constraint ================================================================================
 std::ostream& Constraint::printTo(std::ostream& out) const { 
 	out << af << " ";
 	switch(type) {
@@ -403,6 +403,24 @@ bool Constraint::operator<(const Constraint& other) const {
 
 Constraint Constraint::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {
 	return Constraint( af.toBase(iterVec, idxMap), type );
+}
+
+Constraint Constraint::normalize() const {
+	if ( type == Constraint::EQ || type == Constraint::GE )
+		return *this;
+	
+	AffineFunction newAf(getAffineFunction());
+	// we have to invert the sign of the coefficients 
+	if(type == Constraint::LT || type == Constraint::LE) {
+		for(AffineFunction::iterator it=af.begin(), end=af.end(); it!=end; ++it) {
+			newAf.setCoeff((*it).first, -(*it).second);
+		}
+	}
+	if (type == Constraint::LT || type == Constraint::GT) {
+		// we have to subtract -1 to the constant part
+		newAf.setCoeff(Constant(), newAf.getCoeff(Constant())-1);
+	}
+	return Constraint(newAf, Constraint::GE);
 }
 
 //===== ConstraintCombiner ========================================================================

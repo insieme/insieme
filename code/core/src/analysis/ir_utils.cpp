@@ -46,6 +46,17 @@ namespace core {
 namespace analysis {
 
 
+bool isCallOf(const CallExprPtr& candidate, const NodePtr& function) {
+
+	// check for null
+	if (!candidate) {
+		return false;
+	}
+
+	// check invoked function
+	return *(candidate->getFunctionExpr()) == *function;
+}
+
 bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
 
 	// check for null
@@ -59,7 +70,23 @@ bool isCallOf(const NodePtr& candidate, const NodePtr& function) {
 	}
 
 	// check invoked function
-	return *(static_pointer_cast<const CallExpr>(candidate)->getFunctionExpr()) == *function;
+	return isCallOf(static_pointer_cast<const CallExpr>(candidate), function);
+}
+
+bool isNoOp(const StatementPtr& candidate) {
+
+	// check for null
+	if (!candidate) {
+		return false;
+	}
+
+	// check type of statement => must be a compound statement
+	if (candidate->getNodeType() != NT_CompoundStmt) {
+		return false;
+	}
+
+	// must be an empty compound statement
+	return static_pointer_cast<const CompoundStmt>(candidate)->getStatements().empty();
 }
 
 bool isRefOf(const NodePtr& candidate, const NodePtr& type) {
@@ -92,6 +119,24 @@ bool isRefOf(const NodePtr& candidate, const NodeType kind) {
 
 	// check element type (kind)
 	return static_pointer_cast<const RefType>(candidate)->getElementType()->getNodeType() == kind;
+}
+
+bool isTypeLiteralType(const GenericTypePtr& type) {
+	// check family name as well as type and name of parameters
+	return type->getFamilyName() == "type"
+			&& type->getTypeParameter().size() == static_cast<std::size_t>(1)
+			&& type->getIntTypeParameter().empty();
+}
+
+bool isTypeLiteralType(const TypePtr& type) {
+
+	// check node type
+	if (type->getNodeType() != core::NT_GenericType) {
+		return false;
+	}
+
+	// forward test
+	return isTypeLiteralType(static_pointer_cast<const core::GenericType>(type));
 }
 
 } // end namespace utils

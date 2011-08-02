@@ -40,6 +40,10 @@
 #include <cassert>
 #include <unordered_set>
 #include <queue>
+#include <functional>
+
+#include <boost/type_traits/is_same.hpp>
+#include <boost/type_traits/is_polymorphic.hpp>
 
 #include "insieme/utils/functional_utils.h"
 
@@ -76,6 +80,11 @@ class ASTVisitor {
 	 */
 	const bool visitTypes;
 
+	/**
+	 * A functor used to perform static casts on the handled pointer type.
+	 */
+	typename Ptr<const Node>::StaticCast cast;
+
 public:
 
 	/**
@@ -88,7 +97,7 @@ public:
 	 *
 	 * @param a flag determining whether the resulting visitor will visit types or not.
 	 */
-	ASTVisitor(bool visitTypes) : visitTypes(visitTypes) {}
+	ASTVisitor(bool visitTypes) : visitTypes(visitTypes), cast() {}
 
 	/**
 	 * A virtual destructor to support handling proper sub-types.
@@ -99,7 +108,7 @@ public:
 	 * Instructs this visitor to visit / process the given element.
 	 *
 	 * @param element the element to be visited / processed
-	 * @param p the context paraemters for the visiting process
+	 * @param p the context parameters for the visiting process
 	 * @return the result of the visiting process
 	 */
 	virtual ReturnType visit(const Ptr<const Node>& element, P ... context) {
@@ -109,9 +118,6 @@ public:
 		if (!visitTypes && element->getNodeCategory() == NC_Type) {
 			return ReturnType();
 		}
-
-		// create cast functor instance
-		typename Ptr<const Node>::StaticCast cast;
 
 		// dispatch to correct visit method
 		switch(element->getNodeType()) {
@@ -172,36 +178,34 @@ protected:
 
 };
 
-#undef TEMP_OP
 
 /**
- * A visitor implementation operating on node addresses instead of node
- * pointer.
- */
-template<typename ReturnType = void, typename ... P>
-class AddressVisitor : public ASTVisitor<ReturnType, Address, P...> {
-
-public:
-
-	/**
-	 * A constructor for this address visitor implementation.
-	 *
-	 * @param a flag determining whether the resulting visitor will visit types or not.
-	 */
-	AddressVisitor(bool visitTypes) : ASTVisitor<ReturnType, Address>(visitTypes) {}
-
-};
-
-/**
- * TODO: comment
+ * A lambda visitor is a wrapper for visitors consisting of a single visiting callback-routine. The routine
+ * may accept a pointer to an arbitrary sub-type of the node hierarchy and will only be invoked for the corresponding
+ * type.
+ *
+ * The lambda visitor mainly aims on offering a light-weight mean to create a visitor within user code.
  */
 template<
 	typename Lambda,
 	typename ResultType = void,
 	template<class Target> class Ptr = Pointer,
+	typename TargetType = Node,
+	typename Filter = AcceptAll<const Ptr<const Node>&>,
 	typename ... P
 >
 class LambdaVisitor : public ASTVisitor<ResultType, Ptr, P...> {
+
+	/**
+	 * A functor used to perform dynamic casts on the handled pointer type.
+	 */
+	typename Ptr<const Node>::DynamicCast cast;
+
+	/**
+	 * Instantiate the filter to be applied before visiting a node using the
+	 * given lambda visitor.
+	 */
+	Filter filter;
 
 	/**
 	 * The lambda to be applied to all nodes ...
@@ -212,19 +216,47 @@ public:
 
 	/**
 	 * Create a new visitor based on the given lambda.
-	 * @param lambda the lambda to be applied on all identified nodes
+	 * @param lambda the labmda to be applied on all adequate and accepted nodes
 	 * @param visitTypes to determine whether types should be visited as well
 	 */
 	LambdaVisitor(Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), lambda(lambda) {};
 
 	/**
+	 * Create a new visitor based on the given lambda.
+	 * @param filter a filter allowing to filter out nodes not to be visited
+	 * @param lambda the labmda to be applied on all adequate and accepted nodes
+	 * @param visitTypes to determine whether types should be visited as well
+	 */
+	LambdaVisitor(Filter& filter, Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), filter(filter), lambda(lambda) {};
+
+	/**
+	 * This method is overwritten since no dispatching has to be applied to nodes
+	 * visited by the lambda visitor.
+	 */
+	inline virtual ResultType visit(const Ptr<const Node>& element, P ... context) {
+		return LambdaVisitor::visitNode(element, context ...);
+	}
+
+	/**
 	 * Visits the given node and applies it to the maintained lambda.
 	 */
-	ResultType visitNode(const Ptr<const Node>& node, P ... context) {
-		// simply apply lambda ...
-		return lambda(node, context ...);
+	inline ResultType visitNode(const Ptr<const Node>& node, P ... context) {
+
+		// check whether current node is of correct type
+		if (auto element = cast.TEMP_OP<const TargetType>(node)) {
+			// check filter and ...
+			if (filter(element)) {
+				// ... forward call if matching.
+				return lambda(element, context ...);
+			}
+		}
+
+		// the element type does not match => lambda invocation is skipped
+		return ResultType();
 	}
 };
+
+#undef TEMP_OP
 
 namespace detail {
 
@@ -232,30 +264,30 @@ namespace detail {
 	 * A trait supporting the identification of the type of a lambda and the resulting
 	 * visitor instance. The trait is only defined via its specializations.
 	 */
-	template<typename Lambda, typename Fun>
+	template<typename Filter, typename FilterFun, typename Lambda, typename LambdaFun>
 	struct lambda_visitor_trait_helper;
 
 	/**
 	 * A specialization handling lambdas dealing with node pointers.
 	 */
-	template<typename Lambda, typename R, typename C, typename ... P>
-	struct lambda_visitor_trait_helper<Lambda, R (C::*)( const NodePtr&, P ... ) const> {
-		typedef LambdaVisitor<Lambda, R, Pointer, P...> visitorType;
+	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P>
+	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Pointer<const T>&) const, Lambda, R (C2::*)( const Pointer<const T>&, P ... ) const> {
+		typedef LambdaVisitor<Lambda, R, Pointer, T, Filter, P...> visitorType;
 	};
 
 	/**
 	 * A specialization handling lambdas dealing with node addresses.
 	 */
-	template<typename Lambda, typename R, typename C, typename ... P>
-	struct lambda_visitor_trait_helper<Lambda, R (C::*)( const NodeAddress&, P ... ) const> {
-		typedef LambdaVisitor<Lambda, R, Address, P...> visitorType;
+	template<typename Filter, typename Lambda, typename R, typename C1, typename C2, typename T, typename ... P>
+	struct lambda_visitor_trait_helper<Filter, bool(C1::*)(const Address<const T>&) const, Lambda, R (C2::*)( const Address<const T>&, P ... ) const> {
+		typedef LambdaVisitor<Lambda, R, Address, T, Filter, P...> visitorType;
 	};
 
 	/**
 	 * A trait deducing the type of the resulting lambda visitor based on a given lambda.
 	 */
-	template<typename Lambda>
-	struct lambda_visitor_trait : public lambda_visitor_trait_helper<Lambda, decltype(&Lambda::operator())> {};
+	template<typename Filter, typename Lambda>
+	struct lambda_visitor_trait : public lambda_visitor_trait_helper<Filter, decltype(&Filter::operator()), Lambda, decltype(&Lambda::operator())> {};
 
 }
 
@@ -268,15 +300,37 @@ namespace detail {
  * @param visitTypes a flag determine whether the resulting visitor is visiting types as well
  * @return the resulting visitor.
  */
-template<typename Lambda, typename R = typename detail::lambda_visitor_trait<Lambda>::visitorType>
-inline R makeLambdaVisitor(Lambda lambda, bool visitTypes) {
+template<
+	typename Lambda,
+	typename Filter = AcceptAll<typename lambda_traits<Lambda>::arg1_type>,
+	typename R = typename detail::lambda_visitor_trait<Filter, Lambda>::visitorType
+>
+inline R makeLambdaVisitor(Lambda lambda, bool visitTypes = false) {
 	return R(lambda, visitTypes);
+};
+
+/**
+ * Creates a visitor where each node is passed as an argument to the given
+ * filter and if accepted, to the given lambda function.
+ *
+ * @param filter the filter to be applied before visiting the nodes
+ * @param lambda the lambda function to which all visited nodes shell be passed.
+ * @param visitTypes a flag determine whether the resulting visitor is visiting types as well
+ * @return the resulting visitor.
+ */
+template<
+	typename Filter, typename Lambda,
+	typename Switch = typename boost::disable_if<boost::is_same<Lambda, bool>>::type,
+	typename R = typename detail::lambda_visitor_trait<Filter, Lambda>::visitorType
+>
+inline R makeLambdaVisitor(Filter filter, Lambda lambda, bool visitTypes = false) {
+	return R(filter, lambda, visitTypes);
 };
 
 
 /**
- * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
- * will recursively iterated depth first, pre-order through every visited node. Thereby,
+ * The DepthFirstProgramVisitor provides a wrapper around an ordinary visitor which
+ * will DepthFirstly iterated depth first, pre-order through every visited node. Thereby,
  * within every node, the sub-visitor's visit method will be invoked. Further, the results
  * of the visited nodes may be combined using a generic result combinator.
  */
@@ -285,10 +339,10 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class RecursiveASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstASTVisitor : public ASTVisitor<void, Ptr, P...> {
 
 	/**
-	 * The sub-visitor visiting all nodes recursively.
+	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
 
@@ -307,11 +361,11 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	RecursiveASTVisitor(ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
+	DepthFirstASTVisitor(ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
 		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
-	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
 	 * subtree rooted at this node.
 	 */
 	void visitNode(const Ptr<const Node>& node, P ... context) {
@@ -321,9 +375,9 @@ public:
 			subVisitor.visit(node, context...);
 		}
 
-		// recursively visit all sub-nodes
-		const Node::ChildList& children = node->getChildList();
-		for(std::size_t i=0; i<children.size(); i++) {
+		// DepthFirstly visit all sub-nodes
+		auto size = node->getChildList().size();
+		for(std::size_t i=0; i<size; i++) {
 			this->visit(childFactory(node, i), context ...);
 		}
 
@@ -335,19 +389,19 @@ public:
 };
 
 /**
- * A special variant of a recursive visitor which can be stopped during its recursive
- * processing of an IR graph. To interrupt the recursive visitor, the handed in sub-visitor
- * may simply return false. The result of the interrupted visitor is false if not interrupted,
+ * A special variant of a DepthFirst visitor which can be stopped during its DepthFirst
+ * processing of an IR graph. To interrupt the DepthFirst visitor, the handed in sub-visitor
+ * may simply return *true*. The result of the interrupted visitor is false if not interrupted,
  * true otherwise.
  */
 template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class RecursiveInterruptableASTVisitor : public ASTVisitor<bool, Ptr, P...> {
+class DepthFirstInterruptableASTVisitor : public ASTVisitor<bool, Ptr, P...> {
 
 	/**
-	 * The sub-visitor visiting all nodes recursively.
+	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	ASTVisitor<bool, Ptr, P...>& subVisitor;
 
@@ -366,11 +420,11 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	RecursiveInterruptableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+	DepthFirstInterruptableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
 		: ASTVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
-	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
 	 * subtree rooted at this node.
 	 */
 	bool visitNode(const Ptr<const Node>& node, P...context) {
@@ -383,10 +437,10 @@ public:
 		auto innerVisitor = makeLambdaVisitor([&, this](const Ptr<const Node>& cur,P...context)->bool {
 			// visit current (in case of a pre-order)
 			if (this->preorder) {
-				interrupted = interrupted || !this->subVisitor.visit(cur, context...);
+				interrupted = interrupted || this->subVisitor.visit(cur, context...);
 			}
 
-			// recursively visit all sub-nodes
+			// DepthFirstly visit all sub-nodes
 			const Node::ChildList& children = cur->getChildList();
 			for(std::size_t i=0; i<children.size(); i++) {
 				interrupted = interrupted || inner->visit(this->childFactory(cur, i));
@@ -394,14 +448,14 @@ public:
 
 			// visit current (in case of a post-order)
 			if (!this->preorder) {
-				interrupted = interrupted || !this->subVisitor.visit(cur, context...);
+				interrupted = interrupted || this->subVisitor.visit(cur, context...);
 			}
 
 			// return interruption state
 			return interrupted;
 		}, this->isVisitingTypes());
 
-		// close recursive cycle
+		// close DepthFirst cycle
 		inner = &innerVisitor;
 
 		// trigger inner visitor
@@ -413,19 +467,19 @@ public:
 };
 
 /**
- * The RecursivePrunableASTVisitor provides a wrapper around an ordinary visitor which
- * will recursively iterated depth first, pre-order through every visited node. Thereby,
- * within every node, the sub-visitor's visit method will be invoked. The result of the
+ * The DepthFirstPrunableASTVisitor provides a wrapper around an ordinary visitor which
+ * will be iterated depth first, pre-order through every visited node. 
+ * Within every node, the sub-visitor's visit method will be invoked. The result of the
  * visit will be used to determine whether its child nodes should be visited.
  */
 template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class RecursivePrunableASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstPrunableASTVisitor : public ASTVisitor<void, Ptr, P...> {
 
 	/**
-	 * The sub-visitor visiting all nodes recursively.
+	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	ASTVisitor<bool, Ptr, P...>& subVisitor;
 
@@ -439,22 +493,22 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	RecursivePrunableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor)
+	DepthFirstPrunableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor)
 		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
 
 	/**
-	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
 	 * subtree rooted at this node.
 	 */
 	void visitNode(const Ptr<const Node>& node, P...context) {
 
 		// visit current node
-		if(!subVisitor.visit(node, context...)) {
+		if(subVisitor.visit(node, context...)) {
 			// => visiting sub-nodes is not required
 			return;
 		}
 
-		// recursively visit all sub-nodes
+		// DepthFirstly visit all sub-nodes
 		const Node::ChildList& children = node->getChildList();
 		for(std::size_t i=0; i<children.size(); i++) {
 			this->visit(childFactory(node, i), context...);
@@ -465,10 +519,8 @@ public:
 
 
 /**
- * The RecursiveProgramVisitor provides a wrapper around an ordinary visitor which
- * will recursively iterated depth first, pre-order through every visited node. Thereby,
- * within every node, the sub-visitor's visit method will be invoked. Further, the results
- * of the visited nodes may be combined using a generic result combinator.
+ * The BreadthFirstASTVisitor provides a wrapper around an ordinary visitor which
+ * will iterate breadth first, pre-order through every visited node.
  */
 template<
 	typename SubVisitorResultType,
@@ -478,7 +530,7 @@ template<
 class BreadthFirstASTVisitor : public ASTVisitor<void, Ptr, P...> {
 
 	/**
-	 * The sub-visitor visiting all nodes recursively.
+	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
 
@@ -496,7 +548,7 @@ public:
 		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
 
 	/**
-	 * Visits the given node by recursively, depth-first, pre-order visiting of the entire
+	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
 	 * subtree rooted at this node.
 	 */
 	void visitNode(const Ptr<const Node>& node, P...context) {
@@ -532,7 +584,7 @@ public:
 };
 
 /**
- * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
+ * This visitor is visiting all nodes within the AST in a DepthFirst manner. Thereby,
  * the
  */
 template<
@@ -540,10 +592,10 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ...P
 >
-class VisitOnceASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstOnceASTVisitor : public ASTVisitor<void, Ptr, P...> {
 
 	/**
-	 * The sub-visitor visiting all nodes recursively.
+	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
 
@@ -562,7 +614,7 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	VisitOnceASTVisitor(ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
+	DepthFirstOnceASTVisitor(ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
 			: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
@@ -570,7 +622,7 @@ public:
 	 */
 	virtual void visit(const Ptr<const Node>& node, P...context) {
 
-		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		utils::set::PointerSet<Ptr<const Node>> all;
 		ASTVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 			// add current node to set ..
@@ -584,7 +636,7 @@ public:
 				this->subVisitor.visit(node, context...);
 			}
 
-			// visit all child nodes recursively
+			// visit all child nodes DepthFirstly
 			const Node::ChildList& children = node->getChildList();
 			for(std::size_t i = 0; i<children.size(); i++) {
 				visitor->visit(this->childFactory(node, i));
@@ -605,17 +657,16 @@ public:
 };
 
 /**
- * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
- * the visiting process can be aborted at any place.
+ * This visitor is visiting all nodes within the AST in a DepthFirst manner and can be aborted at any time.
  */
 template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class VisitOnceInterruptableASTVisitor : public ASTVisitor<bool, Ptr, P...> {
+class DepthFirstOnceInterruptableASTVisitor : public ASTVisitor<bool, Ptr, P...> {
 
 	/**
-	 * The sub-visitor visiting all nodes recursively.
+	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	ASTVisitor<bool, Ptr, P...>& subVisitor;
 
@@ -634,7 +685,7 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	VisitOnceInterruptableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+	DepthFirstOnceInterruptableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
 		: ASTVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 
@@ -646,7 +697,7 @@ public:
 		// init interrupt flag
 		bool interrupted = false;
 
-		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		utils::set::PointerSet<Ptr<const Node>> all;
 		ASTVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
@@ -663,10 +714,10 @@ public:
 
 			if (this->preorder) {
 				// visit current node
-				interrupted = interrupted || !this->subVisitor.visit(node, context...);
+				interrupted = interrupted || this->subVisitor.visit(node, context...);
 			}
 
-			// visit all child nodes recursively
+			// visit all child nodes DepthFirstly
 			const Node::ChildList& children = node->getChildList();
 			for(std::size_t i = 0; i<children.size(); i++) {
 				visitor->visit(this->childFactory(node, i));
@@ -674,7 +725,7 @@ public:
 
 			if (!this->preorder) {
 				// visit current node
-				interrupted = interrupted || !this->subVisitor.visit(node, context...);
+				interrupted = interrupted || this->subVisitor.visit(node, context...);
 			}
 		}, this->isVisitingTypes());
 
@@ -690,17 +741,17 @@ public:
 
 
 /**
- * This visitor is visiting all nodes within the AST in a recursive manner. Thereby,
- * the recursive visiting of sub-trees can be pruned at any time.
+ * This visitor is visiting all nodes within the AST in a DepthFirst manner. Thereby,
+ * the DepthFirst visiting of sub-trees can be pruned at any time.
  */
 template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class VisitOncePrunableASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstOncePrunableASTVisitor : public ASTVisitor<void, Ptr, P...> {
 
 	/**
-	 * The sub-visitor visiting all nodes recursively.
+	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	ASTVisitor<bool, Ptr, P...>& subVisitor;
 
@@ -714,7 +765,7 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	VisitOncePrunableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor)
+	DepthFirstOncePrunableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor)
 		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
 
 
@@ -723,7 +774,7 @@ public:
 	 */
 	virtual void visit(const Ptr<const Node>& node, P...context) {
 
-		std::unordered_set<Ptr<const Node>, hash_target<Ptr<const Node>>, equal_target<Ptr<const Node>>> all;
+		utils::set::PointerSet<Ptr<const Node>> all;
 		ASTVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
@@ -734,12 +785,12 @@ public:
 			}
 
 			// visit current node
-			if (!this->subVisitor.visit(node, context...)) {
+			if (this->subVisitor.visit(node, context...)) {
 				// visitor decided not to visit child nodes
 				return;
 			}
 
-			// visit all child nodes recursively
+			// visit all child nodes DepthFirstly
 			const Node::ChildList& children = node->getChildList();
 			for(std::size_t i = 0; i<children.size(); i++) {
 				visitor->visit(this->childFactory(node, i));
@@ -757,44 +808,44 @@ public:
 
 
 /**
- * A factory method creating recursive visitors based on a predefined visitor.
+ * A factory method creating DepthFirst visitors based on a predefined visitor.
  *
  * @param visitor the visitor to be based on
  * @param preorder allows to chose between pre- or postorder depth first visiting
- * @return a recursive visitor encapsulating the given visitor
+ * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<typename Result, template<class Target> class Ptr, typename ... P>
-RecursiveASTVisitor<Result, Ptr, P...> makeRecursiveVisitor(ASTVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
-	return RecursiveASTVisitor<Result, Ptr, P...>(visitor, preorder);
+DepthFirstASTVisitor<Result, Ptr, P...> makeDepthFirstVisitor(ASTVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstASTVisitor<Result, Ptr, P...>(visitor, preorder);
 }
 
 /**
  * A factory method creating visit once visitor based on a predefined visitor.
  *
  * @param visitor the visitor to be based on
- * @return a recursive visitor encapsulating the given visitor
+ * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-RecursiveInterruptableASTVisitor<Ptr, P...> makeRecursiveInterruptableVisitor(ASTVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
-	return RecursiveInterruptableASTVisitor<Ptr, P...>(visitor, preorder);
+DepthFirstInterruptableASTVisitor<Ptr, P...> makeDepthFirstInterruptableVisitor(ASTVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstInterruptableASTVisitor<Ptr, P...>(visitor, preorder);
 }
 
 /**
- * A factory method creating a recursive visitor capable of Pruning the iteration space.
+ * A factory method creating a DepthFirst visitor capable of Pruning the iteration space.
  *
  * @param visitor the visitor to be based on
- * @return a recursive visitor encapsulating the given visitor
+ * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-RecursivePrunableASTVisitor<Ptr, P...> makeRecursivePrunableVisitor(ASTVisitor<bool,Ptr, P...>& visitor) {
-	return RecursivePrunableASTVisitor<Ptr, P...>(visitor);
+DepthFirstPrunableASTVisitor<Ptr, P...> makeDepthFirstPrunableVisitor(ASTVisitor<bool,Ptr, P...>& visitor) {
+	return DepthFirstPrunableASTVisitor<Ptr, P...>(visitor);
 }
 
 /**
  * A factory method creating breadth first visitor visitors based on a predefined visitor.
  *
  * @param visitor the visitor to be based on
- * @return a recursive visitor encapsulating the given visitor
+ * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<typename Result, template<class Target> class Ptr, typename ... P>
 BreadthFirstASTVisitor<Result, Ptr, P...> makeBreadthFirstVisitor(ASTVisitor<Result,Ptr, P...>& visitor) {
@@ -805,38 +856,38 @@ BreadthFirstASTVisitor<Result, Ptr, P...> makeBreadthFirstVisitor(ASTVisitor<Res
  * A factory method creating visit once visitor based on a predefined visitor.
  *
  * @param visitor the visitor to be based on
- * @return a recursive visitor encapsulating the given visitor
+ * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<typename Result, template<class Target> class Ptr, typename ... P>
-VisitOnceASTVisitor<Result, Ptr, P...> makeVisitOnceVisitor(ASTVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
-	return VisitOnceASTVisitor<Result, Ptr, P...>(visitor, preorder);
+DepthFirstOnceASTVisitor<Result, Ptr, P...> makeDepthFirstOnceVisitor(ASTVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstOnceASTVisitor<Result, Ptr, P...>(visitor, preorder);
 }
 
 /**
  * A factory method creating visit once visitor based on a predefined visitor.
  *
  * @param visitor the visitor to be based on
- * @return a recursive visitor encapsulating the given visitor
+ * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-VisitOnceInterruptableASTVisitor<Ptr, P...> makeVisitOnceInterruptableVisitor(ASTVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
-	return VisitOnceInterruptableASTVisitor<Ptr, P...>(visitor, preorder);
+DepthFirstOnceInterruptableASTVisitor<Ptr, P...> makeDepthFirstOnceInterruptableVisitor(ASTVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstOnceInterruptableASTVisitor<Ptr, P...>(visitor, preorder);
 }
 
 /**
  * A factory method creating visit once visitor based on a predefined visitor.
  *
  * @param visitor the visitor to be based on
- * @return a recursive visitor encapsulating the given visitor
+ * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-VisitOncePrunableASTVisitor<Ptr, P...> makeVisitOncePrunableVisitor(ASTVisitor<bool,Ptr, P...>& visitor) {
-	return VisitOncePrunableASTVisitor<Ptr, P...>(visitor);
+DepthFirstOncePrunableASTVisitor<Ptr, P...> makeDepthFirstOncePrunableVisitor(ASTVisitor<bool,Ptr, P...>& visitor) {
+	return DepthFirstOncePrunableASTVisitor<Ptr, P...>(visitor);
 }
 
 
 /**
- * The given visitor is recursively applied to all nodes reachable starting from the
+ * The given visitor is DepthFirstly applied to all nodes reachable starting from the
  * given root node. If nodes are shared within the AST, those nodes will be visited
  * multiple times.
  *
@@ -846,29 +897,34 @@ VisitOncePrunableASTVisitor<Ptr, P...> makeVisitOncePrunableVisitor(ASTVisitor<b
  * 				   post order will be enforced.
  */
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
-	makeRecursiveVisitor(visitor, preorder).visit(root);
+inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
+	makeDepthFirstVisitor(visitor, preorder).visit(root);
 }
 
-// same as above, however it is accepting visitors by reference
+// same as above, however it is accepting visitors by r-value reference
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
-	makeRecursiveVisitor(visitor, preorder).visit(root);
+inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
+	makeDepthFirstVisitor(visitor, preorder).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename H, typename ... P>
-inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr, H, P...>&& visitor, bool preorder, H first, P...rest) {
-	makeRecursiveVisitor(visitor, preorder).visit(root, first, rest...);
+inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, H, P...>& visitor, bool preorder, H first, P...rest) {
+	makeDepthFirstVisitor(visitor, preorder).visit(root, first, rest...);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename H, typename ... P>
-inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr, H, P...>& visitor, bool preorder, H first, P...rest) {
-	makeRecursiveVisitor(visitor, preorder).visit(root, first, rest...);
+inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, H, P...>&& visitor, bool preorder, H first, P...rest) {
+	makeDepthFirstVisitor(visitor, preorder).visit(root, first, rest...);
 }
 
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline void visitDepthFirst(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+	visitDepthFirst(root, makeLambdaVisitor(lambda, visitTypes), preorder);
+}
 
 /**
- * The given visitor is recursively applied to all nodes reachable starting from the
+ * The given visitor is DepthFirstly applied to all nodes reachable starting from the
  * given root node. If the given visitor returns false, the visiting will be interrupted.
  *
  * @param root the root not to start the visiting from
@@ -878,95 +934,76 @@ inline void visitAll(const Ptr<Node>& root, ASTVisitor<Result, Ptr, H, P...>& vi
  * @return returns true if interrupted, false otherwise
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
-	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+	return makeDepthFirstInterruptableVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitAllInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
-	return makeRecursiveInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+	return makeDepthFirstInterruptableVisitor(visitor, preorder).visit(root);
 }
 
+
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+	return visitDepthFirstInterruptable(root, makeLambdaVisitor(lambda, visitTypes), preorder);
+}
+
+
 /**
- * The given visitor is recursively applied to all nodes reachable starting from the
+ * The given visitor is DepthFirstly applied to all nodes reachable starting from the
  * given root node. If the given visitor returns false, the corresponding sub-tree will be pruned.
  *
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitAllPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor) {
-	makeRecursivePrunableVisitor(visitor).visit(root);
+inline void visitDepthFirstPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor) {
+	makeDepthFirstPrunableVisitor(visitor).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitAllPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor) {
-	makeRecursivePrunableVisitor(visitor).visit(root);
+inline void visitDepthFirstPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor) {
+	makeDepthFirstPrunableVisitor(visitor).visit(root);
+}
+
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline void visitDepthFirstPrunable(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
+	visitDepthFirstPrunable(root, makeLambdaVisitor(lambda, visitTypes));
 }
 
 /**
- * The given lambda is recursively applied to all nodes reachable starting from the
- * given root node. If nodes are shared within the AST, those nodes will be visited
- * multiple times.
- *
- * @param root the root not to start the visiting from
- * @param lambda the lambda to be applied to all the nodes
- * @param visitTypes a flag determine whether the resulting visitor is visiting types as well
- * @param preorder if set to true, nodes will be visited in preorder (parent node first), otherwise
- * 				   post order will be enforced.
- */
-template<template<class Target> class Ptr, typename Node, typename Lambda, typename ... P>
-inline void visitAllNodes(const Ptr<Node>& root, Lambda lambda, bool visitTypes, bool preorder = true) {
-	auto visitor = makeLambdaVisitor(lambda, visitTypes);
-	visitAll(root, visitor, preorder);
-}
-
-/**
- * The given visitor is recursively applied to all nodes reachable starting from the
+ * The given visitor is DepthFirstly applied to all nodes reachable starting from the
  * given root node. If nodes are shared within the AST, those nodes will be visited
  * only once.
- *
- * NOTE: if used based on Addresses, only the first address referencing a shared node
- * 		 is visited.
  *
  * @param root the root not to start the visiting from
  * @param visitor the visitor to be visiting all the nodes
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitAllOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>&& visitor, bool preorder = true) {
-	makeVisitOnceVisitor(visitor, preorder).visit(root);
+inline void visitDepthFirstOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>&& visitor, bool preorder = true) {
+	makeDepthFirstOnceVisitor(visitor, preorder).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitAllOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>& visitor, bool preorder = true) {
-	makeVisitOnceVisitor(visitor, preorder).visit(root);
+inline void visitDepthFirstOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>& visitor, bool preorder = true) {
+	makeDepthFirstOnceVisitor(visitor, preorder).visit(root);
+}
+
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline void visitDepthFirstOnce(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+	visitDepthFirstOnce(root, makeLambdaVisitor(lambda, visitTypes), preorder);
 }
 
 
 /**
- * The given lambda is recursively applied to all nodes reachable starting from the
- * given root node. If nodes are shared within the AST, those nodes will be visited
- * only once.
- *
- * NOTE: if used based on Addresses, only the first address referencing a shared node
- * 		 is visited.
- *
- * @param root the root not to start the visiting from
- * @param lambda the lambda to be applied to all the nodes
- * @param visitTypes a flag determine whether the resulting visitor is visiting types as well
- * @param preorder a flag indicating whether nodes should be visited in pre or post order
- */
-template<typename Node, typename Lambda, template<class Target> class Ptr, typename ... P>
-inline void visitAllNodesOnce(const Ptr<Node>& root, Lambda lambda, bool visitTypes, bool preorder = true) {
-	auto visitor = makeLambdaVisitor(lambda, visitTypes);
-	visitAllOnce(root, visitor, preorder);
-}
-
-/**
- * The given visitor is recursively applied to all nodes reachable starting from the
+ * The given visitor is DepthFirstly applied to all nodes reachable starting from the
  * given root node. If the given visitor returns false, the visiting will be interrupted.
  *
  * NOTE: if used based on Addresses, only the first address referencing a shared node
@@ -978,18 +1015,24 @@ inline void visitAllNodesOnce(const Ptr<Node>& root, Lambda lambda, bool visitTy
  * 				   post order will be enforced.
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitAllOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
-	return makeVisitOnceInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+	return makeDepthFirstOnceInterruptableVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitAllOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
-	return makeVisitOnceInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+	return makeDepthFirstOnceInterruptableVisitor(visitor, preorder).visit(root);
+}
+
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline void visitDepthFirstOnceInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+	return visitDepthFirstOnceInterruptable(root, makeLambdaVisitor(lambda, visitTypes), preorder);
 }
 
 /**
- * The given visitor is recursively applied to all nodes reachable starting from the
+ * The given visitor is DepthFirstly applied to all nodes reachable starting from the
  * given root node. If the given visitor returns false, the corresponding sub-tree will be pruned.
  *
  * NOTE: if used based on Addresses, only the first address referencing a shared node
@@ -999,18 +1042,24 @@ inline bool visitAllOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Pt
  * @param visitor the visitor to be visiting all the nodes
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitAllOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor) {
-	makeVisitOncePrunableVisitor(visitor).visit(root);
+inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor) {
+	makeDepthFirstOncePrunableVisitor(visitor).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitAllOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor) {
-	makeVisitOncePrunableVisitor(visitor).visit(root);
+inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor) {
+	makeDepthFirstOncePrunableVisitor(visitor).visit(root);
+}
+
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+	return visitDepthFirstOncePrunable(root, makeLambdaVisitor(lambda, visitTypes));
 }
 
 /**
- * The given visitor is recursively applied to all nodes reachable starting from the
+ * The given visitor is DepthFirstly applied to all nodes reachable starting from the
  * given root node. If nodes are shared within the AST, those nodes will be visited
  * multiple times.
  *
@@ -1018,28 +1067,19 @@ inline void visitAllOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P.
  * @param visitor the visitor to be visiting all the nodes
  */
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitAllBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>&& visitor) {
+inline void visitBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>&& visitor) {
 	makeBreadthFirstVisitor(visitor).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitAllBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>& visitor) {
+inline void visitBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>& visitor) {
 	makeBreadthFirstVisitor(visitor).visit(root);
 }
 
-/**
- * The given lambda is recursively applied to all nodes reachable starting from the
- * given root node. If nodes are shared within the AST, those nodes will be visited
- * multiple times.
- *
- * @param root the root not to start the visiting from
- * @param lambda the lambda to be applied to all the nodes
- * @param visitTypes a flag determine whether the resulting visitor is visiting types as well
- */
-template<typename Node, typename Lambda, template<class Target> class Ptr, typename ... P>
-inline void visitAllNodesBreadthFirst(const Ptr<Node>& root, Lambda lambda, bool visitTypes) {
-	auto visitor = makeLambdaVisitor(lambda, visitTypes);
-	visitAllBreadthFirst(root, visitor);
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline void visitBreadthFirst(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
+	return visitBreadthFirst(root, makeLambdaVisitor(lambda, visitTypes));
 }
 
 } // end namespace core

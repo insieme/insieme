@@ -7,130 +7,86 @@
 #define false 0
 #define null 0
 
-// start code fragment :: Prototype of struct item //
-struct item;
-
-// start code fragment :: array type definition of __insieme_type_1 <=> array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1> //
-typedef struct ___insieme_type_1 { 
-    struct item* data;
-} __insieme_type_1;
-
 // start code fragment :: type_declaration_stack //
 struct stack { 
-    __insieme_type_1 top;
+    struct item* top;
 };
 
-// start code fragment :: array type definition of Stack <=> array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1> //
-typedef struct _Stack { 
-    struct stack* data;
-} Stack;
-
-// start code fragment :: New operator for type ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>> //
-static inline Stack* _ref_new___insieme_type_2(Stack value) {
-    Stack* res = malloc(sizeof(Stack));
-    *res = value;
-    return res;
+// start code fragment :: Definition of newStack ... type: (()->ref<array<struct<top:ref<array<rec 'elem.{'elem=struct<value:int<4>,next:ref<array<'elem,1>>>},1>>>,1>>) //
+struct stack* newStack(){
+	struct stack* res = (((struct stack*){malloc(sizeof(struct stack*)*(sizeof(struct stack)/sizeof(struct stack)))}));
+	((*(&((((res)[0])).top))) = 0);
+	return (res);
 }
-
-
-// start code fragment :: array type utils of Stack <=> array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1> //
-// A constructor for the array type Stack
-static inline Stack Stack_ctr(unsigned s1) {
-    return ((Stack){malloc(sizeof(struct stack)*s1)});
-}
-
-// start code fragment :: Definition of newStack ... type: (()->ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>) //
-Stack* newStack(){
-	Stack* res = _ref_new___insieme_type_2((Stack_ctr((sizeof(struct stack)/sizeof(struct stack)))));
-	((*(&((((*res).data[0])).top))) = (__insieme_type_1){0});
-	return res;
-}
-static Stack* newStack_wrap(void* _closure) { return newStack(); }
-
-// start code fragment :: array type definition of __insieme_type_3 <=> array<char,1> //
-typedef struct ___insieme_type_3 { 
-    char* data;
-} __insieme_type_3;
+static struct stack* newStack_wrap(void* _closure) { return newStack(); }
 
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: New operator for type ref<array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>> //
-static inline __insieme_type_1* _ref_new___insieme_type_5(__insieme_type_1 value) {
-    __insieme_type_1* res = malloc(sizeof(__insieme_type_1));
-    *res = value;
-    return res;
-}
-
+// start code fragment :: Prototype of struct item //
+struct item;
 
 // start code fragment :: type_declaration_item //
 struct item { 
     int value;
-    __insieme_type_1 next;
+    struct item* next;
 };
 
-// start code fragment :: array type utils of __insieme_type_1 <=> array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1> //
-// A constructor for the array type __insieme_type_1
-static inline __insieme_type_1 __insieme_type_1_ctr(unsigned s1) {
-    return ((__insieme_type_1){malloc(sizeof(struct item)*s1)});
+// start code fragment :: Definition of push ... type: ((ref<array<struct<top:ref<array<rec 'elem.{'elem=struct<value:int<4>,next:ref<array<'elem,1>>>},1>>>,1>>,int<4>)->unit) //
+void push(struct stack* stack, int value){
+	struct item* element = (((struct item*){malloc(sizeof(struct item*)*(sizeof(struct item)/sizeof(struct item)))}));
+	((*(&((((element)[0])).value))) = value);
+	((*(&((((element)[0])).next))) = (*(&(((stack[0])).top))));
+	((*(&(((stack[0])).top))) = (element));
 }
-
-// start code fragment :: Definition of push ... type: ((ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>,int<4>)->unit) //
-void push(Stack* stack, int value){
-	__insieme_type_1* element = _ref_new___insieme_type_5((__insieme_type_1_ctr((sizeof(struct item)/sizeof(struct item)))));
-	((*(&((((*element).data[0])).value))) = value);
-	((*(&((((*element).data[0])).next))) = (*(&((((*stack).data[0])).top))));
-	((*(&((((*stack).data[0])).top))) = (*element));
-}
-static void push_wrap(void* _closure, Stack* stack, int value) { push(stack, value); }
+static void push_wrap(void* _closure, struct stack* stack, int value) { push(stack, value); }
 
 // start code fragment :: Prototype for external function: ceil ... type: ((real<8>)->real<8>) //
 double ceil(double);
 static double ceil_wrap(void* _closure, double var_22) { return ceil(var_22); }
 
-// start code fragment :: Definition of pop ... type: ((ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>)->int<4>) //
-int pop(Stack* stack){
-	if((!(!((*(&((((*stack).data[0])).top))).data==0)))) { return (((int)(0))-1); };
-	__insieme_type_1 tmp = *(&((((*stack).data[0])).top));
-	int res = *(&((((tmp).data[0])).value));
-	((*(&((((*stack).data[0])).top))) = (*(&((((tmp).data[0])).next))));
-	;
+// start code fragment :: Definition of pop ... type: ((ref<array<struct<top:ref<array<rec 'elem.{'elem=struct<value:int<4>,next:ref<array<'elem,1>>>},1>>>,1>>)->int<4>) //
+int pop(struct stack* stack){
+	if((!(!((*(&(((stack[0])).top)))==0)))) { return (((int)(0))-1); };
+	struct item* tmp = (*(&(((stack[0])).top)));
+	int res = (*(&((((tmp)[0])).value)));
+	((*(&(((stack[0])).top))) = (*(&((((tmp)[0])).next))));
+	free((tmp));
 	return (res);
 }
-static int pop_wrap(void* _closure, Stack* stack) { return pop(stack); }
+static int pop_wrap(void* _closure, struct stack* stack) { return pop(stack); }
 
-// start code fragment :: Definition of dumpStack ... type: ((ref<array<struct<top:array<rec 'elem.{'elem=struct<value:int<4>,next:array<'elem,1>>},1>>,1>>)->unit) //
-void dumpStack(Stack* stack){
-	Stack* var_3 = stack;
+// start code fragment :: Definition of dumpStack ... type: ((ref<array<struct<top:ref<array<rec 'elem.{'elem=struct<value:int<4>,next:ref<array<'elem,1>>>},1>>>,1>>)->unit) //
+void dumpStack(struct stack* stack){
+	struct stack* var_3 = stack;
 	{
-		while((!((*(&((((*(var_3)).data[0])).top))).data==0))) {
-			__insieme_type_1 tmp = *(&((((*(var_3)).data[0])).top));
-			((*(&((((*(var_3)).data[0])).top))) = (*(&((((tmp).data[0])).next))));
-			;
+		while((!((*(&((((var_3)[0])).top)))==0))) {
+			struct item* tmp = (*(&((((var_3)[0])).top)));
+			((*(&((((var_3)[0])).top))) = (*(&((((tmp)[0])).next))));
+			free((tmp));
 		};
 		;
 	};
 }
-static void dumpStack_wrap(void* _closure, Stack* stack) { dumpStack(stack); }
+static void dumpStack_wrap(void* _closure, struct stack* stack) { dumpStack(stack); }
 
-// start code fragment :: main function //
-int main() {
+// start code fragment :: Definition of main ... type: (()->int<4>) //
+int main(){
+	int i = 0;
+	struct stack* stack;
+	((stack) = newStack());
 	{
-		int i = 0;
-		Stack stack;
-		((stack) = (*newStack()));
-		{
-			for(int var_18 = 0; var_18 < 10; var_18 += 1) {
-				printf(((char*)((*(&((__insieme_type_3){"Pushing %d\n"}))).data)), var_18);
-				push(&stack, var_18);
-			};
-			((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
+		for(int var_18 = 0; var_18 < 10; var_18 += 1) {
+			printf("Pushing %d\n", var_18);
+			push((stack), var_18);
 		};
-		{
-			for(int var_20 = 0; var_20 < 5; var_20 += 1)  { printf(((char*)((*(&((__insieme_type_3){"Poping  %d\n"}))).data)), pop(&stack)); };
-			((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
-		};
-		dumpStack(&stack);
-		return 0;
+		((i) = (0+(((int)(ceil((((double)((10-0)))/((double)(1))))))*1)));
 	};
+	{
+		for(int var_20 = 0; var_20 < 5; var_20 += 1)  { printf("Poping  %d\n", pop((stack))); };
+		((i) = (0+(((int)(ceil((((double)((5-0)))/((double)(1))))))*1)));
+	};
+	dumpStack((stack));
+	return 0;
 }
+static int main_wrap(void* _closure) { return main(); }

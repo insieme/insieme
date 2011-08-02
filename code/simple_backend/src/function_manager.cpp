@@ -51,9 +51,6 @@ namespace {
 
 		auto parameter = funType->getParameterTypes();
 
-//		if (!captures.empty()) {
-//			ss << "void *" << ((!arguments.empty())?", ":"");
-//		}
 		ss << join(", ", parameter, [&](std::ostream& out, const TypePtr& cur) {
 			out << typeManager.getTypeName(context, cur);
 		});
@@ -295,30 +292,30 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaPtr& lambda) {
 	cc.getStmtConverter().convert(body, function);
 
 	function << "\n";
-
-	// add closure wrapper
-	function << "static " << typeManager.getTypeName(function, returnType) << " " << wrapperName << "(";
-	// TODO: test whether void* is fine or actual pointer is better
-//	function << typeManager.getFunctionTypeInfo(funType).closureName << "* _closure";
-	function << "void* _closure";
-	if (!params.empty()) {
-		function << ", ";
-		appendFunctionParameters(function, params);
-	}
-	function << ") { " << ((cc.getLangBasic().isUnit(returnType))?"":"return ") << name << "(";
-	if (!params.empty()) {
-		auto start = params.begin();
-		auto end = params.end();
-		function << cc.getNameManager().getName(*start);
-		++start;
-		while (start != end) {
+	if (createWrapper == true) {
+		// add closure wrapper
+		function << "static " << typeManager.getTypeName(function, returnType) << " " << wrapperName << "(";
+		// TODO: test whether void* is fine or actual pointer is better
+	//	function << typeManager.getFunctionTypeInfo(funType).closureName << "* _closure";
+		function << "void* _closure";
+		if (!params.empty()) {
 			function << ", ";
+			appendFunctionParameters(function, params);
+		}
+		function << ") { " << ((cc.getLangBasic().isUnit(returnType))?"":"return ") << name << "(";
+		if (!params.empty()) {
+			auto start = params.begin();
+			auto end = params.end();
 			function << cc.getNameManager().getName(*start);
 			++start;
+			while (start != end) {
+				function << ", ";
+				function << cc.getNameManager().getName(*start);
+				++start;
+			}
 		}
+		function << "); }\n";
 	}
-	function << "); }\n";
-
 
 	// register and return result
 	functions.insert(std::make_pair(lambda, function));

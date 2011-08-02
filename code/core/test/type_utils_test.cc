@@ -301,7 +301,7 @@ typedef utils::set::PointerSet<IntTypeParamPtr> ParamSet;
 
 VariableSet getTypeVariables(const TypePtr& ptr) {
 	VariableSet res;
-	visitAllNodesOnce(ptr, [&res](const NodePtr& node) {
+	visitDepthFirstOnce(ptr, [&res](const NodePtr& node) {
 		if (node->getNodeType() == NT_TypeVariable) {
 			res.insert(static_pointer_cast<const TypeVariable>(node));
 		}
@@ -311,7 +311,7 @@ VariableSet getTypeVariables(const TypePtr& ptr) {
 
 ParamSet getParamVariables(const TypePtr& ptr) {
 	ParamSet res;
-	visitAllNodesOnce(ptr, [&res](const NodePtr& node) {
+	visitDepthFirstOnce(ptr, [&res](const NodePtr& node) {
 		if (node->getNodeType() == NT_VariableIntTypeParam) {
 			res.insert(static_pointer_cast<const IntTypeParam>(node));
 		}

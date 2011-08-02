@@ -37,13 +37,22 @@
 #include <vector>
 #include <iostream>
 #include <memory>
-
 #include <gtest/gtest.h>
-#include "insieme/opencl_backend/opencl_convert.h"
+
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
+#include "insieme/core/printer/pretty_printer.h"
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/logging.h"
 #include "insieme/c_info/naming.h"
+
+#include "insieme/frontend/program.h"
+#include "insieme/frontend/clang_config.h"
+#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/ocl/ocl_host_compiler.h"
+
+#include "insieme/opencl_backend/opencl_convert.h"
+#include "insieme/opencl_backend/opencl_backend_config.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
@@ -52,69 +61,46 @@ using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 using namespace insieme::backend::ocl;
 
-
-#include "insieme/frontend/program.h"
-#include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
-#include "insieme/core/printer/pretty_printer.h"
-#include "insieme/utils/logging.h"
-
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
+TEST(OpenCLBackend, baseTest) {
+	NodeManager manager;
+	ProgramPtr program = Program::create(manager);
 
-/*ProgramPtr setupSampleProgram(ASTBuilder& build) {
+	std::cout << "Test Directory: " << std::string(OCL_BE_TEST_DIR) << std::endl;
 
-	BasicGenerator typeGen(build.getNodeManager());
+	// Frontend PATH
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c 
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
 
-	TypeList printfArgType = toVector<TypePtr>(build.refType(typeGen.getChar()), typeGen.getVarList());
-	TypePtr unitType = typeGen.getUnit();
-	TypePtr printfType = build.functionType(printfArgType, unitType);
+	// Backend PATH
+	CommandLineOptions::IncludePaths.push_back(std::string(OCL_BE_TEST_DIR));
+	CommandLineOptions::Defs.push_back("INSIEME");	
 
-	auto printfDefinition = build.literal("printf", printfType);
-
-	FunctionTypePtr voidNullaryFunctionType = build.functionType(TypeList(), unitType);
-
-	ExpressionPtr stringLiteral = build.literal("Hello World!", typeGen.getString());
-	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
-	auto mainBody = build.compoundStmt(invocation);
-	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
-
-	mainLambda->addAnnotation(std::make_shared<CNameAnnotation>(Identifier("main")));
-
-	return build.createProgram(
-		toSet<Program::EntryPointSet>(mainLambda)
-	);
-}
-
-TEST(OpenCLBackend, Basic) {
-
-	ASTBuilder build;
-	ProgramPtr prog = setupSampleProgram(build);
-
-	std::cout << "Start OpenCL visit\n";
-	auto converted = insieme::backend::ocl::convert(prog);
-	std::cout << "Converted code:\n" << *converted;
-}*/
-
-TEST(OpenCLBackend, HelloCLTest) {
-    NodeManager manager;
-    ProgramPtr program = Program::create(manager);
-
-	std::cout << "Converting input program '" << string(SRC_DIR) << "hello.cl" << "' to IR...\n";
+	std::cout << "Converting input program '" << string(OCL_BE_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	insieme::frontend::Program prog(manager);
 
-	std::cout << SRC_DIR << std::endl;
-	prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
+	prog.addTranslationUnit(std::string(OCL_BE_TEST_DIR) + "host.c");
+	//prog.addTranslationUnit(std::string(OCL_BE_TEST_DIR) + "kernel.cl");
 	program = prog.convert();
 	std::cout << "Done.\n";
+
+	LOG(INFO) << "Starting OpenCL host code transformations";
+	insieme::frontend::ocl::HostCompiler hc(program, manager);
+	hc.compile();
 
 	insieme::core::printer::PrettyPrinter pp(program);
 	std::cout << "Printing the IR: " << pp;
 	
 	std::cout << "Start OpenCL Backend visit\n";
-	auto backend = OpenCLBackend::getDefault();
+        
+	// Simple backend Test
+	/*#include "insieme/simple_backend/backend_convert.h"
+	auto backend = SimpleBackend::getDefault();	
+        */
+
+	auto backend = OpenCLBackend::getDefault(); 
 	auto converted = backend->convert(program);
 	std::cout << "Converted code:\n" << *converted;
 }
-

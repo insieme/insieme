@@ -67,17 +67,17 @@ namespace c_ast {
 	class CNodeManager;
 	typedef std::shared_ptr<CNodeManager> SharedCNodeManager;
 
+	class CodeFragmentManager;
+	typedef std::shared_ptr<CodeFragmentManager> SharedCodeFragmentManager;
+
 	class CCode;
 	typedef std::shared_ptr<CCode> CCodePtr;
 
 	class CodeFragment;
-	typedef std::shared_ptr<CodeFragment> CodeFragmentPtr;
+	typedef Ptr<CodeFragment> CodeFragmentPtr;
 
 	class CCodeFragment;
-	typedef std::shared_ptr<CCodeFragment> CCodeFragmentPtr;
-
-	class IncludeFragment;
-	typedef std::shared_ptr<IncludeFragment> IncludeFragmentPtr;
+	typedef Ptr<CCodeFragment> CCodeFragmentPtr;
 
 	typedef std::set<CodeFragmentPtr> FragmentSet;
 

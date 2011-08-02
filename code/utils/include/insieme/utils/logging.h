@@ -140,7 +140,7 @@ struct LevelSpec {
 		case ERROR:		return "ERROR";
 		case FATAL:		return "FATAL";
 		default:
-		assert(false);
+		assert(false); return "UNKNOWN";
 		}
 	}
 	

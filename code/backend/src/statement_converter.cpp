@@ -36,13 +36,15 @@
 
 #include "insieme/backend/statement_converter.h"
 
-#include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/name_manager.h"
 
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_code.h"
 
+#include "insieme/backend/ir_extensions.h"
 #include "insieme/backend/variable_manager.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -57,7 +59,7 @@ namespace backend {
 	namespace {
 
 		c_ast::CCodeFragmentPtr toCodeFragment(const ConversionContext& context, c_ast::NodePtr code) {
-			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getConverter().getCNodeManager(), code);
+			c_ast::CCodeFragmentPtr fragment = c_ast::CCodeFragment::createNew(context.getConverter().getFragmentManager(), code);
 			fragment->addDependencies(context.getDependencies());
 			return fragment;
 		}
@@ -92,9 +94,13 @@ namespace backend {
 
 		// get shared C Node Manager reference
 		const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
-
 		// program is not producing any C code => just dependencies
 		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
+
+			// fix name of main entry
+			if (node->isMain() && node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
+				context.getConverter().getNameManager().setName(entryPoint, "main");
+			}
 
 			// create a new context
 			ConversionContext entryContext(converter);
@@ -150,8 +156,22 @@ namespace backend {
 			return converter.getFunctionManager().getValue(ptr, context);
 		}
 
-		// the rest is just converted into a ordinary literal
-		return converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+		// convert literal
+		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+
+		// special handling for the global struct
+		if (ptr->getValue() == IRExtensions::GLOBAL_ID) {
+			if (ptr->getType()->getNodeType() == core::NT_RefType) {
+				res = c_ast::ref(res);
+			}
+
+			// add code dependency to global struct
+			assert(converter.getGlobalFragment() && "Global Fragment not yet initialized!");
+			context.getDependencies().insert(converter.getGlobalFragment());
+		}
+
+		// done
+		return res;
 	}
 
 	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
@@ -162,10 +182,21 @@ namespace backend {
 		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
 		c_ast::InitializerPtr init = c_ast::init(type);
 
+		// obtain some helper
+		auto& basic = converter.getNodeManager().getBasicGenerator();
+
 		// append initialization values
 		::transform(ptr->getMembers(), std::back_inserter(init->values),
 				[&](const core::StructExpr::Member& cur) {
-					return convert(context, cur.second);
+					core::ExpressionPtr arg = cur.second;
+					// skip ref.var if present
+					if (core::analysis::isCallOf(cur.second, basic.getRefVar())) {
+						arg = static_pointer_cast<const core::CallExpr>(cur.second)->getArgument(0);
+						if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
+							arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0);
+						}
+					}
+					return convert(context, arg);
 		});
 
 		// return completed
@@ -245,9 +276,9 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitCompoundStmt(const core::CompoundStmtPtr& ptr, ConversionContext& context) {
 		c_ast::CompoundPtr res = converter.getCNodeManager()->create<c_ast::Compound>();
-		::transform(ptr->getStatements(), std::back_inserter(res->statements),
-				[&](const core::StatementPtr& cur) {
-					return this->visit(cur, context);
+		for_each(ptr->getStatements(), [&](const core::StatementPtr& cur) {
+			c_ast::NodePtr stmt = this->visit(cur,context);
+			if (stmt) { res->statements.push_back(stmt); }
 		});
 		return res;
 	}
@@ -279,7 +310,24 @@ namespace backend {
 		// register variable information
 		const VariableInfo& info = context.getVariableManager().addInfo(converter, var, location);
 
+		// add code dependency
+		context.getDependencies().insert(info.typeInfo->definition);
+
+		// test whether initialization is required ...
+		if (core::analysis::isCallOf(init, basic.getRefVar()) || core::analysis::isCallOf(init, basic.getRefNew())) {
+			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
+			if (core::analysis::isCallOf(call->getArgument(0), basic.getUndefined())) {
+				// => undefined initialization, hence no initialization!
+				return manager->create<c_ast::VarDecl>(info.var);
+			}
+		}
+
 		// TODO: handle initUndefine and init struct cases
+
+		// drop ref.var ...
+		if (core::analysis::isCallOf(init, basic.getRefVar())) {
+			init = core::analysis::getArgument(init, 0);
+		}
 
 		// create declaration statement
 		return manager->create<c_ast::VarDecl>(info.var, convertExpression(context, init));
@@ -315,7 +363,8 @@ namespace backend {
 		// create condition, then and else branch
 		c_ast::ExpressionPtr condition = convertExpression(context, ptr->getCondition());
 		c_ast::StatementPtr thenBranch = convertStmt(context, ptr->getThenBody());
-		c_ast::StatementPtr elseBranch = convertStmt(context, ptr->getElseBody());
+		c_ast::StatementPtr elseBranch = (core::analysis::isNoOp(ptr->getElseBody()))
+				?c_ast::StatementPtr():convertStmt(context, ptr->getElseBody());
 
 		return manager->create<c_ast::If>(condition, thenBranch, elseBranch);
 	}
@@ -333,6 +382,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
+		if (context.getConverter().getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
+			// special handling for unit-return
+			return converter.getCNodeManager()->create<c_ast::Return>();
+		}
 		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
 	}
 

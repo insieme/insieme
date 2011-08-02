@@ -35,6 +35,7 @@
  */
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
 #include "insieme/utils/container_utils.h"
@@ -111,6 +112,9 @@ namespace core {
 
 		// free temporary instance
 		delete node;
+
+		// migrate annotations
+		core::transform::utils::migrateAnnotations(NodePtr(this), res);
 
 		// return instance maintained within manager
 		return res;

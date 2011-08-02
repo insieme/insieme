@@ -122,7 +122,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (*retType != *resType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_RETURN_TYPE,
-						format("Invalid return type - expected: %s, actual: %s - function type: %s",
+						format("Invalid result type of call expression - expected: %s, actual: %s - function type: %s",
 								toString(*retType).c_str(),
 								toString(*resType).c_str(),
                                 toString(*functionType).c_str()),
@@ -169,13 +169,13 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 	const TypePtr& returnType = address->getType()->getReturnType();
 
 	// search for all return statements and check type
-	visitAllPrunable(address, makeLambdaVisitor([&](const NodeAddress& cur)->bool {
+	visitDepthFirstPrunable(address, [&](const NodeAddress& cur)->bool {
 
 		// check whether it is a a return statement
 		if (cur->getNodeType() != NT_ReturnStmt) {
 			// abort if this node is a expression or type
 			NodeCategory category = cur->getNodeCategory();
-			return !(category == NC_Type || category == NC_Expression);
+			return (category == NC_Type || category == NC_Expression);
 		}
 
 		const ReturnStmtAddress& returnStmt = static_address_cast<const ReturnStmt>(cur);
@@ -189,8 +189,8 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 				Message::ERROR));
 		}
 
-		return false;
-	}, false));
+		return true;
+	}, false);
 
 
 	// EC_TYPE_MISSING_RETURN_STMT,
@@ -268,6 +268,32 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 								toString(*switchType).c_str()),
 						Message::ERROR));
 	}
+	return res;
+}
+
+
+
+OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress& address) {
+	OptionalMessageList res;
+
+	// extract type
+	core::StructTypePtr structType = static_pointer_cast<const StructType>(address->getType());
+
+	// check type of values within struct expression
+	for_each(address->getMembers(), [&](const core::StructExpr::Member& cur) {
+		core::TypePtr requiredType = structType->getTypeOfMember(cur.first);
+		core::TypePtr isType = cur.second->getType();
+
+		if (*requiredType != *isType) {
+			add(res, Message(address,
+				EC_TYPE_INVALID_INITIALIZATION_EXPR,
+				format("Invalid type of struct-member initalization - expected type: %s, actual: %s",
+						toString(*requiredType).c_str(),
+						toString(*isType).c_str()),
+				Message::ERROR));
+		}
+	});
+
 	return res;
 }
 

@@ -7,24 +7,14 @@
 #define false 0
 #define null 0
 
-// start code fragment :: array type definition of __insieme_type_1 <=> array<char,1> //
+// start code fragment :: vector_type_declaration of __insieme_type_1 <=> vector<int<4>,4> //
 typedef struct ___insieme_type_1 { 
-    char* data;
+    int data[4];
 } __insieme_type_1;
 
-// start code fragment :: array type definition of __insieme_type_0 <=> array<array<char,1>,1> //
-typedef struct ___insieme_type_0 { 
-    __insieme_type_1* data;
-} __insieme_type_0;
-
-// start code fragment :: vector_type_declaration of __insieme_type_2 <=> vector<int<4>,4> //
-typedef struct ___insieme_type_2 { 
-    int data[4];
-} __insieme_type_2;
-
-// A constructor initializing a vector of the type __insieme_type_2 uniformly
-static inline __insieme_type_2 __insieme_type_2_init_uniform(int value) {
-	__insieme_type_2 res;
+// A constructor initializing a vector of the type __insieme_type_1 uniformly
+static inline __insieme_type_1 __insieme_type_1_init_uniform(int value) {
+	__insieme_type_1 res;
 	for (int i=0; i<4;++i) {
 	    res.data[i] = value;
 	}
@@ -35,50 +25,18 @@ static inline __insieme_type_2 __insieme_type_2_init_uniform(int value) {
 // start code fragment :: Prototype for external function: printf ... type: ((ref<array<char,1>>,var_list)->int<4>) //
 int printf(char*, ...);
 
-// start code fragment :: array type definition of __insieme_type_5 <=> array<int<4>,1> //
-typedef struct ___insieme_type_5 { 
-    int* data;
-} __insieme_type_5;
-
-// start code fragment :: New operator for type ref<array<int<4>,1>> //
-static inline __insieme_type_5* _ref_new___insieme_type_6(__insieme_type_5 value) {
-    __insieme_type_5* res = malloc(sizeof(__insieme_type_5));
-    *res = value;
-    return res;
-}
-
-
-// start code fragment :: array type utils of __insieme_type_5 <=> array<int<4>,1> //
-// A constructor for the array type __insieme_type_5
-static inline __insieme_type_5 __insieme_type_5_ctr(unsigned s1) {
-    return ((__insieme_type_5){malloc(sizeof(int)*s1)});
-}
-
 // start code fragment :: Prototype for external function: memcpy ... type: ((anyRef,anyRef,uint<8>)->anyRef) //
 void* memcpy(void*, void*, unsigned long);
 static void* memcpy_wrap(void* _closure, void* var_8, void* var_9, unsigned long var_10) { return memcpy(var_8, var_9, var_10); }
 
-// start code fragment :: main function //
-int main(int __argc, char** __argv) {
-	
-	// encapsulating arguments within Insieme Types ...
-	int argc = __argc;
-	__insieme_type_0 argv = (__insieme_type_0){alloca(sizeof(__insieme_type_1) * argc)};
-	for(int i=0; i<argc; ++i) {
-		argv.data[i] = (__insieme_type_1){__argv[i]};
-	}
-	
-	// ---- begin of actual code body ----
-	{
-		__insieme_type_2 src_array = ((__insieme_type_2){{1, 2, 3, 4}});
-		printf(((char*)((*(&((__insieme_type_1){"%d\n"}))).data)), (4*sizeof(int)));
-		__insieme_type_5* dest_array = _ref_new___insieme_type_6((__insieme_type_5_ctr(((4*sizeof(int))/sizeof(int)))));
-		memcpy((void*)((int*)((*(dest_array)).data)), (void*)((int*)((*(&src_array)).data)), (4*sizeof(int)));
-		for(int var_6 = 0; var_6 < ((4*sizeof(int))/sizeof(int)); var_6 += 1)  { printf(((char*)((*(&((__insieme_type_1){"%d, "}))).data)), (((*dest_array).data[((unsigned int)(var_6))]))); };
-		printf(((char*)((*(&((__insieme_type_1){"\n"}))).data)), 0);
-		free((*dest_array).data);
-	}
-	// ----  end of actual code body  ----
-	
+// start code fragment :: Definition of main ... type: ((int<4>,ref<array<ref<array<char,1>>,1>>)->int<4>) //
+int main(int argc, char** argv){
+	__insieme_type_1 src_array = ((__insieme_type_1){{1, 2, 3, 4}});
+	printf("%d\n", (4*sizeof(int)));
+	int* dest_array = (((int*){malloc(sizeof(int*)*((4*sizeof(int))/sizeof(int)))}));
+	memcpy((void*)(dest_array), (void*)((int*)((*(&src_array)).data)), (4*sizeof(int)));
+	for(int var_6 = 0; var_6 < ((4*sizeof(int))/sizeof(int)); var_6 += 1)  { printf("%d, ", (((dest_array)[((unsigned int)(var_6))]))); };
+	printf("\n", 0);
+	free((dest_array));
 }
-
+static int main_wrap(void* _closure, int argc, char** argv) { return main(argc, argv); }

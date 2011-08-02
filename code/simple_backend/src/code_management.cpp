@@ -40,6 +40,10 @@
 #include <boost/graph/adjacency_list.hpp>
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/logging.h"
+
+#include <fstream>
+#include <boost/graph/graphviz.hpp>
 
 namespace insieme {
 namespace simple_backend {
@@ -135,6 +139,18 @@ namespace depResolve {
 
 		addDeps(code, g, vmap, processed);
 		std::vector<Vertex> vResult;
+
+//		std::fstream outFile("graph.dot", std::fstream::out | std::fstream::trunc);
+//		boost::write_graphviz(outFile, g, [&](std::ostream& out, const Vertex& v) {
+//			string label = codePtrMap(v)->getName();
+//			boost::replace_all(label, "\n", " ");
+//			const int limit = 40;
+//			if (label.size() > limit) {
+//				label = label.substr(0,limit) + "...";
+//			}
+//			out << "[label=\"" << label << "\"]";
+//		});
+//		outFile.close();
 
 		try {
 			topological_sort(g, std::back_inserter(vResult));

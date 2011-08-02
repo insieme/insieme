@@ -323,7 +323,7 @@ namespace analysis {
 
 			// use a visitor to meet all variables and variable int parameters
 			std::for_each(begin, end, [&](const TypePtr& cur) {
-				visitAllOnce(cur, visitor, true);
+				visitDepthFirstOnce(cur, visitor, true);
 			});
 
 			// return result

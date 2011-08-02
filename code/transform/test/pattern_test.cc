@@ -80,6 +80,87 @@ namespace pattern {
 		EXPECT_PRED2(notMatch, pattern, treeB);
 
 	}
+	
+	TEST(TreePattern, Variables) {
+
+		TreePtr treeA = makeTree('a');
+		TreePtr treeB = makeTree('b');
+
+		TreePtr treeAs = makeTree(treeA, treeA);
+		TreePtr treeAB = makeTree(treeA, treeB);
+		TreePtr treeBs = makeTree(treeB, treeB);
+
+		EXPECT_EQ("(a,a)", toString(treeAs));
+		EXPECT_EQ("(a,b)", toString(treeAB));
+		EXPECT_EQ("(b,b)", toString(treeBs));
+		
+		auto pattern1 = node(var("var") << var("var"));
+		auto pattern2 = node(var("var") << !var("var"));
+		
+		EXPECT_EQ("(%var%,%var%)", toString(pattern1));
+		EXPECT_EQ("(%var%,!(%var%))", toString(pattern2));
+		
+		EXPECT_PRED2(match, pattern1, treeAs);
+		EXPECT_PRED2(notMatch, pattern1, treeAB);
+		EXPECT_PRED2(match, pattern1, treeBs);
+		EXPECT_PRED2(notMatch, pattern2, treeAs);
+		EXPECT_PRED2(match, pattern2, treeAB);
+		EXPECT_PRED2(notMatch, pattern2, treeBs);
+
+		// check variable handling in alternative
+		auto pattern3 = pattern1 | pattern2;
+		EXPECT_PRED2(match, pattern3, treeAs);
+		EXPECT_PRED2(match, pattern3, treeAB);
+		EXPECT_PRED2(match, pattern3, treeBs);
+
+		// check "Herbert semantic"
+		auto pattern4 = node(*var("var"));
+		EXPECT_PRED2(match, pattern4, treeAs);
+		EXPECT_PRED2(match, pattern4, treeAB);
+		EXPECT_PRED2(match, pattern4, treeBs);
+
+		// check variable handling in aT
+		TreePtr treeAsBs = makeTree(treeAs, treeBs);
+		TreePtr treeAsAs = makeTree(treeAs, treeAs);
+		TreePtr treeAsAB = makeTree(treeAs, treeAB);
+		
+		EXPECT_EQ("((a,a),(b,b))", toString(treeAsBs));
+		EXPECT_EQ("((a,a),(a,a))", toString(treeAsAs));
+		EXPECT_EQ("((a,a),(a,b))", toString(treeAsAB));
+
+		auto pattern5 = aT(pattern2);
+		EXPECT_PRED2(match, pattern5, treeAsBs);
+		EXPECT_PRED2(notMatch, pattern5, treeAsAs);
+		EXPECT_PRED2(match, pattern5, treeAsAB);
+	}
+	
+	TEST(TreePattern, Recursion) {
+		
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+		TreePtr c = makeTree('c');
+		TreePtr d = makeTree('d');
+		
+		TreePtr treeA = makeTree(a,makeTree(b,makeTree(c)));
+		TreePtr treeB = makeTree(a,makeTree(b,makeTree(b,makeTree(b,makeTree(b,makeTree(c))))));
+		TreePtr treeC = makeTree(a,makeTree(b,makeTree(a,makeTree(c))));
+		TreePtr treeD = makeTree(a,makeTree(b,makeTree(a,makeTree(b,makeTree(c)))));
+		TreePtr treeE = makeTree(a,makeTree(b,makeTree(a,makeTree(d,makeTree(c)))));
+
+		auto pattern = node(atom(a) << rT((atom(b) << recurse) | single(c)));
+		EXPECT_PRED2(match, pattern, treeA);
+		EXPECT_PRED2(match, pattern, treeB);
+		EXPECT_PRED2(notMatch, pattern, treeC);
+		EXPECT_PRED2(notMatch, pattern, treeD);
+		EXPECT_PRED2(notMatch, pattern, treeE);
+
+		pattern = rT(((single(b) | single(a)) << recurse) | single(c));
+		EXPECT_PRED2(match, pattern, treeA);
+		EXPECT_PRED2(match, pattern, treeB);
+		EXPECT_PRED2(match, pattern, treeC);
+		EXPECT_PRED2(match, pattern, treeD);
+		EXPECT_PRED2(notMatch, pattern, treeE);
+	}
 
 	TEST(NodePattern, Basic) {
 
@@ -101,7 +182,7 @@ namespace pattern {
 		EXPECT_PRED2(notMatch, node(pattern), treeC);
 
 		// test sequence
-		pattern = (pattern, pattern);
+		pattern = pattern << pattern;
 		treePattern = node(pattern);
 		EXPECT_EQ("a,a", toString(pattern));
 		EXPECT_EQ("(a,a)", toString(treePattern));
@@ -111,7 +192,7 @@ namespace pattern {
 		EXPECT_PRED2(notMatch, node(pattern), treeC);
 
 		// test repetition
-		pattern = *(single(atom(treeA)));
+		pattern = *atom(treeA);
 		treePattern = node(pattern);
 		EXPECT_EQ("[a]*", toString(pattern));
 		EXPECT_EQ("([a]*)", toString(treePattern));
@@ -121,7 +202,7 @@ namespace pattern {
 		EXPECT_PRED2(notMatch, node(pattern), treeC);
 
 		// combination
-		pattern = (pattern, single(atom(treeB)));
+		pattern = pattern << atom(treeB);
 		treePattern = node(pattern);
 		EXPECT_EQ("[a]*,(a,a)", toString(pattern));
 		EXPECT_EQ("([a]*,(a,a))", toString(treePattern));
@@ -140,7 +221,7 @@ namespace pattern {
 
 		EXPECT_EQ("(a,a,(a,a))", toString(treeC));
 
-		auto pattern = (single(treeA), single(treeA), single(any));
+		auto pattern = single(treeA) << single(treeA) << any;
 		EXPECT_EQ("a,a,_", toString(pattern));
 
 		EXPECT_PRED2(notMatch, node(pattern), treeA);
@@ -148,7 +229,7 @@ namespace pattern {
 		EXPECT_PRED2(match, node(pattern), treeC);
 
 
-		pattern = (single(treeA), single(any), single(treeA));
+		pattern = single(treeA) << any << single(treeA);
 		EXPECT_EQ("a,_,a", toString(pattern));
 
 		EXPECT_PRED2(notMatch, node(pattern), treeA);
@@ -163,7 +244,7 @@ namespace pattern {
 		TreePtr b = makeTree('b');
 		TreePtr c = makeTree('c');
 
-		auto pattern = *(single(a) | (single(a), single(b)) | single(c));
+		auto pattern = *(single(a) | (single(a) << single(b)) | single(c));
 
 		EXPECT_EQ("[a|a,b|c]*", toString(pattern));
 		EXPECT_EQ("([a|a,b|c]*)", toString(node(pattern)));

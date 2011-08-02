@@ -58,7 +58,7 @@ namespace simple_backend {
 	backend::TargetCodePtr SimpleBackend::convert(const core::NodePtr& source) const {
 
 		// create and set up the converter
-		Converter converter(false);
+		Converter converter;
 
 		// Prepare managers
 		core::NodeManager& nodeManager = source->getNodeManager();

@@ -54,7 +54,7 @@ class IDontLikeAnythingCheck : public ASTCheck {
 public:
 	IDontLikeAnythingCheck() : ASTCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
-		return toVector(Message(node, 1, "I hate it!"));
+		return MessageList(Message(node, 1, "I hate it!"));
 	}
 };
 
@@ -62,7 +62,7 @@ class IAmScaredCheck : public ASTCheck {
 public:
 	IAmScaredCheck() : ASTCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
-		return toVector(Message(node, 2, "Don't know - I'm scared!", Message::WARNING));
+		return MessageList(Message(node, 2, "Don't know - I'm scared!", Message::WARNING));
 	}
 };
 
@@ -83,16 +83,16 @@ TEST(ASTCheck, Basic) {
 	EXPECT_EQ("WARNING: [00002]@ (0) - MSG: Don't know - I'm scared!", toString(msgB));
 
 	MessageList res = check(type, make_check<AllFine>());
-	EXPECT_TRUE(equals(toVector<Message>(), res));
+	EXPECT_EQ(MessageList(),res);
 
 	res = check(type, make_check<IDontLikeAnythingCheck>());
-	EXPECT_TRUE(equals(toVector(msgA), res));
+	EXPECT_EQ(MessageList(msgA), res);
 
 	res = check(type, make_check<IAmScaredCheck>());
-	EXPECT_TRUE(equals(toVector(msgB), res));
+	EXPECT_EQ(MessageList(msgB), res);
 
 	res = check(type, combine(toVector<CheckPtr>(std::make_shared<IAmScaredCheck>(), std::make_shared<IDontLikeAnythingCheck>())));
-	EXPECT_EQ(toVector(msgB, msgA), res);
+	EXPECT_EQ(MessageList(msgB, msgA), res);
 
 }
 
@@ -127,7 +127,7 @@ TEST(ASTCheck, Decorators) {
 	NodeAddress adr4 = adr1.getAddressOfChild(1);
 	NodeAddress adr5 = adr4.getAddressOfChild(0);
 
-	MessageList res = check(typeA, recCheck);
+	vector<Message> res = check(typeA, recCheck).getAll();
 	std::sort(res.begin(), res.end());
 	ASSERT_EQ((std::size_t)5, res.size());
 	EXPECT_EQ(res[0], Message(adr1, 1, "", Message::ERROR));
@@ -136,7 +136,7 @@ TEST(ASTCheck, Decorators) {
 	EXPECT_EQ(res[3], Message(adr4, 1, "", Message::ERROR));
 	EXPECT_EQ(res[4], Message(adr5, 1, "", Message::ERROR));
 
-	res = check(typeA, onceCheck);
+	res = check(typeA, onceCheck).getAll();
 	std::sort(res.begin(), res.end());
 	ASSERT_EQ((std::size_t)4, res.size());
 	EXPECT_EQ(res[0], Message(adr1, 1, "", Message::ERROR));

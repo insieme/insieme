@@ -120,9 +120,7 @@ LITERAL(False, "false", "bool")
 
 TYPE(Alpha, "'a")
 TYPE(RefAlpha, "ref<'a>")
-// TYPE(NullPtr, "anyRef")
 
-// LITERAL(Null, "null", "anyRef")
 TYPE(VarList, "var_list")
 
 // Parallel Types -----------------------------------------------------------------------------------------------------
@@ -304,6 +302,8 @@ LITERAL(ScalarToArray, 	"scalar.to.array", 		"(ref<'a>) -> ref<array<'a,1>>")
 
 // Any References -----------------------------------------------------------------------------------------------------
 
+
+LITERAL(Null,           "null",                     "anyRef")
 LITERAL(RefToAnyRef,    "ref.to.anyref",    		"(ref<'a>) -> anyRef")
 LITERAL(AnyRefToRef,    "anyref.to.ref",    		"(anyRef, type<'a>) -> ref<'a>")
 
@@ -349,9 +349,9 @@ LITERAL(ArrayElemToVec, "array.elem.to.vec",
 
 // -- special operations to support encoding of C pointers as arrays ----------------------------------------------------
 
-LITERAL(IsNull,   		"is.null",				"(array<'a,1>) -> bool")
-LITERAL(GetNull,   		"get.null",				"(type<'a>) -> array<'a,1>")
-LITERAL(PtrEq,			"ptr.eq",				"(array<'a,1>, array<'a,1>) -> bool")
+LITERAL(IsNull,   		"is.null",				"(ref<'a>) -> bool")
+LITERAL(GetNull,   		"get.null",				"(type<'a>) -> ref<'a>")
+LITERAL(PtrEq,			"ptr.eq",				"(ref<'a>, ref<'a>) -> bool")
 
 // Vectors ------------------------------------------------------------------------------------------------------------
 

@@ -48,23 +48,97 @@ namespace insieme {
 namespace backend {
 namespace c_ast {
 
-	class CBasics {
+	// a switch to enable / disable improvements
+	#define MAKE_PRETTY(X)  { X }
 
-		CNodeManager& manager;
+	// -- Operator Precedence Handling ----------------------
 
-	public:
+	static inline unsigned getPriority(UnaryOperation::UnaryOp op) {
+		switch(op) {
+		case UnaryOperation::UnaryPlus: 	return 14;
+		case UnaryOperation::UnaryMinus: 	return 14;
+		case UnaryOperation::PrefixInc: 	return 13;
+		case UnaryOperation::PrefixDec: 	return 13;
+		case UnaryOperation::PostfixInc: 	return 14;
+		case UnaryOperation::PostfixDec: 	return 14;
+		case UnaryOperation::LogicNot: 		return 14;
+		case UnaryOperation::BitwiseNot: 	return 14;
+		case UnaryOperation::Indirection: 	return 14;
+		case UnaryOperation::Reference: 	return 14;
+		case UnaryOperation::SizeOf: 		return 14;
+		}
+		assert(false && "Uncovered operator encountered!");
+	}
 
-		CBasics(CNodeManager& manager) : manager(manager) {}
+	static inline unsigned getPriority(BinaryOperation::BinaryOp op) {
+		switch(op) {
+		case BinaryOperation::Assignment: 				return 2;
+		case BinaryOperation::Additon: 					return 12;
+		case BinaryOperation::Subtraction: 				return 12;
+		case BinaryOperation::Multiplication: 			return 13;
+		case BinaryOperation::Division: 				return 13;
+		case BinaryOperation::Modulo: 					return 13;
+		case BinaryOperation::Equal: 					return 9;
+		case BinaryOperation::NotEqual: 				return 9;
+		case BinaryOperation::GreaterThan: 				return 10;
+		case BinaryOperation::LessThan: 				return 10;
+		case BinaryOperation::GreaterOrEqual: 			return 10;
+		case BinaryOperation::LessOrEqual: 				return 10;
+		case BinaryOperation::LogicAnd: 				return 5;
+		case BinaryOperation::LogicOr: 					return 4;
+		case BinaryOperation::BitwiseAnd: 				return 8;
+		case BinaryOperation::BitwiseOr: 				return 6;
+		case BinaryOperation::BitwiseXOr: 				return 7;
+		case BinaryOperation::BitwiseLeftShift: 		return 11;
+		case BinaryOperation::BitwiseRightShift: 		return 11;
+		case BinaryOperation::AdditionAssign: 			return 2;
+		case BinaryOperation::SubtractionAssign: 		return 2;
+		case BinaryOperation::MultiplicationAssign: 	return 2;
+		case BinaryOperation::DivisionAssign: 			return 2;
+		case BinaryOperation::ModuloAssign: 			return 2;
+		case BinaryOperation::BitwiseAndAssign: 		return 2;
+		case BinaryOperation::BitwiseOrAssign: 			return 2;
+		case BinaryOperation::BitwiseXOrAssign: 		return 2;
+		case BinaryOperation::BitwiseLeftShiftAssign: 	return 2;
+		case BinaryOperation::BitwiseRightShiftAssign: 	return 2;
+		case BinaryOperation::MemberAccess: 			return 15;
+		case BinaryOperation::IndirectMemberAccess: 	return 15;
+		case BinaryOperation::Subscript: 				return 15;
+		case BinaryOperation::Cast: 					return 14;
+		}
+		assert(false && "Uncovered operator encountered!");
+	}
 
-		IdentifierPtr getIdentifier(const string& name) {
-			return manager.create(name);
+	static inline unsigned getPriority(TernaryOperation::TernaryOp op) {
+		switch(op) {
+		case TernaryOperation::TernaryCondition: return 3;
+		}
+		assert(false && "Uncovered operator encountered!");
+	}
+
+	static inline unsigned getPriority(const NodePtr& node) {
+		assert(node && "Cannot obtain type of null-node!");
+
+		// select priority based on operator
+		NodeType type = node->getType();
+
+		if (type == NT_UnaryOperation) {
+			return getPriority(static_pointer_cast<const UnaryOperation>(node)->operation);
 		}
 
-		TypePtr getIntType() {
-			return manager.create<PrimitiveType>(PrimitiveType::INT);
+		if (type == NT_BinaryOperation) {
+			return getPriority(static_pointer_cast<const BinaryOperation>(node)->operation);
 		}
 
-	};
+		if (type == NT_TernaryOperation) {
+			return getPriority(static_pointer_cast<const TernaryOperation>(node)->operation);
+		}
+
+		// for all the rest => priority is even higher
+		return 16;
+	}
+
+
 
 	// --- types ------------------------------------------------
 
@@ -94,12 +168,34 @@ namespace c_ast {
 
 	// --- create a pair of parentheses -------------------------
 
-	inline ParenthesesPtr parenthese(ExpressionPtr expr) {
+	inline ExpressionPtr parenthese(ExpressionPtr expr) {
 		assert(expr && expr->getManager() && "There should be a manager!");
-		if (expr->getType() == NT_Parentheses) {
-			return static_pointer_cast<Parentheses>(expr);
+		switch(expr->getType()) {
+		case NT_Parentheses:
+		case NT_Variable:
+		case NT_Identifier:
+		case NT_Call:
+			// those do not need (extra) parentheses
+			return expr;
+		default: {}
 		}
 		return expr->getManager()->create<Parentheses>(expr);
+	}
+
+	inline NodePtr parenthese(NodePtr node) {
+		// only expressions need to be encapsulated using parentheses
+		if (ExpressionPtr expr = dynamic_pointer_cast<const Expression>(node)) {
+			return parenthese(expr);
+		}
+		// no parentheses required for the rest
+		return node;
+	}
+
+	inline NodePtr removeParenthese(NodePtr node) {
+		if (node->getType() == NT_Parentheses) {
+			return removeParenthese(static_pointer_cast<Parentheses>(node)->expression);
+		}
+		return node;
 	}
 
 	// --- all kind of overloaded operators ---
@@ -113,7 +209,17 @@ namespace c_ast {
 
 	inline ExpressionPtr unaryOp(UnaryOperation::UnaryOp op, NodePtr a) {
 		assert(a && a->getManager() && "There should be a manager!");
+		a = removeParenthese(a);
+		a = (getPriority(a) < getPriority(op)) ? parenthese(a) : a;
 		return a->getManager()->create<UnaryOperation>(op, a);
+	}
+
+	inline bool isUnaryOp(NodePtr candidate, UnaryOperation::UnaryOp op) {
+		NodePtr cur = removeParenthese(candidate);
+		if (cur->getType() == NT_UnaryOperation) {
+			return static_pointer_cast<UnaryOperation>(cur)->operation == op;
+		}
+		return false;
 	}
 
 	inline ExpressionPtr deref(IdentifierPtr expr) {
@@ -121,7 +227,13 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr deref(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::Indirection, parenthese(expr));
+		MAKE_PRETTY(
+			NodePtr sub = removeParenthese(expr);
+			if (isUnaryOp(sub, UnaryOperation::Reference)) {
+				return static_pointer_cast<Expression>(static_pointer_cast<UnaryOperation>(sub)->operand);
+			}
+		);
+		return unaryOp(UnaryOperation::Indirection, expr);
 	}
 
 	inline ExpressionPtr ref(IdentifierPtr expr) {
@@ -129,7 +241,13 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr ref(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::Reference, parenthese(expr));
+		MAKE_PRETTY(
+			NodePtr sub = removeParenthese(expr);
+			if (isUnaryOp(sub, UnaryOperation::Indirection)) {
+				return static_pointer_cast<Expression>(static_pointer_cast<UnaryOperation>(sub)->operand);
+			}
+		);
+		return unaryOp(UnaryOperation::Reference, expr);
 	}
 
 	inline ExpressionPtr logicNot(ExpressionPtr expr) {
@@ -141,19 +259,19 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr preInc(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PrefixInc, parenthese(expr));
+		return unaryOp(UnaryOperation::PrefixInc, expr);
 	}
 
 	inline ExpressionPtr preDec(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PrefixDec, parenthese(expr));
+		return unaryOp(UnaryOperation::PrefixDec, expr);
 	}
 
 	inline ExpressionPtr postInc(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PostfixInc, parenthese(expr));
+		return unaryOp(UnaryOperation::PostfixInc, expr);
 	}
 
 	inline ExpressionPtr postDec(ExpressionPtr expr) {
-		return unaryOp(UnaryOperation::PostfixDec, parenthese(expr));
+		return unaryOp(UnaryOperation::PostfixDec, expr);
 	}
 
 	inline ExpressionPtr sizeOf(NodePtr element) {
@@ -164,7 +282,21 @@ namespace c_ast {
 
 	inline ExpressionPtr binaryOp(BinaryOperation::BinaryOp op, NodePtr a, NodePtr b) {
 		assert(a && b && a->getManager() && a->getManager() == b->getManager() && "Manager should match!");
+		unsigned priority = getPriority(op);
+		// comparison can be less than, since all binary operators are left-associative
+		a = removeParenthese(a);
+		b = removeParenthese(b);
+		a = (getPriority(a) < priority) ? parenthese(a) : a;
+		b = (getPriority(b) <= priority && op != BinaryOperation::Subscript) ? parenthese(b) : b;
 		return a->getManager()->create<BinaryOperation>(op, a, b);
+	}
+
+	inline bool isBinaryOp(NodePtr candidate, BinaryOperation::BinaryOp op) {
+		NodePtr cur = removeParenthese(candidate);
+		if (cur->getType() == NT_BinaryOperation) {
+			return static_pointer_cast<BinaryOperation>(cur)->operation == op;
+		}
+		return false;
 	}
 
 	inline ExpressionPtr assign(ExpressionPtr a, ExpressionPtr b) {
@@ -248,11 +380,11 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr access(ExpressionPtr expr, const string& element) {
-		return binaryOp(BinaryOperation::MemberAccess, parenthese(expr), expr->getManager()->create(element));
+		return binaryOp(BinaryOperation::MemberAccess, expr, expr->getManager()->create(element));
 	}
 
 	inline ExpressionPtr access(ExpressionPtr expr, NodePtr element) {
-		return binaryOp(BinaryOperation::MemberAccess, parenthese(expr), element);
+		return binaryOp(BinaryOperation::MemberAccess, expr, element);
 	}
 
 	inline ExpressionPtr indirectAccess(NodePtr expr, const string& element) {
@@ -268,7 +400,13 @@ namespace c_ast {
 	}
 
 	inline ExpressionPtr subscript(ExpressionPtr expr, NodePtr subscript) {
-		return binaryOp(BinaryOperation::Subscript, parenthese(expr), subscript);
+		MAKE_PRETTY(
+			subscript = removeParenthese(subscript);
+			if (isBinaryOp(subscript, BinaryOperation::Cast)) {
+				subscript = static_pointer_cast<BinaryOperation>(subscript)->operandB;
+			}
+		);
+		return binaryOp(BinaryOperation::Subscript, expr, subscript);
 	}
 
 	template<typename ... E>
@@ -278,8 +416,11 @@ namespace c_ast {
 
 	// -- Ternary Operations -------------------------------------
 
-	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, NodePtr a, NodePtr b, NodePtr c) {
+	inline ExpressionPtr ternaryOp(TernaryOperation::TernaryOp op, ExpressionPtr a, ExpressionPtr b, ExpressionPtr c) {
 		assert(a && b && c && a->getManager() && a->getManager() == b->getManager() && a->getManager() == c->getManager() && "Manager should match!");
+		a = (getPriority(a) <= getPriority(op))? parenthese(a) : a;
+		b = (getPriority(b) <= getPriority(op))? parenthese(b) : b;
+		c = (getPriority(c) <= getPriority(op))? parenthese(c) : c;
 		return a->getManager()->create<TernaryOperation>(op, a, b, c);
 	}
 
@@ -302,8 +443,9 @@ namespace c_ast {
 	// -- Some tests ----------------------------------------
 
 	inline bool isVoid(TypePtr type) {
-		return type->getType() == NT_PrimitiveType && static_pointer_cast<const PrimitiveType>(type)->type == PrimitiveType::VOID;
+		return type->getType() == NT_PrimitiveType && static_pointer_cast<const PrimitiveType>(type)->type == PrimitiveType::Void;
 	}
+
 
 } // end namespace c_ast
 } // end namespace backend

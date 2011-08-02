@@ -177,6 +177,28 @@ struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<Poi
 	}
 };
 
+// -------------------- Filter Functions ----------------------------
+// Filters are functors accepting a certain set of arguments and returning
+// a boolean indicating true (accepted) or false (rejected).
+// ------------------------------------------------------------------
+
+/**
+ * A (generic) functor accepting representing a filter accepting any value.
+ */
+template<typename ... T>
+struct AcceptAll {
+	bool operator()(T...args) const { return true; }
+};
+
+/**
+ * A (generic) functor accepting representing a filter rejecting any value.
+ */
+template<typename ... T>
+struct RejectAll {
+	bool operator()(T...args) const { return false; }
+};
+
+
 // -------------------- Type List traits ----------------------------
 
 
@@ -268,11 +290,14 @@ namespace detail {
 	  typedef type_list<T1,T2,T3> argument_types;
 	};
 
-	template <typename R, typename C, typename ... A >
-	struct lambda_traits_helper<R (C::*)( A ... ) const>  {
-		BOOST_STATIC_CONSTANT(unsigned, arity = sizeof...(A));
+	template <typename R, typename C, typename T1, typename T2, typename T3, typename ... A >
+	struct lambda_traits_helper<R (C::*)( T1, T2, T3, A ... ) const>  {
+		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
 		typedef R result_type;
-		typedef type_list<A...> argument_types;
+		typedef T1 arg1_type;
+	    typedef T2 arg2_type;
+	    typedef T3 arg3_type;
+		typedef type_list<T1,T2,T3,A...> argument_types;
 	};
 
 } // end namespace detail

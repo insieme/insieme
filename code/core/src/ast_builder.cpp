@@ -85,17 +85,17 @@ namespace {
 
 	    bool visitVariable(const core::VariablePtr& varExpr) {
 	    	usedVars.insert(varExpr);
-	    	return false;
+	    	return true;
 	    }
 
-	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return false; }
+	    bool visitLambdaExpr(const core::LambdaExprPtr& lambdaExpr) { return true; }
 
 	    bool visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
 	        declaredVars.insert( declStmt->getVariable() );
-	        return true;
+	        return false;
 	    }
 
-	    bool visitNode(const NodePtr& node) { return true; }
+	    bool visitNode(const NodePtr& node) { return false; }
 
 	    utils::set::PointerSet<VariablePtr> declaredVars;
 	    utils::set::PointerSet<VariablePtr> usedVars;
@@ -103,7 +103,7 @@ namespace {
 
 	utils::set::PointerSet<VariablePtr> getRechingVariables(const core::NodePtr& root) {
 		VarRefFinder visitor;
-		visitAllPrunable(root, visitor);
+		visitDepthFirstPrunable(root, visitor);
 
 		utils::set::PointerSet<VariablePtr> nonDecls;
 		std::set_difference( visitor.usedVars.begin(), visitor.usedVars.end(),
@@ -144,6 +144,10 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 CallExprPtr ASTBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.basic.getRefNew(), subExpr);
+}
+
+CallExprPtr ASTBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+	return callExpr(manager.basic.getUnit(), manager.basic.getRefAssign(), target, value);
 }
 
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
@@ -222,7 +226,7 @@ namespace {
 	}
 }
 
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
 	// use deduced return type to construct call
 	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
@@ -234,6 +238,9 @@ CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const Expres
 }
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
+}
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
+	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
 }
 CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1));
@@ -396,6 +403,34 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     // build the expression body
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
+
+ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+	core::TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_StructType);
+
+	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+	core::TypePtr memberType = structType->getTypeOfMember(member);
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getCompositeMemberAccess();
+	return callExpr(memberType, access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+}
+
+ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+	core::TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_RefType);
+
+	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
+	assert(elementType->getNodeType() == core::NT_StructType);
+
+	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(elementType);
+	core::TypePtr memberType = structType->getTypeOfMember(member);
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getCompositeRefElem();
+	return callExpr(refType(memberType), access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+}
+
 
 // ---------------------------- Utilities ---------------------------------------
 

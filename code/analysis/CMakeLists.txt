@@ -51,5 +51,7 @@ foreach ( case_file ${test_cases})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
-install (DIRECTORY ${insieme_analysis_include_dir}/insieme DESTINATION include)
-INSTALL(TARGETS insieme_analysis LIBRARY DESTINATION lib)
+if(DO_INSTALL)
+	install (DIRECTORY ${insieme_analysis_include_dir}/insieme DESTINATION include)
+	INSTALL(TARGETS insieme_analysis LIBRARY DESTINATION lib)
+endif(DO_INSTALL)

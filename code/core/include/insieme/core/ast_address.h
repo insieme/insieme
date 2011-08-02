@@ -243,6 +243,7 @@ public:
 
 // forward declaration
 struct StaticAddressCast;
+struct DynamicAddressCast;
 struct AddressChildFactory;
 
 /**
@@ -262,6 +263,7 @@ public:
 	 * Defines a functor representing a static cast operator for this type.
 	 */
 	typedef StaticAddressCast StaticCast;
+	typedef DynamicAddressCast DynamicCast;
 	typedef AddressChildFactory ChildFactory;
 
 	/**
@@ -527,6 +529,18 @@ struct StaticAddressCast {
 	template<typename Target, typename Source>
 	const Address<const Target>& operator()(const Address<const Source>& value) const {
 		return static_address_cast<const Target>(value);
+	}
+};
+
+/**
+ * A template version for a functor performing dynamic address casts on node addresses.
+ * The purpose of this struct is to allow the dynamic_address_cast function to be defined as
+ * a pointer conversion function required as a template parameter of the AST Visitor class.
+ */
+struct DynamicAddressCast {
+	template<typename Target, typename Source>
+	const Address<const Target> operator()(const Address<const Source>& value) const {
+		return dynamic_address_cast<const Target>(value);
 	}
 };
 
