@@ -151,7 +151,7 @@ TEST(ExpressionsTest, Lambda) {
 	StatementPtr body = Literal::get(manager, type, "a");
 	VariablePtr varA = Variable::get(manager, type, 1);
 	VariablePtr varB = Variable::get(manager, type, 2);
-	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type);
+	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type, true);
 	LambdaPtr empty = Lambda::get(manager, funType, Lambda::ParamList(), body);
 	LambdaPtr little = Lambda::get(manager, funType, toVector(varA), body);
 	LambdaPtr more = Lambda::get(manager, funType, toVector(varA, varB), body);

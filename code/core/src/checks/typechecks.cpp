@@ -148,7 +148,7 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	FunctionTypePtr isType = address->getLambda()->getType();
 	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result);
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, true);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,

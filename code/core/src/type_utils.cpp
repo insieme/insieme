@@ -855,7 +855,8 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 
 		// construct resulting type
 		ASTBuilder builder(funTypeA->getNodeManager());
-		return builder.functionType(args, resType);
+		bool plane = funTypeA->isPlain() && funTypeB->isPlain();
+		return builder.functionType(args, resType, plane);
 	}
 
 	// everything else does not have a common join/meet type
