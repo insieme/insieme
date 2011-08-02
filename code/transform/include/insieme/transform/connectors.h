@@ -39,7 +39,6 @@
 #include <vector>
 #include "insieme/transform/transformation.h"
 
-
 namespace insieme {
 namespace transform {
 

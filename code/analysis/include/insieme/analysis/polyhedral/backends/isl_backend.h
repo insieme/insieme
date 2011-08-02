@@ -36,6 +36,37 @@
 
 #pragma once 
 
-#include "isl_ctx.h"
+#include "insieme/analysis/polyhedral/backend.h"
+
+#include "isl/ctx.h"
+#include <boost/utility.hpp>
+
+namespace insieme {
+namespace analysis {
+namespace poly {
+namespace backends {
+
+/**
+ * The IslContext contains the isl_ctx object which is created to store the polyhedral set/maps. 
+ * The context object has to be unique and in order to avoid eventual accidental copy or
+ * deallocation of the main ISL context, we mark the class as noncopyable and the constructor also
+ * marked as explicit. 
+ */
+class IslContext : public Context, public boost::noncopyable {
+	isl_ctx* ctx;
+
+public:
+	// Build an ISL context and allocate the underlying isl_ctx object
+	explicit IslContext() : ctx( isl_ctx_alloc() ) { }
+
+	// because we do not allows copy of this class, we can safely remove the context once this
+	// IslContext goes out of scope 
+	~IslContext() { isl_ctx_free(ctx); }
+};
 
 
+
+} // end backends namespace 
+} // end poly namespace 
+} // end analysis namespace 
+} // end insieme namespace 

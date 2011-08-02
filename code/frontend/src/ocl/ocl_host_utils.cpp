@@ -43,6 +43,15 @@ namespace ocl {
 // shortcut
 #define BASIC builder.getNodeManager().basic
 
+void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg, const core::ASTBuilder& builder) {
+// remove stuff added by (void*)&
+	if(const core::CallExprPtr& refToAnyref = dynamic_pointer_cast<const core::CallExpr>(arg))
+		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef())
+			if(const core::CallExprPtr& scalarToArray = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0)))
+				if(scalarToArray->getFunctionExpr() == BASIC.getScalarToArray())
+					arg = scalarToArray->getArgument(0);
+}
+
 
 /*
  * Function to get the type of an Expression

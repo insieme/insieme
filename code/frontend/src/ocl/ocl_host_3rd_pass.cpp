@@ -46,7 +46,7 @@ namespace frontend {
 namespace ocl {
 using namespace insieme::core;
 
-
+/*
 void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg) {
 // remove stuff added by (void*)&
 	if(const CallExprPtr& refToAnyref = dynamic_pointer_cast<const CallExpr>(arg))
@@ -55,7 +55,7 @@ void HostMapper3rdPass::getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& ar
 				if(scalarToArray->getFunctionExpr() == BASIC.getScalarToArray())
 					arg = scalarToArray->getArgument(0);
 }
-
+*/
 /* Assumptions:
  * 1. the work dimension is a scalar in the arguments
  * 2. The cast to void* of the local/global size happens in the argument
@@ -297,7 +297,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						for_each(args, [&](ExpressionPtr& arg) {
 								assert(!!arg && "Kernel has illegal global memory argument");
 								//global and private memory arguments must be variables
-								getVarOutOfCrazyInspireConstruct(arg);
+								getVarOutOfCrazyInspireConstruct(arg, builder);
 
 								newArgs.push_back(dynamic_pointer_cast<const Expression>(this->resolveElement(arg)));
 							});
@@ -326,8 +326,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							assert(!!arg && "Kernel has illegal global memory argument");
 							bool local = false;
 							//global and private memory arguments must be variables
-							getVarOutOfCrazyInspireConstruct(arg);
-
+							getVarOutOfCrazyInspireConstruct(arg, builder);
 							// local args are declared in localMemDecls
 							for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
 									assert(!!decl && "Kernel has illegal local memory argument");

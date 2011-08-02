@@ -34,50 +34,41 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/transform/transformation.h"
 
 namespace insieme {
-namespace analysis {
-namespace poly {
 
-/** 
- * Stores eventual context information to keep the state of the underlying library implementation 
- */
-struct Context { 
-	Context();
-	virtual ~Context();
-};
+namespace transform {
 
-/**
- * Generic implementation of a the concept of a set which is natively supported by polyhedral
- * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
- * union, difference, etc...)
- */
-struct Set {
+	// ------------------------------------------------------------
+  	IntegerRepresentationType::IntegerRepresentationType() {
+	// ------------------------------------------------------------
+  		name = "integer";
+  		}
+	// ------------------------------------------------------------
 
-	// Creates an empty Set based on the dimensionality of the given iteration vector. 
-	// Once creates, the iteration vector on which the set is based cannot been changed. 
-	Set(const Context& ctx, const IterationVector& iterVec);
-	
-	// Adds a new constraint to this set. 
-	//
-	// The iteration vector on which c is expressed must be compatibile with the iterVec
-	void addConstraint(const Constraint& c); 
+	// ------------------------------------------------------------
+	IntegerParameterType::IntegerParameterType(){
+	// ------------------------------------------------------------
+		name = "integer";
+		supertype = NULL;
+		representationtype = Types::integerRepresentationType;
+		}
+	// ------------------------------------------------------------
+	UnrollingDepthParameterType::UnrollingDepthParameterType() {
+	// ------------------------------------------------------------
+		name = "unrolling_depth";
+		supertype = Types::integerParameterType;
+		representationtype = supertype->getRepresentationType();
+		}
+	// ------------------------------------------------------------
 
-	~Set();
-private:
-	const Context& ctx;
-	const IterationVector& iterVec; 
-};
+		IntegerRepresentationType* Types::integerRepresentationType = new IntegerRepresentationType;
+		IntegerParameterType* Types::integerParameterType  = new IntegerParameterType;
+		UnrollingDepthParameterType* Types::unrollingDepthParameterType = new UnrollingDepthParameterType;
 
-// Set union(const Set& lhs, const Set& rhs);
+		// UnrollingDepthParameter* defaultUnrollingDepth = new UnrollingDepthParameter(0); 
+		// Transformation* descrLoopUnrolling = new LoopUnrolling(defaultUnrollingDepth);
+}
 
-// Set intersect(const Set& lhs, const Set& rhs);
-
-Set negate(const Set& lhs, const Set& rhs);
-
-} // end poly namespace
-} // end analysis namespace 
-} // end insieme namespace 
+}

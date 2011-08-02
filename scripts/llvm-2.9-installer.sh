@@ -1,9 +1,9 @@
-PREFIX=/insieme-libs/llvm-2.9
+PREFIX=/insieme/libs/llvm-2.9
 SLOTS=16
 
-export LD_LIBRARY_PATH=/insieme-libs/gcc452/lib64
-export CXX="/insieme-libs/gcc452/bin/g++"
-export CC="/insieme-libs/gcc452/bin/gcc"
+#export LD_LIBRARY_PATH=/insieme-libs/gcc452/lib64
+#export CXX="/insieme-libs/gcc452/bin/g++"
+#export CC="/insieme-libs/gcc452/bin/gcc"
 
 # download llvm 
 echo "*****************************************"

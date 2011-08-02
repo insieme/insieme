@@ -357,6 +357,15 @@ void doCleanup(core::ProgramPtr& program) {
 	showStatistics(program);
 }
 
+//***************************************************************************************
+// Feature Extractor
+//***************************************************************************************
+void featureExtract(const core::ProgramPtr& program) {
+	if (!CommandLineOptions::FeatureExtract) { return; }
+	LOG(INFO) << "Feature extract mode";
+	return;
+}
+
 } // end anonymous namespace 
 
 /** 
@@ -382,7 +391,7 @@ int main(int argc, char** argv) {
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
 
-			// This function is a hook usefull when some hack needs to be tested 
+			// This function is a hook useful when some hack needs to be tested
 			testModule(program);
 
 			// Performs some benchmarks 
@@ -426,6 +435,9 @@ int main(int argc, char** argv) {
 			// do some cleanup 
 			doCleanup(program);
 			if (CommandLineOptions::Cleanup) { checkSema(program, errors, stmtMap); }
+
+			// Extract features
+			if (CommandLineOptions::FeatureExtract) { featureExtract(program); }
 		}
 
 		#ifdef USE_XML

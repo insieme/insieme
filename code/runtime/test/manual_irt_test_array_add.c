@@ -114,9 +114,8 @@ void insieme_init_context(irt_context* context) {
 	for (uint i = 0; i < num; ++i){	
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
-		cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "", IRT_OCL_SOURCE);
-		//cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
-		clReleaseProgram(program);
+		irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "", "", IRT_OCL_SOURCE);
+		//irt_ocl_create_kernel(dev, "./test_array_add.cl", "", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
 	}
 	#endif
 
@@ -214,9 +213,8 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_ocl_device* dev = irt_ocl_get_device(0);
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 	
-	cl_program program = irt_ocl_create_program(dev, IRT_OCL_TEST_DIR "test_array_add.cl" , "", IRT_OCL_BINARY);
-	//cl_program program = irt_ocl_create_program(dev, "./test_array_add.cl" , "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
-	cl_kernel kernel = irt_ocl_create_kernel(dev, program, "vector_add");
+	irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "vector_add", "", IRT_OCL_BINARY);
+	//irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "./test_array_add.cl", "vector_add", "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 
 	cl_long len_input = (wi->range.end - wi->range.begin);
 	cl_long len_output = (wi->range.end - wi->range.begin);
@@ -224,43 +222,31 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	unsigned int mem_size_input = sizeof(insieme_struct1) * len_input;
 	unsigned int mem_size_output = sizeof(uint64) * len_output;
 
-	irt_ocl_buffer* buff_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
-	irt_ocl_buffer* buff_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_output);
+	irt_ocl_buffer* buf_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
+	irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_output);
 
-	cl_mem d_input = buff_input->cl_mem;
-	cl_mem d_output = buff_output->cl_mem;
-	
-	cl_int errcode;
-	errcode = clEnqueueWriteBuffer(dev->cl_queue, d_input, CL_FALSE, 0, mem_size_input, &input[wi->range.begin], 0, NULL, NULL);
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueWriteBuffer of input, %d\n", errcode);
-	
-	errcode  = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&d_input);
-	if (errcode != CL_SUCCESS) printf("Error First Arg\n");
+	irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);	
 
-	errcode  = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&d_output);
-	if (errcode != CL_SUCCESS) printf("Error Second Arg\n");
+        size_t szLocalWorkSize = 256;
+        float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
+        if(multiplier > (int)multiplier){
+                multiplier += 1;
+        }
+        size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 	
-	errcode  = clSetKernelArg(kernel, 2, sizeof(cl_long), (void *)&len_input);
-	if (errcode != CL_SUCCESS) printf("Error Third Arg\n");
+	irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
 
-	size_t szLocalWorkSize = 256;
-	float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
-	if(multiplier > (int)multiplier){
-		multiplier += 1;
-	}
-	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
-	clEnqueueNDRangeKernel(dev->cl_queue, kernel, 1, NULL, &szGlobalWorkSize, &szLocalWorkSize, 0, NULL, NULL);
-	errcode = clEnqueueReadBuffer(dev->cl_queue, d_output, CL_TRUE, 0, mem_size_output, &output[wi->range.begin], 0, NULL, NULL);
-	if (errcode != CL_SUCCESS) printf("Error in clEnqueueReadBuffer of output, %d\n", errcode);
+        irt_ocl_run_kernel(kernel, 3,   sizeof(cl_mem), (void *)&(buf_input->cl_mem),
+                                        sizeof(cl_mem), (void *)&(buf_output->cl_mem),
+                                        sizeof(cl_long), (void *)&len_input);
+
+	irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
 	//clFinish(dev->cl_queue); // ??	
-	irt_ocl_release_buffer(buff_input);
-	irt_ocl_release_buffer(buff_output);
 	
-	errcode = clReleaseKernel(kernel);
-	if (errcode != CL_SUCCESS) printf("Error Releasing kernel\n");
+	irt_ocl_release_buffer(buf_input);
+	irt_ocl_release_buffer(buf_output);
+	irt_ocl_release_kernel(kernel);
 	
-	errcode = clReleaseProgram(program);
-	if (errcode != CL_SUCCESS) printf("Error Releasing Program\n");
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
 	irt_di_destroy(inputdata);

@@ -152,10 +152,46 @@ public:
 
 };
 
+/**
+ * compares two Expressions. Returns true if they are equal or if they are both a SubscriptOperator on the same variable,
+ * regardless of the index
+ */
+struct equal_variables : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
+	// needed to perform isSubscriptOperator()
+	core::ASTBuilder& builder;
+
+	equal_variables(core::ASTBuilder& build) : builder(build) {}
+
+	/**
+	 * Performs the actual comparison by using the operator== of the generic
+	 * pointer type.
+	 *
+	 * @param x the pointer to the first element to be compared
+	 * @param y the pointer to the second element to be compared
+	 */
+	bool operator()(const core::ExpressionPtr& x, const core::ExpressionPtr& y) const {
+		if(x == y)
+			return true;
+		if(*x == *y)
+			return true;
+
+		if(const core::CallExprPtr xExpr = dynamic_pointer_cast<const core::CallExpr>(x))
+			if(builder.getNodeManager().basic.isSubscriptOperator(xExpr->getFunctionExpr()))
+				if(const core::CallExprPtr yExpr = dynamic_pointer_cast<const core::CallExpr>(y))
+					if(builder.getNodeManager().basic.isSubscriptOperator(yExpr->getFunctionExpr()))
+						if(xExpr->getArgument(0) == yExpr->getArgument(0))
+							return true;
+
+		return false;
+	}
+};
+
+
 typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string> > HandlerTable;
 typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;
-typedef insieme::utils::map::PointerMap<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
+typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables> KernelArgs;
+//typedef insieme::utils::map::PointerMap<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
 typedef insieme::utils::map::PointerMap<core::ExpressionPtr, core::LambdaExprPtr> KernelLambdas;
 typedef insieme::utils::map::PointerMap<core::ExpressionPtr, vector<core::DeclarationStmtPtr> > LocalMemDecls;
@@ -187,12 +223,12 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	HandlerTable handles;
 	ClmemTable cl_mems;
 	Ocl2Inspire o2i;
+	core::ProgramPtr& mProgram;
 	KernelArgs kernelArgs;
 	KernelNames kernelNames;
 	vector<core::ExpressionPtr> kernelEntries;
 	LocalMemDecls localMemDecls;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-	core::ProgramPtr& mProgram;
 
 	// check if the call is a call to ref.assign
 	core::CallExprPtr checkAssignment(const core::NodePtr& oldCall);
@@ -266,12 +302,6 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	KernelNames& kernelNames;
 	KernelLambdas& kernelLambdas;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-
-//	core::ExpressionPtr create3Dvec;
-
-	// get a VariablePtr which is hidden under the stuff added by the frontend if ther is a cast to (void*) in the C input
-	// the variable is stored in the passed argument arg
-	void getVarOutOfCrazyInspireConstruct(core::ExpressionPtr& arg);
 
 	// takes the expression size which describes the work size for the clEnqueueNDRange and embed it in an IR function which returns a
 	// vector<uint<4>, 3>, always awaited by the kernel function. The elements with index greater or equal to workDim will always be set
