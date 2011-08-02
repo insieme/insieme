@@ -36,8 +36,9 @@
 
 #include "insieme/backend/statement_converter.h"
 
-#include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/name_manager.h"
 
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -93,9 +94,13 @@ namespace backend {
 
 		// get shared C Node Manager reference
 		const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
-
 		// program is not producing any C code => just dependencies
 		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
+
+			// fix name of main entry
+			if (node->isMain() && node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
+				context.getConverter().getNameManager().setName(entryPoint, "main");
+			}
 
 			// create a new context
 			ConversionContext entryContext(converter);

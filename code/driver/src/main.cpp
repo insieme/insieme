@@ -382,7 +382,7 @@ void featureExtract(const core::ProgramPtr& program) {
  */
 int main(int argc, char** argv) {
 
-	CommandLineOptions::Parse(argc, argv, true);
+	CommandLineOptions::Parse(argc, argv);
 	Logger::get(std::cerr, LevelSpec<>::loggingLevelFromStr(CommandLineOptions::LogLevel));
 	LOG(INFO) << "Insieme compiler";
 
@@ -478,6 +478,7 @@ int main(int argc, char** argv) {
 			// TODO: remove this
 			// enforces the usage of the full backend for testing
 //			selection = 'r';
+//			selection = 's';
 			// ###################################################
 
 

@@ -34,11 +34,49 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
-#pragma insieme mark
-__kernel void hello(__global int *src, __global int *dst, int factor){
-                    int i = get_global_id(0);
-                    dst[i] = src[i] * factor;
+#include "insieme/backend/runtime/runtime_operator.h"
+
+#include "insieme/backend/converter.h"
+
+#include "insieme/backend/runtime/runtime_extensions.h"
+
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
+
+namespace insieme {
+namespace backend {
+namespace runtime {
 
 
-}
+	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
+
+		Extensions ext(manager);
+
+		#include "insieme/backend/operator_converter_begin.inc"
+
+		table[ext.initRuntime] = OP_CONVERTER({
+			return c_ast::ExpressionPtr();
+		});
+
+		table[ext.initContext] = OP_CONVERTER({
+			// TODO: create init / cleanup function
+			return c_ast::ref(C_NODE_MANAGER->create("insieme_init_context"));
+		});
+
+		table[ext.cleanupContext] = OP_CONVERTER({
+			return c_ast::ref(C_NODE_MANAGER->create("insieme_cleanup_context"));
+		});
+
+		table[ext.registerWorkItem] = OP_CONVERTER({
+			return c_ast::ExpressionPtr();
+		});
+
+		#include "insieme/backend/operator_converter_end.inc"
+
+		return table;
+	}
+
+
+} // end namespace runtime
+} // end namespace backend
+} // end namespace insieme

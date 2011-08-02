@@ -57,9 +57,9 @@ namespace backend {
 	 * A type definition for a map linking external function names (literals)
 	 * with include files those literals are part of.
 	 */
-	typedef std::map<string, string> IncludeTable;
+	typedef std::map<string, string> FunctionIncludeTable;
 
-	IncludeTable getBasicIncludeTable();
+	FunctionIncludeTable getBasicFunctionIncludeTable();
 
 	namespace detail {
 		class FunctionInfoStore;
@@ -73,13 +73,13 @@ namespace backend {
 
 		const OperatorConverterTable operatorTable;
 
-		const IncludeTable includeTable;
+		const FunctionIncludeTable includeTable;
 
 	public:
 
 		FunctionManager(const Converter& converter);
 
-		FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const IncludeTable& includeTable);
+		FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const FunctionIncludeTable& includeTable);
 
 		~FunctionManager();
 

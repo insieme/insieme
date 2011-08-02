@@ -80,7 +80,6 @@ int main(int argc, char* argv[]) {
 	printf("size of b2 %d\n", sizeof(b2));
 	printf("size of b3 %d\n", sizeof(b3));
 
-	/* Those need not to be preserved
 	printf("size of c1 %d\n", sizeof(c1));
 	printf("size of c2 %d\n", sizeof(c2));
 	printf("size of c3 %d\n", sizeof(c3));
@@ -94,7 +93,6 @@ int main(int argc, char* argv[]) {
 	printf("size of e1 %d\n", sizeof(e1));
 	printf("size of e2 %d\n", sizeof(e2));
 	printf("size of e3 %d\n", sizeof(e3));
-	*/
 
 	printf("Letter Array:   %c\n", funArray(a1, b1, b2, b3));
 	printf("Letter Pointer: %c\n", funPointer(a1, c1, c2, c3));

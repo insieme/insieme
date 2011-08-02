@@ -503,7 +503,7 @@ TEST(TypeManager, FunctionTypes) {
 	TypeManager typeManager(converter);
 
 	FunctionTypeInfo info;
-	auto lit = cManager->create("X");
+	auto lit = cManager->create<c_ast::Literal>("X");
 
 	core::ConcreteIntTypeParamPtr size = builder.concreteIntTypeParam(4);
 
@@ -519,6 +519,7 @@ TEST(TypeManager, FunctionTypes) {
 	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
 	EXPECT_EQ("name*", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
+	EXPECT_EQ("name*", toC(info.externalType));  // should this be this way?
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.callerName);
@@ -542,6 +543,9 @@ TEST(TypeManager, FunctionTypes) {
 
 	EXPECT_TRUE(contains(info.caller->getDependencies(), info.definition));
 	EXPECT_TRUE(contains(info.constructor->getDependencies(), info.definition));
+
+	// check externalizing / internalizing
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 }
 
 TEST(TypeManager, RecursiveTypes) {
