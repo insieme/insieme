@@ -63,7 +63,7 @@ typedef Pointer<const Expression> ExpressionPtr;
 namespace analysis {
 namespace poly {
 
-//===== Exceptions ==============================================================
+//===== Exceptions =================================================================================
 struct NotAffineExpr : public std::logic_error {
 	const core::ExpressionPtr expr;
 	NotAffineExpr(const core::ExpressionPtr& expr);
