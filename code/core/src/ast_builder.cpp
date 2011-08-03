@@ -253,10 +253,10 @@ CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr&
 }
 
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit(), true), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), returnType), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), returnType, true), params, body);
 }
 
 
@@ -278,7 +278,7 @@ BindExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr
 	parameter.insert(parameter.end(), params.begin(), params.end());
 
 	// build function type
-	FunctionTypePtr funType = functionType(extractParamTypes(parameter), returnType);
+	FunctionTypePtr funType = functionType(extractParamTypes(parameter), returnType, true);
 
 	// build inner function
 	LambdaExprPtr lambda = lambdaExpr(funType, parameter, body);
@@ -395,7 +395,7 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     		);
     }
 
-    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy ), params, body );
+    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, true), params, body );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
 
     if ( !lazy ) 	return callExpr;

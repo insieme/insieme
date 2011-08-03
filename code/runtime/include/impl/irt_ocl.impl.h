@@ -621,7 +621,7 @@ irt_ocl_kernel*  irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_nam
 	}
 	err_code = clReleaseProgram(program);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));	
-	return kernel; // I want only to compile the program, with kernel name = ""
+	return kernel; // with kernel name "", I will only compile the program returning a NULL kernel
 }
 
 inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {

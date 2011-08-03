@@ -558,7 +558,33 @@ TEST(TypeUtils, IsSubTypeOfFunctionType) {
 	EXPECT_PRED2(isNotSubTypeOf, funB, funA);
 	EXPECT_PRED2(isSubTypeOf, funA, funA);
 	EXPECT_PRED2(isSubTypeOf, funB, funB);
+
+	// -- plain function types vs. closure types
+
+	funA = builder.functionType(toVector(int4), int2, true);
+	funB = builder.functionType(toVector(int4), int2, false);
+
+	EXPECT_EQ("((int<4>)->int<2>)", toString(*funA));
+	EXPECT_EQ("((int<4>)=>int<2>)", toString(*funB));
+
+	EXPECT_PRED2(isSubTypeOf, funA, funB);
+	EXPECT_PRED2(isNotSubTypeOf, funB, funA);
+	EXPECT_PRED2(isSubTypeOf, funA, funA);
+	EXPECT_PRED2(isSubTypeOf, funB, funB);
+
+
+	funA = builder.functionType(toVector(int4), int2, true);
+	funB = builder.functionType(toVector(int2), int2, false);
+
+	EXPECT_EQ("((int<4>)->int<2>)", toString(*funA));
+	EXPECT_EQ("((int<2>)=>int<2>)", toString(*funB));
+
+	EXPECT_PRED2(isSubTypeOf, funA, funB);
+	EXPECT_PRED2(isNotSubTypeOf, funB, funA);
+	EXPECT_PRED2(isSubTypeOf, funA, funA);
+	EXPECT_PRED2(isSubTypeOf, funB, funB);
 }
+
 
 TEST(TypeUtils, JoinMeetTypeComputation) {
 

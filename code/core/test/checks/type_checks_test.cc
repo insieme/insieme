@@ -508,7 +508,25 @@ TEST(KeywordCheck, Basic) {
 
 		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
 	}
+}
 
+TEST(ExternalFunctionType, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+	TypePtr intType = builder.genericType("int");
+	TypePtr boolType = builder.genericType("bool");
+	FunctionTypePtr funTypeOK  = builder.functionType(toVector(intType), boolType, true);
+	FunctionTypePtr funTypeERR = builder.functionType(toVector(intType), boolType, false);
+
+	NodePtr ok = builder.literal(funTypeOK, "fun");
+	NodePtr err = builder.literal(funTypeERR, "fun");
+
+	CheckPtr typeCheck = make_check<ExternalFunctionTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
 }
 
 

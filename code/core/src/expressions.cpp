@@ -663,6 +663,7 @@ std::ostream& Lambda::printTo(std::ostream& out) const {
 }
 
 LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body) {
+	assert(type->isPlain() && "Lambdas should be plain functions!");
 	return manager.get(Lambda(type, params, body));
 }
 
@@ -906,7 +907,7 @@ namespace {
 		});
 
 		// create resulting type
-		return FunctionType::get(resultType->getNodeManager(), paramTypes, resultType);
+		return FunctionType::get(resultType->getNodeManager(), paramTypes, resultType, false);
 	}
 
 	std::size_t hashBindExpr(const vector<VariablePtr>& parameters, const CallExprPtr& call) {
@@ -916,7 +917,6 @@ namespace {
 		boost::hash_combine(hash, call->hash());
 		return hash;
 	}
-
 
 }
 

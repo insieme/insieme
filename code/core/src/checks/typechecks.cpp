@@ -148,7 +148,7 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	FunctionTypePtr isType = address->getLambda()->getType();
 	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result);
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, true);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
@@ -156,7 +156,55 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 								toString(*funType).c_str(),
 								toString(*isType).c_str()),
 						Message::ERROR));
+	}
+	return res;
+}
+
+OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& address) {
+
+	NodeManager& manager = address->getNodeManager();
+	OptionalMessageList res;
+
+	// recreate type
+	auto extractType = [](const VariablePtr& var) {
+		return var->getType();
+	};
+
+	TypeList param;
+	transform(address->getParameters(), back_inserter(param), extractType);
+
+	TypePtr isType = address->getType();
+	TypePtr result = address->getCall()->getType();
+
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, false);
+	if (*funType != *isType) {
+		add(res, Message(address,
+						EC_TYPE_INVALID_FUNCTION_TYPE,
+						format("Invalid type of bind expression - expected: %s, actual: %s",
+								toString(*funType).c_str(),
+								toString(*isType).c_str()),
+						Message::ERROR));
+	}
+	return res;
+}
+
+OptionalMessageList ExternalFunctionTypeCheck::visitLiteral(const LiteralAddress& address) {
+
+	NodeManager& manager = address->getNodeManager();
+	OptionalMessageList res;
+
+	// only important for function types
+	core::TypePtr type = address->getType();
+	if (type->getNodeType() != core::NT_FunctionType) {
 		return res;
+	}
+
+	core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(type);
+	if (!funType->isPlain()) {
+		add(res, Message(address,
+						EC_TYPE_INVALID_FUNCTION_TYPE,
+						format("External literals have to have plain function types!"),
+						Message::ERROR));
 	}
 	return res;
 }

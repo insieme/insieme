@@ -193,9 +193,20 @@ namespace analysis {
 
 					// ... and fall-through to check the child types
 				}
+				case NT_FunctionType:
+
+					if (nodeTypeA == NT_FunctionType) {
+						FunctionTypePtr funA = static_pointer_cast<const FunctionType>(typeA);
+						FunctionTypePtr funB = static_pointer_cast<const FunctionType>(typeB);
+
+						if (funA->isPlain() != funB->isPlain()) {
+							// unable to satisfy equality constraint
+							constraints.makeUnsatisfiable();
+							return;
+						}
+					}
 
 				case NT_TupleType:
-				case NT_FunctionType:
 				{
 					// the number of sub-types must match
 					auto paramChildren = typeA->getChildList();
@@ -355,6 +366,12 @@ namespace analysis {
 
 				auto funParamType = static_pointer_cast<const FunctionType>(paramType);
 				auto funArgType = static_pointer_cast<const FunctionType>(argType);
+
+				// check kind of function parameter
+				if (funParamType->isPlain() && !funArgType->isPlain()) {
+					// cannot pass a closure function to a plain function parameter
+					constraints.makeUnsatisfiable();
+				}
 
 				// check number of arguments
 				const TypeList& paramParams = funParamType->getParameterTypes();

@@ -105,6 +105,7 @@ public:
 	// Types
 	void visitTypeVariable(const TypeVariablePtr& typeVar);
 	void visitGenericType(const GenericTypePtr& genTy);
+	void visitIntTypeParam(const IntTypeParamPtr& intTyParm);
 	void visitFunctionType(const FunctionTypePtr& funcType);
 	void visitTupleType(const TupleTypePtr& tupleTy);
 	void visitNamedCompositeType(const NamedCompositeTypePtr& compTy);
@@ -122,7 +123,7 @@ public:
 	// Expressions
 	void visitLambdaExpr(const LambdaExprPtr& lambdaExpr);
 	void visitLambda(const LambdaPtr& lambda);
-	void visitLambdaDefintion(const LambdaDefinitionPtr& lambda);
+	void visitLambdaDefinition(const LambdaDefinitionPtr& lambda);
 	void visitVariable(const VariablePtr& var);
 	void visitCallExpr(const CallExprPtr& callExpr);
 	void visitCastExpr(const CastExprPtr& castExpr);
@@ -133,11 +134,12 @@ public:
 	void visitNode(const insieme::core::NodePtr& node);
 	void visitProgram(const core::ProgramPtr& prog);
 private:
+	size_t dummyNodeID;
 	IRBuilderPtr builder;
 	const MessageList& errors;
 };
 
-std::shared_ptr<ASTPrinter> makeDotPrinter(std::ostream& out, const MessageList& errors);
+ASTPrinter makeDotPrinter(std::ostream& out, const MessageList& errors);
 
 void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out);
 
