@@ -238,7 +238,7 @@ def run_test_case(test_case_name):
 		if runOcl & (test_case_name == "ocl_kernel"):
 			sys.stderr.write(" * Compiling OpenCL host program...                 ")
 
-			ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c {LDFLAGS} {GCCFLAGS}".format(
+			ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c --opencl --backend=ocl {LDFLAGS} {GCCFLAGS}".format(
 								**{'CC':CC, 'CFLAGS':CFLAGS, 'LDFLAGS':os.path.expandvars(LDFLAGS_ORG), 'GCCFLAGS':os.path.expandvars(gccFlagsRef)})  
 							)
 			if(ret != None) :
