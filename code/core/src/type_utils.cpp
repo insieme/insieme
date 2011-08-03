@@ -755,6 +755,11 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		FunctionTypePtr funTypeA = static_pointer_cast<const FunctionType>(subType);
 		FunctionTypePtr funTypeB = static_pointer_cast<const FunctionType>(superType);
 
+		// check plain/non-plain relation
+		if (funTypeB->isPlain() && !funTypeA->isPlain()) {
+			return false;
+		}
+
 		bool res = true;
 		res = res && funTypeA->getParameterTypes().size() == funTypeB->getParameterTypes().size();
 		res = res && isSubTypeOf(funTypeA->getReturnType(), funTypeB->getReturnType());
