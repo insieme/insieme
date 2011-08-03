@@ -1,1 +1,1 @@
---opencl
+--opencl --backend=ocl

@@ -7,7 +7,7 @@ fun(ref<array<real<4>,1>> v98, vector<uint<4>,3> v86, vector<uint<4>,3> v100){
             default: bind(){fun(ref<array<real<4>,1>> v92, vector<uint<4>,3> v87, vector<uint<4>,3> v93){
                 parallel(job([vector.reduction(v93, 1, uint.mul)-vector.reduction(v93, 1, uint.mul)])[decl ref<array<real<4>,1>> v89 = v92, decl vector<uint<4>,3> v90 = v93]{
                     default: bind(){fun(ref<array<real<4>,1>> v1, vector<uint<4>,3> v88){
-                        decl ref<real<4>> v2 = array.ref.elem.1D(v1, 0);
+                        decl ref<real<4>> v2 =  var(array.ref.elem.1D(v1, 0));
                     }(v89, v90)}
                 });
                 mergeAll();
@@ -24,7 +24,7 @@ fun(ref<array<real<4>,1>> v114, vector<uint<4>,3> v102, vector<uint<4>,3> v116){
             default: bind(){fun(ref<array<real<4>,1>> v108, vector<uint<4>,3> v103, vector<uint<4>,3> v109){
                 parallel(job([vector.reduction(v109, 1, uint.mul)-vector.reduction(v109, 1, uint.mul)])[decl ref<array<real<4>,1>> v105 = v108, decl vector<uint<4>,3> v106 = v109]{
                     default: bind(){fun(ref<array<real<4>,1>> v4, vector<uint<4>,3> v104){
-                        decl ref<real<4>> v5 = array.ref.elem.1D(v4, 0);
+                        decl ref<real<4>> v5 =  var(array.ref.elem.1D(v4, 0));
                     }(v105, v106)}
                 });
                 mergeAll();
@@ -41,7 +41,7 @@ fun(ref<array<int<4>,1>> v126, vector<uint<4>,3> v118, vector<uint<4>,3> v131){
             default: bind(){fun(ref<array<int<4>,1>> v124, vector<uint<4>,3> v119, vector<uint<4>,3> v125){
                 parallel(job([vector.reduction(v125, 1, uint.mul)-vector.reduction(v125, 1, uint.mul)])[decl ref<array<int<4>,1>> v121 = v124, decl vector<uint<4>,3> v122 = v125]{
                     default: bind(){fun(ref<array<int<4>,1>> v7, vector<uint<4>,3> v120){
-                        decl ref<int<4>> v8 = array.ref.elem.1D(v7, 0);
+                        decl ref<int<4>> v8 =  var(array.ref.elem.1D(v7, 0));
                     }(v121, v122)}
                 });
                 mergeAll();
@@ -360,7 +360,7 @@ fun(ref<array<real<4>,1>> v98, vector<uint<4>,3> v86, vector<uint<4>,3> v100){
             default: bind(){fun(ref<array<real<4>,1>> v92, vector<uint<4>,3> v87, vector<uint<4>,3> v93){
                 parallel(job(([vector.reduction(v93, 1, uint.mul)-vector.reduction(v93, 1, uint.mul)]))[decl ref<array<real<4>,1>> v89 = v92, decl vector<uint<4>,3> v90 = v93]{
                     default: bind(){fun(ref<array<real<4>,1>> v1, vector<uint<4>,3> v88){
-                        decl ref<real<4>> v2 = array.ref.elem.1D(v1, CAST<uint<4>>(0));
+                        decl ref<real<4>> v2 = ( var(( *array.ref.elem.1D(v1, CAST<uint<4>>(0)))));
                     }(v89, v90)}
                 });
                 mergeAll();
@@ -377,7 +377,7 @@ fun(ref<array<real<4>,1>> v114, vector<uint<4>,3> v102, vector<uint<4>,3> v116){
             default: bind(){fun(ref<array<real<4>,1>> v108, vector<uint<4>,3> v103, vector<uint<4>,3> v109){
                 parallel(job(([vector.reduction(v109, 1, uint.mul)-vector.reduction(v109, 1, uint.mul)]))[decl ref<array<real<4>,1>> v105 = v108, decl vector<uint<4>,3> v106 = v109]{
                     default: bind(){fun(ref<array<real<4>,1>> v4, vector<uint<4>,3> v104){
-                        decl ref<real<4>> v5 = array.ref.elem.1D(v4, CAST<uint<4>>(0));
+                        decl ref<real<4>> v5 = ( var(( *array.ref.elem.1D(v4, CAST<uint<4>>(0)))));
                     }(v105, v106)}
                 });
                 mergeAll();
@@ -394,7 +394,7 @@ fun(ref<array<int<4>,1>> v126, vector<uint<4>,3> v118, vector<uint<4>,3> v131){
             default: bind(){fun(ref<array<int<4>,1>> v124, vector<uint<4>,3> v119, vector<uint<4>,3> v125){
                 parallel(job(([vector.reduction(v125, 1, uint.mul)-vector.reduction(v125, 1, uint.mul)]))[decl ref<array<int<4>,1>> v121 = v124, decl vector<uint<4>,3> v122 = v125]{
                     default: bind(){fun(ref<array<int<4>,1>> v7, vector<uint<4>,3> v120){
-                        decl ref<int<4>> v8 = array.ref.elem.1D(v7, CAST<uint<4>>(0));
+                        decl ref<int<4>> v8 = ( var(( *array.ref.elem.1D(v7, CAST<uint<4>>(0)))));
                     }(v121, v122)}
                 });
                 mergeAll();
@@ -446,7 +446,7 @@ fun(ref<array<real<4>,1>> v203, ref<array<real<4>,1>> v204, ref<array<int<4>,1>>
                 parallel(job(([vector.reduction(v193, 1, uint.mul)-vector.reduction(v193, 1, uint.mul)]))[decl ref<array<real<4>,1>> v181 = v189, decl ref<array<real<4>,1>> v182 = v190, decl ref<array<int<4>,1>> v183 = v191, decl ref<array<real<4>,1>> v184 = v192, decl vector<uint<4>,3> v187 = v193]{
                     default: bind(){fun(ref<array<real<4>,1>> v20, ref<array<real<4>,1>> v21, ref<array<int<4>,1>> v22, ref<array<real<4>,1>> v23, uint<4> v24, int<4> v25, vector<uint<4>,3> v180){
                         (array.ref.elem.1D(v23, CAST<uint<4>>(( *array.ref.elem.1D(v22, CAST<uint<4>>(0))))) := 3.3f);
-                        (array.ref.elem.1D(v21, CAST<uint<4>>(v24)) := (( *array.ref.elem.1D(v20, CAST<uint<4>>(1)))*( *array.ref.elem.1D(v23, CAST<uint<4>>(( *array.ref.elem.1D(v22, CAST<uint<4>>(0))))))));
+                        (array.ref.elem.1D(v21, v24) := (( *array.ref.elem.1D(v20, CAST<uint<4>>(1)))*( *array.ref.elem.1D(v23, CAST<uint<4>>(( *array.ref.elem.1D(v22, CAST<uint<4>>(0))))))));
                     }(v181, v182, v183, v184, v185, v186, v187)}
                 });
                 mergeAll();
@@ -473,7 +473,7 @@ fun(ref<array<real<4>,1>> v242, ref<array<real<4>,1>> v243, ref<array<int<4>,1>>
                                 default: { }
                             };
                         }(CAST<uint<4>>(0), v210, v211)));
-                        (array.ref.elem.1D(v28, CAST<uint<4>>(( *v33))) := CAST<real<4>>(( *v33)));
+                        (array.ref.elem.1D(v28, ( *v33)) := CAST<real<4>>(( *v33)));
                     }(v218, v219, v220, v221, v222, v223, v224, v225)}
                 });
                 mergeAll();
@@ -564,7 +564,7 @@ fun(ref<array<real<4>,1>> v361, ref<array<real<4>,1>> v362, ref<array<int<4>,1>>
                             };
                         }(CAST<uint<4>>(2), v317, v318));
                         decl ref<uint<4>> v56 = ( var(((((( *vector.ref.elem(v55, CAST<uint<4>>(0)))*CAST<uint<4>>(( *array.ref.elem.1D(v51, CAST<uint<4>>(2)))))*CAST<uint<4>>(( *array.ref.elem.1D(v51, CAST<uint<4>>(1)))))+(( *vector.ref.elem(v55, CAST<uint<4>>(1)))*CAST<uint<4>>(( *array.ref.elem.1D(v51, CAST<uint<4>>(2))))))+( *vector.ref.elem(v55, CAST<uint<4>>(2))))));
-                        (array.ref.elem.1D(v50, CAST<uint<4>>(( *v56))) := ( *array.ref.elem.1D(v49, CAST<uint<4>>(( *v56)))));
+                        (array.ref.elem.1D(v50, ( *v56)) := ( *array.ref.elem.1D(v49, ( *v56))));
                     }(v337, v338, v339, v340, v341, v342, v343, v344)}
                 });
                 mergeAll();
@@ -600,9 +600,9 @@ fun(ref<array<real<4>,1>> v406, ref<array<real<4>,1>> v407, ref<array<int<4>,1>>
                                 default: { }
                             };
                         }(CAST<uint<4>>(0), v368, v369)));
-                        (array.ref.elem.1D(v61, CAST<uint<4>>(( *v64))) := ( *array.ref.elem.1D(v58, CAST<uint<4>>(( *v65)))));
+                        (array.ref.elem.1D(v61, ( *v64)) := ( *array.ref.elem.1D(v58, ( *v65))));
                         barrier(getThreadGroup(0));
-                        (array.ref.elem.1D(v59, CAST<uint<4>>(( *v65))) := ( *array.ref.elem.1D(v61, CAST<uint<4>>(( *v64)))));
+                        (array.ref.elem.1D(v59, ( *v65)) := ( *array.ref.elem.1D(v61, ( *v64))));
                     }(v382, v383, v384, v385, v386, v387, v388, v389)}
                 });
                 mergeAll();
@@ -639,10 +639,10 @@ fun(ref<array<real<4>,1>> v452, ref<array<real<4>,1>> v453, ref<array<int<4>,1>>
                             };
                         }(CAST<uint<4>>(0), v414)));
                         { };
-                        (array.ref.elem.1D(v70, CAST<uint<4>>(( *v74))) := ( *array.ref.elem.1D(v67, CAST<uint<4>>(( *v73)))));
-                        (vector.ref.elem(v75, CAST<uint<4>>((( *v74)-CAST<uint<4>>(1)))) := ( *array.ref.elem.1D(v69, CAST<uint<4>>(( *v73)))));
+                        (array.ref.elem.1D(v70, ( *v74)) := ( *array.ref.elem.1D(v67, ( *v73))));
+                        (vector.ref.elem(v75, (( *v74)-CAST<uint<4>>(1))) := ( *array.ref.elem.1D(v69, ( *v73))));
                         barrier(getThreadGroup(0));
-                        (array.ref.elem.1D(v68, CAST<uint<4>>(( *v73))) := (( *array.ref.elem.1D(v70, CAST<uint<4>>((( *v73)+CAST<uint<4>>(1)))))+CAST<real<4>>(( *vector.ref.elem(v75, CAST<uint<4>>(( *v73)))))));
+                        (array.ref.elem.1D(v68, ( *v73)) := (( *array.ref.elem.1D(v70, (( *v73)+CAST<uint<4>>(1))))+CAST<real<4>>(( *vector.ref.elem(v75, ( *v73))))));
                     }(v427, v428, v429, v430, v431, v432, v433, v434, v435)}
                 });
                 mergeAll();

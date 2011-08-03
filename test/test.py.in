@@ -123,9 +123,9 @@ def run_test_case(test_case_name):
 		os.chdir(test_case_name)
 		# RUN insieme to generate the IR dump and C output
 		ret = run_cmd( "{INSIEMEC} {CFLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --dump-xml {XML_DUMP} --col-wrap=120 -S -o {C_DUMP} {FLAGS}".format(
-							**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 
-							   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML}) 
-					 )
+						**{'INSIEMEC': INSIEMEC, 'CFLAGS':CFLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr, 'C_DUMP': testC, 
+						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML})
+			) 
 		if check_for_error(test_case_name, ret):
 			os.chdir("../")
 			return 1
@@ -238,7 +238,7 @@ def run_test_case(test_case_name):
 		if runOcl & (test_case_name == "ocl_kernel"):
 			sys.stderr.write(" * Compiling OpenCL host program...                 ")
 
-			ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c --opencl --backend=ocl {LDFLAGS} {GCCFLAGS}".format(
+			ret = run_cmd( "{CC} -O3 {CFLAGS} -o host runTestKernels.c {LDFLAGS} {GCCFLAGS}".format(
 								**{'CC':CC, 'CFLAGS':CFLAGS, 'LDFLAGS':os.path.expandvars(LDFLAGS_ORG), 'GCCFLAGS':os.path.expandvars(gccFlagsRef)})  
 							)
 			if(ret != None) :
