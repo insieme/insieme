@@ -310,13 +310,30 @@ std::ostream& AffineFunction::printTo(std::ostream& out) const {
 		);
 }
 
+int AffineFunction::getCoeff(size_t idx) const {
+	int index = idxConv(idx);
+	return (index==-1)?0:coeffs[index];
+}
+
+void AffineFunction::setCoeff(const core::VariablePtr& var, int coeff) { 
+	int idx = iterVec.getIdx(var);
+	// In the case the variable is not in the iteration vector, throw an exception
+	if (idx == -1) { throw VariableNotFound(var); }
+	setCoeff( idx, coeff );
+}
+
 int AffineFunction::getCoeff(const Element& elem) const {
 	int idx = iterVec.getIdx(elem);
 	// In the case the variable is not in the iteration vector, throw an exception
 	assert (idx != -1 && "Element not in iteration vector");
+	return getCoeff( idx );
+}
 
-	idx = idxConv(idx);
-	return idx==-1?0:coeffs[idx];
+int AffineFunction::getCoeff(const core::VariablePtr& var) const { 
+	int idx = iterVec.getIdx(var);
+	// In the case the variable is not in the iteration vector, throw an exception
+	if (idx == -1) { throw VariableNotFound(var); }
+	return getCoeff( idx );
 }
 
 bool AffineFunction::operator==(const AffineFunction& other) const {
@@ -329,21 +346,23 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 	// for which a coefficient is specified is the same 	
 	iterator thisIt = begin(), otherIt = other.begin(); 
 	while( thisIt!=end() ) {
-		if ( ((*thisIt).first.getType() == Element::PARAM && 
-				(*otherIt).first.getType() == Element::ITER) || 
-			((*thisIt).first.getType() == Element::CONST && 
-			 	(*otherIt).first.getType() != Element::CONST) ) 
+		Term &&thisTerm = *thisIt, &&otherTerm = *otherIt;
+
+		if ( (thisTerm.first.getType() == Element::PARAM && 
+			  	otherTerm.first.getType() == Element::ITER) || 
+			(thisTerm.first.getType() == Element::CONST && 
+			 	otherTerm.first.getType() != Element::CONST) ) 
 		{
-			if ((*otherIt).second != 0) { return false; }
+			if (otherTerm.second != 0) { return false; }
 			++otherIt;
-		} else if ( ((*thisIt).first.getType() == Element::ITER && 
-				(*otherIt).first.getType() == Element::PARAM) || 
-			((*thisIt).first.getType() != Element::CONST &&
-			 	(*otherIt).first.getType() == Element::CONST) )	
+		} else if ( (thisTerm.first.getType() == Element::ITER && 
+				otherTerm.first.getType() == Element::PARAM) || 
+			(thisTerm.first.getType() != Element::CONST &&
+			 	otherTerm.first.getType() == Element::CONST) )	
 		{
-			if ((*thisIt).second != 0) { return false; }
+			if (thisTerm.second != 0) { return false; }
 			++thisIt;
-		} else if (*thisIt == *otherIt) {
+		} else if (thisTerm == otherTerm) {
 			// iterators aligned 
 			++thisIt;
 			++otherIt;
@@ -363,8 +382,7 @@ AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const Inde
 	std::fill(ret.coeffs.begin(), ret.coeffs.end(), 0);
 
 	for(size_t it=0; it<this->iterVec.size(); ++it) { 
-		int idx = idxConv(it);
-		ret.coeffs[idxMapCpy[it]] = (idx != -1) ? this->coeffs[idx] : 0;
+		ret.coeffs[idxMapCpy[it]] = getCoeff(it);
 	}
 
 	return ret;
@@ -373,17 +391,16 @@ AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const Inde
 //====== AffineFunction::iterator =================================================================
 
 AffineFunction::iterator& AffineFunction::iterator::operator++() { 
-	if ( iterPos == iterVec.size() )	throw "Iterator not valid.";
+	assert ( iterPos < iterVec.size() && "Iterator not valid!"); 
 	
 	iterPos++;
 	return *this;
 }
 
 AffineFunction::Term AffineFunction::iterator::operator*() const {  
-	if ( iterPos == iterVec.size() )	throw "Iterator not valid.";
+	assert ( iterPos < iterVec.size() && "Iterator not valid!"); 
 
-	int idx = af.idxConv(iterPos);
-	return Term(iterVec[iterPos], idx==-1?0:af.coeffs[idx]);	
+	return Term(iterVec[iterPos], af.getCoeff(iterPos));	
 }
 
 //===== Constraint ================================================================================

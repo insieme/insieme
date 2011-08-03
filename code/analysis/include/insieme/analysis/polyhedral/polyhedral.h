@@ -362,7 +362,14 @@ class AffineFunction : public utils::Printable,
 	 * that case the coefficient value for the index is by default zero.  
 	 */
 	int idxConv(size_t idx) const;
-	
+
+	void setCoeff(size_t idx, int coeff) { 
+		assert(idx < coeffs.size()); 
+		coeffs[idx] = coeff; 
+	}
+
+	int getCoeff(size_t idx) const;
+
 public:
 	template <class T>
 	friend class ConstraintSet; 
@@ -408,18 +415,13 @@ public:
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
 	// Setter and Getter for coefficient values. 
-	void setCoeff(const Element& iter, int coeff) {
-		coeffs[iterVec.getIdx(iter)] = coeff;
+	inline void setCoeff(const Element& iter, int coeff) {
+		setCoeff(iterVec.getIdx(iter), coeff);
 	}
+	void setCoeff(const core::VariablePtr& var, int coeff);
 
-	int getCoeff(const Element& iter) const;
-
-	int getCoeff(const core::VariablePtr& var) const { 
-		int idx = iterVec.getIdx(var);
-		// In the case the variable is not in the iteration vector, throw an exception
-		if (idx == -1) { throw VariableNotFound(var); }
-		return getCoeff( iterVec[idx] );
-	}
+	int getCoeff(const Element& elem) const;
+	int getCoeff(const core::VariablePtr& var) const;
 
 	iterator begin() const { return iterator(iterVec, *this); }
 	iterator end() const { return iterator(iterVec, *this, iterVec.size()); }
@@ -551,8 +553,8 @@ public:
  * This class represent the combination of two constraints which can be either a combined through a
  * AND or a OR operator. 
  */
-class BinaryConstraintCombiner : public ConstraintCombiner {
-public:
+struct BinaryConstraintCombiner : public ConstraintCombiner {
+	
 	enum Type { AND, OR };
 
 	BinaryConstraintCombiner(const Type& type, const ConstraintCombinerPtr& lhs, 

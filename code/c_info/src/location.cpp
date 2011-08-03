@@ -44,19 +44,16 @@ namespace c_info {
 const string CLocAnnotation::NAME = "CLocAnnotation";
 const utils::StringKey<CLocAnnotation> CLocAnnotation::KEY("CLocAnnotationKey");
 
-std::string SourceLocation::toString() const {
-	std::ostringstream ss;
-	ss << fileName << ":" << lineNo << ":" << columnNo;
-	return ss.str();
+std::ostream& SourceLocation::printTo(std::ostream& out) const {
+	return out << fileName << ":" << lineNo << ":" << columnNo;
 }
 
-const std::string CLocAnnotation::toString() const {
-	std::ostringstream ss;
-	ss << begin.toString() << " - " << end.toString();
+std::ostream& CLocAnnotation::printTo(std::ostream& out) const {
+	out << begin << " - " << end;
 	if(!isFunctionDef) {
-		ss << "\\ncallExpr(" << join(", ", args) << ")";
+		out << "\\ncallExpr(" << join(", ", args) << ")";
 	}
-	return ss.str();
+	return out;
 }
 
 } // End c_info namespace
