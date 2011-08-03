@@ -269,10 +269,14 @@ TEST(TypeTest, FunctionType) {
 	FunctionTypePtr funTypeA = FunctionType::get(manager, toVector(dummyA), resultA);
 	FunctionTypePtr funTypeB = FunctionType::get(manager, toVector(alpha), resultB);
 	FunctionTypePtr funTypeC = FunctionType::get(manager, toVector(alpha, dummyA), resultB);
+	FunctionTypePtr funTypeD = FunctionType::get(manager, toVector(dummyA), resultA, false);
 
 	EXPECT_EQ ( "((dummyA)->returnA)" , toString(*funTypeA) );
 	EXPECT_EQ ( "(('alpha)->returnB)" , toString(*funTypeB) );
 	EXPECT_EQ ( "(('alpha,dummyA)->returnB)" , toString(*funTypeC) );
+	EXPECT_EQ ( "((dummyA)=>returnA)" , toString(*funTypeD) );
+
+	EXPECT_NE ( funTypeA, funTypeD );
 
 	vector<TypePtr> subTypesA;
 	subTypesA.push_back(dummyA);
@@ -291,6 +295,7 @@ TEST(TypeTest, FunctionType) {
 	basicTypeTests(funTypeA, true, toList(subTypesA));
 	basicTypeTests(funTypeB, true, toList(subTypesB));
 	basicTypeTests(funTypeC, true, toList(subTypesC));
+	basicTypeTests(funTypeD, true, toList(subTypesA));
 }
 
 TEST(TypeTest, RecType) {
