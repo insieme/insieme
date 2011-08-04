@@ -21,7 +21,7 @@ set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
 
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
-set ( insieme_c_info_include_dir         	${insieme_code_dir}/c_info/include )
+set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
 
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )

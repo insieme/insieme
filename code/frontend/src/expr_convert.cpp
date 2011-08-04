@@ -36,12 +36,14 @@
 
 #include "insieme/frontend/convert.h"
 
+#include "insieme/annotations/ocl/ocl_annotations.h"
+
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/utils/dep_graph.h"
 #include "insieme/frontend/utils/clang_utils.h"
 #include "insieme/frontend/analysis/expr_analysis.h"
 #include "insieme/frontend/omp/omp_pragma.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/ocl/ocl_compiler.h"
 
 #include "insieme/frontend/insieme_pragma.h"
 
@@ -53,7 +55,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
-#include "insieme/c_info/naming.h"
+#include "insieme/annotations/c/naming.h"
 
 #include "clang/AST/StmtVisitor.h"
 
@@ -2215,7 +2217,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, params, body);
 		// attach name annotation to the lambda
 		retLambdaExpr->getLambda()->addAnnotation(
-			std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() )
+			std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getNameAsString() )
 		);
 
         // Adding the lambda function to the list of converted functions
@@ -2227,7 +2229,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );
 	// attach name annotation to the lambda
-	retLambdaNode->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getNameAsString() ) );
+	retLambdaNode->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getNameAsString() ) );
 	// this is a recurive function call
 	if ( ctx.isRecSubFunc ) {
 		/*
@@ -2283,7 +2285,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			assert(lambda && "Resolution of sub recursive lambda yields a wrong result");
 			this->currTU = oldTU;
 			// attach name annotation to the lambda
-			lambda->addAnnotation( std::make_shared<c_info::CNameAnnotation>( fd->getNameAsString() ) );
+			lambda->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( fd->getNameAsString() ) );
 			definitions.insert( std::make_pair(this->ctx.currVar, lambda) );
 
 			// reinsert the TypeVar in the map in order to solve the other recursive types

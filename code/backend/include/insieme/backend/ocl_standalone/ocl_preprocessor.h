@@ -36,44 +36,17 @@
 
 #pragma once
 
-#include <cassert>
-#include <unordered_map>
-#include <boost/functional/hash.hpp>
-
-#include "insieme/utils/annotation.h"
-
-#include "insieme/core/ast_node.h"
+#include "insieme/backend/preprocessor.h"
 
 namespace insieme {
-namespace c_info {
+namespace backend {
+namespace ocl_standalone {
 
-/** Annotation class intended to keep the name of C types and functions.
- ** Should be used to annotate *pointers* when exactly one name is required,
- ** for example with structs, unions or functions.
- ** */
-class CNameAnnotation : public core::NodeAnnotation {
-	const string name;
+	class OCLPreprocessor : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
 
-public:
-	static const string NAME;
-	static const utils::StringKey<CNameAnnotation> KEY;
-
-	CNameAnnotation(const std::string& name) : core::NodeAnnotation(), name(name) { }
-
-	const std::string& getName() const { return name; }
-	const std::string& getAnnotationName() const { return NAME; }
-
-	std::ostream& printTo(std::ostream& out) const { return out << name; }
-
-	const utils::AnnotationKey* getKey() const { return &KEY; }
-
-	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, const core::NodePtr& after) const {
-		assert(&*ptr == this && "Annotation Pointer should point to this!");
-		// always migrate the name annotation
-		after->addAnnotation(ptr);
-		return true;
-	}
-};
-
-} // namespace c_info
-} // namespace insieme
+} // end namespace ocl_standalone
+} // end namespace backend
+} // end namespace insieme

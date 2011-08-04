@@ -12,17 +12,17 @@ file(GLOB_RECURSE insieme_backend_incs 	include/*.h )
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
-include_directories( ${insieme_c_info_include_dir} )
+include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_backend_include_dir} )
 
 # Build the core library
 add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} ${insieme_backend_incs} )
 
 # add dependencies
-#add_dependencies( insieme_backend insieme_core insieme_c_info insieme_utils )
+#add_dependencies( insieme_backend insieme_core insieme_annotations insieme_utils )
 target_link_libraries(insieme_backend insieme_utils)
 target_link_libraries(insieme_backend insieme_core)
-target_link_libraries(insieme_backend insieme_c_info)
+target_link_libraries(insieme_backend insieme_annotations)
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -37,7 +37,7 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_core)
-	target_link_libraries(${case_name} insieme_c_info)
+	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_backend)
 	

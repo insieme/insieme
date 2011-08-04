@@ -43,7 +43,8 @@
 #include "insieme/core/ast_node.h"
 
 namespace insieme {
-namespace c_info {
+namespace annotations {
+namespace c {
 
 class SourceLocation: public boost::less_than_comparable<SourceLocation, SourceLocation>, public utils::Printable {
 	const std::string 	fileName;
@@ -112,5 +113,6 @@ private:
 	ArgumentList args;
 };
 
-} // End c_info namespace
-} // End insieme namespace
+} // end namespace c_info
+} // end namespace annotations
+} // end namespace insieme

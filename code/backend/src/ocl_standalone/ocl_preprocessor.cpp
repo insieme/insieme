@@ -34,19 +34,68 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#include "insieme/backend/ocl_standalone/ocl_preprocessor.h"
 
-#include "insieme/c_info/naming.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+
+#include "insieme/backend/ocl_standalone/ocl_standalone_extensions.h"
 
 namespace insieme {
-namespace c_info {
+namespace backend {
+namespace ocl_standalone {
 
-TEST(Naming, Basic) {
 
-	insieme::utils::Annotatable<> obj;
+	namespace {
 
-//	const CRecNameAnnotation annotation;
-}
+	// --------------------------------------------------------------------------------------------------------------
+		//      ITE to lazy-ITE Convertion
+		// --------------------------------------------------------------------------------------------------------------
 
-}
-}
+		class TypeWrapper : public core::transform::CachedNodeMapping {
+
+			core::NodeManager& manager;
+			const Extensions extensions;
+
+		public:
+
+			TypeWrapper(core::NodeManager& manager) :
+				manager(manager),  extensions(manager) {};
+
+			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+				// only interested in lambda expressions
+				if (ptr->getNodeType() != core::NT_LambdaExpr) {
+					return ptr->substitute(manager, *this);
+				}
+
+				// extract lambda
+				const core::LambdaExprPtr& lambda = static_pointer_cast<const core::LambdaExpr>(ptr);
+
+//				lambda->has
+
+
+
+				return ptr;
+			}
+		};
+
+
+	}
+
+
+	core::NodePtr OCLPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
+
+		// TODO:
+		// 		- find kernel lambdas, updated types
+
+		// the converter does the magic
+		TypeWrapper wrapper(manager);
+		return wrapper.map(code);
+	}
+
+
+} // end namespace runtime
+} // end namespace backend
+} // end namespace insieme

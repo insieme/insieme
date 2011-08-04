@@ -283,8 +283,7 @@ namespace backend {
 		case core::NT_CallExpr:
 		{
 			// variable is already representing a value
-			c_ast::NodePtr res = converter.getStmtConverter().convert(context, fun);
-			return static_pointer_cast<c_ast::Expression>(res);
+			return converter.getStmtConverter().convertExpression(context, fun);
 		}
 		default:
 			LOG(FATAL) << "Encountered unsupported node: " << *fun;

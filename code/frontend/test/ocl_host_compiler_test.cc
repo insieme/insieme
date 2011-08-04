@@ -39,9 +39,10 @@
 #include "insieme/core/program.h"
 #include "insieme/core/checks/ir_checks.h"
 
+#include "insieme/annotations/ocl/ocl_annotations.h"
+
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"

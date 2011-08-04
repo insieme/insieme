@@ -37,13 +37,12 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_passes.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include <fstream>
 
 namespace ba = boost::algorithm;
-namespace iocl = insieme::ocl;
 
 namespace insieme {
 namespace frontend {
@@ -625,8 +624,8 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
 	if(type == POINTER(builder.genericType("_cl_program"))) {
 		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) {
-			if(iocl::KernelFileAnnotationPtr kfa =
-					dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
+			if(annotations::ocl::KernelFileAnnotationPtr kfa =
+					dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>(cpwsCall->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
 				const string& path = kfa->getKernelPath();
 				//std::cerr << "Found OpenCL kernel file path: " << path;
 				if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)

@@ -36,9 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 namespace insieme {
+namespace annotations {
 namespace ocl {
 
 TEST(ocl_properties, FunctionAnnotations) {
@@ -101,5 +102,6 @@ TEST(ocl_properties, DeclarationAnnotations) {
 
 }
 
-} //namespace ocl
-} //namespace insieme
+} // end namespace ocl
+} // end namespace annotations
+} // end namespace insieme

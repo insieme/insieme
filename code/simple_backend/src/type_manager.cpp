@@ -41,7 +41,7 @@
 #include "insieme/core/types.h"
 #include "insieme/core/analysis/ir_utils.h"
 
-#include "insieme/c_info/naming.h"
+#include "insieme/annotations/c/naming.h"
 
 
 namespace insieme {

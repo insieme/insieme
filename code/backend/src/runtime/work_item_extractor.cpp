@@ -36,8 +36,6 @@
 
 #include "insieme/backend/runtime/work_item_extractor.h"
 
-#include "insieme/c_info/naming.h"
-
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"

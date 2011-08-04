@@ -39,10 +39,14 @@
 
 #include "insieme/core/transform/node_mapper_utils.h"
 
-#include "insieme/c_info/naming.h"
-#include "insieme/c_info/location.h"
+#include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/c/location.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
+
 #include "insieme/frontend/ocl/ocl_compiler.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/convert.h"
+#include "insieme/frontend/insieme_pragma.h"
+#include "insieme/frontend/pragma_handler.h"
 
 namespace ba = boost::algorithm;
 
@@ -511,17 +515,17 @@ public:
         }
 
         if (core::DeclarationStmtPtr decl = dynamic_pointer_cast<const core::DeclarationStmt>(element)) {
-//            std::cout << "a variable declaration " << (element.hasAnnotation(insieme::ocl::BaseAnnotation::KEY) ? "with . attributes " : " -  ") <<
-//                    (element->hasAnnotation(insieme::ocl::BaseAnnotation::KEY) ? "with -> attributes \n" : " -  \n");
+//            std::cout << "a variable declaration " << (element.hasAnnotation(annotations::ocl::BaseAnnotation::KEY) ? "with . attributes " : " -  ") <<
+//                    (element->hasAnnotation(annotations::ocl::BaseAnnotation::KEY) ? "with -> attributes \n" : " -  \n");
 //            std::cout << "variable: " << decl->toString() << std::endl;
 
-            if(decl->getVariable()->hasAnnotation(insieme::ocl::BaseAnnotation::KEY)) {
-                insieme::ocl::BaseAnnotationPtr annot = decl->getVariable()->getAnnotation(insieme::ocl::BaseAnnotation::KEY);
-                for(insieme::ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
+            if(decl->getVariable()->hasAnnotation(annotations::ocl::BaseAnnotation::KEY)) {
+                annotations::ocl::BaseAnnotationPtr annot = decl->getVariable()->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
+                for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
                         E = annot->getAnnotationListEnd(); I != E; ++I) {
-                    if(insieme::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<insieme::ocl::AddressSpaceAnnotation>(*I)) {
+                    if(annotations::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<annotations::ocl::AddressSpaceAnnotation>(*I)) {
                         switch(asa->getAddressSpace()) {
-                        case insieme::ocl::AddressSpaceAnnotation::LOCAL: {
+                        case annotations::ocl::AddressSpaceAnnotation::LOCAL: {
                             core::ExpressionPtr init;
                             core::TypePtr varType = decl->getVariable()->getType();
                             core::NodeType derefType = tryDeref(decl->getVariable())->getType()->getNodeType();
@@ -544,11 +548,11 @@ public:
                             return removeRefVar(decl);
                             break;
                         }
-                        case insieme::ocl::AddressSpaceAnnotation::PRIVATE: {
+                        case annotations::ocl::AddressSpaceAnnotation::PRIVATE: {
                             privateVars.push_back(decl->getVariable());
                             break;
                         }
-                        case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
+                        case annotations::ocl::AddressSpaceAnnotation::GLOBAL: {
                             core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getUndefined(),
                                  BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
                              // store the variable in list, initialized with zero, will be declared in global variable list
@@ -561,7 +565,7 @@ public:
                              return removeRefVar(decl);
                              break;
                         }
-                        case insieme::ocl::AddressSpaceAnnotation::CONSTANT: {
+                        case annotations::ocl::AddressSpaceAnnotation::CONSTANT: {
                             assert(false && "Address space CONSTANT not allowed for local variables");
                         }
                         default:
@@ -779,19 +783,19 @@ public:
                 bool isKernelFunction = false;
                 bool workGroupSizeDefined = false;
 
-                auto cName = func->getAnnotation(c_info::CNameAnnotation::KEY);
-                auto sourceLoc = func->getAnnotation(c_info::CLocAnnotation::KEY);
-                auto funcAnnotation = element->getAnnotation(insieme::ocl::BaseAnnotation::KEY);
+                auto cName = func->getAnnotation(annotations::c::CNameAnnotation::KEY);
+                auto sourceLoc = func->getAnnotation(annotations::c::CLocAnnotation::KEY);
+                auto funcAnnotation = element->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
 
                 if(!funcAnnotation)
                     return element->substitute(builder.getNodeManager(), *this);
 
                 size_t wgs[3];
-                for(insieme::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
+                for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = funcAnnotation->getAnnotationListBegin(),
                         E = funcAnnotation->getAnnotationListEnd(); I != E; ++I) {
-                    insieme::ocl::AnnotationPtr annot = (*I);
+                    annotations::ocl::AnnotationPtr annot = (*I);
 
-                    if(insieme::ocl::WorkGroupSizeAnnotationPtr wgsap = std::dynamic_pointer_cast<insieme::ocl::WorkGroupSizeAnnotation>(annot)) {
+                    if(annotations::ocl::WorkGroupSizeAnnotationPtr wgsap = std::dynamic_pointer_cast<annotations::ocl::WorkGroupSizeAnnotation>(annot)) {
                         workGroupSizeDefined = true;
                         wgs[0] = wgsap->getXdim();
                         assert(wgs[0] > 0 && "Work group Size x-dimension has to be greater than 0.");
@@ -800,7 +804,7 @@ public:
                         wgs[2] = wgsap->getZdim();
                         assert(wgs[2] > 0 && "Work group Size z-dimension has to be greater than 0.");
                     }
-                    if(insieme::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<insieme::ocl::KernelFctAnnotation>(annot)) {
+                    if(annotations::ocl::KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<annotations::ocl::KernelFctAnnotation>(annot)) {
                         isKernelFunction = kf->isKernelFct();
                     }
 
@@ -826,28 +830,28 @@ public:
                 // store memory spaces of arguments
                 for(core::Lambda::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
                     core::VariablePtr var = *pi;
-                    if(var->hasAnnotation(insieme::ocl::BaseAnnotation::KEY)) {
-                        insieme::ocl::BaseAnnotationPtr annot = var->getAnnotation(insieme::ocl::BaseAnnotation::KEY);
-                        for(insieme::ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
+                    if(var->hasAnnotation(annotations::ocl::BaseAnnotation::KEY)) {
+                        annotations::ocl::BaseAnnotationPtr annot = var->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
+                        for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = annot->getAnnotationListBegin(),
                                 E = annot->getAnnotationListEnd(); I != E; ++I) {
-                            if(insieme::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<insieme::ocl::AddressSpaceAnnotation>(*I)) {
+                            if(annotations::ocl::AddressSpaceAnnotationPtr asa = std::dynamic_pointer_cast<annotations::ocl::AddressSpaceAnnotation>(*I)) {
                                 switch(asa->getAddressSpace()) {
-                                case insieme::ocl::AddressSpaceAnnotation::GLOBAL: {
+                                case annotations::ocl::AddressSpaceAnnotation::GLOBAL: {
                                     globalArgs.push_back(var);
                                     argsOrder.push_back(GLOBAL);
                                     break;
                                 }
-                                case insieme::ocl::AddressSpaceAnnotation::CONSTANT: {
+                                case annotations::ocl::AddressSpaceAnnotation::CONSTANT: {
                                     constantArgs.push_back(var);
                                     argsOrder.push_back(CONSTANT);
                                     break;
                                 }
-                                case insieme::ocl::AddressSpaceAnnotation::LOCAL: {
+                                case annotations::ocl::AddressSpaceAnnotation::LOCAL: {
                                     localArgs.push_back(var);
                                     argsOrder.push_back(LOCAL);
                                     break;
                                 }
-                                case insieme::ocl::AddressSpaceAnnotation::PRIVATE: {
+                                case annotations::ocl::AddressSpaceAnnotation::PRIVATE: {
                                     privateArgs.push_back(var);
                                     argsOrder.push_back(PRIVATE);
                                     break;
@@ -1069,6 +1073,28 @@ core::ProgramPtr Compiler::lookForOclAnnotations() {
         assert(newProg && "OclCompiler corrupted the program");
     return mProgram;
 }
+
+
+void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& convFact){
+    insieme::core::NodeAnnotationPtr annot;
+
+    // check if there is a kernelFile annotation
+    const frontend::PragmaStmtMap::StmtMap& pragmaStmtMap = convFact.getPragmaMap().getStatementMap();
+    std::pair<frontend::PragmaStmtMap::StmtMap::const_iterator, frontend::PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
+
+    std::for_each(iter.first, iter.second,
+        [ & ](const frontend::PragmaStmtMap::StmtMap::value_type& curr){
+            const frontend::InsiemeKernelFile* kf = dynamic_cast<const frontend::InsiemeKernelFile*>( &*(curr.second) );
+            if(kf) {
+                annot = std::make_shared<annotations::ocl::KernelFileAnnotation>(annotations::ocl::KernelFileAnnotation(kf->getPath()));
+            }
+    });
+
+    if(annot)
+        irNode->addAnnotation(annot);
+}
+
 
 } //namespace ocl
 } //namespace frontend

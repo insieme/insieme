@@ -34,27 +34,17 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/c_info/location.h"
+#include "insieme/annotations/c/naming.h"
 
-#include <sstream>
+#include "insieme/core/identifier.h"
 
 namespace insieme {
-namespace c_info {
+namespace annotations {
+namespace c {
 
-const string CLocAnnotation::NAME = "CLocAnnotation";
-const utils::StringKey<CLocAnnotation> CLocAnnotation::KEY("CLocAnnotationKey");
+const string CNameAnnotation::NAME = "CNameAnnotation";
+const utils::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
 
-std::ostream& SourceLocation::printTo(std::ostream& out) const {
-	return out << fileName << ":" << lineNo << ":" << columnNo;
 }
-
-std::ostream& CLocAnnotation::printTo(std::ostream& out) const {
-	out << begin << " - " << end;
-	if(!isFunctionDef) {
-		out << "\\ncallExpr(" << join(", ", args) << ")";
-	}
-	return out;
 }
-
-} // End c_info namespace
-} // End insieem namespace
+}

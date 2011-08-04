@@ -53,6 +53,7 @@
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/ocl_standalone/ocl_standalone_backend.h"
 
 #include "insieme/transform/ir_cleanup.h"
 
@@ -479,18 +480,19 @@ int main(int argc, char** argv) {
 			// enforces the usage of the full backend for testing
 //			selection = 'r';
 //			selection = 's';
+//			selection = 'o';
 			// ###################################################
 
 
 			switch(selection) {
 				case 'o': {
-					backendName = "OpenCL.Backend";
+					backendName = "OpenCL.Standalone.Backend";
 
 					//TODO find the OpenCLChecker
 					//				insieme::opencl_backend::OpenCLChecker oc;
 					//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
 
-					backend = insieme::backend::ocl::OpenCLBackend::getDefault();
+					backend = insieme::backend::ocl_standalone::OCLStandaloneBackend::getDefault();
 					break;
 				}
 				case 'r': {

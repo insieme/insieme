@@ -34,10 +34,10 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/c_info/naming.h"
+#include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
 #include "insieme/frontend/ocl/ocl_host_passes.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
 
 namespace ba = boost::algorithm;
 
@@ -51,7 +51,7 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 	std::map<string, int> checkDuplicates;
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
 			if(const LambdaExprPtr& lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
-			if(auto cname = lambdaEx->getLambda()->getAnnotation(c_info::CNameAnnotation::KEY)) {
+			if(auto cname = lambdaEx->getLambda()->getAnnotation(annotations::c::CNameAnnotation::KEY)) {
 				assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
 				checkDuplicates[cname->getName()] = 1;
 

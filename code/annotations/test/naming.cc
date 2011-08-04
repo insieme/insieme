@@ -34,15 +34,19 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/c_info/naming.h"
+#include <gtest/gtest.h>
 
-#include "insieme/core/identifier.h"
+#include "insieme/annotations/c/naming.h"
 
 namespace insieme {
 namespace c_info {
 
-const string CNameAnnotation::NAME = "CNameAnnotation";
-const utils::StringKey<CNameAnnotation> CNameAnnotation::KEY("CNameAnnotationKey");
+TEST(Naming, Basic) {
+
+	insieme::utils::Annotatable<> obj;
+
+//	const CRecNameAnnotation annotation;
+}
 
 }
 }

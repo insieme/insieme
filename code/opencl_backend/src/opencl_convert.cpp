@@ -43,7 +43,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/name_manager.h"
@@ -58,7 +58,7 @@ namespace insieme {
 namespace backend {
 namespace ocl {
 
-using namespace insieme::ocl;
+using namespace insieme::annotations::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 

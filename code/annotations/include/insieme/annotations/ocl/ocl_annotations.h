@@ -54,6 +54,7 @@ class ConversionFactory;
 }
 }
 
+namespace annotations {
 namespace ocl {
 
 DEFINE_TYPE(BaseAnnotation);
@@ -241,12 +242,8 @@ public:
 
 typedef std::shared_ptr<BuiltinFunctionAnnotation> BuiltinFunctionAnnotationPtr;
 
-// responsible for adding ocl KernelFile annotation
-void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
-        frontend::conversion::ConversionFactory& fact);
 
-
-
-} // namespace ocl
+} // namespace ocl_info
+} // namesapce annotations
 } // namespace insieme
 
