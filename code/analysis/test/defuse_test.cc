@@ -147,7 +147,7 @@ TEST(DefUseCollect, ArrayAccess) {
 		EXPECT_EQ(static_cast<size_t>(2), refs.size());
 
 		for_each(refs.arrays_begin(), refs.arrays_end(),
-			[](const RefPtr& cur){
+			[](const RefPtr& cur) {
 				EXPECT_TRUE(cur->getUsage() == Ref::USE);
 			}
 		);

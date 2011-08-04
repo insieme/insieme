@@ -39,6 +39,7 @@
 #include <vector>
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/ast_address.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/analysis/defuse_collect.h"
@@ -66,7 +67,7 @@ public:
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> KEY;
 
-	typedef std::vector<core::StatementPtr> StmtList;
+	typedef std::vector<core::StatementAddress> StmtList;
 
 	// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 	// be directly referred from sub SCoPs. 
@@ -184,7 +185,7 @@ public:
 	}
 };
 
-typedef std::vector< std::pair<core::NodePtr, poly::IterationVector> > ScopList;
+typedef std::vector< std::pair<core::NodeAddress, poly::IterationVector> > ScopList;
 
 /**
  * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an

@@ -49,8 +49,8 @@ FLAG("feat-extract,f",		"feat-extract",			FeatureExtract,	false,	"Enables featur
 
 // output options
 FLAG("pretty-print,P", 		"pretty-print", 		PrettyPrint, 	false, 	"pretty print the IR after frontend conversion")
-FLAG("show-line-no,",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
-FLAG("mark-scop,",       	"mark-scop",            MarkScop,		false,	"Mark Static Control Parts int the IR")
+FLAG("show-line-no",       "show-num",             ShowLineNo,		true,	"Show line numbers when the IR code is printed to the standard output")
+FLAG("mark-scop",       	"mark-scop",            MarkScop,		false,	"Mark Static Control Parts int the IR")
 FLAG("check-sema,S",		"check-sema", 			CheckSema, 		false, 	"run semantics check on the generated IR")
 FLAG("show-stats",			"show-stats", 			ShowStats, 		false, 	"computes statistics regarding the composition of the IR")
 FLAG("cleanup,C",			"cleanup", 				Cleanup, 		false,	"applies some cleanup operations to the IR produced by the frontend")
@@ -65,10 +65,10 @@ OPTION("input-file", 		"input-file", 			InputFiles, 	std::vector<std::string>, 	
 OPTION("include-path,I", 	"include-path", 		IncludePaths, 	std::vector<std::string>, 	"Add directory to include search path")
 OPTION("std,std", 			"std-compatibility",	STD, 			std::string, 				"Set compatibility mode")
 OPTION("definitions,D",	 	"definitions", 			Defs, 			std::vector<std::string>, 	"Add a preprocessor definition")
-OPTION("show-ir,", 			"show-ir", 				ShowIR, 		std::string, 				"Print a dot representation of the IR")
+OPTION("show-ir", 			"show-ir", 				ShowIR, 		std::string, 				"Print a dot representation of the IR")
 OPTION("dump-xml", 			"dump-xml", 			DumpXML, 		std::string, 				"Print the xml representation of the IR")
 OPTION("load-xml", 			"load-xml", 			LoadXML, 		std::string, 				"Load an xml contanining an IR")
-OPTION("dump-iri", 			"dump-ir", 				DumpIR, 		std::string, 				"Print the pretty printed representation of the IR")
+OPTION("dump-ir", 			"dump-ir", 				DumpIR, 		std::string, 				"Print the pretty printed representation of the IR")
 OPTION("out-file,o", 		"out-file", 			Output, 		std::string, 				"output file")
 OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph of the CFG")
 

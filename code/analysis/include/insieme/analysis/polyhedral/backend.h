@@ -56,11 +56,12 @@ struct Context {
  * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
  * union, difference, etc...)
  */
+template <class Ctx>
 struct Set : public utils::Printable {
 
 	// Creates an empty Set based on the dimensionality of the given iteration vector. 
 	// Once creates, the iteration vector on which the set is based cannot been changed. 
-	Set(Context& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { } 
+	Set(Ctx& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { } 
 	
 	// Adds a new constraint to this set. 
 	//
@@ -73,7 +74,7 @@ struct Set : public utils::Printable {
 
 	virtual ~Set() { }
 protected:
-	Context& ctx;
+	Ctx& ctx;
 	const IterationVector& iterVec; 
 };
 

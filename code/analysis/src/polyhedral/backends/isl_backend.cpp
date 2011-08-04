@@ -112,10 +112,9 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const Constraint
 	return isl_basic_set_add_constraint( bset, cons );
 }
 
-IslSet::IslSet(Context& ctx, const IterationVector& iterVec) : Set(ctx, iterVec) {
-	isl_ctx* islCtx = static_cast<IslContext&>(ctx).getRawContext();
+IslSet::IslSet(IslContext& ctx, const IterationVector& iterVec) : Set(ctx, iterVec) {
 	// Build the dim object
-	dim = isl_dim_set_alloc( islCtx, iterVec.getParameterNum(), iterVec.getIteratorNum() );
+	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
 
 	// Set the names for the iterators of this dim
 	for(IterationVector::iter_iterator it = iterVec.iter_begin(), end = iterVec.iter_end(); it != end; ++it) {
@@ -133,14 +132,12 @@ IslSet::IslSet(Context& ctx, const IterationVector& iterVec) : Set(ctx, iterVec)
 
 
 std::ostream& IslSet::printTo(std::ostream& out) const {
-	printIslSet(out, static_cast<IslContext&>(ctx).getRawContext(), set); 
+	printIslSet(out, ctx.getRawContext(), set); 
 	return out;
 }
 
 void IslSet::addConstraint(const Constraint& c) {
-	isl_ctx* islCtx = static_cast<IslContext&>(ctx).getRawContext();
-
-	isl_basic_set* bset = setFromConstraint(islCtx, dim, c);
+	isl_basic_set* bset = setFromConstraint(ctx.getRawContext(), dim, c);
 	isl_set *tmp_set = isl_set_from_basic_set( bset );
 
 	// Intersect the current set with the new constraint
@@ -189,9 +186,7 @@ struct ISLConstraintConverterVisitor : public ConstraintVisitor {
 
 
 void IslSet::addConstraint(const ConstraintCombinerPtr& cc) {
-	isl_ctx* islCtx = static_cast<IslContext&>(ctx).getRawContext();
-
-	ISLConstraintConverterVisitor ccv(islCtx, dim);
+	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
 	ccv.visit(cc);
 
 	set = isl_set_intersect(set, ccv.getResult());
