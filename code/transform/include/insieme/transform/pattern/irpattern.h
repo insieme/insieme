@@ -34,46 +34,31 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
+#include <string>
+#include <memory>
+#include <ostream>
+#include <unordered_map>
+
 #include "insieme/transform/pattern/structure.h"
+#include "insieme/transform/pattern/pattern.h"
 
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
+namespace irp {
 
-
-	std::ostream& Tree::printTo(std::ostream& out) const {
-		// print symbol if present
-		if (id) out << (char)id;
-
-		// add sub-trees
-		if (!subTrees.empty()) {
-			out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
-		}
-
-		// in case neither a symbol nor subtrees are given
-		if (!id && subTrees.empty()) {
-			out << "()";
-		}
-		return out;
+	inline TreePatternPtr atom(const NodePtr& node) {
+		return atom(convertIR(node));
 	}
 
-	bool Tree::operator==(Tree& other) {
-		if (this == &other) {
-			return true;
-		}
-		return id == other.id && equals(subTrees, other.subTrees, equal_target<TreePtr>());
+	inline TreePatternPtr tupleType(const NodePatternPtr& pattern) {
+		return node(core::NT_TupleType, pattern);
 	}
-
-	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
-		return tree.printTo(out);
-	}
-
-	std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
-		return out << *tree;
-	}
-
+}
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

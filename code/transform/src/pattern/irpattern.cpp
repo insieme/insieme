@@ -34,45 +34,13 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/transform/pattern/pattern.h"
 
-#include "insieme/utils/logging.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
-
-
-	std::ostream& Tree::printTo(std::ostream& out) const {
-		// print symbol if present
-		if (id) out << (char)id;
-
-		// add sub-trees
-		if (!subTrees.empty()) {
-			out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
-		}
-
-		// in case neither a symbol nor subtrees are given
-		if (!id && subTrees.empty()) {
-			out << "()";
-		}
-		return out;
-	}
-
-	bool Tree::operator==(Tree& other) {
-		if (this == &other) {
-			return true;
-		}
-		return id == other.id && equals(subTrees, other.subTrees, equal_target<TreePtr>());
-	}
-
-	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
-		return tree.printTo(out);
-	}
-
-	std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
-		return out << *tree;
-	}
 
 } // end namespace pattern
 } // end namespace transform
