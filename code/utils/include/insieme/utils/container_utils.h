@@ -51,6 +51,7 @@
 
 #include "string_utils.h"
 #include "iterator_utils.h"
+#include "functional_utils.h"
 
 using std::vector;
 using std::function;
@@ -85,9 +86,11 @@ inline void copy(const Container& c, OutputIterator out) {
 /**
  * Convenience function for std::transform.
  */
-template<typename Container, typename Functor>
-inline Container transform(const Container& c, const Functor& f) {
-	Container res;
+template<template <typename, typename> class Container, typename Functor, 
+	typename T, template <typename> class A, typename ResultMember = typename lambda_traits<Functor>::result_type,
+	typename Result = Container<ResultMember, A<ResultMember>>>
+inline Result transform(const Container<T, A<T>>& c, const Functor& f) {
+	Result res;
 	std::transform(c.begin(), c.end(), inserter(res, res.end()), f);
 	return res;
 }
