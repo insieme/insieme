@@ -132,9 +132,12 @@ namespace backend {
 	struct FunctionTypeInfo : public TypeInfo {
 
 		// to be included
+		//		- plain flag
 		//		- closure name
 		//		- caller name
 		//		- references to code fragments of utilities
+
+		bool plain;
 
 		c_ast::IdentifierPtr callerName;
 

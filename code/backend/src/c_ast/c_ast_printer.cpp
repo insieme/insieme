@@ -171,7 +171,7 @@ namespace c_ast {
 
 			PRINT(VarDecl) {
 				// print a variable declaration
-				out << print(node->var->type) << " " << print(node->var->name);
+				out << printParam(node->var);
 
 				if (!node->init) {
 					return out;

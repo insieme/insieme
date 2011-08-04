@@ -435,7 +435,7 @@ LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> uint<4>")
 LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> uint<4>")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
-LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->unit")
+LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)=>'a)->unit")
 
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
