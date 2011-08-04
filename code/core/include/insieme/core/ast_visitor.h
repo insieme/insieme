@@ -376,8 +376,8 @@ public:
 		}
 
 		// DepthFirstly visit all sub-nodes
-		const Node::ChildList& children = node->getChildList();
-		for(std::size_t i=0; i<children.size(); i++) {
+		auto size = node->getChildList().size();
+		for(std::size_t i=0; i<size; i++) {
 			this->visit(childFactory(node, i), context ...);
 		}
 

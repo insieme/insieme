@@ -520,3 +520,19 @@ TEST(IRParser, InteractiveTest) {
 			<< std::endl << "--------------------------------------\n";
 	}
 }
+
+TEST(IRParser, FunctionType) {
+    NodeManager manager;
+    IRParser parser(manager);
+    ASTBuilder builder(manager);
+
+    // parse a function plain and a closure type
+    TypePtr a = builder.genericType("A");
+    TypePtr b = builder.genericType("B");
+
+    FunctionTypePtr funA = builder.functionType(toVector(a), b, true);
+    FunctionTypePtr funB = builder.functionType(toVector(a), b, false);
+
+    EXPECT_EQ(funA, parser.parseType("(A) -> B"));
+    EXPECT_EQ(funB, parser.parseType("(A) => B"));
+}

@@ -58,10 +58,13 @@ namespace backend {
 	class VectorTypeInfo;
 	class ChannelTypeInfo;
 
+	typedef std::map<string, string> TypeIncludeTable;
+
+	TypeIncludeTable getBasicTypeIncludeTable();
+
 	namespace detail {
 		class TypeInfoStore;
 	}
-
 
 	class TypeManager {
 
@@ -70,6 +73,8 @@ namespace backend {
 	public:
 
 		TypeManager(const Converter& converter);
+
+		TypeManager(const Converter& converter, const TypeIncludeTable& includeTable);
 
 		virtual ~TypeManager();
 
@@ -91,6 +96,9 @@ namespace backend {
 	 * A type definition for a function converting one C AST node pointer into another
 	 * node pointer. Elements of this type are used to realize variable and parameter
 	 * declarations and conversions between plain C and Inspire types.
+	 *
+	 *  - The shared C-node manager should be used for generating new C-AST nodes.
+	 *  - the C-AST expression is the converted value representation
 	 */
 	typedef std::function<c_ast::ExpressionPtr(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr&)> NodeConverter;
 
@@ -124,9 +132,12 @@ namespace backend {
 	struct FunctionTypeInfo : public TypeInfo {
 
 		// to be included
+		//		- plain flag
 		//		- closure name
 		//		- caller name
 		//		- references to code fragments of utilities
+
+		bool plain;
 
 		c_ast::IdentifierPtr callerName;
 

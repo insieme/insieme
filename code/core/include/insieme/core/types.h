@@ -319,6 +319,12 @@ class FunctionType: public Type {
 	 */
 	const TypePtr returnType;
 
+	/**
+	 * A flag determining whether this function type is representing a function value that
+	 * is plain (can be called without a context) or one that requires a closure context.
+	 */
+	const bool plain;
+
 private:
 
 	/**
@@ -326,8 +332,10 @@ private:
 	 *
 	 * @param parameterTypes a reference to the type used as argument types
 	 * @param returnType a reference to the type used as return type
+	 * @param plain a flag determining whether values of this function require a closure context when
+	 * being invoked or not.
 	 */
-	FunctionType(const TypeList& parameterTypes, const TypePtr& returnType);
+	FunctionType(const TypeList& parameterTypes, const TypePtr& returnType, bool plane);
 
 protected:
 
@@ -351,9 +359,10 @@ public:
 	 * @param manager the manager to be used for handling the obtained type pointer
 	 * @param paramTypes the type of the single parameter accepted by the resulting function
 	 * @param resultType the type of value to be returned by the obtained function type
+	 * @param plane determining whether the resulting type covers closures or not
 	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
-	static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& resultType);
+	static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& resultType, bool plane = true);
 
 	/**
 	 * This method provides a static factory method for this type of node. It will return
@@ -363,9 +372,10 @@ public:
 	 * @param manager the manager to be used for handling the obtained type pointer
 	 * @param parameterTypes the arguments accepted by the resulting function type
 	 * @param returnType the type of value to be returned by the obtained function type
+	 * @param plain determining whether the resulting type covers closures or not
 	 * @return a pointer to a instance of the required type maintained by the given manager
 	 */
-	static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType);
+	static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, bool plain = true);
 
 	/**
 	 * Obtains a reference to the internally maintained list of parameter types.
@@ -383,6 +393,14 @@ public:
 	 */
 	const TypePtr& getReturnType() const {
 		return returnType;
+	}
+
+	/**
+	 * Determines whether this type represents a plane function type (if true) or a
+	 * function type requiring a closure context when being invoked.
+	 */
+	const bool isPlain() const {
+		return plain;
 	}
 
 	/**

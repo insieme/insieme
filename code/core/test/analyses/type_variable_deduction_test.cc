@@ -951,6 +951,51 @@ TEST(TypeVariableDeduction, PassingVectorToArrayBug) {
 	if (unifier) EXPECT_EQ(*uint8, *unifier->applyTo(manager, alpha));
 }
 
+TEST(TypeVariableDeduction, PlainFunctionTest) {
+
+	// To be tested:
+	//		a function A -> B is a subtype of A => B
+	//		hence: passing a value x : A -> B to a function
+	//			accepting a parameter p : A => B should be allowed
+	//
+	//		On the other hand, passing y : A => B to q : A -> B is
+	//			not allowed.
+
+	ASTBuilder builder;
+	NodeManager& manager = builder.getNodeManager();
+
+	TypePtr A = builder.genericType("A");
+	TypePtr B = builder.genericType("B");
+
+	TypePtr funA = builder.functionType(toVector(A), B, true);
+	TypePtr funB = builder.functionType(toVector(A), B, false);
+
+	// create a plain and a standard function type
+	EXPECT_EQ("((A)->B)", toString(*funA));
+	EXPECT_EQ("((A)=>B)", toString(*funB));
+
+	// passing funA to funB => should work
+	auto res = getTypeVariableInstantiation(manager, toVector(funB), toVector(funA));
+	EXPECT_TRUE(res);
+
+	// passing funB to funA => should not work
+	res = getTypeVariableInstantiation(manager, toVector(funA), toVector(funB));
+	EXPECT_FALSE(res);
+
+	// also test type variable deduction
+	TypePtr alpha = builder.typeVariable("a");
+	TypePtr beta = builder.typeVariable("b");
+	TypePtr funG = builder.functionType(toVector(alpha), beta, false);
+
+	EXPECT_EQ("(('a)=>'b)", toString(*funG));
+
+	res = getTypeVariableInstantiation(manager, toVector(funG), toVector(funA));
+	ASSERT_TRUE(res);
+	EXPECT_EQ("A", toString(*res->applyTo(alpha)));
+	EXPECT_EQ("B", toString(*res->applyTo(beta)));
+}
+
+
 } // end namespace analysis
 } // end namespace core
 } // end namespace insieme

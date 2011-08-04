@@ -59,8 +59,11 @@ namespace backend {
 		if(auto cnameAnn = ptr->getAnnotation(c_info::CNameAnnotation::KEY)) {
 			// => take original c name
 			string name = cnameAnn->getName();
-			nameMap.insert(make_pair(ptr, name));
-			return name;
+			if (usedNames.find(name) == usedNames.end()) {
+				nameMap.insert(make_pair(ptr, name));
+				usedNames.insert(name);
+				return name;
+			}
 		}
 
 		// special handling for variables
@@ -99,12 +102,16 @@ namespace backend {
 		}
 
 		name << "_" << num++;
-		nameMap.insert(make_pair(ptr, name.str()));
+		string resName = name.str();
+		nameMap.insert(make_pair(ptr, resName));
+		usedNames.insert(resName);
 		return getName(ptr, fragment);
 	}
 
 	void SimpleNameManager::setName(const core::NodePtr& ptr, const string& name) {
+		assert((usedNames.find(name) == usedNames.end() || *(usedNames.find(name)) == name) && "Cannot bind name already used!");
 		auto res = nameMap.insert(make_pair(ptr, name));
+		usedNames.insert(name);
 		assert(res.second && "Tried to alter name after first assignment!");
 	}
 

@@ -26,6 +26,7 @@ add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_
 
 # add dependencies
 add_dependencies( insieme_analysis insieme_core insieme_utils ${isl_LIB})
+target_link_libraries( insieme_analysis ${isl_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)

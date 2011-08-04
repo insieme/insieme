@@ -39,8 +39,6 @@
  * headers.
  * 
  * FUN(x,y)  ... states that header file x contains a declaration of y
- * 
- * NOT YET IMPLEMENTED: 
  * TYPE(x,y) ... states that header file x contains a definition of type y
  */
 
@@ -65,6 +63,8 @@ FUN("stdio.h", fscanf)
 FUN("stdio.h", fwrite)
 FUN("stdio.h", fclose)
 FUN("stdio.h", sprintf)
+
+TYPE("stdio.h", FILE)
 
 FUN("stdlib.h", malloc)
 FUN("stdlib.h", calloc)

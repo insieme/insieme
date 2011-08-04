@@ -267,11 +267,12 @@ using std::vector;
 					break;
 				}
 			}
-
-			return "E" + string(1,bound) + ".(" + printFormula(&*(cur->sub), subNames) + ")";
+			std::ostringstream ss;
+			ss << "E" << string(1,bound) << ".(" << printFormula(&*(cur->sub), subNames) << ")";
+			return ss.str();
 		}
 
-		return "";
+		return std::string();
 	}
 
 	string printFormula(const FormulaPtr f) {

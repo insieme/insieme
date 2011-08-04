@@ -63,7 +63,7 @@ typedef Pointer<const Expression> ExpressionPtr;
 namespace analysis {
 namespace poly {
 
-//===== Exceptions ==============================================================
+//===== Exceptions =================================================================================
 struct NotAffineExpr : public std::logic_error {
 	const core::ExpressionPtr expr;
 	NotAffineExpr(const core::ExpressionPtr& expr);
@@ -362,7 +362,14 @@ class AffineFunction : public utils::Printable,
 	 * that case the coefficient value for the index is by default zero.  
 	 */
 	int idxConv(size_t idx) const;
-	
+
+	void setCoeff(size_t idx, int coeff) { 
+		assert(idx < coeffs.size()); 
+		coeffs[idx] = coeff; 
+	}
+
+	int getCoeff(size_t idx) const;
+
 public:
 	template <class T>
 	friend class ConstraintSet; 
@@ -407,32 +414,17 @@ public:
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
-	// Set a coefficient for an iterator. 
-	void setCoefficient(const Iterator& iter, int coeff) {
-		size_t idx = iterVec.getIdx(iter);
-		assert(idx<sep && 
-			"Iterator vector has been updated before the affine function has been created."); 
-			// FIXME define exception class
-		coeffs[idx] = coeff;
+	// Setter and Getter for coefficient values. 
+	inline void setCoeff(const Element& iter, int coeff) {
+		setCoeff(iterVec.getIdx(iter), coeff);
 	}
+	void setCoeff(const core::VariablePtr& var, int coeff);
 
-	// Sets the coefficient value for a parameter
-	void setCoefficient(const Parameter& param, int coeff) {
-		size_t idx = iterVec.getIdx(param);
-		assert(idx<coeffs.size()-1 && 
-			"Iterator vector has been updated before the affine function has been created."); 
-			// FIXME define exception class
-		coeffs[idx] = coeff;
-	}
-
-	// Set the constant part coefficient 
-	void setConstantPart(int coeff) { coeffs.back() = coeff; }
+	int getCoeff(const Element& elem) const;
+	int getCoeff(const core::VariablePtr& var) const;
 
 	iterator begin() const { return iterator(iterVec, *this); }
 	iterator end() const { return iterator(iterVec, *this, iterVec.size()); }
-
-	int getCoeff(const core::VariablePtr& var) const;
-	inline int getConstCoeff() const { return coeffs.back(); }
 
 	inline size_t size() const { return iterVec.size(); } 
 
@@ -492,6 +484,10 @@ struct Constraint : public utils::Printable,
 
 	Constraint 
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const;
+
+	// We normalize the constraint, usually required for libraries. 
+	// Equality constraints remains the same while inequalities must be rewritten to be GE (>=)
+	Constraint normalize() const;
 
 private:
 	const AffineFunction af;
@@ -557,8 +553,8 @@ public:
  * This class represent the combination of two constraints which can be either a combined through a
  * AND or a OR operator. 
  */
-class BinaryConstraintCombiner : public ConstraintCombiner {
-public:
+struct BinaryConstraintCombiner : public ConstraintCombiner {
+	
 	enum Type { AND, OR };
 
 	BinaryConstraintCombiner(const Type& type, const ConstraintCombinerPtr& lhs, 

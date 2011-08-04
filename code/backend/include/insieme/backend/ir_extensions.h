@@ -71,6 +71,7 @@ namespace backend {
 		 * A special literal representing a function causing the initialization of the global variables.
 		 */
 		const core::LiteralPtr initGlobals;
+
 	};
 
 

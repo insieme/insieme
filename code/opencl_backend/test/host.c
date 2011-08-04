@@ -88,7 +88,7 @@ int main(int argc, char **argv)
         queue = clCreateCommandQueue(context, devices[0], 0, &_err);
 
         for (int i=0; i<NUM_DATA; i++) {
-                clEnqueueWriteBuffer(queue, input_buffer, CL_TRUE, i*sizeof(int), sizeof(int), &i, 0, NULL, NULL);
+                clEnqueueWriteBuffer(queue, input_buffer, CL_TRUE, 0, sizeof(int), &i, 0, NULL, NULL);
         }
 
         cl_event kernel_completion;

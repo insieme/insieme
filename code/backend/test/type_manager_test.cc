@@ -503,7 +503,7 @@ TEST(TypeManager, FunctionTypes) {
 	TypeManager typeManager(converter);
 
 	FunctionTypeInfo info;
-	auto lit = cManager->create("X");
+	auto lit = cManager->create<c_ast::Literal>("X");
 
 	core::ConcreteIntTypeParamPtr size = builder.concreteIntTypeParam(4);
 
@@ -514,11 +514,15 @@ TEST(TypeManager, FunctionTypes) {
 
 	core::FunctionTypePtr type;
 
-	type = builder.functionType(toVector(typeA, typeB), typeC);
+	// -- test a thick function pointer first => should generate closure, constructor and caller --
+
+	type = builder.functionType(toVector(typeA, typeB), typeC, false);
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
+	EXPECT_EQ("((int<4>,bool)=>real<4>)", toString(*type));
+	EXPECT_FALSE(info.plain);
 	EXPECT_EQ("name*", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
+	EXPECT_EQ("name*", toC(info.externalType));  // should this be this way?
 	EXPECT_TRUE((bool)info.declaration);
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.callerName);
@@ -542,6 +546,32 @@ TEST(TypeManager, FunctionTypes) {
 
 	EXPECT_TRUE(contains(info.caller->getDependencies(), info.definition));
 	EXPECT_TRUE(contains(info.constructor->getDependencies(), info.definition));
+
+	// check externalizing / internalizing
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
+
+	// -- test a plain function type --
+
+	type = builder.functionType(toVector(typeA, typeB), typeC, true);
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
+	EXPECT_TRUE(info.plain);
+	EXPECT_EQ("float(int32_t,bool)*", toC(info.lValueType));
+	EXPECT_EQ("float(int32_t,bool)*", toC(info.rValueType));
+	EXPECT_EQ("float(int32_t,bool)*", toC(info.externalType));  // should this be this way?
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_FALSE((bool)info.callerName);
+	EXPECT_FALSE((bool)info.caller);
+	EXPECT_FALSE((bool)info.constructorName);
+	EXPECT_FALSE((bool)info.constructor);
+
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
+
+	// check externalizing / internalizing
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
 }
 
 TEST(TypeManager, RecursiveTypes) {

@@ -45,7 +45,7 @@
 namespace insieme {
 namespace c_info {
 
-class SourceLocation: public boost::less_than_comparable<SourceLocation, SourceLocation> {
+class SourceLocation: public boost::less_than_comparable<SourceLocation, SourceLocation>, public utils::Printable {
 	const std::string 	fileName;
 	const size_t		lineNo;
 	const size_t 		columnNo;
@@ -73,7 +73,7 @@ public:
 		return fileName == other.fileName && lineNo == other.lineNo && columnNo == other.columnNo;
 	}
 
-	std::string toString() const;
+	std::ostream& printTo(std::ostream& out) const;
 };
 
 /**
@@ -92,7 +92,7 @@ public:
 
 	const std::string& getAnnotationName() const {return NAME;}
 
-	const std::string toString() const;
+	std::ostream& printTo(std::ostream& out) const;
 
 	const SourceLocation getStartLoc() const { return begin; }
 	const SourceLocation getEndLoc() const { return end; }

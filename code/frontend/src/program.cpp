@@ -64,6 +64,8 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/timer.h"
 
+#include "insieme/frontend/ocl/ocl_host_compiler.h"
+
 using namespace insieme;
 using namespace insieme::core;
 using namespace insieme::frontend;
@@ -242,8 +244,14 @@ namespace {
  * Those annotations will be translated to parallel constructs
  */
 core::ProgramPtr addParallelism(core::ProgramPtr& prog, core::NodeManager& mgr) {
-    ocl::Compiler oclCompiler(prog, mgr);
-    return oclCompiler.lookForOclAnnotations();
+	ocl::Compiler oclCompiler(prog, mgr);
+	return oclCompiler.lookForOclAnnotations();
+	//ocl::Compiler oclCompiler(prog, mgr);
+	//prog= oclCompiler.lookForOclAnnotations();
+	//ocl::HostCompiler hc(prog, mgr);
+	//hc.compile();
+
+	//return prog;
 }
 
 } // end anonymous namespace

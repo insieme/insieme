@@ -35,7 +35,8 @@
  */
 
 #include "insieme/analysis/defuse_collect.h"
-#include <insieme/core/ast_visitor.h>
+#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ast_address.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 
@@ -70,7 +71,7 @@ namespace analysis {
 
 //===== Ref =========================================================================================
 
-Ref::Ref(const RefType& type, const core::ExpressionPtr& var, const UseType& usage) : 
+Ref::Ref(const RefType& type, const core::ExpressionAddress& var, const UseType& usage) : 
 	 baseExpr(var), type(type), usage(usage) 
 { 
 	assert(var->getType()->getNodeType() == core::NT_RefType && "TYpe of base expression must be of RefType"); 
@@ -82,10 +83,10 @@ std::ostream& Ref::printTo(std::ostream& out) const {
 
 //===== ScalarRef =======================================================================================
 
-ScalarRef::ScalarRef(const core::VariablePtr& var, const Ref::UseType& usage) : Ref(Ref::VAR, var, usage) { }
+ScalarRef::ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage) : Ref(Ref::VAR, var, usage) { }
 
-const core::VariablePtr& ScalarRef::getVariable() const { 
-	return core::static_pointer_cast<const core::Variable>(baseExpr);
+const core::VariableAddress& ScalarRef::getVariable() const { 
+	return core::static_address_cast<const core::Variable>(baseExpr);
 }
 
 std::ostream& ScalarRef::printTo(std::ostream& out) const {
@@ -107,15 +108,15 @@ std::ostream& ArrayRef::printTo(std::ostream& out) const {
 
 //===== MemberRef =====================================================================================
 
-MemberRef::MemberRef(const core::ExpressionPtr& memberAcc, const UseType& usage) : Ref(Ref::MEMBER, memberAcc, usage) { 
+MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage) : Ref(Ref::MEMBER, memberAcc, usage) { 
 	assert (memberAcc->getNodeType() == core::NT_CallExpr);
 
 	core::NodeManager& mgr = memberAcc->getNodeManager();
-	assert (core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeMemberAccess()) || 
-		core::analysis::isCallOf(memberAcc, mgr.basic.getCompositeRefElem() ) );
+	assert (core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.basic.getCompositeMemberAccess()) || 
+		core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.basic.getCompositeRefElem() ) );
 
 	// initialize the value of the literal
-	const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(memberAcc);
+	const core::CallExprAddress& callExpr = core::static_address_cast<const core::CallExpr>(memberAcc);
 	identifier = core::static_pointer_cast<const core::Literal>(callExpr->getArgument(1));
 
 	// initialize the value of the named composite type 
@@ -132,13 +133,13 @@ std::ostream& MemberRef::printTo(std::ostream& out) const {
 }
 
 //===== CallRef =====================================================================================
-CallRef::CallRef(const core::CallExprPtr& callExpr, const UseType& usage) : Ref::Ref(Ref::CALL, callExpr, usage) { }
+CallRef::CallRef(const core::CallExprAddress& callExpr, const UseType& usage) : Ref::Ref(Ref::CALL, callExpr, usage) { }
 
-const core::CallExprPtr& CallRef::getCallExpr() const { return core::static_pointer_cast<const core::CallExpr>(baseExpr); }
+const core::CallExprAddress& CallRef::getCallExpr() const { return core::static_address_cast<const core::CallExpr>(baseExpr); }
 
 std::ostream& CallRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);
-	return out << " (" << *core::static_pointer_cast<const core::CallExpr>(baseExpr)->getFunctionExpr() << "(...)" << ")";
+	return out << " (" << *core::static_address_cast<const core::CallExpr>(baseExpr)->getFunctionExpr() << "(...)" << ")";
 }
 
 namespace {
@@ -149,18 +150,18 @@ namespace {
  * defined. In case of arrays references also a pointer to the expressions utilized to index each
  * array dimension needs to be stored. 
  */
-class DefUseCollect : public core::ASTVisitor<> {
+class DefUseCollect : public core::ASTVisitor<void, core::Address> {
 	
 	RefList& refSet;
 	Ref::UseType usage;
 
-	typedef std::vector<core::ExpressionPtr> ExpressionList;
-	typedef std::pair<core::ExpressionPtr, ExpressionList> SubscriptContext;
+	typedef std::vector<core::ExpressionAddress> ExpressionList;
+	typedef std::pair<core::ExpressionAddress, ExpressionList> SubscriptContext;
 	std::stack<SubscriptContext> idxStack;
 
 	const core::StatementSet& skipStmts;
 
-	void addVariable(const core::ExpressionPtr& var, const Ref::RefType& refType=Ref::VAR) {
+	void addVariable(const core::ExpressionAddress& var, const Ref::RefType& refType=Ref::VAR) {
 		const core::TypePtr& type = var->getType(); 
 		
 		// If the variable is not a ref we are not interested in its usage 
@@ -187,32 +188,31 @@ class DefUseCollect : public core::ASTVisitor<> {
 		}
 		if ( refType == Ref::CALL ) {
 			assert(var->getNodeType() == core::NT_CallExpr && "Expected call expression");
-			refSet.push_back( std::make_shared<CallRef>(core::static_pointer_cast<const core::CallExpr>(var), usage) );
+			refSet.push_back( std::make_shared<CallRef>(core::static_address_cast<const core::CallExpr>(var), usage) );
 			return;
 		}
 
 		assert(var->getNodeType() == core::NT_Variable && "Expected scalar variable");
-		refSet.push_back( std::make_shared<ScalarRef>(core::static_pointer_cast<const core::Variable>(var), usage) );
+		refSet.push_back( std::make_shared<ScalarRef>(core::static_address_cast<const core::Variable>(var), usage) );
 	}
 
 public:
 	DefUseCollect(RefList& refSet, const core::StatementSet& skipStmts) : 
-		core::ASTVisitor<>(false), refSet(refSet), usage(Ref::USE), skipStmts(skipStmts) 
+		core::ASTVisitor<void, core::Address>(false), refSet(refSet), usage(Ref::USE), skipStmts(skipStmts) 
 	{ 
 			idxStack.push( SubscriptContext() ); // initialize the stack of array index expressions
 	}
 
-	void visitDeclarationStmt(const core::DeclarationStmtPtr& declStmt) {
-		const core::VariablePtr& var = declStmt->getVariable();
+	void visitDeclarationStmt(const core::DeclarationStmtAddress& declStmt) {
 		usage = Ref::DEF;
-		addVariable(var);
+		addVariable( core::static_address_cast<const core::Variable>(declStmt.getAddressOfChild(0)) ); // getVariable
 		usage = Ref::USE;
-		visit( declStmt->getInitialization() );
+		visit( declStmt.getAddressOfChild(1) ); // getInitialization
 	}
 
-	void visitVariable(const core::VariablePtr& var) { addVariable(var); }
+	void visitVariable(const core::VariableAddress& var) { addVariable(var); }
 
-	void visitCallExpr(const core::CallExprPtr& callExpr) {
+	void visitCallExpr(const core::CallExprAddress& callExpr) {
 		const core::NodeManager& mgr = callExpr->getNodeManager();
 
 		// save the usage before the entering of this callexpression
@@ -221,9 +221,9 @@ public:
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
 			assert( usage != Ref::DEF && "Nested assignment operations" );
 			usage = Ref::DEF;
-			visit( callExpr->getArgument(0) );
+			visit( callExpr.getAddressOfChild(2) ); // arg(0)
 			usage = Ref::USE;
-			visit( callExpr->getArgument(1) );
+			visit( callExpr.getAddressOfChild(3) ); // arg(1)
 			usage = saveUsage; // restore the previous usage
 			return;
 		}
@@ -234,21 +234,21 @@ public:
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			visit(callExpr->getArgument(0));
+			visit(callExpr.getAddressOfChild(2)); // arg(1)
 			return;
 		}
 
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
-			core::analysis::isCallOf(callExpr, mgr.basic.getArrayRefElem1D()) || 
-			core::analysis::isCallOf(callExpr, mgr.basic.getVectorRefElem()) || 
-			core::analysis::isCallOf(callExpr, mgr.basic.getVectorSubscript()) ) 
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getArraySubscript1D()) ||
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getArrayRefElem1D()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getVectorRefElem()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getVectorSubscript()) ) 
 		{
 			usage = Ref::USE;
 			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 			
 			// Visit the index expression
 			idxStack.push( SubscriptContext() );
-			visit( callExpr->getArgument(1) );
+			visit( callExpr.getAddressOfChild(3) ); // arg(1)
 			idxStack.pop();
 	
 			usage = saveUsage; // restore the previous usage 
@@ -256,16 +256,16 @@ public:
 			SubscriptContext& subCtx = idxStack.top();
 			// if the start of the subscript expression is not set, this is the start
 			if (!subCtx.first) { subCtx.first = callExpr; }
-			subCtx.second.push_back( callExpr->getArgument(1) );
+			subCtx.second.push_back( core::static_address_cast<const core::Expression>(callExpr.getAddressOfChild(3)) ); // arg(1)
 
-			visit( callExpr->getArgument(0) );
+			visit( callExpr.getAddressOfChild(2) ); // arg(0)
 			return;
 		}
 
 		// List the IR literals which do not alterate the usage of a variable  
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefDeref())) {
 			usage = Ref::USE;
-			visit( callExpr->getArgument(0) );
+			visit( callExpr.getAddressOfChild(2) ); // arg(0)
 			usage = saveUsage;
 			return;
 		}
@@ -275,7 +275,7 @@ public:
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefVectorToRefArray()) ||
 			core::analysis::isCallOf(callExpr, mgr.basic.getStringToCharPointer()) ) 
 		{
-			visit( callExpr->getArgument(0) );
+			visit( callExpr.getAddressOfChild(2) ); // arg(0)
 			return;
 		}
 
@@ -288,35 +288,32 @@ public:
 		usage = saveUsage;
 	}
 
-	void visitLambda(const core::LambdaPtr& lambda) {
+	void visitLambda(const core::LambdaAddress& lambda) {
 
 		Ref::UseType saveUsage = usage;
 
+		size_t it, end;
 		// the parameters has to be treated as definitions for the variable
-		const core::Lambda::ParamList& params = lambda->getParameterList();
-		std::for_each(params.begin(), params.end(), 
-			[&](const core::VariablePtr& cur) { 
-				usage = Ref::DEF;	
-				addVariable(cur); 
-			}
-		);
+		for(it=1, end=it+lambda->getParameterList().size(); it != end; ++it) {
+			usage = Ref::DEF;	
+			addVariable( core::static_address_cast<const core::Variable>(lambda.getAddressOfChild(it)) ); 
+		}
 		usage = Ref::USE;
-		visit(lambda->getBody());
+		visit( lambda.getAddressOfChild(it) );
 		usage = saveUsage;
 	}
 
-	void visitStatement(const core::StatementPtr& stmt) {
+	void visitStatement(const core::StatementAddress& stmt) {
 		if ( skipStmts.find(stmt) == skipStmts.end() ) {
 			visitNode(stmt);
 		}
 	}
 
 	// Generic method which recursively visit IR nodes 
-	void visitNode(const core::NodePtr& node) {
-		const core::Node::ChildList& cl = node->getChildList();
-		std::for_each( cl.begin(), cl.end(), [&](const core::NodePtr& cur) { 
-				this->visit(cur); 
-		} );
+	void visitNode(const core::NodeAddress& node) {
+		for(size_t it=0, end=node->getChildList().size(); it != end; ++it) {
+			visit( node.getAddressOfChild(it) ); 
+		}
 	}
 };
 
@@ -325,7 +322,7 @@ public:
 RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipStmt) { 
 	RefList ret;
 	DefUseCollect duCollVis(ret, skipStmt);
-	duCollVis.visit(root);
+	duCollVis.visit( core::NodeAddress(root) );
 	return ret;
 }
 

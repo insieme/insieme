@@ -32,4 +32,9 @@ int main ( int argc, char* argv[] ) {
 	if ( *ptr3 == 0 && **ptr2 == 0 ) {
 		printf("SUPER AWESOME\n");
 	}
+
+	// test null assignment
+	char* p = NULL;
+
+	return 0;
 }

@@ -175,8 +175,8 @@ OPERATOR(Ge,	">=")
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, LAnd, "bool.and", "(bool,() -> bool) -> bool")
-OPERATION(Bool, LOr,  "bool.or",  "(bool,() -> bool) -> bool")
+OPERATION(Bool, LAnd, "bool.and", "(bool,() => bool) -> bool")
+OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
@@ -413,7 +413,7 @@ LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b"
 // Misc. --------------------------------------------------------------------------------------------------------------
 
 LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
-LITERAL(IfThenElse, "ite", "(bool, () -> 'b, () -> 'b) -> 'b")
+LITERAL(IfThenElse, "ite", "(bool, () => 'b, () => 'b) -> 'b")
 
 // Parallel Constructs ------------------------------------------------------------------------------------------------
 
@@ -435,7 +435,7 @@ LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> uint<4>")
 LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> uint<4>")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
-LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->unit")
+LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)=>'a)->unit")
 
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute

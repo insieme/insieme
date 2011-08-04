@@ -62,7 +62,7 @@ struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 	qi::rule<ParseIt, U(), qi::space_type> intTypeParam;
 
 	// nonterminal rules with skip parsing
-	qi::rule<ParseIt, T(), qi::locals<vector<T>, T>, qi::space_type> functionType;
+	qi::rule<ParseIt, T(), qi::locals<vector<T>, T, bool>, qi::space_type> functionType;
 	qi::rule<ParseIt, T(), qi::space_type> typeVariable;
 	qi::rule<ParseIt, T(), qi::space_type> refType;
 	qi::rule<ParseIt, T(), qi::space_type> channelType;
@@ -80,7 +80,7 @@ struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 	qi::rule<ParseIt, T()> getTypeVarLabel();
 	qi::rule<ParseIt, U()> getIntTypeParamLabel();
 	qi::rule<ParseIt, U(), qi::space_type> getIntTypeParam();
-    qi::rule<ParseIt, T(), qi::locals<vector<T>, T>, qi::space_type> getFunctionType();
+    qi::rule<ParseIt, T(), qi::locals<vector<T>, T, bool>, qi::space_type> getFunctionType();
     get(TypeVariable)
     get(RefType)
     get(ChannelType)
@@ -107,7 +107,7 @@ protected:
 	virtual T channelTypeHelp(const T& type, const U& size);
 	virtual T genericTypeHelp(const V& name, const vector<T>& typeParams, const vector<U>& intTypeParams, const T& baseType);
     virtual T tupleTypeHelp(const vector<T>& type);
-    virtual T functionTypeHelp(const vector<T>& argTypes, const T& retType);
+    virtual T functionTypeHelp(const vector<T>& argTypes, const T& retType, bool plain);
     virtual T structTypeHelp(const vector<std::pair<V,T> >& entries);
     virtual T unionTypeHelp(const vector<std::pair<V,T> >& entries);
 };

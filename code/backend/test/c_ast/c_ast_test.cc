@@ -78,7 +78,6 @@ TEST(C_AST, Basic) {
 
 TEST(C_AST_Printer, ParameterFormatting) {
 
-
 	CNodeManager manager;
 
 	TypePtr type;
@@ -111,6 +110,9 @@ TEST(C_AST_Printer, ParameterFormatting) {
 	type = manager.create<VectorType>(type, manager.create<Literal>("7"));
 	structType->elements.push_back(var(type, "x9"));
 
+	type = manager.create<PointerType>(manager.create<FunctionType>(intType, toVector(intType)));
+	structType->elements.push_back(var(type, "x10"));
+
 	NodePtr def = manager.create<TypeDefinition>(structType, manager.create("Z"));
 
 	auto code = toC(def);
@@ -123,8 +125,10 @@ TEST(C_AST_Printer, ParameterFormatting) {
 	EXPECT_PRED2(containsSubString, code, "int32_t*(* x7)[5][3]");
 	EXPECT_PRED2(containsSubString, code, "int32_t*(** x8)[5][3]");
 	EXPECT_PRED2(containsSubString, code, "int32_t*(** x9[7])[5][3]");
+	EXPECT_PRED2(containsSubString, code, "int32_t(* x10)(int32_t)");
 
 }
+
 
 int f(int(*fun)(int, int)) {
 	return fun(1,2);

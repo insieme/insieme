@@ -75,6 +75,7 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 			hash_combine(seed, type->getFamilyName());
 			break;
 		}
+		case insieme::core::NT_FunctionType: { hash_combine(seed, static_pointer_cast<const FunctionType>(cur)->isPlain()); break; }
 		case insieme::core::NT_StructType:   { hash_combine(seed, "struct"); break; }
 		case insieme::core::NT_UnionType:    { hash_combine(seed, "union"); break; }
 		case insieme::core::NT_Identifier:   { hash_combine(seed, static_pointer_cast<const Identifier>(cur)->getName()); break; }

@@ -120,6 +120,21 @@ ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints,
 
 // ---------------------------- Convenience -------------------------------------
 
+FunctionTypePtr ASTBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
+	if (funType->isPlain()) {
+		return funType;
+	}
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), true);
+}
+
+FunctionTypePtr ASTBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
+	if (!funType->isPlain()) {
+		return funType;
+	}
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), false);
+}
+
+
 LiteralPtr ASTBuilder::stringLit(const string& str) const {
 	return literal(str, manager.basic.getString());
 }
@@ -226,7 +241,7 @@ namespace {
 	}
 }
 
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
 	// use deduced return type to construct call
 	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
@@ -239,6 +254,9 @@ CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const Expres
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
 }
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
+	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
+}
 CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1));
 }
@@ -250,10 +268,10 @@ CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr&
 }
 
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit(), true), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), returnType), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), returnType, true), params, body);
 }
 
 
@@ -275,7 +293,7 @@ BindExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr
 	parameter.insert(parameter.end(), params.begin(), params.end());
 
 	// build function type
-	FunctionTypePtr funType = functionType(extractParamTypes(parameter), returnType);
+	FunctionTypePtr funType = functionType(extractParamTypes(parameter), returnType, true);
 
 	// build inner function
 	LambdaExprPtr lambda = lambdaExpr(funType, parameter, body);
@@ -392,7 +410,7 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     		);
     }
 
-    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy ), params, body );
+    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, true), params, body );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
 
     if ( !lazy ) 	return callExpr;
