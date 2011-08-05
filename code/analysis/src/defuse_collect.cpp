@@ -42,6 +42,11 @@
 
 #include <stack>
 
+#define AS_EXPR_ADDR(addr) 		core::static_address_cast<const core::Expression>(addr)
+#define AS_CALLEXPR_ADDR(addr) 	core::static_address_cast<const core::CallExpr>(addr)
+#define AS_VAR_ADDR(addr) 		core::static_address_cast<const core::Variable>(addr)
+
+
 namespace {
 
 using namespace insieme::analysis;
@@ -86,7 +91,7 @@ std::ostream& Ref::printTo(std::ostream& out) const {
 ScalarRef::ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage) : Ref(Ref::VAR, var, usage) { }
 
 const core::VariableAddress& ScalarRef::getVariable() const { 
-	return core::static_address_cast<const core::Variable>(baseExpr);
+	return AS_VAR_ADDR(baseExpr);
 }
 
 std::ostream& ScalarRef::printTo(std::ostream& out) const {
@@ -116,7 +121,7 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 		core::analysis::isCallOf(memberAcc.getAddressedNode(), mgr.basic.getCompositeRefElem() ) );
 
 	// initialize the value of the literal
-	const core::CallExprAddress& callExpr = core::static_address_cast<const core::CallExpr>(memberAcc);
+	const core::CallExprAddress& callExpr = AS_CALLEXPR_ADDR(memberAcc);
 	identifier = core::static_pointer_cast<const core::Literal>(callExpr->getArgument(1));
 
 	// initialize the value of the named composite type 
@@ -135,11 +140,11 @@ std::ostream& MemberRef::printTo(std::ostream& out) const {
 //===== CallRef =====================================================================================
 CallRef::CallRef(const core::CallExprAddress& callExpr, const UseType& usage) : Ref::Ref(Ref::CALL, callExpr, usage) { }
 
-const core::CallExprAddress& CallRef::getCallExpr() const { return core::static_address_cast<const core::CallExpr>(baseExpr); }
+const core::CallExprAddress& CallRef::getCallExpr() const { return AS_CALLEXPR_ADDR(baseExpr); }
 
 std::ostream& CallRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);
-	return out << " (" << *core::static_address_cast<const core::CallExpr>(baseExpr)->getFunctionExpr() << "(...)" << ")";
+	return out << " (" << *AS_CALLEXPR_ADDR(baseExpr)->getFunctionExpr() << "(...)" << ")";
 }
 
 namespace {
@@ -188,12 +193,12 @@ class DefUseCollect : public core::ASTVisitor<void, core::Address> {
 		}
 		if ( refType == Ref::CALL ) {
 			assert(var->getNodeType() == core::NT_CallExpr && "Expected call expression");
-			refSet.push_back( std::make_shared<CallRef>(core::static_address_cast<const core::CallExpr>(var), usage) );
+			refSet.push_back( std::make_shared<CallRef>(AS_CALLEXPR_ADDR(var), usage) );
 			return;
 		}
 
 		assert(var->getNodeType() == core::NT_Variable && "Expected scalar variable");
-		refSet.push_back( std::make_shared<ScalarRef>(core::static_address_cast<const core::Variable>(var), usage) );
+		refSet.push_back( std::make_shared<ScalarRef>(AS_VAR_ADDR(var), usage) );
 	}
 
 public:
@@ -205,7 +210,7 @@ public:
 
 	void visitDeclarationStmt(const core::DeclarationStmtAddress& declStmt) {
 		usage = Ref::DEF;
-		addVariable( core::static_address_cast<const core::Variable>(declStmt.getAddressOfChild(0)) ); // getVariable
+		addVariable( AS_VAR_ADDR(declStmt.getAddressOfChild(0)) ); // getVariable
 		usage = Ref::USE;
 		visit( declStmt.getAddressOfChild(1) ); // getInitialization
 	}
@@ -218,7 +223,7 @@ public:
 		// save the usage before the entering of this callexpression
 		Ref::UseType saveUsage = usage;
 
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefAssign())) {
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getRefAssign())) {
 			assert( usage != Ref::DEF && "Nested assignment operations" );
 			usage = Ref::DEF;
 			visit( callExpr.getAddressOfChild(2) ); // arg(0)
@@ -228,8 +233,8 @@ public:
 			return;
 		}
 
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getCompositeMemberAccess()) || 
-			core::analysis::isCallOf(callExpr, mgr.basic.getCompositeRefElem() ) ) {
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getCompositeMemberAccess()) || 
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getCompositeRefElem() ) ) {
 
 			addVariable(callExpr, Ref::MEMBER);
 
@@ -256,7 +261,7 @@ public:
 			SubscriptContext& subCtx = idxStack.top();
 			// if the start of the subscript expression is not set, this is the start
 			if (!subCtx.first) { subCtx.first = callExpr; }
-			subCtx.second.push_back( core::static_address_cast<const core::Expression>(callExpr.getAddressOfChild(3)) ); // arg(1)
+			subCtx.second.push_back( AS_EXPR_ADDR(callExpr.getAddressOfChild(3)) ); // arg(1)
 
 			visit( callExpr.getAddressOfChild(2) ); // arg(0)
 			return;
@@ -272,8 +277,8 @@ public:
 
 		// List the IR literals which do not alterate the usage of a variable and therefore are used
 		// to convert a ref into another ref 
-		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefVectorToRefArray()) ||
-			core::analysis::isCallOf(callExpr, mgr.basic.getStringToCharPointer()) ) 
+		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getRefVectorToRefArray()) ||
+			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.basic.getStringToCharPointer()) ) 
 		{
 			visit( callExpr.getAddressOfChild(2) ); // arg(0)
 			return;
@@ -296,7 +301,7 @@ public:
 		// the parameters has to be treated as definitions for the variable
 		for(it=1, end=it+lambda->getParameterList().size(); it != end; ++it) {
 			usage = Ref::DEF;	
-			addVariable( core::static_address_cast<const core::Variable>(lambda.getAddressOfChild(it)) ); 
+			addVariable( AS_VAR_ADDR(lambda.getAddressOfChild(it)) ); 
 		}
 		usage = Ref::USE;
 		visit( lambda.getAddressOfChild(it) );

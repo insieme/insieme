@@ -273,11 +273,11 @@ TEST(Constraint, Normalization) {
 		c.printTo(ss);
 		EXPECT_EQ("1*v2 + 2*v3 + 10*1 < 0", ss.str());
 	}
-	poly::Constraint nc = c.normalize();
+	poly::ConstraintCombinerPtr nc = normalize(c);
 	{
 		std::ostringstream ss;
-		nc.printTo(ss);
-		EXPECT_EQ("-1*v2 + -2*v3 + -11*1 >= 0", ss.str());
+		nc->printTo(ss);
+		EXPECT_EQ("(-1*v2 + -2*v3 + -11*1 >= 0)", ss.str());
 	}
 }
 
@@ -301,8 +301,7 @@ TEST(Constraint, Combiner) {
 	
 	poly::Constraint c2(af2, poly::Constraint::LT);
 
-	poly::ConstraintCombinerPtr ptr = 
-		poly::makeDisjunction( poly::makeCombiner(c1), poly::negate(c2) );
+	poly::ConstraintCombinerPtr ptr = c1 | ~c2;
 
 	std::cout << *ptr << std::endl;
 

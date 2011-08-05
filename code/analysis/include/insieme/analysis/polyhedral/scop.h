@@ -37,6 +37,7 @@
 #pragma once 
 
 #include <vector>
+#include <map>
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_address.h"
@@ -48,9 +49,8 @@ namespace insieme {
 namespace analysis {
 namespace scop {
 
-//===== ScopRegion ================================================================================
-/* 
- * Stores the information related to a SCoP (Static Control Part) region of a program.
+/************************************************************************************************** 
+ * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
  * The IterationVector which is valid within the SCoP body and the set of constraints which define
  * the entry point for this SCoP.
  *
@@ -61,13 +61,15 @@ namespace scop {
  * and the list of ref accesses directly present in this region. Accesses in the sub region are not
  * directly listed in the current region but retrieval is possible via the aforementioned pointer to
  * the sub scops. 
- */
+ *************************************************************************************************/
 class ScopRegion: public core::NodeAnnotation {
 public:
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> KEY;
 
 	typedef std::vector<core::StatementAddress> StmtList;
+
+	typedef std::map<core::StatementAddress, poly::ScatteringFunction> StmtScattering;
 
 	// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 	// be directly referred from sub SCoPs. 
@@ -76,12 +78,14 @@ public:
 	typedef std::vector<RefPtr> AccessRefList; 
 
 	ScopRegion( const poly::IterationVector& iv, 
+			const StmtList& stmts,
 			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),
 			const StmtList& subScops = StmtList(),
 			const AccessRefList& accesses = AccessRefList() ) : 
-		core::NodeAnnotation(), 
+		core::NodeAnnotation(),
 		iterVec(iv), 
-		constraints (poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
+		stmts(stmts),
+		constraints(poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
 		subScops(subScops), 
 		accesses(accesses) { } 
 
@@ -103,6 +107,10 @@ public:
 	 */
 	inline const poly::IterationVector& getIterationVector() const { return iterVec; }
 	
+	inline const StmtList& getDirectRegionStmts() const { return stmts; }
+
+	StmtScattering getStatementScattering() const;
+
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
@@ -137,6 +145,9 @@ private:
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;
 
+	// List of statements direclty contained in this region (but not in nested sub-regions)
+	StmtList stmts;
+
 	// List of constraints which this SCoP defines 
 	poly::ConstraintCombinerPtr constraints;
 
@@ -152,13 +163,13 @@ private:
 	AccessRefList accesses;
 };
 
-/**
+/**************************************************************************************************
  * AccessFunction : this annotation is used to annotate array subscript expressions with the
  * equality constraint resulting from the access function. 
  *
  * for example the subscript operation A[i+j-N] will generate an equality constraint of the type
  * i+j-N==0. Constraint which is used to annotate the expression.
- */
+ *************************************************************************************************/
 class AccessFunction: public core::NodeAnnotation {
 	poly::IterationVector 	iterVec;
 	poly::Constraint  		eqCons;
@@ -187,18 +198,18 @@ public:
 
 typedef std::vector< std::pair<core::NodeAddress, poly::IterationVector> > ScopList;
 
-/**
+/**************************************************************************************************
  * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an
  * empty list in the case no SCoP was found). 
- */ 
+ *************************************************************************************************/ 
 ScopList mark(const core::NodePtr& root);
 
-/**
+/**************************************************************************************************
  * printSCoP is a debug function which is used mainly as a proof of concept for the mechanism which
  * is used to support SCoPs. The function prints all the infromation related to a SCoP, i.e. for
  * each of the accesses existing in the SCoP the iteration domain associated to it and the access
  * function.
- */
+ *************************************************************************************************/
 void printSCoP(std::ostream& out, const core::NodePtr& scop);
 
 } // end namespace scop

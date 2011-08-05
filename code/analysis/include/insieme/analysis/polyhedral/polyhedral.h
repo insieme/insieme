@@ -41,16 +41,19 @@
 #include <stdexcept>
 #include <memory>
 #include <set>
+#include <list>
 
 #include "insieme/core/ast_node.h"
 #include "insieme/utils/printable.h"
 
 #include "boost/operators.hpp"
 #include "boost/optional.hpp"
+#include "boost/mpl/or.hpp"
 
 namespace insieme {
 namespace core {
 
+//===== Forward decls ==============================================================================
 class Variable;
 template<typename T> class Pointer;
 typedef Pointer<const Variable> VariablePtr;
@@ -59,7 +62,8 @@ class Expression;
 template<typename T> class Pointer;
 typedef Pointer<const Expression> ExpressionPtr;
 
-}
+} // end core namespace 
+
 namespace analysis {
 namespace poly {
 
@@ -81,14 +85,14 @@ struct IteratorNotValid : public std::logic_error {
 	~IteratorNotValid() throw () { }
 };
 
-/**
+/**************************************************************************************************
  * Element defines an element appearing in the iteration vector which can be either an iterator or a
  * global parameter.In the IR they are both represented using a Variable.
  *
  * It is important for the polyhedral model to be able to distinguish between an iterator and a
  * parameter, this is required later in the creation of the sets and relationships representing the
  * polyhedron. 
- */
+ *************************************************************************************************/
 struct Element : public utils::Printable, public boost::equality_comparable<Element> { 
 	// The type of a vector element is either an Iterator or a Parameter
 	enum Type { ITER, PARAM, CONST };
@@ -104,10 +108,10 @@ private:
 	Type type;
 };
 
-/** 
+/**************************************************************************************************
  * A Variable in a wrapper for an IR Variable. We use the wrapper in order to solve error with the
  * resolution of the == operator by the compiler. 
- */
+ *************************************************************************************************/
 class Variable : public Element {
 	core::VariablePtr var;
 public:
@@ -116,11 +120,11 @@ public:
 	virtual ~Variable() { }
 };
 
-/** 
+/************************************************************************************************** 
  * An Iterator is a variable in the iteration vector which refers to a loop iterator. Iterators are
  * always listed at the beginning of the iterator vector and their order refers to the nesting
  * levels. 
- */
+ *************************************************************************************************/
 struct Iterator : public Variable {
 	Iterator(const core::VariablePtr& var) : Variable(Element::ITER, var) { } 
 	
@@ -128,11 +132,11 @@ struct Iterator : public Variable {
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-/**
+/**************************************************************************************************
  * A Parameter refers to variable which are global constant in the SCoP. This means that these
  * variables are not loop iterators. In the IR these variables are still represented as Variable, so
  * we use the same base class as Iterators.  
- */
+ *************************************************************************************************/
 struct Parameter : public Variable {
 	Parameter(const core::VariablePtr& var) : Variable(Element::PARAM, var) { }	
 	
@@ -140,11 +144,11 @@ struct Parameter : public Variable {
 	std::ostream& printTo(std::ostream& out) const; 
 };
 
-/** 
+/************************************************************************************************** 
  * The constant part of an iteration domain is by default the last element of the vector and fixed
  * to 1. We define a class to hold this value in order to make easier the representation of an
  * iterator domain. 
- * */
+ *************************************************************************************************/
 struct Constant : public Element {
 	Constant() : Element(Element::CONST) { }
 
@@ -153,7 +157,7 @@ struct Constant : public Element {
 	virtual ~Constant() { }
 };
 
-/**
+/**************************************************************************************************
  * An iteration vector is an order set of elements (either iterators or parameters) which defines
  * the position of a specific variable in the domain matrix and transformation matrix which is built
  * on top of this vector. 
@@ -173,7 +177,7 @@ struct Constant : public Element {
  * may encounter new iterators or parameters as we build the iteration domain) we chose a
  * representation which allows the size of the vector to grow without invalidating already generated
  * polyhedron.
- */
+ *************************************************************************************************/
 class IterationVector : public utils::Printable, 
 	public boost::equality_comparable<IterationVector> {
 
@@ -187,16 +191,14 @@ class IterationVector : public utils::Printable,
 	template <class T>							
 	int getIdxFrom(const T& elem, const std::vector<T>& vec) const {
 		auto fit = std::find(vec.begin(), vec.end(), elem);
-		if (fit != vec.end())
-			return fit - vec.begin();
+		if (fit != vec.end()) { return fit - vec.begin(); }
 		return -1;
 	}
 
 	template <class T>							
 	size_t addTo(const T& elem, std::vector<T>& vec) {
 		int idx = getIdxFrom(elem, vec);
-		if (idx != -1)
-			return idx;
+		if (idx != -1) { return idx; }
 
 		// Append the new element to the vector 
 		vec.push_back(elem);
@@ -205,11 +207,11 @@ class IterationVector : public utils::Printable,
 
 public:
 
-	/**
+	/**********************************************************************************************
 	 * Class utilized to build iterators over an iteration vector. Because the internal
 	 * representation of the iteration vector is non linear in memory the iterator can be used to
 	 * access all the element of the iterator in using the iterator interface. 
-	 * */
+	 *********************************************************************************************/
 	class iterator : public boost::random_access_iterator_helper<iterator, Element> {
 
 		const IterationVector& iterVec;
@@ -221,8 +223,7 @@ public:
 	public:
 		iterator(const IterationVector& iterVec, IterVec::const_iterator iterIt, 
 				ParamVec::const_iterator paramIt, bool valid=true) :
-			iterVec(iterVec), iterIt(iterIt), paramIt(paramIt), constant(valid), 
-			valid(valid) { }
+			iterVec(iterVec), iterIt(iterIt), paramIt(paramIt), constant(valid), valid(valid) { }
 
         const Element& operator*() const;
 
@@ -309,11 +310,11 @@ public:
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which contains both the
 // elements of a and b. 
-IterationVector merge(const IterationVector& a, const IterationVector& b); 
+IterationVector merge(const IterationVector& a, const IterationVector& b);
 
 typedef std::vector<size_t> IndexTransMap;
 
-/**
+/**************************************************************************************************
  * Creates a transformation map which maps the index in the iteration vector src into positions into
  * iteration vector trg. This map can be used to efficiently convert AffineFunction expressed in the
  * base of src vector in the new base (trg vector).
@@ -321,10 +322,10 @@ typedef std::vector<size_t> IndexTransMap;
  * Src must be <= than trg and all the element present in src must appear in trg. In contrary case
  * an exception will be thrown. The size of the returned transformation map is always equal to the
  * size of the src iteration vector.
- */
+ *************************************************************************************************/
 const IndexTransMap transform(const IterationVector& trg, const IterationVector& src);
 
-/**
+/**************************************************************************************************
  * AffineFunction represents an affine function based on an iteration vector. An
  * affine linear function is a function in the form:
  *
@@ -339,7 +340,7 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
  * construction of a SCoP, the affine function should refer to an iteration vector which size may
  * change. But because new iterators or parameters are always append, we can easily create the new
  * coefficient matrix for the mutated iteration vector, thanks to the sep member.  
- */
+ *************************************************************************************************/
 class AffineFunction : public utils::Printable, 
 	public boost::equality_comparable<AffineFunction> { 
 	// Iteration Vector to which this function refers to 
@@ -371,6 +372,10 @@ class AffineFunction : public utils::Printable,
 	int getCoeff(size_t idx) const;
 
 public:
+
+	static const unsigned PRINT_ZEROS = 0x01;
+	static const unsigned PRINT_VARS  = 0x10;
+
 	template <class T>
 	friend class ConstraintSet; 
 
@@ -378,8 +383,8 @@ public:
 	/**
 	 * Class utilized to build iterators over Affine Functions. 
 	 *
-	 * The iterator returns a pair<Element,int> containing the element and the
-	 * coefficient associated to it. 
+	 * The iterator returns a pair<Element,int> containing the element and the coefficient
+	 * associated to it. 
 	 *
 	 */
 	struct iterator : public boost::forward_iterator_helper<iterator, Term> {
@@ -405,12 +410,8 @@ public:
 
 	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
-	// Creates a copy of this affine function based on a different iteration
-	// vector. This is necessary when composing constrains for building
-	// iteration domains 
-	// AffineFunction(const IterationVector& newIterVec, const AffineFunction& other);
-
-	AffineFunction(const AffineFunction& other) : iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
+	AffineFunction(const AffineFunction& other) : 
+		iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
@@ -431,6 +432,8 @@ public:
 	// Implements the Printable interface 
 	std::ostream& printTo(std::ostream& out) const;
 
+	std::string toStr(unsigned policy=PRINT_VARS | PRINT_ZEROS) const;
+
 	bool operator==(const AffineFunction& other) const;
 
 	/**
@@ -446,12 +449,12 @@ public:
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
 };
 
-/**
+/******************************************************************************************************
  * A constraint is a linear affine expression limiting the polyhedron. A set of constraints will
  * define an iteration domain which is our polyhedron. A constraint is usually represented as an
  * inequality, i.e. f(x) <= 0, however we allow here for a more general representation allowing any
  * sort of constraint (==, !=, <, >, <= and >=) to be represented. 
- */
+ *****************************************************************************************************/
 struct Constraint : public utils::Printable, 
 	public boost::equality_comparable<Constraint>,
 	public boost::less_than_comparable<Constraint> 
@@ -485,14 +488,11 @@ struct Constraint : public utils::Printable,
 	Constraint 
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const;
 
-	// We normalize the constraint, usually required for libraries. 
-	// Equality constraints remains the same while inequalities must be rewritten to be GE (>=)
-	Constraint normalize() const;
-
 private:
 	const AffineFunction af;
 	const Type type;
 };
+
 
 //===== ConstraintCombiner ========================================================================
 
@@ -507,26 +507,25 @@ typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr;
 // forward declaration for the Constraint visitor 
 struct ConstraintVisitor; 
 
-/**
+/**************************************************************************************************
  * This class has the purpose to create conjunctions and/or disjunctions of constraints. This allows
  * to represent the domain spawned by control operations with a composed conditional expression
- */
+ *************************************************************************************************/
 struct ConstraintCombiner : public utils::Printable {
 	// implements a simple double dispatch visitor for the Composite  
 	virtual void accept(ConstraintVisitor& v) const = 0; 
-
+	
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-/**
+/**************************************************************************************************
  * This class is a wrapper for a plain Constraint. Utilized to combine constraints in a composite
  * like structure.
- */
+ *************************************************************************************************/
 class RawConstraintCombiner : public ConstraintCombiner {
 	Constraint constraint; 
 public:
-	RawConstraintCombiner(const Constraint& constraint) : 
-		ConstraintCombiner(), constraint(constraint) { }
+	RawConstraintCombiner(const Constraint& constraint) : constraint(constraint) { }
 	
 	// Returns the constraint embodied in this wrapper class
 	inline const Constraint& getConstraint() const { return constraint; }
@@ -534,14 +533,13 @@ public:
 	void accept(ConstraintVisitor& v) const;
 };
 
-/**
+/**************************************************************************************************
  * This class represents the negation of a constraint. 
- */
+ *************************************************************************************************/
 class NegatedConstraintCombiner : public ConstraintCombiner {
 	ConstraintCombinerPtr subComb;
 public:
-	NegatedConstraintCombiner(const ConstraintCombinerPtr& comb) :
-		ConstraintCombiner( ), subComb( comb ) { }
+	NegatedConstraintCombiner(const ConstraintCombinerPtr& comb) : subComb( comb ) { }
 
 	// Returns the negated constraint 
 	inline const ConstraintCombinerPtr& getSubConstraint() const { return subComb; }
@@ -549,10 +547,10 @@ public:
 	void accept(ConstraintVisitor& v) const;
 };
 
-/**
+/**************************************************************************************************
  * This class represent the combination of two constraints which can be either a combined through a
  * AND or a OR operator. 
- */
+ *************************************************************************************************/
 struct BinaryConstraintCombiner : public ConstraintCombiner {
 	
 	enum Type { AND, OR };
@@ -577,13 +575,13 @@ private:
 	ConstraintCombinerPtr lhs, rhs;
 };
 
-/** 
+/**************************************************************************************************
  * Visitor class used to visit a combination of constraints. Because constraints are combined
  * together in a composite (tree like) structure, it is therefore easier to visit the structure by
  * means of a visitor. 
  *
  * The implementation of the visitor is based on double-dispatch. 
- */
+ *************************************************************************************************/
 struct ConstraintVisitor {
 	
 	// Visits a raw node (which contains a raw constraint)
@@ -594,8 +592,7 @@ struct ConstraintVisitor {
 		ucc.getSubConstraint()->accept(*this);
 	}
 
-	// Visits a combination of constraints which can either be a conjunction or
-	// a disjunction 
+	// Visits a combination of constraints which can either be a conjunction or a disjunction 
 	virtual void visit(const BinaryConstraintCombiner& bcc) {
 		bcc.getLHS()->accept(*this); bcc.getRHS()->accept(*this);
 	}
@@ -606,9 +603,11 @@ namespace {
 template <class... All>
 class Combiner;
 
-// Combiner class takes a list of constraints and assembles them together either in a conjunction or
-// a disjunction (depending on the provided type) and returns a pointer to the combiner containing
-// the constraints 
+/**************************************************************************************************
+ * Combiner class takes a list of constraints and assembles them together either in a conjunction or
+ * a disjunction (depending on the provided type) and returns a pointer to the combiner containing
+ * the constraints 
+ *************************************************************************************************/
 template <class Head, class... Tail>
 struct Combiner<Head, Tail...> {
 	static ConstraintCombinerPtr 
@@ -641,22 +640,53 @@ ConstraintCombinerPtr makeDisjunction(const All&... args) {
 	return Combiner<All...>::make(BinaryConstraintCombiner::OR, args...); 
 }
 
-// Utility function to create negation of constraints. Both of plain constraints (by wrapping them
-// on a raw constraint first) and negation of constraints 
-ConstraintCombinerPtr negate(const ConstraintCombinerPtr& cc);
-ConstraintCombinerPtr negate(const Constraint& c);
-
 ConstraintCombinerPtr makeCombiner(const Constraint& c);
+ConstraintCombinerPtr makeCombiner(const ConstraintCombinerPtr& cc);
 
 // Makes a copy of the constraint cc changing the base vector to the iteration vector trgVec. 
 ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& cc);
 
+// We normalize the constraint, usually required for libraries. 
+// Equality constraints remains the same while inequalities must be rewritten to be GE (>=)
+ConstraintCombinerPtr normalize(const Constraint& c);
+
+
+//==== Operator definitions for Constraint =========================================================
+
+// Redefinition of ~ operator with the semantics of NOT
+template <class C>
+typename boost::enable_if<
+	boost::mpl::or_<boost::is_same<C,Constraint>, boost::is_same<C,ConstraintCombinerPtr>
+>, ConstraintCombinerPtr>::type operator~(const C& c) { 
+	return std::make_shared<NegatedConstraintCombiner>(makeCombiner(c)); 
+}
+
+// Redefinition of && operarator with the semantics of AND 
+template <class C1, class C2>
+typename boost::enable_if<
+	boost::mpl::and_<
+		boost::mpl::or_<boost::is_same<C1,Constraint>, boost::is_same<C1,ConstraintCombinerPtr>>,
+		boost::mpl::or_<boost::is_same<C2,Constraint>, boost::is_same<C2,ConstraintCombinerPtr>>
+	>, ConstraintCombinerPtr>::type 
+operator&(const C1& lhs, const C2& rhs) { return makeConjunction(makeCombiner(lhs), makeCombiner(rhs)); }
+
+// Redefinition of || operator with the semantics of OR 
+template <class C1, class C2>
+typename boost::enable_if<
+	boost::mpl::and_<
+		boost::mpl::or_<boost::is_same<C1,Constraint>, boost::is_same<C1,ConstraintCombinerPtr>>,
+		boost::mpl::or_<boost::is_same<C2,Constraint>, boost::is_same<C2,ConstraintCombinerPtr>>
+	>, ConstraintCombinerPtr>::type
+operator|(const C1& lhs, const C2& rhs) { return makeDisjunction(makeCombiner(lhs), makeCombiner(rhs)); }
+
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;
 
-// The iteration domain is the class which defines the shape of the polyhedron, the set of integer
+//****************************************************************************************************
+// IterationDomanin: is the class which defines the shape of the polyhedron, the set of integer
 // points of an N-dimensional plane are delimited by affine linear functions which define a convex
 // region, therefore the polyhedron. 
+//****************************************************************************************************
 struct IterationDomain : public utils::Printable {
 	IterationDomain(const IterationVector& iterVec, const ConstraintCombinerPtr& combiner) : 
 		iterVec(iterVec), constraints(combiner) { }
@@ -670,24 +700,34 @@ private:
 	ConstraintCombinerPtr	constraints; 
 };
 
-// Scheduling functions defines the order of statements in the program
-// struct ScatteringFunction  { 
-//	
-//	ScatteringFunction(const IterationVector& iterVec, const std::vector<EqualityConstraint>& clist) :
-//		ConstraintSet<EqualityConstraint>(iterVec, clist) { }
-//	
-//	std::ostream& printTo(std::ostream& out) {
-//		out << "ScatteringFunction: ";
-//	   	ConstraintSet<EqualityConstraint>::printTo(out);
-//		return out;
-//	}
-//
-//};
+//*****************************************************************************************************
+// ScatteringFunction: A scattering function represent the order of execution of statements inside a
+// SCoP
+//*****************************************************************************************************
+struct ScatteringFunction : public utils::Printable {
+
+	ScatteringFunction(const IterationVector& iterVec) : iterVec(iterVec) { }
+	ScatteringFunction(const ScatteringFunction& other) : iterVec(other.iterVec) { cloneRows(other.funcs); }
+
+	inline void appendRow(const AffineFunction& af) {  funcs.push_back( af.toBase(iterVec) ); }
+	
+	ScatteringFunction& operator=(const ScatteringFunction& other);
+
+	inline const IterationVector& getIterationVector() const { return iterVec; }
+
+	std::ostream& printTo(std::ostream& out) const;
+
+private:
+
+	void cloneRows(const std::list<AffineFunction>& src);
+
+	IterationVector iterVec; 
+	std::list<AffineFunction> funcs;
+};
 
 } // end poly namespace
 } // end analysis namespace
 } // end insieme namespace 
-
 
 namespace std {
 std::ostream& operator<<(std::ostream& out, const insieme::analysis::poly::AffineFunction::Term& c);
