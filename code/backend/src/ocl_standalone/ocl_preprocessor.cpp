@@ -46,7 +46,13 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ast_check.h"
+#include "insieme/core/checks/ir_checks.h"
+
+#include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/backend/ocl_standalone/ocl_standalone_extensions.h"
@@ -58,13 +64,6 @@ namespace ocl_standalone {
 	using namespace insieme::annotations::ocl;
 
 	namespace {
-
-		enum AddressSpace {
-			PRIVATE,
-			LOCAL,
-			GLOBAL,
-			CONSTANT,
-		};
 
 		/**
 		 * Tests whether the given lambda is marked to converted into an OpenCL kernel.
@@ -113,7 +112,8 @@ namespace ocl_standalone {
 
 			// fix address spaces for each parameter
 			AddressSpaceMap res;
-			for_each(kernel->getParameterList(), [&](const core::VariablePtr& cur) {
+			auto& params = kernel->getParameterList();
+			for_each(params.begin(), params.end()-2, [&](const core::VariablePtr& cur) {
 				AddressSpace space = AddressSpace::PRIVATE;
 				if (cur->getType()->getNodeType() == core::NT_RefType) {
 					space = (contains(initValues, cur)) ? AddressSpace::GLOBAL : AddressSpace::LOCAL;
@@ -209,6 +209,157 @@ namespace ocl_standalone {
 		}
 
 
+		core::StatementPtr getKernelCore(const core::BindExprPtr& bind) {
+			auto& basic = bind->getNodeManager().getBasicGenerator();
+
+			core::StatementPtr body = static_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr())->getBody();
+			if (body->getNodeType() == core::NT_CompoundStmt) {
+				const vector<core::StatementPtr>& stmts = static_pointer_cast<const core::CompoundStmt>(body)->getStatements();
+				if (core::analysis::isCallOf(stmts[0], basic.getParallel())) {
+					body = stmts[0];
+				}
+			}
+
+			if (!core::analysis::isCallOf(body, basic.getParallel())) {
+				return body;
+			}
+
+			core::JobExprPtr job = static_pointer_cast<const core::JobExpr>(core::analysis::getArgument(body, 0));
+			return getKernelCore(static_pointer_cast<const core::BindExpr>(job->getDefaultStmt()));
+		}
+
+
+		core::StatementPtr getKernelCore(const core::LambdaExprPtr& lambda) {
+			return getKernelCore(static_pointer_cast<const core::BindExpr>(getGlobalJob(lambda)->getDefaultStmt()));
+		}
+
+
+		bool isGetIDHelper(const core::ExpressionPtr& expr, std::size_t length) {
+
+			if (expr->getNodeType() != core::NT_LambdaExpr) {
+				return false;
+			}
+
+			const core::LambdaExprPtr& lambda = static_pointer_cast<const core::LambdaExpr>(expr);
+
+			core::StatementPtr body = lambda->getBody();
+			if (body->getNodeType() != core::NT_CompoundStmt) {
+				return false;
+			}
+
+			vector<core::StatementPtr> stmts = static_pointer_cast<const core::CompoundStmt>(body)->getStatements();
+			if (stmts.size() != length) {
+				return false;
+			}
+
+			for (std::size_t i = 0; i< length-1; i++) {
+				if (stmts[i]->getNodeType() != core::NT_DeclarationStmt) {
+					return false;
+				}
+			}
+
+			return stmts[length-1]->getNodeType() == core::NT_SwitchStmt;
+		}
+
+		bool isGetLocalID(const core::ExpressionPtr& expr) {
+			return isGetIDHelper(expr, 2);
+		}
+
+		bool isGetGlobalID(const core::ExpressionPtr& expr) {
+			return isGetIDHelper(expr, 3);
+		}
+
+
+		class BuildInReplacer : public core::transform::CachedNodeMapping {
+
+			core::NodeManager& manager;
+
+			core::VariablePtr globalSizeVar;
+			core::VariablePtr localSizeVar;
+			core::VariablePtr numGroupsVar;
+
+		public:
+
+			BuildInReplacer(core::NodeManager& manager, const core::VariablePtr& globalSize, const core::VariablePtr& localSize, const core::VariablePtr& numGroups)
+					: manager(manager),  globalSizeVar(globalSize), localSizeVar(localSize), numGroupsVar(numGroups) {};
+
+
+			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+				core::ASTBuilder builder(manager);
+				auto& basic = manager.getBasicGenerator();
+				Extensions extensions(manager);
+
+				// perform conversion in post-order
+				core::NodePtr res = ptr->substitute(manager, *this);
+
+				// only interested in lambda expressions
+				if (ptr->getNodeType() != core::NT_CallExpr) {
+					return res;
+				}
+
+				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
+
+				// ceck for access to global ids
+				const core::TypePtr uint4 = basic.getUInt4();
+				auto& fun = call->getFunctionExpr();
+				if (isGetGlobalID(fun)) {
+					return builder.callExpr(uint4, extensions.getGlobalID, toVector(call->getArgument(0)));
+				}
+
+				if (isGetLocalID(fun)) {
+					return builder.callExpr(uint4, extensions.getLocalID, toVector(call->getArgument(0)));
+				}
+
+				if (basic.isVectorSubscript(fun)) {
+					auto target = call->getArgument(0);
+					auto index = call->getArgument(1);
+
+					if (*target == *globalSizeVar) {
+						return builder.callExpr(uint4, extensions.getGlobalSize, toVector(index));
+					}
+					if (*target == *localSizeVar) {
+						return builder.callExpr(uint4, extensions.getLocalSize, toVector(index));
+					}
+					if (*target == *numGroupsVar) {
+						return builder.callExpr(uint4, extensions.getNumGroups, toVector(index));
+					}
+				}
+
+				if (basic.isBarrier(fun)) {
+					auto threadGroup = call->getArgument(0);
+					if (core::analysis::isCallOf(threadGroup, basic.getGetThreadGroup())) {
+						auto arg = core::analysis::getArgument(threadGroup, 0);
+						if (arg->getNodeType() == core::NT_Literal) {
+							core::LiteralPtr argument = static_pointer_cast<const core::Literal>(arg);
+							core::LiteralPtr lit;
+							if (argument->getValue() == "0") {
+								lit = builder.literal(threadGroup->getType(),"CLK_LOCAL_MEM_FENCE");
+							} else if (argument->getValue() == "1") {
+								lit = builder.literal(threadGroup->getType(),"CLK_GLOBAL_MEM_FENCE");
+							}
+							if (lit) {
+								return builder.callExpr(call->getType(), basic.getBarrier(), toVector<core::ExpressionPtr>(lit));
+							}
+						}
+					}
+				}
+
+				return res;
+			}
+
+
+		};
+
+		template<typename T>
+		T& copyCName(T& target, const core::NodePtr& src) {
+			if (src->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {
+				target->addAnnotation(src->getAnnotation(annotations::c::CNameAnnotation::KEY));
+			}
+			return target;
+		}
+
+
 		// --------------------------------------------------------------------------------------------------------------
 		//
 		// --------------------------------------------------------------------------------------------------------------
@@ -225,6 +376,9 @@ namespace ocl_standalone {
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
+				core::ASTBuilder builder(manager);
+				auto& basic = manager.getBasicGenerator();
+
 				// perform conversion in post-order
 				core::NodePtr res = ptr->substitute(manager, *this);
 
@@ -234,9 +388,9 @@ namespace ocl_standalone {
 				}
 
 				// extract lambda
-				const core::LambdaExprPtr& lambda = static_pointer_cast<const core::LambdaExpr>(res);
+				const core::LambdaExprPtr& kernel = static_pointer_cast<const core::LambdaExpr>(res);
 
-				if (!isKernel(lambda)) {
+				if (!isKernel(kernel)) {
 					return res;
 				}
 
@@ -245,219 +399,112 @@ namespace ocl_standalone {
 				// 		- replace build ins
 				//		- add address space modifier
 
-				// get required address space modifiers
-				AddressSpaceMap varMap = getAddressSpaces(lambda);
-
-				LOG(INFO) << "AddressSpaces: " << varMap;
-
-				VariableMap&& map = mapBodyVars(lambda);
-				LOG(INFO) << "Body Vars: " << map;
-
-
-//				LOG(INFO) << "Function with some Opencl Annotation...\n";
-//
-//
-//				for(auto iter = annotations->getAnnotationListBegin(); iter != annotations->getAnnotationListEnd(); ++iter) {
-//
-//					KernelFctAnnotationPtr kf = std::dynamic_pointer_cast<KernelFctAnnotation>(*iter);
-//					if(!kf) { continue; }
-//
-//					LOG(INFO) << "Function with kernel annotation...\n";
-//
-//					// Done here:
-//					//   - last two parameters replaced by get_global_size / get_local_size / get_num_groups
-//					//	 - annotating parameters to be local / global ...
-//
-//					// -------------------------------------------------------------------------------------
-//					// get sizes:
-//
-//					const LambdaPtr& oldLambda = ptr->getLambda();
-//					const Lambda::ParamList& oldParams = oldLambda->getParameterList();
-//					const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(oldLambda->getBody());
-//					const FunctionTypePtr& oldFuncType = oldLambda->getType();
-//
-//					// new paramList (case IR created from OpenCL frontend)
-//					for (uint i = 0; i < oldParams.size()-2; i++){
-//						const VariablePtr& tmpVar = oldParams.at(i);
-//						qualifierMap.insert(std::make_pair(tmpVar->getId(), tmpVar));
-//					}
-//
-//					// add builtin annotation for get_global_size & get_local_size to the variable
-//					addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-2), "get_global_size");
-//					addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-1), "get_local_size");
-//
-//					// new functionType
-//					const core::TypeList& oldArgs = oldFuncType->getParameterTypes();
-//
-//					//const core::TypePtr& retType = oldFuncType->getReturnType();
-//					// set the return type of the kernel to void
-//					const core::TypePtr& retType = (builder.getNodeManager()).basic.getUnit();
-//
-//					TypeList newArgs;
-//					for (uint i = 0; i < oldArgs.size()-2; i++){
-//						newArgs.push_back(oldArgs.at(i));
-//					}
-//					const FunctionTypePtr& newFuncType = builder.functionType(newArgs, retType);
-//
-//					const vector<StatementPtr>& bodyCompoundStmt = oldBody->getStatements();
-//
-//					// -------------------------------------------------------------------------------------
-//					// num groups:
-//
-//					// add builtin for get_num_groups
-//					const DeclarationStmtPtr& dcl = dynamic_pointer_cast<const DeclarationStmt>(bodyCompoundStmt.front());
-//					addBuiltinAnnotation(builder, qualifierMap, dcl->getVariable(), "get_num_groups");
-//
-//					// -------------------------------------------------------------------------------------
-//
-//
-//					// TODO: fix the [1] with the pattern matching
-//					const CallExprPtr& globalParallel = dynamic_pointer_cast<const CallExpr>(bodyCompoundStmt[1]);
-//
-//					const vector<ExpressionPtr>& globalExpr = globalParallel->getArguments();
-//
-//					const JobExprPtr& globalJob = dynamic_pointer_cast<const JobExpr>(globalExpr.back());
-//
-//					// Check for global variables
-//					const vector<DeclarationStmtPtr>& globalJobDecls = globalJob->getLocalDecls();
-//					for_each(globalJobDecls, [&](const DeclarationStmtPtr& curDecl) {
-//						unsigned newName = (curDecl->getVariable())->getId();
-//						unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
-//
-//						backwardVarNameMap.insert(std::make_pair(newName, oldName));
-//						forwardVarNameMap.insert(std::make_pair(oldName, newName));
-//						unsigned firstVal = getVarName(backwardVarNameMap, oldName);
-//						// Add global qualifier
-//						addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::GLOBAL);
-//					});
-//
-//					const BindExprPtr& globalBind =  dynamic_pointer_cast<const BindExpr>(globalJob->getDefaultStmt());
-//
-//					const CallExprPtr& globalCall = globalBind->getCall();
-//					const vector<ExpressionPtr> globalOldValues = globalCall->getArguments();
-//					const LambdaExprPtr& globalParFct = dynamic_pointer_cast<const LambdaExpr>(globalCall->getFunctionExpr());
-//
-//					const std::vector<VariablePtr>& globalNewValues = globalParFct->getParameterList();
-//
-//					auto&& iter2 = globalOldValues.begin();
-//					for (auto&& iter = globalNewValues.begin(); iter != globalNewValues.end(); ++iter, ++iter2){
-//						unsigned newName = (*iter)->getId();
-//						unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
-//
-//						backwardVarNameMap.insert(std::make_pair(newName, oldName));
-//						forwardVarNameMap.insert(std::make_pair(oldName, newName));
-//					}
-//
-//					const CompoundStmtPtr& globalParBody = dynamic_pointer_cast<const CompoundStmt>(globalParFct->getBody());
-//
-//					const vector<StatementPtr>& globalBodyStmts = globalParBody->getStatements();
-//
-//					const CallExprPtr& localParallel =  dynamic_pointer_cast<const CallExpr>(globalBodyStmts.front());
-//
-//					const vector<ExpressionPtr>& localExpr = localParallel->getArguments();
-//
-//					const JobExprPtr& localJob = dynamic_pointer_cast<const JobExpr>(localExpr.back());
-//
-//					const vector<DeclarationStmtPtr>& localJobDecls = localJob->getLocalDecls();
-//
-//					// declarations that we want to add to the body of the function
-//					vector<DeclarationStmtPtr> newBodyDecls;
-//
-//					for_each(localJobDecls, [&](const DeclarationStmtPtr& curDecl) {
-//						unsigned newName = (curDecl->getVariable())->getId();
-//						if (dynamic_pointer_cast<const Variable>(curDecl->getInitialization())){
-//							unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
-//
-//							backwardVarNameMap.insert(std::make_pair(newName, oldName));
-//							forwardVarNameMap.insert(std::make_pair(oldName, newName));
-//							unsigned firstVal = getVarName(backwardVarNameMap, oldName);
-//							// Add local qualifier
-//							addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::LOCAL);
-//						}
-//						else {
-//							// for example: v17 = initZero(ref<real<4>> // literal
-//							qualifierMap.insert(std::make_pair(newName, curDecl->getVariable()));
-//							addQualifier(qualifierMap, newName, AddressSpaceAnnotation::addressSpace::LOCAL);
-//							newBodyDecls.push_back(curDecl);
-//						}
-//					});
-//
-//					const BindExprPtr& localBind =  dynamic_pointer_cast<const BindExpr>(localJob->getDefaultStmt());
-//
-//					const CallExprPtr& localCall = localBind->getCall();
-//					const vector<ExpressionPtr> localOldValues = localCall->getArguments();
-//					const LambdaExprPtr& localParFct = dynamic_pointer_cast<const LambdaExpr>(localCall->getFunctionExpr());
-//
-//					const std::vector<VariablePtr>& localNewValues = localParFct->getParameterList();
-//
-//					iter2 = localOldValues.begin();
-//					for (auto&& iter = localNewValues.begin(); iter != localNewValues.end(); ++iter, ++iter2){
-//						unsigned newName = (*iter)->getId();
-//						unsigned oldName = (dynamic_pointer_cast<const Variable>(*iter2))->getId();
-//						//LOG(INFO) << newName << " " << oldName << '\n';
-//						backwardVarNameMap.insert(std::make_pair(newName, oldName));
-//						forwardVarNameMap.insert(std::make_pair(oldName, newName));
-//						qualifierMap.insert(std::make_pair(newName, *iter));
-//					}
-//
-//					Lambda::ParamList newParams;
-//					for (uint i = 0; i < oldParams.size()-2; i++){
-//						unsigned oldName = (oldParams.at(i))->getId();
-//						unsigned newName = getVarName(forwardVarNameMap, oldName);
-//						moveQualifier(qualifierMap, oldName, newName);
-//						auto&& fit = qualifierMap.find(newName);
-//						if (fit != qualifierMap.end()) {
-//							newParams.push_back(fit->second);
-//						} else {
-//							assert(false && "WTF: varName not in qualifierMap!!");
-//						}
-//					}
-//
-//					// modify the DeclarationStmts that we have to add to the body
-//					vector<StatementPtr> newRenameBodyDecls;
-//					for_each(newBodyDecls, [&](const DeclarationStmtPtr& curDecl) {
-//						unsigned oldName = (curDecl->getVariable())->getId();
-//						unsigned newName = getVarName(forwardVarNameMap, oldName);
-//						moveQualifier(qualifierMap, oldName, newName);
-//						auto&& fit = qualifierMap.find(newName);
-//						if (fit != qualifierMap.end()) {
-//							newRenameBodyDecls.push_back(builder.declarationStmt(fit->second,curDecl->getInitialization()));
-//						} else {
-//							assert(false && "WTF: varName not in qualifierMap!!");
-//						}
-//					});
-//
-//					const CompoundStmtPtr& localParBody = dynamic_pointer_cast<const CompoundStmt>(localParFct->getBody());
-//
-//					for_each(localParBody->getStatements(), [&](const StatementPtr& curStmt) {
-//						newRenameBodyDecls.push_back(curStmt);
-//					});
-//
-//					CompoundStmtPtr newBody = builder.compoundStmt(newRenameBodyDecls);
-//
-//					for (uint i = 0; i < oldArgs.size()-2; i++){
-//						newArgs.push_back(oldArgs.at(i));
-//					}
-//
-//					LambdaExprPtr&& newFunc = builder.lambdaExpr(newFuncType, newParams, newBody);
-//					// add the annotation to the lambda and not to the lambdaExpr for then use
-//					// the sinmple_backend with addFunctionPrefix
-//					KernelFctAnnotationPtr an(new KernelFctAnnotation());
-//					const LambdaPtr& newLambda = newFunc->getLambda();
-//					newLambda->setAnnotations(oldLambda->getAnnotations());
-//					newLambda->addAnnotation(an);
-//
-//					LOG(INFO) << "----- Insieme IR generated by the OpenCL Backend -----";
-//					LOG(INFO) << printer::PrettyPrinter(newLambda) << std::endl;
-//
-//					FunctionManager& funManager = getConversionContext().getFunctionManager();
-//					const CodeFragmentPtr& code = getCurrentCodeFragment();
-//					code << funManager.getFunctionName(code, newFunc);
-//				}
+				// replace some build-ins
 
 
 
-				return ptr;
+				// create kernel function
+				core::StatementPtr core = getKernelCore(kernel);
+
+				// - get_num_groups => first declaration
+				// - get_*_size => last two parameters
+
+				LOG(INFO) << "Core Before: " << core::printer::PrettyPrinter(core);
+
+				// ------------------ Update variable names within kernel core -------------------
+
+				// exchange variables within core
+				VariableMap&& map = mapBodyVars(kernel);
+
+				AddressSpaceMap varMap = getAddressSpaces(kernel);
+
+				// Separate variable map into local variable declarations and parameters
+				VariableMap localVars;
+				utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> parameters;
+				for_each(map, [&](const VariableMap::value_type& cur) {
+					if (cur.second->getNodeType() == core::NT_Variable) {
+						core::VariablePtr var = static_pointer_cast<const core::Variable>(cur.second);
+
+						// copy C-name annotation
+						copyCName(var, cur.first);
+
+						core::ExpressionPtr substitute = cur.second;
+						auto pos = varMap.find(var);
+						if (pos != varMap.end()) {
+							substitute = builder.variable(extensions.getType(pos->second, var->getType()), var->getId());
+							substitute = extensions.unWrapExpr(pos->second, substitute);
+						}
+
+						parameters.insert(std::make_pair(cur.first, substitute));
+					} else {
+
+						core::VariablePtr var = builder.variable(extensions.getType(AddressSpace::LOCAL, cur.first->getType()), cur.first->getId());
+						core::ExpressionPtr value = extensions.wrapExpr(AddressSpace::LOCAL, cur.second);
+						localVars.insert(std::make_pair(var, value));
+
+						parameters.insert(std::make_pair(cur.first, extensions.unWrapExpr(AddressSpace::LOCAL, var)));
+					}
+				});
+
+				// replace parameters ...
+				core = core::transform::replaceVarsGen(manager, core, parameters);
+
+				// add locals ...
+				if (!localVars.empty()) {
+					vector<core::StatementPtr> stmts;
+					for_each(localVars, [&](const VariableMap::value_type& cur) {
+						stmts.push_back(builder.declarationStmt(cur.first, cur.second));
+					});
+					stmts.push_back(core);
+					core = builder.compoundStmt(stmts);
+				}
+
+
+				// ------------------------- Replace build-in literals ---------------------------
+
+				core::VariablePtr globalSizeVar = *(kernel->getParameterList().end() - 2);
+				core::VariablePtr localSizeVar = *(kernel->getParameterList().end() - 1);
+				core::VariablePtr numGroupVar =
+						static_pointer_cast<const core::DeclarationStmt>(
+						static_pointer_cast<const core::CompoundStmt>(kernel->getBody())->getStatements()[0])->getVariable();
+				BuildInReplacer replacer(manager, globalSizeVar, localSizeVar, numGroupVar);
+				core = static_pointer_cast<const core::Statement>(core->substitute(manager, replacer));
+
+
+				LOG(INFO) << "Core After: " << core::printer::PrettyPrinter(core);
+
+				// ------------------ Create resulting lambda expression -------------------
+
+				// build parameter list
+				vector<core::VariablePtr> params = vector<core::VariablePtr>(kernel->getParameterList().begin(), kernel->getParameterList().end()-2);
+
+				for_each(params, [&](core::VariablePtr& cur) {
+					core::VariablePtr res = builder.variable(extensions.getType(varMap[cur], cur->getType()), cur->getId());
+					cur = copyCName(res, cur);
+				});
+
+				vector<core::TypePtr> paramTypes = ::transform(params, [](const core::VariablePtr& cur) { return cur->getType(); });
+
+				core::FunctionTypePtr kernelType = builder.functionType(paramTypes, basic.getUnit());
+				core::LambdaExprPtr newKernel = builder.lambdaExpr(kernelType, params, core);
+
+				if (kernel->getLambda()->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {
+					auto name = kernel->getLambda()->getAnnotation(annotations::c::CNameAnnotation::KEY);
+					LOG(INFO) << " Name is moved: " << name->getName();
+					newKernel->getLambda()->addAnnotation(name);
+					newKernel->addAnnotation(name);
+				}
+
+
+				res = builder.callExpr(kernelType, extensions.kernelWrapper, toVector<core::ExpressionPtr>(newKernel));
+
+				LOG(INFO) << "New Kernel: " << core::printer::PrettyPrinter(res);
+
+				LOG(INFO) << "Errors: " << core::check(newKernel, core::checks::getFullCheck());
+
+
+
+				return res;
 			}
 		};
 

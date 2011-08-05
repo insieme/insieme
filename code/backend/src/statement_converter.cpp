@@ -75,6 +75,24 @@ namespace backend {
 	}
 
 
+	////////////////////////////////////////////////////////////////////////// Core Visitor
+
+	c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
+		// first ask the handlers
+		if (!stmtHandler.empty()) {
+			for(auto it = stmtHandler.begin(); it != stmtHandler.end(); ++it) {
+				c_ast::NodePtr res = (*it)(context, node);
+				if (res) {
+					return res;
+				}
+			}
+		}
+
+		// use default conversion
+		return ASTVisitor::visit(node, context);
+	}
+
+
 	////////////////////////////////////////////////////////////////////////// Basic Nodes
 
 	c_ast::NodePtr StmtConverter::visitNode(const core::NodePtr& node, ConversionContext& context) {
@@ -313,24 +331,33 @@ namespace backend {
 		// add code dependency
 		context.getDependencies().insert(info.typeInfo->definition);
 
+		// create declaration statement
+		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
+		return manager->create<c_ast::VarDecl>(info.var, initValue);
+	}
+
+	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
+		auto& basic = converter.getNodeManager().getBasicGenerator();
+		auto manager = converter.getCNodeManager();
+
 		// test whether initialization is required ...
 		if (core::analysis::isCallOf(init, basic.getRefVar()) || core::analysis::isCallOf(init, basic.getRefNew())) {
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
 			if (core::analysis::isCallOf(call->getArgument(0), basic.getUndefined())) {
 				// => undefined initialization, hence no initialization!
-				return manager->create<c_ast::VarDecl>(info.var);
+				return c_ast::ExpressionPtr();
 			}
 		}
 
 		// TODO: handle initUndefine and init struct cases
 
 		// drop ref.var ...
-		if (core::analysis::isCallOf(init, basic.getRefVar())) {
-			init = core::analysis::getArgument(init, 0);
+		core::ExpressionPtr initValue = init;
+		if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
+			initValue = core::analysis::getArgument(initValue, 0);
 		}
 
-		// create declaration statement
-		return manager->create<c_ast::VarDecl>(info.var, convertExpression(context, init));
+		return convertExpression(context, initValue);
 	}
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {

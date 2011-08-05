@@ -34,12 +34,9 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/ocl_standalone/ocl_operator.h"
+#include "insieme/backend/ocl_standalone/ocl_type_handler.h"
 
 #include "insieme/backend/converter.h"
-
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/statement_converter.h"
 #include "insieme/backend/ocl_standalone/ocl_standalone_extensions.h"
 
 #include "insieme/backend/c_ast/c_code.h"
@@ -49,41 +46,42 @@ namespace insieme {
 namespace backend {
 namespace ocl_standalone {
 
+	namespace {
 
-	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
+		TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
-		Extensions ext(manager);
+			Extensions extensions(converter.getNodeManager());
 
-		#include "insieme/backend/operator_converter_begin.inc"
+			// determine kind of address space
+			char const * attribute;
+			if (extensions.isGlobalType(type)) {
+				attribute = "__global";
+			} else if (extensions.isLocalType(type)) {
+				attribute = "__local";
+			} else if (extensions.isConstType(type)) {
+				attribute = "__const";
+			} else {
+				// it is not an OpenCL type ..
+				return 0;
+			}
 
-		table[ext.unwrapLocal] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.unwrapGlobal] 	= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.unwrapConst] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
+			// resolve sub-type info
+			core::TypePtr subType = static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
+			const TypeInfo& subInfo = converter.getTypeManager().getTypeInfo(subType);
 
-		table[ext.wrapLocal] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.wrapGlobal] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.wrapConst] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
+			// copy info of actual type
+			TypeInfo* res = new TypeInfo();
+			*res = subInfo;
 
-		table[ext.kernelWrapper] 	= OP_CONVERTER({
-			// verify that argument is indeed a lambda exression => nothing else supported!
-			assert(ARG(0)->getNodeType() == core::NT_LambdaExpr && "Argument has to be a lambda!");
+			// annotate the sub-type type to get the actual type
+			res->rValueType = c_ast::attribute(std::string(attribute), res->rValueType);
+			res->lValueType = c_ast::attribute(std::string(attribute), res->lValueType);
+			return res;
+		}
 
-			// extract and convert lambda expression
-			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(ARG(0));
-			auto res = CONVERT_ARG(0);
-
-			// modify lambda expression just converted by setting the OCL kernel flag
-			c_ast::FunctionPtr fun = GET_FUNCTION_INFO(lambda).function;
-			fun->flags = fun->flags | c_ast::Function::OCL_KERNEL;
-
-			return C_NODE_MANAGER->create<c_ast::Literal>("");
-		});
-
-		#include "insieme/backend/operator_converter_end.inc"
-
-		return table;
 	}
 
+	TypeHandler OpenCLTypeHandler = &handleType;
 
 } // end namespace ocl_standalone
 } // end namespace backend

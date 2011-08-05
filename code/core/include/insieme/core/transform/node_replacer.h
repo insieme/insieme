@@ -99,6 +99,25 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
 NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
 		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements);
 
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root,
+		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements);
+
+/**
+ * A generic wrapper for the function provided above. This operation returns the same kind of node
+ * pointer is getting passed as an argument.
+ */
+template<typename T>
+core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
+	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
+}
+
+template<typename T>
+core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
+		const utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements) {
+	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
+}
+
 /**
  * Replaces all occurrences of the type variables and int type parameters within the top level scope of the
  * given root node by the values assigned to them within the given substitution.

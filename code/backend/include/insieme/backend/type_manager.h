@@ -62,6 +62,11 @@ namespace backend {
 
 	TypeIncludeTable getBasicTypeIncludeTable();
 
+
+	typedef std::function<TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
+
+	typedef vector<TypeHandler> TypeHandlerList;
+
 	namespace detail {
 		class TypeInfoStore;
 	}
@@ -74,7 +79,7 @@ namespace backend {
 
 		TypeManager(const Converter& converter);
 
-		TypeManager(const Converter& converter, const TypeIncludeTable& includeTable);
+		TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers);
 
 		virtual ~TypeManager();
 

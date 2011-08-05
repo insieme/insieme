@@ -155,6 +155,10 @@ namespace c_ast {
 		return fun(returnType, toVector<c_ast::TypePtr>(params...));
 	}
 
+	inline AttributedTypePtr attribute(const string& attribute, const TypePtr& type) {
+		return type->getManager()->create<c_ast::AttributedType>(attribute, type);
+	}
+
 	// --- create literals and variables ------------------------
 
 	inline VariablePtr var(const TypePtr& type, const IdentifierPtr& name) {

@@ -42,6 +42,14 @@ namespace insieme {
 namespace backend {
 namespace ocl_standalone {
 
+
+	enum AddressSpace {
+		PRIVATE,
+		LOCAL,
+		GLOBAL,
+		CONSTANT,
+	};
+
 	/**
 	 * This class offers a list of IR extensions required to model concepts within the
 	 * Insieme Runtime. The extensions include literals and types to model work items,
@@ -50,21 +58,26 @@ namespace ocl_standalone {
 	class Extensions {
 	public:
 
-		const core::TypePtr constWrapper;
-
+		const core::LiteralPtr wrapConst;
 		const core::LiteralPtr unwrapConst;
 
-		const core::TypePtr globalWrapper;
-
+		const core::LiteralPtr wrapGlobal;
 		const core::LiteralPtr unwrapGlobal;
 
-		const core::TypePtr localWrapper;
-
+		const core::LiteralPtr wrapLocal;
 		const core::LiteralPtr unwrapLocal;
 
-		const core::TypePtr privateWrapper;
+		const core::LiteralPtr getLocalID;
 
-		const core::LiteralPtr unwrapPrivate;
+		const core::LiteralPtr getGlobalID;
+
+		const core::LiteralPtr getLocalSize;
+
+		const core::LiteralPtr getGlobalSize;
+
+		const core::LiteralPtr getNumGroups;
+
+		const core::LiteralPtr kernelWrapper;
 
 		/**
 		 * Creates a new instance of this extension set. The given manager is used to construct
@@ -73,6 +86,25 @@ namespace ocl_standalone {
 		 * @param manager the manager to be used to construct the required types and literals
 		 */
 		Extensions(core::NodeManager& manager);
+
+
+		core::TypePtr getType(AddressSpace space, const core::TypePtr& type) const;
+		bool isWrapperType(const core::TypePtr& type) const;
+		bool isWrapperType(AddressSpace space, const core::TypePtr& type) const;
+
+		const core::LiteralPtr& getWrapper(AddressSpace space) const;
+		const core::LiteralPtr& getUnWrapper(AddressSpace space) const;
+
+		core::TypePtr getGlobalType(const core::TypePtr& type) const;
+		core::TypePtr getLocalType(const core::TypePtr& type) const;
+		core::TypePtr getConstType(const core::TypePtr& type) const;
+
+		bool isGlobalType(const core::TypePtr& type) const;
+		bool isLocalType(const core::TypePtr& type) const;
+		bool isConstType(const core::TypePtr& type) const;
+
+		core::ExpressionPtr wrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
+		core::ExpressionPtr unWrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
 
 	};
 

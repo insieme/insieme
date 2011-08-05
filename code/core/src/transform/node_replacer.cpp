@@ -202,14 +202,15 @@ private:
 	}
 };
 
+template<typename T>
 class VariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
-	const PointerMap<VariablePtr, VariablePtr>& replacements;
+	const PointerMap<VariablePtr, T>& replacements;
 
 public:
 
-	VariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements)
+	VariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, T>& replacements)
 		: manager(manager), replacements(replacements) { }
 
 private:
@@ -418,9 +419,21 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 	}
 
 	// conduct actual substitutions
-	auto mapper = ::VariableMapReplacer(mgr, replacements);
+	auto mapper = ::VariableMapReplacer<VariablePtr>(mgr, replacements);
 	return applyReplacer(mgr, root, mapper);
 }
+
+NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements) {
+	// special handling for empty replacement map
+	if (replacements.empty()) {
+		return mgr.get(root);
+	}
+
+	// conduct actual substitutions
+	auto mapper = ::VariableMapReplacer<ExpressionPtr>(mgr, replacements);
+	return applyReplacer(mgr, root, mapper);
+}
+
 
 
 NodePtr replaceTypeVars(NodeManager& mgr, const NodePtr& root, const SubstitutionOpt& substitution) {

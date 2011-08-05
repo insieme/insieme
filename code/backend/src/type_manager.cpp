@@ -98,12 +98,14 @@ namespace backend {
 
 			TypeIncludeTable includeTable;
 
+			TypeHandlerList typeHandlers;
+
 			utils::map::PointerMap<core::TypePtr, TypeInfoPtr> typeInfos;
 
 		public:
 
-			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable)
-				: converter(converter), includeTable(includeTable), typeInfos() {}
+			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& typeHandlers)
+				: converter(converter), includeTable(includeTable), typeHandlers(typeHandlers), typeInfos() {}
 
 			~TypeInfoStore() {
 				// free all stored type information instances
@@ -161,12 +163,11 @@ namespace backend {
 
 	}
 
-
 	TypeManager::TypeManager(const Converter& converter)
-		: store(new detail::TypeInfoStore(converter, getBasicTypeIncludeTable())) {}
+		: store(new detail::TypeInfoStore(converter, getBasicTypeIncludeTable(), TypeHandlerList())) {}
 
-	TypeManager::TypeManager(const Converter& converter, const TypeIncludeTable& includeTable)
-		: store(new detail::TypeInfoStore(converter, includeTable)) {}
+	TypeManager::TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers)
+		: store(new detail::TypeInfoStore(converter, includeTable, handlers)) {}
 
 	TypeManager::~TypeManager() {
 		delete store;
@@ -305,6 +306,15 @@ namespace backend {
 				TypeInfo* info = createInfo(converter.getFragmentManager(), name, header);
 				typeInfos.insert(std::make_pair(type, info));
 				return info;
+			}
+
+			// try resolving it using type handlers
+			for(auto it = typeHandlers.begin(); it!= typeHandlers.end(); ++it) {
+				TypeInfo* info = (*it)(converter, type);
+				if (info) {
+					typeInfos.insert(std::make_pair(type, info));
+					return info;
+				}
 			}
 
 			// obtain type information

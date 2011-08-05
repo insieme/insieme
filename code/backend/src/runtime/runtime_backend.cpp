@@ -108,7 +108,7 @@ namespace runtime {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter);
+		TypeManager typeManager(converter, getBasicTypeIncludeTable(), TypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter);

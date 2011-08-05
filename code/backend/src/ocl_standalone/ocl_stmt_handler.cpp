@@ -34,56 +34,67 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/ocl_standalone/ocl_operator.h"
+#include "insieme/backend/ocl_standalone/ocl_stmt_handler.h"
+
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/backend/converter.h"
-
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/variable_manager.h"
 #include "insieme/backend/ocl_standalone/ocl_standalone_extensions.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_standalone {
 
+	namespace {
 
-	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
+		c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
 
-		Extensions ext(manager);
+			// only interested in declaration statements
+			c_ast::NodePtr res;
+			if (node->getNodeType() != core::NT_DeclarationStmt) {
+				return res; // let anybody else try ...
+			}
 
-		#include "insieme/backend/operator_converter_begin.inc"
+			// get decl statement
+			core::DeclarationStmtPtr decl = static_pointer_cast<const core::DeclarationStmt>(node);
 
-		table[ext.unwrapLocal] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.unwrapGlobal] 	= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.unwrapConst] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
+			// check for a OCL extended type ...
+			Extensions extensions(context.getConverter().getNodeManager());
+			if (!extensions.isWrapperType(decl->getVariable()->getType())) {
+				return res;
+			}
 
-		table[ext.wrapLocal] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.wrapGlobal] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
-		table[ext.wrapConst] 		= OP_CONVERTER({ return CONVERT_ARG(0); });
+			// build declaration replacement
+			const Converter& converter = context.getConverter();
+			auto manager = converter.getCNodeManager();
 
-		table[ext.kernelWrapper] 	= OP_CONVERTER({
-			// verify that argument is indeed a lambda exression => nothing else supported!
-			assert(ARG(0)->getNodeType() == core::NT_LambdaExpr && "Argument has to be a lambda!");
+			core::VariablePtr var = decl->getVariable();
+			core::ExpressionPtr init = decl->getInitialization();
 
-			// extract and convert lambda expression
-			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(ARG(0));
-			auto res = CONVERT_ARG(0);
+			// register new variable within context
+			const VariableInfo& info = context.getVariableManager().addInfo(converter, var, VariableInfo::DIRECT);
 
-			// modify lambda expression just converted by setting the OCL kernel flag
-			c_ast::FunctionPtr fun = GET_FUNCTION_INFO(lambda).function;
-			fun->flags = fun->flags | c_ast::Function::OCL_KERNEL;
+			// add code dependency
+			context.getDependencies().insert(info.typeInfo->definition);
 
-			return C_NODE_MANAGER->create<c_ast::Literal>("");
-		});
+			LOG(INFO) << "What to do with " << *node << "?";
 
-		#include "insieme/backend/operator_converter_end.inc"
+			// get first argument of init statement
+			init = core::analysis::getArgument(init, 0);
+			auto initExpr = context.getConverter().getStmtConverter().convertInitExpression(context, init);
+			return manager->create<c_ast::VarDecl>(info.var, initExpr);
+		}
 
-		return table;
 	}
 
+	StmtHandler OpenCLStmtHandler = &handleStmts;
 
 } // end namespace ocl_standalone
 } // end namespace backend

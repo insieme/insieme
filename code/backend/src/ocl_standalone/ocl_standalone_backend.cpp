@@ -53,8 +53,11 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/parallel_manager.h"
 
+
 #include "insieme/backend/ocl_standalone/ocl_operator.h"
 #include "insieme/backend/ocl_standalone/ocl_preprocessor.h"
+#include "insieme/backend/ocl_standalone/ocl_type_handler.h"
+#include "insieme/backend/ocl_standalone/ocl_stmt_handler.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -68,6 +71,10 @@ namespace ocl_standalone {
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
 
 		FunctionIncludeTable getFunctionIncludeTable();
+
+		TypeHandlerList getTypeHandlerList();
+
+		StmtHandlerList getStmtHandlerList();
 
 	}
 
@@ -108,10 +115,10 @@ namespace ocl_standalone {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter);
+		TypeManager typeManager(converter, getBasicTypeIncludeTable(), getTypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
-		StmtConverter stmtConverter(converter);
+		StmtConverter stmtConverter(converter, getStmtHandlerList());
 		converter.setStmtConverter(&stmtConverter);
 
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
@@ -134,11 +141,29 @@ namespace ocl_standalone {
 		FunctionIncludeTable getFunctionIncludeTable() {
 			FunctionIncludeTable res = getBasicFunctionIncludeTable();
 
-			// add runtime-specific includes
+			// add OpenCL-specific includes
 			res["irt_get_default_worker_count"] 	= "standalone.h";
 			res["irt_runtime_standalone"] 			= "standalone.h";
 
+			res["get_local_id"] 					= "ocl_device.h";
+			res["get_global_id"] 					= "ocl_device.h";
+			res["get_local_size"] 					= "ocl_device.h";
+			res["get_global_size"] 					= "ocl_device.h";
+			res["get_num_groups"] 					= "ocl_device.h";
+			res["barrier"]							= "ocl_device.h";
 
+			return res;
+		}
+
+		TypeHandlerList getTypeHandlerList() {
+			TypeHandlerList res;
+			res.push_back(OpenCLTypeHandler);
+			return res;
+		}
+
+		StmtHandlerList getStmtHandlerList() {
+			StmtHandlerList res;
+			res.push_back(OpenCLStmtHandler);
 			return res;
 		}
 
