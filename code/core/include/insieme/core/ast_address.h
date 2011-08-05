@@ -386,6 +386,19 @@ public:
 	}
 
 	/**
+	 * Obtains all child addresses.
+	 *
+	 * @return a vector containing addresses for all child nodes
+	 */
+	vector<NodeAddress> getChildAddresses() const {
+		vector<NodeAddress> addresses;
+		for(size_t i=0; i<getAddressedNode()->getChildList().size(); ++i) {
+			addresses.push_back(NodeAddress(path.extendForChild(i)));
+		}
+		return addresses;
+	}
+
+	/**
 	 * Checks whether this address is constituting a valid path within some AST. The method returns
 	 * true in case the represented path can be reconstructed within the AST, hence if the (i+1)-th element
 	 * within the path constituting this address is a pointer to a child node referenced by the i-th element.

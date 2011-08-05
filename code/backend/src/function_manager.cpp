@@ -147,37 +147,6 @@ namespace backend {
 
 	namespace {
 
-		const c_ast::ExpressionPtr getValueInternal(ConversionContext& context, const core::ExpressionPtr& expr, const FunctionInfo& info) {
-
-			// The value of a literal is created by instantiating a closure covering the literal
-			// This looks as follows:
-			//		<closure_name>_ctr((closure_name*)alloca(sizeof(closure_name)), &literal_wrapper)
-
-			// collect information regarding result
-			const Converter& converter = context.getConverter();
-			const FunctionTypeInfo& typeInfo = converter.getTypeManager().getTypeInfo(static_pointer_cast<const core::FunctionType>(expr->getType()));
-
-			c_ast::TypePtr closureType = typeInfo.rValueType;
-			assert(typeInfo.rValueType->getType() == c_ast::NT_PointerType && "Expected function type to be a pointer!");
-			closureType = static_pointer_cast<c_ast::PointerType>(closureType)->elementType;
-
-			// add dependencies
-			c_ast::FragmentSet& dependencies = context.getDependencies();
-			dependencies.insert(typeInfo.definition);
-			dependencies.insert(typeInfo.constructor);
-			dependencies.insert(info.lambdaWrapper);
-
-			// add include for alloca
-			context.getIncludes().insert("alloca.h");
-
-			// build the value
-			auto manager = converter.getCNodeManager();
-			c_ast::ExpressionPtr alloc = c_ast::cast(c_ast::ptr(closureType),
-					c_ast::call(manager->create("alloca"), c_ast::unaryOp(c_ast::UnaryOperation::SizeOf, closureType)));
-			return c_ast::call(typeInfo.constructorName, alloc, c_ast::ref(info.lambdaWrapperName));
-		}
-
-
 		void appendAsArguments(ConversionContext& context, c_ast::CallPtr& call, const vector<core::ExpressionPtr>& arguments, bool external) {
 
 			// collect some manager references
@@ -264,10 +233,19 @@ namespace backend {
 			return res;
 		}
 
+		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
+
+
+		// 4) test whether target is a plane function pointer => call function pointer, no closure
+		if (funType->isPlain()) {
+			// add call to function pointer (which is the value)
+			c_ast::CallPtr res = c_ast::call(getValue(call->getFunctionExpr(), context));
+			appendAsArguments(context, res, call->getArguments(), false);
+			return res;
+		}
+
 		// Finally: the generic fall-back solution:
 		//		get function as a value and call it using the function-type's caller function
-
-		core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
 
 		c_ast::ExpressionPtr value = getValue(call->getFunctionExpr(), context);
 
@@ -292,12 +270,14 @@ namespace backend {
 			return getValue(static_pointer_cast<const core::BindExpr>(fun), context);
 		}
 		case core::NT_Literal: {
-			core::LiteralPtr literal = static_pointer_cast<const core::Literal>(fun);
-			return getValueInternal(context, fun, getInfo(literal));
+			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
+			context.getDependencies().insert(info.prototype);
+			return c_ast::ref(info.lambdaWrapperName);
 		}
 		case core::NT_LambdaExpr: {
-			core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
-			return getValueInternal(context, fun, getInfo(lambda));
+			const FunctionInfo& info = getInfo(static_pointer_cast<const core::LambdaExpr>(fun));
+			context.getDependencies().insert(info.prototype);
+			return c_ast::ref(info.function->name);
 		}
 		case core::NT_Variable:
 		case core::NT_CallExpr:
@@ -519,6 +499,7 @@ namespace backend {
 
 			c_ast::FunctionPtr mapper;
 			{
+				bool plain = nestedFunType->isPlain();
 				c_ast::TypePtr returnType = mapperType->returnType;
 
 				vector<c_ast::VariablePtr> params;
@@ -527,10 +508,15 @@ namespace backend {
 					return variableMap[cur];
 				});
 
-				auto fun = indirectAccess(indirectAccess(varClosure, "nested"), "call");
+				c_ast::ExpressionPtr fun = indirectAccess(varClosure, "nested");
+				if (!plain) {
+					fun = indirectAccess(fun, "call");
+				}
 
 				c_ast::CallPtr call = manager->create<c_ast::Call>(fun);
-				call->arguments.push_back(indirectAccess(varClosure, "nested"));
+				if (!plain) {
+					call->arguments.push_back(indirectAccess(varClosure, "nested"));
+				}
 
 				for_each(args, [&](const core::ExpressionPtr& cur) {
 					c_ast::VariablePtr var = variableMap[cur];
@@ -770,8 +756,9 @@ namespace backend {
 			auto manager = converter.getCNodeManager();
 
 			// obtain function type information
+			core::FunctionTypePtr closureType = core::FunctionType::get(funType->getNodeManager(), funType->getParameterTypes(), funType->getReturnType(), false);
 			TypeManager& typeManager = converter.getTypeManager();
-			const FunctionTypeInfo& funTypeInfo = typeManager.getTypeInfo(funType);
+			const FunctionTypeInfo& funTypeInfo = typeManager.getTypeInfo(closureType);
 
 			// create a new function representing the wrapper
 
@@ -802,7 +789,7 @@ namespace backend {
 						return cur.second;
 			});
 
-			c_ast::StatementPtr body = typeManager.getTypeInfo(funType->getReturnType()).internalize(manager, call);
+			c_ast::StatementPtr body = typeManager.getTypeInfo(closureType->getReturnType()).internalize(manager, call);
 			if (!c_ast::isVoid(function->returnType)) {
 				body = manager->create<c_ast::Return>(call);
 			}

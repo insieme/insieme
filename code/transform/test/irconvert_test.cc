@@ -34,46 +34,54 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/structure.h"
+#include <gtest/gtest.h>
+
+#include "insieme/transform/pattern/irconvert.h"
+#include "insieme/transform/pattern/irpattern.h"
+#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"
 
+using namespace insieme::utils::log;
+
 namespace insieme {
+using namespace core;
+	
 namespace transform {
 namespace pattern {
 
+bool match(const TreePatternPtr& pattern, const TreePtr& tree) {
+	return pattern->match(tree);
+}
 
-	std::ostream& Tree::printTo(std::ostream& out) const {
-		// print symbol if present
-		if (id) out << (char)id;
+bool notMatch(const TreePatternPtr& pattern, const TreePtr& tree) {
+	return !match(pattern, tree);
+}
 
-		// add sub-trees
-		if (!subTrees.empty()) {
-			out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
-		}
+TEST(IRConvert, Basic) {
+	NodeManager manager;
+	auto t = [&manager](string typespec) { return parse::parseType(manager, typespec); };
+	
+	TypePtr tupleA = t("(int<4>,float<8>,uint<1>)");
+	TypePtr tupleB = t("(int<4>,float<8>)");
 
-		// in case neither a symbol nor subtrees are given
-		if (!id && subTrees.empty()) {
-			out << "()";
-		}
-		return out;
-	}
+	//LOG(INFO) << *tupleA;
 
-	bool Tree::operator==(Tree& other) {
-		if (this == &other) {
-			return true;
-		}
-		return id == other.id && equals(subTrees, other.subTrees, equal_target<TreePtr>());
-	}
+	ConversionVisitor converter;
+	auto treeA = converter.visit(NodeAddress(tupleA));
+	auto treeB = converter.visit(NodeAddress(tupleB));
+	//LOG(INFO) << treeA;
 
-	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
-		return tree.printTo(out);
-	}
-
-	std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
-		return out << *tree;
-	}
+	TreePatternPtr patternA = aT(atom(converter.visit(NodeAddress(t("float<8>")))));
+	EXPECT_PRED2(match, patternA, treeA);
+	TreePatternPtr patternB = aT(atom(converter.visit(NodeAddress(t("uint<8>")))));
+	EXPECT_PRED2(notMatch, patternB, treeA);
+	TreePatternPtr patternC = irp::tupleType(any << atom(converter.visit(NodeAddress(t("float<8>")))) << any);
+	EXPECT_PRED2(match, patternC, treeA);
+	EXPECT_PRED2(notMatch, patternC, treeB);
+}
 
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
+

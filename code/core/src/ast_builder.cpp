@@ -120,6 +120,21 @@ ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints,
 
 // ---------------------------- Convenience -------------------------------------
 
+FunctionTypePtr ASTBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
+	if (funType->isPlain()) {
+		return funType;
+	}
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), true);
+}
+
+FunctionTypePtr ASTBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
+	if (!funType->isPlain()) {
+		return funType;
+	}
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), false);
+}
+
+
 LiteralPtr ASTBuilder::stringLit(const string& str) const {
 	return literal(str, manager.basic.getString());
 }

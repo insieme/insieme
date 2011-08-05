@@ -146,6 +146,15 @@ namespace c_ast {
 		return type->getManager()->create<c_ast::PointerType>(type);
 	}
 
+	inline FunctionTypePtr fun(const TypePtr& returnType, const vector<c_ast::TypePtr>& params) {
+		return returnType->getManager()->create<c_ast::FunctionType>(returnType, params);
+	}
+
+	template<typename ... P>
+	inline FunctionTypePtr fun(const TypePtr& returnType, P ... params) {
+		return fun(returnType, toVector<c_ast::TypePtr>(params...));
+	}
+
 	// --- create literals and variables ------------------------
 
 	inline VariablePtr var(const TypePtr& type, const IdentifierPtr& name) {

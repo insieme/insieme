@@ -149,6 +149,9 @@ namespace backend {
 			ChannelTypeInfo* resolveChannelType(const core::ChannelTypePtr& ptr);
 
 			FunctionTypeInfo* resolveFunctionType(const core::FunctionTypePtr& ptr);
+			FunctionTypeInfo* resolvePlainFunctionType(const core::FunctionTypePtr& ptr);
+			FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
+
 			RefTypeInfo* resolveRefType(const core::RefTypePtr& ptr);
 
 			TypeInfo* resolveRecType(const core::RecTypePtr& ptr);
@@ -753,6 +756,68 @@ namespace backend {
 
 
 		FunctionTypeInfo* TypeInfoStore::resolveFunctionType(const core::FunctionTypePtr& ptr) {
+			// dispatch to pointer-specific type!
+			if (ptr->isPlain()) {
+				return resolvePlainFunctionType(ptr);
+			}
+			return resolveThickFunctionType(ptr);
+		}
+
+		FunctionTypeInfo* TypeInfoStore::resolvePlainFunctionType(const core::FunctionTypePtr& ptr) {
+			assert(ptr->isPlain() && "Only supported for plain function types!");
+
+			auto manager = converter.getCNodeManager();
+
+			// get name for function type
+			auto params = ptr->getParameterTypes();
+
+			FunctionTypeInfo* res = new FunctionTypeInfo();
+			res->plain = true;
+
+			// construct the C AST function type token
+			TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
+			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType);
+
+			// add result type dependencies
+			vector<c_ast::CodeFragmentPtr> declDependencies;
+			declDependencies.push_back(retTypeInfo->declaration);
+
+			// add remaining parameters
+			for_each(ptr->getParameterTypes(), [&](const core::TypePtr& cur) {
+				TypeInfo* info = resolveType(cur);
+				functionType->parameterTypes.push_back(info->rValueType);
+				declDependencies.push_back(info->declaration);
+			});
+
+
+			// construct a dummy fragment combining all dependencies
+			res->declaration = c_ast::DummyFragment::createNew(converter.getFragmentManager());
+			res->declaration->addDependencies(declDependencies);
+			res->definition = res->declaration;
+
+			// R / L value names
+			res->rValueType = c_ast::ptr(functionType);
+			res->lValueType = res->rValueType;
+
+			// external type handling
+			res->externalType = res->rValueType;
+			res->externalize = &NoOp;
+			res->internalize = &NoOp;
+
+			// ------------ Initialize the rest ------------------
+
+			res->callerName = c_ast::IdentifierPtr();
+			res->caller = c_ast::CodeFragmentPtr();
+			res->constructorName = c_ast::IdentifierPtr();
+			res->constructor = c_ast::CodeFragmentPtr();
+
+			// done
+			return res;
+
+		}
+
+		FunctionTypeInfo* TypeInfoStore::resolveThickFunctionType(const core::FunctionTypePtr& ptr) {
+			assert(!ptr->isPlain() && "Only supported for non-plain function types!");
 
 			auto manager = converter.getCNodeManager();
 
@@ -766,9 +831,13 @@ namespace backend {
 			auto params = ptr->getParameterTypes();
 
 			FunctionTypeInfo* res = new FunctionTypeInfo();
+			res->plain = false;
 
 			// create the struct type defining the closure
+			vector<c_ast::CodeFragmentPtr> declDependencies;
+			vector<c_ast::CodeFragmentPtr> defDependencies;
 			c_ast::StructTypePtr structType = manager->create<c_ast::StructType>(manager->create("_" + name));
+
 
 			// construct the C AST function type token
 			TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
@@ -778,19 +847,17 @@ namespace backend {
 			c_ast::TypePtr structPointerType = manager->create<c_ast::PointerType>(structType);
 			functionType->parameterTypes.push_back(structPointerType);
 
+			// add result type dependencies
+			declDependencies.push_back(retTypeInfo->declaration);
+			defDependencies.push_back(retTypeInfo->definition);
+
 			// add remaining parameters
-			vector<c_ast::CodeFragmentPtr> declDependencies;
-			vector<c_ast::CodeFragmentPtr> defDependencies;
 			for_each(ptr->getParameterTypes(), [&](const core::TypePtr& cur) {
 				TypeInfo* info = resolveType(cur);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
 				defDependencies.push_back(info->definition);
 			});
-
-			// add result type dependencies
-			declDependencies.push_back(resolveType(ptr->getReturnType())->declaration);
-			defDependencies.push_back(resolveType(ptr->getReturnType())->definition);
 
 
 			// construct the function type => struct including a function pointer

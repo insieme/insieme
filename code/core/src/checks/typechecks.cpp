@@ -190,7 +190,6 @@ OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& addr
 
 OptionalMessageList ExternalFunctionTypeCheck::visitLiteral(const LiteralAddress& address) {
 
-	NodeManager& manager = address->getNodeManager();
 	OptionalMessageList res;
 
 	// only important for function types

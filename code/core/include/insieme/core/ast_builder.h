@@ -110,6 +110,10 @@ public:
 
 #include "ast_builder.inl"
 
+	// Function Types
+	FunctionTypePtr toPlainFunctionType(const FunctionTypePtr& funType) const;
+	FunctionTypePtr toThickFunctionType(const FunctionTypePtr& funType) const;
+
 	// Literals
 	LiteralPtr stringLit(const std::string& str) const;
     LiteralPtr intLit(const int val) const;
