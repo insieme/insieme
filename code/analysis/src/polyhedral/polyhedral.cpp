@@ -271,43 +271,87 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	});
 }
 
-//AffineFunction::AffineFunction(const IterationVector& newIterVec, const AffineFunction& other) : 
-	//iterVec(newIterVec)
-//{
-	//// check weather the 2 iteration vectors are compatible. 
-	//if(iterVec != other.iterVec) {
-		//assert(false && "Operation not allowed");
-	//}
-
-	//// FIXME: allow the copy of iteration vector which are not perfectly the
-	//// same but have the same structure 
-	
-	//coeffs = other.coeffs;
-	//sep = other.sep;
-//}
-
 int AffineFunction::idxConv(size_t idx) const {
 
-	if(idx<sep)	{ return idx; }
-	if(idx == iterVec.size()-1) { return coeffs.size()-1; }
+	if (idx<sep)	{ return idx; }
+	if (idx == iterVec.size()-1) { return coeffs.size()-1; }
 
-	if(idx>=sep && idx<iterVec.getIteratorNum()) { return -1; }
+	if (idx>=sep && idx<iterVec.getIteratorNum()) { return -1; }
 
 	idx -= iterVec.getIteratorNum();
-	if(idx<coeffs.size()-sep-1)
+	if (idx<coeffs.size()-sep-1) {
 		return sep+idx;
+	}
 	
 	return -1;
 }
 
+namespace {
+/**
+ * Printer: prints affine functions using different styles which can be selected by policies which can are 
+ * specified by the user.
+ */
+struct Printer : public utils::Printable {
+
+	Printer(const AffineFunction& af, unsigned policy) : af(af), policy(policy) { }
+
+	bool doPrintZeros() const { return policy & AffineFunction::PRINT_ZEROS; }
+
+	bool doPrintVars() const { return policy & AffineFunction::PRINT_VARS; }
+
+	template <class IterT>
+	void print(std::ostream& out, const IterT& begin, const IterT& end) const {
+		bool isEmpty = true;
+		out << join((doPrintVars() ? " + " : " "), begin, end, 
+				[&](std::ostream& jout, const AffineFunction::Term& cur) { 
+					if ( doPrintVars() ) jout << cur;
+					else jout << cur.second; 
+					isEmpty = false;
+				} 
+			);
+		if(isEmpty) {
+			// If the we didn't produce any output it means the affine constraint is all zeros,
+			// print the constant part to visualize the real value
+			assert(af.getCoeff(Constant()) == 0);
+			out << 0;
+		}
+	}
+
+	std::ostream& printTo(std::ostream& out) const {
+
+		if (!doPrintZeros()) { 
+			auto&& filtered = filterIterator<
+					AffineFunction::iterator, 
+					AffineFunction::Term, 
+					AffineFunction::Term*, 
+					AffineFunction::Term
+				>(af.begin(), af.end(), [](const AffineFunction::Term& cur) -> bool { return cur.second == 0; }
+			);
+			print(out, filtered.first, filtered.second);
+		} else {
+			print(out, af.begin(), af.end());
+		}
+
+		return out;
+
+	}
+		
+private:
+	const AffineFunction& af;
+	const unsigned policy;
+};
+
+} // end anonymous namespace
+
+
+std::string AffineFunction::toStr(unsigned policy) const {
+	std::ostringstream ss;
+	ss << Printer(*this, policy);
+	return ss.str();
+}
+
 std::ostream& AffineFunction::printTo(std::ostream& out) const { 
-	// Filters out all the elements with a coefficient equal to 0
-	auto&& filtered = filterIterator<iterator, Term, Term*, Term>(begin(), end(), 
-			[](const Term& cur) -> bool { return cur.second == 0; }
-		); 	
-	return out << join(" + ", filtered.first, filtered.second, 
-			[&](std::ostream& jout, const Term& cur) { jout << cur; } 
-		);
+	return out << toStr( AffineFunction::PRINT_VARS );
 }
 
 int AffineFunction::getCoeff(size_t idx) const {
@@ -347,18 +391,16 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 	iterator thisIt = begin(), otherIt = other.begin(); 
 	while( thisIt!=end() ) {
 		Term &&thisTerm = *thisIt, &&otherTerm = *otherIt;
+		const Element::Type& thisType = thisTerm.first.getType();
+		const Element::Type& otherType = otherTerm.first.getType();
 
-		if ( (thisTerm.first.getType() == Element::PARAM && 
-			  	otherTerm.first.getType() == Element::ITER) || 
-			(thisTerm.first.getType() == Element::CONST && 
-			 	otherTerm.first.getType() != Element::CONST) ) 
+		if ( (thisType == Element::PARAM && otherType == Element::ITER) || 
+			(thisType == Element::CONST && otherType != Element::CONST) ) 
 		{
 			if (otherTerm.second != 0) { return false; }
 			++otherIt;
-		} else if ( (thisTerm.first.getType() == Element::ITER && 
-				otherTerm.first.getType() == Element::PARAM) || 
-			(thisTerm.first.getType() != Element::CONST &&
-			 	otherTerm.first.getType() == Element::CONST) )	
+		} else if ( (thisType == Element::ITER && otherType == Element::PARAM) || 
+			(thisType != Element::CONST && otherType == Element::CONST) )	
 		{
 			if (thisTerm.second != 0) { return false; }
 			++thisIt;
@@ -422,14 +464,21 @@ Constraint Constraint::toBase(const IterationVector& iterVec, const IndexTransMa
 	return Constraint( af.toBase(iterVec, idxMap), type );
 }
 
-Constraint Constraint::normalize() const {
-	if ( type == Constraint::EQ || type == Constraint::GE )
-		return *this;
-	
-	AffineFunction newAf(getAffineFunction());
+ConstraintCombinerPtr normalize(const Constraint& c) {
+	const Constraint::Type& type = c.getType();
+	if ( type == Constraint::EQ || type == Constraint::GE ) { return makeCombiner(c); }
+
+	if ( type == Constraint::NE ) {
+		// if the contraint is !=, then we convert it into a negation
+		return not_( Constraint(c.getAffineFunction(), Constraint::EQ) );
+	}
+
+	AffineFunction newAf( c.getAffineFunction() );
 	// we have to invert the sign of the coefficients 
 	if(type == Constraint::LT || type == Constraint::LE) {
-		for(AffineFunction::iterator it=af.begin(), end=af.end(); it!=end; ++it) {
+		for(AffineFunction::iterator it=c.getAffineFunction().begin(), 
+								     end=c.getAffineFunction().end(); it!=end; ++it) 
+		{
 			newAf.setCoeff((*it).first, -(*it).second);
 		}
 	}
@@ -437,7 +486,7 @@ Constraint Constraint::normalize() const {
 		// we have to subtract -1 to the constant part
 		newAf.setCoeff(Constant(), newAf.getCoeff(Constant())-1);
 	}
-	return Constraint(newAf, Constraint::GE);
+	return makeCombiner( Constraint(newAf, Constraint::GE) );
 }
 
 //===== ConstraintCombiner ========================================================================
@@ -480,17 +529,11 @@ std::ostream& ConstraintCombiner::printTo(std::ostream& out) const {
 	return out;
 } 
 
-ConstraintCombinerPtr negate(const ConstraintCombinerPtr& cc) {
-	return std::make_shared<NegatedConstraintCombiner>( cc );
-}
-
-ConstraintCombinerPtr negate(const Constraint& c) {
-	return std::make_shared<NegatedConstraintCombiner>( makeCombiner(c) );
-}
-
 ConstraintCombinerPtr makeCombiner(const Constraint& constr) {
 	return std::make_shared<RawConstraintCombiner>(constr);
 }
+
+ConstraintCombinerPtr makeCombiner(const ConstraintCombinerPtr& cc) { return cc; }
 
 namespace {
 
@@ -541,6 +584,28 @@ ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const Const
 	old->accept(cc);
 	return cc.newCC;
 }
+
+//==== ScatteringFunction ==============================================================================
+
+std::ostream& ScatteringFunction::printTo(std::ostream& out) const {
+	out << "IV: " << iterVec << std::endl << "{" << std::endl;
+	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunction& cur) { 
+			out << "\t" << cur.toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
+		} ); 
+	return out << "}" << std::endl;
+}
+
+void ScatteringFunction::cloneRows(const std::list<AffineFunction>& src) { 
+	std::for_each(src.begin(), src.end(), [&] (const AffineFunction& cur) { funcs.push_back(cur.toBase(iterVec)); } );
+}
+
+ScatteringFunction& ScatteringFunction::operator=(const ScatteringFunction& other) {
+	iterVec = other.iterVec;
+	funcs.clear();
+	cloneRows(other.funcs);
+	return *this;
+}
+
 
 } // end poly namesapce 
 } // end analysis namespace 
