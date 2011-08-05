@@ -82,11 +82,7 @@ TEST(IslBackend, SetConstraint) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param), 3);
-	af.setCoeff(poly::Constant(), 10);
-
+	poly::AffineFunction af(iterVec, {0,3,10} );
 	poly::Constraint c(af, poly::Constraint::LT);
 
 	poly::backend::IslContext ctx;
@@ -113,10 +109,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 1);
-	af.setCoeff(poly::Parameter(param), 0);
-	af.setCoeff(poly::Constant(), 10);
+	poly::AffineFunction af(iterVec, {1,0,10});
 	
 	// 1*v1 + 0*v2  + 10 != 0
 	poly::Constraint c(af, poly::Constraint::NE);
@@ -147,25 +140,19 @@ TEST(IslBackend, FromCombiner) {
 	CREATE_ITER_VECTOR;
 
 	// 0*v1 + 2*v2 + 10
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param),2);
-	af.setCoeff(poly::Constant(), 10);
+	poly::AffineFunction af(iterVec, {0,2,10});
 
 	// 0*v1 + 2*v3 + 10 == 0
 	poly::Constraint c1(af, poly::Constraint::EQ);
 
 	// 2*v1 + 3*v3 +10 
-	poly::AffineFunction af2(iterVec);
-	af2.setCoeff(poly::Iterator(iter1), 2);
-	af2.setCoeff(poly::Parameter(param),3);
-	af2.setCoeff(poly::Constant(), 10);
+	poly::AffineFunction af2(iterVec, {2,3,10});
 	
 	// 2*v1 + 3*v3 +10 < 0
 	poly::Constraint c2(af2, poly::Constraint::LT);
 
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
-	poly::ConstraintCombinerPtr ptr =  c1 | ~c2;
+	poly::ConstraintCombinerPtr ptr =  c1 or (not_(c2));
 	
 // 	std::cout << *ptr << std::endl;
 

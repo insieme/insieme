@@ -410,6 +410,11 @@ public:
 
 	AffineFunction(IterationVector& iterVec, const insieme::core::ExpressionPtr& expr);
 
+	AffineFunction(IterationVector& iterVec, const std::vector<int>& coeffVec) : 
+		iterVec(iterVec), coeffs(coeffVec), sep( iterVec.getIteratorNum() ) {
+		assert(coeffVec.size() == iterVec.size());
+	}
+
 	AffineFunction(const AffineFunction& other) : 
 		iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
 
@@ -657,7 +662,7 @@ ConstraintCombinerPtr normalize(const Constraint& c);
 template <class C>
 typename boost::enable_if<
 	boost::mpl::or_<boost::is_same<C,Constraint>, boost::is_same<C,ConstraintCombinerPtr>
->, ConstraintCombinerPtr>::type operator~(const C& c) { 
+>, ConstraintCombinerPtr>::type not_(const C& c) { 
 	return std::make_shared<NegatedConstraintCombiner>(makeCombiner(c)); 
 }
 
@@ -668,7 +673,7 @@ typename boost::enable_if<
 		boost::mpl::or_<boost::is_same<C1,Constraint>, boost::is_same<C1,ConstraintCombinerPtr>>,
 		boost::mpl::or_<boost::is_same<C2,Constraint>, boost::is_same<C2,ConstraintCombinerPtr>>
 	>, ConstraintCombinerPtr>::type 
-operator&(const C1& lhs, const C2& rhs) { return makeConjunction(makeCombiner(lhs), makeCombiner(rhs)); }
+operator and(const C1& lhs, const C2& rhs) { return makeConjunction(makeCombiner(lhs), makeCombiner(rhs)); }
 
 // Redefinition of || operator with the semantics of OR 
 template <class C1, class C2>
@@ -677,7 +682,7 @@ typename boost::enable_if<
 		boost::mpl::or_<boost::is_same<C1,Constraint>, boost::is_same<C1,ConstraintCombinerPtr>>,
 		boost::mpl::or_<boost::is_same<C2,Constraint>, boost::is_same<C2,ConstraintCombinerPtr>>
 	>, ConstraintCombinerPtr>::type
-operator|(const C1& lhs, const C2& rhs) { return makeDisjunction(makeCombiner(lhs), makeCombiner(rhs)); }
+operator or(const C1& lhs, const C2& rhs) { return makeDisjunction(makeCombiner(lhs), makeCombiner(rhs)); }
 
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;

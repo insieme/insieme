@@ -49,6 +49,58 @@ namespace insieme {
 namespace analysis {
 namespace scop {
 
+typedef std::vector<core::StatementAddress> StmtAddressList;
+
+// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
+// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
+typedef std::vector<RefPtr> RefAccessList; 
+
+/**************************************************************************************************
+ * ScopStmt: Utility class which contains all the information of statements inside a SCoP (both
+ * direct and contained in sub-scops). 
+ *
+ * A statement into a SCoP has 3 piece of information associated:
+ * 	- Iteration domain:    which define the domain on which this statement is valid
+ * 	- Scattering function: which define the order of execution with respect of other statements in
+ * 						   the SCoP region
+ *  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within 
+ *              the statement. 
+ *
+ * This is information is not computed when the the SCoP region is first build but instead on demand
+ * (lazy) and cached for future requests. 
+ *************************************************************************************************/
+class ScopStmt { 
+	
+	core::StatementAddress 		address;
+
+	boost::optional<poly::ScatteringFunction> 	scattering;
+
+	RefAccessList				accesses;
+
+public:
+	ScopStmt(const core::StatementAddress& addr) : address(addr) { }
+
+	const core::StatementAddress& getAddr() const { return address; }
+	
+	const core::StatementAddress& operator->() const { return address; }
+
+	const poly::ScatteringFunction& getScattering() const { 
+		if (!scattering) {
+			// compute the scattering and cache the result
+		}
+		assert(scattering && "Scattering not computed!");
+		return *scattering;
+	}
+
+	const RefAccessList& getRefAccesses() const { return accesses; }
+
+	bool operator<(const ScopStmt& other) const { return address < other.address; }
+	
+	~ScopStmt() { }
+};
+
+typedef std::vector<ScopStmt> ScopStmtList;
+
 /************************************************************************************************** 
  * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
  * The IterationVector which is valid within the SCoP body and the set of constraints which define
@@ -67,21 +119,13 @@ public:
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> KEY;
 
-	typedef std::vector<core::StatementAddress> StmtList;
-
 	typedef std::map<core::StatementAddress, poly::ScatteringFunction> StmtScattering;
 
-	// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
-	// be directly referred from sub SCoPs. 
-	//
-	// The accesses are ordered by the appearance in the SCoP
-	typedef std::vector<RefPtr> AccessRefList; 
-
 	ScopRegion( const poly::IterationVector& iv, 
-			const StmtList& stmts,
 			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),
-			const StmtList& subScops = StmtList(),
-			const AccessRefList& accesses = AccessRefList() ) : 
+			const ScopStmtList& stmts = ScopStmtList(),
+			const StmtAddressList& subScops = StmtAddressList(),
+			const RefAccessList& accesses = RefAccessList() ) : 
 		core::NodeAnnotation(),
 		iterVec(iv), 
 		stmts(stmts),
@@ -107,7 +151,7 @@ public:
 	 */
 	inline const poly::IterationVector& getIterationVector() const { return iterVec; }
 	
-	inline const StmtList& getDirectRegionStmts() const { return stmts; }
+	inline const ScopStmtList& getDirectRegionStmts() const { return stmts; }
 
 	StmtScattering getStatementScattering() const;
 
@@ -121,7 +165,7 @@ public:
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	inline const AccessRefList& getDirectAccesses() const { return accesses; }
+	inline const RefAccessList& getDirectAccesses() const { return accesses; }
 
 	/** 
 	 * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
@@ -136,17 +180,18 @@ public:
 	const AccessInfoList listAccesses() const;
 
 	/** 
+	 *
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
 	 * current iteration domain
 	 */
-	const StmtList& getSubScops() const { return subScops; }
+	const StmtAddressList& getSubScops() const { return subScops; }
 
 private:
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;
 
 	// List of statements direclty contained in this region (but not in nested sub-regions)
-	StmtList stmts;
+	ScopStmtList stmts;
 
 	// List of constraints which this SCoP defines 
 	poly::ConstraintCombinerPtr constraints;
@@ -157,10 +202,12 @@ private:
 	 *  
 	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
 	 */
-	StmtList subScops;
+	StmtAddressList subScops;
 
 	// Access informations 
-	AccessRefList accesses;
+	RefAccessList accesses;
+
+	boost::optional<AccessInfoList> cachedAccessInfo;
 };
 
 /**************************************************************************************************

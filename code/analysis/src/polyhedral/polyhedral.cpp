@@ -470,7 +470,7 @@ ConstraintCombinerPtr normalize(const Constraint& c) {
 
 	if ( type == Constraint::NE ) {
 		// if the contraint is !=, then we convert it into a negation
-		return ~Constraint(c.getAffineFunction(), Constraint::EQ);
+		return not_( Constraint(c.getAffineFunction(), Constraint::EQ) );
 	}
 
 	AffineFunction newAf( c.getAffineFunction() );
