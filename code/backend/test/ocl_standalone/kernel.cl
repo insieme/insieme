@@ -34,5 +34,11 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define OCL_BE_TEST_DIR "/home/herbert/insieme/code/opencl_backend/test/"
+#include "ocl_device.h"
+#pragma insieme mark
+__kernel void fun(__global int *src, __global int *dst, int factor){
+		int i = get_global_id(0);
+		dst[i] = src[i] * factor;
+
+
+}

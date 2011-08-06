@@ -9,10 +9,13 @@ include(../environment.cmake)
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_backend_incs 	include/*.h )
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ocl_standalone_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/backend/ocl_standalone/ocl_standalone_config.h)
+
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
 include_directories( ${insieme_annotations_include_dir} )
+include_directories( ${insieme_frontend_include_dir} ) #REMOVE: added only for ocl_standalone_test 
 include_directories( ${insieme_backend_include_dir} )
 
 # Build the core library
@@ -23,6 +26,7 @@ add_library(insieme_backend ${LINKING_TYPE} ${insieme_backend_srcs} ${insieme_ba
 target_link_libraries(insieme_backend insieme_utils)
 target_link_libraries(insieme_backend insieme_core)
 target_link_libraries(insieme_backend insieme_annotations)
+target_link_libraries(insieme_backend insieme_frontend) #REMOVE: added only for ocl_standalone_test
 
 # enable tests for this project
 find_package(GTest REQUIRED)
