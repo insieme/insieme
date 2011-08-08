@@ -36,12 +36,15 @@
 
 #include "insieme/backend/runtime/runtime_code_fragments.h"
 
+#include "insieme/backend/function_manager.h"
+
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
 
+	// definition of some names within the generated code
 	#define INIT_CONTEXT_NAME "insieme_init_context"
 	#define CLEAN_CONTEXT_NAME "insieme_cleanup_context"
 	#define TYPE_TABLE_NAME "g_insieme_type_table"
@@ -50,7 +53,23 @@ namespace runtime {
 	ContextHandlingFragment::ContextHandlingFragment(const Converter& converter) : converter(converter) {
 		// add include to context definition and type and implementation table
 		addInclude("irt_all_impls.h");
-//		addDependency(converter->get)
+		addDependency(TypeTable::get(converter));
+		addDependency(ImplementationTable::get(converter));
+	}
+
+	ContextHandlingFragmentPtr ContextHandlingFragment::get(const Converter& converter) {
+		static string ENTRY_NAME = "ContextHandlingTable";
+
+		// look up the entry within the fragment manager
+		auto manager = converter.getFragmentManager();
+		auto res = manager->getFragment(ENTRY_NAME);
+		if (!res) {
+			// create new instance
+			ContextHandlingFragmentPtr table = manager->create<ContextHandlingFragment>(converter);
+			manager->bindFragment(ENTRY_NAME, table);
+			res = table;
+		}
+		return static_pointer_cast<const ContextHandlingFragment>(res);
 	}
 
 	const c_ast::IdentifierPtr ContextHandlingFragment::getInitFunctionName() {
@@ -66,21 +85,72 @@ namespace runtime {
 				"void " INIT_CONTEXT_NAME "(irt_context* context) {\n"
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
 				"    context->impl_table = " IMPL_TABLE_NAME ";\n"
-				"}\n;"
+				"}\n"
 				"\n"
 				"void " CLEAN_CONTEXT_NAME "(irt_context* context) {\n"
 				"    // nothing to do \n"
-				"}\n;";
+				"}\n\n";
 	}
 
+
+
+	// -- Type Table ------------------------------------------------------------------------
+
+	TypeTablePtr TypeTable::get(const Converter& converter) {
+		static string ENTRY_NAME = "TypeTable";
+
+		// look up the entry within the fragment manager
+		auto manager = converter.getFragmentManager();
+		auto res = manager->getFragment(ENTRY_NAME);
+		if (!res) {
+			// create new instance
+			TypeTablePtr table = manager->create<TypeTable>(converter);
+			manager->bindFragment(ENTRY_NAME, table);
+			res = table;
+		}
+		return static_pointer_cast<const TypeTable>(res);
+	}
 
 	const c_ast::ExpressionPtr TypeTable::getTypeTable() {
 		return c_ast::ref(converter.getCNodeManager()->create(TYPE_TABLE_NAME));
 	}
 
 	std::ostream& TypeTable::printTo(std::ostream& out) const {
-		return out;
+		return out <<
+				"// --- the type table ---\n"
+				"irt_type " TYPE_TABLE_NAME "[] = {};\n\n";
 	}
+
+
+	// -- Implementation Table --------------------------------------------------------------
+
+	ImplementationTablePtr ImplementationTable::get(const Converter& converter) {
+		static string ENTRY_NAME = "ImplementationTable";
+
+		// look up the entry within the fragment manager
+		auto manager = converter.getFragmentManager();
+		auto res = manager->getFragment(ENTRY_NAME);
+		if (!res) {
+			// create new instance
+			ImplementationTablePtr table = manager->create<ImplementationTable>(converter);
+			manager->bindFragment(ENTRY_NAME, table);
+			res = table;
+		}
+		return static_pointer_cast<const ImplementationTable>(res);
+	}
+
+	void ImplementationTable::registerWorkItem(const core::LambdaExprPtr& lambda) {
+
+		// resolve entry point
+		const FunctionInfo& info = converter.getFunctionManager().getInfo(lambda);
+
+		// make this fragment depending on the entry point
+		addDependency(info.prototype);
+
+		// add to list of entry points
+		workItems.push_back(WorkItemImpl(info.function->name->name));
+	}
+
 
 
 	const c_ast::ExpressionPtr ImplementationTable::getImplementationTable() {
@@ -88,7 +158,25 @@ namespace runtime {
 	}
 
 	std::ostream& ImplementationTable::printTo(std::ostream& out) const {
-		return out;
+
+		out << "// --- work item variants ---\n";
+
+		int counter=0;
+		for_each(workItems, [&](const WorkItemImpl& cur) {
+			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
+			out << "    { IRT_WI_IMPL_SHARED_MEM, &" << cur.entryName << ", 0, NULL, 0, NULL }\n";
+			out << "};\n";
+		});
+
+		out <<
+				"// --- the implementation table --- \n"
+				"irt_wi_implementation " IMPL_TABLE_NAME "[] = {\n";
+
+		for(int i=0; i<counter; i++) {
+			out << "    { 1, g_insieme_wi_" << i << "_variants },\n";
+		}
+
+		return out << "};\n\n";
 	}
 
 

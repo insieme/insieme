@@ -34,58 +34,26 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/runtime/runtime_operator.h"
-
-#include "insieme/backend/converter.h"
-#include "insieme/backend/function_manager.h"
+#include "insieme/backend/runtime/runtime_stmt_handler.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
-#include "insieme/backend/runtime/runtime_code_fragments.h"
-
-#include "insieme/backend/c_ast/c_code.h"
-#include "insieme/backend/c_ast/c_ast_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
 
+	namespace {
 
-	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
+		c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
 
-		Extensions ext(manager);
+			// let somebody else resolve this node
+			return 0;
 
-		#include "insieme/backend/operator_converter_begin.inc"
+		}
 
-		table[ext.initRuntime] = OP_CONVERTER({
-			// create context handling table (by introducing a dependency)
-			context.addDependency(ContextHandlingFragment::get(context.getConverter()));
-
-			return c_ast::ExpressionPtr();
-		});
-
-		table[ext.initContext] = OP_CONVERTER({
-			// TODO: create init / cleanup function
-			return c_ast::ref(C_NODE_MANAGER->create("insieme_init_context"));
-		});
-
-		table[ext.cleanupContext] = OP_CONVERTER({
-			return c_ast::ref(C_NODE_MANAGER->create("insieme_cleanup_context"));
-		});
-
-		table[ext.registerWorkItem] = OP_CONVERTER({
-
-			// just register new work item
-			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
-			implTable->registerWorkItem(static_pointer_cast<const core::LambdaExpr>(ARG(0)));
-
-			return c_ast::ExpressionPtr();
-		});
-
-		#include "insieme/backend/operator_converter_end.inc"
-
-		return table;
 	}
 
+	StmtHandler RuntimeStmtHandler = &handleStmts;
 
 } // end namespace runtime
 } // end namespace backend

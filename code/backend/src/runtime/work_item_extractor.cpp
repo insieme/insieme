@@ -58,7 +58,45 @@ namespace runtime {
 			// check whether entry expression is of a function type
 			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
 
+			// remove arguments
+			assert(*entry->getType() == *builder.functionType(builder.refType(extensions.workItemType), basic.getUnit())
+					&& "Type of entry point has to be (ref<workitem>)->unit");
+
 			return builder.callExpr(basic.getUnit(), extensions.registerWorkItem, entry);
+		}
+
+		core::ExpressionPtr wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
+			core::ASTBuilder builder(manager);
+			auto& basic = manager.getBasicGenerator();
+			Extensions extensions(manager);
+
+			// check whether entry is already of right type
+			core::TypePtr unit = basic.getUnit();
+			core::TypePtr contextPtr = builder.refType(extensions.workItemType);
+			core::TypePtr resType = builder.functionType(contextPtr, unit);
+			if (*entry->getType() == *resType) {
+				return entry;
+			}
+
+			// create new lambda expression wrapping the entry point
+			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
+			core::FunctionTypePtr entryType = static_pointer_cast<const core::FunctionType>(entry->getType());
+			assert(entryType->isPlain() && "Only plain functions can be entry points!");
+
+			// create parameter list
+			// TODO: replace this with data passes as parameter to the work-item
+			//		 for now, values will be initialized with zero
+
+			vector<core::ExpressionPtr> argList;
+			transform(entryType->getParameterTypes(), std::back_inserter(argList), [&](const core::TypePtr& type) {
+				return builder.getZero(type);
+			});
+
+			// produce replacement
+			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
+			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
+			core::ExpressionPtr exit = builder.callExpr(unit, extensions.exitWorkItem, workItem);
+			return builder.lambdaExpr(unit, builder.compoundStmt(call, exit), toVector(workItem));
 		}
 
 
@@ -80,7 +118,7 @@ namespace runtime {
 			// ------------------- Add list of entry points --------------------------
 
 			for_each(program->getEntryPoints(), [&](const core::ExpressionPtr& entry) {
-				stmts.push_back(registerEntryPoint(manager, entry));
+				stmts.push_back(registerEntryPoint(manager, wrapEntryPoint(manager, entry)));
 			});
 
 			// ------------------- Start standalone runtime  -------------------------
@@ -90,7 +128,7 @@ namespace runtime {
 			core::ExpressionPtr getWorkerCount = builder.callExpr(intType, builder.literal(getWorkerCountType,"irt_get_default_worker_count"), toVector<core::ExpressionPtr>());
 
 			// add call to irt_runtime_standalone
-			core::TypePtr contextFunType = builder.functionType(core::TypeList(), manager.basic.getUnit());
+			core::TypePtr contextFunType = builder.functionType(toVector<core::TypePtr>(builder.refType(extensions.contextType)), manager.basic.getUnit());
 			core::TypePtr standaloneFunType = builder.functionType(toVector(intType, contextFunType,contextFunType), unit);
 			core::ExpressionPtr standalone = builder.literal(standaloneFunType, "irt_runtime_standalone");
 			core::ExpressionPtr start = builder.callExpr(unit, standalone, toVector(getWorkerCount, extensions.initContext, extensions.cleanupContext));

@@ -38,6 +38,9 @@
 
 #include <pthread.h>
 
+#include "client_app.h"
+#include "irt_mqueue.h"
+
 /** Starts the runtime in standalone mode and executes work item 0.
   * Returns once that wi has finished.
   * worker_count : number of workers to start

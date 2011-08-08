@@ -113,6 +113,11 @@ namespace runtime {
 		const core::LiteralPtr joinWorkItem;
 
 		/**
+		 * The literal representing the function used for terminating a work item.
+		 */
+		const core::LiteralPtr exitWorkItem;
+
+		/**
 		 * Creates a new instance of this extension set. The given manager is used to construct
 		 * the contained literals and types.
 		 *

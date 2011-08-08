@@ -119,6 +119,10 @@ public:
     LiteralPtr intLit(const int val) const;
     LiteralPtr uintLit(const unsigned int val) const;
 
+    // Values
+    // obtains a zero value - recursively resolved for the given type
+    ExpressionPtr getZero(const TypePtr& type) const;
+
 	// Referencing
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;
 	CallExprPtr refVar(const ExpressionPtr& subExpr) const;

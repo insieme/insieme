@@ -78,7 +78,7 @@ namespace backend {
 		}
 	};
 
-	class Converter {
+	class Converter : private boost::noncopyable {
 
 		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
@@ -254,12 +254,20 @@ namespace backend {
 			return converter;
 		}
 
+		void addDependency(const c_ast::CodeFragmentPtr& fragment) {
+			dependencies.insert(fragment);
+		}
+
 		c_ast::FragmentSet& getDependencies() {
 			return dependencies;
 		}
 
 		const c_ast::FragmentSet& getDependencies() const {
 			return dependencies;
+		}
+
+		void addRequirement(const c_ast::CodeFragmentPtr& fragment) {
+			requirements.insert(fragment);
 		}
 
 		c_ast::FragmentSet& getRequirements() {

@@ -157,12 +157,13 @@ namespace backend {
 
 		const core::LiteralPtr initZero;
 		core::NodeManager& manager;
+		core::ASTBuilder builder;
 		const core::lang::BasicGenerator& basic;
 
 	public:
 
 		InitZeroReplacer(core::NodeManager& manager) :
-			initZero(manager.basic.getInitZero()), manager(manager), basic(manager.getBasicGenerator()) {};
+			initZero(manager.basic.getInitZero()), manager(manager), builder(manager), basic(manager.getBasicGenerator()) {};
 
 		/**
 		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
@@ -180,50 +181,11 @@ namespace backend {
 			// check current node
 			if (core::analysis::isCallOf(res, initZero)) {
 				// replace with equivalent zero value
-				core::NodePtr zero = getZero(static_pointer_cast<const core::Expression>(res)->getType());
-
-				// update result if zero computation was successfull
-				res = (zero)?zero:res;
+				res = builder.getZero(static_pointer_cast<const core::Expression>(res)->getType());
 			}
 
 			// no change required
 			return res;
-		}
-
-	private:
-
-		/**
-		 * Obtains an expression of the given type representing zero.
-		 */
-		core::ExpressionPtr getZero(const core::TypePtr& type) {
-
-			// if it is an integer ...
-			if (basic.isInt(type)) {
-				return core::Literal::get(manager, type, "0");
-			}
-
-			// if it is a real ..
-			if (basic.isReal(type)) {
-				return core::Literal::get(manager, type, "0.0");
-			}
-
-			// if it is a struct ...
-			if (type->getNodeType() == core::NT_StructType) {
-
-				// extract type and resolve members recursively
-				core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
-
-				core::StructExpr::Members members;
-				for_each(structType->getEntries(), [&](const core::StructType::Entry& cur) {
-					members.push_back(std::make_pair(cur.first, getZero(cur.second)));
-				});
-
-				return core::StructExpr::get(manager, members);
-			}
-
-			// fall-back => no default initalization possible
-			return core::ExpressionPtr();
-
 		}
 
 	};
