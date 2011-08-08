@@ -58,6 +58,22 @@ namespace ocl_standalone {
 	class Extensions {
 	public:
 
+		const core::LiteralPtr initDevices;
+		const core::LiteralPtr getNumDevices;
+		const core::LiteralPtr getDevice;
+		const core::LiteralPtr releaseDevices;
+
+		const core::LiteralPtr createKernel;
+		const core::LiteralPtr setKernelNDrange;
+		const core::LiteralPtr runKernel;
+		const core::LiteralPtr releaseKernel;
+
+		const core::LiteralPtr createBuffer;
+		const core::LiteralPtr readBuffer;
+		const core::LiteralPtr writeBuffer;
+		const core::LiteralPtr releaseBuffer;
+
+
 		const core::LiteralPtr wrapConst;
 		const core::LiteralPtr unwrapConst;
 

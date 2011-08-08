@@ -281,7 +281,7 @@ namespace ocl_standalone {
 		public:
 
 			BuildInReplacer(core::NodeManager& manager, const core::VariablePtr& globalSize, const core::VariablePtr& localSize, const core::VariablePtr& numGroups)
-					: manager(manager),  globalSizeVar(globalSize), localSizeVar(localSize), numGroupsVar(numGroups) {};
+					: manager(manager),  globalSizeVar(globalSize), localSizeVar(localSize), numGroupsVar(numGroups) {}
 
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
@@ -372,7 +372,7 @@ namespace ocl_standalone {
 		public:
 
 			TypeWrapper(core::NodeManager& manager) :
-				manager(manager),  extensions(manager) {};
+				manager(manager),  extensions(manager) {}
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
