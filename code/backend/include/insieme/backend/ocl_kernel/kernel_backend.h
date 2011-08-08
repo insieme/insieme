@@ -40,29 +40,29 @@
 
 namespace insieme {
 namespace backend {
-namespace ocl_standalone {
+namespace ocl_kernel {
 
-	// A forward declaration of the OpenCL standalone backend implementation
-	class OCLStandaloneBackend;
-	typedef std::shared_ptr<OCLStandaloneBackend> OCLStandaloneBackendPtr;
+	// A forward declaration of the OpenCL Kernel backend implementation
+	class OCLKernelBackend;
+	typedef std::shared_ptr<OCLKernelBackend> OCLKernelBackendPtr;
 
 	/**
-	 * The OpenCL standalone backend aims on generating pure sequential code without
+	 * The OpenCL Kernel backend aims on generating pure sequential code without
 	 * any dependencies to any runtime implementation.
 	 */
-	class OCLStandaloneBackend : public Backend {
+	class OCLKernelBackend : public Backend {
 	public:
 
 		/**
 		 * A factory method obtaining a smart pointer referencing a
-		 * fresh instance of the OpenCL standalone backend using the default configuration.
+		 * fresh instance of the OpenCL Kernel backend using the default configuration.
 		 *
 		 * @return a smart pointer to a fresh instance of the sequential backend
 		 */
-		static OCLStandaloneBackendPtr getDefault();
+		static OCLKernelBackendPtr getDefault();
 
 		/**
-		 * The main facade function of the OpenCL standalone backend. This function converts the given
+		 * The main facade function of the OpenCL Kernel backend. This function converts the given
 		 * IR representation into OpenCL host/kernel code.
 		 *
 		 * @param source the program to be converted
@@ -73,6 +73,6 @@ namespace ocl_standalone {
 	};
 
 
-}
-}
-}
+} // end namespace ocl_kernel
+} // end namespace backend
+} // end namespace insieme

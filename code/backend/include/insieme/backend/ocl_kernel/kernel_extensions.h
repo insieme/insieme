@@ -40,7 +40,7 @@
 
 namespace insieme {
 namespace backend {
-namespace ocl_standalone {
+namespace ocl_kernel {
 
 
 	enum AddressSpace {
@@ -124,6 +124,6 @@ namespace ocl_standalone {
 
 	};
 
-} // end namespace runtime
+} // end namespace ocl_kernel
 } // end namespace backend
 } // end namespace insieme

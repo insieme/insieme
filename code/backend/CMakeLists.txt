@@ -9,7 +9,7 @@ include(../environment.cmake)
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_backend_incs 	include/*.h )
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ocl_standalone_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/backend/ocl_standalone/ocl_standalone_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/kernel_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/backend/ocl_kernel/kernel_config.h)
 
 # list all include paths
 include_directories( ${insieme_core_include_dir} )

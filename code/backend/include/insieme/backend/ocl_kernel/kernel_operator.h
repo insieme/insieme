@@ -36,17 +36,14 @@
 
 #pragma once
 
-#include "insieme/backend/preprocessor.h"
+#include "insieme/backend/operator_converter.h"
 
 namespace insieme {
 namespace backend {
-namespace ocl_standalone {
+namespace ocl_kernel{
 
-	class OCLPreprocessor : public PreProcessor {
-	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table);
 
-} // end namespace ocl_standalone
+} // end namespace ocl_kernel
 } // end namespace backend
 } // end namespace insieme

@@ -35,4 +35,18 @@
  */
 
 #pragma once
-#define OCL_STANDALONE_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/ocl_standalone/"
+
+#include "insieme/backend/preprocessor.h"
+
+namespace insieme {
+namespace backend {
+namespace ocl_kernel {
+
+	class OCLPreprocessor : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+} // end namespace ocl_kernel
+} // end namespace backend
+} // end namespace insieme

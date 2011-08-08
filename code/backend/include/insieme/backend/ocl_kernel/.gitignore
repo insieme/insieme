@@ -1,2 +1,2 @@
 # Ignore all generated files
-ocl_standalone_config.h
+kernel_config.h

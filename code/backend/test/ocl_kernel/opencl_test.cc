@@ -52,8 +52,8 @@
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
-#include "insieme/backend/ocl_standalone/ocl_standalone_backend.h"
-#include "insieme/backend/ocl_standalone/ocl_standalone_config.h"
+#include "insieme/backend/ocl_kernel/kernel_backend.h"
+#include "insieme/backend/ocl_kernel/kernel_config.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
@@ -63,25 +63,25 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
-TEST(ocl_standalone, baseTest) {
+TEST(ocl_hostKernel, baseTest) {
 	NodeManager manager;
 	ProgramPtr program = Program::create(manager);
 
-	std::cout << "Test Directory: " << std::string(OCL_STANDALONE_TEST_DIR) << std::endl;
+	std::cout << "Test Directory: " << std::string(OCL_KERNEL_TEST_DIR) << std::endl;
 
 	// Frontend PATH
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs"); // this is for CL/cl.h in host.c 
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR)); // this is for ocl_device.h in kernel.cl
 
 	// Backend PATH
-	CommandLineOptions::IncludePaths.push_back(std::string(OCL_STANDALONE_TEST_DIR));
+	CommandLineOptions::IncludePaths.push_back(std::string(OCL_KERNEL_TEST_DIR));
 	CommandLineOptions::Defs.push_back("INSIEME");	
 
-	std::cout << "Converting input program '" << string(OCL_STANDALONE_TEST_DIR) << "kernel.cl" << "' to IR...\n";
+	std::cout << "Converting input program '" << string(OCL_KERNEL_TEST_DIR) << "kernel.cl" << "' to IR...\n";
 	insieme::frontend::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(OCL_STANDALONE_TEST_DIR) + "host.c");
-	//prog.addTranslationUnit(std::string(OCL_STANDALONE_TEST_DIR) + "kernel.cl");
+	prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "host.c");
+	//prog.addTranslationUnit(std::string(OCL_KERNEL_TEST_DIR) + "kernel.cl");
 	program = prog.convert();
 	std::cout << "Done.\n";
 
@@ -94,7 +94,7 @@ TEST(ocl_standalone, baseTest) {
 	
 	std::cout << "Start OpenCL Backend visit\n";
         
-	auto backend = insieme::backend::ocl_standalone::OCLStandaloneBackend::getDefault();
+	auto backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
 	auto converted = backend->convert(program);
 	std::cout << "Converted code:\n" << *converted;
 }

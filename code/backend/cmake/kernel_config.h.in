@@ -35,15 +35,4 @@
  */
 
 #pragma once
-
-#include "insieme/backend/type_manager.h"
-
-namespace insieme {
-namespace backend {
-namespace ocl_standalone {
-
-	extern TypeHandler OpenCLTypeHandler;
-
-} // end namespace ocl_standalone
-} // end namespace backend
-} // end namespace insieme
+#define OCL_KERNEL_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/ocl_kernel/"

@@ -53,7 +53,7 @@
 
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
-#include "insieme/backend/ocl_standalone/ocl_standalone_backend.h"
+#include "insieme/backend/ocl_kernel/kernel_backend.h"
 
 #include "insieme/transform/ir_cleanup.h"
 
@@ -492,7 +492,7 @@ int main(int argc, char** argv) {
 					//				insieme::opencl_backend::OpenCLChecker oc;
 					//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
 
-					backend = insieme::backend::ocl_standalone::OCLStandaloneBackend::getDefault();
+					backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
 					break;
 				}
 				case 'r': {

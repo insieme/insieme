@@ -36,14 +36,14 @@
 
 #pragma once
 
-#include "insieme/backend/operator_converter.h"
+#include "insieme/backend/type_manager.h"
 
 namespace insieme {
 namespace backend {
-namespace ocl_standalone {
+namespace ocl_kernel {
 
-	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table);
+	extern TypeHandler OpenCLTypeHandler;
 
-} // end namespace ocl_standalone
+} // end namespace ocl_kernel
 } // end namespace backend
 } // end namespace insieme

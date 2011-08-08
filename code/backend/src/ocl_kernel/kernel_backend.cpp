@@ -34,8 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/ocl_standalone/ocl_standalone_backend.h"
-
 #include <sstream>
 
 #include <cstdlib>
@@ -54,17 +52,18 @@
 #include "insieme/backend/parallel_manager.h"
 
 
-#include "insieme/backend/ocl_standalone/ocl_operator.h"
-#include "insieme/backend/ocl_standalone/ocl_preprocessor.h"
-#include "insieme/backend/ocl_standalone/ocl_type_handler.h"
-#include "insieme/backend/ocl_standalone/ocl_stmt_handler.h"
+#include "insieme/backend/ocl_kernel/kernel_operator.h"
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+#include "insieme/backend/ocl_kernel/kernel_type_handler.h"
+#include "insieme/backend/ocl_kernel/kernel_stmt_handler.h"
+#include "insieme/backend/ocl_kernel/kernel_backend.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
 
 namespace insieme {
 namespace backend {
-namespace ocl_standalone {
+namespace ocl_kernel {
 
 	namespace {
 
@@ -78,11 +77,11 @@ namespace ocl_standalone {
 
 	}
 
-	OCLStandaloneBackendPtr OCLStandaloneBackend::getDefault() {
-		return std::make_shared<OCLStandaloneBackend>();
+	OCLKernelBackendPtr OCLKernelBackend::getDefault() {
+		return std::make_shared<OCLKernelBackend>();
 	}
 
-	TargetCodePtr OCLStandaloneBackend::convert(const core::NodePtr& code) const {
+	TargetCodePtr OCLKernelBackend::convert(const core::NodePtr& code) const {
 
 		// basic setup
 		ConverterConfig config = ConverterConfig::getDefault();
@@ -141,9 +140,10 @@ namespace ocl_standalone {
 		FunctionIncludeTable getFunctionIncludeTable() {
 			FunctionIncludeTable res = getBasicFunctionIncludeTable();
 
+			//res["irt_get_default_worker_count"] 			= "standalone.h"; // REMOVE
+			//res["irt_runtime_standalone"] 			= "standalone.h";
+			
 			// add OpenCL-specific includes
-			res["irt_get_default_worker_count"] 	= "standalone.h";
-			res["irt_runtime_standalone"] 			= "standalone.h";
 
 			/*res["get_local_id"] 					= "ocl_device.h";
 			res["get_global_id"] 					= "ocl_device.h";
@@ -170,7 +170,7 @@ namespace ocl_standalone {
 
 	}
 
-} // end namespace sequential
+} // end namespace ocl_kernel
 } // end namespace backend
 } // end namespace insieme
 

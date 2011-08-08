@@ -34,8 +34,6 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/ocl_standalone/ocl_preprocessor.h"
-
 #include <algorithm>
 
 #include "insieme/utils/logging.h"
@@ -55,11 +53,12 @@
 #include "insieme/annotations/c/naming.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 
-#include "insieme/backend/ocl_standalone/ocl_standalone_extensions.h"
+#include "insieme/backend/ocl_kernel/kernel_extensions.h"
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
 namespace insieme {
 namespace backend {
-namespace ocl_standalone {
+namespace ocl_kernel {
 
 	using namespace insieme::annotations::ocl;
 
@@ -523,6 +522,6 @@ namespace ocl_standalone {
 	}
 
 
-} // end namespace runtime
+} // end namespace ocl_kernel
 } // end namespace backend
 } // end namespace insieme
