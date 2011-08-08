@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
+#include "insieme/analysis/polyhedral/affine_func.h"
+#include "insieme/analysis/polyhedral/constraint.h"
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
