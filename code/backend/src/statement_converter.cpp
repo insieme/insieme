@@ -189,6 +189,11 @@ namespace backend {
 			context.getDependencies().insert(fragment);
 		}
 
+		// handle null pointer
+		if (converter.getNodeManager().getBasicGenerator().isNull(ptr)) {
+			return converter.getCNodeManager()->create<c_ast::Literal>("0");
+		}
+
 		// done
 		return res;
 	}

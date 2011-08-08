@@ -79,7 +79,7 @@ namespace backend {
 
 		public:
 
-			FunctionInfoStore(const Converter& converter) : converter(converter) {}
+			FunctionInfoStore(const Converter& converter) : converter(converter), funInfos() {}
 
 			~FunctionInfoStore() {
 				// free all stored type information instances
@@ -119,7 +119,6 @@ namespace backend {
 		};
 
 	}
-
 
 	FunctionManager::FunctionManager(const Converter& converter)
 		: converter(converter), store(new detail::FunctionInfoStore(converter)),
@@ -271,7 +270,12 @@ namespace backend {
 		}
 		case core::NT_Literal: {
 			const FunctionInfo& info = getInfo(static_pointer_cast<const core::Literal>(fun));
-			context.getDependencies().insert(info.prototype);
+			if (static_pointer_cast<const core::FunctionType>(fun->getType())->isPlain()) {
+				// TODO: also check whether an externalization is required
+				context.getDependencies().insert(info.prototype);
+				return c_ast::ref(info.function->name);
+			}
+			context.getDependencies().insert(info.lambdaWrapper);
 			return c_ast::ref(info.lambdaWrapperName);
 		}
 		case core::NT_LambdaExpr: {

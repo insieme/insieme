@@ -113,7 +113,7 @@ namespace runtime {
 			//  - the resource requirements
 
 			core::TypePtr unit = basic.getUnit();
-			core::TypePtr fun = builder.functionType(core::TypeList(), unit);
+			core::TypePtr fun = builder.functionType(builder.refType(getWorkItemType(manager)), unit);
 			core::TypePtr resType = builder.functionType(toVector(fun), unit);
 
 			return builder.literal(resType, "registerWorkItem");
@@ -167,6 +167,19 @@ namespace runtime {
 			return builder.literal(type, "joinWorkItem");
 		}
 
+		const core::LiteralPtr getExitWorkItem(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+			auto& basic = manager.basic;
+
+			// simply (WorkItem)->unit
+			core::TypePtr unit = basic.getUnit();
+			core::TypePtr workItemType = builder.refType(getWorkItemType(manager));
+
+			// the create-work-item function
+			core::TypePtr type = builder.functionType(toVector(workItemType), unit);
+
+			return builder.literal(type, "irt_wi_end");
+		}
 
 	}
 
@@ -180,7 +193,8 @@ namespace runtime {
 		  registerWorkItem(getRegisterWorkItem(manager)),
 		  createWorkItem(getCreateWorkItem(manager)),
 		  submitWorkItem(getSubmitWorkItem(manager)),
-		  joinWorkItem(getJoinWorkItem(manager)) {}
+		  joinWorkItem(getJoinWorkItem(manager)),
+		  exitWorkItem(getExitWorkItem(manager)) {}
 
 
 } // end namespace runtime

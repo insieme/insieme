@@ -61,7 +61,7 @@ namespace backend {
 
 namespace c_ast {
 
-	class CodeFragmentManager {
+	class CodeFragmentManager : boost::noncopyable {
 
 		SharedCNodeManager cNodeManager;
 
@@ -82,7 +82,7 @@ namespace c_ast {
 		~CodeFragmentManager();
 
 		template<typename T, typename ... E>
-		Ptr<T> create(E ... args) {
+		Ptr<T> create(E& ... args) {
 			T* res = new T(args...);
 			fragments.push_back(res);
 			return Ptr<T>(res);

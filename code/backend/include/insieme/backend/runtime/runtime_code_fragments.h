@@ -49,6 +49,14 @@ namespace runtime {
 	//  creating code to be executed on the Insieme runtime is defined.
 	// ------------------------------------------------------------------------
 
+	class ContextHandlingFragment;
+	typedef Ptr<ContextHandlingFragment> ContextHandlingFragmentPtr;
+
+	class TypeTable;
+	typedef Ptr<TypeTable> TypeTablePtr;
+
+	class ImplementationTable;
+	typedef Ptr<ImplementationTable> ImplementationTablePtr;
 
 	/**
 	 * This code fragment is containing code for context handling functions like
@@ -63,6 +71,8 @@ namespace runtime {
 	public:
 
 		ContextHandlingFragment(const Converter& converter);
+
+		static ContextHandlingFragmentPtr get(const Converter& converter);
 
 		const c_ast::IdentifierPtr getInitFunctionName();
 
@@ -84,11 +94,15 @@ namespace runtime {
 
 		TypeTable(const Converter& converter) : converter(converter) {}
 
+		static TypeTablePtr get(const Converter& converter);
+
 		const c_ast::ExpressionPtr getTypeTable();
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 
 	};
+
+	struct WorkItemImpl;
 
 	/**
 	 * The implementation table fragment represents code resulting in the creation of the
@@ -99,16 +113,28 @@ namespace runtime {
 
 		const Converter& converter;
 
+		vector<WorkItemImpl> workItems;
+
 	public:
 
-		ImplementationTable(const Converter& converter) : converter(converter) {}
+		ImplementationTable(const Converter& converter) : converter(converter), workItems() {}
+
+		static ImplementationTablePtr get(const Converter& converter);
 
 		const c_ast::ExpressionPtr getImplementationTable();
+
+		void registerWorkItem(const core::LambdaExprPtr& lambda);
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 
 	};
 
+
+	struct WorkItemImpl {
+		string entryName;
+
+		WorkItemImpl(const string& entryName) : entryName(entryName) {}
+	};
 
 } // end namespace runtime
 } // end namespace backend

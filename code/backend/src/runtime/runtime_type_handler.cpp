@@ -59,6 +59,12 @@ namespace runtime {
 				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_context", "irt_all_impls.h");
 			}
 
+			if (*extensions.workItemType == *type) {
+				// use runtime definition of the context
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_item", "irt_all_impls.h");
+			}
+
+
 			// it is not a special runtime type => let somebody else try
 			return 0;
 		}

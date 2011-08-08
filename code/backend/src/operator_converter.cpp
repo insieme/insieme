@@ -467,6 +467,10 @@ namespace backend {
 			return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
 		});
 
+		res[basic.getAnyRefToRef()] = OP_CONVERTER({
+			return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0));
+		});
+
 
 		// -- others --
 

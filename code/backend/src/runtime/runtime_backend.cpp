@@ -55,6 +55,7 @@
 
 #include "insieme/backend/runtime/runtime_operator.h"
 #include "insieme/backend/runtime/runtime_type_handler.h"
+#include "insieme/backend/runtime/runtime_stmt_handler.h"
 #include "insieme/backend/runtime/work_item_extractor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
@@ -71,6 +72,8 @@ namespace runtime {
 		FunctionIncludeTable getFunctionIncludeTable();
 
 		TypeHandlerList getTypeHandlerList();
+
+		StmtHandlerList getStmtHandlerList();
 
 	}
 
@@ -140,7 +143,11 @@ namespace runtime {
 			// add runtime-specific includes
 			res["irt_get_default_worker_count"] 	= "standalone.h";
 			res["irt_runtime_standalone"] 			= "standalone.h";
+			res["irt_wi_end"]						= "irt_all_impls.h";
 
+			// the literals which are defined within the generated code
+			res["insieme_init_context"] = "";
+			res["insieme_cleanup_context"] = "";
 
 			return res;
 		}
@@ -148,6 +155,12 @@ namespace runtime {
 		TypeHandlerList getTypeHandlerList() {
 			TypeHandlerList res;
 			res.push_back(RuntimeTypeHandler);
+			return res;
+		}
+
+		StmtHandlerList getStmtHandlerList() {
+			StmtHandlerList res;
+			res.push_back(RuntimeStmtHandler);
 			return res;
 		}
 
