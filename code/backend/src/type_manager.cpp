@@ -204,74 +204,16 @@ namespace backend {
 		return *(store->resolveType(type));
 	}
 
-
-	namespace detail {
+	namespace type_info_utils {
 
 		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
 			return node;
 		}
 
-		template<typename T = TypeInfo>
-		T* createInfo(const c_ast::TypePtr& type) {
-			// construct the type information
-			T* res = new T();
-			res->lValueType = type;
-			res->rValueType = type;
-			res->externalType = type;
-			res->externalize = &NoOp;
-			res->internalize = &NoOp;
-			return res;
-		}
-
-		template<typename T = TypeInfo>
-		T* createInfo(c_ast::CNodeManager& nodeManager, const string& name) {
-			c_ast::IdentifierPtr ident = nodeManager.create(name);
-			c_ast::TypePtr type = nodeManager.create<c_ast::NamedType>(ident);
-			return createInfo<T>(type);
-		}
-
-		template<typename T = TypeInfo>
-		T* createInfo(const c_ast::SharedCodeFragmentManager& fragmentManager, const string& name, const string& includeFile) {
-			const c_ast::SharedCNodeManager& nodeManager = fragmentManager->getNodeManager();
-			c_ast::IdentifierPtr ident = nodeManager->create(name);
-			c_ast::TypePtr type = nodeManager->create<c_ast::NamedType>(ident);
-			T* res = createInfo<T>(type);
-
-			c_ast::CodeFragmentPtr decl = c_ast::DummyFragment::createNew(fragmentManager);
-			decl->addInclude(includeFile);
-			res->declaration = decl;
-			res->definition = decl;
-			return res;
-		}
+	}
 
 
-		template<typename T = TypeInfo>
-		T* createUnsupportedInfo(c_ast::CNodeManager& nodeManager) {
-			return createInfo<T>(nodeManager, "/* UNSUPPORTED TYPE */");
-		}
-
-		template<typename T = TypeInfo>
-		T* createInfo(const c_ast::TypePtr& type, const c_ast::CodeFragmentPtr& definition) {
-			T* res = createInfo<T>(type);
-			res->declaration = definition;
-			res->definition = definition;
-			return res;
-		}
-
-		template<typename T = TypeInfo>
-		T* createInfo(const c_ast::TypePtr& type,
-				const c_ast::CodeFragmentPtr& declaration,
-				const c_ast::CodeFragmentPtr& definition) {
-
-			// declaration => definition
-			assert(!declaration || definition);
-
-			T* res = createInfo<T>(type);
-			res->declaration = declaration;
-			res->definition = definition;
-			return res;
-		}
-
+	namespace detail {
 
 		string getName(const Converter& converter, const core::TypePtr& type) {
 			// for generic types it is clear
@@ -282,7 +224,6 @@ namespace backend {
 			// for other types, use name resolution
 			return converter.getNameManager().getName(type);
 		}
-
 
 		// --------------------- Type Specific Wrapper --------------------
 
@@ -303,7 +244,7 @@ namespace backend {
 			if (pos2 != includeTable.end()) {
 				// create new info referencing a header file
 				const string& header = pos2->second;
-				TypeInfo* info = createInfo(converter.getFragmentManager(), name, header);
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
 				typeInfos.insert(std::make_pair(type, info));
 				return info;
 			}
@@ -345,7 +286,7 @@ namespace backend {
 				// this should not happen ...
 				LOG(FATAL) << "Unsupported IR Type encountered: " << type;
 				assert(false && "Unsupported IR type encountered!");
-				info = createUnsupportedInfo(*converter.getCNodeManager()); break;
+				info = type_info_utils::createUnsupportedInfo(*converter.getCNodeManager()); break;
 			}
 
 			// store information
@@ -357,7 +298,7 @@ namespace backend {
 
 		TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
-			return createInfo(manager, "<" + ptr->getVarName() + ">");
+			return type_info_utils::createInfo(manager, "<" + ptr->getVarName() + ">");
 		}
 
 		TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr)  {
@@ -367,10 +308,10 @@ namespace backend {
 
 			// try find a match
 			if (basic.isUnit(ptr)) {
-				return createInfo(manager, "void");
+				return type_info_utils::createInfo(manager, "void");
 			}
 			if (basic.isAnyRef(ptr)) {
-				return createInfo(manager, "void*");
+				return type_info_utils::createInfo(manager, "void*");
 			}
 
 			// ------------ integers -------------
@@ -404,27 +345,27 @@ namespace backend {
 				c_ast::CodeFragmentPtr definition = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 				definition->addInclude("stdint.h");
 
-				return createInfo(intType, definition);
+				return type_info_utils::createInfo(intType, definition);
 			}
 
 			// ------------ Floating Point -------------
 			if (basic.isFloat(ptr)) {
-				return createInfo(manager, "float");
+				return type_info_utils::createInfo(manager, "float");
 			}
 			if (basic.isDouble(ptr)) {
-				return createInfo(manager, "double");
+				return type_info_utils::createInfo(manager, "double");
 			}
 
 			if (basic.isChar(ptr)) {
-				return createInfo(manager, "char");
+				return type_info_utils::createInfo(manager, "char");
 			}
 
 			if (basic.isString(ptr)) {
-				return createInfo(manager, "char*");
+				return type_info_utils::createInfo(manager, "char*");
 			}
 
 			if (basic.isVarList(ptr)) {
-				return createInfo(manager.create<c_ast::VarArgsType>());
+				return type_info_utils::createInfo(manager.create<c_ast::VarArgsType>());
 			}
 
 			// ------------- boolean ------------------
@@ -438,20 +379,20 @@ namespace backend {
 				c_ast::CodeFragmentPtr definition = c_ast::DummyFragment::createNew(converter.getFragmentManager());
 				definition->addInclude("stdbool.h");
 
-				return createInfo(boolType, definition);
+				return type_info_utils::createInfo(boolType, definition);
 			}
 
 			// TODO: replace by work item / work item group concepts
 			// check for job types ...
 			if(basic.isJob(ptr)) {
-				return createInfo(manager, "isbr_Job*");
+				return type_info_utils::createInfo(manager, "isbr_Job*");
 			}
 			if(basic.isThreadGroup(ptr)) {
-				return createInfo(manager, "isbr_ThreadGroup");
+				return type_info_utils::createInfo(manager, "isbr_ThreadGroup");
 			}
 
 			// no match found => return unsupported type info
-			return createUnsupportedInfo(manager);
+			return type_info_utils::createUnsupportedInfo(manager);
 		}
 
 		TypeInfo* TypeInfoStore::resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, bool isStruct) {
@@ -506,7 +447,7 @@ namespace backend {
 			definition->addDependencies(definitions);
 
 			// create resulting type info
-			return createInfo(type, declaration, definition);
+			return type_info_utils::createInfo(type, declaration, definition);
 		}
 
 		TypeInfo* TypeInfoStore::resolveStructType(const core::StructTypePtr& ptr) {
@@ -526,7 +467,7 @@ namespace backend {
 			const core::IntTypeParamPtr& dimPtr = ptr->getDimension();
 			if (dimPtr->getNodeType() != core::NT_ConcreteIntTypeParam) {
 				// non-concrete array types are not supported
-				return createUnsupportedInfo<ArrayTypeInfo>(*manager);
+				return type_info_utils::createUnsupportedInfo<ArrayTypeInfo>(*manager);
 			} else {
 				dim = static_pointer_cast<const core::ConcreteIntTypeParam>(dimPtr)->getValue();
 			}
@@ -559,8 +500,8 @@ namespace backend {
 			res->externalType = arrayType;
 
 			// set externalizer / internalizer
-			res->externalize = &NoOp;
-			res->internalize = &NoOp;
+			res->externalize = &type_info_utils::NoOp;
+			res->internalize = &type_info_utils::NoOp;
 
 			// set declaration / definition (based on element type)
 			res->declaration = elementTypeInfo->declaration;
@@ -578,7 +519,7 @@ namespace backend {
 			const core::IntTypeParamPtr& sizePtr = ptr->getSize();
 			if (sizePtr->getNodeType() != core::NT_ConcreteIntTypeParam) {
 				// non-concrete array types are not supported
-				return createUnsupportedInfo<VectorTypeInfo>(*manager);
+				return type_info_utils::createUnsupportedInfo<VectorTypeInfo>(*manager);
 			} else {
 				size = static_pointer_cast<const core::ConcreteIntTypeParam>(sizePtr)->getValue();
 			}
@@ -664,7 +605,7 @@ namespace backend {
 		}
 
 		ChannelTypeInfo* TypeInfoStore::resolveChannelType(const core::ChannelTypePtr& ptr) {
-			return createUnsupportedInfo<ChannelTypeInfo>(*converter.getCNodeManager());
+			return type_info_utils::createUnsupportedInfo<ChannelTypeInfo>(*converter.getCNodeManager());
 		}
 
 		RefTypeInfo* TypeInfoStore::resolveRefType(const core::RefTypePtr& ptr) {
@@ -704,8 +645,8 @@ namespace backend {
 			// add externalization operators
 			if (*res->rValueType == *res->externalType) {
 				// no difference => do nothing
-				res->externalize = &NoOp;
-				res->internalize = &NoOp;
+				res->externalize = &type_info_utils::NoOp;
+				res->internalize = &type_info_utils::NoOp;
 			} else {
 				// requires a cast
 				res->externalize = [res](const c_ast::SharedCNodeManager& manager, const c_ast::ExpressionPtr& node) {
@@ -811,8 +752,8 @@ namespace backend {
 
 			// external type handling
 			res->externalType = res->rValueType;
-			res->externalize = &NoOp;
-			res->internalize = &NoOp;
+			res->externalize = &type_info_utils::NoOp;
+			res->internalize = &type_info_utils::NoOp;
 
 			// ------------ Initialize the rest ------------------
 
@@ -884,8 +825,8 @@ namespace backend {
 
 			// external type handling
 			res->externalType = res->rValueType;
-			res->externalize = &NoOp;
-			res->internalize = &NoOp;
+			res->externalize = &type_info_utils::NoOp;
+			res->internalize = &type_info_utils::NoOp;
 
 
 			// ---------------- add caller ------------------------

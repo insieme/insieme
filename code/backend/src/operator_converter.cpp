@@ -499,7 +499,7 @@ namespace backend {
 		res[ext.initGlobals] = OP_CONVERTER({
 
 			// ensure globals have not bee initialized before
-			assert(!context.getConverter().getGlobalFragment());
+			assert(!FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));
 
 			core::TypePtr globalType = ARG(0)->getType();
 			if (globalType->getNodeType() == core::NT_RefType) {
@@ -514,7 +514,7 @@ namespace backend {
 			c_ast::CodeFragmentPtr globals = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER, decl);
 			globals->addDependency(info.definition);
 
-			context.getConverter().setGlobalFragment(globals);
+			FRAGMENT_MANAGER->bindFragment(IRExtensions::GLOBAL_ID, globals);
 			context.getDependencies().insert(globals);
 
 			// => no actual expression required her ...

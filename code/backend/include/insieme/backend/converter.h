@@ -101,16 +101,9 @@ namespace backend {
 		// NOTE: shared pointer, since it has to survive the conversion process
 		c_ast::SharedCodeFragmentManager fragmentManager;
 
-
 		// ----------- Overall Conversion Configuration ----------------
 
 		ConverterConfig config;
-
-
-		/**
-		 * A Code Fragment containing global declarations.
-		 */
-		mutable c_ast::CodeFragmentPtr globalFragment;
 
 	public:
 
@@ -217,17 +210,6 @@ namespace backend {
 
 		void setConfig(const ConverterConfig& newConfig) {
 			config = newConfig;
-		}
-
-		// TODO: find a better place for this ...
-
-		const c_ast::CodeFragmentPtr& getGlobalFragment() const {
-			return globalFragment;
-		}
-
-		void setGlobalFragment(const c_ast::CodeFragmentPtr& globals) const {
-			assert(!globalFragment && "Global fragment has been set before!!");
-			globalFragment = globals;
 		}
 
 	};

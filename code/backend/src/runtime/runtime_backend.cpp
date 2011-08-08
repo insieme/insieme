@@ -54,6 +54,7 @@
 #include "insieme/backend/parallel_manager.h"
 
 #include "insieme/backend/runtime/runtime_operator.h"
+#include "insieme/backend/runtime/runtime_type_handler.h"
 #include "insieme/backend/runtime/work_item_extractor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
@@ -68,6 +69,8 @@ namespace runtime {
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
 
 		FunctionIncludeTable getFunctionIncludeTable();
+
+		TypeHandlerList getTypeHandlerList();
 
 	}
 
@@ -108,7 +111,7 @@ namespace runtime {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter, getBasicTypeIncludeTable(), TypeHandlerList());
+		TypeManager typeManager(converter, getBasicTypeIncludeTable(), getTypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter);
@@ -142,6 +145,11 @@ namespace runtime {
 			return res;
 		}
 
+		TypeHandlerList getTypeHandlerList() {
+			TypeHandlerList res;
+			res.push_back(RuntimeTypeHandler);
+			return res;
+		}
 
 	}
 

@@ -67,6 +67,13 @@ namespace c_ast {
 
 		vector<CodeFragment*> fragments;
 
+		/**
+		 * A list of special, named code fragments which can be accessed
+		 * via their names. All fragments within this map have to be part
+		 * of the fragments vector, hence managed by this manager.
+		 */
+		std::map<string, CodeFragment*> namedFragments;
+
 	public:
 
 		CodeFragmentManager(const SharedCNodeManager& cNodeManager)
@@ -88,6 +95,21 @@ namespace c_ast {
 		static SharedCodeFragmentManager createShared() {
 			return std::make_shared<CodeFragmentManager>(CNodeManager::createShared());
 		}
+
+		CodeFragmentPtr getFragment(const string& name) {
+			auto pos = namedFragments.find(name);
+			if (pos != namedFragments.end()) {
+				return pos->second;
+			}
+			return 0;
+		}
+
+		void bindFragment(const string& name, const CodeFragmentPtr& fragment) {
+			assert(contains(fragments, fragment.ptr) && "Cannot bind fragment not maintained by this manager!");
+			auto res = namedFragments.insert(std::make_pair(name, fragment.ptr));
+			assert(res.second && "Name already in use!!");
+		}
+
 	};
 
 

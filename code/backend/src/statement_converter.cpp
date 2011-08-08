@@ -184,8 +184,9 @@ namespace backend {
 			}
 
 			// add code dependency to global struct
-			assert(converter.getGlobalFragment() && "Global Fragment not yet initialized!");
-			context.getDependencies().insert(converter.getGlobalFragment());
+			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
+			assert(fragment && "Global Fragment not yet initialized!");
+			context.getDependencies().insert(fragment);
 		}
 
 		// done

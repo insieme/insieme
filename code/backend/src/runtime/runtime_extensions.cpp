@@ -171,10 +171,16 @@ namespace runtime {
 	}
 
 	Extensions::Extensions(core::NodeManager& manager)
-		: initRuntime(getInitRuntime(manager)), initContext(getInitContext(manager)), cleanupContext(getCleanupContext(manager)),
-		  workItemType(getWorkItemType(manager)), dataItemType(getDataItemType(manager)),
-		  registerWorkItem(getRegisterWorkItem(manager)), createWorkItem(getCreateWorkItem(manager)),
-		  submitWorkItem(getSubmitWorkItem(manager)), joinWorkItem(getJoinWorkItem(manager)) {}
+		: contextType(getContextType(manager)),
+		  initRuntime(getInitRuntime(manager)),
+		  initContext(getInitContext(manager)),
+		  cleanupContext(getCleanupContext(manager)),
+		  workItemType(getWorkItemType(manager)),
+		  dataItemType(getDataItemType(manager)),
+		  registerWorkItem(getRegisterWorkItem(manager)),
+		  createWorkItem(getCreateWorkItem(manager)),
+		  submitWorkItem(getSubmitWorkItem(manager)),
+		  joinWorkItem(getJoinWorkItem(manager)) {}
 
 
 } // end namespace runtime

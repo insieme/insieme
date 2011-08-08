@@ -51,6 +51,11 @@ namespace runtime {
 	public:
 
 		/**
+		 * The type used to represent a runtime context within the IR.
+		 */
+		const core::TypePtr contextType;
+
+		/**
 		 * An invocation to this literal results in a no-op. However, context management routines
 		 * like the init / cleanup context functions as well as the type/implementation tables
 		 * required by the runtime will be initialized as a side effect. This instruction
