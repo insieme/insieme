@@ -148,9 +148,10 @@ namespace ocl_standalone {
 
 			core::TypePtr refKernelType = builder.refType(getKernelType(manager));
 			core::TypePtr uint4Type = basic.getUInt4();
+			core::TypePtr varListType = basic.getVarList();
 
 			// void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refKernelType, uint4Type), basic.getUnit()); // FIXME: variable number parameters
+			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refKernelType, uint4Type, varListType), basic.getUnit()); // FIXME: variable number parameters
 
 			return builder.literal(type, "irt_ocl_run_kernel");
 		}

@@ -145,12 +145,12 @@ namespace ocl_standalone {
 			res["irt_get_default_worker_count"] 	= "standalone.h";
 			res["irt_runtime_standalone"] 			= "standalone.h";
 
-			res["get_local_id"] 					= "ocl_device.h";
+			/*res["get_local_id"] 					= "ocl_device.h";
 			res["get_global_id"] 					= "ocl_device.h";
 			res["get_local_size"] 					= "ocl_device.h";
 			res["get_global_size"] 					= "ocl_device.h";
-			res["get_num_groups"] 					= "ocl_device.h";
-			res["barrier"]							= "ocl_device.h";
+			res["get_num_groups"] 					= "ocl_device.h";*/
+			res["barrier"]							= "";
 
 			return res;
 		}

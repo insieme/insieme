@@ -52,6 +52,45 @@ namespace ocl_standalone {
 
 			Extensions extensions(converter.getNodeManager());
 
+			auto& basic = converter.getNodeManager().getBasicGenerator();
+			c_ast::CNodeManager& manager = *converter.getCNodeManager();
+
+			if (basic.isChar(type)) {
+				return type_info_utils::createInfo(manager, "char");
+			}
+
+			if (basic.isInt2(type)) {
+				return type_info_utils::createInfo(manager, "short");
+			}
+
+			if (basic.isUInt2(type)) {
+				return type_info_utils::createInfo(manager, "unsigned short");
+			}
+
+			if (basic.isInt4(type)) {
+				return type_info_utils::createInfo(manager, "int");
+			}
+
+			if (basic.isUInt4(type)) {
+				return type_info_utils::createInfo(manager, "unsigned int");
+			}
+
+			if (basic.isInt8(type)) {
+				return type_info_utils::createInfo(manager, "long");
+			}
+
+			if (basic.isUInt8(type)) {
+				return type_info_utils::createInfo(manager, "unsigned long");
+			}
+
+			if (basic.isFloat(type)) {
+				return type_info_utils::createInfo(manager, "float");
+			}
+
+			if (basic.isDouble(type)) {
+				return type_info_utils::createInfo(manager, "double");
+			}
+
 			// determine kind of address space
 			char const * attribute;
 			if (extensions.isGlobalType(type)) {
@@ -64,6 +103,7 @@ namespace ocl_standalone {
 				// it is not an OpenCL type ..
 				return 0;
 			}
+
 
 			// resolve sub-type info
 			core::TypePtr subType = static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
