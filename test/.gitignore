@@ -6,8 +6,11 @@ build*
 *.out
 *.ir
 *.ref
+*.test
+*.bmp
+*.sh
 *~
-\#bin/*
+\#*/*
 
 *.cfg
 !test.cfg
