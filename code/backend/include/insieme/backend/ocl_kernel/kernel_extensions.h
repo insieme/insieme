@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/expressions.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
 namespace backend {
@@ -54,7 +55,7 @@ namespace ocl_kernel {
 	 * This class offers a list of IR extensions required to model concepts within the
 	 * OpenCL Kernel. 
 	 */
-	class Extensions {
+	class Extensions : public core::lang::Extension {
 	public:
 
 		const core::LiteralPtr wrapConst;
@@ -78,8 +79,14 @@ namespace ocl_kernel {
 
 		const core::LiteralPtr kernelWrapper;
 
+
+	private:
+
+		friend class core::NodeManager;
+
 		Extensions(core::NodeManager& manager);
 
+	public:
 
 		core::TypePtr getType(AddressSpace space, const core::TypePtr& type) const;
 		bool isWrapperType(const core::TypePtr& type) const;

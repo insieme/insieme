@@ -50,7 +50,7 @@ namespace ocl_kernel{
 
 	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
-		Extensions ext(manager);
+		auto& ext = manager.getLangExtension<Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 

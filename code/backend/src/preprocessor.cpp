@@ -82,12 +82,12 @@ namespace backend {
 	class ITEConverter : public core::transform::CachedNodeMapping {
 
 		const core::LiteralPtr ITE;
-		const IRExtensions extensions;
+		const IRExtensions& extensions;
 
 	public:
 
 		ITEConverter(core::NodeManager& manager) :
-			ITE(manager.basic.getIfThenElse()),  extensions(manager) {};
+			ITE(manager.basic.getIfThenElse()),  extensions(manager.getLangExtension<IRExtensions>()) {};
 
 		/**
 		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
@@ -306,7 +306,7 @@ namespace backend {
 		core::LiteralPtr replacement = core::Literal::get(manager, globalType, IRExtensions::GLOBAL_ID);
 
 		// replace global declaration statement with initalization block
-		IRExtensions extensions(manager);
+		const IRExtensions& extensions = manager.getLangExtension<IRExtensions>();
 		core::TypePtr unit = manager.getBasicGenerator().getUnit();
 		core::ExpressionPtr initValue = core::analysis::getArgument(globalDecl->getInitialization(), 0);
 		core::StatementPtr initGlobal = core::CallExpr::get(manager, unit, extensions.initGlobals, toVector(initValue));

@@ -287,7 +287,7 @@ namespace ocl_kernel {
 
 				core::ASTBuilder builder(manager);
 				auto& basic = manager.getBasicGenerator();
-				Extensions extensions(manager);
+				auto& extensions = manager.getLangExtension<Extensions>();
 
 				// perform conversion in post-order
 				core::NodePtr res = ptr->substitute(manager, *this);
@@ -366,12 +366,12 @@ namespace ocl_kernel {
 		class TypeWrapper : public core::transform::CachedNodeMapping {
 
 			core::NodeManager& manager;
-			const Extensions extensions;
+			const Extensions& extensions;
 
 		public:
 
 			TypeWrapper(core::NodeManager& manager) :
-				manager(manager),  extensions(manager) {}
+				manager(manager),  extensions(manager.getLangExtension<Extensions>()) {}
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 

@@ -36,43 +36,28 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/lang/extension.h"
-
 namespace insieme {
-namespace backend {
-namespace ocl_host {
+namespace core {
+namespace lang {
 
 	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * OpenCL Host. 
-	 */	
-	class Extensions : public core::lang::Extension {
+	 * This class represents the common base class of language extensions. Such
+	 * extensions are defining new types or literals and can be used within the
+	 * frontend, backends or analyses to encode information within the IR.
+	 *
+	 * Extensions should not directly be created. Instead, extensions should be created
+	 * using the corresponding factory method of the NodeManager.
+	 */
+	class Extension : private boost::noncopyable {
 	public:
-
-		const core::LiteralPtr initDevices;
-		const core::LiteralPtr getNumDevices;
-		const core::LiteralPtr getDevice;
-		const core::LiteralPtr releaseDevices;
-
-		const core::LiteralPtr createKernel;
-		const core::LiteralPtr setKernelNDrange;
-		const core::LiteralPtr runKernel;
-		const core::LiteralPtr releaseKernel;
-
-		const core::LiteralPtr createBuffer;
-		const core::LiteralPtr readBuffer;
-		const core::LiteralPtr writeBuffer;
-		const core::LiteralPtr releaseBuffer;
-
-	private:
-
-		friend class core::NodeManager;
-
-		Extensions(core::NodeManager& manager);
-
+		/**
+		 * A virtual destructor to enable the proper destruction of derived
+		 * instances.
+		 */
+		virtual ~Extension() {}
 	};
 
-} // end namespace ocl_host
-} // end namespace backend
+
+} // end namespace lang
+} // end namespace core
 } // end namespace insieme

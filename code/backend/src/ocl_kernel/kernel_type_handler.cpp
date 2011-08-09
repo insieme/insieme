@@ -50,9 +50,8 @@ namespace ocl_kernel {
 
 		TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
-			Extensions extensions(converter.getNodeManager());
-
 			auto& basic = converter.getNodeManager().getBasicGenerator();
+			auto& extensions = converter.getNodeManager().getLangExtension<Extensions>();
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
 			if (basic.isChar(type)) {

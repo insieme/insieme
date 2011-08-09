@@ -494,7 +494,7 @@ namespace backend {
 
 		// -- IR extensions --
 
-		IRExtensions ext(manager);
+		auto& ext = manager.getLangExtension<IRExtensions>();
 		res[ext.lazyITE] = OP_CONVERTER({
 			// simple translation of lazy ITE into C/C++ ?: operators
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2));

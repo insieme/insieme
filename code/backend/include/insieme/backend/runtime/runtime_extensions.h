@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/expressions.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
 namespace backend {
@@ -47,7 +48,7 @@ namespace runtime {
 	 * Insieme Runtime. The extensions include literals and types to model work items,
 	 * data items and additional runtime functionality.
 	 */
-	class Extensions {
+	class Extensions : public core::lang::Extension {
 	public:
 
 		/**
@@ -116,6 +117,10 @@ namespace runtime {
 		 * The literal representing the function used for terminating a work item.
 		 */
 		const core::LiteralPtr exitWorkItem;
+
+	private:
+
+		friend class core::NodeManager;
 
 		/**
 		 * Creates a new instance of this extension set. The given manager is used to construct

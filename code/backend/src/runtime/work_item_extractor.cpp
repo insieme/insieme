@@ -53,7 +53,7 @@ namespace runtime {
 		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.getBasicGenerator();
-			Extensions extensions(manager);
+			auto& extensions = manager.getLangExtension<Extensions>();
 
 			// check whether entry expression is of a function type
 			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
@@ -68,7 +68,7 @@ namespace runtime {
 		core::ExpressionPtr wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.getBasicGenerator();
-			Extensions extensions(manager);
+			auto& extensions = manager.getLangExtension<Extensions>();
 
 			// check whether entry is already of right type
 			core::TypePtr unit = basic.getUnit();
@@ -103,7 +103,7 @@ namespace runtime {
 		core::ProgramPtr extractWorkItems(core::NodeManager& manager, const core::ProgramPtr& program) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.getBasicGenerator();
-			Extensions extensions(manager);
+			auto& extensions = manager.getLangExtension<Extensions>();
 
 			core::TypePtr unit = basic.getUnit();
 			core::TypePtr intType = basic.getUInt4();

@@ -65,7 +65,7 @@ namespace ocl_kernel {
 			core::DeclarationStmtPtr decl = static_pointer_cast<const core::DeclarationStmt>(node);
 
 			// check for a OCL extended type ...
-			Extensions extensions(context.getConverter().getNodeManager());
+			const Extensions& extensions = context.getConverter().getNodeManager().getLangExtension<Extensions>();
 			if (!extensions.isWrapperType(decl->getVariable()->getType())) {
 				return res;
 			}

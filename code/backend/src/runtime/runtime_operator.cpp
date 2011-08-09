@@ -52,7 +52,7 @@ namespace runtime {
 
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
-		Extensions ext(manager);
+		const Extensions& ext = manager.getLangExtension<Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
