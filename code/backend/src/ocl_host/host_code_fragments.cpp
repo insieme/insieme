@@ -96,11 +96,12 @@ namespace ocl_host {
 
 	std::ostream& KernelCodeTable::printTo(std::ostream& out) const {
 
-		out << "// --- kernel codes ---\n";
+		out <<	"// --- the kernel code table --- \n"
+				"irt_ocl_kernel_code " KERNEL_TABLE_NAME "[] = {\n";
 
 		int counter = 0;
 		for_each(codes, [&](const KernelCode& cur) {
-			out << "const char* kernel_" << counter++ << " = \n    \"";
+			out << "    { // kernel " << counter++ << "\n    \"";
 
 			// the most pure version:
 			// escape(out) << *cur.code;
@@ -113,16 +114,8 @@ namespace ocl_host {
 			string code = buffer.str();
 			boost::replace_all(code, "\\n", "\"\n    \"");
 			out << code;
-			out << "\";\n";
+			out << "\"\n    },\n";
 		});
-
-		out <<  "\n"
-				"// --- the kernel code table --- \n"
-				"irt_ocl_kernel_code " KERNEL_TABLE_NAME "[] = {\n";
-
-		for(int i=0; i<counter; i++) {
-			out << "    { kernel_" << i << " },\n";
-		}
 
 		return out << "};\n\n";
 	}
