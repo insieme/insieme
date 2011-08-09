@@ -43,6 +43,10 @@
 #include <sstream>
 #include <iterator>
 
+#include <boost/iostreams/concepts.hpp>
+#include <boost/iostreams/operations.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+
 #include "functional_utils.h"
 
 using std::string;
@@ -184,5 +188,61 @@ std::ostream& operator<<(std::ostream& out, const Multiplier<Element, Printer>& 
 template<typename Element, typename Printer = print<id<Element>>>
 Multiplier<Element, Printer> times(const Element& element, unsigned times, const string& separator = "", const Printer& printer = Printer()) {
 	return Multiplier<Element, Printer>(element, times, printer, separator);
+}
+
+
+namespace {
+
+	struct escape_character_filter {
+		typedef char char_type;
+		typedef boost::iostreams::output_filter_tag  category;
+
+		template<typename Sink>
+		bool put(Sink& snk, char c)
+		{
+			switch(c) {
+			case '\a': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'a');
+			case '\b': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'b');
+			case '\f': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'f');
+			case '\n': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'n');
+			case '\r': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'r');
+			case '\t': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 't');
+			case '\v': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, 'v');
+			case '\'': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '\'');
+			case '\\': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '\\');
+			case '"': return boost::iostreams::put(snk, '\\') && boost::iostreams::put(snk, '"');
+			}
+			return boost::iostreams::put(snk, c);
+		}
+	};
+
+	template<typename T>
+	class CharacterEscaper {
+		T& sink;
+		boost::iostreams::filtering_ostream filter;
+	public:
+		CharacterEscaper(T& sink) : sink(sink) {
+			filter.push(escape_character_filter());
+			filter.push(sink);
+			filter.set_auto_close(true);
+		}
+
+		CharacterEscaper(const CharacterEscaper& other) : sink(other.sink) {
+			filter.push(escape_character_filter());
+			filter.push(sink);
+			filter.set_auto_close(true);
+		}
+
+		template<typename E>
+		CharacterEscaper& operator<<(E element) {
+			filter << element;
+			return *this;
+		}
+	};
+}
+
+template<typename T>
+CharacterEscaper<T> escape(T& stream) {
+	return CharacterEscaper<T>(stream);
 }
 

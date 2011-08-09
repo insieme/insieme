@@ -67,3 +67,18 @@ TEST(StringUtilsTest, split) {
 	EXPECT_EQ(toVector<string>("Some", "more", "space"), split("Some    more    space"));
 	EXPECT_EQ(toVector<string>(), split(""));
 }
+
+
+TEST(EscapeTest, escape) {
+
+	std::stringstream out;
+
+	// use the escape utility to stream stuff in an escaping encoding
+	escape(out) << "Hello \n \"" << " some \\ test ...  \" \' ";
+
+	// check the result
+	EXPECT_EQ("Hello \\n \\\" some \\\\ test ...  \\\" \\\' ", out.str());
+}
+
+
+
