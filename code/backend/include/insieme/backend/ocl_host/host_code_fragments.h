@@ -34,51 +34,65 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/converter.h"
-#include "insieme/backend/function_manager.h"
-#include "insieme/backend/statement_converter.h"
-#include "insieme/backend/ocl_host/host_operator.h"
-#include "insieme/backend/ocl_host/host_extensions.h"
-#include "insieme/backend/ocl_host/host_code_fragments.h"
+#pragma once
 
-#include "insieme/backend/ocl_kernel/kernel_backend.h"
-#include "insieme/backend/ocl_kernel/kernel_extensions.h"
+#include "insieme/utils/map_utils.h"
+
+#include "insieme/core/forward_decls.h"
 
 #include "insieme/backend/c_ast/c_code.h"
-#include "insieme/backend/c_ast/c_ast_utils.h"
-
-#include "insieme/utils/string_utils.h"
+#include "insieme/backend/converter.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_host {
 
-	OperatorConverterTable& addOpenCLHostSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
+	// ------------------------------------------------------------------------
+	//  Within this header file a list of special code fragments used for
+	//  creating code to be executed on the Insieme runtime is defined.
+	// ------------------------------------------------------------------------
 
-		//auto& ext = manager.getLangExtension<Extensions>();
-		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
+	class KernelCodeTable;
+	typedef Ptr<KernelCodeTable> KernelCodeTablePtr;
 
-		#include "insieme/backend/operator_converter_begin.inc"
+	struct KernelCode;
+
+	/**
+	 * The implementation table fragment realizing a list of indexable kernel
+	 * code strings embedded within the resutling target code.
+	 */
+	class KernelCodeTable : public c_ast::CodeFragment {
+
+		const Converter& converter;
+
+		utils::map::PointerMap<core::ExpressionPtr, unsigned> kernelMap;
+
+		vector<KernelCode> codes;
+
+	public:
+
+		KernelCodeTable(const Converter& converter)
+			: converter(converter), kernelMap(), codes() {
+			addInclude("irt_all_impls.h");
+		}
+
+		static KernelCodeTablePtr get(const Converter& converter);
+
+		const c_ast::ExpressionPtr getTableToken();
+
+		unsigned registerKernel(const core::ExpressionPtr& kernel);
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	};
 
 
+	struct KernelCode {
+		backend::TargetCodePtr code;
 
-		table[kernelExt.kernelWrapper] 	= OP_CONVERTER({
+		KernelCode(const backend::TargetCodePtr& code) : code(code) {}
+	};
 
-			KernelCodeTablePtr table = KernelCodeTable::get(context.getConverter());
-			context.addDependency(table);
-
-			unsigned kernelID = table->registerKernel(call);
-
-
-			return C_NODE_MANAGER->create<c_ast::Literal>(""); // ciao
-		});
-
-		#include "insieme/backend/operator_converter_end.inc"
-
-		return table;
-	}
-
-
-} // end namespace ocl_host
+} // end namespace runtime
 } // end namespace backend
 } // end namespace insieme

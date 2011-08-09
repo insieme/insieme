@@ -234,7 +234,7 @@ namespace {
 		}
 
 		template<typename E>
-		CharacterEscaper& operator<<(E element) {
+		CharacterEscaper& operator<<(E& element) {
 			filter << element;
 			return *this;
 		}

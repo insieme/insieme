@@ -154,3 +154,10 @@ irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
 void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
+
+// ------------------ kernel code handling --------------
+
+typedef struct _irt_ocl_kernel_code {
+	const char* code;
+} irt_ocl_kernel_code;
+
