@@ -97,7 +97,7 @@ void irt_exit_handler() {
 #endif
 	irt_cleanup_globals();
 	free(irt_g_workers);
-	IRT_INFO("\nInsieme runtime exiting.\n");
+	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
 
 // error handling

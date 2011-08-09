@@ -141,7 +141,7 @@ namespace runtime {
 			// assemble parameters
 			vector<core::VariablePtr> params; // no parameters so far (not supported)
 
-			core::FunctionTypePtr mainType = builder.functionType(core::TypeList(), intType);
+			core::FunctionTypePtr mainType = builder.functionType(core::TypeList(), basic.getInt4());
 
 			// create new main function
 			core::StatementPtr body = builder.compoundStmt(stmts);

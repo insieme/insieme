@@ -249,6 +249,18 @@ namespace backend {
 				return info;
 			}
 
+			// also test struct variant
+			name = "struct " + name;
+			pos2 = includeTable.find(name);
+			if (pos2 != includeTable.end()) {
+				// create new info referencing a header file
+				const string& header = pos2->second;
+				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
+				typeInfos.insert(std::make_pair(type, info));
+				return info;
+			}
+
+
 			// try resolving it using type handlers
 			for(auto it = typeHandlers.begin(); it!= typeHandlers.end(); ++it) {
 				TypeInfo* info = (*it)(converter, type);
@@ -984,7 +996,7 @@ namespace backend {
 		TypeIncludeTable res;
 
 		// add function definitions from macro file
-		#define TYPE(l,f) res[#f] = l;
+		#define TYPE(l,f) res[f] = l;
 		#include "includes.def"
 		#undef TYPE
 
