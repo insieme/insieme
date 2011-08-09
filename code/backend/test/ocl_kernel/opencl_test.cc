@@ -52,7 +52,7 @@
 #include "insieme/frontend/clang_config.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
-#include "insieme/backend/ocl_kernel/kernel_backend.h"
+#include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_config.h"
 
 using namespace insieme::core;
@@ -94,7 +94,7 @@ TEST(ocl_hostKernel, baseTest) {
 	
 	std::cout << "Start OpenCL Backend visit\n";
         
-	auto backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
+	auto backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 	auto converted = backend->convert(program);
 	std::cout << "Converted code:\n" << *converted;
 }

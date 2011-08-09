@@ -134,7 +134,7 @@ namespace ocl_kernel {
 
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res = getBasicOperatorTable(manager);
-			return addOpenCLSpecificOps(manager, res);
+			return addOpenCLKernelSpecificOps(manager, res);
 		}
 
 		FunctionIncludeTable getFunctionIncludeTable() {
