@@ -40,67 +40,34 @@
 
 namespace insieme {
 namespace backend {
-namespace ocl_kernel {
-
-
-	enum AddressSpace {
-		PRIVATE,
-		LOCAL,
-		GLOBAL,
-		CONSTANT,
-	};
+namespace ocl_host {
 
 	/**
 	 * This class offers a list of IR extensions required to model concepts within the
-	 * OpenCL Kernel. 
-	 */
+	 * OpenCL Host. 
+	 */	
 	class Extensions {
 	public:
 
-		const core::LiteralPtr wrapConst;
-		const core::LiteralPtr unwrapConst;
+		const core::LiteralPtr initDevices;
+		const core::LiteralPtr getNumDevices;
+		const core::LiteralPtr getDevice;
+		const core::LiteralPtr releaseDevices;
 
-		const core::LiteralPtr wrapGlobal;
-		const core::LiteralPtr unwrapGlobal;
+		const core::LiteralPtr createKernel;
+		const core::LiteralPtr setKernelNDrange;
+		const core::LiteralPtr runKernel;
+		const core::LiteralPtr releaseKernel;
 
-		const core::LiteralPtr wrapLocal;
-		const core::LiteralPtr unwrapLocal;
-
-		const core::LiteralPtr getLocalID;
-
-		const core::LiteralPtr getGlobalID;
-
-		const core::LiteralPtr getLocalSize;
-
-		const core::LiteralPtr getGlobalSize;
-
-		const core::LiteralPtr getNumGroups;
-
-		const core::LiteralPtr kernelWrapper;
+		const core::LiteralPtr createBuffer;
+		const core::LiteralPtr readBuffer;
+		const core::LiteralPtr writeBuffer;
+		const core::LiteralPtr releaseBuffer;
 
 		Extensions(core::NodeManager& manager);
 
-
-		core::TypePtr getType(AddressSpace space, const core::TypePtr& type) const;
-		bool isWrapperType(const core::TypePtr& type) const;
-		bool isWrapperType(AddressSpace space, const core::TypePtr& type) const;
-
-		const core::LiteralPtr& getWrapper(AddressSpace space) const;
-		const core::LiteralPtr& getUnWrapper(AddressSpace space) const;
-
-		core::TypePtr getGlobalType(const core::TypePtr& type) const;
-		core::TypePtr getLocalType(const core::TypePtr& type) const;
-		core::TypePtr getConstType(const core::TypePtr& type) const;
-
-		bool isGlobalType(const core::TypePtr& type) const;
-		bool isLocalType(const core::TypePtr& type) const;
-		bool isConstType(const core::TypePtr& type) const;
-
-		core::ExpressionPtr wrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
-		core::ExpressionPtr unWrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
-
 	};
 
-} // end namespace ocl_kernel
+} // end namespace ocl_host
 } // end namespace backend
 } // end namespace insieme

@@ -36,71 +36,42 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
+#include "insieme/backend/backend.h"
 
 namespace insieme {
 namespace backend {
-namespace ocl_kernel {
+namespace ocl_host {
 
-
-	enum AddressSpace {
-		PRIVATE,
-		LOCAL,
-		GLOBAL,
-		CONSTANT,
-	};
+	// A forward declaration of the OpenCL Host backend implementation
+	class OCLHostBackend;
+	typedef std::shared_ptr<OCLHostBackend> OCLHostBackendPtr;
 
 	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * OpenCL Kernel. 
+	 * The OpenCL Host backend aims on generating pure sequential code without
+	 * any dependencies to any runtime implementation.
 	 */
-	class Extensions {
+	class OCLHostBackend : public Backend {
 	public:
 
-		const core::LiteralPtr wrapConst;
-		const core::LiteralPtr unwrapConst;
+		/**
+		 * A factory method obtaining a smart pointer referencing a
+		 * fresh instance of the OpenCL Host backend using the default configuration.
+		 *
+		 * @return a smart pointer to a fresh instance of the sequential backend
+		 */
+		static OCLHostBackendPtr getDefault();
 
-		const core::LiteralPtr wrapGlobal;
-		const core::LiteralPtr unwrapGlobal;
-
-		const core::LiteralPtr wrapLocal;
-		const core::LiteralPtr unwrapLocal;
-
-		const core::LiteralPtr getLocalID;
-
-		const core::LiteralPtr getGlobalID;
-
-		const core::LiteralPtr getLocalSize;
-
-		const core::LiteralPtr getGlobalSize;
-
-		const core::LiteralPtr getNumGroups;
-
-		const core::LiteralPtr kernelWrapper;
-
-		Extensions(core::NodeManager& manager);
-
-
-		core::TypePtr getType(AddressSpace space, const core::TypePtr& type) const;
-		bool isWrapperType(const core::TypePtr& type) const;
-		bool isWrapperType(AddressSpace space, const core::TypePtr& type) const;
-
-		const core::LiteralPtr& getWrapper(AddressSpace space) const;
-		const core::LiteralPtr& getUnWrapper(AddressSpace space) const;
-
-		core::TypePtr getGlobalType(const core::TypePtr& type) const;
-		core::TypePtr getLocalType(const core::TypePtr& type) const;
-		core::TypePtr getConstType(const core::TypePtr& type) const;
-
-		bool isGlobalType(const core::TypePtr& type) const;
-		bool isLocalType(const core::TypePtr& type) const;
-		bool isConstType(const core::TypePtr& type) const;
-
-		core::ExpressionPtr wrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
-		core::ExpressionPtr unWrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
+		/**
+		 * The main facade function of the OpenCL Host backend. This function converts the given
+		 * IR representation into pure C99-target code.
+		 *
+		 * @param source the program to be converted
+		 * @return a pointer to the converted target code
+		 */
+		backend::TargetCodePtr convert(const core::NodePtr& source) const;
 
 	};
 
-} // end namespace ocl_kernel
+} // end namespace ocl_host
 } // end namespace backend
 } // end namespace insieme
