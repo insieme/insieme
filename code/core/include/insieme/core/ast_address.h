@@ -241,6 +241,7 @@ public:
 	static std::size_t hashSingleStepPath(const NodePtr& node);
 };
 
+
 // forward declaration
 struct StaticAddressCast;
 struct DynamicAddressCast;
@@ -566,6 +567,20 @@ struct AddressChildFactory {
 		return value.getAddressOfChild(childIndex);
 	}
 };
+
+template <class T>
+Address<const T> concat(const Address<const T>& head, const Address<const T>& tail) {
+	assert(head.getAddressedNode() == tail.getRootNode() && "Impossible to merge addresses");
+	const Path& tailPath = tail.getPath(); 
+	// If try to merge a path with another path containing only 1 node we return the head path
+	if ( tailPath.getLength() <= 1) { return head; }
+
+	Path newPath = head.getPath();
+	for(int i=tailPath.getLength()-2; i>=0; --i) {
+		newPath = newPath.extendForChild( tailPath.getPathToParent(i).getIndex() );
+	}
+	return Address<const T>(newPath);
+}
 
 } // end namespace core
 } // end namespace insieme

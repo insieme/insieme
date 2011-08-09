@@ -59,6 +59,13 @@ struct VariableNotFound : public std::logic_error {
 	~VariableNotFound() throw () { }
 };
 
+// Forward Declarations for Constraints 
+class Constraint;
+
+class ConstraintCombiner;
+
+typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
+
 /**************************************************************************************************
  * AffineFunction represents an affine function based on an iteration vector. An
  * affine linear function is a function in the form:
@@ -75,7 +82,7 @@ struct VariableNotFound : public std::logic_error {
  * change. But because new iterators or parameters are always append, we can easily create the new
  * coefficient matrix for the mutated iteration vector, thanks to the sep member.  
  *************************************************************************************************/
-class AffineFunction : public utils::Printable, 
+class AffineFunction : public boost::noncopyable, public utils::Printable, 
 	public boost::equality_comparable<AffineFunction> { 
 	// Iteration Vector to which this function refers to 
 	const IterationVector& iterVec;
@@ -110,16 +117,12 @@ public:
 	static const unsigned PRINT_ZEROS = 0x01;
 	static const unsigned PRINT_VARS  = 0x10;
 
-	template <class T>
-	friend class ConstraintSet; 
-
 	typedef std::pair<const Element&, int> Term;
 	/**
 	 * Class utilized to build iterators over Affine Functions. 
 	 *
 	 * The iterator returns a pair<Element,int> containing the element and the coefficient
 	 * associated to it. 
-	 *
 	 */
 	struct iterator : public boost::forward_iterator_helper<iterator, Term> {
 
@@ -149,6 +152,9 @@ public:
 		assert(coeffVec.size() == iterVec.size());
 	}
 
+	// This constructor is defined private because client of this class should not 
+	// be able to invoke it. Only the Constraint class makes use of it therefore 
+	// it is defined friend 
 	AffineFunction(const AffineFunction& other) : 
 		iterVec(other.iterVec), coeffs(other.coeffs), sep(other.sep) { }
 
@@ -163,8 +169,8 @@ public:
 	int getCoeff(const Element& elem) const;
 	int getCoeff(const core::VariablePtr& var) const;
 
-	iterator begin() const { return iterator(iterVec, *this); }
-	iterator end() const { return iterator(iterVec, *this, iterVec.size()); }
+	inline iterator begin() const { return iterator(iterVec, *this); }
+	inline iterator end() const { return iterator(iterVec, *this, iterVec.size()); }
 
 	inline size_t size() const { return iterVec.size(); } 
 

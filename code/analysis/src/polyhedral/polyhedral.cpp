@@ -42,7 +42,7 @@ namespace poly {
 
 //==== ScatteringFunction ==============================================================================
 
-std::ostream& ScatteringFunction::printTo(std::ostream& out) const {
+std::ostream& AffineSystem::printTo(std::ostream& out) const {
 	out << "IV: " << iterVec << std::endl << "{" << std::endl;
 	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunction& cur) { 
 			out << "\t" << cur.toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
@@ -50,17 +50,18 @@ std::ostream& ScatteringFunction::printTo(std::ostream& out) const {
 	return out << "}" << std::endl;
 }
 
-void ScatteringFunction::cloneRows(const std::list<AffineFunction>& src) { 
-	std::for_each(src.begin(), src.end(), [&] (const AffineFunction& cur) { funcs.push_back(cur.toBase(iterVec)); } );
+void AffineSystem::appendRow(const AffineFunction& af) { 
+	assert( iterVec == af.getIterationVector() && 
+			"Adding an affine function to a scattering matrix with a different base");
+
+	// adding a row to this matrix 
+	funcs.push_back( af.toBase(iterVec) );
 }
 
-ScatteringFunction& ScatteringFunction::operator=(const ScatteringFunction& other) {
-	iterVec = other.iterVec;
-	funcs.clear();
-	cloneRows(other.funcs);
-	return *this;
+void AffineSystem::cloneRows(const AffineList& src) { 
+	std::for_each(src.begin(), src.end(), 
+			[&] (const AffineFunction& cur) { funcs.push_back( cur.toBase(iterVec) ); } );
 }
-
 
 } // end poly namesapce 
 } // end analysis namespace 

@@ -45,6 +45,8 @@
 
 #include "insieme/analysis/defuse_collect.h"
 
+#include "boost/optional.hpp"
+
 namespace insieme {
 namespace analysis {
 namespace scop {
@@ -71,11 +73,9 @@ typedef std::vector<RefPtr> RefAccessList;
  *************************************************************************************************/
 class ScopStmt { 
 	
-	core::StatementAddress 		address;
-
-	boost::optional<poly::ScatteringFunction> 	scattering;
-
-	RefAccessList				accesses;
+	core::StatementAddress 			address;
+	poly::ScatteringFunctionPtr		scattering;
+	RefAccessList					accesses;
 
 public:
 	ScopStmt(const core::StatementAddress& addr) : address(addr) { }
@@ -84,6 +84,7 @@ public:
 	
 	const core::StatementAddress& operator->() const { return address; }
 
+	// FIXME:
 	const poly::ScatteringFunction& getScattering() const { 
 		if (!scattering) {
 			// compute the scattering and cache the result
@@ -121,15 +122,27 @@ public:
 
 	typedef std::map<core::StatementAddress, poly::ScatteringFunction> StmtScattering;
 
+	/********************************************************************************************** 
+	 * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
+	 * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
+	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
+	 * access is defined and the access functions for each dimensions.
+	 *********************************************************************************************/
+	typedef std::tuple< 
+		RefPtr, poly::ConstraintCombinerPtr, std::vector<poly::ConstraintCombinerPtr>
+	> AccessInfo;
+
+	typedef std::vector<AccessInfo> AccessInfoList;
+
 	ScopRegion( const poly::IterationVector& iv, 
-			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),
+			const poly::IterationDomain& comb = poly::IterationDomain(),
 			const ScopStmtList& stmts = ScopStmtList(),
 			const StmtAddressList& subScops = StmtAddressList(),
 			const RefAccessList& accesses = RefAccessList() ) : 
 		core::NodeAnnotation(),
 		iterVec(iv), 
 		stmts(stmts),
-		constraints(poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
+		constraints( poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
 		subScops(subScops), 
 		accesses(accesses) { } 
 
@@ -158,7 +171,7 @@ public:
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::ConstraintCombinerPtr getConstraints() const { return constraints; }
+	inline const poly::IterationDomain& getDomainConstraints() const { return constraints; }
 
 	/** 
 	 * Returns the set of ref accesses which are within this region (eventual access which are in
@@ -167,16 +180,7 @@ public:
 	 */
 	inline const RefAccessList& getDirectAccesses() const { return accesses; }
 
-	/** 
-	 * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
-	 * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
-	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
-	 * access is defined and the access functions for each dimensions.
-	 */
-	typedef std::tuple<RefPtr, poly::IterationDomain, std::vector<poly::ConstraintCombinerPtr>> AccessInfo;
-
-	typedef std::vector<AccessInfo> AccessInfoList;
-
+	
 	const AccessInfoList listAccesses() const;
 
 	/** 

@@ -36,7 +36,6 @@
 
 #pragma once 
 
-#include <array>
 #include <iterator>
 #include <stdexcept>
 #include <memory>
@@ -57,51 +56,42 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
-// Defines a list of constraints stored in a vector
-typedef std::vector<Constraint> ConstraintList;
+typedef ConstraintCombinerPtr IterationDomain;
 
-//****************************************************************************************************
-// IterationDomanin: is the class which defines the shape of the polyhedron, the set of integer
-// points of an N-dimensional plane are delimited by affine linear functions which define a convex
-// region, therefore the polyhedron. 
-//****************************************************************************************************
-struct IterationDomain : public utils::Printable {
-	IterationDomain(const IterationVector& iterVec, const ConstraintCombinerPtr& combiner) : 
-		iterVec(iterVec), constraints(combiner) { }
+struct AffineSystem : public utils::Printable {
+	
+	typedef std::list<AffineFunction> AffineList;
 
-	std::ostream& printTo(std::ostream& out) const {
-		return out << "Iteration Domain: \n\tIV: " << iterVec << "\n\tCONS: [ " << *constraints << " ]";
-	}
+	AffineSystem(const IterationVector& iterVec) : iterVec(iterVec) { }	
+	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) { cloneRows(other.funcs); }
 
-private:
-	IterationVector 		iterVec;
-	ConstraintCombinerPtr	constraints; 
+	inline const IterationVector& getIterationVector() const { return iterVec; }
+
+	void appendRow(const AffineFunction& af);
+
+	inline size_t size() const { return funcs.size(); }
+
+	std::ostream& printTo(std::ostream& out) const;
+
+private:	
+	void cloneRows(const AffineList&);
+
+	const IterationVector& iterVec; 
+	AffineList funcs;
 };
 
 //*****************************************************************************************************
 // ScatteringFunction: A scattering function represent the order of execution of statements inside a
 // SCoP
 //*****************************************************************************************************
-struct ScatteringFunction : public utils::Printable {
+struct ScatteringFunction : public AffineSystem {
 
-	ScatteringFunction(const IterationVector& iterVec) : iterVec(iterVec) { }
-	ScatteringFunction(const ScatteringFunction& other) : iterVec(other.iterVec) { cloneRows(other.funcs); }
+	ScatteringFunction(const IterationVector& iterVec) : AffineSystem(iterVec) { }
+	ScatteringFunction(const ScatteringFunction& other) : AffineSystem(other) { }
 
-	inline void appendRow(const AffineFunction& af) {  funcs.push_back( af.toBase(iterVec) ); }
-	
-	ScatteringFunction& operator=(const ScatteringFunction& other);
-
-	inline const IterationVector& getIterationVector() const { return iterVec; }
-
-	std::ostream& printTo(std::ostream& out) const;
-
-private:
-
-	void cloneRows(const std::list<AffineFunction>& src);
-
-	IterationVector iterVec; 
-	std::list<AffineFunction> funcs;
 };
+
+typedef std::shared_ptr<ScatteringFunction> ScatteringFunctionPtr;
 
 } // end poly namespace
 } // end analysis namespace
