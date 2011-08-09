@@ -115,7 +115,7 @@ typedef struct _irt_ocl_device {
 irt_ocl_device* devices;
 cl_uint num_devices;
 
-typedef enum {IRT_OCL_SOURCE, IRT_OCL_BINARY, IRT_OCL_NO_CACHE} irt_ocl_create_kernel_flag;  
+typedef enum {IRT_OCL_SOURCE, IRT_OCL_BINARY, IRT_OCL_STRING, IRT_OCL_NO_CACHE} irt_ocl_create_kernel_flag;
 typedef enum {IRT_OCL_SEC, IRT_OCL_MILLI, IRT_OCL_NANO} irt_ocl_profile_event_flag;
 
 void irt_ocl_init_devices();
