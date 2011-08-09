@@ -51,6 +51,7 @@
 #include "insieme/backend/parallel_manager.h"
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/ocl_host/host_backend.h"
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -82,9 +83,10 @@ namespace ocl_host {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				makePreProcessor<IfThenElseInlining>(),
-				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>()
+			makePreProcessor<IfThenElseInlining>(),
+			makePreProcessor<RestoreGlobals>(),
+			makePreProcessor<InitZeroSubstitution>(),
+			makePreProcessor<ocl_kernel::OCLPreprocessor>()
 		);
 		converter.setPreProcessor(preprocessor);
 
