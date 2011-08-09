@@ -154,5 +154,5 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, 0, NULL);
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 	// TODO solve with event handling
-	while(main_wi->state != IRT_WI_STATE_DONE) sleep(5);
+	while(main_wi->state != IRT_WI_STATE_DONE) sleep(0);
 }

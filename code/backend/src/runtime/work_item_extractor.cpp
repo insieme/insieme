@@ -134,13 +134,14 @@ namespace runtime {
 			core::ExpressionPtr start = builder.callExpr(unit, standalone, toVector(getWorkerCount, extensions.initContext, extensions.cleanupContext));
 
 			stmts.push_back(start);
+			stmts.push_back(builder.returnStmt(builder.intLit(0)));
 
 			// ------------------- Creation of new main function -------------------------
 
 			// assemble parameters
 			vector<core::VariablePtr> params; // no parameters so far (not supported)
 
-			core::FunctionTypePtr mainType = builder.functionType(core::TypeList(), unit);
+			core::FunctionTypePtr mainType = builder.functionType(core::TypeList(), intType);
 
 			// create new main function
 			core::StatementPtr body = builder.compoundStmt(stmts);

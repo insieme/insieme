@@ -467,76 +467,79 @@ int main(int argc, char** argv) {
 			string backendName = "";
 			be::BackendPtr backend;
 
-			char selection = 'p'; // default
+			// see whether a backend has been selected
 			if (!CommandLineOptions::Backend.empty()) {
-				selection = CommandLineOptions::Backend[0];
+
+				// get option
+				char selection = CommandLineOptions::Backend[0];
 				if (selection < 'a') { // to lower case
 					selection += 'a' - 'A';
 				}
+
+				// ###################################################
+				// TODO: remove this
+				// enforces the usage of the full backend for testing
+//				selection = 'r';
+//				selection = 's';
+//				selection = 'o';
+				// ###################################################
+
+
+				switch(selection) {
+					case 'o': {
+						backendName = "OpenCL.Standalone.Backend";
+
+						//TODO find the OpenCLChecker
+						//				insieme::opencl_backend::OpenCLChecker oc;
+						//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
+
+						backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
+						break;
+					}
+					case 'r': {
+						backendName = "Runtime.Backend";
+						backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+						break;
+					}
+					case 's': {
+						backendName = "Sequential.Backend";
+						backend = insieme::backend::sequential::SequentialBackend::getDefault();
+						break;
+					}
+					case 'p':
+					default: {
+						backendName = "Simple.Backend";
+						backend = insieme::simple_backend::SimpleBackend::getDefault();
+					}
+				}
+
+				insieme::utils::Timer timer(backendName);
+
+				LOG(INFO) << "======================= Converting to TargetCode ================================";
+
+				// convert code
+				be::TargetCodePtr targetCode = backend->convert(program);
+
+				// select output target
+				if(!CommandLineOptions::Output.empty()) {
+					// write result to file ...
+					std::fstream outFile(CommandLineOptions::Output, std::fstream::out | std::fstream::trunc);
+					outFile << *targetCode;
+					outFile.close();
+
+					// TODO: reinstate rewriter when fractions of programs are supported as entry points
+//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
+
+				} else {
+					// just write result to logger
+					LOG(INFO) << *targetCode;
+				}
+
+				// print timing information
+				timer.stop();
+				LOG(INFO) << timer;
 			}
 
-			// ###################################################
-			// TODO: remove this
-			// enforces the usage of the full backend for testing
-//			selection = 'r';
-//			selection = 's';
-//			selection = 'o';
-			// ###################################################
-
-
-			switch(selection) {
-				case 'o': {
-					backendName = "OpenCL.Standalone.Backend";
-
-					//TODO find the OpenCLChecker
-					//				insieme::opencl_backend::OpenCLChecker oc;
-					//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
-
-					backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
-					break;
-				}
-				case 'r': {
-					backendName = "Runtime.Backend";
-					backend = insieme::backend::runtime::RuntimeBackend::getDefault();
-					break;
-				}
-				case 's': {
-					backendName = "Sequential.Backend";
-					backend = insieme::backend::sequential::SequentialBackend::getDefault();
-					break;
-				}
-				case 'p':
-				default: {
-					backendName = "Simple.Backend";
-					backend = insieme::simple_backend::SimpleBackend::getDefault();
-				}
-			}
-
-			insieme::utils::Timer timer(backendName);
-
-			LOG(INFO) << "======================= Converting to TargetCode ================================";
-
-			// convert code
-			be::TargetCodePtr targetCode = backend->convert(program);
-
-			// select output target
-			if(!CommandLineOptions::Output.empty()) {
-				// write result to file ...
-				std::fstream outFile(CommandLineOptions::Output, std::fstream::out | std::fstream::trunc);
-				outFile << *targetCode;
-				outFile.close();
-
-				// TODO: reinstate rewriter when fractions of programs are supported as entry points
-//				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
-
-			} else {
-				// just write result to logger
-				LOG(INFO) << *targetCode;
-			}
-
-			// print timing information
-			timer.stop();
-			LOG(INFO) << timer;
 		}
 
 	} catch (fe::ClangParsingError& e) {

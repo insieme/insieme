@@ -66,13 +66,13 @@ TEST(FullBackend, HelloWorld) {
 //	ASSERT_TRUE(code) << "Unable to load input code!";
 //
 //	// print IR code
-////	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
+//	// EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
 //
 //	// create target code using real backend
 //	auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
 //
 //	// check target code
-////	EXPECT_EQ("", toString(*target));
+//	// EXPECT_EQ("", toString(*target));
 //
 //	std::fstream outFile("out.c", std::fstream::out | std::fstream::trunc);
 //	outFile << *target;
@@ -81,7 +81,7 @@ TEST(FullBackend, HelloWorld) {
 //	// see whether target code can be compiled
 //	// TODO: compile target code => test result
 //	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-//	compiler.addFlag("-lm");
+//	compiler.addFlag("-I /home/herbert/insieme/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 //	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
 //
 }

@@ -2,8 +2,10 @@
 build*
 *.insieme
 *.insieme.c
+*.insieme.*.c
 *.out
 *.ir
+*.ref
 *~
 \#bin/*
 
