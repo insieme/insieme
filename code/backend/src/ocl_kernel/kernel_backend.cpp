@@ -139,17 +139,14 @@ namespace ocl_kernel {
 
 		FunctionIncludeTable getFunctionIncludeTable() {
 			FunctionIncludeTable res = getBasicFunctionIncludeTable();
-
-			//res["irt_get_default_worker_count"] 			= "standalone.h"; // REMOVE
-			//res["irt_runtime_standalone"] 			= "standalone.h";
 			
 			// add OpenCL-specific includes
 
-			/*res["get_local_id"] 					= "ocl_device.h";
-			res["get_global_id"] 					= "ocl_device.h";
-			res["get_local_size"] 					= "ocl_device.h";
-			res["get_global_size"] 					= "ocl_device.h";
-			res["get_num_groups"] 					= "ocl_device.h";*/
+			res["get_local_id"] 					= "";
+			res["get_global_id"] 					= "";
+			res["get_local_size"]					= "";
+			res["get_global_size"] 					= "";
+			res["get_num_groups"] 					= "";
 			res["barrier"]							= "";
 
 			return res;
