@@ -54,8 +54,10 @@
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
+#include "insieme/backend/ocl_host/host_backend.h"
 
 #include "insieme/transform/ir_cleanup.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -80,6 +82,7 @@
 
 using namespace std;
 using namespace insieme::utils::log;
+using namespace insieme::annotations::ocl;
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
