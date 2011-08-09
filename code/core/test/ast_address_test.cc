@@ -139,6 +139,28 @@ TEST(NodeAddressTest, EqualityTest) {
 	EXPECT_EQ(ABD2.getAddressedNode(), ACD.getAddressedNode());
 }
 
+TEST(NodeAddressTest, MergePaths) {
+	ASTBuilder builder;
+
+	// test a diamond
+	TypePtr typeD = builder.genericType("D");
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeD));
+	TypePtr typeA = builder.genericType("A", toVector(typeB, typeC));
+
+	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
+
+	// start with root node R
+	NodeAddress BD(Path(typeB).extendForChild(0));
+	NodeAddress AB(Path(typeA).extendForChild(0));
+
+	NodeAddress ABD1 = concat(AB, BD);
+	EXPECT_EQ("0-0-0", toString(ABD1));
+
+	EXPECT_EQ(typeD, ABD1.getAddressedNode());
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

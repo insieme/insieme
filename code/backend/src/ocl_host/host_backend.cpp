@@ -52,6 +52,7 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+#include "insieme/backend/ocl_host/host_operator.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -60,6 +61,12 @@ namespace insieme {
 namespace backend {
 namespace ocl_host {
 
+
+	namespace {
+
+		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
+
+	}
 
 	OCLHostBackendPtr OCLHostBackend::getDefault() {
 		return std::make_shared<OCLHostBackend>();
@@ -104,7 +111,7 @@ namespace ocl_host {
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicFunctionIncludeTable());
+		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getBasicFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
 
 		ParallelManager parallelManager;
@@ -112,6 +119,14 @@ namespace ocl_host {
 
 		// conduct conversion
 		return converter.convert(code);
+	}
+
+
+	namespace {
+		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
+			OperatorConverterTable res = getBasicOperatorTable(manager);
+			return addOpenCLHostSpecificOps(manager, res);
+		}
 	}
 
 } // end namespace ocl_host

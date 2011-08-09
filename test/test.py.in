@@ -387,7 +387,7 @@ def run_test_case(test_case_name):
 				if not check_diff(test_case_name, ref_out, test_out):
 					return 1
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
-				map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+				map(lambda x : os.remove(x), [testIr, testSBE, ref_out, test_out])
 		
 		sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
 #'''

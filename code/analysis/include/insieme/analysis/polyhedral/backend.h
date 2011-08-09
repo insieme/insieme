@@ -51,11 +51,11 @@ struct Context {
 	virtual ~Context() { }
 };
 
-/**
+/**************************************************************************************************
  * Generic implementation of a the concept of a set which is natively supported by polyhedral
  * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
  * union, difference, etc...)
- */
+ *************************************************************************************************/
 template <class Ctx>
 struct Set : public utils::Printable {
 
@@ -73,9 +73,10 @@ struct Set : public utils::Printable {
 	virtual std::ostream& printTo(std::ostream& out) const = 0; 
 
 	virtual ~Set() { }
+
 protected:
 	Ctx& ctx;
-	const IterationVector& iterVec; 
+	const IterationVector& iterVec;
 };
 
 template <class SetTy>

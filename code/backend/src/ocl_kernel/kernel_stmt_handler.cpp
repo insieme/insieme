@@ -83,8 +83,6 @@ namespace ocl_kernel {
 			// add code dependency
 			context.getDependencies().insert(info.typeInfo->definition);
 
-			LOG(INFO) << "What to do with " << *node << "?";
-
 			// get first argument of init statement
 			init = core::analysis::getArgument(init, 0);
 			auto initExpr = context.getConverter().getStmtConverter().convertInitExpression(context, init);

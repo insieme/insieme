@@ -40,8 +40,9 @@
 #include "insieme/core/ast_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
-
 #include "insieme/core/ast_builder.h"
+
+#include "insieme/utils/logging.h"
 
 #include <stack>
 
@@ -49,20 +50,21 @@
 #define AS_EXPR_ADDR(addr) static_address_cast<const Expression>(addr)
 
 namespace {
+
 using namespace insieme::core;
 using namespace insieme::core::lang;
 using namespace insieme::analysis;
 using namespace insieme::analysis::poly;
 using namespace insieme::analysis::scop;
 
-/**
+/**************************************************************************************************
  * Expection which is thrown when a particular tree is defined to be not a static control part. This
  * exception has to be forwarded until the root containing this node which has to be defined as a
  * non ScopRegion
  * 
  * Because this exception is only used within the implementation of the ScopRegion visitor, it is
  * defined in the anonymous namespace and therefore not visible outside this translation unit.
- */
+ *************************************************************************************************/
 class NotASCoP : public std::exception {
 	const NodePtr& root;
 public:
@@ -77,78 +79,81 @@ public:
 	virtual ~NotASCoP() throw() { }
 };
 
+/**************************************************************************************************
+ * Extract constraints from a conditional expression. This is used for determining constraints for 
+ * if and for statements. 
+ *************************************************************************************************/
 ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const ExpressionPtr& cond) {
 
 	NodeManager& mgr = cond->getNodeManager();
-    if (cond->getNodeType() == NT_CallExpr) {
-    	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
-        if ( mgr.basic.isIntCompOp(callExpr->getFunctionExpr()) || 
-	  		 mgr.basic.isUIntCompOp(callExpr->getFunctionExpr()) ) 
-		{
-			assert(callExpr->getArguments().size() == 2 && "Malformed expression");
+	assert (cond->getNodeType() == NT_CallExpr);
 
-			// First of all we check whether this condition is a composed by multiple conditions
-			// connected through || or && statements 
-			BasicGenerator::Operator&& op = 
-				mgr.basic.getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
+	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
+	if ( mgr.basic.isIntCompOp(callExpr->getFunctionExpr()) || 
+		 mgr.basic.isUIntCompOp(callExpr->getFunctionExpr()) ) 
+	{
+		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
-			switch (op) {
-			case BasicGenerator::LOr:
-			case BasicGenerator::LAnd:
-				{
-					ConstraintCombinerPtr&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
-					ConstraintCombinerPtr&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
+		// First of all we check whether this condition is a composed by multiple conditions
+		// connected through || or && statements 
+		BasicGenerator::Operator&& op = 
+			mgr.basic.getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
 
-					if (op == BasicGenerator::LAnd)	{	return lhs and rhs; }
-					else 							{	return lhs or rhs; }
-				}
-			case BasicGenerator::LNot:
-				 return std::make_shared<NegatedConstraintCombiner>( 
-						 extractFromCondition(iv, callExpr->getArgument(0))
-					);
-			default:
-				break;
+		switch (op) {
+		case BasicGenerator::LOr:
+		case BasicGenerator::LAnd:
+			{
+				ConstraintCombinerPtr&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
+				ConstraintCombinerPtr&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
+
+				if (op == BasicGenerator::LAnd)	{	return lhs and rhs; }
+				else 							{	return lhs or rhs; }
 			}
-			// A constraints is normalized having a 0 on the right side, therefore we build a
-			// temporary expression by subtracting the rhs to the lhs, Example: 
-			//
-			// if (a<b) { }    ->    if( a-b<0 ) { }
-			try {
-				ASTBuilder builder(mgr);
-				ExpressionPtr&& expr = builder.callExpr( 
-						mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
-					);
-				AffineFunction af(iv, expr);
-				// Determine the type of this constraint
-				Constraint::Type type;
-				switch (op) {
-					case BasicGenerator::Eq: type = Constraint::EQ; break;
-					case BasicGenerator::Ne: type = Constraint::NE; break;
-					case BasicGenerator::Lt: type = Constraint::LT; break;
-					case BasicGenerator::Le: type = Constraint::LE; break;
-					case BasicGenerator::Gt: type = Constraint::GT; break;
-					case BasicGenerator::Ge: type = Constraint::GE; break;
-					default:
-						assert(false && "Operation not supported!");
-				}
-				return makeCombiner( Constraint(af, type) );
-
-			} catch (const NotAffineExpr& e) { throw NotASCoP(cond); }
+		case BasicGenerator::LNot:
+			 return not_( extractFromCondition(iv, callExpr->getArgument(0)) );
+		default:
+			break;
 		}
+		// A constraints is normalized having a 0 on the right side, therefore we build a
+		// temporary expression by subtracting the rhs to the lhs, Example: 
+		//
+		// if (a<b) { }    ->    if( a-b<0 ) { }
+		try {
+			ASTBuilder builder(mgr);
+			ExpressionPtr&& expr = builder.callExpr( 
+					mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
+				);
+			AffineFunction af(iv, expr);
+			// Determine the type of this constraint
+			Constraint::Type type;
+			switch (op) {
+				case BasicGenerator::Eq: type = Constraint::EQ; break;
+				case BasicGenerator::Ne: type = Constraint::NE; break;
+				case BasicGenerator::Lt: type = Constraint::LT; break;
+				case BasicGenerator::Le: type = Constraint::LE; break;
+				case BasicGenerator::Gt: type = Constraint::GT; break;
+				case BasicGenerator::Ge: type = Constraint::GE; break;
+				default:
+					assert(false && "Operation not supported!");
+			}
+			return makeCombiner( Constraint(af, type) );
+
+		} catch (const NotAffineExpr& e) { throw NotASCoP(cond); }
 	}
-	assert(false);
+	LOG(ERROR) << *cond;
+	assert(false && "Condition Expression not supported");
 }
 
 IterationVector markAccessExpression(const ExpressionPtr& expr) {
 	try {
 		IterationVector it;
 		expr->addAnnotation(
-			std::make_shared<AccessFunction>( it, Constraint( AffineFunction(it, expr), Constraint::EQ ) ) 
+			std::make_shared<AccessFunction>( it, 
+				Constraint( AffineFunction(it, expr), Constraint::EQ ) 
+			) 
 		);
 		return it;
-	} catch(const NotAffineExpr& e) { 
-		throw NotASCoP(expr); 
-	}
+	} catch(const NotAffineExpr& e) { throw NotASCoP(expr); }
 }
 
 //===== ScopVisitor ================================================================================
@@ -157,6 +162,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	ScopList& scopList;
 	StmtAddressList subScops;
 
+	// Used as Stack
 	std::vector<ScopStmtList> regionStmts;
 
 	ScopVisitor(ScopList& scopList) : ASTVisitor<IterationVector, Address>(false), scopList(scopList) { 
@@ -167,12 +173,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	// eventual ref access statements existing in the body. For each array access we extract the
 	// equality constraint used for accessing each dimension of the array and store it in the
 	// AccessFunction annotation.
-	RefList visitBody(IterationVector& iterVec, const StatementAddress& body) { 
-		iterVec = merge(iterVec, visit(body));
+	RefList collectRefs(IterationVector& iterVec, const StatementAddress& body) { 
 		
-		if (body->getNodeType() != NT_CompoundStmt) { regionStmts.back().push_back(body); }
-
-		RefList&& refs = collectDefUse( body.getAddressedNode(), StatementSet(subScops.begin(), subScops.end()) );
+		RefList&& refs = collectDefUse( body.getAddressedNode() );
 		
 		// For now we only consider array access. 
 		//
@@ -189,29 +192,30 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		return refs;
 	}
 
-	/*
+	/**********************************************************************************************
 	 * Visit of If Statements: 
-	 *   Visits the then and else body checking whether they are SCoPs. In the case both the
-	 *   branches are SCoPs the condition is evaluated and a constraint created out of it. Two
-	 *   annotations will be then created, one with the positive condition and the second one with
-	 *   the negated condition which will be attached respectively to the then and the else body of
-	 *   the if statement. In the case one of the two branches is not a SCoP, the SCoP branch is
-	 *   inserted in the list of root scops (scopList) and the NotAScop exception thrown to the
-	 *   parent node. 
-	 */
+	 * Visits the then and else body checking whether they are SCoPs. In the case both the branches
+	 * are SCoPs the condition is evaluated and a constraint created out of it. Two annotations will
+	 * be then created, one with the positive condition and the second one with the negated
+	 * condition which will be attached respectively to the then and the else body of the if
+	 * statement. In the case one of the two branches is not a SCoP, the SCoP branch is inserted in
+	 * the list of root scops (scopList) and the NotAScop exception thrown to the parent node. 
+	 *********************************************************************************************/
 	IterationVector visitIfStmt(const IfStmtAddress& ifStmt) {
 		IterationVector ret, saveThen, saveElse;
-		RefList thenRefs, elseRefs;
+		// RefList thenRefs, elseRefs;
 		StmtAddressList thenScops, elseScops;
 		bool isThenSCOP = true, isElseSCOP = true;
 
 		try {
 			subScops.clear();
 			// check the then body
-			thenRefs = visitBody( ret, AS_STMT_ADDR(ifStmt.getAddressOfChild(1)) /*getThenBody()*/ );
+			saveThen = visit(AS_STMT_ADDR(ifStmt.getAddressOfChild(1)));
+
+			//FIXME thenRefs = visitBody( ret, AS_STMT_ADDR(ifStmt.getAddressOfChild(1)) /*getThenBody()*/ );
 			// save the sub scops of the then body
 			thenScops = subScops;
-			saveThen = ret;
+			// saveThen = ret;
 		} catch (const NotASCoP& e) { isThenSCOP = false; }
 
 		// reset the value of the iteration vector 
@@ -220,10 +224,12 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		try {
 			subScops.clear();
 			// check the else body
-			elseRefs = visitBody( ret, AS_STMT_ADDR(ifStmt.getAddressOfChild(2)) /*getElseBody()*/ );
+			saveElse = visit(AS_STMT_ADDR(ifStmt.getAddressOfChild(2)));
+
+			//FIXME elseRefs = visitBody( ret, AS_STMT_ADDR(ifStmt.getAddressOfChild(2)) /*getElseBody()*/ );
 			// save the sub scops of the else body
 			elseScops = subScops; 
-			saveElse = ret;
+			// saveElse = ret;
 		} catch (const NotASCoP& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
@@ -254,8 +260,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		// if no exception has been thrown we are sure the sub else and then tree are ScopRegions,
 		// therefore this node can be marked as SCoP as well.
 		ifStmt->getThenBody()->addAnnotation( 
-			std::make_shared<ScopRegion>(ret, comb, ScopStmtList(), thenScops, 
-				RefAccessList(thenRefs.arrays_begin(), thenRefs.arrays_end()) 
+			std::make_shared<ScopRegion>(ret, comb, ScopStmtList(), thenScops
+//				RefAccessList(thenRefs.arrays_begin(), thenRefs.arrays_end()) 
 			)
 		);
 		// Add the then body to the list of subscops to which the parent will point at
@@ -263,8 +269,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		
 		// the else body is annotated with the negated domain
 		ifStmt->getElseBody()->addAnnotation( 
-			std::make_shared<ScopRegion>(ret, not_(comb), ScopStmtList(), elseScops, 
-				RefAccessList(elseRefs.arrays_begin(), elseRefs.arrays_end()) 
+			std::make_shared<ScopRegion>(ret, not_(comb), ScopStmtList(), elseScops
+//				RefAccessList(elseRefs.arrays_begin(), elseRefs.arrays_end()) 
 			)
 		);
 		// Add the else body to the list of subscops to which the parent will point at
@@ -277,9 +283,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		regionStmts.push_back( ScopStmtList() );
 
 		subScops.clear();
-	
-		IterationVector bodyIV;
-		RefList&& refs = visitBody( bodyIV, AS_STMT_ADDR(forStmt.getAddressOfChild(3)) /*getBody()*/ );
+
+		IterationVector bodyIV = visit(AS_STMT_ADDR(forStmt.getAddressOfChild(3)));
+		//FIXME	RefList&& refs = visitBody( bodyIV, AS_STMT_ADDR(forStmt.getAddressOfChild(3)) /*getBody()*/ );
 		
 		IterationVector ret;
 		const DeclarationStmtPtr& decl = forStmt->getDeclaration();
@@ -308,8 +314,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			ret = merge(ret,bodyIV);
 
 			forStmt->addAnnotation( 
-				std::make_shared<ScopRegion>(ret, cons, regionStmts.back(), subScops, 
-					RefAccessList(refs.arrays_begin(), refs.arrays_end())
+				std::make_shared<ScopRegion>(ret, cons, regionStmts.back(), subScops 
+//					RefAccessList(refs.arrays_begin(), refs.arrays_end())
 				) 
 			); 
 
@@ -339,7 +345,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		bool isSCOP = true;
 		
 		StmtAddressList scops;
-
 		for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
 			try {
 				// clear Sub scops
@@ -353,14 +358,18 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				ret = merge(ret, this->visit( nodeAddr ));
 				
 				ScopStmtList& subStmts = regionStmts.back();
-				if (subStmts.empty() ) {
+				if ( subStmts.empty() ) {
 					// if there are no sub stmts it means this statement is a basic statement, 
 					// therefore we can add it to the list of region stmts 
 					assert(regionStmts.size() >= 2);
+
+					RefList&& refs = collectRefs(ret, AS_STMT_ADDR(nodeAddr));
+
 					(regionStmts.end()-2)->push_back( AS_STMT_ADDR(nodeAddr) );
 				} else {
-					// the statement has generated a number of sub stmts, this can happen when an if
-					// is visited or a compound statement, we copy the subStmts on the current level 
+					// the statement has generated a number of sub stmts, this can happen when a
+					// compound statement is visited which is not relevant for polyhedral analysis,
+					// we copy the subStmts on the current level 
 					assert(regionStmts.size() >= 2);
 					std::copy(subStmts.begin(), subStmts.end(), std::back_inserter(*(regionStmts.end()-2)));
 				}
@@ -422,6 +431,10 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		//}
 	//}
 
+	IterationVector visitStatement(const StatementAddress& stmt) { 
+		return IterationVector();
+	}
+	
 	IterationVector visitProgram(const ProgramAddress& prog) {
 		for(size_t i=0, end=prog->getEntryPoints().size(); i!=end; ++i) {
 			try { 
@@ -481,7 +494,7 @@ void visitScop(const poly::IterationVector& iterVec, const poly::ConstraintCombi
 		const ScopRegion& region, ScopRegion::AccessInfoList& accessList) 
 {
 	// assert( parentDomain->getIterationVector() == iterVec );
-	poly::ConstraintCombinerPtr&& currDomain = poly::cloneConstraint(iterVec, region.getConstraints());
+	poly::ConstraintCombinerPtr&& currDomain = poly::cloneConstraint(iterVec, region.getDomainConstraints());
 	if (parentDomain) { currDomain = parentDomain and currDomain; }
 	
 	// for every access in this region, convert the affine constraint to the new iteration vector 
@@ -497,7 +510,7 @@ void visitScop(const poly::IterationVector& iterVec, const poly::ConstraintCombi
 						idx.push_back( poly::makeCombiner( ann.getAccessConstraint().toBase(iterVec) ) );
 					}
 				);
-				accessList.push_back( std::make_tuple(cur, poly::IterationDomain(iterVec, currDomain), idx) ); 
+				accessList.push_back( std::make_tuple(cur, currDomain, idx) ); 
 				return;
 			}
 			// accessList.push_back( std::make_tuple(cur, poly::IterationDomain(iterVec, currDomain), std::vector<poly::AffineFunction>()) ); 

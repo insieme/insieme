@@ -173,6 +173,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# add general flags
 	add_definitions( -fshow-column )
 	add_definitions( -Wall )
+	# add_definitions( -Wextra )
+	# add_definitions( -pedantic )
 
 	# add flags for debug mode
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")

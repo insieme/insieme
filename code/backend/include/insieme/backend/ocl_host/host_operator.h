@@ -40,10 +40,10 @@
 
 namespace insieme {
 namespace backend {
-namespace ocl_kernel{
+namespace ocl_host{
 
-	OperatorConverterTable& addOpenCLKernelSpecificOps(core::NodeManager& manager, OperatorConverterTable& table);
+	OperatorConverterTable& addOpenCLHostSpecificOps(core::NodeManager& manager, OperatorConverterTable& table);
 
-} // end namespace ocl_kernel
+} // end namespace ocl_host
 } // end namespace backend
 } // end namespace insieme
