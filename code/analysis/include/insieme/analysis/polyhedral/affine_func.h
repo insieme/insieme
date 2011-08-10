@@ -49,7 +49,16 @@ namespace poly {
 //===== Exceptions =================================================================================
 struct NotAffineExpr : public std::logic_error {
 	const core::ExpressionPtr expr;
-	NotAffineExpr(const core::ExpressionPtr& expr);
+	std::string msg;
+
+	NotAffineExpr(const core::ExpressionPtr& expr) : std::logic_error(""), expr(expr) {
+		std::ostringstream ss;
+		ss << "Expression '" << *expr << "' is not a linear affine function";
+		msg = ss.str();
+	}
+	
+	virtual const char* what() const throw() { return msg.c_str(); }
+
 	~NotAffineExpr() throw () { }
 };
 

@@ -49,10 +49,14 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
-const char* NotAFormulaException::what() const throw() {	
+NotAFormulaException::NotAFormulaException(const NodePtr& expr) :expr(expr) {
 	std::ostringstream ss;
 	ss << "Cannot convert expression '" << *expr << "', not a formula!";
-	return ss.str().c_str();
+	msg = ss.str();
+}
+
+const char* NotAFormulaException::what() const throw() {	
+	return msg.c_str(); 
 }
 
 namespace {

@@ -78,7 +78,8 @@ class ScopStmt {
 	RefAccessList					accesses;
 
 public:
-	ScopStmt(const core::StatementAddress& addr) : address(addr) { }
+	ScopStmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
+		address(addr), accesses(accesses) { }
 
 	const core::StatementAddress& getAddr() const { return address; }
 	
@@ -137,14 +138,12 @@ public:
 	ScopRegion( const poly::IterationVector& iv, 
 			const poly::IterationDomain& comb = poly::IterationDomain(),
 			const ScopStmtList& stmts = ScopStmtList(),
-			const StmtAddressList& subScops = StmtAddressList(),
-			const RefAccessList& accesses = RefAccessList() ) : 
+			const StmtAddressList& subScops = StmtAddressList() ) : 
 		core::NodeAnnotation(),
 		iterVec(iv), 
 		stmts(stmts),
 		constraints( poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
-		subScops(subScops), 
-		accesses(accesses) { } 
+		subScops(subScops) { } 
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 
@@ -178,7 +177,7 @@ public:
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	inline const RefAccessList& getDirectAccesses() const { return accesses; }
+	inline const RefAccessList& getDirectAccesses() const { /*return accesses;*/ }
 
 	
 	const AccessInfoList listAccesses() const;
@@ -207,11 +206,6 @@ private:
 	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
 	 */
 	StmtAddressList subScops;
-
-	// Access informations 
-	RefAccessList accesses;
-
-	boost::optional<AccessInfoList> cachedAccessInfo;
 };
 
 /**************************************************************************************************

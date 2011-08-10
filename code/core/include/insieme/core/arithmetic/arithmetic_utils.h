@@ -77,10 +77,11 @@ namespace arithmetic {
 	 */
 	class NotAFormulaException : public std::exception {
 		NodePtr expr;
+		std::string msg;
 
 	public:
-		NotAFormulaException(const NodePtr& expr) : expr(expr) { }
-
+		NotAFormulaException(const NodePtr& expr);
+	
 		virtual const char* what() const throw();
 		virtual ~NotAFormulaException() throw() { }
 	};

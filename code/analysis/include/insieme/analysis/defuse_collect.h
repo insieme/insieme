@@ -59,11 +59,11 @@ class Ref;
 
 typedef std::shared_ptr<Ref> RefPtr; 
 
-/** 
+/**************************************************************************************************
  * Class Ref represent a generic IR ref which can be either assigned or read. In this context 
  * a Ref can be either a scalar variable, an array or a vector (having a ref type), a struct/class
  * member or the return value of a call expression returning a ref. 
- */
+ *************************************************************************************************/
 struct Ref : public utils::Printable {
 
 	// possible usage of a variable can be of three types: 

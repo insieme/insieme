@@ -43,9 +43,6 @@ namespace analysis {
 namespace poly {
 
 //====== Exceptions ===============================================================================
-NotAffineExpr::NotAffineExpr(const core::ExpressionPtr& expr): 
-                std::logic_error("Expression is not linear and affine"), expr(expr) { }
-
 VariableNotFound::VariableNotFound(const core::VariablePtr& var) : 
                 std::logic_error("Variable not found in the iteration vector."), var(var) { }
 
