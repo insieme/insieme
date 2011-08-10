@@ -39,10 +39,12 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
+#include "insieme/annotations/c/naming.h"
+
+#include "insieme/core/analysis/ir_utils.h"
+
 #include "insieme/backend/function_manager.h"
-
 #include "insieme/backend/c_ast/c_ast_utils.h"
-
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 
 namespace insieme {
@@ -63,7 +65,7 @@ namespace ocl_host {
 		auto res = manager->getFragment(ENTRY_NAME);
 		if (!res) {
 			// create new instance
-			KernelCodeTablePtr table = manager->create<KernelCodeTable>(converter);
+			KernelCodeTablePtr table = manager->create<KernelCodeTable>(boost::ref(converter));
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
 		}
@@ -82,7 +84,20 @@ namespace ocl_host {
 		unsigned id = codes.size();
 		kernelMap.insert(std::make_pair(kernel, id));
 
-		KernelCode code(ocl_kernel::OCLKernelBackend::getDefault()->convert(kernel));
+		assert(kernel->getNodeType() == core::NT_CallExpr);
+		core::ExpressionPtr kernelLambda = core::analysis::getArgument(kernel, 0);
+
+		// fix name of kernel
+		std::string name;
+		if (kernelLambda->hasAnnotation(annotations::c::CNameAnnotation::KEY)) {
+			name = kernelLambda->getAnnotation(annotations::c::CNameAnnotation::KEY)->getName();
+		} else {
+			name = "main_kernel";
+			kernelLambda->addAnnotation(std::make_shared<annotations::c::CNameAnnotation>(name));
+		}
+
+		// create a kernel code entry
+		KernelCode code(name, ocl_kernel::OCLKernelBackend::getDefault()->convert(kernel));
 		codes.push_back(code);
 
 		return id;
@@ -101,7 +116,8 @@ namespace ocl_host {
 
 		int counter = 0;
 		for_each(codes, [&](const KernelCode& cur) {
-			out << "    { // kernel " << counter++ << "\n    \"";
+			out << "    { // kernel " << counter++ << "\n"
+				   "    \"" << cur.name << "\",\n    \"";
 
 			// the most pure version:
 			// escape(out) << *cur.code;
