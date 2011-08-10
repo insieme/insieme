@@ -36,6 +36,8 @@
 
 #include "insieme/analysis/polyhedral/constraint.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace analysis {
 namespace poly {
@@ -146,10 +148,19 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 	void visit(const RawConstraintCombiner& rcc) { 
 		const Constraint& c = rcc.getConstraint();
+		// If we try to clone a constraint to a new constraint with the same iteration vector
+		// just return the same element 
+		//if (&c.getAffineFunction().getIterationVector() == &trg) { 
+	//		newCC = rcc; 
+	//		return;
+	//	}
+		
+		// we are really switching iteration vectors
 		if (transMap.empty() ) {
 			src = &c.getAffineFunction().getIterationVector();
 			transMap = transform( trg, *src );
 		}
+
 		assert(c.getAffineFunction().getIterationVector() == *src);
 		newCC = std::make_shared<RawConstraintCombiner>( c.toBase(trg, transMap) ); 
 	}
@@ -174,7 +185,6 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& old) {
 	if (!old) { return ConstraintCombinerPtr(); }
-	
 	ConstraintCloner cc(trgVec);
 	old->accept(cc);
 	return cc.newCC;

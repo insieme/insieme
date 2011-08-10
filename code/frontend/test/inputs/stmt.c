@@ -306,6 +306,25 @@ void switch_stmt_test() {
 	//	}
 	//};
 
+	for(;;) {
+	#pragma test \
+	"{ decl int<4> v2 = CAST<int<4>>(( *v1)); switch(v2) { case 10: { return CAST<unit>(9); (v1 := (( *v1)+10)); } case 8: (v1 := (( *v1)+10)) case 2: { (v1 := 1); continue; } case 3: { int.postInc(v1); return unit; } default: { } };}"
+	switch(a) {
+		case 10:
+			return 9;
+		case 8:
+			a += 10;
+			break;
+		case 2:
+			a = 1;
+			continue;
+		case 3: 
+			a++;
+			return;
+		default:
+			break;
+	}
+	}
 }
 
 
