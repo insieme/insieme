@@ -21,7 +21,7 @@ USE_RBE = 0
 INSIEME_FLAGS = "--std=c99 -I."
 CFLAGS_GCC = "-O3 -g --std=c99 -I."
 CFLAGS_SBE = "-O3 -g --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
-CFLAGS_RBE = "-O3 -g --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE"
+CFLAGS_RBE = "-O0 -g --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE"
 
 
 # linker flags
@@ -202,7 +202,6 @@ def run_test_case(test_case_name):
 
 			if USE_SBE:
 				if not os.path.exists(refSBE) and os.path.exists(testSBE):
-					shutil.copyfile(testSBE, refSBE)
 					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 				else:
 					sys.stderr.write(" * Comparing generated SBE output...    ")
@@ -214,7 +213,6 @@ def run_test_case(test_case_name):
 			
 			if USE_RBE:
 				if not os.path.exists(refRBE) and os.path.exists(testRBE):
-					shutil.copyfile(testRBE, refRBE)
 					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 				else:
 					sys.stderr.write(" * Comparing generated RBE output...    ")
@@ -313,7 +311,7 @@ def run_test_case(test_case_name):
 
 				if USE_RBE:
 					sys.stderr.write(" * Checking RBE program output...       ")
-					if not check_diff(test_case_name, ref_out, test_sbe_out):
+					if not check_diff(test_case_name, ref_out, test_rbe_out):
 						return 1
 
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
@@ -339,6 +337,13 @@ def run_test_case(test_case_name):
 					os.remove(test_sbe_out)
 				if USE_RBE: 
 					os.remove(test_rbe_out)
+
+				# update reference file if necessary
+				if not os.path.exists(refSBE) and os.path.exists(testSBE):
+					shutil.copyfile(testSBE, refSBE)
+				if not os.path.exists(refRBE) and os.path.exists(testRBE):
+					shutil.copyfile(testRBE, refRBE)
+
 			
 		else:  # it is an ocl test
 
@@ -382,7 +387,7 @@ def run_test_case(test_case_name):
 				if not check_diff(test_case_name, ref_out, test_out):
 					return 1
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
-				map(lambda x : os.remove(x), [testIr, testC, ref_out, test_out])
+				map(lambda x : os.remove(x), [testIr, testSBE, ref_out, test_out])
 		
 		sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
 #'''

@@ -34,69 +34,16 @@
  * regarding third party software licenses.
  */
 
-/**
- * A macro file defining relations between functions and types defined within various
- * headers.
- * 
- * FUN(x,y)  ... states that header file x contains a declaration of y
- * TYPE(x,y) ... states that header file x contains a definition of type y
- */
+#pragma once
 
-// -----------------------------------
-#if ! defined FUN
-	#define FUN(X,Y)
-	#define __INTERNAL_FUN_DEFINITION
-#endif /* NODE definition */
+#include "insieme/backend/operator_converter.h"
 
-#if ! defined TYPE
-	#define TYPE(X,Y)
-	#define __INTERNAL_TYPE_DEFINITION
-#endif /* NODE definition */
-// -----------------------------------
+namespace insieme {
+namespace backend {
+namespace ocl_host{
 
+	OperatorConverterTable& addOpenCLHostSpecificOps(core::NodeManager& manager, OperatorConverterTable& table);
 
-FUN("stdio.h", printf)
-FUN("stdio.h", fopen)
-FUN("stdio.h", fread)
-FUN("stdio.h", fgetc)
-FUN("stdio.h", fscanf)
-FUN("stdio.h", fwrite)
-FUN("stdio.h", fclose)
-FUN("stdio.h", sprintf)
-
-TYPE("stdio.h", "FILE")
-
-FUN("stdlib.h", malloc)
-FUN("stdlib.h", calloc)
-FUN("stdlib.h", free)
-
-FUN("stdlib.h", atoi)
-FUN("stdlib.h", atol)
-FUN("stdlib.h", atof)
-
-FUN("alloca.h", alloca)
-
-FUN("string.h", memcpy)
-FUN("string.h", strcmp)
-FUN("string.h", strtok)
-FUN("string.h", strchr)
-FUN("string.h", strrchr)
-FUN("string.h", strcpy)
-
-FUN("sys/time.h", gettimeofday)
-
-TYPE("sys/time.h", "struct timeval")
-
-
-
-// -----------------------------------
-#ifdef __INTERNAL_FUN_DEFINITION
-	#undef __INTERNAL_FUN_DEFINITION
-	#undef FUN
-#endif
-
-#ifdef __INTERNAL_TYPE_DEFINITION
-	#undef __INTERNAL_TYPE_DEFINITION
-	#undef TYPE
-#endif
-// -----------------------------------
+} // end namespace ocl_host
+} // end namespace backend
+} // end namespace insieme

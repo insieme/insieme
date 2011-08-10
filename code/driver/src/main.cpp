@@ -54,8 +54,10 @@
 #include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/sequential/sequential_backend.h"
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
+#include "insieme/backend/ocl_host/host_backend.h"
 
 #include "insieme/transform/ir_cleanup.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -80,6 +82,7 @@
 
 using namespace std;
 using namespace insieme::utils::log;
+using namespace insieme::annotations::ocl;
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
@@ -487,13 +490,28 @@ int main(int argc, char** argv) {
 
 				switch(selection) {
 					case 'o': {
-						backendName = "OpenCL.Standalone.Backend";
+						// check if the host is in the entrypoints, otherwise use the kernel backend
+						bool host = false;
+						const vector<ExpressionPtr>& ep = program->getEntryPoints();
+						for (vector<ExpressionPtr>::const_iterator it = ep.begin(); it != ep.end(); ++it) {
+							if((*it)->hasAnnotation(BaseAnnotation::KEY)) {
+								BaseAnnotationPtr&& annotations = (*it)->getAnnotation(BaseAnnotation::KEY);
+								for(BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
+									iter < annotations->getAnnotationListEnd(); ++iter) {
+									if(!dynamic_pointer_cast<KernelFctAnnotation>(*iter)) {
+										host = true;
+									}
+								}
+							}
+						}
 
-						//TODO find the OpenCLChecker
-						//				insieme::opencl_backend::OpenCLChecker oc;
-						//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
-
-						backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
+						if (host) {
+							backendName = "OpenCL.Host.Backend";
+							backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+						} else {
+							backendName = "OpenCL.Kernel.Backend";
+							backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
+						}
 						break;
 					}
 					case 'r': {

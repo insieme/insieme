@@ -34,69 +34,65 @@
  * regarding third party software licenses.
  */
 
-/**
- * A macro file defining relations between functions and types defined within various
- * headers.
- * 
- * FUN(x,y)  ... states that header file x contains a declaration of y
- * TYPE(x,y) ... states that header file x contains a definition of type y
- */
+#pragma once
 
-// -----------------------------------
-#if ! defined FUN
-	#define FUN(X,Y)
-	#define __INTERNAL_FUN_DEFINITION
-#endif /* NODE definition */
+#include "insieme/utils/map_utils.h"
 
-#if ! defined TYPE
-	#define TYPE(X,Y)
-	#define __INTERNAL_TYPE_DEFINITION
-#endif /* NODE definition */
-// -----------------------------------
+#include "insieme/core/forward_decls.h"
 
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/converter.h"
 
-FUN("stdio.h", printf)
-FUN("stdio.h", fopen)
-FUN("stdio.h", fread)
-FUN("stdio.h", fgetc)
-FUN("stdio.h", fscanf)
-FUN("stdio.h", fwrite)
-FUN("stdio.h", fclose)
-FUN("stdio.h", sprintf)
+namespace insieme {
+namespace backend {
+namespace ocl_host {
 
-TYPE("stdio.h", "FILE")
+	// ------------------------------------------------------------------------
+	//  Within this header file a list of special code fragments used for
+	//  creating code to be executed on the Insieme runtime is defined.
+	// ------------------------------------------------------------------------
 
-FUN("stdlib.h", malloc)
-FUN("stdlib.h", calloc)
-FUN("stdlib.h", free)
+	class KernelCodeTable;
+	typedef Ptr<KernelCodeTable> KernelCodeTablePtr;
 
-FUN("stdlib.h", atoi)
-FUN("stdlib.h", atol)
-FUN("stdlib.h", atof)
+	struct KernelCode;
 
-FUN("alloca.h", alloca)
+	/**
+	 * The implementation table fragment realizing a list of indexable kernel
+	 * code strings embedded within the resutling target code.
+	 */
+	class KernelCodeTable : public c_ast::CodeFragment {
 
-FUN("string.h", memcpy)
-FUN("string.h", strcmp)
-FUN("string.h", strtok)
-FUN("string.h", strchr)
-FUN("string.h", strrchr)
-FUN("string.h", strcpy)
+		const Converter& converter;
 
-FUN("sys/time.h", gettimeofday)
+		utils::map::PointerMap<core::ExpressionPtr, unsigned> kernelMap;
 
-TYPE("sys/time.h", "struct timeval")
+		vector<KernelCode> codes;
 
+	public:
+
+		KernelCodeTable(const Converter& converter)
+			: converter(converter), kernelMap(), codes() {
+			addInclude("irt_all_impls.h");
+		}
+
+		static KernelCodeTablePtr get(const Converter& converter);
+
+		const c_ast::ExpressionPtr getTableToken();
+
+		unsigned registerKernel(const core::ExpressionPtr& kernel);
+
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	};
 
 
-// -----------------------------------
-#ifdef __INTERNAL_FUN_DEFINITION
-	#undef __INTERNAL_FUN_DEFINITION
-	#undef FUN
-#endif
+	struct KernelCode {
+		backend::TargetCodePtr code;
 
-#ifdef __INTERNAL_TYPE_DEFINITION
-	#undef __INTERNAL_TYPE_DEFINITION
-	#undef TYPE
-#endif
-// -----------------------------------
+		KernelCode(const backend::TargetCodePtr& code) : code(code) {}
+	};
+
+} // end namespace runtime
+} // end namespace backend
+} // end namespace insieme

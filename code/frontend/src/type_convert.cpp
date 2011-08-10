@@ -51,6 +51,9 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
 
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
+
 using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
@@ -459,6 +462,13 @@ public:
 				// Enums are converted into integers
 				return convFact.builder.getBasicGenerator().getInt4();
 			} else {
+
+
+
+
+
+
+				// TODO
 				// handle struct/union/class
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
@@ -523,6 +533,18 @@ public:
 						);
 				}
 
+
+				// TODO
+				// c++ constructors
+				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+				if(recDeclCXX){
+					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(), xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+						CXXRecordDecl::ctor_iterator::value_type curr = *xit;
+						curr->dump();
+					}
+				}
+
+
 				// build a struct or union IR type
 				retTy = handleTagType(tagDecl, structElements);
 
@@ -583,6 +605,12 @@ public:
 					// so next time we encounter it, we don't need to compute the graph
 					convFact.ctx.recTypeCache.insert(std::make_pair(tagType, retTy));
 				}
+
+
+
+
+
+
 
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );

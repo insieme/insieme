@@ -62,6 +62,9 @@
 #include "clang/Index/Entity.h"
 #include "clang/Index/Indexer.h"
 
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
+
 using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
@@ -1159,6 +1162,9 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		//todo: CXX extensions
+		core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
+		////clang::Expr * callObject = callExpr->getImplicitObjectArgument();
+
 		assert(false && "CXXMemberCallExpr not yet handled");
 	}
 
@@ -1175,7 +1181,32 @@ public:
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
-		assert(false && "VisitCXXConstructExpr not yet handled");
+		START_LOG_EXPR_CONVERSION(callExpr);
+		const core::ASTBuilder& builder = convFact.builder;
+		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+
+		CXXMethodDecl* constructorDecl = dyn_cast<CXXMethodDecl>(callExpr->getConstructor());
+		assert(constructorDecl);
+		////const FunctionProtoType *FnType = callExpr->getType()->getAs<FunctionProtoType>();
+
+		// get class declaration
+		CXXRecordDecl * callingClass = constructorDecl->getParent();
+
+
+		std::cout << "Dump: ";
+		callingClass->dump();
+		std::cout << std::endl;
+
+		core::IdentifierPtr ident = builder.identifier(constructorDecl->getNameAsString());
+		core::ExpressionPtr retExpr;
+		core::ExpressionPtr op = gen.getCompositeMemberAccess();
+
+		////Expr** functionArgs = callExpr->getArgs();
+		////unsigned numArgs = callExpr->getNumArgs();
+
+		return retExpr;
+
+		//assert(false && "VisitCXXConstructExpr not yet handled");
 		//return NULL;
 	}
 
@@ -1212,6 +1243,7 @@ public:
 	core::ExpressionPtr VisitMemberExpr(clang::MemberExpr* membExpr)  {
 		START_LOG_EXPR_CONVERSION(membExpr);
 		const core::ASTBuilder& builder = convFact.builder;
+
 		core::ExpressionPtr&& base = Visit(membExpr->getBase());
 
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();

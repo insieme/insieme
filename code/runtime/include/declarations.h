@@ -46,7 +46,8 @@
 #define IRT_EVENT_LT_BUCKETS 72073
 
 // TODO : better configurability, maybe per-wi stack size set by compiler?
-#define IRT_WI_STACK_SIZE 1024 * 256
+// updated to 8MB due to failing test cases (quicksort, jacobi)
+#define IRT_WI_STACK_SIZE 8 * 1024 * 1024
 
 #define IRT_MAX_WORK_GROUPS 16
 

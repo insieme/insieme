@@ -34,69 +34,51 @@
  * regarding third party software licenses.
  */
 
-/**
- * A macro file defining relations between functions and types defined within various
- * headers.
- * 
- * FUN(x,y)  ... states that header file x contains a declaration of y
- * TYPE(x,y) ... states that header file x contains a definition of type y
- */
+#include "insieme/backend/converter.h"
+#include "insieme/backend/function_manager.h"
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/ocl_host/host_operator.h"
+#include "insieme/backend/ocl_host/host_extensions.h"
+#include "insieme/backend/ocl_host/host_code_fragments.h"
 
-// -----------------------------------
-#if ! defined FUN
-	#define FUN(X,Y)
-	#define __INTERNAL_FUN_DEFINITION
-#endif /* NODE definition */
+#include "insieme/backend/ocl_kernel/kernel_backend.h"
+#include "insieme/backend/ocl_kernel/kernel_extensions.h"
 
-#if ! defined TYPE
-	#define TYPE(X,Y)
-	#define __INTERNAL_TYPE_DEFINITION
-#endif /* NODE definition */
-// -----------------------------------
+#include "insieme/backend/c_ast/c_code.h"
+#include "insieme/backend/c_ast/c_ast_utils.h"
 
+#include "insieme/utils/string_utils.h"
 
-FUN("stdio.h", printf)
-FUN("stdio.h", fopen)
-FUN("stdio.h", fread)
-FUN("stdio.h", fgetc)
-FUN("stdio.h", fscanf)
-FUN("stdio.h", fwrite)
-FUN("stdio.h", fclose)
-FUN("stdio.h", sprintf)
+namespace insieme {
+namespace backend {
+namespace ocl_host {
 
-TYPE("stdio.h", "FILE")
+	OperatorConverterTable& addOpenCLHostSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
-FUN("stdlib.h", malloc)
-FUN("stdlib.h", calloc)
-FUN("stdlib.h", free)
+		//auto& ext = manager.getLangExtension<Extensions>();
+		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
 
-FUN("stdlib.h", atoi)
-FUN("stdlib.h", atol)
-FUN("stdlib.h", atof)
-
-FUN("alloca.h", alloca)
-
-FUN("string.h", memcpy)
-FUN("string.h", strcmp)
-FUN("string.h", strtok)
-FUN("string.h", strchr)
-FUN("string.h", strrchr)
-FUN("string.h", strcpy)
-
-FUN("sys/time.h", gettimeofday)
-
-TYPE("sys/time.h", "struct timeval")
+		#include "insieme/backend/operator_converter_begin.inc"
 
 
 
-// -----------------------------------
-#ifdef __INTERNAL_FUN_DEFINITION
-	#undef __INTERNAL_FUN_DEFINITION
-	#undef FUN
-#endif
+		table[kernelExt.kernelWrapper] 	= OP_CONVERTER({
 
-#ifdef __INTERNAL_TYPE_DEFINITION
-	#undef __INTERNAL_TYPE_DEFINITION
-	#undef TYPE
-#endif
-// -----------------------------------
+			KernelCodeTablePtr table = KernelCodeTable::get(context.getConverter());
+			context.addDependency(table);
+
+			unsigned kernelID = table->registerKernel(call);
+
+
+			return C_NODE_MANAGER->create<c_ast::Literal>(""); // ciao
+		});
+
+		#include "insieme/backend/operator_converter_end.inc"
+
+		return table;
+	}
+
+
+} // end namespace ocl_host
+} // end namespace backend
+} // end namespace insieme

@@ -48,7 +48,7 @@ namespace backend {
 namespace ocl_kernel{
 
 
-	OperatorConverterTable& addOpenCLSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
+	OperatorConverterTable& addOpenCLKernelSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
 		auto& ext = manager.getLangExtension<Extensions>();
 
