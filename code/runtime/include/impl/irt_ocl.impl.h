@@ -630,6 +630,114 @@ irt_ocl_kernel*  irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_nam
 	return kernel; // I want only to compile the program, with kernel name = ""
 }
 
+// REMOVE
+irt_ocl_kernel*  irt_ocl_create_kernel2(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
+	cl_program program = NULL;
+	char* binary_name = NULL;
+	size_t filesize = 0;
+	cl_int err_code;
+	if (flag != IRT_OCL_STRING) {
+		// create the binary name
+		size_t len, binary_name_size, cl_param_size;
+		char* device_name;
+		err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, 0, NULL, &cl_param_size);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
+		device_name = alloca (cl_param_size);
+		err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, cl_param_size, device_name, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
+
+		const char* file_ptr = strrchr(file_name, '/'); // remove the path from the file_name
+		if (file_ptr)
+			file_ptr++; // remove the last '/'
+		else
+			file_ptr = file_name;
+
+		len = strlen(file_ptr);
+		IRT_ASSERT(len >= 0, IRT_ERR_OCL, "Error size of file_name");
+
+		char* converted_file_name = alloca(len + 1); // +1 for the \0 in the end
+		strcpy (converted_file_name, file_ptr);
+		for (int i = 0; i < len; ++i) {
+			if (!isalnum ((int)converted_file_name[i])) {
+				converted_file_name[i] = '_';
+			}
+		}
+		binary_name_size = len;
+
+		len = strlen(device_name);
+		char* converted_device_name = alloca(len + 1); // +1 for the \0 in the end
+		strcpy (converted_device_name, device_name);
+		for (int i = 0; i < len; ++i) {
+			if (!isalnum ((int)converted_device_name[i])) {
+				converted_device_name[i] = '_';
+			}
+		}
+		binary_name_size += len;
+		binary_name_size += 6; // file_name.device_name.bin\0
+
+		binary_name = alloca (binary_name_size);
+
+		sprintf (binary_name, "%s.%s.bin", converted_file_name, converted_device_name);
+		//printf("%s\n", binary_name);
+	}
+	if ((flag == IRT_OCL_SOURCE) || (flag == IRT_OCL_STRING)) {
+		if (flag == IRT_OCL_SOURCE) {
+			char* program_source = _irt_load_program_source(file_name, &filesize);
+			IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
+			program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &program_source, NULL, &err_code);
+			IRT_ASSERT(err_code == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(err_code));
+			free(program_source);
+		} else { // case of IRT_OCL_STRING we use the file_name to pass the string
+			program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &file_name, NULL, &err_code);
+			IRT_ASSERT(err_code == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(err_code));
+		}
+
+		err_code = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
+
+		// If there are build errors, print them to the screen
+		if(err_code != CL_SUCCESS) {
+			IRT_INFO("Kernel program failed to build.\n");
+			char *buildLog;
+			size_t buildLogSize;
+			err_code = clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize);
+			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info: \"%s\"", _irt_error_string(err_code));
+			buildLog = (char*)malloc(buildLogSize);
+			err_code = clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL);
+			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info: \"%s\"", _irt_error_string(err_code));
+			buildLog[buildLogSize-1] = '\0';
+			IRT_INFO("Device Build Log:\n%s\n", buildLog);
+			free(buildLog);
+		}
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(err_code));
+	}
+
+	if (flag == IRT_OCL_SOURCE) _irt_save_program_binary(program, binary_name); // We don't save in case of IRT_OCL_STRING
+
+	if (flag == IRT_OCL_BINARY) {
+		cl_int binary_status;
+		unsigned char* program_s = (unsigned char*) _irt_load_program_source(binary_name, &filesize);
+		program = clCreateProgramWithBinary (dev->cl_context, 1, &(dev->cl_device), &filesize, (const unsigned char **) &program_s, &binary_status, &err_code);
+		free(program_s);
+		IRT_ASSERT(err_code == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(err_code));
+		err_code = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(err_code));
+	}
+
+	if ((kernel_name != NULL) && (*kernel_name != 0)) {
+		clCreateKernel(program, kernel_name, &err_code);
+		kernel->cl_kernel = clCreateKernel(program, kernel_name, &err_code);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel: \"%s\"", _irt_error_string(err_code));
+		kernel->type = IRT_OCL_TASK;
+		kernel->work_dim = 0;
+		kernel->global_work_size = 0;
+		kernel->local_work_size = 0;
+		kernel->dev = dev;
+	}
+	err_code = clReleaseProgram(program);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));
+	return kernel; // I want only to compile the program, with kernel name = ""
+}
+
 inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 	cl_int err_code = clReleaseKernel(kernel->cl_kernel);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing kernel");

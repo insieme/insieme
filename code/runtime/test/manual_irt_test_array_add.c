@@ -107,16 +107,43 @@ irt_wi_implementation g_insieme_impl_table[] = {
 	{ 2, g_insieme_wi_add_variants }
 };
 
+// OpenCL Kernel table
+unsigned g_kernel_code_table_size = 1;
+irt_ocl_kernel_code g_kernel_code_table[] = {
+	{
+		"vector_add",
+		"typedef struct _insieme_struct1 { \n"
+		"	int do_add; \n"
+		"	ulong v1; \n"
+		"	ulong v2; \n"
+		"} insieme_struct1; \n"
+		"__kernel void vector_add(__global const insieme_struct1* input, __global ulong* output, long num_elements) \n"
+		"{\n"
+		"	int gid = get_global_id(0);\n"
+		"	if (gid >= num_elements) return;\n"
+		"	if(input[gid].do_add) { output[gid] = (input[gid].v1 + input[gid].v2)/2; }\n"
+		"}"
+	}
+};
+
 // initialization
 void insieme_init_context(irt_context* context) {
 	#ifdef USE_OPENCL
-	cl_uint num = irt_ocl_get_num_devices();
-	for (uint i = 0; i < num; ++i){	
+	cl_uint num_devices = irt_ocl_get_num_devices();
+
+	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel)*num_devices*g_kernel_code_table_size);
+	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*)*num_devices);
+
+	for (uint i = 0; i < num_devices; ++i) {
+		context->kernel_binary_table[i] = &(tmp[i*g_kernel_code_table_size]);
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
-		irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "", "", IRT_OCL_SOURCE);
-		//irt_ocl_create_kernel(dev, "./test_array_add.cl", "", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
+
+		for (uint j = 0; j < g_kernel_code_table_size; ++j)
+			irt_ocl_create_kernel2(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
 	}
+
+	context->kernel_code_table = g_kernel_code_table;
 	#endif
 
 	context->type_table = g_insieme_type_table;
@@ -211,10 +238,8 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	uint64* output = (uint64*)outputblock->data;
 
 	irt_ocl_device* dev = irt_ocl_get_device(0);
+	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][0];
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
-	
-	irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_array_add.cl", "vector_add", "", IRT_OCL_BINARY);
-	//irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "./test_array_add.cl", "vector_add", "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 
 	cl_long len_input = (wi->range.end - wi->range.begin);
 	cl_long len_output = (wi->range.end - wi->range.begin);
@@ -225,27 +250,26 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_ocl_buffer* buf_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
 	irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_output);
 
-	irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);	
+	irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);
 
-        size_t szLocalWorkSize = 256;
-        float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
-        if(multiplier > (int)multiplier){
-                multiplier += 1;
-        }
-        size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
+	size_t szLocalWorkSize = 256;
+	float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
+	if(multiplier > (int)multiplier){
+		multiplier += 1;
+	}
+	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 	
 	irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
 
-        irt_ocl_run_kernel(kernel, 3,   sizeof(cl_mem), (void *)&(buf_input->cl_mem),
-                                        sizeof(cl_mem), (void *)&(buf_output->cl_mem),
-                                        sizeof(cl_long), (void *)&len_input);
+	irt_ocl_run_kernel(kernel, 3,   sizeof(cl_mem), (void *)&(buf_input->cl_mem),
+									sizeof(cl_mem), (void *)&(buf_output->cl_mem),
+									sizeof(cl_long), (void *)&len_input);
 
 	irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
 	//clFinish(dev->cl_queue); // ??	
 	
 	irt_ocl_release_buffer(buf_input);
 	irt_ocl_release_buffer(buf_output);
-	irt_ocl_release_kernel(kernel);
 	
 	irt_di_free(inputblock);
 	irt_di_free(outputblock);
