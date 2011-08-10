@@ -190,6 +190,14 @@ namespace c_ast {
 		virtual bool equals(const Node& node) const;
 	};
 
+	struct AttributedType : public Type {
+		string attribute;
+		TypePtr type;
+		AttributedType(const string& attribute, const TypePtr& type)
+			: Type(NT_AttributedType), attribute(attribute), type(type) {}
+		virtual bool equals(const Node& node) const;
+	};
+
 	// -- Statements -----------------------------
 
 	struct Statement : public Node {
@@ -448,8 +456,9 @@ namespace c_ast {
 
 	struct Function : public Definition {
 		enum Modifier {
-			STATIC = 1<<0,
-			INLINE = 1<<1
+			STATIC 		= 1<<0,
+			INLINE 		= 1<<1,
+			OCL_KERNEL 	= 1<<2
 		};
 		unsigned flags;
 		TypePtr returnType;

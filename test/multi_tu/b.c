@@ -9,5 +9,5 @@ int g(int a) {
 }
 
 int main(int argc, char** argv) {
-	printf("res=%d\n", f(argc, argc));
+	printf("res=%d\n", f(0, 0));
 }

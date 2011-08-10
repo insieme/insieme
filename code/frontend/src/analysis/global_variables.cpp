@@ -45,7 +45,8 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
-#include "insieme/c_info/naming.h"
+
+#include "insieme/annotations/c/naming.h"
 
 #include "clang/Index/Entity.h"
 #include "clang/Index/Indexer.h"
@@ -226,7 +227,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conv
 	}
 	core::StructTypePtr&& structTy = builder.structType(entries);
 	// we name this structure as '__insieme_globals'
-	structTy->addAnnotation( std::make_shared<c_info::CNameAnnotation>(std::string("__insieme_globals")) );
+	structTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(std::string("__insieme_globals")) );
 	// set back the original TU
 	assert(currTU && "Lost reference to the translation unit");
 	fact.setTranslationUnit(fact.getProgram().getTranslationUnit(currTU));

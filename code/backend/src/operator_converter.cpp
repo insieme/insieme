@@ -467,6 +467,10 @@ namespace backend {
 			return c_ast::eq(CONVERT_ARG(0), c_ast::lit(intType,"0"));
 		});
 
+		res[basic.getAnyRefToRef()] = OP_CONVERTER({
+			return c_ast::cast(CONVERT_RES_TYPE, CONVERT_ARG(0));
+		});
+
 
 		// -- others --
 
@@ -490,7 +494,7 @@ namespace backend {
 
 		// -- IR extensions --
 
-		IRExtensions ext(manager);
+		auto& ext = manager.getLangExtension<IRExtensions>();
 		res[ext.lazyITE] = OP_CONVERTER({
 			// simple translation of lazy ITE into C/C++ ?: operators
 			return c_ast::ite(CONVERT_ARG(0), CONVERT_ARG(1), CONVERT_ARG(2));
@@ -499,7 +503,7 @@ namespace backend {
 		res[ext.initGlobals] = OP_CONVERTER({
 
 			// ensure globals have not bee initialized before
-			assert(!context.getConverter().getGlobalFragment());
+			assert(!FRAGMENT_MANAGER->getFragment(IRExtensions::GLOBAL_ID));
 
 			core::TypePtr globalType = ARG(0)->getType();
 			if (globalType->getNodeType() == core::NT_RefType) {
@@ -514,7 +518,7 @@ namespace backend {
 			c_ast::CodeFragmentPtr globals = c_ast::CCodeFragment::createNew(FRAGMENT_MANAGER, decl);
 			globals->addDependency(info.definition);
 
-			context.getConverter().setGlobalFragment(globals);
+			FRAGMENT_MANAGER->bindFragment(IRExtensions::GLOBAL_ID, globals);
 			context.getDependencies().insert(globals);
 
 			// => no actual expression required her ...

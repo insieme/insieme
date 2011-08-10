@@ -64,7 +64,7 @@ FUN("stdio.h", fwrite)
 FUN("stdio.h", fclose)
 FUN("stdio.h", sprintf)
 
-TYPE("stdio.h", FILE)
+TYPE("stdio.h", "FILE")
 
 FUN("stdlib.h", malloc)
 FUN("stdlib.h", calloc)
@@ -81,6 +81,12 @@ FUN("string.h", strcmp)
 FUN("string.h", strtok)
 FUN("string.h", strchr)
 FUN("string.h", strrchr)
+FUN("string.h", strcpy)
+
+FUN("sys/time.h", gettimeofday)
+
+TYPE("sys/time.h", "struct timeval")
+
 
 
 // -----------------------------------

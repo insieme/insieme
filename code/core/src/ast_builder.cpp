@@ -147,6 +147,48 @@ LiteralPtr ASTBuilder::uintLit(const unsigned int val) const {
 }
 
 
+core::ExpressionPtr ASTBuilder::getZero(const core::TypePtr& type) const {
+
+	// if it is an integer ...
+	if (manager.basic.isInt(type)) {
+		return core::Literal::get(manager, type, "0");
+	}
+
+	// if it is a real ..
+	if (manager.basic.isReal(type)) {
+		return core::Literal::get(manager, type, "0.0");
+	}
+
+	// if it is a struct ...
+	if (type->getNodeType() == core::NT_StructType) {
+
+		// extract type and resolve members recursively
+		core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+
+		core::StructExpr::Members members;
+		for_each(structType->getEntries(), [&](const core::StructType::Entry& cur) {
+			members.push_back(std::make_pair(cur.first, getZero(cur.second)));
+		});
+
+		return core::StructExpr::get(manager, members);
+	}
+
+	// if it is a ref type ...
+	if (type->getNodeType() == core::NT_RefType) {
+		// return the corresponding flavor of NULL
+		core::TypePtr elementType = core::analysis::getReferencedType(type);
+		return callExpr(type, manager.basic.getAnyRefToRef(), manager.basic.getNull(), manager.basic.getTypeLiteral(elementType));
+	}
+
+	// TODO: extend for more types
+	LOG(FATAL) << "Encountered unsupported type: " << *type;
+	assert(false && "Given type not supported yet!");
+
+	// fall-back => no default initialization possible
+	return callExpr(type, manager.basic.getInitZero(), manager.basic.getTypeLiteral(type));
+}
+
+
 CallExprPtr ASTBuilder::deref(const ExpressionPtr& subExpr) const {
 	RefTypePtr&& refTy = dynamic_pointer_cast<const RefType>(subExpr->getType());
 	assert(refTy && "Deref a non ref type.");

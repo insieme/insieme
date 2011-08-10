@@ -160,7 +160,7 @@ void Rewriter::writeBack(const ProgramPtr& program, const backend::TargetCodePtr
 	std::for_each(entryPoints.begin(), entryPoints.end(),
 		[ &list ](const core::ExpressionPtr& curr) {
 			// we expect entry point to have annotations with corresponding source locations
-			std::shared_ptr<insieme::c_info::CLocAnnotation>&& locAnn = curr->getAnnotation(insieme::c_info::CLocAnnotation::KEY);
+			std::shared_ptr<insieme::annotations::c::CLocAnnotation>&& locAnn = curr->getAnnotation(insieme::annotations::c::CLocAnnotation::KEY);
 			assert(locAnn && "Entry point has not source location annotation, impossible to rewrite it back in the correct location");
 
 			// in case of function decl we wipe out the old definition from the source file
@@ -172,7 +172,7 @@ void Rewriter::writeBack(const ProgramPtr& program, const backend::TargetCodePtr
 				return;
 			}
 			// else we are replacing a code region, a function call has to be created
-//			std::shared_ptr<insieme::c_info::CNameAnnotation>&& nameAnn = curr.getAnnotation(insieme::c_info::CNameAnnotation::KEY);
+//			std::shared_ptr<insieme::annotations::c::CNameAnnotation>&& nameAnn = curr.getAnnotation(insieme::annotations::c::CNameAnnotation::KEY);
 //			assert(nameAnn && "No name associated to this lambda expr");
 	});
 

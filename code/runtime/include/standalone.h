@@ -38,6 +38,9 @@
 
 #include <pthread.h>
 
+#include "client_app.h"
+#include "irt_mqueue.h"
+
 /** Starts the runtime in standalone mode and executes work item 0.
   * Returns once that wi has finished.
   * worker_count : number of workers to start
@@ -95,7 +98,7 @@ void irt_exit_handler() {
 #endif
 	irt_cleanup_globals();
 	free(irt_g_workers);
-	IRT_INFO("\nInsieme runtime exiting.\n");
+	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
 
 // error handling
@@ -152,5 +155,5 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, 0, startup_params);
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 	// TODO solve with event handling
-	while(main_wi->state != IRT_WI_STATE_DONE) sleep(5);
+	while(main_wi->state != IRT_WI_STATE_DONE) sleep(0);
 }

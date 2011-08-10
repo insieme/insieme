@@ -84,6 +84,8 @@ public:
 
 	void addConstraint(const ConstraintCombinerPtr& c);
 
+	const isl_set* getAsIslSet() const { return set; }
+
 	~IslSet() { 
 		isl_dim_free(dim);
 		isl_set_free(set);

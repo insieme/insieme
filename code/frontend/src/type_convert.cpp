@@ -45,11 +45,14 @@
 
 #include "insieme/core/types.h"
 
-#include "insieme/c_info/naming.h"
+#include "insieme/annotations/c/naming.h"
 
 #include "clang/AST/TypeVisitor.h"
 #include <clang/AST/Decl.h>
 #include <clang/AST/Expr.h>
+
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/ExprCXX.h>
 
 using namespace clang;
 using namespace insieme;
@@ -393,7 +396,7 @@ public:
 
         core::TypePtr&& subType = Visit( typedefType->getDecl()->getUnderlyingType().getTypePtr() );
         // Adding the name of the typedef as annotation
-        subType->addAnnotation(std::make_shared<insieme::c_info::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
+        subType->addAnnotation(std::make_shared<annotations::c::CNameAnnotation>(typedefType->getDecl()->getNameAsString()));
 
         END_LOG_TYPE_CONVERSION( subType );
         return  subType;
@@ -459,6 +462,13 @@ public:
 				// Enums are converted into integers
 				return convFact.builder.getBasicGenerator().getInt4();
 			} else {
+
+
+
+
+
+
+				// TODO
 				// handle struct/union/class
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
 				assert(recDecl && "TagType decl is not of a RecordDecl type!");
@@ -523,6 +533,18 @@ public:
 						);
 				}
 
+
+				// TODO
+				// c++ constructors
+				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+				if(recDeclCXX){
+					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(), xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+						CXXRecordDecl::ctor_iterator::value_type curr = *xit;
+						curr->dump();
+					}
+				}
+
+
 				// build a struct or union IR type
 				retTy = handleTagType(tagDecl, structElements);
 
@@ -565,7 +587,7 @@ public:
 							this->convFact.ctx.recVarMap.erase(ty);
 
 							definitions.insert( std::make_pair(var, this->Visit(const_cast<Type*>(ty))) );
-							var->addAnnotation( std::make_shared<insieme::c_info::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
+							var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(tagTy->getDecl()->getNameAsString()) );
 
 							// reinsert the TypeVar in the map in order to solve the other recursive types
 							this->convFact.ctx.recVarMap.insert( std::make_pair(tagTy, var) );
@@ -584,8 +606,14 @@ public:
 					convFact.ctx.recTypeCache.insert(std::make_pair(tagType, retTy));
 				}
 
+
+
+
+
+
+
 				// Adding the name of the C struct as annotation
-				retTy->addAnnotation( std::make_shared<insieme::c_info::CNameAnnotation>(recDecl->getName()) );
+				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type

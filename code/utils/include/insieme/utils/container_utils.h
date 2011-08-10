@@ -71,7 +71,7 @@ inline void for_each(Container& c, const Functor& f) {
  * Convenience function for std::for_each.
  */
 template<typename Iterator, typename Functor>
-inline void for_range(std::pair<Iterator, Iterator>& c, const Functor& f) {
+inline void for_range(const std::pair<Iterator, Iterator>& c, const Functor& f) {
 	std::for_each(c.first, c.second, f);
 }
 

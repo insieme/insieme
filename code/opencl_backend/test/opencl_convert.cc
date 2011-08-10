@@ -44,11 +44,12 @@
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
-#include "insieme/c_info/naming.h"
+
+#include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/opencl_backend/opencl_convert.h"
@@ -56,7 +57,7 @@
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
-using namespace insieme::c_info;
+using namespace insieme::annotations::c;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 using namespace insieme::backend::ocl;

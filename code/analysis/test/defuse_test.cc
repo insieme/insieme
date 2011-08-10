@@ -178,7 +178,10 @@ TEST(DefUseCollect, ArrayAssignment) {
 		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
 		EXPECT_TRUE((*it)->getUsage() == Ref::USE);
 		++it;
+		EXPECT_TRUE(it != end);
 		EXPECT_TRUE((*it)->getUsage() == Ref::DEF);
+		++it;
+		EXPECT_TRUE(it == end);
 
 	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
 	

@@ -76,6 +76,9 @@ namespace c_ast {
 			includes.insert(cur->getIncludes().begin(), cur->getIncludes().end());
 		});
 		for_each(includes, [&](const string& cur) {
+			if (cur.empty()) {
+				return;
+			}
 			if (cur[0] == '<' || cur[0] == '"') {
 				out << "#include " << cur << "\n";
 			} else {
