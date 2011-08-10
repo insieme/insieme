@@ -88,9 +88,10 @@ namespace ocl_host {
 
 
 	struct KernelCode {
+		std::string name;
 		backend::TargetCodePtr code;
 
-		KernelCode(const backend::TargetCodePtr& code) : code(code) {}
+		KernelCode(const string& name, const backend::TargetCodePtr& code) : name(name), code(code) {}
 	};
 
 } // end namespace runtime

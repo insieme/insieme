@@ -131,16 +131,47 @@ irt_wi_implementation g_insieme_impl_table[] = {
 	{ 2, g_insieme_wi_mul_variants }
 };
 
+// OpenCL Kernel table
+unsigned g_kernel_code_table_size = 1;
+irt_ocl_kernel_code g_kernel_code_table[] = {
+	{
+		"matrix_mul",
+		"#ifdef cl_amd_fp64 \n"
+		"#	pragma OPENCL EXTENSION cl_amd_fp64 : enable // AMD GPU PRAGMA \n"
+		"#endif \n"
+		"#ifdef cl_khr_fp64 \n"
+		"#	pragma OPENCL EXTENSION cl_khr_fp64 : enable \n"
+		"#endif \n"
+		"__kernel void matrix_mul(__global const double* A, __global const double* B, __global double* C, long hA, long wA, long wB)\n"
+		"{\n"
+		"	int tx = get_global_id(0);\n"
+		"	int ty = get_global_id(1);\n"
+		"	if (tx >= hA || ty >= wA ) return;\n"
+		"	double sum = 0;\n"
+		"	for (int k = 0; k < wA; ++k) { sum += A[tx * wA + k] * B[k * wB + ty]; } \n"
+		"	C[tx * wB + ty] = sum;\n"
+		"}"
+	}
+};
+
 // initialization
 void insieme_init_context(irt_context* context) {
 	#ifdef USE_OPENCL
-	cl_uint num = irt_ocl_get_num_devices();
-	for (uint i = 0; i < num; ++i){	
+	cl_uint num_devices = irt_ocl_get_num_devices();
+
+	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel)*num_devices*g_kernel_code_table_size);
+	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*)*num_devices);
+
+	for (uint i = 0; i < num_devices; ++i) {
+		context->kernel_binary_table[i] = &(tmp[i*g_kernel_code_table_size]);
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
-		irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl", "", "", IRT_OCL_SOURCE);
-		//irt_ocl_create_kernel(dev, "./test_matrix_mul.cl", "", "", IRT_OCL_SOURCE); //FIXME REMOVE: add only for test
+
+		for (uint j = 0; j < g_kernel_code_table_size; ++j)
+			irt_ocl_create_kernel2(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
 	}
+
+	context->kernel_code_table = g_kernel_code_table;
 	#endif
 
 	context->type_table = g_insieme_type_table;
@@ -148,6 +179,11 @@ void insieme_init_context(irt_context* context) {
 }
 
 void insieme_cleanup_context(irt_context* context) {
+	#ifdef USE_OPENCL
+	free(context->kernel_binary_table[0]);
+	free(context->kernel_binary_table);
+	context->kernel_binary_table = NULL;
+	#endif
 	// nothing
 	printf("Cleaning up manual IRT test matrix mul\n");
 }
@@ -285,10 +321,8 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	double** C = (double**)blockC->data;
 	
 	irt_ocl_device* dev = irt_ocl_get_device(0);
+	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][0];
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
-	
-	irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "matrix_mul", "", IRT_OCL_BINARY);
-	//irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "./test_matrix_mul.cl", "matrix_mul", "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 	
 	cl_long hA = (subrange[0].end-subrange[0].begin);
 	cl_long wA = (subrange[1].end-subrange[1].begin);
@@ -342,7 +376,6 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_ocl_release_buffer(buff_A);
 	irt_ocl_release_buffer(buff_B);
 	irt_ocl_release_buffer(buff_C);
-	irt_ocl_release_kernel(kernel);	
 
 	irt_di_free(blockA);
 	irt_di_free(blockB);
@@ -380,10 +413,8 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	double** C = (double**)blockC->data;
 	
 	irt_ocl_device* dev = irt_ocl_get_device(0);
+	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][0];
 	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
-
-	irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, IRT_OCL_TEST_DIR "test_matrix_mul.cl" , "matrix_mul", "", IRT_OCL_BINARY);
-	//irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "./test_matrix_mul.cl", "matrix_mul", "", IRT_OCL_BINARY); // FIXME REMOVE: add only for test
 
 	cl_long hA = (subrange[0].end-subrange[0].begin);
 	cl_long wA = (subrange[1].end-subrange[1].begin);
@@ -463,8 +494,7 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	irt_ocl_release_buffer(buff_Cd);
 	irt_ocl_release_buffer(buff_Ah);
 	irt_ocl_release_buffer(buff_Bh);
-	irt_ocl_release_buffer(buff_Ch);	
-	irt_ocl_release_kernel(kernel);	
+	irt_ocl_release_buffer(buff_Ch);
 	
 	irt_di_free(blockA);
 	irt_di_free(blockB);

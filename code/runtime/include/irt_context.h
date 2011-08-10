@@ -38,6 +38,7 @@
 
 #include "declarations.h"
 #include "client_app.h"
+#include "irt_ocl.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -48,6 +49,9 @@ struct _irt_context {
 	irt_client_app* client_app;
 	irt_type* type_table;
 	irt_wi_implementation* impl_table;
+	irt_ocl_kernel_code* kernel_code_table;
+	irt_ocl_kernel** kernel_binary_table;
+
 	// private implementation detail
 	struct _irt_context* lookup_table_next;
 };

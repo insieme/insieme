@@ -82,7 +82,7 @@ namespace c_ast {
 		~CodeFragmentManager();
 
 		template<typename T, typename ... E>
-		Ptr<T> create(E& ... args) {
+		Ptr<T> create(E ... args) {
 			T* res = new T(args...);
 			fragments.push_back(res);
 			return Ptr<T>(res);
@@ -175,7 +175,7 @@ namespace c_ast {
 	 * An abstract base class for various kinds of specialized code fragments. This base class
 	 * defines an interface for code fragments to be handled uniformly.
 	 */
-	class CodeFragment : public utils::Printable {
+	class CodeFragment : public utils::Printable, private boost::noncopyable {
 
 		/**
 		 * The set of code fragments this fragment is depending on. The dependencies should form

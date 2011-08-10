@@ -127,11 +127,14 @@ namespace runtime {
 			core::TypePtr getWorkerCountType = builder.functionType(core::TypeList(), intType);
 			core::ExpressionPtr getWorkerCount = builder.callExpr(intType, builder.literal(getWorkerCountType,"irt_get_default_worker_count"), toVector<core::ExpressionPtr>());
 
+			core::TypePtr type = builder.genericType("MYstrangeType");
+			core::LiteralPtr args = builder.literal(type, "0");
+
 			// add call to irt_runtime_standalone
 			core::TypePtr contextFunType = builder.functionType(toVector<core::TypePtr>(builder.refType(extensions.contextType)), manager.basic.getUnit());
-			core::TypePtr standaloneFunType = builder.functionType(toVector(intType, contextFunType,contextFunType), unit);
+			core::TypePtr standaloneFunType = builder.functionType(toVector(intType, contextFunType,contextFunType,type), unit);
 			core::ExpressionPtr standalone = builder.literal(standaloneFunType, "irt_runtime_standalone");
-			core::ExpressionPtr start = builder.callExpr(unit, standalone, toVector(getWorkerCount, extensions.initContext, extensions.cleanupContext));
+			core::ExpressionPtr start = builder.callExpr(unit, standalone, toVector(getWorkerCount, extensions.initContext, extensions.cleanupContext, args));
 
 			stmts.push_back(start);
 			stmts.push_back(builder.returnStmt(builder.intLit(0)));
