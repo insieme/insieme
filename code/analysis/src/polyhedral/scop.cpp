@@ -316,12 +316,11 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		regionStmts.push( RegionStmtStack::value_type() );
 
 		{
+			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); } );
 
-			IterationVector bodyIV = visit( forStmt.getAddressOfChild(3) );
+			IterationVector bodyIV = visit( forStmt.getAddressOfChild(3) ), ret;
 
-			IterationVector ret;
-			 
 			const DeclarationStmtPtr& decl = forStmt.getAddressedNode()->getDeclaration();
 			ret.add( Iterator(decl->getVariable()) ); 
 			
@@ -371,13 +370,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitCompoundStmt(const CompoundStmtAddress& compStmt) {
-		CHECK_STACK_SIZE
-
 		IterationVector ret;
 		bool isSCOP = true;
 		AddressList scops;
 			
 		for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
+			// make sure at every iteration the stack size is not growing within this compound stmt
+			CHECK_STACK_SIZE
 			try {
 				// clear Sub scops
 				subScops.clear();
@@ -528,62 +527,18 @@ std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	return out;
 }
 
-
-
-namespace {
-
-/***************************************************************************************************
- * buildScatteringMatrix: construct the matrix which assign to each statement inside this SCoP a
- * logical data which represent the ordering on which statements are executed. 
- **************************************************************************************************/
-void buildScatteringMatrix(const ScopRegion& region, ScatteringFunction& curScat, ScopRegion::StmtScattering& finalScat) {
-	
-	/*size_t pos=0;*/
-	//const ScopStmtList& stmts = region.getDirectRegionStmts();
-	//std::for_each(stmts.begin(), stmts.end(), 
-		//[&](const ScopStmt& cur) {
-			//ScatteringFunction sf(curScat);
-			//const IterationVector& iterVec = curScat.getIterationVector();
-			//AffineFunction af( iterVec );
-			//af.setCoeff(poly::Constant(), pos++);
-			//sf.appendRow( af );
-
-			//if (cur->getNodeType() != NT_ForStmt) {
-				//finalScat.insert( std::make_pair(cur.getAddr(), sf) );
-				//return;
-			//}
-
-			//// if the statement is a loop, then we append a dimension with the corresponding
-			//// iterator variable and we go recursively to visit the body  
-			//const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(cur.getAddr().getAddressedNode());
-			//const VariablePtr& iter = forStmt->getDeclaration()->getVariable();
-
-			//AffineFunction newAf( iterVec );
-			//newAf.setCoeff(poly::Iterator(iter), 1);
-				
-			//sf.appendRow(newAf); 
-
-			//assert(cur->hasAnnotation(scop::ScopRegion::KEY) && "For loop inside SCoP must be annotated as SCoP.");
-			//buildScatteringMatrix(*cur->getAnnotation(scop::ScopRegion::KEY), sf, finalScat);
-		//}
-	/*);*/
-
-}
-
-} // end anonymous namespace 
-
 /**************************************************************************************************
  * Recursively process ScopRegions caching the information related to access functions and
  * scattering matrices for the statements contained in this Scop region
  *************************************************************************************************/
 void ScopRegion::resolveScop(const poly::IterationVector& iterVec, 
-							 const poly::ConstraintCombinerPtr& parentDomain, 
+							 const poly::IterationDomain& parentDomain, 
 			 	   		   	 const ScopRegion& region,
  							 const ScatteringFunction& curScat,
 							 ScatteringMatrix& scat) 
 {
 	// assert( parentDomain->getIterationVector() == iterVec );
-	poly::ConstraintCombinerPtr&& currDomain = poly::cloneConstraint(iterVec, region.getDomainConstraints());
+	poly::ConstraintCombinerPtr currDomain = poly::cloneConstraint(iterVec, region.getDomainConstraints());
 
 	// We concatenate the parent domain and this domain 
 	if ( parentDomain ) { currDomain = parentDomain and currDomain; }
@@ -600,32 +555,61 @@ void ScopRegion::resolveScop(const poly::IterationVector& iterVec,
 			af.setCoeff(poly::Constant(), pos++);
 			newScat.appendRow( af );
 
+			StatementPtr curPtr = cur.getAddr().getAddressedNode();
 			// check wheather the statement is a SCoP
 			auto fit = std::find(region.subScops.begin(), region.subScops.end(), cur.getAddr());
 			if (fit != region.subScops.end()) {
 				// this is a sub scop
 				assert(cur->hasAnnotation(ScopRegion::KEY));
-				if ( cur.getAddr().getAddressedNode()->getNodeType() == NT_ForStmt ) {
+				if ( curPtr->getNodeType() == NT_ForStmt ) {
 					// if the statement is a loop, then we append a dimension with the corresponding
 					// iterator variable and we go recursively to visit the body  
 					const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(cur.getAddr().getAddressedNode());
 					const VariablePtr& iter = forStmt->getDeclaration()->getVariable();
 
 					AffineFunction newAf( iterVec );
-					newAf.setCoeff(poly::Iterator(iter), 1);
+					newAf.setCoeff( poly::Iterator(iter), 1 );
 						
 					newScat.appendRow(newAf); 
-				}
+				} 
 				resolveScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), newScat, scat);
-			}
+				return;
+			} 
 			
-			const RefAccessList& refs = cur.getRefAccesses();
-			std::for_each(refs.begin(), refs.end(), 
-					[](const RefPtr& curRef) {
+			// If statements 
+			if ( curPtr->getNodeType() == NT_IfStmt ) {
+				// if we are inside a SCoP we can safely access to the annotations of the then and
+				// else body of this if statement because they must be SCoPs 
+				StatementAddress thenBody = AS_STMT_ADDR( cur.getAddr().getAddressOfChild(1) );
+				assert( thenBody->hasAnnotation(ScopRegion::KEY) );
+				resolveScop(iterVec, currDomain, *thenBody->getAnnotation(ScopRegion::KEY), 
+						newScat, scat);
 
+				StatementAddress elseBody = AS_STMT_ADDR( cur.getAddr().getAddressOfChild(2) );
+				assert( elseBody->hasAnnotation(ScopRegion::KEY) );
+				resolveScop(iterVec, currDomain, *elseBody->getAnnotation(ScopRegion::KEY), 
+						newScat, scat);
+
+				// Once the branches of the IF has been analyzed, skip the if statement	
+				return;
+			}
+
+			const RefAccessList& refs = cur.getRefAccesses();
+			AccessInfoList accInfo;
+			std::for_each(refs.begin(), refs.end(), 
+					[&] (const RefPtr& curRef) {
+						
 					}
 				);
-			scat.push_back( std::make_tuple(cur.getAddr(), std::make_shared<ScatteringFunction>(newScat), AccessInfoList()) );
+
+			scat.push_back( 
+					std::make_tuple(
+						cur.getAddr(), 
+						currDomain, 
+						std::make_shared<ScatteringFunction>(newScat), 
+						accInfo
+					) 
+				);
 
 			// 
 			//if ( cur->getType() == Ref::ARRAY ) {
@@ -655,15 +639,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& iterVec,
 	//);
 }
 
-ScopRegion::StmtScattering getStatementScattering() {
-		
-	//ScatteringFunction scat(iterVec);
-	//StmtScattering finalScat;
 
-	//buildScatteringMatrix(*this, scat, finalScat);
-
-	//return finalScat;
-}
 
 const ScopRegion::ScatteringMatrix ScopRegion::getScatteringInfo() const {
 	ScopRegion::ScatteringMatrix ret;
@@ -697,7 +673,6 @@ ScopList mark(const core::NodePtr& root) {
 
 //===== printSCoP ===================================================================
 void printSCoP(std::ostream& out, const core::NodePtr& scop) {
-	out << *scop << std::endl;
 	out << "SCoP: ";
 	// check whether the IR node has a SCoP annotation
 	if( !scop->hasAnnotation( ScopRegion::KEY ) ) {
@@ -708,15 +683,18 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	const ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
 	const ScopRegion::ScatteringMatrix&& scat = ann.getScatteringInfo();
 	
-	out << "\nNumber of sub-statements: " << scat.size();
+	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
 	
-	//ScopRegion::StmtScattering&& scat = ann.getStatementScattering();
-
 	size_t stmtID = 0;
 	std::for_each(scat.begin(), scat.end(), 
 		[ &stmtID, &out ] (const ScopRegion::StmtScattering& cur) { 
 			out << "S" << stmtID++ << ": " << *std::get<0>(cur) << std::endl;
-			out << *std::get<1>(cur) << std::endl;
+			IterationDomain id = std::get<1>(cur);
+			out << "ID: ";
+			if (!id) { out << "{}"; }
+			else 	 { out << *id; }
+			out << std::endl;
+			out << *std::get<2>(cur) << std::endl;
 		}
 	);
 

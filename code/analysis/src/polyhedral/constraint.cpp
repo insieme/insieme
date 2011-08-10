@@ -148,12 +148,6 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 	void visit(const RawConstraintCombiner& rcc) { 
 		const Constraint& c = rcc.getConstraint();
-		// If we try to clone a constraint to a new constraint with the same iteration vector
-		// just return the same element 
-		//if (&c.getAffineFunction().getIterationVector() == &trg) { 
-	//		newCC = rcc; 
-	//		return;
-	//	}
 		
 		// we are really switching iteration vectors
 		if (transMap.empty() ) {
@@ -167,7 +161,7 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 	virtual void visit(const NegatedConstraintCombiner& ucc) {
 		ConstraintVisitor::visit(ucc);
-		newCC = std::make_shared<NegatedConstraintCombiner>(newCC);
+		newCC = not_(newCC);
 	}
 
 	virtual void visit(const BinaryConstraintCombiner& bcc) {
@@ -185,6 +179,7 @@ struct ConstraintCloner : public ConstraintVisitor {
 
 ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& old) {
 	if (!old) { return ConstraintCombinerPtr(); }
+
 	ConstraintCloner cc(trgVec);
 	old->accept(cc);
 	return cc.newCC;

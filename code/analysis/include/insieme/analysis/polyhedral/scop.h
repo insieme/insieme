@@ -130,7 +130,12 @@ public:
 	typedef std::pair<RefPtr, std::vector<poly::ConstraintCombinerPtr>> AccessInfo;
 	typedef std::vector<AccessInfo> AccessInfoList;
 
-	typedef std::tuple<core::StatementAddress, poly::ScatteringFunctionPtr, AccessInfoList> StmtScattering;
+	typedef std::tuple<
+			core::StatementAddress, 
+			poly::IterationDomain, 
+			poly::ScatteringFunctionPtr, 
+			AccessInfoList > StmtScattering;
+
 	typedef std::vector<StmtScattering> ScatteringMatrix;
 
 	ScopRegion( const poly::IterationVector& iv, 
@@ -173,7 +178,6 @@ public:
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	inline const RefAccessList& getDirectAccesses() const { /*return accesses;*/ }
 	
 	const ScatteringMatrix getScatteringInfo() const;
 
@@ -187,7 +191,7 @@ public:
 private:
 
 	static void resolveScop(const poly::IterationVector& iterVec, 
-					 const poly::ConstraintCombinerPtr& parentDomain, 
+					 const poly::IterationDomain& parentDomain, 
 			 	   	 const ScopRegion& region,
 					 const poly::ScatteringFunction& curScat,
 					 ScatteringMatrix& finalScat);
