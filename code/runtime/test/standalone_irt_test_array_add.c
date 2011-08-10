@@ -129,7 +129,7 @@ void insieme_init_context(irt_context* context) {
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
 
 		for (uint j = 0; j < g_kernel_code_table_size; ++j)
-			irt_ocl_create_kernel2(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
+			irt_ocl_create_kernel(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
 	}
 
 	context->kernel_code_table = g_kernel_code_table;

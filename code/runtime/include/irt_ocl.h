@@ -150,8 +150,7 @@ typedef struct _irt_ocl_kernel {
 	irt_ocl_device* dev;
 } irt_ocl_kernel;
 
-irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
-irt_ocl_kernel* irt_ocl_create_kernel2(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
+irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
 void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
