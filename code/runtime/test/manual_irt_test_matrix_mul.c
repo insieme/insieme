@@ -179,6 +179,11 @@ void insieme_init_context(irt_context* context) {
 }
 
 void insieme_cleanup_context(irt_context* context) {
+	#ifdef USE_OPENCL
+	free(context->kernel_binary_table[0]);
+	free(context->kernel_binary_table);
+	context->kernel_binary_table = NULL;
+	#endif
 	// nothing
 	printf("Cleaning up manual IRT test matrix mul\n");
 }
