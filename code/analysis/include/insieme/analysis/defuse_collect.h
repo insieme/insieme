@@ -90,6 +90,9 @@ struct Ref : public utils::Printable {
 	const RefType& getType() const { return type; }
 
 	const core::ExpressionAddress& getBaseExpression() const { return baseExpr; }
+	
+	static std::string useTypeToStr(const UseType& usage);
+	static std::string refTypeToStr(const RefType& type);
 
 protected:
 	Ref(const RefType& type, const core::ExpressionAddress& expr, const UseType& usage = USE);

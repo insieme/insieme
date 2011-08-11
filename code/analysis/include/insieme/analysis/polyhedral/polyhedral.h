@@ -73,12 +73,18 @@ struct AffineSystem : public utils::Printable {
 
 	std::ostream& printTo(std::ostream& out) const;
 
+	AffineList::const_iterator begin() const { return funcs.begin(); }
+
+	AffineList::const_iterator end() const { return funcs.end(); }
+
 private:	
 	void cloneRows(const AffineList&);
 
 	const IterationVector& iterVec; 
 	AffineList funcs;
 };
+
+typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
 
 //*****************************************************************************************************
 // ScatteringFunction: A scattering function represent the order of execution of statements inside a

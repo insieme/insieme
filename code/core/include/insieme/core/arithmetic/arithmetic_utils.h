@@ -83,6 +83,7 @@ namespace arithmetic {
 		NotAFormulaException(const NodePtr& expr);
 	
 		virtual const char* what() const throw();
+		NodePtr getExpr() const { return expr; }
 		virtual ~NotAFormulaException() throw() { }
 	};
 
