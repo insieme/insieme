@@ -537,10 +537,27 @@ public:
 				// TODO
 				// c++ constructors
 				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+
 				if(recDeclCXX){
-					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(), xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
-						CXXRecordDecl::ctor_iterator::value_type curr = *xit;
-						curr->dump();
+					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
+							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+						//CXXRecordDecl::ctor_iterator::value_type curr = *xit;
+						CXXConstructorDecl * curr = *xit;
+						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+						curr->dumpDeclContext(); // on cerr
+						//std::cerr<<"enddumpconstr\n";
+						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+					}
+
+					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+						CXXMethodDecl * curr = *mit;
+						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+						curr->dumpDeclContext(); // on cerr
+						//std::cerr<<"enddumpconstr\n";
+						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
 					}
 				}
 
