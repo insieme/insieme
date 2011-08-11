@@ -131,21 +131,7 @@ irt_ocl_kernel_code g_kernel_code_table[] = {
 // initialization
 void insieme_init_context(irt_context* context) {
 	#ifdef USE_OPENCL
-	cl_uint num_devices = irt_ocl_get_num_devices();
-
-	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel)*num_devices*g_kernel_code_table_size);
-	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*)*num_devices);
-
-	for (uint i = 0; i < num_devices; ++i) {
-		context->kernel_binary_table[i] = &(tmp[i*g_kernel_code_table_size]);
-		irt_ocl_device* dev = irt_ocl_get_device(i);
-		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
-
-		for (uint j = 0; j < g_kernel_code_table_size; ++j)
-			irt_ocl_create_kernel2(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
-	}
-
-	context->kernel_code_table = g_kernel_code_table;
+	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
 	#endif
 
 	context->type_table = g_insieme_type_table;
@@ -154,9 +140,7 @@ void insieme_init_context(irt_context* context) {
 
 void insieme_cleanup_context(irt_context* context) {
 	#ifdef USE_OPENCL
-	free(context->kernel_binary_table[0]);
-	free(context->kernel_binary_table);
-	context->kernel_binary_table = NULL;
+	irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size);
 	#endif
 
 	// nothing
