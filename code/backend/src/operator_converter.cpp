@@ -344,7 +344,7 @@ namespace backend {
 			// skip deref => included subscript operator
 			c_ast::ExpressionPtr target;
 			if (core::analysis::isCallOf(ARG(0), LANG_BASIC.getRefDeref())) {
-				target = CONVERT_EXPR(static_pointer_cast<const core::CallExpr>(ARG(0))->getArgument(0));
+				target = CONVERT_EXPR(core::analysis::getArgument(ARG(0), 0));
 			} else {
 				target = CONVERT_ARG(0);
 			}

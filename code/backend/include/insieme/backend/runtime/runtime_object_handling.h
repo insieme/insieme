@@ -36,11 +36,48 @@
 
 #pragma once
 
+#include "insieme/core/forward_decls.h"
 #include "insieme/backend/preprocessor.h"
 
 namespace insieme {
 namespace backend {
 namespace runtime {
+
+	// ------------------------------------------------------------
+	//   A data infrastructure to handle runtime items
+	// ------------------------------------------------------------
+
+	class DataItem {
+
+		core::TypePtr elementType;
+
+	};
+
+	class DataRequirement {
+
+	};
+
+	class ChannelRequirement {
+
+	};
+
+	class WorkItemImpl {
+
+		core::LambdaExprPtr implementation;
+
+		vector<DataRequirement> dataRequirement;
+
+		vector<ChannelRequirement> channelRequirement;
+
+	};
+
+	class WorkItem {
+
+		unsigned implementationID;
+
+		vector<WorkItemImpl> variants;
+
+	};
 
 	/**
 	 * The work item extractor mainly consists of a pre-processing step which is

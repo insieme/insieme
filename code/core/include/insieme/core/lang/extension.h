@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <boost/noncopyable.hpp>
+
 namespace insieme {
 namespace core {
 namespace lang {

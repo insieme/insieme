@@ -68,6 +68,7 @@ namespace c_ast {
 		case UnaryOperation::SizeOf: 		return 14;
 		}
 		assert(false && "Uncovered operator encountered!");
+		return 0;
 	}
 
 	static inline unsigned getPriority(BinaryOperation::BinaryOp op) {
@@ -107,6 +108,7 @@ namespace c_ast {
 		case BinaryOperation::Cast: 					return 14;
 		}
 		assert(false && "Uncovered operator encountered!");
+		return 0;
 	}
 
 	static inline unsigned getPriority(TernaryOperation::TernaryOp op) {
@@ -114,6 +116,7 @@ namespace c_ast {
 		case TernaryOperation::TernaryCondition: return 3;
 		}
 		assert(false && "Uncovered operator encountered!");
+		return 0;
 	}
 
 	static inline unsigned getPriority(const NodePtr& node) {
