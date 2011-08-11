@@ -49,8 +49,11 @@ struct _irt_context {
 	irt_client_app* client_app;
 	irt_type* type_table;
 	irt_wi_implementation* impl_table;
+
+#ifdef USE_OPENCL
 	irt_ocl_kernel_code* kernel_code_table;
 	irt_ocl_kernel** kernel_binary_table;
+#endif
 
 	// private implementation detail
 	struct _irt_context* lookup_table_next;
