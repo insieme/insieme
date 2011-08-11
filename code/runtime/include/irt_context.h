@@ -38,7 +38,10 @@
 
 #include "declarations.h"
 #include "client_app.h"
+
+#ifdef USE_OPENCL
 #include "irt_ocl.h"
+#endif
 
 /* ------------------------------ data structures ----- */
 

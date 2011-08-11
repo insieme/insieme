@@ -36,7 +36,6 @@
 
 #pragma once
 
-#ifdef USE_OPENCL
 #include "CL/opencl.h"
 #include "impl/error_handling.impl.h"
 
@@ -164,4 +163,3 @@ typedef struct _irt_ocl_kernel_code {
 	const char* code;
 } irt_ocl_kernel_code;
 
-#endif

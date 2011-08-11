@@ -97,6 +97,7 @@ irt_wi_implementation g_insieme_impl_table[] = {
 };
 
 // OpenCL Kernel table
+#ifdef USE_OPENCL
 unsigned g_kernel_code_table_size = 1;
 irt_ocl_kernel_code g_kernel_code_table[] = {
 	{
@@ -114,6 +115,7 @@ irt_ocl_kernel_code g_kernel_code_table[] = {
 		"}"
 	}
 };
+#endif
 
 // initialization
 void insieme_init_context(irt_context* context) {
