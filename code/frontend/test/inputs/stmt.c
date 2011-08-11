@@ -101,7 +101,7 @@ void unary_op_test() {
 	#pragma test "decl ref<ref<array<int<4>,1>>> v1 = ( var(scalar.to.array(v2)))"
 	int* b = &a;
 
-	#pragma test "( *array.ref.elem.1D(( *v1), 0))"
+	#pragma test "( *(( *v1)[&0]))"
 	*b;
 
 	#pragma test "int.postInc(v1)"
@@ -122,7 +122,7 @@ void array_test() {
 	#pragma test "decl ref<ref<array<int<4>,1>>> v1 = ( var(undefined(type<ref<array<int<4>,1>>>)))"
 	int* a;
 
-	#pragma test "( *array.ref.elem.1D(( *v1), CAST<uint<4>>(0)))"
+	#pragma test "( *(( *v1)[&CAST<uint<4>>(0)]))"
 	a[0];
 
 }
@@ -135,16 +135,16 @@ void member_access_test() {
 	#pragma test "decl ref<struct<weigth:int<4>,age:int<4>>> v1 = ( var(undefined(type<struct<weigth:int<4>,age:int<4>>>)))"
 	struct Person p;
 
-	#pragma test "( *composite.ref.elem(v1, weigth, type<int<4>>))"
+	#pragma test "( *(v1->weigth))"
 	p.weigth;
 
 	#pragma test "decl ref<ref<array<struct<weigth:int<4>,age:int<4>>,1>>> v1 = ( var(scalar.to.array(v2)))"
 	struct Person* ptr = &p;
 
-	#pragma test "( *composite.ref.elem(array.ref.elem.1D(( *v1), 0), age, type<int<4>>))"
+	#pragma test "( *((( *v1)[&0])->age))"
 	ptr->age;
 
-	#pragma test "(composite.ref.elem(array.ref.elem.1D(( *v1), 0), age, type<int<4>>) := 100)"
+	#pragma test "(((( *v1)[&0])->age) := 100)"
 	ptr->age = 100;
 }
 
@@ -370,11 +370,11 @@ void vector_stmt_test() {
 	int a[5];
 
 	#pragma test \
-	"( *vector.ref.elem(v1, CAST<uint<4>>(0)))"
+	"( *(v1[&CAST<uint<4>>(0)]))"
 	a[0];
 
 	#pragma test \
-	"(vector.ref.elem(v1, CAST<uint<4>>(0)) := 1)"
+	"((v1[&CAST<uint<4>>(0)]) := 1)"
 	a[0] = 1;
 
 	#pragma test \
@@ -382,11 +382,11 @@ void vector_stmt_test() {
 	int b[2][3];
 
 	#pragma test \
-	"( *vector.ref.elem(vector.ref.elem(v1, CAST<uint<4>>(0)), CAST<uint<4>>(0)))"
+	"( *((v1[&CAST<uint<4>>(0)])[&CAST<uint<4>>(0)]))"
 	b[0][0];
 
 	#pragma test \
-	"(vector.ref.elem(vector.ref.elem(v1, CAST<uint<4>>(1)), CAST<uint<4>>(1)) := 0)"
+	"(((v1[&CAST<uint<4>>(1)])[&CAST<uint<4>>(1)]) := 0)"
 	b[1][1] = 0;
 
 	#pragma test \
