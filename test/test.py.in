@@ -10,29 +10,35 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 
 #
 # GCC = gcc comparison version
-# SBE = simple backend
-# RBE = real backend
+# SMP = simple backend
+# SEQ = the sequential backend
+# RUN = the runtime backend
 #
 
-USE_SBE = 1
-USE_RBE = 0
+USE_SMP = 1
+USE_SEQ = 0
+USE_RUN = 0
 
 # compiler flags
 INSIEME_FLAGS = "--std=c99 -I."
-CFLAGS_GCC = "-O3 -g --std=c99 -I."
-CFLAGS_SBE = "-O3 -g --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
-CFLAGS_RBE = "-O0 -g --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE"
+CFLAGS_GCC = "-O3 --std=c99 -I."
+CFLAGS_SMP = "-O3 --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
+CFLAGS_SEQ = "-O3 --std=c99 -I."
+CFLAGS_RUN = "-O3 --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE"
 
 
 # linker flags
 LDFLAGS_GCC = "-lm -lpthread"
-LDFLAGS_SBE = "-lm -lpthread -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
-LDFLAGS_RBE = "-lm -lpthread -ldl -lrt"
+LDFLAGS_SMP = "-lm -lpthread -linsieme_simple_backend_runtime -L${CMAKE_BINARY_DIR}/code/simple_backend"
+LDFLAGS_SEQ = "-lm"
+LDFLAGS_RUN = "-lm -lpthread -ldl -lrt"
 
 
-runOcl = 0
-printErr = 0
-verbose = 0
+runOcl 			= 0
+printErr 		= 0
+verbose 		= 0
+force 			= 0 # forces the test script to build and run test cases even when ref-files match
+cleanRef 		= 0 # removes individual reference files before running tests
 
 class bcolors:
 	HEADER = '\033[95m'
@@ -103,22 +109,34 @@ def check_diff(test_case_name, ref, test):
 	ret = run_cmd("diff {0} {1}".format(ref, test))
 	return not check_for_error(test_case_name, ret)
 
+def remove_if_exist(file_name):
+	if os.path.exists(file_name) : 
+		os.remove(file_name)
+
 def run_test_case(test_case_name): 
 	sys.stderr.write("#-----------------------------------------------------\n")
-	sys.stderr.write("# {0}\n".format(test_case_name))
+	sys.stderr.write("# {0}  ".format(test_case_name))
+
+	if not os.path.isdir(test_case_name):
+		sys.stderr.write(bcolors.FAIL + " --- NO SUCH TEST CASE!!" + bcolors.ENDC + "\n")
+		return 1
+
+	sys.stderr.write("\n");
 
 	# name of the file contaning the reference IR for the current test
 	refIr   = test_case_name + '.ir.ref'
 	# name of the file containing the generated IR for the case test
 	testIr  = test_case_name + '.ir'
 	# name of the file containing the reference C output for the current test
-	refSBE  = test_case_name + '.insieme.sbe.c.ref'
-	# name of the file containing the reference C output for the current test
-	refRBE  = test_case_name + '.insieme.rbe.c.ref'
-	# name of the file containing the SBE generated C output for the current test
-	testSBE = test_case_name + '.insieme.sbe.c'
-	# name of the file containing the RBE generated C output for the current test
-	testRBE = test_case_name + '.insieme.rbe.c'
+	refSMP  = test_case_name + '.insieme.smp.c.ref'
+	refSEQ  = test_case_name + '.insieme.seq.c.ref'
+	refRUN  = test_case_name + '.insieme.run.c.ref'
+
+	# name of the file containing the generated C output for the current test
+	testSMP = test_case_name + '.insieme.smp.c'
+	testSEQ = test_case_name + '.insieme.seq.c'
+	testRUN = test_case_name + '.insieme.run.c'
+
 	# name of the file containing the reference dot dump of the CFG
 	refCfg  = test_case_name + '.cfg.ref'
 	# name of the file containing the generated dot dump of the CFG
@@ -144,7 +162,17 @@ def run_test_case(test_case_name):
 			gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().split(',')])
 
 		os.chdir(test_case_name)
-		# RUN insieme to generate the IR dump and C output
+
+		# clear reference files if requested
+		if cleanRef :
+			remove_if_exist(refIr)
+			remove_if_exist(refCfg)
+			if USE_SMP:
+				remove_if_exist(refSMP)
+			if USE_SEQ:
+				remove_if_exist(refSEQ)
+			if USE_RUN:
+				remove_if_exist(refRUN)
 
 		# RUN insieme, check semantic and generate CFG / XML and IR dump
 		sys.stderr.write(" * Running Compiler Checks...           ")
@@ -157,26 +185,32 @@ def run_test_case(test_case_name):
 		# run non-cl tests
 		if(test_case_name != "ocl_kernel"):
 
-			if USE_SBE:
+			if USE_SMP:
 				# RUN insieme to generate simple-backend output code
-				sys.stderr.write(" * Running Compiler => SBE ...          ")
+				sys.stderr.write(" * Running Compiler => SMP ...          ")
 				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b pthread -o {OUTPUT}".format(
-								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testSBE})) 
+								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testSMP})) 
 				if check_for_error(test_case_name, ret):
 					return 1		  
 
-			if USE_RBE:
-				sys.stderr.write(" * Running Compiler => RBE ...          ")
+			if USE_SEQ:
+				sys.stderr.write(" * Running Compiler => SEQ ...          ")
+				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b sequential -o {OUTPUT}".format(
+								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testSEQ})) 
+				if check_for_error(test_case_name, ret):
+					return 1
+			
+			if USE_RUN:
+				sys.stderr.write(" * Running Compiler => RUN ...          ")
 				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b runtime -o {OUTPUT}".format(
-								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testRBE})) 
+								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testRUN})) 
 				if check_for_error(test_case_name, ret):
 					return 1
 			  
 			sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
-
 			# verify results
-			runTests = 0
+			runTests = force		
 			if not os.path.exists(refIr) and os.path.exists(testIr):
 			  shutil.copyfile(testIr, refIr)
 			  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
@@ -200,23 +234,34 @@ def run_test_case(test_case_name):
 				sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
 				runTests = 1 # => file comparison failed, but program might still be OK
 
-			if USE_SBE:
-				if not os.path.exists(refSBE) and os.path.exists(testSBE):
+			if USE_SMP:
+				if not os.path.exists(refSMP) and os.path.exists(testSMP):
 					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 				else:
-					sys.stderr.write(" * Comparing generated SBE output...    ")
-					if check_diff(test_case_name, refSBE, testSBE):
+					sys.stderr.write(" * Comparing generated SMP output...    ")
+					if check_diff(test_case_name, refSMP, testSMP):
 						sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 					else:
 						sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
 						runTests = 1 # => file comparison failed, but program might still be OK
 			
-			if USE_RBE:
-				if not os.path.exists(refRBE) and os.path.exists(testRBE):
+			if USE_SEQ:
+				if not os.path.exists(refSEQ) and os.path.exists(testSEQ):
 					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 				else:
-					sys.stderr.write(" * Comparing generated RBE output...    ")
-					if check_diff(test_case_name, refRBE, testRBE):
+					sys.stderr.write(" * Comparing generated SEQ output...    ")
+					if check_diff(test_case_name, refSEQ, testSEQ):
+						sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
+					else:
+						sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
+						runTests = 1 # => file comparison failed, but program might still be OK
+
+			if USE_RUN:
+				if not os.path.exists(refRUN) and os.path.exists(testRUN):
+					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
+				else:
+					sys.stderr.write(" * Comparing generated RUN output...    ")
+					if check_diff(test_case_name, refRUN, testRUN):
 						sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 					else:
 						sys.stderr.write(" * -> " + bcolors.WARNING  +"Different!" + bcolors.ENDC + "\n")
@@ -225,12 +270,14 @@ def run_test_case(test_case_name):
 			
 			# test whether executables are missing within #bin directory
 			ref_exec = test_case_name + '.ref'
-			test_sbe_exec = test_case_name + '.sbe.test'
-			test_rbe_exec = test_case_name + '.rbe.test'
+			test_smp_exec = test_case_name + '.smp.test'
+			test_seq_exec = test_case_name + '.seq.test'
+			test_run_exec = test_case_name + '.run.test'
 			if not runTests and os.path.exists("../#bin/"):
 				if  ((not os.path.exists("../#bin/" + ref_exec)) or 
-					 (USE_SBE and not os.path.exists("../#bin/" + test_sbe_exec)) or 
-					 (USE_RBE and not os.path.exists("../#bin/" + test_rbe_exec))) :
+					 (USE_SMP and not os.path.exists("../#bin/" + test_smp_exec)) or 
+					 (USE_SEQ and not os.path.exists("../#bin/" + test_seq_exec)) or 
+					 (USE_RUN and not os.path.exists("../#bin/" + test_run_exec))) :
 					runTests = 1 # => ensure that all binaries are present within #bin
 
 			if runTests:
@@ -238,24 +285,31 @@ def run_test_case(test_case_name):
 				# file containing the output of the reference program
 				ref_out = "ref.out"
 				# file containing the output of the test program
-				test_sbe_out = "sbe.test.out"
-				test_rbe_out = "rbe.test.out"
+				test_smp_out = "smp.test.out"
+				test_seq_out = "seq.test.out"
+				test_run_out = "run.test.out"
 
 				sys.stderr.write(" * Compiling C input...                 ")
 				if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 									**{'CC':CC, 'CFLAGS':CFLAGS_GCC, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_GCC, 'GCCFLAGS':gccFlagsRef})  
 								)) : return 1
 
-				if USE_SBE:
-					sys.stderr.write(" * Compiling generated SBE output...    ")
+				if USE_SMP:
+					sys.stderr.write(" * Compiling generated SMP output...    ")
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
-										**{'CC':CC, 'CFLAGS':CFLAGS_SBE, 'INPUTS':testSBE, 'OUTPUT':test_sbe_exec, 'LDFLAGS':LDFLAGS_SBE, 'GCCFLAGS':gccFlagsTest})
+										**{'CC':CC, 'CFLAGS':CFLAGS_SMP, 'INPUTS':testSMP, 'OUTPUT':test_smp_exec, 'LDFLAGS':LDFLAGS_SMP, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
 
-				if USE_RBE:
-					sys.stderr.write(" * Compiling generated RBE output...    ")
+				if USE_SEQ:
+					sys.stderr.write(" * Compiling generated SEQ output...    ")
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
-										**{'CC':CC, 'CFLAGS':CFLAGS_RBE, 'INPUTS':testRBE, 'OUTPUT':test_rbe_exec, 'LDFLAGS':LDFLAGS_RBE, 'GCCFLAGS':gccFlagsTest})
+										**{'CC':CC, 'CFLAGS':CFLAGS_SEQ, 'INPUTS':testSEQ, 'OUTPUT':test_seq_exec, 'LDFLAGS':LDFLAGS_SEQ, 'GCCFLAGS':gccFlagsTest})
+									)) : return 1
+
+				if USE_RUN:
+					sys.stderr.write(" * Compiling generated RUN output...    ")
+					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
+										**{'CC':CC, 'CFLAGS':CFLAGS_RUN, 'INPUTS':testRUN, 'OUTPUT':test_run_exec, 'LDFLAGS':LDFLAGS_RUN, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
 
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
@@ -270,12 +324,12 @@ def run_test_case(test_case_name):
 
 				sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
 			
-				if USE_SBE:
-					sys.stderr.write(" * Running SBE program...                ")
+				if USE_SMP:
+					sys.stderr.write(" * Running SMP program...                ")
 					ldPath = os.getenv("LD_LIBRARY_PATH", "");
 					os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
 					start = time.time()
-					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_sbe_exec, test_sbe_out)) >> 8;
+					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_smp_exec, test_smp_out)) >> 8;
 					if exitValue != 0:
 						if exitValue == 139:
 							sys.stderr.write(bcolors.FAIL + '[FAILED - SegFault]' + bcolors.ENDC + '\n');
@@ -286,10 +340,23 @@ def run_test_case(test_case_name):
 					sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
 					os.putenv("LD_LIBRARY_PATH", ldPath);
 
-				if USE_RBE:
-					sys.stderr.write(" * Running RBE program...                ")
+				if USE_SEQ:
+					sys.stderr.write(" * Running SEQ program...                ")
 					start = time.time()
-					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_rbe_exec, test_rbe_out)) >> 8;
+					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_seq_exec, test_seq_out)) >> 8;
+					if exitValue != 0:
+						if exitValue == 139:
+							sys.stderr.write(bcolors.FAIL + '[FAILED - SegFault]' + bcolors.ENDC + '\n');
+						else:
+							sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
+						return 1
+				
+					sys.stderr.write("[{0:.4f} secs]\n".format(time.time() - start))
+
+				if USE_RUN:
+					sys.stderr.write(" * Running RUN program...                ")
+					start = time.time()
+					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_run_exec, test_run_out)) >> 8;
 					if exitValue != 0:
 						if exitValue == 139:
 							sys.stderr.write(bcolors.FAIL + '[FAILED - SegFault]' + bcolors.ENDC + '\n');
@@ -304,14 +371,19 @@ def run_test_case(test_case_name):
 
 				# ---------------------------- Checking Outputs ----------------------------
 
-				if USE_SBE:
-					sys.stderr.write(" * Checking SBE program output...       ")
-					if not check_diff(test_case_name, ref_out, test_sbe_out):
+				if USE_SMP:
+					sys.stderr.write(" * Checking SMP program output...       ")
+					if not check_diff(test_case_name, ref_out, test_smp_out):
 						return 1
 
-				if USE_RBE:
-					sys.stderr.write(" * Checking RBE program output...       ")
-					if not check_diff(test_case_name, ref_out, test_rbe_out):
+				if USE_SEQ:
+					sys.stderr.write(" * Checking SEQ program output...       ")
+					if not check_diff(test_case_name, ref_out, test_seq_out):
+						return 1
+
+				if USE_RUN:
+					sys.stderr.write(" * Checking RUN program output...       ")
+					if not check_diff(test_case_name, ref_out, test_run_out):
 						return 1
 
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
@@ -322,34 +394,43 @@ def run_test_case(test_case_name):
 						os.remove("../#bin/" + ref_exec)
 					shutil.move(ref_exec, "../#bin/")
 			
-					if USE_SBE:
-						if os.path.exists("../#bin/" + test_sbe_exec):
-							os.remove("../#bin/" + test_sbe_exec)
-						shutil.move(test_sbe_exec, "../#bin/")
+					if USE_SMP:
+						if os.path.exists("../#bin/" + test_smp_exec):
+							os.remove("../#bin/" + test_smp_exec)
+						shutil.move(test_smp_exec, "../#bin/")
 
-					if USE_RBE:
-						if os.path.exists("../#bin/" + test_rbe_exec):
-							os.remove("../#bin/" + test_rbe_exec)
-						shutil.move(test_rbe_exec, "../#bin/")
+					if USE_SEQ:
+						if os.path.exists("../#bin/" + test_seq_exec):
+							os.remove("../#bin/" + test_seq_exec)
+						shutil.move(test_seq_exec, "../#bin/")
+
+					if USE_RUN:
+						if os.path.exists("../#bin/" + test_run_exec):
+							os.remove("../#bin/" + test_run_exec)
+						shutil.move(test_run_exec, "../#bin/")
 			
 				os.remove(ref_out)
-				if USE_SBE:
-					os.remove(test_sbe_out)
-				if USE_RBE: 
-					os.remove(test_rbe_out)
+				if USE_SMP:
+					os.remove(test_smp_out)
+				if USE_SEQ:
+					os.remove(test_seq_out)
+				if USE_RUN: 
+					os.remove(test_run_out)
 
 				# update reference file if necessary
-				if not os.path.exists(refSBE) and os.path.exists(testSBE):
-					shutil.copyfile(testSBE, refSBE)
-				if not os.path.exists(refRBE) and os.path.exists(testRBE):
-					shutil.copyfile(testRBE, refRBE)
+				if not os.path.exists(refSMP) and os.path.exists(testSMP):
+					shutil.copyfile(testSMP, refSMP)
+				if not os.path.exists(refSEQ) and os.path.exists(testSEQ):
+					shutil.copyfile(testSEQ, refSEQ)
+				if not os.path.exists(refRUN) and os.path.exists(testRUN):
+					shutil.copyfile(testRUN, refRUN)
 
 			
 		else:  # it is an ocl test
 
 			sys.stderr.write(" * Running Compiler => OCL ...          ")
 			ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b ocl -o {OUTPUT}".format(
-							**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testSBE})) 
+							**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testSMP})) 
 			if check_for_error(test_case_name, ret):
 				return 1		  
 
@@ -387,7 +468,7 @@ def run_test_case(test_case_name):
 				if not check_diff(test_case_name, ref_out, test_out):
 					return 1
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  + "Success." + bcolors.ENDC + "\n")
-				map(lambda x : os.remove(x), [testIr, testSBE, ref_out, test_out])
+				map(lambda x : os.remove(x), [testIr, testSMP, ref_out, test_out])
 		
 		sys.stderr.write(bcolors.OKGREEN + "@ [SUCCESS]" + bcolors.ENDC + "\n")
 #'''
@@ -404,9 +485,10 @@ def main():
 
 	abortOnFail = False;
 
-	#check for opencl flag
-	global USE_SBE
-	global USE_RBE
+	#check flags
+	global USE_SMP
+	global USE_SEQ
+	global USE_RUN
 
 	for arg in sys.argv[1:] :
 		if(arg == "--runOpenCL") :
@@ -430,18 +512,35 @@ def main():
 		if(arg == "--abortOnFail") :
 			abortOnFail = True
 			sys.argv.remove(arg)
-		if(arg == "--sbe") :
-			USE_SBE = 1
-			USE_RBE = 0
+		if(arg == "-f") :
+			global force
+			force = 1
 			sys.argv.remove(arg)
-		if(arg == "--rbe") :
-			USE_SBE = 0
-			USE_RBE = 1
+		if(arg == "-c") :
+			global cleanRef
+			cleanRef = 1
 			sys.argv.remove(arg)
-		if(arg == "--all") :
-			USE_SBE = 1
-			USE_RBE = 1
+		if(arg == "-smp") :
+			USE_SMP = 1
+			USE_SEQ = 0
+			USE_RUN = 0
 			sys.argv.remove(arg)
+		if(arg == "-seq") :
+			USE_SMP = 0
+			USE_SEQ = 1
+			USE_RUN = 0
+			sys.argv.remove(arg)
+		if(arg == "-run") :
+			USE_SMP = 0
+			USE_SEQ = 0
+			USE_RUN = 1
+			sys.argv.remove(arg)
+		if(arg == "-full") :
+			USE_SMP = 1
+			USE_SEQ = 1
+			USE_RUN = 1
+			sys.argv.remove(arg)
+
 
 
 	tests = []
