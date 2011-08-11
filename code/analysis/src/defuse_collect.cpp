@@ -159,7 +159,7 @@ class DefUseCollect : public core::ASTVisitor<void, core::Address> {
 	
 	RefList& refSet;
 	Ref::UseType usage;
-
+	
 	typedef std::vector<core::ExpressionAddress> ExpressionList;
 	typedef std::pair<core::ExpressionAddress, ExpressionList> SubscriptContext;
 	std::stack<SubscriptContext> idxStack;

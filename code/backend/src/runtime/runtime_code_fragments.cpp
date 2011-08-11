@@ -65,7 +65,7 @@ namespace runtime {
 		auto res = manager->getFragment(ENTRY_NAME);
 		if (!res) {
 			// create new instance
-			ContextHandlingFragmentPtr table = manager->create<ContextHandlingFragment>(converter);
+			ContextHandlingFragmentPtr table = manager->create<ContextHandlingFragment>(boost::ref(converter));
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
 		}
@@ -104,7 +104,7 @@ namespace runtime {
 		auto res = manager->getFragment(ENTRY_NAME);
 		if (!res) {
 			// create new instance
-			TypeTablePtr table = manager->create<TypeTable>(converter);
+			TypeTablePtr table = manager->create<TypeTable>(boost::ref(converter));
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
 		}
@@ -132,7 +132,7 @@ namespace runtime {
 		auto res = manager->getFragment(ENTRY_NAME);
 		if (!res) {
 			// create new instance
-			ImplementationTablePtr table = manager->create<ImplementationTable>(converter);
+			ImplementationTablePtr table = manager->create<ImplementationTable>(boost::ref(converter));
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
 		}
