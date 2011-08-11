@@ -114,6 +114,10 @@ void* _irt_worker_func(void *argvp) {
 	return NULL;
 }
 
+#ifdef USING_MINLWT
+// required for minlwt in gcc
+__attribute__((optimize("-fno-optimize-sibling-calls")))
+#endif
 void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	IRT_ASSERT(self->cur_wi == NULL, IRT_ERR_INTERNAL, "Worker %p _irt_worker_switch_to_wi with non-null current WI", self);
 	self->cur_context = wi->context_id;

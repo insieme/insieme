@@ -117,9 +117,18 @@ void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 //	lwt_continue_impl(newstack, basestack);
 //	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 //}
+
+// workaround required to tell gcc that lwt_end is not a leaf function
+volatile int lwt_dummy = 0;
+__attribute__ ((noinline))
+void lwt_dummy_func() {
+	lwt_dummy++;
+}
+
 __attribute__ ((noinline))
 void lwt_end(intptr_t *basestack) {
 	//IRT_DEBUG("lwt_end - A.");
+	if(lwt_dummy) lwt_dummy_func();
 	__asm__ volatile (
 		/* swap stacks */
 		"movq (%%rcx), %%rsp ;"
