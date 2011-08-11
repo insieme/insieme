@@ -1162,7 +1162,32 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		//todo: CXX extensions
+		core::ExpressionPtr retExpr;
+		const core::ASTBuilder& builder = convFact.builder;
 		core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
+
+		const Expr * callee = callExpr->getCallee()->IgnoreParens();
+		const MemberExpr * memberExpr = cast<MemberExpr>(callee);
+		const CXXMethodDecl * methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
+
+		if (methodDecl->isStatic()) {
+			// static method
+		}
+
+
+
+		core::TypePtr subTy = funcPtr->getType();
+		if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
+			subTy = core::static_pointer_cast<const core::SingleElementType>( subTy )->getElementType();
+			funcPtr = builder.callExpr( subTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
+		}
+		assert(subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
+		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
+		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+		retExpr = builder.callExpr( funcPtr, args );
+
+		return retExpr;
+
 		////clang::Expr * callObject = callExpr->getImplicitObjectArgument();
 
 		assert(false && "CXXMemberCallExpr not yet handled");
@@ -1173,10 +1198,17 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
 		//todo: CXX extensions
+		// call to an overloaded operator
 		assert(false && "CXXOperatorCallExpr not yet handled");
 	}
 
+private:
+	void dumpDecl(clang::Decl * decl) {
+		std::cout << "********\n***\n*********\n";
+		decl->dump();
+	}
 
+public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1185,17 +1217,16 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 
-		CXXMethodDecl* constructorDecl = dyn_cast<CXXMethodDecl>(callExpr->getConstructor());
+		CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor());
 		assert(constructorDecl);
+		dumpDecl(constructorDecl);
+
+		////clang::Stmt* Body = constructorDecl->getBody();
 		////const FunctionProtoType *FnType = callExpr->getType()->getAs<FunctionProtoType>();
 
 		// get class declaration
 		CXXRecordDecl * callingClass = constructorDecl->getParent();
-
-
-		std::cout << "Dump: ";
-		callingClass->dump();
-		std::cout << std::endl;
+		assert(callingClass);
 
 		core::IdentifierPtr ident = builder.identifier(constructorDecl->getNameAsString());
 		core::ExpressionPtr retExpr;
@@ -1813,7 +1844,7 @@ public:
 			retExpr = convFact.lookUpVariable( varDecl );
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
-		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) { 
+		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
 			retExpr = convFact.builder.literal(enumDecl->getInitVal().toString(10), convFact.builder.getBasicGenerator().getInt4());
 		} else {
 			// todo: C++ check whether this is a reference to a class field, or method (function).
