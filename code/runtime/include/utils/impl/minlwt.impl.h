@@ -53,7 +53,7 @@ static inline void lwt_prepare(irt_work_item *wi, intptr_t *basestack) {
 	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
 	wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
 
-	// lead stack be allocated by the OS kernel
+	// let stack be allocated by the OS kernel
 	// see http://www.evanjones.ca/software/threading.html
 	// section: Implementing Kernel Threads on Linux
 //	wi->stack_ptr = (intptr_t)(mmap(NULL, IRT_WI_STACK_SIZE,
