@@ -979,6 +979,24 @@ private:
 		return args;
 	}
 
+	ExpressionList getFunctionArguments(const core::ASTBuilder& builder,
+			clang::CXXConstructExpr* callExpr, const core::FunctionTypePtr& funcTy)
+	{
+		ExpressionList args;
+		for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
+			core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+			// core::TypePtr&& argTy = arg->getType();
+			if ( argId < funcTy->getParameterTypes().size() ) {
+				const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId];
+				arg = convFact.castToType(funcArgTy, arg);
+			} else {
+				arg = convFact.castToType(builder.getNodeManager().basic.getVarList(), arg);
+			}
+			args.push_back( arg );
+		}
+		return args;
+	}
+
 public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							FUNCTION CALL EXPRESSION
@@ -1221,12 +1239,21 @@ public:
 		assert(constructorDecl);
 		dumpDecl(constructorDecl);
 
+
+		FunctionDecl* funcDecl = constructorDecl;
+		core::FunctionTypePtr funcTy =
+			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+
+
+
 		////clang::Stmt* Body = constructorDecl->getBody();
 		////const FunctionProtoType *FnType = callExpr->getType()->getAs<FunctionProtoType>();
 
 		// get class declaration
 		CXXRecordDecl * callingClass = constructorDecl->getParent();
 		assert(callingClass);
+		callingClass->viewInheritance(callingClass->getASTContext());
 
 		core::IdentifierPtr ident = builder.identifier(constructorDecl->getNameAsString());
 		core::ExpressionPtr retExpr;
@@ -1260,7 +1287,19 @@ public:
 	//						CXX THIS CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
-		assert(false && "VisitCXXThisExpr not yet handled");
+		clang::SourceLocation&& source = callExpr->getLocation();
+		//source.dump(convFact.currTU->getCompiler().getSourceManager());
+
+		std::cerr << "CXXThisExpr: \n";
+		std::cerr << callExpr->getValueKind() << std::endl;
+		std::cerr << callExpr->getObjectKind() << std::endl;
+		callExpr->dump();
+
+		std::cerr << "***************Function graph\n";
+		convFact.exprConv->funcDepGraph.print( std::cerr );
+
+
+		//assert(false && "VisitCXXThisExpr not yet handled");
 		//return NULL;
 	}
 
