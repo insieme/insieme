@@ -58,7 +58,7 @@ TEST(TargetCodeCompilerTest, helloWorldTest) {
 	namespace fs = boost::filesystem;
 
 	// create a dummy code file to be compiled
-	fs::path dir = UTILS_BUILD_DIR;
+	fs::path dir = "./";
 	fs::path srcFile = dir / "_ut_hello_world.c";
 	fs::path binFile = dir / "_ut_hello_world";
 
