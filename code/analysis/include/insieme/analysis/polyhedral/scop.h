@@ -127,7 +127,7 @@ public:
 	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
 	 * access is defined and the access functions for each dimensions.
 	 *********************************************************************************************/
-	typedef std::pair<RefPtr, std::vector<poly::ConstraintCombinerPtr>> AccessInfo;
+	typedef std::tuple<core::ExpressionAddress, Ref::UseType, poly::AffineSystemPtr> AccessInfo;
 	typedef std::vector<AccessInfo> AccessInfoList;
 
 	typedef std::tuple<
@@ -223,15 +223,15 @@ private:
  *************************************************************************************************/
 class AccessFunction: public core::NodeAnnotation {
 	poly::IterationVector 	iterVec;
-	poly::Constraint  		eqCons;
+	poly::AffineFunction 	access;
 public:
 	static const string NAME;
 	static const utils::StringKey<AccessFunction> KEY;
 
-	AccessFunction(const poly::IterationVector& iv, const poly::Constraint& eqCons) : 
+	AccessFunction(const poly::IterationVector& iv, const poly::AffineFunction& access) : 
 		core::NodeAnnotation(), 
 		iterVec(iv), 
-		eqCons( eqCons.toBase(iterVec) ) { assert(eqCons.getType() == poly::Constraint::EQ); }
+		access( access.toBase(iterVec) ) { }
 
 	const std::string& getAnnotationName() const { return NAME; }
 
@@ -239,7 +239,9 @@ public:
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 
-	const poly::Constraint& getAccessConstraint() const { return eqCons; }
+	const poly::AffineFunction& getAccessFunction() const { return access; }
+	
+	const poly::IterationVector& getIterationVector() const { return iterVec; }
 
 	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
 			const core::NodePtr& after) const { 

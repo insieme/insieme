@@ -56,7 +56,7 @@
 #include "insieme/backend/runtime/runtime_operator.h"
 #include "insieme/backend/runtime/runtime_type_handler.h"
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
-#include "insieme/backend/runtime/work_item_extractor.h"
+#include "insieme/backend/runtime/runtime_object_handling.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 

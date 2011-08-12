@@ -34,59 +34,71 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <exception>
+#include <boost/lexical_cast.hpp>
 
-#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/lists/converter.h"
+
+#include "insieme/utils/container_utils.h"
+
+#include "insieme/core/ast_node.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
 namespace core {
+namespace lists {
 
-class Expression;
-template<typename T> class Pointer;
-typedef Pointer<const Expression> ExpressionPtr;
+TEST(Lists, TestBaseTypes) {
 
-namespace arithmetic {
+	NodeManager manager;
+	ASTBuilder builder(manager);
 
-	class NotAFormulaException;
+	core::ExpressionPtr expr = toIR(manager, 12);
 
-	/**
-	 * A function converting a given expression into an equivalent formula.
-	 *
-	 * @param expr the expression to be converted
-	 * @return an equivalent formula
-	 *
-	 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
-	 */
-	Formula toFormula(const ExpressionPtr& expr);
+	EXPECT_EQ(manager.basic.getInt4(), expr->getType());
+	EXPECT_EQ("12", toString(*expr));
+	EXPECT_EQ(12, toValue<int>(expr));
+	EXPECT_TRUE(isEncodingOf<int>(expr));
+	EXPECT_FALSE(isEncodingOf<short>(expr));
 
-	/**
-	 * A function converting a formula into an equivalent expression.
-	 *
-	 * @param manager the manager responsible for handling the IR nodes constructed by this method
-	 * @param formula the formula to be converted
-	 * @return an equivalent IR expression
-	 */
-	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
+	expr = toIR(manager, false);
+	EXPECT_EQ(manager.basic.getBool(), expr->getType());
+	EXPECT_EQ("0", toString(*expr));
+	EXPECT_FALSE(toValue<bool>(expr));
+
+	EXPECT_TRUE(isEncodingOf<bool>(expr));
+	EXPECT_FALSE(isEncodingOf<int>(expr));
+	EXPECT_FALSE(isEncodingOf<short>(expr));
 
 
-	/**
-	 * An exception which will be raised if a expression not representing
-	 * a formula should be converted into one.
-	 */
-	class NotAFormulaException : public std::exception {
-		NodePtr expr;
-		std::string msg;
+	expr = toIR(manager, (short)4);
+	EXPECT_EQ("int<2>", toString(*expr->getType()));
+	EXPECT_EQ("4", toString(*expr));
 
-	public:
-		NotAFormulaException(const NodePtr& expr);
-	
-		virtual const char* what() const throw();
-		NodePtr getExpr() const { return expr; }
-		virtual ~NotAFormulaException() throw() { }
-	};
+	expr = toIR(manager, (unsigned)14);
+	EXPECT_EQ("uint<4>", toString(*expr->getType()));
+	EXPECT_EQ("14", toString(*expr));
 
-} // end namespace arithmetic
+
+	double x = 123.123;
+	expr = toIR(manager, x);
+	EXPECT_EQ("real<8>", toString(*expr->getType()));
+	EXPECT_EQ("123.123", toString(*expr));
+	EXPECT_EQ(x, toValue<double>(expr));
+
+
+	// check assertion
+	expr = builder.variable(manager.basic.getInt4());
+	EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type
+	EXPECT_THROW(toValue<int>(expr), InvalidExpression); // wrong node type
+
+}
+
+
+
+} // end namespace lists
 } // end namespace core
 } // end namespace insieme
+

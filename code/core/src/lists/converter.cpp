@@ -34,26 +34,30 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/backend/preprocessor.h"
+#include "insieme/core/lists/converter.h"
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace core {
+namespace lists {
 
-	/**
-	 * The work item extractor mainly consists of a pre-processing step which is
-	 * converting e.g. pfor and job expressions into equivalent runtime function calls.
-	 */
-	class WorkItemExtractor : public PreProcessor {
-	public:
-		/**
-		 * An invocation of this method will conduct the necessary extractions.
-		 */
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
 
-} // end namespace runtime
-} // end namespace backend
+	InvalidExpression::InvalidExpression(const ExpressionPtr& expr) {
+		std::ostringstream ss;
+		ss << "Unsupported expression: " << *expr;
+		msg = ss.str();
+	}
+
+	InvalidExpression::InvalidExpression(const TypePtr& should, const TypePtr& is) {
+		std::ostringstream ss;
+		ss << "Cannot convert expression of type " << *is << " - expecting: " << *should;
+		msg = ss.str();
+	}
+
+	const char* InvalidExpression::what() const throw() {
+		return msg.c_str();
+	}
+
+
+} // end namespace lists
+} // end namespace core
 } // end namespace insieme
