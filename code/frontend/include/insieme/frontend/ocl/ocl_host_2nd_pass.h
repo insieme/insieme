@@ -36,52 +36,40 @@
 
 #pragma once
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/frontend/ocl/ocl_host_passes.h"
 
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
-// shortcut
-#define BASIC builder.getNodeManager().basic
-
 /*
- *  get a VariablePtr which is hidden under the stuff added by the frontend if their is a cast to (void*) in the C input
+ * Second pass when translating a program OpenCL to IR
+ * Responsible for:
+ * - connecting the names of kernel functions with the IR entry points (= LambdaExpr)
  */
-core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder);
+class Host2ndPass {
+	KernelNames& kernelNames;
+	KernelLambdas kernelLambdas;
+	ClmemTable& cl_mems;
+	const core::ASTBuilder& builder;
 
-/*
- * Function to get the type of an Expression
- * If it is a ref-type, it's element type is returned
- */
-const core::TypePtr getNonRefType(const core::ExpressionPtr& refExpr);
-/*
- * Returns either the type itself or the element type, in case that it is a referenceType
- */
-const core::TypePtr getNonRefType(const core::TypePtr& refType);
+public:
+	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, core::ASTBuilder& build) :
+		kernelNames(oclKernelNames), cl_mems(clMemTable), builder(build), kernelLambdas(
+				boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
+				hash_target_specialized(build),	equal_variables(build)) {
+	}
+	void mapNamesToLambdas(const vector<core::ExpressionPtr>& kernelEntries);
 
-/*
- * Builds a ref.deref call around an expression if the it is of ref-type
- */
-core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
+	ClmemTable& getCleanedStructures();
 
-/*
- * Returns either the expression itself or the first argument if expression was a call to function
- */
-core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
-
-/*
- * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
- * Usefull to get variable out of nests of array and struct accesses
- */
-core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::ASTBuilder& builder);
-
-
-/*
- * Function to copy all annotations form one NodePtr to another
- */
-void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink);
-
+	KernelNames& getKernelNames() {
+		return kernelNames;
+	}
+	KernelLambdas& getKernelLambdas() {
+		return kernelLambdas;
+	}
+};
 
 } //namespace ocl
 } //namespace frontend

@@ -538,13 +538,13 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	if ( trgTy->getNodeType() == core::NT_RefType ) {
 		assert( argTy->getNodeType() == core::NT_RefType );
 		const core::TypePtr& subTrgTy = core::analysis::getReferencedType(trgTy);
-		const core::TypePtr& argSubTy = core::analysis::getReferencedType(argTy);
+//		const core::TypePtr& argSubTy = core::analysis::getReferencedType(argTy);
 		if ( subTrgTy->getNodeType() == core::NT_ArrayType ) {
-			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
+//			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
 			core::ExpressionPtr subExpr = expr;
-			if ( *arrTy->getElementType() != *argSubTy ) {
-				subExpr = convertExprTo(builder, arrTy->getElementType(), expr );
-			}
+//			if ( *arrTy->getElementType() != *argSubTy ) {
+//				subExpr = convertExprTo(builder, arrTy->getElementType(), expr );
+//			}
 			return convertRefScalarToRefArray(builder, subExpr);
 		}
 	}
