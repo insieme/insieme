@@ -50,16 +50,18 @@
 
 static inline void lwt_prepare(irt_work_item *wi, intptr_t *basestack) {
 	// heap allocated thread memory
-//	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
-//	wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
+	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
+	wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
 
 	// lead stack be allocated by the OS kernel
-	wi->stack_ptr = (intptr_t)(mmap(NULL, IRT_WI_STACK_SIZE,
-			PROT_READ | PROT_WRITE,
-			MAP_PRIVATE | MAP_32BIT | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK,
-			-1, 0)
-	);
-	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
+	// see http://www.evanjones.ca/software/threading.html
+	// section: Implementing Kernel Threads on Linux
+//	wi->stack_ptr = (intptr_t)(mmap(NULL, IRT_WI_STACK_SIZE,
+//			PROT_READ | PROT_WRITE,
+//			MAP_PRIVATE | MAP_32BIT | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK,
+//			-1, 0)
+//	);
+//	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
 // launch lwt for wi with implementation func and store current stack address in basestack
