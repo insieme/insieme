@@ -674,6 +674,7 @@ namespace conversion {
 class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
+	core::ExpressionPtr currentThisPtr;
 
 	core::ExpressionPtr wrapVariable(clang::Expr* expr) {
 		const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
@@ -1202,6 +1203,10 @@ public:
 		assert(subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
 		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+
+		currentThisPtr.ptr->printTo(std::cerr);
+		args.push_back(currentThisPtr);
+
 		retExpr = builder.callExpr( funcPtr, args );
 
 		return retExpr;
@@ -1291,14 +1296,19 @@ public:
 		//source.dump(convFact.currTU->getCompiler().getSourceManager());
 
 		std::cerr << "CXXThisExpr: \n";
-		std::cerr << callExpr->getValueKind() << std::endl;
-		std::cerr << callExpr->getObjectKind() << std::endl;
 		callExpr->dump();
 
 		std::cerr << "***************Function graph\n";
 		convFact.exprConv->funcDepGraph.print( std::cerr );
 
 
+		for (std::map<const clang::ValueDecl*, core::VariablePtr>::const_iterator it = convFact.ctx.varDeclMap.begin(),
+				end = convFact.ctx.varDeclMap.end(); it!=end; it++){
+			(*it).second->printTo(std::cerr) ;
+			std::cerr << "\n" << (*it).second->getId() << std::endl;
+		}
+
+		return currentThisPtr;
 		//assert(false && "VisitCXXThisExpr not yet handled");
 		//return NULL;
 	}
@@ -1323,7 +1333,7 @@ public:
 			 * C pointers)
 			 */
 			assert( base->getType()->getNodeType() == core::NT_RefType);
-			base = getCArrayElemRef(builder, base);
+			//base = getCArrayElemRef(builder, base);
 		}
 
 		core::IdentifierPtr ident = builder.identifier(membExpr->getMemberDecl()->getNameAsString());
@@ -1881,6 +1891,7 @@ public:
 		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
+			currentThisPtr = retExpr;
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
 		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
