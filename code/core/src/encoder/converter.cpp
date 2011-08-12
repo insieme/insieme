@@ -34,11 +34,11 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/lists/converter.h"
+#include "insieme/core/encoder/encoder.h"
 
 namespace insieme {
 namespace core {
-namespace lists {
+namespace encoder {
 
 
 	InvalidExpression::InvalidExpression(const ExpressionPtr& expr) {

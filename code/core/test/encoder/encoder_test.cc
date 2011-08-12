@@ -38,7 +38,7 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "insieme/core/lists/converter.h"
+#include "insieme/core/encoder/encoder.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -48,12 +48,13 @@
 
 namespace insieme {
 namespace core {
-namespace lists {
+namespace encoder {
 
 TEST(Lists, TestBaseTypes) {
 
 	NodeManager manager;
 	ASTBuilder builder(manager);
+	const auto& basic = manager.basic;
 
 	core::ExpressionPtr expr = toIR(manager, 12);
 
@@ -89,10 +90,15 @@ TEST(Lists, TestBaseTypes) {
 	EXPECT_EQ(x, toValue<double>(expr));
 
 
-	// check assertion
+	// check exceptions
 	expr = builder.variable(manager.basic.getInt4());
 	EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type
 	EXPECT_THROW(toValue<int>(expr), InvalidExpression); // wrong node type
+
+
+	// check types
+	EXPECT_EQ(basic.getInt4(), getTypeFor<int>(manager));
+	EXPECT_EQ(basic.getDouble(), getTypeFor<double>(manager));
 
 }
 

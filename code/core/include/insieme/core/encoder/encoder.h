@@ -38,15 +38,15 @@
 
 #include <inttypes.h>
 
-#include <boost/lexical_cast.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/type_traits/is_same.hpp>
 
+#include "insieme/utils/numeric_cast.h"
 #include "insieme/core/ast_builder.h"
 
 namespace insieme {
 namespace core {
-namespace lists {
+namespace encoder {
 
 	/**
 	 * Within this header file the basic infrastructure for encoding C++ values into
@@ -66,8 +66,14 @@ namespace lists {
 	 * 							  a value of the given type T. If the conversion can
 	 * 							  not be supported, an exception is raised.
 	 *
-	 * The two generic methods toIR(..) and toValue(..) provide generic wrappers for
-	 * the conversion process.
+	 *		- is_encoding_of<T> ... a functor of type bool(const ExpressionPtr&)
+	 *							  testing whether the given expression is a valid encoding
+	 *							  of a value of type T. If this functor is returning
+	 *							  true for some expression e, than the decoding of
+	 *							  e using ir_to_value_converter<T> must not fail.
+	 *
+	 * The three generic methods toIR(..), toValue(..) and isEncodingOf(..) provide
+	 * generic wrappers for the conversion process.
 	 */
 
 
@@ -103,18 +109,52 @@ namespace lists {
 	struct is_encoding_of;
 
 	/**
+	 * A struct bundling together a collection of encoders / decoders for a given
+	 * value type. This class can be used to determine the actual encoding within
+	 * the following wrapper functions.
+	 */
+	template<
+		typename T,
+		typename TypeFactory = type_factory<T>,
+		typename Value2IR    = value_to_ir_converter<T>,
+		typename IR2Value    = ir_to_value_converter<T>,
+		typename Tester      = is_encoding_of<T>
+	>
+	struct Converter {
+		typedef T 				value_type;
+		typedef TypeFactory 	type_factory;
+		typedef Value2IR 		value_to_ir_converter;
+		typedef IR2Value 		ir_to_value_converter;
+		typedef Tester 			is_encoding_of;
+	};
+
+	/**
+	 * A generic utility function determining the IR type to be used to encode
+	 * information of the given value type T.
+	 *
+	 * @tparam T the type of value to be encoded
+	 * @tparam C the converter to be used
+	 * @param manager the manager to be used to obtain the resulting type
+	 * @return the IR type used to encode information of type T
+	 */
+	template<typename T, typename C = Converter<T>>
+	core::TypePtr getTypeFor(core::NodeManager& manager) {
+		return typename C::type_factory()(manager);
+	}
+
+	/**
 	 * A generic utility function supporting the encoding of a given value into an
 	 * equivalent IR representation.
 	 *
 	 * @tparam T the type of value to be encoded
-	 * @tparam Converter the converter to be used
+	 * @tparam C the converter to be used
 	 * @param manager the manager to be used to create the resulting IR node
 	 * @param value the value to be encoded
 	 * @return the encoded equivalent IR structure
 	 */
-	template<typename T, typename Converter = value_to_ir_converter<T>>
+	template<typename T, typename C = Converter<T>>
 	core::ExpressionPtr toIR(core::NodeManager& manager, T value) {
-		return Converter()(manager, value);
+		return typename C::value_to_ir_converter()(manager, value);
 	}
 
 	/**
@@ -122,22 +162,27 @@ namespace lists {
 	 * into a C++ value.
 	 *
 	 * @tparam T the type of value to be decoded
-	 * @tparam Converter the converter to be used
+	 * @tparam C the converter to be used
 	 * @param expr the expression to be decoded
 	 * @return the decoded equivalent value
 	 */
-	template<typename T, typename Converter = ir_to_value_converter<T>>
+	template<typename T, typename C = Converter<T>>
 	T toValue(const core::ExpressionPtr& expr) {
-		return Converter()(expr);
+		return typename C::ir_to_value_converter()(expr);
 	}
 
 	/**
 	 * A generic utility function allowing to test whether the given IR expression
 	 * is a encoding of the given value type.
+	 *
+	 * @tparam T the type of value to be tested for
+	 * @tparam C the converter to be used
+	 * @param expr the expression to be tested
+	 * @return true if it is a valid encoding, false otherwise
 	 */
-	template<typename T, typename Test = is_encoding_of<T>>
+	template<typename T, typename C = Converter<T>>
 	bool isEncodingOf(const core::ExpressionPtr& expr) {
-		return Test()(expr);
+		return typename C::is_encoding_of()(expr);
 	}
 
 	/**
@@ -179,7 +224,7 @@ namespace lists {
 		struct simple_value_converter {
 			core::ExpressionPtr operator()(core::NodeManager& manager, const T& value) const {
 				type_factory<T> factory;
-				return Literal::get(manager, factory(manager), boost::lexical_cast<string>(value));
+				return Literal::get(manager, factory(manager), utils::numeric_cast<string>(value));
 			}
 		};
 
@@ -208,7 +253,7 @@ namespace lists {
 				assert(expr->getNodeType() == core::NT_Literal && "Simple conversion only works for literals!");
 
 				// convert
-				return boost::lexical_cast<T>(static_pointer_cast<const core::Literal>(expr)->getValue());
+				return utils::numeric_cast<T>(static_pointer_cast<const core::Literal>(expr)->getValue());
 			}
 		};
 
