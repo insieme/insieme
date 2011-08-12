@@ -45,7 +45,7 @@
 
 namespace ba = boost::algorithm;
 
-#include "insieme/core/ast_visitor.h"
+//#include "insieme/core/ast_visitor.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/naming.h"
 

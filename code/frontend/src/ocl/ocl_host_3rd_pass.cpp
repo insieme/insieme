@@ -46,11 +46,52 @@ namespace frontend {
 namespace ocl {
 using namespace insieme::core;
 
+namespace {
+
+// visitor finds calls to array.create.1D to check if the type is still correct
+class ArrayCreat1DFinder: public ASTVisitor<bool> {
+	const ASTBuilder& builder;
+//	TypePtr match;
+
+public:
+	ArrayCreat1DFinder(const ASTBuilder& build): ASTVisitor<bool>(false), builder(build) {}
+
+	bool visitNode(const NodePtr& node) {
+		return false;
+	}
+
+	bool visitCallExpr(const CallExprPtr& call) {
+//		std::cout << "SDF " << call->getFunctionExpr() << std::endl;
+		if(call->getFunctionExpr() == BASIC.getArrayCreate1D()) {
+			if(call->getArgument(0)->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
+/*				match = call->getArgument(0)->getType();
+				if(const GenericTypePtr& gt = dynamic_pointer_cast<const GenericType>(match))
+					match = gt->getTypeParameter()[0]; // taken from typechecks.cpp check type literal*/
+				return true;
+			}
+		}
+		return false;
+	}
+
+//	TypePtr getMatch(){ return match; }
+};
+}
+
+// gets the innermost type out of an array/ref nest
+// TODO change to something that makes more sense
+const TypePtr& HostMapper3rdPass::getInnermostType(const TypePtr& type){
+	if(const ArrayTypePtr& at = dynamic_pointer_cast<const ArrayType>(type))
+		return getInnermostType(at->getElementType());
+	if(const RefTypePtr& rt = dynamic_pointer_cast<const RefType>(type))
+		return getInnermostType(rt->getElementType());
+
+	return type;
+}
+
 /* Assumptions:
  * 1. the work dimension is a scalar in the arguments
  * 2. The cast to void* of the local/global size happens in the argument
 */
-
 const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, ExpressionPtr size) {
 	const TypePtr vecTy = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
 	TypePtr argTy;
@@ -266,6 +307,20 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				if(rhs->getFunctionExpr()->toString() == "clCreateCommandQueue")
 					return BASIC.getNoOp();
 
+
+				// update array.create.1D if type of variable has changed
+				if(rhs->getFunctionExpr() == BASIC.getArrayCreate1D())
+				{
+					const ExpressionPtr lhs = callExpr->getArgument(0);
+					const TypePtr& lhsTy = dynamic_pointer_cast<const RefType>(lhs->getType())->getElementType();
+					if(!!lhsTy && lhsTy != rhs->getType()) {
+						vector<ExpressionPtr> newArgs;
+						newArgs.push_back(builder.literal("FU", lhsTy));
+						NodePtr ret = builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), lhs, builder.callExpr(lhsTy,
+								BASIC.getArrayCreate1D(), builder.literal("FU", lhsTy), rhs->getArgument(1)));
+					}
+				}
+
 			}
 		}
 
@@ -416,7 +471,6 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 					}
 
 				}
-
 			}
 			// check if return type of array/vector subscript calls are still valid
 			if(BASIC.isSubscriptOperator(newCall->getFunctionExpr())) {
@@ -443,6 +497,19 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 					if(newCall->getType() != argTy->getElementType())
 						return builder.callExpr(argTy->getElementType(), BASIC.getRefDeref(), newCall->getArgument(0));
 				}
+			}
+			// need to update array.create.1D type if type of variable did change
+			ArrayCreat1DFinder ac1df(builder);
+			if(visitDepthFirstInterruptable(newCall, ac1df)) {
+				const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
+
+				// FIXME too dirty
+				if(newType->toString().find("_cl_mem"))
+					return newCall;
+
+//std::cout << "The day is comming " << builder.genericType("_cl_mem") << " -> " << newCall->getArgument(0) << " "<< newType << std::endl;
+//todo copy annotations
+				return transform::replaceAll(builder.getNodeManager(), newCall, builder.genericType("_cl_mem"), newType);
 			}
 		}
 
