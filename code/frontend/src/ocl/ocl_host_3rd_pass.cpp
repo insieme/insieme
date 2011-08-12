@@ -35,7 +35,7 @@
  */
 
 #include "insieme/frontend/ocl/ocl_host_utils.h"
-#include "insieme/frontend/ocl/ocl_host_passes.h"
+#include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
 #include "insieme/core/transform/node_replacer.h"
 
 
@@ -272,6 +272,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this))) {
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 				if(fun->getValue() == "clEnqueueNDRangeKernel" ) {
+//std::cout << "lit: " << fun->getValue() << kernelLambdas.size() <<  std::endl;
 					// get kernel function
 					ExpressionPtr k = callExpr->getArgument(1);
 
@@ -280,7 +281,10 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 					// get corresponding lambda expression
 //equal_target<ExpressionPtr> cmp;
-//std::cout << "Arguments: " << kernelArgs << "\nk: " << k << " compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;
+/*for_each(kernelLambdas, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr > ka) {
+	std::cout << "Arguments: " << ka.first << "\n";
+});
+std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;*/
 					assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
 					LambdaExprPtr lambda = kernelLambdas[k];
 
@@ -326,7 +330,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							assert(!!arg && "Kernel has illegal global memory argument");
 							bool local = false;
 							//global and private memory arguments must be variables
-							std::cout << "before " << arg;
 							arg = getVarOutOfCrazyInspireConstruct(arg, builder);
 							// local args are declared in localMemDecls
 							for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
@@ -379,8 +382,11 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				// replace variable with new version if necessary
 				const VariablePtr& newStruct = dynamic_pointer_cast<const Variable>(newCall->getArgument(0));
 				const VariablePtr& oldStruct = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0));
-				assert(oldStruct && newStruct && "First argument of composite.ref.elem must be a struct variable");
-				if(newStruct != oldStruct) { // struct variable has been replaced, may need to update type of composite.ref.elem
+//				std::cout << "OldStruct: " << callExpr->getArgument(0) << "\nNewStruct: " << newCall->getArgument(0) << std::endl;
+
+				//TODO test quickfix if NULL, e.g. struct is inside an array
+				//assert(oldStruct && newStruct && "First argument of composite.ref.elem must be a struct variable");
+				if(!!newStruct && (newStruct != oldStruct)) { // struct variable has been replaced, may need to update type of composite.ref.elem
 					const TypePtr& newType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct->getType()));
 					assert(newType && "First argument of composite.ref.elem must be a struct variable");
 
@@ -413,7 +419,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 			}
 			// check if return type of array/vector subscript calls are still valid
-			if(BASIC.isSubscriptOperator(newCall->getFunctionExpr()))
+			if(BASIC.isSubscriptOperator(newCall->getFunctionExpr())) {
 				if(newCall->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
 					if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>(getNonRefType(newCall->getArgument(0)))) {
 /*						if(BASIC.isArrayOp(newCall->getFunctionExpr()))
@@ -430,7 +436,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						}
 					}
 				}
-
+			}
 			// need to update type of delete operation for former cl_mem variables
 			if(newCall->getFunctionExpr() == BASIC.getRefDeref()) {
 				if(const RefTypePtr& argTy = dynamic_pointer_cast<const RefType>(newCall->getArgument(0)->getType())) {
