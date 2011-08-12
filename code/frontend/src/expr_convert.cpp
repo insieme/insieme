@@ -1333,7 +1333,7 @@ public:
 			 * C pointers)
 			 */
 			assert( base->getType()->getNodeType() == core::NT_RefType);
-			//base = getCArrayElemRef(builder, base);
+			base = getCArrayElemRef(builder, base);
 		}
 
 		core::IdentifierPtr ident = builder.identifier(membExpr->getMemberDecl()->getNameAsString());
