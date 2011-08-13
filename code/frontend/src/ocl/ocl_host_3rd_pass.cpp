@@ -63,7 +63,8 @@ public:
 	bool visitCallExpr(const CallExprPtr& call) {
 //		std::cout << "SDF " << call->getFunctionExpr() << std::endl;
 		if(call->getFunctionExpr() == BASIC.getArrayCreate1D()) {
-			if(call->getArgument(0)->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
+			if(call->getArgument(0)->getType()->toString().find("<_cl_") != string::npos) {
+				std::cout << "found " << call->getArgument(0)->getType()->toString() << std::endl;
 /*				match = call->getArgument(0)->getType();
 				if(const GenericTypePtr& gt = dynamic_pointer_cast<const GenericType>(match))
 					match = gt->getTypeParameter()[0]; // taken from typechecks.cpp check type literal*/
@@ -320,14 +321,22 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				ArrayCreat1DFinder ac1df(builder);
 				if(visitDepthFirstInterruptable(newCall, ac1df)) {
 					const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
+					const TypePtr& oldType = getInnermostType(newCall->getArgument(1)->getType());
 
 					// FIXME too dirty
 	//				if(newType->toString().find("_cl_mem"))
 	//					return newCall;
 
-	//std::cout << "The day is comming " << builder.genericType("_cl_mem") << " -> " << newCall->getArgument(0) << " "<< newType << std::endl;
 	//todo copy annotations
-					return transform::replaceAll(builder.getNodeManager(), newCall, builder.genericType("_cl_mem"), newType);
+	std::cout << "The day is comming " << oldType << " -> " << newType << std::endl;
+					NodePtr ret;
+					if(oldType != newType) {
+						ret = transform::replaceAll(builder.getNodeManager(), newCall, oldType, newType);
+					} else {
+						ret= callExpr;
+					}
+					copyAnnotations(callExpr, ret);
+					return ret;
 				}
 /*
 				if(rhs->getFunctionExpr() == BASIC.getArrayCreate1D())
