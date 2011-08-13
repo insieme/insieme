@@ -106,7 +106,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	// check work dimension
 	const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim);
 	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
-	wd = atoi(dim->getValue().c_str());
+	wd = atoi(dim->getValue(). c_str());
 	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
 	assert(workDim < 3u && "Invalid work_dim. Should be 1 - 3!");
 
@@ -297,7 +297,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
 		if(fun == BASIC.getRefAssign()) {
 			// get rid of some not needed functions
-			if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+			const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this));
+			if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
 				// check if it is embedded in a ref.deref
 				if(const CallExprPtr& deref = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0)))
 					if(rhs->getFunctionExpr() == BASIC.getRefDeref())
@@ -307,8 +308,28 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				if(rhs->getFunctionExpr()->toString() == "clCreateCommandQueue")
 					return BASIC.getNoOp();
 
-
 				// update array.create.1D if type of variable has changed
+				// need to update type of delete operation for former cl_mem variables
+				if(newCall->getFunctionExpr() == BASIC.getRefDeref()) {
+					if(const RefTypePtr& argTy = dynamic_pointer_cast<const RefType>(newCall->getArgument(0)->getType())) {
+						if(newCall->getType() != argTy->getElementType())
+							return builder.callExpr(argTy->getElementType(), BASIC.getRefDeref(), newCall->getArgument(0));
+					}
+				}
+				// need to update array.create.1D type if type of variable did change
+				ArrayCreat1DFinder ac1df(builder);
+				if(visitDepthFirstInterruptable(newCall, ac1df)) {
+					const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
+
+					// FIXME too dirty
+	//				if(newType->toString().find("_cl_mem"))
+	//					return newCall;
+
+	//std::cout << "The day is comming " << builder.genericType("_cl_mem") << " -> " << newCall->getArgument(0) << " "<< newType << std::endl;
+	//todo copy annotations
+					return transform::replaceAll(builder.getNodeManager(), newCall, builder.genericType("_cl_mem"), newType);
+				}
+/*
 				if(rhs->getFunctionExpr() == BASIC.getArrayCreate1D())
 				{
 					const ExpressionPtr lhs = callExpr->getArgument(0);
@@ -320,7 +341,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 								BASIC.getArrayCreate1D(), builder.literal("FU", lhsTy), rhs->getArgument(1)));
 					}
 				}
-
+*/
 			}
 		}
 
@@ -491,28 +512,7 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 					}
 				}
 			}
-			// need to update type of delete operation for former cl_mem variables
-			if(newCall->getFunctionExpr() == BASIC.getRefDeref()) {
-				if(const RefTypePtr& argTy = dynamic_pointer_cast<const RefType>(newCall->getArgument(0)->getType())) {
-					if(newCall->getType() != argTy->getElementType())
-						return builder.callExpr(argTy->getElementType(), BASIC.getRefDeref(), newCall->getArgument(0));
-				}
-			}
-			// need to update array.create.1D type if type of variable did change
-			ArrayCreat1DFinder ac1df(builder);
-			if(visitDepthFirstInterruptable(newCall, ac1df)) {
-				const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
-
-				// FIXME too dirty
-				if(newType->toString().find("_cl_mem"))
-					return newCall;
-
-//std::cout << "The day is comming " << builder.genericType("_cl_mem") << " -> " << newCall->getArgument(0) << " "<< newType << std::endl;
-//todo copy annotations
-				return transform::replaceAll(builder.getNodeManager(), newCall, builder.genericType("_cl_mem"), newType);
-			}
 		}
-
 	}
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
