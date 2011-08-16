@@ -211,6 +211,7 @@ public:
 
 	ClmemTable& getClMemMapping() { return cl_mems; }
 	const vector<core::ExpressionPtr>& getKernels() { return kernelEntries;	}
+	const size_t getnKernels() { return kernelEntries.size(); }
 	KernelArgs& getKernelArgs() { return kernelArgs; }
 	KernelNames& getKernelNames() { return kernelNames; }
 	LocalMemDecls& getLocalMemDecls() {	return localMemDecls; }

@@ -49,9 +49,9 @@ namespace ocl {
  */
 class Host2ndPass {
 	KernelNames& kernelNames;
-	KernelLambdas kernelLambdas;
 	ClmemTable& cl_mems;
 	const core::ASTBuilder& builder;
+	KernelLambdas kernelLambdas;
 
 public:
 	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, core::ASTBuilder& build) :

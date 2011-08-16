@@ -58,6 +58,9 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	KernelLambdas& kernelLambdas;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 
+	// get the zero element of the corresponding type
+	core::ExpressionPtr getZeroElem(core::TypePtr type);
+
 	// gets the innermost type out of an array/ref nest
 	const core::TypePtr& getInnermostType(const core::TypePtr& type);
 

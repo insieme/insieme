@@ -63,8 +63,7 @@ public:
 	bool visitCallExpr(const CallExprPtr& call) {
 //		std::cout << "SDF " << call->getFunctionExpr() << std::endl;
 		if(call->getFunctionExpr() == BASIC.getArrayCreate1D()) {
-			if(call->getArgument(0)->getType()->toString().find("<_cl_") != string::npos) {
-				std::cout << "found " << call->getArgument(0)->getType()->toString() << std::endl;
+			if(call->getArgument(0)->getType()->toString().find("array<_cl_") != string::npos) {
 /*				match = call->getArgument(0)->getType();
 				if(const GenericTypePtr& gt = dynamic_pointer_cast<const GenericType>(match))
 					match = gt->getTypeParameter()[0]; // taken from typechecks.cpp check type literal*/
@@ -77,6 +76,23 @@ public:
 //	TypePtr getMatch(){ return match; }
 };
 }
+
+// returns a 0-literal of the corresponding type or NoOp in cas of unit
+ExpressionPtr HostMapper3rdPass::getZeroElem(TypePtr type) {
+	TypeList noArgs;
+	std::vector<VariablePtr> noParams;
+	std::vector<ExpressionPtr> noExpr;
+/*
+	if(type == BASIC.getUnit()) {
+		LambdaExprPtr zeroCall = builder.lambdaExpr(builder.functionType(noArgs, type), noParams, builder.returnStmt(BASIC.getUnit()));
+		return builder.callExpr(type, zeroCall);
+	}
+*/
+	LambdaExprPtr zeroCall = builder.lambdaExpr(builder.functionType(noArgs, type), noParams, builder.returnStmt(builder.literal(type, "0")));
+	return builder.callExpr(type, zeroCall);
+}
+
+
 
 // gets the innermost type out of an array/ref nest
 // TODO change to something that makes more sense
@@ -250,6 +266,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(this->resolveElement(decl->getInitialization()))) {
 				LiteralPtr typeLiteral;
+				if(initFct->getArguments().size() > 0)
 				if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(initFct->getArgument(0))) { // default init
 					if(undefined->getFunctionExpr() == BASIC.getUndefined()) {
 						typeLiteral = dynamic_pointer_cast<const Literal>(undefined->getArgument(0));
@@ -258,6 +275,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					}
 				}
 
+				if(initFct->getArguments().size() > 0)
 				if(const CastExprPtr& castToClMem = dynamic_pointer_cast<const CastExpr>(initFct->getArgument(0))) {
 					oldType = (castToClMem->getType());
 					assert(oldType && "Unexpected argument when initializing variable by cast");
@@ -288,7 +306,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			}
 		} else {
 // remove delarations of opencl type variables. Should not be used any more
-			if(var->getType()->toString().find("_cl_") != string::npos /*&& var->getNodeCategory() != NT_StructType*/)
+			if(var->getType()->toString().find("array<_cl_") != string::npos /*&& var->getNodeCategory() != NT_StructType*/)
 				return BASIC.getNoOp();
 		}
 
@@ -301,6 +319,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this));
 			if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
 				// check if it is embedded in a ref.deref
+				if(rhs->getArguments().size() > 0)
 				if(const CallExprPtr& deref = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0)))
 					if(rhs->getFunctionExpr() == BASIC.getRefDeref())
 						rhs = deref;
@@ -310,35 +329,33 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					return BASIC.getNoOp();
 
 				// update array.create.1D if type of variable has changed
-				// need to update type of delete operation for former cl_mem variables
 				if(newCall->getFunctionExpr() == BASIC.getRefDeref()) {
+assert(false && "A ref deref can be the substituion of a refAssign");
 					if(const RefTypePtr& argTy = dynamic_pointer_cast<const RefType>(newCall->getArgument(0)->getType())) {
 						if(newCall->getType() != argTy->getElementType())
 							return builder.callExpr(argTy->getElementType(), BASIC.getRefDeref(), newCall->getArgument(0));
 					}
 				}
-				// need to update array.create.1D type if type of variable did change
+				// need to update array.create.1D type if type of variable did change or is still a cl_ type
 				ArrayCreat1DFinder ac1df(builder);
 				if(visitDepthFirstInterruptable(newCall, ac1df)) {
 					const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
 					const TypePtr& oldType = getInnermostType(newCall->getArgument(1)->getType());
 
-					// FIXME too dirty
-	//				if(newType->toString().find("_cl_mem"))
-	//					return newCall;
-
-	//todo copy annotations
-	std::cout << "The day is comming " << oldType << " -> " << newType << std::endl;
+//	std::cout << "The day is comming " << oldType << " -> " << newType << std::endl;
 					NodePtr ret;
 					if(oldType != newType) {
 						ret = transform::replaceAll(builder.getNodeManager(), newCall, oldType, newType);
 					} else {
+						// if there are cl_ types for which we have no replacement we remove them
+						if(oldType->toString().find("_cl_") != string::npos)
+							return BASIC.getNoOp();
 						ret= callExpr;
 					}
 					copyAnnotations(callExpr, ret);
 					return ret;
 				}
-/*
+/* crapy static version without vistior
 				if(rhs->getFunctionExpr() == BASIC.getArrayCreate1D())
 				{
 					const ExpressionPtr lhs = callExpr->getArgument(0);
@@ -350,6 +367,21 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 								BASIC.getArrayCreate1D(), builder.literal("FU", lhsTy), rhs->getArgument(1)));
 					}
 				}
+*/
+				/*TODO check of removement of _cl_ stuff should be moved to a more general place
+				if(rhs->getType()->toString().find("array<_cl_") != string::npos){
+					return BASIC.getNoOp();
+				} unused*/
+/* fucking destroys everything
+				// remove remaining calls using cl_ objects
+				if(rhs->getType()->toString().find("array<_cl_"))
+					return BASIC.getNoOp();
+
+				//TODO unchecked, maybe unusual
+				for(auto I = rhs->getArguments().begin(); I != rhs->getArguments().end(); ++I) {
+					if((*I)->getType()->toString().find("array<_cl_") != string::npos)
+						return BASIC.getNoOp();
+				};
 */
 			}
 		}
@@ -505,15 +537,15 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 			// check if return type of array/vector subscript calls are still valid
 			if(BASIC.isSubscriptOperator(newCall->getFunctionExpr())) {
 				if(newCall->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
-					if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>(getNonRefType(newCall->getArgument(0)))) {
-/*						if(BASIC.isArrayOp(newCall->getFunctionExpr()))
-							std::cout << "ARRRARY" << std::endl;
-						else if(BASIC.isVectorOp(newCall->getFunctionExpr()))
-							std::cout << "VECTOR" << std::endl;
-						else
-							std::cout << "NOTHING" << newCall->getFunctionExpr() << std::endl;*/
+					if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>((newCall->getArgument(0)->getType()))) {
 						const TypePtr& oldType = getNonRefType(newCall);
-						if(seType->getElementType() != oldType) {
+/*						if(BASIC.isArrayOp(newCall->getFunctionExpr()))
+							std::cout << "ARRRARY " << oldType << " " << newCall->getArgument(0) << std::endl;
+						else if(BASIC.isVectorOp(newCall->getFunctionExpr()))
+							std::cout << "VECTOR " << seType << std::endl;
+						else
+							std::cout << "NOTHING " << seType << newCall->getFunctionExpr() << std::endl;
+*/						if(getNonRefType(seType->getElementType()) != oldType) {
 							TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), newCall->getType(),
 									oldType, seType->getElementType()));
 							return builder.callExpr(newRetType, newCall->getFunctionExpr(), newCall->getArguments());
@@ -521,10 +553,20 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 					}
 				}
 			}
+
+			// TODO find correct type
+			// remove remaining calls using cl_ objects
+			if(newCall->getType()->toString().find("array<_cl_") != string::npos)
+				return getZeroElem(newCall->getType());
+			for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
+				if((*I)->getType()->toString().find("array<_cl_") != string::npos)
+					return getZeroElem(newCall->getType());
+			}
 		}
 	}
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
+
 	copyAnnotations(element, ret);
 	return ret;
 }

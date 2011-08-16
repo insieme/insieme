@@ -76,11 +76,11 @@ ProgramPtr HostCompiler::compile() {
 	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
 	assert(interProg && "First pass of OclHostCompiler corrupted the program");
 
-	if(oclHostMapper.getKernels().size() == 0) {
+	if(oclHostMapper.getnKernels() == 0) {
 		LOG(INFO) << "No OpenCL kernel functions found";
 		return mProgram;
 	}
-	LOG(INFO) << "Adding " << oclHostMapper.getKernels().size() << " OpenCL kernels to host Program... ";
+	LOG(INFO) << "Adding " << oclHostMapper.getnKernels() << " OpenCL kernels to host Program... ";
 
 	const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
 
