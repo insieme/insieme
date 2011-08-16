@@ -85,7 +85,7 @@ ProgramPtr HostCompiler::compile() {
 	const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
 
 	const ProgramPtr& progWithEntries = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
-	const ProgramPtr& progWithKernels = progWithKernels->remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
+	const ProgramPtr& progWithKernels = core::Program::remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
 
 	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
 	oh2nd.mapNamesToLambdas(kernelEntries);

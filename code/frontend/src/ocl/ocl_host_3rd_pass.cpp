@@ -86,16 +86,16 @@ bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::
 		if(BASIC.isSubscriptOperator(fun)) {
 //		std::cout << "-----------------------\n" << oldCall << std::endl << std::endl << oldCall->getArgument(0)->getType() << std::endl;
 			if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>((oldCall->getArgument(0)->getType()))) {
-				const TypePtr& oldType = getBaseType(oldCall);
+				const TypePtr& oldBType = getBaseType(oldCall);
 /*						if(BASIC.isArrayOp(oldCall->getFunctionExpr()))
 					std::cout << "ARRRARY " << oldType << " " << getBaseType(seType->getElementType()) << std::endl;
 				else if(BASIC.isVectorOp(oldCall->getFunctionExpr()))
 					std::cout << "VECTOR " << seType << std::endl;
 				else
 					std::cout << "NOTHING " << seType << oldCall->getFunctionExpr() << std::endl;
-*/				if(getBaseType(seType) != oldType) {
-					TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), oldCall->getType(), // do NOT change to oldType!
-							oldType, getBaseType(seType)));
+*/				if(getBaseType(seType) != oldBType) {
+					TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), oldType,
+							oldBType, getBaseType(seType)));
 					newCall = builder.callExpr(newRetType, oldCall->getFunctionExpr(), oldCall->getArguments());
 					return true;
 				}
@@ -114,11 +114,11 @@ bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::
 				return true;
 			}
 		}
-
+/*
 		if(fun == BASIC.getArrayCreate1D()) {
-
+tbi
 		}
-
+*/
 		if(fun == BASIC.getRefDeref()) {
 			const TypePtr retTy = tryDeref(oldCall->getArgument(0), builder)->getType();
 			if(oldType != retTy) {
@@ -132,7 +132,8 @@ bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::
 
 
 // returns a 0-literal of the corresponding type or NoOp in cas of unit
-ExpressionPtr HostMapper3rdPass::getZeroElem(TypePtr type) {
+const ExpressionPtr HostMapper3rdPass::getZeroElem(const TypePtr& type) {
+	return builder.literal(type, "0");
 	TypeList noArgs;
 	std::vector<VariablePtr> noParams;
 	std::vector<ExpressionPtr> noExpr;
@@ -141,9 +142,9 @@ ExpressionPtr HostMapper3rdPass::getZeroElem(TypePtr type) {
 		LambdaExprPtr zeroCall = builder.lambdaExpr(builder.functionType(noArgs, type), noParams, builder.returnStmt(BASIC.getUnit()));
 		return builder.callExpr(type, zeroCall);
 	}
-*/
-	LambdaExprPtr zeroCall = builder.lambdaExpr(builder.functionType(noArgs, type), noParams, builder.returnStmt(builder.literal(type, "0")));
-	return builder.callExpr(type, zeroCall);
+*//*
+	const LambdaExprPtr& zeroCall = builder.lambdaExpr(builder.functionType(noArgs, type), noParams, builder.returnStmt(builder.literal(type, "0")));
+	return builder.callExpr(type, zeroCall);*/
 }
 
 
@@ -597,19 +598,21 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 
 			// shortcut to avoid replacing functions which return cl_ types
 			// have to be replaced elsewhere coz we do not know the correct replacement here
-			if(newCall->getType()->toString().find("array<_cl_") != string::npos) {
+/*			if(newCall->getType()->toString().find("array<_cl_") != string::npos) {
 //				std::cout << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
 				return newCall;
-			}
-			// remove remaining calls using cl_ objects, just return the zero-element
-			for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
-				// extra check to not remove e.g. sizeof
-				if(const LiteralPtr lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
-					if(lit->getValue().find("sizeof") == string::npos)
-						if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
-		//					std::cout << "-> " << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
-							return getZeroElem(newCall->getType());
-						}
+			}*/
+			if(newCall->getType()->toString().find("array<_cl_") == string::npos) {
+				// remove remaining calls using cl_ objects, just return the zero-element
+				for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
+					// extra check to not remove e.g. sizeof
+					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
+						if(lit->getValue().find("sizeof") == string::npos)
+							if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
+			//					std::cout << "-> " << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
+								return getZeroElem(newCall->getType());
+							}
+				}
 			}
 		}
 	}
