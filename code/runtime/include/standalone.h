@@ -176,4 +176,7 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
 	pthread_mutex_lock(&mutex);	
+	//irt_wi_event_check_and_register(main_wi, IRT_WI_STATE_DONE, )
+	// TODO solve with event handling
+	while(main_wi->state != IRT_WI_STATE_DONE) { usleep(10); };
 }

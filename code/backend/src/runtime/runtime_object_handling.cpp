@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/runtime/work_item_extractor.h"
+#include "insieme/backend/runtime/runtime_object_handling.h"
 
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"

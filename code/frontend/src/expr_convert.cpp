@@ -538,13 +538,13 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	if ( trgTy->getNodeType() == core::NT_RefType ) {
 		assert( argTy->getNodeType() == core::NT_RefType );
 		const core::TypePtr& subTrgTy = core::analysis::getReferencedType(trgTy);
-		const core::TypePtr& argSubTy = core::analysis::getReferencedType(argTy);
+//		const core::TypePtr& argSubTy = core::analysis::getReferencedType(argTy);
 		if ( subTrgTy->getNodeType() == core::NT_ArrayType ) {
-			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
+//			const core::ArrayTypePtr& arrTy = core::static_pointer_cast<const core::ArrayType>( subTrgTy );
 			core::ExpressionPtr subExpr = expr;
-			if ( *arrTy->getElementType() != *argSubTy ) {
-				subExpr = convertExprTo(builder, arrTy->getElementType(), expr );
-			}
+//			if ( *arrTy->getElementType() != *argSubTy ) {
+//				subExpr = convertExprTo(builder, arrTy->getElementType(), expr );
+//			}
 			return convertRefScalarToRefArray(builder, subExpr);
 		}
 	}
@@ -674,6 +674,7 @@ namespace conversion {
 class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
+	core::ExpressionPtr currentThisPtr;
 
 	core::ExpressionPtr wrapVariable(clang::Expr* expr) {
 		const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
@@ -979,6 +980,24 @@ private:
 		return args;
 	}
 
+	ExpressionList getFunctionArguments(const core::ASTBuilder& builder,
+			clang::CXXConstructExpr* callExpr, const core::FunctionTypePtr& funcTy)
+	{
+		ExpressionList args;
+		for ( size_t argId = 0, end = callExpr->getNumArgs(); argId < end; ++argId ) {
+			core::ExpressionPtr&& arg = Visit( callExpr->getArg(argId) );
+			// core::TypePtr&& argTy = arg->getType();
+			if ( argId < funcTy->getParameterTypes().size() ) {
+				const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId];
+				arg = convFact.castToType(funcArgTy, arg);
+			} else {
+				arg = convFact.castToType(builder.getNodeManager().basic.getVarList(), arg);
+			}
+			args.push_back( arg );
+		}
+		return args;
+	}
+
 public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							FUNCTION CALL EXPRESSION
@@ -1184,6 +1203,10 @@ public:
 		assert(subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
 		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+
+		currentThisPtr.ptr->printTo(std::cerr);
+		args.push_back(currentThisPtr);
+
 		retExpr = builder.callExpr( funcPtr, args );
 
 		return retExpr;
@@ -1221,12 +1244,21 @@ public:
 		assert(constructorDecl);
 		dumpDecl(constructorDecl);
 
+
+		FunctionDecl* funcDecl = constructorDecl;
+		core::FunctionTypePtr funcTy =
+			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+
+
+
 		////clang::Stmt* Body = constructorDecl->getBody();
 		////const FunctionProtoType *FnType = callExpr->getType()->getAs<FunctionProtoType>();
 
 		// get class declaration
 		CXXRecordDecl * callingClass = constructorDecl->getParent();
 		assert(callingClass);
+		callingClass->viewInheritance(callingClass->getASTContext());
 
 		core::IdentifierPtr ident = builder.identifier(constructorDecl->getNameAsString());
 		core::ExpressionPtr retExpr;
@@ -1260,7 +1292,24 @@ public:
 	//						CXX THIS CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
-		assert(false && "VisitCXXThisExpr not yet handled");
+		clang::SourceLocation&& source = callExpr->getLocation();
+		//source.dump(convFact.currTU->getCompiler().getSourceManager());
+
+		std::cerr << "CXXThisExpr: \n";
+		callExpr->dump();
+
+		std::cerr << "***************Function graph\n";
+		convFact.exprConv->funcDepGraph.print( std::cerr );
+
+
+		for (std::map<const clang::ValueDecl*, core::VariablePtr>::const_iterator it = convFact.ctx.varDeclMap.begin(),
+				end = convFact.ctx.varDeclMap.end(); it!=end; it++){
+			(*it).second->printTo(std::cerr) ;
+			std::cerr << "\n" << (*it).second->getId() << std::endl;
+		}
+
+		return currentThisPtr;
+		//assert(false && "VisitCXXThisExpr not yet handled");
 		//return NULL;
 	}
 
@@ -1842,6 +1891,7 @@ public:
 		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
+			currentThisPtr = retExpr;
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
 		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {

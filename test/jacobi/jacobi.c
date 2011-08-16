@@ -12,13 +12,14 @@
 #include <math.h>
 #include <time.h>
 
+#define N 650
+
 double init_func(int x, int y) {
 	return 40 * sin((double)(16 * (2 * x - 1) * y));
 }
 
-#define N 650
-
 int main(int argc, char** argv) {
+
 	clock_t start_t, end_t;
 	double setup_time, elapsed_time;
 	start_t = clock();

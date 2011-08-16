@@ -36,57 +36,61 @@
 
 #pragma once
 
-#include <exception>
-
-#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/forward_decls.h"
+#include "insieme/backend/preprocessor.h"
 
 namespace insieme {
-namespace core {
+namespace backend {
+namespace runtime {
 
-class Expression;
-template<typename T> class Pointer;
-typedef Pointer<const Expression> ExpressionPtr;
+	// ------------------------------------------------------------
+	//   A data infrastructure to handle runtime items
+	// ------------------------------------------------------------
 
-namespace arithmetic {
+	class DataItem {
 
-	class NotAFormulaException;
+		core::TypePtr elementType;
 
-	/**
-	 * A function converting a given expression into an equivalent formula.
-	 *
-	 * @param expr the expression to be converted
-	 * @return an equivalent formula
-	 *
-	 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
-	 */
-	Formula toFormula(const ExpressionPtr& expr);
-
-	/**
-	 * A function converting a formula into an equivalent expression.
-	 *
-	 * @param manager the manager responsible for handling the IR nodes constructed by this method
-	 * @param formula the formula to be converted
-	 * @return an equivalent IR expression
-	 */
-	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
-
-
-	/**
-	 * An exception which will be raised if a expression not representing
-	 * a formula should be converted into one.
-	 */
-	class NotAFormulaException : public std::exception {
-		NodePtr expr;
-		std::string msg;
-
-	public:
-		NotAFormulaException(const NodePtr& expr);
-	
-		virtual const char* what() const throw();
-		NodePtr getExpr() const { return expr; }
-		virtual ~NotAFormulaException() throw() { }
 	};
 
-} // end namespace arithmetic
-} // end namespace core
+	class DataRequirement {
+
+	};
+
+	class ChannelRequirement {
+
+	};
+
+	class WorkItemImpl {
+
+		core::LambdaExprPtr implementation;
+
+		vector<DataRequirement> dataRequirement;
+
+		vector<ChannelRequirement> channelRequirement;
+
+	};
+
+	class WorkItem {
+
+		unsigned implementationID;
+
+		vector<WorkItemImpl> variants;
+
+	};
+
+	/**
+	 * The work item extractor mainly consists of a pre-processing step which is
+	 * converting e.g. pfor and job expressions into equivalent runtime function calls.
+	 */
+	class WorkItemExtractor : public PreProcessor {
+	public:
+		/**
+		 * An invocation of this method will conduct the necessary extractions.
+		 */
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+} // end namespace runtime
+} // end namespace backend
 } // end namespace insieme

@@ -34,59 +34,59 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <exception>
+#include <boost/lexical_cast.hpp>
 
-#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/encoder/lists.h"
+
+#include "insieme/utils/container_utils.h"
+
+#include "insieme/core/ast_node.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
 namespace core {
+namespace encoder {
 
-class Expression;
-template<typename T> class Pointer;
-typedef Pointer<const Expression> ExpressionPtr;
+TEST(Lists, languageExtension) {
 
-namespace arithmetic {
+	NodeManager manager;
+	const ListExtension& ext = manager.getLangExtension<ListExtension>();
 
-	class NotAFormulaException;
+	EXPECT_EQ("(('a,list<'a>)->list<'a>)", toString(*ext.cons->getType()));
+	EXPECT_EQ("((type<'a>)->list<'a>)", toString(*ext.empty->getType()));
 
-	/**
-	 * A function converting a given expression into an equivalent formula.
-	 *
-	 * @param expr the expression to be converted
-	 * @return an equivalent formula
-	 *
-	 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
-	 */
-	Formula toFormula(const ExpressionPtr& expr);
-
-	/**
-	 * A function converting a formula into an equivalent expression.
-	 *
-	 * @param manager the manager responsible for handling the IR nodes constructed by this method
-	 * @param formula the formula to be converted
-	 * @return an equivalent IR expression
-	 */
-	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
+}
 
 
-	/**
-	 * An exception which will be raised if a expression not representing
-	 * a formula should be converted into one.
-	 */
-	class NotAFormulaException : public std::exception {
-		NodePtr expr;
-		std::string msg;
+TEST(Lists, listConversion) {
 
-	public:
-		NotAFormulaException(const NodePtr& expr);
-	
-		virtual const char* what() const throw();
-		NodePtr getExpr() const { return expr; }
-		virtual ~NotAFormulaException() throw() { }
-	};
+	NodeManager manager;
 
-} // end namespace arithmetic
+	// create a list
+
+	vector<int> list = toVector(1,2,3);
+	core::ExpressionPtr irList = toIR(manager, list);
+	vector<int> back = toValue<vector<int>>(irList);
+
+	EXPECT_EQ("[1,2,3]", toString(list));
+	EXPECT_EQ("cons(1, cons(2, cons(3, empty(int<4>))))", toString(*irList));
+
+	EXPECT_TRUE(isEncodingOf<vector<int>>(irList));
+	EXPECT_EQ(list, back);
+
+	EXPECT_EQ("[]", toString(check(irList, checks::getFullCheck())));
+
+
+	// test another type
+	EXPECT_EQ("cons(3.75, cons(1.47, empty(real<8>)))", toString(*toIR(manager, toVector<double>(3.75, 1.47))));
+
+}
+
+
+} // end namespace lists
 } // end namespace core
 } // end namespace insieme
+

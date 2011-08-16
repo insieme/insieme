@@ -34,82 +34,77 @@
  * regarding third party software licenses.
  */
 
-#define BOOST_FILESYSTEM_VERSION 3
 #include <gtest/gtest.h>
 
-#include "insieme/utils/compiler/compiler.h"
+#include <boost/lexical_cast.hpp>
 
-#include <iostream>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include "insieme/core/encoder/encoder.h"
 
 #include "insieme/utils/container_utils.h"
-#include "insieme/utils/compiler/compiler_config.h"
 
-using namespace insieme::utils;
+#include "insieme/core/ast_node.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
-namespace utils {
-namespace compiler {
+namespace core {
+namespace encoder {
+
+TEST(Lists, TestBaseTypes) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const auto& basic = manager.basic;
+
+	core::ExpressionPtr expr = toIR(manager, 12);
+
+	EXPECT_EQ(manager.basic.getInt4(), expr->getType());
+	EXPECT_EQ("12", toString(*expr));
+	EXPECT_EQ(12, toValue<int>(expr));
+	EXPECT_TRUE(isEncodingOf<int>(expr));
+	EXPECT_FALSE(isEncodingOf<short>(expr));
+
+	expr = toIR(manager, false);
+	EXPECT_EQ(manager.basic.getBool(), expr->getType());
+	EXPECT_EQ("0", toString(*expr));
+	EXPECT_FALSE(toValue<bool>(expr));
+
+	EXPECT_TRUE(isEncodingOf<bool>(expr));
+	EXPECT_FALSE(isEncodingOf<int>(expr));
+	EXPECT_FALSE(isEncodingOf<short>(expr));
 
 
-TEST(TargetCodeCompilerTest, helloWorldTest) {
+	expr = toIR(manager, (short)4);
+	EXPECT_EQ("int<2>", toString(*expr->getType()));
+	EXPECT_EQ("4", toString(*expr));
 
-	namespace fs = boost::filesystem;
-
-	// create a dummy code file to be compiled
-	fs::path dir = "./";
-	fs::path srcFile = dir / "_ut_hello_world.c";
-	fs::path binFile = dir / "_ut_hello_world";
-
-	// ensure file does not exist yet
-	ASSERT_FALSE(fs::exists(srcFile)) << "File " << srcFile << " should not exist!";
-	ASSERT_FALSE(fs::exists(binFile)) << "File " << binFile << " should not exist!";
+	expr = toIR(manager, (unsigned)14);
+	EXPECT_EQ("uint<4>", toString(*expr->getType()));
+	EXPECT_EQ("14", toString(*expr));
 
 
-	// write hello world code into the source file
-	fs::ofstream code;
-	code.open(srcFile);
-	ASSERT_TRUE(code.is_open()) << "Unable to open source file!";
-	code << "#include <stdio.h>\n\n";
-	code << "int main() {\n";
-	code << "	printf(\"Hello World!\\n\");\n";
-	code << "}\n\n";
-	code.close();
-
-	// file should exist now
-	ASSERT_TRUE(fs::exists(srcFile));
-
-	// compile the example code using the default compiler
-	EXPECT_TRUE(compile(srcFile.string(), binFile.string()));
+	double x = 123.123;
+	expr = toIR(manager, x);
+	EXPECT_EQ("real<8>", toString(*expr->getType()));
+	EXPECT_EQ("123.123", toString(*expr));
+	EXPECT_EQ(x, toValue<double>(expr));
 
 
-	// delete both files
-	if (fs::exists(srcFile)) {
-		fs::remove(srcFile);
-	}
-
-	if(fs::exists(binFile)) {
-		fs::remove(binFile);
-	}
-}
+	// check exceptions
+	expr = builder.variable(manager.basic.getInt4());
+	EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type
+	EXPECT_THROW(toValue<int>(expr), InvalidExpression); // wrong node type
 
 
-TEST(TargetCodeCompilerTest, DirectHelloWorldTest) {
-
-	// write some code
-	string code =
-			"#include <stdio.h>\n\n"
-			"int main() {\n"
-			"	printf(\"Hello World!\\n\");\n"
-			"}\n\n";
-
-	// compile using direct signature
-	EXPECT_TRUE(compile(toPrintable(code)));
+	// check types
+	EXPECT_EQ(basic.getInt4(), getTypeFor<int>(manager));
+	EXPECT_EQ(basic.getDouble(), getTypeFor<double>(manager));
 
 }
 
 
-} // end namespace test
-} // end namespace utils
+
+} // end namespace lists
+} // end namespace core
 } // end namespace insieme
+

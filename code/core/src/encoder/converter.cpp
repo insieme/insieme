@@ -34,59 +34,30 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <exception>
-
-#include "insieme/core/arithmetic/arithmetic.h"
+#include "insieme/core/encoder/encoder.h"
 
 namespace insieme {
 namespace core {
-
-class Expression;
-template<typename T> class Pointer;
-typedef Pointer<const Expression> ExpressionPtr;
-
-namespace arithmetic {
-
-	class NotAFormulaException;
-
-	/**
-	 * A function converting a given expression into an equivalent formula.
-	 *
-	 * @param expr the expression to be converted
-	 * @return an equivalent formula
-	 *
-	 * @throws a NotAFormulaException if the given expression is not an arithmetic expression
-	 */
-	Formula toFormula(const ExpressionPtr& expr);
-
-	/**
-	 * A function converting a formula into an equivalent expression.
-	 *
-	 * @param manager the manager responsible for handling the IR nodes constructed by this method
-	 * @param formula the formula to be converted
-	 * @return an equivalent IR expression
-	 */
-	ExpressionPtr toIR(NodeManager& manager, const Formula& formula);
+namespace encoder {
 
 
-	/**
-	 * An exception which will be raised if a expression not representing
-	 * a formula should be converted into one.
-	 */
-	class NotAFormulaException : public std::exception {
-		NodePtr expr;
-		std::string msg;
+	InvalidExpression::InvalidExpression(const ExpressionPtr& expr) {
+		std::ostringstream ss;
+		ss << "Unsupported expression: " << *expr;
+		msg = ss.str();
+	}
 
-	public:
-		NotAFormulaException(const NodePtr& expr);
-	
-		virtual const char* what() const throw();
-		NodePtr getExpr() const { return expr; }
-		virtual ~NotAFormulaException() throw() { }
-	};
+	InvalidExpression::InvalidExpression(const TypePtr& should, const TypePtr& is) {
+		std::ostringstream ss;
+		ss << "Cannot convert expression of type " << *is << " - expecting: " << *should;
+		msg = ss.str();
+	}
 
-} // end namespace arithmetic
+	const char* InvalidExpression::what() const throw() {
+		return msg.c_str();
+	}
+
+
+} // end namespace lists
 } // end namespace core
 } // end namespace insieme

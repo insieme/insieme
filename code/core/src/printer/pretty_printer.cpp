@@ -839,9 +839,16 @@ namespace {
 
 		ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArrayRefElem1D(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArrayRefElemND(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
 
 		ADD_FORMATTER(basic.getVectorSubscript(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getVectorRefElem(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
 
+
+		ADD_FORMATTER(basic.getCompositeRefElem(), { PRINT_ARG(0); OUT("->"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getCompositeMemberAccess(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+	
 		ADD_FORMATTER(basic.getRealAdd(), { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealSub(), { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealMul(), { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });

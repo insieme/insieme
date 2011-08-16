@@ -561,6 +561,8 @@ public:
 					}
 				}
 
+				std::cerr << "\n***************Type graph\n";
+				typeGraph.print(std::cerr);
 
 				// build a struct or union IR type
 				retTy = handleTagType(tagDecl, structElements);

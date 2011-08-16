@@ -47,21 +47,10 @@
 #define AS_VAR_ADDR(addr) 		core::static_address_cast<const core::Variable>(addr)
 
 
-namespace {
+namespace insieme {
+namespace analysis {
 
-using namespace insieme::analysis;
-
-std::string refTypeToStr(const Ref::RefType& type) { 
-	switch(type) {
-	case Ref::VAR:		return "SCALAR"; 
-	case Ref::ARRAY:	return "ARRAY"; 
-	case Ref::MEMBER:	return "MEMBER"; 
-	case Ref::CALL: 	return "CALL"; 
-	default:  			assert(false);
-	}
-}
-
-std::string usageTypeToStr(const Ref::UseType& usage) {
+std::string Ref::useTypeToStr(const UseType& usage) {
 	switch (usage) {
 	case Ref::DEF: 		return "DEF"; 
 	case Ref::USE:		return "USE"; 
@@ -70,9 +59,15 @@ std::string usageTypeToStr(const Ref::UseType& usage) {
 	}
 }
 
-} // end anonymous namespace 
-namespace insieme {
-namespace analysis {
+std::string Ref::refTypeToStr(const RefType& type) {
+	switch(type) {
+	case Ref::VAR:		return "SCALAR"; 
+	case Ref::ARRAY:	return "ARRAY"; 
+	case Ref::MEMBER:	return "MEMBER"; 
+	case Ref::CALL: 	return "CALL"; 
+	default:  			assert(false);
+	}
+}
 
 //===== Ref =========================================================================================
 
@@ -83,7 +78,7 @@ Ref::Ref(const RefType& type, const core::ExpressionAddress& var, const UseType&
 }
 
 std::ostream& Ref::printTo(std::ostream& out) const {
-	return out << "[" << usageTypeToStr(getUsage()) << "] - " << refTypeToStr(getType());
+	return out << "[" << Ref::useTypeToStr(getUsage()) << "] - " << refTypeToStr(getType());
 }
 
 //===== ScalarRef =======================================================================================

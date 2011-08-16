@@ -36,24 +36,41 @@
 
 #pragma once
 
-#include "insieme/backend/preprocessor.h"
+#include "insieme/frontend/ocl/ocl_host_passes.h"
 
 namespace insieme {
-namespace backend {
-namespace runtime {
+namespace frontend {
+namespace ocl {
 
-	/**
-	 * The work item extractor mainly consists of a pre-processing step which is
-	 * converting e.g. pfor and job expressions into equivalent runtime function calls.
-	 */
-	class WorkItemExtractor : public PreProcessor {
-	public:
-		/**
-		 * An invocation of this method will conduct the necessary extractions.
-		 */
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
-	};
+/*
+ * Second pass when translating a program OpenCL to IR
+ * Responsible for:
+ * - connecting the names of kernel functions with the IR entry points (= LambdaExpr)
+ */
+class Host2ndPass {
+	KernelNames& kernelNames;
+	ClmemTable& cl_mems;
+	const core::ASTBuilder& builder;
+	KernelLambdas kernelLambdas;
 
-} // end namespace runtime
-} // end namespace backend
-} // end namespace insieme
+public:
+	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, core::ASTBuilder& build) :
+		kernelNames(oclKernelNames), cl_mems(clMemTable), builder(build), kernelLambdas(
+				boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
+				hash_target_specialized(build),	equal_variables(build)) {
+	}
+	void mapNamesToLambdas(const vector<core::ExpressionPtr>& kernelEntries);
+
+	ClmemTable& getCleanedStructures();
+
+	KernelNames& getKernelNames() {
+		return kernelNames;
+	}
+	KernelLambdas& getKernelLambdas() {
+		return kernelLambdas;
+	}
+};
+
+} //namespace ocl
+} //namespace frontend
+} //namespace insieme
