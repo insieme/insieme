@@ -123,10 +123,10 @@ bool IRBlob::operator==(Tree& other) {
 // ConversionVisitor
 
 const IRTree::EvalFunctor& ConversionVisitor::getDefaultChildEvaluator() {
-	static IRTree::EvalFunctor eval = [this](IRTree& self) {
+	static IRTree::EvalFunctor eval = [](IRTree& self) {
 		auto children = self.getData().getChildAddresses();
 		std::transform(children.begin(), children.end(), back_inserter(self.getSubTrees()), 
-			[this](const NodeAddress& cadd) { return convertIR(cadd); }); // prev: this->visit
+			[](const NodeAddress& cadd) { return convertIR(cadd); }); // prev: this->visit
 	};
 	return eval;
 }
@@ -204,10 +204,20 @@ TreePtr ConversionVisitor::visitBindExpr(const BindExprAddress& addr){
 	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
 }
 TreePtr ConversionVisitor::visitLiteral(const LiteralAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
+	static IRTree::EvalFunctor litEval = [this](IRTree& self){
+		auto selfLitNode = dynamic_pointer_cast<const Literal>(self.getData().getAddressedNode());
+		self.getSubTrees().push_back(make_shared<IRBlob>(selfLitNode->getValue()));
+		getDefaultChildEvaluator()(self);
+	};
+	return make_shared<IRTree>(addr, litEval);
 }
 TreePtr ConversionVisitor::visitCallExpr(const CallExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
+	return make_shared<IRTree>(addr, [](IRTree& self) {
+		auto children = self.getData().getChildAddresses();
+		auto start = children.begin()+1;
+		std::transform(start, children.end(), back_inserter(self.getSubTrees()), 
+			[](const NodeAddress& cadd) { return convertIR(cadd); }); // prev: this->visit
+	} );
 }
 TreePtr ConversionVisitor::visitCastExpr(const CastExprAddress& addr){
 	return make_shared<IRTree>(addr, getDefaultChildEvaluator());

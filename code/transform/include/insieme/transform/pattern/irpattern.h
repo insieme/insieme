@@ -59,11 +59,24 @@ namespace irp {
 	inline TreePatternPtr tupleType(const NodePatternPtr& pattern) {
 		return node(core::NT_TupleType, pattern);
 	}
-	inline TreePatternPtr genericType(const std::string& family, const NodePatternPtr& pattern) {
-		return node(core::NT_GenericType, atom(make_shared<IRBlob>(family)) << pattern);
+	inline TreePatternPtr genericType(const std::string& family, const NodePatternPtr& subtypes) {
+		return node(core::NT_GenericType, atom(make_shared<IRBlob>(family)) << subtypes);
 	}
-	inline TreePatternPtr genericType(const NodePatternPtr& family, const NodePatternPtr& pattern) {
-		return node(core::NT_GenericType, family << pattern);
+	inline TreePatternPtr genericType(const NodePatternPtr& family, const NodePatternPtr& subtypes) {
+		return node(core::NT_GenericType, family << subtypes);
+	}
+
+	inline TreePatternPtr lit(const std::string& value, const TreePatternPtr& typePattern) {
+		return node(core::NT_Literal, atom(make_shared<IRBlob>(value)) << single(typePattern));
+	}
+	inline TreePatternPtr lit(const TreePatternPtr& valuePattern, const TreePatternPtr& typePattern) {
+		return node(core::NT_Literal, single(valuePattern) << single(typePattern));
+	}
+	inline TreePatternPtr call(const NodePtr& function, const NodePatternPtr& parameters) {
+		return node(core::NT_CallExpr, atom(function) << parameters);
+	}
+	inline TreePatternPtr call(const TreePatternPtr& function, const NodePatternPtr& parameters) {
+		return node(core::NT_CallExpr, single(function) << parameters);
 	}
 }
 } // end namespace pattern

@@ -42,6 +42,11 @@
 
 #include "insieme/utils/logging.h"
 
+#ifndef TEST
+// avoiding warnings in eclipse, enabling auto completions
+#define TEST void fun
+#endif
+
 using namespace insieme::utils::log;
 
 namespace insieme {
@@ -102,7 +107,30 @@ TEST(IRPattern, Types) {
 	EXPECT_PRED2(notMatch, patternB, genericATypeTree);
 	EXPECT_PRED2(notMatch, aT(patternB), int8TypeTree);
 	EXPECT_PRED2(match, aT(patternB), genericATypeTree);
+}
 
+
+TEST(IRPattern, Expressions) {
+	NodeManager manager;
+	auto e = [&manager](string expressionSpec) { return parse::parseExpression(manager, expressionSpec); };
+	
+	ExpressionPtr realAddExp = e("(4.2 + 3.1)");
+	ExpressionPtr intSubExp = e("(4 - 2)");
+	ExpressionPtr nestedExp = e("((4.2 + 3.1) * (4 - 2))");
+	
+	auto realAddTree = convertIR(realAddExp);
+	auto intSubTree = convertIR(intSubExp);
+	auto nestedTree = convertIR(nestedExp);
+
+	TreePatternPtr patternA = irp::call(manager.basic.getRealAdd(), *any);
+	EXPECT_PRED2(match, patternA, realAddTree);
+	EXPECT_PRED2(notMatch, patternA, intSubTree);
+	EXPECT_PRED2(notMatch, patternA, nestedTree);
+	
+	TreePatternPtr patternB = node(irp::lit("int.sub", any) << *any);
+	EXPECT_PRED2(notMatch, patternB, realAddTree);
+	EXPECT_PRED2(match, patternB, intSubTree);
+	EXPECT_PRED2(notMatch, patternB, nestedTree);
 }
 
 } // end namespace pattern
