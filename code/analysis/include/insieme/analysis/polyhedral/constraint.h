@@ -269,7 +269,13 @@ typename boost::enable_if<
 		boost::mpl::or_<boost::is_same<C1,Constraint>, boost::is_same<C1,ConstraintCombinerPtr>>,
 		boost::mpl::or_<boost::is_same<C2,Constraint>, boost::is_same<C2,ConstraintCombinerPtr>>
 	>, ConstraintCombinerPtr>::type 
-operator and(const C1& lhs, const C2& rhs) { return makeConjunction(makeCombiner(lhs), makeCombiner(rhs)); }
+operator and(const C1& lhs, const C2& rhs) { 
+	ConstraintCombinerPtr lhsPtr = makeCombiner(lhs);
+	ConstraintCombinerPtr rhsPtr = makeCombiner(rhs);
+	if (!lhsPtr) return rhsPtr;
+	if (!rhsPtr) return lhsPtr;
+	return makeConjunction(makeCombiner(lhs), makeCombiner(rhs)); 
+}
 
 // Redefinition of || operator with the semantics of OR 
 template <class C1, class C2>
@@ -278,7 +284,13 @@ typename boost::enable_if<
 		boost::mpl::or_<boost::is_same<C1,Constraint>, boost::is_same<C1,ConstraintCombinerPtr>>,
 		boost::mpl::or_<boost::is_same<C2,Constraint>, boost::is_same<C2,ConstraintCombinerPtr>>
 	>, ConstraintCombinerPtr>::type
-operator or(const C1& lhs, const C2& rhs) { return makeDisjunction(makeCombiner(lhs), makeCombiner(rhs)); }
+operator or(const C1& lhs, const C2& rhs) { 
+	ConstraintCombinerPtr lhsPtr = makeCombiner(lhs);
+	ConstraintCombinerPtr rhsPtr = makeCombiner(rhs);
+	if (!lhsPtr) return rhsPtr;
+	if (!rhsPtr) return lhsPtr;
+	return makeDisjunction(makeCombiner(lhs), makeCombiner(rhs)); 
+}
 
 // Defines a list of constraints stored in a vector
 typedef std::vector<Constraint> ConstraintList;

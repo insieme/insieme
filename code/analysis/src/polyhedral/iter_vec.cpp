@@ -35,6 +35,7 @@
  */
 
 #include "insieme/analysis/polyhedral/iter_vec.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace analysis {
