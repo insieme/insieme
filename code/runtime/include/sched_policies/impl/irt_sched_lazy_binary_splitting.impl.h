@@ -71,8 +71,12 @@ void irt_scheduling_loop(irt_worker* self) {
 		// try to take a ready WI from the pool
 		irt_work_item* next_wi = irt_work_item_deque_pop_front(&self->sched_data.pool);
 		if(next_wi != NULL) {
-			_irt_worker_switch_to_wi(self, next_wi);
-			continue;
+			if(next_wi->ready_check.fun && !next_wi->ready_check.fun(next_wi)) {
+				irt_work_item_deque_insert_back(&self->sched_data.pool, next_wi);
+			} else {
+				_irt_worker_switch_to_wi(self, next_wi);
+				continue;
+			}
 		}
 
 		// if that failed, try to take a work item from the queue

@@ -62,6 +62,7 @@ typedef struct _irt_wi_readiness_check {
 	irt_wi_readiness_check_fun *fun;
 	void *data;
 } irt_wi_readiness_check;
+irt_wi_readiness_check irt_g_null_readiness_check = { NULL, NULL };
 
 struct _irt_work_item {
 	// core functionality
