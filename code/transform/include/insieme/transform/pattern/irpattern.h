@@ -50,6 +50,7 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 namespace irp {
+	using std::make_shared;
 
 	inline TreePatternPtr atom(const NodePtr& node) {
 		return atom(convertIR(node));
@@ -57,6 +58,12 @@ namespace irp {
 
 	inline TreePatternPtr tupleType(const NodePatternPtr& pattern) {
 		return node(core::NT_TupleType, pattern);
+	}
+	inline TreePatternPtr genericType(const std::string& family, const NodePatternPtr& pattern) {
+		return node(core::NT_GenericType, atom(make_shared<IRBlob>(family)) << pattern);
+	}
+	inline TreePatternPtr genericType(const NodePatternPtr& family, const NodePatternPtr& pattern) {
+		return node(core::NT_GenericType, family << pattern);
 	}
 }
 } // end namespace pattern
