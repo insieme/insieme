@@ -68,13 +68,15 @@ public:
 	virtual const core::NodeAddress& getData() const { return data; }
 	virtual std::ostream& printTo(std::ostream& out) const;
 	virtual bool operator==(Tree& other);
-	void setEvaluated() { evaluated = true; }
-	bool isEvaluated() { return evaluated; }
+	void evaluate();
+	virtual std::vector<TreePtr>& getSubTrees();
 };
 
 /** Represents a simple IR node (no children, but an address).
 */
 class IRLeaf : public IRTree {
+	static std::vector<TreePtr> emptyTreeVec;
+
 public:
 	IRLeaf(const core::NodeAddress& data) : IRTree(data) {}
 		
@@ -87,7 +89,7 @@ public:
 class IRBlob : public Tree {
 	const string blob;
 public:
-	IRBlob(const string& blob) : Tree(666), blob(blob) {}
+	IRBlob(const string& blob) : Tree(100000), blob(blob) {}
 		
 	virtual std::ostream& printTo(std::ostream& out) const;
 	virtual bool operator==(Tree& other);

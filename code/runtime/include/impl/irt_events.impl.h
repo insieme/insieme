@@ -46,15 +46,21 @@ static inline irt_wi_event_register* _irt_get_wi_event_register() {
 		memset(reg, 0, sizeof(irt_wi_event_register));
 		return reg;
 	} else {
-		return (irt_wi_event_register*)calloc(1, sizeof(irt_wi_event_register));
+		irt_wi_event_register* ret = (irt_wi_event_register*)calloc(1, sizeof(irt_wi_event_register));
+		pthread_spin_init(&ret->lock, PTHREAD_PROCESS_PRIVATE); // TODO check destroy
+		return ret;
 	}
+}
+
+
+void _irt_wi_event_register_only(irt_wi_event_register *reg) {
+	 irt_wi_event_register_table_insert(reg);
 }
 
 uint32 irt_wi_event_check_and_register(irt_work_item_id wi_id, irt_wi_event_code event_code, irt_event_lambda *handler) {
 	irt_wi_event_register *newreg = _irt_get_wi_event_register();
 	newreg->id.value.full = wi_id.value.full;
 	newreg->id.cached = newreg;
-	pthread_spin_init(&newreg->lock, PTHREAD_PROCESS_PRIVATE); // TODO check destroy
 	irt_wi_event_register *reg = irt_wi_event_register_table_lookup_or_insert(newreg);
 	pthread_spin_lock(&reg->lock);
 	// check if event already occurred
@@ -71,11 +77,10 @@ uint32 irt_wi_event_check_and_register(irt_work_item_id wi_id, irt_wi_event_code
 }
 
 void irt_wi_event_trigger(irt_work_item_id wi_id, irt_wi_event_code event_code) {
-	irt_wi_event_register_id regid;
-	regid.value.full = wi_id.value.full;
-	regid.cached = NULL;
-	irt_wi_event_register *reg = irt_wi_event_register_table_lookup(regid);
-	if(!reg) return;
+	irt_wi_event_register *newreg = _irt_get_wi_event_register();
+	newreg->id.value.full = wi_id.value.full;
+	newreg->id.cached = newreg;
+	irt_wi_event_register *reg = irt_wi_event_register_table_lookup_or_insert(newreg);
 	pthread_spin_lock(&reg->lock);
 	// increase event count
 	++reg->occurence_count[event_code];

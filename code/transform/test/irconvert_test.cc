@@ -42,6 +42,11 @@
 
 #include "insieme/utils/logging.h"
 
+#ifndef TEST
+// avoiding warnings in eclipse, enabling auto completions
+#define TEST void fun
+#endif
+
 using namespace insieme::utils::log;
 
 namespace insieme {
@@ -79,6 +84,53 @@ TEST(IRConvert, Basic) {
 	TreePatternPtr patternC = irp::tupleType(any << atom(converter.visit(NodeAddress(t("float<8>")))) << any);
 	EXPECT_PRED2(match, patternC, treeA);
 	EXPECT_PRED2(notMatch, patternC, treeB);
+}
+
+
+TEST(IRPattern, Types) {
+	NodeManager manager;
+	auto t = [&manager](string typespec) { return parse::parseType(manager, typespec); };
+	
+	TypePtr int8Type = t("int<8>");
+	TypePtr genericA = t("megatype<ultratype<int<8>,666>>");
+	
+	ConversionVisitor converter;
+	auto int8TypeTree = converter.visit(NodeAddress(int8Type));
+	auto genericATypeTree = converter.visit(NodeAddress(genericA));
+
+	TreePatternPtr patternA = irp::genericType("megatype", single(any));
+	EXPECT_PRED2(notMatch, patternA, int8TypeTree); 
+	EXPECT_PRED2(match, patternA, genericATypeTree);
+
+	TreePatternPtr patternB = irp::genericType("ultratype", any << any);
+	EXPECT_PRED2(notMatch, patternB, int8TypeTree);
+	EXPECT_PRED2(notMatch, patternB, genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternB), int8TypeTree);
+	EXPECT_PRED2(match, aT(patternB), genericATypeTree);
+}
+
+
+TEST(IRPattern, Expressions) {
+	NodeManager manager;
+	auto e = [&manager](string expressionSpec) { return parse::parseExpression(manager, expressionSpec); };
+	
+	ExpressionPtr realAddExp = e("(4.2 + 3.1)");
+	ExpressionPtr intSubExp = e("(4 - 2)");
+	ExpressionPtr nestedExp = e("((4.2 + 3.1) * (4 - 2))");
+	
+	auto realAddTree = convertIR(realAddExp);
+	auto intSubTree = convertIR(intSubExp);
+	auto nestedTree = convertIR(nestedExp);
+
+	TreePatternPtr patternA = irp::call(manager.basic.getRealAdd(), *any);
+	EXPECT_PRED2(match, patternA, realAddTree);
+	EXPECT_PRED2(notMatch, patternA, intSubTree);
+	EXPECT_PRED2(notMatch, patternA, nestedTree);
+	
+	TreePatternPtr patternB = node(irp::lit("int.sub", any) << *any);
+	EXPECT_PRED2(notMatch, patternB, realAddTree);
+	EXPECT_PRED2(match, patternB, intSubTree);
+	EXPECT_PRED2(notMatch, patternB, nestedTree);
 }
 
 } // end namespace pattern

@@ -234,7 +234,9 @@ namespace pattern {
 			NodeTreePattern(const int id, const NodePatternPtr& pattern) : pattern(pattern), id(id) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "(";
+				if(id != -1) {
+					out << "(id:" << id << "|";
+				} else out << "(";
 				pattern->printTo(out);
 				return out << ")";
 			}

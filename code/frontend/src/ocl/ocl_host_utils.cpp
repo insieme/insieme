@@ -59,6 +59,24 @@ core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& 
 
 
 /*
+ * Returns the very base type of the passed Expression
+ */
+const core::TypePtr getBaseType(const core::ExpressionPtr& singleElementExpr) {
+	return getBaseType(singleElementExpr->getType());
+}
+
+/*
+ * Returns the very base type of the passed type
+ */
+const core::TypePtr getBaseType(const core::TypePtr& singleElementType) {
+	// TODO test quickfix
+	core::TypePtr type = singleElementType;
+	while(const core::SingleElementTypePtr& se = dynamic_pointer_cast<const core::SingleElementType>(type))
+		type = se->getElementType();
+	return type;
+}
+
+/*
  * Function to get the type of an Expression
  * If it is a ref-type, it's element type is returned
  */

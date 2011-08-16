@@ -65,6 +65,11 @@ struct _irt_wi_event_register {
 
 IRT_DEFINE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
+
+/* Registers a new event handler for the work item identified by wi_id, for the event event_code
+ * Use only when you can be sure that no event has occurred or been registered yet for this wi */
+void _irt_wi_event_register_only(irt_wi_event_register *reg);
+
 /* Registers a new event handler for the work item identified by wi_id, for the event event_code
  * If the event has already occurred the event handler will be executed immediately */
 uint32 irt_wi_event_check_and_register(irt_work_item_id wi_id, irt_wi_event_code event_code, irt_event_lambda *handler);

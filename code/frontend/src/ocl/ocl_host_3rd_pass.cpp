@@ -77,6 +77,56 @@ public:
 };
 }
 
+// Takes a function which argument's may have changed and which return value depends on the argument to create a new function
+// with an appropriate return value
+bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::NodePtr& newCall) {
+	ExpressionPtr fun = oldCall->getFunctionExpr();
+	// check if return type of array/vector subscript calls are still valid
+	if(oldCall->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
+		if(BASIC.isSubscriptOperator(fun)) {
+//		std::cout << "-----------------------\n" << oldCall << std::endl << std::endl << oldCall->getArgument(0)->getType() << std::endl;
+			if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>((oldCall->getArgument(0)->getType()))) {
+				const TypePtr& oldType = getBaseType(oldCall);
+/*						if(BASIC.isArrayOp(oldCall->getFunctionExpr()))
+					std::cout << "ARRRARY " << oldType << " " << getBaseType(seType->getElementType()) << std::endl;
+				else if(BASIC.isVectorOp(oldCall->getFunctionExpr()))
+					std::cout << "VECTOR " << seType << std::endl;
+				else
+					std::cout << "NOTHING " << seType << oldCall->getFunctionExpr() << std::endl;
+*/				if(getBaseType(seType) != oldType) {
+					TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), oldCall->getType(),
+							oldType, getBaseType(seType)));
+					newCall = builder.callExpr(newRetType, oldCall->getFunctionExpr(), oldCall->getArguments());
+					return true;
+				}
+			}
+		}
+
+		if(fun == BASIC.getRefNew()) {
+			if(oldCall->getType() != builder.refType(oldCall->getArgument(0)->getType())) {
+				newCall = builder.refNew(oldCall->getArgument(0));
+				return true;
+			}
+		}
+		if(fun == BASIC.getRefVar()) {
+			if(oldCall->getType() != builder.refType(oldCall->getArgument(0)->getType())) {
+				newCall = builder.refVar(oldCall->getArgument(0));
+				return true;
+			}
+		}
+
+		if(fun == BASIC.getRefDeref()) {
+			const TypePtr retTy = tryDeref(oldCall->getArgument(0), builder)->getType();
+			if(oldCall->getType() != retTy) {
+				newCall = builder.callExpr(retTy, BASIC.getRefDeref(), oldCall->getArgument(0));
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
 // returns a 0-literal of the corresponding type or NoOp in cas of unit
 ExpressionPtr HostMapper3rdPass::getZeroElem(TypePtr type) {
 	TypeList noArgs;
@@ -534,33 +584,25 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 
 				}
 			}
-			// check if return type of array/vector subscript calls are still valid
-			if(BASIC.isSubscriptOperator(newCall->getFunctionExpr())) {
-				if(newCall->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
-					if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>((newCall->getArgument(0)->getType()))) {
-						const TypePtr& oldType = getNonRefType(newCall);
-/*						if(BASIC.isArrayOp(newCall->getFunctionExpr()))
-							std::cout << "ARRRARY " << oldType << " " << newCall->getArgument(0) << std::endl;
-						else if(BASIC.isVectorOp(newCall->getFunctionExpr()))
-							std::cout << "VECTOR " << seType << std::endl;
-						else
-							std::cout << "NOTHING " << seType << newCall->getFunctionExpr() << std::endl;
-*/						if(getNonRefType(seType->getElementType()) != oldType) {
-							TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), newCall->getType(),
-									oldType, seType->getElementType()));
-							return builder.callExpr(newRetType, newCall->getFunctionExpr(), newCall->getArguments());
-						}
-					}
-				}
+
+
+			NodePtr ret;
+			if(updateReturnVal(newCall, ret)) {
+				copyAnnotations(callExpr, ret);
+				return ret;
 			}
 
 			// TODO find correct type
 			// remove remaining calls using cl_ objects
-			if(newCall->getType()->toString().find("array<_cl_") != string::npos)
+			if(newCall->getType()->toString().find("array<_cl_") != string::npos) {
+//				std::cout << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
 				return getZeroElem(newCall->getType());
+			}
 			for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
-				if((*I)->getType()->toString().find("array<_cl_") != string::npos)
+				if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
+//					std::cout << "-> " << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
 					return getZeroElem(newCall->getType());
+				}
 			}
 		}
 	}

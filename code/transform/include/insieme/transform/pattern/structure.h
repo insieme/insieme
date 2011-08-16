@@ -62,7 +62,7 @@ namespace pattern {
 		virtual std::ostream& printTo(std::ostream& out) const;
 		virtual bool operator==(Tree& other);
 
-		std::vector<TreePtr>& getSubTrees() { return subTrees; }
+		virtual std::vector<TreePtr>& getSubTrees() { return subTrees; }
 		const int getId() const { return id; }
 	};
 

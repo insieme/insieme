@@ -70,6 +70,10 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	const core::ExpressionPtr anythingToVec3(core::ExpressionPtr workDim,
 			core::ExpressionPtr size);
 
+	// Takes a function which argument's may have changed and which return value depends on the argument to create a new function
+	// with an appropriate return value
+	bool updateReturnVal(const core::CallExprPtr& oldCall, core::NodePtr& newCall);
+
 public:
 	HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
 			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> oclReplacements) :

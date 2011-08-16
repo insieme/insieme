@@ -112,6 +112,7 @@ void irt_wg_barrier(irt_work_group* wg) {
 		swi->ready_check.fun = &_irt_wg_barrier_check_down;
 		swi->ready_check.data = wg;
 		irt_scheduling_yield(self, swi);
+		swi->ready_check = irt_g_null_readiness_check;
 	}
 	// enter barrier
 	if(irt_atomic_add_and_fetch(&wg->cur_barrier_count_up, 1) < wg->local_member_count) {
@@ -121,6 +122,7 @@ void irt_wg_barrier(irt_work_group* wg) {
 		swi->ready_check.data = wg;
 		irt_scheduling_yield(self, swi);
 		irt_atomic_dec(&wg->cur_barrier_count_down);
+		swi->ready_check = irt_g_null_readiness_check;
 	} else {
 		// last wi to reach barrier, set down count
 		wg->cur_barrier_count_up = 0;
