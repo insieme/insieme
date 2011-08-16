@@ -81,6 +81,30 @@ TEST(IRConvert, Basic) {
 	EXPECT_PRED2(notMatch, patternC, treeB);
 }
 
+
+TEST(IRPattern, Types) {
+	NodeManager manager;
+	auto t = [&manager](string typespec) { return parse::parseType(manager, typespec); };
+	
+	TypePtr int8Type = t("int<8>");
+	TypePtr genericA = t("megatype<ultratype<int<8>,666>>");
+	
+	ConversionVisitor converter;
+	auto int8TypeTree = converter.visit(NodeAddress(int8Type));
+	auto genericATypeTree = converter.visit(NodeAddress(genericA));
+
+	TreePatternPtr patternA = irp::genericType("megatype", single(any));
+	EXPECT_PRED2(notMatch, patternA, int8TypeTree); 
+	EXPECT_PRED2(match, patternA, genericATypeTree);
+
+	TreePatternPtr patternB = irp::genericType("ultratype", any << any);
+	EXPECT_PRED2(notMatch, patternB, int8TypeTree);
+	EXPECT_PRED2(notMatch, patternB, genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternB), int8TypeTree);
+	EXPECT_PRED2(match, aT(patternB), genericATypeTree);
+
+}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
