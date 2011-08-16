@@ -74,7 +74,6 @@ typedef std::vector<RefPtr> RefAccessList;
 class ScopStmt { 
 	
 	core::StatementAddress 			address;
-	poly::ScatteringFunctionPtr		scattering;
 	RefAccessList					accesses;
 
 public:
@@ -84,15 +83,6 @@ public:
 	const core::StatementAddress& getAddr() const { return address; }
 	
 	const core::StatementAddress& operator->() const { return address; }
-
-	// FIXME:
-	const poly::ScatteringFunction& getScattering() const { 
-		if (!scattering) {
-			// compute the scattering and cache the result
-		}
-		assert(scattering && "Scattering not computed!");
-		return *scattering;
-	}
 
 	const RefAccessList& getRefAccesses() const { return accesses; }
 

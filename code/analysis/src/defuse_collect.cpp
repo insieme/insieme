@@ -39,6 +39,7 @@
 #include "insieme/core/ast_address.h"
 
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/utils/logging.h"
 
 #include <stack>
 
@@ -122,7 +123,8 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 	// initialize the value of the named composite type 
 	const core::TypePtr& refType = callExpr->getArgument(0)->getType();
 	assert(refType->getNodeType() == core::NT_RefType);
-
+	
+	// FIXME: Handle recursive types here
 	type = core::static_pointer_cast<const core::NamedCompositeType>(
 			core::static_pointer_cast<const core::RefType>(refType)->getElementType() );
 }

@@ -264,13 +264,16 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 void markSCoPs(const ProgramPtr& program) {
 	if (!CommandLineOptions::MarkScop) { return; }
 	using namespace insieme::analysis::scop;
-
-	ScopList sl = mark(program);
-	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
-	std::for_each(sl.begin(), sl.end(),	[](const ScopList::value_type& cur){ 
-			printSCoP(LOG_STREAM(INFO), cur.first); 
-		}
-	);	
+	
+	measureTimeFor<void>("IR.SCoP.Analysis ", 
+		[&]() { 
+			ScopList sl = mark(program);
+			LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
+		});
+//	std::for_each(sl.begin(), sl.end(),	[](const ScopList::value_type& cur){ 
+//			printSCoP(LOG_STREAM(INFO), cur.first); 
+//		}
+//	);	
 }
 
 //***************************************************************************************

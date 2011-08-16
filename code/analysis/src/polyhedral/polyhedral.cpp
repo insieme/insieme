@@ -43,7 +43,7 @@ namespace poly {
 //==== ScatteringFunction ==============================================================================
 
 std::ostream& AffineSystem::printTo(std::ostream& out) const {
-	out << "IV: " << iterVec << std::endl << "{" << std::endl;
+	out << "{" << std::endl;
 	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunction& cur) { 
 			out << "\t" << cur.toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
 		} ); 
