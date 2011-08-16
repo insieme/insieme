@@ -51,6 +51,15 @@ namespace ocl {
 core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder);
 
 /*
+ * Returns the very base type of the passed Expression
+ */
+const core::TypePtr getBaseType(const core::ExpressionPtr& singleElementExpr);
+/*
+ * Returns the very base type of the passed type
+ */
+const core::TypePtr getBaseType(const core::TypePtr& singleElementType);
+
+/*
  * Function to get the type of an Expression
  * If it is a ref-type, it's element type is returned
  */

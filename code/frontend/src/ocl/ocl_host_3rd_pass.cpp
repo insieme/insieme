@@ -86,16 +86,16 @@ bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::
 		if(BASIC.isSubscriptOperator(fun)) {
 //		std::cout << "-----------------------\n" << oldCall << std::endl << std::endl << oldCall->getArgument(0)->getType() << std::endl;
 			if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>((oldCall->getArgument(0)->getType()))) {
-				const TypePtr& oldType = getNonRefType(oldCall);
-/*						if(BASIC.isArrayOp(newCall->getFunctionExpr()))
-					std::cout << "ARRRARY " << oldType << " " << newCall->getArgument(0) << std::endl;
-				else if(BASIC.isVectorOp(newCall->getFunctionExpr()))
+				const TypePtr& oldType = getBaseType(oldCall);
+/*						if(BASIC.isArrayOp(oldCall->getFunctionExpr()))
+					std::cout << "ARRRARY " << oldType << " " << getBaseType(seType->getElementType()) << std::endl;
+				else if(BASIC.isVectorOp(oldCall->getFunctionExpr()))
 					std::cout << "VECTOR " << seType << std::endl;
 				else
-					std::cout << "NOTHING " << seType << newCall->getFunctionExpr() << std::endl;
-*/						if(getNonRefType(seType->getElementType()) != oldType) {
+					std::cout << "NOTHING " << seType << oldCall->getFunctionExpr() << std::endl;
+*/				if(getBaseType(seType) != oldType) {
 					TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), oldCall->getType(),
-							oldType, seType->getElementType()));
+							oldType, getBaseType(seType)));
 					newCall = builder.callExpr(newRetType, oldCall->getFunctionExpr(), oldCall->getArguments());
 					return true;
 				}
