@@ -527,7 +527,7 @@ public:
 			 * 		}
 			 */
 			core::StatementPtr&& whileStmt = builder.whileStmt(
-				convFact.convertExpr( forStmt->getCond() ), // cond
+				convFact.castToType(builder.getBasicGenerator().getBool(), convFact.convertExpr( forStmt->getCond() )), 
 				forStmt->getInc() ?
 					builder.compoundStmt( toVector<core::StatementPtr>(
 							tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )

@@ -58,17 +58,17 @@ struct Context {
  *************************************************************************************************/
 template <class Ctx>
 struct Set : public utils::Printable {
+	
+	typedef Ctx ctx_type;
 
-	// Creates an empty Set based on the dimensionality of the given iteration vector. 
+	// Creates a universe Set based on the dimensionality of the given iteration vector. 
 	// Once creates, the iteration vector on which the set is based cannot been changed. 
 	Set(Ctx& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { } 
 	
 	// Adds a new constraint to this set. 
 	//
 	// The iteration vector on which c is expressed must be compatibile with the iterVec
-	virtual void addConstraint(const Constraint& c) = 0; 
-
-	virtual void addConstraint(const ConstraintCombinerPtr& c) = 0;
+	virtual void applyConstraint(const ConstraintCombinerPtr& c) = 0;
 
 	virtual std::ostream& printTo(std::ostream& out) const = 0; 
 
@@ -79,20 +79,24 @@ protected:
 	const IterationVector& iterVec;
 };
 
-template <class SetTy>
-SetTy set_union(const SetTy& lhs, const SetTy& rhs);
+//template <class SetTy>
+//SetTy set_union(const SetTy& lhs, const SetTy& rhs);
 
-template <class SetTy>
-SetTy set_intersect(const SetTy& lhs, const SetTy& rhs);
+//template <class SetTy>
+//SetTy set_intersect(const SetTy& lhs, const SetTy& rhs);
 
-template <class SetTy>
-SetTy set_negate(const SetTy& lhs);
+//template <class SetTy>
+//SetTy set_negate(const SetTy& lhs);
 
 
 //===== Conversion Utilities ======================================================================
 // Utilities to convert data structures represented as IR annotations
 template <class SetTy>
-SetTy convertIterationDomain(Context& ctx, const ConstraintCombinerPtr& constraints);
+SetTy convertIterationDomain(typename SetTy::ctx_type& ctx, const poly::IterationVector& iv, const ConstraintCombinerPtr& constraints) {
+	SetTy set(ctx, iv);
+	set.applyConstraint(constraints);
+	return set;
+}
 
 
 } // end poly namespace

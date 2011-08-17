@@ -60,7 +60,8 @@ void AffineSystem::appendRow(const AffineFunction& af) {
 
 void AffineSystem::cloneRows(const AffineList& src) { 
 	std::for_each(src.begin(), src.end(), 
-			[&] (const AffineFunction& cur) { funcs.push_back( cur.toBase(iterVec) ); } );
+			[&] (const AffineFunction& cur) { funcs.push_back( cur.toBase(iterVec) ); } 
+		);
 }
 
 } // end poly namesapce 
