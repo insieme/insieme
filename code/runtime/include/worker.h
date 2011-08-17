@@ -66,6 +66,7 @@ struct _irt_worker {
 	uint64 lazy_count;
 	// memory reuse stuff
 	irt_wi_event_register *wi_ev_register_list;
+	irt_wg_event_register *wg_ev_register_list;
 };
 
 /* ------------------------------ operations ----- */
