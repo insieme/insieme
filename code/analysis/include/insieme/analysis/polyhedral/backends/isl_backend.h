@@ -80,9 +80,7 @@ public:
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	void addConstraint(const Constraint& c);
-
-	void addConstraint(const ConstraintCombinerPtr& c);
+	void applyConstraint(const ConstraintCombinerPtr& c);
 
 	const isl_set* getAsIslSet() const { return set; }
 

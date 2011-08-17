@@ -185,11 +185,7 @@ std::ostream& IslSet::printTo(std::ostream& out) const {
 	return out;
 }
 
-void IslSet::addConstraint(const Constraint& c) {
-	addConstraint( makeCombiner(c) );
-}
-
-void IslSet::addConstraint(const ConstraintCombinerPtr& cc) {
+void IslSet::applyConstraint(const ConstraintCombinerPtr& cc) {
 	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
 	cc->accept(ccv);
 

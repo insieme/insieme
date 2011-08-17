@@ -168,8 +168,7 @@ public:
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	
-	const ScatteringMatrix getScatteringInfo() const;
+	const ScatteringMatrix getScatteringInfo();
 
 	/** 
 	 *
@@ -202,6 +201,8 @@ private:
 	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
 	 */
 	AddressList subScops;
+
+	boost::optional<ScatteringMatrix> scattering;
 };
 
 /**************************************************************************************************
