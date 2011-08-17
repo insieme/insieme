@@ -48,6 +48,7 @@ struct _irt_work_group {
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
 	uint32 local_member_count;
+	uint32 ended_member_count;
 	uint32 cur_barrier_count_up;
 	uint32 cur_barrier_count_down;
 	void** redistribute_data_array;
@@ -65,6 +66,8 @@ typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, u
 irt_work_group* irt_wg_create();
 void irt_wg_destroy(irt_work_group* wg);
 
+static inline void _irt_wg_end_member(irt_work_group* wg);
+
 //static inline void irt_wg_join(irt_work_group* wg);
 //static inline void irt_wg_leave(irt_work_group* wg);
 
@@ -75,4 +78,5 @@ static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi);
 
 void irt_wg_barrier(irt_work_group* wg);
 void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_data, void* result_data, irt_wg_redistribution_function* func);
+void irt_wg_join(irt_work_group* wg);
 
