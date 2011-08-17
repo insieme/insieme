@@ -55,13 +55,11 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 
 	core::ASTBuilder builder;
 
-	/**
-	 * Explicit Default constructor required by VC.
-	 */
 	hash_target_specialized(core::ASTBuilder build) : hash_target(), builder(build) {}
 
 	/**
-	 * Computes the hash value of the given pointer based on the target it is pointing to.
+	 * Computes the hash value of the given pointer based on the target it is pointing to. For subscript operations only the subscripted variable/call
+	 * is considered
 	 */
 	std::size_t operator()(const core::ExpressionPtr expr) const {
 		if(!expr)
@@ -76,7 +74,7 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 //			call = tmp;
 
 		if(builder.getNodeManager().basic.isSubscriptOperator(call->getFunctionExpr()))
-			return hasher(*call->getArgument(0));
+			return this->operator ()(call->getArgument(0));
 
 		return hasher(*expr);
 	}
@@ -104,20 +102,12 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return true;
 
 		core::CallExprPtr xCall =  dynamic_pointer_cast<const core::CallExpr>(x);
-/*std::cout << "xCall: " << xCall << std::endl;
-		while(const core::CallExprPtr& xExpr = dynamic_pointer_cast<const core::CallExpr>(xCall->getArgument(0)))
-			xCall = xExpr;
-std::cout << "xExpr: " << xCall << std::endl;
-*/
-		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(x);
-/*std::cout << "yCall: " << yCall << std::endl;
-		while(const core::CallExprPtr& yExpr = dynamic_pointer_cast<const core::CallExpr>(yCall->getArgument(0)))
-			yCall = yExpr;
-std::cout << "yExpr: " << yCall << std::endl;
-*/
+
+		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
+
 		if(builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
 			if(builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
-				if(xCall->getArgument(0) == yCall->getArgument(0))
+				if(this->operator ()(xCall->getArgument(0), yCall->getArgument(0)) )
 					return true;
 
 
