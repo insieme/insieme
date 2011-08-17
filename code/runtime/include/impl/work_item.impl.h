@@ -50,6 +50,13 @@
 #include "impl/irt_events.impl.h"
 
 
+static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) { 
+	return wi->wg_memberships[index]; 
+}
+static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index) {
+	return irt_wi_get_wg_membership(wi, index).wg_id.cached; // TODO cached distributed crash
+}
+
 static inline irt_work_item* irt_wi_get_current() {
 	return irt_worker_get_current()->cur_wi;
 }
@@ -151,7 +158,7 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* swi = self->cur_wi;
 	_irt_wi_join_event_data clo = {swi, self};
-	irt_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
+	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
 		self->cur_wi = NULL;
@@ -185,6 +192,9 @@ void irt_wi_end(irt_work_item* wi) {
 		if(source->num_fragments == 0) irt_wi_end(source);
 	}
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
+	for(int g=0; g<wi->num_groups; ++g) {
+		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
+	}
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
