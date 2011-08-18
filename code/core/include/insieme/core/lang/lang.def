@@ -104,6 +104,10 @@ GROUP(Real, RealGen, RealInf, Float, Double)
 
 TYPE(RealGen, "real<#a>")
 TYPE(RealInf, "real<#inf>")
+TYPE(Real4,   "real<4>")
+TYPE(Real8,   "real<8>")
+
+// aliases:
 TYPE(Float,   "real<4>")
 TYPE(Double,  "real<8>")
 
