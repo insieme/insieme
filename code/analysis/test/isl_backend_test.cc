@@ -89,7 +89,7 @@ TEST(IslBackend, SetConstraint) {
 	poly::backend::IslContext ctx;
 	poly::backend::IslSet set(ctx, iterVec);
 
-	set.addConstraint(c);
+	set.applyConstraint( makeCombiner(c) );
 
 	std::ostringstream ss;
 	ss << set;
@@ -119,7 +119,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
 	poly::backend::IslContext ctx;
 	poly::backend::IslSet set(ctx, iterVec);
-	set.addConstraint(c);
+	set.applyConstraint( makeCombiner(c) );
 
 	std::ostringstream ss;
 	ss << set;
@@ -159,7 +159,7 @@ TEST(IslBackend, FromCombiner) {
 
 	poly::backend::IslContext ctx;
 	poly::backend::IslSet set(ctx, iterVec);
-	set.addConstraint(ptr);
+	set.applyConstraint(ptr);
 
 	std::ostringstream ss;
 	ss << set;

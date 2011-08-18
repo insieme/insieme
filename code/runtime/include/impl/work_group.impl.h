@@ -65,6 +65,13 @@ void irt_wg_destroy(irt_work_group* wg) {
 	_irt_wg_recycle(wg);
 }
 
+static inline void _irt_wg_end_member(irt_work_group* wg) {
+	irt_atomic_inc(&wg->ended_member_count);
+	if(wg->ended_member_count == wg->local_member_count) {
+		irt_wg_event_trigger(wg->id, IRT_WG_EV_COMPLETED);
+	}
+}
+
 //static inline void irt_wg_join(irt_work_group* wg) {
 //	irt_wg_insert(wg, irt_wi_get_current());
 //}
@@ -146,3 +153,23 @@ void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_da
 	irt_wg_barrier(wg);
 }
 
+typedef struct __irt_wg_join_event_data {
+	irt_work_item* joining_wi;
+	irt_worker* join_to;
+} _irt_wg_join_event_data;
+bool _irt_wg_join_event(irt_wg_event_register* source_event_register, void *user_data) {
+	_irt_wg_join_event_data* join_data = (_irt_wg_join_event_data*)user_data;
+	irt_scheduling_continue_wi(join_data->join_to, join_data->joining_wi);
+	return false;
+}
+void irt_wg_join(irt_work_group* wg) {
+	irt_worker* self = irt_worker_get_current();
+	irt_work_item* swi = self->cur_wi;
+	_irt_wg_join_event_data clo = {swi, self};
+	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
+	uint32 occ = irt_wg_event_check_and_register(wg->id, IRT_WG_EV_COMPLETED, &lambda);
+	if(occ==0) { // if not completed, suspend this wi
+		self->cur_wi = NULL;
+		lwt_continue(&self->basestack, &swi->stack_ptr);
+	}
+}

@@ -84,6 +84,8 @@ typedef struct _irt_error irt_error;
 
 IRT_DECLARE_ID_TYPE(wi_event_register);
 typedef struct _irt_wi_event_register irt_wi_event_register;
+IRT_DECLARE_ID_TYPE(wg_event_register);
+typedef struct _irt_wg_event_register irt_wg_event_register;
 
 /* ------------------------------ types ----- */
 

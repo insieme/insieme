@@ -36,6 +36,8 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
+
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/ast_address.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -587,7 +589,6 @@ void ScopRegion::resolveScop(const poly::IterationVector& iterVec,
 		[&] (const ScopStmt& cur) { 
 			
 			StatementPtr curPtr = cur.getAddr().getAddressedNode();
-			LOG(ERROR) << *curPtr;
 			assert(curPtr->getNodeType() != core::NT_MarkerExpr && curPtr->getNodeType() != core::NT_MarkerStmt);
 			
 			ScatteringFunction newScat(curScat);
@@ -676,12 +677,17 @@ void ScopRegion::resolveScop(const poly::IterationVector& iterVec,
 		} ); 
 }
 
-const ScopRegion::ScatteringMatrix ScopRegion::getScatteringInfo() const {
-	ScopRegion::ScatteringMatrix ret;
-	ScatteringFunction sf(iterVec);
-	// FIXME: cache the result 	
-	resolveScop(iterVec, constraints, *this, sf, ret);
-	return ret;
+const ScopRegion::ScatteringMatrix ScopRegion::getScatteringInfo() {
+	if ( !scattering ) {
+		// we compute the full scattering information for this domain and we cache the result for
+		// later use. 
+		ScopRegion::ScatteringMatrix ret;
+		ScatteringFunction sf(iterVec);
+		// FIXME: cache the result 	
+		resolveScop(iterVec, constraints, *this, sf, ret);
+		scattering = ret;
+	}
+	return *scattering;
 }
 
 //===== AccessFunction ============================================================
@@ -714,25 +720,30 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 		return ;
 	}
 	
-	const ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
+	backend::IslContext ctx;
+
+	ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
 	const ScopRegion::ScatteringMatrix&& scat = ann.getScatteringInfo();
 	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
 		
 	out << "IV: " << ann.getIterationVector() << std::endl;
 	size_t stmtID = 0;
 	std::for_each(scat.begin(), scat.end(), 
-		[ &stmtID, &out ] (const ScopRegion::StmtScattering& cur) { 
-			out << std::endl << std::setfill('~') << std::setw(80) << "" << std::endl;
+		[ &ann, &stmtID, &out, &ctx ] (const ScopRegion::StmtScattering& cur) { 
+			out << std::setfill('~') << std::setw(80) << "" << std::endl;
 			out << "@ S" << stmtID++ << ": " << std::endl 
 				<< " -> " << printer::PrettyPrinter( std::get<0>(cur).getAddressedNode() ) << std::endl;
 	
 			IterationDomain id = std::get<1>(cur);
 			out << " -> ID ";
 			if (!id) { out << "{}"; }
-			else 	 { out << *id; }
+			else 	 { 
+				out << *id << std::endl; 
+				out << " => ISL: " << convertIterationDomain<backend::IslSet>(ctx, ann.getIterationVector(), id);
+			}
 			out << std::endl;
 
-			out << *std::get<2>(cur) << std::endl;
+			out << *std::get<2>(cur);
 			
 			const ScopRegion::AccessInfoList& ail = std::get<3>(cur);
 			std::for_each(ail.begin(), ail.end(), [&](const ScopRegion::AccessInfo& cur){
@@ -748,7 +759,6 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	);
 	
 	LOG(DEBUG) << std::endl << std::setfill('=') << std::setw(80) << "";
-	LOG(DEBUG) << std::endl;
 }
 
 } // end namespace scop

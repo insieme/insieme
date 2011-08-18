@@ -317,7 +317,7 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	// [ Char -> Generic Integer ] 
 	// 
 	// Take the integer value of the char literal and create an int literal out of it (int)c
-	if ( gen.isChar(argTy) && gen.isInt(trgTy) ) {
+	if ( gen.isChar(argTy) && gen.isInt(trgTy) &&  expr->getNodeType() == core::NT_Literal ) {
 		const core::LiteralPtr& lit = core::static_pointer_cast<const core::Literal>(expr);
 		char val;
 		if ( lit->getValue().length() == 3) {
@@ -913,10 +913,6 @@ public:
 			return convFact.builder.callExpr(gen.getGetNull(), gen.getTypeLiteral(subType));
 		}
 
-		//if ( ( type->getNodeType() == core::NT_ArrayType || gen.isAnyRef(type) )) {
-			//return subExpr;
-		//}
-
 		// Mallocs/Allocs are replaced with ref.new expression
 		if(core::ExpressionPtr&& retExpr = handleMemAlloc(convFact.getASTBuilder(), type, subExpr))
 			return retExpr;
@@ -953,12 +949,10 @@ public:
 
 		// LOG(DEBUG) << *subExpr << " -> " << *type;
 		// Convert casts form scalars to vectors to vector init exrpessions
-		subExpr = convFact.mgr.basic.scalarToVector(type, subExpr);
+		subExpr = convFact.castToType(type, subExpr);
 		
-		core::ExpressionPtr&& retExpr =
-				( type != subExpr->getType() ? convFact.builder.castExpr( type, subExpr ) : subExpr );
-		END_LOG_EXPR_CONVERSION(retExpr);
-		return retExpr;
+		END_LOG_EXPR_CONVERSION(subExpr);
+		return subExpr;
 	}
 
 private:
