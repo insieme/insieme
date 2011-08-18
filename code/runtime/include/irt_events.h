@@ -58,11 +58,19 @@ struct _irt_##__short__##_event_register { \
 	struct _irt_##__short__##_event_register *lookup_table_next; \
 }; \
 \
+/* Registers a new event handler for the ##__short__##_item identified by ##__short__##_id, for the event event_code \
+ * Use only when you can be sure that no event has occurred or been registered yet for this ##__short__## */ \
 void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *reg); \
+/* Registers a new event handler for the ##__short__##_item identified by##__short__##_id, for the event event_code \
+ * If the event has already occurred the event handler will be executed immediately */ \
 uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler); \
+/* Triggers the event event_code on ##__short__##_id. \
+ * This will execute (and potentially remove) all the associated event handlers */ \
 void irt_##__short__##_event_trigger(irt_##__subject__##_id wi_id, irt_##__short__##_event_code event_code);
 
-// WI events
+
+
+// WI events //////////////////////////////////////
 
 IRT_MAKE_ID_TYPE(wi_event_register);
 
@@ -75,7 +83,7 @@ IRT_DECLARE_EVENTS(work_item, wi, IRT_WI_EV_NUM);
 
 IRT_DEFINE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
-// WG events
+// WG events //////////////////////////////////////
 
 IRT_MAKE_ID_TYPE(wg_event_register);
 

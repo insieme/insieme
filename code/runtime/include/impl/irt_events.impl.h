@@ -99,9 +99,9 @@ void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_
 	pthread_spin_unlock(&reg->lock); \
 }
 
-// WI events
+// WI events //////////////////////////////////////
 IRT_DEFINE_EVENTS(work_item, wi);
 
-// WG events
+// WG events //////////////////////////////////////
 IRT_DEFINE_EVENTS(work_group, wg);
 
