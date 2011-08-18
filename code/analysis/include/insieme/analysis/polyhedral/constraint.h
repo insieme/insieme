@@ -213,8 +213,8 @@ template <class Head, class... Tail>
 struct Combiner<Head, Tail...> {
 	static ConstraintCombinerPtr 
 	make(const BinaryConstraintCombiner::Type& type, const Head& head, const Tail&... args) {
-		return std::make_shared<BinaryConstraintCombiner>( type, head, 
-				Combiner<Tail...>::make(type, args...) 
+		return std::make_shared<BinaryConstraintCombiner>( 
+				type, head, Combiner<Tail...>::make(type, args...) 
 			);
 	}
 };
@@ -274,7 +274,9 @@ operator and(const C1& lhs, const C2& rhs) {
 	ConstraintCombinerPtr rhsPtr = makeCombiner(rhs);
 	if (!lhsPtr) return rhsPtr;
 	if (!rhsPtr) return lhsPtr;
-	return makeConjunction(makeCombiner(lhs), makeCombiner(rhs)); 
+	// FIXME: check whether the iteration vectors of lhs and rhs are compatible for the constraints
+	// to be composed
+	return makeConjunction(lhsPtr, rhsPtr); 
 }
 
 // Redefinition of || operator with the semantics of OR 
@@ -289,7 +291,9 @@ operator or(const C1& lhs, const C2& rhs) {
 	ConstraintCombinerPtr rhsPtr = makeCombiner(rhs);
 	if (!lhsPtr) return rhsPtr;
 	if (!rhsPtr) return lhsPtr;
-	return makeDisjunction(makeCombiner(lhs), makeCombiner(rhs)); 
+	// FIXME: check whether the iteration vectors of lhs and rhs are compatible for the constraints
+	// to be composed
+	return makeDisjunction(lhsPtr, rhsPtr); 
 }
 
 // Defines a list of constraints stored in a vector
