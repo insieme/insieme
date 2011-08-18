@@ -48,6 +48,7 @@ using namespace insieme::core;
 
 namespace {
 
+
 // visitor finds calls to array.create.1D to check if the type is still correct
 class ArrayCreat1DFinder: public ASTVisitor<bool> {
 	const ASTBuilder& builder;
@@ -133,7 +134,7 @@ tbi
 
 // returns a 0-literal of the corresponding type or NoOp in cas of unit
 const ExpressionPtr HostMapper3rdPass::getZeroElem(const TypePtr& type) {
-	return builder.literal(type, "0");
+	return builder.literal(type, "00");
 	TypeList noArgs;
 	std::vector<VariablePtr> noParams;
 	std::vector<ExpressionPtr> noExpr;
@@ -541,7 +542,7 @@ std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()
 					innerArgs.push_back(localVar);
 					wrapperInterface.push_back(vec3type);
 
-					NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, innerArgs);
+					NodePtr kernelCall = builder.returnStmt(builder.callExpr(BASIC.getInt4(), lambda, innerArgs));
 					copyAnnotations(callExpr, kernelCall);
 
 					declsAndKernelCall.push_back(dynamic_pointer_cast<const Statement>(kernelCall));
