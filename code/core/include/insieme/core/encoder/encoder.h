@@ -303,6 +303,39 @@ namespace encoder {
 	#undef ADD_CONVERTER
 
 
+	// --------------------------------------------------------------------
+	//   Add support for encoding expressions directly into expressions
+	// --------------------------------------------------------------------
+
+	template<>
+	struct type_factory<core::ExpressionPtr> {
+		core::TypePtr operator()(core::NodeManager& manager) const {
+			assert(false && "Not applicable in the general case!");
+			throw InvalidExpression("Cannot define generic type for all expressions!");
+		}
+	};
+
+	template<>
+	struct value_to_ir_converter<core::ExpressionPtr> {
+		core::ExpressionPtr operator()(core::NodeManager& manager, const core::ExpressionPtr& value) const {
+			return manager.get(value);
+		}
+	};
+
+	template<>
+	struct ir_to_value_converter<core::ExpressionPtr> {
+		core::ExpressionPtr operator()(const core::ExpressionPtr& expr) const {
+			return expr;
+		}
+	};
+
+	template<>
+	struct is_encoding_of<core::ExpressionPtr> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			return true;
+		}
+	};
+
 } // end namespace lists
 } // end namespace core
 } // end namespace insieme
