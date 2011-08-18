@@ -36,22 +36,16 @@
 
 #pragma once
 
-#include "impl/client_app.impl.h"
-#include "impl/irt_context.impl.h"
-#include "impl/error_handling.impl.h"
-#include "impl/worker.impl.h"
-#include "impl/irt_scheduling.impl.h"
-#include "impl/irt_mqueue.impl.h"
-#include "impl/data_item.impl.h"
-#include "impl/work_group.impl.h"
-#include "impl/irt_events.impl.h"
-#include "impl/ir_interface.impl.h"
-#include "irt_types.h"
-#include "wi_implementation.h"
-#include "utils/timing.h"
-#include "runtime.h"
+#include "declarations.h"
 
-#ifdef USE_OPENCL 
-#include "impl/irt_ocl.impl.h"
-#include "irt_ocl_config.h"
-#endif
+typedef struct _irt_parallel_job {
+	irt_work_group* parent;
+	uint32 min;
+	uint32 max;
+	uint32 mod;
+	irt_wi_implementation_id impl_id;
+	irt_lw_data_item* args;
+} irt_parallel_job;
+
+irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+irt_work_group* irt_parallel(const irt_parallel_job* job);

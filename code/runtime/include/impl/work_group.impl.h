@@ -59,9 +59,11 @@ irt_work_group* irt_wg_create() {
 	wg->cur_barrier_count_up = 0;
 	wg->cur_barrier_count_down = 0;
 	wg->redistribute_data_array = NULL;
+	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
+	pthread_spin_destroy(&wg->lock);
 	_irt_wg_recycle(wg);
 }
 
@@ -96,7 +98,14 @@ void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi) {
 	uint32 i;
 	for(i=0; i<wi->num_groups; ++i) if(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full) break;
+	IRT_ASSERT(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full, IRT_ERR_INTERNAL, "irt_wg_get_wi_num: membership not found for wi in wg");
 	return wi->wg_memberships[i].num;
+}
+static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg, irt_work_item* wi) {
+	uint32 i;
+	for(i=0; i<wi->num_groups; ++i) if(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full) break;
+	IRT_ASSERT(wi->wg_memberships[i].wg_id.value.full == wg->id.value.full, IRT_ERR_INTERNAL, "irt_wg_get_wi_membership: membership not found for wi in wg");
+	return &wi->wg_memberships[i];
 }
 
 
