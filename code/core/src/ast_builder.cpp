@@ -488,6 +488,22 @@ ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr memb
 	return callExpr(refType(memberType), access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
 }
 
+ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
+	core::TypePtr type = tupleExpr->getType();
+	assert(type->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
+
+	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(type);
+	assert(component < tupleType->getElementTypes().size() && "Component out of range!");
+	core::TypePtr componentType = tupleType->getElementTypes()[component];
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getTupleMemberAccess();
+	core::ExpressionPtr index = literal(getBasicGenerator().getUInt8(), utils::numeric_cast<string>(component));
+	core::ExpressionPtr typeLiteral = getBasicGenerator().getTypeLiteral(componentType);
+	return callExpr(componentType, access, tupleExpr, index, typeLiteral);
+}
+
+
 
 // ---------------------------- Utilities ---------------------------------------
 

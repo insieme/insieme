@@ -39,6 +39,7 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/encoder/encoder.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 
@@ -61,35 +62,31 @@ namespace runtime {
 
 		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
 			core::ASTBuilder builder(manager);
-			auto& basic = manager.getBasicGenerator();
-			auto& extensions = manager.getLangExtension<Extensions>();
+			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+			const Extensions& extensions = manager.getLangExtension<Extensions>();
 
 			// create new lambda expression wrapping the entry point
 			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
 			core::FunctionTypePtr entryType = static_pointer_cast<const core::FunctionType>(entry->getType());
 			assert(entryType->isPlain() && "Only plain functions can be entry points!");
 
-			// create parameter list
-			// TODO: replace this with data passes as parameter to the work-item
-			//		 for now, values will be initialized with zero
 
-			// construct parameter struct type
-//			core::StructType::Entries entries;
-//			transform(entryType->getParameterTypes(), )
-//			core::StructType paramType = builder.structType();
-
+			// define parameter of resulting lambda
+			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
+			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()));
+			core::ExpressionPtr paramTypes = core::encoder::toIR(manager, tupleType);
 
 			vector<core::ExpressionPtr> argList;
+			unsigned counter = 0;
 			transform(entryType->getParameterTypes(), std::back_inserter(argList), [&](const core::TypePtr& type) {
-				return builder.getZero(type);
+				return builder.callExpr(type, extensions.getWorkItemArgument,
+						toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++), paramTypes, basic.getTypeLiteral(type)));
 			});
 
 			// produce replacement
 			core::TypePtr unit = basic.getUnit();
-			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
 			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
 			core::ExpressionPtr exit = builder.callExpr(unit, extensions.exitWorkItem, workItem);
-
 			WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(call, exit), toVector(workItem)));
 			return WorkItemImpl(toVector(variant));
 		}
@@ -120,13 +117,10 @@ namespace runtime {
 
 			// ------------------- Start standalone runtime  -------------------------
 
-			// construct light-weight data item struct
-			core::StructExpr::Members members;
-			members.push_back(core::StructExpr::Member(builder.identifier("a"), argc));
-			members.push_back(core::StructExpr::Member(builder.identifier("b"), argv));
-			core::ExpressionPtr expr = builder.structExpr(members);
-			core::StructTypePtr structType = static_pointer_cast<const core::StructType>(expr->getType());
-			expr = builder.callExpr(DataItem::toLWDataItemType(structType), extensions.wrapLWData, toVector(expr));
+			// construct light-weight data item tuple
+			core::ExpressionPtr expr = builder.tupleExpr(toVector<core::ExpressionPtr>(argc, argv));
+			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
+			expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.wrapLWData, toVector(expr));
 
 			// create call to standalone runtime
 			stmts.push_back(builder.callExpr(unit, extensions.runStandalone, expr));

@@ -65,7 +65,7 @@ typedef struct {
 typedef struct {
 	uint16 program_id;						// < the ID of the context
 	irt_wi_implementation_id work_item;		// < the ID of the work item
-	uint16 implementation;					// < the index of the selected implementation
+	uint16 variant;							// < the index of the selected implementation
 	uint16 fragment;						// < the code fragment within the implementation
 } irt_subject_region;
 
@@ -121,16 +121,19 @@ typedef enum {
 } irt_metric_kind;
 
 typedef struct _irt_metric_atom {
+	// only use id => rest in table
 	const char* name;
-	unsigned sample_resolution;
+	unsigned sample_resolution; /* < order of magnitude in ns */
 } irt_metric_atom;
 
 typedef enum {
-	OP_AVG, OP_SUM, OP_MAX, OP_MIN, OP_MOVING_AVG, OP_VARIANCE
+	OP_AVG, OP_SUM, OP_MAX, OP_MIN, OP_MOVING_AVG, OP_VARIANCE, OP_DIV
 } irt_metric_compose_op;
 
 typedef struct _irt_metric_composed {
 	irt_metric_compose_op operation;
+//	irt_metric* metricA;
+//	irt_metric* metricB;
 } irt_metric_composed;
 
 typedef struct {
@@ -156,7 +159,7 @@ typedef struct {
 typedef uint64 irt_time;
 
 typedef enum {
-	IRT_TC_LATEST, IRT_TC_LAST_BEFORE, IRT_FIRST_AFTER, IRT_TC_BETWEEN
+	IRT_TC_NOW, IRT_TC_LATEST, IRT_TC_LAST_BEFORE, IRT_FIRST_AFTER, IRT_TC_BETWEEN
 } irt_time_constraint_kind;
 
 typedef struct {
@@ -177,6 +180,10 @@ typedef struct {
 //    The main functionality to interact with the remaining system
 // --------------------------------------------------------------------
 
+typedef enum {
+
+} irt_tuning_error_code;
+
 /**
  * Allows to obtain a list of parameters offered by a certain subject. The function
  * will write a copy of the offered parameters to the given parameter list.
@@ -187,7 +194,10 @@ typedef struct {
  * @param max     ... the maximal number parameters to be written to param (size of param)
  * @param offset  ... the offset to the total list of parameters
  */
-void irt_list_params(const irt_subject* subject, irt_parameter* param, unsigned* num, unsigned max, unsigned offset);
+irt_tuning_error_code irt_list_params(const irt_subject* subject, irt_parameter out_param[], unsigned* out_num, unsigned max, unsigned offset);
+
+//irt_tuning_error_code irt_list_params(const irt_subject* subject, const irt_parameter(* out_params)[], unsigned* out_num);
+
 
 /**
  * Obtains a list of metrics offered by a given subject. The function will copy
@@ -199,18 +209,18 @@ void irt_list_params(const irt_subject* subject, irt_parameter* param, unsigned*
  * @param max     ... the maximal number of metrics to be written to the given metric list
  * @param offset  ... the offset starting at
  */
-void irt_list_metrics(const irt_subject* subject, irt_metric* metric, unsigned* num, unsigned max, unsigned offset);
+irt_tuning_error_code irt_list_metrics(const irt_subject* subject, irt_metric out_metric[], unsigned* num, unsigned max, unsigned offset);
 
 /**
  * The main querying function allowing to obtain values for metrics offered by a subject.
  *
  * @param subject ... the (single) subject for which information is requested
- * @param metric  ... the list of metrics requested
+ * @param metrics ... the list of metrics requested
  * @param value   ... the target to which the obtained information should be written to
  * @param n       ... the number of requested metrics
  * @param time    ... the time constraints for the requested data (where applicable)
  */
-void irt_get_data(const irt_subject* subject, const irt_metric* metric, irt_value* value, unsigned n, const irt_time_constraint* time);
+irt_tuning_error_code irt_get_data(const irt_subject* subject, const irt_metric metrics[], irt_value out_value[], unsigned n, const irt_time_constraint* time);
 
 /**
  * Allows to obtain the current state of the parameters offered by a subject.
@@ -220,7 +230,7 @@ void irt_get_data(const irt_subject* subject, const irt_metric* metric, irt_valu
  * @param value   ... the target to which the obtained information should be written to
  * @param n       ... the number of requested parameters
  */
-void irt_get_params(const irt_subject* subject, const irt_parameter* param, irt_value* value, unsigned n);
+irt_tuning_error_code irt_get_params(const irt_subject* subject, const irt_parameter params[], irt_value value[], unsigned n);
 
 /**
  * Allows to update the parameter state of a single subject.
@@ -230,5 +240,5 @@ void irt_get_params(const irt_subject* subject, const irt_parameter* param, irt_
  * @param value   ... the new values to be assigned to the parameters
  * @param n       ... the number of parameters to be updated
  */
-void irt_set_params(const irt_subject* subject, const irt_parameter* param, const irt_value* value, unsigned n);
+irt_tuning_error_code irt_set_params(const irt_subject* subject, const irt_parameter params[], const irt_value value[], unsigned n);
 

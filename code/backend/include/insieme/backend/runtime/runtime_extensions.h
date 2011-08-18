@@ -74,6 +74,8 @@ namespace runtime {
 		const core::TypePtr workItemType;
 
 
+		// --- Work Item Implementations -------------------------------------
+
 		const core::TypePtr workItemImplType;
 
 		const core::LiteralPtr workItemImplCtr;
@@ -138,6 +140,11 @@ namespace runtime {
 
 		const core::LiteralPtr unwrapLWData;
 
+		// --- Information retrieval -----------------------------------------
+
+		const core::LiteralPtr getWorkItemArgument;
+
+
 	private:
 
 		friend class core::NodeManager;
@@ -164,15 +171,15 @@ namespace runtime {
 	public:
 
 		static core::TypePtr toDataItemType(const core::TypePtr& type);
-		static core::TypePtr toLWDataItemType(const core::StructTypePtr& type);
+		static core::TypePtr toLWDataItemType(const core::TupleTypePtr& type);
 
 		static bool isDataItemType(const core::TypePtr& type);
 		static bool isLWDataItemType(const core::TypePtr& type);
 
 		static core::TypePtr extractItemType(const core::TypePtr& type);
 
-		static core::StructTypePtr getLWDataItemStruct(const core::StructTypePtr& structType);
-		static core::StructExprPtr getLWDataItemValue(unsigned typeID, const core::StructExprPtr& structValue);
+		static core::TupleTypePtr getUnfoldedLWDataItemType(const core::TupleTypePtr& tupleType);
+		static core::TupleExprPtr getLWDataItemValue(unsigned typeID, const core::TupleExprPtr& tupleValue);
 
 	};
 

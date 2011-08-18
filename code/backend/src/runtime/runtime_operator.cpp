@@ -97,7 +97,7 @@ namespace runtime {
 
 		table[ext.wrapLWData] = OP_CONVERTER({
 			// check arguments
-			assert(ARG(0)->getNodeType() == core::NT_StructExpr && "Only supported for struct expressions!");
+			assert(ARG(0)->getNodeType() == core::NT_TupleExpr && "Only supported for tuple expressions!");
 
 			// add type dependency
 			const TypeInfo& info = GET_TYPE_INFO(call->getType());
@@ -105,16 +105,24 @@ namespace runtime {
 
 			// register type within type table
 			TypeTablePtr typeTable = TypeTable::get(context.getConverter());
-			core::StructTypePtr structType = DataItem::getLWDataItemStruct(static_pointer_cast<const core::StructType>(ARG(0)->getType()));
-			unsigned id = typeTable->registerType(structType);
+
+			core::TupleTypePtr tupleType = DataItem::getUnfoldedLWDataItemType(static_pointer_cast<const core::TupleType>(ARG(0)->getType()));
+			unsigned id = typeTable->registerType(tupleType);
 
 			// convert wrapped data item struct
-			core::StructExprPtr pure = static_pointer_cast<const core::StructExpr>(ARG(0));
-			core::StructExprPtr dataItem = DataItem::getLWDataItemValue(id, pure);
+			core::TupleExprPtr pure = static_pointer_cast<const core::TupleExpr>(ARG(0));
+			core::TupleExprPtr dataItem = DataItem::getLWDataItemValue(id, pure);
 
 			// just forward the inner expression
 			c_ast::TypePtr resType = c_ast::ptr(C_NODE_MANAGER->create<c_ast::NamedType>(C_NODE_MANAGER->create("irt_lw_data_item")));
 			return c_ast::cast(resType,c_ast::ref(CONVERT_EXPR(dataItem)));
+		});
+
+		table[ext.getWorkItemArgument] = OP_CONVERTER({
+			// access work item member and cast to proper value
+			c_ast::TypePtr paramPtr = c_ast::ptr(CONVERT_TYPE(core::encoder::toValue<core::TypePtr>(ARG(2))));
+			c_ast::ExpressionPtr inner = c_ast::cast(paramPtr, c_ast::access(c_ast::deref(CONVERT_ARG(0)), "parameters"));
+			return c_ast::access(c_ast::deref(inner), format("c%d", core::encoder::toValue<unsigned>(ARG(1))+1));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

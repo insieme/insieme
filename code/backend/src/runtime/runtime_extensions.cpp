@@ -58,12 +58,10 @@ namespace runtime {
 			auto& basic = manager.basic;
 
 			// create type + literal
-			core::NamedCompositeType::Entries members;
-			members.push_back(core::NamedCompositeType::Entry(builder.identifier("argc"), basic.getInt4()));
-			members.push_back(core::NamedCompositeType::Entry(builder.identifier("argv"),
-					builder.refType(builder.arrayType(builder.refType(builder.arrayType(basic.getChar()))))));
-
-			core::TypePtr args = DataItem::toLWDataItemType(builder.structType(members));
+			core::TypeList componentTypes;
+			componentTypes.push_back(basic.getInt4());
+			componentTypes.push_back(builder.refType(builder.arrayType(builder.refType(builder.arrayType(basic.getChar())))));
+			core::TypePtr args = DataItem::toLWDataItemType(builder.tupleType(componentTypes));
 			core::TypePtr type = builder.functionType(toVector(args), basic.getUnit());
 			return builder.literal(type, "runStandalone");
 		}
@@ -248,6 +246,24 @@ namespace runtime {
 			core::FunctionTypePtr type = builder.functionType(toVector(getLWDataItemType(manager)), builder.typeVariable("a"));
 			return builder.literal(type, "unwrap");
 		}
+
+		const core::LiteralPtr getGetWorkItemArgument(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+
+			// this function is of type
+			//  (ref<WorkItem>, uint<#a>, type<LWDataItem<'p>>, type<'a>)->'a
+
+			core::TypePtr workItem = builder.refType(getWorkItemType(manager));
+			core::TypePtr index = basic.getUIntGen();
+
+			core::TypePtr dataItem = builder.genericType(LW_DATA_ITEM_TYPE_NAME, toVector<core::TypePtr>(builder.typeVariable("p")));
+			core::TypePtr tupleDataItem = builder.genericType("type", toVector(dataItem));
+
+			core::TypePtr typeLiteral = basic.getTypeLiteralTypeGen();
+			core::FunctionTypePtr type = builder.functionType(toVector(workItem, index, tupleDataItem, typeLiteral), basic.getAlpha());
+			return builder.literal(type, "getArg");
+		}
 	}
 
 	Extensions::Extensions(core::NodeManager& manager)
@@ -270,7 +286,8 @@ namespace runtime {
 		  typeID(getTypeIDType(manager)),
 		  LWDataItemType(getLWDataItemType(manager)),
 		  wrapLWData(getWrapLWData(manager)),
-		  unwrapLWData(getUnwrapLWData(manager)) {}
+		  unwrapLWData(getUnwrapLWData(manager)),
+		  getWorkItemArgument(getGetWorkItemArgument(manager)) {}
 
 
 
@@ -281,7 +298,7 @@ namespace runtime {
 		return builder.genericType(DATA_ITEM_TYPE_NAME, toVector(type));
 	}
 
-	core::TypePtr DataItem::toLWDataItemType(const core::StructTypePtr& type) {
+	core::TypePtr DataItem::toLWDataItemType(const core::TupleTypePtr& type) {
 		core::ASTBuilder builder(type->getNodeManager());
 		return builder.genericType(LW_DATA_ITEM_TYPE_NAME, toVector<core::TypePtr>(type));
 	}
@@ -317,32 +334,32 @@ namespace runtime {
 
 	bool DataItem::isLWDataItemType(const core::TypePtr& type) {
 		return isItemType(type, LW_DATA_ITEM_TYPE_NAME) &&
-				static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0]->getNodeType() == core::NT_StructType;
+				static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0]->getNodeType() == core::NT_TupleType;
 	}
 
-	core::StructTypePtr DataItem::getLWDataItemStruct(const core::StructTypePtr& structType) {
+	core::TupleTypePtr DataItem::getUnfoldedLWDataItemType(const core::TupleTypePtr& tupleType) {
 		// obtain some utilities
-		core::NodeManager& manager = structType->getNodeManager();
+		core::NodeManager& manager = tupleType->getNodeManager();
 		core::ASTBuilder builder(manager);
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 
-		// create resulting struct - same struct + the type id field
-		core::StructType::Entries entries;
-		entries.push_back(core::StructType::Entry(builder.identifier("type"), ext.typeID));
-		copy(structType->getEntries(), std::back_inserter(entries));
-		return core::StructType::get(manager, entries);
+		// create resulting tuple - same components + the type id field
+		core::TypeList components;
+		components.push_back(ext.typeID);
+		copy(tupleType->getElementTypes(), std::back_inserter(components));
+		return core::TupleType::get(manager, components);
 	}
 
-	core::StructExprPtr DataItem::getLWDataItemValue(unsigned typeID, const core::StructExprPtr& structValue) {
+	core::TupleExprPtr DataItem::getLWDataItemValue(unsigned typeID, const core::TupleExprPtr& tupleValue) {
 		// obtain some utilities
-		core::NodeManager& manager = structValue->getNodeManager();
+		core::NodeManager& manager = tupleValue->getNodeManager();
 		core::ASTBuilder builder(manager);
 		const Extensions& ext = manager.getLangExtension<Extensions>();
 
-		core::StructExpr::Members members;
-		members.push_back(core::StructExpr::Member(builder.identifier("type"), builder.literal(ext.typeID, toString(typeID))));
-		copy(structValue->getMembers(), std::back_inserter(members));
-		return core::StructExpr::get(manager, members);
+		core::ExpressionList values;
+		values.push_back(builder.literal(ext.typeID, toString(typeID)));
+		copy(tupleValue->getExpressions(), std::back_inserter(values));
+		return core::TupleExpr::get(manager, values);
 	}
 
 } // end namespace runtime

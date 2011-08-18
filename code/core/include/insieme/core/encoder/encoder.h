@@ -336,6 +336,63 @@ namespace encoder {
 		}
 	};
 
+
+	// --------------------------------------------------------------------
+	//       Add support for encoding of types within expressions
+	// --------------------------------------------------------------------
+
+	template<>
+	struct type_factory<core::TypePtr> {
+		core::TypePtr operator()(core::NodeManager& manager) const {
+			assert(false && "Not applicable in the general case!");
+			throw InvalidExpression("Cannot define generic type for all types!");
+		}
+	};
+
+	template<>
+	struct value_to_ir_converter<core::TypePtr> {
+		core::ExpressionPtr operator()(core::NodeManager& manager, const core::TypePtr& value) const {
+			core::TypePtr resType = core::GenericType::get(manager, "type", toVector(value));
+			return core::Literal::get(manager, resType, toString(*value));
+		}
+	};
+
+	template<>
+	struct ir_to_value_converter<core::TypePtr> {
+		core::TypePtr operator()(const core::ExpressionPtr& expr) const {
+			// encoding has to be a literal
+			if (!isEncodingOf<core::TypePtr>(expr)) {
+				throw InvalidExpression(expr);
+			}
+
+			// check type of literal
+			const core::GenericTypePtr& genType = static_pointer_cast<const GenericType>(expr->getType());
+			return genType->getTypeParameter()[0];
+		}
+	};
+
+	template<>
+	struct is_encoding_of<core::TypePtr> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+			// encoding has to be a literal
+			if (expr->getNodeType() != core::NT_Literal) {
+				return false;
+			}
+
+			// the literal has to have the right type
+			const core::TypePtr& type = expr->getType();
+			if (type->getNodeType() != core::NT_GenericType) {
+				return false;
+			}
+
+			// check type of literal
+			const core::GenericTypePtr& genType = static_pointer_cast<const GenericType>(type);
+			return genType->getFamilyName() == "type" &&
+					genType->getTypeParameter().size() == static_cast<std::size_t>(1) &&
+					genType->getIntTypeParameter().empty();
+		}
+	};
+
 } // end namespace lists
 } // end namespace core
 } // end namespace insieme

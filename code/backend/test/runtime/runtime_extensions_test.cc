@@ -118,12 +118,12 @@ TEST(RuntimeExtensions, DataItem) {
 	core::NodeManager manager;
 	core::ASTBuilder builder(manager);
 
-	core::StructType::Entries entries;
-	core::StructTypePtr structType = builder.structType(entries);
+	core::TypeList list;
+	core::TupleTypePtr tupleType = builder.tupleType(list);
 
-	core::TypePtr lwDataItem = DataItem::toLWDataItemType(structType);
+	core::TypePtr lwDataItem = DataItem::toLWDataItemType(tupleType);
 
-	EXPECT_EQ("LWDataItem<struct<>>", toString(*lwDataItem));
+	EXPECT_EQ("LWDataItem<()>", toString(*lwDataItem));
 	EXPECT_TRUE(DataItem::isLWDataItemType(lwDataItem));
 }
 

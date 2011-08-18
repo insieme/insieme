@@ -35,6 +35,8 @@ set ( insieme_opencl_backend_include_dir 	${insieme_code_dir}/opencl_backend/inc
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
 
+set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
+
 # ------------------------------------------------------------- configuration for platforms
 if(MSVC)   # Windows Visual Studio
 

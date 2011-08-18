@@ -54,15 +54,15 @@ namespace runtime {
 			// make sure it is only invoked using LW data items
 			assert(DataItem::isLWDataItemType(type) && "Only works on LW Data Items!");
 
-			// get underlying struct type
-			core::StructTypePtr structType = static_pointer_cast<const core::StructType>(
+			// get underlying tuple type
+			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(
 					static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0]);
 
-			// convert to data item struct
-			core::StructTypePtr newStruct = DataItem::getLWDataItemStruct(structType);
+			// convert to data item to tuple used within runtime
+			core::TupleTypePtr fullTuple = DataItem::getUnfoldedLWDataItemType(tupleType);
 
 			// obtain type information from base struct
-			return new TypeInfo(converter.getTypeManager().getTypeInfo(newStruct));
+			return new TypeInfo(converter.getTypeManager().getTypeInfo(fullTuple));
 		}
 
 
