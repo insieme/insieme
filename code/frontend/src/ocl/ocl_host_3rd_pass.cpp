@@ -269,6 +269,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		return element;//->substitute(builder.getNodeManager(), *this);
 	}
 
+
 	// TODO make more efficient
 	if(replacements.find(element) != replacements.end())
 		return replacements[element];
@@ -368,7 +369,60 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 	}
 
+
 	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
+
+		// check if arguments have been replaced
+		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr())) {
+			Lambda::ParamList params = lambda->getParameterList();
+			Lambda::ParamList newParams = params;
+			const std::vector<ExpressionPtr>& args = callExpr->getArguments();
+			size_t cnt = 0;
+			bool changed = false;
+
+//std::cout << "vArg: " << callExpr->getArgument(0) << std::endl;
+			for_each(args, [&](const ExpressionPtr& arg) {
+				// check if parameter has already been replaced, replace only once
+				if(const VariablePtr& vArg = getVariableArg(arg, builder)) {
+					// todo fix dirty hack
+					if((params.at(cnt)->getType()->toString().find("array<_cl_")) != string::npos)
+					if(cl_mems.find(params.at(cnt)) != cl_mems.end()) {
+						newParams.at(cnt) = cl_mems[params.at(cnt)];
+						changed = true;
+					// else check if the passed has a diffetent type
+					} else if(cl_mems.find(vArg) != cl_mems.end()) {
+						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getNonRefType(vArg), getNonRefType(cl_mems[vArg]));
+						if(const TypePtr& newType = dynamic_pointer_cast<const Type>(nt)){
+							newParams.at(cnt) = builder.variable(newType);
+							cl_mems[params.at(cnt)] = newParams.at(cnt);
+							changed = true;
+						}
+					}
+				}
+				++cnt;
+			});
+			if(changed) {
+/*std::cout << "Old params [";
+for_each(params, [](VariablePtr param) {
+std::cout << param->getType() << " " << *param << ", ";
+});
+std::cout << "]\nNew params [";
+for_each(newParams, [](VariablePtr param) {
+std::cout << param->getType() << " " << *param << ", ";
+});
+std::cout << "]\n";
+std::cout << "]\ncl_mems [";
+for_each(cl_mems, [](std::pair<VariablePtr, VariablePtr> cl_mem) {
+std::cout << cl_mem.first->getType() << " " << *(cl_mem.first) << " ->" << cl_mem.second->getType() << " " << *(cl_mem.second) <<  "\n";
+});
+std::cout << "]\n";*/
+				const LambdaExprPtr& newLambda = builder.lambdaExpr(callExpr->getType(), lambda->getBody(), newParams);
+				NodePtr ret = builder.callExpr(callExpr->getType(), newLambda, args);
+				copyAnnotations(callExpr, ret);
+				return ret->substitute(builder.getNodeManager(), *this);
+			}
+		}
+
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
 		if(fun == BASIC.getRefAssign()) {
 			// get rid of some not needed functions
@@ -427,11 +481,7 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 				if(rhs->getType()->toString().find("array<_cl_") != string::npos){
 					return BASIC.getNoOp();
 				} unused*/
-/* fucking destroys everything
-				// remove remaining calls using cl_ objects
-				if(rhs->getType()->toString().find("array<_cl_"))
-					return BASIC.getNoOp();
-
+/*
 				//TODO unchecked, maybe unusual
 				for(auto I = rhs->getArguments().begin(); I != rhs->getArguments().end(); ++I) {
 					if((*I)->getType()->toString().find("array<_cl_") != string::npos)
@@ -440,6 +490,7 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 */
 			}
 		}
+
 
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this))) {
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {

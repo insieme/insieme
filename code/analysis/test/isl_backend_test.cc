@@ -177,5 +177,19 @@ TEST(IslBackend, FromCombiner) {
 	isl_set_free(refSet);
 }
 
+TEST(IslBackend, SimpleMap) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	poly::AffineSystem affSys(iterVec);
+	// 0*v1 + 2*v2 + 10
+	affSys.appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
+	affSys.appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
+	affSys.appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
+	
+	poly::backend::IslContext ctx;
+	poly::backend::IslMap map(ctx,iterVec,affSys);
+
+}
 
 
