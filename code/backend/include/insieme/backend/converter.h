@@ -78,7 +78,7 @@ namespace backend {
 		}
 	};
 
-	class Converter {
+	class Converter : private boost::noncopyable {
 
 		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
@@ -101,16 +101,9 @@ namespace backend {
 		// NOTE: shared pointer, since it has to survive the conversion process
 		c_ast::SharedCodeFragmentManager fragmentManager;
 
-
 		// ----------- Overall Conversion Configuration ----------------
 
 		ConverterConfig config;
-
-
-		/**
-		 * A Code Fragment containing global declarations.
-		 */
-		mutable c_ast::CodeFragmentPtr globalFragment;
 
 	public:
 
@@ -219,17 +212,6 @@ namespace backend {
 			config = newConfig;
 		}
 
-		// TODO: find a better place for this ...
-
-		const c_ast::CodeFragmentPtr& getGlobalFragment() const {
-			return globalFragment;
-		}
-
-		void setGlobalFragment(const c_ast::CodeFragmentPtr& globals) const {
-			assert(!globalFragment && "Global fragment has been set before!!");
-			globalFragment = globals;
-		}
-
 	};
 
 	class ConversionContext :  public boost::noncopyable {
@@ -272,12 +254,20 @@ namespace backend {
 			return converter;
 		}
 
+		void addDependency(const c_ast::CodeFragmentPtr& fragment) {
+			dependencies.insert(fragment);
+		}
+
 		c_ast::FragmentSet& getDependencies() {
 			return dependencies;
 		}
 
 		const c_ast::FragmentSet& getDependencies() const {
 			return dependencies;
+		}
+
+		void addRequirement(const c_ast::CodeFragmentPtr& fragment) {
+			requirements.insert(fragment);
 		}
 
 		c_ast::FragmentSet& getRequirements() {

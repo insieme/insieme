@@ -38,58 +38,70 @@
 
 #include "irt_events.h"
 
-static inline irt_wi_event_register* _irt_get_wi_event_register() {
-	irt_worker* self = irt_worker_get_current();
-	irt_wi_event_register* reg = self->wi_ev_register_list;
-	if(reg) {
-		self->wi_ev_register_list = reg->lookup_table_next;
-		memset(reg, 0, sizeof(irt_wi_event_register));
-		return reg;
-	} else {
-		return (irt_wi_event_register*)calloc(1, sizeof(irt_wi_event_register));
-	}
+#define IRT_DEFINE_EVENTS(__subject__, __short__) \
+static inline irt_##__short__##_event_register* _irt_get_##__short__##_event_register() { \
+	irt_worker* self = irt_worker_get_current(); \
+	irt_##__short__##_event_register* reg = self->__short__##_ev_register_list; \
+	if(reg) { \
+		self->__short__##_ev_register_list = reg->lookup_table_next; \
+		memset(reg, 0, sizeof(irt_##__short__##_event_register)); \
+		return reg; \
+	} else { \
+		irt_##__short__##_event_register* ret = (irt_##__short__##_event_register*)calloc(1, sizeof(irt_##__short__##_event_register)); \
+		pthread_spin_init(&ret->lock, PTHREAD_PROCESS_PRIVATE); /* TODO check destroy */ \
+		return ret; \
+	} \
+} \
+ \
+void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *reg) { \
+	 irt_##__short__##_event_register_table_insert(reg); \
+} \
+ \
+uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler) { \
+	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
+	newreg->id.value.full = __short__##_id.value.full; \
+	newreg->id.cached = newreg; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
+	pthread_spin_lock(&reg->lock); \
+	/* check if event already occurred */ \
+	if(reg->occurence_count[event_code]>0) { \
+		/* if so, return occurrence count */ \
+		pthread_spin_unlock(&reg->lock); \
+		return reg->occurence_count[event_code]; \
+	} \
+	/* else insert additional handler */ \
+	handler->next = reg->handler[event_code]; \
+	reg->handler[event_code] = handler; \
+	pthread_spin_unlock(&reg->lock); \
+	return 0; \
+} \
+ \
+void irt_##__short__##_event_trigger(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code) { \
+	irt_##__short__##_event_register *newreg = _irt_get_##__short__##_event_register(); \
+	newreg->id.value.full = __short__##_id.value.full; \
+	newreg->id.cached = newreg; \
+	irt_##__short__##_event_register *reg = irt_##__short__##_event_register_table_lookup_or_insert(newreg); \
+	pthread_spin_lock(&reg->lock); \
+	/* increase event count */ \
+	++reg->occurence_count[event_code]; \
+	/* go through all event handlers */ \
+	irt_##__short__##_event_lambda *cur = reg->handler[event_code]; \
+	irt_##__short__##_event_lambda *prev = NULL; \
+	while(cur != NULL) { \
+		if(!cur->func(reg, cur->data)) { /* if event handled, remove */ \
+			if(prev == NULL) reg->handler[event_code] = cur->next; \
+			else prev->next = cur; \
+		} else { /* else keep the handler in the list */ \
+			prev = cur; \
+		} \
+		cur = cur->next; \
+	} \
+	pthread_spin_unlock(&reg->lock); \
 }
 
-uint32 irt_wi_event_check_and_register(irt_work_item_id wi_id, irt_wi_event_code event_code, irt_event_lambda *handler) {
-	irt_wi_event_register *newreg = _irt_get_wi_event_register();
-	newreg->id.value.full = wi_id.value.full;
-	newreg->id.cached = newreg;
-	pthread_spin_init(&newreg->lock, PTHREAD_PROCESS_PRIVATE); // TODO check destroy
-	irt_wi_event_register *reg = irt_wi_event_register_table_lookup_or_insert(newreg);
-	pthread_spin_lock(&reg->lock);
-	// check if event already occurred
-	if(reg->occurence_count[event_code]>0) {
-		// if so, return occurrence count
-		pthread_spin_unlock(&reg->lock);
-		return reg->occurence_count[event_code];
-	}
-	// else insert additional handler
-	handler->next = reg->handler[event_code];
-	reg->handler[event_code] = handler;
-	pthread_spin_unlock(&reg->lock);
-	return 0;
-}
+// WI events //////////////////////////////////////
+IRT_DEFINE_EVENTS(work_item, wi);
 
-void irt_wi_event_trigger(irt_work_item_id wi_id, irt_wi_event_code event_code) {
-	irt_wi_event_register_id regid;
-	regid.value.full = wi_id.value.full;
-	regid.cached = NULL;
-	irt_wi_event_register *reg = irt_wi_event_register_table_lookup(regid);
-	if(!reg) return;
-	pthread_spin_lock(&reg->lock);
-	// increase event count
-	++reg->occurence_count[event_code];
-	// go through all event handlers
-	irt_event_lambda *cur = reg->handler[event_code];
-	irt_event_lambda *prev = NULL;
-	while(cur != NULL) {
-		if(!cur->func(reg, cur->data)) { // if event handled, remove
-			if(prev == NULL) reg->handler[event_code] = cur->next;
-			else prev->next = cur;
-		} else { // else keep the handler in the list
-			prev = cur;
-		}
-		cur = cur->next;
-	}
-	pthread_spin_unlock(&reg->lock);
-}
+// WG events //////////////////////////////////////
+IRT_DEFINE_EVENTS(work_group, wg);
+

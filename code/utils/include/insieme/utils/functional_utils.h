@@ -320,5 +320,52 @@ struct element_type<pos,H,R...> {
 	typedef typename element_type<pos-1,R...>::type type;
 };
 
+//==== FinalActions ===============================================================================
+// A class which is utilized to invoke a sequence of statements (or action) when a block is exited. 
+// Because there are situation where a block can be exited from multiple paths, this object will 
+// make it sure thos actions will be invoked on every exit path. 
+//
+// Example:
+//
+// { 
+// 	stream << "";
+// 	if (x==0) {
+// 		stream.close();
+// 		return;
+// 	}
+// 	...
+// 	stream.close()
+// }
+//
+// Usage with FinalActions():
+//
+// { 
+// 	FinalAction fa([&stream](){ stream.close(); });
+// 	if(x==0)
+// 		return;
+// 	...
+// 	return;
+// }
+//
+// The action which is provided will be invoked when the block is exited, therefore in the
+// destructor 
+//=================================================================================================
+class FinalActions {
+	
+	typedef std::function<void ()> Action;
+	Action 	action;
+	bool 	enabled;
 
+public:
+	FinalActions(const Action& action, bool enabled=true) : 
+		action(action), enabled(enabled) { }
+	
+	bool isEnabled() const { return enabled; }
+
+	void setEnabled(bool enabled) { this->enabled = enabled; }
+
+	~FinalActions() { 
+		if(isEnabled()) { action(); }
+	}	
+};
 

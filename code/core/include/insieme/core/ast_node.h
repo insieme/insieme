@@ -37,6 +37,7 @@
 #pragma once
 
 #include <cassert>
+#include <map>
 
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/hash_utils.h"
@@ -49,6 +50,7 @@
 #include "insieme/core/ast_pointer.h"
 
 #include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/extension.h"
 
 #include "insieme/core/forward_decls.h"
 
@@ -116,16 +118,47 @@ enum NodeCategory {
 	NC_Program /* < The node represents a program. */
 };
 
+
 /**
  * Implements a node manager to be used for maintaining AST node instances.
  */
 class NodeManager: public InstanceManager<Node, Pointer> {
+
+	typedef std::map<const char*, lang::Extension*> ExtensionMap;
+
 public:
 	const lang::BasicGenerator basic;
 
-	NodeManager() : basic(*this) { }
+	// a common store for IR extensions
+	ExtensionMap extensions;
+
+	NodeManager() : basic(*this), extensions() { }
+
+	~NodeManager() {
+		// free all extensions
+		for_each(extensions, [](const ExtensionMap::value_type& cur) {
+			delete cur.second;
+		});
+	}
 
 	const lang::BasicGenerator& getBasicGenerator() const { return basic; }
+
+	template<
+		typename E,
+		typename boost::enable_if<boost::is_base_of<lang::Extension, E>, int>::type = 0
+	>
+	const E& getLangExtension() {
+		// look up type information within map
+		const char* key = typeid(E).name();
+		auto pos = extensions.find(key);
+		if (pos != extensions.end()) {
+			return static_cast<const E&>(*(pos->second));
+		}
+
+		// create a new instance
+		extensions[key] = new E(*this);
+		return getLangExtension<E>();
+	}
 };
 
 

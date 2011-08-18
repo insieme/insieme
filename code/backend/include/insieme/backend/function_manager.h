@@ -65,7 +65,7 @@ namespace backend {
 		class FunctionInfoStore;
 	}
 
-	class FunctionManager {
+	class FunctionManager : private boost::noncopyable {
 
 		const Converter& converter;
 

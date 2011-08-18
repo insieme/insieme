@@ -210,3 +210,43 @@ TEST(ContainerUtils, equal) {
 	EXPECT_FALSE (equals(vectorA, vectorB));
 }
 
+TEST(ContainerUtils, transform) {
+
+	vector<int> vectorA;
+	vectorA.push_back(1);
+	vectorA.push_back(2);
+	vectorA.push_back(3);
+
+	vector<int> vectorB;
+	vectorB.push_back(2);
+	vectorB.push_back(3);
+	vectorB.push_back(4);
+	
+	vector<char> vectorC;
+	vectorC.push_back('A');
+	vectorC.push_back('B');
+	vectorC.push_back('C');
+	
+	EXPECT_FALSE(equals(vectorA, vectorB));
+	EXPECT_FALSE(equals(vectorA, vectorC));
+
+	// same member type
+	auto result1 = transform(vectorA, [](const int val){ return val+1; }); 
+	EXPECT_TRUE(equals(vectorB, result1));
+	// changed member type
+	auto result2 = transform(vectorA, [](const int val){ return 'A' + (char)(val) - 1; }); 
+	EXPECT_TRUE(equals(vectorC, result2));
+
+
+	// different container type
+	list<int> listA(vectorA.begin(), vectorA.end());
+	list<int> listB(vectorB.begin(), vectorB.end());
+	list<char> listC(vectorC.begin(), vectorC.end());
+	
+	// same member type
+	auto result3 = transform(listA, [](const int val){ return val+1; }); 
+	EXPECT_TRUE(equals(listB, result3));
+	// changed member type
+	auto result4 = transform(listA, [](const int val){ return 'A' + (char)(val) - 1; }); 
+	EXPECT_TRUE(equals(listC, result4));
+}

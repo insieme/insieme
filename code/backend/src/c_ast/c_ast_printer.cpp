@@ -169,9 +169,13 @@ namespace c_ast {
 				return out << "...";
 			}
 
+			PRINT(AttributedType) {
+				return out << node->attribute << " " << print(node->type);
+			}
+
 			PRINT(VarDecl) {
 				// print a variable declaration
-				out << print(node->var->type) << " " << print(node->var->name);
+				out << printParam(node->var);
 
 				if (!node->init) {
 					return out;
@@ -455,6 +459,9 @@ namespace c_ast {
 				}
 				if (node->flags & Function::INLINE) {
 					out << "inline ";
+				}
+				if (node->flags & Function::OCL_KERNEL) {
+					out << "__kernel ";
 				}
 
 				out << print(node->returnType) << " " << print(node->name) << "(" << printParam(node->parameter) << ") ";

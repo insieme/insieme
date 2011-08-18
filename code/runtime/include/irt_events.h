@@ -40,35 +40,59 @@
 
 #include "utils/lookup_tables.h"
 
+#define IRT_DECLARE_EVENTS(__subject__, __short__, __num_events__) \
+\
+typedef bool (irt_##__short__##_event_lambda_func)(irt_##__short__##_event_register* source_event_register, void *user_data); \
+\
+typedef struct _irt_##__short__##_event_lambda { \
+	irt_##__short__##_event_lambda_func *func; \
+	void *data; \
+	struct _irt_##__short__##_event_lambda *next; \
+} irt_##__short__##_event_lambda; \
+\
+struct _irt_##__short__##_event_register { \
+	irt_##__short__##_event_register_id id; \
+	uint32 occurence_count[__num_events__]; \
+	irt_##__short__##_event_lambda *handler[__num_events__]; \
+	pthread_spinlock_t lock; \
+	struct _irt_##__short__##_event_register *lookup_table_next; \
+}; \
+\
+/* Registers a new event handler for the ##__short__##_item identified by ##__short__##_id, for the event event_code \
+ * Use only when you can be sure that no event has occurred or been registered yet for this ##__short__## */ \
+void _irt_##__short__##_event_register_only(irt_##__short__##_event_register *reg); \
+/* Registers a new event handler for the ##__short__##_item identified by##__short__##_id, for the event event_code \
+ * If the event has already occurred the event handler will be executed immediately */ \
+uint32 irt_##__short__##_event_check_and_register(irt_##__subject__##_id __short__##_id, irt_##__short__##_event_code event_code, irt_##__short__##_event_lambda *handler); \
+/* Triggers the event event_code on ##__short__##_id. \
+ * This will execute (and potentially remove) all the associated event handlers */ \
+void irt_##__short__##_event_trigger(irt_##__subject__##_id wi_id, irt_##__short__##_event_code event_code);
+
+
+
+// WI events //////////////////////////////////////
+
 IRT_MAKE_ID_TYPE(wi_event_register);
-
-typedef bool (irt_event_lambda_func)(irt_wi_event_register* source_event_register, void *user_data);
-
-typedef struct _irt_event_lambda {
-	irt_event_lambda_func *func;
-	void *data;
-	struct _irt_event_lambda *next;
-} irt_event_lambda;
 
 typedef enum _irt_wi_event_code {
 	IRT_WI_EV_COMPLETED, 
 	IRT_WI_EV_NUM // sentinel
 } irt_wi_event_code;
 
-struct _irt_wi_event_register {
-	irt_wi_event_register_id id;
-	uint32 occurence_count[IRT_WI_EV_NUM];
-	irt_event_lambda *handler[IRT_WI_EV_NUM];
-	pthread_spinlock_t lock;
-	struct _irt_wi_event_register *lookup_table_next;
-};
+IRT_DECLARE_EVENTS(work_item, wi, IRT_WI_EV_NUM);
 
 IRT_DEFINE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
-/* Registers a new event handler for the work item identified by wi_id, for the event event_code
- * If the event has already occurred the event handler will be executed immediately */
-uint32 irt_wi_event_check_and_register(irt_work_item_id wi_id, irt_wi_event_code event_code, irt_event_lambda *handler);
+// WG events //////////////////////////////////////
 
-/* Triggers the event event_code on work item wi_id. 
- * This will execute (and potentially remove) all the associated event handlers */
-void irt_wi_event_trigger(irt_work_item_id wi_id, irt_wi_event_code event_code);
+IRT_MAKE_ID_TYPE(wg_event_register);
+
+typedef enum _irt_wg_event_code {
+	IRT_WG_EV_COMPLETED, 
+	IRT_WG_EV_NUM // sentinel
+} irt_wg_event_code;
+
+IRT_DECLARE_EVENTS(work_group, wg, IRT_WG_EV_NUM);
+
+IRT_DEFINE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
+

@@ -40,7 +40,7 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/statements.h"
 
-#include "insieme/c_info/naming.h"
+#include "insieme/annotations/c/naming.h"
 
 
 namespace insieme {
@@ -56,7 +56,7 @@ namespace backend {
 		if(it != nameMap.end()) return it->second;
 
 		// test whether the node has an annotation
-		if(auto cnameAnn = ptr->getAnnotation(c_info::CNameAnnotation::KEY)) {
+		if(auto cnameAnn = ptr->getAnnotation(annotations::c::CNameAnnotation::KEY)) {
 			// => take original c name
 			string name = cnameAnn->getName();
 			if (usedNames.find(name) == usedNames.end()) {

@@ -61,8 +61,6 @@ void printIslSet(std::ostream& out, isl_ctx* ctx, isl_set* set) {
 	isl_printer_free(printer);
 }
 
-} // end anonymous namespace 
-
 isl_constraint* convertConstraint(isl_ctx *islCtx, struct isl_dim* dim, const Constraint& constraint) {
 	isl_constraint* islCons = NULL;
 
@@ -98,7 +96,15 @@ isl_constraint* convertConstraint(isl_ctx *islCtx, struct isl_dim* dim, const Co
 	return islCons;
 }
 
+bool isNormalized(const Constraint& c) {
+	return c.getType() == Constraint::EQ || c.getType() == Constraint::GE;
+}
+
 isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const Constraint& c) {
+
+	// check whether the constraint is properly normalize 
+	assert(isNormalized(c) && "Constraint not normlized");
+
 	// Create an ISL basic_set 
 	isl_basic_set* bset = isl_basic_set_universe( isl_dim_copy(dim) );
 
@@ -106,16 +112,59 @@ isl_basic_set* setFromConstraint(isl_ctx* islCtx, isl_dim* dim, const Constraint
 	// constraint to fit this specification
 
 	// Create the ISL constraint 
-	isl_constraint* cons = convertConstraint( islCtx, dim, c.normalize() );
+	isl_constraint* cons = convertConstraint( islCtx, dim, c );
 	
 	// Add the constraint to the basic_set
 	return isl_basic_set_add_constraint( bset, cons );
 }
 
-IslSet::IslSet(Context& ctx, const IterationVector& iterVec) : Set(ctx, iterVec) {
-	isl_ctx* islCtx = static_cast<IslContext&>(ctx).getRawContext();
+// Visits the Constraint combiner and builds the corresponding ISL set 
+struct ISLConstraintConverterVisitor : public ConstraintVisitor {
+
+	isl_ctx* ctx;
+	isl_dim* dim;
+	
+	isl_set* curr_set;
+
+	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_dim* dim) : ctx(ctx), dim(dim) { }
+
+	void visit(const RawConstraintCombiner& rcc) { 
+		const Constraint& c = rcc.getConstraint();
+		if ( isNormalized(c) ) {
+			isl_basic_set* bset = setFromConstraint(ctx, dim, c);
+			curr_set = isl_set_from_basic_set( bset );
+			return;
+		}
+		normalize(c)->accept(*this);
+	}
+
+	void visit(const NegatedConstraintCombiner& ucc) {
+		ConstraintVisitor::visit( ucc.getSubConstraint() );
+		// in curr_set we have the set coming from the sub constraint, we have to negate it 
+		isl_basic_set* universe = isl_basic_set_universe( isl_dim_copy(dim) );
+
+		curr_set = isl_set_subtract( isl_set_from_basic_set(universe), curr_set );
+	}
+	
+	void visit(const BinaryConstraintCombiner& bcc) {
+		bcc.getLHS()->accept(*this);
+		isl_set* lhs = curr_set;
+
+		bcc.getRHS()->accept(*this);
+		isl_set* rhs = curr_set;
+
+		curr_set = bcc.isConjunction() ? isl_set_intersect(lhs, rhs) : isl_set_union(lhs, rhs);
+	}
+
+	isl_set* getResult() const { return curr_set; }
+
+};
+
+} // end anonynous namespace
+
+IslSet::IslSet(IslContext& ctx, const IterationVector& iterVec) : Set(ctx, iterVec) {
 	// Build the dim object
-	dim = isl_dim_set_alloc( islCtx, iterVec.getParameterNum(), iterVec.getIteratorNum() );
+	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
 
 	// Set the names for the iterators of this dim
 	for(IterationVector::iter_iterator it = iterVec.iter_begin(), end = iterVec.iter_end(); it != end; ++it) {
@@ -131,68 +180,14 @@ IslSet::IslSet(Context& ctx, const IterationVector& iterVec) : Set(ctx, iterVec)
 	set = isl_set_universe( isl_dim_copy(dim) );
 }
 
-
 std::ostream& IslSet::printTo(std::ostream& out) const {
-	printIslSet(out, static_cast<IslContext&>(ctx).getRawContext(), set); 
+	printIslSet(out, ctx.getRawContext(), set); 
 	return out;
 }
 
-void IslSet::addConstraint(const Constraint& c) {
-	isl_ctx* islCtx = static_cast<IslContext&>(ctx).getRawContext();
-
-	isl_basic_set* bset = setFromConstraint(islCtx, dim, c);
-	isl_set *tmp_set = isl_set_from_basic_set( bset );
-
-	// Intersect the current set with the new constraint
-	set = isl_set_intersect(tmp_set, set);
-}
-
-namespace {
-
-// Visits the Constraint combiner and builds the corresponding ISL set 
-struct ISLConstraintConverterVisitor : public ConstraintVisitor {
-
-	isl_ctx* ctx;
-	isl_dim* dim;
-	
-	isl_set* curr_set;
-
-	ISLConstraintConverterVisitor(isl_ctx* ctx, isl_dim* dim) : ctx(ctx), dim(dim) { }
-
-	void visit(const RawConstraintCombiner& rcc) { 
-		isl_basic_set* bset = setFromConstraint(ctx, dim, rcc.getConstraint());
-		curr_set = isl_set_from_basic_set( bset );
-	}
-
-	void visit(const NegatedConstraintCombiner& ucc) {
-		ConstraintVisitor::visit( ucc.getSubConstraint() );
-		// in curr_set we have the set coming from the sub constraint, we have to negate it 
-		isl_basic_set* universe = isl_basic_set_universe( isl_dim_copy(dim) );
-
-		curr_set = isl_set_subtract( isl_set_from_basic_set(universe), curr_set );
-	}
-	
-	void visit(const BinaryConstraintCombiner& bcc) {
-		bcc.getLHS()->accept(*this);
-		isl_set* lhs = curr_set;
-		bcc.getRHS()->accept(*this);
-		isl_set* rhs = curr_set;
-
-		curr_set = bcc.isConjunction() ? isl_set_union(lhs, rhs) : isl_set_intersect(lhs, rhs);
-	}
-
-	isl_set* getResult() const { return curr_set; }
-
-};
-
-} // end anonymous namespace
-
-
-void IslSet::addConstraint(const ConstraintCombinerPtr& cc) {
-	isl_ctx* islCtx = static_cast<IslContext&>(ctx).getRawContext();
-
-	ISLConstraintConverterVisitor ccv(islCtx, dim);
-	ccv.visit(cc);
+void IslSet::applyConstraint(const ConstraintCombinerPtr& cc) {
+	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
+	cc->accept(ccv);
 
 	set = isl_set_intersect(set, ccv.getResult());
 }

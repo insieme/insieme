@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/expressions.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
 namespace backend {
@@ -46,13 +47,17 @@ namespace backend {
 	 * extensions include additional literals representing i.g. C operators or procedures of the
 	 * runtime interface.
 	 */
-	class IRExtensions {
+	class IRExtensions : public core::lang::Extension {
 	public:
 
 		/**
 		 * The name of the global literal introduced by the preprocessor.
 		 */
 		static const string GLOBAL_ID;
+
+	private:
+
+		friend class core::NodeManager;
 
 		/**
 		 * Creates a new instance of this IRExtension set. The given manager is used to construct
@@ -61,6 +66,8 @@ namespace backend {
 		 * @param manager the manager to be used to construct the required types and literals
 		 */
 		IRExtensions(core::NodeManager& manager);
+
+	public:
 
 		/**
 		 * A special literal representing a lazy-evaluating if-then-else operator.
@@ -71,6 +78,7 @@ namespace backend {
 		 * A special literal representing a function causing the initialization of the global variables.
 		 */
 		const core::LiteralPtr initGlobals;
+
 	};
 
 

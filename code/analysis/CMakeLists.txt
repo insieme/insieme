@@ -26,6 +26,7 @@ add_library(insieme_analysis ${LINKING_TYPE} ${insieme_analysis_srcs} ${insieme_
 
 # add dependencies
 add_dependencies( insieme_analysis insieme_core insieme_utils ${isl_LIB})
+target_link_libraries( insieme_analysis ${isl_LIB})
 
 # enable tests for this project
 find_package(GTest REQUIRED)
@@ -43,7 +44,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_analysis)
 	target_link_libraries(${case_name} insieme_frontend)
-	target_link_libraries(${case_name} insieme_c_info)
+	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} ${isl_LIB})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	

@@ -39,7 +39,7 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/global_variables.h"
 #include "insieme/frontend/omp/omp_pragma.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/numeric_cast.h"
@@ -51,8 +51,8 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/type_utils.h"
 
-#include "insieme/c_info/naming.h"
-#include "insieme/c_info/location.h"
+#include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/c/location.h"
 
 #include "clang/Basic/FileManager.h"
 
@@ -82,11 +82,11 @@ void printErrorMsg(std::ostringstream& errMsg, const frontend::ClangCompiler& cl
     pp.Diag(errLoc, pp.getDiagnostics().getCustomDiagID(Diagnostic::Warning, errMsg.str()));
 }
 
-// Covert clang source location into a c_info::SourceLocation object to be inserted in an CLocAnnotation
-c_info::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
+// Covert clang source location into a annotations::c::SourceLocation object to be inserted in an CLocAnnotation
+annotations::c::SourceLocation convertClangSrcLoc(SourceManager& sm, const SourceLocation& loc) {
 	FileID&& fileId = sm.getFileID(loc);
 	const clang::FileEntry* fileEntry = sm.getFileEntryForID(fileId);
-	return c_info::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
+	return annotations::c::SourceLocation(fileEntry->getName(), sm.getSpellingLineNumber(loc), sm.getSpellingColumnNumber(loc));
 };
 
 } // End empty namespace
@@ -206,7 +206,7 @@ insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang
     }
 
 	std::ostringstream ss;
-	ocl::BaseAnnotation::AnnotationList declAnnotation;
+	annotations::ocl::BaseAnnotation::AnnotationList declAnnotation;
 	try {
 	for ( AttrVec::const_iterator I = varDecl->attr_begin(), E = varDecl->attr_end(); I != E; ++I ) {
 		if ( AnnotateAttr* attr = dyn_cast<AnnotateAttr>(*I) ) {
@@ -216,7 +216,7 @@ insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang
 			if ( sr == "__private" ) {
 				VLOG(2) << "           OpenCL address space __private";
 				declAnnotation.push_back(
-					std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::PRIVATE )
+					std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::PRIVATE )
 				);
 				continue;
 			}
@@ -225,7 +225,7 @@ insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang
 			if ( sr == "__local" ) {
 				VLOG(2) << "           OpenCL address space __local";
 				declAnnotation.push_back(
-					std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::LOCAL )
+					std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::LOCAL )
 				);
 				continue;
 			}
@@ -239,7 +239,7 @@ insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang
 				if(isa<const clang::ParmVarDecl>(varDecl) || varDecl->getType().getTypePtr()->isPointerType()) {
 					VLOG(2) << "           OpenCL address space __global";
 					declAnnotation.push_back(
-						std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::GLOBAL )
+						std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::GLOBAL )
 					);
 					continue;
 				}
@@ -252,7 +252,7 @@ insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang
 				if ( isa<const clang::ParmVarDecl>(varDecl) ) {
 					VLOG(2) << "           OpenCL address space __constant";
 					declAnnotation.push_back(
-						std::make_shared<ocl::AddressSpaceAnnotation>( ocl::AddressSpaceAnnotation::addressSpace::CONSTANT )
+						std::make_shared<annotations::ocl::AddressSpaceAnnotation>( annotations::ocl::AddressSpaceAnnotation::addressSpace::CONSTANT )
 					);
 					continue;
 				}
@@ -269,7 +269,7 @@ insieme::core::NodeAnnotationPtr ConversionFactory::convertAttribute(const clang
         //show errors if unexpected patterns were found
         printErrorMsg(*errMsg, currTU->getCompiler(), varDecl);
 	}
-	return std::make_shared<ocl::BaseAnnotation>(declAnnotation);
+	return std::make_shared<annotations::ocl::BaseAnnotation>(declAnnotation);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -334,7 +334,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	ctx.varDeclMap.insert( std::make_pair(valDecl, var) );
 
 	// Add the C name of this variable as annotation
-	var->addAnnotation( std::make_shared<c_info::CNameAnnotation>(valDecl->getNameAsString()) );
+	var->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(valDecl->getNameAsString()) );
 
 	// Add OpenCL attributes
 	insieme::core::NodeAnnotationPtr&& attr = convertAttribute(valDecl);
@@ -489,13 +489,13 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
         }
         // check for annotations which would lead to a zero init annotation
         if(kind == core::NT_ArrayType || kind == core::NT_VectorType) {
-            if(var->hasAnnotation(ocl::BaseAnnotation::KEY)){
-                auto&& declarationAnnotation = var->getAnnotation(ocl::BaseAnnotation::KEY);
-                for(ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
+            if(var->hasAnnotation(annotations::ocl::BaseAnnotation::KEY)){
+                auto&& declarationAnnotation = var->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
+                for(annotations::ocl::BaseAnnotation::AnnotationList::const_iterator I = declarationAnnotation->getAnnotationListBegin();
                         I < declarationAnnotation->getAnnotationListEnd(); ++I) {
-                    if(ocl::AddressSpaceAnnotationPtr&& as = std::dynamic_pointer_cast<ocl::AddressSpaceAnnotation>(*I)){
-                        if(ocl::AddressSpaceAnnotation::addressSpace::LOCAL == as->getAddressSpace() ||
-                                ocl::AddressSpaceAnnotation::addressSpace::PRIVATE == as->getAddressSpace()) {
+                    if(annotations::ocl::AddressSpaceAnnotationPtr&& as = std::dynamic_pointer_cast<annotations::ocl::AddressSpaceAnnotation>(*I)){
+                        if(annotations::ocl::AddressSpaceAnnotation::addressSpace::LOCAL == as->getAddressSpace() ||
+                                annotations::ocl::AddressSpaceAnnotation::addressSpace::PRIVATE == as->getAddressSpace()) {
                             //TODO check why this fails:
                             //assert(!definition->getInit() && "OpenCL local variables cannot have an initialization expression");
                             zeroInit = true;
@@ -528,7 +528,7 @@ core::ExpressionPtr
 ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const clang::FunctionDecl* funcDecl) {
     // ----------------------------------- Add annotations to this function -------------------------------------------
     // check Attributes of the function definition
-    ocl::BaseAnnotation::AnnotationList kernelAnnotation;
+    annotations::ocl::BaseAnnotation::AnnotationList kernelAnnotation;
 
     if ( funcDecl->hasAttrs() ) {
         const clang::AttrVec attrVec = funcDecl->getAttrs();
@@ -541,12 +541,12 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
                 //check if it is an OpenCL kernel function
                 if ( sr == "__kernel" ) {
                     VLOG(1) << "is OpenCL kernel function";
-                    kernelAnnotation.push_back( std::make_shared<ocl::KernelFctAnnotation>() );
+                    kernelAnnotation.push_back( std::make_shared<annotations::ocl::KernelFctAnnotation>() );
                 }
             }
             else if ( ReqdWorkGroupSizeAttr* attr = dyn_cast<ReqdWorkGroupSizeAttr>(*I) ) {
                 kernelAnnotation.push_back(
-                	std::make_shared<ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
+                	std::make_shared<annotations::ocl::WorkGroupSizeAnnotation>( attr->getXDim(), attr->getYDim(), attr->getZDim() )
                 );
             }
         }
@@ -554,7 +554,7 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
 
     // -------------------------------------------------- C NAME ------------------------------------------------------
     // annotate with the C name of the function
-    node->addAnnotation( std::make_shared<c_info::CNameAnnotation>( funcDecl->getName() ) );
+    node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getName() ) );
 
     // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
     /*
@@ -569,7 +569,7 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
     }
 
     assert(currTU && "Translation unit not correctly set");
-    node->addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+    node->addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
         convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.first),
         convertClangSrcLoc(currTU->getCompiler().getSourceManager(), loc.second))
     );
@@ -579,7 +579,7 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
     if(!kernelAnnotation.empty()) {
         // create new marker node
         core::MarkerExprPtr&& marker = builder.markerExpr(node);
-        marker->addAnnotation( std::make_shared<ocl::BaseAnnotation>(kernelAnnotation) );
+        marker->addAnnotation( std::make_shared<annotations::ocl::BaseAnnotation>(kernelAnnotation) );
         return marker;
     }
     return node;
@@ -590,7 +590,7 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Tran
 //	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
 //	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.basic.getUnit() );
 
-//	c_info::CLocAnnotation::ArgumentList args;
+//	annotations::c::CLocAnnotation::ArgumentList args;
 //	if(core::CaptureInitExprPtr&& captureExpr = core::dynamic_pointer_cast<const core::CaptureInitExpr>(callExpr)) {
 //		// look for variable names
 //		for_each(captureExpr->getArguments().begin(), captureExpr->getArguments().end(), [ &args ](const core::ExpressionPtr& expr){
@@ -600,7 +600,7 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Tran
 //			assert(var && "Argument of call expression is not a variable.");
 //			// we also have to look at the CNameAnnotation in order to find the name of the original variable
 //
-//			std::shared_ptr<c_info::CNameAnnotation>&& nameAnn = var->getAnnotation(c_info::CNameAnnotation::KEY);
+//			std::shared_ptr<annotations::c::CNameAnnotation>&& nameAnn = var->getAnnotation(annotations::c::CNameAnnotation::KEY);
 //			assert(nameAnn && "Variable has not CName associated");
 //			args.push_back( nameAnn->getName() );
 //		});
@@ -615,7 +615,7 @@ core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const Tran
 //		loc.first = fit->second->getStartLocation();
 //	}
 //
-//	lambdaExpr.addAnnotation( std::make_shared<c_info::CLocAnnotation>(
+//	lambdaExpr.addAnnotation( std::make_shared<annotations::c::CLocAnnotation>(
 //		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.first),
 //		convertClangSrcLoc(tu.getCompiler().getSourceManager(), loc.second),
 //		false, // this is not a function decl

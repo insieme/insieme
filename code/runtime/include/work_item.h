@@ -62,6 +62,7 @@ typedef struct _irt_wi_readiness_check {
 	irt_wi_readiness_check_fun *fun;
 	void *data;
 } irt_wi_readiness_check;
+irt_wi_readiness_check irt_g_null_readiness_check = { NULL, NULL };
 
 struct _irt_work_item {
 	// core functionality
@@ -88,6 +89,8 @@ struct _irt_work_item {
 static inline irt_work_item* irt_wi_get_current();
 
 static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.value.full != irt_work_item_null_id().value.full; }
+static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index);
+static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 void irt_wi_destroy(irt_work_item* wi);

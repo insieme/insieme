@@ -123,7 +123,7 @@ LambdaPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPt
     });
 
 //    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));
-    return build.lambda(build.functionType(paramTypes, retType), params, body);
+    return build.lambda(build.functionType(paramTypes, retType, true), params, body);
 }
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>

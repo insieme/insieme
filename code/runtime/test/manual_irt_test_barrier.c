@@ -34,6 +34,7 @@
  * regarding third party software licenses.
  */
 
+#define ERR(blabla) //fprintf(stderr, blabla "\n") 
 #include "impl/client_app.impl.h"
 #include "impl/irt_context.impl.h"
 #include "impl/error_handling.impl.h"
@@ -46,8 +47,8 @@
 #include "wi_implementation.h"
 #include "utils/timing.h"
 
-#define NUM_WIS 1000
-#define WI_RANGE 1000
+#define NUM_WIS 100
+#define WI_RANGE 100
 
 typedef struct _insieme_wi_test_params {
 	irt_type_id type_id;
@@ -108,12 +109,18 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 		irt_wg_insert(wg1, test_wis[i]);
 	}
 	for(int i=0; i<NUM_WIS; ++i) {
+		ERR("Z1");
 		irt_scheduling_assign_wi(irt_g_workers[i%irt_g_worker_count], test_wis[i]);
+		ERR("Z2");
 	}
-
-	for(int i=0; i<NUM_WIS; ++i) {
-		irt_wi_join(test_wis[i]);
-	}
+	ERR("Z3 ---");
+	//for(int i=0; i<NUM_WIS; ++i) {
+	//	ERR("Z3.5");
+	//	irt_wi_join(test_wis[i]);
+	//	ERR("Z4");
+	//}
+	irt_wg_join(wg1);
+	ERR("Z5 ---");
 
 	uint64 end_time = irt_time_ms();
 
@@ -128,11 +135,18 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 void insieme_wi_test_implementation(irt_work_item* wi) {
 	insieme_wi_test_params *params = (insieme_wi_test_params*)wi->parameters;
 	irt_atomic_add_and_fetch(&(params->val1), irt_wi_range_get_size(&wi->range));
+
+	ERR("A1");
 	irt_wg_barrier(params->wg1);
+	ERR("A2");
 	if(params->val1 != NUM_WIS*WI_RANGE) printf("Barrier error!\n");
+	ERR("A3");
 	irt_atomic_add_and_fetch(&(params->val2), irt_wi_range_get_size(&wi->range));
+	ERR("A4");
 	irt_wg_barrier(params->wg1);
+	ERR("A5");
 	if(params->val2 != NUM_WIS*WI_RANGE) printf("Barrier error!\n");
+	ERR("A6");
 	irt_wi_end(wi);
 }
 

@@ -36,13 +36,26 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
+#include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/core/expressions.h"
 
 using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::core;
+
+void printIslSet(std::ostream& out, isl_ctx* ctx, isl_set* set) {
+	isl_printer* printer = isl_printer_to_str(ctx);
+	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
+	isl_printer_set_indent(printer, 1);
+	isl_printer_print_set(printer, set);
+	isl_printer_flush(printer);
+	char* str = isl_printer_get_str(printer);
+	out << str;
+	free(str); // free the allocated string by the library
+	isl_printer_free(printer);
+}
 
 #define CREATE_ITER_VECTOR \
 	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); \
@@ -70,22 +83,57 @@ TEST(IslBackend, SetConstraint) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param), 3);
-	af.setCoeff(poly::Constant(), 10);
-
+	poly::AffineFunction af(iterVec, {0,3,10} );
 	poly::Constraint c(af, poly::Constraint::LT);
 
 	poly::backend::IslContext ctx;
 	poly::backend::IslSet set(ctx, iterVec);
 
-	set.addConstraint(c);
+	set.applyConstraint( makeCombiner(c) );
 
 	std::ostringstream ss;
 	ss << set;
 	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", ss.str());
+
+	// Build directly the ISL set
+	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
+			"[v3] -> {[v1] : 3v3 + 10 < 0}", -1
+		);
+
+	// check for equality
+	EXPECT_TRUE(isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())));
 	
+	isl_set_free(refSet);
+}
+
+TEST(IslBackend, SetConstraintNormalized) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	poly::AffineFunction af(iterVec, {1,0,10});
+	
+	// 1*v1 + 0*v2  + 10 != 0
+	poly::Constraint c(af, poly::Constraint::NE);
+
+	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
+	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
+	poly::backend::IslContext ctx;
+	poly::backend::IslSet set(ctx, iterVec);
+	set.applyConstraint( makeCombiner(c) );
+
+	std::ostringstream ss;
+	ss << set;
+	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", ss.str());
+
+	// Build directly the ISL set
+	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
+			"[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}", -1
+		);
+
+	// check for equality
+	EXPECT_TRUE(isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())));
+	
+	isl_set_free(refSet);
 }
 
 TEST(IslBackend, FromCombiner) {
@@ -93,35 +141,40 @@ TEST(IslBackend, FromCombiner) {
 	CREATE_ITER_VECTOR;
 
 	// 0*v1 + 2*v2 + 10
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param),2);
-	af.setCoeff(poly::Constant(), 10);
+	poly::AffineFunction af(iterVec, {0,2,10});
 
-	// 0*v1 + 2*v2 + 10 == 0
+	// 0*v1 + 2*v3 + 10 == 0
 	poly::Constraint c1(af, poly::Constraint::EQ);
 
-	// 2*v1 + 3*v2 +10 
-	poly::AffineFunction af2(iterVec);
-	af2.setCoeff(poly::Iterator(iter1), 2);
-	af2.setCoeff(poly::Parameter(param),3);
-	af2.setCoeff(poly::Constant(), 10);
+	// 2*v1 + 3*v3 +10 
+	poly::AffineFunction af2(iterVec, {2,3,10});
 	
-	// 2*v1 + 3*v2 +10 < 0
+	// 2*v1 + 3*v3 +10 < 0
 	poly::Constraint c2(af2, poly::Constraint::LT);
 
-	// 2v2+10 == 0 OR !(2v1 + 3v2 +10 < 0)
-	poly::ConstraintCombinerPtr ptr = 
-		poly::makeDisjunction( poly::makeCombiner(c1), poly::negate(c2) );
+	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
+	poly::ConstraintCombinerPtr ptr =  c1 or (not_(c2));
+	
+// 	std::cout << *ptr << std::endl;
 
 	poly::backend::IslContext ctx;
 	poly::backend::IslSet set(ctx, iterVec);
-	set.addConstraint(ptr);
+	set.applyConstraint(ptr);
 
 	std::ostringstream ss;
 	ss << set;
-	EXPECT_EQ("[v3] -> { [v1] : v3 <= -6 or v3 >= -4 or (v3 = -5 and v1 <= 2) }", ss.str());
+	EXPECT_EQ("[v3] -> { [v1] : v3 = -5 or 2v1 >= -10 - 3v3 }", ss.str());
 
+	// Build directly the ISL set
+	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
+			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}", -1
+		);
+	
+	printIslSet(std::cout, ctx.getRawContext(), refSet);
+	// check for equality
+	EXPECT_TRUE( isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())) );
+	
+	isl_set_free(refSet);
 }
 
 

@@ -43,7 +43,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/name_manager.h"
@@ -58,7 +58,7 @@ namespace insieme {
 namespace backend {
 namespace ocl {
 
-using namespace insieme::ocl;
+using namespace insieme::annotations::ocl;
 using namespace insieme::core;
 using namespace insieme::simple_backend;
 
@@ -378,6 +378,8 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 		}
 	}
 	else {
+		// save variable name in the map, used to find declaration of cl_mem
+		//LOG(INFO) << "INSIDE LAMBDA EXPRESSION\n" << printer::PrettyPrinter(ptr) << std::endl;
 		simple_backend::StmtConverter::visitLambdaExpr(ptr);
 	}
 }
@@ -520,11 +522,11 @@ namespace detail {
 		LiteralPtr lit6 = builder.literal(builder.functionType(tList1, t1), "get_global_offset");
 		// FIXME: check for the prototype of this function.. why int get...() 
 		LiteralPtr lit7 = builder.literal(builder.functionType(tList1, t1), "get_work_dimension");
-		ADD_FORMATTER(res, lit1, { OUT("get_global_id("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(res, lit2, { OUT("get_local_id("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(res, lit3, { OUT("get_global_size("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(res, lit4, { OUT("get_local_size("); 		VISIT_ARG(0); OUT(")"); });
-		ADD_FORMATTER(res, lit5, { OUT("get_num_groups("); 		VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit1, { OUT("get_global_id("); 	VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit2, { OUT("get_local_id("); 	VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit3, { OUT("get_global_size("); 	VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit4, { OUT("get_local_size("); 	VISIT_ARG(0); OUT(")"); });
+		ADD_FORMATTER(res, lit5, { OUT("get_num_groups("); 	VISIT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(res, lit6, { OUT("get_global_offset(");	VISIT_ARG(0); OUT(")"); });
 		ADD_FORMATTER(res, lit7, { OUT("get_work_dimension(");	VISIT_ARG(0); OUT(")"); });
 	}

@@ -156,6 +156,8 @@ bool isTypeLiteralType(const GenericTypePtr& type);
  */
 bool isTypeLiteralType(const TypePtr& type);
 
+
+
 } // end namespace utils
 } // end namespace core
 } // end namespace insieme

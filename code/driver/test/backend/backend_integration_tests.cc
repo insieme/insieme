@@ -48,6 +48,7 @@
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
 
 namespace insieme {
 namespace backend {
@@ -58,7 +59,7 @@ TEST(FullBackend, HelloWorld) {
 //	core::NodeManager manager;
 //
 //	// load hello world test case
-//	auto testCase = utils::test::getCase("hello_world");
+//	auto testCase = utils::test::getCase("args");
 //	ASSERT_TRUE(testCase) << "Could not load test case!";
 //
 //	// convert test case into IR using the frontend
@@ -66,13 +67,14 @@ TEST(FullBackend, HelloWorld) {
 //	ASSERT_TRUE(code) << "Unable to load input code!";
 //
 //	// print IR code
-////	EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
+//	// EXPECT_EQ("", toString(core::printer::PrettyPrinter(code, core::printer::PrettyPrinter::OPTIONS_DETAIL)));
 //
 //	// create target code using real backend
 //	auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
+////	auto target = backend::sequential::SequentialBackend::getDefault()->convert(code);
 //
 //	// check target code
-////	EXPECT_EQ("", toString(*target));
+//	// EXPECT_EQ("", toString(*target));
 //
 //	std::fstream outFile("out.c", std::fstream::out | std::fstream::trunc);
 //	outFile << *target;
@@ -81,9 +83,9 @@ TEST(FullBackend, HelloWorld) {
 //	// see whether target code can be compiled
 //	// TODO: compile target code => test result
 //	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
-//	compiler.addFlag("-lm");
+//	compiler.addFlag("-I /home/herbert/insieme/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
 //	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
-//
+
 }
 
 } // end namespace backend

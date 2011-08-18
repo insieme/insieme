@@ -36,7 +36,9 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/analysis/polyhedral/polyhedral.h"
+#include "insieme/analysis/polyhedral/iter_vec.h"
+#include "insieme/analysis/polyhedral/affine_func.h"
+#include "insieme/analysis/polyhedral/constraint.h"
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
@@ -243,12 +245,7 @@ TEST(Constraint, Creation) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param),2);
-	af.setCoeff(poly::Iterator(iter2), 1);
-	af.setCoeff(poly::Constant(), 10);
-
+	poly::AffineFunction af(iterVec, {0,1,2,10});
 	poly::Constraint c(af, poly::Constraint::EQ);
 	{
 		std::ostringstream ss;
@@ -261,23 +258,18 @@ TEST(Constraint, Normalization) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param),2);
-	af.setCoeff(poly::Iterator(iter2), 1);
-	af.setCoeff(poly::Constant(), 10);
-
+	poly::AffineFunction af(iterVec, {0,1,2,10});
 	poly::Constraint c(af, poly::Constraint::LT);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
 		EXPECT_EQ("1*v2 + 2*v3 + 10*1 < 0", ss.str());
 	}
-	poly::Constraint nc = c.normalize();
+	poly::ConstraintCombinerPtr nc = normalize(c);
 	{
 		std::ostringstream ss;
-		nc.printTo(ss);
-		EXPECT_EQ("-1*v2 + -2*v3 + -11*1 >= 0", ss.str());
+		nc->printTo(ss);
+		EXPECT_EQ("(-1*v2 + -2*v3 + -11*1 >= 0)", ss.str());
 	}
 }
 
@@ -285,24 +277,13 @@ TEST(Constraint, Combiner) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param),2);
-	af.setCoeff(poly::Iterator(iter2), 1);
-	af.setCoeff(poly::Constant(), 10);
-
+	poly::AffineFunction af(iterVec, {0,1,2,10});
 	poly::Constraint c1(af, poly::Constraint::EQ);
 
-	poly::AffineFunction af2(iterVec);
-	af2.setCoeff(poly::Iterator(iter1), 2);
-	af2.setCoeff(poly::Parameter(param),3);
-	af2.setCoeff(poly::Iterator(iter2), 0);
-	af2.setCoeff(poly::Constant(), 10);
-	
+	poly::AffineFunction af2(iterVec, {2,3,0,10});
 	poly::Constraint c2(af2, poly::Constraint::LT);
 
-	poly::ConstraintCombinerPtr ptr = 
-		poly::makeDisjunction( poly::makeCombiner(c1), poly::negate(c2) );
+	poly::ConstraintCombinerPtr ptr = c1 or not_(c2);
 
 	std::cout << *ptr << std::endl;
 
@@ -312,23 +293,9 @@ TEST(IterationDomain, Creation) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param),2);
-	af.setCoeff(poly::Iterator(iter2), 1);
-	af.setCoeff(poly::Constant(), 10);
-
-	poly::AffineFunction af2(iterVec);
-	af2.setCoeff(poly::Iterator(iter1), 1);
-	af2.setCoeff(poly::Parameter(param),0);
-	af2.setCoeff(poly::Iterator(iter2), 1);
-	af2.setCoeff(poly::Constant(), 7);
-
-	poly::AffineFunction af3(iterVec);
-	af3.setCoeff(poly::Iterator(iter1), 1);
-	af3.setCoeff(poly::Parameter(param),1);
-	af3.setCoeff(poly::Iterator(iter2), 0);
-	af3.setCoeff(poly::Constant(), 0);
+	poly::AffineFunction af(iterVec, {0,1,2,10});
+	poly::AffineFunction af2(iterVec, {1,1,0,7});
+	poly::AffineFunction af3(iterVec, {1,0,1,0});
 
 	poly::ConstraintList cl = {
 		poly::Constraint(af, poly::Constraint::LT),
@@ -370,12 +337,7 @@ TEST(AffineFunction, ChangeBase) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineFunction af(iterVec);
-	af.setCoeff(poly::Iterator(iter1), 0);
-	af.setCoeff(poly::Parameter(param),2);
-	af.setCoeff(poly::Iterator(iter2), 1);
-	af.setCoeff(poly::Constant(), 10);
-
+	poly::AffineFunction af(iterVec, {0,1,2,10});
 	{
 		std::ostringstream ss;
 		af.printTo(ss);

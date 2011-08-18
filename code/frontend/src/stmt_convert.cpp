@@ -39,8 +39,8 @@
 #include "insieme/frontend/utils/source_locations.h"
 #include "insieme/frontend/analysis/loop_analyzer.h"
 #include "insieme/frontend/omp/omp_pragma.h"
+#include "insieme/frontend/ocl/ocl_compiler.h"
 #include "insieme/frontend/insieme_pragma.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
@@ -48,8 +48,9 @@
 #include "insieme/core/statements.h"
 #include "insieme/core/analysis/ir_utils.h"
 
-#include "insieme/c_info/naming.h"
-#include "insieme/c_info/location.h"
+#include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/c/location.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -526,7 +527,7 @@ public:
 			 * 		}
 			 */
 			core::StatementPtr&& whileStmt = builder.whileStmt(
-				convFact.convertExpr( forStmt->getCond() ), // cond
+				convFact.castToType(builder.getBasicGenerator().getBool(), convFact.convertExpr( forStmt->getCond() )), 
 				forStmt->getInc() ?
 					builder.compoundStmt( toVector<core::StatementPtr>(
 							tryAggregateStmts(builder, body), convFact.convertExpr( forStmt->getInc() ) )
@@ -799,11 +800,12 @@ public:
 		auto addCase = [this, &cases, &caseStmts, &caseExprs, &defaultStart, &defStmt, &isDefault]() -> void {
 			std::for_each(caseExprs.begin(), caseExprs.end(),
 				[ &cases, &caseStmts, this ](const std::pair<core::ExpressionPtr,size_t>& curr) {
-					std::vector<core::StatementPtr> stmtList(caseStmts.size() - curr.second);
+					size_t size = caseStmts.size() - curr.second;
+					std::vector<core::StatementPtr> stmtList(size);
 					std::copy(caseStmts.begin() + curr.second, caseStmts.end(), stmtList.begin());
 					cases.push_back(
-							core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList ))
-						);
+						core::SwitchStmt::Case(curr.first, tryAggregateStmts( this->convFact.builder, stmtList ))
+					);
 				}
 			);
 			if ( isDefault ) {
@@ -828,7 +830,7 @@ public:
 				caseExprs.push_back(
 						std::make_pair(this->convFact.convertExpr( caseStmt->getLHS() ), caseStmts.size())
 					);
-
+				
 				core::StatementPtr subStmt;
 				if ( const Expr* rhs = caseStmt->getRHS() ) {
 					assert(!caseStmt->getSubStmt() && "Case stmt cannot have both a RHS and and sub statement.");
@@ -845,7 +847,7 @@ public:
 					 * if the sub-statement is a BreakStmt we have to replace it with a noOp and remember to reset the
 					 * caseStmts
 					 */
-					if ( core::dynamic_pointer_cast<const core::BreakStmt>(subStmt) ) {
+					if ( subStmt->getNodeType() == core::NT_BreakStmt ) {
 						subStmt = convFact.mgr.basic.getNoOp();
 						breakEncountred = true;
 					}
@@ -863,18 +865,24 @@ public:
 				core::StatementPtr&& subStmt =
 						tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(defCase->getSubStmt())) );
 
-				if(core::dynamic_pointer_cast<const core::BreakStmt>(subStmt)) {
+				if(subStmt->getNodeType() == core::NT_BreakStmt) {
 					subStmt = convFact.mgr.basic.getNoOp();
 					breakEncountred = true;
 				}
 				caseStmts.push_back(subStmt);
 			}
-
+			
+			if ( isa<const ContinueStmt>(curr) || isa<const ReturnStmt>(curr) ) {
+				core::StatementPtr subStmt = tryAggregateStmts( convFact.builder, Visit( const_cast<Stmt*>(curr) ) );
+				breakEncountred = true;
+				caseStmts.push_back(subStmt);
+			}
 			/*
 			 * if the current statement is a break, or we encountred a break in the current case we create a new case
 			 * and add to the list of cases for this switch statement
 			 */
-			if ( breakEncountred || isa<const BreakStmt>(curr) ) {
+			if ( breakEncountred || isa<const BreakStmt>(curr) ) 
+			{
 				addCase();
 				// clear the list of statements collected until now
 				caseExprs.clear();
@@ -977,6 +985,7 @@ public:
 	FORWARD_VISITOR_CALL(CXXConstructExpr)
 	FORWARD_VISITOR_CALL(CXXNewExpr)
 	FORWARD_VISITOR_CALL(CXXDeleteExpr)
+	FORWARD_VISITOR_CALL(CXXThisExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ] (Stmt* stmt) { this->Visit(stmt); });

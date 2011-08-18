@@ -177,8 +177,7 @@ void mem_alloc() {
 
 	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>)))))"
 	int* a = malloc(4);
-
-
+	free(a); // make the static checks happy
 }
 
 enum E{ ON, OFF=10 };

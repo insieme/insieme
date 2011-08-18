@@ -514,9 +514,12 @@ TEST(TypeManager, FunctionTypes) {
 
 	core::FunctionTypePtr type;
 
-	type = builder.functionType(toVector(typeA, typeB), typeC);
+	// -- test a thick function pointer first => should generate closure, constructor and caller --
+
+	type = builder.functionType(toVector(typeA, typeB), typeC, false);
 	info = typeManager.getTypeInfo(type);
-	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
+	EXPECT_EQ("((int<4>,bool)=>real<4>)", toString(*type));
+	EXPECT_FALSE(info.plain);
 	EXPECT_EQ("name*", toC(info.lValueType));
 	EXPECT_EQ("name*", toC(info.rValueType));
 	EXPECT_EQ("name*", toC(info.externalType));  // should this be this way?
@@ -543,6 +546,29 @@ TEST(TypeManager, FunctionTypes) {
 
 	EXPECT_TRUE(contains(info.caller->getDependencies(), info.definition));
 	EXPECT_TRUE(contains(info.constructor->getDependencies(), info.definition));
+
+	// check externalizing / internalizing
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+
+
+	// -- test a plain function type --
+
+	type = builder.functionType(toVector(typeA, typeB), typeC, true);
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("((int<4>,bool)->real<4>)", toString(*type));
+	EXPECT_TRUE(info.plain);
+	EXPECT_EQ("float(int32_t,bool)*", toC(info.lValueType));
+	EXPECT_EQ("float(int32_t,bool)*", toC(info.rValueType));
+	EXPECT_EQ("float(int32_t,bool)*", toC(info.externalType));  // should this be this way?
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+	EXPECT_FALSE((bool)info.callerName);
+	EXPECT_FALSE((bool)info.caller);
+	EXPECT_FALSE((bool)info.constructorName);
+	EXPECT_FALSE((bool)info.constructor);
+
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "");
 
 	// check externalizing / internalizing
 	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
@@ -667,6 +693,59 @@ TEST(TypeManager, MutalRecursiveTypes) {
 
 }
 
+
+TEST(TypeManager, TupleType) {
+
+	core::NodeManager nodeManager;
+	core::ASTBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+
+
+	TestNameManager nameManager;
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	c_ast::SharedCNodeManager cManager = fragmentManager->getNodeManager();
+
+	Converter converter;
+	converter.setNameManager(&nameManager);
+	converter.setNodeManager(&nodeManager);
+	converter.setFragmentManager(fragmentManager);
+
+	TypeManager typeManager(converter);
+
+	TypeInfo info;
+	auto lit = cManager->create<c_ast::Literal>("X");
+
+	core::TypePtr type = builder.tupleType(core::TypeList());
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("struct name", toC(info.lValueType));
+	EXPECT_EQ("struct name", toC(info.rValueType));
+	EXPECT_EQ("struct name", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+
+	// members should not have an effect on the types
+	type = builder.tupleType(toVector(basic.getInt4(), basic.getBool()));
+	info = typeManager.getTypeInfo(type);
+	EXPECT_EQ("struct name", toC(info.lValueType));
+	EXPECT_EQ("struct name", toC(info.rValueType));
+	EXPECT_EQ("struct name", toC(info.externalType));
+	EXPECT_EQ("X", toC(info.externalize(cManager, lit)));
+	EXPECT_EQ("X", toC(info.internalize(cManager, lit)));
+
+	EXPECT_TRUE((bool)info.declaration);
+	EXPECT_TRUE((bool)info.definition);
+
+	EXPECT_PRED2(containsSubString, toC(info.definition), "int32_t c0;");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "bool c1;");
+
+	// the definition should depend on the definition of the boolean
+	TypeInfo infoBool = typeManager.getTypeInfo(basic.getBool());
+	EXPECT_TRUE((bool)infoBool.definition);
+	auto dependencies = info.definition->getDependencies();
+	EXPECT_TRUE(contains(dependencies, infoBool.definition));
+}
 
 } // end namespace backend
 } // end namespace insieme

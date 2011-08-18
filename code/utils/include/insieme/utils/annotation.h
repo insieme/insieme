@@ -143,6 +143,10 @@ public:
 	typename AnnotationList::const_iterator getAnnotationListBegin() const { return annotationList.cbegin(); }
 	typename AnnotationList::const_iterator getAnnotationListEnd() const { return annotationList.cend(); }
 
+	const AnnotationList& getAnnotationList() {
+		return annotationList;
+	}
+
 private:
 	AnnotationList annotationList;
 };

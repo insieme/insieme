@@ -91,10 +91,9 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (numArguments != numParameter) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
-						format("Wrong number of arguments - expected: %d, actual: %d - function type: %s",
-								numParameter,
-								numArguments,
-								toString(*functionType).c_str()),
+						format("Wrong number of arguments - expected: \n%d", numParameter) +
+						format("actual: \n%d\n ", numArguments) +
+						format("- function type: \n%s", toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
 	}
@@ -107,10 +106,9 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 		TupleTypePtr parameterTuple = TupleType::get(manager, parameterTypes);
 		add(res, Message(address,
 						EC_TYPE_INVALID_ARGUMENT_TYPE,
-						format("Invalid argument type(s) - expected: %s, actual: %s - function type: %s",
-								toString(*parameterTuple).c_str(),
-								toString(*argumentTuple).c_str(),
-								toString(*functionType).c_str()),
+						format("Invalid argument type(s) - expected: \n%s\n",	toString(*parameterTuple).c_str()) +
+						format("actual: \n%s\n", toString(*argumentTuple).c_str()) +
+						format("- function type: \n%s", toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
 	}
@@ -148,15 +146,62 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	FunctionTypePtr isType = address->getLambda()->getType();
 	TypePtr result = address->getLambda()->getType()->getReturnType();
 
-	FunctionTypePtr funType = FunctionType::get(manager, param, result);
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, true);
 	if (*funType != *isType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_FUNCTION_TYPE,
-						format("Invalid type of lambda expression - expected: %s, actual: %s",
+						format("Invalid type of lambda expression - expected: \n%s, actual: \n%s",
 								toString(*funType).c_str(),
 								toString(*isType).c_str()),
 						Message::ERROR));
+	}
+	return res;
+}
+
+OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& address) {
+
+	NodeManager& manager = address->getNodeManager();
+	OptionalMessageList res;
+
+	// recreate type
+	auto extractType = [](const VariablePtr& var) {
+		return var->getType();
+	};
+
+	TypeList param;
+	transform(address->getParameters(), back_inserter(param), extractType);
+
+	TypePtr isType = address->getType();
+	TypePtr result = address->getCall()->getType();
+
+	FunctionTypePtr funType = FunctionType::get(manager, param, result, false);
+	if (*funType != *isType) {
+		add(res, Message(address,
+						EC_TYPE_INVALID_FUNCTION_TYPE,
+						format("Invalid type of bind expression - expected: \n%s, actual: \n%s",
+								toString(*funType).c_str(),
+								toString(*isType).c_str()),
+						Message::ERROR));
+	}
+	return res;
+}
+
+OptionalMessageList ExternalFunctionTypeCheck::visitLiteral(const LiteralAddress& address) {
+
+	OptionalMessageList res;
+
+	// only important for function types
+	core::TypePtr type = address->getType();
+	if (type->getNodeType() != core::NT_FunctionType) {
 		return res;
+	}
+
+	core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(type);
+	if (!funType->isPlain()) {
+		add(res, Message(address,
+						EC_TYPE_INVALID_FUNCTION_TYPE,
+						format("External literals have to have plain function types!"),
+						Message::ERROR));
 	}
 	return res;
 }
@@ -183,7 +228,7 @@ OptionalMessageList ReturnTypeCheck::visitLambda(const LambdaAddress& address) {
 		if (returnType != actualType) {
 			add(res, Message(cur,
 				EC_TYPE_INVALID_RETURN_VALUE_TYPE,
-				format("Invalid return type - expected: %s, actual: %s",
+				format("Invalid return type - expected: \n%s, actual: \n%s",
 						toString(*returnType).c_str(),
 						toString(*actualType).c_str()),
 				Message::ERROR));
@@ -212,7 +257,7 @@ OptionalMessageList DeclarationStmtTypeCheck::visitDeclarationStmt(const Declara
 	if (*variableType != *initType) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_INITIALIZATION_EXPR,
-						format("Invalid type of initial value - expected: %s, actual: %s",
+						format("Invalid type of initial value - expected: \n%s, actual: \n%s",
 								toString(*variableType).c_str(),
 								toString(*initType).c_str()),
 						Message::ERROR));
@@ -230,7 +275,7 @@ OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& addre
 	if (!manager.basic.isBool(conditionType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
-						format("Invalid type of condition expression - expected: %s, actual: %s",
+						format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
 								toString(*manager.basic.getBool()).c_str(),
 								toString(*conditionType).c_str()),
 						Message::ERROR));
@@ -247,7 +292,7 @@ OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddre
 	if (!manager.basic.isBool(conditionType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
-						format("Invalid type of condition expression - expected: %s, actual: %s",
+						format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
 								toString(*manager.basic.getBool()).c_str(),
 								toString(*conditionType).c_str()),
 						Message::ERROR));
@@ -264,7 +309,7 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 	if (!manager.basic.isInt(switchType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_SWITCH_EXPR,
-						format("Invalid type of switch expression - expected: integral type, actual: %s",
+						format("Invalid type of switch expression - expected: integral type, actual: \n%s",
 								toString(*switchType).c_str()),
 						Message::ERROR));
 	}
@@ -287,7 +332,7 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 		if (*requiredType != *isType) {
 			add(res, Message(address,
 				EC_TYPE_INVALID_INITIALIZATION_EXPR,
-				format("Invalid type of struct-member initalization - expected type: %s, actual: %s",
+				format("Invalid type of struct-member initalization - expected type: \n%s, actual: \n%s",
 						toString(*requiredType).c_str(),
 						toString(*isType).c_str()),
 				Message::ERROR));
@@ -327,7 +372,7 @@ namespace {
 		if (!compositeType) {
 			add(res, Message(address,
 					EC_TYPE_ACCESSING_MEMBER_OF_NON_NAMED_COMPOSITE_TYPE,
-					format("Cannot access member '%s' of non-named-composed type %s of type %s",
+					format("Cannot access member '%s' of non-named-composed type \n%s of type \n%s",
 							toString(*identifier).c_str(),
 							toString(*structExpr).c_str(),
 							toString(*exprType).c_str()),
@@ -340,7 +385,7 @@ namespace {
 		if (!resultType) {
 			add(res, Message(address,
 					EC_TYPE_NO_SUCH_MEMBER,
-					format("No member %s within composed type %s",
+					format("No member \n%s within composed type \n%s",
 							toString(*identifier).c_str(),
 							toString(*compositeType).c_str()),
 					Message::ERROR));
@@ -351,7 +396,7 @@ namespace {
 		if (elementType != resultType) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_MEMBER,
-					format("Invalid type of extracted member %s - expected %s",
+					format("Invalid type of extracted member \n%s - expected \n%s",
 							toString(*resultType).c_str(),
 							toString(*elementType).c_str()),
 					Message::ERROR));
@@ -391,7 +436,7 @@ OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAd
 	if (identifierExpr->getNodeType() != NT_Literal) {
 		add(res, Message(address,
 				EC_TYPE_INVALID_IDENTIFIER,
-				format("Invalid identifier expression %s - not a constant.",
+				format("Invalid identifier expression \n%s - not a constant.",
 						toString(*identifierExpr).c_str()),
 				Message::ERROR));
 		return res;
@@ -438,7 +483,7 @@ OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& addr
 		if (*buildIn->getType() != *address->getType()) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_LITERAL,
-					format("Deviating type of build in literal %s - expected: %s, actual: %s",
+					format("Deviating type of build in literal \n%s - expected: \n%s, actual: \n%s",
 							address->getValue().c_str(),
 							toString(*buildIn->getType()).c_str(),
 							toString(*address->getType()).c_str()),

@@ -36,6 +36,8 @@
 
 #include "insieme/driver/dot_printer.h"
 
+#include "insieme/utils/logging.h"
+
 using namespace insieme;
 using namespace driver;
 
@@ -143,7 +145,7 @@ void visitAnnotationList(BuilderTy& builder, size_t parentId, const core::Node::
 		size_t annotationId = (size_t)&*it->second;
 		
 		std::ostringstream ss;
-		ss << "\"" << it->second->getAnnotationName() << "\\n[" << *it->second << "]\"";
+		ss << "\"" << it->second->getAnnotationName() << "\\n[" << *(it->second) << "]\"";
 		builder.addNode( AnnotationNode(annotationId,ss.str()) );
 
 		DotLink l1(parentId, annotationId, "");
@@ -183,7 +185,8 @@ void checkSemanticErrors(const MessageList& list, DotNode& currNode, const core:
 	});
 }
 
-ASTPrinter::ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors): insieme::core::ASTVisitor<>(true), builder(builder), errors(errors) { }
+ASTPrinter::ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors): 
+	insieme::core::ASTVisitor<>(true), dummyNodeID(1), builder(builder), errors(errors) { }
 
 void ASTPrinter::visitTypeVariable(const TypeVariablePtr& typeVar) {
 	TypeNode varNode( NODE_ID(typeVar), "\"var\\n{" + typeVar->toString() + "}\"");
@@ -192,6 +195,8 @@ void ASTPrinter::visitTypeVariable(const TypeVariablePtr& typeVar) {
 
 	visitAnnotationList(*builder, NODE_ID(typeVar), typeVar->getAnnotations());
 }
+
+void ASTPrinter::visitIntTypeParam(const IntTypeParamPtr& intTyParm) { }
 
 void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
 	std::ostringstream ss("");
@@ -265,8 +270,7 @@ void ASTPrinter::visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy) {
 	unsigned num = 0;
 	std::for_each(recTy->getDefinitions().begin(), recTy->getDefinitions().end(),
 		[ this, recTy, &num ](const RecTypeDefinition::RecTypeDefs::value_type& cur){
-			// this->builder->addLink( DotLink(NODE_ID(recTy), NODE_ID(cur.second), "\"\"") );
-			size_t interId = NODE_ID(recTy) ^ NODE_ID(cur.first) ^ NODE_ID(cur.second);
+			size_t interId = dummyNodeID++;
 
 			JunctionNode node(interId);
 			node[NodeProperty::SHAPE] = "diamond";
@@ -378,7 +382,7 @@ void ASTPrinter::visitLambda(const LambdaPtr& lambda) {
 	visitChildList(*builder, toVector(lambda->getBody()), lambda, "body");
 }
 
-void ASTPrinter::visitLambdaDefintion(const LambdaDefinitionPtr& lambdaDef) {
+void ASTPrinter::visitLambdaDefinition(const LambdaDefinitionPtr& lambdaDef) {
 	StmtNode lambdaNode( NODE_ID(lambdaDef), "lambdaDef");
 	checkSemanticErrors(errors, lambdaNode, lambdaDef);
 	builder->addNode(lambdaNode);
@@ -389,7 +393,7 @@ void ASTPrinter::visitLambdaDefintion(const LambdaDefinitionPtr& lambdaDef) {
 	for_each(lambdaDef->getDefinitions().begin(), lambdaDef->getDefinitions().end(),
 		[&num, &lambdaDef, this](const LambdaDefinition::Definitions::value_type& curr){
 			// this->builder->addLink( DotLink(NODE_ID(recTy), NODE_ID(cur.second), "\"\"") );
-			size_t interId = NODE_ID(lambdaDef) ^ NODE_ID(curr.first) ^ NODE_ID(curr.second);
+			size_t interId =dummyNodeID++; 
 
 			JunctionNode node(interId);
 			node[NodeProperty::SHAPE] = "diamond";
@@ -402,8 +406,8 @@ void ASTPrinter::visitLambdaDefintion(const LambdaDefinitionPtr& lambdaDef) {
 
 			DotLink link(NODE_ID(lambdaDef), interId, label);
 			this->builder->addLink( link );
-			this->builder->addLink( DotLink(interId, NODE_ID(curr.first), "") );
-			this->builder->addLink( DotLink(interId, NODE_ID(curr.second), "") );
+			this->builder->addLink( DotLink(interId, NODE_ID(curr.first), "var") );
+			this->builder->addLink( DotLink(interId, NODE_ID(curr.second), "lambda") );
 		}
 	);
 }
@@ -461,7 +465,7 @@ void ASTPrinter::visitVectorExpr(const VectorExprPtr& vexp) {
 	builder->addNode(vectNode);
 
 	visitAnnotationList(*builder, NODE_ID(vexp), vexp->getAnnotations());
-	// visitChildList(*builder, vexp->getChildList(), vexp, "expr");
+	visitChildList(*builder, vexp->getChildList(), vexp, "expr");
 }
 
 void ASTPrinter::visitStatement(const insieme::core::StatementPtr& stmt) {
@@ -474,6 +478,7 @@ void ASTPrinter::visitStatement(const insieme::core::StatementPtr& stmt) {
 }
 
 void ASTPrinter::visitNode(const insieme::core::NodePtr& node) {
+	LOG(WARNING) << "Using generic visitor for IR node: " << *node;
 	builder->addNode( DotNode( NODE_ID(node), utils::numeric_cast<std::string>(node->getNodeCategory()) ));
 
 	visitAnnotationList(*builder, NODE_ID(node), node->getAnnotations());
@@ -487,13 +492,13 @@ void ASTPrinter::visitProgram(const core::ProgramPtr& prog) {
 	visitChildList(*builder, prog->getChildList(), prog, "entry_point");
 }
 
-std::shared_ptr<ASTPrinter> makeDotPrinter(std::ostream& out, const MessageList& errors) {
-	return std::make_shared<ASTPrinter>( std::make_shared<DOTGraphBuilder>(out), errors );
+ASTPrinter makeDotPrinter(std::ostream& out, const MessageList& errors) {
+	return ASTPrinter( std::make_shared<DOTGraphBuilder>(out), errors );
 }
 
 void printDotGraph(const insieme::core::NodePtr& root, const MessageList& errors, std::ostream& out) {
 	out << "digraph inspire {" << std::endl;
-	insieme::core::visitDepthFirstOnce(root, *makeDotPrinter(out, errors));
+	insieme::core::visitDepthFirstOnce(root, makeDotPrinter(out, errors));
 	out << "}" << std::endl;
 }
 }

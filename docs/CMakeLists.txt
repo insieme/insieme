@@ -13,3 +13,5 @@ add_subdirectory(dataflow_framework)
 add_subdirectory(polyhedral)
 add_subdirectory(transformation_framework)
 
+add_subdirectory(optimization)
+

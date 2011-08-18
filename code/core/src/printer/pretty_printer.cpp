@@ -46,6 +46,7 @@
 
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/encoder/lists.h"
 
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/concepts.hpp> 
@@ -57,7 +58,7 @@ namespace printer {
 
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
-const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS;
+const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -839,9 +840,16 @@ namespace {
 
 		ADD_FORMATTER(basic.getArraySubscript1D(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
 		ADD_FORMATTER(basic.getArraySubscriptND(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArrayRefElem1D(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getArrayRefElemND(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
 
 		ADD_FORMATTER(basic.getVectorSubscript(), { PRINT_ARG(0); OUT("["); PRINT_ARG(1); OUT("]"); });
+		ADD_FORMATTER(basic.getVectorRefElem(), { PRINT_ARG(0); OUT("[&"); PRINT_ARG(1); OUT("]"); });
 
+
+		ADD_FORMATTER(basic.getCompositeRefElem(), { PRINT_ARG(0); OUT("->"); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getCompositeMemberAccess(), { PRINT_ARG(0); OUT("."); PRINT_ARG(1); });
+	
 		ADD_FORMATTER(basic.getRealAdd(), { PRINT_ARG(0); OUT("+"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealSub(), { PRINT_ARG(0); OUT("-"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealMul(), { PRINT_ARG(0); OUT("*"); PRINT_ARG(1); });
@@ -892,6 +900,21 @@ namespace {
 		ADD_FORMATTER(basic.getCreateMinRange(), { OUT("["); PRINT_ARG(0); OUT("-inf]"); });
 		ADD_FORMATTER(basic.getCreateBoundRange(), { OUT("["); PRINT_ARG(0); OUT("-"); PRINT_ARG(1); OUT("]"); });
 		
+
+		if (!config.hasOption(PrettyPrinter::NO_LIST_SUGAR)) {
+			// add semantic sugar for list handling
+			const encoder::ListExtension& ext = config.root->getNodeManager().getLangExtension<encoder::ListExtension>();
+
+			ADD_FORMATTER(ext.empty, { OUT("[]"); });
+			ADD_FORMATTER(ext.cons, {
+					vector<ExpressionPtr> list = encoder::toValue<vector<ExpressionPtr>>(call);
+					printer.out << "[" << join(",", list, [&](std::ostream& out, const ExpressionPtr& cur) {
+						printer.visit(cur);
+					}) << "]";
+			});
+		}
+
+
 		#undef ADD_FORMATTER
 		#undef OUT
 		#undef ARG

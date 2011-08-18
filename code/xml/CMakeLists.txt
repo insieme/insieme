@@ -1,5 +1,5 @@
 #
-# Builds the insieme c_info library
+# Builds the insieme xml library
 #
 project(insieme_xml CXX)
 
@@ -28,7 +28,7 @@ endif (USE_XML)
 if (USE_XML) 
 	# list all include paths
 	include_directories( ${insieme_xml_include_dir} )
-	include_directories( ${insieme_c_info_include_dir} )
+	include_directories( ${insieme_annotations_include_dir} )
 	include_directories( ${insieme_utils_include_dir} )
 	include_directories( ${insieme_core_include_dir} )
 	include_directories( ${XERCES_INCLUDE_DIRS} )
@@ -54,7 +54,7 @@ if (USE_XML)
 		set ( case_name ${ut_prefix}${case_name} )
 		add_executable(${case_name} ${case_file})
 		target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
-		target_link_libraries(${case_name} insieme_c_info)
+		target_link_libraries(${case_name} insieme_annotations)
 		target_link_libraries(${case_name} insieme_core)
 		target_link_libraries(${case_name} insieme_utils)
 		target_link_libraries(${case_name} insieme_xml)

@@ -38,13 +38,17 @@
 
 #include <pthread.h>
 
+#include "client_app.h"
+#include "irt_mqueue.h"
+
 /** Starts the runtime in standalone mode and executes work item 0.
   * Returns once that wi has finished.
   * worker_count : number of workers to start
   * init_context_fun : fills type tables in context
   * cleanup_context_fun : cleans up the context
+  * startup_params : parameter struct for the startup work item (0)
   */
-void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun);
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_lw_data_item *startup_params);
 
 // globals
 pthread_key_t irt_g_error_key;
@@ -58,6 +62,7 @@ irt_runtime_behaviour_flags irt_g_runtime_behaviour;
 IRT_CREATE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 IRT_CREATE_LOOKUP_TABLE(context, lookup_table_next, IRT_ID_HASH, IRT_CONTEXT_LT_BUCKETS);
 IRT_CREATE_LOOKUP_TABLE(wi_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
+IRT_CREATE_LOOKUP_TABLE(wg_event_register, lookup_table_next, IRT_ID_HASH, IRT_EVENT_LT_BUCKETS);
 
 void irt_init_globals() {
 	// not using IRT_ASSERT since environment is not yet set up
@@ -73,12 +78,14 @@ void irt_init_globals() {
 	irt_data_item_table_init();
 	irt_context_table_init();
 	irt_wi_event_register_table_init();
+	irt_wg_event_register_table_init();
 }
 void irt_cleanup_globals() {
 	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) irt_mqueue_cleanup();
 	irt_data_item_table_cleanup();
 	irt_context_table_cleanup();
 	irt_wi_event_register_table_cleanup();
+	irt_wg_event_register_table_cleanup();
 	pthread_mutex_destroy(&irt_g_error_mutex);
 	pthread_key_delete(irt_g_error_key);
 	pthread_key_delete(irt_g_worker_key);
@@ -94,7 +101,7 @@ void irt_exit_handler() {
 #endif
 	irt_cleanup_globals();
 	free(irt_g_workers);
-	IRT_INFO("\nInsieme runtime exiting.\n");
+	//IRT_INFO("\nInsieme runtime exiting.\n");
 }
 
 // error handling
@@ -141,15 +148,38 @@ uint32 irt_get_default_worker_count() {
 	return 1;
 }
 
-void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
+bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
+	pthread_mutex_t* mutex = (pthread_mutex_t*)mutexp;
+	pthread_mutex_unlock(mutex);
+	return false;
+}
+
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_lw_data_item *startup_params) {
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count);
 	pthread_setspecific(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
-	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, 0, NULL);
+	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, 0, startup_params);
+	// event handling for outer work item [[
+	pthread_mutex_t mutex;
+	pthread_mutex_init(&mutex, NULL);
+	pthread_mutex_lock(&mutex);
+	irt_wi_event_lambda handler;
+	handler.next = NULL;
+	handler.data = &mutex;
+	handler.func = &_irt_runtime_standalone_end_func;
+	irt_wi_event_register* ev_reg = (irt_wi_event_register*)calloc(1, sizeof(irt_wi_event_register));
+	pthread_spin_init(&ev_reg->lock, PTHREAD_PROCESS_PRIVATE);
+	ev_reg->handler[IRT_WI_EV_COMPLETED] = &handler;
+	ev_reg->id.value.full = main_wi->id.value.full;
+	ev_reg->id.cached = ev_reg;
+	_irt_wi_event_register_only(ev_reg);
+	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
+	pthread_mutex_lock(&mutex);	
+	//irt_wi_event_check_and_register(main_wi, IRT_WI_STATE_DONE, )
 	// TODO solve with event handling
-	while(main_wi->state != IRT_WI_STATE_DONE) sleep(5);
+	while(main_wi->state != IRT_WI_STATE_DONE) { usleep(10); };
 }

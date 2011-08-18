@@ -36,4 +36,3 @@
 
 #pragma once
 #define C_COMPILER "${CMAKE_C_COMPILER}"
-#define UTILS_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}"

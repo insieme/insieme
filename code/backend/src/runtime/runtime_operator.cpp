@@ -37,8 +37,13 @@
 #include "insieme/backend/runtime/runtime_operator.h"
 
 #include "insieme/backend/converter.h"
+#include "insieme/backend/function_manager.h"
+
+#include "insieme/backend/statement_converter.h"
+#include "insieme/backend/type_manager.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_code_fragments.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -50,25 +55,74 @@ namespace runtime {
 
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
-		Extensions ext(manager);
+		const Extensions& ext = manager.getLangExtension<Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
-		table[ext.initRuntime] = OP_CONVERTER({
+		table[ext.runStandalone] = OP_CONVERTER({
+
+			// add dependencies
+			ADD_HEADER_FOR("irt_runtime_standalone");
+			ADD_HEADER_FOR("irt_get_default_worker_count");
+
+			ContextHandlingFragmentPtr fragment = ContextHandlingFragment::get(context.getConverter());
+			context.addDependency(fragment);
+
+			// add call to irt_runtime_standalone
+			c_ast::NodePtr fun = C_NODE_MANAGER->create("irt_runtime_standalone");
+
+			// create arguments
+			c_ast::ExpressionPtr numThreads = c_ast::call(C_NODE_MANAGER->create("irt_get_default_worker_count"));
+			c_ast::ExpressionPtr initContext = c_ast::ref(fragment->getInitFunctionName());
+			c_ast::ExpressionPtr cleanupContext = c_ast::ref(fragment->getCleanupFunctionName());
+			c_ast::ExpressionPtr args = CONVERT_ARG(0);
+
+			// produce call
+			return c_ast::call(fun, numThreads, initContext, cleanupContext, args);
+		});
+
+		table[ext.registerWorkItemImpl] = OP_CONVERTER({
+
+			// just register new work item
+			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
+
+			// convert argument into list of variants
+			implTable->registerWorkItemImpl(WorkItemImpl::decode(ARG(0)));
+
+			context.addDependency(implTable);
+
+			// no code substitute, only dependencies
 			return c_ast::ExpressionPtr();
 		});
 
-		table[ext.initContext] = OP_CONVERTER({
-			// TODO: create init / cleanup function
-			return c_ast::ref(C_NODE_MANAGER->create("insieme_init_context"));
+		table[ext.wrapLWData] = OP_CONVERTER({
+			// check arguments
+			assert(ARG(0)->getNodeType() == core::NT_TupleExpr && "Only supported for tuple expressions!");
+
+			// add type dependency
+			const TypeInfo& info = GET_TYPE_INFO(call->getType());
+			context.addDependency(info.definition);
+
+			// register type within type table
+			TypeTablePtr typeTable = TypeTable::get(context.getConverter());
+
+			core::TupleTypePtr tupleType = DataItem::getUnfoldedLWDataItemType(static_pointer_cast<const core::TupleType>(ARG(0)->getType()));
+			unsigned id = typeTable->registerType(tupleType);
+
+			// convert wrapped data item struct
+			core::TupleExprPtr pure = static_pointer_cast<const core::TupleExpr>(ARG(0));
+			core::TupleExprPtr dataItem = DataItem::getLWDataItemValue(id, pure);
+
+			// just forward the inner expression
+			c_ast::TypePtr resType = c_ast::ptr(C_NODE_MANAGER->create<c_ast::NamedType>(C_NODE_MANAGER->create("irt_lw_data_item")));
+			return c_ast::cast(resType,c_ast::ref(CONVERT_EXPR(dataItem)));
 		});
 
-		table[ext.cleanupContext] = OP_CONVERTER({
-			return c_ast::ref(C_NODE_MANAGER->create("insieme_cleanup_context"));
-		});
-
-		table[ext.registerWorkItem] = OP_CONVERTER({
-			return c_ast::ExpressionPtr();
+		table[ext.getWorkItemArgument] = OP_CONVERTER({
+			// access work item member and cast to proper value
+			c_ast::TypePtr paramPtr = c_ast::ptr(CONVERT_TYPE(core::encoder::toValue<core::TypePtr>(ARG(2))));
+			c_ast::ExpressionPtr inner = c_ast::cast(paramPtr, c_ast::access(c_ast::deref(CONVERT_ARG(0)), "parameters"));
+			return c_ast::access(c_ast::deref(inner), format("c%d", core::encoder::toValue<unsigned>(ARG(1))+1));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

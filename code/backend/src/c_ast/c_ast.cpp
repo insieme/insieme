@@ -196,6 +196,12 @@ namespace c_ast {
 		return true;
 	}
 
+	bool AttributedType::equals(const Node& node) const {
+		assert(dynamic_cast<const AttributedType*>(&node));
+		auto other = static_cast<const AttributedType&>(node);
+		return attribute == other.attribute && *type == *other.type;
+	}
+
 	bool VarDecl::equals(const Node& node) const {
 		assert(dynamic_cast<const VarDecl*>(&node));
 		auto other = static_cast<const VarDecl&>(node);

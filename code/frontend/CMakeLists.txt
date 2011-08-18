@@ -20,13 +20,13 @@ include_directories(
 	${LLVM_HOME}/include
 	${insieme_utils_include_dir}
 	${insieme_core_include_dir}
-	${insieme_c_info_include_dir} )
+	${insieme_annotations_include_dir} )
 
 # build the frontend library
 add_library(insieme_frontend ${LINKING_TYPE} ${insieme_frontend_srcs} ${insieme_frontend_incs} )
 
 # add dependencies
-add_dependencies( insieme_frontend insieme_core insieme_utils insieme_c_info )
+add_dependencies( insieme_frontend insieme_core insieme_utils insieme_annotations )
 target_link_libraries(insieme_frontend ${clang_LIBs} ${pthread_LIB} ${llvm_LIBs})
 
 # enable tests for this project
@@ -45,7 +45,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
 	target_link_libraries(${case_name} insieme_utils)
-	target_link_libraries(${case_name} insieme_c_info)
+	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${clang_LIBs})
 	target_link_libraries(${case_name} ${pthread_LIB})

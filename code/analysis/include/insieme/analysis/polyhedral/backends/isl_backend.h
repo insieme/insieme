@@ -70,19 +70,19 @@ public:
 };
 
 
-class IslSet : public Set {
+class IslSet : public Set<IslContext> {
 	isl_dim* dim;
 	isl_set* set;
 
 public:
 
-	IslSet(Context& ctx, const IterationVector& iterVec);
+	IslSet(IslContext& ctx, const IterationVector& iterVec);
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	void addConstraint(const Constraint& c);
+	void applyConstraint(const ConstraintCombinerPtr& c);
 
-	void addConstraint(const ConstraintCombinerPtr& c);
+	const isl_set* getAsIslSet() const { return set; }
 
 	~IslSet() { 
 		isl_dim_free(dim);

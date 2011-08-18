@@ -46,7 +46,8 @@
 #define IRT_EVENT_LT_BUCKETS 72073
 
 // TODO : better configurability, maybe per-wi stack size set by compiler?
-#define IRT_WI_STACK_SIZE 1024 * 256
+// updated to 8MB due to failing test cases (quicksort, jacobi)
+#define IRT_WI_STACK_SIZE 8 * 1024 * 1024
 
 #define IRT_MAX_WORK_GROUPS 16
 
@@ -83,6 +84,8 @@ typedef struct _irt_error irt_error;
 
 IRT_DECLARE_ID_TYPE(wi_event_register);
 typedef struct _irt_wi_event_register irt_wi_event_register;
+IRT_DECLARE_ID_TYPE(wg_event_register);
+typedef struct _irt_wg_event_register irt_wg_event_register;
 
 /* ------------------------------ types ----- */
 

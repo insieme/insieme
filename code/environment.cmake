@@ -21,7 +21,7 @@ set ( insieme_utils_src_dir 	         	${insieme_code_dir}/utils/src )
 
 set ( insieme_core_include_dir 	         	${insieme_code_dir}/core/include )
 set ( insieme_utils_include_dir          	${insieme_code_dir}/utils/include )
-set ( insieme_c_info_include_dir         	${insieme_code_dir}/c_info/include )
+set ( insieme_annotations_include_dir       ${insieme_code_dir}/annotations/include )
 
 set ( insieme_frontend_include_dir       	${insieme_code_dir}/frontend/include )
 set ( insieme_backend_include_dir       	${insieme_code_dir}/backend/include )
@@ -34,6 +34,8 @@ set ( insieme_opencl_backend_include_dir 	${insieme_code_dir}/opencl_backend/inc
 
 set ( insieme_analysis_include_dir       	${insieme_code_dir}/analysis/include )
 set ( insieme_transform_include_dir       	${insieme_code_dir}/transform/include )
+
+set ( insieme_runtime_include_dir 	        ${insieme_code_dir}/runtime/include )
 
 # ------------------------------------------------------------- configuration for platforms
 if(MSVC)   # Windows Visual Studio
@@ -173,6 +175,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	# add general flags
 	add_definitions( -fshow-column )
 	add_definitions( -Wall )
+	# add_definitions( -Wextra )
+	# add_definitions( -pedantic )
 
 	# add flags for debug mode
 	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")

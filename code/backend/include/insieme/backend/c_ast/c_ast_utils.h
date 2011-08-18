@@ -68,6 +68,7 @@ namespace c_ast {
 		case UnaryOperation::SizeOf: 		return 14;
 		}
 		assert(false && "Uncovered operator encountered!");
+		return 0;
 	}
 
 	static inline unsigned getPriority(BinaryOperation::BinaryOp op) {
@@ -107,6 +108,7 @@ namespace c_ast {
 		case BinaryOperation::Cast: 					return 14;
 		}
 		assert(false && "Uncovered operator encountered!");
+		return 0;
 	}
 
 	static inline unsigned getPriority(TernaryOperation::TernaryOp op) {
@@ -114,6 +116,7 @@ namespace c_ast {
 		case TernaryOperation::TernaryCondition: return 3;
 		}
 		assert(false && "Uncovered operator encountered!");
+		return 0;
 	}
 
 	static inline unsigned getPriority(const NodePtr& node) {
@@ -144,6 +147,19 @@ namespace c_ast {
 
 	inline PointerTypePtr ptr(const TypePtr& type) {
 		return type->getManager()->create<c_ast::PointerType>(type);
+	}
+
+	inline FunctionTypePtr fun(const TypePtr& returnType, const vector<c_ast::TypePtr>& params) {
+		return returnType->getManager()->create<c_ast::FunctionType>(returnType, params);
+	}
+
+	template<typename ... P>
+	inline FunctionTypePtr fun(const TypePtr& returnType, P ... params) {
+		return fun(returnType, toVector<c_ast::TypePtr>(params...));
+	}
+
+	inline AttributedTypePtr attribute(const string& attribute, const TypePtr& type) {
+		return type->getManager()->create<c_ast::AttributedType>(attribute, type);
 	}
 
 	// --- create literals and variables ------------------------
