@@ -41,6 +41,7 @@
 #include "isl/ctx.h"
 #include "isl/dim.h"
 #include "isl/set.h"
+#include "isl/map.h"
 
 #include <boost/utility.hpp>
 
@@ -49,13 +50,13 @@ namespace analysis {
 namespace poly {
 namespace backend {
 
-/**
+/**************************************************************************************************
  * The IslContext contains the isl_ctx object which is created to store the polyhedral set/maps. 
  * The context object has to be unique and in order to avoid eventual accidental copy or
  * deallocation of the main ISL context, we mark the class as noncopyable and the constructor also
  * marked as explicit. 
- */
-class IslContext : public Context, public boost::noncopyable {
+ *************************************************************************************************/
+class IslContext : public boost::noncopyable {
 	isl_ctx* ctx;
 
 public:
@@ -69,13 +70,18 @@ public:
 	~IslContext() { isl_ctx_free(ctx); }
 };
 
-
+/**************************************************************************************************
+ * IslSet: is a wrapper to isl_sets, this class allows to easily convert a set of constraints,
+ * represented by a constraint combiner to isl representation. Output of the isl library will be
+ * represented with this same abstraction which allows for isl sets to be converted back into
+ * Constraints as defined in the poly namepsace
+ *************************************************************************************************/
 class IslSet : public Set<IslContext> {
 	isl_dim* dim;
 	isl_set* set;
-
+	
+	friend class IslMap;
 public:
-
 	IslSet(IslContext& ctx, const IterationVector& iterVec);
 
 	std::ostream& printTo(std::ostream& out) const;
@@ -88,7 +94,26 @@ public:
 		isl_dim_free(dim);
 		isl_set_free(set);
 	}
-	
+};
+
+/**************************************************************************************************
+ * IslMap: is the abstraction used to represent relations (or maps) in the ISL library. 
+ *************************************************************************************************/
+class IslMap : public Map<IslContext> {
+	isl_dim* dim;
+	isl_map* map;
+
+public:
+	IslMap(IslContext& ctx, const IterationVector& iterVec, const AffineSystem& affSys);
+
+	std::ostream& printTo(std::ostream& out) const;
+
+	void intersect(const Set<IslContext>& set);
+
+	~IslMap() { 
+		isl_dim_free(dim);
+		isl_map_free(map);
+	}
 };
 
 } // end backends namespace 

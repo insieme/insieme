@@ -43,14 +43,6 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
-/** 
- * Stores eventual context information to keep the state of the underlying library implementation 
- */
-struct Context { 
-	Context() { }
-	virtual ~Context() { }
-};
-
 /**************************************************************************************************
  * Generic implementation of a the concept of a set which is natively supported by polyhedral
  * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
@@ -79,25 +71,48 @@ protected:
 	const IterationVector& iterVec;
 };
 
-//template <class SetTy>
-//SetTy set_union(const SetTy& lhs, const SetTy& rhs);
+template <class Ctx> 
+struct Map : public utils::Printable {
 
-//template <class SetTy>
-//SetTy set_intersect(const SetTy& lhs, const SetTy& rhs);
+	typedef Ctx ctx_type;
+
+	Map(Ctx& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { }
+
+	virtual void intersect(const Set<Ctx>& set) = 0;
+
+	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+
+	virtual ~Map() { }
+protected:
+	Ctx& ctx;
+	const IterationVector& iterVec;
+};
+
+template <class SetTy>
+SetTy set_union(const SetTy& lhs, const SetTy& rhs);
+
+template <class SetTy>
+SetTy set_intersect(const SetTy& lhs, const SetTy& rhs);
 
 //template <class SetTy>
 //SetTy set_negate(const SetTy& lhs);
 
-
 //===== Conversion Utilities ======================================================================
 // Utilities to convert data structures represented as IR annotations
 template <class SetTy>
-SetTy convertIterationDomain(typename SetTy::ctx_type& ctx, const poly::IterationVector& iv, const ConstraintCombinerPtr& constraints) {
+SetTy convertIterationDomain(typename SetTy::ctx_type& ctx, const poly::IterationVector& iv, 
+		const ConstraintCombinerPtr& constraints) 
+{
 	SetTy set(ctx, iv);
-	set.applyConstraint(constraints);
+	if ( constraints ) { set.applyConstraint(constraints); } // FIXME
 	return set;
 }
 
+template <class MapTy>
+MapTy convertScatteringFunction(typename MapTy::ctx_type& ctx, const AffineSystem& scat) {
+	MapTy map(ctx, scat.getIterationVector(), scat);
+	return map;
+}
 
 } // end poly namespace
 } // end analysis namespace 

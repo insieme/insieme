@@ -122,7 +122,7 @@ namespace encoder {
 
 
 
-	namespace {
+	namespace detail {
 
 		//  -- some utility functors --
 
@@ -254,35 +254,35 @@ namespace encoder {
 	 * @tparam C the converter to be used for encoding element types
 	 */
 	template<typename E, typename C = Converter<E>>
-	struct ListConverter : public Converter<vector<E>, create_list_type<E,C>, encode_list<E,C>, decode_list<E,C>, is_list<E,C>> {};
+	struct ListConverter : public Converter<vector<E>, detail::create_list_type<E,C>, detail::encode_list<E,C>, detail::decode_list<E,C>, detail::is_list<E,C>> {};
 
 	/**
 	 * A partial template specialization for the type_factory struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct type_factory<vector<E>> : public create_list_type<E> {};
+	struct type_factory<vector<E>> : public detail::create_list_type<E> {};
 
 	/**
 	 * A partial template specialization for the value_to_ir_converter struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct value_to_ir_converter<vector<E>> : public encode_list<E> {};
+	struct value_to_ir_converter<vector<E>> : public detail::encode_list<E> {};
 
 	/**
 	 * A partial template specialization for the ir_to_value_converter struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct ir_to_value_converter<vector<E>> : public decode_list<E> {};
+	struct ir_to_value_converter<vector<E>> : public detail::decode_list<E> {};
 
 	/**
 	 * A partial template specialization for the is_encoding_of struct to support the encoding
 	 * of vectors using default element type converters.
 	 */
 	template<typename E>
-	struct is_encoding_of<vector<E>> : public is_list<E> { };
+	struct is_encoding_of<vector<E>> : public detail::is_list<E> { };
 
 
 

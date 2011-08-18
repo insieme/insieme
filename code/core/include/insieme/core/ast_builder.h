@@ -184,14 +184,19 @@ public:
 	ExpressionPtr createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy=false) const;
 
 	/**
-	 * Creates a expression accessing the corresponding member of the given struct.
+	 * Creates an expression accessing the corresponding member of the given struct.
 	 */
 	ExpressionPtr accessMember(ExpressionPtr structExpr, IdentifierPtr member) const;
 
 	/**
-	 * Creates a expression obtaining a reference to a member of a struct.
+	 * Creates an expression obtaining a reference to a member of a struct.
 	 */
 	ExpressionPtr refMember(ExpressionPtr structExpr, IdentifierPtr member) const;
+
+	/**
+	 * Creates an expression accessing the given component of the given tuple value.
+	 */
+	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;
 
 	// Utilities
 private:

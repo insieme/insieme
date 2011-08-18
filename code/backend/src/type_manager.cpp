@@ -49,6 +49,7 @@
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/core/types.h"
+#include "insieme/core/ast_builder.h"
 
 #include "insieme/utils/logging.h"
 
@@ -145,6 +146,7 @@ namespace backend {
 			TypeInfo* resolveNamedCompositType(const core::NamedCompositeTypePtr&, bool);
 			TypeInfo* resolveStructType(const core::StructTypePtr& ptr);
 			TypeInfo* resolveUnionType(const core::UnionTypePtr& ptr);
+			TypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
 
 			ArrayTypeInfo* resolveArrayType(const core::ArrayTypePtr& ptr);
 			VectorTypeInfo* resolveVectorType(const core::VectorTypePtr& ptr);
@@ -281,6 +283,8 @@ namespace backend {
 				info = resolveStructType(static_pointer_cast<const core::StructType>(type)); break;
 			case core::NT_UnionType:
 				info = resolveUnionType(static_pointer_cast<const core::UnionType>(type)); break;
+			case core::NT_TupleType:
+				info = resolveTupleType(static_pointer_cast<const core::TupleType>(type)); break;
 			case core::NT_FunctionType:
 				info = resolveFunctionType(static_pointer_cast<const core::FunctionType>(type)); break;
 			case core::NT_VectorType:
@@ -420,7 +424,7 @@ namespace backend {
 			auto fragmentManager = converter.getFragmentManager();
 
 			// fetch a name for the composed type
-			string name = converter.getNameManager().getName(ptr, "userdefined_type");
+			string name = converter.getNameManager().getName(ptr, "gen_type");
 
 			// get struct and type name
 			c_ast::IdentifierPtr typeName = manager->create(name);
@@ -470,6 +474,18 @@ namespace backend {
 			return resolveNamedCompositType(ptr, false);
 		}
 
+		TypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
+
+			// use struct conversion to resolve type => since tuple is represented using structs
+			core::ASTBuilder builder(ptr->getNodeManager());
+			core::NamedCompositeType::Entries entries;
+			unsigned counter = 0;
+			transform(ptr->getElementTypes(), std::back_inserter(entries), [&](const core::TypePtr& cur) {
+				return core::NamedCompositeType::Entry(builder.identifier(format("c%d", counter++)), cur);
+			});
+
+			return resolveStructType(builder.structType(entries));
+		}
 
 		ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::ArrayTypePtr& ptr) {
 			auto manager = converter.getCNodeManager();

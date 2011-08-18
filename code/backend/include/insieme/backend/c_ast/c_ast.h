@@ -87,7 +87,8 @@ namespace c_ast {
 		Node(NodeType type) : type(type), equalityID(0) {}
 		virtual ~Node() {};
 
-		NodeType getType() const { return type; }
+		NodeType getType() const { return type; } // TODO: remove this, expressions have types!
+		NodeType getNodeType() const { return type; }
 
 		void setManager(CNodeManager* mgr) { manager = mgr; }
 		CNodeManager* getManager() const {

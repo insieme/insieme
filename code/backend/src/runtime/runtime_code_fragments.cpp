@@ -36,9 +36,15 @@
 
 #include "insieme/backend/runtime/runtime_code_fragments.h"
 
-#include "insieme/backend/function_manager.h"
+#include <algorithm>
 
+#include "insieme/utils/logging.h"
+
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/function_manager.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
+
 
 namespace insieme {
 namespace backend {
@@ -96,6 +102,146 @@ namespace runtime {
 
 	// -- Type Table ------------------------------------------------------------------------
 
+	class TypeTableStore {
+	public:
+
+		struct Entry {
+			unsigned index;
+			c_ast::IdentifierPtr kind;
+			c_ast::TypePtr type;
+			vector<unsigned> components;
+		};
+
+	private:
+
+		const Converter& converter;
+
+		vector<Entry> entries;
+
+	public:
+
+		TypeTableStore(const Converter& converter) : converter(converter) {}
+
+		const Entry& resolve(const c_ast::TypePtr& type) {
+
+			// try looking it up within the existing entries
+			auto pos = std::find_if(entries.begin(), entries.end(),
+					[&](const Entry& cur) { return *(cur.type) == *type; });
+			if (pos != entries.end()) {
+				return *pos;
+			}
+
+			// type has not been resolved before => process now
+			return addType(type);
+		}
+
+		const vector<Entry>& getEntries() const {
+			return entries;
+		}
+
+	private:
+
+		const Entry& addEntry(Entry& entry) {
+			entry.index = entries.size();
+			entries.push_back(entry);
+			return *entries.rbegin();
+		}
+
+		Entry unknown;
+
+		const Entry& addType(const c_ast::TypePtr& type) {
+			switch(type->getNodeType()) {
+			case c_ast::NT_PrimitiveType:
+				return addType(static_pointer_cast<c_ast::PrimitiveType>(type));
+			case c_ast::NT_StructType:
+			case c_ast::NT_UnionType:
+				return addType(static_pointer_cast<c_ast::NamedCompositeType>(type));
+			case c_ast::NT_PointerType:
+				return addType(static_pointer_cast<c_ast::PointerType>(type));
+			case c_ast::NT_NamedType:
+				return addType(static_pointer_cast<c_ast::NamedType>(type));
+			default:
+				LOG(FATAL) << "Unsupported type: " << c_ast::toC(type);
+				assert(false && "Unsupported type encountered!");
+			}
+			return unknown;
+		}
+
+		const Entry& addType(const c_ast::PrimitiveTypePtr& type) {
+
+			char const * kind = "";
+			switch(type->type) {
+			case c_ast::PrimitiveType::Void:
+				assert(false && "Void should not be part of the type table!"); break;
+			case c_ast::PrimitiveType::Bool:   kind = "IRT_T_BOOL"; break;
+			case c_ast::PrimitiveType::Int8:   kind = "IRT_T_INT8"; break;
+			case c_ast::PrimitiveType::Int16:  kind = "IRT_T_INT16"; break;
+			case c_ast::PrimitiveType::Int32:  kind = "IRT_T_INT32"; break;
+			case c_ast::PrimitiveType::Int64:  kind = "IRT_T_INT64"; break;
+			case c_ast::PrimitiveType::UInt8:  kind = "IRT_T_UINT8"; break;
+			case c_ast::PrimitiveType::UInt16: kind = "IRT_T_UINT16"; break;
+			case c_ast::PrimitiveType::UInt32: kind = "IRT_T_UINT32"; break;
+			case c_ast::PrimitiveType::UInt64: kind = "IRT_T_UINT64"; break;
+			case c_ast::PrimitiveType::Float:  kind = "IRT_T_REAL32"; break;
+			case c_ast::PrimitiveType::Double: kind = "IRT_T_REAL64"; break;
+			}
+
+			// add entry
+			Entry entry;
+			entry.kind = converter.getCNodeManager()->create(kind);
+			entry.type = type;
+			return addEntry(entry);
+		}
+
+		const Entry& addType(const c_ast::NamedCompositeTypePtr& type) {
+
+			char const* kind = (type->getNodeType() == c_ast::NT_StructType)?"IRT_T_STRUCT":"IRT_T_UNION";
+
+			Entry entry;
+			entry.kind = converter.getCNodeManager()->create(kind);
+			entry.type = type;
+
+			// add components
+			for_each(type->elements, [&](const c_ast::VariablePtr& cur) {
+				entry.components.push_back(resolve(cur->type).index);
+			});
+
+			return addEntry(entry);
+		}
+
+		const Entry& addType(const c_ast::NamedTypePtr& type) {
+
+			char const* kind = "IRT_T_UINT32";
+
+			Entry entry;
+			entry.kind = converter.getCNodeManager()->create(kind);
+			entry.type = type;
+			return addEntry(entry);
+
+		}
+
+		const Entry& addType(const c_ast::PointerTypePtr& type) {
+
+			char const* kind = "IRT_T_POINTER";
+
+			Entry entry;
+			entry.kind = converter.getCNodeManager()->create(kind);
+			entry.type = type;
+			entry.components.push_back(resolve(type->elementType).index);
+			return addEntry(entry);
+		}
+
+	};
+
+
+	TypeTable::TypeTable(const Converter& converter)
+		: converter(converter), store(new TypeTableStore(converter)) {}
+
+	TypeTable::~TypeTable() {
+		delete store;
+	}
+
+
 	TypeTablePtr TypeTable::get(const Converter& converter) {
 		static string ENTRY_NAME = "TypeTable";
 
@@ -116,13 +262,60 @@ namespace runtime {
 	}
 
 	std::ostream& TypeTable::printTo(std::ostream& out) const {
-		return out <<
-				"// --- the type table ---\n"
-				"irt_type " TYPE_TABLE_NAME "[] = {};\n\n";
+
+		// create component arrays
+		out << "// --- componenents for type table entries ---\n";
+		for_each(store->getEntries(), [&](const TypeTableStore::Entry& cur) {
+			if (!cur.components.empty()) {
+				out << "irt_type_id g_type_" << cur.index << "_components[] = {" << join(",", cur.components) << "};\n";
+			}
+		});
+		out << "\n";
+
+		out << "// --- the type table ---\n"
+			   "irt_type " TYPE_TABLE_NAME "[] = {\n";
+
+		out << join(",\n",store->getEntries(), [&](std::ostream& out, const TypeTableStore::Entry& cur) {
+			out << "    {" << toC(cur.kind) << ", sizeof(" << toC(cur.type) << "), " << cur.components.size() << ", ";
+			if (cur.components.empty()) {
+				out << "0";
+			} else {
+				out << "g_type_" << cur.index << "_components";
+			}
+			out << "}";
+		});
+
+		return out << "\n};\n\n";
+	}
+
+	unsigned TypeTable::registerType(const core::TypePtr& type) {
+
+		// look up type information
+		const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+
+		// add dependency to type definition
+		addDependency(info.definition);
+
+		// add type information to table store
+		return store->resolve(info.rValueType).index;
 	}
 
 
 	// -- Implementation Table --------------------------------------------------------------
+
+
+	struct WorkItemVariantCode {
+		string entryName;
+		WorkItemVariantCode(const string& name) : entryName(name) {}
+	};
+
+	struct WorkItemImplCode {
+		vector<WorkItemVariantCode> variants;
+		WorkItemImplCode(const vector<WorkItemVariantCode>& variants) : variants(variants) {}
+	};
+
+	ImplementationTable::ImplementationTable(const Converter& converter)
+		: converter(converter), workItems() {}
 
 	ImplementationTablePtr ImplementationTable::get(const Converter& converter) {
 		static string ENTRY_NAME = "ImplementationTable";
@@ -139,16 +332,23 @@ namespace runtime {
 		return static_pointer_cast<const ImplementationTable>(res);
 	}
 
-	void ImplementationTable::registerWorkItem(const core::LambdaExprPtr& lambda) {
+	void ImplementationTable::registerWorkItemImpl(const WorkItemImpl& implementation) {
 
-		// resolve entry point
-		const FunctionInfo& info = converter.getFunctionManager().getInfo(lambda);
+		vector<WorkItemVariantCode> variants;
+		for_each(implementation.getVariants(), [&](const WorkItemVariant& cur) {
 
-		// make this fragment depending on the entry point
-		addDependency(info.prototype);
+			// resolve entry point
+			const FunctionInfo& info = converter.getFunctionManager().getInfo(cur.getImplementation());
 
-		// add to list of entry points
-		workItems.push_back(WorkItemImpl(info.function->name->name));
+			// make this fragment depending on the entry point
+			this->addDependency(info.prototype);
+
+			// add to lists of variants
+			variants.push_back(WorkItemVariantCode(info.function->name->name));
+		});
+
+		// add implementation to list of implementations
+		workItems.push_back(WorkItemImplCode(variants));
 	}
 
 
@@ -162,9 +362,11 @@ namespace runtime {
 		out << "// --- work item variants ---\n";
 
 		int counter=0;
-		for_each(workItems, [&](const WorkItemImpl& cur) {
+		for_each(workItems, [&](const WorkItemImplCode& cur) {
 			out << "irt_wi_implementation_variant g_insieme_wi_" << counter++ << "_variants[] = {\n";
-			out << "    { IRT_WI_IMPL_SHARED_MEM, &" << cur.entryName << ", 0, NULL, 0, NULL }\n";
+			for_each(cur.variants, [&](const WorkItemVariantCode& variant) {
+				out << "    { IRT_WI_IMPL_SHARED_MEM, &" << variant.entryName << ", 0, NULL, 0, NULL }\n";
+			});
 			out << "};\n";
 		});
 
@@ -172,9 +374,10 @@ namespace runtime {
 				"// --- the implementation table --- \n"
 				"irt_wi_implementation " IMPL_TABLE_NAME "[] = {\n";
 
-		for(int i=0; i<counter; i++) {
-			out << "    { 1, g_insieme_wi_" << i << "_variants },\n";
-		}
+		counter=0;
+		for_each(workItems, [&](const WorkItemImplCode& cur) {
+			out << "    { " << cur.variants.size() << ", g_insieme_wi_" << counter++ << "_variants },\n";
+		});
 
 		return out << "};\n\n";
 	}

@@ -127,6 +127,8 @@ public:
 			AccessInfoList > StmtScattering;
 
 	typedef std::vector<StmtScattering> ScatteringMatrix;
+	
+	typedef std::vector<poly::Iterator> IteratorOrder;
 
 	ScopRegion( const poly::IterationVector& iv, 
 			const poly::IterationDomain& comb = poly::IterationDomain(),
@@ -179,11 +181,12 @@ public:
 
 private:
 
-	static void resolveScop(const poly::IterationVector& iterVec, 
-					 const poly::IterationDomain& parentDomain, 
-			 	   	 const ScopRegion& region,
-					 const poly::ScatteringFunction& curScat,
-					 ScatteringMatrix& finalScat);
+	static void resolveScop(const poly::IterationVector& 	iterVec, 
+					 poly::IterationDomain 					parentDomain, 
+			 	   	 const ScopRegion& 						region,
+					 const poly::ScatteringFunction& 		curScat,
+					 IteratorOrder& 						iterators,
+					 ScatteringMatrix& 						finalScat);
 
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;

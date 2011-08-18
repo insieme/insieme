@@ -34,11 +34,12 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/runtime/runtime_object_handling.h"
+#include "insieme/backend/runtime/runtime_preprocessing.h"
 
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/encoder/encoder.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 
@@ -50,57 +51,48 @@ namespace runtime {
 	namespace {
 
 
-		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
+		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const WorkItemImpl& entry) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.getBasicGenerator();
 			auto& extensions = manager.getLangExtension<Extensions>();
 
-			// check whether entry expression is of a function type
-			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
-
-			// remove arguments
-			assert(*entry->getType() == *builder.functionType(builder.refType(extensions.workItemType), basic.getUnit())
-					&& "Type of entry point has to be (ref<workitem>)->unit");
-
-			return builder.callExpr(basic.getUnit(), extensions.registerWorkItem, entry);
+			// create register call
+			return builder.callExpr(basic.getUnit(), extensions.registerWorkItemImpl, core::encoder::toIR(manager, entry));
 		}
 
-		core::ExpressionPtr wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
+		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
 			core::ASTBuilder builder(manager);
-			auto& basic = manager.getBasicGenerator();
-			auto& extensions = manager.getLangExtension<Extensions>();
-
-			// check whether entry is already of right type
-			core::TypePtr unit = basic.getUnit();
-			core::TypePtr contextPtr = builder.refType(extensions.workItemType);
-			core::TypePtr resType = builder.functionType(contextPtr, unit);
-			if (*entry->getType() == *resType) {
-				return entry;
-			}
+			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+			const Extensions& extensions = manager.getLangExtension<Extensions>();
 
 			// create new lambda expression wrapping the entry point
 			assert(entry->getType()->getNodeType() == core::NT_FunctionType && "Only functions can be entry points!");
 			core::FunctionTypePtr entryType = static_pointer_cast<const core::FunctionType>(entry->getType());
 			assert(entryType->isPlain() && "Only plain functions can be entry points!");
 
-			// create parameter list
-			// TODO: replace this with data passes as parameter to the work-item
-			//		 for now, values will be initialized with zero
+
+			// define parameter of resulting lambda
+			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
+			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()));
+			core::ExpressionPtr paramTypes = core::encoder::toIR(manager, tupleType);
 
 			vector<core::ExpressionPtr> argList;
+			unsigned counter = 0;
 			transform(entryType->getParameterTypes(), std::back_inserter(argList), [&](const core::TypePtr& type) {
-				return builder.getZero(type);
+				return builder.callExpr(type, extensions.getWorkItemArgument,
+						toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++), paramTypes, basic.getTypeLiteral(type)));
 			});
 
 			// produce replacement
-			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
+			core::TypePtr unit = basic.getUnit();
 			core::ExpressionPtr call = builder.callExpr(entryType->getReturnType(), entry, argList);
 			core::ExpressionPtr exit = builder.callExpr(unit, extensions.exitWorkItem, workItem);
-			return builder.lambdaExpr(unit, builder.compoundStmt(call, exit), toVector(workItem));
+			WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(call, exit), toVector(workItem)));
+			return WorkItemImpl(toVector(variant));
 		}
 
 
-		core::ProgramPtr extractWorkItems(core::NodeManager& manager, const core::ProgramPtr& program) {
+		core::ProgramPtr replaceMain(core::NodeManager& manager, const core::ProgramPtr& program) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.getBasicGenerator();
 			auto& extensions = manager.getLangExtension<Extensions>();
@@ -111,9 +103,11 @@ namespace runtime {
 			// build up list of statements for the body
 			vector<core::StatementPtr> stmts;
 
-			// ------------------- Start with a call to init -------------------------
+			// -------------------- assemble parameters ------------------------------
 
-			stmts.push_back(builder.callExpr(unit, extensions.initRuntime));
+			core::VariablePtr argc = builder.variable(basic.getInt4());
+			core::VariablePtr argv = builder.variable(builder.refType(builder.arrayType(builder.refType(builder.arrayType(basic.getChar())))));
+			vector<core::VariablePtr> params = toVector(argc,argv);
 
 			// ------------------- Add list of entry points --------------------------
 
@@ -123,28 +117,22 @@ namespace runtime {
 
 			// ------------------- Start standalone runtime  -------------------------
 
-			// add call to irt_get_default_worker_count
-			core::TypePtr getWorkerCountType = builder.functionType(core::TypeList(), intType);
-			core::ExpressionPtr getWorkerCount = builder.callExpr(intType, builder.literal(getWorkerCountType,"irt_get_default_worker_count"), toVector<core::ExpressionPtr>());
+			// construct light-weight data item tuple
+			core::ExpressionPtr expr = builder.tupleExpr(toVector<core::ExpressionPtr>(argc, argv));
+			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(expr->getType());
+			expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.wrapLWData, toVector(expr));
 
-			core::TypePtr type = builder.genericType("MYstrangeType");
-			core::LiteralPtr args = builder.literal(type, "0");
+			// create call to standalone runtime
+			stmts.push_back(builder.callExpr(unit, extensions.runStandalone, expr));
 
-			// add call to irt_runtime_standalone
-			core::TypePtr contextFunType = builder.functionType(toVector<core::TypePtr>(builder.refType(extensions.contextType)), manager.basic.getUnit());
-			core::TypePtr standaloneFunType = builder.functionType(toVector(intType, contextFunType,contextFunType,type), unit);
-			core::ExpressionPtr standalone = builder.literal(standaloneFunType, "irt_runtime_standalone");
-			core::ExpressionPtr start = builder.callExpr(unit, standalone, toVector(getWorkerCount, extensions.initContext, extensions.cleanupContext, args));
+			// ------------------- Add return   -------------------------
 
-			stmts.push_back(start);
 			stmts.push_back(builder.returnStmt(builder.intLit(0)));
 
 			// ------------------- Creation of new main function -------------------------
 
-			// assemble parameters
-			vector<core::VariablePtr> params; // no parameters so far (not supported)
 
-			core::FunctionTypePtr mainType = builder.functionType(core::TypeList(), basic.getInt4());
+			core::FunctionTypePtr mainType = builder.functionType(toVector(argc->getType(), argv->getType()), basic.getInt4());
 
 			// create new main function
 			core::StatementPtr body = builder.compoundStmt(stmts);
@@ -154,42 +142,30 @@ namespace runtime {
 			return core::Program::create(manager, toVector(main), true);
 		}
 
-		/**
-		 *
-		 */
-		core::NodePtr extractWorkItems(core::NodeManager& manager, const core::NodePtr& node) {
-			auto nodeType = node->getNodeType();
-
-			// handle programs specially
-			if (nodeType == core::NT_Program) {
-				return extractWorkItems(manager, static_pointer_cast<const core::Program>(node));
-			}
-
-			// if it is a expression, wrap it within a program and resolve equally
-			if (core::ExpressionPtr expr = dynamic_pointer_cast<const core::Expression>(node)) {
-				return extractWorkItems(manager, core::Program::create(manager, toVector(expr)));
-			}
-
-			// nothing to do otherwise
-			return node;
-		}
-
 	}
 
 
-
-	core::NodePtr WorkItemExtractor::process(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr WorkItemExtractor::process(core::NodeManager& manager, const core::NodePtr& node) {
 
 		// TODO:
 		//    - convert entry points to work items
 		// 	  - create alternative main conducting a runtime call (+ initContext())
 		//	  - identification and creation of work items
 
+		auto nodeType = node->getNodeType();
 
-		core::NodePtr res = extractWorkItems(manager, code);
+		// handle programs specially
+		if (nodeType == core::NT_Program) {
+			return replaceMain(manager, static_pointer_cast<const core::Program>(node));
+		}
 
-		// so far, nothing
-		return res;
+		// if it is a expression, wrap it within a program and resolve equally
+		if (core::ExpressionPtr expr = dynamic_pointer_cast<const core::Expression>(node)) {
+			return replaceMain(manager, core::Program::create(manager, toVector(expr)));
+		}
+
+		// nothing to do otherwise
+		return node;
 	}
 
 

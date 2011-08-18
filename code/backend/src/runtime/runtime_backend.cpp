@@ -56,7 +56,7 @@
 #include "insieme/backend/runtime/runtime_operator.h"
 #include "insieme/backend/runtime/runtime_type_handler.h"
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
-#include "insieme/backend/runtime/runtime_object_handling.h"
+#include "insieme/backend/runtime/runtime_preprocessing.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -70,6 +70,8 @@ namespace runtime {
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
 
 		FunctionIncludeTable getFunctionIncludeTable();
+
+		TypeIncludeTable getTypeIncludeTable();
 
 		TypeHandlerList getTypeHandlerList();
 
@@ -114,7 +116,7 @@ namespace runtime {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter, getBasicTypeIncludeTable(), getTypeHandlerList());
+		TypeManager typeManager(converter, getTypeIncludeTable(), getTypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter);
@@ -145,9 +147,13 @@ namespace runtime {
 			res["irt_runtime_standalone"] 			= "standalone.h";
 			res["irt_wi_end"]						= "irt_all_impls.h";
 
-			// the literals which are defined within the generated code
-			res["insieme_init_context"] = "";
-			res["insieme_cleanup_context"] = "";
+			return res;
+		}
+
+		TypeIncludeTable getTypeIncludeTable() {
+			TypeIncludeTable res = getBasicTypeIncludeTable();
+
+			// nothing added yet
 
 			return res;
 		}

@@ -103,29 +103,9 @@ namespace encoder {
 		return static_pointer_cast<const core::GenericType>(listType)->getTypeParameter()[0];
 	}
 
-
-	bool isList(const core::ExpressionPtr& expr) {
-		const ListExtension& ext = expr->getNodeManager().getLangExtension<ListExtension>();
-
-		// check step case
-		if (expr->getNodeType() != core::NT_CallExpr) {
-			return false;
-		}
-
-		// check the call
-		CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
-
-		// lists can only be composed using cons and empty
-		auto& fun = call->getFunctionExpr();
-		if (*fun == *ext.empty) {
-			return true;
-		}
-		if (*fun == *ext.cons) {
-			return isList(call->getArgument(1));
-		}
-
-		// it is not a list
-		return false;
+	const core::TypePtr getListType(const core::TypePtr& elementType) {
+		ASTBuilder builder(elementType->getNodeManager());
+		return builder.genericType(ListExtension::LIST_TYPE_NAME, toVector(elementType));
 	}
 
 
