@@ -779,7 +779,7 @@ bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
 	}, false);
 
 	// run visitor => if interrupted, the definition is recursive
-	return visitDepthFirstInterruptable(lambda, detector);
+	return visitDepthFirstOnceInterruptable(lambda, detector);
 }
 
 namespace {
@@ -843,7 +843,7 @@ namespace {
 LambdaExpr::LambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition)
 	: Expression(NT_LambdaExpr, variable->getType(), ::hashLambdaExpr(variable, definition)),
 	  variable(isolate(variable)), definition(isolate(definition)), lambda(definition->getDefinitionOf(variable)),
-	  recursive(definition->isRecursive(variable)) { }
+	  recursive(boost::logic::indeterminate) { }
 
 LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
