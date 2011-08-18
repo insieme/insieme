@@ -39,6 +39,7 @@
 #include "insieme/backend/c_ast/c_code.h"
 
 #include "insieme/backend/converter.h"
+#include "insieme/backend/runtime/runtime_extensions.h"
 
 namespace insieme {
 namespace backend {
@@ -82,6 +83,8 @@ namespace runtime {
 
 	};
 
+	class TypeTableStore;
+
 	/**
 	 * The type table fragment contains code creating and handling the type table
 	 * used by the Insieme runtime to obtain information regarding data item types.
@@ -90,9 +93,13 @@ namespace runtime {
 
 		const Converter& converter;
 
+		TypeTableStore* store;
+
 	public:
 
-		TypeTable(const Converter& converter) : converter(converter) {}
+		TypeTable(const Converter& converter);
+
+		~TypeTable();
 
 		static TypeTablePtr get(const Converter& converter);
 
@@ -100,9 +107,11 @@ namespace runtime {
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 
+		unsigned registerType(const core::TypePtr& type);
+
 	};
 
-	struct WorkItemImpl;
+	struct WorkItemImplCode;
 
 	/**
 	 * The implementation table fragment represents code resulting in the creation of the
@@ -113,27 +122,20 @@ namespace runtime {
 
 		const Converter& converter;
 
-		vector<WorkItemImpl> workItems;
+		vector<WorkItemImplCode> workItems;
 
 	public:
 
-		ImplementationTable(const Converter& converter) : converter(converter), workItems() {}
+		ImplementationTable(const Converter& converter);
 
 		static ImplementationTablePtr get(const Converter& converter);
 
 		const c_ast::ExpressionPtr getImplementationTable();
 
-		void registerWorkItem(const core::LambdaExprPtr& lambda);
+		void registerWorkItemImpl(const WorkItemImpl& implementation);
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 
-	};
-
-
-	struct WorkItemImpl {
-		string entryName;
-
-		WorkItemImpl(const string& entryName) : entryName(entryName) {}
 	};
 
 } // end namespace runtime

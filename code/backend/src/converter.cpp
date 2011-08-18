@@ -68,8 +68,8 @@ namespace backend {
 		LOG(INFO) << timer;
 
 //		// TODO: only for debugging - remove when done
-//		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-//		LOG(INFO) << "Semantic Checks: " << core::check(processed, core::checks::getFullCheck());
+		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed);
+		LOG(INFO) << "Semantic Checks: " << core::check(processed, core::checks::getFullCheck());
 
 		// -------------------------- CONVERSION -------------------------
 
