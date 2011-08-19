@@ -175,6 +175,21 @@ struct ConstraintCloner : public ConstraintVisitor {
 	}
 };
 
+struct IterVecExtractor : public ConstraintVisitor {
+	
+	const IterationVector* iterVec; 
+
+	IterVecExtractor() : iterVec(NULL) { }
+
+	void visit(const RawConstraintCombiner& rcc) { 
+		const IterationVector& thisIterVec = rcc.getConstraint().getAffineFunction().getIterationVector();
+		if (iterVec == NULL) {
+			iterVec = &thisIterVec;
+		} 
+		assert(*iterVec == thisIterVec); // FIXME use exceptions for this
+	}
+};
+
 } // end anonymous namespace 
 
 ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& old) {
@@ -185,6 +200,14 @@ ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const Const
 	return cc.newCC;
 }
 
+const IterationVector& extractIterationVector(const ConstraintCombinerPtr& constraint) {
+	assert( static_cast<bool>(constraint) && "Passing an empty constraint");
+
+	IterVecExtractor ive;
+	constraint->accept(ive);
+	assert(ive.iterVec != NULL);
+	return *ive.iterVec;
+}
 } // end poly namespace
 } // end analysis namespace 
 } // end insieme namespace 
