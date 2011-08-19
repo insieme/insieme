@@ -116,9 +116,6 @@ public:
 	// a factory method for intTypeParam literals
 	LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
 
-	// a factory method for a type literal
-	LiteralPtr getTypeLiteral(const TypePtr& type) const;
-
 	// a factory method for a identifier literal
 	LiteralPtr getIdentifierLiteral(const core::IdentifierPtr& identifier) const;
 
@@ -128,6 +125,9 @@ public:
 	// two methods obtaining all direct super / sub types of the given generic types
 	TypeSet getDirectSuperTypesOf(const TypePtr& type) const;
 	TypeSet getDirectSubTypesOf(const TypePtr& type) const;
+
+	// a factory method for a type literal
+	LiteralPtr getTypeLiteral(const TypePtr& type) const;
 
 private:
 

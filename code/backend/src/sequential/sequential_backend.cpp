@@ -83,9 +83,7 @@ namespace sequential {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				makePreProcessor<IfThenElseInlining>(),
-				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>()
+				getBasicPreProcessorSequence()
 		);
 		converter.setPreProcessor(preprocessor);
 

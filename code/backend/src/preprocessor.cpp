@@ -41,14 +41,28 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_builder.h"
 
+#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
+
 namespace insieme {
 namespace backend {
+
+
+	PreProcessorPtr getBasicPreProcessorSequence() {
+		return makePreProcessor<PreProcessingSequence>(
+				makePreProcessor<InlinePointwise>(),
+				makePreProcessor<GenericLambdaInstantiator>(),
+				makePreProcessor<IfThenElseInlining>(),
+				makePreProcessor<RestoreGlobals>(),
+				makePreProcessor<InitZeroSubstitution>()
+		);
+	}
 
 
 	core::NodePtr PreProcessingSequence::process(core::NodeManager& manager, const core::NodePtr& code) {
@@ -197,6 +211,165 @@ namespace backend {
 		return converter.map(code);
 	}
 
+
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      PreProcessor GenericLambdaInstantiator => instantiates generic lambda implementations
+	// --------------------------------------------------------------------------------------------------------------
+
+	class LambdaInstantiater : public core::transform::CachedNodeMapping {
+
+		core::NodeManager& manager;
+
+	public:
+
+		LambdaInstantiater(core::NodeManager& manager) : manager(manager) {};
+
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+			// check types => abort
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+
+			// look for call expressions
+			if (ptr->getNodeType() == core::NT_CallExpr) {
+				// extract the call
+				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
+
+				// only care about lambdas
+				core::ExpressionPtr fun = call->getFunctionExpr();
+				if (fun->getNodeType() == core::NT_LambdaExpr) {
+
+					// convert to lambda
+					core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
+
+					// check whether the lambda is generic
+					if (core::isGeneric(fun->getType())) {
+
+						// compute substitutions
+						core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+
+						// instantiate type variables according to map
+						lambda = core::transform::instantiate(manager, lambda, map);
+
+						// create new call node
+						core::ExpressionList arguments;
+						::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
+							return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
+						});
+
+						// produce new call expression
+						return core::CallExpr::get(manager, call->getType(), lambda, arguments);
+
+					}
+				}
+			}
+
+			// decent recursively
+			return ptr->substitute(manager, *this, true);
+		}
+
+	};
+
+	core::NodePtr GenericLambdaInstantiator::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		LambdaInstantiater converter(manager);
+		return converter.map(code);
+	}
+
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      PreProcessor InlinePointwise => replaces invocations of pointwise operators with in-lined code
+	// --------------------------------------------------------------------------------------------------------------
+
+	class PointwiseReplacer : public core::transform::CachedNodeMapping {
+
+		core::NodeManager& manager;
+		const core::lang::BasicGenerator& basic;
+
+	public:
+
+		PointwiseReplacer(core::NodeManager& manager) : manager(manager), basic(manager.getBasicGenerator()) {};
+
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+			// check types => abort
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+			// look for call expressions
+			if (ptr->getNodeType() == core::NT_CallExpr) {
+				// extract the call
+				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
+
+				// only care about calls to pointwise operations
+				if (core::analysis::isCallOf(call->getFunctionExpr(), basic.getVectorPointwise())) {
+
+					// get argument and result types!
+					assert(call->getType()->getNodeType() == core::NT_VectorType && "Result should be a vector!");
+					assert(call->getArgument(0)->getType()->getNodeType() == core::NT_VectorType && "Argument should be a vector!");
+
+					core::VectorTypePtr argType = static_pointer_cast<const core::VectorType>(call->getArgument(0)->getType());
+					core::VectorTypePtr resType = static_pointer_cast<const core::VectorType>(call->getType());
+
+					// extract generic parameter types
+					core::TypePtr in = argType->getElementType();
+					core::TypePtr out = resType->getElementType();
+
+					assert(resType->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam && "Result should be of fixed size!");
+					core::ConcreteIntTypeParamPtr size = static_pointer_cast<const core::ConcreteIntTypeParam>(resType->getSize());
+
+					// extract operator
+					core::ExpressionPtr op = static_pointer_cast<const core::CallExpr>(call->getFunctionExpr())->getArgument(0);
+
+					// create new lambda, realizing the point-wise operation
+					core::ASTBuilder builder(manager);
+
+					core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(argType, argType), resType);
+
+					core::VariablePtr v1 = builder.variable(argType);
+					core::VariablePtr v2 = builder.variable(argType);
+					core::VariablePtr res = builder.variable(resType);
+
+					// create vector init expression
+					vector<core::ExpressionPtr> fields;
+
+					// unroll the pointwise operation
+					core::TypePtr unitType = basic.getUnit();
+					core::TypePtr longType = basic.getUInt8();
+					core::ExpressionPtr vectorSubscript = basic.getVectorSubscript();
+					for(std::size_t i=0; i<size->getValue(); i++) {
+						core::LiteralPtr index = builder.literal(longType, boost::lexical_cast<std::string>(i));
+
+						core::ExpressionPtr a = builder.callExpr(in, vectorSubscript, v1, index);
+						core::ExpressionPtr b = builder.callExpr(in, vectorSubscript, v2, index);
+
+						fields.push_back(builder.callExpr(out, op, a, b));
+					}
+
+					// return result
+					core::StatementPtr body = builder.returnStmt(builder.vectorExpr(resType, fields));
+
+					// construct substitute ...
+					core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1,v2), body);
+					return builder.callExpr(resType, substitute, call->getArguments());
+				}
+			}
+
+			// decent recursively
+			return ptr->substitute(manager, *this, true);
+		}
+
+	};
+
+	core::NodePtr InlinePointwise::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		PointwiseReplacer converter(manager);
+		return converter.map(code);
+	}
 
 
 	// --------------------------------------------------------------------------------------------------------------

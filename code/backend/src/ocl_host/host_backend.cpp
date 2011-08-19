@@ -90,9 +90,7 @@ namespace ocl_host {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-			makePreProcessor<IfThenElseInlining>(),
-			makePreProcessor<RestoreGlobals>(),
-			makePreProcessor<InitZeroSubstitution>(),
+			getBasicPreProcessorSequence(),
 			makePreProcessor<ocl_kernel::OCLPreprocessor>()
 		);
 		converter.setPreProcessor(preprocessor);

@@ -87,6 +87,14 @@ namespace backend {
 		return std::make_shared<T>(args...);
 	}
 
+	/**
+	 * Obtains a basic pre-processor sequence including processing steps potentially used by
+	 * all backend variants. The list includes all pre-processors defined within this header file.
+	 *
+	 * @return a list of pre-processor instances - one of each kind
+	 */
+	PreProcessorPtr getBasicPreProcessorSequence();
+
 	// -------------------------------------------------------------------------
 	//  Some pre-processing connectors
 	// -------------------------------------------------------------------------
@@ -110,6 +118,12 @@ namespace backend {
 		template<typename ... P>
 		PreProcessingSequence(P ... processors)
 			: preprocessor(toVector<PreProcessorPtr>(processors ...)) {}
+
+		/**
+		 * A simple constructor accepting the list of pre-processors covered by this sequence.
+		 */
+		PreProcessingSequence(const vector<PreProcessorPtr>& processors)
+			: preprocessor(processors) {}
 
 		/**
 		 * Applies this pre-processor on the given target code. Therefore, the internally maintained
@@ -157,6 +171,23 @@ namespace backend {
 	 * with a literal substitution.
 	 */
 	class RestoreGlobals : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+	/**
+	 * A simple pre-processor replacing pointwise operations on vectors with in-lined, equivalent code.
+	 */
+	class InlinePointwise : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+	/**
+	 * A pre-processor replacing generic lambdas operating on type variables with their actual instantiation
+	 * based on the invocation context.
+	 */
+	class GenericLambdaInstantiator : public PreProcessor {
 	public:
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
