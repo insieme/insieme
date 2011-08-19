@@ -38,6 +38,7 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -66,8 +67,6 @@ namespace runtime {
 		}
 
 
-
-
 		TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
 			const Extensions& extensions = converter.getNodeManager().getLangExtension<Extensions>();
@@ -90,6 +89,18 @@ namespace runtime {
 			if (DataItem::isLWDataItemType(type)) {
 				// create a substitution struct - the same struct + the type id
 				return getLWDataItemStruct(converter, type);
+			}
+
+			// handle jobs
+			const core::lang::BasicGenerator& basic = converter.getNodeManager().getBasicGenerator();
+
+			// check for job types ...
+			if(basic.isJob(type)) {
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_parallel_job", "ir_interface.h");
+			}
+
+			if(basic.isThreadGroup(type)) {
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_group", "ir_interface.h");
 			}
 
 			// it is not a special runtime type => let somebody else try

@@ -40,6 +40,7 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
 namespace insieme {
 namespace backend {

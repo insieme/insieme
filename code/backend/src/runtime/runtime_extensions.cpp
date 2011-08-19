@@ -40,6 +40,8 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/encoder/lists.h"
 
+#include "insieme/backend/runtime/runtime_entities.h"
+
 namespace insieme {
 namespace backend {
 namespace runtime {

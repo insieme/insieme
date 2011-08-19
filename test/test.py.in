@@ -16,8 +16,8 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 #
 
 USE_SMP = 1
-USE_SEQ = 1
-USE_RUN = 1
+USE_SEQ = 0
+USE_RUN = 0
 
 # compiler flags
 INSIEME_FLAGS = "--std=c99 -I."

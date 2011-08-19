@@ -42,6 +42,7 @@
 #include "insieme/core/encoder/encoder.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
 namespace insieme {
 namespace backend {
@@ -145,13 +146,9 @@ namespace runtime {
 	}
 
 
-	core::NodePtr WorkItemExtractor::process(core::NodeManager& manager, const core::NodePtr& node) {
+	core::NodePtr StandaloneWrapper::process(core::NodeManager& manager, const core::NodePtr& node) {
 
-		// TODO:
-		//    - convert entry points to work items
-		// 	  - create alternative main conducting a runtime call (+ initContext())
-		//	  - identification and creation of work items
-
+		// simply convert entry points to work items and add new main
 		auto nodeType = node->getNodeType();
 
 		// handle programs specially
@@ -166,6 +163,61 @@ namespace runtime {
 
 		// nothing to do otherwise
 		return node;
+	}
+
+
+	// -----------------------------------------------------------------------------------------
+	// 	          Replace parallel and job expressions with work-item equivalents
+	// -----------------------------------------------------------------------------------------
+
+	namespace {
+
+		class WorkItemIntroducer : public core::transform::CachedNodeMapping {
+
+			core::NodeManager& manager;
+			const core::lang::BasicGenerator& basic;
+
+		public:
+
+			WorkItemIntroducer(core::NodeManager& manager) : manager(manager), basic(manager.getBasicGenerator()) {}
+
+			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+				// skip types
+				if (ptr->getNodeCategory() == core::NC_Type) {
+					return ptr; // don't touch types
+				}
+
+				// start by processing the child nodes (bottom up)
+				core::NodePtr res = ptr->substitute(manager, *this);
+
+				// test whether it is something of interest
+				if (res->getNodeType() == core::NT_JobExpr) {
+
+					std::cout << "Discovered Job: " << *ptr << "\n";
+
+					// TODO: convert the job
+
+
+				}
+
+
+				if (core::analysis::isCallOf(ptr, basic.getParallel())) {
+
+					std::cout << "Disovered Parallel: " << *ptr << "\n";
+				}
+
+				// nothing interesting ...
+				return res;
+			}
+
+		};
+
+	}
+
+
+	core::NodePtr WorkItemizer::process(core::NodeManager& manager, const core::NodePtr& node) {
+		return WorkItemIntroducer(manager).resolveElement(node);
 	}
 
 

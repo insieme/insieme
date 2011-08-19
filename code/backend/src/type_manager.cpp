@@ -406,16 +406,6 @@ namespace backend {
 				return resolveInternal(basic.getTypeLiteralTypeGen());
 			}
 
-
-			// TODO: replace by work item / work item group concepts
-			// check for job types ...
-			if(basic.isJob(ptr)) {
-				return type_info_utils::createInfo(manager, "isbr_Job*");
-			}
-			if(basic.isThreadGroup(ptr)) {
-				return type_info_utils::createInfo(manager, "isbr_ThreadGroup");
-			}
-
 			// no match found => return unsupported type info
 			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager);

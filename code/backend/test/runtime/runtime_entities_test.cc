@@ -36,10 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ast_builder.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/extension.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
 namespace insieme {
 namespace backend {
