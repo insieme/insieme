@@ -385,19 +385,26 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				// check if parameter has already been replaced, replace only once
 				if(const VariablePtr& vArg = getVariableArg(arg, builder)) {
 					// todo fix dirty hack
-					if((params.at(cnt)->getType()->toString().find("array<_cl_")) != string::npos)
+					if(params.at(cnt)->getType()->toString().find("array<_cl_") != string::npos) {
 					if(cl_mems.find(params.at(cnt)) != cl_mems.end()) {
 						newParams.at(cnt) = cl_mems[params.at(cnt)];
 						changed = true;
 					// else check if the passed has a diffetent type
 					} else if(cl_mems.find(vArg) != cl_mems.end()) {
-						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getNonRefType(vArg), getNonRefType(cl_mems[vArg]));
+						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getBaseType(arg),
+								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))));
+						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
+								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))) << std::endl;
 						if(const TypePtr& newType = dynamic_pointer_cast<const Type>(nt)){
 							newParams.at(cnt) = builder.variable(newType);
 							cl_mems[params.at(cnt)] = newParams.at(cnt);
 							changed = true;
 						}
-					}
+					}}/* else if(cl_mems.find(vArg) != cl_mems.end()){
+						TypePtr argTy = getBaseType(arg);
+						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << argTy << "\ncl_mems[vArg] " <<
+								(static_pointer_cast<const Expression>(resolveElement(arg)))->getType() << std::endl;
+					}*/
 				}
 				++cnt;
 			});
