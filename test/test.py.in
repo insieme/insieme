@@ -16,8 +16,8 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 #
 
 USE_SMP = 1
-USE_SEQ = 0
-USE_RUN = 0
+USE_SEQ = 1
+USE_RUN = 1
 
 # compiler flags
 INSIEME_FLAGS = "--std=c99 -I."
@@ -104,14 +104,20 @@ def check_for_error(test_case, ret):
 		sys.stderr.write(bcolors.FAIL + "@------------------- end cause ---------------------" + bcolors.ENDC + "\n\n")
 
 	return ret
-    
-def check_diff(test_case_name, ref, test):
-	ret = run_cmd("diff {0} {1}".format(ref, test))
-	return not check_for_error(test_case_name, ret)
 
 def remove_if_exist(file_name):
 	if os.path.exists(file_name) : 
 		os.remove(file_name)
+
+def check_diff(test_case_name, ref, test):
+	refFile = ref + ".tmp"
+	testFile = test + ".tmp"
+	os.system("sort {0} > {1}".format(ref, refFile))
+	os.system("sort {0} > {1}".format(test, testFile))
+	ret = run_cmd("diff {0} {1}".format(refFile, testFile))
+	remove_if_exist(refFile)
+	remove_if_exist(testFile)
+	return not check_for_error(test_case_name, ret)
 
 def run_test_case(test_case_name): 
 	sys.stderr.write("#-----------------------------------------------------\n")
