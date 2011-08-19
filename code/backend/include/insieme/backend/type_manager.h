@@ -131,14 +131,6 @@ namespace backend {
 
 		c_ast::CodeFragmentPtr definition;
 
-		TypeInfo() {}
-
-		TypeInfo(const TypeInfo& info)
-			: lValueType(info.lValueType), rValueType(info.rValueType),
-			  externalType(info.externalType), externalize(info.externalize),
-			  internalize(info.internalize), declaration(info.declaration),
-			  definition(info.definition) { }
-
 		virtual ~TypeInfo() {};
 	};
 

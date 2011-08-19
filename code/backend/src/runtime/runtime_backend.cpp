@@ -101,9 +101,7 @@ namespace runtime {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				makePreProcessor<IfThenElseInlining>(),
-				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>(),
+				getBasicPreProcessorSequence(),
 				makePreProcessor<runtime::WorkItemExtractor>()
 		);
 		converter.setPreProcessor(preprocessor);

@@ -61,8 +61,8 @@ namespace runtime {
 			// convert to data item to tuple used within runtime
 			core::TupleTypePtr fullTuple = DataItem::getUnfoldedLWDataItemType(tupleType);
 
-			// obtain type information from base struct
-			return new TypeInfo(converter.getTypeManager().getTypeInfo(fullTuple));
+			// obtain type information from base struct => use the same type
+			return const_cast<TypeInfo*>(&converter.getTypeManager().getTypeInfo(fullTuple));
 		}
 
 

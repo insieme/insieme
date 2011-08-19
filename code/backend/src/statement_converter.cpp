@@ -189,6 +189,13 @@ namespace backend {
 			context.getDependencies().insert(fragment);
 		}
 
+		// special handling for type literals (fall-back solution)
+		if (core::analysis::isTypeLiteralType(ptr->getType())) {
+			const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+			context.addDependency(info.declaration);
+			return c_ast::lit(info.rValueType, "type_token");
+		}
+
 		// handle null pointer
 		if (converter.getNodeManager().getBasicGenerator().isNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");

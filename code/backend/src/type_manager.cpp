@@ -50,6 +50,7 @@
 
 #include "insieme/core/types.h"
 #include "insieme/core/ast_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -71,28 +72,6 @@ namespace backend {
 		template<> struct info_trait<core::FunctionType> { typedef FunctionTypeInfo type; };
 		template<> struct info_trait<core::RecType> { typedef TypeInfo type; };
 
-
-		class TypeInfoPtr {
-			TypeInfo* ptr;
-			bool owner;
-
-		public:
-			TypeInfoPtr(TypeInfo* ptr, bool owner=true)
-				: ptr(ptr), owner(owner) {}
-
-			operator TypeInfo*() const {
-				return ptr;
-			}
-
-			TypeInfo* getPointer() const {
-				return ptr;
-			}
-
-			bool isOwner() const {
-				return owner;
-			}
-		};
-
 		class TypeInfoStore {
 
 			const Converter& converter;
@@ -101,17 +80,19 @@ namespace backend {
 
 			TypeHandlerList typeHandlers;
 
-			utils::map::PointerMap<core::TypePtr, TypeInfoPtr> typeInfos;
+			utils::map::PointerMap<core::TypePtr, TypeInfo*> typeInfos; // < may contain duplicates
+
+			std::set<TypeInfo*> allInfos;
 
 		public:
 
 			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& typeHandlers)
-				: converter(converter), includeTable(includeTable), typeHandlers(typeHandlers), typeInfos() {}
+				: converter(converter), includeTable(includeTable), typeHandlers(typeHandlers), typeInfos(), allInfos() {}
 
 			~TypeInfoStore() {
 				// free all stored type information instances
-				for_each(typeInfos, [](const std::pair<core::TypePtr, TypeInfoPtr>& cur) {
-					if (cur.second.isOwner()) delete cur.second.getPointer();
+				for_each(allInfos, [](const TypeInfo* cur) {
+					delete cur;
 				});
 			}
 
@@ -307,6 +288,7 @@ namespace backend {
 
 			// store information
 			typeInfos.insert(std::make_pair(type, info));
+			allInfos.insert(info);
 
 			// return pointer to obtained information
 			return info;
@@ -352,6 +334,7 @@ namespace backend {
 				} else if (basic.isInt8(ptr)) {
 					type = c_ast::PrimitiveType::Int64;
 				} else {
+					LOG(FATAL) << "Unsupported integer type: " << *ptr;
 					assert(false && "Unsupported Integer type encountered!");
 					type = c_ast::PrimitiveType::Int32;
 				}
@@ -398,6 +381,32 @@ namespace backend {
 				return type_info_utils::createInfo(boolType, definition);
 			}
 
+			// -------------- type literals -------------
+
+			if (basic.isTypeLiteralTypeGen(ptr)) {
+
+				// creates a empty struct and a new type "type"
+
+				// create type literal type
+				c_ast::IdentifierPtr name = manager.create("type");
+				c_ast::TypePtr typeType = manager.create<c_ast::NamedType>(name);
+				c_ast::TypeDefinitionPtr def = manager.create<c_ast::TypeDefinition>(manager.create<c_ast::StructType>(manager.create("_type")), name);
+
+				// also add empty instance
+				c_ast::VarDeclPtr decl = manager.create<c_ast::VarDecl>(manager.create<c_ast::Variable>(typeType, manager.create("type_token")));
+
+				c_ast::CodeFragmentPtr code = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def, decl);
+
+				// add dependency to header
+				return type_info_utils::createInfo(typeType, code);
+			}
+
+			if (core::analysis::isTypeLiteralType(ptr)) {
+				// use same info then for the generic case
+				return resolveInternal(basic.getTypeLiteralTypeGen());
+			}
+
+
 			// TODO: replace by work item / work item group concepts
 			// check for job types ...
 			if(basic.isJob(ptr)) {
@@ -408,6 +417,7 @@ namespace backend {
 			}
 
 			// no match found => return unsupported type info
+			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager);
 		}
 
@@ -509,8 +519,8 @@ namespace backend {
 			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
 			auto pos = typeInfos.find(ptr);
 			if (pos != typeInfos.end()) {
-				assert(dynamic_cast<ArrayTypeInfo*>(pos->second.getPointer()));
-				return static_cast<ArrayTypeInfo*>(pos->second.getPointer());
+				assert(dynamic_cast<ArrayTypeInfo*>(pos->second));
+				return static_cast<ArrayTypeInfo*>(pos->second);
 			}
 
 			// create array type information
@@ -560,8 +570,8 @@ namespace backend {
 			// check whether the type has been resolved while resolving the sub-type
 			auto pos = typeInfos.find(ptr);
 			if (pos != typeInfos.end()) {
-				assert(dynamic_cast<VectorTypeInfo*>(pos->second.getPointer()));
-				return static_cast<VectorTypeInfo*>(pos->second.getPointer());
+				assert(dynamic_cast<VectorTypeInfo*>(pos->second));
+				return static_cast<VectorTypeInfo*>(pos->second);
 			}
 
 			// compose resulting info instance
@@ -650,8 +660,8 @@ namespace backend {
 			// check whether this ref type has been resolved while resolving the sub-type (due to recursion)
 			auto pos = typeInfos.find(ptr);
 			if (pos != typeInfos.end()) {
-				assert(dynamic_cast<RefTypeInfo*>(pos->second.getPointer()));
-				return static_cast<RefTypeInfo*>(pos->second.getPointer());
+				assert(dynamic_cast<RefTypeInfo*>(pos->second));
+				return static_cast<RefTypeInfo*>(pos->second);
 			}
 
 			// produce R and L value type
@@ -988,8 +998,8 @@ namespace backend {
 				// fix name of unrolled struct
 				nameManager.setName(unrolled, nameManager.getName(recType));
 
-				TypeInfoPtr& entry = typeInfos.at(recType);
-				TypeInfo* curInfo = entry.getPointer();
+				// get reference to pointer within map (needs to be updated)
+				TypeInfo*& curInfo = typeInfos.at(recType);
 				TypeInfo* newInfo = resolveType(unrolled);
 
 				assert(curInfo && newInfo && "Both should be available now!");
@@ -997,10 +1007,12 @@ namespace backend {
 
 				// combine them and updated within type info map (not being owned by the pointer)
 				newInfo->declaration = curInfo->declaration;
-				entry = TypeInfoPtr(newInfo, false);
 
 				// remove old information
 				delete curInfo;
+
+				// use new information
+				curInfo = newInfo;
 			});
 
 		}

@@ -99,9 +99,7 @@ namespace ocl_kernel {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				makePreProcessor<IfThenElseInlining>(),
-				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>(),
+				getBasicPreProcessorSequence(),
 				makePreProcessor<OCLPreprocessor>()
 		);
 		converter.setPreProcessor(preprocessor);

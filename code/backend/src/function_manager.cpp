@@ -172,6 +172,11 @@ namespace backend {
 					return;
 				}
 
+				// test if the current argument is a type literal
+				if (core::analysis::isTypeLiteralType(cur->getType())) {
+					return; // skip those parameters
+				}
+
 				// simply append the argument (externalize if necessary)
 				c_ast::ExpressionPtr res = stmtConverter.convertExpression(context, cur);
 				call->arguments.push_back((external)?typeManager.getTypeInfo(cur->getType()).externalize(manager, res):res);
@@ -705,11 +710,18 @@ namespace backend {
 			res.prototypeDependencies.insert(returnTypeInfo.definition);
 			c_ast::TypePtr returnType = (external)?returnTypeInfo.externalType:returnTypeInfo.rValueType;
 
-
 			// resolve parameters
 			int counter = 0;
 			vector<c_ast::VariablePtr> parameter;
 			for_each(funType->getParameterTypes(), [&](const core::TypePtr& cur) {
+
+				// skip type literals passed as arguments
+				if (core::analysis::isTypeLiteralType(cur)) {
+					counter++;
+					return;
+				}
+
+				// resolve parameter type
 				const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
 				res.prototypeDependencies.insert(paramTypeInfo.definition);
 
@@ -784,7 +796,17 @@ namespace backend {
 
 			// create a function body (call to the function including wrappers)
 			c_ast::CallPtr call = manager->create<c_ast::Call>(function->name);
-			::transform_range(make_paired_range(funType->getParameterTypes(), function->parameter), std::back_inserter(call->arguments),
+
+			// filter out type literal parameters
+			vector<core::TypePtr> paramTypes;
+			for_each(funType->getParameterTypes(), [&](const core::TypePtr& cur) {
+				if (!core::analysis::isTypeLiteralType(cur)) {
+					paramTypes.push_back(cur);
+				}
+			});
+
+			// add parameters for wrapper
+			::transform_range(make_paired_range(paramTypes, function->parameter), std::back_inserter(call->arguments),
 					[&](const std::pair<core::TypePtr, c_ast::VariablePtr>& cur)->c_ast::ExpressionPtr {
 						if (external) {
 							return typeManager.getTypeInfo(cur.first).externalize(manager, cur.second);
