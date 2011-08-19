@@ -41,6 +41,8 @@
 #include <map>
 #include <exception>
 
+#include <boost/logic/tribool.hpp>
+
 #include "insieme/core/ast_node.h"
 #include "insieme/core/identifier.h"
 #include "insieme/core/statements.h"
@@ -341,7 +343,7 @@ class LambdaExpr : public Expression {
 	/**
 	 * A flag indicating whether this lambda is representing a recursive function.
 	 */
-	const bool recursive;
+	mutable boost::logic::tribool recursive;
 
 	/**
 	 * A constructor for creating a new lambda.
@@ -441,7 +443,13 @@ public:
 	/**
 	 * Determines whether this function is recursively defined or not.
 	 */
-	bool isRecursive() const { return recursive; }
+	bool isRecursive() const {
+		// evaluate lazily
+		if (boost::logic::indeterminate(recursive)) {
+			recursive = definition->isRecursive(variable);
+		}
+		return recursive;
+	}
 };
 
 /**
