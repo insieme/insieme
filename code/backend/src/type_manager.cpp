@@ -119,6 +119,7 @@ namespace backend {
 
 			// --------------- Internal resolution utilities -----------------
 
+			TypeInfo* addInfo(const core::TypePtr& type, TypeInfo* info);
 			TypeInfo* resolveInternal(const core::TypePtr& type);
 
 			TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
@@ -210,6 +211,12 @@ namespace backend {
 
 		// --------------------- Type Specific Wrapper --------------------
 
+		TypeInfo* TypeInfoStore::addInfo(const core::TypePtr& type, TypeInfo* info) {
+			// register type information
+			typeInfos.insert(std::make_pair(type, info));
+			allInfos.insert(info);
+			return info;
+		}
 
 		// --------------------- Implementations of resolution utilities --------------------
 
@@ -228,7 +235,7 @@ namespace backend {
 				// create new info referencing a header file
 				const string& header = pos2->second;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				typeInfos.insert(std::make_pair(type, info));
+				addInfo(type,info);
 				return info;
 			}
 
@@ -239,7 +246,7 @@ namespace backend {
 				// create new info referencing a header file
 				const string& header = pos2->second;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				typeInfos.insert(std::make_pair(type, info));
+				addInfo(type,info);
 				return info;
 			}
 
@@ -248,7 +255,7 @@ namespace backend {
 			for(auto it = typeHandlers.begin(); it!= typeHandlers.end(); ++it) {
 				TypeInfo* info = (*it)(converter, type);
 				if (info) {
-					typeInfos.insert(std::make_pair(type, info));
+					addInfo(type,info);
 					return info;
 				}
 			}
@@ -287,8 +294,7 @@ namespace backend {
 			}
 
 			// store information
-			typeInfos.insert(std::make_pair(type, info));
-			allInfos.insert(info);
+			addInfo(type,info);
 
 			// return pointer to obtained information
 			return info;
