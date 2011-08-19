@@ -53,22 +53,11 @@ struct Set : public utils::Printable {
 	
 	typedef Ctx ctx_type;
 
-	// Creates a universe Set based on the dimensionality of the given iteration vector. 
-	// Once creates, the iteration vector on which the set is based cannot been changed. 
-	Set(Ctx& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { } 
-	
-	// Adds a new constraint to this set. 
-	//
-	// The iteration vector on which c is expressed must be compatibile with the iterVec
-	virtual void applyConstraint(const ConstraintCombinerPtr& c) = 0;
-
 	virtual std::ostream& printTo(std::ostream& out) const = 0; 
 
 	virtual ~Set() { }
-
-protected:
-	Ctx& ctx;
-	const IterationVector& iterVec;
+private:
+	Set();
 };
 
 template <class Ctx> 
@@ -76,42 +65,52 @@ struct Map : public utils::Printable {
 
 	typedef Ctx ctx_type;
 
-	Map(Ctx& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { }
-
-	virtual void intersect(const Set<Ctx>& set) = 0;
-
 	virtual std::ostream& printTo(std::ostream& out) const = 0; 
 
 	virtual ~Map() { }
-protected:
-	Ctx& ctx;
-	const IterationVector& iterVec;
+
+private:
+	Map();
 };
 
 template <class SetTy>
-SetTy set_union(const SetTy& lhs, const SetTy& rhs);
+SetTy set_union(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
 
 template <class SetTy>
-SetTy set_intersect(const SetTy& lhs, const SetTy& rhs);
+SetTy set_intersect(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
 
-//template <class SetTy>
-//SetTy set_negate(const SetTy& lhs);
+template <class SetTy>
+SetTy set_negate(const SetTy& lhs) { assert(false && "TO BE IMPLEMENTED!"); }
 
 //===== Conversion Utilities ======================================================================
-// Utilities to convert data structures represented as IR annotations
-template <class SetTy>
-SetTy convertIterationDomain(typename SetTy::ctx_type& ctx, const poly::IterationVector& iv, 
-		const ConstraintCombinerPtr& constraints) 
+
+enum Backend { ISL };
+
+/**
+ * Defines type traits which are used to determine the type of the context for implementing backends 
+ */
+template <Backend B>
+struct BackendTraits;
+
+template <Backend B>
+std::shared_ptr<typename BackendTraits<B>::ctx_type>
+createContext() { return std::make_shared<typename BackendTraits<B>::ctx_type>(); }
+
+template <Backend B>
+std::shared_ptr<Set<typename BackendTraits<B>::ctx_type>> 
+makeSet( typename BackendTraits<B>::ctx_type& ctx, 
+		 const IterationVector& iterVec,
+		 const ConstraintCombinerPtr& constraint) 
 {
-	SetTy set(ctx, iv);
-	if ( constraints ) { set.applyConstraint(constraints); } // FIXME
-	return set;
+	return std::make_shared<Set<typename BackendTraits<B>::ctx_type>>(ctx, iterVec, constraint);
 }
 
-template <class MapTy>
-MapTy convertScatteringFunction(typename MapTy::ctx_type& ctx, const AffineSystem& scat) {
-	MapTy map(ctx, scat.getIterationVector(), scat);
-	return map;
+template <Backend B>
+std::shared_ptr<Map<typename BackendTraits<B>::ctx_type>>
+makeMap( typename BackendTraits<B>::ctx_type& ctx, 
+		 const AffineSystem& affSys)
+{
+	return std::make_shared<Map<typename BackendTraits<B>::ctx_type>>(ctx, affSys);
 }
 
 } // end poly namespace

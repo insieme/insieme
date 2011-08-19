@@ -38,24 +38,13 @@
 
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
+#include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/core/expressions.h"
 
 using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::core;
-
-void printIslSet(std::ostream& out, isl_ctx* ctx, isl_set* set) {
-	isl_printer* printer = isl_printer_to_str(ctx);
-	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
-	isl_printer_set_indent(printer, 1);
-	isl_printer_print_set(printer, set);
-	isl_printer_flush(printer);
-	char* str = isl_printer_get_str(printer);
-	out << str;
-	free(str); // free the allocated string by the library
-	isl_printer_free(printer);
-}
 
 #define CREATE_ITER_VECTOR \
 	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); \
@@ -73,9 +62,12 @@ TEST(IslBackend, SetCreation) {
 	NodeManager mgr;	
 	CREATE_ITER_VECTOR; 
 
-	poly::backend::IslContext ctx;
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, poly::ConstraintCombinerPtr() );
 
-	poly::backend::IslSet set(ctx, iterVec);
+	std::ostringstream ss;
+	set->printTo(ss);
+	EXPECT_EQ("[v3] -> { [v1] }", ss.str());
 	
 }
 
@@ -86,22 +78,20 @@ TEST(IslBackend, SetConstraint) {
 	poly::AffineFunction af(iterVec, {0,3,10} );
 	poly::Constraint c(af, poly::Constraint::LT);
 
-	poly::backend::IslContext ctx;
-	poly::backend::IslSet set(ctx, iterVec);
-
-	set.applyConstraint( makeCombiner(c) );
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c));
 
 	std::ostringstream ss;
-	ss << set;
+	set->printTo(ss);
 	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", ss.str());
 
 	// Build directly the ISL set
-	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
+	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
 			"[v3] -> {[v1] : 3v3 + 10 < 0}", -1
 		);
 
 	// check for equality
-	EXPECT_TRUE(isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())));
+	EXPECT_TRUE( isl_set_is_equal(refSet, const_cast<isl_set*>(set->getAsIslSet())) );
 	
 	isl_set_free(refSet);
 }
@@ -117,21 +107,20 @@ TEST(IslBackend, SetConstraintNormalized) {
 
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
-	poly::backend::IslContext ctx;
-	poly::backend::IslSet set(ctx, iterVec);
-	set.applyConstraint( makeCombiner(c) );
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c));
 
 	std::ostringstream ss;
-	ss << set;
+	set->printTo(ss);
 	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", ss.str());
 
 	// Build directly the ISL set
-	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
+	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
 			"[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}", -1
 		);
 
 	// check for equality
-	EXPECT_TRUE(isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())));
+	EXPECT_TRUE(isl_set_is_equal(refSet, const_cast<isl_set*>(set->getAsIslSet())));
 	
 	isl_set_free(refSet);
 }
@@ -157,22 +146,20 @@ TEST(IslBackend, FromCombiner) {
 	
 // 	std::cout << *ptr << std::endl;
 
-	poly::backend::IslContext ctx;
-	poly::backend::IslSet set(ctx, iterVec);
-	set.applyConstraint(ptr);
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, ptr);
 
 	std::ostringstream ss;
-	ss << set;
+	set->printTo(ss);
 	EXPECT_EQ("[v3] -> { [v1] : v3 = -5 or 2v1 >= -10 - 3v3 }", ss.str());
 
 	// Build directly the ISL set
-	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
+	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
 			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}", -1
 		);
 	
-	printIslSet(std::cout, ctx.getRawContext(), refSet);
 	// check for equality
-	EXPECT_TRUE( isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())) );
+	EXPECT_TRUE( isl_set_is_equal(refSet, const_cast<isl_set*>(set->getAsIslSet())) );
 	
 	isl_set_free(refSet);
 }
@@ -181,14 +168,14 @@ TEST(IslBackend, SimpleMap) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystem affSys(iterVec);
+	poly::AffineSystemPtr affSys = std::make_shared<poly::AffineSystem>(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys.appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
-	affSys.appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
-	affSys.appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
 	
-	poly::backend::IslContext ctx;
-	poly::backend::IslMap map(ctx,iterVec,affSys);
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& map = poly::makeMap<poly::ISL>(*ctx, *affSys);
 
 }
 

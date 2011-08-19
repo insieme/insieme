@@ -44,7 +44,6 @@
 namespace insieme {
 namespace analysis {
 namespace poly {
-namespace backend {
 
 namespace {
 
@@ -173,7 +172,11 @@ struct ISLConstraintConverterVisitor : public ConstraintVisitor {
 template <class IterT>
 void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin, IterT const& end) {
 	for(IterT it = begin; it != end; ++it) {
-		isl_dim_set_name(dim, type, std::distance(begin, it), it->getVariable()->toString().c_str());
+		assert(dynamic_cast<const Variable*>(&*it) != NULL && "Element of not Variable type");
+		const poly::Variable& var = static_cast<const Variable&>(*it);
+		isl_dim_set_name(dim, type, std::distance(begin, it), 
+				var.getVariable()->toString().c_str()
+			);
 	}
 }
 
@@ -181,7 +184,9 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 
 //==== IslSet ====================================================================================
 
-IslSet::IslSet(IslContext& ctx, const IterationVector& iterVec) : Set(ctx, iterVec) {
+Set<IslContext>::Set(IslContext& ctx, const IterationVector& iterVec, const ConstraintCombinerPtr& constraint) : 
+	ctx(ctx), iterVec(iterVec), constraint(constraint) 
+{
 	// Build the dim object
 	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
 
@@ -191,25 +196,28 @@ IslSet::IslSet(IslContext& ctx, const IterationVector& iterVec) : Set(ctx, iterV
 	// Set the names for the parameters of this dim
 	setVariableName(dim, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 
-	// creates an universe set containing the dimensionatility of the iteration vector
 	set = isl_set_universe( isl_dim_copy(dim) );
+
+	// If a non empty constraint is provided, then add it to the universe set 
+	if (constraint) {
+		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
+		constraint->accept(ccv);
+		set = isl_set_intersect(set, ccv.getResult());
+	} 
 }
 
-std::ostream& IslSet::printTo(std::ostream& out) const {
+std::ostream& Set<IslContext>::printTo(std::ostream& out) const {
 	printIslSet(out, ctx.getRawContext(), set); 
 	return out;
 }
 
-void IslSet::applyConstraint(const ConstraintCombinerPtr& cc) {
-	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
-	cc->accept(ccv);
-
-	set = isl_set_intersect(set, ccv.getResult());
-}
-
 //==== IslMap ====================================================================================
 
-IslMap::IslMap(IslContext& ctx, const IterationVector& iterVec, const AffineSystem& affSys) : Map(ctx, iterVec) {
+Map<IslContext>::Map(IslContext& ctx, const AffineSystem& affSys) : 
+	ctx(ctx), affSys(affSys) 
+{
+	const IterationVector& iterVec = affSys.getIterationVector();
+
 	// Build the dim object
 	dim = isl_dim_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum(), affSys.size());
 
@@ -240,16 +248,15 @@ IslMap::IslMap(IslContext& ctx, const IterationVector& iterVec, const AffineSyst
 	map = isl_map_from_basic_map(bmap);
 }
 
-std::ostream& IslMap::printTo(std::ostream& out) const {
+std::ostream& Map<IslContext>::printTo(std::ostream& out) const {
 	printIslMap(out, ctx.getRawContext(), map); 
 	return out;
 }
 
-void IslMap::intersect(const Set<IslContext>& set) {
-	map = isl_map_intersect_domain( map, isl_set_copy(static_cast<const IslSet&>(set).set) );
-}
+// void IslMap::intersect(const Set<IslContext>& set) {
+//	map = isl_map_intersect_domain( map, isl_set_copy(static_cast<const IslSet&>(set).set) );
+//}
 
-} // end backends namespace 
 } // end poly namespace 
 } // end analysis namespace 
 } // end insieme namespace 
