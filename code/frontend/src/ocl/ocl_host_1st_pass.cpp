@@ -158,6 +158,30 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
 	}
 	return true;
 }
+
+void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
+	if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(path)) {
+		if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
+			if(stringAsChar->getValue() == "string.as.char.pointer") {
+				if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
+					kernels = loadKernelsFromFile(path->getValue(), builder);
+
+					// set source string to an empty char array
+					//							ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
+				}
+			}
+		}
+	}
+	if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(path)) {
+		//            std::cout << "PathVariable: " << pathVar << std::endl;
+		KernelCodeRetriver kcr(pathVar, root, builder);
+		visitDepthFirst(mProgram, kcr);
+		string kernelFilePath = kcr.getKernelFilePath();
+		if(kernelFilePath.size() > 0)
+		kernels = loadKernelsFromFile(kernelFilePath, builder);
+	}
+}
+
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type) {
 	// get rid of casts
 	NodePtr uncasted = arg;
@@ -392,29 +416,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	);
 
 	ADD_Handler(builder, "oclLoadProgSource",
-			//			NodePtr ret = node;
-			if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(node->getArgument(0))) {
-				if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-					if(stringAsChar->getValue() == "string.as.char.pointer") {
-						if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-							kernels = loadKernelsFromFile(path->getValue(), builder);
-
-							// set source string to an empty char array
-							//							ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
-						}
-					}
-				}
-			}
-			if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(node->getArgument(0))) {
-				//            std::cout << "PathVariable: " << pathVar << std::endl;
-				KernelCodeRetriver kcr(pathVar, node, builder);
-				visitDepthFirst(mProgram, kcr);
-				string kernelFilePath = kcr.getKernelFilePath();
-				if(kernelFilePath.size() > 0)
-				kernels = loadKernelsFromFile(kernelFilePath, builder);
-			}
+			this->findKernelsUsingPathString("irt_ocl_create_kernel", node->getArgument(0), node);
 			// set source string to an empty char array
 			return builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
+	);
+
+	// TODO ignores 3rd argument (kernelName) and just adds all kernels to the program
+	ADD_Handler(builder, "irt_ocl_create_kernel",
+			this->findKernelsUsingPathString("irt_ocl_create_kernel", node->getArgument(1), node);
+			return builder.uintLit(0);
 	);
 
 	ADD_Handler(builder, "clEnqueueNDRangeKernel",
@@ -509,13 +519,19 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	ADD_Handler(builder, "clCreateContext", return node;);
 	ADD_Handler(builder, "clCreateCommandQueue", return node;);
 	ADD_Handler(builder, "clCreateKernel", return node;);
+
+
+	// handlers for insieme opencl runtime stuff
+	ADD_Handler(builder, "irt_ocl_",
+		return builder.uintLit(0); // default handling, remove it
+	);
 };
 
 HandlerPtr& HostMapper::findHandler(const string& fctName) {
-	// for performance reasons working with function prefixes is only enabled for cl* functions
-	if (fctName.substr(0, 2).find("cl") == string::npos)
+	// for performance reasons working with function prefixes is only enabled for funcitons containing cl
+	// needed for cl*, ocl* and irt_ocl_* functions
+	if (fctName.find("cl") == string::npos)
 		return handles[fctName];
-
 	// checking function names, starting from the full name
 	for (int i = fctName.size(); i > 2; --i) {
 		if (HandlerPtr& h = handles[fctName.substr(0,i)])

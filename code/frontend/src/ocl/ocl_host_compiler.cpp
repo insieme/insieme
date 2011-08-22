@@ -78,7 +78,7 @@ ProgramPtr HostCompiler::compile() {
 
 	if(oclHostMapper.getnKernels() == 0) {
 		LOG(INFO) << "No OpenCL kernel functions found";
-		return mProgram;
+//		return mProgram;
 	}
 	LOG(INFO) << "Adding " << oclHostMapper.getnKernels() << " OpenCL kernels to host Program... ";
 
