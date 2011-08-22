@@ -51,7 +51,7 @@ namespace runtime {
 
 	namespace {
 
-		TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
 			// make sure it is only invoked using LW data items
 			assert(DataItem::isLWDataItemType(type) && "Only works on LW Data Items!");
 
@@ -63,11 +63,11 @@ namespace runtime {
 			core::TupleTypePtr fullTuple = DataItem::getUnfoldedLWDataItemType(tupleType);
 
 			// obtain type information from base struct => use the same type
-			return const_cast<TypeInfo*>(&converter.getTypeManager().getTypeInfo(fullTuple));
+			return &converter.getTypeManager().getTypeInfo(fullTuple);
 		}
 
 
-		TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
 			const Extensions& extensions = converter.getNodeManager().getLangExtension<Extensions>();
 

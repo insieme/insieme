@@ -48,7 +48,7 @@ namespace ocl_kernel {
 
 	namespace {
 
-		TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
 			auto& basic = converter.getNodeManager().getBasicGenerator();
 			auto& extensions = converter.getNodeManager().getLangExtension<Extensions>();
