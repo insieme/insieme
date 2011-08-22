@@ -5,6 +5,18 @@ project(insieme_driver CXX)
 
 include(../environment.cmake)
 
+# enable XML if requested
+if (USE_XML) 	
+	list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
+	find_package(Xerces)
+	if ( NOT ${Xerces_FOUND} )
+		message("Xerces library not found, XML support will be disabled!")
+		set(USE_XML OFF)
+	else ()
+		add_definitions(-DUSE_XML)
+	endif()
+endif (USE_XML)
+
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
