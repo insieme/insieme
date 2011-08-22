@@ -467,7 +467,7 @@ def run_test_case(test_case_name):
 				test_out = "test.out"	
 				start = time.time()
 
-				os.system("./host ocl_kernel.insieme.sbe.c > {0}".format( test_out))
+				os.system("./host ocl_kernel.insieme.smp.c > {0}".format( test_out))
 				sys.stderr.write(" [{0:.4f} secs]\n".format(time.time() - start))
 
 				sys.stderr.write(" * Checking generated program output... ")
