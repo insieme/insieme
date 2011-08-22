@@ -34,22 +34,35 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "data/tuning.h"
-#include "data/metric_table.h"
+#include "tuning.h"
 
-int equal(const char* s1, const char* s2) {
-	return !strcmp(s1,s2);
-}
 
-TEST(tuning, compileable_test) {
-	// just testing whether header is compiling
+/**
+ * The global list of metric names for simple access. These instances
+ * can also be used to forward
+ */
+typedef enum {
+	#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name,
+	#include "metric.def"
+	#undef METRIC
+} irt_atomic_metric;
 
-	// check size of irt value element
-	EXPECT_LE(sizeof(irt_value), 2*sizeof(void*));
+/**
+ * The metric table listing all atomic metrics supported within the system.
+ * The IDs used to identify atomic metrics is based on the order of the
+ * entries within this table.
+ */
+const irt_atomic_metric_info g_atomic_metric_table[] = {
+	#define METRIC(id, name, type, res, desc) { id, type, res, desc },
+	#include "metric.def"
+	#undef METRIC
+};
 
-	// just test access
-	EXPECT_PRED2(equal, "The execution time in nano-seconds", irt_get_metric_info(IRT_METRIC_EXEC_TIME)->name);
 
+// --------------------------- utilities ------------------------
+
+const irt_atomic_metric_info* irt_get_metric_info(irt_atomic_metric metric) {
+	return &g_atomic_metric_table[metric];
 }
