@@ -20,11 +20,12 @@ USE_SEQ = 0
 USE_RUN = 0
 
 # compiler flags
+SRC_DIR = "${CMAKE_SOURCE_DIR}"
 INSIEME_FLAGS = "--std=c99 -I."
 CFLAGS_GCC = "-O3 --std=c99 -I."
-CFLAGS_SMP = "-O3 --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/simple_backend/include/insieme/simple_backend/runtime"
+CFLAGS_SMP = "-O3 --std=c99 -I. -I{SRC_DIR}/code/simple_backend/include/insieme/simple_backend/runtime".format(**{'SRC_DIR': SRC_DIR})
 CFLAGS_SEQ = "-O3 --std=c99 -I."
-CFLAGS_RUN = "-O3 --std=c99 -I. -I${CMAKE_SOURCE_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE"
+CFLAGS_RUN = "-O3 --std=c99 -I. -I{SRC_DIR}/code/runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE".format(**{'SRC_DIR': SRC_DIR})
 
 
 # linker flags
@@ -157,15 +158,15 @@ def run_test_case(test_case_name):
 
 		insiemeFlags = ''
 		if os.path.exists(test_case_name + '/insieme.flags'):
-			insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().split(',')])
+			insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
 
 		gccFlagsRef = ''
 		if os.path.exists(test_case_name + '/ref-gcc.flags'):
-			gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().split(',')])
+			gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
 
 		gccFlagsTest = ''
 		if os.path.exists(test_case_name + '/test-gcc.flags'):
-			gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().split(',')])
+			gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
 
 		os.chdir(test_case_name)
 
@@ -189,7 +190,7 @@ def run_test_case(test_case_name):
 			return 1
 
 		# run non-cl tests
-		if(test_case_name != "ocl_kernel"):
+		if(test_case_name != "ocl_kernel" and test_case_name != "openCore"):
 
 			if USE_SMP:
 				# RUN insieme to generate simple-backend output code
