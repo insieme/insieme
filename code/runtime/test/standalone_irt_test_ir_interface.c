@@ -95,15 +95,15 @@ void insieme_cleanup_context(irt_context* context) {
 int main(int argc, char **argv) {
 	uint32 wcount = irt_get_default_worker_count();
 	if(argc>=2) wcount = atoi(argv[1]);
-	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, NULL);
+	irt_runtime_standalone(wcount, &insieme_init_context, &insieme_cleanup_context, 0, NULL);
 	return 0;
 }
 
 // work item function definitions
 
 void insieme_wi_startup_implementation(irt_work_item* wi) {
-	irt_parallel_job job = { NULL, 8,8,1, INSIEME_TEST_WI_INDEX, NULL };
-	irt_work_group* par_wg = irt_parallel(&job);
+	irt_parallel_job job = { 8,8,1, INSIEME_TEST_WI_INDEX, NULL };
+	irt_work_group* par_wg = irt_parallel(NULL, &job);
 	irt_wg_join(par_wg);
 	irt_wi_end(wi);
 }

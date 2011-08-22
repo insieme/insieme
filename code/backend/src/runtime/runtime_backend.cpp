@@ -144,6 +144,11 @@ namespace runtime {
 			// add runtime-specific includes
 			res["irt_get_default_worker_count"] 	= "standalone.h";
 			res["irt_runtime_standalone"] 			= "standalone.h";
+
+			res["irt_parallel"] 					= "ir_interface.h";
+			res["irt_merge"] 						= "ir_interface.h";
+
+			res["irt_wg_join"]						= "irt_all_impls.h";
 			res["irt_wi_end"]						= "irt_all_impls.h";
 
 			return res;
@@ -152,7 +157,8 @@ namespace runtime {
 		TypeIncludeTable getTypeIncludeTable() {
 			TypeIncludeTable res = getBasicTypeIncludeTable();
 
-			// nothing added yet
+			// some runtime types ...
+			res["irt_parallel_job"]				= "ir_interface.h";
 
 			return res;
 		}

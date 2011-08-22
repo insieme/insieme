@@ -49,23 +49,12 @@ namespace runtime {
 	const string DATA_ITEM_TYPE_NAME = "DataItem";
 	const string LW_DATA_ITEM_TYPE_NAME = "LWDataItem";
 
+	// TODO: re-write using type parser
+
 	namespace {
 
 		const core::TypePtr getContextType(core::NodeManager& manager) {
 			return core::GenericType::get(manager, "Context");
-		}
-
-		const core::LiteralPtr getRunStandalone(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// create type + literal
-			core::TypeList componentTypes;
-			componentTypes.push_back(basic.getInt4());
-			componentTypes.push_back(builder.refType(builder.arrayType(builder.refType(builder.arrayType(basic.getChar())))));
-			core::TypePtr args = DataItem::toLWDataItemType(builder.tupleType(componentTypes));
-			core::TypePtr type = builder.functionType(toVector(args), basic.getUnit());
-			return builder.literal(type, "runStandalone");
 		}
 
 
@@ -121,6 +110,20 @@ namespace runtime {
 
 
 		// -- Runtime Constructors ------------------------------------------------------
+
+		const core::LiteralPtr getRunStandalone(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+			auto& basic = manager.basic;
+
+			// create type + literal
+			core::TypeList componentTypes;
+			componentTypes.push_back(basic.getInt4());
+			componentTypes.push_back(builder.refType(builder.arrayType(builder.refType(builder.arrayType(basic.getChar())))));
+			core::TypePtr impl = getWorkItemImplType(manager);
+			core::TypePtr args = DataItem::toLWDataItemType(builder.tupleType(componentTypes));
+			core::TypePtr type = builder.functionType(toVector(impl, args), basic.getUnit());
+			return builder.literal(type, "runStandalone");
+		}
 
 		const core::LiteralPtr getWorkItemImplCtr(core::NodeManager& manager) {
 			core::ASTBuilder builder(manager);
@@ -249,6 +252,49 @@ namespace runtime {
 			return builder.literal(type, "unwrap");
 		}
 
+		const core::TypePtr getJobType(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+			return builder.genericType("irt_parallel_job");
+		}
+
+		const core::LiteralPtr getCreateJob(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			// assemble argument list and literal type
+			core::TypePtr uint8 = manager.getBasicGenerator().getUInt8();
+			core::TypePtr implType = getWorkItemImplType(manager);
+			core::TypePtr data = getLWDataItemType(manager);
+			core::FunctionTypePtr funType = builder.functionType(toVector(uint8, uint8, uint8, implType, data), getJobType(manager));
+			return builder.literal(funType, "createJob");
+		}
+
+		const core::LiteralPtr getParallel(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			// assemble argument list and literal type
+			core::TypePtr job = getJobType(manager);
+			core::FunctionTypePtr funType = builder.functionType(toVector(job), getWorkItemType(manager));
+			return builder.literal(funType, "irt_parallel");
+		}
+
+		const core::LiteralPtr getPFor(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			// assemble argument list and literal type
+			core::TypePtr int8 = manager.getBasicGenerator().getInt8();
+			core::TypePtr bodyImpl = getWorkItemImplType(manager);
+			core::TypePtr data = getLWDataItemType(manager);
+			core::FunctionTypePtr funType = builder.functionType(toVector(int8,int8,int8,bodyImpl,data), getWorkItemType(manager));
+			return builder.literal(funType, "irt_pfor");
+		}
+
+		const core::LiteralPtr getMerge(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			core::FunctionTypePtr funType = builder.functionType(toVector(getWorkItemType(manager)), builder.getBasicGenerator().getUnit());
+			return builder.literal(funType, "irt_merge");
+		}
+
 		const core::LiteralPtr getGetWorkItemArgument(core::NodeManager& manager) {
 			core::ASTBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
@@ -289,6 +335,11 @@ namespace runtime {
 		  LWDataItemType(getLWDataItemType(manager)),
 		  wrapLWData(getWrapLWData(manager)),
 		  unwrapLWData(getUnwrapLWData(manager)),
+		  jobType(getJobType(manager)),
+		  createJob(getCreateJob(manager)),
+		  parallel(getParallel(manager)),
+		  pfor(getPFor(manager)),
+		  merge(getMerge(manager)),
 		  getWorkItemArgument(getGetWorkItemArgument(manager)) {}
 
 

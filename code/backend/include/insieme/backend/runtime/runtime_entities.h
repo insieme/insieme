@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <limits>
+
 namespace insieme {
 namespace backend {
 namespace runtime {
@@ -45,6 +47,16 @@ namespace runtime {
 	//   A data infrastructure to handle runtime items
 	// ------------------------------------------------------------
 
+	struct Range {
+		uint64_t min;
+		uint64_t max;
+		uint64_t mod;
+
+	public:
+
+		Range(uint64_t min, uint64_t max, uint64_t mod)
+			: min(min), max(max), mod(mod) {}
+	};
 
 	class DataItem {
 
@@ -118,10 +130,100 @@ namespace encoder {
 
 	namespace rbe = backend::runtime;
 
-
 	// ------------------------------------------------------------
 	//   Implementations to fit into the data encoding framework
 	// ------------------------------------------------------------
+
+
+	// -- Ranges ---------------------------------
+
+	template<>
+	struct type_factory<rbe::Range> {
+		core::TypePtr operator()(core::NodeManager& manager) const {
+			return manager.getBasicGenerator().getJobRange();
+		}
+	};
+
+	template<>
+	struct value_to_ir_converter<rbe::Range> {
+		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::Range& value) const {
+			ASTBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+
+			// create a call to the range constructor using the given values
+			core::ExpressionPtr min = toIR(manager, value.min);
+			core::ExpressionPtr max = toIR(manager, value.max);
+			core::ExpressionPtr mod = toIR(manager, value.mod);
+			return builder.callExpr(basic.getJobRange(), basic.getCreateBoundRangeMod(), toVector(min, max, mod));
+		}
+	};
+
+	template<>
+	struct ir_to_value_converter<rbe::Range> {
+		rbe::Range operator()(const core::ExpressionPtr& expr) const {
+			const lang::BasicGenerator& basic = expr->getNodeManager().getBasicGenerator();
+
+			// check for call
+			if (expr->getNodeType() != core::NT_CallExpr) {
+				throw InvalidExpression(expr);
+			}
+
+			const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
+			const core::ExpressionPtr& fun = call->getFunctionExpr();
+			const core::ExpressionList& args = call->getArguments();
+
+			uint64_t min = 1;
+			uint64_t max = std::numeric_limits<uint32_t>::max(); // target filed is 32 bit only ...
+			uint64_t mod = 1;
+			if (basic.isCreateMinRange(fun)) {
+				min = toValue<uint64_t>(args[0]);
+			} else if (basic.isCreateBoundRange(fun)) {
+				min = toValue<uint64_t>(args[0]);
+				max = toValue<uint64_t>(args[1]);
+			} else if (basic.isCreateBoundRangeMod(fun)) {
+				min = toValue<uint64_t>(args[0]);
+				max = toValue<uint64_t>(args[1]);
+				mod = toValue<uint64_t>(args[2]);
+			} else {
+				throw InvalidExpression(expr);
+			}
+
+			// construct result
+			return rbe::Range(min, max, mod);
+		}
+	};
+
+	template<>
+	struct is_encoding_of<rbe::Range> {
+		bool operator()(const core::ExpressionPtr& expr) const {
+
+			// check call expr
+			if (!expr || expr->getNodeType() != core::NT_CallExpr) {
+				return false;
+			}
+
+			// check call target and arguments
+			const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
+			const core::lang::BasicGenerator& basic = expr->getNodeManager().getBasicGenerator();
+
+			const core::ExpressionPtr& fun = call->getFunctionExpr();
+
+			std::size_t numArgs = 0;
+			if (basic.isCreateMinRange(fun)) {
+				numArgs = 1;
+			} else if (basic.isCreateBoundRange(fun)) {
+				numArgs = 2;
+			} else if (basic.isCreateBoundRangeMod(fun)) {
+				numArgs = 3;
+			} else {
+				return false;
+			}
+
+			// check number and encoding of arguments
+			const core::ExpressionList& args = call->getArguments();
+			return args.size() == numArgs && all(args, [](const core::ExpressionPtr& cur) { return isEncodingOf<uint64_t>(cur); });
+		}
+	};
 
 
 	// -- Work Item Impls ---------------------------
