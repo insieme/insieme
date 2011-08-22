@@ -34,32 +34,8 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/ast_builder.h"
-#include "insieme/frontend/program.h"
-
-namespace insieme {
-namespace frontend {
-namespace ocl {
-
-
-/*
- * provides interface to the OpenCL host compiler
- */
-class HostCompiler {
-	core::ProgramPtr& mProgram;
-	//    frontend::Program& mProg;
-	core::ASTBuilder builder;
-
-public:
-	HostCompiler(core::ProgramPtr& program) :
-		mProgram(program), builder(program->getNodeManager()) {
-	}
-
-	core::ProgramPtr compile();
-};
-
-} //namespace ocl
-} //namespace frontend
-} //namespace insieme
+__kernel void vec_add(__global int* input1, __global int* input2, __global int* output, int num_elements) {
+	int gid = get_global_id(0);
+	if (gid >= num_elements) return;
+	output[gid] = (input1[gid] + input2[gid])/2;
+}
