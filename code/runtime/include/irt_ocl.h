@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "CL/opencl.h"
+#include "CL/cl.h"
 #include "impl/error_handling.impl.h"
 
 #define DEVICE_TYPE (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_CPU)

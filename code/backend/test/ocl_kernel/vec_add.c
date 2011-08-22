@@ -42,12 +42,10 @@
 
 int main(int argc, char* argv[]) {
 	int len_input = SIZE;
-	int input_size = sizeof(int) * SIZE;
-	int output_size = sizeof(int) * SIZE;
 
-	int* input1 = (int*)malloc(input_size);
-	int* input2 = (int*) malloc(input_size);
-	int* output = (int *)malloc(output_size);
+	int* input1 = (int*)malloc(sizeof(int) * SIZE);
+	int* input2 = (int*)malloc(sizeof(int) * SIZE);
+	int* output = (int*)malloc(sizeof(int) * SIZE);
 	
 	for(int i=0; i < SIZE; ++i) {
 		input1[i] = i;
@@ -59,12 +57,12 @@ int main(int argc, char* argv[]) {
 		irt_ocl_device* dev = irt_ocl_get_device(0);
 		irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "vec_add.cl", "vec_add", "", IRT_OCL_SOURCE);
 		
-		irt_ocl_buffer* buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, input_size);
-		irt_ocl_buffer* buf_input2 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, input_size);
-		irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, output_size);
+		irt_ocl_buffer* buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
+		irt_ocl_buffer* buf_input2 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
+		irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * SIZE);
 
-		irt_ocl_write_buffer(buf_input1, CL_FALSE, input_size, &input1[0]);
-		irt_ocl_write_buffer(buf_input2, CL_FALSE, input_size, &input2[0]);
+		irt_ocl_write_buffer(buf_input1, CL_FALSE, sizeof(int) * SIZE, &input1[0]);
+		irt_ocl_write_buffer(buf_input2, CL_FALSE, sizeof(int) * SIZE, &input2[0]);
 
 		size_t szLocalWorkSize = 256;
 		float multiplier = SIZE/(float)szLocalWorkSize;
@@ -79,7 +77,7 @@ int main(int argc, char* argv[]) {
 						sizeof(cl_mem), (void *)&(buf_output->cl_mem),
 						sizeof(cl_int), (void *)&len_input);
 
-		irt_ocl_read_buffer(buf_output, CL_TRUE, output_size, &output[0]);
+		irt_ocl_read_buffer(buf_output, CL_TRUE, sizeof(int) * SIZE, &output[0]);
 	
 		irt_ocl_release_buffer(buf_input1);
 		irt_ocl_release_buffer(buf_input2);

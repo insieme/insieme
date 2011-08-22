@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "CL/opencl.h"
+#include "CL/cl.h"
 #include "lib_dep.h"
 #define IRT_CL_NUM_PLATFORM_PARAMS	(sizeof(_irt_cl_platform_params)/sizeof(_irt_cl_platform_param))
 
