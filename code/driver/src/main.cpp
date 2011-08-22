@@ -68,6 +68,7 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/driver/dot_printer.h"
 
@@ -342,8 +343,19 @@ void applyOpenMPFrontend(core::ProgramPtr& program) {
 	if (!CommandLineOptions::OpenMP) { return; }
 	
 	LOG(INFO) << "============================= OMP conversion ====================================";
-	program = measureTimeFor<core::ProgramPtr>("OpenMP ", 
-			[&]() {return fe::omp::applySema(program, program->getNodeManager()); } 
+	program = measureTimeFor<core::ProgramPtr>("OpenMP ",
+			[&]() {return fe::omp::applySema(program, program->getNodeManager()); }
+		);
+	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+}
+
+void applyOpenCLFrontend(core::ProgramPtr& program) {
+	if (!CommandLineOptions::OpenCL) { return; }
+
+	LOG(INFO) << "============================= OpenCL conversion ====================================";
+	fe::ocl::HostCompiler oclHostCompiler(program);
+	program = measureTimeFor<core::ProgramPtr>("OpenCL ",
+			[&]() {return oclHostCompiler.compile(); }
 		);
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
@@ -417,6 +429,9 @@ int main(int argc, char** argv) {
 			
 			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);
+
+			// run OpenCL frontend
+			applyOpenCLFrontend(program);
 
 			// perform checks
 			MessageList errors;
@@ -501,17 +516,21 @@ int main(int argc, char** argv) {
 								for(BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
 									iter < annotations->getAnnotationListEnd(); ++iter) {
 									if(!dynamic_pointer_cast<KernelFctAnnotation>(*iter)) {
+std::cout << "Number of entry points: " << ep.size() << std::endl;
 										host = true;
 									}
 								}
-							}
+							} else
+								host = true;
 						}
 
 						if (host) {
 							backendName = "OpenCL.Host.Backend";
+std::cout << "Running Host\n";
 							backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
 						} else {
 							backendName = "OpenCL.Kernel.Backend";
+std::cout << "Running kernel\n";
 							backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
 						}
 						break;

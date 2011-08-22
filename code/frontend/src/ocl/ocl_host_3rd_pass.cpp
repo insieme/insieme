@@ -393,8 +393,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					} else if(cl_mems.find(vArg) != cl_mems.end()) {
 						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getBaseType(arg),
 								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))));
-						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
-								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))) << std::endl;
+//						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
+//								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))) << std::endl;
 						if(const TypePtr& newType = dynamic_pointer_cast<const Type>(nt)){
 							newParams.at(cnt) = builder.variable(newType);
 							cl_mems[params.at(cnt)] = newParams.at(cnt);
@@ -512,7 +512,7 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 					// get corresponding lambda expression
 //equal_target<ExpressionPtr> cmp;
 /*for_each(kernelLambdas, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr > ka) {
-	std::cout << "Arguments: " << ka.first << "\n";
+	std::cout << "Arguments: " << ka.second << "\n";
 });
 std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;*/
 					assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
