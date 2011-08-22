@@ -140,6 +140,20 @@ namespace runtime {
 
 		const core::LiteralPtr unwrapLWData;
 
+
+		// --- Job Handling --------------------------------------------------
+
+		const core::TypePtr jobType;
+
+		const core::LiteralPtr createJob;
+
+		const core::LiteralPtr parallel;
+
+		const core::LiteralPtr pfor;
+
+		const core::LiteralPtr merge;
+
+
 		// --- Information retrieval -----------------------------------------
 
 		const core::LiteralPtr getWorkItemArgument;

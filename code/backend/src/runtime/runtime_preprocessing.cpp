@@ -39,6 +39,8 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 #include "insieme/core/encoder/encoder.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
@@ -52,13 +54,13 @@ namespace runtime {
 	namespace {
 
 
-		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const WorkItemImpl& entry) {
+		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& workItemImpl) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.getBasicGenerator();
 			auto& extensions = manager.getLangExtension<Extensions>();
 
 			// create register call
-			return builder.callExpr(basic.getUnit(), extensions.registerWorkItemImpl, core::encoder::toIR(manager, entry));
+			return builder.callExpr(basic.getUnit(), extensions.registerWorkItemImpl, workItemImpl);
 		}
 
 		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
@@ -112,8 +114,11 @@ namespace runtime {
 
 			// ------------------- Add list of entry points --------------------------
 
+			vector<core::ExpressionPtr> workItemImpls;
 			for_each(program->getEntryPoints(), [&](const core::ExpressionPtr& entry) {
-				stmts.push_back(registerEntryPoint(manager, wrapEntryPoint(manager, entry)));
+				core::ExpressionPtr impl = WorkItemImpl::encode(manager, wrapEntryPoint(manager, entry));
+				workItemImpls.push_back(impl);
+				stmts.push_back(registerEntryPoint(manager, impl));
 			});
 
 			// ------------------- Start standalone runtime  -------------------------
@@ -124,7 +129,9 @@ namespace runtime {
 			expr = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.wrapLWData, toVector(expr));
 
 			// create call to standalone runtime
-			stmts.push_back(builder.callExpr(unit, extensions.runStandalone, expr));
+			if (!workItemImpls.empty()) {
+				stmts.push_back(builder.callExpr(unit, extensions.runStandalone, workItemImpls[0], expr));
+			}
 
 			// ------------------- Add return   -------------------------
 
@@ -172,14 +179,198 @@ namespace runtime {
 
 	namespace {
 
+		namespace coder = core::encoder;
+
+		/**
+		 * A small helper-visitor collecting all variables which should be automatically
+		 * captured by jobs for their branches.
+		 */
+		class VariableCollector : public core::ASTVisitor<> {
+
+			/**
+			 * A set of variables to be excluded.
+			 */
+			const utils::set::PointerSet<core::VariablePtr>& excluded;
+
+			/**
+			 * A reference to the resulting list of variables.
+			 */
+			vector<core::VariablePtr>& list;
+
+
+		public:
+
+			/**
+			 * Creates a new instance of this visitor based on the given list of variables.
+			 * @param list the list to be filled by this collector.
+			 */
+			VariableCollector(const utils::set::PointerSet<core::VariablePtr>& excluded, vector<core::VariablePtr>& list) : core::ASTVisitor<>(false), excluded(excluded), list(list) {}
+
+		protected:
+
+			/**
+			 * Visits a variable and adds the variable to the resulting list (without duplicates).
+			 * It also terminates the recursive decent.
+			 */
+			void visitVariable(const core::VariablePtr& var) {
+				// collect this variable
+				if (excluded.find(var) == excluded.end() && !contains(list, var)) {
+					list.push_back(var);
+				}
+			}
+
+			/**
+			 * Visiting a lambda expression terminates the recursive decent since a new scope
+			 * is started.
+			 */
+			void visitLambdaExpr(const core::LambdaExprPtr& lambda) {
+				// break recursive decent when new scope is reached
+			}
+
+			/**
+			 * Do not collect parameters of bind expressions.
+			 */
+			void visitBindExpr(const core::BindExprPtr& bind) {
+				// only visit bound expressions
+				auto boundExpressions = bind->getBoundExpressions();
+				for_each(boundExpressions, [this](const core::ExpressionPtr& cur) {
+					this->visit(cur);
+				});
+			}
+
+			/**
+			 * Types are generally ignored by this visitor for performance reasons (no variables will
+			 * occur within types).
+			 */
+			void visitType(const core::TypePtr& type) {
+				// just ignore types
+			}
+
+			/**
+			 * The default behavior for all other node types is to recursively decent by iterating
+			 * through the child-node list.
+			 */
+			void visitNode(const core::NodePtr& node) {
+				assert(node->getNodeType() != core::NT_LambdaExpr);
+				// visit all children recursively
+				for_each(node->getChildList(), [this](const core::NodePtr& cur){
+					this->visit(cur);
+				});
+			}
+
+		};
+
+
+		/**
+		 * Collects a list of variables to be captures by a job for proper initialization
+		 * of the various job branches.
+		 */
+		vector<core::VariablePtr> getVariablesToBeCaptured(const core::ExpressionPtr& job, const utils::set::PointerSet<core::VariablePtr>& excluded = utils::set::PointerSet<core::VariablePtr>()) {
+
+			vector<core::VariablePtr> res;
+
+			// collect all variables potentially captured by this job
+			VariableCollector collector(excluded, res);
+			collector.visit(job);
+
+			return res;
+		}
+
+
+		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
+			core::ASTBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+			const Extensions& extensions = manager.getLangExtension<Extensions>();
+
+			// define parameter of resulting lambda
+			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
+
+			// collect parameters to be captured by the job
+			vector<core::VariablePtr> capturedVars = getVariablesToBeCaptured(job);
+
+			// add local declarations
+			core::TypeList list;
+			core::ExpressionList capturedValues;
+			utils::map::PointerMap<core::VariablePtr, unsigned> varIndex;
+			for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+				varIndex.insert(std::make_pair(cur->getVariable(), list.size()));
+				list.push_back(cur->getVariable()->getType());
+				capturedValues.push_back(cur->getInitialization());
+			});
+			for_each(capturedVars, [&](const core::VariablePtr& cur) {
+				varIndex.insert(std::make_pair(cur, list.size()));
+				list.push_back(cur->getType());
+				capturedValues.push_back(cur);
+			});
+
+			core::TypePtr unit = basic.getUnit();
+
+			// create variable replacement map
+			utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> varReplacements;
+			for_each(varIndex, [&](const std::pair<core::VariablePtr, unsigned>& cur) {
+				core::TypePtr varType = cur.first->getType();
+				core::ExpressionPtr index = coder::toIR(manager, cur.second + 1);
+				core::ExpressionPtr tupleType = coder::toIR(manager, tupleType);
+				core::ExpressionPtr access = builder.callExpr(varType, extensions.getWorkItemArgument,
+						toVector<core::ExpressionPtr>(workItem, index, tupleType, coder::toIR(manager, varType)));
+				varReplacements.insert(std::make_pair(cur.first, access));
+			});
+
+			auto fixVariables = [&](const core::ExpressionPtr& cur)->core::ExpressionPtr {
+				return static_pointer_cast<const core::Expression>(core::transform::replaceVars(manager, cur, varReplacements));
+			};
+
+			auto fixBranch = [&](const core::ExpressionPtr& branch)->core::ExpressionPtr {
+				core::CallExprPtr call = builder.callExpr(unit, branch, core::ExpressionList());
+				core::ExpressionPtr res = core::transform::tryInlineToExpr(manager, call);
+				return fixVariables(res);
+			};
+
+			// create function processing the job (forming the entry point)
+			core::StatementList body;
+			core::StatementPtr returnStmt = builder.returnStmt(basic.getUnitConstant());
+			for(auto it = job->getGuardedStmts().begin(); it != job->getGuardedStmts().end(); ++it) {
+				const core::JobExpr::GuardedStmt& cur = *it;
+				core::ExpressionPtr condition = fixVariables(cur.first);
+				core::ExpressionPtr branch = fixBranch(cur.second);
+				body.push_back(builder.ifStmt(condition, builder.compoundStmt(branch, returnStmt)));
+			}
+
+			// add default branch
+			body.push_back(fixBranch(job->getDefaultStmt()));
+
+			// add exit work-item call
+			body.push_back(builder.callExpr(unit, extensions.exitWorkItem, workItem));
+
+			// produce work item implementation
+			WorkItemVariant variant(builder.lambdaExpr(unit, builder.compoundStmt(body), toVector(workItem)));
+			WorkItemImpl impl(toVector(variant));
+
+
+			// ------------------- initialize work item parameters -------------------------
+
+			// construct light-weight data item tuple
+			core::ExpressionPtr tuple = builder.tupleExpr(capturedValues);
+			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(tuple->getType());
+			core::ExpressionPtr parameters = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.wrapLWData, toVector(tuple));
+
+			// return implementation + parameters
+			return std::make_pair(impl, parameters);
+		}
+
+
 		class WorkItemIntroducer : public core::transform::CachedNodeMapping {
 
 			core::NodeManager& manager;
 			const core::lang::BasicGenerator& basic;
+			const Extensions& ext;
+			core::ASTBuilder builder;
 
 		public:
 
-			WorkItemIntroducer(core::NodeManager& manager) : manager(manager), basic(manager.getBasicGenerator()) {}
+			WorkItemIntroducer(core::NodeManager& manager)
+				: manager(manager), basic(manager.getBasicGenerator()),
+				  ext(manager.getLangExtension<Extensions>()), builder(manager) {}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
@@ -193,23 +384,48 @@ namespace runtime {
 
 				// test whether it is something of interest
 				if (res->getNodeType() == core::NT_JobExpr) {
-
-					std::cout << "Discovered Job: " << *ptr << "\n";
-
-					// TODO: convert the job
-
-
+					return convertJob(static_pointer_cast<const core::JobExpr>(ptr));
 				}
 
+				// handle parallel call
+				if (core::analysis::isCallOf(res, basic.getParallel())) {
 
-				if (core::analysis::isCallOf(ptr, basic.getParallel())) {
+					const core::ExpressionPtr& job = core::analysis::getArgument(res, 0);
+					assert(*job->getType() == *ext.jobType && "Argument hasn't been converted!");
+					return builder.callExpr(ext.workItemType ,ext.parallel, job);
+				}
 
-					std::cout << "Disovered Parallel: " << *ptr << "\n";
+				// handle merge call
+				if (core::analysis::isCallOf(res, basic.getMerge())) {
+					return builder.callExpr(basic.getUnit(), ext.merge, core::analysis::getArgument(res, 0));
 				}
 
 				// nothing interesting ...
 				return res;
 			}
+
+		private:
+
+			core::ExpressionPtr convertJob(core::JobExprPtr job) {
+
+				// extract range
+				Range range = coder::toValue<Range>(job->getThreadNumRange());
+
+				// create job parameters
+				core::ExpressionPtr min = coder::toIR(manager, range.min);
+				core::ExpressionPtr max = coder::toIR(manager, range.max);
+				core::ExpressionPtr mod = coder::toIR(manager, range.mod);
+
+				auto info = wrapJob(manager, job);
+				core::ExpressionPtr wi = coder::toIR(manager, info.first);
+				core::ExpressionPtr data = info.second;
+
+				// create call to job constructor
+				return builder.callExpr(ext.jobType, ext.createJob, toVector(min,max,mod, wi, data));
+
+			}
+
+
 
 		};
 

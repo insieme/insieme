@@ -75,10 +75,11 @@ namespace runtime {
 			c_ast::ExpressionPtr numThreads = c_ast::call(C_NODE_MANAGER->create("irt_get_default_worker_count"));
 			c_ast::ExpressionPtr initContext = c_ast::ref(fragment->getInitFunctionName());
 			c_ast::ExpressionPtr cleanupContext = c_ast::ref(fragment->getCleanupFunctionName());
-			c_ast::ExpressionPtr args = CONVERT_ARG(0);
+			c_ast::ExpressionPtr impl = CONVERT_ARG(0);
+			c_ast::ExpressionPtr args = CONVERT_ARG(1);
 
 			// produce call
-			return c_ast::call(fun, numThreads, initContext, cleanupContext, args);
+			return c_ast::call(fun, numThreads, initContext, cleanupContext, impl, args);
 		});
 
 		table[ext.registerWorkItemImpl] = OP_CONVERTER({
@@ -87,12 +88,23 @@ namespace runtime {
 			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
 
 			// convert argument into list of variants
-			implTable->registerWorkItemImpl(WorkItemImpl::decode(ARG(0)));
+			implTable->registerWorkItemImpl(ARG(0));
 
 			context.addDependency(implTable);
 
 			// no code substitute, only dependencies
 			return c_ast::ExpressionPtr();
+		});
+
+		table[ext.workItemImplCtr] = OP_CONVERTER({
+
+			// register work item
+			ImplementationTablePtr implTable = ImplementationTable::get(context.getConverter());
+			unsigned id = implTable->registerWorkItemImpl(call);
+
+			// produce work item id as a result
+			const Extensions& ext = NODE_MANAGER.getLangExtension<Extensions>();
+			return c_ast::lit(CONVERT_TYPE(ext.workItemImplType), utils::numeric_cast<string>(id));
 		});
 
 		table[ext.wrapLWData] = OP_CONVERTER({
@@ -123,6 +135,32 @@ namespace runtime {
 			c_ast::TypePtr paramPtr = c_ast::ptr(CONVERT_TYPE(core::encoder::toValue<core::TypePtr>(ARG(2))));
 			c_ast::ExpressionPtr inner = c_ast::cast(paramPtr, c_ast::access(c_ast::deref(CONVERT_ARG(0)), "parameters"));
 			return c_ast::access(c_ast::deref(inner), format("c%d", core::encoder::toValue<unsigned>(ARG(1))+1));
+		});
+
+		table[ext.createJob] = OP_CONVERTER({
+			const Extensions& ext = NODE_MANAGER.getLangExtension<Extensions>();
+
+			// uint4, uint4, uint4, implType, data
+			c_ast::ExpressionPtr min = CONVERT_ARG(0);
+			c_ast::ExpressionPtr max = CONVERT_ARG(1);
+			c_ast::ExpressionPtr mod = CONVERT_ARG(2);
+
+			c_ast::ExpressionPtr wi = CONVERT_ARG(3);
+			c_ast::ExpressionPtr data = CONVERT_ARG(4);
+
+			return c_ast::init(CONVERT_TYPE(ext.jobType), min, max, mod, wi, data);
+		});
+
+		table[ext.parallel] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_parallel");
+			c_ast::TypePtr voidPointer = c_ast::ptr(C_NODE_MANAGER->create<c_ast::PrimitiveType>(c_ast::PrimitiveType::Void));
+			c_ast::ExpressionPtr getGroup = c_ast::lit(voidPointer, "NULL");
+			return c_ast::call(C_NODE_MANAGER->create("irt_parallel"), getGroup, c_ast::ref(CONVERT_ARG(0)));
+		});
+
+		table[ext.merge] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_wg_join");
+			return c_ast::call(C_NODE_MANAGER->create("irt_wg_join"), CONVERT_ARG(0));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"
