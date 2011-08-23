@@ -103,6 +103,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 TEST(OclHostCompilerTest, VecAddTest) {
 	Logger::get(std::cerr, DEBUG);
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../backend/test/ocl_kernel");
 
 	CommandLineOptions::Defs.push_back("INSIEME");

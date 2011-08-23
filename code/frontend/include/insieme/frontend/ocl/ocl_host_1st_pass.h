@@ -109,9 +109,10 @@ public:
 class Handler {
 protected:
 	core::ProgramPtr kernels;
-	core::ASTBuilder& builder;
+	const core::ASTBuilder& builder;
+	Ocl2Inspire o2i;
 public:
-	Handler(core::ASTBuilder& build) : builder(build) {
+	Handler(const core::ASTBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire) {
 		kernels = core::Program::create(build.getNodeManager());
 	}
 
@@ -124,6 +125,10 @@ public:
 	// check if expression is a string conatining a path to a kernel file
 	// if yes, load and compile these kernels and add them to the appropriate fields
 	void findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
+
+	// return an INSPIRE equivalent of clCreateBuffer/irt_ocl_create_buffer
+	const core::ExpressionPtr getCreateBuffer(const core::ExpressionPtr& flags, const core::ExpressionPtr& sizeArg,
+			const bool copyPtr, const core::ExpressionPtr& hostPtr, const core::ExpressionPtr& errcode_ret);
 };
 
 /*
@@ -138,8 +143,8 @@ class LambdaHandler: public Handler {
 	const char* fct;
 	Lambda body;
 public:
-	LambdaHandler(core::ASTBuilder& build, const char* fun, Lambda lambda) :
-		Handler(build), fct(fun), body(lambda) {
+	LambdaHandler(core::ASTBuilder& build, Ocl2Inspire& ocl2inspire, const char* fun, Lambda lambda) :
+		Handler(build, ocl2inspire), fct(fun), body(lambda) {
 	}
 
 	// creating a shared pointer to a LambdaHandler
@@ -157,13 +162,13 @@ typedef std::shared_ptr<Handler> HandlerPtr;
 typedef boost::unordered_map<string, HandlerPtr, boost::hash<string> > HandlerTable;
 
 template<typename Lambda>
-HandlerPtr make_handler(core::ASTBuilder& builder, const char* fct,
+HandlerPtr make_handler(core::ASTBuilder& builder, Ocl2Inspire& o2i, const char* fct,
 		Lambda lambda) {
-	return std::make_shared<LambdaHandler<Lambda> >(builder, fct, lambda);
+	return std::make_shared<LambdaHandler<Lambda> >(builder, o2i, fct, lambda);
 }
 
-#define ADD_Handler(builder, fct, BODY) \
-    handles.insert(std::make_pair(fct, make_handler(builder, fct, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
+#define ADD_Handler(builder, o2i, fct, BODY) \
+    handles.insert(std::make_pair(fct, make_handler(builder, o2i, fct, [&](core::CallExprPtr node, core::ProgramPtr& kernels){ BODY }))).second;
 
 /*
  * First pass when translating a program OpenCL to IR
@@ -208,9 +213,16 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	bool handleClCreateKernel(const core::ExpressionPtr& expr, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName);
 	bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
 
+	// handles create buffer at the rhs of assignments
+	const core::NodePtr handleCreateBufferAssignment(const core::VariablePtr& lhsVar, const core::CallExprPtr& callExpr);
+
 	// needed to add one level of indirection because calling the hander member function seems to be impossible form the ADD_Handler macro
 	void findKernelsUsingPathString(const string& handleName, const core::ExpressionPtr& path, const core::ExpressionPtr& root) {
 		handles[handleName]->findKernelsUsingPathString(path, root, mProgram);
+	}
+	core::ExpressionPtr getCreateBuffer(const string& handleName, const core::ExpressionPtr& flags, const core::ExpressionPtr& sizeArg, const bool copyPtr,
+			const core::ExpressionPtr& hostPtr, const core::ExpressionPtr& errcode_ret) {
+		return handles[handleName]->getCreateBuffer(flags, sizeArg, copyPtr, hostPtr, errcode_ret);
 	}
 public:
 	HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);

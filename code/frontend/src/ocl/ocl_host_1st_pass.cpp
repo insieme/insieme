@@ -182,6 +182,24 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 	}
 }
 
+const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, const ExpressionPtr& sizeArg, const bool copyPtr,
+		const ExpressionPtr& hostPtr, const ExpressionPtr& errcode_ret) {
+	ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr);
+
+	TypePtr type;
+	ExpressionPtr size;
+	bool sizeFound = o2i.extractSizeFromSizeof(sizeArg, size, type);
+	assert(sizeFound && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
+
+	vector<ExpressionPtr> args;
+	args.push_back(BASIC.getTypeLiteral(type));
+	args.push_back(devicePtr);
+	args.push_back(size);
+	if(copyPtr) args.push_back(hostPtr);
+	args.push_back(errcode_ret);
+	return builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
+}
+
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type) {
 	// get rid of casts
 	NodePtr uncasted = arg;
@@ -289,7 +307,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build.getNodeManager()), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build),	equal_variables(build)) {
-	ADD_Handler(builder, "clCreateBuffer",
+	ADD_Handler(builder, o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
 			// check if CL_MEM_USE_HOST_PTR is set
@@ -298,8 +316,6 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			bool copyPtr = flags.find(CreateBufferFlags::CL_MEM_COPY_HOST_PTR) != flags.end();
 
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
-			ExpressionPtr size;
-			TypePtr type;
 			ExpressionPtr hostPtr;
 
 			hostPtr = node->getArgument(3);
@@ -313,22 +329,17 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 				return hostPtr;
 			}
 
-			ExpressionPtr fun = o2i.getClCreateBuffer(copyPtr);
-
-			bool sizeFound = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
-			assert(sizeFound && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
-
-			vector<ExpressionPtr> args;
-			args.push_back(BASIC.getTypeLiteral(type));
-			args.push_back(node->getArgument(1));
-			args.push_back(size);
-			if(copyPtr) args.push_back(hostPtr);
-			args.push_back(node->getArgument(4));
-			ExpressionPtr retVal = builder.callExpr(builder.refType(builder.arrayType(type)), fun, args);
-			return retVal;
+			return getCreateBuffer("clCreateBuffer", node->getArgument(1), node->getArgument(2), copyPtr, hostPtr, node->getArgument(4));
 	);
 
-	ADD_Handler(builder, "clEnqueueWriteBuffer",
+	ADD_Handler(builder, o2i, "irt_ocl_create_buffer",
+			// Flags can be ignored, INSPIRE is always blocking
+			return getCreateBuffer("irt_ocl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0),
+					builder.callExpr(builder.refType(builder.arrayType(BASIC.getInt4())), BASIC.getGetNull(),
+					BASIC.getTypeLiteral(builder.arrayType(BASIC.getInt4())))); // errorcode_ret, never set
+	);
+
+	ADD_Handler(builder, o2i, "clEnqueueWriteBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
@@ -344,7 +355,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
-	ADD_Handler(builder, "clEnqueueReadBuffer",
+	ADD_Handler(builder, o2i, "clEnqueueReadBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
@@ -360,7 +371,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
-	ADD_Handler(builder, "clSetKernelArg",
+	ADD_Handler(builder, o2i, "clSetKernelArg",
 			// arg_index must either be an integer literal or all arguments have to be specified in the right order in the source code
 			ExpressionPtr kernel = tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder);
 			// check if kernel argument is in a struct, if yes, use the struct-variable
@@ -415,19 +426,19 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			return builder.intLit(0); // returning CL_SUCCESS
 	);
 
-	ADD_Handler(builder, "oclLoadProgSource",
-			this->findKernelsUsingPathString("irt_ocl_create_kernel", node->getArgument(0), node);
+	ADD_Handler(builder, o2i, "oclLoadProgSource",
+			this->findKernelsUsingPathString("oclLoadProgSource", node->getArgument(0), node);
 			// set source string to an empty char array
 			return builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
 	);
 
 	// TODO ignores 3rd argument (kernelName) and just adds all kernels to the program
-	ADD_Handler(builder, "irt_ocl_create_kernel",
+	ADD_Handler(builder, o2i, "irt_ocl_create_kernel",
 			this->findKernelsUsingPathString("irt_ocl_create_kernel", node->getArgument(1), node);
 			return builder.uintLit(0);
 	);
 
-	ADD_Handler(builder, "clEnqueueNDRangeKernel",
+	ADD_Handler(builder, o2i, "clEnqueueNDRangeKernel",
 			// get argument vector
 			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(1), builder);
 //			tryStructExtract(k, builder);
@@ -441,88 +452,88 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			return node;
 	);
 
-	ADD_Handler(builder, "clBuildProgram",
+	ADD_Handler(builder, o2i, "clBuildProgram",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO add flags for profiling and out of order
-	ADD_Handler(builder, "clGetEventProfilingInfo",
+	ADD_Handler(builder, o2i, "clGetEventProfilingInfo",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO add syncronization means when adding asynchronous queue
-	ADD_Handler(builder, "clFinish",
+	ADD_Handler(builder, o2i, "clFinish",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, "clWaitForEvents",
+	ADD_Handler(builder, o2i, "clWaitForEvents",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// need to release clMem objects
-	ADD_Handler(builder, "clReleaseMemObject",
+	ADD_Handler(builder, o2i, "clReleaseMemObject",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
 			// updataint of the type to update the deref operation in the argument done in thrid pass
 	);
 
 	// all other clRelease calls can be ignored since the variables are removed
-	ADD_Handler(builder, "clRelease",
+	ADD_Handler(builder, o2i, "clRelease",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, "clRetain",
+	ADD_Handler(builder, o2i, "clRetain",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO implement, may have some semantic meaning
-	ADD_Handler(builder, "clGetEventInfo",
+	ADD_Handler(builder, o2i, "clGetEventInfo",
 			LOG(WARNING) << "Removing clGetEventInfo. Check the semantics!";
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, "clFlush",
+	ADD_Handler(builder, o2i, "clFlush",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO maybe a bit too optimisitc?
-	ADD_Handler(builder, "clGet",
+	ADD_Handler(builder, o2i, "clGet",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// TODO need to add exception this when adding image support
-	ADD_Handler(builder, "clCreate",
+	ADD_Handler(builder, o2i, "clCreate",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
-	ADD_Handler(builder, "clUnloadCompiler",
+	ADD_Handler(builder, o2i, "clUnloadCompiler",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// DEPRECATED, but used in the NVIDIA examples
-	ADD_Handler(builder, "clSetCommandQueueProperty",
+	ADD_Handler(builder, o2i, "clSetCommandQueueProperty",
 			// return cl_success
 			return builder.intLit(0);
 	);
 
 	// exceptions, will be handled in a later step
-	ADD_Handler(builder, "clCreateContext", return node;);
-	ADD_Handler(builder, "clCreateCommandQueue", return node;);
-	ADD_Handler(builder, "clCreateKernel", return node;);
+	ADD_Handler(builder, o2i, "clCreateContext", return node;);
+	ADD_Handler(builder, o2i, "clCreateCommandQueue", return node;);
+	ADD_Handler(builder, o2i, "clCreateKernel", return node;);
 
 
 	// handlers for insieme opencl runtime stuff
-	ADD_Handler(builder, "irt_ocl_",
+	ADD_Handler(builder, o2i, "irt_ocl_",
 		return builder.uintLit(0); // default handling, remove it
 	);
 };
@@ -663,6 +674,54 @@ bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::
 	return false;
 }
 
+const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar, const CallExprPtr& callExpr) {
+	NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
+	bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
+	// check if data has to be copied to a new array
+	if(const CallExprPtr& newCall = checkAssignment(createBuffer)) {
+		// exchange the _cl_mem type with the new type, gathered from the clCreateBuffer call
+		TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhsVar->getType(),
+				callExpr->getArgument(1)->getType(), newCall->getType()));
+		// check if variable has already been put into replacement map with a different type
+		if(alreadyThere) {
+			assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+		}
+		NodePtr ret;
+
+		if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newCall, builder))) {
+			// use the host variable because CL_MEM_USE_HOST_PTR was set
+			cl_mems[lhsVar] = var;
+			// TODO check if err argument has been passed and set variable to 0
+			ret = BASIC.getNoOp();
+		} else {
+			if(!alreadyThere) {
+				const VariablePtr& newVar = builder.variable(newType);
+				cl_mems[lhsVar] = newVar;
+			}
+			// replace the variable and the type in the lhs of the assignmend
+			ExpressionPtr newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(),
+					callExpr->getArgument(0), lhsVar, cl_mems[lhsVar]));
+			newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(), newLhs,
+					callExpr->getArgument(1)->getType(), newCall->getType()));
+			ret = builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), newLhs, newCall);
+		}
+
+		copyAnnotations(callExpr, ret);
+		return ret;
+	}
+	// check if we can simply use the existing array
+	if(const VariablePtr clMemReplacement = dynamic_pointer_cast<const Variable>(createBuffer)) {
+		TypePtr newType = clMemReplacement->getType();
+
+		if(alreadyThere)
+			assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+
+		cl_mems[lhsVar] = clMemReplacement;
+	}
+	return BASIC.getNoOp();
+}
+
+
 const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 	// stopp recursion at type level
 	if (element->getNodeCategory() == NodeCategory::NC_Type) {
@@ -785,7 +844,8 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				// handling clCreateBuffer
 				if(lhsVar->getType()->toString().find("array<_cl_mem,1>") != string::npos)
 				if(callExpr->getArgument(1)->toString().find("clCreateBuffer") != string::npos){
-					NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
+					handleCreateBufferAssignment(lhsVar, callExpr);
+/*					NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
 					bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
 					// check if data has to be copied to a new array
 					if(const CallExprPtr& newCall = checkAssignment(createBuffer)) {
@@ -814,6 +874,56 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 							newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(), newLhs,
 									callExpr->getArgument(1)->getType(), newCall->getType()));
 							ret = builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), newLhs, newCall);
+						}
+
+						copyAnnotations(callExpr, ret);
+						return ret;
+					}
+					// check if we can simply use the existing array
+					if(const VariablePtr clMemReplacement = dynamic_pointer_cast<const Variable>(createBuffer)) {
+						TypePtr newType = clMemReplacement->getType();
+
+						if(alreadyThere)
+							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+
+						cl_mems[lhsVar] = clMemReplacement;
+						return BASIC.getNoOp();
+					}
+*/				}
+
+				// handling clCreateBuffer
+				if(lhsVar->getType()->toString().find("_irt_ocl_buffer=struct<cl_mem") != string::npos)
+				if(callExpr->getArgument(1)->toString().find("irt_ocl_create_buffer") != string::npos){
+//					return handleCreateBufferAssignment(lhsVar, callExpr);
+					NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
+					bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
+					// check if data has to be copied to a new array
+					if(const CallExprPtr& newCall = checkAssignment(createBuffer)) {
+						// exchange the _cl_mem type with the new type, gathered from the clCreateBuffer call
+						TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhs->getType(),
+								callExpr->getArgument(1)->getType(), newCall->getType()));
+						// check if variable has already been put into replacement map with a different type
+						if(alreadyThere) {
+							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+						}
+						NodePtr ret;
+
+						if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newCall, builder))) {
+							// use the host variable because CL_MEM_USE_HOST_PTR was set
+							cl_mems[lhsVar] = var;
+							// TODO check if err argument has been passed and set variable to 0
+							ret = BASIC.getNoOp();
+						} else {
+							if(!alreadyThere) {
+								const VariablePtr& newVar = builder.variable(newType);
+								cl_mems[lhsVar] = newVar;
+							}
+							// replace the variable and the type in the lhs of the assignmend
+							ExpressionPtr newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(),
+									callExpr->getArgument(0), lhsVar, cl_mems[lhsVar]));
+							newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(), newLhs,
+									callExpr->getArgument(1)->getType(), newCall->getType()));
+							ret = newCall;// builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), newLhs, newCall);
 						}
 
 						copyAnnotations(callExpr, ret);
