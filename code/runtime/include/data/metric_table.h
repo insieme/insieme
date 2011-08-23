@@ -40,14 +40,42 @@
 
 
 /**
- * The global list of metric names for simple access. These instances
- * can also be used to forward
+ * Defines global names for the indices of atomic metrics. Those indices
+ * may change as the list of supported metrics is changing (however, only
+ * during compile time).
  */
-typedef enum {
+enum {
+	#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name ## _INDEX,
+	#include "metric.def"
+	#undef METRIC
+};
+
+
+/**
+ * A global list of instances of atomic metrics pointers. These metrics
+ * can be directly used for assembling lists of metrics to be queried.
+ */
+#define METRIC(id, name, type, res, desc) irt_metric IRT_METRIC_ ## name [] = {{ ATOMIC_METRIC, {{ IRT_METRIC_ ## name ## _INDEX }}}};
+#include "metric.def"
+#undef METRIC
+
+/**
+ * A list of all atomic metric pointers.
+ */
+const irt_metric* g_all_atomic_metrics[] = {
 	#define METRIC(id, name, type, res, desc) IRT_METRIC_ ## name,
 	#include "metric.def"
 	#undef METRIC
-} irt_atomic_metric;
+};
+
+/**
+ * Obtain the number of atomic metrics.
+ */
+const uint16 g_num_atomic_metrics = 0
+#define METRIC(id, name, type, res, desc) +1
+#include "metric.def"
+#undef METRIC
+;
 
 /**
  * The metric table listing all atomic metrics supported within the system.
@@ -63,6 +91,6 @@ const irt_atomic_metric_info g_atomic_metric_table[] = {
 
 // --------------------------- utilities ------------------------
 
-const irt_atomic_metric_info* irt_get_metric_info(irt_atomic_metric metric) {
+const irt_atomic_metric_info* irt_get_metric_info(irt_atomic_metric_index metric) {
 	return &g_atomic_metric_table[metric];
 }

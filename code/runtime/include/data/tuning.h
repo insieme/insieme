@@ -173,9 +173,10 @@ typedef struct {
 	const irt_atomic_metric_id id;
 	const irt_value_type value_type;
 	const irt_sample_resolution sample_resolution;
-	const char* name;
+	const char* description;
 } irt_atomic_metric_info;
 
+typedef uint16 irt_atomic_metric_index;
 
 typedef enum {
 	ATOMIC_METRIC, COMPOSED_METRIC
@@ -193,7 +194,7 @@ typedef struct _irt_metric {
 	irt_metric_kind kind;							// < determines whether it is an atomic or composed metric
 	union {
 		struct {
-			irt_atomic_metric_id id;				// < the id of the atomic metric
+			irt_atomic_metric_index index;				// < the index of the atomic metric within the table
 		};
 		struct {
 			irt_metric_combinator combinator;		// < the connector used for composing
