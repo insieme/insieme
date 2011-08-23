@@ -34,10 +34,13 @@
  * regarding third party software licenses.
  */
 
-/*#include <gtest/gtest.h>
+#include <gtest/gtest.h>
 
 #include "data/tuning.h"
 #include "data/metric_table.h"
+
+// horrible hack incoming
+uint32 irt_g_error_key = 0;
 
 TEST(tuning, compileable_test) {
 	// just testing whether header is compiling
@@ -58,4 +61,4 @@ TEST(tuning, compileable_test) {
 		EXPECT_STRNE("Just testing presence of string", irt_get_metric_info(all[i]->index)->description);
 	}
 
-}*/
+}
