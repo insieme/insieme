@@ -41,13 +41,12 @@
 #define SIZE 1000
 
 int main(int argc, char* argv[]) {
-	int len_input = SIZE;
-	int input_size = sizeof(int) * SIZE;
-	int output_size = sizeof(int) * SIZE;
+	int size = SIZE;
+	int arr_size = sizeof(int) * SIZE;
 
-	int* input1 = (int*)malloc(input_size);
-	int* input2 = (int*) malloc(input_size);
-	int* output = (int *)malloc(output_size);
+	int* input1 = (int*)malloc(arr_size);
+	int* input2 = (int*) malloc(arr_size);
+	int* output = (int *)malloc(arr_size);
 	
 	for(int i=0; i < SIZE; ++i) {
 		input1[i] = i;
@@ -59,12 +58,12 @@ int main(int argc, char* argv[]) {
 		irt_ocl_device* dev = irt_ocl_get_device(0);
 		irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "vec_add.cl", "vec_add", "", IRT_OCL_SOURCE);
 		
-		irt_ocl_buffer* buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, input_size);
-		irt_ocl_buffer* buf_input2 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, input_size);
-		irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, output_size);
+		irt_ocl_buffer* buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, arr_size);
+		irt_ocl_buffer* buf_input2 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, arr_size);
+		irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, arr_size);
 
-		irt_ocl_write_buffer(buf_input1, CL_FALSE, input_size, &input1[0]);
-		irt_ocl_write_buffer(buf_input2, CL_FALSE, input_size, &input2[0]);
+		irt_ocl_write_buffer(buf_input1, CL_FALSE, arr_size, &input1[0]);
+		irt_ocl_write_buffer(buf_input2, CL_FALSE, arr_size, &input2[0]);
 
 		size_t szLocalWorkSize = 256;
 		float multiplier = SIZE/(float)szLocalWorkSize;
@@ -74,16 +73,16 @@ int main(int argc, char* argv[]) {
 	
 		irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
 
-		irt_ocl_run_kernel(kernel, 4,   sizeof(cl_mem), (void *)&(buf_input1->cl_mem),
-						sizeof(cl_mem), (void *)&(buf_input2->cl_mem),
-						sizeof(cl_mem), (void *)&(buf_output->cl_mem),
-						sizeof(cl_int), (void *)&len_input);
+		irt_ocl_run_kernel(kernel, 4,   (size_t)0, (void *)buf_input1,
+						(size_t)0, (void *)buf_input2,
+						(size_t)0, (void *)buf_output,
+						sizeof(cl_int), (void *)&size);
 
-		irt_ocl_read_buffer(buf_output, CL_TRUE, output_size, &output[0]);
+		irt_ocl_read_buffer(buf_output, CL_TRUE, arr_size, &output[0]);
 	
 		irt_ocl_release_buffer(buf_input1);
 		irt_ocl_release_buffer(buf_input2);
-		irt_ocl_release_buffer(buf_output);	
+		irt_ocl_release_buffer(buf_output);
 		irt_ocl_release_kernel(kernel);
 	}
 	irt_ocl_release_devices();

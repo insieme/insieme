@@ -642,6 +642,11 @@ void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...) {
 		arg_index = i;
 		arg_size = va_arg (arg_list, size_t);
 		arg_val = va_arg (arg_list, void *);
+		if (arg_size == 0){
+			irt_ocl_buffer* buf = (irt_ocl_buffer*) arg_val;
+			arg_size = sizeof(cl_mem);
+			arg_val = (void*) &(buf->cl_mem);
+		}
 		err_code = clSetKernelArg(kernel->cl_kernel, arg_index, arg_size, arg_val);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error setting kernel arguments: \"%s\"", _irt_error_string(err_code));    
 	}
