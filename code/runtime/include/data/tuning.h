@@ -38,6 +38,8 @@
 
 #include "declarations.h"
 #include "irt_inttypes.h"
+#include "irt_context.h"
+#include "worker.h"
 
 /**
  * Required improvements:
@@ -51,46 +53,72 @@
 
 /* --- subject description --- */
 
-enum irt_subject_type {
+typedef enum {
 	IRT_SUBJECT_PROGRAM,
 	IRT_SUBJECT_REGION,
 	IRT_SUBJECT_VARIABLE,
-	IRT_SUBJECT_RUNTIME
-};
+	IRT_SUBJECT_WORKER,
+	IRT_SUBJECT_RUNTIME,
+	// + all other entities of the HW model
+} irt_subject_type;
 
 typedef struct {
-	uint16 program_id;
+	irt_context_id context_id;
 } irt_subject_program;
 
 typedef struct {
-	uint16 program_id;						// < the ID of the context
+	irt_context_id context_id;				// < the ID of the context
 	irt_wi_implementation_id work_item;		// < the ID of the work item
 	uint16 variant;							// < the index of the selected implementation
 	uint16 fragment;						// < the code fragment within the implementation
 } irt_subject_region;
 
 typedef struct {
-	uint16 program_id;
-	irt_wi_implementation_id work_item;
-	uint16 implementation;
-	uint16 variable;
+	irt_context_id context_id;				// < the ID of the context
+	irt_wi_implementation_id work_item;		// < the work item implementation ID (impl table)
+	uint16 variant;							// < the variant of the implementation
+	uint16 variable;						// < the index of the variable within the variant
 } irt_subject_variable;
 
 typedef struct {
-	// no distinct fields yet
+	irt_worker_id worker_id;				// < the ID of the addressed worker
+} irt_subject_worker;
+
+typedef struct {
+	uint16 node_id;							// < the ID of the node the runtime is running on
 } irt_subject_runtime;
 
 typedef struct {
-	enum irt_subject_type subject_type;
+	irt_subject_type subject_type;
 	union {
 		irt_subject_program program;
 		irt_subject_region region;
 		irt_subject_variable variable;
+		irt_subject_worker worker;
 		irt_subject_runtime runtime;
 	};
 } irt_subject;
 
 /* --- value description --- */
+
+/**
+ * An enumeration used to distinguish value types for metrics.
+ */
+typedef enum {
+	IRT_VT_BOOL,
+	IRT_VT_INT8,
+	IRT_VT_INT16,
+	IRT_VT_INT32,
+	IRT_VT_INT64,
+	IRT_VT_UINT8,
+	IRT_VT_UINT16,
+	IRT_VT_UINT32,
+	IRT_VT_UINT64,
+	IRT_VT_FLOAT,
+	IRT_VT_DOUBLE,
+	IRT_VT_COMPLEX,		// < the value is a pointer to something complex
+} irt_value_type;
+
 
 typedef struct {
 	bool valid;
@@ -112,46 +140,83 @@ typedef struct {
 
 /* --- metric --- */
 
-// Problem: metric should have an ID => more efficient handling
+typedef uint16 irt_atomic_metric_id;
 
-typedef int irt_value_type_id;
+/**
+ * The enum used to represent sample resolutions.
+ * Resolutions are categorized in order of magnitudes.
+ */
+typedef enum {
+	IRT_SR_1_NS,
+	IRT_SR_10_NS,
+	IRT_SR_100_NS,
+	IRT_SR_1_US,
+	IRT_SR_10_US,
+	IRT_SR_100_US,
+	IRT_SR_1_MS,
+	IRT_SR_10_MS,
+	IRT_SR_100_MS,
+	IRT_SR_1_SEC,
+	IRT_SR_10_SEC,
+	IRT_SR_STATIC
+} irt_sample_resolution;
+
+
+/**
+ * This struct defined the basic properties of atomic
+ * metrics offered by the runtime. Instances of this type
+ * should be organized within a table and the index of
+ * atomic metrices within this table are used to identify
+ * those.
+ */
+typedef struct {
+	const irt_atomic_metric_id id;
+	const irt_value_type value_type;
+	const irt_sample_resolution sample_resolution;
+	const char* description;
+} irt_atomic_metric_info;
+
+typedef uint16 irt_atomic_metric_index;
 
 typedef enum {
 	ATOMIC_METRIC, COMPOSED_METRIC
 } irt_metric_kind;
 
-typedef struct _irt_metric_atom {
-	// only use id => rest in table
-	const char* name;
-	unsigned sample_resolution; /* < order of magnitude in ns */
-} irt_metric_atom;
-
 typedef enum {
-	OP_AVG, OP_SUM, OP_MAX, OP_MIN, OP_MOVING_AVG, OP_VARIANCE, OP_DIV
-} irt_metric_compose_op;
+	OP_AVG, OP_MAX, OP_MIN,						// < single argument connectors
+	OP_MOVING_AVG, OP_VARIANCE,
+	OP_SUM, OP_PROD,
+	OP_ADD, OP_SUB, OP_MUL, OP_DIV				// < binary connectors
+} irt_metric_combinator;
 
-typedef struct _irt_metric_composed {
-	irt_metric_compose_op operation;
-//	irt_metric* metricA;
-//	irt_metric* metricB;
-} irt_metric_composed;
 
-typedef struct {
-	irt_metric_kind kind;
-	irt_value_type_id value_type;
+typedef struct _irt_metric {
+	irt_metric_kind kind;							// < determines whether it is an atomic or composed metric
 	union {
-		irt_metric_atom atom;
-		irt_metric_composed composed;
+		struct {
+			irt_atomic_metric_index index;				// < the index of the atomic metric within the table
+		};
+		struct {
+			irt_metric_combinator combinator;		// < the connector used for composing
+			struct _irt_metric* metricA;			// < the first sub-metric
+			struct _irt_metric* metricB;			// < the second sub-metric
+		};
 	};
 } irt_metric;
 
 
 /* --- parameters --- */
 
+// TODO: this does not support complex values for parameters (e.g. parameterized policies)
+
+typedef uint16 irt_parameter_id;
+
+// this struct should be used to establish a parameter table within a context
 typedef struct {
-	const char* name;
-	irt_type_id type;
-} irt_parameter;
+	const irt_parameter_id id;
+	const irt_value_type type;
+	const char* desc;
+} irt_parameter_info;
 
 
 /* --- time constraints --- */
@@ -194,10 +259,7 @@ typedef enum {
  * @param max     ... the maximal number parameters to be written to param (size of param)
  * @param offset  ... the offset to the total list of parameters
  */
-irt_tuning_error_code irt_list_params(const irt_subject* subject, irt_parameter out_param[], unsigned* out_num, unsigned max, unsigned offset);
-
-//irt_tuning_error_code irt_list_params(const irt_subject* subject, const irt_parameter(* out_params)[], unsigned* out_num);
-
+irt_tuning_error_code irt_list_params(const irt_subject* subject, irt_parameter_id out_param[], unsigned* out_num, unsigned max, unsigned offset);
 
 /**
  * Obtains a list of metrics offered by a given subject. The function will copy
@@ -209,7 +271,7 @@ irt_tuning_error_code irt_list_params(const irt_subject* subject, irt_parameter 
  * @param max     ... the maximal number of metrics to be written to the given metric list
  * @param offset  ... the offset starting at
  */
-irt_tuning_error_code irt_list_metrics(const irt_subject* subject, irt_metric out_metric[], unsigned* num, unsigned max, unsigned offset);
+irt_tuning_error_code irt_list_metrics(const irt_subject* subject, const irt_metric* out_metric[], unsigned* num, unsigned max, unsigned offset);
 
 /**
  * The main querying function allowing to obtain values for metrics offered by a subject.
@@ -220,7 +282,7 @@ irt_tuning_error_code irt_list_metrics(const irt_subject* subject, irt_metric ou
  * @param n       ... the number of requested metrics
  * @param time    ... the time constraints for the requested data (where applicable)
  */
-irt_tuning_error_code irt_get_data(const irt_subject* subject, const irt_metric metrics[], irt_value out_value[], unsigned n, const irt_time_constraint* time);
+irt_tuning_error_code irt_get_data(const irt_subject* subject, const irt_metric* metrics[], irt_value out_value[], unsigned n, const irt_time_constraint* time);
 
 /**
  * Allows to obtain the current state of the parameters offered by a subject.
@@ -230,7 +292,7 @@ irt_tuning_error_code irt_get_data(const irt_subject* subject, const irt_metric 
  * @param value   ... the target to which the obtained information should be written to
  * @param n       ... the number of requested parameters
  */
-irt_tuning_error_code irt_get_params(const irt_subject* subject, const irt_parameter params[], irt_value value[], unsigned n);
+irt_tuning_error_code irt_get_params(const irt_subject* subject, const irt_parameter_id params[], irt_value value[], unsigned n);
 
 /**
  * Allows to update the parameter state of a single subject.
@@ -240,5 +302,5 @@ irt_tuning_error_code irt_get_params(const irt_subject* subject, const irt_param
  * @param value   ... the new values to be assigned to the parameters
  * @param n       ... the number of parameters to be updated
  */
-irt_tuning_error_code irt_set_params(const irt_subject* subject, const irt_parameter params[], const irt_value value[], unsigned n);
+irt_tuning_error_code irt_set_params(const irt_subject* subject, const irt_parameter_id params[], const irt_value value[], unsigned n);
 

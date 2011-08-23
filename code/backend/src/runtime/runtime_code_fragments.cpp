@@ -303,6 +303,12 @@ namespace runtime {
 
 	// -- Implementation Table --------------------------------------------------------------
 
+	class ImplementationStore {
+
+
+
+	};
+
 
 	struct WorkItemVariantCode {
 		string entryName;
@@ -315,7 +321,8 @@ namespace runtime {
 	};
 
 	ImplementationTable::ImplementationTable(const Converter& converter)
-		: converter(converter), workItems() {}
+		: converter(converter) {}
+
 
 	ImplementationTablePtr ImplementationTable::get(const Converter& converter) {
 		static string ENTRY_NAME = "ImplementationTable";
@@ -332,10 +339,19 @@ namespace runtime {
 		return static_pointer_cast<const ImplementationTable>(res);
 	}
 
-	void ImplementationTable::registerWorkItemImpl(const WorkItemImpl& implementation) {
+	unsigned ImplementationTable::registerWorkItemImpl(const core::ExpressionPtr& implementation) {
+
+		// check whether implementation has already been resolved
+		auto pos = index.find(implementation);
+		if (pos != index.end()) {
+			return pos->second;
+		}
+
+		// decode implementation information
+		WorkItemImpl impl = WorkItemImpl::decode(implementation);
 
 		vector<WorkItemVariantCode> variants;
-		for_each(implementation.getVariants(), [&](const WorkItemVariant& cur) {
+		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
 			// resolve entry point
 			const FunctionInfo& info = converter.getFunctionManager().getInfo(cur.getImplementation());
@@ -348,7 +364,10 @@ namespace runtime {
 		});
 
 		// add implementation to list of implementations
+		unsigned id = workItems.size();
+		index.insert(std::make_pair(implementation, id));
 		workItems.push_back(WorkItemImplCode(variants));
+		return id;
 	}
 
 

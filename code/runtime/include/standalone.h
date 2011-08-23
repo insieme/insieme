@@ -41,14 +41,15 @@
 #include "client_app.h"
 #include "irt_mqueue.h"
 
-/** Starts the runtime in standalone mode and executes work item 0.
+/** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
   * worker_count : number of workers to start
   * init_context_fun : fills type tables in context
   * cleanup_context_fun : cleans up the context
-  * startup_params : parameter struct for the startup work item (0)
+  * impl_id : the id of the work-item implementation to be started
+  * startup_params : parameter struct for the startup work item (impl_id)
   */
-void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_lw_data_item *startup_params);
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params);
 
 // globals
 pthread_key_t irt_g_error_key;
@@ -154,14 +155,14 @@ bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_regist
 	return false;
 }
 
-void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_lw_data_item *startup_params) {
+void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cleanup_context_fun* cleanup_fun, irt_wi_implementation_id impl_id, irt_lw_data_item *startup_params) {
 	irt_runtime_start(IRT_RT_STANDALONE, worker_count);
 	pthread_setspecific(irt_g_worker_key, irt_g_workers[0]); // slightly hacky
 	irt_context* context = irt_context_create_standalone(init_fun, cleanup_fun);
 	for(int i=0; i<irt_g_worker_count; ++i) {
 		irt_g_workers[i]->cur_context = context->id;
 	}
-	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, 0, startup_params);
+	irt_work_item* main_wi = irt_wi_create(irt_g_wi_range_one_elem, impl_id, startup_params);
 	// event handling for outer work item [[
 	pthread_mutex_t mutex;
 	pthread_mutex_init(&mutex, NULL);

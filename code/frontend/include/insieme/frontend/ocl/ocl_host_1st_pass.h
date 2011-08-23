@@ -109,8 +109,9 @@ public:
 class Handler {
 protected:
 	core::ProgramPtr kernels;
+	core::ASTBuilder& builder;
 public:
-	Handler(core::ASTBuilder& build) {
+	Handler(core::ASTBuilder& build) : builder(build) {
 		kernels = core::Program::create(build.getNodeManager());
 	}
 
@@ -119,6 +120,10 @@ public:
 	const vector<core::ExpressionPtr>& getKernels() {
 		return kernels->getEntryPoints();
 	}
+
+	// check if expression is a string conatining a path to a kernel file
+	// if yes, load and compile these kernels and add them to the appropriate fields
+	void findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
 };
 
 /*
@@ -129,14 +134,12 @@ template<typename Lambda>
 class LambdaHandler: public Handler {
 	// flag indicating if the definition of the actual function has already been added to the program
 	static bool defAdded;
-	core::ASTBuilder& builder;
 
 	const char* fct;
 	Lambda body;
-
 public:
 	LambdaHandler(core::ASTBuilder& build, const char* fun, Lambda lambda) :
-		Handler(build), builder(build), fct(fun), body(lambda) {
+		Handler(build), fct(fun), body(lambda) {
 	}
 
 	// creating a shared pointer to a LambdaHandler
@@ -187,6 +190,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	LocalMemDecls localMemDecls;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 
+
 	// check if the call is a call to ref.assign
 	core::CallExprPtr checkAssignment(const core::NodePtr& oldCall);
 
@@ -204,6 +208,10 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	bool handleClCreateKernel(const core::ExpressionPtr& expr, const core::ExpressionPtr& call, const core::ExpressionPtr& fieldName);
 	bool lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource);
 
+	// needed to add one level of indirection because calling the hander member function seems to be impossible form the ADD_Handler macro
+	void findKernelsUsingPathString(const string& handleName, const core::ExpressionPtr& path, const core::ExpressionPtr& root) {
+		handles[handleName]->findKernelsUsingPathString(path, root, mProgram);
+	}
 public:
 	HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);
 

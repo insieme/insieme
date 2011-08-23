@@ -63,7 +63,7 @@ irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_ite
 }
 
 
-irt_work_group* irt_parallel(const irt_parallel_job* job) {
+irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job) {
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
 	irt_work_group* ret = irt_wg_create();
