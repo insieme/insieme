@@ -42,6 +42,7 @@
 #include "insieme/core/ast_address.h"
 #include "insieme/core/type_utils.h"
 
+#include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
@@ -304,15 +305,11 @@ private:
 		// correct type literal name => cosmetic
 		if (res->getNodeType() == NT_Literal) {
 			const LiteralPtr& literal = static_pointer_cast<const Literal>(res);
-			if (literal->getType()->getNodeType() == NT_GenericType) {
-				const GenericTypePtr& type = static_pointer_cast<const GenericType>(literal->getType());
-				if (type->getFamilyName() == "type"
-						&& type->getTypeParameter().size() == static_cast<std::size_t>(1)
-						&& type->getIntTypeParameter().empty()) {
+			if (analysis::isTypeLiteralType(literal->getType())) {
+				const TypePtr& type = analysis::getRepresentedType(literal->getType());
 
-					// update type
-					return manager.basic.getTypeLiteral(type);
-				}
+				// update type
+				return manager.basic.getTypeLiteral(type);
 			}
 		}
 

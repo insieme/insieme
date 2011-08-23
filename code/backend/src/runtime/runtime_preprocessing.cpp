@@ -415,12 +415,12 @@ namespace runtime {
 			core::ExpressionPtr convertJob(const core::JobExprPtr& job) {
 
 				// extract range
-				Range range = coder::toValue<Range>(job->getThreadNumRange());
+				WorkItemRange range = coder::toValue<WorkItemRange>(job->getThreadNumRange());
 
 				// create job parameters
-				core::ExpressionPtr min = coder::toIR(manager, range.min);
-				core::ExpressionPtr max = coder::toIR(manager, range.max);
-				core::ExpressionPtr mod = coder::toIR(manager, range.mod);
+				core::ExpressionPtr min = range.min;
+				core::ExpressionPtr max = range.max;
+				core::ExpressionPtr mod = range.mod;
 
 				auto info = wrapJob(manager, job);
 				core::ExpressionPtr wi = coder::toIR(manager, info.first);

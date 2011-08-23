@@ -381,8 +381,39 @@ namespace ocl_kernel {
 				// perform conversion in post-order
 				core::NodePtr res = ptr->substitute(manager, *this);
 
+				// check whether this is the call to a kernel
+				if (res->getNodeType() == core::NT_CallExpr) {
+					core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
+					core::ExpressionPtr fun = call->getFunctionExpr();
+
+					// if this is a call to the kernel ...
+					if (core::analysis::isCallOf(fun, extensions.kernelWrapper)) {
+						// ... drop final two arguments
+						const core::ExpressionList& args = call->getArguments();
+						assert(args.size() >= 2 && "Call should have 2 or more arguments");
+						core::ExpressionList newArgs = core::ExpressionList(args.begin(), args.end()-2);
+
+						core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
+						const core::TypeList& paramTypes = funType->getParameterTypes();
+						assert(paramTypes.size() == newArgs.size());
+
+						// add type wrappers where necessary
+						for(std::size_t i = 0; i < paramTypes.size(); i++) {
+							if (extensions.isGlobalType(paramTypes[i])) {
+								newArgs[i] = builder.callExpr(paramTypes[i], extensions.wrapGlobal, newArgs[i]);
+							} else if (extensions.isLocalType(paramTypes[i])) {
+								newArgs[i] = builder.callExpr(paramTypes[i], extensions.wrapLocal, newArgs[i]);
+							} else if (extensions.isConstType(paramTypes[i])) {
+								newArgs[i] = builder.callExpr(paramTypes[i], extensions.wrapConst, newArgs[i]);
+							}
+						}
+
+						return builder.callExpr(funType->getReturnType(), fun, newArgs);
+					}
+				}
+
 				// only interested in lambda expressions
-				if (ptr->getNodeType() != core::NT_LambdaExpr) {
+				if (res->getNodeType() != core::NT_LambdaExpr) {
 					return res;
 				}
 
