@@ -215,7 +215,8 @@ class HostMapper: public core::transform::CachedNodeMapping {
 
 	// handles create buffer at the rhs of assignments
 	const core::NodePtr handleCreateBufferAssignment(const core::VariablePtr& lhsVar, const core::CallExprPtr& callExpr);
-
+	// handles create buffer at the init expression of declarations
+	const core::NodePtr handleCreateBufferDecl(const core::VariablePtr& var, const core::ExpressionPtr& initFct, const core::DeclarationStmtPtr& decl);
 	// needed to add one level of indirection because calling the hander member function seems to be impossible form the ADD_Handler macro
 	void findKernelsUsingPathString(const string& handleName, const core::ExpressionPtr& path, const core::ExpressionPtr& root) {
 		handles[handleName]->findKernelsUsingPathString(path, root, mProgram);
