@@ -73,14 +73,41 @@ private:
 	Map();
 };
 
-template <class SetTy>
-SetTy set_union(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
+template <class Ctx>
+std::shared_ptr<Set<Ctx>> set_union(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
 
-template <class SetTy>
-SetTy set_intersect(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
+template <class Ctx>
+std::shared_ptr<Set<Ctx>> set_intersect(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
 
-template <class SetTy>
-SetTy set_negate(const SetTy& lhs) { assert(false && "TO BE IMPLEMENTED!"); }
+template <class Ctx>
+std::shared_ptr<Map<Ctx>> map_union(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+
+template <class Ctx>
+std::shared_ptr<Map<Ctx>> map_intersect(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+
+template <class Ctx>
+std::shared_ptr<Map<Ctx>> map_intersect_domain(Ctx& ctx, const Map<Ctx>& lhs, const Set<Ctx>& dom);
+
+
+//===== Dependency analysis =======================================================================
+
+template <class Ctx>
+struct DependenceInfo {
+	Map<Ctx> mustDep;
+	Map<Ctx> mayDep;
+	Map<Ctx> mustNoSource;
+	Map<Ctx> mayNoSource;
+};
+
+template <class Ctx>
+void buildDependencies( 
+		Ctx&								ctx,
+		const std::shared_ptr<Set<Ctx>>& 	domain, 
+		const std::shared_ptr<Map<Ctx>>& 	schedule, 
+		const std::shared_ptr<Map<Ctx>>& 	sinks, 
+		const std::shared_ptr<Map<Ctx>>& 	must_sources = std::shared_ptr<Map<Ctx>>(), 
+		const std::shared_ptr<Map<Ctx>>& 	may_sourcs = std::shared_ptr<Map<Ctx>>()
+);
 
 //===== Conversion Utilities ======================================================================
 
@@ -100,17 +127,20 @@ template <Backend B>
 std::shared_ptr<Set<typename BackendTraits<B>::ctx_type>> 
 makeSet( typename BackendTraits<B>::ctx_type& ctx, 
 		 const IterationVector& iterVec,
-		 const ConstraintCombinerPtr& constraint) 
+		 const ConstraintCombinerPtr& constraint,
+		 const std::string& tuple_name = std::string())
 {
-	return std::make_shared<Set<typename BackendTraits<B>::ctx_type>>(ctx, iterVec, constraint);
+	return std::make_shared<Set<typename BackendTraits<B>::ctx_type>>(ctx, iterVec, constraint, tuple_name);
 }
 
 template <Backend B>
 std::shared_ptr<Map<typename BackendTraits<B>::ctx_type>>
-makeMap( typename BackendTraits<B>::ctx_type& ctx, 
-		 const AffineSystem& affSys)
+makeMap( typename BackendTraits<B>::ctx_type& ctx,  
+		 const AffineSystem& affSys,
+		 const std::string& in_tuple_name = std::string(),
+		 const std::string& out_tuple_name = std::string())
 {
-	return std::make_shared<Map<typename BackendTraits<B>::ctx_type>>(ctx, affSys);
+	return std::make_shared<Map<typename BackendTraits<B>::ctx_type>>(ctx, affSys, in_tuple_name, out_tuple_name);
 }
 
 } // end poly namespace

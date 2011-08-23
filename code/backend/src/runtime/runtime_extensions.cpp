@@ -36,6 +36,8 @@
 
 #include "insieme/backend/runtime/runtime_extensions.h"
 
+#include "insieme/annotations/c/naming.h"
+
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/encoder/lists.h"
@@ -71,7 +73,7 @@ namespace runtime {
 			core::ASTBuilder builder(manager);
 
 			// create a generic type representing the work item implementation
-			return builder.genericType("WorkItemImpl");
+			return builder.genericType("irt_wi_implementation_id");
 		}
 
 		const core::TypePtr getWorkItemVariantType(core::NodeManager& manager) {
@@ -107,7 +109,6 @@ namespace runtime {
 			core::ASTBuilder builder(manager);
 			return builder.genericType("irt_type_id");
 		}
-
 
 		// -- Runtime Constructors ------------------------------------------------------
 
@@ -281,10 +282,11 @@ namespace runtime {
 			core::ASTBuilder builder(manager);
 
 			// assemble argument list and literal type
-			core::TypePtr int8 = manager.getBasicGenerator().getInt8();
+			core::TypePtr group = manager.basic.getThreadGroup();
+			core::TypePtr int4 = manager.getBasicGenerator().getInt4();
 			core::TypePtr bodyImpl = getWorkItemImplType(manager);
 			core::TypePtr data = getLWDataItemType(manager);
-			core::FunctionTypePtr funType = builder.functionType(toVector(int8,int8,int8,bodyImpl,data), getWorkItemType(manager));
+			core::FunctionTypePtr funType = builder.functionType(toVector(group,int4,int4,int4,bodyImpl,data), getWorkItemType(manager));
 			return builder.literal(funType, "irt_pfor");
 		}
 
@@ -312,6 +314,29 @@ namespace runtime {
 			core::FunctionTypePtr type = builder.functionType(toVector(workItem, index, tupleDataItem, typeLiteral), basic.getAlpha());
 			return builder.literal(type, "getArg");
 		}
+
+
+		const core::TypePtr getWorkItemRangeType(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			core::TypePtr int4 = manager.basic.getInt4();
+			core::StructType::Entries entries;
+			entries.push_back(core::StructType::Entry(builder.identifier("begin"), int4));
+			entries.push_back(core::StructType::Entry(builder.identifier("end"), int4));
+			entries.push_back(core::StructType::Entry(builder.identifier("step"), int4));
+			core::TypePtr res = builder.structType(entries);
+
+			res->addAnnotation<annotations::c::CNameAnnotation>("irt_work_item_range");
+			return res;
+		}
+
+		const core::LiteralPtr getGetWorkItemRange(core::NodeManager& manager) {
+			core::ASTBuilder builder(manager);
+
+			core::TypePtr item = builder.refType(getWorkItemType(manager));
+			core::FunctionTypePtr type = builder.functionType(toVector(item), getWorkItemRangeType(manager));
+			return builder.literal(type, "getRange");
+		}
 	}
 
 	Extensions::Extensions(core::NodeManager& manager)
@@ -328,9 +353,6 @@ namespace runtime {
 		  submitWorkItem(getSubmitWorkItem(manager)),
 		  joinWorkItem(getJoinWorkItem(manager)),
 		  exitWorkItem(getExitWorkItem(manager)),
-//		  dataItemType(getDataItemType(manager)),
-//		  wrapData(getWrapData(manager)),
-//		  unwrapData(getUnwrapData(manager)),
 		  typeID(getTypeIDType(manager)),
 		  LWDataItemType(getLWDataItemType(manager)),
 		  wrapLWData(getWrapLWData(manager)),
@@ -340,7 +362,9 @@ namespace runtime {
 		  parallel(getParallel(manager)),
 		  pfor(getPFor(manager)),
 		  merge(getMerge(manager)),
-		  getWorkItemArgument(getGetWorkItemArgument(manager)) {}
+		  getWorkItemArgument(getGetWorkItemArgument(manager)),
+		  workItemRange(getWorkItemRangeType(manager)),
+		  getWorkItemRange(getGetWorkItemRange(manager)) {}
 
 
 

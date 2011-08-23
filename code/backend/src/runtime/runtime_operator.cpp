@@ -56,6 +56,7 @@ namespace runtime {
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
+		const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
@@ -137,6 +138,11 @@ namespace runtime {
 			return c_ast::access(c_ast::deref(inner), format("c%d", core::encoder::toValue<unsigned>(ARG(1))+1));
 		});
 
+		table[ext.getWorkItemRange] = OP_CONVERTER({
+			// access work item range directly
+			return c_ast::access(c_ast::deref(CONVERT_ARG(0)), "range");
+		});
+
 		table[ext.createJob] = OP_CONVERTER({
 			const Extensions& ext = NODE_MANAGER.getLangExtension<Extensions>();
 
@@ -161,6 +167,33 @@ namespace runtime {
 		table[ext.merge] = OP_CONVERTER({
 			ADD_HEADER_FOR("irt_wg_join");
 			return c_ast::call(C_NODE_MANAGER->create("irt_wg_join"), CONVERT_ARG(0));
+		});
+
+		table[ext.pfor] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_pfor");
+			ADD_HEADER_FOR("irt_wi_get_current");
+
+			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
+			c_ast::ExpressionPtr group = CONVERT_ARG(0);
+			c_ast::ExpressionPtr min = CONVERT_ARG(1);
+			c_ast::ExpressionPtr max = CONVERT_ARG(2);
+			c_ast::ExpressionPtr step = CONVERT_ARG(3);
+			c_ast::ExpressionPtr range = c_ast::init(C_NODE_MANAGER->create<c_ast::NamedType>(C_NODE_MANAGER->create("irt_work_item_range")), min, max, step);
+			c_ast::ExpressionPtr body = CONVERT_ARG(4);
+			c_ast::ExpressionPtr data = CONVERT_ARG(5);
+			return c_ast::call(C_NODE_MANAGER->create("irt_pfor"), item, group, range, body, data);
+		});
+
+		table[basic.getGetThreadGroup()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_wi_get_current");
+			ADD_HEADER_FOR("irt_wi_get_wg");
+			c_ast::ExpressionPtr item = c_ast::call(C_NODE_MANAGER->create("irt_wi_get_current"));
+			return c_ast::call(C_NODE_MANAGER->create("irt_wi_get_wg"), item, CONVERT_ARG(0));
+		});
+
+		table[basic.getBarrier()] = OP_CONVERTER({
+			ADD_HEADER_FOR("irt_wg_barrier");
+			return c_ast::call(C_NODE_MANAGER->create("irt_wg_barrier"), CONVERT_ARG(0));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

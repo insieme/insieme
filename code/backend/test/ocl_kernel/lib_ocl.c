@@ -42,11 +42,58 @@
 
 /*
  * =====================================================================================
- *  OpenCL Platforms Functions 
+ *  OpenCL Static Internal Functions Declarations
  * =====================================================================================
  */
 
-void _irt_cl_print_platform_info(cl_platform_id* id) {
+#define IRT_CL_NUM_PLATFORM_PARAMS	(sizeof(_irt_cl_platform_params)/sizeof(_irt_cl_platform_param))
+
+typedef struct __irt_cl_platform_param {
+	cl_platform_info name;
+	char* name_string;
+} _irt_cl_platform_param;
+
+/*static _irt_cl_platform_param _irt_cl_platform_params[] = {
+	{ CL_PLATFORM_NAME, "CL_PLATFORM_NAME" },
+	{ CL_PLATFORM_VERSION, "CL_PLATFORM_VERSION" },
+	{ CL_PLATFORM_VENDOR, "CL_PLATFORM_VENDOR" },
+	//{ CL_PLATFORM_PROFILE, "CL_PLATFORM_PROFILE" },
+	//{ CL_PLATFORM_EXTENSIONS, "CL_PLATFORM_EXTENSIONS" },
+};*/
+
+//static void _irt_cl_print_platform_info(cl_platform_id* id);
+static cl_uint _irt_cl_get_num_platforms();
+static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms);
+
+#define IRT_CL_NUM_DEVICE_PARAMS	(sizeof(_irt_cl_device_params)/sizeof(_irt_cl_device_param))
+
+typedef struct __irt_cl_device_param {
+	cl_device_info name;
+	char* name_string;
+} _irt_cl_device_param;
+
+static _irt_cl_device_param _irt_cl_device_params[] = {
+	{ CL_DEVICE_NAME, "CL_DEVICE_NAME" },
+	{ CL_DRIVER_VERSION, "CL_DRIVER_VERSION"},
+	{ CL_DEVICE_VENDOR, "CL_DEVICE_VENDOR" },
+};
+
+static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
+static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
+static void _irt_cl_print_device_infos(cl_device_id* device);
+static void _irt_cl_print_device_info(cl_device_id* device, char* prefix, cl_device_info param_name, char* suffix);
+
+static char* _irt_load_program_source (const char* filename, size_t* filesize);
+static void _irt_save_program_binary (cl_program program, const char* binary_filename);
+static const char* _irt_error_string (cl_int err_code);
+
+/*
+ * =====================================================================================
+ *  OpenCL Internal Platform Functions
+ * =====================================================================================
+ */
+
+/*static void _irt_cl_print_platform_info(cl_platform_id* id) {
 	IRT_ASSERT(id != NULL, IRT_ERR_OCL, "Error: invalid platform");
 	for (cl_uint i = 0; i < IRT_CL_NUM_PLATFORM_PARAMS; i++) {
 		size_t cl_param_size;
@@ -61,7 +108,7 @@ void _irt_cl_print_platform_info(cl_platform_id* id) {
 		IRT_INFO("%-25s = \"%s\"\n", _irt_cl_platform_params[i].name_string, cl_param_value);
 	}
 	IRT_INFO("\n");
-}
+}*/
 
 inline static cl_uint _irt_cl_get_num_platforms() {
 	cl_uint cl_num_platforms;
@@ -76,7 +123,7 @@ inline static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* 
 
 /* 
  * =====================================================================================
- *  OpenCL Devices Functions
+ *  OpenCL Internal Device Functions
  * =====================================================================================
  */
 
@@ -114,23 +161,9 @@ inline static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type 
 }
 
 
-
-/* 
- * =====================================================================================
- *  OpenCL Buffers Functions
- * =====================================================================================
- */
-
-inline cl_mem _irt_cl_create_buffer(cl_context context, cl_mem_flags flags, size_t size) {
-	cl_int err_code;
-	cl_mem mem = clCreateBuffer(context, flags, size, NULL, &err_code);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error creating buffer: \"%s\"", _irt_error_string(err_code));
-	return mem;
-}
-
 /* 
 * =====================================================================================
-*  OpenCL Load, Save, Error Functions
+*  OpenCL Internal Load, Save, Error Functions
 * =====================================================================================
 */
 
@@ -281,9 +314,9 @@ static const char* _irt_error_string (cl_int errcode) {
 	};
 }
 
-/* 
+/*
  * =====================================================================================
- *  Insieme Runtime OpenCL Devices
+ *  OpenCL Device Functions
  * =====================================================================================
  */
 
@@ -321,24 +354,24 @@ void irt_ocl_init_devices() {
 					for (int i = 0; i < cl_num_devices; ++i, ++index) {
 						cl_int err_code;
 						irt_ocl_device* dev = &devices[index];
-						dev->cl_device = cl_devices[i];
-						dev->cl_context = clCreateContext(NULL, 1, &dev->cl_device, NULL, NULL, &err_code);
-						IRT_ASSERT(err_code == CL_SUCCESS && dev->cl_context != NULL, IRT_ERR_OCL, "Error creating context: \"%s\"", _irt_error_string(err_code));
-						dev->cl_queue = clCreateCommandQueue(dev->cl_context, dev->cl_device, 0, &err_code); //FIXME: CL_QUEUE_PROFILING_ENABLE, &err_code);
-						IRT_ASSERT(err_code == CL_SUCCESS && dev->cl_queue != NULL, IRT_ERR_OCL, "Error creating queue: \"%s\"", _irt_error_string(err_code));
+						dev->device = cl_devices[i];
+						dev->context = clCreateContext(NULL, 1, &dev->device, NULL, NULL, &err_code);
+						IRT_ASSERT(err_code == CL_SUCCESS &&dev->context != NULL, IRT_ERR_OCL, "Error creating context: \"%s\"", _irt_error_string(err_code));
+						dev->queue = clCreateCommandQueue(dev->context, dev->device, 0, &err_code); //FIXME: CL_QUEUE_PROFILING_ENABLE, &err_code);
+						IRT_ASSERT(err_code == CL_SUCCESS && dev->queue != NULL, IRT_ERR_OCL, "Error creating queue: \"%s\"", _irt_error_string(err_code));
 						
 						cl_ulong cl_global_mem_size;
-						err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &cl_global_mem_size, NULL);
+						err_code = clGetDeviceInfo(dev->device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &cl_global_mem_size, NULL);
 						IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
 
-						cl_ulong cl_max_buffer_size;
-						err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &cl_max_buffer_size, NULL);
+						cl_ulong max_buffer_size;
+						err_code = clGetDeviceInfo(dev->device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &max_buffer_size, NULL);
 						IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
 
-						dev->cl_mem_size = cl_global_mem_size;
-						dev->cl_mem_available = cl_global_mem_size;
-						dev->cl_max_buffer_size = cl_max_buffer_size;
-						dev->cl_buffer = NULL;
+						dev->mem_size = cl_global_mem_size;
+						dev->mem_available = cl_global_mem_size;
+						dev->max_buffer_size = max_buffer_size;
+						dev->buffer = NULL;
 					}
 				}
 			}
@@ -350,20 +383,19 @@ void irt_ocl_release_devices() {
 	cl_int err_code;
 	for (int i = 0; i < num_devices; ++i) {
 		irt_ocl_device* dev = &devices[i];
-		// release the buffer list 
-		irt_ocl_buffer* tmp = dev->cl_buffer;
+		irt_ocl_buffer* tmp = dev->buffer;
 		while(tmp) {
-			dev->cl_buffer = (dev->cl_buffer)->next;
-			err_code = clReleaseMemObject(tmp->cl_mem);
+			dev->buffer = (dev->buffer)->next;
+			err_code = clReleaseMemObject(tmp->mem);
 			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
 			free(tmp);
-			tmp = dev->cl_buffer;
+			tmp = dev->buffer;
 		}
 		// release the queue
-		err_code = clReleaseCommandQueue(dev->cl_queue);
+		err_code = clReleaseCommandQueue(dev->queue);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing command queue: \"%s\"", _irt_error_string(err_code));
 		// release the context
-		err_code = clReleaseContext(dev->cl_context);
+		err_code = clReleaseContext(dev->context);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context: \"%s\"", _irt_error_string(err_code));
 	}
 	free(devices);
@@ -379,13 +411,19 @@ inline irt_ocl_device* irt_ocl_get_device(cl_uint id) {
 	return &devices[id];
 }
 
+/*
+ * =====================================================================================
+ *  OpenCL Buffer Functions
+ * =====================================================================================
+ */
+
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size) {
-	IRT_ASSERT(size <= dev->cl_max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
-	//printf("Available Memory: %lu   Request Memory: %lu\n", dev->cl_mem_available, size);
-	if (size > dev->cl_mem_available) {
+	IRT_ASSERT(size <= dev->max_buffer_size, IRT_ERR_OCL, "Error creating buffer: \"Buffer size is too big\"");
+	//printf("Available Memory: %lu   Request Memory: %lu\n", dev->mem_available, size);
+	if (size > dev->mem_available) {
 		//printf(" Need to free some buffer\n");
 
-		irt_ocl_buffer* ptr = dev->cl_buffer;
+		irt_ocl_buffer* ptr = dev->buffer;
 		irt_ocl_buffer* prev = NULL;
 		while (ptr) {
 			if ((ptr->size > size) && (ptr->used == false)) 
@@ -397,28 +435,30 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 		IRT_ASSERT(ptr != NULL, IRT_ERR_OCL, "Error creating buffer: \"Not enough memory\""); // FIXME: assert if an element is not found
 		// FIXME: maybe more than one element can be released
 		if (!prev) {
-			dev->cl_buffer = NULL;
+			dev->buffer = NULL;
 		} else {
 			prev->next = ptr->next;
 		}
 		// free the selected buffer
-		cl_int err_code = clReleaseMemObject(ptr->cl_mem);
-		dev->cl_mem_available += ptr->size;
-		//printf("Released Buffer: %lu  Available Memory:%lu\n", ptr->size, dev->cl_mem_available);
+		cl_int err_code = clReleaseMemObject(ptr->mem);
+		dev->mem_available += ptr->size;
+		//printf("Released Buffer: %lu  Available Memory:%lu\n", ptr->size, dev->mem_available);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
 		free(ptr);
 	}
 	
 	// create buffer
 	irt_ocl_buffer* buf = (irt_ocl_buffer*)malloc(sizeof(irt_ocl_buffer));
-	buf->cl_mem = _irt_cl_create_buffer(dev->cl_context, flags, size);
+	cl_int err_code;
+	buf->mem = clCreateBuffer(dev->context, flags, size, NULL, &err_code);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error creating buffer: \"%s\"", _irt_error_string(err_code));
 	buf->used = true;
 	buf->size = size;
 	buf->next = NULL;
-	buf->cl_queue = dev->cl_queue;
+	buf->queue =dev->queue;
 	
 	// add buffer to the list
-	irt_ocl_buffer* ptr = dev->cl_buffer;
+	irt_ocl_buffer* ptr = dev->buffer;
 	irt_ocl_buffer* prev = NULL;
 	while(ptr && (ptr->size <= size)) {
 		prev = ptr;
@@ -426,14 +466,14 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 	}
 	if (!prev) { // prev == NULL
 		buf->next = ptr;
-		dev->cl_buffer = buf;
+		dev->buffer = buf;
 	} else {
 		//insert after prev
 		buf->next = prev->next;
 		prev->next = buf;
 	}
 	//update the available memory
-	dev->cl_mem_available -= size;
+	dev->mem_available -= size;
 
 	// print buffer list status
 	/*printf("LIST BEGIN\n");
@@ -454,39 +494,45 @@ inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
 }
 
 inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr) {
-	cl_int err_code = clEnqueueWriteBuffer(buf->cl_queue, buf->cl_mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
+	cl_int err_code = clEnqueueWriteBuffer(buf->queue, buf->mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error writing buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
 inline void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr) {
-	cl_int err_code = clEnqueueReadBuffer(buf->cl_queue, buf->cl_mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
+	cl_int err_code = clEnqueueReadBuffer(buf->queue, buf->mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error reading buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
 inline void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size) {
 	cl_int err_code;
-	void* ptr = clEnqueueMapBuffer(buf->cl_queue, buf->cl_mem, blocking, map_flags, 0, size, 0, NULL, NULL, &err_code); 
+	void* ptr = clEnqueueMapBuffer(buf->queue, buf->mem, blocking, map_flags, 0, size, 0, NULL, NULL, &err_code); 
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error mapping buffer: \"%s\"",  _irt_error_string(err_code));
 	return ptr;
 }
 
 inline void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr) {
-	cl_int err_code = clEnqueueUnmapMemObject(buf->cl_queue, buf->cl_mem, mapped_ptr, 0, NULL, NULL);
+	cl_int err_code = clEnqueueUnmapMemObject(buf->queue, buf->mem, mapped_ptr, 0, NULL, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error unmapping buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
 inline void irt_ocl_copy_buffer(irt_ocl_buffer* src_buf, irt_ocl_buffer* dest_buf, size_t size) {
-	IRT_ASSERT(src_buf->cl_queue  == dest_buf->cl_queue, IRT_ERR_OCL, "Error: source and destination buffer have a different queue");
-	cl_int err_code = clEnqueueCopyBuffer(src_buf->cl_queue, src_buf->cl_mem, dest_buf->cl_mem, 0, 0, size, 0, NULL, NULL);
+	IRT_ASSERT(src_buf->queue  == dest_buf->queue, IRT_ERR_OCL, "Error: source and destination buffer have a different queue");
+	cl_int err_code = clEnqueueCopyBuffer(src_buf->queue, src_buf->mem, dest_buf->mem, 0, 0, size, 0, NULL, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error copying buffer: \"%s\"",  _irt_error_string(err_code));
-} 
+}
+
+/*
+ * =====================================================================================
+ *  OpenCL Print & Profile Functions
+ * =====================================================================================
+ */
 
 inline void irt_ocl_print_device_infos(irt_ocl_device* dev) {
-	_irt_cl_print_device_infos(&(dev->cl_device));
+	_irt_cl_print_device_infos(&(dev->device));
 }
 
 inline void irt_ocl_print_device_info(irt_ocl_device* dev, char* prefix, cl_device_info param_name, char* suffix) {
-	_irt_cl_print_device_info(&(dev->cl_device), prefix, param_name, suffix);
+	_irt_cl_print_device_info(&(dev->device), prefix, param_name, suffix);
 }
 
 inline float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag) {
@@ -515,96 +561,108 @@ float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_com
 	return time;
 }
 
+/*
+ * =====================================================================================
+ *  OpenCL Kernel Functions
+ * =====================================================================================
+ */
+
 irt_ocl_kernel*  irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag) {
 	cl_program program = NULL;
+	char* binary_name = NULL;
 	size_t filesize = 0;
-	
-	// create the binary name
-	size_t len, binary_name_size, cl_param_size;
-	char* device_name;
 	cl_int err_code;
-	err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, 0, NULL, &cl_param_size);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
-	device_name = alloca (cl_param_size);
-	err_code = clGetDeviceInfo(dev->cl_device, CL_DEVICE_NAME, cl_param_size, device_name, NULL);
-	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
-	
-	const char* file_ptr = strrchr(file_name, '/'); // remove the path from the file_name
-	if (file_ptr) 
-		file_ptr++; // remove the last '/'
-	else
-		file_ptr = file_name;
-	
-	len = strlen(file_ptr);
-	IRT_ASSERT(len >= 0, IRT_ERR_OCL, "Error size of file_name");
-	
-	char* converted_file_name = alloca(len + 1); // +1 for the \0 in the end
-	strcpy (converted_file_name, file_ptr);
-	for (int i = 0; i < len; ++i) {
-		if (!isalnum ((int)converted_file_name[i])) {
-			converted_file_name[i] = '_';
+	if (flag != IRT_OCL_STRING) {
+		// create the binary name
+		size_t len, binary_name_size, cl_param_size;
+		char* device_name;
+		err_code = clGetDeviceInfo(dev->device, CL_DEVICE_NAME, 0, NULL, &cl_param_size);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
+		device_name = alloca (cl_param_size);
+		err_code = clGetDeviceInfo(dev->device, CL_DEVICE_NAME, cl_param_size, device_name, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
+
+		const char* file_ptr = strrchr(file_name, '/'); // remove the path from the file_name
+		if (file_ptr)
+			file_ptr++; // remove the last '/'
+		else
+			file_ptr = file_name;
+
+		len = strlen(file_ptr);
+		IRT_ASSERT(len >= 0, IRT_ERR_OCL, "Error size of file_name");
+
+		char* converted_file_name = alloca(len + 1); // +1 for the \0 in the end
+		strcpy (converted_file_name, file_ptr);
+		for (int i = 0; i < len; ++i) {
+			if (!isalnum ((int)converted_file_name[i])) {
+				converted_file_name[i] = '_';
+			}
 		}
-	}
-	binary_name_size = len;
+		binary_name_size = len;
 
-	len = strlen(device_name);
-	char* converted_device_name = alloca(len + 1); // +1 for the \0 in the end
-	strcpy (converted_device_name, device_name);
-	for (int i = 0; i < len; ++i) {
-		if (!isalnum ((int)converted_device_name[i])) {
-			converted_device_name[i] = '_';
+		len = strlen(device_name);
+		char* converted_device_name = alloca(len + 1); // +1 for the \0 in the end
+		strcpy (converted_device_name, device_name);
+		for (int i = 0; i < len; ++i) {
+			if (!isalnum ((int)converted_device_name[i])) {
+				converted_device_name[i] = '_';
+			}
 		}
+		binary_name_size += len;
+		binary_name_size += 6; // file_name.device_name.bin\0
+
+		binary_name = alloca (binary_name_size);
+
+		sprintf (binary_name, "%s.%s.bin", converted_file_name, converted_device_name);
+		//printf("%s\n", binary_name);
 	}
-	binary_name_size += len;
-	binary_name_size += 6; // file_name.device_name.bin\0
-	
-	char* binary_name = alloca (binary_name_size);
+	if ((flag == IRT_OCL_SOURCE) || (flag == IRT_OCL_STRING)) {
+		if (flag == IRT_OCL_SOURCE) {
+			char* program_source = _irt_load_program_source(file_name, &filesize);
+			IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
+			program = clCreateProgramWithSource (dev->context, 1, (const char **) &program_source, NULL, &err_code);
+			IRT_ASSERT(err_code == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(err_code));
+			free(program_source);
+		} else { // case of IRT_OCL_STRING we use the file_name to pass the string
+			program = clCreateProgramWithSource (dev->context, 1, (const char **) &file_name, NULL, &err_code);
+			IRT_ASSERT(err_code == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(err_code));
+		}
 
-	sprintf (binary_name, "%s.%s.bin", converted_file_name, converted_device_name);
-	//printf("%s\n", binary_name);
+		err_code = clBuildProgram(program, 1, &(dev->device), build_options, NULL, NULL);
 
-	if (flag == IRT_OCL_SOURCE) {
-		char* program_source = _irt_load_program_source(file_name, &filesize);
-		IRT_ASSERT(program_source != NULL, IRT_ERR_OCL, "Error loading kernel program source");
-	
-		program = clCreateProgramWithSource (dev->cl_context, 1, (const char **) &program_source, NULL, &err_code);
-		IRT_ASSERT(err_code == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(err_code));
-		free(program_source);
-		err_code = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
-		
 		// If there are build errors, print them to the screen
 		if(err_code != CL_SUCCESS) {
 			IRT_INFO("Kernel program failed to build.\n");
 			char *buildLog;
 			size_t buildLogSize;
-			err_code = clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize);
+			err_code = clGetProgramBuildInfo(program,dev->device, CL_PROGRAM_BUILD_LOG, 0, NULL, &buildLogSize);
 			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info: \"%s\"", _irt_error_string(err_code));
 			buildLog = (char*)malloc(buildLogSize);
-			err_code = clGetProgramBuildInfo(program, dev->cl_device, CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL);
+			err_code = clGetProgramBuildInfo(program,dev->device, CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL);
 			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program build info: \"%s\"", _irt_error_string(err_code));
 			buildLog[buildLogSize-1] = '\0';
-			IRT_INFO("Device Build Log:\n%s\n", buildLog); 
+			IRT_INFO("Device Build Log:\n%s\n", buildLog);
 			free(buildLog);
 		}
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(err_code));
-		
-		_irt_save_program_binary(program, binary_name); 
 	}
-	
+
+	if (flag == IRT_OCL_SOURCE) _irt_save_program_binary(program, binary_name); // We don't save in case of IRT_OCL_STRING
+
 	if (flag == IRT_OCL_BINARY) {
 		cl_int binary_status;
-		unsigned char* program_s = (unsigned char*) _irt_load_program_source(binary_name, &filesize); 
-		program = clCreateProgramWithBinary (dev->cl_context, 1, &(dev->cl_device), &filesize, (const unsigned char **) &program_s, &binary_status, &err_code);
+		unsigned char* program_s = (unsigned char*) _irt_load_program_source(binary_name, &filesize);
+		program = clCreateProgramWithBinary (dev->context, 1, &(dev->device), &filesize, (const unsigned char **) &program_s, &binary_status, &err_code);
 		free(program_s);
 		IRT_ASSERT(err_code == CL_SUCCESS && binary_status == CL_SUCCESS && program != NULL, IRT_ERR_OCL, "Error creating compute program: \"%s\"", _irt_error_string(err_code));
-		err_code = clBuildProgram(program, 1, &(dev->cl_device), build_options, NULL, NULL);
-		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(err_code));		
+		err_code = clBuildProgram(program, 1, &(dev->device), build_options, NULL, NULL);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error building compute program: \"%s\"", _irt_error_string(err_code));
 	}
 
 	irt_ocl_kernel* kernel = NULL;
 	if ((kernel_name != NULL) && (*kernel_name != 0)) {
 		kernel = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel));
-		kernel->cl_kernel = clCreateKernel(program, kernel_name, &err_code);
+		kernel->kernel = clCreateKernel(program, kernel_name, &err_code);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel: \"%s\"", _irt_error_string(err_code));
 		kernel->type = IRT_OCL_TASK;
 		kernel->work_dim = 0;
@@ -613,12 +671,12 @@ irt_ocl_kernel*  irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_nam
 		kernel->dev = dev;
 	}
 	err_code = clReleaseProgram(program);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));	
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));
 	return kernel; // I want only to compile the program, with kernel name = ""
 }
 
 inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
-	cl_int err_code = clReleaseKernel(kernel->cl_kernel);
+	cl_int err_code = clReleaseKernel(kernel->kernel);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing kernel");
 	free(kernel);
 }
@@ -638,23 +696,23 @@ void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...) {
 	va_list arg_list;
 	cl_int err_code;
 	va_start (arg_list, num_args);
-	for (int i = 0; i < num_args; i++) {
+	for (unsigned i = 0; i < num_args; i++) {
 		arg_index = i;
 		arg_size = va_arg (arg_list, size_t);
 		arg_val = va_arg (arg_list, void *);
 		if (arg_size == 0){
 			irt_ocl_buffer* buf = (irt_ocl_buffer*) arg_val;
 			arg_size = sizeof(cl_mem);
-			arg_val = (void*) &(buf->cl_mem);
+			arg_val = (void*) &(buf->mem);
 		}
-		err_code = clSetKernelArg(kernel->cl_kernel, arg_index, arg_size, arg_val);
+		err_code = clSetKernelArg(kernel->kernel, arg_index, arg_size, arg_val);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error setting kernel arguments: \"%s\"", _irt_error_string(err_code));    
 	}
   	va_end (arg_list);
 
 	if (kernel->type == IRT_OCL_NDRANGE) {
-		err_code = clEnqueueNDRangeKernel((kernel->dev)->cl_queue, 
-						kernel->cl_kernel, 
+		err_code = clEnqueueNDRangeKernel((kernel->dev)->queue, 
+						kernel->kernel, 
 						kernel->work_dim,
 						NULL, 
 						kernel->global_work_size,
@@ -663,8 +721,8 @@ void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...) {
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error enqueuing NDRange Kernel: \"%s\"", _irt_error_string(err_code));
 	}
 	else if (kernel->type == IRT_OCL_TASK) {
-		err_code = clEnqueueTask((kernel->dev)->cl_queue, kernel->cl_kernel, 0, NULL, NULL);
+		err_code = clEnqueueTask((kernel->dev)->queue, kernel->kernel, 0, NULL, NULL);
 		 IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error enqueuing Task Kernel: \"%s\"", _irt_error_string(err_code));
 	}
 	else IRT_ASSERT(false, IRT_ERR_OCL, "Kernel Type Not Valid");
-}
+}	

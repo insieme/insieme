@@ -461,6 +461,10 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
 
+ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, string member) const {
+	return accessMember(structExpr, identifier(member));
+}
+
 ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_StructType);
