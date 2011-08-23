@@ -147,9 +147,13 @@ namespace runtime {
 
 			res["irt_parallel"] 					= "ir_interface.h";
 			res["irt_merge"] 						= "ir_interface.h";
+			res["irt_pfor"]							= "ir_interface.h";
 
 			res["irt_wg_join"]						= "irt_all_impls.h";
 			res["irt_wi_end"]						= "irt_all_impls.h";
+			res["irt_wi_get_current"]				= "irt_all_impls.h";
+			res["irt_wi_get_wg"]					= "irt_all_impls.h";
+			res["irt_wg_barrier"]					= "irt_all_impls.h";
 
 			return res;
 		}
@@ -159,6 +163,8 @@ namespace runtime {
 
 			// some runtime types ...
 			res["irt_parallel_job"]				= "ir_interface.h";
+			res["irt_work_item_range"]			= "irt_all_impls.h";
+			res["irt_wi_implementation_id"]		= "irt_all_impls.h";
 
 			return res;
 		}

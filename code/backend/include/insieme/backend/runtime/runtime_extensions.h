@@ -120,17 +120,6 @@ namespace runtime {
 
 		const core::TypePtr typeID;
 
-//		/**
-//		 * The type used internally to represent data items. The type is treated in an abstract
-//		 * way and its actual implementation is imported via a runtime-include file.
-//		 *
-//		 * The type is DataItem<'a> where 'a is the actual data structure to be represented.
-//		 */
-//		const core::TypePtr dataItemType;
-//
-//		const core::LiteralPtr wrapData;
-//
-//		const core::LiteralPtr unwrapData;
 
 		// --- Light Weight Data Item Handling ----------------------------------
 
@@ -158,6 +147,9 @@ namespace runtime {
 
 		const core::LiteralPtr getWorkItemArgument;
 
+		const core::TypePtr workItemRange;
+
+		const core::LiteralPtr getWorkItemRange;
 
 	private:
 

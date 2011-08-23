@@ -265,13 +265,13 @@ namespace runtime {
 		 * Collects a list of variables to be captures by a job for proper initialization
 		 * of the various job branches.
 		 */
-		vector<core::VariablePtr> getVariablesToBeCaptured(const core::ExpressionPtr& job, const utils::set::PointerSet<core::VariablePtr>& excluded = utils::set::PointerSet<core::VariablePtr>()) {
+		vector<core::VariablePtr> getVariablesToBeCaptured(const core::ExpressionPtr& code, const utils::set::PointerSet<core::VariablePtr>& excluded = utils::set::PointerSet<core::VariablePtr>()) {
 
 			vector<core::VariablePtr> res;
 
 			// collect all variables potentially captured by this job
 			VariableCollector collector(excluded, res);
-			collector.visit(job);
+			collector.visit(code);
 
 			return res;
 		}
@@ -306,18 +306,20 @@ namespace runtime {
 			core::TypePtr unit = basic.getUnit();
 
 			// create variable replacement map
+			core::TupleTypePtr tupleType = builder.tupleType(list);
+			core::TypePtr dataItemType = DataItem::toLWDataItemType(tupleType);
+			core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
 			utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> varReplacements;
 			for_each(varIndex, [&](const std::pair<core::VariablePtr, unsigned>& cur) {
 				core::TypePtr varType = cur.first->getType();
-				core::ExpressionPtr index = coder::toIR(manager, cur.second + 1);
-				core::ExpressionPtr tupleType = coder::toIR(manager, tupleType);
+				core::ExpressionPtr index = coder::toIR(manager, cur.second);
 				core::ExpressionPtr access = builder.callExpr(varType, extensions.getWorkItemArgument,
-						toVector<core::ExpressionPtr>(workItem, index, tupleType, coder::toIR(manager, varType)));
+						toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, coder::toIR(manager, varType)));
 				varReplacements.insert(std::make_pair(cur.first, access));
 			});
 
 			auto fixVariables = [&](const core::ExpressionPtr& cur)->core::ExpressionPtr {
-				return static_pointer_cast<const core::Expression>(core::transform::replaceVars(manager, cur, varReplacements));
+				return core::transform::replaceVarsGen(manager, cur, varReplacements);
 			};
 
 			auto fixBranch = [&](const core::ExpressionPtr& branch)->core::ExpressionPtr {
@@ -351,8 +353,7 @@ namespace runtime {
 
 			// construct light-weight data item tuple
 			core::ExpressionPtr tuple = builder.tupleExpr(capturedValues);
-			core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(tuple->getType());
-			core::ExpressionPtr parameters = builder.callExpr(DataItem::toLWDataItemType(tupleType), extensions.wrapLWData, toVector(tuple));
+			core::ExpressionPtr parameters = builder.callExpr(dataItemType, extensions.wrapLWData, toVector(tuple));
 
 			// return implementation + parameters
 			return std::make_pair(impl, parameters);
@@ -384,7 +385,7 @@ namespace runtime {
 
 				// test whether it is something of interest
 				if (res->getNodeType() == core::NT_JobExpr) {
-					return convertJob(static_pointer_cast<const core::JobExpr>(ptr));
+					return convertJob(static_pointer_cast<const core::JobExpr>(res));
 				}
 
 				// handle parallel call
@@ -400,13 +401,18 @@ namespace runtime {
 					return builder.callExpr(basic.getUnit(), ext.merge, core::analysis::getArgument(res, 0));
 				}
 
+				// handle pfor calls
+				if (core::analysis::isCallOf(res, basic.getPFor())) {
+					return convertPfor(static_pointer_cast<const core::CallExpr>(res));
+				}
+
 				// nothing interesting ...
 				return res;
 			}
 
 		private:
 
-			core::ExpressionPtr convertJob(core::JobExprPtr job) {
+			core::ExpressionPtr convertJob(const core::JobExprPtr& job) {
 
 				// extract range
 				Range range = coder::toValue<Range>(job->getThreadNumRange());
@@ -425,8 +431,100 @@ namespace runtime {
 
 			}
 
+			core::ExpressionPtr convertPfor(const core::CallExprPtr& call) {
+				// check that it is indeed a pfor call
+				assert(core::analysis::isCallOf(call, basic.getPFor()));
+
+				// construct call to pfor ...
+				const core::ExpressionList& args = call->getArguments();
+
+				auto info = pforBodyToWorkItem(args[4]);
+				core::ExpressionPtr bodyImpl = coder::toIR(manager, info.first);
+				core::ExpressionPtr data = info.second;
+				core::TypePtr resType = ext.workItemType;
+
+				return builder.callExpr(resType, ext.pfor,
+						toVector(args[0], args[1], args[2], args[3], bodyImpl, data));
+
+//				irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
+			}
+
+			std::pair<WorkItemImpl, core::ExpressionPtr> pforBodyToWorkItem(const core::ExpressionPtr& body) {
+
+				// ------------- build captured data -------------
+
+				// collect variables to be captured
+				vector<core::VariablePtr> captured = getVariablesToBeCaptured(body);
+
+				// create tuple of captured data
+				core::TypeList typeList;
+				core::ExpressionList capturedValues;
+				for_each(captured, [&](const core::VariablePtr& cur) {
+					typeList.push_back(cur->getType());
+					capturedValues.push_back(cur);
+				});
+
+				// construct light-weight data tuple to be passed to work item
+				core::TupleTypePtr tupleType = builder.tupleType(typeList);
+				core::TypePtr dataItemType = DataItem::toLWDataItemType(tupleType);
+				core::ExpressionPtr tuple = builder.tupleExpr(capturedValues);
+				core::ExpressionPtr data = builder.callExpr(dataItemType, ext.wrapLWData, toVector(tuple));
 
 
+				// ------------- build up function computing for-loop body -------------
+
+				core::StatementList resBody;
+
+				// define parameter of resulting lambda
+				core::VariablePtr workItem = builder.variable(builder.refType(ext.workItemType));
+
+				// create variables containing loop boundaries
+				core::TypePtr unit = basic.getUnit();
+				core::TypePtr int4 = basic.getInt4();
+
+				core::VariablePtr range = builder.variable(ext.workItemRange);
+				core::VariablePtr begin = builder.variable(int4);
+				core::VariablePtr end = builder.variable(int4);
+				core::VariablePtr step = builder.variable(int4);
+
+				resBody.push_back(builder.declarationStmt(range, builder.callExpr(ext.workItemRange, ext.getWorkItemRange, workItem)));
+				resBody.push_back(builder.declarationStmt(begin, builder.accessMember(range, "begin")));
+				resBody.push_back(builder.declarationStmt(end, 	 builder.accessMember(range, "end")));
+				resBody.push_back(builder.declarationStmt(step,  builder.accessMember(range, "step")));
+
+				// create loop calling body of p-for
+				core::VariablePtr iterator = builder.variable(int4);
+				core::CallExprPtr loopBodyCall = builder.callExpr(unit, body, iterator);
+				core::ExpressionPtr loopBody = core::transform::tryInlineToExpr(manager, loopBodyCall);
+
+				// replace variables within loop body to fit new context
+				core::ExpressionPtr paramTypeToken = coder::toIR<core::TypePtr>(manager, dataItemType);
+				utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> varReplacements;
+				unsigned count = 0;
+				for_each(captured, [&](const core::VariablePtr& cur) {
+					core::TypePtr varType = cur->getType();
+					core::ExpressionPtr index = coder::toIR(manager, count++);
+					core::ExpressionPtr access = builder.callExpr(varType, ext.getWorkItemArgument,
+							toVector<core::ExpressionPtr>(workItem, index, paramTypeToken, coder::toIR(manager, varType)));
+					varReplacements.insert(std::make_pair(cur, access));
+				});
+
+				loopBody = core::transform::replaceVarsGen(manager, loopBody, varReplacements);
+
+				// build for loop
+				core::DeclarationStmtPtr iterDecl = builder.declarationStmt(iterator, begin);
+				core::ForStmtPtr forStmt = builder.forStmt(iterDecl, loopBody, end, step);
+				resBody.push_back(forStmt);
+
+				// add exit work-item call
+				resBody.push_back(builder.callExpr(unit, ext.exitWorkItem, workItem));
+
+				core::LambdaExprPtr lambda = builder.lambdaExpr(unit, builder.compoundStmt(resBody), toVector(workItem));
+				WorkItemImpl impl(toVector(WorkItemVariant(lambda)));
+
+				// combine results into a pair
+				return std::make_pair(impl, data);
+			}
 		};
 
 	}

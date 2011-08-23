@@ -341,8 +341,8 @@ namespace backend {
 					type = c_ast::PrimitiveType::Int64;
 				} else {
 					LOG(FATAL) << "Unsupported integer type: " << *ptr;
-					assert(false && "Unsupported Integer type encountered!");
-					type = c_ast::PrimitiveType::Int32;
+					//assert(false && "Unsupported Integer type encountered!");
+					return type_info_utils::createUnsupportedInfo(manager);
 				}
 
 				// create primitive type + include dependency

@@ -235,6 +235,19 @@ public:
 	}
 
 	/**
+	 * Adds a new annotation of the given generic type to this class. The annotation
+	 * will be constructed internally based on the given parameters.
+	 *
+	 * @tparam Annotation the kind of annotation to be added
+	 * @tparam Params the types of the parameters required for the construction
+	 * @param p the parameters to be passed to the constructor
+	 */
+	template<typename Annotation, typename ... Params>
+	void addAnnotation(Params ... p) const {
+		addAnnotation(std::make_shared<Annotation>(p...));
+	}
+
+	/**
 	 * Obtains a pointer to an Annotation associated to this annotatable class.
 	 *
 	 * @tparam Key the type of key used to look up the requested element.
