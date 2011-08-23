@@ -120,13 +120,12 @@ TEST(FunctionManager, Literals) {
 
 	EXPECT_EQ("myFun_wrap", toC(info.lambdaWrapperName));
 
-	EXPECT_PRED2(containsSubString, toC(info.prototype), "int myFun(float p1, bool p2);");
-	EXPECT_EQ("int myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "int32_t myFun(float p1, bool p2);");
+	EXPECT_EQ("int32_t myFun_wrap(name* closure, float p1, bool p2) {\n    return myFun(p1, p2);\n}\n", toC(info.lambdaWrapper));
 
 	// check get value (value to be used when passing function as an argument)
 	ConversionContext context(converter);
-	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &myFun_wrap)", toC(funManager.getValue(literal, context)));
-	EXPECT_TRUE(context.getDependencies().find(info.lambdaWrapper) != context.getDependencies().end());
+	EXPECT_EQ("&myFun", toC(funManager.getValue(literal, context)));
 
 	// TODO: check the call creation
 }
@@ -191,17 +190,16 @@ TEST(FunctionManager, Lambda) {
 	EXPECT_TRUE((bool)info.lambdaWrapperName);
 
 	EXPECT_EQ("name_wrap", toC(info.lambdaWrapperName));
-	EXPECT_PRED2(containsSubString, toC(info.prototype), "int name(float name, bool name)");
-	EXPECT_PRED2(containsSubString, toC(info.definition), "int name(float name, bool name) {\n    return 12;\n}");
-	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "int name_wrap(name* closure, float p1, bool p2) {\n    return name(p1, p2);\n}");
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "int32_t name(float name, bool name)");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "int32_t name(float name, bool name) {\n    return 12;\n}");
+	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "int32_t name_wrap(name* closure, float p1, bool p2) {\n    return name(p1, p2);\n}");
 
 	// since function is not recursive, no seperation of prototype and definition should be required
 	EXPECT_EQ(info.prototype, info.definition);
 
 	// check get value (value to be used when passing function as an argument)
 	ConversionContext context(converter);
-	EXPECT_EQ("name_ctr((name*)alloca(sizeof(name)), &name_wrap)", toC(funManager.getValue(lambda, context)));
-	EXPECT_TRUE(context.getDependencies().find(info.lambdaWrapper) != context.getDependencies().end());
+	EXPECT_EQ("&name", toC(funManager.getValue(lambda, context)));
 
 	// TODO: check for call
 }
@@ -271,9 +269,9 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	EXPECT_TRUE((bool)info.definition);
 	EXPECT_TRUE((bool)info.lambdaWrapper);
 
-	EXPECT_PRED2(containsSubString, toC(info.prototype), "bool name(int p1);");
-	EXPECT_PRED2(containsSubString, toC(info.definition), "bool name(int name) {\n");
-	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "bool name_wrap(name* closure, int p1) {\n    return name(p1);\n}");
+	EXPECT_PRED2(containsSubString, toC(info.prototype), "bool name(int32_t p1);");
+	EXPECT_PRED2(containsSubString, toC(info.definition), "bool name(int32_t name) {\n");
+	EXPECT_PRED2(containsSubString, toC(info.lambdaWrapper), "bool name_wrap(name* closure, int32_t p1) {\n    return name(p1);\n}");
 
 	// TODO: check create call and get value
 }
@@ -340,20 +338,20 @@ TEST(FunctionManager, Bind) {
 	EXPECT_EQ("name_closure", toC(info.closureType));
 
 	string def = toC(info.definitions);
-	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,float,int);");
-	EXPECT_PRED2(containsSubString, def, "name* nested;");
-	EXPECT_PRED2(containsSubString, def, "int* c2;");
+	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,float,int32_t);");
+	EXPECT_PRED2(containsSubString, def, "bool(* nested)(float,int32_t*,int32_t);");
+	EXPECT_PRED2(containsSubString, def, "int32_t* c2;");
 	EXPECT_PRED2(containsSubString, def, "} name_closure;");
 
 	EXPECT_PRED2(containsSubString, def,
-		"bool name_mapper(name_closure* closure, float c1, int c3) {\n"
-		"    return (closure->nested)->call(closure->nested, c1, closure->c2, c3);\n"
+		"bool name_mapper(name_closure* closure, float c1, int32_t c3) {\n"
+		"    return closure->nested(c1, closure->c2, c3);\n"
 		"}"
 	);
 
 	EXPECT_PRED2(containsSubString, def,
-		"static inline name_closure* name_ctr(name_closure* closure, name* nested, int* c2) {\n"
-		"    (*closure) = ((name_closure){&name_mapper, nested, c2});\n"
+		"static inline name_closure* name_ctr(name_closure* closure, bool(* nested)(float,int32_t*,int32_t), int32_t* c2) {\n"
+		"    *closure = (name_closure){&name_mapper, nested, c2};\n"
 		"    return closure;\n"
 		"}"
 	);
@@ -365,13 +363,115 @@ TEST(FunctionManager, Bind) {
 	ConversionContext context(converter);
 
 	EXPECT_EQ(
-			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name*)alloca(sizeof(name)), &fun_wrap), v3)",
+			"name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, v3)",
 			toC(funManager.getValue(bind, context))
 	);
 	EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());
 
 }
 
+
+TEST(FunctionManager, NestedBind) {
+
+	core::NodeManager nodeManager;
+	core::ASTBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+
+	Converter converter;
+	converter.setNodeManager(&nodeManager);
+
+	TestNameManager nameManager;
+	converter.setNameManager(&nameManager);
+
+	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
+	converter.setFragmentManager(fragmentManager);
+
+	TypeManager typeManager(converter);
+	converter.setTypeManager(&typeManager);
+
+	StmtConverter stmtConverter(converter);
+	converter.setStmtConverter(&stmtConverter);
+
+	FunctionManager funManager(converter);
+	converter.setFunctionManager(&funManager);
+
+	// ----------------- Create a bind -----------
+
+	core::TypePtr int4 = basic.getInt4();
+	core::TypePtr real4 = basic.getFloat();
+	core::TypePtr refInt4 = builder.refType(int4);
+	core::TypePtr boolean = basic.getBool();
+
+	core::VariablePtr p1 = builder.variable(int4, 1);
+	core::VariablePtr p2 = builder.variable(real4, 2);
+	core::LiteralPtr  p3 = builder.literal(refInt4, "v3");
+
+	core::LiteralPtr fun = builder.literal(builder.functionType(toVector(real4, refInt4, int4), boolean), "fun");
+	core::CallExprPtr call = builder.callExpr(boolean, fun, p2, p3, p1);
+	core::BindExprPtr innerBind = builder.bindExpr(toVector(p2,p1), call);
+
+	EXPECT_EQ("bind(v2,v1){fun(v2, v3, v1)}", toString(*innerBind));
+
+	// ----------------- Create another bind -----------
+
+	core::VariablePtr p4 = builder.variable(int4, 4);
+	core::LiteralPtr  p5 = builder.literal(real4, "v5");
+	core::CallExprPtr call2 = builder.callExpr(boolean, innerBind, p5, p4);
+	core::BindExprPtr bind = builder.bindExpr(toVector(p4), call2);
+
+	EXPECT_EQ("bind(v4){bind(v2,v1){fun(v2, v3, v1)}(v5, v4)}", toString(*bind));
+
+	// ----------------- Convert using function manager -----------
+
+	BindInfo info = funManager.getInfo(bind);
+
+	// check presence of all members
+	EXPECT_TRUE((bool)info.closureName);
+	EXPECT_EQ("name_closure", toC(info.closureName));
+
+	EXPECT_TRUE((bool)info.mapperName);
+	EXPECT_EQ("name_mapper", toC(info.mapperName));
+
+	EXPECT_TRUE((bool)info.constructorName);
+	EXPECT_EQ("name_ctr", toC(info.constructorName));
+
+	EXPECT_TRUE((bool)info.closureType);
+	EXPECT_TRUE((bool)info.definitions);
+
+	EXPECT_EQ("name_closure", toC(info.closureType));
+
+	string def = toC(info.definitions);
+	EXPECT_PRED2(containsSubString, def, "bool(* call)(struct _name_closure*,int32_t);");
+	EXPECT_PRED2(containsSubString, def, "name* nested;");
+	EXPECT_PRED2(containsSubString, def, "float c1;");
+	EXPECT_PRED2(containsSubString, def, "} name_closure;");
+
+	EXPECT_PRED2(containsSubString, def,
+		"bool name_mapper(name_closure* closure, int32_t c2) {\n"
+		"    return closure->nested->call(closure->nested, closure->c1, c2);\n"
+		"}"
+	);
+
+	EXPECT_PRED2(containsSubString, def,
+		"static inline name_closure* name_ctr(name_closure* closure, name* nested, float c1) {\n"
+		"    *closure = (name_closure){&name_mapper, nested, c1};\n"
+		"    return closure;\n"
+		"}"
+	);
+
+	// full code example - just make sure that no dependency cycle has been produced
+	toString(c_ast::CCode(fragmentManager, bind, info.definitions));
+
+	// check get value (value to be used when passing function as an argument)
+	ConversionContext context(converter);
+
+	EXPECT_EQ(
+			"name_ctr((name_closure*)alloca(sizeof(name_closure)), name_ctr((name_closure*)alloca(sizeof(name_closure)), &fun, v3), v5)",
+			toC(funManager.getValue(bind, context))
+	);
+	EXPECT_TRUE(context.getDependencies().find(info.definitions) != context.getDependencies().end());
+
+}
 
 } // end namespace backend
 } // end namespace insieme

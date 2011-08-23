@@ -120,6 +120,21 @@ ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints,
 
 // ---------------------------- Convenience -------------------------------------
 
+FunctionTypePtr ASTBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
+	if (funType->isPlain()) {
+		return funType;
+	}
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), true);
+}
+
+FunctionTypePtr ASTBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
+	if (!funType->isPlain()) {
+		return funType;
+	}
+	return functionType(funType->getParameterTypes(), funType->getReturnType(), false);
+}
+
+
 LiteralPtr ASTBuilder::stringLit(const string& str) const {
 	return literal(str, manager.basic.getString());
 }
@@ -129,6 +144,48 @@ LiteralPtr ASTBuilder::intLit(const int val) const {
 }
 LiteralPtr ASTBuilder::uintLit(const unsigned int val) const {
     return literal(manager.basic.getUInt4(), toString(val));
+}
+
+
+core::ExpressionPtr ASTBuilder::getZero(const core::TypePtr& type) const {
+
+	// if it is an integer ...
+	if (manager.basic.isInt(type)) {
+		return core::Literal::get(manager, type, "0");
+	}
+
+	// if it is a real ..
+	if (manager.basic.isReal(type)) {
+		return core::Literal::get(manager, type, "0.0");
+	}
+
+	// if it is a struct ...
+	if (type->getNodeType() == core::NT_StructType) {
+
+		// extract type and resolve members recursively
+		core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+
+		core::StructExpr::Members members;
+		for_each(structType->getEntries(), [&](const core::StructType::Entry& cur) {
+			members.push_back(std::make_pair(cur.first, getZero(cur.second)));
+		});
+
+		return core::StructExpr::get(manager, members);
+	}
+
+	// if it is a ref type ...
+	if (type->getNodeType() == core::NT_RefType) {
+		// return the corresponding flavor of NULL
+		core::TypePtr elementType = core::analysis::getReferencedType(type);
+		return callExpr(type, manager.basic.getAnyRefToRef(), manager.basic.getNull(), manager.basic.getTypeLiteral(elementType));
+	}
+
+	// TODO: extend for more types
+	LOG(FATAL) << "Encountered unsupported type: " << *type;
+	assert(false && "Given type not supported yet!");
+
+	// fall-back => no default initialization possible
+	return callExpr(type, manager.basic.getInitZero(), manager.basic.getTypeLiteral(type));
 }
 
 
@@ -144,6 +201,10 @@ CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
 
 CallExprPtr ASTBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.basic.getRefNew(), subExpr);
+}
+
+CallExprPtr ASTBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+	return callExpr(manager.basic.getUnit(), manager.basic.getRefAssign(), target, value);
 }
 
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
@@ -222,7 +283,7 @@ namespace {
 	}
 }
 
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments /*= vector<ExpressionPtr>()*/) const {
+CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
 	// use deduced return type to construct call
 	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
@@ -235,6 +296,9 @@ CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const Expres
 CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
 }
+CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
+	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
+}
 CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1));
 }
@@ -246,10 +310,10 @@ CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr&
 }
 
 LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit()), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit(), true), params, body);
 }
 LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), returnType), params, body);
+	return lambdaExpr(functionType(extractParamTypes(params), returnType, true), params, body);
 }
 
 
@@ -271,7 +335,7 @@ BindExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr
 	parameter.insert(parameter.end(), params.begin(), params.end());
 
 	// build function type
-	FunctionTypePtr funType = functionType(extractParamTypes(parameter), returnType);
+	FunctionTypePtr funType = functionType(extractParamTypes(parameter), returnType, true);
 
 	// build inner function
 	LambdaExprPtr lambda = lambdaExpr(funType, parameter, body);
@@ -388,7 +452,7 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     		);
     }
 
-    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy ), params, body );
+    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, true), params, body );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
 
     if ( !lazy ) 	return callExpr;
@@ -396,6 +460,50 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     // build the expression body
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
+
+ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+	core::TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_StructType);
+
+	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
+	core::TypePtr memberType = structType->getTypeOfMember(member);
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getCompositeMemberAccess();
+	return callExpr(memberType, access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+}
+
+ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+	core::TypePtr type = structExpr->getType();
+	assert(type->getNodeType() == core::NT_RefType);
+
+	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
+	assert(elementType->getNodeType() == core::NT_StructType);
+
+	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(elementType);
+	core::TypePtr memberType = structType->getTypeOfMember(member);
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getCompositeRefElem();
+	return callExpr(refType(memberType), access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+}
+
+ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
+	core::TypePtr type = tupleExpr->getType();
+	assert(type->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
+
+	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(type);
+	assert(component < tupleType->getElementTypes().size() && "Component out of range!");
+	core::TypePtr componentType = tupleType->getElementTypes()[component];
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getTupleMemberAccess();
+	core::ExpressionPtr index = literal(getBasicGenerator().getUInt8(), utils::numeric_cast<string>(component));
+	core::ExpressionPtr typeLiteral = getBasicGenerator().getTypeLiteral(componentType);
+	return callExpr(componentType, access, tupleExpr, index, typeLiteral);
+}
+
+
 
 // ---------------------------- Utilities ---------------------------------------
 

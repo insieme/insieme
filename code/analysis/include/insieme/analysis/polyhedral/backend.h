@@ -36,47 +36,82 @@
 
 #pragma once
 
+#include "insieme/utils/printable.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme {
 namespace analysis {
 namespace poly {
 
-/** 
- * Stores eventual context information to keep the state of the underlying library implementation 
- */
-struct Context { 
-	Context();
-	virtual ~Context();
-};
-
-/**
+/**************************************************************************************************
  * Generic implementation of a the concept of a set which is natively supported by polyhedral
  * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
  * union, difference, etc...)
- */
-struct Set {
-
-	// Creates an empty Set based on the dimensionality of the given iteration vector. 
-	// Once creates, the iteration vector on which the set is based cannot been changed. 
-	Set(const Context& ctx, const IterationVector& iterVec);
+ *************************************************************************************************/
+template <class Ctx>
+struct Set : public utils::Printable {
 	
-	// Adds a new constraint to this set. 
-	//
-	// The iteration vector on which c is expressed must be compatibile with the iterVec
-	void addConstraint(const Constraint& c); 
+	typedef Ctx ctx_type;
 
-	~Set();
+	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+
+	virtual ~Set() { }
 private:
-	const Context& ctx;
-	const IterationVector& iterVec; 
+	Set();
 };
 
-// Set union(const Set& lhs, const Set& rhs);
+template <class Ctx> 
+struct Map : public utils::Printable {
 
-// Set intersect(const Set& lhs, const Set& rhs);
+	typedef Ctx ctx_type;
 
-Set negate(const Set& lhs, const Set& rhs);
+	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+
+	virtual ~Map() { }
+
+private:
+	Map();
+};
+
+template <class SetTy>
+SetTy set_union(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
+
+template <class SetTy>
+SetTy set_intersect(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
+
+template <class SetTy>
+SetTy set_negate(const SetTy& lhs) { assert(false && "TO BE IMPLEMENTED!"); }
+
+//===== Conversion Utilities ======================================================================
+
+enum Backend { ISL };
+
+/**
+ * Defines type traits which are used to determine the type of the context for implementing backends 
+ */
+template <Backend B>
+struct BackendTraits;
+
+template <Backend B>
+std::shared_ptr<typename BackendTraits<B>::ctx_type>
+createContext() { return std::make_shared<typename BackendTraits<B>::ctx_type>(); }
+
+template <Backend B>
+std::shared_ptr<Set<typename BackendTraits<B>::ctx_type>> 
+makeSet( typename BackendTraits<B>::ctx_type& ctx, 
+		 const IterationVector& iterVec,
+		 const ConstraintCombinerPtr& constraint) 
+{
+	return std::make_shared<Set<typename BackendTraits<B>::ctx_type>>(ctx, iterVec, constraint);
+}
+
+template <Backend B>
+std::shared_ptr<Map<typename BackendTraits<B>::ctx_type>>
+makeMap( typename BackendTraits<B>::ctx_type& ctx, 
+		 const AffineSystem& affSys)
+{
+	return std::make_shared<Map<typename BackendTraits<B>::ctx_type>>(ctx, affSys);
+}
 
 } // end poly namespace
 } // end analysis namespace 

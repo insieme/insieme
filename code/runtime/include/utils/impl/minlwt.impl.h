@@ -41,14 +41,27 @@
 #include "wi_implementation.h"
 #include "impl/error_handling.impl.h"
 
+#include "sys/mman.h"
+
 #ifdef __x86_64__
 
 // ----------------------------------------------------------------------------
 // x86-64 implementation
 
 static inline void lwt_prepare(irt_work_item *wi, intptr_t *basestack) {
+	// heap allocated thread memory
 	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
 	wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
+
+	// let stack be allocated by the OS kernel
+	// see http://www.evanjones.ca/software/threading.html
+	// section: Implementing Kernel Threads on Linux
+//	wi->stack_ptr = (intptr_t)(mmap(NULL, IRT_WI_STACK_SIZE,
+//			PROT_READ | PROT_WRITE,
+//			MAP_PRIVATE | MAP_32BIT | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK,
+//			-1, 0)
+//	);
+//	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
 // launch lwt for wi with implementation func and store current stack address in basestack
@@ -117,9 +130,18 @@ void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 //	lwt_continue_impl(newstack, basestack);
 //	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 //}
+
+// workaround required to tell gcc that lwt_end is not a leaf function
+volatile int lwt_dummy = 0;
+__attribute__ ((noinline))
+void lwt_dummy_func() {
+	lwt_dummy++;
+}
+
 __attribute__ ((noinline))
 void lwt_end(intptr_t *basestack) {
 	//IRT_DEBUG("lwt_end - A.");
+	if(lwt_dummy) lwt_dummy_func();
 	__asm__ volatile (
 		/* swap stacks */
 		"movq (%%rcx), %%rsp ;"

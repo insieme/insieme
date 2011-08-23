@@ -119,7 +119,6 @@ using namespace utils::log;
 
 		timer.stop();
 		LOG(INFO) << timer;
-
 		timer = insieme::utils::Timer("SimpleBackend.Conversions");
 
 		// convert code

@@ -40,11 +40,11 @@
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/checks/ir_checks.h"
 
-#include "insieme/c_info/naming.h"
+#include "insieme/annotations/c/naming.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/logging.h"
@@ -75,7 +75,7 @@ public:
         if(core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
             const core::TypeList& args = funcType->getParameterTypes();
 
-            if(func->hasAnnotation(insieme::ocl::BaseAnnotation::KEY)) {
+            if(func->hasAnnotation(insieme::annotations::ocl::BaseAnnotation::KEY)) {
 
                 const core::TypePtr& retTy = funcType->getReturnType();
 
@@ -157,7 +157,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 
 //    LOG(INFO) << pp;
 
-    auto errors = core::check(program, insieme::core::checks::getFullCheck());
+    auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
     std::sort(errors.begin(), errors.end());
     for_each(errors, [](const core::Message& cur) {
         LOG(INFO) << cur << std::endl;

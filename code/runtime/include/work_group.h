@@ -38,6 +38,10 @@
 
 #include "declarations.h"
 
+#include <pthread.h>
+
+#define IRT_WG_RING_BUFFER_SIZE 16
+
 /* ------------------------------ data structures ----- */
 
 IRT_MAKE_ID_TYPE(work_group);
@@ -47,15 +51,20 @@ struct _irt_work_group {
 	bool distributed;			// starts at false, set to true if part of the group is not on the same shared memory node
 	irt_worker_id coordinator;  // only set if distributed == true
 	/* implementation stuff */
+	pthread_spinlock_t lock;
 	uint32 local_member_count;
+	uint32 ended_member_count;
 	uint32 cur_barrier_count_up;
 	uint32 cur_barrier_count_down;
 	void** redistribute_data_array;
+	irt_work_item* pfor_wi_list[IRT_WG_RING_BUFFER_SIZE];
+	uint32 pfor_count;
 };
 
 struct _irt_wi_wg_membership {
 	irt_work_group_id wg_id;
 	uint32 num;
+	uint32 pfor_count;
 };
 
 typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, uint32 num_participants, void *out_result);
@@ -65,6 +74,8 @@ typedef void irt_wg_redistribution_function(void** collected, uint32 local_id, u
 irt_work_group* irt_wg_create();
 void irt_wg_destroy(irt_work_group* wg);
 
+static inline void _irt_wg_end_member(irt_work_group* wg);
+
 //static inline void irt_wg_join(irt_work_group* wg);
 //static inline void irt_wg_leave(irt_work_group* wg);
 
@@ -72,7 +83,9 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi);
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi);
 
 static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi);
+static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg, irt_work_item* wi);
 
 void irt_wg_barrier(irt_work_group* wg);
 void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_data, void* result_data, irt_wg_redistribution_function* func);
+void irt_wg_join(irt_work_group* wg);
 

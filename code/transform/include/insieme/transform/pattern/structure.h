@@ -46,23 +46,24 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 
-
 	class Tree;
 	typedef std::shared_ptr<Tree> TreePtr;
 
-
 	class Tree {
-		const char symbol;
-		const std::vector<TreePtr> subTrees;
+	protected:
+		const int id;
+		std::vector<TreePtr> subTrees;
 	public:
 		template<typename... Args>
-		Tree(char symbol, Args && ... args) : symbol(symbol), subTrees(toVector<TreePtr>(args...)) {}
+		Tree(int id, Args && ... args) : id(id), subTrees(toVector<TreePtr>(args...)) {}
 
-		std::ostream& printTo(std::ostream& out) const;
-		bool operator==(const Tree& other) const;
+		Tree(const std::vector<TreePtr>& children, int id) : id(id), subTrees(children) {}
 
-		const std::vector<TreePtr> getSubTrees() const { return subTrees; }
-		const char getSymbol() const { return symbol; }
+		virtual std::ostream& printTo(std::ostream& out) const;
+		virtual bool operator==(Tree& other);
+
+		virtual std::vector<TreePtr>& getSubTrees() { return subTrees; }
+		const int getId() const { return id; }
 	};
 
 	template<typename... Args>
@@ -72,7 +73,7 @@ namespace pattern {
 
 	template<typename... Args>
 	TreePtr makeTree(char symbol, const Args & ... args ) {
-		return std::make_shared<Tree>(symbol, args...);
+		return std::make_shared<Tree>((int)symbol, args...);
 	}
 
 	std::ostream& operator<<(std::ostream& out, const Tree& tree);

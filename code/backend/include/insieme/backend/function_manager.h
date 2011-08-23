@@ -52,11 +52,20 @@ namespace backend {
 	class LambdaInfo;
 	class BindInfo;
 
+
+	/**
+	 * A type definition for a map linking external function names (literals)
+	 * with include files those literals are part of.
+	 */
+	typedef std::map<string, string> FunctionIncludeTable;
+
+	FunctionIncludeTable getBasicFunctionIncludeTable();
+
 	namespace detail {
 		class FunctionInfoStore;
 	}
 
-	class FunctionManager {
+	class FunctionManager : private boost::noncopyable {
 
 		const Converter& converter;
 
@@ -64,11 +73,13 @@ namespace backend {
 
 		const OperatorConverterTable operatorTable;
 
+		const FunctionIncludeTable includeTable;
+
 	public:
 
 		FunctionManager(const Converter& converter);
 
-		FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable);
+		FunctionManager(const Converter& converter, const OperatorConverterTable& operatorTable, const FunctionIncludeTable& includeTable);
 
 		~FunctionManager();
 
@@ -84,6 +95,7 @@ namespace backend {
 
 		const c_ast::ExpressionPtr getValue(const core::BindExprPtr& bind, ConversionContext& context);
 
+		const boost::optional<string> getHeaderFor(const string& function) const;
 	};
 
 

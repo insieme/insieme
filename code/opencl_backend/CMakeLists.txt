@@ -12,23 +12,23 @@ file(GLOB_RECURSE insieme_opencl_backend_incs 	include/*.h )
 # list all include paths
 include_directories( ${insieme_core_include_dir} )
 include_directories( ${insieme_utils_include_dir} )
-include_directories( ${insieme_c_info_include_dir} )
+include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_frontend_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
 include_directories( ${insieme_opencl_backend_include_dir} )
 
 # Build the opencl library
 add_library(insieme_opencl_backend ${LINKING_TYPE} ${insieme_opencl_backend_srcs} ${insieme_opencl_backend_incs} )
-
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/opencl_backend_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/opencl_backend/opencl_backend_config.h)
 # add dependencies
-add_dependencies( insieme_opencl_backend insieme_simple_backend insieme_core insieme_c_info insieme_utils )
-target_link_libraries(insieme_opencl_backend insieme_c_info)
+add_dependencies( insieme_opencl_backend insieme_simple_backend insieme_core insieme_annotations insieme_utils )
+target_link_libraries(insieme_opencl_backend insieme_annotations)
 
 # enable tests for this project
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
-set ( ut_prefix  ut_oclbe_ocl_ )
+set ( ut_prefix  ut_sbe_ )
 file(GLOB_RECURSE test_cases test/*.cc)
 foreach ( case_file ${test_cases})
 	get_filename_component( case_name ${case_file} NAME_WE )
@@ -38,7 +38,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
 	target_link_libraries(${case_name} insieme_frontend)
 	target_link_libraries(${case_name} insieme_core)
-	target_link_libraries(${case_name} insieme_c_info)
+	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_simple_backend)
 	target_link_libraries(${case_name} insieme_opencl_backend)

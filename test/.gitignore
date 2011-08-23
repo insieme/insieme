@@ -2,11 +2,17 @@
 build*
 *.insieme
 *.insieme.c
+*.insieme.*.c
 *.out
 *.ir
+*.ref
+*.test
+*.bmp
+*.sh
 *~
-\#bin/*
+\#*/*
 
 *.cfg
+*.xml
 !test.cfg
 

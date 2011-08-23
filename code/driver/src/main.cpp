@@ -49,10 +49,15 @@
 
 #include "insieme/simple_backend/simple_backend.h"
 #include "insieme/opencl_backend/opencl_convert.h"
-#include "insieme/backend/full_backend.h"
 #include "insieme/simple_backend/rewrite.h"
 
+#include "insieme/backend/runtime/runtime_backend.h"
+#include "insieme/backend/sequential/sequential_backend.h"
+#include "insieme/backend/ocl_kernel/kernel_backend.h"
+#include "insieme/backend/ocl_host/host_backend.h"
+
 #include "insieme/transform/ir_cleanup.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
@@ -63,6 +68,7 @@
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/omp/omp_sema.h"
+#include "insieme/frontend/ocl/ocl_host_compiler.h"
 
 #include "insieme/driver/dot_printer.h"
 
@@ -77,6 +83,7 @@
 
 using namespace std;
 using namespace insieme::utils::log;
+using namespace insieme::annotations::ocl;
 
 namespace fe = insieme::frontend;
 namespace core = insieme::core;
@@ -259,9 +266,11 @@ void markSCoPs(const ProgramPtr& program) {
 	if (!CommandLineOptions::MarkScop) { return; }
 	using namespace insieme::analysis::scop;
 
-	ScopList sl = mark(program);
+	ScopList sl = measureTimeFor<ScopList>("IR.SCoP.Analysis ", 
+		[&]() -> ScopList { return mark(program); });
+
 	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
-	std::for_each(sl.begin(), sl.end(),	[](const ScopList::value_type& cur){ 
+	std::for_each(sl.begin(), sl.end(),	[](ScopList::value_type& cur){ 
 			printSCoP(LOG_STREAM(INFO), cur.first); 
 		}
 	);	
@@ -270,7 +279,7 @@ void markSCoPs(const ProgramPtr& program) {
 //***************************************************************************************
 // Check Semantics 
 //***************************************************************************************
-void checkSema(const core::ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
+void checkSema(const core::ProgramPtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
 	using namespace insieme::core::printer;
 
 	// Skip semantics checks if the flag is not set
@@ -280,33 +289,38 @@ void checkSema(const core::ProgramPtr& program, MessageList& errors, const Inver
 	insieme::utils::Timer timer("Checks");
 
 	measureTimeFor<void>("Semantic Checks ", 
-			[&]() { errors = check( program, core::checks::getFullCheck() ); } 
-		);
+		[&]() { list = check( program, core::checks::getFullCheck() ); }
+	);
 
+	auto errors = list.getAll();
 	std::sort(errors.begin(), errors.end());
-		for_each(errors, [&](const Message& cur) {
-			LOG(INFO) << cur;
-			NodeAddress address = cur.getAddress();
-			stringstream ss;
-			unsigned contextSize = 1;
-			do {
-				ss.str("");
-				ss.clear();
-				NodePtr&& context = address.getParentNode(
-						min((unsigned)contextSize, address.getDepth()-contextSize)
-					);
-				ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
+	for_each(errors, [&](const Message& cur) {
+		LOG(INFO) << cur;
+		NodeAddress address = cur.getAddress();
+		stringstream ss;
+		unsigned contextSize = 1;
+		do {
+			ss.str("");
+			ss.clear();
+			NodePtr&& context = address.getParentNode(
+					min((unsigned)contextSize, address.getDepth()-contextSize)
+				);
+			ss << PrettyPrinter(context, PrettyPrinter::OPTIONS_SINGLE_LINE, 1+2*contextSize);
 
-				auto fit = stmtMap.find(address.getAddressedNode());
-				assert(fit != stmtMap.end());
+			auto fit = stmtMap.find(address.getAddressedNode());
+			if (fit != stmtMap.end()) {
 				LOG(INFO) << "Source Location: " << fit->second;
+			}
 
-			} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
-			LOG(INFO) << "\t Context: " << ss.str() << std::endl;
-		});
+		} while(ss.str().length() < MIN_CONTEXT && contextSize++ < 5);
+		LOG(INFO) << "\t Context: " << ss.str() << std::endl;
+	});
 
 	// In the case of semantic errors, quit
-	if ( !errors.empty() ) { exit(1); }
+	if ( !list.getErrors().empty() ) {
+		cerr << "---- Semantic errors encountered - compilation aborted!! ----\n";
+		exit(1);
+	}
 
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
@@ -326,11 +340,22 @@ void showIR(const core::ProgramPtr& program, MessageList& errors) {
 }
 
 void applyOpenMPFrontend(core::ProgramPtr& program) {
-	if (!CommandLineOptions::OMPSema) { return; }
+	if (!CommandLineOptions::OpenMP) { return; }
 	
 	LOG(INFO) << "============================= OMP conversion ====================================";
-	program = measureTimeFor<core::ProgramPtr>("OpenMP ", 
-			[&]() {return fe::omp::applySema(program, program->getNodeManager()); } 
+	program = measureTimeFor<core::ProgramPtr>("OpenMP ",
+			[&]() {return fe::omp::applySema(program, program->getNodeManager()); }
+		);
+	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+}
+
+void applyOpenCLFrontend(core::ProgramPtr& program) {
+	if (!CommandLineOptions::OpenCL) { return; }
+
+	LOG(INFO) << "============================= OpenCL conversion ====================================";
+	fe::ocl::HostCompiler oclHostCompiler(program);
+	program = measureTimeFor<core::ProgramPtr>("OpenCL ",
+			[&]() {return oclHostCompiler.compile(); }
 		);
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
@@ -405,6 +430,9 @@ int main(int argc, char** argv) {
 			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);
 
+			// run OpenCL frontend
+			applyOpenCLFrontend(program);
+
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
@@ -415,7 +443,7 @@ int main(int argc, char** argv) {
 			// run OMP frontend
 			applyOpenMPFrontend(program);
 			// check again if the OMP flag is on
-			if (CommandLineOptions::OMPSema) { checkSema(program, errors, stmtMap); }
+			if (CommandLineOptions::OpenMP) { checkSema(program, errors, stmtMap); }
 			
 			// IR statistics
 			showStatistics(program);
@@ -458,55 +486,99 @@ int main(int argc, char** argv) {
 		{
 			string backendName = "";
 			be::BackendPtr backend;
-			if (CommandLineOptions::OpenCL) {
-				backendName = "OpenCL.Backend";
 
-//TODO find the OpenCLChecker
-//				insieme::opencl_backend::OpenCLChecker oc;
-//				LOG(INFO) << "Checking OpenCL compatibility ... " << (oc.check(program) ? "OK" : "ERROR\nInput program cannot be translated to OpenCL!");
+			// see whether a backend has been selected
+			if (!CommandLineOptions::Backend.empty()) {
 
-				// obtain open CL backend instance
-				backend = insieme::backend::ocl::OpenCLBackend::getDefault();
-			} else if (CommandLineOptions::OmegaBackend) {
-				backendName = "Full.Backend";
-				backend = insieme::backend::FullBackend::getDefault();
-			} else {
-				backendName = "Simple.Backend";
-				backend = insieme::simple_backend::SimpleBackend::getDefault();
+				// get option
+				char selection = CommandLineOptions::Backend[0];
+				if (selection < 'a') { // to lower case
+					selection += 'a' - 'A';
+				}
+
+				// ###################################################
+				// TODO: remove this
+				// enforces the usage of the full backend for testing
+//				selection = 'r';
+//				selection = 's';
+//				selection = 'o';
+				// ###################################################
+
+
+				switch(selection) {
+					case 'o': {
+						// check if the host is in the entrypoints, otherwise use the kernel backend
+						bool host = false;
+						const vector<ExpressionPtr>& ep = program->getEntryPoints();
+						for (vector<ExpressionPtr>::const_iterator it = ep.begin(); it != ep.end(); ++it) {
+							if((*it)->hasAnnotation(BaseAnnotation::KEY)) {
+								BaseAnnotationPtr&& annotations = (*it)->getAnnotation(BaseAnnotation::KEY);
+								for(BaseAnnotation::AnnotationList::const_iterator iter = annotations->getAnnotationListBegin();
+									iter < annotations->getAnnotationListEnd(); ++iter) {
+									if(!dynamic_pointer_cast<KernelFctAnnotation>(*iter)) {
+std::cout << "Number of entry points: " << ep.size() << std::endl;
+										host = true;
+									}
+								}
+							} else
+								host = true;
+						}
+
+						if (host) {
+							backendName = "OpenCL.Host.Backend";
+std::cout << "Running Host\n";
+							backend = insieme::backend::ocl_host::OCLHostBackend::getDefault();
+						} else {
+							backendName = "OpenCL.Kernel.Backend";
+std::cout << "Running kernel\n";
+							backend = insieme::backend::ocl_kernel::OCLKernelBackend::getDefault();
+						}
+						break;
+					}
+					case 'r': {
+						backendName = "Runtime.Backend";
+						backend = insieme::backend::runtime::RuntimeBackend::getDefault();
+						break;
+					}
+					case 's': {
+						backendName = "Sequential.Backend";
+						backend = insieme::backend::sequential::SequentialBackend::getDefault();
+						break;
+					}
+					case 'p':
+					default: {
+						backendName = "Simple.Backend";
+						backend = insieme::simple_backend::SimpleBackend::getDefault();
+					}
+				}
+
+				insieme::utils::Timer timer(backendName);
+
+				LOG(INFO) << "======================= Converting to TargetCode ================================";
+
+				// convert code
+				be::TargetCodePtr targetCode = backend->convert(program);
+
+				// select output target
+				if(!CommandLineOptions::Output.empty()) {
+					// write result to file ...
+					std::fstream outFile(CommandLineOptions::Output, std::fstream::out | std::fstream::trunc);
+					outFile << *targetCode;
+					outFile.close();
+
+					// TODO: reinstate rewriter when fractions of programs are supported as entry points
+//					insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
+
+				} else {
+					// just write result to logger
+					LOG(INFO) << *targetCode;
+				}
+
+				// print timing information
+				timer.stop();
+				LOG(INFO) << timer;
 			}
 
-			// ###################################################
-			// TODO: remove this
-			// enforces the usage of the full backend for testing
-			backendName = "Full.Backend";
-			backend = insieme::backend::FullBackend::getDefault();
-			// ###################################################
-
-			insieme::utils::Timer timer(backendName);
-
-			LOG(INFO) << "======================= Converting to TargetCode ================================";
-
-			// convert code
-			be::TargetCodePtr targetCode = backend->convert(program);
-
-			// select output target
-			if(!CommandLineOptions::Output.empty()) {
-				// write result to file ...
-				std::fstream outFile(CommandLineOptions::Output, std::fstream::out | std::fstream::trunc);
-				outFile << *targetCode;
-				outFile.close();
-
-				// TODO: reinstate rewriter when fractions of programs are supported as entry points
-//				insieme::backend::Rewriter::writeBack(program, insieme::simple_backend::convert(program), CommandLineOptions::Output);
-
-			} else {
-				// just write result to logger
-				LOG(INFO) << *targetCode;
-			}
-
-			// print timing information
-			timer.stop();
-			LOG(INFO) << timer;
 		}
 
 	} catch (fe::ClangParsingError& e) {

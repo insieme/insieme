@@ -5,6 +5,18 @@ project(insieme_driver CXX)
 
 include(../environment.cmake)
 
+# enable XML if requested
+if (USE_XML) 	
+	list(APPEND CMAKE_MODULE_PATH "${insieme_code_dir}/xml/cmake")
+	find_package(Xerces)
+	if ( NOT ${Xerces_FOUND} )
+		message("Xerces library not found, XML support will be disabled!")
+		set(USE_XML OFF)
+	else ()
+		add_definitions(-DUSE_XML)
+	endif()
+endif (USE_XML)
+
 # States that CMake required version must be >= 2.6
 cmake_minimum_required(VERSION 2.6)
 
@@ -42,7 +54,7 @@ include_directories( ${insieme_analysis_include_dir} )
 include_directories( ${insieme_transform_include_dir} )
 include_directories( ${insieme_simple_backend_include_dir} )
 include_directories( ${insieme_opencl_backend_include_dir} )
-include_directories( ${insieme_c_info_include_dir} )
+include_directories( ${insieme_annotations_include_dir} )
 include_directories( ${insieme_driver_include_dir} )
 if (USE_XML)
 	include_directories( ${insieme_xml_include_dir} )
@@ -54,7 +66,7 @@ add_executable( main ${insieme_driver_srcs} )
 
 # add dependencies
 add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_backend 
-					   insieme_simple_backend insieme_c_info insieme_transform
+					   insieme_simple_backend insieme_annotations insieme_transform
 			    )
 
 # register linked libraries
@@ -64,7 +76,7 @@ target_link_libraries( main insieme_core )
 target_link_libraries( main insieme_backend )
 target_link_libraries( main insieme_simple_backend )
 target_link_libraries( main insieme_opencl_backend ) 
-target_link_libraries( main insieme_c_info )
+target_link_libraries( main insieme_annotations )
 target_link_libraries( main insieme_analysis )
 target_link_libraries( main insieme_transform )
 
@@ -93,7 +105,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_transform)
 	target_link_libraries(${case_name} insieme_simple_backend)
 	target_link_libraries(${case_name} insieme_opencl_backend)
-	target_link_libraries(${case_name} insieme_c_info)
+	target_link_libraries(${case_name} insieme_annotations)
 	target_link_libraries(${case_name} insieme_utils)
 	
 	if (USE_XML) 

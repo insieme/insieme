@@ -59,6 +59,24 @@ core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& 
 
 
 /*
+ * Returns the very base type of the passed Expression
+ */
+const core::TypePtr getBaseType(const core::ExpressionPtr& singleElementExpr) {
+	return getBaseType(singleElementExpr->getType());
+}
+
+/*
+ * Returns the very base type of the passed type
+ */
+const core::TypePtr getBaseType(const core::TypePtr& singleElementType) {
+	// TODO test quickfix
+	core::TypePtr type = singleElementType;
+	while(const core::SingleElementTypePtr& se = dynamic_pointer_cast<const core::SingleElementType>(type))
+		type = se->getElementType();
+	return type;
+}
+
+/*
  * Function to get the type of an Expression
  * If it is a ref-type, it's element type is returned
  */
@@ -106,15 +124,22 @@ core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::E
 	return e;
 }
 
+/*
+ * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
+ * Usefull to get variable out of nests of array and struct accesses
+ */
+core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::ASTBuilder& builder) {
+	if(const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(function))
+		return getVariableArg(call->getArgument(0), builder);
+	return dynamic_pointer_cast<const core::Variable>(function);
+}
 
 
 /*
  * Function to copy all annotations form one NodePtr to another
  */
 void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink) {
-	unsigned int i = 0; // normal iterator and for_each loop leads to infinity loop, go
-	for (auto I = source->getAnnotations().begin(); i < source->getAnnotations().size(); ++I, ++i)
-		sink->addAnnotation(I->second);
+	sink->setAnnotations(source->getAnnotations());
 }
 
 

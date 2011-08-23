@@ -38,6 +38,7 @@
 
 #include <memory>
 #include <set>
+#include <functional>
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/c_ast/c_ast.h"
@@ -47,19 +48,26 @@
 namespace insieme {
 namespace backend {
 
+	typedef std::function<c_ast::NodePtr(ConversionContext&, const core::NodePtr&)> StmtHandler;
+	typedef vector<StmtHandler> StmtHandlerList;
+
 
 	class StmtConverter : public core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&> {
 
 		const Converter& converter;
 
+		const StmtHandlerList stmtHandler;
+
 	public:
 
-		StmtConverter(const Converter& converter)
-			: core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true), converter(converter) {}
+		StmtConverter(const Converter& converter, const StmtHandlerList& stmtHandler = StmtHandlerList())
+			: core::ASTVisitor<c_ast::NodePtr, core::Pointer, ConversionContext&>(true), converter(converter), stmtHandler(stmtHandler) {}
 
 		c_ast::NodePtr convert(ConversionContext& context, const core::NodePtr& node);
 
 		////////////////////////////////////////////////////////////////////////// Utilities
+
+		virtual c_ast::NodePtr visit(const core::NodePtr&, ConversionContext& context);
 
 		template<typename T>
 		Ptr<T> convert(ConversionContext& context, const core::NodePtr& node) {
@@ -79,6 +87,9 @@ namespace backend {
 		c_ast::StatementPtr convertStmt(ConversionContext& context, const core::StatementPtr& stmt) {
 			return convert<c_ast::Statement>(context, stmt);
 		}
+
+		c_ast::ExpressionPtr convertInitExpression(ConversionContext& context, const core::ExpressionPtr& initValue);
+
 	protected:
 
 		////////////////////////////////////////////////////////////////////////// Basic Elements

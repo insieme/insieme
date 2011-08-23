@@ -110,15 +110,24 @@ public:
 
 #include "ast_builder.inl"
 
+	// Function Types
+	FunctionTypePtr toPlainFunctionType(const FunctionTypePtr& funType) const;
+	FunctionTypePtr toThickFunctionType(const FunctionTypePtr& funType) const;
+
 	// Literals
 	LiteralPtr stringLit(const std::string& str) const;
     LiteralPtr intLit(const int val) const;
     LiteralPtr uintLit(const unsigned int val) const;
 
+    // Values
+    // obtains a zero value - recursively resolved for the given type
+    ExpressionPtr getZero(const TypePtr& type) const;
+
 	// Referencing
 	CallExprPtr deref(const ExpressionPtr& subExpr) const;
 	CallExprPtr refVar(const ExpressionPtr& subExpr) const;
 	CallExprPtr refNew(const ExpressionPtr& subExpr) const;
+	CallExprPtr assign(const ExpressionPtr& target, const ExpressionPtr& value) const;
 
 	ExpressionPtr invertSign(const ExpressionPtr& subExpr) const;
 	// Returns the negation of the passed subExpr (which must be of boolean type)
@@ -134,6 +143,7 @@ public:
 	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const;
 
 	// Call Expressions
+	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
 	CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
@@ -172,6 +182,21 @@ public:
 	 * creates a function call from a list of expressions
 	 */
 	ExpressionPtr createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy=false) const;
+
+	/**
+	 * Creates an expression accessing the corresponding member of the given struct.
+	 */
+	ExpressionPtr accessMember(ExpressionPtr structExpr, IdentifierPtr member) const;
+
+	/**
+	 * Creates an expression obtaining a reference to a member of a struct.
+	 */
+	ExpressionPtr refMember(ExpressionPtr structExpr, IdentifierPtr member) const;
+
+	/**
+	 * Creates an expression accessing the given component of the given tuple value.
+	 */
+	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;
 
 	// Utilities
 private:

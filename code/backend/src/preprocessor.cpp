@@ -41,23 +41,38 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_builder.h"
 
+#include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/analysis/type_variable_deduction.h"
+#include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+
 
 namespace insieme {
 namespace backend {
 
 
-	core::NodePtr PreProcessingSequence::preprocess(core::NodeManager& manager, const core::NodePtr& code) {
+	PreProcessorPtr getBasicPreProcessorSequence() {
+		return makePreProcessor<PreProcessingSequence>(
+				makePreProcessor<InlinePointwise>(),
+				makePreProcessor<GenericLambdaInstantiator>(),
+				makePreProcessor<IfThenElseInlining>(),
+				makePreProcessor<RestoreGlobals>(),
+				makePreProcessor<InitZeroSubstitution>()
+		);
+	}
+
+
+	core::NodePtr PreProcessingSequence::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// start by copying code to given target manager
 		core::NodePtr res = manager.get(code);
 
 		// apply sequence of pre-processing steps
 		for_each(preprocessor, [&](const PreProcessorPtr& cur) {
-			res = cur->preprocess(manager, res);
+			res = cur->process(manager, res);
 		});
 
 		// return final result
@@ -67,7 +82,7 @@ namespace backend {
 
 	// ------- concrete pre-processing step implementations ---------
 
-	core::NodePtr NoPreProcessing::preprocess(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr NoPreProcessing::process(core::NodeManager& manager, const core::NodePtr& code) {
 		// just copy to target manager
 		return manager.get(code);
 	}
@@ -81,12 +96,12 @@ namespace backend {
 	class ITEConverter : public core::transform::CachedNodeMapping {
 
 		const core::LiteralPtr ITE;
-		const IRExtensions extensions;
+		const IRExtensions& extensions;
 
 	public:
 
 		ITEConverter(core::NodeManager& manager) :
-			ITE(manager.basic.getIfThenElse()),  extensions(manager) {};
+			ITE(manager.basic.getIfThenElse()),  extensions(manager.getLangExtension<IRExtensions>()) {};
 
 		/**
 		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
@@ -140,13 +155,374 @@ namespace backend {
 
 
 
-	core::NodePtr IfThenElseInlining::preprocess(core::NodeManager& manager, const core::NodePtr& code) {
+	core::NodePtr IfThenElseInlining::process(core::NodeManager& manager, const core::NodePtr& code) {
 		// the converter does the magic
 		ITEConverter converter(manager);
 		return converter.map(code);
 	}
 
 
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      PreProcessor InitZero convert => replaces call by actual value
+	// --------------------------------------------------------------------------------------------------------------
+
+	class InitZeroReplacer : public core::transform::CachedNodeMapping {
+
+		const core::LiteralPtr initZero;
+		core::NodeManager& manager;
+		core::ASTBuilder builder;
+		const core::lang::BasicGenerator& basic;
+
+	public:
+
+		InitZeroReplacer(core::NodeManager& manager) :
+			initZero(manager.basic.getInitZero()), manager(manager), builder(manager), basic(manager.getBasicGenerator()) {};
+
+		/**
+		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
+		 * the resulting call.
+		 */
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+			// do not touch types ...
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+			// apply recursively - bottom up
+			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+
+			// check current node
+			if (core::analysis::isCallOf(res, initZero)) {
+				// replace with equivalent zero value
+				res = builder.getZero(static_pointer_cast<const core::Expression>(res)->getType());
+			}
+
+			// no change required
+			return res;
+		}
+
+	};
+
+
+	core::NodePtr InitZeroSubstitution::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		InitZeroReplacer converter(manager);
+		return converter.map(code);
+	}
+
+
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      PreProcessor GenericLambdaInstantiator => instantiates generic lambda implementations
+	// --------------------------------------------------------------------------------------------------------------
+
+	class LambdaInstantiater : public core::transform::CachedNodeMapping {
+
+		core::NodeManager& manager;
+
+	public:
+
+		LambdaInstantiater(core::NodeManager& manager) : manager(manager) {};
+
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+			// check types => abort
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+
+			// look for call expressions
+			if (ptr->getNodeType() == core::NT_CallExpr) {
+				// extract the call
+				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
+
+				// only care about lambdas
+				core::ExpressionPtr fun = call->getFunctionExpr();
+				if (fun->getNodeType() == core::NT_LambdaExpr) {
+
+					// convert to lambda
+					core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
+
+					// check whether the lambda is generic
+					if (core::isGeneric(fun->getType())) {
+
+						// compute substitutions
+						core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
+
+						// instantiate type variables according to map
+						lambda = core::transform::instantiate(manager, lambda, map);
+
+						// create new call node
+						core::ExpressionList arguments;
+						::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
+							return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
+						});
+
+						// produce new call expression
+						return core::CallExpr::get(manager, call->getType(), lambda, arguments);
+
+					}
+				}
+			}
+
+			// decent recursively
+			return ptr->substitute(manager, *this, true);
+		}
+
+	};
+
+	core::NodePtr GenericLambdaInstantiator::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		LambdaInstantiater converter(manager);
+		return converter.map(code);
+	}
+
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      PreProcessor InlinePointwise => replaces invocations of pointwise operators with in-lined code
+	// --------------------------------------------------------------------------------------------------------------
+
+	class PointwiseReplacer : public core::transform::CachedNodeMapping {
+
+		core::NodeManager& manager;
+		const core::lang::BasicGenerator& basic;
+
+	public:
+
+		PointwiseReplacer(core::NodeManager& manager) : manager(manager), basic(manager.getBasicGenerator()) {};
+
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+			// check types => abort
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+			// look for call expressions
+			if (ptr->getNodeType() == core::NT_CallExpr) {
+				// extract the call
+				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(ptr);
+
+				// only care about calls to pointwise operations
+				if (core::analysis::isCallOf(call->getFunctionExpr(), basic.getVectorPointwise())) {
+
+					// get argument and result types!
+					assert(call->getType()->getNodeType() == core::NT_VectorType && "Result should be a vector!");
+					assert(call->getArgument(0)->getType()->getNodeType() == core::NT_VectorType && "Argument should be a vector!");
+
+					core::VectorTypePtr argType = static_pointer_cast<const core::VectorType>(call->getArgument(0)->getType());
+					core::VectorTypePtr resType = static_pointer_cast<const core::VectorType>(call->getType());
+
+					// extract generic parameter types
+					core::TypePtr in = argType->getElementType();
+					core::TypePtr out = resType->getElementType();
+
+					assert(resType->getSize()->getNodeType() == core::NT_ConcreteIntTypeParam && "Result should be of fixed size!");
+					core::ConcreteIntTypeParamPtr size = static_pointer_cast<const core::ConcreteIntTypeParam>(resType->getSize());
+
+					// extract operator
+					core::ExpressionPtr op = static_pointer_cast<const core::CallExpr>(call->getFunctionExpr())->getArgument(0);
+
+					// create new lambda, realizing the point-wise operation
+					core::ASTBuilder builder(manager);
+
+					core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(argType, argType), resType);
+
+					core::VariablePtr v1 = builder.variable(argType);
+					core::VariablePtr v2 = builder.variable(argType);
+					core::VariablePtr res = builder.variable(resType);
+
+					// create vector init expression
+					vector<core::ExpressionPtr> fields;
+
+					// unroll the pointwise operation
+					core::TypePtr unitType = basic.getUnit();
+					core::TypePtr longType = basic.getUInt8();
+					core::ExpressionPtr vectorSubscript = basic.getVectorSubscript();
+					for(std::size_t i=0; i<size->getValue(); i++) {
+						core::LiteralPtr index = builder.literal(longType, boost::lexical_cast<std::string>(i));
+
+						core::ExpressionPtr a = builder.callExpr(in, vectorSubscript, v1, index);
+						core::ExpressionPtr b = builder.callExpr(in, vectorSubscript, v2, index);
+
+						fields.push_back(builder.callExpr(out, op, a, b));
+					}
+
+					// return result
+					core::StatementPtr body = builder.returnStmt(builder.vectorExpr(resType, fields));
+
+					// construct substitute ...
+					core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1,v2), body);
+					return builder.callExpr(resType, substitute, call->getArguments());
+				}
+			}
+
+			// decent recursively
+			return ptr->substitute(manager, *this, true);
+		}
+
+	};
+
+	core::NodePtr InlinePointwise::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		PointwiseReplacer converter(manager);
+		return converter.map(code);
+	}
+
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      Restore Globals
+	// --------------------------------------------------------------------------------------------------------------
+
+	bool isZero(const core::ExpressionPtr& value) {
+
+		const core::lang::BasicGenerator& basic = value->getNodeManager().getBasicGenerator();
+
+		// if initialization is zero ...
+		if (core::analysis::isCallOf(value, basic.getInitZero())) {
+			// no initialization required
+			return true;
+		}
+
+		// ... or a zero literal ..
+		if (value->getNodeType() == core::NT_Literal) {
+			const string& strValue = static_pointer_cast<const core::Literal>(value)->getValue();
+			if (strValue == "0" || strValue == "0.0") {
+				return true;
+			}
+		}
+
+		// ... or a call to getNull(...)
+		if (core::analysis::isCallOf(value, basic.getGetNull())) {
+			return true;
+		}
+
+		// ... or a vector initialization with a zero value
+		if (core::analysis::isCallOf(value, basic.getVectorInitUniform())) {
+			return isZero(core::analysis::getArgument(value, 0));
+		}
+
+		// TODO: remove this when frontend is fixed!!
+		// => compensate for silly stuff like var(*getNull())
+		if (core::analysis::isCallOf(value, basic.getRefVar())) {
+			core::ExpressionPtr arg = core::analysis::getArgument(value, 0);
+			if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
+				return isZero(core::analysis::getArgument(arg, 0));
+			}
+		}
+
+		// otherwise, it is not zero
+		return false;
+	}
+
+
+	core::NodePtr RestoreGlobals::process(core::NodeManager& manager, const core::NodePtr& code) {
+
+		// check for the program - only works on the global level
+		if (code->getNodeType() != core::NT_Program) {
+			return code;
+		}
+
+		// check whether it is a main program ...
+		const core::ProgramPtr& program = static_pointer_cast<const core::Program>(code);
+		if (!(program->isMain() || program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
+			return code;
+		}
+
+		// search for global struct
+		const core::ExpressionPtr& mainExpr = program->getEntryPoints()[0];
+		if (mainExpr->getNodeType() != core::NT_LambdaExpr) {
+			return code;
+		}
+		const core::LambdaExprPtr& main = static_pointer_cast<const core::LambdaExpr>(mainExpr);
+		const core::StatementPtr& bodyStmt = main->getBody();
+		if (bodyStmt->getNodeType() != core::NT_CompoundStmt) {
+			return code;
+		}
+		core::CompoundStmtPtr body = static_pointer_cast<const core::CompoundStmt>(bodyStmt);
+		while (body->getStatements().size() == static_cast<std::size_t>(1)
+				&& body->getStatements()[0]->getNodeType() == core::NT_CompoundStmt) {
+			body = static_pointer_cast<const core::CompoundStmt>(body->getStatements()[0]);
+		}
+
+		// global struct initialization is first line ..
+		const core::StatementPtr& globalDeclStmt = body->getStatements()[0];
+		if (globalDeclStmt->getNodeType() != core::NT_DeclarationStmt) {
+			return code;
+		}
+		const core::DeclarationStmtPtr& globalDecl = static_pointer_cast<const core::DeclarationStmt>(globalDeclStmt);
+
+		// extract variable
+		const core::VariablePtr& globals = globalDecl->getVariable();
+		const core::TypePtr& globalType = globals->getType();
+
+		// check whether it is really a global struct ...
+		if (globalType->getNodeType() != core::NT_RefType) {
+			// this is not a global struct ..
+			return code;
+		}
+
+		const core::TypePtr& structType = static_pointer_cast<const core::RefType>(globalType)->getElementType();
+		if (structType->getNodeType() != core::NT_StructType) {
+			// this is not a global struct ..
+			return code;
+		}
+
+		// check initialization
+		if (!core::analysis::isCallOf(globalDecl->getInitialization(), manager.basic.getRefNew())) {
+			// this is not a global struct ...
+			return code;
+		}
+
+		core::LiteralPtr replacement = core::Literal::get(manager, globalType, IRExtensions::GLOBAL_ID);
+
+		// replace global declaration statement with initalization block
+		const IRExtensions& extensions = manager.getLangExtension<IRExtensions>();
+		core::TypePtr unit = manager.getBasicGenerator().getUnit();
+		core::ExpressionPtr initValue = core::analysis::getArgument(globalDecl->getInitialization(), 0);
+		core::StatementPtr initGlobal = core::CallExpr::get(manager, unit, extensions.initGlobals, toVector(initValue));
+
+
+		core::ASTBuilder builder(manager);
+		vector<core::StatementPtr> initExpressions;
+		{
+			// start with initGlobals call (initializes code fragment and adds dependencies)
+			initExpressions.push_back(initGlobal);
+
+			// initialize remaining fields of global struct
+			core::ExpressionPtr initValue = core::analysis::getArgument(globalDecl->getInitialization(), 0);
+			assert(initValue->getNodeType() == core::NT_StructExpr);
+			core::StructExprPtr initStruct = static_pointer_cast<const core::StructExpr>(initValue);
+
+			// get some functions used for the pattern matching
+			core::ExpressionPtr initUniform = manager.basic.getVectorInitUniform();
+			core::ExpressionPtr initZero = manager.basic.getInitZero();
+
+			for_each(initStruct->getMembers(), [&](const core::StructExpr::Member& cur) {
+
+				// ignore zero values => default initialization
+				if (isZero(cur.second)) {
+					return;
+				}
+
+				core::ExpressionPtr access = builder.refMember(replacement, cur.first);
+				core::ExpressionPtr assign = builder.assign(access, cur.second);
+				initExpressions.push_back(assign);
+			});
+		}
+
+
+		// replace declaration with init call
+		core::StatementList stmts = body->getStatements();
+		stmts[0] = builder.compoundStmt(initExpressions);
+		core::StatementPtr newBody = core::CompoundStmt::get(manager,stmts);
+
+		// fix the global variable
+		newBody = core::transform::fixVariable(manager, newBody, globals, replacement);
+		return core::transform::replaceAll(manager, code, body, newBody);
+	}
 
 } // end namespace backend
 } // end namespace insieme

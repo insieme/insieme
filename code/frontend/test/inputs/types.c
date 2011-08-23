@@ -177,8 +177,7 @@ void mem_alloc() {
 
 	#pragma test "ref<ref<array<int<4>,1>>> v1 = ref.var(ref.new(array.create.1D(int<4>, uint.div(4, sizeof(int<4>)))))"
 	int* a = malloc(4);
-
-
+	free(a); // make the static checks happy
 }
 
 enum E{ ON, OFF=10 };
@@ -198,10 +197,10 @@ void fun_ptr() {
 
 	// test declaration, assignment and call of function pointers
 
-	#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v5.{v5=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
+	#pragma test "ref<((int<4>,int<4>)->int<4>)> v1 = ref.var(rec v4.{v4=fun(int<4> v2, int<4> v3) {return int.add(v2, v3);}})"
 	int(* f)(int,int) = &add;
 
-	#pragma test "ref.assign(v5, rec v4.{v4=fun(int<4> v1, int<4> v2) {return int.sub(v1, v2);}})"
+	#pragma test "ref.assign(v4, rec v3.{v3=fun(int<4> v1, int<4> v2) {return int.sub(v1, v2);}})"
 	f = &sub;
 
 	#pragma test "ref.deref(v1)(3, 4)"

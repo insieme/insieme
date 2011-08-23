@@ -44,6 +44,7 @@
 #include <memory>
 
 #include "boost/operators.hpp"
+#include "insieme/core/ast_address.h"
 
 namespace insieme {
 
@@ -58,11 +59,11 @@ class Ref;
 
 typedef std::shared_ptr<Ref> RefPtr; 
 
-/** 
+/**************************************************************************************************
  * Class Ref represent a generic IR ref which can be either assigned or read. In this context 
  * a Ref can be either a scalar variable, an array or a vector (having a ref type), a struct/class
  * member or the return value of a call expression returning a ref. 
- */
+ *************************************************************************************************/
 struct Ref : public utils::Printable {
 
 	// possible usage of a variable can be of three types: 
@@ -88,14 +89,17 @@ struct Ref : public utils::Printable {
 	
 	const RefType& getType() const { return type; }
 
-	const core::ExpressionPtr& getBaseExpression() const { return baseExpr; }
+	const core::ExpressionAddress& getBaseExpression() const { return baseExpr; }
+	
+	static std::string useTypeToStr(const UseType& usage);
+	static std::string refTypeToStr(const RefType& type);
 
 protected:
-	Ref(const RefType& type, const core::ExpressionPtr& expr, const UseType& usage = USE);
+	Ref(const RefType& type, const core::ExpressionAddress& expr, const UseType& usage = USE);
 	
 	// Points to the base expression: 
 	// 	 this can be either a scalar variable, an array or a call to a function 
-	core::ExpressionPtr baseExpr;
+	core::ExpressionAddress baseExpr;
 
 private:
 	// Define the type of this reference 
@@ -112,9 +116,9 @@ typedef std::shared_ptr<ScalarRef> ScalarRefPtr;
 // variable, we can safely cast the base expression to a variable reference  
 struct ScalarRef : public Ref {
 
-	ScalarRef(const core::VariablePtr& var, const Ref::UseType& usage);
+	ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage);
 
-	const core::VariablePtr& getVariable() const;
+	const core::VariableAddress& getVariable() const;
 	std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -125,7 +129,7 @@ typedef std::shared_ptr<MemberRef> MemberRefPtr;
 // access to the field name being accessed and the type of the composite 
 struct MemberRef: public Ref {
 
-	MemberRef(const core::ExpressionPtr& memberAcc, const UseType& usage);
+	MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage);
 
 	const core::NamedCompositeTypePtr& getCompositeType() const { return type; }
 	const core::LiteralPtr& getIdentifier() const { return identifier; }
@@ -143,21 +147,21 @@ typedef std::shared_ptr<ArrayRef> ArrayRefPtr;
 // array dimensions. The baseExpr is used to point at the entire array subscript expression. 
 struct ArrayRef : public Ref { 
 	
-	typedef std::vector<core::ExpressionPtr> ExpressionList;  
+	typedef std::vector<core::ExpressionAddress> ExpressionList;  
 
-	ArrayRef(const core::ExpressionPtr& arrayVar, const ExpressionList& idxExpr, 
-			const core::ExpressionPtr& exprPtr, const UseType& usage = USE) :
+	ArrayRef(const core::ExpressionAddress& arrayVar, const ExpressionList& idxExpr, 
+			const core::ExpressionAddress& exprPtr, const UseType& usage = USE) :
 		Ref(Ref::ARRAY, arrayVar, usage), exprPtr(exprPtr), idxExpr(idxExpr) { }
 
 	std::ostream& printTo(std::ostream& out) const;	
 
 	const ExpressionList& getIndexExpressions() const { return idxExpr; }
 	
-	const core::ExpressionPtr& getSubscriptExpression() const { return !exprPtr ? baseExpr : exprPtr; }
+	const core::ExpressionAddress& getSubscriptExpression() const { return !exprPtr ? baseExpr : exprPtr; }
 
 private:
-	core::ExpressionPtr exprPtr;
-	ExpressionList 		idxExpr;
+	core::ExpressionAddress exprPtr;
+	ExpressionList 			idxExpr;
 };
 
 class CallRef;
@@ -167,11 +171,11 @@ typedef std::shared_ptr<CallRef> CallRefPtr;
 // access to the field name being accessed and the type of the composite 
 struct CallRef: public Ref {
 
-	CallRef(const core::CallExprPtr& callExpr, const UseType& usage);
+	CallRef(const core::CallExprAddress& callExpr, const UseType& usage);
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	const core::CallExprPtr& getCallExpr() const;
+	const core::CallExprAddress& getCallExpr() const;
 };
 
 

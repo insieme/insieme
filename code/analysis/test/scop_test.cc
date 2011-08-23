@@ -79,42 +79,53 @@ TEST(ScopRegion, IfStmt) {
 	// std::cout << *ifStmt << std::endl;
 	// Mark scops in this code snippet
 	scop::mark(ifStmt);
-
-	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
-	scop::ScopRegion& ann = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
-	
-	poly::IterationVector iterVec = ann.getIterationVector();
+	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& annIf = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
+	poly::IterationVector iterVec = annIf.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
 
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
 	EXPECT_EQ(static_cast<size_t>(4), iterVec.getParameterNum());
 	{	
 		std::ostringstream ss;
-		ss << ann.getIterationVector();
+		ss << annIf.getIterationVector();
 		EXPECT_EQ("(|v4,v5,v7,v8|1)", ss.str());
 	}
+
+	EXPECT_TRUE( static_cast<bool>(annIf.getDomainConstraints()) );
 	{ 
 		std::ostringstream ss;
-		ss << *ann.getConstraints();
+		ss << *annIf.getDomainConstraints();
 		EXPECT_EQ("(1*v4 + -1*v5 <= 0)", ss.str());
 	}
-	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
-	ann = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
-	iterVec = ann.getIterationVector();
-	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
+
+	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& annThen = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
+	iterVec = annThen.getIterationVector();
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
-	EXPECT_EQ(static_cast<size_t>(4), iterVec.getParameterNum());
+	EXPECT_EQ(static_cast<size_t>(2), iterVec.getParameterNum());
+	{	
+		std::ostringstream ss;
+		ss << annThen.getIterationVector();
+		EXPECT_EQ("(|v7,v8|1)", ss.str());
+	}
+	EXPECT_FALSE( static_cast<bool>(annThen.getDomainConstraints()) );
+
+	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
+	scop::ScopRegion& annElse = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
+	iterVec = annElse.getIterationVector();
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
+
+	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(2), iterVec.getParameterNum());
  	{	
 		std::ostringstream ss;
-		ss << ann.getIterationVector();
-		EXPECT_EQ("(|v4,v5,v7,v8|1)", ss.str());
+		ss << annElse.getIterationVector();
+		EXPECT_EQ("(|v7,v8|1)", ss.str());
 	}
-	{ 
-		std::ostringstream ss;
-		ss << *ann.getConstraints();
-		EXPECT_EQ("NOT(1*v4 + -1*v5 <= 0)", ss.str());
-	}
+	EXPECT_FALSE( static_cast<bool>(annElse.getDomainConstraints()) );
 
 }
 
@@ -133,6 +144,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	EXPECT_TRUE(forStmt->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& ann = *forStmt->getAnnotation(scop::ScopRegion::KEY);
 
+	EXPECT_EQ(1, ann.getDirectRegionStmts().size());
 	poly::IterationVector iterVec = ann.getIterationVector();
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 	EXPECT_EQ(static_cast<size_t>(1), iterVec.getIteratorNum());
@@ -145,7 +157,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	}
 	{ 
 		std::ostringstream ss;
-		ss << *ann.getConstraints();
+		ss << *ann.getDomainConstraints();
 		EXPECT_EQ("((1*v9 + -10*1 >= 0) AND (1*v9 + -50*1 < 0))", ss.str());
 	}
 	EXPECT_FALSE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
@@ -170,11 +182,11 @@ TEST(ScopRegion, ForStmt) {
 	IfStmtPtr ifStmt = static_pointer_cast<const IfStmt>(
 		static_pointer_cast<const CompoundStmt>(forStmt->getBody())->getStatements().back());
 
-	EXPECT_FALSE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
 	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
 
 	// check the then body
-	scop::ScopRegion& ann = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
+	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
 	poly::IterationVector iterVec = ann.getIterationVector(); 
 
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
@@ -189,7 +201,7 @@ TEST(ScopRegion, ForStmt) {
 
 	{
 		std::ostringstream ss;
-		ss << *ann.getConstraints();
+		ss << *ann.getDomainConstraints();
 		EXPECT_EQ("(1*v12 + -25*1 > 0)", ss.str());
 	}
 

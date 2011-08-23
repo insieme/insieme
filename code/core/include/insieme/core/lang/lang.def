@@ -104,6 +104,10 @@ GROUP(Real, RealGen, RealInf, Float, Double)
 
 TYPE(RealGen, "real<#a>")
 TYPE(RealInf, "real<#inf>")
+TYPE(Real4,   "real<4>")
+TYPE(Real8,   "real<8>")
+
+// aliases:
 TYPE(Float,   "real<4>")
 TYPE(Double,  "real<8>")
 
@@ -119,6 +123,7 @@ LITERAL(True,  "true",  "bool")
 LITERAL(False, "false", "bool")
 
 TYPE(Alpha, "'a")
+TYPE(TypeLiteralTypeGen, "type<'a>")
 TYPE(RefAlpha, "ref<'a>")
 
 TYPE(VarList, "var_list")
@@ -175,8 +180,8 @@ OPERATOR(Ge,	">=")
 
 GROUP(LogicOp, BoolLAnd, BoolLOr, BoolEq, BoolNe, BoolLNot)
 
-OPERATION(Bool, LAnd, "bool.and", "(bool,() -> bool) -> bool")
-OPERATION(Bool, LOr,  "bool.or",  "(bool,() -> bool) -> bool")
+OPERATION(Bool, LAnd, "bool.and", "(bool,() => bool) -> bool")
+OPERATION(Bool, LOr,  "bool.or",  "(bool,() => bool) -> bool")
 OPERATION(Bool, Eq,   "bool.eq",  "(bool,bool) -> bool")
 OPERATION(Bool, Ne,   "bool.ne",  "(bool,bool) -> bool")
 OPERATION(Bool, LNot, "bool.not", "(bool) -> bool")
@@ -413,7 +418,12 @@ LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b"
 // Misc. --------------------------------------------------------------------------------------------------------------
 
 LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
-LITERAL(IfThenElse, "ite", "(bool, () -> 'b, () -> 'b) -> 'b")
+LITERAL(IfThenElse, "ite", "(bool, () => 'b, () => 'b) -> 'b")
+
+
+// Tunable Options ----------------------------------------------------------------------------------------------------
+
+LITERAL(Pick, "pick", "(list<'a>)->'a")
 
 // Parallel Constructs ------------------------------------------------------------------------------------------------
 
@@ -435,7 +445,7 @@ LITERAL(GetThreadId, "getThreadID", "(uint<#a>) -> uint<4>")
 LITERAL(GetGroupSize, "getGroupSize", "(uint<#a>) -> uint<4>")
 
 LITERAL(Barrier, "barrier", "(threadgroup) -> unit")
-LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->unit")
+LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)=>'a)->unit")
 
 //TYPE(reduce, "reduce", "(threadgroup, ('a -> 'a), ) -> unit") // wtf?
 // redistribute
@@ -446,8 +456,9 @@ LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)->'a)->
 
 TYPE(JobRange, "JobRange")
 
-LITERAL(CreateMinRange,     "MinRange",    "(uint<#8>)->JobRange")					// lower boundery only
-LITERAL(CreateBoundRange,   "BoundRange",    "(uint<#8>, uint<#8>)->JobRange")		// lower and upper bound
+LITERAL(CreateMinRange,     "MinRange",    		"(uint<#8>)->JobRange")							// lower boundery only
+LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<#8>, uint<#8>)->JobRange")				// lower and upper bound
+LITERAL(CreateBoundRangeMod,"BoundRange",    	"(uint<#8>, uint<#8>, uint<#8>)->JobRange")		// lower, upper and modula bound
 
 
 // --------------------------------------------------------------------------------------------------------------------

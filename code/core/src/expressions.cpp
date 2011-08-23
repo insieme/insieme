@@ -43,6 +43,7 @@
 
 #include "insieme/core/statements.h"
 #include "insieme/core/ast_visitor.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 using namespace insieme::core;
 
@@ -663,6 +664,7 @@ std::ostream& Lambda::printTo(std::ostream& out) const {
 }
 
 LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body) {
+	assert(type->isPlain() && "Lambdas should be plain functions!");
 	return manager.get(Lambda(type, params, body));
 }
 
@@ -778,12 +780,12 @@ bool LambdaDefinition::isRecursive(const VariablePtr& variable) const {
 	}, false);
 
 	// run visitor => if interrupted, the definition is recursive
-	return visitDepthFirstInterruptable(lambda, detector);
+	return visitDepthFirstOnceInterruptable(lambda, detector);
 }
 
 namespace {
 
-	class RecLambdaUnroller : public NodeMapping {
+	class RecLambdaUnroller : public transform::CachedNodeMapping {
 
 		NodeManager& manager;
 		const LambdaDefinition& definition;
@@ -795,7 +797,7 @@ namespace {
 		RecLambdaUnroller(NodeManager& manager, const LambdaDefinition& definition)
 			: manager(manager), definition(definition), definitions(definition.getDefinitions()) { }
 
-		virtual const NodePtr mapElement(unsigned, const NodePtr& ptr) {
+		virtual const NodePtr resolveElement(const NodePtr& ptr) {
 			// check whether it is a known variable
 			if (ptr->getNodeType() == NT_Variable) {
 				VariablePtr var = static_pointer_cast<const Variable>(ptr);
@@ -804,6 +806,11 @@ namespace {
 				if (pos != definitions.end()) {
 					return LambdaExpr::get(manager, var, LambdaDefinitionPtr(&definition));
 				}
+			}
+
+			// cut of types
+			if (ptr->getNodeCategory() == NC_Type) {
+				return ptr;
 			}
 
 			// replace recursively
@@ -842,7 +849,7 @@ namespace {
 LambdaExpr::LambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition)
 	: Expression(NT_LambdaExpr, variable->getType(), ::hashLambdaExpr(variable, definition)),
 	  variable(isolate(variable)), definition(isolate(definition)), lambda(definition->getDefinitionOf(variable)),
-	  recursive(definition->isRecursive(variable)) { }
+	  recursive(boost::logic::indeterminate) { }
 
 LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
@@ -901,12 +908,12 @@ namespace {
 
 		// create list of arguments
 		TypeList paramTypes;
-		transform(parameters, std::back_inserter(paramTypes), [](const VariablePtr& cur) {
+		::transform(parameters, std::back_inserter(paramTypes), [](const VariablePtr& cur) {
 			return cur->getType();
 		});
 
 		// create resulting type
-		return FunctionType::get(resultType->getNodeManager(), paramTypes, resultType);
+		return FunctionType::get(resultType->getNodeManager(), paramTypes, resultType, false);
 	}
 
 	std::size_t hashBindExpr(const vector<VariablePtr>& parameters, const CallExprPtr& call) {
@@ -916,7 +923,6 @@ namespace {
 		boost::hash_combine(hash, call->hash());
 		return hash;
 	}
-
 
 }
 

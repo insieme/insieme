@@ -38,6 +38,7 @@
 
 #include "insieme/core/checks/imperativechecks.h"
 #include "insieme/core/checks/typechecks.h"
+#include "insieme/core/checks/semanticchecks.h"
 
 
 namespace insieme {
@@ -51,17 +52,22 @@ namespace checks {
 		checks.push_back(make_check<KeywordCheck>());
 		checks.push_back(make_check<CallExprTypeCheck>());
 		checks.push_back(make_check<FunctionTypeCheck>());
+		checks.push_back(make_check<BindExprTypeCheck>());
+		checks.push_back(make_check<ExternalFunctionTypeCheck>());
 		checks.push_back(make_check<ReturnTypeCheck>());
 		checks.push_back(make_check<DeclarationStmtTypeCheck>());
 		checks.push_back(make_check<WhileConditionTypeCheck>());
 		checks.push_back(make_check<IfConditionTypeCheck>());
 		checks.push_back(make_check<SwitchExpressionTypeCheck>());
+		checks.push_back(make_check<StructExprTypeCheck>());
 		checks.push_back(make_check<MemberAccessElementTypeCheck>());
 		checks.push_back(make_check<BuiltInLiteralCheck>());
 		checks.push_back(make_check<RefCastCheck>());
 		checks.push_back(make_check<CastCheck>());
 
 		checks.push_back(make_check<UndeclaredVariableCheck>());
+
+		checks.push_back(make_check<ScalarArrayIndexRangeCheck>());
 
 		// assemble the IR check list
 		CheckPtr recursive = makeVisitOnce(combine(checks));

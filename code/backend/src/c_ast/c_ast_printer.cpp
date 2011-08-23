@@ -40,6 +40,8 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
 
+#include "insieme/backend/c_ast/c_ast_utils.h"
+
 namespace insieme {
 namespace backend {
 namespace c_ast {
@@ -119,11 +121,18 @@ namespace c_ast {
 
 			PRINT(PrimitiveType) {
 				switch(node->type) {
-				case PrimitiveType::VOID : return out << "void";
-				case PrimitiveType::INT : return out << "int";
-				case PrimitiveType::UNSIGNED : return out << "unsigned";
-				case PrimitiveType::FLOAT : return out << "float";
-				case PrimitiveType::DOUBLE : return out << "double";
+				case PrimitiveType::Void : return out << "void";
+				case PrimitiveType::Bool : return out << "bool";
+				case PrimitiveType::Int8 : return out << "int8_t";
+				case PrimitiveType::Int16 : return out << "int16_t";
+				case PrimitiveType::Int32 : return out << "int32_t";
+				case PrimitiveType::Int64 : return out << "int64_t";
+				case PrimitiveType::UInt8 : return out << "uint8_t";
+				case PrimitiveType::UInt16 : return out << "uint16_t";
+				case PrimitiveType::UInt32 : return out << "uint32_t";
+				case PrimitiveType::UInt64 : return out << "uint64_t";
+				case PrimitiveType::Float : return out << "float";
+				case PrimitiveType::Double : return out << "double";
 				}
 				assert(false && "Unsupported primitive type!");
 				return out << "/* unsupported primitive type */";
@@ -160,9 +169,13 @@ namespace c_ast {
 				return out << "...";
 			}
 
+			PRINT(AttributedType) {
+				return out << node->attribute << " " << print(node->type);
+			}
+
 			PRINT(VarDecl) {
 				// print a variable declaration
-				out << print(node->var->type) << " " << print(node->var->name);
+				out << printParam(node->var);
 
 				if (!node->init) {
 					return out;
@@ -178,7 +191,12 @@ namespace c_ast {
 
 				std::size_t size = node->statements.size();
 				for (std::size_t i=0; i<size; i++) {
-					out << print(node->statements[i]) << ";";
+					const NodePtr& cur = node->statements[i];
+					out << print(cur);
+//					auto type = cur->getType();
+//					if (type != NT_For && type != NT_While && type != NT_If && type != NT_Switch && type != NT_Compound) {
+						out << ";";
+//					}
 					if (i < size-1) newLine(out);
 				}
 
@@ -213,26 +231,27 @@ namespace c_ast {
 			}
 
 			PRINT(Switch) {
-				out << "switch(";
-				print(node->value);
-				out << ") {";
+				out << "switch(" << print(node->value) << ") {";
 				incIndent();
 				newLine(out);
 
 				std::size_t size = node->cases.size();
 				for (std::size_t i=0; i<size; i++) {
 					const std::pair<ExpressionPtr, StatementPtr>& cur = node->cases[i];
-					out << "case ";
-					print(cur.first);
-					out << ": ";
-					print(cur.second);
+					out << "case " << print(cur.first) << ": " << print(cur.second);
+					if (cur.second->getType() != c_ast::NT_Compound) {
+						out << ";";
+					}
+					out << " break;";
 					if (i < size-1) newLine(out);
 				}
 
 				if (node->defaultBranch) {
 					newLine(out);
-					out << "default: ";
-					print(node->defaultBranch);
+					out << "default: " << print(node->defaultBranch);
+					if (node->defaultBranch->getType() != c_ast::NT_Compound) {
+						out << ";";
+					}
 				}
 
 				decIndent();
@@ -242,10 +261,15 @@ namespace c_ast {
 			}
 
 			PRINT(For) {
-				return out << "for (" << print(node->init) << "; "
-						   << print(node->check) << "; "
-						   << print(node->step) << ") "
-						   << print(node->body);
+				out << "for (" << print(node->init) << "; "
+				    << print(node->check) << "; "
+				    << print(node->step) << ") ";
+
+				NodePtr body = node->body;
+				if (body->getType() != NT_Compound) {
+					body = c_ast::compound(body);
+				}
+				return out << print(body);
 			}
 
 			PRINT(While) {
@@ -261,7 +285,11 @@ namespace c_ast {
 			}
 
 			PRINT(Return) {
-				return out << "return " << print(node->value);
+				out << "return";
+				if (node->value) { // if there is a return value ...
+					out << " " << print(node->value);
+				}
+				return out;
 			}
 
 			PRINT(Literal) {
@@ -317,16 +345,16 @@ namespace c_ast {
 					case BinaryOperation::Multiplication: 			op = "*"; break;
 					case BinaryOperation::Division: 				op = "/"; break;
 					case BinaryOperation::Modulo: 					op = "%"; break;
-					case BinaryOperation::Equal: 					op = "=="; break;
-					case BinaryOperation::NotEqual: 				op = "!="; break;
-					case BinaryOperation::GreaterThan: 				op = ">"; break;
-					case BinaryOperation::LessThan: 				op = "<"; break;
-					case BinaryOperation::GreaterOrEqual: 			op = ">="; break;
-					case BinaryOperation::LessOrEqual: 				op = "<="; break;
-					case BinaryOperation::LogicAnd: 				op = "&&"; break;
-					case BinaryOperation::LogicOr: 					op = "||"; break;
-					case BinaryOperation::BitwiseAnd: 				op = "&"; break;
-					case BinaryOperation::BitwiseOr: 				op = "|"; break;
+					case BinaryOperation::Equal: 					op = " == "; break;
+					case BinaryOperation::NotEqual: 				op = " != "; break;
+					case BinaryOperation::GreaterThan: 				op = " > "; break;
+					case BinaryOperation::LessThan: 				op = " < "; break;
+					case BinaryOperation::GreaterOrEqual: 			op = " >= "; break;
+					case BinaryOperation::LessOrEqual: 				op = " <= "; break;
+					case BinaryOperation::LogicAnd: 				op = " && "; break;
+					case BinaryOperation::LogicOr: 					op = " || "; break;
+					case BinaryOperation::BitwiseAnd: 				op = " & "; break;
+					case BinaryOperation::BitwiseOr: 				op = " | "; break;
 					case BinaryOperation::BitwiseXOr: 				op = "^"; break;
 					case BinaryOperation::BitwiseLeftShift: 		op = "<<"; break;
 					case BinaryOperation::BitwiseRightShift:		op = ">>"; break;
@@ -351,6 +379,17 @@ namespace c_ast {
 
 				assert(op != "" && "Invalid binary operation encountered!");
 
+				// avoid /* literal by composition of / and dereferencing *
+				if (node->operation == BinaryOperation::Division) {
+					if (node->operandB->getType() == NT_UnaryOperation) {
+						c_ast::UnaryOperationPtr opB = static_pointer_cast<const UnaryOperation>(node->operandB);
+						if (opB->operation == UnaryOperation::Indirection) {
+							return out << print(node->operandA) << op << " " << print(node->operandB);
+						}
+					}
+				}
+
+				// handle as usual
 				return out << print(node->operandA) << op << print(node->operandB);
 			}
 
@@ -420,6 +459,9 @@ namespace c_ast {
 				}
 				if (node->flags & Function::INLINE) {
 					out << "inline ";
+				}
+				if (node->flags & Function::OCL_KERNEL) {
+					out << "__kernel ";
 				}
 
 				out << print(node->returnType) << " " << print(node->name) << "(" << printParam(node->parameter) << ") ";

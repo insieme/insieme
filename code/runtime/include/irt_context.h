@@ -37,6 +37,11 @@
 #pragma once
 
 #include "declarations.h"
+#include "client_app.h"
+
+#ifdef USE_OPENCL
+#include "irt_ocl.h"
+#endif
 
 /* ------------------------------ data structures ----- */
 
@@ -47,6 +52,12 @@ struct _irt_context {
 	irt_client_app* client_app;
 	irt_type* type_table;
 	irt_wi_implementation* impl_table;
+
+#ifdef USE_OPENCL
+	irt_ocl_kernel_code* kernel_code_table;
+	irt_ocl_kernel** kernel_binary_table;
+#endif
+
 	// private implementation detail
 	struct _irt_context* lookup_table_next;
 };
@@ -57,5 +68,5 @@ struct _irt_context {
 static inline irt_context* irt_context_get_current();
 
 irt_context* irt_context_create(irt_client_app* app);
-irt_context* irt_context_create_standalone(irt_type* type_table, irt_wi_implementation* impl_table);
+irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun*);
 void irt_context_destroy(irt_context* context);

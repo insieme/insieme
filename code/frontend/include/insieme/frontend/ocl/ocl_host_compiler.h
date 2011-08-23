@@ -53,8 +53,8 @@ class HostCompiler {
 	core::ASTBuilder builder;
 
 public:
-	HostCompiler(core::ProgramPtr& program, core::NodeManager& mgr) :
-		mProgram(program), builder(mgr) {
+	HostCompiler(core::ProgramPtr& program) :
+		mProgram(program), builder(program->getNodeManager()) {
 	}
 
 	core::ProgramPtr compile();

@@ -47,11 +47,11 @@
 
 #include "insieme/utils/set_utils.h"
 
-#include "insieme/c_info/naming.h"
+#include "insieme/annotations/c/naming.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
-using namespace insieme::c_info;
+using namespace insieme::annotations::c;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 

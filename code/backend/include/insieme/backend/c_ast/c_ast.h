@@ -87,7 +87,8 @@ namespace c_ast {
 		Node(NodeType type) : type(type), equalityID(0) {}
 		virtual ~Node() {};
 
-		NodeType getType() const { return type; }
+		NodeType getType() const { return type; } // TODO: remove this, expressions have types!
+		NodeType getNodeType() const { return type; }
 
 		void setManager(CNodeManager* mgr) { manager = mgr; }
 		CNodeManager* getManager() const {
@@ -133,7 +134,7 @@ namespace c_ast {
 
 	struct PrimitiveType : public Type {
 		enum CType {
-			VOID, UNSIGNED, INT, FLOAT, DOUBLE
+			Void, Bool, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float, Double
 		};
 		const CType type;
 		PrimitiveType(CType type) : Type(NT_PrimitiveType), type(type) {}
@@ -187,6 +188,14 @@ namespace c_ast {
 
 	struct VarArgsType : public Type {
 		VarArgsType() : Type(NT_VarArgsType) {}
+		virtual bool equals(const Node& node) const;
+	};
+
+	struct AttributedType : public Type {
+		string attribute;
+		TypePtr type;
+		AttributedType(const string& attribute, const TypePtr& type)
+			: Type(NT_AttributedType), attribute(attribute), type(type) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -265,7 +274,7 @@ namespace c_ast {
 
 	struct Return : public Statement {
 		ExpressionPtr value;
-		Return(ExpressionPtr value) : Statement(NT_Return), value(value) {}
+		Return(ExpressionPtr value = ExpressionPtr()) : Statement(NT_Return), value(value) {}
 		virtual bool equals(const Node& node) const;
 	};
 
@@ -448,8 +457,9 @@ namespace c_ast {
 
 	struct Function : public Definition {
 		enum Modifier {
-			STATIC = 1<<0,
-			INLINE = 1<<1
+			STATIC 		= 1<<0,
+			INLINE 		= 1<<1,
+			OCL_KERNEL 	= 1<<2
 		};
 		unsigned flags;
 		TypePtr returnType;

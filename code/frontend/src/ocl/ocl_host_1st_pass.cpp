@@ -36,14 +36,13 @@
 
 #include "insieme/core/ast_node.h"
 #include "insieme/frontend/ocl/ocl_host_utils.h"
-#include "insieme/frontend/ocl/ocl_host_passes.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
+#include "insieme/frontend/ocl/ocl_host_1st_pass.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include <fstream>
 
 namespace ba = boost::algorithm;
-namespace iocl = insieme::ocl;
 
 namespace insieme {
 namespace frontend {
@@ -52,7 +51,7 @@ using namespace insieme::core;
 
 #define POINTER(type) builder.refType(builder.refType(builder.arrayType(type)))
 
-const ProgramPtr& loadKernelsFromFile(string path, const ASTBuilder& builder) {
+const ProgramPtr loadKernelsFromFile(string path, const ASTBuilder& builder) {
 	// delete quotation marks form path
 	if (path[0] == '"')
 		path = path.substr(1, path.length() - 2);
@@ -159,6 +158,30 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
 	}
 	return true;
 }
+
+void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
+	if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(path)) {
+		if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
+			if(stringAsChar->getValue() == "string.as.char.pointer") {
+				if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
+					kernels = loadKernelsFromFile(path->getValue(), builder);
+
+					// set source string to an empty char array
+					//							ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
+				}
+			}
+		}
+	}
+	if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(path)) {
+		//            std::cout << "PathVariable: " << pathVar << std::endl;
+		KernelCodeRetriver kcr(pathVar, root, builder);
+		visitDepthFirst(mProgram, kcr);
+		string kernelFilePath = kcr.getKernelFilePath();
+		if(kernelFilePath.size() > 0)
+		kernels = loadKernelsFromFile(kernelFilePath, builder);
+	}
+}
+
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type) {
 	// get rid of casts
 	NodePtr uncasted = arg;
@@ -393,29 +416,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	);
 
 	ADD_Handler(builder, "oclLoadProgSource",
-			//			NodePtr ret = node;
-			if(const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(node->getArgument(0))) {
-				if(const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-					if(stringAsChar->getValue() == "string.as.char.pointer") {
-						if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-							kernels = loadKernelsFromFile(path->getValue(), builder);
-
-							// set source string to an empty char array
-							//							ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
-						}
-					}
-				}
-			}
-			if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(node->getArgument(0))) {
-				//            std::cout << "PathVariable: " << pathVar << std::endl;
-				KernelCodeRetriver kcr(pathVar, node, builder);
-				visitDepthFirst(mProgram, kcr);
-				string kernelFilePath = kcr.getKernelFilePath();
-				if(kernelFilePath.size() > 0)
-				kernels = loadKernelsFromFile(kernelFilePath, builder);
-			}
+			this->findKernelsUsingPathString("irt_ocl_create_kernel", node->getArgument(0), node);
 			// set source string to an empty char array
 			return builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
+	);
+
+	// TODO ignores 3rd argument (kernelName) and just adds all kernels to the program
+	ADD_Handler(builder, "irt_ocl_create_kernel",
+			this->findKernelsUsingPathString("irt_ocl_create_kernel", node->getArgument(1), node);
+			return builder.uintLit(0);
 	);
 
 	ADD_Handler(builder, "clEnqueueNDRangeKernel",
@@ -510,13 +519,19 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	ADD_Handler(builder, "clCreateContext", return node;);
 	ADD_Handler(builder, "clCreateCommandQueue", return node;);
 	ADD_Handler(builder, "clCreateKernel", return node;);
+
+
+	// handlers for insieme opencl runtime stuff
+	ADD_Handler(builder, "irt_ocl_",
+		return builder.uintLit(0); // default handling, remove it
+	);
 };
 
 HandlerPtr& HostMapper::findHandler(const string& fctName) {
-	// for performance reasons working with function prefixes is only enabled for cl* functions
-	if (fctName.substr(0, 2).find("cl") == string::npos)
+	// for performance reasons working with function prefixes is only enabled for funcitons containing cl
+	// needed for cl*, ocl* and irt_ocl_* functions
+	if (fctName.find("cl") == string::npos)
 		return handles[fctName];
-
 	// checking function names, starting from the full name
 	for (int i = fctName.size(); i > 2; --i) {
 		if (HandlerPtr& h = handles[fctName.substr(0,i)])
@@ -528,6 +543,8 @@ HandlerPtr& HostMapper::findHandler(const string& fctName) {
 CallExprPtr HostMapper::checkAssignment(const core::NodePtr& oldCall) {
 	CallExprPtr newCall;
 	if ((newCall = dynamic_pointer_cast<const CallExpr> (oldCall))) {
+		if(newCall->getArguments().size() < 2)
+			return newCall;
 		// get rid of deref operations, automatically inserted by the frontend coz _cl_mem* is translated to ref<array<...>>, and refs cannot be
 		// rhs of an assignment
 		if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
@@ -575,6 +592,8 @@ std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
 }
 
 bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const ExpressionPtr& call, const ExpressionPtr& fieldName) {
+	if(call->getType()->toString().find("array<_cl_kernel,1>") == string::npos)
+		return false; //TODO untested
 	TypePtr type = getNonRefType(expr);
 	// if it is a struct we have to check the field
 	if (const StructTypePtr st = dynamic_pointer_cast<const StructType>(type)) {
@@ -600,21 +619,21 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 			type = at->getElementType();
 		}
 	}
+	if(type->toString().find("array<_cl_kernel,1>") != string::npos) {
+		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), call, builder))) {//!
+			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
+				if(fun->getValue() == "clCreateKernel" ) {
+						ExpressionPtr kn = newCall->getArgument(1);
+						// usually kernel name is embedded in a "string.as.char.pointer" call"
+						if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
+						kn = sacp->getArgument(0);
+						if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
+								string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
+								kernelNames[name] = expr;
+						}
 
-	if(getNonRefType(type) == builder.arrayType(builder.genericType("_cl_kernel"))) {
-		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(call)) {//!
-			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
-			if(fun->getValue() == "clCreateKernel" ) {
-				ExpressionPtr kn = newCall->getArgument(1);
-				// usually kernel name is embedded in a "string.as.char.pointer" call"
-				if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
-				kn = sacp->getArgument(0);
-				if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
-					string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
-					kernelNames[name] = expr;
+						return true;
 				}
-
-				return true;
 			}
 		}
 	}
@@ -622,27 +641,26 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 }
 
 bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
-if(type == POINTER(builder.genericType("_cl_program"))) {
-	if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) {
-		if(iocl::KernelFileAnnotationPtr kfa =
-				dynamic_pointer_cast<iocl::KernelFileAnnotation>(cpwsCall->getAnnotation(iocl::KernelFileAnnotation::KEY))) {
-			string path = kfa->getKernelPath();
-			//std::cerr << "Found OpenCL kernel file path: " << path;
-			if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
-			cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
-			if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
-				if(clCPWS->getValue() == "clCreateProgramWithSource") {
-					ProgramPtr kernels = loadKernelsFromFile(path, builder);
-					for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
+	if(type == POINTER(builder.genericType("_cl_program"))) {
+		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) {
+			if(annotations::ocl::KernelFileAnnotationPtr kfa =
+					dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>(cpwsCall->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
+				const string& path = kfa->getKernelPath();
+				if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
+					cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
+				if(const LiteralPtr& clCPWS = dynamic_pointer_cast<const Literal>(cpwsCall->getFunctionExpr())) {
+					if(clCPWS->getValue() == "clCreateProgramWithSource") {
+						const ProgramPtr kernels = loadKernelsFromFile(path, builder);
+						for_each(kernels->getEntryPoints(), [&](ExpressionPtr kernel) {
 								kernelEntries.push_back(kernel);
 							});
+					}
 				}
 			}
 		}
+		return true;
 	}
-	return true;
-}
-return false;
+	return false;
 }
 
 const NodePtr HostMapper::resolveElement(const NodePtr& element) {
@@ -680,6 +698,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
 		if(fun == BASIC.getRefAssign()) {
 			ExpressionPtr lhs = callExpr->getArgument(0);
+
 			// on the left hand side we'll either have a variable or a struct, probably holding a reference to the global array
 			// for the latter case we have to handle it differently
 			if(const CallExprPtr& lhsCall = dynamic_pointer_cast<const CallExpr>(lhs)) {
@@ -687,7 +706,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
 						if(lhsCall->getType() == POINTER(builder.genericType("_cl_mem"))) {
 							const TypePtr& newType = newCall->getType();
-
+//std::cout << "Alle meine entchen: " << lhsCall->getArgument(0) << std::endl;
 							const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
 							assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
 							VariablePtr newStruct;
@@ -741,7 +760,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 							return builder.callExpr(BASIC.getRefAssign(), structAccess, newCall);
 						}
 
-						if(lhsCall->getType() == POINTER(builder.genericType("_cl_kernel"))) {
+						if(lhsCall->getType()->toString().find("array<_cl_kernel,1>") != string::npos) {
 							if(const CallExprPtr& cre = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0)))
 								if(cre->getFunctionExpr() == BASIC.getCompositeRefElem())
 									if(dynamic_pointer_cast<const Variable>(cre->getArgument(0))){
@@ -756,15 +775,16 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					}
 				}
 				// also if the variable is an array we will have a function call on the left hand side
-				if(lhsCall->getFunctionExpr() == BASIC.getArrayRefElem1D() || lhsCall->getFunctionExpr() ==  BASIC.getVectorRefElem()) {
+				if(BASIC.isSubscriptOperator(lhsCall->getFunctionExpr())) {
 					//prepare stuff for VariablePtr section
-					lhs = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
+					lhs = getVariableArg(lhsCall, builder);
 				}
 			}
 
 			if(const VariablePtr& lhsVar = dynamic_pointer_cast<const Variable>(lhs)) {
 				// handling clCreateBuffer
-				if(lhsVar->getType()->toString().find("array<_cl_mem,1>") != string::npos) {// == builder.refType(builder.arrayType(builder.genericType("_cl_mem")))) {
+				if(lhsVar->getType()->toString().find("array<_cl_mem,1>") != string::npos)
+				if(callExpr->getArgument(1)->toString().find("clCreateBuffer") != string::npos){
 					NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
 					bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
 					// check if data has to be copied to a new array
@@ -773,8 +793,9 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 						TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhs->getType(),
 								callExpr->getArgument(1)->getType(), newCall->getType()));
 						// check if variable has already been put into replacement map with a different type
-						if(alreadyThere)
+						if(alreadyThere) {
 							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
+						}
 						NodePtr ret;
 
 						if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newCall, builder))) {
@@ -811,6 +832,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				}
 
 				if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
+//std::cout << "\nchecked assignment: " << newCall << std::endl;
 					if(handleClCreateKernel(callExpr->getArgument(0), newCall, NULL)) {
 						return BASIC.getNoOp();
 					}

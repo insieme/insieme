@@ -55,13 +55,24 @@ namespace core {
 
 }
 namespace backend {
+
+	class PostProcessor;
+	typedef std::shared_ptr<PostProcessor> PostProcessorPtr;
+
 namespace c_ast {
 
-	class CodeFragmentManager {
+	class CodeFragmentManager : boost::noncopyable {
 
 		SharedCNodeManager cNodeManager;
 
 		vector<CodeFragment*> fragments;
+
+		/**
+		 * A list of special, named code fragments which can be accessed
+		 * via their names. All fragments within this map have to be part
+		 * of the fragments vector, hence managed by this manager.
+		 */
+		std::map<string, CodeFragment*> namedFragments;
 
 	public:
 
@@ -84,6 +95,21 @@ namespace c_ast {
 		static SharedCodeFragmentManager createShared() {
 			return std::make_shared<CodeFragmentManager>(CNodeManager::createShared());
 		}
+
+		CodeFragmentPtr getFragment(const string& name) {
+			auto pos = namedFragments.find(name);
+			if (pos != namedFragments.end()) {
+				return pos->second;
+			}
+			return 0;
+		}
+
+		void bindFragment(const string& name, const CodeFragmentPtr& fragment) {
+			assert(contains(fragments, fragment.ptr) && "Cannot bind fragment not maintained by this manager!");
+			auto res = namedFragments.insert(std::make_pair(name, fragment.ptr));
+			assert(res.second && "Name already in use!!");
+		}
+
 	};
 
 
@@ -98,9 +124,10 @@ namespace c_ast {
 		const SharedCodeFragmentManager fragmentManager;
 
 		/**
-		 * A list of seeds for the graph of fragments the represented target code is consisting of.
-		 * The code represented by this instance is the transitive closure of the dependencies
-		 * defined by the given code fragments.
+		 * The list of code fragments in the correct order forming this program. To include all
+		 * required fragments in to proper order, the transitive closure of the dependency and
+		 * requirement relation between fragments and a topological order on the first relation
+		 * can be computed using the getOrderedClosure() function.
 		 */
 		const vector<CodeFragmentPtr> fragments;
 
@@ -112,7 +139,7 @@ namespace c_ast {
 		 *
 		 * @param manager the fragment manager maintaining the given code fragment and all its dependencies and requirements
 		 * @param source the IR node this code has been generated from
-		 * @param code the root element of the resulting target code fragment
+		 * @param code the root element of the resulting target code fragment (closure will be automatically computed)
 		 */
 		CCode(const SharedCodeFragmentManager& manager, const core::NodePtr& source, const CodeFragmentPtr& root);
 
@@ -122,25 +149,15 @@ namespace c_ast {
 		 *
 		 * @param manager the fragment manager maintaining the given code fragment and all its dependencies and requirements
 		 * @param source the IR node this code has been generated from
-		 * @param fragments seeds / entry points of the represented program
+		 * @param fragments the code fragments this code is consisting of
 		 */
 		CCode(const SharedCodeFragmentManager& manager, const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments);
-
-		/**
-		 * Creates a new C code instance representing a translation of the given source to the given code fragment.
-		 *
-		 * @param source the source of the translation, hence the internal IR representation.
-		 * @param fragment the code fragment forming the root of the DAG of code fragments representing the result
-		 */
-		static CCodePtr createNew(const SharedCodeFragmentManager& manager, const core::NodePtr& source, CodeFragmentPtr& fragment) {
-			return std::make_shared<CCode>(manager, source, fragment);
-		}
 
 		/**
 		 * Creates a new C code instance representing a translation of the given source to the given code fragments.
 		 *
 		 * @param source the source of the translation, hence the internal IR representation.
-		 * @param fragments the code fragment forming the root elements of the DAG of code fragments representing the result
+		 * @param fragments the code fragments the resulting code should be consisting of
 		 */
 		static CCodePtr createNew(const SharedCodeFragmentManager& manager, const core::NodePtr& source, const vector<CodeFragmentPtr>& fragments) {
 			return std::make_shared<CCode>(manager, source, fragments);
@@ -158,7 +175,7 @@ namespace c_ast {
 	 * An abstract base class for various kinds of specialized code fragments. This base class
 	 * defines an interface for code fragments to be handled uniformly.
 	 */
-	class CodeFragment : public utils::Printable {
+	class CodeFragment : public utils::Printable, private boost::noncopyable {
 
 		/**
 		 * The set of code fragments this fragment is depending on. The dependencies should form
@@ -374,7 +391,26 @@ namespace c_ast {
 		 * @return the out reference passed as an argument
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const;
+
+		/**
+		 * Instructs this C-code fragment to apply the given post-processor to
+		 * itself. This will change the internal code structure.
+		 *
+		 * @param processor the post-processor to be applied on this fragment.
+		 */
+		void apply(const PostProcessorPtr& processor);
 	};
+
+	/**
+	 * Obtains a the list of fragments containing all the code fragments within the transitive
+	 * closure of the dependency and requirement relation ordered according to a topological
+	 * order of the dependency relation. Hence, code fragments required by an element X are
+	 * located before the element X within the resulting list.
+	 *
+	 * @param fragments the seed elements for the computation of the transitive closure
+	 * @return the requested closure
+	 */
+	vector<CodeFragmentPtr> getOrderedClosure(const vector<CodeFragmentPtr>& fragments);
 
 
 	/**

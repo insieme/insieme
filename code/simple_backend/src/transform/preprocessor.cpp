@@ -219,35 +219,6 @@ namespace transform {
 						core::LambdaExprPtr substitute = builder.lambdaExpr(funType, toVector(v1,v2), body);
 						return builder.callExpr(resType, substitute, call->getArguments());
 					}
-
-//
-//					// only care about lambdas
-//					core::ExpressionPtr fun = call->getFunctionExpr();
-//					if (fun->getNodeType() == core::NT_LambdaExpr) {
-//
-//						// convert to lambda
-//						core::LambdaExprPtr lambda = static_pointer_cast<const core::LambdaExpr>(fun);
-//
-//						// check whether the lambda is generic
-//						if (core::isGeneric(fun->getType())) {
-//
-//							// compute substitutions
-//							core::SubstitutionOpt&& map = core::analysis::getTypeVariableInstantiation(manager, call);
-//
-//							// instantiate type variables according to map
-//							lambda = core::transform::instantiate(manager, lambda, map);
-//
-//							// create new call node
-//							core::ExpressionList arguments;
-//							::transform(call->getArguments(), std::back_inserter(arguments), [&](const core::ExpressionPtr& cur) {
-//								return static_pointer_cast<const core::Expression>(this->mapElement(0, cur));
-//							});
-//
-//							// produce new call expression
-//							return core::CallExpr::get(manager, call->getType(), lambda, arguments);
-//
-//						}
-//					}
 				}
 
 				// decent recursively

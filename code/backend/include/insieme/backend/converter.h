@@ -53,6 +53,9 @@ namespace backend {
 	class PreProcessor;
 	typedef std::shared_ptr<PreProcessor> PreProcessorPtr;
 
+	class PostProcessor;
+	typedef std::shared_ptr<PostProcessor> PostProcessorPtr;
+
 	// forward declaration of involved managers
 	class NameManager;
 	class TypeManager;
@@ -66,21 +69,21 @@ namespace backend {
 
 
 	struct ConverterConfig {
-		bool supportArrayLength;
 
+		// - no configuration so far -
 
 		static ConverterConfig getDefault() {
 			ConverterConfig res;
-			res.supportArrayLength = false;
 			return res;
 		}
 	};
 
-	class Converter {
+	class Converter : private boost::noncopyable {
 
-		// ------- The Preprocessor applied before the conversion -----------
+		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
 		PreProcessorPtr preProcessor;
+		PostProcessorPtr postProcessor;
 
 		// ------- Manager involved in the conversion process -----------
 
@@ -98,20 +101,18 @@ namespace backend {
 		// NOTE: shared pointer, since it has to survive the conversion process
 		c_ast::SharedCodeFragmentManager fragmentManager;
 
-
 		// ----------- Overall Conversion Configuration ----------------
 
 		ConverterConfig config;
 
-
 	public:
 
 		Converter() :
-			preProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(ConverterConfig::getDefault()) {}
 
 		Converter(const ConverterConfig& config) :
-			preProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
+			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
 			functionManager(0), parallelManager(0), config(config) {}
 
 		backend::TargetCodePtr convert(const core::NodePtr& code);
@@ -123,6 +124,15 @@ namespace backend {
 
 		void setPreProcessor(PreProcessorPtr newPreProcessor) {
 			preProcessor = newPreProcessor;
+		}
+
+		const PostProcessorPtr& getPostProcessor() const {
+			assert(postProcessor);
+			return postProcessor;
+		}
+
+		void setPostProcessor(PostProcessorPtr newPostProcessor) {
+			postProcessor = newPostProcessor;
 		}
 
 		NameManager& getNameManager() const {
@@ -244,12 +254,20 @@ namespace backend {
 			return converter;
 		}
 
+		void addDependency(const c_ast::CodeFragmentPtr& fragment) {
+			dependencies.insert(fragment);
+		}
+
 		c_ast::FragmentSet& getDependencies() {
 			return dependencies;
 		}
 
 		const c_ast::FragmentSet& getDependencies() const {
 			return dependencies;
+		}
+
+		void addRequirement(const c_ast::CodeFragmentPtr& fragment) {
+			requirements.insert(fragment);
 		}
 
 		c_ast::FragmentSet& getRequirements() {

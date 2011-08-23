@@ -488,7 +488,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 	// create new function type
 	paramTypes.erase(paramTypes.begin() + index);
-	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType());
+	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), true);
 
 	// create new parameter list
 	vector<VariablePtr> params = lambda->getParameterList();

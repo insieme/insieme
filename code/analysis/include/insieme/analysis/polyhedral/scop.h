@@ -37,19 +37,64 @@
 #pragma once 
 
 #include <vector>
+#include <map>
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/ast_address.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/analysis/defuse_collect.h"
+
+#include "boost/optional.hpp"
 
 namespace insieme {
 namespace analysis {
 namespace scop {
 
-//===== ScopRegion ================================================================================
-/* 
- * Stores the information related to a SCoP (Static Control Part) region of a program.
+typedef std::vector<core::NodeAddress> AddressList;
+
+// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
+// be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
+typedef std::vector<RefPtr> RefAccessList; 
+
+/**************************************************************************************************
+ * ScopStmt: Utility class which contains all the information of statements inside a SCoP (both
+ * direct and contained in sub-scops). 
+ *
+ * A statement into a SCoP has 3 piece of information associated:
+ * 	- Iteration domain:    which define the domain on which this statement is valid
+ * 	- Scattering function: which define the order of execution with respect of other statements in
+ * 						   the SCoP region
+ *  - Accesses: pointers to refs (either Arrays/Scalars/Memebrs) which are defined or used within 
+ *              the statement. 
+ *
+ * This is information is not computed when the the SCoP region is first build but instead on demand
+ * (lazy) and cached for future requests. 
+ *************************************************************************************************/
+class ScopStmt { 
+	
+	core::StatementAddress 			address;
+	RefAccessList					accesses;
+
+public:
+	ScopStmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
+		address(addr), accesses(accesses) { }
+
+	const core::StatementAddress& getAddr() const { return address; }
+	
+	const core::StatementAddress& operator->() const { return address; }
+
+	const RefAccessList& getRefAccesses() const { return accesses; }
+
+	bool operator<(const ScopStmt& other) const { return address < other.address; }
+	
+	~ScopStmt() { }
+};
+
+typedef std::vector<ScopStmt> ScopStmtList;
+
+/************************************************************************************************** 
+ * ScopRegion: Stores the information related to a SCoP (Static Control Part) region of a program.
  * The IterationVector which is valid within the SCoP body and the set of constraints which define
  * the entry point for this SCoP.
  *
@@ -60,29 +105,40 @@ namespace scop {
  * and the list of ref accesses directly present in this region. Accesses in the sub region are not
  * directly listed in the current region but retrieval is possible via the aforementioned pointer to
  * the sub scops. 
- */
+ *************************************************************************************************/
 class ScopRegion: public core::NodeAnnotation {
 public:
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> KEY;
 
-	typedef std::vector<core::StatementPtr> StmtList;
+	/********************************************************************************************** 
+	 * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
+	 * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
+	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
+	 * access is defined and the access functions for each dimensions.
+	 *********************************************************************************************/
+	typedef std::tuple<core::ExpressionAddress, Ref::UseType, poly::AffineSystemPtr> AccessInfo;
+	typedef std::vector<AccessInfo> AccessInfoList;
 
-	// Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
-	// be directly referred from sub SCoPs. 
-	//
-	// The accesses are ordered by the appearance in the SCoP
-	typedef std::vector<RefPtr> AccessRefList; 
+	typedef std::tuple<
+			core::StatementAddress, 
+			poly::IterationDomain, 
+			poly::ScatteringFunctionPtr, 
+			AccessInfoList > StmtScattering;
+
+	typedef std::vector<StmtScattering> ScatteringMatrix;
+	
+	typedef std::vector<poly::Iterator> IteratorOrder;
 
 	ScopRegion( const poly::IterationVector& iv, 
-			const poly::ConstraintCombinerPtr& comb = poly::ConstraintCombinerPtr(),
-			const StmtList& subScops = StmtList(),
-			const AccessRefList& accesses = AccessRefList() ) : 
-		core::NodeAnnotation(), 
+			const poly::IterationDomain& comb = poly::IterationDomain(),
+			const ScopStmtList& stmts = ScopStmtList(),
+			const AddressList& subScops = AddressList() ) : 
+		core::NodeAnnotation(),
 		iterVec(iv), 
-		constraints (poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
-		subScops(subScops), 
-		accesses(accesses) { } 
+		stmts(stmts),
+		constraints( poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
+		subScops(subScops) { } 
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 
@@ -105,36 +161,38 @@ public:
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::ConstraintCombinerPtr getConstraints() const { return constraints; }
+	inline const poly::IterationDomain& getDomainConstraints() const { return constraints; }
+
+	inline const ScopStmtList& getDirectRegionStmts() const { return stmts; }
 
 	/** 
 	 * Returns the set of ref accesses which are within this region (eventual access which are in
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	inline const AccessRefList& getDirectAccesses() const { return accesses; }
+	const ScatteringMatrix getScatteringInfo();
 
 	/** 
-	 * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
-	 * the pointer to a RefPtr instance (containing the ref to the variable being accessed and the
-	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
-	 * access is defined and the access functions for each dimensions.
-	 */
-	typedef std::tuple<RefPtr, poly::IterationDomain, std::vector<poly::ConstraintCombinerPtr>> AccessInfo;
-
-	typedef std::vector<AccessInfo> AccessInfoList;
-
-	const AccessInfoList listAccesses() const;
-
-	/** 
+	 *
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
 	 * current iteration domain
 	 */
-	const StmtList& getSubScops() const { return subScops; }
+	const AddressList& getSubScops() const { return subScops; }
 
 private:
+
+	static void resolveScop(const poly::IterationVector& 	iterVec, 
+					 poly::IterationDomain 					parentDomain, 
+			 	   	 const ScopRegion& 						region,
+					 const poly::ScatteringFunction& 		curScat,
+					 IteratorOrder& 						iterators,
+					 ScatteringMatrix& 						finalScat);
+
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;
+
+	// List of statements direclty contained in this region (but not in nested sub-regions)
+	ScopStmtList stmts;
 
 	// List of constraints which this SCoP defines 
 	poly::ConstraintCombinerPtr constraints;
@@ -145,30 +203,29 @@ private:
 	 *  
 	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
 	 */
-	StmtList subScops;
+	AddressList subScops;
 
-	// Access informations 
-	AccessRefList accesses;
+	boost::optional<ScatteringMatrix> scattering;
 };
 
-/**
+/**************************************************************************************************
  * AccessFunction : this annotation is used to annotate array subscript expressions with the
  * equality constraint resulting from the access function. 
  *
  * for example the subscript operation A[i+j-N] will generate an equality constraint of the type
  * i+j-N==0. Constraint which is used to annotate the expression.
- */
+ *************************************************************************************************/
 class AccessFunction: public core::NodeAnnotation {
 	poly::IterationVector 	iterVec;
-	poly::Constraint  		eqCons;
+	poly::AffineFunction 	access;
 public:
 	static const string NAME;
 	static const utils::StringKey<AccessFunction> KEY;
 
-	AccessFunction(const poly::IterationVector& iv, const poly::Constraint& eqCons) : 
+	AccessFunction(const poly::IterationVector& iv, const poly::AffineFunction& access) : 
 		core::NodeAnnotation(), 
 		iterVec(iv), 
-		eqCons( eqCons.toBase(iterVec) ) { assert(eqCons.getType() == poly::Constraint::EQ); }
+		access( access.toBase(iterVec) ) { }
 
 	const std::string& getAnnotationName() const { return NAME; }
 
@@ -176,7 +233,9 @@ public:
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 
-	const poly::Constraint& getAccessConstraint() const { return eqCons; }
+	const poly::AffineFunction& getAccessFunction() const { return access; }
+	
+	const poly::IterationVector& getIterationVector() const { return iterVec; }
 
 	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
 			const core::NodePtr& after) const { 
@@ -184,20 +243,20 @@ public:
 	}
 };
 
-typedef std::vector< std::pair<core::NodePtr, poly::IterationVector> > ScopList;
+typedef std::vector< std::pair<core::NodeAddress, poly::IterationVector> > ScopList;
 
-/**
+/**************************************************************************************************
  * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an
  * empty list in the case no SCoP was found). 
- */ 
+ *************************************************************************************************/ 
 ScopList mark(const core::NodePtr& root);
 
-/**
+/**************************************************************************************************
  * printSCoP is a debug function which is used mainly as a proof of concept for the mechanism which
  * is used to support SCoPs. The function prints all the infromation related to a SCoP, i.e. for
  * each of the accesses existing in the SCoP the iteration domain associated to it and the access
  * function.
- */
+ *************************************************************************************************/
 void printSCoP(std::ostream& out, const core::NodePtr& scop);
 
 } // end namespace scop

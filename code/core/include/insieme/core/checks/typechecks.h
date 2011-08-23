@@ -78,6 +78,8 @@ SIMPLE_CHECK(Keyword, GenericType, true);
 
 SIMPLE_CHECK(CallExprType, CallExpr, false);
 SIMPLE_CHECK(FunctionType, LambdaExpr, false);
+SIMPLE_CHECK(BindExprType, BindExpr, false);
+SIMPLE_CHECK(ExternalFunctionType, Literal, false);
 SIMPLE_CHECK(ReturnType, Lambda, false);
 
 SIMPLE_CHECK(DeclarationStmtType, DeclarationStmt, false);
@@ -85,6 +87,7 @@ SIMPLE_CHECK(IfConditionType, IfStmt, false);
 SIMPLE_CHECK(WhileConditionType, WhileStmt, false);
 SIMPLE_CHECK(SwitchExpressionType, SwitchStmt, false);
 
+SIMPLE_CHECK(StructExprType, StructExpr, false);
 SIMPLE_CHECK(MemberAccessElementType, CallExpr, false);
 
 SIMPLE_CHECK(BuiltInLiteral, Literal, false);

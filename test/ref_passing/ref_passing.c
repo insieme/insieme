@@ -7,6 +7,7 @@ int f(int* a) {
 
 int main(int argc, char* argv[]) {
 	int a=0;
+	argc = 0;
 
 	f(&a); // solve this problem in the backend
 	f(&argc);

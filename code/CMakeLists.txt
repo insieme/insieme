@@ -9,7 +9,7 @@ enable_testing()
 # include modules
 add_subdirectory( core )
 add_subdirectory( utils )
-add_subdirectory( c_info )
+add_subdirectory( annotations )
 add_subdirectory( frontend )
 add_subdirectory( backend )
 add_subdirectory( analysis )

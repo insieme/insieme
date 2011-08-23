@@ -44,7 +44,7 @@ namespace core {
 namespace checks {
 
 bool containsMSG(const MessageList& list, const Message& msg) {
-	return contains(list, msg);
+	return contains(list.getAll(), msg);
 }
 
 
@@ -156,6 +156,39 @@ TEST(CallExprTypeCheck, Basic) {
 	EXPECT_PRED2(containsMSG, issues, Message(NodeAddress(expr), EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS, "", Message::ERROR));
 }
 
+TEST(StructExprTypeCheck, Basic) {
+	ASTBuilder builder;
+
+	// some preparations
+	core::IdentifierPtr name = builder.identifier("x");
+	core::TypePtr typeA = builder.genericType("A");
+	core::TypePtr typeB = builder.genericType("B");
+
+	core::ExpressionPtr valueA = builder.literal(typeA, "a");
+	core::ExpressionPtr valueB = builder.literal(typeB, "b");
+
+	core::StructType::Entries entries;
+	entries.push_back(core::StructType::Entry(name, typeA));
+	core::StructTypePtr structType = builder.structType(entries);
+
+
+	// create struct expression
+	core::StructExpr::Members members;
+	members.push_back(core::StructExpr::Member(name, valueA));
+	core::StructExprPtr ok = builder.structExpr(structType, members);
+
+	members.clear();
+	members.push_back(core::StructExpr::Member(name, valueB));
+	core::StructExprPtr err = builder.structExpr(structType, members);
+
+	// conduct checks
+	CheckPtr typeCheck = make_check<StructExprTypeCheck>();
+
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_INITIALIZATION_EXPR, "", Message::ERROR));
+}
 
 TEST(MemberAccessElementTypeCheck, Basic) {
 	ASTBuilder builder;
@@ -475,7 +508,25 @@ TEST(KeywordCheck, Basic) {
 
 		EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD, "", Message::WARNING));
 	}
+}
 
+TEST(ExternalFunctionType, Basic) {
+	ASTBuilder builder;
+
+	// OK ... create a function literal
+	TypePtr intType = builder.genericType("int");
+	TypePtr boolType = builder.genericType("bool");
+	FunctionTypePtr funTypeOK  = builder.functionType(toVector(intType), boolType, true);
+	FunctionTypePtr funTypeERR = builder.functionType(toVector(intType), boolType, false);
+
+	NodePtr ok = builder.literal(funTypeOK, "fun");
+	NodePtr err = builder.literal(funTypeERR, "fun");
+
+	CheckPtr typeCheck = make_check<ExternalFunctionTypeCheck>();
+	EXPECT_TRUE(check(ok, typeCheck).empty());
+	ASSERT_FALSE(check(err, typeCheck).empty());
+
+	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(NodeAddress(err), EC_TYPE_INVALID_FUNCTION_TYPE, "", Message::ERROR));
 }
 
 

@@ -58,10 +58,18 @@ namespace backend {
 	class VectorTypeInfo;
 	class ChannelTypeInfo;
 
+	typedef std::map<string, string> TypeIncludeTable;
+
+	TypeIncludeTable getBasicTypeIncludeTable();
+
+
+	typedef std::function<const TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
+
+	typedef vector<TypeHandler> TypeHandlerList;
+
 	namespace detail {
 		class TypeInfoStore;
 	}
-
 
 	class TypeManager {
 
@@ -70,6 +78,8 @@ namespace backend {
 	public:
 
 		TypeManager(const Converter& converter);
+
+		TypeManager(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& handlers);
 
 		virtual ~TypeManager();
 
@@ -91,6 +101,9 @@ namespace backend {
 	 * A type definition for a function converting one C AST node pointer into another
 	 * node pointer. Elements of this type are used to realize variable and parameter
 	 * declarations and conversions between plain C and Inspire types.
+	 *
+	 *  - The shared C-node manager should be used for generating new C-AST nodes.
+	 *  - the C-AST expression is the converted value representation
 	 */
 	typedef std::function<c_ast::ExpressionPtr(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr&)> NodeConverter;
 
@@ -124,9 +137,12 @@ namespace backend {
 	struct FunctionTypeInfo : public TypeInfo {
 
 		// to be included
+		//		- plain flag
 		//		- closure name
 		//		- caller name
 		//		- references to code fragments of utilities
+
+		bool plain;
 
 		c_ast::IdentifierPtr callerName;
 
@@ -151,11 +167,7 @@ namespace backend {
 
 	struct ArrayTypeInfo : public TypeInfo {
 		// to be included
-		//		- constructor
-
-		c_ast::IdentifierPtr constructorName;
-
-		c_ast::CodeFragmentPtr constructor;
+		//		- nothing extra so far
 	};
 
 	struct VectorTypeInfo : public TypeInfo {
@@ -173,6 +185,73 @@ namespace backend {
 		//		- read and write operations?
 	};
 
+
+	namespace type_info_utils {
+
+		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node);
+
+		template<typename T = TypeInfo>
+		T* createInfo(const c_ast::TypePtr& type) {
+			// construct the type information
+			T* res = new T();
+			res->lValueType = type;
+			res->rValueType = type;
+			res->externalType = type;
+			res->externalize = &NoOp;
+			res->internalize = &NoOp;
+			return res;
+		}
+
+		template<typename T = TypeInfo>
+		T* createInfo(c_ast::CNodeManager& nodeManager, const string& name) {
+			c_ast::IdentifierPtr ident = nodeManager.create(name);
+			c_ast::TypePtr type = nodeManager.create<c_ast::NamedType>(ident);
+			return createInfo<T>(type);
+		}
+
+		template<typename T = TypeInfo>
+		T* createInfo(const c_ast::SharedCodeFragmentManager& fragmentManager, const string& name, const string& includeFile) {
+			const c_ast::SharedCNodeManager& nodeManager = fragmentManager->getNodeManager();
+			c_ast::IdentifierPtr ident = nodeManager->create(name);
+			c_ast::TypePtr type = nodeManager->create<c_ast::NamedType>(ident);
+			T* res = createInfo<T>(type);
+
+			c_ast::CodeFragmentPtr decl = c_ast::DummyFragment::createNew(fragmentManager);
+			decl->addInclude(includeFile);
+			res->declaration = decl;
+			res->definition = decl;
+			return res;
+		}
+
+
+		template<typename T = TypeInfo>
+		T* createUnsupportedInfo(c_ast::CNodeManager& nodeManager) {
+			return createInfo<T>(nodeManager, "/* UNSUPPORTED TYPE */");
+		}
+
+		template<typename T = TypeInfo>
+		T* createInfo(const c_ast::TypePtr& type, const c_ast::CodeFragmentPtr& definition) {
+			T* res = createInfo<T>(type);
+			res->declaration = definition;
+			res->definition = definition;
+			return res;
+		}
+
+		template<typename T = TypeInfo>
+		T* createInfo(const c_ast::TypePtr& type,
+				const c_ast::CodeFragmentPtr& declaration,
+				const c_ast::CodeFragmentPtr& definition) {
+
+			// declaration => definition
+			assert(!declaration || definition);
+
+			T* res = createInfo<T>(type);
+			res->declaration = declaration;
+			res->definition = definition;
+			return res;
+		}
+
+	}
 
 } // end namespace backend
 } // end namespace insieme

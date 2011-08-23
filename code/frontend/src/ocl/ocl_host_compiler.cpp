@@ -39,9 +39,15 @@
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
-#include "insieme/frontend/ocl/ocl_host_passes.h"
+#include "insieme/frontend/ocl/ocl_host_1st_pass.h"
+#include "insieme/frontend/ocl/ocl_host_2nd_pass.h"
+#include "insieme/frontend/ocl/ocl_host_3rd_pass.h"
 
 namespace ba = boost::algorithm;
+
+//#include "insieme/core/ast_visitor.h"
+#include "insieme/annotations/ocl/ocl_annotations.h"
+#include "insieme/annotations/c/naming.h"
 
 namespace insieme {
 namespace frontend {
@@ -49,19 +55,37 @@ namespace ocl {
 using namespace insieme::core;
 
 
-
+/*class fuVisitor: public core::ASTVisitor<void> {
+	void visitNode(const NodePtr& node) {
+		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa =
+				dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>(node->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
+			std::cout << "Found kernel file Pragma at node \n" << node << std::endl;
+		}
+	}
+public:
+	fuVisitor(): ASTVisitor<void>(true) {}
+};
+*/
 ProgramPtr HostCompiler::compile() {
 	//    HostVisitor oclHostVisitor(builder, mProgram);
 	HostMapper oclHostMapper(builder, mProgram);
 
+//	fuVisitor FAKK;
+//	visitDepthFirst(mProgram,FAKK);
+
 	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
 	assert(interProg && "First pass of OclHostCompiler corrupted the program");
 
-	LOG(INFO) << "Adding " << oclHostMapper.getKernelArgs().size() << " kernels to host Program... ";
+	if(oclHostMapper.getnKernels() == 0) {
+		LOG(INFO) << "No OpenCL kernel functions found";
+//		return mProgram;
+	}
+	LOG(INFO) << "Adding " << oclHostMapper.getnKernels() << " OpenCL kernels to host Program... ";
 
 	const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
 
-	const ProgramPtr& progWithKernels = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
+	const ProgramPtr& progWithEntries = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
+	const ProgramPtr& progWithKernels = core::Program::remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
 
 	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), builder);
 	oh2nd.mapNamesToLambdas(kernelEntries);
@@ -79,7 +103,7 @@ ProgramPtr HostCompiler::compile() {
 
 	NodePtr fu = ohm3rd.mapElement(0, progWithKernels);
 
-	insieme::utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
+	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
 /*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 		tmp[t.first] = t.second;
 		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {

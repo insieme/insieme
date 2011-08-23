@@ -177,6 +177,28 @@ struct hash_target<PointerType, typename boost::disable_if<boost::is_pointer<Poi
 	}
 };
 
+// -------------------- Filter Functions ----------------------------
+// Filters are functors accepting a certain set of arguments and returning
+// a boolean indicating true (accepted) or false (rejected).
+// ------------------------------------------------------------------
+
+/**
+ * A (generic) functor accepting representing a filter accepting any value.
+ */
+template<typename ... T>
+struct AcceptAll {
+	bool operator()(T...args) const { return true; }
+};
+
+/**
+ * A (generic) functor accepting representing a filter rejecting any value.
+ */
+template<typename ... T>
+struct RejectAll {
+	bool operator()(T...args) const { return false; }
+};
+
+
 // -------------------- Type List traits ----------------------------
 
 
@@ -268,18 +290,21 @@ namespace detail {
 	  typedef type_list<T1,T2,T3> argument_types;
 	};
 
-	template <typename R, typename C, typename ... A >
-	struct lambda_traits_helper<R (C::*)( A ... ) const>  {
-		BOOST_STATIC_CONSTANT(unsigned, arity = sizeof...(A));
+	template <typename R, typename C, typename T1, typename T2, typename T3, typename ... A >
+	struct lambda_traits_helper<R (C::*)( T1, T2, T3, A ... ) const>  {
+		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
 		typedef R result_type;
-		typedef type_list<A...> argument_types;
+		typedef T1 arg1_type;
+	    typedef T2 arg2_type;
+	    typedef T3 arg3_type;
+		typedef type_list<T1,T2,T3,A...> argument_types;
 	};
 
 } // end namespace detail
 
 
-//template <typename Lambda>
-//struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> { };
+template <typename Lambda>
+struct lambda_traits : public detail::lambda_traits_helper<decltype(&Lambda::operator())> { };
 
 
 template<unsigned pos, typename ...R>
@@ -295,5 +320,52 @@ struct element_type<pos,H,R...> {
 	typedef typename element_type<pos-1,R...>::type type;
 };
 
+//==== FinalActions ===============================================================================
+// A class which is utilized to invoke a sequence of statements (or action) when a block is exited. 
+// Because there are situation where a block can be exited from multiple paths, this object will 
+// make it sure thos actions will be invoked on every exit path. 
+//
+// Example:
+//
+// { 
+// 	stream << "";
+// 	if (x==0) {
+// 		stream.close();
+// 		return;
+// 	}
+// 	...
+// 	stream.close()
+// }
+//
+// Usage with FinalActions():
+//
+// { 
+// 	FinalAction fa([&stream](){ stream.close(); });
+// 	if(x==0)
+// 		return;
+// 	...
+// 	return;
+// }
+//
+// The action which is provided will be invoked when the block is exited, therefore in the
+// destructor 
+//=================================================================================================
+class FinalActions {
+	
+	typedef std::function<void ()> Action;
+	Action 	action;
+	bool 	enabled;
 
+public:
+	FinalActions(const Action& action, bool enabled=true) : 
+		action(action), enabled(enabled) { }
+	
+	bool isEnabled() const { return enabled; }
+
+	void setEnabled(bool enabled) { this->enabled = enabled; }
+
+	~FinalActions() { 
+		if(isEnabled()) { action(); }
+	}	
+};
 

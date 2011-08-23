@@ -151,6 +151,11 @@ public:
     core::ProgramPtr getProgram() { return mProgram; }
 };
 
+// responsible for adding ocl KernelFile annotation
+void attatchOclAnnotation(const core::StatementPtr& irNode, const clang::Stmt* clangNode,
+        frontend::conversion::ConversionFactory& fact);
+
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

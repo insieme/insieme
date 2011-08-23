@@ -48,12 +48,11 @@ static inline irt_context* irt_context_get_current() {
 }
 
 
-irt_context* irt_context_create_standalone(irt_type* type_table, irt_wi_implementation* impl_table) {
+irt_context* irt_context_create_standalone(init_context_fun* init_fun, cleanup_context_fun* cleanup_fun) {
 	irt_context *context = (irt_context*)malloc(sizeof(irt_context));
 	context->id = irt_generate_context_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	context->client_app = NULL;
-	context->type_table = type_table;
-	context->impl_table = impl_table;
+	init_fun(context);
 	irt_context_table_insert(context);
 	return context;
 }

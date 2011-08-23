@@ -52,8 +52,9 @@ namespace pattern {
 		auto list = tree->getSubTrees();
 		return match(context, list, 0) == static_cast<int>(list.size());
 	}
-
+	
 	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
+	const TreePatternPtr recurse = std::make_shared<trees::Recursion>();
 
 	std::ostream& operator<<(std::ostream& out, const PatternPtr& pattern) {
 		return (pattern)?(pattern->printTo(out)):(out << "null");
@@ -71,21 +72,18 @@ namespace pattern {
 
 		bool contains(MatchContext& context, const TreePtr& tree, const TreePatternPtr& pattern) {
 			bool res = false;
-			res = res || pattern->match(tree);
+			// isolate context for each try
+			MatchContext contextCopy(context);
+			res = res || pattern->match(contextCopy, tree);
 			for_each(tree->getSubTrees(), [&](const TreePtr& cur) {
-				res = res || contains(context, cur, pattern);
+				MatchContext contextInnerCopy(context);
+				res = res || contains(contextInnerCopy, cur, pattern);
 			});
 			return res;
-
-			// TODO: figure out why this is not working
-//			return pattern->match(tree) || any(tree->getSubTrees(), [&](const TreePtr& cur) {
-//				return contains(context, cur, pattern);
-//			});
-
 		}
 
 		bool Descendant::match(MatchContext& context, const TreePtr& tree) const {
-			// search for all patterns occuring in the sub-trees
+			// search for all patterns occurring in the sub-trees
 			return all(subPatterns, [&](const TreePatternPtr& cur) {
 				return contains(context, tree, cur);
 			});

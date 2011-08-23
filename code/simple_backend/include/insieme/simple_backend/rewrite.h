@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/c_info/location.h"
+#include "insieme/annotations/c/location.h"
 
 #include "insieme/core/program.h"
 #include "insieme/backend/backend.h"
@@ -44,7 +44,7 @@
 namespace insieme {
 namespace backend {
 
-using namespace insieme::c_info;
+using namespace insieme::annotations::c;
 using namespace insieme::core;
 
 class Rewriter {

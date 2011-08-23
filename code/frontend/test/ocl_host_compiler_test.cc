@@ -39,9 +39,10 @@
 #include "insieme/core/program.h"
 #include "insieme/core/checks/ir_checks.h"
 
+#include "insieme/annotations/ocl/ocl_annotations.h"
+
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
-#include "insieme/frontend/ocl/ocl_annotations.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
@@ -70,15 +71,15 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::create(manager);
 
-	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.cpp" << "' to IR...";
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.c" << "' to IR...";
 	fe::Program prog(manager);
 
-	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.cpp");
+	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.c");
 	program = prog.convert();
 	LOG(INFO) << "Done.";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	fe::ocl::HostCompiler hc(program, manager);
+	fe::ocl::HostCompiler hc(program);
 	hc.compile();
 
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
@@ -86,7 +87,47 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	LOG(INFO) << "Printing the IR: " << pp;
 	//    LOG(INFO) << pp;
 
-	auto errors = core::check(program, insieme::core::checks::getFullCheck());
+	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	std::sort(errors.begin(), errors.end());
+	for_each(errors, [](const core::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+		/*        core::NodeAddress address = cur.getAddress();
+		 core::NodePtr context = address.getParentNode(address.getDepth()-1);
+		 std::cout << "\t Context: " <<
+		 insieme::core::printer::PrettyPrinter(context, insieme::core::printer::PrettyPrinter::OPTIONS_SINGLE_LINE, 3) << std::endl;
+		 */
+	});
+
+}
+
+TEST(OclHostCompilerTest, VecAddTest) {
+	Logger::get(std::cerr, DEBUG);
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../backend/test/ocl_kernel");
+
+	CommandLineOptions::Defs.push_back("INSIEME");
+
+	CommandLineOptions::Verbosity = 2;
+	core::NodeManager manager;
+	core::ProgramPtr program = core::Program::create(manager);
+
+	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
+	fe::Program prog(manager);
+
+	prog.addTranslationUnit(std::string(SRC_DIR) + "../../backend/test/ocl_kernel/vec_add.c");
+	program = prog.convert();
+	LOG(INFO) << "Done.";
+
+	LOG(INFO) << "Starting OpenCL host code transformations";
+	fe::ocl::HostCompiler hc(program);
+	hc.compile();
+
+	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
+
+	LOG(INFO) << "Printing the IR: " << pp;
+	//    LOG(INFO) << pp;
+
+	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
 		LOG(INFO) << cur << std::endl;

@@ -36,13 +36,15 @@
 
 #include "insieme/backend/statement_converter.h"
 
-#include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
+#include "insieme/backend/type_manager.h"
+#include "insieme/backend/name_manager.h"
 
 #include "insieme/backend/c_ast/c_ast.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_code.h"
 
+#include "insieme/backend/ir_extensions.h"
 #include "insieme/backend/variable_manager.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -73,6 +75,24 @@ namespace backend {
 	}
 
 
+	////////////////////////////////////////////////////////////////////////// Core Visitor
+
+	c_ast::NodePtr StmtConverter::visit(const core::NodePtr& node, ConversionContext& context) {
+		// first ask the handlers
+		if (!stmtHandler.empty()) {
+			for(auto it = stmtHandler.begin(); it != stmtHandler.end(); ++it) {
+				c_ast::NodePtr res = (*it)(context, node);
+				if (res) {
+					return res;
+				}
+			}
+		}
+
+		// use default conversion
+		return ASTVisitor::visit(node, context);
+	}
+
+
 	////////////////////////////////////////////////////////////////////////// Basic Nodes
 
 	c_ast::NodePtr StmtConverter::visitNode(const core::NodePtr& node, ConversionContext& context) {
@@ -92,9 +112,13 @@ namespace backend {
 
 		// get shared C Node Manager reference
 		const c_ast::SharedCNodeManager& manager = converter.getCNodeManager();
-
 		// program is not producing any C code => just dependencies
 		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
+
+			// fix name of main entry
+			if (node->isMain() && node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
+				context.getConverter().getNameManager().setName(entryPoint, "main");
+			}
 
 			// create a new context
 			ConversionContext entryContext(converter);
@@ -150,8 +174,35 @@ namespace backend {
 			return converter.getFunctionManager().getValue(ptr, context);
 		}
 
-		// the rest is just converted into a ordinary literal
-		return converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+		// convert literal
+		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+
+		// special handling for the global struct
+		if (ptr->getValue() == IRExtensions::GLOBAL_ID) {
+			if (ptr->getType()->getNodeType() == core::NT_RefType) {
+				res = c_ast::ref(res);
+			}
+
+			// add code dependency to global struct
+			auto fragment = converter.getFragmentManager()->getFragment(IRExtensions::GLOBAL_ID);
+			assert(fragment && "Global Fragment not yet initialized!");
+			context.getDependencies().insert(fragment);
+		}
+
+		// special handling for type literals (fall-back solution)
+		if (core::analysis::isTypeLiteralType(ptr->getType())) {
+			const TypeInfo& info = converter.getTypeManager().getTypeInfo(ptr->getType());
+			context.addDependency(info.declaration);
+			return c_ast::lit(info.rValueType, "type_token");
+		}
+
+		// handle null pointer
+		if (converter.getNodeManager().getBasicGenerator().isNull(ptr)) {
+			return converter.getCNodeManager()->create<c_ast::Literal>("0");
+		}
+
+		// done
+		return res;
 	}
 
 	c_ast::NodePtr StmtConverter::visitStructExpr(const core::StructExprPtr& ptr, ConversionContext& context) {
@@ -162,10 +213,21 @@ namespace backend {
 		c_ast::TypePtr type = converter.getTypeManager().getTypeInfo(ptr->getType()).rValueType;
 		c_ast::InitializerPtr init = c_ast::init(type);
 
+		// obtain some helper
+		auto& basic = converter.getNodeManager().getBasicGenerator();
+
 		// append initialization values
 		::transform(ptr->getMembers(), std::back_inserter(init->values),
 				[&](const core::StructExpr::Member& cur) {
-					return convert(context, cur.second);
+					core::ExpressionPtr arg = cur.second;
+					// skip ref.var if present
+					if (core::analysis::isCallOf(cur.second, basic.getRefVar())) {
+						arg = static_pointer_cast<const core::CallExpr>(cur.second)->getArgument(0);
+						if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
+							arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0);
+						}
+					}
+					return convert(context, arg);
 		});
 
 		// return completed
@@ -282,19 +344,33 @@ namespace backend {
 		// add code dependency
 		context.getDependencies().insert(info.typeInfo->definition);
 
+		// create declaration statement
+		c_ast::ExpressionPtr initValue = convertInitExpression(context, init);
+		return manager->create<c_ast::VarDecl>(info.var, initValue);
+	}
+
+	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
+		auto& basic = converter.getNodeManager().getBasicGenerator();
+		auto manager = converter.getCNodeManager();
+
 		// test whether initialization is required ...
 		if (core::analysis::isCallOf(init, basic.getRefVar()) || core::analysis::isCallOf(init, basic.getRefNew())) {
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(init);
 			if (core::analysis::isCallOf(call->getArgument(0), basic.getUndefined())) {
 				// => undefined initialization, hence no initialization!
-				return manager->create<c_ast::VarDecl>(info.var);
+				return c_ast::ExpressionPtr();
 			}
 		}
 
 		// TODO: handle initUndefine and init struct cases
 
-		// create declaration statement
-		return manager->create<c_ast::VarDecl>(info.var, convertExpression(context, init));
+		// drop ref.var ...
+		core::ExpressionPtr initValue = init;
+		if (core::analysis::isCallOf(initValue, basic.getRefVar())) {
+			initValue = core::analysis::getArgument(initValue, 0);
+		}
+
+		return convertExpression(context, initValue);
 	}
 
 	c_ast::NodePtr StmtConverter::visitForStmt(const core::ForStmtPtr& ptr, ConversionContext& context) {
@@ -346,6 +422,10 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
+		if (context.getConverter().getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
+			// special handling for unit-return
+			return converter.getCNodeManager()->create<c_ast::Return>();
+		}
 		return converter.getCNodeManager()->create<c_ast::Return>(convertExpression(context, ptr->getReturnExpr()));
 	}
 

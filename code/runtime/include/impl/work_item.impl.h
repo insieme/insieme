@@ -50,6 +50,13 @@
 #include "impl/irt_events.impl.h"
 
 
+static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) { 
+	return wi->wg_memberships[index]; 
+}
+static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index) {
+	return irt_wi_get_wg_membership(wi, index).wg_id.cached; // TODO cached distributed crash
+}
+
 static inline irt_work_item* irt_wi_get_current() {
 	return irt_worker_get_current()->cur_wi;
 }
@@ -82,6 +89,7 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 	retval->range = range;
 	retval->state = IRT_WI_STATE_NEW;
 	retval->stack_start = 0;
+	retval->ready_check = irt_g_null_readiness_check;
 	//retval->stack_ptr = 0;
 	retval->source_id = irt_work_item_null_id();
 	retval->num_fragments = 0;
@@ -117,24 +125,24 @@ irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementat
 	return irt_scheduling_optional_wi(worker, wi);
 }
 
-bool _irt_wi_done_check(irt_work_item* wi) {
-	return ((irt_work_item*)(wi->ready_check.data))->state == IRT_WI_STATE_DONE;
-}
-typedef struct __irt_wi_multi_check_closure {
-	uint32 cur_wi;
-	uint32 num_wis;
-	irt_work_item** wis;
-} _irt_wi_multi_check_closure;
-bool _irt_wi_multi_done_check(irt_work_item* wi) {
-	_irt_wi_multi_check_closure* closure = (_irt_wi_multi_check_closure*)wi->ready_check.data;
-	for(int i = closure->cur_wi; i < closure->num_wis; ++i) {
-		if(closure->wis[i]->state != IRT_WI_STATE_DONE) {
-			closure->cur_wi = i;
-			return false;
-		}
-	}
-	return true;
-}
+//bool _irt_wi_done_check(irt_work_item* wi) {
+//	return ((irt_work_item*)(wi->ready_check.data))->state == IRT_WI_STATE_DONE;
+//}
+//typedef struct __irt_wi_multi_check_closure {
+//	uint32 cur_wi;
+//	uint32 num_wis;
+//	irt_work_item** wis;
+//} _irt_wi_multi_check_closure;
+//bool _irt_wi_multi_done_check(irt_work_item* wi) {
+//	_irt_wi_multi_check_closure* closure = (_irt_wi_multi_check_closure*)wi->ready_check.data;
+//	for(int i = closure->cur_wi; i < closure->num_wis; ++i) {
+//		if(closure->wis[i]->state != IRT_WI_STATE_DONE) {
+//			closure->cur_wi = i;
+//			return false;
+//		}
+//	}
+//	return true;
+//}
 
 typedef struct __irt_wi_join_event_data {
 	irt_work_item* joining_wi;
@@ -150,21 +158,21 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_worker* self = irt_worker_get_current();
 	irt_work_item* swi = self->cur_wi;
 	_irt_wi_join_event_data clo = {swi, self};
-	irt_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
+	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
 	}
 }
-void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
-	irt_worker* self = irt_worker_get_current();
-	irt_work_item* swi = self->cur_wi;
-	swi->ready_check.fun = &_irt_wi_multi_done_check;
-	_irt_wi_multi_check_closure closure = { 0, num_wis, wis };
-	swi->ready_check.data = &closure;
-	irt_scheduling_yield(self, swi);
-}
+//void irt_wi_multi_join(uint32 num_wis, irt_work_item** wis) {
+//	irt_worker* self = irt_worker_get_current();
+//	irt_work_item* swi = self->cur_wi;
+//	swi->ready_check.fun = &_irt_wi_multi_done_check;
+//	_irt_wi_multi_check_closure closure = { 0, num_wis, wis };
+//	swi->ready_check.data = &closure;
+//	irt_scheduling_yield(self, swi);
+//}
 
 void irt_wi_end(irt_work_item* wi) {
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
@@ -184,6 +192,9 @@ void irt_wi_end(irt_work_item* wi) {
 		if(source->num_fragments == 0) irt_wi_end(source);
 	}
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
+	for(int g=0; g<wi->num_groups; ++g) {
+		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
+	}
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }

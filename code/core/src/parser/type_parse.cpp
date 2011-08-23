@@ -122,8 +122,8 @@ TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::tupleTypeHelp(cons
 }
 
 template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::functionTypeHelp(const vector<TypePtr>& argTypes, const TypePtr& retType) {
-    return FunctionType::get(nodeMan, argTypes, retType);
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::functionTypeHelp(const vector<TypePtr>& argTypes, const TypePtr& retType, bool plain) {
+    return FunctionType::get(nodeMan, argTypes, retType, plain);
 }
 
 template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
@@ -159,11 +159,13 @@ qi::rule<ParseIt, U(), qi::space_type> TypeGrammar<T, U, V>::getIntTypeParam() {
 }
 
 template<typename T, typename U, typename V>
-qi::rule<ParseIt, T(), qi::locals<vector<T>, T>, qi::space_type> TypeGrammar<T, U, V>::getFunctionType() {
+qi::rule<ParseIt, T(), qi::locals<vector<T>, T, bool>, qi::space_type> TypeGrammar<T, U, V>::getFunctionType() {
     return ( qi::lit("(") >> -( typeRule                            [ ph::push_back(qi::_a, qi::_1) ]
         % ',' ) >> ')' >>
-        qi::lit("->") >> typeRule                                   [ qi::_b = qi::_1 ]
-        )                                                           [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::functionTypeHelp, this, qi::_a, qi::_b) ];
+        ( qi::lit("->")												[ qi::_c = true ]
+    	| qi::lit("=>")												[ qi::_c = false ]
+        ) >> typeRule												[ qi::_b = qi::_1 ]
+        )															[ qi::_val = ph::bind(&TypeGrammar<T, U, V>::functionTypeHelp, this, qi::_a, qi::_b, qi::_c) ];
 }
 
 template<typename T, typename U, typename V>

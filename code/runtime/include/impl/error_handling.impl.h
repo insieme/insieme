@@ -74,6 +74,7 @@ const char* irt_errcode_string(irt_errcode code) {
 		"IRT_ERR_IO",
 		"IRT_ERR_INIT",
 		"IRT_ERR_INTERNAL",
+		"IRT_ERR_OVERFLOW",
 		"IRT_ERR_APP",
 		"IRT_ERR_OCL"
 	};
