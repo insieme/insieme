@@ -281,12 +281,12 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_read, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
+			decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
+				for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+					( (op<array.ref.elem.1D>(hp, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, i )) )) );\
             return 0; \
     }}");
 	/*
-	 decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
-                ( (op<array.ref.elem.1D>(hp, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, i )) )) );
 	 */
 }
 
@@ -355,6 +355,22 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
+	ADD_Handler(builder, o2i, "irt_ocl_write_buffer",
+			// extract the size form argument size, relying on it using a multiple of sizeof(type)
+			ExpressionPtr size;
+			TypePtr type;
+
+			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+
+			vector<ExpressionPtr> args;
+			args.push_back(node->getArgument(0));
+			args.push_back(node->getArgument(1));
+			args.push_back(builder.uintLit(0)); // offset not supported
+			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+	);
+
 	ADD_Handler(builder, o2i, "clEnqueueReadBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
@@ -368,6 +384,22 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			args.push_back(node->getArgument(3));
 			args.push_back(foundSizeOf ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
+			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+	);
+
+	ADD_Handler(builder, o2i, "irt_ocl_read_buffer",
+			// extract the size form argument size, relying on it using a multiple of sizeof(type)
+			ExpressionPtr size;
+			TypePtr type;
+
+			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+
+			vector<ExpressionPtr> args;
+			args.push_back(node->getArgument(0));
+			args.push_back(node->getArgument(1));
+			args.push_back(builder.uintLit(0)); // offset not supported
+			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(node->getArgument(3));
 			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
@@ -477,7 +509,11 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	// need to release clMem objects
 	ADD_Handler(builder, o2i, "clReleaseMemObject",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
-			// updataint of the type to update the deref operation in the argument done in thrid pass
+			// updating of the type to update the deref operation in the argument done in thrid pass
+	);
+	ADD_Handler(builder, o2i, "irt_ocl_release_buffer",
+			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
+			// updating of the type to update the deref operation in the argument done in thrid pass
 	);
 
 	// all other clRelease calls can be ignored since the variables are removed
@@ -721,6 +757,25 @@ const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar
 	return BASIC.getNoOp();
 }
 
+const NodePtr HostMapper::handleCreateBufferDecl(const VariablePtr& var, const ExpressionPtr& initFct, const DeclarationStmtPtr& decl) {
+	const CallExprPtr& newInit = dynamic_pointer_cast<const CallExpr>(this->resolveElement(initFct));
+
+	// check if the variable was created with CL_MEM_USE_HOST_PTR flag and can be removed
+	if(const VariablePtr replacement = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newInit, builder))) {
+		cl_mems[var] = replacement; // TODO check if error argument has been set and set error to CL_SUCCESS
+		return BASIC.getNoOp();
+	}
+
+	//DeclarationStmtPtr newDecl = dynamic_pointer_cast<const DeclarationStmt>(decl->substitute(builder.getNodeManager(), *this));
+	TypePtr newType = builder.refType(newInit->getType());
+
+	NodePtr newDecl = builder.declarationStmt(var, builder.refVar(newInit));
+	const VariablePtr& newVar = builder.variable(newType);
+	cl_mems[var] = newVar;
+
+	copyAnnotations(decl, newDecl);
+	return newDecl;
+}
 
 const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 	// stopp recursion at type level
@@ -842,102 +897,16 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
 			if(const VariablePtr& lhsVar = dynamic_pointer_cast<const Variable>(lhs)) {
 				// handling clCreateBuffer
-				if(lhsVar->getType()->toString().find("array<_cl_mem,1>") != string::npos)
-				if(callExpr->getArgument(1)->toString().find("clCreateBuffer") != string::npos){
-					handleCreateBufferAssignment(lhsVar, callExpr);
-/*					NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
-					bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
-					// check if data has to be copied to a new array
-					if(const CallExprPtr& newCall = checkAssignment(createBuffer)) {
-						// exchange the _cl_mem type with the new type, gathered from the clCreateBuffer call
-						TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhs->getType(),
-								callExpr->getArgument(1)->getType(), newCall->getType()));
-						// check if variable has already been put into replacement map with a different type
-						if(alreadyThere) {
-							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
-						}
-						NodePtr ret;
-
-						if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newCall, builder))) {
-							// use the host variable because CL_MEM_USE_HOST_PTR was set
-							cl_mems[lhsVar] = var;
-							// TODO check if err argument has been passed and set variable to 0
-							ret = BASIC.getNoOp();
-						} else {
-							if(!alreadyThere) {
-								const VariablePtr& newVar = builder.variable(newType);
-								cl_mems[lhsVar] = newVar;
-							}
-							// replace the variable and the type in the lhs of the assignmend
-							ExpressionPtr newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(),
-									callExpr->getArgument(0), lhsVar, cl_mems[lhsVar]));
-							newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(), newLhs,
-									callExpr->getArgument(1)->getType(), newCall->getType()));
-							ret = builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), newLhs, newCall);
-						}
-
-						copyAnnotations(callExpr, ret);
-						return ret;
+				if(lhsVar->getType()->toString().find("array<_cl_mem,1>") != string::npos) {
+					if(callExpr->getArgument(1)->toString().find("clCreateBuffer") != string::npos){
+						return handleCreateBufferAssignment(lhsVar, callExpr);
 					}
-					// check if we can simply use the existing array
-					if(const VariablePtr clMemReplacement = dynamic_pointer_cast<const Variable>(createBuffer)) {
-						TypePtr newType = clMemReplacement->getType();
-
-						if(alreadyThere)
-							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
-
-						cl_mems[lhsVar] = clMemReplacement;
-						return BASIC.getNoOp();
-					}
-*/				}
+				}
 
 				// handling clCreateBuffer
-				if(lhsVar->getType()->toString().find("_irt_ocl_buffer=struct<cl_mem") != string::npos)
-				if(callExpr->getArgument(1)->toString().find("irt_ocl_create_buffer") != string::npos){
-//					return handleCreateBufferAssignment(lhsVar, callExpr);
-					NodePtr createBuffer = callExpr->substitute(builder.getNodeManager(), *this);
-					bool alreadyThere = cl_mems.find(lhsVar) != cl_mems.end();
-					// check if data has to be copied to a new array
-					if(const CallExprPtr& newCall = checkAssignment(createBuffer)) {
-						// exchange the _cl_mem type with the new type, gathered from the clCreateBuffer call
-						TypePtr newType = static_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), lhs->getType(),
-								callExpr->getArgument(1)->getType(), newCall->getType()));
-						// check if variable has already been put into replacement map with a different type
-						if(alreadyThere) {
-							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
-						}
-						NodePtr ret;
-
-						if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newCall, builder))) {
-							// use the host variable because CL_MEM_USE_HOST_PTR was set
-							cl_mems[lhsVar] = var;
-							// TODO check if err argument has been passed and set variable to 0
-							ret = BASIC.getNoOp();
-						} else {
-							if(!alreadyThere) {
-								const VariablePtr& newVar = builder.variable(newType);
-								cl_mems[lhsVar] = newVar;
-							}
-							// replace the variable and the type in the lhs of the assignmend
-							ExpressionPtr newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(),
-									callExpr->getArgument(0), lhsVar, cl_mems[lhsVar]));
-							newLhs = static_pointer_cast<const Expression>(core::transform::replaceAll(builder.getNodeManager(), newLhs,
-									callExpr->getArgument(1)->getType(), newCall->getType()));
-							ret = newCall;// builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), newLhs, newCall);
-						}
-
-						copyAnnotations(callExpr, ret);
-						return ret;
-					}
-					// check if we can simply use the existing array
-					if(const VariablePtr clMemReplacement = dynamic_pointer_cast<const Variable>(createBuffer)) {
-						TypePtr newType = clMemReplacement->getType();
-
-						if(alreadyThere)
-							assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
-
-						cl_mems[lhsVar] = clMemReplacement;
-						return BASIC.getNoOp();
+				if(lhsVar->getType()->toString().find("_irt_ocl_buffer=struct<mem:ref<array<_cl_mem,1>>") != string::npos){
+					if(callExpr->getArgument(1)->toString().find("irt_ocl_create_buffer") != string::npos){
+						return handleCreateBufferAssignment(lhsVar, callExpr);
 					}
 				}
 
@@ -962,23 +931,18 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), decl->getInitialization(), builder))) {
 				if(const LiteralPtr& literal = core::dynamic_pointer_cast<const core::Literal>(initFct->getFunctionExpr())) {
 					if(literal->getValue() == "clCreateBuffer") { // clCreateBuffer is called at definition of cl_mem variable
-						const CallExprPtr& newInit = dynamic_pointer_cast<const CallExpr>(this->resolveElement(initFct));
+						return handleCreateBufferDecl(var, initFct, decl);
+					}
+				}
+			}
+			assert(decl->getInitialization()->getNodeType() == NT_CallExpr && "Unexpected initialization of cl_mem variable");
+		}
 
-						// check if the variable was created with CL_MEM_USE_HOST_PTR flag and can be removed
-						if(const VariablePtr replacement = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newInit, builder))) {
-							cl_mems[var] = replacement; // TODO check if error argument has been set and set error to CL_SUCCESS
-							return BASIC.getNoOp();
-						}
-
-						//DeclarationStmtPtr newDecl = dynamic_pointer_cast<const DeclarationStmt>(decl->substitute(builder.getNodeManager(), *this));
-						TypePtr newType = builder.refType(newInit->getType());
-
-						NodePtr newDecl = builder.declarationStmt(var, builder.refVar(newInit));
-						const VariablePtr& newVar = builder.variable(newType);
-						cl_mems[var] = newVar;
-
-						copyAnnotations(decl, newDecl);
-						return newDecl;
+		if(var->getType()->toString().find("_irt_ocl_buffer=struct<mem:ref<array<_cl_mem,1>>") != string::npos){
+			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), decl->getInitialization(), builder))) {
+				if(const LiteralPtr& literal = core::dynamic_pointer_cast<const core::Literal>(initFct->getFunctionExpr())) {
+					if(literal->getValue() == "irt_ocl_create_buffer") {
+						return handleCreateBufferDecl(var, initFct, decl);
 					}
 				}
 			}

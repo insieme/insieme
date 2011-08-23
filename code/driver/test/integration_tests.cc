@@ -386,8 +386,7 @@ TEST_P(XMLIntegrationTest, WriteReadTest) {
 }
 
 // instantiate the test case
-// TODO: re-enable when XML read/write is fixed!
-//INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
+INSTANTIATE_TEST_CASE_P(XMLIntegrationCheck, XMLIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 #endif
 
