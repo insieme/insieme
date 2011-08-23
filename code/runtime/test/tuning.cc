@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+/*#include <gtest/gtest.h>
 
 #include "data/tuning.h"
 #include "data/metric_table.h"
@@ -58,4 +58,4 @@ TEST(tuning, compileable_test) {
 		EXPECT_STRNE("Just testing presence of string", irt_get_metric_info(all[i]->index)->description);
 	}
 
-}
+}*/
