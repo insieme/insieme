@@ -214,7 +214,7 @@ TEST(XmlTest, FunctionTypeTest) {
 	list.push_back(type1);
 	list.push_back(type2);
 
-	FunctionTypePtr funType1 = FunctionType::get(manager, list, type3);
+	FunctionTypePtr funType1 = FunctionType::get(manager, list, type3, true);
 	FunctionTypePtr funType2 = FunctionType::get(manager, list, type3, false);
 
 	funType1->addAnnotation(dummy_fn);
