@@ -355,6 +355,22 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
+	ADD_Handler(builder, o2i, "irt_ocl_write_buffer",
+			// extract the size form argument size, relying on it using a multiple of sizeof(type)
+			ExpressionPtr size;
+			TypePtr type;
+
+			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+
+			vector<ExpressionPtr> args;
+			args.push_back(node->getArgument(0));
+			args.push_back(node->getArgument(1));
+			args.push_back(builder.uintLit(0)); // offset not supported
+			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+	);
+
 	ADD_Handler(builder, o2i, "clEnqueueReadBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
@@ -368,6 +384,22 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			args.push_back(node->getArgument(3));
 			args.push_back(foundSizeOf ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
+			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+	);
+
+	ADD_Handler(builder, o2i, "irt_ocl_read_buffer",
+			// extract the size form argument size, relying on it using a multiple of sizeof(type)
+			ExpressionPtr size;
+			TypePtr type;
+
+			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+
+			vector<ExpressionPtr> args;
+			args.push_back(node->getArgument(0));
+			args.push_back(node->getArgument(1));
+			args.push_back(builder.uintLit(0)); // offset not supported
+			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(node->getArgument(3));
 			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
