@@ -281,12 +281,12 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_read, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
+			decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
+				for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+					( (op<array.ref.elem.1D>(hp, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, i )) )) );\
             return 0; \
     }}");
 	/*
-	 decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
-            for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
-                ( (op<array.ref.elem.1D>(hp, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, i )) )) );
 	 */
 }
 
@@ -509,7 +509,11 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	// need to release clMem objects
 	ADD_Handler(builder, o2i, "clReleaseMemObject",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
-			// updataint of the type to update the deref operation in the argument done in thrid pass
+			// updating of the type to update the deref operation in the argument done in thrid pass
+	);
+	ADD_Handler(builder, o2i, "irt_ocl_release_buffer",
+			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), node->getArgument(0));
+			// updating of the type to update the deref operation in the argument done in thrid pass
 	);
 
 	// all other clRelease calls can be ignored since the variables are removed
