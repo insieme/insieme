@@ -102,6 +102,31 @@ TEST(Lists, TestBaseTypes) {
 
 }
 
+TEST(Lists, SubTypeSupport) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const auto& basic = manager.basic;
+
+	core::TypePtr uint4 = basic.getUInt4();
+	core::TypePtr uint8 = basic.getUInt8();
+
+	core::ExpressionPtr exprA = builder.literal(uint4, "12");
+	core::ExpressionPtr exprB = builder.literal(uint8, "14");
+
+	EXPECT_EQ(uint4, getTypeFor<uint32_t>(manager));
+	EXPECT_EQ(uint8, getTypeFor<uint64_t>(manager));
+
+	EXPECT_TRUE(isEncodingOf<uint32_t>(exprA));
+	EXPECT_FALSE(isEncodingOf<uint32_t>(exprB));
+	EXPECT_TRUE(isEncodingOf<uint64_t>(exprA));
+	EXPECT_TRUE(isEncodingOf<uint64_t>(exprB));
+
+	EXPECT_EQ(12, toValue<uint32_t>(exprA));
+	EXPECT_EQ(12, toValue<uint64_t>(exprA));
+	EXPECT_EQ(14, toValue<uint64_t>(exprB));
+}
+
 
 
 } // end namespace lists
