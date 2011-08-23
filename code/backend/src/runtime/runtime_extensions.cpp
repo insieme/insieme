@@ -48,323 +48,55 @@ namespace insieme {
 namespace backend {
 namespace runtime {
 
-	const string DATA_ITEM_TYPE_NAME = "DataItem";
-	const string LW_DATA_ITEM_TYPE_NAME = "LWDataItem";
-
-	// TODO: re-write using type parser
+	const string DATA_ITEM_TYPE_NAME = "irt_di";
+	const string LW_DATA_ITEM_TYPE_NAME = "irt_lwdi";
 
 	namespace {
 
-		const core::TypePtr getContextType(core::NodeManager& manager) {
-			return core::GenericType::get(manager, "Context");
-		}
-
-
-		// -- Runtime Types ---------------------------------------------------------
-
-		const core::TypePtr getWorkItemType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create the work item type as a generic type
-			return builder.genericType("WorkItem");
-		}
-
-		const core::TypePtr getWorkItemImplType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create a generic type representing the work item implementation
-			return builder.genericType("irt_wi_implementation_id");
-		}
-
-		const core::TypePtr getWorkItemVariantType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// crate a generic type representing a work item variant
-			return builder.genericType("WorkItemVariant");
-		}
-
-		const core::TypePtr getWorkItemVariantImplType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr argType = builder.refType(getWorkItemType(manager));
-			return builder.functionType(toVector(argType), basic.getUnit());
-		}
-
-		const core::TypePtr getDataItemType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create the work item type as a generic type
-			return builder.genericType(DATA_ITEM_TYPE_NAME, toVector<core::TypePtr>(builder.typeVariable("a")));
-		}
-
-		const core::TypePtr getLWDataItemType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create the work item type as a generic type
-			return builder.genericType(LW_DATA_ITEM_TYPE_NAME, toVector<core::TypePtr>(builder.typeVariable("a")));
-		}
-
-		const core::TypePtr getTypeIDType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			return builder.genericType("irt_type_id");
-		}
-
-		// -- Runtime Constructors ------------------------------------------------------
-
-		const core::LiteralPtr getRunStandalone(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// create type + literal
-			core::TypeList componentTypes;
-			componentTypes.push_back(basic.getInt4());
-			componentTypes.push_back(builder.refType(builder.arrayType(builder.refType(builder.arrayType(basic.getChar())))));
-			core::TypePtr impl = getWorkItemImplType(manager);
-			core::TypePtr args = DataItem::toLWDataItemType(builder.tupleType(componentTypes));
-			core::TypePtr type = builder.functionType(toVector(impl, args), basic.getUnit());
-			return builder.literal(type, "runStandalone");
-		}
-
-		const core::LiteralPtr getWorkItemImplCtr(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create the work item constructor token
-			core::TypePtr variants = core::encoder::getListType(getWorkItemVariantType(manager));
-			core::TypePtr funType = builder.functionType(toVector(variants), getWorkItemImplType(manager));
-			return builder.literal(funType, "WorkItemImpl");
-		}
-
-		const core::LiteralPtr getWorkItemVariantCtr(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create the work item constructor token
-			core::TypePtr variants = core::encoder::getListType(getWorkItemImplType(manager));
-			core::TypePtr implFunType = getWorkItemVariantImplType(manager);
-			core::TypePtr funType = builder.functionType(toVector(implFunType), getWorkItemVariantType(manager));
-			return builder.literal(funType, "WorkItemVariant");
-		}
-
-
-		const core::LiteralPtr getRegisterWorkItemImpl(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// parameter list:
-			// 	- the lambdas implementing this work item
-			//  - the work-item parameter type
-			//  - the data item requirements
-			//  - the resource requirements
-			// => all encoded within list of variants
-
-			core::TypePtr unit = basic.getUnit();
-			core::TypePtr resType = builder.functionType(toVector(getWorkItemImplType(manager)), unit);
-
-			return builder.literal(resType, "registerWorkItemImpl");
-		}
-
-		const core::LiteralPtr getCreateWorkItem(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// parameter list:
-			//	- start/end/step-size of range
-			//  - work item entry
-			//  - parameter data item
-
-			core::TypePtr intType = basic.getUIntGen();
-			core::TypePtr workItemImplType = getWorkItemImplType(manager);
-			core::TypePtr dataItemType = getDataItemType(manager);
-			core::TypePtr workItemType = getWorkItemType(manager);
-
-			// the create-work-item function
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(intType, intType, intType, workItemImplType, dataItemType), workItemType);
-
-			return builder.literal(type, "createWorkItem");
-		}
-
-		const core::LiteralPtr getSubmitWorkItem(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// simply (WorkItem)->unit
-			core::TypePtr unit = basic.getUnit();
-			core::TypePtr workItemType = getWorkItemType(manager);
-
-			// the create-work-item function
-			core::TypePtr type = builder.functionType(toVector(workItemType), unit);
-
-			return builder.literal(type, "submitWorkItem");
-		}
-
-		const core::LiteralPtr getJoinWorkItem(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// simply (WorkItem)->unit
-			core::TypePtr unit = basic.getUnit();
-			core::TypePtr workItemType = getWorkItemType(manager);
-
-			// the create-work-item function
-			core::TypePtr type = builder.functionType(toVector(workItemType), unit);
-
-			return builder.literal(type, "joinWorkItem");
-		}
-
-		const core::LiteralPtr getExitWorkItem(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// simply (WorkItem)->unit
-			core::TypePtr unit = basic.getUnit();
-			core::TypePtr workItemType = builder.refType(getWorkItemType(manager));
-
-			// the create-work-item function
-			core::TypePtr type = builder.functionType(toVector(workItemType), unit);
-
-			return builder.literal(type, "irt_wi_end");
-		}
-
-		const core::LiteralPtr getWrapData(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			core::FunctionTypePtr type = builder.functionType(toVector<core::TypePtr>(builder.typeVariable("a")), getDataItemType(manager));
-			return builder.literal(type, "wrap");
-		}
-
-		const core::LiteralPtr getUnwrapData(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			core::FunctionTypePtr type = builder.functionType(toVector(getDataItemType(manager)), builder.typeVariable("a"));
-			return builder.literal(type, "unwrap");
-		}
-
-		const core::LiteralPtr getWrapLWData(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			core::FunctionTypePtr type = builder.functionType(toVector<core::TypePtr>(builder.typeVariable("a")), getLWDataItemType(manager));
-			return builder.literal(type, "wrap");
-		}
-
-		const core::LiteralPtr getUnwrapLWData(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			core::FunctionTypePtr type = builder.functionType(toVector(getLWDataItemType(manager)), builder.typeVariable("a"));
-			return builder.literal(type, "unwrap");
-		}
-
-		const core::TypePtr getJobType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			return builder.genericType("irt_parallel_job");
-		}
-
-		const core::LiteralPtr getCreateJob(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// assemble argument list and literal type
-			core::TypePtr uint8 = manager.getBasicGenerator().getUInt8();
-			core::TypePtr implType = getWorkItemImplType(manager);
-			core::TypePtr data = getLWDataItemType(manager);
-			core::FunctionTypePtr funType = builder.functionType(toVector(uint8, uint8, uint8, implType, data), getJobType(manager));
-			return builder.literal(funType, "createJob");
-		}
-
-		const core::LiteralPtr getParallel(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// assemble argument list and literal type
-			core::TypePtr job = getJobType(manager);
-			core::FunctionTypePtr funType = builder.functionType(toVector(job), getWorkItemType(manager));
-			return builder.literal(funType, "irt_parallel");
-		}
-
-		const core::LiteralPtr getPFor(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// assemble argument list and literal type
-			core::TypePtr group = manager.basic.getThreadGroup();
-			core::TypePtr int4 = manager.getBasicGenerator().getInt4();
-			core::TypePtr bodyImpl = getWorkItemImplType(manager);
-			core::TypePtr data = getLWDataItemType(manager);
-			core::FunctionTypePtr funType = builder.functionType(toVector(group,int4,int4,int4,bodyImpl,data), getWorkItemType(manager));
-			return builder.literal(funType, "irt_pfor");
-		}
-
-		const core::LiteralPtr getMerge(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			core::FunctionTypePtr funType = builder.functionType(toVector(getWorkItemType(manager)), builder.getBasicGenerator().getUnit());
-			return builder.literal(funType, "irt_merge");
-		}
-
-		const core::LiteralPtr getGetWorkItemArgument(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
-
-			// this function is of type
-			//  (ref<WorkItem>, uint<#a>, type<LWDataItem<'p>>, type<'a>)->'a
-
-			core::TypePtr workItem = builder.refType(getWorkItemType(manager));
-			core::TypePtr index = basic.getUIntGen();
-
-			core::TypePtr dataItem = builder.genericType(LW_DATA_ITEM_TYPE_NAME, toVector<core::TypePtr>(builder.typeVariable("p")));
-			core::TypePtr tupleDataItem = builder.genericType("type", toVector(dataItem));
-
-			core::TypePtr typeLiteral = basic.getTypeLiteralTypeGen();
-			core::FunctionTypePtr type = builder.functionType(toVector(workItem, index, tupleDataItem, typeLiteral), basic.getAlpha());
-			return builder.literal(type, "getArg");
-		}
-
-
-		const core::TypePtr getWorkItemRangeType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			core::TypePtr int4 = manager.basic.getInt4();
-			core::StructType::Entries entries;
-			entries.push_back(core::StructType::Entry(builder.identifier("begin"), int4));
-			entries.push_back(core::StructType::Entry(builder.identifier("end"), int4));
-			entries.push_back(core::StructType::Entry(builder.identifier("step"), int4));
-			core::TypePtr res = builder.structType(entries);
-
-			res->addAnnotation<annotations::c::CNameAnnotation>("irt_work_item_range");
-			return res;
-		}
-
-		const core::LiteralPtr getGetWorkItemRange(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			core::TypePtr item = builder.refType(getWorkItemType(manager));
-			core::FunctionTypePtr type = builder.functionType(toVector(item), getWorkItemRangeType(manager));
-			return builder.literal(type, "getRange");
+		template<typename T>
+		const T& attachName(const T& node, const string& name) {
+			const core::NodePtr& cur = node;
+			cur->addAnnotation<annotations::c::CNameAnnotation>(name);
+			return node;
 		}
 	}
 
+	namespace lang = core::lang;
+
 	Extensions::Extensions(core::NodeManager& manager)
-		: runStandalone(getRunStandalone(manager)),
-		  contextType(getContextType(manager)),
-		  workItemType(getWorkItemType(manager)),
-		  workItemImplType(getWorkItemImplType(manager)),
-		  workItemImplCtr(getWorkItemImplCtr(manager)),
-		  workItemVariantType(getWorkItemVariantType(manager)),
-		  workItemVariantCtr(getWorkItemVariantCtr(manager)),
-		  workItemVariantImplType(getWorkItemVariantImplType(manager)),
-		  registerWorkItemImpl(getRegisterWorkItemImpl(manager)),
-		  createWorkItem(getCreateWorkItem(manager)),
-		  submitWorkItem(getSubmitWorkItem(manager)),
-		  joinWorkItem(getJoinWorkItem(manager)),
-		  exitWorkItem(getExitWorkItem(manager)),
-		  typeID(getTypeIDType(manager)),
-		  LWDataItemType(getLWDataItemType(manager)),
-		  wrapLWData(getWrapLWData(manager)),
-		  unwrapLWData(getUnwrapLWData(manager)),
-		  jobType(getJobType(manager)),
-		  createJob(getCreateJob(manager)),
-		  parallel(getParallel(manager)),
-		  pfor(getPFor(manager)),
-		  merge(getMerge(manager)),
-		  getWorkItemArgument(getGetWorkItemArgument(manager)),
-		  workItemRange(getWorkItemRangeType(manager)),
-		  getWorkItemRange(getGetWorkItemRange(manager)) {}
+		:
+		  runStandalone(lang::getLiteral(manager, 			"(irt_wi_implementation_id, irt_lwdi<'a>)->unit", 	"runStandalone")),
+
+		  contextType(lang::getType(manager, 				"irt_context")),
+		  workItemType(lang::getType(manager, 				"irt_wi")),
+		  workItemImplType(lang::getType(manager, 			"irt_wi_implementation_id")),
+		  workItemImplCtr(lang::getLiteral(manager, 		"(list<irt_wi_variant>)->irt_wi_implementation_id", "WorkItemImpl")),
+		  workItemVariantType(lang::getType(manager, 		"irt_wi_variant")),
+		  workItemVariantCtr(lang::getLiteral(manager, 		"((ref<irt_wi>)->unit)->irt_wi_variant",			"WorkItemVariant")),
+		  workItemVariantImplType(lang::getType(manager, 	"(ref<irt_wi>)->unit")),
+
+		  registerWorkItemImpl(lang::getLiteral(manager, 	"(irt_wi_implementation_id)->unit", 				"registerImpl")),
+		  createWorkItem(lang::getLiteral(manager, 			"(uint<#a>,uint<#a>,uint<#a>,irt_wi_implementation_id,irt_di<'a>)->ref<irt_wi>", "createWI")),
+		  submitWorkItem(lang::getLiteral(manager, 			"(ref<irt_wi>)->unit", 								"submitWI")),
+		  joinWorkItem(lang::getLiteral(manager, 			"(ref<irt_wi>)->unit", 								"joinWI")),
+		  exitWorkItem(lang::getLiteral(manager, 			"(ref<irt_wi>)->unit", 								"irt_wi_end")),
+
+		  typeID(lang::getType(manager, 					"irt_type_id")),
+		  LWDataItemType(lang::getType(manager, 			"irt_lwdi<'a>")),
+		  wrapLWData(lang::getLiteral(manager, 				"('a)->irt_lwdi<'a>", 								"wrap")),
+		  unwrapLWData(lang::getLiteral(manager, 			"(irt_lwdi<'a>)->'a", 								"unwrap")),
+
+		  jobType(lang::getType(manager, 					"irt_parallel_job")),
+
+		  createJob(lang::getLiteral(manager, 				"(uint<8>,uint<8>,uint<8>,irt_wi_implementation_id,irt_lwdi<'a>)->irt_parallel_job" , "createJob")),
+		  parallel(lang::getLiteral(manager, 				"(irt_parallel_job)->ref<irt_wi>", 					"irt_parallel")),
+
+		  pfor(lang::getLiteral(manager, 					"(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>", "irt_pfor")),
+		  merge(lang::getLiteral(manager, 					"(ref<irt_wi>)->unit", 								"irt_merge")),
+
+		  getWorkItemArgument(lang::getLiteral(manager, 	"(ref<irt_wi>, uint<#a>, type<irt_lwdi<'p>>, type<'a>)->'a", "getArg")),
+		  workItemRange(attachName(lang::getType(manager, 	"struct<begin:int<4>,end:int<4>,step:int<4>>"), "irt_work_item_range")),
+		  getWorkItemRange(lang::getLiteral(manager, 		"(ref<irt_wi>)->struct<begin:int<4>,end:int<4>,step:int<4>>", "getRange")) {}
 
 
 

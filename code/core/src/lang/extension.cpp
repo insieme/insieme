@@ -34,55 +34,24 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/lang/extension.h"
 
-#include <boost/noncopyable.hpp>
-
-#include "insieme/core/forward_decls.h"
+#include "insieme/core/parser/ir_parse.h"
+#include "insieme/core/expressions.h"
 
 namespace insieme {
 namespace core {
 namespace lang {
 
-	using std::string;
+	core::TypePtr getType(core::NodeManager& manager, const string& type) {
+		// build type
+		return parse::parseType(manager, type);
+	}
 
-	/**
-	 * This class represents the common base class of language extensions. Such
-	 * extensions are defining new types or literals and can be used within the
-	 * frontend, backends or analyses to encode information within the IR.
-	 *
-	 * Extensions should not directly be created. Instead, extensions should be created
-	 * using the corresponding factory method of the NodeManager.
-	 */
-	class Extension : private boost::noncopyable {
-	public:
-		/**
-		 * A virtual destructor to enable the proper destruction of derived
-		 * instances.
-		 */
-		virtual ~Extension() {}
-	};
+	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value) {
+		return core::Literal::get(manager, getType(manager, type), value);
+	}
 
-	/**
-	 * A utility simplifying the creation of a type within language extensions. The
-	 * given type string will be parsed and returned.
-	 *
-	 * @param manager the node manager to be used for creating the type
-	 * @param type the string to be parsed
-	 * @return the requested type
-	 */
-	core::TypePtr getType(core::NodeManager& manager, const string& type);
-
-	/**
-	 * A utility simplifying the creation of literals within language extensions.
-	 * The type of the literal is passed as a string which will internally be parsed.
-	 *
-	 * @param manager the node manager to be used for creating the resulting literal
-	 * @param type the type of the resulting literal, encoded as a string
-	 * @param value the value of the resulting literal
-	 * @return the requested literal
-	 */
-	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value);
 
 } // end namespace lang
 } // end namespace core
