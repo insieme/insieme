@@ -41,6 +41,7 @@
 // this is needed for compiling this class as templates are used and the template specializations
 // for Sets and Maps are needed in order to compile this translation unit 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
+#include "isl/flow.h"
 
 #define POLYHEDRAL_BACKEND ISL
 
@@ -55,6 +56,7 @@
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/logging.h"
 #include "insieme/utils/set_utils.h"
+#include "insieme/utils/numeric_cast.h"
 #include <stack>
 
 #define AS_STMT_ADDR(addr) static_address_cast<const Statement>(addr)
@@ -585,7 +587,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			 	   		   	 const ScopRegion& 				region,
  							 const ScatteringFunction& 		curScat,
 							 IteratorOrder&					iterators,
-							 ScatteringMatrix& 				scat ) 
+							 ScatteringMatrix& 				scat,
+							 size_t&						sched_dim) 
 {
 	typedef std::set<Iterator> IteratorSet;
 	
@@ -619,9 +622,9 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			assert( thenBody->hasAnnotation(ScopRegion::KEY) && "If body inside SCoP not correctly annotated");
 
 			// Actualize the iteration domain to the current iteration vector 
-			IterationDomain&& currID = poly::cloneConstraint(iterVec, ifScop.getDomainConstraints());
+			IterationDomain&& currID = currDomain and poly::cloneConstraint(iterVec, ifScop.getDomainConstraints());
 
-			resolveScop(iterVec, currID, *thenBody->getAnnotation(ScopRegion::KEY), thenScat, iterators, scat);
+			resolveScop(iterVec, currID, *thenBody->getAnnotation(ScopRegion::KEY), thenScat, iterators, scat, sched_dim);
 
 			ScatteringFunction elseScat(curScat);
 			af.setCoeff(poly::Constant(), pos++);
@@ -629,8 +632,9 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			
 			StatementAddress elseBody = AS_STMT_ADDR( cur.getAddr().getAddressOfChild(2) );
 			assert( elseBody->hasAnnotation(ScopRegion::KEY) && "Else body inside SCoP not correctly annotated");
-
-			resolveScop(iterVec, not_(currID), *elseBody->getAnnotation(ScopRegion::KEY), elseScat, iterators, scat);
+			
+			currID = currDomain and not_(poly::cloneConstraint(iterVec, ifScop.getDomainConstraints()));
+			resolveScop(iterVec, currID, *elseBody->getAnnotation(ScopRegion::KEY), elseScat, iterators, scat, sched_dim);
 			
 			// Once the branches of the IF has been analyzed, skip the if statement	
 			return;
@@ -640,15 +644,15 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 		newScat.appendRow( af );
 
 		// check wheather the statement is a SCoP
-		auto fit = std::find(region.subScops.begin(), region.subScops.end(), cur.getAddr());
-		if (fit != region.subScops.end()) {
+		// auto fit = std::find(region.subScops.begin(), region.subScops.end(), cur.getAddr());
+		// if (fit != region.subScops.end()) {
 			// this is a sub scop
-			assert(cur->hasAnnotation(ScopRegion::KEY));
+		if (curPtr->hasAnnotation(ScopRegion::KEY)) {
 
 			if ( curPtr->getNodeType() == NT_ForStmt ) {
 				// if the statement is a loop, then we append a dimension with the corresponding
 				// iterator variable and we go recursively to visit the body  
-				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(cur.getAddr().getAddressedNode());
+				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curPtr);
 				const VariablePtr& iter = forStmt->getDeclaration()->getVariable();
 
 				AffineFunction newAf( iterVec );
@@ -657,11 +661,12 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 				
 				iterators.push_back(poly::Iterator(iter));
 			} 
-			resolveScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), newScat, iterators, scat);
+			resolveScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), newScat, iterators, scat, sched_dim);
 			// pop back the iterator in the case the statement was a for stmt
 			if ( curPtr->getNodeType() == NT_ForStmt ) { iterators.pop_back(); }
 			return;
-		} 
+		}
+		// } 
 		// Access expressions 
 		const RefAccessList& refs = cur.getRefAccesses();
 		AccessInfoList accInfo;
@@ -715,20 +720,23 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			) 
 		);
 		
+		if (newScat.size() > sched_dim) {
+			sched_dim = newScat.size();
+		}
 		// Set back the domain
 		currDomain = saveDomain;
 
 	} ); 
 }
 
-const ScopRegion::ScatteringMatrix ScopRegion::getScatteringInfo() {
+const ScopRegion::ScatteringPair ScopRegion::getScatteringInfo() {
 	if ( !scattering ) {
 		// we compute the full scattering information for this domain and we cache the result for
 		// later use. 
-		ScopRegion::ScatteringMatrix ret;
+		ScopRegion::ScatteringPair ret;
 		ScatteringFunction sf(iterVec);
 		ScopRegion::IteratorOrder iterOrder;
-		resolveScop(iterVec, constraints, *this, sf, iterOrder, ret);
+		resolveScop(iterVec, constraints, *this, sf, iterOrder, ret.second, ret.first);
 		scattering = ret; // cache the result to be used for successive call to this function
 	}
 	return *scattering;
@@ -754,6 +762,102 @@ ScopList mark(const core::NodePtr& root) {
 	return ret;
 }
 
+void computeDataDependence(const NodePtr& root) {
+
+	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
+		LOG(WARNING) << "Not possible to compute dependence information from a non static control region.";
+		return ;
+	}
+	
+	// We are in a Scop 
+	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
+	const ScopRegion::ScatteringPair&& scat = ann.getScatteringInfo();
+	const IterationVector& iterVec = ann.getIterationVector();
+	auto&& ctx = BackendTraits<POLYHEDRAL_BACKEND>::ctx_type();
+
+	std::shared_ptr<Set<IslContext>> domain;
+	std::shared_ptr<Map<IslContext>> schedule;
+	std::shared_ptr<Map<IslContext>> reads;
+	std::shared_ptr<Map<IslContext>> writes;
+
+	size_t stmtID = 0;
+	std::for_each(scat.second.begin(), scat.second.end(), 
+		[ & ] (const ScopRegion::StmtScattering& cur) { 
+			std::string stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
+			IterationDomain id = std::get<1>(cur);
+
+			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, iterVec, id, stmtid);
+			domain = !domain ? ids : set_union(ctx, *domain, *ids);
+
+			ScatteringFunctionPtr sf = std::get<2>(cur);
+			// Because the scheduling of every statement has to have the same number of elements
+			// (same dimensions) we append zeros until the size of the affine system is equal to 
+			// the number of dimensions used inside this SCoP for the scheduling functions 
+			for ( size_t s = sf->size(); s < scat.first; ++s ) {
+				sf->appendRow( AffineFunction(iterVec) );
+			}
+			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
+			schedule = !schedule ? scattering : map_union(ctx, *schedule, *scattering);
+				
+			// Access Functions 
+			const ScopRegion::AccessInfoList& ail = std::get<3>(cur);
+			std::for_each(ail.begin(), ail.end(), [&](const ScopRegion::AccessInfo& cur){
+				const ExpressionAddress& addr = std::get<0>(cur);
+				AffineSystemPtr accessInfo = std::get<2>(cur);
+
+				if (accessInfo) {
+					auto&& access = makeMap<POLYHEDRAL_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
+
+					switch ( std::get<1>(cur) ) {
+					case Ref::USE: 
+						reads = !reads ? access : map_union(ctx, *reads, *access);
+						break;
+					case Ref::DEF:
+						writes = !writes ? access : map_union(ctx, *writes, *access);
+						break;
+					case Ref::UNKNOWN:
+						reads = !reads ? access : map_union(ctx, *reads, *access);
+						writes = !writes ? access : map_union(ctx, *writes, *access);
+						break;
+					default:
+						assert(false);
+					}
+				}
+			});
+		}
+	);
+
+
+	std::cout << "D:=";
+	domain->printTo(std::cout);
+	std::cout << std::endl;
+	std::cout << "S:=";	
+	schedule->printTo(std::cout);
+	std::cout << std::endl;
+	if (reads) {
+		std::cout << "R:=";
+		reads->printTo(std::cout);
+		std::cout << std::endl;
+	}
+	if (writes) {
+		std::cout << "W:=";	
+		writes->printTo(std::cout);
+		std::cout << std::endl;
+	}
+	LOG(DEBUG) << "Computing RAW dependencies: ";
+	buildDependencies(ctx, domain, schedule, reads, writes);
+	
+	std::cout << std::endl;
+
+	LOG(DEBUG) << "Computing WAW dependencies: ";	
+	buildDependencies(ctx, domain, schedule, writes, writes);
+	std::cout << std::endl;
+
+	LOG(DEBUG) << "Computing WAR dependencies: ";
+	buildDependencies(ctx, domain, schedule, writes, reads);
+	std::cout << std::endl;
+}
+
 //===== printSCoP ===================================================================
 void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	out << std::endl << std::setfill('=') << std::setw(80) << std::left << "@ SCoP PRINT";	
@@ -767,7 +871,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	auto&& ctx = BackendTraits<POLYHEDRAL_BACKEND>::ctx_type();
 
 	ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
-	const ScopRegion::ScatteringMatrix&& scat = ann.getScatteringInfo();
+	const ScopRegion::ScatteringMatrix&& scat = ann.getScatteringInfo().second;
 	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
 		
 	out << "IV: " << ann.getIterationVector() << std::endl;
@@ -775,13 +879,14 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	std::for_each(scat.begin(), scat.end(), 
 		[ &ann, &stmtID, &out, &ctx ] (const ScopRegion::StmtScattering& cur) { 
 			out << std::setfill('~') << std::setw(80) << "" << std::endl;
-			out << "@ S" << stmtID++ << ": " << std::endl 
+			std::string stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
+			out << "@ " << stmtid << ": " << std::endl 
 				<< " -> " << printer::PrettyPrinter( std::get<0>(cur).getAddressedNode() ) << std::endl;
 	
 			IterationDomain id = std::get<1>(cur);
 			out << " -> ID ";
 			
-			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, ann.getIterationVector(), id);
+			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, ann.getIterationVector(), id, stmtid);
 
 			if (!id) { out << "{}"; }
 			else 	 { 
@@ -792,7 +897,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 			out << std::endl;
 			ScatteringFunctionPtr sf = std::get<2>(cur);
 			out << *sf;
-			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf));
+			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
 			out << " => ISL: ";
 			scattering->printTo(out);
 			out << std::endl;
@@ -807,7 +912,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 					[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
 				out << std::endl;
 				if (accessInfo) {
-					auto&& access = makeMap<POLYHEDRAL_BACKEND>(ctx, *accessInfo);
+					auto&& access = makeMap<POLYHEDRAL_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
 					// map.intersect(ids);
 					out << " => ISL: "; 
 					access->printTo(out);

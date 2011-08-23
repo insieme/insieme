@@ -124,11 +124,12 @@ public:
 			core::StatementAddress, 
 			poly::IterationDomain, 
 			poly::ScatteringFunctionPtr, 
-			AccessInfoList > StmtScattering;
+			AccessInfoList > 					StmtScattering;
 
-	typedef std::vector<StmtScattering> ScatteringMatrix;
+	typedef std::vector<StmtScattering> 		ScatteringMatrix;
+	typedef std::pair<size_t, ScatteringMatrix> 	ScatteringPair;
 	
-	typedef std::vector<poly::Iterator> IteratorOrder;
+	typedef std::vector<poly::Iterator> 		IteratorOrder;
 
 	ScopRegion( const poly::IterationVector& iv, 
 			const poly::IterationDomain& comb = poly::IterationDomain(),
@@ -170,7 +171,7 @@ public:
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	const ScatteringMatrix getScatteringInfo();
+	const ScatteringPair getScatteringInfo();
 
 	/** 
 	 *
@@ -186,7 +187,8 @@ private:
 			 	   	 const ScopRegion& 						region,
 					 const poly::ScatteringFunction& 		curScat,
 					 IteratorOrder& 						iterators,
-					 ScatteringMatrix& 						finalScat);
+					 ScatteringMatrix& 						finalScat,
+					 size_t&								sched_dim);
 
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;
@@ -205,7 +207,7 @@ private:
 	 */
 	AddressList subScops;
 
-	boost::optional<ScatteringMatrix> scattering;
+	boost::optional<ScatteringPair> scattering;
 };
 
 /**************************************************************************************************
@@ -258,6 +260,7 @@ ScopList mark(const core::NodePtr& root);
  * function.
  *************************************************************************************************/
 void printSCoP(std::ostream& out, const core::NodePtr& scop);
+void computeDataDependence(const core::NodePtr& root) ;
 
 } // end namespace scop
 } // end namespace analysis

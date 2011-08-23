@@ -272,6 +272,8 @@ void markSCoPs(const ProgramPtr& program) {
 	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
 	std::for_each(sl.begin(), sl.end(),	[](ScopList::value_type& cur){ 
 			printSCoP(LOG_STREAM(INFO), cur.first); 
+			// performing dependence analysis
+			computeDataDependence(cur.first);
 		}
 	);	
 }

@@ -249,9 +249,10 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 
 	irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
 
-	irt_ocl_run_kernel(kernel, 3,   sizeof(cl_mem), (void *)&(buf_input->cl_mem),
-									sizeof(cl_mem), (void *)&(buf_output->cl_mem),
-									sizeof(cl_long), (void *)&len_input);
+	irt_ocl_run_kernel(kernel, 3,
+							(size_t)0, (void *)buf_input,
+							(size_t)0, (void *)buf_output,
+							sizeof(cl_long), (void *)&len_input);
 
 	irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
 	//clFinish(dev->cl_queue); // ??

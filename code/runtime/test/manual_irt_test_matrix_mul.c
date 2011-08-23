@@ -350,9 +350,10 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	
 	irt_ocl_set_kernel_ndrange(kernel, 2, szGlobalWorkSize, szLocalWorkSize);
 
-	irt_ocl_run_kernel(kernel, 6, 	sizeof(cl_mem), (void *)&(buff_A->cl_mem),
-					sizeof(cl_mem), (void *)&(buff_B->cl_mem),
-					sizeof(cl_mem), (void *)&(buff_C->cl_mem), 
+	irt_ocl_run_kernel(kernel, 6,
+					(size_t)0, (void *)buff_A,
+					(size_t)0, (void *)buff_B,
+					(size_t)0, (void *)buff_C,
 					sizeof(cl_long), (void *)&hA,
 					sizeof(cl_long), (void *)&wA,
 					sizeof(cl_long), (void *)&wB);
@@ -458,9 +459,10 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	
 	irt_ocl_set_kernel_ndrange(kernel, 2, szGlobalWorkSize, szLocalWorkSize);
 
-	irt_ocl_run_kernel(kernel, 6, 	sizeof(cl_mem), (void *)&(buff_Ad->cl_mem),
-					sizeof(cl_mem), (void *)&(buff_Bd->cl_mem),
-					sizeof(cl_mem), (void *)&(buff_Cd->cl_mem), 
+	irt_ocl_run_kernel(kernel, 6,
+					(size_t)0, (void *)buff_Ad,
+					(size_t)0, (void *)buff_Bd,
+					(size_t)0, (void *)buff_Cd,
 					sizeof(cl_long), (void *)&hA,
 					sizeof(cl_long), (void *)&wA,
 					sizeof(cl_long), (void *)&wB);

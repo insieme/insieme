@@ -39,6 +39,9 @@
 #include "data/tuning.h"
 #include "data/metric_table.h"
 
+// horrible hack incoming
+uint32 irt_g_error_key = 0;
+
 TEST(tuning, compileable_test) {
 	// just testing whether header is compiling
 
