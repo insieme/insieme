@@ -214,9 +214,11 @@ TEST(XmlTest, FunctionTypeTest) {
 	list.push_back(type1);
 	list.push_back(type2);
 
-	FunctionTypePtr funType1 = FunctionType::get(manager, list, type3);
+	FunctionTypePtr funType1 = FunctionType::get(manager, list, type3, true);
+	FunctionTypePtr funType2 = FunctionType::get(manager, list, type3, false);
 
 	funType1->addAnnotation(dummy_fn);
+	funType2->addAnnotation(dummy_fn);
 
 	NodePtr root = funType1;
 
@@ -227,6 +229,21 @@ TEST(XmlTest, FunctionTypeTest) {
 
 	NodeManager manager2;
 	NodePtr root2 = xml.convertDomToIr(manager2);
+
+	EXPECT_EQ(*root, *root2);
+	EXPECT_NE(root, root2);
+	EXPECT_TRUE(equalsWithAnnotations(root, root2));
+
+	// -- now for the closur function type ---
+
+	root = funType2;
+
+	xml.convertIrToDom(root);
+	s1 = xml.convertDomToString();
+	xml.convertStringToDom(s1, true);
+
+	manager2;
+	root2 = xml.convertDomToIr(manager2);
 
 	EXPECT_EQ(*root, *root2);
 	EXPECT_NE(root, root2);
