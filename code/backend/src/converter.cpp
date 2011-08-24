@@ -73,7 +73,7 @@ namespace backend {
 		LOG(INFO) << timer;
 
 		// only for debugging purposes ...
-//		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed);
+		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed);
 //		LOG(INFO) << "Semantic Checks: " << core::check(processed, core::checks::getFullCheck());
 //		for_each(core::check(processed, core::checks::getFullCheck()).getAll(), [](const core::Message& msg) {
 //			LOG(INFO) << msg << " @ " << *msg.getAddress();
