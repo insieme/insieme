@@ -70,7 +70,7 @@ namespace ocl_host {
 			unsigned kernelID = table->registerKernel(call);
 
 
-			return C_NODE_MANAGER->create<c_ast::Literal>(""); // ciao
+			return C_NODE_MANAGER->create<c_ast::Literal>("");
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"
