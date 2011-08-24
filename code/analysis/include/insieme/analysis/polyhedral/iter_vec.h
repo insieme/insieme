@@ -84,6 +84,8 @@ struct Element :
 	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	bool operator==(const Element& other) const;
+	
+	bool operator<(const Element& other) const;
 
 private:
 	Type type;
@@ -99,10 +101,6 @@ public:
 	Expr(const Type& type, const core::ExpressionPtr& expr) : Element(type),  expr(expr) { } 
 	const core::ExpressionPtr& getExpr() const { assert(expr); return expr; } 
 
-	bool operator<(const Expr& other) const {
-		return expr->hash() < other.expr->hash();
-	}
-
 	virtual ~Expr() { }
 };
 
@@ -117,9 +115,11 @@ struct Iterator : public Expr {
 	const core::VariablePtr& getVariable() const { 
 		return core::static_pointer_cast<const core::Variable>(getExpr()); 
 	}
-
-
-
+	
+	bool operator<(const Iterator& other) const {
+		return getVariable()->getId() < other.getVariable()->getId();
+	}
+	
 	// Implements the printable interface
 	std::ostream& printTo(std::ostream& out) const;
 };
