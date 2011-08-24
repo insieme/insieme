@@ -71,7 +71,10 @@ namespace poly {
  * parameter, this is required later in the creation of the sets and relationships representing the
  * polyhedron. 
  *************************************************************************************************/
-struct Element : public utils::Printable, public boost::equality_comparable<Element> { 
+struct Element : 
+	public utils::Printable, 
+	public boost::equality_comparable<Element> 
+{ 
 	// The type of a vector element is either an Iterator or a Parameter
 	enum Type { ITER, PARAM, CONST };
 	
@@ -81,7 +84,7 @@ struct Element : public utils::Printable, public boost::equality_comparable<Elem
 	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	bool operator==(const Element& other) const;
-    bool operator<(const Element& other) const;
+
 private:
 	Type type;
 };
@@ -95,6 +98,11 @@ class Expr : public Element {
 public:
 	Expr(const Type& type, const core::ExpressionPtr& expr) : Element(type),  expr(expr) { } 
 	const core::ExpressionPtr& getExpr() const { assert(expr); return expr; } 
+
+	bool operator<(const Expr& other) const {
+		return expr->hash() < other.expr->hash();
+	}
+
 	virtual ~Expr() { }
 };
 
@@ -109,6 +117,8 @@ struct Iterator : public Expr {
 	const core::VariablePtr& getVariable() const { 
 		return core::static_pointer_cast<const core::Variable>(getExpr()); 
 	}
+
+
 
 	// Implements the printable interface
 	std::ostream& printTo(std::ostream& out) const;
@@ -313,3 +323,16 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 } // end analysis namespace 
 } // end insieme namespace 
 
+namespace std {
+
+template <>
+struct hash<insieme::analysis::poly::Iterator> {
+	size_t operator()(const insieme::analysis::poly::Iterator& it) const { return it.getExpr()->hash(); }
+};
+
+template <>
+struct hash<insieme::analysis::poly::Parameter> {
+	size_t operator()(const insieme::analysis::poly::Parameter& it) const { return it.getExpr()->hash(); }
+};
+
+} // end std namespace 

@@ -66,27 +66,6 @@ namespace ocl_host{
 			return builder.genericType("irt_ocl_buffer");
 		}
 
-		const core::LiteralPtr getInitDevices(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			// void irt_ocl_init_devices();
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(), basic.getUnit());
-
-			return builder.literal(type, "irt_ocl_init_devices");
-		}
-
-		const core::LiteralPtr getGetNumDevices(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr uint4Type = basic.getUInt4();
-			// cl_uint irt_ocl_get_num_devices();
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(), uint4Type);
-
-			return builder.literal(type, "irt_ocl_get_num_devices");
-		}
-
 		const core::LiteralPtr getGetDevice(core::NodeManager& manager) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.basic;
@@ -100,31 +79,21 @@ namespace ocl_host{
 			return builder.literal(type, "irt_ocl_get_device");
 		}
 
-		const core::LiteralPtr getReleaseDevices(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
+		const core::LiteralPtr getCreateAllKernels(core::NodeManager& manager) {
+					core::ASTBuilder builder(manager);
+					auto& basic = manager.basic;
 
-			// void irt_ocl_release_devices();
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(), basic.getUnit());
-
-			return builder.literal(type, "irt_ocl_release_devices");
-		}
-
-		const core::LiteralPtr getCreateKernel(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr refKernelType = builder.refType(getKernelType(manager));
-			core::TypePtr refDeviceType = builder.refType(getDeviceType(manager));
-			core::TypePtr refCharType = builder.refType(basic.getChar());
-			core::TypePtr enumType = builder.genericType("irt_ocl_create_kernel_flag");
+					core::TypePtr refKernelType = builder.refType(getKernelType(manager));
+					core::TypePtr refDeviceType = builder.refType(getDeviceType(manager));
+					core::TypePtr refCharType = builder.refType(basic.getChar());
+					core::TypePtr enumType = builder.genericType("irt_ocl_create_kernel_flag");
 
 
-			//irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name,
-			//		const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refDeviceType, refCharType, refCharType,refCharType, enumType), refKernelType);
+					//irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
+					// FIXME: Wrong type
+					core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refDeviceType, refCharType, refCharType,refCharType, enumType), refKernelType);
 
-			return builder.literal(type, "irt_ocl_create_kernel");
+					return builder.literal(type, "irt_ocl_rt_create_all_kernels");
 		}
 
 		const core::LiteralPtr getSetKernelNDrange(core::NodeManager& manager) {
@@ -156,16 +125,18 @@ namespace ocl_host{
 			return builder.literal(type, "irt_ocl_run_kernel");
 		}
 
-		const core::LiteralPtr getReleaseKernel(core::NodeManager& manager) {
+
+		const core::LiteralPtr getReleaseAllKernels(core::NodeManager& manager) {
 			core::ASTBuilder builder(manager);
 			auto& basic = manager.basic;
 
 			core::TypePtr refKernelType = builder.refType(getKernelType(manager));
 
-			// void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
+			//irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size)
+			//FIXME: wrong type
 			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refKernelType), basic.getUnit());
 
-			return builder.literal(type, "irt_ocl_release_kernel");
+			return builder.literal(type, "irt_ocl_rt_release_all_kernels");
 		}
 
 		const core::LiteralPtr getCreateBuffer(core::NodeManager& manager) {
@@ -227,11 +198,10 @@ namespace ocl_host{
 
 
 	Extensions::Extensions(core::NodeManager& manager)
-		  : initDevices(getInitDevices(manager)), getNumDevices(getGetNumDevices(manager)),
-			getDevice(getGetDevice(manager)), releaseDevices(getReleaseDevices(manager)),
+		  : getDevice(getGetDevice(manager)),
 
-			createKernel(getCreateKernel(manager)),setKernelNDrange(getSetKernelNDrange(manager)),
-			runKernel(getRunKernel(manager)), releaseKernel(getReleaseKernel(manager)),
+			createAllKernels(getCreateAllKernels(manager)), releaseAllKernels(getReleaseAllKernels(manager)),
+			setKernelNDrange(getSetKernelNDrange(manager)), runKernel(getRunKernel(manager)),
 
 			createBuffer(getCreateBuffer(manager)), readBuffer(getReadBuffer(manager)),
 			writeBuffer(getWriteBuffer(manager)), releaseBuffer(getReleaseBuffer(manager)) {}

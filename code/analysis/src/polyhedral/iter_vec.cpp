@@ -56,13 +56,6 @@ bool Element::operator==(const Element& other) const {
 	return false;
 }
 
-bool Element::operator<(const Element& other) const {
-    if (type != other.type) { return type < other.type; }
-	if (type == ITER || type == PARAM) { 
-		return &*static_cast<const Expr&>(*this).getExpr() < &*static_cast<const Expr&>(other).getExpr(); }
-    return false;
-}
-
 std::ostream& Iterator::printTo(std::ostream& out) const { return out << *getVariable(); }
 
 std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getExpr(); }
@@ -122,8 +115,8 @@ void merge_add(IterationVector& dest,
 		typename std::vector<T>::const_iterator bBegin, 
 		typename std::vector<T>::const_iterator bEnd )
 {
-	std::vector<T> varSet;
-    std::set_union(aBegin, aEnd, bBegin, bEnd, std::back_inserter(varSet));
+	std::unordered_set<T> varSet;
+    std::set_union(aBegin, aEnd, bBegin, bEnd, std::inserter(varSet, varSet.end()));
 	std::for_each(varSet.begin(), varSet.end(), [&dest] (const T& cur) { 
 		if (dest.getIdx(cur.getExpr()) == -1 ) { 
 			dest.add(cur); 
