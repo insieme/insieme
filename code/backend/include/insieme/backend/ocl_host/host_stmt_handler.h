@@ -34,46 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/converter.h"
-#include "insieme/backend/function_manager.h"
+#pragma once
+
 #include "insieme/backend/statement_converter.h"
-#include "insieme/backend/ocl_host/host_operator.h"
-#include "insieme/backend/ocl_host/host_extensions.h"
-#include "insieme/backend/ocl_host/host_code_fragments.h"
-
-#include "insieme/backend/ocl_kernel/kernel_backend.h"
-#include "insieme/backend/ocl_kernel/kernel_extensions.h"
-
-#include "insieme/backend/c_ast/c_code.h"
-#include "insieme/backend/c_ast/c_ast_utils.h"
-#include "insieme/backend/c_ast/c_ast_printer.h"
-
-#include "insieme/utils/string_utils.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_host {
 
-	OperatorConverterTable& addOpenCLHostSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
-
-		//auto& ext = manager.getLangExtension<Extensions>();
-		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
-
-		#include "insieme/backend/operator_converter_begin.inc"
-
-		table[kernelExt.wrapGlobal] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
-		});
-
-		table[kernelExt.wrapConst] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
-		});
-
-		#include "insieme/backend/operator_converter_end.inc"
-
-		return table;
-	}
-
+	extern StmtHandler OpenCLStmtHandler;
 
 } // end namespace ocl_host
 } // end namespace backend

@@ -50,9 +50,12 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/parallel_manager.h"
 #include "insieme/backend/statement_converter.h"
+
 #include "insieme/backend/ocl_host/host_backend.h"
-#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_host/host_operator.h"
+#include "insieme/backend/ocl_host/host_stmt_handler.h"
+
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
