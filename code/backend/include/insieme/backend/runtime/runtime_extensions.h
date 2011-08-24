@@ -56,102 +56,17 @@ namespace runtime {
 	class Extensions : public core::lang::Extension {
 	public:
 
-		/**
-		 * The function used to trigger the execution of the first work item
-		 * within a stand-alone runtime instances.
-		 */
-		const core::LiteralPtr runStandalone;
+		// Adds the definition of constant, public members to this definition using a macro file
 
-		/**
-		 * The type used to represent a runtime context within the IR.
-		 */
-		const core::TypePtr contextType;
-
-		/**
-		 * The type used internally to represent work items. The type is treated in an abstract
-		 * way and its actual implementation is imported via a runtime-include file.
-		 */
-		const core::TypePtr workItemType;
-
-
-		// --- Work Item Implementations -------------------------------------
-
-		const core::TypePtr workItemImplType;
-
-		const core::LiteralPtr workItemImplCtr;
-
-		const core::TypePtr workItemVariantType;
-
-		const core::LiteralPtr workItemVariantCtr;
-
-		const core::TypePtr workItemVariantImplType;
-
-		// --- Work Item Handling --------------------------------------------
-
-		/**
-		 * A marker literal instructing the backend to register the given entry point as a work
-		 * item. A call to this literal will not produce any expression or statement. However, it
-		 * will add a new entry point to the work-item/implementation table.
-		 */
-		const core::LiteralPtr registerWorkItemImpl;
-
-		/**
-		 * The literal used as a wrapper for the work-item creation function within the runtime.
-		 */
-		const core::LiteralPtr createWorkItem;
-
-		/**
-		 * The literal used as a wrapper for the work-item submission function within the runtime.
-		 */
-		const core::LiteralPtr submitWorkItem;
-
-		/**
-		 * The literal used as a wrapper for the work-item join function offered by the runtime.
-		 */
-		const core::LiteralPtr joinWorkItem;
-
-		/**
-		 * The literal representing the function used for terminating a work item.
-		 */
-		const core::LiteralPtr exitWorkItem;
-
-
-		// --- Data Item Handling --------------------------------------------
-
-		const core::TypePtr typeID;
-
-
-		// --- Light Weight Data Item Handling ----------------------------------
-
-		const core::TypePtr LWDataItemType;
-
-		const core::LiteralPtr wrapLWData;
-
-		const core::LiteralPtr unwrapLWData;
-
-
-		// --- Job Handling --------------------------------------------------
-
-		const core::TypePtr jobType;
-
-		const core::LiteralPtr createJob;
-
-		const core::LiteralPtr parallel;
-
-		const core::LiteralPtr pfor;
-
-		const core::LiteralPtr merge;
-
-
-		// --- Information retrieval -----------------------------------------
-
-		const core::LiteralPtr getWorkItemArgument;
-
-		const core::TypePtr workItemRange;
-
-		const core::LiteralPtr getWorkItemRange;
+		#define TYPE(name, type) 			const core::TypePtr name;
+		#define LITERAL(name, value, type) 	const core::LiteralPtr name;
+		#include "ir_extensions.def"
+		#undef TYPE
+		#undef LITERAL
 
 	private:
+
+		int dummy;
 
 		friend class core::NodeManager;
 

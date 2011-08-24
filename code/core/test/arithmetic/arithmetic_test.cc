@@ -44,6 +44,26 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
+TEST(ArithmeticTest, Values) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr varA = builder.variable(type, 1);
+	VariablePtr varB = builder.variable(type, 2);
+	VariablePtr varC = builder.variable(type, 3);
+
+	EXPECT_PRED1(Value::isValue, varA);
+	EXPECT_PRED1(Value::isValue, varB);
+	EXPECT_PRED1(Value::isValue, varC);
+
+	// check < operator
+	EXPECT_LT(Value(varA), Value(varB));
+	EXPECT_LT(Value(varA), Value(varC));
+
+}
+
 
 TEST(ArithmeticTest, Products) {
 

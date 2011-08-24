@@ -71,12 +71,10 @@ int main(int argc, char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 	
-		irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
-
-		irt_ocl_run_kernel(kernel, 4,   (size_t)0, (void *)buf_input1,
-						(size_t)0, (void *)buf_input2,
-						(size_t)0, (void *)buf_output,
-						sizeof(cl_int), (void *)&size);
+		irt_ocl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, 4,   (size_t)0, (void *)buf_input1,
+											(size_t)0, (void *)buf_input2,
+											(size_t)0, (void *)buf_output,
+											sizeof(cl_int), (void *)&size);
 
 		irt_ocl_read_buffer(buf_output, CL_TRUE, sizeof(int) * SIZE, &output[0]);
 	

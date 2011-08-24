@@ -41,6 +41,8 @@
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/checks/ir_checks.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+
 namespace insieme {
 namespace core {
 namespace arithmetic {
@@ -154,6 +156,49 @@ TEST(ArithmeticTest, toIR) {
 	EXPECT_EQ(f, toFormula(toIR(manager, f)));
 	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
+}
+
+TEST(ArithmeticTest, nonVariableValues) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getBasicGenerator();
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+
+	VariablePtr varA = builder.variable(type, 1);
+	VariablePtr varB = builder.variable(type, 2);
+
+	core::StructType::Entries entries;
+	entries.push_back(core::StructType::Entry(builder.identifier("a"), type));
+	entries.push_back(core::StructType::Entry(builder.identifier("b"), type));
+	TypePtr type2 = builder.structType(entries);
+
+	VariablePtr varX = builder.variable(type2, 3);
+	ExpressionPtr xa = builder.accessMember(varX, "a");
+	ExpressionPtr xb = builder.accessMember(varX, "b");
+
+	auto all = checks::getFullCheck();
+
+	EXPECT_EQ("v3", toString(*varX));
+	EXPECT_EQ("v3.a", toString(printer::PrettyPrinter(xa)));
+	EXPECT_EQ("v3.b", toString(printer::PrettyPrinter(xb)));
+
+	// -- build formulas using subscripts --
+
+	ExpressionPtr tmp;
+	Formula f;
+
+	tmp = builder.callExpr(basic.getOperator(type, lang::BasicGenerator::Add), varA, xa);
+
+	f= toFormula(tmp);
+	EXPECT_EQ("v1+v3.a", toString(f));
+	EXPECT_EQ("int.add(v1, composite.member.access(v3, a, int<4>))", toString(*toIR(manager, f)));
+	EXPECT_EQ(f, toFormula(toIR(manager, f)));
+	EXPECT_EQ(toIR(manager,f), toIR(manager, toFormula(toIR(manager, f))));
+	EXPECT_PRED1(empty, check(toIR(manager,f), all));
+
+
 }
 
 } // end namespace arithmetic
