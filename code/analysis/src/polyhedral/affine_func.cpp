@@ -52,6 +52,9 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
 	using namespace insieme::core::arithmetic;
+
+	std::cout << expr->toString() << std::endl;
+
 	// extract the Formula object 
 	Formula&& formula = toFormula(expr);
 	
@@ -77,14 +80,15 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
 
 		if ( !prod.isOne() ) {
-			const core::VariablePtr& var = prod.getFactors().front().first;
+			const core::ExpressionPtr& var = prod.getFactors().front().first;
 			// We make sure the variable is not already among the iterators
-			if ( iterVec.getIdx( Iterator(var) ) == -1 ) {
+			if ( var->getNodeType() != core::NT_Variable || 
+					iterVec.getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) ) == -1 ) 
+			{
 				iterVec.add( Parameter(var) );
 			}
 		}
 	});
-
 	// now the iteration vector is inlined with the Formula object extracted from the expression,
 	// the size of the coefficient vector can be set.
 	coeffs.resize(iterVec.size());

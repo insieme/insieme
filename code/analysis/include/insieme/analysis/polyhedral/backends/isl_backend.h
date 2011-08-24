@@ -100,6 +100,8 @@ public:
 
 	std::ostream& printTo(std::ostream& out) const;
 
+	bool isEmpty() const;
+
 	inline isl_union_set* getAsIslSet() const { return set; }
 
 	~Set() { 
@@ -130,6 +132,8 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	inline isl_union_map* getAsIslMap() const { return map; }
+	
+	bool isEmpty() const;
 
 	~Map() { 
 		isl_dim_free(dim);
