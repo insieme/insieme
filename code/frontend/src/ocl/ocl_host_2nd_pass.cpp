@@ -48,7 +48,7 @@ using namespace insieme::core;
 
 void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 {
-	std::cout << "kernelNames:\n" << kernelNames << std::endl;
+//	std::cout << "kernelNames:\n" << kernelNames << std::endl;
 	std::map<string, int> checkDuplicates;
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
 			if(const LambdaExprPtr& lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
