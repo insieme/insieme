@@ -44,15 +44,18 @@ namespace ocl {
 #define BASIC builder.getNodeManager().basic
 
 core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder) {
+	core::CallExprPtr&& stripped = dynamic_pointer_cast<const core::CallExpr>(arg);
 // remove stuff added by (void*)&
 	if(const core::CallExprPtr& refToAnyref = dynamic_pointer_cast<const core::CallExpr>(arg))
-		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef())
-			if(const core::CallExprPtr& makingRef = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0))) {
-				if(makingRef->getFunctionExpr() == BASIC.getScalarToArray())
-					return makingRef->getArgument(0);
-				if(makingRef->getFunctionExpr() == BASIC.getRefDeref())
-					return makingRef->getArgument(0);
-			}
+		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef() )
+			if(const core::CallExprPtr& makingRef = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0)))
+				stripped = makingRef;
+
+	if(!!stripped && stripped->getFunctionExpr() == BASIC.getScalarToArray())
+		return stripped->getArgument(0);
+	if(!!stripped && stripped->getFunctionExpr() == BASIC.getRefDeref())
+		return stripped->getArgument(0);
+
 
 	return arg;
 }

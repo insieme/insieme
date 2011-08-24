@@ -166,8 +166,8 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 				if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					kernels = loadKernelsFromFile(path->getValue(), builder);
 
-					// set source string to an empty char array
-					//							ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
+// set source string to an empty char array
+//					ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
 				}
 			}
 		}
@@ -237,8 +237,9 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 
 	// check if the index argument is a (casted) integer literal
 	const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(index);
+	const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index);
 
-	if(const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index)) {
+	if(!!idx && BASIC.isInt(idx)) {
 		// use the literal as index for the argument
 		unsigned int pos = atoi(idx->getValue().c_str());
 		if(kernelArgs[kernel].size() <= pos)
@@ -249,6 +250,7 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		// use one argument after another
 		kernelArgs[kernel].push_back(arg);
 	}
+
 	return builder.intLit(0); // returning CL_SUCCESS
 }
 
@@ -510,6 +512,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 						// collect arguments
 						ExpressionPtr size = *I;
 						++I; // skip size argument
+						// some invalid stuff is passed as index argument to use simply one after another
 						collectArgument("irt_ocl_run_kernel", k, BASIC.getNull(), size, *I);
 					}
 				}
@@ -729,23 +732,23 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 			}
 		}
 	}
-std::cout << "\ncall: " << call << "\ntype" << type <<  std::endl;
 
 	if(type->toString().find("array<struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) {
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), call, builder))) {//!
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 				if(fun->getValue() == "irt_ocl_create_kernel" ) {
-						ExpressionPtr kn = newCall->getArgument(1);
-						// usually kernel name is embedded in a "string.as.char.pointer" call"
-						if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
-						kn = sacp->getArgument(0);
-						if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
-std::cout << "\nYEYA" << kn << "\nJo " << kl << std::endl;
-								string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
-								kernelNames[name] = expr;
-						}
+					// call resolve element to load the kernel using the appropriate handler
+					resolveElement(newCall);
+					ExpressionPtr kn = newCall->getArgument(2);
+					// usually kernel name is embedded in a "string.as.char.pointer" call"
+					if(const CallExprPtr& sacp = dynamic_pointer_cast<const CallExpr>(kn))
+					kn = sacp->getArgument(0);
+					if(const LiteralPtr& kl = dynamic_pointer_cast<const Literal>(kn)) {
+							string name = kl->getValue().substr(1, kl->getValue().length()-2); // delete quotation marks form name
+							kernelNames[name] = expr;
+					}
 
-						return true;
+					return true;
 				}
 			}
 		}
@@ -865,12 +868,12 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			if(const HandlerPtr& replacement = findHandler(literal->getValue())) {
 				NodePtr ret = replacement->handleNode(callExpr);
 				// check if new kernels have been created
-				vector<ExpressionPtr> kernels = replacement->getKernels();
-				if(kernels.size() > 0)
-				for_each(kernels, [&](ExpressionPtr kernel) {
+				const vector<ExpressionPtr>& kernels = replacement->getKernels();
+				if(kernels.size() > 0) {
+					for_each(kernels, [&](ExpressionPtr kernel) {
 							kernelEntries.push_back(kernel);
 						});
-
+				}
 				copyAnnotations(callExpr, ret);
 				return ret;
 			}

@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 	gqueue = clCreateCommandQueue(gcontext, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
 
 	float* host_ptr;
-	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
+	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_float) * 100, host_ptr, NULL);
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	cl_mem dev_ptr4;
 
