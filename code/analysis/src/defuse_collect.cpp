@@ -169,7 +169,11 @@ class DefUseCollect : public core::ASTVisitor<void, core::Address> {
 		// If the variable is not a ref we are not interested in its usage 
 		if (type->getNodeType() != core::NT_RefType) { return; }
 	
-		const core::TypePtr& subType = core::static_pointer_cast<const core::RefType>(type)->getElementType();
+		core::TypePtr subType = type;
+		while(subType->getNodeType() == core::NT_RefType) {
+			subType = core::static_pointer_cast<const core::RefType>(subType)->getElementType();
+		}
+
 		if (subType->getNodeType() == core::NT_ArrayType || subType->getNodeType() == core::NT_VectorType) { 
 			// In the case the sub type is a vector type, it means this is an array reference 
 			SubscriptContext& subCtx = idxStack.top();
@@ -236,7 +240,7 @@ public:
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			visit(callExpr.getAddressOfChild(2)); // arg(1)
+			visit(callExpr.getAddressOfChild(2)); // arg(0)
 			return;
 		}
 
@@ -259,16 +263,13 @@ public:
 			// if the start of the subscript expression is not set, this is the start
 			if (!subCtx.first) { subCtx.first = callExpr; }
 			subCtx.second.push_back( AS_EXPR_ADDR(callExpr.getAddressOfChild(3)) ); // arg(1)
-
 			visit( callExpr.getAddressOfChild(2) ); // arg(0)
 			return;
 		}
 
 		// List the IR literals which do not alterate the usage of a variable  
 		if (core::analysis::isCallOf(callExpr, mgr.basic.getRefDeref())) {
-			usage = Ref::USE;
 			visit( callExpr.getAddressOfChild(2) ); // arg(0)
-			usage = saveUsage;
 			return;
 		}
 
@@ -284,8 +285,11 @@ public:
 		// This call expression could return a reference to a variable which can be either used or
 		// defined. Therefore we have to add this usage to the list of usages 
 		addVariable(callExpr, Ref::CALL);
-
-		usage = Ref::UNKNOWN;
+		
+		// we check whether the function is builtin, in that case we are sure that the use of the
+		// variable will be a USE and not a definition. For any other unknown literal, we use the
+		// UKNWON
+		usage = mgr.basic.isBuiltIn( callExpr.getAddressOfChild(1).getAddressedNode() ) ? Ref::USE : Ref::UNKNOWN;
 		visitNode(callExpr);
 		usage = saveUsage;
 	}

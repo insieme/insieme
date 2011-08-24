@@ -53,8 +53,6 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 {
 	using namespace insieme::core::arithmetic;
 
-	std::cout << expr->toString() << std::endl;
-
 	// extract the Formula object 
 	Formula&& formula = toFormula(expr);
 	

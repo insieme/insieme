@@ -217,8 +217,11 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		//
 		// FIXME: In the future also scalars should be properly handled using technique like scalar
 		// arrays and so forth
+		LOG(INFO) << *body;
+		LOG(INFO) << "OK " << refs.size();
 		std::for_each(refs.arrays_begin(), refs.arrays_end(),
 			[&](const ArrayRefPtr& cur) { 
+				LOG(INFO) << "ARRAYREF " << cur->getBaseExpression(); 
 				const ArrayRef::ExpressionList& idxExprs = cur->getIndexExpressions();
 				std::for_each(idxExprs.begin(), idxExprs.end(), 
 					[&](const ExpressionAddress& cur) { 
@@ -229,43 +232,28 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitStmt(NodeAddress addr) {
-		CHECK_STACK_SIZE
-		// Push a new recod 
-		regionStmts.push( RegionStmtStack::value_type() );
-		{
-			// in the case an exception is thrown it makes sure the record allocated on the region stack
-			// will be deallocated 
-			FinalActions fa( [&] () -> void { regionStmts.pop(); } );
+		CHECK_STACK_SIZE;
 		
-			// skip all the marker nodes 
-			while ( addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr ) {
-					addr = addr.getAddressOfChild(0);
-				}
-			assert(addr->getNodeType() != NT_MarkerStmt && addr->getNodeType() != NT_MarkerExpr);
-			IterationVector&& ret = visit(addr);
+		assert(subScops.empty());
+		if (addr->getNodeType() == NT_CompoundStmt) { return visit(addr); }
 
-			// we need to copy this value because we need to keep it alive after the pop operation
-			ScopStmtList subStmts = regionStmts.top();
-			fa.setEnabled(false);
-			regionStmts.pop(); // discard empty node 
-
-			if ( subStmts.empty() ) {
-				// if there are no sub stmts it means this statement is a basic statement, 
-				// therefore we can add it to the list of region stmts 
-				assert(regionStmts.size() >= 1);
-
-				RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
-				// Add this statement to the scope for the parent node 
-				regionStmts.top().push_back( ScopStmt(AS_STMT_ADDR(addr), refs) );
-			} else {
-				// the statement has generated a number of sub stmts, this can happen when a
-				// compound statement is visited which is not relevant for polyhedral analysis,
-				// we copy the subStmts on the current level 
-				assert(regionStmts.size() >= 1);
-				std::copy(subStmts.begin(), subStmts.end(), std::back_inserter(regionStmts.top()));
-			}
-			return ret;
+		while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
+			addr = addr.getAddressOfChild(0);
 		}
+
+		IterationVector&& ret = visit(addr);
+
+		if ( subScops.empty() ) {
+			// this is a single stmt, therefore we can collect the references inside
+			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
+			// Add this statement to the scope for the parent node 
+			regionStmts.top().push_back( ScopStmt(AS_STMT_ADDR(addr), refs) );
+		} else {
+			// the substatement is a 
+			regionStmts.top().push_back( ScopStmt(AS_STMT_ADDR(addr), RefList()) );
+		}
+	
+		return ret;
 	}
 
 	/**********************************************************************************************
@@ -360,7 +348,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		ifStmt->addAnnotation( 
 			std::make_shared<ScopRegion>(ret, comb, ScopStmtList(), AddressList({thenAddr, elseAddr}))
 		);
-		
+
 		subScops.push_back( ifStmt );
 		
 		return ret;
@@ -426,6 +414,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			}catch(arithmetic::NotAFormulaException&& e) {
 				throw NotASCoP( e.getExpr() ); 
 			}	 
+			
 			return ret;
 		}
 	}
@@ -457,7 +446,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// clear Sub scops
 				subScops.clear();
 				NodeAddress&& nodeAddr = compStmt.getAddressOfChild(i);
-				ret = merge(ret, visitStmt( std::move(nodeAddr) ));
+				ret = merge(ret, visitStmt( nodeAddr ));
 				// copy the sub spawned scops 
 				std::copy(subScops.begin(), subScops.end(), std::back_inserter(scops));
 			} catch(NotASCoP&& e) { isSCOP = false; }
@@ -508,9 +497,17 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				);
 		}
 		scopList.push_back( std::make_pair(lambda, bodyIV) );
-		subScops.push_back( lambda );
+		//subScops.push_back( lambda );
 
 		return bodyIV;
+	}
+
+	IterationVector visitMarkerStmt(const MarkerStmtAddress& mark) {
+		return visit( mark.getAddressOfChild(0) );
+	}
+
+	IterationVector visitMarkerExpr(const MarkerExprAddress& mark) {
+		return visit( mark.getAddressOfChild(0) );
 	}
 
 	//IterationVector visitCallExpr(const CallExprPtr& callExpr) {
@@ -597,8 +594,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 
 	size_t pos = 0;
 	const ScopStmtList& scopStmts = region.stmts;
-	LOG(INFO) << scat.size();
-	LOG(INFO) << *scopStmts.front().getAddr();
+
 	// for every access in this region, convert the affine constraint to the new iteration vector 
 	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const ScopStmt& cur) { 
 			
@@ -829,6 +825,7 @@ void computeDataDependence(const NodePtr& root) {
 		}
 	);
 
+	if(domain && schedule && reads && writes ) {
 
 	std::cout << "D:=";
 	domain->printTo(std::cout);
@@ -858,6 +855,7 @@ void computeDataDependence(const NodePtr& root) {
 	LOG(DEBUG) << "Computing WAR dependencies: ";
 	buildDependencies(ctx, domain, schedule, writes, reads);
 	std::cout << std::endl;
+	}
 }
 
 //===== printSCoP ===================================================================
