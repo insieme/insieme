@@ -76,6 +76,20 @@ public:
 	}
 };
 
+/**
+ * A utility function simplifying the attachment of names to IR nodes.
+ *
+ * @param node the node the name should be attached to
+ * @param name the name to be attached
+ * @return the given node
+ */
+template<typename T>
+const T& attachCName(const T& node, const string& name) {
+	const core::NodePtr& cur = node;
+	cur->addAnnotation<annotations::c::CNameAnnotation>(name);
+	return node;
+}
+
 
 } // end namespace c_info
 } // end namespace annotations

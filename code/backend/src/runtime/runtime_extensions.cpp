@@ -51,55 +51,20 @@ namespace runtime {
 	const string DATA_ITEM_TYPE_NAME = "irt_di";
 	const string LW_DATA_ITEM_TYPE_NAME = "irt_lwdi";
 
-	namespace {
-
-		template<typename T>
-		const T& attachName(const T& node, const string& name) {
-			const core::NodePtr& cur = node;
-			cur->addAnnotation<annotations::c::CNameAnnotation>(name);
-			return node;
-		}
-	}
-
-	namespace lang = core::lang;
-
 	Extensions::Extensions(core::NodeManager& manager)
 		:
-		  runStandalone(lang::getLiteral(manager, 			"(irt_wi_implementation_id, irt_lwdi<'a>)->unit", 	"runStandalone")),
 
-		  contextType(lang::getType(manager, 				"irt_context")),
-		  workItemType(lang::getType(manager, 				"irt_wi")),
-		  workItemImplType(lang::getType(manager, 			"irt_wi_implementation_id")),
-		  workItemImplCtr(lang::getLiteral(manager, 		"(list<irt_wi_variant>)->irt_wi_implementation_id", "WorkItemImpl")),
-		  workItemVariantType(lang::getType(manager, 		"irt_wi_variant")),
-		  workItemVariantCtr(lang::getLiteral(manager, 		"((ref<irt_wi>)->unit)->irt_wi_variant",			"WorkItemVariant")),
-		  workItemVariantImplType(lang::getType(manager, 	"(ref<irt_wi>)->unit")),
+		// members are initialized using the content of the macro file
+		#define TYPE(_name, _type) 				_name(core::lang::getType(manager, _type)),
+		#define NTYPE(_name, _type, _cname)    	_name(annotations::c::attachCName(core::lang::getType(manager, _type), _cname)),
+		#define LITERAL(_name, _value, _type) 	_name(core::lang::getLiteral(manager, _type, _value)),
+		#include "insieme/backend/runtime/ir_extensions.def"
+		#undef TYPE
+		#undef NTYPE
+		#undef LITERAL
 
-		  registerWorkItemImpl(lang::getLiteral(manager, 	"(irt_wi_implementation_id)->unit", 				"registerImpl")),
-		  createWorkItem(lang::getLiteral(manager, 			"(uint<#a>,uint<#a>,uint<#a>,irt_wi_implementation_id,irt_di<'a>)->ref<irt_wi>", "createWI")),
-		  submitWorkItem(lang::getLiteral(manager, 			"(ref<irt_wi>)->unit", 								"submitWI")),
-		  joinWorkItem(lang::getLiteral(manager, 			"(ref<irt_wi>)->unit", 								"joinWI")),
-		  exitWorkItem(lang::getLiteral(manager, 			"(ref<irt_wi>)->unit", 								"irt_wi_end")),
-
-		  typeID(lang::getType(manager, 					"irt_type_id")),
-		  LWDataItemType(lang::getType(manager, 			"irt_lwdi<'a>")),
-		  wrapLWData(lang::getLiteral(manager, 				"('a)->irt_lwdi<'a>", 								"wrap")),
-		  unwrapLWData(lang::getLiteral(manager, 			"(irt_lwdi<'a>)->'a", 								"unwrap")),
-
-		  jobType(lang::getType(manager, 					"irt_parallel_job")),
-
-		  createJob(lang::getLiteral(manager, 				"(uint<8>,uint<8>,uint<8>,irt_wi_implementation_id,irt_lwdi<'a>)->irt_parallel_job" , "createJob")),
-		  parallel(lang::getLiteral(manager, 				"(irt_parallel_job)->ref<irt_wi>", 					"irt_parallel")),
-
-		  pfor(lang::getLiteral(manager, 					"(threadgroup,int<4>,int<4>,int<4>,irt_wi_implementation_id,irt_lwdi<'a>)->ref<irt_wi>", "irt_pfor")),
-		  merge(lang::getLiteral(manager, 					"(ref<irt_wi>)->unit", 								"irt_merge")),
-
-		  getWorkItemArgument(lang::getLiteral(manager, 	"(ref<irt_wi>, uint<#a>, type<irt_lwdi<'p>>, type<'a>)->'a", "getArg")),
-		  workItemRange(attachName(lang::getType(manager, 	"struct<begin:int<4>,end:int<4>,step:int<4>>"), "irt_work_item_range")),
-		  getWorkItemRange(lang::getLiteral(manager, 		"(ref<irt_wi>)->struct<begin:int<4>,end:int<4>,step:int<4>>", "getRange")) {}
-
-
-
+		dummy(0) // required since sequence must not end with a ,
+	{}
 
 
 	core::TypePtr DataItem::toDataItemType(const core::TypePtr& type) {
