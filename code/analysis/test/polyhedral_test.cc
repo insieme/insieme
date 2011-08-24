@@ -119,16 +119,16 @@ TEST(IterationVector, MergeEmpty) {
 	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
 	std::cout << iterVec1 << " " << iterVec2 << " " << itv;
 	poly::IterationVector::iterator it = itv.begin();
-	EXPECT_EQ(poly::Iterator(iter1), *(it++));
 	EXPECT_EQ(poly::Iterator(iter2), *(it++));
+	EXPECT_EQ(poly::Iterator(iter1), *(it++));
 //	EXPECT_EQ(poly::Parameter(param), *(it++));
 	EXPECT_EQ(poly::Constant(), *it);
 
 	poly::IterationVector itv2 = poly::merge(iterVec2, itv);
 	// std::cout << itv;
 	poly::IterationVector::iterator it2 = itv2.begin();
-	EXPECT_EQ(poly::Iterator(iter1), *(it2++));
 	EXPECT_EQ(poly::Iterator(iter2), *(it2++));
+	EXPECT_EQ(poly::Iterator(iter1), *(it2++));
 // 	EXPECT_EQ(poly::Parameter(param), *(it2++));
 	EXPECT_EQ(poly::Constant(), *it2);
 

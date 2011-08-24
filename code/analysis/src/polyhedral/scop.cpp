@@ -217,11 +217,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		//
 		// FIXME: In the future also scalars should be properly handled using technique like scalar
 		// arrays and so forth
-		LOG(INFO) << *body;
-		LOG(INFO) << "OK " << refs.size();
 		std::for_each(refs.arrays_begin(), refs.arrays_end(),
 			[&](const ArrayRefPtr& cur) { 
-				LOG(INFO) << "ARRAYREF " << cur->getBaseExpression(); 
 				const ArrayRef::ExpressionList& idxExprs = cur->getIndexExpressions();
 				std::for_each(idxExprs.begin(), idxExprs.end(), 
 					[&](const ExpressionAddress& cur) { 
