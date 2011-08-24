@@ -268,7 +268,28 @@ TEST(AffineFunction, CreationFromExpr) {
 		af.printTo(ss);
 		EXPECT_EQ("1*v1 + 1*v3", ss.str());
 	}
+}
 
+TEST(AffineFunction, Equality) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Parameter(iter2) ); 
+	
+	poly::AffineFunction af1(iterVec1, {1,1,0});
+	
+	poly::IterationVector iterVec2; 
+	iterVec2.add( poly::Iterator(iter2) ); 
+	iterVec2.add( poly::Parameter(iter1) ); 
+		
+	poly::AffineFunction af2(iterVec2, {1,1,0});
+	
+	EXPECT_NE(af1, af2);
 }
 
 TEST(AffineFunction, AFChangeBase) {
