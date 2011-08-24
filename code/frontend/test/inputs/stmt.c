@@ -89,7 +89,7 @@ void unary_op_test() {
 	#pragma test "decl ref<int<4>> v1 = ( var(0))"
 	int a = 0;
 
-	#pragma test "(!int.ne(( *v1), 0))"
+	#pragma test "(!(( *v1)!=0))"
 	!a;
 
 	#pragma test "( *v1)"
@@ -153,7 +153,7 @@ void if_stmt_test() {
 	int cond = 0;
 
 	#pragma test \
-	"if(int.ne(( *v1), 0)) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
+	"if((( *v1)!=0)) { (v1 := (( *v1)+1));} else { (v1 := (( *v1)-1));}"
 	if(cond) {
 		cond += 1;
 	} else {
@@ -168,7 +168,7 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"ite(int.ne(( *v1), 0), bind(){fun(ref<int<4>> v4)return (( *v4)+1)(v1)}, bind(){fun(ref<int<4>> v2)return (( *v2)-1)(v1)})"
+	"ite((( *v1)!=0), bind(){fun(ref<int<4>> v4)return (( *v4)+1)(v1)}, bind(){fun(ref<int<4>> v2)return (( *v2)-1)(v1)})"
 	a ? a+1 : a-1;
 
 	#pragma test \
@@ -176,7 +176,7 @@ void if_stmt_test() {
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
-	"if(((( *v1)>0)&&bind(){fun(ref<int<4>> v2)return int.ne(( *v2), 1)(v1)})) { { };} else { }"
+	"if(((( *v1)>0)&&bind(){fun(ref<int<4>> v2)return (( *v2)!=1)(v1)})) { { };} else { }"
 	if(cond > 0 && cond != 1) {	; }
 }
 
@@ -331,7 +331,7 @@ void switch_stmt_test() {
 void while_stmt_test() {
 	int it = 0;
 	#pragma test \
-	"while(int.ne(( *v1), 0)) { (v1 := (( *v1)-1));}"
+	"while((( *v1)!=0)) { (v1 := (( *v1)-1));}"
 	while(it != 0) { it-=1; }
 
 	#pragma test \
