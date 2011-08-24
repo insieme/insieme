@@ -47,9 +47,9 @@ bool Element::operator==(const Element& other) const {
 	if (this == &other) { return true; }
 
 	if (type == other.type) {
-		if(type == ITER || type == PARAM) 
-			return *static_cast<const Variable&>(*this).getVariable() == 
-				   *static_cast<const Variable&>(other).getVariable();
+		if(type == ITER || type == PARAM) {
+			return *static_cast<const Expr&>(*this).getExpr() == *static_cast<const Expr&>(other).getExpr();
+		} 
 		else 
 			return true;
 	}
@@ -59,14 +59,13 @@ bool Element::operator==(const Element& other) const {
 bool Element::operator<(const Element& other) const {
     if (type != other.type) { return type < other.type; }
 	if (type == ITER || type == PARAM) { 
-		return static_cast<const Variable&>(*this).getVariable()->getId() < 
-			static_cast<const Variable&>(other).getVariable()->getId(); }
+		return &*static_cast<const Expr&>(*this).getExpr() < &*static_cast<const Expr&>(other).getExpr(); }
     return false;
 }
 
 std::ostream& Iterator::printTo(std::ostream& out) const { return out << *getVariable(); }
 
-std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getVariable(); }
+std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getExpr(); }
 
 //====== IterationVector ==========================================================================
 
@@ -121,12 +120,12 @@ void merge_add(IterationVector& dest,
 		typename std::vector<T>::const_iterator aBegin, 
 		typename std::vector<T>::const_iterator aEnd, 
 		typename std::vector<T>::const_iterator bBegin, 
-		typename std::vector<T>::const_iterator bEnd ) 
+		typename std::vector<T>::const_iterator bEnd )
 {
-	std::set<T> varSet;
-    std::set_union(aBegin, aEnd, bBegin, bEnd, std::inserter(varSet, varSet.begin()));
-	std::for_each(varSet.begin(), varSet.end(), [&dest](const T& cur) { 
-		if ( dest.getIdx(static_cast<const poly::Variable&>(cur).getVariable()) == -1 ) { 
+	std::vector<T> varSet;
+    std::set_union(aBegin, aEnd, bBegin, bEnd, std::back_inserter(varSet));
+	std::for_each(varSet.begin(), varSet.end(), [&dest] (const T& cur) { 
+		if (dest.getIdx(cur.getExpr()) == -1 ) { 
 			dest.add(cur); 
 		}
 	} );
@@ -152,8 +151,8 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 	IndexTransMap transMap;
 	std::for_each(src.begin(), src.end(), [&](const Element& cur) {
 			int idx = 0;
-			if (cur.getType() != Element::CONST) {
-				idx = trg.getIdx( static_cast<const Variable&>(cur).getVariable() ); 
+			if (cur.getType() == Element::ITER || cur.getType() == Element::PARAM) {
+				idx = trg.getIdx( static_cast<const Expr&>(cur).getExpr() ); 
 			} else {
 				idx = trg.getIdx(cur);
 			}

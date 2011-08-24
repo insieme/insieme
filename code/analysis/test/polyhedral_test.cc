@@ -117,7 +117,7 @@ TEST(IterationVector, MergeEmpty) {
 	poly::IterationVector iterVec2; 
 
 	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
-	// std::cout << itv;
+	std::cout << iterVec1 << " " << iterVec2 << " " << itv;
 	poly::IterationVector::iterator it = itv.begin();
 	EXPECT_EQ(poly::Iterator(iter1), *(it++));
 	EXPECT_EQ(poly::Iterator(iter2), *(it++));
@@ -144,18 +144,18 @@ TEST(IterationVector, Merge) {
 	poly::IterationVector iterVec1; 
 	iterVec1.add( poly::Iterator(iter1) ); 
 	iterVec1.add( poly::Parameter(param) ); 
-	// std::cout << iterVec1 << std::endl;
+	std::cout << iterVec1 << std::endl;
 
 	poly::IterationVector iterVec2; 
 	iterVec2.add( poly::Parameter(param) ); 
 	iterVec2.add( poly::Iterator(iter2) ); 
-	// std::cout << iterVec2 << std::endl; 
+	std::cout << iterVec2 << std::endl; 
 
 	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
-	// std::cout << itv;
+	std::cout << itv << std::endl;
 	poly::IterationVector::iterator it = itv.begin();
-	EXPECT_EQ(poly::Iterator(iter1), *(it++));
 	EXPECT_EQ(poly::Iterator(iter2), *(it++));
+	EXPECT_EQ(poly::Iterator(iter1), *(it++));
 	EXPECT_EQ(poly::Parameter(param), *(it++));
 	EXPECT_EQ(poly::Constant(), *it);
 }

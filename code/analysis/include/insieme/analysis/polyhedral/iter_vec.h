@@ -90,12 +90,12 @@ private:
  * A Variable in a wrapper for an IR Variable. We use the wrapper in order to solve error with the
  * resolution of the == operator by the compiler. 
  *************************************************************************************************/
-class Variable : public Element {
-	core::VariablePtr var;
+class Expr : public Element {
+	core::ExpressionPtr expr;
 public:
-	Variable(const Type& type, const core::VariablePtr& var) : Element(type),  var(var) { } 
-	core::VariablePtr getVariable() const { return var; } 
-	virtual ~Variable() { }
+	Expr(const Type& type, const core::ExpressionPtr& expr) : Element(type),  expr(expr) { } 
+	const core::ExpressionPtr& getExpr() const { assert(expr); return expr; } 
+	virtual ~Expr() { }
 };
 
 /************************************************************************************************** 
@@ -103,9 +103,13 @@ public:
  * always listed at the beginning of the iterator vector and their order refers to the nesting
  * levels. 
  *************************************************************************************************/
-struct Iterator : public Variable {
-	Iterator(const core::VariablePtr& var) : Variable(Element::ITER, var) { } 
+struct Iterator : public Expr {
+	Iterator(const core::VariablePtr& var) : Expr(Element::ITER, var) { } 
 	
+	const core::VariablePtr& getVariable() const { 
+		return core::static_pointer_cast<const core::Variable>(getExpr()); 
+	}
+
 	// Implements the printable interface
 	std::ostream& printTo(std::ostream& out) const;
 };
@@ -115,8 +119,8 @@ struct Iterator : public Variable {
  * variables are not loop iterators. In the IR these variables are still represented as Variable, so
  * we use the same base class as Iterators.  
  *************************************************************************************************/
-struct Parameter : public Variable {
-	Parameter(const core::VariablePtr& var) : Variable(Element::PARAM, var) { }	
+struct Parameter : public Expr {
+	Parameter(const core::ExpressionPtr& expr) : Expr(Element::PARAM, expr) { }	
 	
 	// Implements the Printable interface
 	std::ostream& printTo(std::ostream& out) const; 
@@ -247,11 +251,13 @@ public:
 	 * Search for a Variable inside this iteration vector, check if the variable is within the
 	 * iterators and the parameters, it returns -1 id the variable was not found
 	 * */
-	int getIdx(const core::VariablePtr& var) const {
-		int idx = getIdx( Iterator(var) );
-		if ( idx != -1 ) {
-			assert(getIdx( Parameter(var) ) == -1 && "Variable is both among the iterators and parameters.");
-			return idx;
+	int getIdx(const core::ExpressionPtr& var) const {
+		if (var->getNodeType() == core::NT_Variable) {
+			int idx = getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) );
+			if ( idx != -1 ) {
+				assert(getIdx( Parameter(var) ) == -1 && "Variable is both among the iterators and parameters.");
+				return idx;
+			}
 		}
 		return getIdx( Parameter(var) );
 	}

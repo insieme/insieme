@@ -597,6 +597,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 
 	size_t pos = 0;
 	const ScopStmtList& scopStmts = region.stmts;
+	LOG(INFO) << scat.size();
+	LOG(INFO) << *scopStmts.front().getAddr();
 	// for every access in this region, convert the affine constraint to the new iteration vector 
 	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const ScopStmt& cur) { 
 			

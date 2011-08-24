@@ -174,11 +174,9 @@ struct ISLConstraintConverterVisitor : public ConstraintVisitor {
 template <class IterT>
 void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin, IterT const& end) {
 	for(IterT it = begin; it != end; ++it) {
-		assert(dynamic_cast<const Variable*>(&*it) != NULL && "Element of not Variable type");
-		const poly::Variable& var = static_cast<const Variable&>(*it);
-		isl_dim_set_name(dim, type, std::distance(begin, it), 
-				var.getVariable()->toString().c_str()
-			);
+		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
+		const poly::Expr& var = static_cast<const Expr&>(*it);
+		isl_dim_set_name(dim, type, std::distance(begin, it), var.getExpr()->toString().c_str());
 	}
 }
 
@@ -215,6 +213,8 @@ Set<IslContext>::Set(
 	} 
 	set = isl_union_set_from_set(tset);
 }
+
+bool Set<IslContext>::isEmpty() const { return isl_union_set_is_empty(set);	}
 
 std::ostream& Set<IslContext>::printTo(std::ostream& out) const {
 	printIslSet(out, ctx.getRawContext(), set); 
@@ -268,6 +268,8 @@ std::ostream& Map<IslContext>::printTo(std::ostream& out) const {
 	printIslMap(out, ctx.getRawContext(), map); 
 	return out;
 }
+
+bool Map<IslContext>::isEmpty() const { return isl_union_map_is_empty(map);	}
 
 // void IslMap::intersect(const Set<IslContext>& set) {
 //	map = isl_map_intersect_domain( map, isl_set_copy(static_cast<const IslSet&>(set).set) );

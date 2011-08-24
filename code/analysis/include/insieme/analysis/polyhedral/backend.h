@@ -53,9 +53,11 @@ struct Set : public utils::Printable {
 	
 	typedef Ctx ctx_type;
 
-	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	virtual ~Set() { }
+	bool isEmpty() const = 0;
+
+	~Set() { }
 private:
 	Set();
 };
@@ -65,9 +67,11 @@ struct Map : public utils::Printable {
 
 	typedef Ctx ctx_type;
 
-	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	virtual ~Map() { }
+	bool isEmpty() const = 0;
+
+	~Map() { }
 
 private:
 	Map();
