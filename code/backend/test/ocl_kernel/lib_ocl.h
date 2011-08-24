@@ -67,9 +67,6 @@ typedef enum {IRT_OCL_SOURCE, IRT_OCL_BINARY, IRT_OCL_STRING, IRT_OCL_NO_CACHE} 
 
 typedef struct _irt_ocl_kernel {
 	cl_kernel kernel;
-	cl_uint work_dim;
-	size_t* global_work_size;
-	size_t* local_work_size;
 
 	irt_ocl_device* dev;
 } irt_ocl_kernel;

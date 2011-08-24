@@ -664,9 +664,6 @@ irt_ocl_kernel*  irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_nam
 		kernel = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel));
 		kernel->kernel = clCreateKernel(program, kernel_name, &err_code);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error creating kernel: \"%s\"", _irt_error_string(err_code));
-		kernel->work_dim = 0;
-		kernel->global_work_size = 0;
-		kernel->local_work_size = 0;
 		kernel->dev = dev;
 	}
 	err_code = clReleaseProgram(program);
@@ -681,9 +678,6 @@ inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 }
 
 void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...) {
-	kernel->work_dim = work_dim;
-	kernel->global_work_size = global_work_size;
-	kernel->local_work_size = local_work_size;
 	
 	//loop through the arguments and call clSetKernelArg for each argument
 	cl_uint arg_index;
@@ -708,10 +702,10 @@ void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global
 
 	err_code = clEnqueueNDRangeKernel((kernel->dev)->queue, 
 						kernel->kernel, 
-						kernel->work_dim,
+						work_dim,
 						NULL, 
-						kernel->global_work_size,
-						kernel->local_work_size,
+						global_work_size,
+						local_work_size,
 						0, NULL, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error enqueuing NDRange Kernel: \"%s\"", _irt_error_string(err_code));
 }
