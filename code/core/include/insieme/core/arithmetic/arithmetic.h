@@ -52,7 +52,99 @@ namespace arithmetic {
 	using std::pair;
 
 	/**
-	 * A class representing the product of variables. The class is responsible
+	 * A class representing an atomic value within formulas. Such an atomic
+	 * value might be a single variable, a dereferenced variable, a projected
+	 * tuple or any other term considered to be a simple value read.
+	 *
+	 * Generally, everything which can be read several times during the evaluation
+	 * of an arithmetic expression without causing side effects may be considered
+	 * to be a value.
+	 */
+	class Value : public utils::Printable {
+
+		/**
+		 * The value to be represented by this class.
+		 */
+		ExpressionPtr value;
+
+	public:
+
+		/**
+		 * Creates a new value representing the given variable. This
+		 * constructor also realizes support for implicit variable to
+		 * value conversions.
+		 */
+		Value(const VariablePtr& var) : value(var) {};
+
+		/**
+		 * Creates a new value instance based on the given
+		 * expression. The value has to be accepted by the
+		 * isValue(..) test, otherwise an exception is raised.
+		 *
+		 * @param value the value to be represented.
+		 */
+		Value(const ExpressionPtr& value);
+
+		/**
+		 * A static test allowing to verify whether a given expression
+		 * is a valid encoding of a value. Valid encodings are for instance
+		 * variables, dereferences of variables as well as struct and
+		 * tuple accesses.
+		 *
+		 * @param expr the expression to be tested
+		 * @return true if it is a valid encoding, false otherwise
+		 */
+		static bool isValue(const ExpressionPtr& expr);
+
+		/**
+		 * An implicit converter of a value into an expression pointer.
+		 * The resulting expression will be the expression represented
+		 * by this value.
+		 */
+		operator ExpressionPtr() const {
+			return value;
+		}
+
+		/**
+		 * Compares this value with another value. Two values are equivalent if
+		 * they are defined by the same expression.
+		 *
+		 * @param other the value to be compared with
+		 * @return true if equivalent, false otherwise
+		 */
+		bool operator==(const Value& other) const {
+			return this==&other || *value == *other.value;
+		}
+
+		/**
+		 * Compares this value with another value. The result is simply the negation
+		 * of the equality operator.
+		 *
+		 * @param other the value to be compared to
+		 * @return true if not equivalent, false otherwise
+		 */
+		bool operator!=(const Value& other) const {
+			return !(*this == other);
+		}
+
+		/**
+		 * Defines a total order on values. The order will be based on the structure
+		 * of the represented expression.
+		 *
+		 * @param other the value to be compared with
+		 * @return true if this value is smaller (not in the numerical sense), false otherwise
+		 */
+		bool operator<(const Value& other) const;
+
+		/**
+		 * This method is required by the printable interface and allows
+		 * instances of this class to be printed to some output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+	};
+
+	/**
+	 * A class representing the product of variables/values. The class is responsible
 	 * to aggregate exponents when multiplying equivalent variables several times
 	 * and it is defining a order over all products of variables.
 	 */
@@ -62,10 +154,10 @@ namespace arithmetic {
 
 		/**
 		 * The type used to represent a single factor. A factor consists of the
-		 * represented variable and its exponent. The exponent must never be 0.
+		 * represented value and its exponent. The exponent must never be 0.
 		 * However, the exponent may be negative.
 		 */
-		typedef pair<VariablePtr, int> Factor;
+		typedef pair<Value, int> Factor;
 
 	private:
 
@@ -96,9 +188,17 @@ namespace arithmetic {
 		 * Creates a product consisting of a single variable and its exponent.
 		 *
 		 * @param var the variable to be included
-		 * @param exponent the exponent to be assigned to the given variable
+		 * @param exponent the exponent to be assigned to the given value
 		 */
-		Product(const core::VariablePtr& var, int exponent = 1);
+		Product(const VariablePtr& var, int exponent = 1);
+
+		/**
+		 * Creates a product consisting of a single value and its exponent.
+		 *
+		 * @param value the value to be included
+		 * @param exponent the exponent to be assigned to the given value
+		 */
+		Product(const Value& value, int exponent = 1);
 
 		/**
 		 * Obtains a constant reference to the internally maintained factors.
@@ -166,10 +266,10 @@ namespace arithmetic {
 		/**
 		 * Obtains the exponent of the given variable within this product.
 		 *
-		 * @param var the variable for which's product to be looking for
+		 * @param value the value for which's product to be looking for
 		 * @return the associated exponent or 0 if the variable is not included.
 		 */
-		int operator[](const VariablePtr& var) const;
+		int operator[](const Value& value) const;
 
 		/**
 		 * Compares this product with another product. Two products are equivalent if
@@ -265,6 +365,18 @@ namespace arithmetic {
 		 * @param coefficient the coefficient of the resulting term within the resulting formula (must be != 0)
 		 */
 		Formula(const core::VariablePtr& var, int exponent = 1, int coefficient = 1);
+
+		/**
+		 * A constructor supporting the creation of a formula consisting of a single
+		 * term covering a single value. The Values exponent and coefficient can
+		 * be stated as well. This constructor also enables the implicit conversion
+		 * of values into formulas.
+		 *
+		 * @param value the value to be covered
+		 * @param exponent the exponent of the given variable within the resulting formula (must be != 0)
+		 * @param coefficient the coefficient of the resulting term within the resulting formula (must be != 0)
+		 */
+		Formula(const Value& value, int exponent = 1, int coefficient = 1);
 
 		/**
 		 * A constructor supporting the creation of a formula consisting of a single term.

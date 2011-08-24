@@ -129,6 +129,10 @@ public:
 	// return an INSPIRE equivalent of clCreateBuffer/irt_ocl_create_buffer
 	const core::ExpressionPtr getCreateBuffer(const core::ExpressionPtr& flags, const core::ExpressionPtr& sizeArg,
 			const bool copyPtr, const core::ExpressionPtr& hostPtr, const core::ExpressionPtr& errcode_ret);
+
+	// puts the passed argument in the right place inside the kernelArgs map
+	const core::ExpressionPtr collectArgument(const core::ExpressionPtr& kernelArg, const core::ExpressionPtr& index, const core::ExpressionPtr& sizeArg,
+			core::ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls);
 };
 
 /*
@@ -224,6 +228,10 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	core::ExpressionPtr getCreateBuffer(const string& handleName, const core::ExpressionPtr& flags, const core::ExpressionPtr& sizeArg, const bool copyPtr,
 			const core::ExpressionPtr& hostPtr, const core::ExpressionPtr& errcode_ret) {
 		return handles[handleName]->getCreateBuffer(flags, sizeArg, copyPtr, hostPtr, errcode_ret);
+	}
+	const core::ExpressionPtr collectArgument(const string& handleName, const core::ExpressionPtr& kernel, const core::ExpressionPtr& index,
+			const core::ExpressionPtr& sizeArg, const core::ExpressionPtr& arg) {
+		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls);
 	}
 public:
 	HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);
