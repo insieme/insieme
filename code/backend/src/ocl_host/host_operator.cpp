@@ -46,6 +46,7 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/utils/string_utils.h"
 
@@ -67,10 +68,53 @@ namespace ocl_host {
 			KernelCodeTablePtr table = KernelCodeTable::get(context.getConverter());
 			context.addDependency(table);
 
+			const ocl_kernel::Extensions& ext = NODE_MANAGER.getLangExtension<ocl_kernel::Extensions>();
+
+			static const char* codeTemplate = "\n\n"
+					"irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][%1$d];\n"
+					"irt_ocl_set_kernel_ndrange(kernel, 1, irt_ocl_get_global_size(%1$d), irt_ocl_get_global_size(%1$d));\n"
+					"irt_ocl_run_kernel(kernel, %2$d %3$s);\n\n";
+
+			// derive some infos
 			unsigned kernelID = table->registerKernel(call);
+			unsigned numArgs = call->getArguments().size();
+
+			std::stringstream argList;
+			for_each(call->getArguments(), [&](const core::ExpressionPtr& cur) {
+				c_ast::ExpressionPtr arg = CONVERT_EXPR(cur);
+				if (ext.isWrapperType(cur->getType())) {
+					argList << ", (size_t)0";
+				} else {
+					argList << ", " << c_ast::toC(c_ast::sizeOf(CONVERT_TYPE(cur->getType())));
+				}
+				argList << ", " << c_ast::toC(arg);
+			});
+
+			return C_NODE_MANAGER->create<c_ast::Literal>(format(codeTemplate, kernelID, numArgs, argList.str().c_str()));
+
+			/*
+		irt_ocl_device* dev = irt_ocl_get_device(0);
+		irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][0];
+
+		 irt_ocl_buffer* buf_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
+
+		irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);
 
 
-			return C_NODE_MANAGER->create<c_ast::Literal>("");
+	irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
+
+	irt_ocl_run_kernel(kernel, 3,   (size_t)0, (void *)buf_input,
+								 (size_t)0, (void *)buf_output,
+								 sizeof(cl_long), (void *)&len_input);
+
+	 irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
+
+
+	irt_ocl_release_buffer(buf_input);
+			 */
+
+
+			//return C_NODE_MANAGER->create<c_ast::Literal>("");
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

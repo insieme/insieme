@@ -66,6 +66,7 @@ namespace ocl_host {
 
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
 
+		StmtHandlerList getStmtHandlerList();
 	}
 
 	OCLHostBackendPtr OCLHostBackend::getDefault() {
@@ -106,7 +107,7 @@ namespace ocl_host {
 		TypeManager typeManager(converter, getBasicTypeIncludeTable(), TypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
-		StmtConverter stmtConverter(converter);
+		StmtConverter stmtConverter(converter, getStmtHandlerList());
 		converter.setStmtConverter(&stmtConverter);
 
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getBasicFunctionIncludeTable());
@@ -124,6 +125,12 @@ namespace ocl_host {
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res = getBasicOperatorTable(manager);
 			return addOpenCLHostSpecificOps(manager, res);
+		}
+
+		StmtHandlerList getStmtHandlerList() {
+			StmtHandlerList res;
+			res.push_back(OpenCLStmtHandler);
+			return res;
 		}
 	}
 
