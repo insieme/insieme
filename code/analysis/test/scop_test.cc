@@ -175,7 +175,7 @@ TEST(ScopRegion, ForStmt) {
 				(int<4>:h = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1))));\
 			};\
 		}") );
-	// std::cout << *forStmt << std::endl;
+	std::cout << *forStmt << std::endl;
 	scop::mark(forStmt);
 
 	EXPECT_FALSE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );
@@ -196,13 +196,13 @@ TEST(ScopRegion, ForStmt) {
 	{
 		std::ostringstream ss;
 		ss << iterVec;
-		EXPECT_EQ("(|v12,v16|1)", ss.str());
+		EXPECT_EQ("(|v16,v12|1)", ss.str());
 	}
 
 	{
 		std::ostringstream ss;
 		ss << *ann.getDomainConstraints();
-		EXPECT_EQ("(1*v12 + -25*1 > 0)", ss.str());
+		EXPECT_EQ("(1*v16 + -25*1 > 0)", ss.str());
 	}
 
 
