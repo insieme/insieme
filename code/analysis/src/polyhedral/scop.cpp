@@ -232,7 +232,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		CHECK_STACK_SIZE;
 		
 		assert(subScops.empty());
-		if (addr->getNodeType() == NT_CompoundStmt) { return visit(addr); }
 
 		while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
 			addr = addr.getAddressOfChild(0);
@@ -249,7 +248,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// the substatement is a 
 			regionStmts.top().push_back( ScopStmt(AS_STMT_ADDR(addr), RefList()) );
 		}
-	
 		return ret;
 	}
 
@@ -399,7 +397,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				cons = Constraint(lb, Constraint::GE) and Constraint(ub, Constraint::LT);
 
 				forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, regionStmts.top(), subScops) ); 
-
+				
+				subScops.clear();
 				// add this statement as a subscop
 				subScops.push_back(forStmt);
 			
@@ -429,12 +428,17 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		IterationVector ret;
 		bool isSCOP = true;
 		AddressList scops;
-		
+	
+		assert(subScops.empty());
+
 		if ( compStmt->hasAnnotation(ScopRegion::KEY) ) {
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
 			return compStmt->getAnnotation(ScopRegion::KEY)->getIterationVector();
 		}
+
+		regionStmts.push( RegionStmtStack::value_type() );
+		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
 
 		for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
 			// make sure at every iteration the stack size is not growing within this compound stmt
@@ -446,7 +450,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				ret = merge(ret, visitStmt( nodeAddr ));
 				// copy the sub spawned scops 
 				std::copy(subScops.begin(), subScops.end(), std::back_inserter(scops));
-			} catch(NotASCoP&& e) { isSCOP = false; }
+			} catch(NotASCoP&& e) { 
+				isSCOP = false; 
+			}
 		}
 
 		// make the SCoPs available for the parent node 	
@@ -458,6 +464,12 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// to the scop list the roots for valid ScopRegions inside this compound statement 
 			for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
 				StatementAddress addr = AS_STMT_ADDR(compStmt.getAddressOfChild(i));
+				
+				// Get rid of marker statements 
+				while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
+					addr = AS_STMT_ADDR(addr.getAddressOfChild(0));
+				}
+
 				if (addr->hasAnnotation(ScopRegion::KEY)) { 
 					scopList.push_back( 
 						std::make_pair(addr, addr->getAnnotation(ScopRegion::KEY)->getIterationVector()) 
@@ -466,6 +478,18 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			}
 			throw NotASCoP(compStmt.getAddressedNode()); 
 		}
+
+		fa.setEnabled(false);
+		
+		// Mark this CompoundStmts because it is a Scop
+		compStmt->addAnnotation( 
+			std::make_shared<scop::ScopRegion>(ret, poly::ConstraintCombinerPtr(), regionStmts.top(), subScops) 
+		);
+
+		subScops.clear();
+		subScops.push_back( compStmt );
+
+		regionStmts.pop();
 
 		return ret;
 	}
@@ -563,6 +587,11 @@ std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	if (!subScops.empty()) {
 		out << "\\nSubScops: " << subScops.size();
 	}
+	
+	//for_each(subScops.begin(), subScops.end(), [&](const AddressList::value_type& cur) { 
+//			out << "SubSCOP: " << *cur.getAddressedNode() << std::endl; 
+//		});
+
 	//if (!accesses.empty()) {
 		//out << "\\nAccesses: " << accesses.size() << "{" 
 			//<< join(",", accesses, [&](std::ostream& jout, const RefPtr& cur){ jout << *cur; } ) 
@@ -591,6 +620,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 
 	size_t pos = 0;
 	const ScopStmtList& scopStmts = region.stmts;
+	
+	LOG(DEBUG) << region;
 
 	// for every access in this region, convert the affine constraint to the new iteration vector 
 	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const ScopStmt& cur) { 
