@@ -52,48 +52,8 @@ namespace ocl_host{
 			return builder.genericType("irt_ocl_buffer");
 		}
 
-		const core::LiteralPtr getCreateAllKernels(core::NodeManager& manager) {
-		/*			core::ASTBuilder builder(manager);
-					auto& basic = manager.basic;
-
-					core::TypePtr refKernelType = builder.refType(getKernelType(manager));
-					core::TypePtr refDeviceType = builder.refType(getDeviceType(manager));
-					core::TypePtr refCharType = builder.refType(basic.getChar());
-					core::TypePtr enumType = builder.genericType("irt_ocl_create_kernel_flag");
-
-
-					//irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
-					// FIXME: Wrong type
-					core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refDeviceType, refCharType, refCharType,refCharType, enumType), refKernelType);
-
-					return builder.literal(type, "irt_ocl_rt_create_all_kernels");
-		*/
-		}
-
-		const core::LiteralPtr getRunKernel(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr uint8Type = basic.getUInt8(); // FIXME: REFTYPE
-			core::TypePtr uint4Type = basic.getUInt4();
-			core::TypePtr varListType = basic.getVarList();
-
-			//void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_siz, cl_uint num_args, ...);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(uint4Type, uint4Type, uint8Type, uint8Type, uint4Type, varListType), basic.getUnit());
-			return builder.literal(type, "irt_ocl_rt_run_kernel");
-		}
-
-
-		const core::LiteralPtr getReleaseAllKernels(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			//irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size)
-			core::TypePtr uint8Type = basic.getUInt8();
-
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(uint8Type), basic.getUnit()); //FIXME: wrong type
-
-			return builder.literal(type, "irt_ocl_rt_release_all_kernels");
+		const core::LiteralPtr getCallKernel(core::NodeManager& manager) {
+			return core::lang::getLiteral(manager, "('a,vector<uint<4>,#l>,vector<uint<4>,#l>,var_list)->unit", "call_kernel");
 		}
 
 		const core::LiteralPtr getCreateBuffer(core::NodeManager& manager) {
@@ -154,8 +114,7 @@ namespace ocl_host{
 
 
 	Extensions::Extensions(core::NodeManager& manager)
-		  : createAllKernels(getCreateAllKernels(manager)), releaseAllKernels(getReleaseAllKernels(manager)),
-			runKernel(getRunKernel(manager)),
+		  : callKernel(getCallKernel(manager)),
 
 			createBuffer(getCreateBuffer(manager)), readBuffer(getReadBuffer(manager)),
 			writeBuffer(getWriteBuffer(manager)), releaseBuffer(getReleaseBuffer(manager)) {}

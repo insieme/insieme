@@ -408,6 +408,9 @@ namespace c_ast {
 
 		Call(NodePtr function) : Expression(NT_Call), function(function) {}
 
+		Call(NodePtr function, const vector<ExpressionPtr>& args)
+			: Expression(NT_Call), function(function), arguments(args) {}
+
 		template<typename ... E>
 		Call(NodePtr function, E ... args)
 			: Expression(NT_Call), function(function), arguments(toVector<ExpressionPtr>(args...)) {}
