@@ -59,10 +59,20 @@ namespace ocl_host {
 
 		c_ast::NodePtr createKernelCall(ConversionContext& context, const core::CallExprPtr& call) {
 
-			static const char* codeTemplate = "\n\n"
+			/*static const char* codeTemplate = "\n\n"
 					"irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][%1$d];\n"
 					"irt_ocl_set_kernel_ndrange(kernel, 1, irt_ocl_get_global_size(%1$d), irt_ocl_get_local_size(%1$d));\n"
-					"irt_ocl_run_kernel(kernel, %2$d%3$s)";
+					"irt_ocl_run_kernel(kernel, %2$d%3$s)";*/
+
+			static const char* codeTemplate = "\n\n"
+					"irt_ocl_rt_run_kernel(%1$d, dim, glob, loc, %2$d%3$s)";
+
+			/*
+			irt_ocl_rt_run_kernel(0,	1, &szGlobalWorkSize, &szLocalWorkSize,
+										3,	(size_t)0, (void *)buf_input,
+										(size_t)0, (void *)buf_output,
+										sizeof(cl_long), (void *)&len_input);
+			*/
 
 			const Converter& converter = context.getConverter();
 			StmtConverter& stmtConverter = converter.getStmtConverter();

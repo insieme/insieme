@@ -81,7 +81,7 @@ struct Ref : public utils::Printable {
 	// ARRAY:  reference to arrays 
 	// CALL:   return value of a function returning a reference 
 	// ANY:    used in the RefList class in order to iterate through any reference type 
-	enum RefType { ANY_REF=-1, VAR, ARRAY, MEMBER, CALL };
+	enum RefType { ANY_REF=-1, SCALAR, ARRAY, MEMBER, CALL };
 
 	std::ostream& printTo(std::ostream& out) const;
 
@@ -218,18 +218,18 @@ public:
 	};
 	// Iterates through all the references 
 	RefList::ref_iterator<Ref> refs_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
-		return ref_iterator<Ref>(begin(), end(), Ref::VAR, usage);
+		return ref_iterator<Ref>(begin(), end(), Ref::ANY_REF, usage);
 	}
 	RefList::ref_iterator<Ref> refs_end(const Ref::UseType& usage=Ref::ANY_USE) { 
-		return ref_iterator<Ref>(end(), end(), Ref::VAR, usage); 
+		return ref_iterator<Ref>(end(), end(), Ref::ANY_REF, usage); 
 	}
 
 	// Iterates through the scalar references only 
 	RefList::ref_iterator<ScalarRef> scalars_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
-		return ref_iterator<ScalarRef>(begin(), end(), Ref::VAR, usage); 
+		return ref_iterator<ScalarRef>(begin(), end(), Ref::SCALAR, usage); 
 	}
 	RefList::ref_iterator<ScalarRef> scalars_end(const Ref::UseType& usage=Ref::ANY_USE) { 
-		return ref_iterator<ScalarRef>(end(), end(), Ref::VAR, usage); 
+		return ref_iterator<ScalarRef>(end(), end(), Ref::SCALAR, usage); 
 	}
 
 	// Iterates through the array references only 

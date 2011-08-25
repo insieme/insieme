@@ -42,7 +42,7 @@
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/core/printer/pretty_printer.h"
-
+#include "insieme/core/parser/ir_parse.h"
 namespace insieme {
 namespace core {
 namespace arithmetic {
@@ -199,6 +199,18 @@ TEST(ArithmeticTest, nonVariableValues) {
 	EXPECT_PRED1(empty, check(toIR(manager,f), all));
 
 
+}
+
+TEST (ArithmeticTest, fromIRExpr) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
+	auto expr = parser.parseStatement("((((0 * 4) * 4) + (0 * 4)) + int<4>:v1)");
+
+	EXPECT_EQ("int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v1)", expr->toString());
+
+	auto f = toFormula(static_pointer_cast<const Expression>(expr));
+	EXPECT_EQ("v1", toString(f));
 }
 
 } // end namespace arithmetic

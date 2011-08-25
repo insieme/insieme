@@ -185,6 +185,7 @@ private:
 	static void resolveScop(const poly::IterationVector& 	iterVec, 
 					 poly::IterationDomain 					parentDomain, 
 			 	   	 const ScopRegion& 						region,
+					 size_t&								pos,
 					 const poly::ScatteringFunction& 		curScat,
 					 IteratorOrder& 						iterators,
 					 ScatteringMatrix& 						finalScat,
