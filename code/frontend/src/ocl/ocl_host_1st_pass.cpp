@@ -127,14 +127,13 @@ bool KernelCodeRetriver::visitCallExpr(const core::CallExprPtr& callExpr) {
 	} else {
 		return true;
 	}
-	if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(0))) {
-		if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(rhs->getArgument(0))) {
-			if (const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-				if (stringAsChar->getValue() == "string.as.char.pointer") {
-					if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-						path = pl->getValue();
-						return false;
-					}
+
+	if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+		if (const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
+			if (stringAsChar->getValue() == "string.as.char.pointer") {
+				if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
+					path = pl->getValue();
+					return false;
 				}
 			}
 		}
@@ -146,7 +145,7 @@ bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& de
 	if (decl->getVariable()->getId() != pathToKernelFile->getId())
 		return true;
 
-	if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
+	if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(decl->getInitialization(), builder))) {
 		if (const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
 			if (stringAsChar->getValue() == "string.as.char.pointer") {
 				if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
@@ -172,13 +171,14 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 			}
 		}
 	}
-	if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(path)) {
+	if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(tryRemove(BASIC.getRefDeref(), path, builder))) {
 		//            std::cout << "PathVariable: " << pathVar << std::endl;
 		KernelCodeRetriver kcr(pathVar, root, builder);
 		visitDepthFirst(mProgram, kcr);
 		string kernelFilePath = kcr.getKernelFilePath();
+std::cout << "path: " << tryRemove(BASIC.getRefDeref(), path, builder) << "\nkfp " << kernelFilePath  << std::endl;
 		if(kernelFilePath.size() > 0)
-		kernels = loadKernelsFromFile(kernelFilePath, builder);
+			kernels = loadKernelsFromFile(kernelFilePath, builder);
 	}
 }
 
@@ -758,9 +758,10 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 
 bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
 	if(type == POINTER(builder.genericType("_cl_program"))) {
-		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(createProgramWithSource)) {
-			if(annotations::ocl::KernelFileAnnotationPtr kfa =
-					dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>(cpwsCall->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
+std::cout << "CPWS " << createProgramWithSource << std::endl;
+		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(createProgramWithSource, builder))) {
+			if(annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>
+					(createProgramWithSource->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
 				const string& path = kfa->getKernelPath();
 				if(cpwsCall->getFunctionExpr() == BASIC.getRefDeref() && cpwsCall->getArgument(0)->getNodeType() == NT_CallExpr)
 					cpwsCall = dynamic_pointer_cast<const CallExpr>(cpwsCall->getArgument(0));
@@ -889,7 +890,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					if(const CallExprPtr& newCall = checkAssignment(callExpr->substitute(builder.getNodeManager(), *this))) {
 						if(lhsCall->getType() == POINTER(builder.genericType("_cl_mem"))) {
 							const TypePtr& newType = newCall->getType();
-//std::cout << "Alle meine entchen: " << lhsCall->getArgument(0) << std::endl;
 							const VariablePtr& struct_ = dynamic_pointer_cast<const Variable>(lhsCall->getArgument(0));
 							assert(struct_ && "First argument of compostite.ref.elem has unexpected type, should be a struct variable");
 							VariablePtr newStruct;
@@ -995,6 +995,10 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 	}
 
 	if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
+		if(annotations::ocl::KernelFileAnnotationPtr kfa =
+				dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>(decl->getInitialization()->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
+			std::cout << "\nFound annotation in " << decl << std::endl;
+		}
 		const VariablePtr& var = decl->getVariable();
 		if(var->getType() == POINTER(builder.genericType("_cl_mem"))) {
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), decl->getInitialization(), builder))) {
