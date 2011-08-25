@@ -814,6 +814,56 @@ void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_
 	context->kernel_binary_table = NULL;
 }
 
+irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size){
+	irt_ocl_device* dev = irt_ocl_get_device(0);
+	return irt_ocl_create_buffer(dev, flags, size);
+}
+
+void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...){
+	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][kernel_id];
+	irt_ocl_print_device_info(kernel->dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
+
+	irt_ocl_set_kernel_ndrange(kernel, work_dim, global_work_size, local_work_size);
+
+	// FIXME: eliminate duplicated code
+	// loop through the arguments and call clSetKernelArg for each argument
+	cl_uint arg_index;
+	size_t arg_size;
+	const void *arg_val;
+	va_list arg_list;
+	cl_int err_code;
+	va_start (arg_list, num_args);
+	for (uint i = 0; i < num_args; i++) {
+		arg_index = i;
+		arg_size = va_arg (arg_list, size_t);
+		arg_val = va_arg (arg_list, void *);
+		if (arg_size == 0){
+			irt_ocl_buffer* buf = (irt_ocl_buffer*) arg_val;
+			arg_size = sizeof(cl_mem);
+			arg_val = (void*) &(buf->mem);
+		}
+		err_code = clSetKernelArg(kernel->kernel, arg_index, arg_size, arg_val);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error setting kernel arguments: \"%s\"", _irt_error_string(err_code));
+	}
+	va_end (arg_list);
+
+	if (kernel->type == IRT_OCL_NDRANGE) {
+		err_code = clEnqueueNDRangeKernel((kernel->dev)->queue,
+						kernel->kernel,
+						kernel->work_dim,
+						NULL,
+						kernel->global_work_size,
+						kernel->local_work_size,
+						0, NULL, NULL);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error enqueuing NDRange Kernel: \"%s\"", _irt_error_string(err_code));
+	}
+	else if (kernel->type == IRT_OCL_TASK) {
+		err_code = clEnqueueTask((kernel->dev)->queue, kernel->kernel, 0, NULL, NULL);
+		 IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error enqueuing Task Kernel: \"%s\"", _irt_error_string(err_code));
+	}
+	else IRT_ASSERT(false, IRT_ERR_OCL, "Kernel Type Not Valid");
+}
+
 
 
 
