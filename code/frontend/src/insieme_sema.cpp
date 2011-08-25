@@ -119,10 +119,15 @@ struct InsiemeSema::InsiemeSemaImpl {
 	InsiemeSemaImpl(PragmaList& pragma_list) :	pragma_list(pragma_list) {	}
 };
 
-InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt,
-						 clang::ASTConsumer& consumer, bool CompleteTranslationUnit,
-						 clang::CodeCompleteConsumer* CompletionConsumer) :
-	clang::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer),
+InsiemeSema::InsiemeSema(
+		PragmaList& 					pragma_list, 
+		clang::Preprocessor& 			pp, 
+		clang::ASTContext& 				ctx,
+		clang::ASTConsumer& 			consumer, 
+		bool 							CompleteTranslationUnit,
+		clang::CodeCompleteConsumer* 	CompletionConsumer) 
+:
+	clang::Sema(pp, ctx, consumer, CompleteTranslationUnit, CompletionConsumer),
 	pimpl(new InsiemeSemaImpl(pragma_list)),
 	isInsideFunctionDef(false) { }
 	//TODO: Visual Studios 2010 fix - please recheck (clang::Sema::Sema -> clang::Sema and include header)
@@ -250,8 +255,8 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm,
 							PragmaList& matched) {
 
-	for ( PragmaFilter&& filter = PragmaFilter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
-		PragmaPtr P = *filter;
+	for ( PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
+		PragmaPtr&& P = *filter;
 		P->setStatement(S);
 		matched.push_back(P);
 	}

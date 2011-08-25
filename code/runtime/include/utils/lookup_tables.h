@@ -95,7 +95,7 @@ static inline irt_##__type__* irt_##__type__##_table_lookup(irt_##__type__##_id 
 	/* The above is a lie. A vile lie. People have lost their heads for less. */ \
 	pthread_spin_lock(&irt_g_##__type__##_table_locks[hash_val]); \
 	element = irt_g_##__type__##_table[hash_val]; \
-	IRT_DEBUG_ONLY(if(element)) IRT_DEBUG("Starting at elem %p, id %u/%u/%u", element, element->id.value.components.node, element->id.value.components.thread, element->id.value.components.index); \
+	IRT_DEBUG_ONLY(if(element)) { IRT_DEBUG("Starting at elem %p, id %u/%u/%u", element, element->id.value.components.node, element->id.value.components.thread, element->id.value.components.index); } \
 	while(element && element->id.value.full != id.value.full) { element = element->__next_name__; IRT_DEBUG("Looking at elem %p, id %u/%u/%u", element, element->id.value.components.node, element->id.value.components.thread, element->id.value.components.index); } \
 	pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); \
 	id.cached = element; IRT_DEBUG("Found elem %p\n", element); \

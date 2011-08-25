@@ -53,7 +53,7 @@ typedef enum _irt_work_item_state {
 struct _irt_work_item_range {
 	int64 begin, end, step;
 };
-const static irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
+static const irt_work_item_range irt_g_wi_range_one_elem = {0,1,1};
 static inline int64 irt_wi_range_get_size(const irt_work_item_range* r) { return (r->end - r->begin) / r->step; }
 static inline void _irt_print_work_item_range(const irt_work_item_range* r);
 
