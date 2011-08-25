@@ -61,7 +61,7 @@ class MatchMap;
  * This purpose of this class is to overload the behavior of clang parser in a way every time an AST node is created,
  * pending pragmas are correctly associated to it.
  */
-class InsiemeSema: public clang::Sema{
+class InsiemeSema: public clang::Sema {
 	class InsiemeSemaImpl;
 	InsiemeSemaImpl* pimpl;
 
@@ -69,23 +69,43 @@ class InsiemeSema: public clang::Sema{
 
 	void matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm, PragmaList& matched);
 
+	InsiemeSema(const InsiemeSema& other);
+
 public:
-	InsiemeSema (PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt, clang::ASTConsumer& consumer, bool CompleteTranslationUnit = true,
-				 clang::CodeCompleteConsumer* CompletionConsumer = 0);
+	InsiemeSema  (PragmaList&   				pragma_list,
+				 clang::Preprocessor& 			pp, 
+				 clang::ASTContext& 			ctx, 
+				 clang::ASTConsumer& 			consumer, 
+				 bool 							CompleteTranslationUnit = true,
+				 clang::CodeCompleteConsumer* 	CompletionConsumer = 0) ;
 	
 	~InsiemeSema();
 
 	void addPragma(PragmaPtr P);
 
-	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation L, clang::SourceLocation R, clang::MultiStmtArg Elts, bool isStmtExpr);
+	clang::StmtResult ActOnCompoundStmt(clang::SourceLocation 	L, 
+										clang::SourceLocation 	R, 
+										clang::MultiStmtArg 	Elts, 
+										bool			 		isStmtExpr );
 								   
-	clang::StmtResult ActOnIfStmt(clang::SourceLocation IfLoc, clang::Sema::FullExprArg CondVal, clang::Decl* CondVar, clang::Stmt* ThenVal,
-			clang::SourceLocation ElseLoc, clang::Stmt* ElseVal);
+	clang::StmtResult ActOnIfStmt(  clang::SourceLocation 		IfLoc, 
+									clang::Sema::FullExprArg 	CondVal, 
+									clang::Decl* 				CondVar, 
+									clang::Stmt* 				ThenVal,
+									clang::SourceLocation 		ElseLoc, 
+									clang::Stmt* 				ElseVal );	
 
-	clang::StmtResult ActOnForStmt(clang::SourceLocation ForLoc, clang::SourceLocation LParenLoc, clang::Stmt* First,
-			clang::Sema::FullExprArg Second, clang::Decl* SecondVar, clang::Sema::FullExprArg Third, clang::SourceLocation RParenLoc, clang::Stmt* Body);
+	clang::StmtResult ActOnForStmt( clang::SourceLocation 		ForLoc, 
+									clang::SourceLocation		LParenLoc, 
+									clang::Stmt* 				First,
+									clang::Sema::FullExprArg 	Second, 
+									clang::Decl* 				SecondVar, 
+									clang::Sema::FullExprArg 	Third, 
+									clang::SourceLocation 		RParenLoc, 
+									clang::Stmt* 				Body );
 								  
-	clang::Decl* ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Declarator &D);
+	clang::Decl* ActOnStartOfFunctionDef(clang::Scope*		FnBodyScope, 
+										 clang::Declarator&	D );
 	
 	clang::Decl* ActOnStartOfFunctionDef(clang::Scope *FnBodyScope, clang::Decl* D);
 

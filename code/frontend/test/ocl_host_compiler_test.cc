@@ -88,6 +88,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	//    LOG(INFO) << pp;
 
 	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	EXPECT_EQ(errors.size(), 0u);
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
 		LOG(INFO) << cur << std::endl;
@@ -129,6 +130,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	//    LOG(INFO) << pp;
 
 	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
 		LOG(INFO) << cur << std::endl;

@@ -62,7 +62,7 @@ TEST(ScopRegion, CompoundStmt) {
 	// Mark scops in this code snippet
 	scop::mark(compStmt);
 
-	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
 }
 
 TEST(ScopRegion, IfStmt) {
@@ -76,7 +76,7 @@ TEST(ScopRegion, IfStmt) {
 		} else { \
 			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (int<4>:a+int<4>:b))); \
 		}") );
-	// std::cout << *ifStmt << std::endl;
+	std::cout << *ifStmt << std::endl;
 	// Mark scops in this code snippet
 	scop::mark(ifStmt);
 	EXPECT_TRUE(ifStmt->hasAnnotation(scop::ScopRegion::KEY));
@@ -160,7 +160,7 @@ TEST(ScopRegion, SimpleForStmt) {
 		ss << *ann.getDomainConstraints();
 		EXPECT_EQ("((1*v9 + -10*1 >= 0) AND (1*v9 + -50*1 < 0))", ss.str());
 	}
-	EXPECT_FALSE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 }
 
 TEST(ScopRegion, ForStmt) {
@@ -175,7 +175,7 @@ TEST(ScopRegion, ForStmt) {
 				(int<4>:h = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, ((int<4>:n+i)-1))));\
 			};\
 		}") );
-	// std::cout << *forStmt << std::endl;
+	std::cout << *forStmt << std::endl;
 	scop::mark(forStmt);
 
 	EXPECT_FALSE( forStmt->hasAnnotation(scop::ScopRegion::KEY) );

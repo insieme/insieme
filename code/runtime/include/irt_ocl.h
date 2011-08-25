@@ -117,4 +117,8 @@ void irt_ocl_rt_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const
 void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint g_kernel_code_table_size);
 void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_table_size);
 
+irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size);
+
+void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_siz, cl_uint num_args, ...);
+
 

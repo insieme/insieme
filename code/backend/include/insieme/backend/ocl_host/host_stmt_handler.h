@@ -36,39 +36,13 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/lang/extension.h"
+#include "insieme/backend/statement_converter.h"
 
 namespace insieme {
 namespace backend {
 namespace ocl_host {
 
-	/**
-	 * This class offers a list of IR extensions required to model concepts within the
-	 * OpenCL Host. 
-	 */	
-	class Extensions : public core::lang::Extension {
-	public:
-
-		const core::LiteralPtr getDevice;
-
-		const core::LiteralPtr createAllKernels;
-		const core::LiteralPtr releaseAllKernels;
-		const core::LiteralPtr setKernelNDrange;
-		const core::LiteralPtr runKernel;
-
-		const core::LiteralPtr createBuffer;
-		const core::LiteralPtr readBuffer;
-		const core::LiteralPtr writeBuffer;
-		const core::LiteralPtr releaseBuffer;
-
-	private:
-
-		friend class core::NodeManager;
-
-		Extensions(core::NodeManager& manager);
-
-	};
+	extern StmtHandler OpenCLStmtHandler;
 
 } // end namespace ocl_host
 } // end namespace backend

@@ -45,7 +45,11 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_backend)
 	
-	add_unit_test(${case_name})
+	if(${case_name} STREQUAL ut_be_opencl_test)
+		add_unit_test(${case_name} off)
+	else()
+		add_unit_test(${case_name})
+	endif()
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------

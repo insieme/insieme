@@ -46,6 +46,7 @@
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
+#include "insieme/backend/c_ast/c_ast_printer.h"
 
 #include "insieme/utils/string_utils.h"
 
@@ -60,17 +61,12 @@ namespace ocl_host {
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
+		table[kernelExt.wrapGlobal] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+		});
 
-
-		table[kernelExt.kernelWrapper] 	= OP_CONVERTER({
-
-			KernelCodeTablePtr table = KernelCodeTable::get(context.getConverter());
-			context.addDependency(table);
-
-			unsigned kernelID = table->registerKernel(call);
-
-
-			return C_NODE_MANAGER->create<c_ast::Literal>(""); // ciao
+		table[kernelExt.wrapConst] = OP_CONVERTER({
+			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"
