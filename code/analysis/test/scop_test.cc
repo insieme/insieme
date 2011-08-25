@@ -62,7 +62,7 @@ TEST(ScopRegion, CompoundStmt) {
 	// Mark scops in this code snippet
 	scop::mark(compStmt);
 
-	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
 }
 
 TEST(ScopRegion, IfStmt) {
@@ -160,7 +160,7 @@ TEST(ScopRegion, SimpleForStmt) {
 		ss << *ann.getDomainConstraints();
 		EXPECT_EQ("((1*v9 + -10*1 >= 0) AND (1*v9 + -50*1 < 0))", ss.str());
 	}
-	EXPECT_FALSE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
 }
 
 TEST(ScopRegion, ForStmt) {

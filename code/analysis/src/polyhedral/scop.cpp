@@ -126,8 +126,8 @@ ConstraintCombinerPtr extractFromCondition(IterationVector& iv, const Expression
 				ConstraintCombinerPtr&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
 				ConstraintCombinerPtr&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
 
-				if (op == BasicGenerator::LAnd)	{	return lhs and rhs; }
-				else 							{	return lhs or rhs; }
+				if (op == BasicGenerator::LAnd)	{ return lhs and rhs; }
+				else 							{ return lhs or rhs; }
 			}
 		case BasicGenerator::LNot:
 			 return not_( extractFromCondition(iv, callExpr->getArgument(0)) );
@@ -230,7 +230,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 	IterationVector visitStmt(NodeAddress addr) {
 		CHECK_STACK_SIZE;
-		
+
 		assert(subScops.empty());
 
 		while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
@@ -265,8 +265,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		CHECK_STACK_SIZE
 
 		IterationVector ret, saveThen, saveElse;
-		// RefList thenRefs, elseRefs;
-		AddressList thenScops, elseScops;
 		bool isThenSCOP = true, isElseSCOP = true;
 
 		ExpressionAddress condAddr = AS_EXPR_ADDR(ifStmt.getAddressOfChild(0));
@@ -280,8 +278,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the then body
 			saveThen = visitStmt(thenAddr);
-			// save the sub scops of the then body
-			thenScops = subScops;
 		} catch (NotASCoP&& e) { isThenSCOP = false; }
 
 		regionStmts.push( RegionStmtStack::value_type() );
@@ -291,8 +287,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the else body
 			saveElse = visitStmt(elseAddr);
-			// save the sub scops of the else body
-			elseScops = subScops; 
 		} catch (NotASCoP&& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
@@ -305,7 +299,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			scopList.push_back( std::make_pair(elseAddr, saveElse) ); // FIXME annotate this nodes?
 		}
 
-		subScops.clear();
 		// if either one of the branches is not a ScopRegion it means the if statement is not a
 		// ScopRegion, therefore we can re-throw the exception and invalidate this region
 		if (!(isThenSCOP && isElseSCOP)) {
@@ -322,20 +315,10 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		// this If statement is also an affine linear function. 
 		ret = merge(ret, merge(saveThen, saveElse));
 
-		// Process the ELSE body because it comes first in the stack of region statements 
-		// the else body is annotated with the negated domain
-		elseAddr->addAnnotation( 
-			std::make_shared<ScopRegion>(saveElse, poly::ConstraintCombinerPtr(), regionStmts.top(), elseScops)
-		);
 		// we saved the else body statements, therefore we can pop the record we allocated for it
 		regionStmts.pop();
 		faElse.setEnabled(false);
 
-		// if no exception has been thrown we are sure the sub else and then tree are ScopRegions,
-		// therefore this node can be marked as SCoP as well.
-		thenAddr->addAnnotation( 
-			std::make_shared<ScopRegion>(saveThen, poly::ConstraintCombinerPtr(), regionStmts.top(), thenScops)
-		);
 		// we saved the then body statements, therefore we can pop the record we allocated for it		
 		regionStmts.pop();
 		faThen.setEnabled(false);
@@ -345,27 +328,31 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		);
 
 		subScops.push_back( ifStmt );
-		
 		return ret;
 	}
 
+	IterationVector visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
+		throw NotASCoP( switchStmt.getAddressedNode() );
+	}
+
 	IterationVector visitForStmt(const ForStmtAddress& forStmt) {
-		CHECK_STACK_SIZE
+		CHECK_STACK_SIZE;
 	
+		assert(subScops.empty());
+
 		// if we already visited this forStmt, just return the precomputed iteration vector 
 		if (forStmt->hasAnnotation(ScopRegion::KEY)) {
 			// return the cached value
+			subScops.push_back(forStmt);
 			return forStmt->getAnnotation(ScopRegion::KEY)->getIterationVector();
 		}
-
-		assert(subScops.empty());
 
 		// Create a new scope for region stmts
 		regionStmts.push( RegionStmtStack::value_type() );
 
 		{
 			// remove element from the stack of statements from all the exit paths 
-			FinalActions fa( [&] () -> void { regionStmts.pop(); } );
+			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
 
 			IterationVector&& bodyIV = visitStmt( forStmt.getAddressOfChild(3) ), ret;
 
@@ -398,7 +385,11 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 				forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, regionStmts.top(), subScops) ); 
 				
+				fa.setEnabled(false);
+
+				regionStmts.pop();
 				subScops.clear();
+
 				// add this statement as a subscop
 				subScops.push_back(forStmt);
 			
@@ -434,10 +425,12 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		if ( compStmt->hasAnnotation(ScopRegion::KEY) ) {
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
+			subScops.push_back(compStmt);
 			return compStmt->getAnnotation(ScopRegion::KEY)->getIterationVector();
 		}
 
 		regionStmts.push( RegionStmtStack::value_type() );
+
 		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
 
 		for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
@@ -459,6 +452,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		subScops = scops;
 
 		if (!isSCOP) { 
+
+			subScops.clear();
+
 			// FIXME: Use the subScops 
 			// one of the statements in this compound statement broke a ScopRegion therefore we add
 			// to the scop list the roots for valid ScopRegions inside this compound statement 
@@ -479,8 +475,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			throw NotASCoP(compStmt.getAddressedNode()); 
 		}
 
-		fa.setEnabled(false);
-		
 		// Mark this CompoundStmts because it is a Scop
 		compStmt->addAnnotation( 
 			std::make_shared<scop::ScopRegion>(ret, poly::ConstraintCombinerPtr(), regionStmts.top(), subScops) 
@@ -489,20 +483,21 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		subScops.clear();
 		subScops.push_back( compStmt );
 
-		regionStmts.pop();
-
 		return ret;
 	}
 
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
 		CHECK_STACK_SIZE
 
+		// assert(subScops.empty());
+
 		if ( lambda->hasAnnotation(ScopRegion::KEY) ) {
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// function, therefore we can return the iteration vector already precomputed 
+			subScops.push_back( lambda );
 			return lambda->getAnnotation(ScopRegion::KEY)->getIterationVector();
 		}
-		
+
 		IterationVector bodyIV;
 		// otherwise we have to visit the body and attach the ScopRegion annotation 
 		{
@@ -516,9 +511,15 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			lambda->addAnnotation( 
 					std::make_shared<ScopRegion>(bodyIV, ConstraintCombinerPtr(), regionStmts.top(), subScops) 
 				);
+
+			fa.setEnabled( false );
 		}
+		regionStmts.pop();
+
 		scopList.push_back( std::make_pair(lambda, bodyIV) );
-		//subScops.push_back( lambda );
+
+		// subScops.clear();
+		// subScops.push_back( lambda );
 
 		return bodyIV;
 	}
@@ -548,7 +549,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		for(size_t i=0, end=prog->getEntryPoints().size(); i!=end; ++i) {
 			try { 
 				visit( prog.getAddressOfChild(i) ); 
-			} catch(NotASCoP&& e) { }
+			} catch(NotASCoP&& e) { subScops.empty(); }
 		} 
 		return IterationVector();
 	}
@@ -589,8 +590,8 @@ std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	}
 	
 	//for_each(subScops.begin(), subScops.end(), [&](const AddressList::value_type& cur) { 
-//			out << "SubSCOP: " << *cur.getAddressedNode() << std::endl; 
-//		});
+			//out << "SubSCOP: " << *cur.getAddressedNode() << std::endl; 
+	//});
 
 	//if (!accesses.empty()) {
 		//out << "\\nAccesses: " << accesses.size() << "{" 
