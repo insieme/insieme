@@ -200,7 +200,6 @@ struct RejectAll {
 };
 
 
-
 // -------------------- Member function wrapper ---------------------
 //  A functor wrapping member function calls to known objects.
 // ------------------------------------------------------------------
@@ -219,15 +218,42 @@ struct RejectAll {
 template<typename C, typename R, typename ... A>
 struct member_function {
 	typedef R (C::* member_function_ptr)( A ... );
+	typedef R (* pointer_to_member_function)(C*, A...);
+
+	/**
+	 * An extension of GCC allows to obtain a function pointer to the actual
+	 * implementation of a member function. This way, the overhead of walking through
+	 * virtual tables is only introduced during construction
+	 *
+	 * See:
+	 * http://gcc.gnu.org/onlinedocs/gcc/Bound-member-functions.html#Bound-member-functions
+	 */
 
 	C* object;
-	member_function_ptr fun;
+
+#ifdef __GNUG__
+	pointer_to_member_function fun;
+#else
+	member_function_ptr fun;  // member function version
+#endif
 
 	member_function(C& object, const member_function_ptr& member)
-		: object(&object), fun(member) {}
+		: object(&object),
+#ifdef __GNUG__
+		  // this is conducting the vtable lookup
+		  fun((pointer_to_member_function)(object.*member))
+#else
+		  fun(member)
+#endif
+		 {}
 
 	R operator()(A...args) const {
+#ifdef __GNUG__
+		// call function like a usual function pointer
+		return fun(object, args ...);
+#else
 		return (object->*fun)(args...);
+#endif
 	}
 };
 
@@ -235,15 +261,33 @@ struct member_function {
 template<typename C, typename R, typename ... A>
 struct member_function_const {
 	typedef R (C::* member_function_ptr)( A ... ) const;
+	typedef R (* pointer_to_member_function)(const C*, A...);
 
 	const C* object;
-	member_function_ptr fun;
+
+#ifdef __GNUG__
+	pointer_to_member_function fun;
+#else
+	member_function_ptr fun;  // member function version
+#endif
 
 	member_function_const(const C& object, const member_function_ptr& member)
-		: object(&object), fun(member) {}
+		: object(&object),
+#ifdef __GNUG__
+		  // this is conducting the vtable lookup
+		  fun((pointer_to_member_function)(object.*member))
+#else
+		  fun(member)
+#endif
+		  {}
 
 	R operator()(A...args) const {
+#ifdef __GNUG__
+		// call function like a usual function pointer
+		return fun(object, args ...);
+#else
 		return (object->*fun)(args...);
+#endif
 	}
 };
 
