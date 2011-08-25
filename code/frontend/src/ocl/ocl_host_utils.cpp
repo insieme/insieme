@@ -128,6 +128,18 @@ core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::E
 }
 
 /*
+ * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
+ */
+core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::ASTBuilder& builder) {
+	if(const core::CallExprPtr& call = core::dynamic_pointer_cast<const core::CallExpr>(expr)) {
+		if(call->getFunctionExpr() == BASIC.getRefNew() || call->getFunctionExpr() == BASIC.getRefVar())
+			return tryRemoveAlloc(call->getArgument(0), builder);
+	}
+	return expr;
+}
+
+
+/*
  * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
  * Usefull to get variable out of nests of array and struct accesses
  */

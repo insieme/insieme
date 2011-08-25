@@ -269,12 +269,12 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
 
 	// check if argument is a call to ref.deref
 	k = tryRemove(BASIC.getRefDeref(), k, builder);
-
+std::cout << "\nKernel: " << k << std::endl;
 	// get corresponding lambda expression
 //equal_target<ExpressionPtr> cmp;
-/*for_each(kernelArgs, [](std::pair<ExpressionPtr, vector<ExpressionPtr> > ka) {
+for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
-for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
+//for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
 });
 std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;*/
 	assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
