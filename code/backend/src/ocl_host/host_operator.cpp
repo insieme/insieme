@@ -56,17 +56,23 @@ namespace ocl_host {
 
 	OperatorConverterTable& addOpenCLHostSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
-		//auto& ext = manager.getLangExtension<Extensions>();
+		const Extensions& ext = manager.getLangExtension<Extensions>();
 		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
 		table[kernelExt.wrapGlobal] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+			return CONVERT_ARG(0);
+			//return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
 		});
 
 		table[kernelExt.wrapConst] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+			return CONVERT_ARG(0);
+			//return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+		});
+
+		table[ext.runKernel] = OP_CONVERTER({
+			return CONVERT_ARG(0);
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"
