@@ -478,6 +478,19 @@ TEST(ArithmeticTest, FormulaSubscriptOperator) {
 
 }
 
+TEST(ArithmeticTest, NastyExample) {
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr var = builder.variable(type, 1);
+
+	auto f = (((0*4)*4) + (0*4)) + var;
+	EXPECT_EQ("1*v1", toString(f));
+
+}
+
 } // end namespace arithmetic
 } // end namespace core
 } // end namespace insieme

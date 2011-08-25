@@ -177,6 +177,7 @@ IterationVector markAccessExpression(const ExpressionPtr& expr) {
 	// otherwise we have to build an affine function from the IR access expression
 	try {
 		IterationVector it;
+		LOG(DEBUG) << *expr;
 		expr->addAnnotation( std::make_shared<AccessFunction>( it, AffineFunction(it, expr)) );
 		return it;
 	} catch(NotAffineExpr&& e) { 
@@ -335,10 +336,19 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		// At this point we are sure that both the then, else body are SCoPs and the condition of
 		// this If statement is also an affine linear function. 
 		ret = merge(ret, merge(saveThen, saveElse));
-
+	
+		if (!elseAddr->hasAnnotation(ScopRegion::KEY)) {
+			// else body is not a compound stmt
+			elseAddr->addAnnotation( std::make_shared<ScopRegion>(saveElse) );
+		}
 		// we saved the else body statements, therefore we can pop the record we allocated for it
 		regionStmts.pop();
 		faElse.setEnabled(false);
+
+		if (!thenAddr->hasAnnotation(ScopRegion::KEY)) {
+			// else body is not a compound stmt
+			thenAddr->addAnnotation( std::make_shared<ScopRegion>(saveThen) );
+		}
 
 		// we saved the then body statements, therefore we can pop the record we allocated for it		
 		regionStmts.pop();
@@ -610,8 +620,8 @@ std::ostream& ScopRegion::printTo(std::ostream& out) const {
 		out << "\\nSubScops: " << subScops.size();
 	}
 	
-	//for_each(subScops.begin(), subScops.end(), [&](const AddressList::value_type& cur) { 
-			//out << "SubSCOP: " << *cur.getAddressedNode() << std::endl; 
+	// for_each(subScops.begin(), subScops.end(), [&](const AddressList::value_type& cur) { 
+	//		out << "SubSCOP: " << *cur.getAddressedNode() << std::endl; 
 	//});
 
 	//if (!accesses.empty()) {
@@ -637,10 +647,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 							 size_t&						sched_dim) 
 {
 	typedef std::set<Iterator> IteratorSet;
-	
 	// assert( parentDomain->getIterationVector() == iterVec );
 	poly::ConstraintCombinerPtr currDomain = parentDomain and poly::cloneConstraint(iterVec, region.getDomainConstraints());
-
 	const ScopStmtList& scopStmts = region.stmts;
 	
 	// for every access in this region, convert the affine constraint to the new iteration vector 
@@ -658,30 +666,22 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			assert( curPtr->hasAnnotation(ScopRegion::KEY) && "If stmt inside SCoP not correctly annotated");
 			const ScopRegion& ifScop = *curPtr->getAnnotation(ScopRegion::KEY);
 		
-			//ScatteringFunction thenScat(curScat);
-			//af.setCoeff(poly::Constant(), pos++);
-			//thenScat.appendRow( af );
-
 			// if we are inside a SCoP we can safely access to the annotations of the then and
 			// else body of this if statement because they must be SCoPs 
 			StatementAddress thenBody = AS_STMT_ADDR( cur.getAddr().getAddressOfChild(1) );
-			assert( thenBody->hasAnnotation(ScopRegion::KEY) && "If body inside SCoP not correctly annotated");
 
 			// Actualize the iteration domain to the current iteration vector 
 			IterationDomain&& currID = currDomain and poly::cloneConstraint(iterVec, ifScop.getDomainConstraints());
+			assert(thenBody->hasAnnotation(ScopRegion::KEY) && "Then body inside SCoP not annotated");
 
 			resolveScop(iterVec, currID, *thenBody->getAnnotation(ScopRegion::KEY), pos, curScat, iterators, scat, sched_dim);
 
-			//ScatteringFunction elseScat(curScat);
-			//af.setCoeff(poly::Constant(), pos++);
-			//elseScat.appendRow( af );
-			
 			StatementAddress elseBody = AS_STMT_ADDR( cur.getAddr().getAddressOfChild(2) );
-			assert( elseBody->hasAnnotation(ScopRegion::KEY) && "Else body inside SCoP not correctly annotated");
-			
 			currID = currDomain and not_(poly::cloneConstraint(iterVec, ifScop.getDomainConstraints()));
+
+			assert(elseBody->hasAnnotation(ScopRegion::KEY) && "Else body inside SCoP not annotated");
+
 			resolveScop(iterVec, currID, *elseBody->getAnnotation(ScopRegion::KEY), pos, curScat, iterators, scat, sched_dim);
-			
 			// Once the branches of the IF has been analyzed, skip the if statement	
 			return;
 		}
@@ -726,7 +726,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 				poly::AffineSystemPtr idx = std::make_shared<poly::AffineSystem>(iterVec);
 				switch(curRef->getType()) {
 				case Ref::SCALAR:
-					idx->appendRow(AffineFunction(iterVec));
+					// A scalar is treated as a zero dimensional array 
+					idx->appendRow( AffineFunction(iterVec) );
 					break;
 				case Ref::ARRAY:
 				{
@@ -745,14 +746,9 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 				}
 
 				accInfo.push_back( 
-						AccessInfo(
-							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->getBaseExpression()) ), 
-							curRef->getUsage(), idx
-						)
+					AccessInfo( AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->getBaseExpression() ) ), 
+							   curRef->getUsage(), idx)
 					);
-
-
-			// act for different kind of refs 	
 		});
 
 		IteratorSet nested_iters(iterators.begin(), iterators.end()), 
@@ -783,7 +779,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 				std::make_shared<poly::ScatteringFunction>(newScat), accInfo
 			) 
 		);
-		
+	
+		// keep track of the max dimension of the scheduling matrix 
 		if (newScat.size() > sched_dim) {
 			sched_dim = newScat.size();
 		}
