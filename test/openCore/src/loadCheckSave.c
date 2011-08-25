@@ -101,19 +101,18 @@ size_t setAll(const char* filePath, const char* filenameAdditon, double** sigPtr
         double** Dstr, double** invF,double** invFT, double** G, double** P11q, double** P22, double** P21, double** T3Ptr, double** fe1q,
         double** fe2, double** fs, double** u, double** LBase, double** XG, size_t** nrOfOrder, ght_hash_table_t** icoShellSections,
         ght_hash_table_t** elsets, ght_hash_table_t** issSize, ght_hash_table_t** elsetSize, ght_hash_table_t** mat, int** interSec, 
-        ght_hash_table_t** elements, int* elast) {
+        ght_hash_table_t** elements, int* elast, size_t* vertices) {
     char path[512];
     size_t initialsize = 64;
     size_t height = 1, width = 1, num = 1, offset = 0;
     size_t elems = 0;
-    size_t elemsInObject = 0;
     double* data = NULL;
     sprintf(path, "%s%s", filePath, filenameAdditon);
 
-    elemsInObject = setChangingFiles(path, sigPtr, strPtr, Dsig, Dstr, invF, invFT, G, P11q, P22, P21, fe1q, fe2, fs, &data);
+    *vertices = setChangingFiles(path, sigPtr, strPtr, Dsig, Dstr, invF, invFT, G, P11q, P22, P21, fe1q, fe2, fs, &data);
 
     // speacial handling for G. It is not read and size is not consitent with the size in the input file
-    *G = (double*)calloc(elemsInObject * 24 * 14, sizeof(double));
+    *G = (double*)calloc(*vertices * 24 * 14, sizeof(double));
 
 
     // load
@@ -124,9 +123,9 @@ size_t setAll(const char* filePath, const char* filenameAdditon, double** sigPtr
 
     // load u
     // TODO works only if Manfred gives you the data for this iteration
-    elemsInObject = readScalar(&data, &initialsize, path, "ppu.sav");
+    *vertices = readScalar(&data, &initialsize, path, "ppu.sav");
     // copy data
-    alocNcpy(u, data, elemsInObject, 1);
+    alocNcpy(u, data, *vertices, 1);
 
     // iteration independent stuff
 
@@ -141,9 +140,9 @@ size_t setAll(const char* filePath, const char* filenameAdditon, double** sigPtr
 
 
     // load XG
-    elemsInObject = readMatrix1D(&data, &width, &height, &initialsize, &offset, filePath, "XG.sav"); // height and width interchanged!
+    *vertices = readMatrix1D(&data, &width, &height, &initialsize, &offset, filePath, "XG.sav"); // height and width interchanged!
     // copy data
-    alocNcpy(XG, data, elemsInObject, height*width);
+    alocNcpy(XG, data, *vertices, height*width);
 
     // TODO put one element in an IcoShellSection
     struct Material* mat_ = (struct Material*)malloc(sizeof(struct Material));
@@ -169,17 +168,17 @@ size_t setAll(const char* filePath, const char* filenameAdditon, double** sigPtr
     *iss = 1u;
     ght_insert((void*)*issSize, iss, sizeof(char*), elemName);
 
-    // putting elemsInObject elements in elsets
+    // putting *vertices elements in elsets
     int** idxs = (int**)malloc(sizeof(int*));
-    *idxs = (int*)malloc(elemsInObject * sizeof(int));
-//    (*elsets)[elemName] = (int*)malloc(elemsInObject * sizeof(int));
-    for(size_t i = 0; i < elemsInObject; ++i)
+    *idxs = (int*)malloc(*vertices * sizeof(int));
+//    (*elsets)[elemName] = (int*)malloc(*vertices * sizeof(int));
+    for(size_t i = 0; i < *vertices; ++i)
         (*idxs)[i] = (i+1);
     (*elsets) = ght_create(1);
     ght_insert((void*)*elsets, idxs, sizeof(char*), elemName);
 
     size_t* n = (size_t*)malloc(sizeof(size_t));
-    *n = elemsInObject;
+    *n = *vertices;
 
     *elsetSize = ght_create(1);
     ght_insert((void*)*elsetSize, n, sizeof(char*), elemName);
