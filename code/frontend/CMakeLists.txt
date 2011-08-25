@@ -51,13 +51,7 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	target_link_libraries(${case_name} ${llvm_LIBs})
 	
-	if(${case_name} STREQUAL "kernel_matcher_test")
-		add_unit_test(${case_name} off)
-	else(${case_name} STREQUAL "ocl_compiler_test")
-		add_unit_test(${case_name} off)
-	else()
-		add_unit_test(${case_name})
-	endif()
+	add_unit_test(${case_name})
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------
