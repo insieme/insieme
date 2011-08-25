@@ -94,6 +94,9 @@ namespace backend {
 		virtual const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
 
 		virtual const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
+
+		// this one is only working for already resolved types
+		virtual const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
 	};
 
 
