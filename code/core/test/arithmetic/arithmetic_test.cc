@@ -487,7 +487,7 @@ TEST(ArithmeticTest, NastyExample) {
 	VariablePtr var = builder.variable(type, 1);
 
 	auto f = (((0*4)*4) + (0*4)) + var;
-	EXPECT_EQ("1*v1", toString(f));
+	EXPECT_EQ("v1", toString(f));
 
 }
 

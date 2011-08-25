@@ -140,7 +140,13 @@ class product_iterator : public IteratorParentType<ITypeA, ITypeB> {
 
 public:
 	product_iterator(ITypeA beginA, ITypeA endA, ITypeB beginB, ITypeB endB)
-		: beginA(beginA), endA(endA), endB(endB), a(beginA), b(beginB) { }
+		: beginA(beginA), endA(endA), endB(endB), a(beginA), b(beginB) {
+		// if product is empty, skip to end ...
+		if (beginA == endA || beginB == endB) {
+			a = endA;
+			b = endB;
+		}
+	}
 
 	ValueType& operator*() {
 		cur = std::make_pair(*a, *b);
