@@ -232,29 +232,30 @@ struct member_function {
 	C* object;
 
 #ifdef __GNUG__
-	pointer_to_member_function fun;
-#else
-	member_function_ptr fun;  // member function version
-#endif
 
+	pointer_to_member_function fun;
+
+	#pragma GCC diagnostic ignored "-Wpmf-conversions"
 	member_function(C& object, const member_function_ptr& member)
-		: object(&object),
-#ifdef __GNUG__
-		  // this is conducting the vtable lookup
-		  fun((pointer_to_member_function)(object.*member))
-#else
-		  fun(member)
-#endif
-		 {}
+		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
 
 	R operator()(A...args) const {
-#ifdef __GNUG__
 		// call function like a usual function pointer
 		return fun(object, args ...);
-#else
-		return (object->*fun)(args...);
-#endif
 	}
+
+#else
+
+	member_function_ptr fun;  // member function version
+
+	member_function(C& object, const member_function_ptr& member)
+		: object(&object), fun(member) {}
+
+	R operator()(A...args) const {
+		return (object->*fun)(args...);
+	}
+
+#endif
 };
 
 // the same as above, for const member functions
@@ -266,29 +267,30 @@ struct member_function_const {
 	const C* object;
 
 #ifdef __GNUG__
-	pointer_to_member_function fun;
-#else
-	member_function_ptr fun;  // member function version
-#endif
 
+	pointer_to_member_function fun;
+
+	#pragma GCC diagnostic ignored "-Wpmf-conversions"
 	member_function_const(const C& object, const member_function_ptr& member)
-		: object(&object),
-#ifdef __GNUG__
-		  // this is conducting the vtable lookup
-		  fun((pointer_to_member_function)(object.*member))
-#else
-		  fun(member)
-#endif
-		  {}
+		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
 
 	R operator()(A...args) const {
-#ifdef __GNUG__
 		// call function like a usual function pointer
 		return fun(object, args ...);
-#else
-		return (object->*fun)(args...);
-#endif
 	}
+
+#else
+
+	member_function_ptr fun;  // member function version
+
+	member_function_const(const C& object, const member_function_ptr& member)
+		: object(&object), fun(member) {}
+
+	R operator()(A...args) const {
+		return (object->*fun)(args...);
+	}
+
+#endif
 };
 
 
