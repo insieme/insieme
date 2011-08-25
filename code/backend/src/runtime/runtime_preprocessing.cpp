@@ -393,7 +393,7 @@ namespace runtime {
 
 					const core::ExpressionPtr& job = core::analysis::getArgument(res, 0);
 					assert(*job->getType() == *ext.jobType && "Argument hasn't been converted!");
-					return builder.callExpr(ext.workItemType ,ext.parallel, job);
+					return builder.callExpr(builder.refType(ext.workItemType), ext.parallel, job);
 				}
 
 				// handle merge call
@@ -441,7 +441,7 @@ namespace runtime {
 				auto info = pforBodyToWorkItem(args[4]);
 				core::ExpressionPtr bodyImpl = coder::toIR(manager, info.first);
 				core::ExpressionPtr data = info.second;
-				core::TypePtr resType = ext.workItemType;
+				core::TypePtr resType = builder.refType(ext.workItemType);
 
 				return builder.callExpr(resType, ext.pfor,
 						toVector(args[0], args[1], args[2], args[3], bodyImpl, data));
