@@ -192,7 +192,7 @@ void irt_wi_end(irt_work_item* wi) {
 		if(source->num_fragments == 0) irt_wi_end(source);
 	}
 	irt_wi_event_trigger(wi->id, IRT_WI_EV_COMPLETED);
-	for(int g=0; g<wi->num_groups; ++g) {
+	for(uint32 g=0; g<wi->num_groups; ++g) {
 		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
 	}
 	lwt_end(&worker->basestack);
@@ -204,7 +204,7 @@ void irt_wi_split_uniform(irt_work_item* wi, uint32 elements, irt_work_item** ou
 	irt_work_item_range *r = &wi->range;
 	uint64 *offsets = (uint64*)alloca(sizeof(uint64)*elements);
 	uint64 step = (r->end - r->begin) / elements, cur = r->begin;
-	for(int i=0; i<elements; ++i, cur+=step) offsets[i] = cur;
+	for(uint32 i=0; i<elements; ++i, cur+=step) offsets[i] = cur;
 	irt_wi_split(wi, elements, offsets, out_wis);
 }
 void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
@@ -215,7 +215,7 @@ void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis) {
 	irt_work_item_range range = wi->range;
-	for(int i=0; i<elements; ++i) {
+	for(uint32 i=0; i<elements; ++i) {
 		range.begin = offsets[i];
 		range.end = i+1 < elements ? offsets[i+1] : wi->range.end;
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
