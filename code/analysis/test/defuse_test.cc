@@ -94,7 +94,7 @@ TEST(DefUseCollect, SimpleArray) {
 				if (cur->getType() == Ref::ARRAY) {
 					EXPECT_EQ(static_cast<size_t>(1), static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
 				} else {
-					EXPECT_TRUE(cur->getType() == Ref::VAR);
+					EXPECT_TRUE(cur->getType() == Ref::SCALAR);
 				}
 			});
 
@@ -123,7 +123,7 @@ TEST(DefUseCollect, Assignment) {
 
 	//	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
 		
-		EXPECT_TRUE(ref.getType() == Ref::VAR);
+		EXPECT_TRUE(ref.getType() == Ref::SCALAR);
 
 	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
 

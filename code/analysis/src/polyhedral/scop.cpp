@@ -62,7 +62,7 @@
 #define AS_STMT_ADDR(addr) static_address_cast<const Statement>(addr)
 #define AS_EXPR_ADDR(addr) static_address_cast<const Expression>(addr)
 
-#define CHECK_STACK_SIZE \
+#define STACK_SIZE_GUARD \
 	auto checkPostCond = [&](size_t stackInitialSize) -> void { 	 \
 		assert(regionStmts.size() == stackInitialSize);				 \
 	};																 \
@@ -217,19 +217,34 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		//
 		// FIXME: In the future also scalars should be properly handled using technique like scalar
 		// arrays and so forth
-		std::for_each(refs.arrays_begin(), refs.arrays_end(),
-			[&](const ArrayRefPtr& cur) { 
-				const ArrayRef::ExpressionList& idxExprs = cur->getIndexExpressions();
-				std::for_each(idxExprs.begin(), idxExprs.end(), 
-					[&](const ExpressionAddress& cur) { 
-						iterVec = merge(iterVec, markAccessExpression(cur));
-				});
+		std::for_each(refs.begin(), refs.end(),
+			[&](const RefPtr& cur) { 
+
+				switch(cur->getType()) {
+				case Ref::ARRAY:
+				{
+					const ArrayRef& arrRef = static_cast<const ArrayRef&>(*cur);
+					const ArrayRef::ExpressionList& idxExprs = arrRef.getIndexExpressions();
+					std::for_each(idxExprs.begin(), idxExprs.end(), 
+						[&](const ExpressionAddress& cur) { 
+							iterVec = merge(iterVec, markAccessExpression(cur));
+					});
+					break;
+				}
+				case Ref::SCALAR:
+				case Ref::CALL:
+				case Ref::MEMBER:
+					break;
+				default:
+					LOG(WARNING) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
+				}
+
 			});
 		return refs;
 	}
 
 	IterationVector visitStmt(NodeAddress addr) {
-		CHECK_STACK_SIZE;
+		STACK_SIZE_GUARD;
 
 		assert(subScops.empty());
 
@@ -261,11 +276,17 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	 * the list of root scops (scopList) and the NotAScop exception thrown to the parent node. 
 	 *********************************************************************************************/
 	IterationVector visitIfStmt(const IfStmtAddress& ifStmt) {
-
-		CHECK_STACK_SIZE
+		STACK_SIZE_GUARD;
 
 		IterationVector ret, saveThen, saveElse;
 		bool isThenSCOP = true, isElseSCOP = true;
+		
+		if ( ifStmt->hasAnnotation(ScopRegion::KEY) ) {
+			// if the SCopRegion annotation is already attached, it means we already visited this
+			// function, therefore we can return the iteration vector already precomputed 
+			subScops.push_back( ifStmt );
+			return ifStmt->getAnnotation(ScopRegion::KEY)->getIterationVector();
+		}
 
 		ExpressionAddress condAddr = AS_EXPR_ADDR(ifStmt.getAddressOfChild(0));
 		StatementAddress  thenAddr = AS_STMT_ADDR(ifStmt.getAddressOfChild(1));
@@ -336,7 +357,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitForStmt(const ForStmtAddress& forStmt) {
-		CHECK_STACK_SIZE;
+		STACK_SIZE_GUARD;
 	
 		assert(subScops.empty());
 
@@ -414,7 +435,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitCompoundStmt(const CompoundStmtAddress& compStmt) {
-		CHECK_STACK_SIZE;
+		STACK_SIZE_GUARD;
 
 		IterationVector ret;
 		bool isSCOP = true;
@@ -435,7 +456,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		for(size_t i=0, end=compStmt->getStatements().size(); i!=end; ++i) {
 			// make sure at every iteration the stack size is not growing within this compound stmt
-			CHECK_STACK_SIZE
+			STACK_SIZE_GUARD;
 			try {
 				// clear Sub scops
 				subScops.clear();
@@ -487,7 +508,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
-		CHECK_STACK_SIZE
+		STACK_SIZE_GUARD;
 
 		// assert(subScops.empty());
 
@@ -702,23 +723,35 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 		const RefAccessList& refs = cur.getRefAccesses();
 		AccessInfoList accInfo;
 		std::for_each(refs.begin(), refs.end(), [&] (const RefPtr& curRef) {
-			if ( curRef->getType() == Ref::ARRAY ) {
 				poly::AffineSystemPtr idx = std::make_shared<poly::AffineSystem>(iterVec);
-				const ArrayRef& array = static_cast<const ArrayRef&>(*curRef);
-				std::for_each(array.getIndexExpressions().begin(), array.getIndexExpressions().end(), 
-					[&](const ExpressionAddress& cur) { 
-						assert(cur->hasAnnotation(scop::AccessFunction::KEY));
-						scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
-						idx->appendRow( ann.getAccessFunction().toBase(iterVec) );
-					}
-				);
+				switch(curRef->getType()) {
+				case Ref::SCALAR:
+					idx->appendRow(AffineFunction(iterVec));
+					break;
+				case Ref::ARRAY:
+				{
+					const ArrayRef& array = static_cast<const ArrayRef&>(*curRef);
+					std::for_each(array.getIndexExpressions().begin(), array.getIndexExpressions().end(), 
+						[&](const ExpressionAddress& cur) { 
+							assert(cur->hasAnnotation(scop::AccessFunction::KEY));
+							scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
+							idx->appendRow( ann.getAccessFunction().toBase(iterVec) );
+						}
+					);
+					break;
+				}
+				default:
+					LOG(WARNING) << "Reference of type " << Ref::refTypeToStr(curRef->getType()) << " not handled!";
+				}
+
 				accInfo.push_back( 
-					AccessInfo(
-						AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->getBaseExpression()) ), 
-						curRef->getUsage(), idx
-					)
-				);
-			}
+						AccessInfo(
+							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->getBaseExpression()) ), 
+							curRef->getUsage(), idx
+						)
+					);
+
+
 			// act for different kind of refs 	
 		});
 
