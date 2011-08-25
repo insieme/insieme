@@ -220,30 +220,33 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 		return sep == other.sep && std::equal(coeffs.begin(), coeffs.end(), other.coeffs.begin());
 
 	// if the two iteration vector are not the same we need to determine if at least the position
-	// for which a coefficient is specified is the same 	
-	iterator thisIt = begin(), otherIt = other.begin(); 
-	while( thisIt!=end() ) {
-		Term &&thisTerm = *thisIt, &&otherTerm = *otherIt;
-		const Element::Type& thisType = thisTerm.first.getType();
-		const Element::Type& otherType = otherTerm.first.getType();
-
-		if ( (thisType == Element::PARAM && otherType == Element::ITER) || 
-			(thisType == Element::CONST && otherType != Element::CONST) ) 
-		{
-			if (otherTerm.second != 0) { return false; }
-			++otherIt;
-		} else if ( (thisType == Element::ITER && otherType == Element::PARAM) || 
-			(thisType != Element::CONST && otherType == Element::CONST) )	
-		{
-			if (thisTerm.second != 0) { return false; }
-			++thisIt;
-		} else if (thisTerm == otherTerm) {
-			// iterators aligned 
-			++thisIt;
-			++otherIt;
-		} else return false;
-	}	
-	return true;
+	// for which a coefficient is specified is the same 
+	auto&& this_filt = 
+		filterIterator<
+			AffineFunction::iterator, 
+			AffineFunction::Term, 
+			AffineFunction::Term*, 
+			AffineFunction::Term
+		>(begin(), end(), [](const AffineFunction::Term& cur) -> bool { 
+				return cur.second == 0; 
+		});	
+	auto&& other_filt = 
+		filterIterator<
+			AffineFunction::iterator, 
+			AffineFunction::Term, 
+			AffineFunction::Term*, 
+			AffineFunction::Term
+		>(other.begin(), other.end(), [](const AffineFunction::Term& cur) -> bool { 
+				return cur.second == 0; 
+		});	
+	
+	std::set<AffineFunction::Term> diff;
+	std::set_difference(
+		this_filt.first, this_filt.second, other_filt.first, other_filt.second, 
+		std::inserter(diff, diff.begin())
+	);
+	
+	return diff.empty();
 }
 
 AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {
