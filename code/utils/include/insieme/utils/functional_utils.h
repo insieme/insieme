@@ -39,6 +39,7 @@
 #include <boost/functional/hash.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
+#include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
 
@@ -198,6 +199,79 @@ struct RejectAll {
 	bool operator()(T...args) const { return false; }
 };
 
+
+
+// -------------------- Member function wrapper ---------------------
+//  A functor wrapping member function calls to known objects.
+// ------------------------------------------------------------------
+
+/**
+ * A functor combining an object pointer and a member function pointer
+ * and invoking the member function on the given object when being
+ * invoked.
+ *
+ * Instances of this functor can be used to bridge the gap between
+ * std::function instances and member function pointers.
+ *
+ * WARNING: Instances of this functor are only valid as long as the
+ * underlying object is still alive. The functor will not keep it alive.
+ */
+template<typename C, typename R, typename ... A>
+struct member_function {
+	typedef R (C::* member_function_ptr)( A ... );
+
+	C* object;
+	member_function_ptr fun;
+
+	member_function(C& object, const member_function_ptr& member)
+		: object(&object), fun(member) {}
+
+	R operator()(A...args) const {
+		return (object->*fun)(args...);
+	}
+};
+
+// the same as above, for const member functions
+template<typename C, typename R, typename ... A>
+struct member_function_const {
+	typedef R (C::* member_function_ptr)( A ... ) const;
+
+	const C* object;
+	member_function_ptr fun;
+
+	member_function_const(const C& object, const member_function_ptr& member)
+		: object(&object), fun(member) {}
+
+	R operator()(A...args) const {
+		return (object->*fun)(args...);
+	}
+};
+
+
+/**
+ * A utility factory method reducing the amount of code required to generate
+ * a member function functor by eliminating the requirement of specifying all
+ * the type parameters.
+ *
+ * @tparam C the class the member function is defined for
+ * @tparam O the class of the object representing the target
+ * @tparam R the result produced by the member function
+ * @tparam A the argument types of the member function
+ * @param object the object to be bound to
+ * @param fun the member function pointer to be bound
+ * @return a member function functor invoking the given member function on the
+ * 		given object upon invocation
+ */
+template<typename C, typename O, typename R, typename ... A>
+typename boost::enable_if<boost::is_base_of<C,O>,member_function<C,R,A...>>::type
+fun(O& object, R (C::* fun)( A ... )) {
+	return member_function<C,R,A...>(object, fun);
+}
+template<typename C, typename O, typename R, typename ... A>
+typename boost::enable_if<boost::is_base_of<C,O>,member_function_const<C,R,A...>>::type
+fun(const O& object, R (C::* fun)( A ... ) const) {
+	return member_function_const<C,R,A...>(object, fun);
+}
 
 // -------------------- Type List traits ----------------------------
 
