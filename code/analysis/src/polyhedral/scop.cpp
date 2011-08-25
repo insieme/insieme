@@ -609,6 +609,7 @@ std::ostream& ScopRegion::printTo(std::ostream& out) const {
 void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec, 
 							 poly::IterationDomain		 	parentDomain, 
 			 	   		   	 const ScopRegion& 				region,
+							 size_t&						pos,
  							 const ScatteringFunction& 		curScat,
 							 IteratorOrder&					iterators,
 							 ScatteringMatrix& 				scat,
@@ -619,11 +620,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 	// assert( parentDomain->getIterationVector() == iterVec );
 	poly::ConstraintCombinerPtr currDomain = parentDomain and poly::cloneConstraint(iterVec, region.getDomainConstraints());
 
-	size_t pos = 0;
 	const ScopStmtList& scopStmts = region.stmts;
 	
-	LOG(DEBUG) << region;
-
 	// for every access in this region, convert the affine constraint to the new iteration vector 
 	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const ScopStmt& cur) { 
 			
@@ -639,9 +637,9 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			assert( curPtr->hasAnnotation(ScopRegion::KEY) && "If stmt inside SCoP not correctly annotated");
 			const ScopRegion& ifScop = *curPtr->getAnnotation(ScopRegion::KEY);
 		
-			ScatteringFunction thenScat(curScat);
-			af.setCoeff(poly::Constant(), pos++);
-			thenScat.appendRow( af );
+			//ScatteringFunction thenScat(curScat);
+			//af.setCoeff(poly::Constant(), pos++);
+			//thenScat.appendRow( af );
 
 			// if we are inside a SCoP we can safely access to the annotations of the then and
 			// else body of this if statement because they must be SCoPs 
@@ -651,19 +649,24 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			// Actualize the iteration domain to the current iteration vector 
 			IterationDomain&& currID = currDomain and poly::cloneConstraint(iterVec, ifScop.getDomainConstraints());
 
-			resolveScop(iterVec, currID, *thenBody->getAnnotation(ScopRegion::KEY), thenScat, iterators, scat, sched_dim);
+			resolveScop(iterVec, currID, *thenBody->getAnnotation(ScopRegion::KEY), pos, curScat, iterators, scat, sched_dim);
 
-			ScatteringFunction elseScat(curScat);
-			af.setCoeff(poly::Constant(), pos++);
-			elseScat.appendRow( af );
+			//ScatteringFunction elseScat(curScat);
+			//af.setCoeff(poly::Constant(), pos++);
+			//elseScat.appendRow( af );
 			
 			StatementAddress elseBody = AS_STMT_ADDR( cur.getAddr().getAddressOfChild(2) );
 			assert( elseBody->hasAnnotation(ScopRegion::KEY) && "Else body inside SCoP not correctly annotated");
 			
 			currID = currDomain and not_(poly::cloneConstraint(iterVec, ifScop.getDomainConstraints()));
-			resolveScop(iterVec, currID, *elseBody->getAnnotation(ScopRegion::KEY), elseScat, iterators, scat, sched_dim);
+			resolveScop(iterVec, currID, *elseBody->getAnnotation(ScopRegion::KEY), pos, curScat, iterators, scat, sched_dim);
 			
 			// Once the branches of the IF has been analyzed, skip the if statement	
+			return;
+		}
+
+		if (curPtr->getNodeType() == NT_CompoundStmt ) {
+			resolveScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), pos, curScat, iterators, scat, sched_dim);
 			return;
 		}
 
@@ -688,7 +691,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 				
 				iterators.push_back(poly::Iterator(iter));
 			} 
-			resolveScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), newScat, iterators, scat, sched_dim);
+			size_t nestedPos = 0;
+			resolveScop(iterVec, currDomain, *cur->getAnnotation(ScopRegion::KEY), nestedPos, newScat, iterators, scat, sched_dim);
 			// pop back the iterator in the case the statement was a for stmt
 			if ( curPtr->getNodeType() == NT_ForStmt ) { iterators.pop_back(); }
 			return;
@@ -752,7 +756,6 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 		}
 		// Set back the domain
 		currDomain = saveDomain;
-
 	} ); 
 }
 
@@ -763,7 +766,10 @@ const ScopRegion::ScatteringPair ScopRegion::getScatteringInfo() {
 		ScopRegion::ScatteringPair ret;
 		ScatteringFunction sf(iterVec);
 		ScopRegion::IteratorOrder iterOrder;
-		resolveScop(iterVec, constraints, *this, sf, iterOrder, ret.second, ret.first);
+
+		size_t pos=0;
+		resolveScop(iterVec, constraints, *this, pos, sf, iterOrder, ret.second, ret.first);
+
 		scattering = ret; // cache the result to be used for successive call to this function
 	}
 	return *scattering;
@@ -890,7 +896,7 @@ void computeDataDependence(const NodePtr& root) {
 //===== printSCoP ===================================================================
 void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	out << std::endl << std::setfill('=') << std::setw(80) << std::left << "@ SCoP PRINT";	
-	out << *scop;
+	// out << *scop;
 	// check whether the IR node has a SCoP annotation
 	if( !scop->hasAnnotation( ScopRegion::KEY ) ) {
 		out << "{ }\n";
