@@ -269,7 +269,7 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
 
 	// check if argument is a call to ref.deref
 	k = tryRemove(BASIC.getRefDeref(), k, builder);
-std::cout << "\nKernel: " << k << std::endl;
+/*std::cout << "\nKernel: " << k << std::endl;
 	// get corresponding lambda expression
 //equal_target<ExpressionPtr> cmp;
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
