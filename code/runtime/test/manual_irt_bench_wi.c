@@ -49,8 +49,8 @@
 #include "impl/work_group.impl.h"
 
 #define NUM_REPEATS 10
-#define NUM_ITER 1000
-#define NUM_LEVELS 2
+#define NUM_ITER 10000
+#define NUM_LEVELS 1
 
 typedef struct _insieme_wi_bench_params {
 	irt_type_id type_id;

@@ -43,7 +43,7 @@
 
 #include "sys/mman.h"
 
-#ifdef __x86_64__
+#ifdef USING_MINLWT
 
 // ----------------------------------------------------------------------------
 // x86-64 implementation
@@ -64,43 +64,8 @@ static inline void lwt_prepare(irt_work_item *wi, intptr_t *basestack) {
 //	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
-// launch lwt for wi with implementation func and store current stack address in basestack
 __attribute__ ((noinline))
-void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
-	__asm__ volatile (		
-		/* save registers on source stack */
-		"push %%rbp \n"
-		"push %%rbx \n"
-		"push %%rdi \n"
-		"push %%r12 \n"
-		"push %%r13 \n"
-		"push %%r14 \n"
-		"push %%r15 \n"
-		/* swap stacks */
-		"movq %%rsp, (%%rax) \n"	/* save stack pointer in memory */
-//		"movq %%rsp, %%rbx \n"		/* save current stack pointer in caller save register B */
-		"movq (%%rcx), %%rsp \n"	/* exchange stack pointer */
-		/* retrieve function address and call */
-		/* %rdi still contains arg */
-		"call *%%rdx \n"		/* call procedure (using alternative stack) */
-								/* this call should never return */
-//		"movq %%rbx, %%rsp \n"		/* restore stack pointer (of source stack) */
-//		/* restore saved registers */
-//		"pop %%r15 \n"
-//		"pop %%r14 \n"
-//		"pop %%r13 \n"
-//		"pop %%r12 \n"
-//		"pop %%rdi \n"
-//		"pop %%rbx \n"
-//		"pop %%rbp \n"
-	: /* no output registers */
-	: "a" (basestack), "c" (&(wi->stack_ptr)), "d" (func) );
-	#ifndef NDEBUG
-	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
-	#endif
-}
-__attribute__ ((noinline))
-void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
+void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestack, wi_implementation_func* func) {
 	__asm__ (
 		/* save registers on stack */
 		"push %%rbp ;"
@@ -111,9 +76,14 @@ void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 		"push %%r14 ;"
 		"push %%r15 ;"
 		/* swap stacks */
-		"movq %%rsp, (%%rax) ;" 
-		"movq (%%rcx), %%rsp ;"
+		"movq %%rsp, (%%rax) ;"
+		"movq (%%rdx), %%rsp ;"
+		/* call function if func != NULL */
+		"jrcxz .NOCALL ;"
+		// rdi still has wi
+		"call *%%rcx ;"
 		/* restore registers for other coroutine */
+		".NOCALL:"
 		"pop %%r15 ;"
 		"pop %%r14 ;"
 		"pop %%r13 ;"
@@ -122,42 +92,23 @@ void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 		"pop %%rbx ;"
 		"pop %%rbp ;"
 	: /* no output registers */
-	: "a" (basestack), "c" (newstack) );
+	: "a" (basestack), "d" (newstack), "c" (func) );
+}
+void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
+	lwt_continue_impl(wi, &wi->stack_ptr, basestack, func);
 }
 //__attribute__ ((noinline))
-//void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
-//	IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
-//	lwt_continue_impl(newstack, basestack);
-//	IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
-//}
-
-// workaround required to tell gcc that lwt_end is not a leaf function
-volatile int lwt_dummy = 0;
-__attribute__ ((noinline))
-void lwt_dummy_func() {
-	lwt_dummy++;
+void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
+	//IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
+	lwt_continue_impl(NULL, newstack, basestack, NULL);
+	//IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 }
 
-__attribute__ ((noinline))
 void lwt_end(intptr_t *basestack) {
-	//IRT_DEBUG("lwt_end - A.");
-	if(lwt_dummy) lwt_dummy_func();
-	__asm__ volatile (
-		/* swap stacks */
-		"movq (%%rcx), %%rsp ;"
-		/* restore registers for original callee */
-		"pop %%r15 ;"
-		"pop %%r14 ;"
-		"pop %%r13 ;"
-		"pop %%r12 ;"
-		"pop %%rdi ;"
-		"pop %%rbx ;"
-		"pop %%rbp ;"
-	: /* no output registers */ 
-	: "c" (basestack) 
-	/* : "%r15", "%r14", "%r13", "%r12", "%rdi", "%rbx", "%rbp", "%rsp", "memory" */ );
-	//IRT_DEBUG("lwt_end - B.");
+	intptr_t dummy;
+	lwt_continue_impl(NULL, basestack, &dummy, NULL);
 }
+
 
 #else
 //#ifdef __POWERPC__
@@ -200,14 +151,14 @@ static inline void lwt_prepare(irt_work_item *wi, ucontext_t *basestack) {
 	getcontext(&wi->stack_ptr);
 }
 
-static inline void lwt_start(irt_work_item *wi, ucontext_t *basestack, wi_implementation_func* func) {
+void lwt_start(irt_work_item *wi, ucontext_t *basestack, wi_implementation_func* func) {
 	makecontext(&wi->stack_ptr, (void(*)(void))func, 1, wi);
 	swapcontext(basestack, &wi->stack_ptr);
 }
-static inline lwt_continue(ucontext_t *newstack, ucontext_t *basestack) {
+void lwt_continue(ucontext_t *newstack, ucontext_t *basestack) {
 	swapcontext(basestack, newstack);
 }
-static inline lwt_end(ucontext_t *basestack) {
+void lwt_end(ucontext_t *basestack) {
 	setcontext(basestack);
 }
 

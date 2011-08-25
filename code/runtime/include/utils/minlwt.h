@@ -48,6 +48,7 @@
 #include "declarations.h"
 
 #ifdef __x86_64__
+//#if 0
 #define USING_MINLWT 1
 typedef intptr_t minlwt_context;
 #else
