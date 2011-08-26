@@ -231,20 +231,20 @@ struct member_function {
 
 	C* object;
 
-#ifdef __GNUG__
-
-	pointer_to_member_function fun;
-
-	#pragma GCC diagnostic ignored "-Wpmf-conversions"
-	member_function(C& object, const member_function_ptr& member)
-		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
-
-	R operator()(A...args) const {
-		// call function like a usual function pointer
-		return fun(object, args ...);
-	}
-
-#else
+//#ifdef __GNUG__
+//
+//	pointer_to_member_function fun;
+//
+//	#pragma GCC diagnostic ignored "-Wpmf-conversions"
+//	member_function(C& object, const member_function_ptr& member)
+//		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
+//
+//	R operator()(A...args) const {
+//		// call function like a usual function pointer
+//		return fun(object, args ...);
+//	}
+//
+//#else
 
 	member_function_ptr fun;  // member function version
 
@@ -255,7 +255,7 @@ struct member_function {
 		return (object->*fun)(args...);
 	}
 
-#endif
+//#endif
 };
 
 // the same as above, for const member functions
@@ -266,20 +266,20 @@ struct member_function_const {
 
 	const C* object;
 
-#ifdef __GNUG__
-
-	pointer_to_member_function fun;
-
-	#pragma GCC diagnostic ignored "-Wpmf-conversions"
-	member_function_const(const C& object, const member_function_ptr& member)
-		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
-
-	R operator()(A...args) const {
-		// call function like a usual function pointer
-		return fun(object, args ...);
-	}
-
-#else
+//#ifdef __GNUG__
+//
+//	pointer_to_member_function fun;
+//
+//	#pragma GCC diagnostic ignored "-Wpmf-conversions"
+//	member_function_const(const C& object, const member_function_ptr& member)
+//		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
+//
+//	R operator()(A...args) const {
+//		// call function like a usual function pointer
+//		return fun(object, args ...);
+//	}
+//
+//#else
 
 	member_function_ptr fun;  // member function version
 
@@ -290,7 +290,7 @@ struct member_function_const {
 		return (object->*fun)(args...);
 	}
 
-#endif
+//#endif
 };
 
 
