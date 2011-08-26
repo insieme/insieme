@@ -34,19 +34,53 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/expressions.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/backend/preprocessor.h"
+#include "insieme/backend/ocl_host/host_extensions.h"
+#include "insieme/backend/ocl_host/host_preprocessor.h"
+
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+
 
 namespace insieme {
 namespace backend {
-namespace ocl_kernel {
+namespace ocl_host {
 
-	class KernelPreprocessor : public PreProcessor {
+	class BufferReplacer : public core::transform::CachedNodeMapping {
+
+		core::NodeManager& manager;
+		const Extensions& extensions;
+
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+
+		BufferReplacer(core::NodeManager& manager) :
+			manager(manager),  extensions(manager.getLangExtension<Extensions>()) {}
+
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+			//core::ASTBuilder builder(manager);
+			//auto& basic = manager.getBasicGenerator();
+			//auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
+
+
+			// perform conversion in post-order
+			core::NodePtr res = ptr->substitute(manager, *this);
+
+			return res;
+		}
 	};
 
-} // end namespace ocl_kernel
+	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
+
+		// the converter does the magic
+		BufferReplacer replacer(manager);
+		return replacer.map(code);
+	}
+
+} // end namespace ocl_host
 } // end namespace backend
 } // end namespace insieme
