@@ -291,6 +291,19 @@ fun(const O& object, R (C::* fun)( A ... ) const) {
 	return member_function_const<C,R,A...>(object, fun);
 }
 
+template<typename T>
+struct member_function_trait;
+
+template<typename C, typename R, typename ... A>
+struct member_function_trait<R(C::*)(A...)> {
+	typedef member_function<C,R,A...> type;
+};
+
+template<typename C, typename R, typename ... A>
+struct member_function_trait<R(C::*)(A...) const> {
+	typedef member_function_const<C,R,A...> type;
+};
+
 // -------------------- Type List traits ----------------------------
 
 
@@ -345,6 +358,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(void) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef type_list<> argument_types;
 	};
@@ -353,6 +367,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 1);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T1 argument_type;
@@ -363,6 +378,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1, T2) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 2);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -375,6 +391,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1, T2, T3) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 3);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -385,6 +402,7 @@ namespace detail {
 	template <typename R, typename C, typename T1, typename T2, typename T3, typename ... A >
 	struct lambda_traits_helper<R (C::*)( T1, T2, T3, A ... ) const>  {
 		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
+		typedef C class_type;
 		typedef R result_type;
 		typedef T1 arg1_type;
 	    typedef T2 arg2_type;
