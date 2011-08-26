@@ -227,24 +227,13 @@ struct member_function {
 	 *
 	 * See:
 	 * http://gcc.gnu.org/onlinedocs/gcc/Bound-member-functions.html#Bound-member-functions
+	 *
+	 * NOTE: this optimization was disabled since it is looking up the virtual function
+	 * table based on the static type of the pointer. Hence, resolving the real type
+	 * of a this pointer within a abstract super class was not supported.
 	 */
 
 	C* object;
-
-//#ifdef __GNUG__
-//
-//	pointer_to_member_function fun;
-//
-//	#pragma GCC diagnostic ignored "-Wpmf-conversions"
-//	member_function(C& object, const member_function_ptr& member)
-//		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
-//
-//	R operator()(A...args) const {
-//		// call function like a usual function pointer
-//		return fun(object, args ...);
-//	}
-//
-//#else
 
 	member_function_ptr fun;  // member function version
 
@@ -255,7 +244,6 @@ struct member_function {
 		return (object->*fun)(args...);
 	}
 
-//#endif
 };
 
 // the same as above, for const member functions
@@ -266,21 +254,6 @@ struct member_function_const {
 
 	const C* object;
 
-//#ifdef __GNUG__
-//
-//	pointer_to_member_function fun;
-//
-//	#pragma GCC diagnostic ignored "-Wpmf-conversions"
-//	member_function_const(const C& object, const member_function_ptr& member)
-//		: object(&object), fun((pointer_to_member_function)(object.*member)) {}
-//
-//	R operator()(A...args) const {
-//		// call function like a usual function pointer
-//		return fun(object, args ...);
-//	}
-//
-//#else
-
 	member_function_ptr fun;  // member function version
 
 	member_function_const(const C& object, const member_function_ptr& member)
@@ -290,7 +263,6 @@ struct member_function_const {
 		return (object->*fun)(args...);
 	}
 
-//#endif
 };
 
 
@@ -318,6 +290,19 @@ typename boost::enable_if<boost::is_base_of<C,O>,member_function_const<C,R,A...>
 fun(const O& object, R (C::* fun)( A ... ) const) {
 	return member_function_const<C,R,A...>(object, fun);
 }
+
+template<typename T>
+struct member_function_trait;
+
+template<typename C, typename R, typename ... A>
+struct member_function_trait<R(C::*)(A...)> {
+	typedef member_function<C,R,A...> type;
+};
+
+template<typename C, typename R, typename ... A>
+struct member_function_trait<R(C::*)(A...) const> {
+	typedef member_function_const<C,R,A...> type;
+};
 
 // -------------------- Type List traits ----------------------------
 
@@ -373,6 +358,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(void) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef type_list<> argument_types;
 	};
@@ -381,6 +367,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 1);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T1 argument_type;
@@ -391,6 +378,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1, T2) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 2);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -403,6 +391,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1, T2, T3) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 3);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -413,6 +402,7 @@ namespace detail {
 	template <typename R, typename C, typename T1, typename T2, typename T3, typename ... A >
 	struct lambda_traits_helper<R (C::*)( T1, T2, T3, A ... ) const>  {
 		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
+		typedef C class_type;
 		typedef R result_type;
 		typedef T1 arg1_type;
 	    typedef T2 arg2_type;

@@ -51,11 +51,15 @@ namespace cache {
 	 * results are cached and if requested returned immediately without repeating
 	 * the computation again.
 	 *
-	 * @tparam Key the key used to index the
+	 * @tparam Key the key used to index the cache
+	 * @tparam Value the value to be stored within the cache
+	 * @tparam Factory the factory used for obtaining missing values
+	 * @tparam Store the store used to maintain data instances
 	 */
 	template<
 		typename Key,
 		typename Value,
+		typename Factory = std::function<Value(const Key&)>,
 		typename Store = std::map<Key, Value>
 	>
 	class Cache {
@@ -63,7 +67,7 @@ namespace cache {
 
 		typedef Key key_type;
 		typedef Value value_type;
-		typedef std::function<Value(const Key&)> factory_type;
+		typedef Factory factory_type;
 		typedef Store store_type;
 
 	private:
@@ -76,7 +80,7 @@ namespace cache {
 		/**
 		 * An instance of the factory used to obtain missing values within the cache.
 		 */
-		factory_type default_factory;
+		Factory default_factory;
 
 	public:
 
@@ -90,7 +94,7 @@ namespace cache {
 		 *
 		 * @param default_factory the default factory to be used to resolve missing values within this cache
 		 */
-		Cache(const factory_type& default_factory) : default_factory(default_factory) {}
+		Cache(const Factory& default_factory) : default_factory(default_factory) {}
 
 		/**
 		 * Obtains a value from this cache. If the value has been obtained
@@ -115,7 +119,7 @@ namespace cache {
 		 * @param factory the factory to be used for the computation of the value if it is missing
 		 * @return the corresponding value cached inside or produced by the factory
 		 */
-		Value get(const Key& key, const factory_type& factory) {
+		Value get(const Key& key, const Factory& factory) {
 			auto pos = cache.find(key);
 			if (pos != cache.end()) {
 				return pos->second;
@@ -134,15 +138,11 @@ namespace cache {
 	 */
 	template<
 		typename Key,
-		typename Value
+		typename Value,
+		typename Factory = std::function<Value(const Key&)>
 	>
-	class PointerCache : public Cache<Key, Value, map::PointerMap<Key, Value>> {
+	class PointerCache : public Cache<Key, Value, Factory, map::PointerMap<Key, Value>> {
 	public:
-
-		/**
-		 * Define the type of the factory for producing values within this cache.
-		 */
-		typedef typename Cache<Key, Value, map::PointerMap<Key, Value>>::factory_type factory_type;
 
 		/**
 		 * A default constructor for this cache.
@@ -152,7 +152,7 @@ namespace cache {
 		/**
 		 * A constructor for a cache using the given factory as a default factory.
 		 */
-		PointerCache(const factory_type& default_factory) : Cache<Key, Value, map::PointerMap<Key, Value>>(default_factory) {}
+		PointerCache(const Factory& default_factory) : Cache<Key, Value, Factory, map::PointerMap<Key, Value>>(default_factory) {}
 	};
 
 } // end namespace cache

@@ -52,9 +52,16 @@ namespace transform {
 class CachedNodeMapping : public NodeMapping {
 
 	/**
+	 * Defines the type of the internal factory used within the cache.
+	 * By specifying the factory type explicitly, the indirection of the std::function
+	 * id avoided.
+	 */
+	typedef member_function_trait<const NodePtr(CachedNodeMapping::*)(const NodePtr&)>::type FactoryType;
+
+	/**
 	 * The cache to be used for reusing results.
 	 */
-	insieme::utils::cache::PointerCache<NodePtr, NodePtr> cache;
+	insieme::utils::cache::PointerCache<NodePtr, NodePtr, FactoryType> cache;
 
 public:
 

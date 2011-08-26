@@ -60,6 +60,10 @@ TEST(OclDriverTest, KernelTest) {
 
 	Logger::get(std::cerr, INFO);
 
+	CommandLineOptions::Defs.push_back("INSIEME");
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../frontend/test/inputs");
+
+
 	core::NodeManager manager;
 	core::ProgramPtr program = core::Program::create(manager);
 
