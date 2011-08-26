@@ -192,6 +192,13 @@ namespace backend {
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
+	/**
+	 * A pre-processor making implicit vector to array conversions explicit.
+	 */
+	class MakeVectorArrayCastsExplicit : public PreProcessor {
+	public:
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
 
 } // end namespace backend
 } // end namespace insieme
