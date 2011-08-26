@@ -37,7 +37,9 @@
 #pragma once
 
 #include <vector>
+
 #include "insieme/transform/transformation.h"
+#include "insieme/utils/cache_utils.h"
 
 namespace insieme {
 namespace transform {
@@ -48,61 +50,103 @@ namespace transform {
 		const std::vector<TransformationPtr> transformations;
 
 	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException) =0;
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
 
 	};
 
-
-	class Parallel : public Transformation {
-
-		const std::vector<TransformationPtr> transformations;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-
-	class Pipeline : public Transformation {
-
-		const std::vector<TransformationPtr> transformations;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-
-
-	class Conditional : public Transformation {
+	class CachedTransformation : public Transformation {
 
 		const TransformationPtr transformation;
 
+		mutable utils::cache::PointerCache<core::NodePtr, bool> precondition;
+		mutable utils::cache::PointerCache<core::NodePtr, core::NodePtr> transformed;
+
 	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+
+		CachedTransformation(const TransformationPtr& transform)
+			: transformation(transform),
+			  precondition(fun(*transform, &Transformation::checkPreCondition)),
+			  transformed(fun(*transform, &Transformation::apply)) {}
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const {
+			return precondition.get(target);
+		}
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException) {
+			return transformed.get(target);
+		}
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
+			return transformation->checkPostCondition(before, after);
+		}
 
 	};
 
-
-
-	class ForAllChild : public Transformation {
-
-		const TransformationPtr transformation;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
+//	class Sequence : public Transformation {
+//
+//		const std::vector<TransformationPtr> transformations;
+//
+//	public:
+//		virtual core::NodePtr apply(const core::NodePtr& target);
+//		virtual bool checkPrecondition(const core::NodePtr& target);
+//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+//
+//	};
+//
+//
+//	class Parallel : public Transformation {
+//
+//		const std::vector<TransformationPtr> transformations;
+//
+//	public:
+//		virtual core::NodePtr apply(const core::NodePtr& target);
+//		virtual bool checkPrecondition(const core::NodePtr& target);
+//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+//
+//	};
+//
+//
+//	class Pipeline : public Transformation {
+//
+//		const std::vector<TransformationPtr> transformations;
+//
+//	public:
+//		virtual core::NodePtr apply(const core::NodePtr& target);
+//		virtual bool checkPrecondition(const core::NodePtr& target);
+//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+//
+//	};
+//
+//
+//
+//	class Conditional : public Transformation {
+//
+//		const TransformationPtr transformation;
+//
+//	public:
+//		virtual core::NodePtr apply(const core::NodePtr& target);
+//		virtual bool checkPrecondition(const core::NodePtr& target);
+//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+//
+//	};
+//
+//
+//
+//	class ForAllChild : public Transformation {
+//
+//		const TransformationPtr transformation;
+//
+//	public:
+//		virtual core::NodePtr apply(const core::NodePtr& target);
+//		virtual bool checkPrecondition(const core::NodePtr& target);
+//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+//
+//	};
 
 }
 }

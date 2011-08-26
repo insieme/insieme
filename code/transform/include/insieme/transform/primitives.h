@@ -44,69 +44,22 @@ namespace insieme {
 namespace transform {
 
 
-	class InsertS : public Transformation {
+	class AbstractTransformation : public Transformation {
 
-		/**
-		 * The node to be inserted.
-		 */
-		const core::NodePtr content;
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
 
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
 
 	};
 
 
-	class Parallel : public Transformation {
-
-		std::vector<TransformationPtr> transformations;
-
+	class NoOp : public Transformation {
 	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
 
 	};
 
 
-	class Pipeline : public Transformation {
-
-		std::vector<TransformationPtr> transformations;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-
-
-	class Conditional : public Transformation {
-
-		const TransformationPtr transformation;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-
-
-	class ForAllChild : public Transformation {
-
-		const TransformationPtr transformation;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-}
-}
+} // end namespace transform
+} // end namespace insieme
