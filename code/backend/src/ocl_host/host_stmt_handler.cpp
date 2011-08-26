@@ -57,61 +57,7 @@ namespace ocl_host {
 
 	namespace {
 
-		c_ast::NodePtr createKernelCall(ConversionContext& context, const core::CallExprPtr& call) {
-
-			/*static const char* codeTemplate = "\n\n"
-					"irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][%1$d];\n"
-					"irt_ocl_set_kernel_ndrange(kernel, 1, irt_ocl_get_global_size(%1$d), irt_ocl_get_local_size(%1$d));\n"
-					"irt_ocl_run_kernel(kernel, %2$d%3$s)";*/
-
-			static const char* codeTemplate = "\n\n"
-					"irt_ocl_rt_run_kernel(%1$d, dim, glob, loc, %2$d%3$s)";
-
-			/*
-			irt_ocl_rt_run_kernel(0,	1, &szGlobalWorkSize, &szLocalWorkSize,
-										3,	(size_t)0, (void *)buf_input,
-										(size_t)0, (void *)buf_output,
-										sizeof(cl_long), (void *)&len_input);
-			*/
-
-			const Converter& converter = context.getConverter();
-			StmtConverter& stmtConverter = converter.getStmtConverter();
-
-			// register kernel
-			KernelCodeTablePtr table = KernelCodeTable::get(converter);
-			context.addDependency(table);
-
-			unsigned kernelID = table->registerKernel(call->getFunctionExpr());
-			unsigned numArgs = call->getArguments().size();
-
-			const ocl_kernel::Extensions& ext = context.getConverter().getNodeManager().getLangExtension<ocl_kernel::Extensions>();
-
-			std::stringstream argList;
-			for_each(call->getArguments(), [&](const core::ExpressionPtr& cur) {
-				c_ast::ExpressionPtr arg = stmtConverter.convertExpression(context, cur);
-				if (ext.isWrapperType(cur->getType())) {
-					argList << ", (size_t)0";
-				} else {
-					argList << ", " << c_ast::toC(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
-				}
-				argList << ", " << c_ast::toC(arg);
-			});
-
-			return converter.getCNodeManager()->create<c_ast::Literal>(format(codeTemplate, kernelID, numArgs, argList.str().c_str()));
-		}
-
-
 		c_ast::NodePtr handleStmts(ConversionContext& context, const core::NodePtr& node) {
-
-			const ocl_kernel::Extensions& ext = context.getConverter().getNodeManager().getLangExtension<ocl_kernel::Extensions>();
-
-			// filter out kernel calls => need to be treated differently
-			if (node->getNodeType() == core::NT_CallExpr) {
-				const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(node);
-				if (core::analysis::isCallOf(call->getFunctionExpr(), ext.kernelWrapper)) {
-					return createKernelCall(context, call);
-				}
-			}
 
 			// let somebody else encode it ..
 			return c_ast::NodePtr();
