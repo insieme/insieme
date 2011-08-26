@@ -47,26 +47,32 @@ bool Element::operator==(const Element& other) const {
 	if (this == &other) { return true; }
 
 	if (type == other.type) {
-		if(type == ITER || type == PARAM) 
-			return *static_cast<const Variable&>(*this).getVariable() == 
-				   *static_cast<const Variable&>(other).getVariable();
-		else 
-			return true;
+		if(type == ITER || type == PARAM) {
+			return *static_cast<const Expr&>(*this).getExpr() == 
+				   *static_cast<const Expr&>(other).getExpr();
+		} 
+		return true;
 	}
 	return false;
 }
 
 bool Element::operator<(const Element& other) const {
-    if (type != other.type) { return type < other.type; }
-	if (type == ITER || type == PARAM) { 
-		return static_cast<const Variable&>(*this).getVariable()->getId() < 
-			static_cast<const Variable&>(other).getVariable()->getId(); }
-    return false;
+	// order based on the type
+	if (type != other.type) {
+		return type < other.type;
+	}
+	
+	if (type == Element::ITER || type == Element::PARAM) {
+		return  static_cast<const Expr&>(*this).getExpr() < 
+				static_cast<const Expr&>(other).getExpr();
+	}
+	
+	return false;
 }
-
+	
 std::ostream& Iterator::printTo(std::ostream& out) const { return out << *getVariable(); }
 
-std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getVariable(); }
+std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getExpr(); }
 
 //====== IterationVector ==========================================================================
 
@@ -116,21 +122,31 @@ std::ostream& IterationVector::printTo(std::ostream& out) const {
 	return out;
 }
 
+namespace {
+template <class T>
+void add_if(IterationVector& dest, 
+		typename std::vector<T>::const_iterator aBegin, 
+		typename std::vector<T>::const_iterator aEnd ) 
+{
+	std::for_each(aBegin, aEnd, [&dest] (const T& cur) { 
+		if (dest.getIdx( cur.getExpr() ) == -1 ) { 
+			dest.add(cur); 
+		}
+	} );
+}
+		
 template <class T>
 void merge_add(IterationVector& dest, 
 		typename std::vector<T>::const_iterator aBegin, 
 		typename std::vector<T>::const_iterator aEnd, 
 		typename std::vector<T>::const_iterator bBegin, 
-		typename std::vector<T>::const_iterator bEnd ) 
+		typename std::vector<T>::const_iterator bEnd )
 {
-	std::set<T> varSet;
-    std::set_union(aBegin, aEnd, bBegin, bEnd, std::inserter(varSet, varSet.begin()));
-	std::for_each(varSet.begin(), varSet.end(), [&dest](const T& cur) { 
-		if ( dest.getIdx(static_cast<const poly::Variable&>(cur).getVariable()) == -1 ) { 
-			dest.add(cur); 
-		}
-	} );
+	add_if<T>(dest, aBegin, aEnd);
+	add_if<T>(dest, bBegin, bEnd);
 }
+
+} // end anonymous namespace 
 
 // Merges two iteration vectors (a and b) to create a new iteration vector which contains
 // both the elements of a and b. 
@@ -152,8 +168,8 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 	IndexTransMap transMap;
 	std::for_each(src.begin(), src.end(), [&](const Element& cur) {
 			int idx = 0;
-			if (cur.getType() != Element::CONST) {
-				idx = trg.getIdx( static_cast<const Variable&>(cur).getVariable() ); 
+			if (cur.getType() == Element::ITER || cur.getType() == Element::PARAM) {
+				idx = trg.getIdx( static_cast<const Expr&>(cur).getExpr() ); 
 			} else {
 				idx = trg.getIdx(cur);
 			}

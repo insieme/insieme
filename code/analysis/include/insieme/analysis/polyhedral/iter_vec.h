@@ -71,7 +71,10 @@ namespace poly {
  * parameter, this is required later in the creation of the sets and relationships representing the
  * polyhedron. 
  *************************************************************************************************/
-struct Element : public utils::Printable, public boost::equality_comparable<Element> { 
+struct Element : 
+	public utils::Printable, 
+	public boost::equality_comparable<Element> 
+{ 
 	// The type of a vector element is either an Iterator or a Parameter
 	enum Type { ITER, PARAM, CONST };
 	
@@ -81,7 +84,9 @@ struct Element : public utils::Printable, public boost::equality_comparable<Elem
 	virtual std::ostream& printTo(std::ostream& out) const = 0;
 
 	bool operator==(const Element& other) const;
-    bool operator<(const Element& other) const;
+	
+	bool operator<(const Element& other) const;
+
 private:
 	Type type;
 };
@@ -90,12 +95,13 @@ private:
  * A Variable in a wrapper for an IR Variable. We use the wrapper in order to solve error with the
  * resolution of the == operator by the compiler. 
  *************************************************************************************************/
-class Variable : public Element {
-	core::VariablePtr var;
+class Expr : public Element {
+	core::ExpressionPtr expr;
 public:
-	Variable(const Type& type, const core::VariablePtr& var) : Element(type),  var(var) { } 
-	core::VariablePtr getVariable() const { return var; } 
-	virtual ~Variable() { }
+	Expr(const Type& type, const core::ExpressionPtr& expr) : Element(type),  expr(expr) { } 
+	const core::ExpressionPtr& getExpr() const { assert(expr); return expr; } 
+
+	virtual ~Expr() { }
 };
 
 /************************************************************************************************** 
@@ -103,8 +109,16 @@ public:
  * always listed at the beginning of the iterator vector and their order refers to the nesting
  * levels. 
  *************************************************************************************************/
-struct Iterator : public Variable {
-	Iterator(const core::VariablePtr& var) : Variable(Element::ITER, var) { } 
+struct Iterator : public Expr {
+	Iterator(const core::VariablePtr& var) : Expr(Element::ITER, var) { } 
+	
+	const core::VariablePtr& getVariable() const { 
+		return core::static_pointer_cast<const core::Variable>(getExpr()); 
+	}
+	
+	bool operator<(const Iterator& other) const {
+		return getVariable()->getId() < other.getVariable()->getId();
+	}
 	
 	// Implements the printable interface
 	std::ostream& printTo(std::ostream& out) const;
@@ -115,8 +129,8 @@ struct Iterator : public Variable {
  * variables are not loop iterators. In the IR these variables are still represented as Variable, so
  * we use the same base class as Iterators.  
  *************************************************************************************************/
-struct Parameter : public Variable {
-	Parameter(const core::VariablePtr& var) : Variable(Element::PARAM, var) { }	
+struct Parameter : public Expr {
+	Parameter(const core::ExpressionPtr& expr) : Expr(Element::PARAM, expr) { }	
 	
 	// Implements the Printable interface
 	std::ostream& printTo(std::ostream& out) const; 
@@ -247,11 +261,13 @@ public:
 	 * Search for a Variable inside this iteration vector, check if the variable is within the
 	 * iterators and the parameters, it returns -1 id the variable was not found
 	 * */
-	int getIdx(const core::VariablePtr& var) const {
-		int idx = getIdx( Iterator(var) );
-		if ( idx != -1 ) {
-			assert(getIdx( Parameter(var) ) == -1 && "Variable is both among the iterators and parameters.");
-			return idx;
+	int getIdx(const core::ExpressionPtr& var) const {
+		if (var->getNodeType() == core::NT_Variable) {
+			int idx = getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) );
+			if ( idx != -1 ) {
+				assert(getIdx( Parameter(var) ) == -1 && "Variable is both among the iterators and parameters.");
+				return idx;
+			}
 		}
 		return getIdx( Parameter(var) );
 	}
@@ -307,3 +323,16 @@ const IndexTransMap transform(const IterationVector& trg, const IterationVector&
 } // end analysis namespace 
 } // end insieme namespace 
 
+namespace std {
+
+template <>
+struct hash<insieme::analysis::poly::Iterator> {
+	size_t operator()(const insieme::analysis::poly::Iterator& it) const { return it.getExpr()->hash(); }
+};
+
+template <>
+struct hash<insieme::analysis::poly::Parameter> {
+	size_t operator()(const insieme::analysis::poly::Parameter& it) const { return it.getExpr()->hash(); }
+};
+
+} // end std namespace 

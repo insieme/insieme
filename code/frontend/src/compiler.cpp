@@ -192,6 +192,7 @@ ClangCompiler::ClangCompiler(const std::string& file_name) : pimpl(new ClangComp
 		}
 		LO.RTTI = 1;
 		LO.Exceptions = 1;
+		LO.CXXExceptions = 1;
 	}
 
 	// Enable OpenCL

@@ -75,7 +75,7 @@ void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	if(size > 1 && size >= irt_g_worker_count) {
 		irt_work_item **split_wis = (irt_work_item**)alloca(irt_g_worker_count * sizeof(irt_work_item*));
 		irt_wi_split_uniform(wi, irt_g_worker_count, split_wis);
-		for(int i=0; i<irt_g_worker_count; ++i) {
+		for(uint32 i=0; i<irt_g_worker_count; ++i) {
 			irt_work_item_cdeque_insert_back(&irt_g_workers[i]->sched_data.queue, split_wis[i]);
 		}
 	} else {

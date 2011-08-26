@@ -38,6 +38,7 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 #include "insieme/backend/c_ast/c_ast_utils.h"
@@ -50,7 +51,7 @@ namespace runtime {
 
 	namespace {
 
-		TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* getLWDataItemStruct(const Converter& converter, const core::TypePtr& type) {
 			// make sure it is only invoked using LW data items
 			assert(DataItem::isLWDataItemType(type) && "Only works on LW Data Items!");
 
@@ -61,14 +62,12 @@ namespace runtime {
 			// convert to data item to tuple used within runtime
 			core::TupleTypePtr fullTuple = DataItem::getUnfoldedLWDataItemType(tupleType);
 
-			// obtain type information from base struct
-			return new TypeInfo(converter.getTypeManager().getTypeInfo(fullTuple));
+			// obtain type information from base struct => use the same type
+			return &converter.getTypeManager().getTypeInfo(fullTuple);
 		}
 
 
-
-
-		TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
+		const TypeInfo* handleType(const Converter& converter, const core::TypePtr& type) {
 
 			const Extensions& extensions = converter.getNodeManager().getLangExtension<Extensions>();
 
@@ -90,6 +89,18 @@ namespace runtime {
 			if (DataItem::isLWDataItemType(type)) {
 				// create a substitution struct - the same struct + the type id
 				return getLWDataItemStruct(converter, type);
+			}
+
+			// handle jobs
+			const core::lang::BasicGenerator& basic = converter.getNodeManager().getBasicGenerator();
+
+			// check for job types ...
+			if(basic.isJob(type)) {
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_parallel_job", "ir_interface.h");
+			}
+
+			if(basic.isThreadGroup(type)) {
+				return type_info_utils::createInfo(converter.getFragmentManager(), "irt_work_group", "ir_interface.h");
 			}
 
 			// it is not a special runtime type => let somebody else try

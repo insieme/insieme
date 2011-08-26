@@ -51,7 +51,9 @@ namespace insieme {
 namespace analysis {
 namespace scop {
 
-typedef std::vector<core::NodeAddress> AddressList;
+typedef std::vector<core::NodeAddress>	AddressList;
+typedef std::pair<core::NodeAddress, poly::IterationDomain> 	SubScop;
+typedef std::vector<SubScop> SubScopList;
 
 // Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 // be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
@@ -124,21 +126,28 @@ public:
 			core::StatementAddress, 
 			poly::IterationDomain, 
 			poly::ScatteringFunctionPtr, 
-			AccessInfoList > StmtScattering;
+			AccessInfoList > 						StmtScattering;
 
-	typedef std::vector<StmtScattering> ScatteringMatrix;
+	typedef std::vector<StmtScattering> 			ScatteringMatrix;
+	typedef std::pair<size_t, ScatteringMatrix> 	ScatteringPair;
 	
-	typedef std::vector<poly::Iterator> IteratorOrder;
+	typedef std::vector<poly::Iterator> 			IteratorOrder;
 
 	ScopRegion( const poly::IterationVector& iv, 
 			const poly::IterationDomain& comb = poly::IterationDomain(),
 			const ScopStmtList& stmts = ScopStmtList(),
-			const AddressList& subScops = AddressList() ) : 
+			const SubScopList& subScops_ = SubScopList() ) : 
 		core::NodeAnnotation(),
 		iterVec(iv), 
 		stmts(stmts),
-		constraints( poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
-		subScops(subScops) { } 
+		constraints( poly::cloneConstraint(iterVec, comb) ) // Switch the base to the this->iterVec 
+	{ 
+		
+		for_each(subScops_.begin(), subScops_.end(), 
+			[&] (const SubScop& cur) { 
+				subScops.push_back( SubScop(cur.first, poly::cloneConstraint(iterVec, cur.second)) ); 
+			});	
+	} 
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 
@@ -170,23 +179,25 @@ public:
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	const ScatteringMatrix getScatteringInfo();
+	const ScatteringPair getScatteringInfo();
 
 	/** 
 	 *
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
 	 * current iteration domain
 	 */
-	const AddressList& getSubScops() const { return subScops; }
+	const SubScopList& getSubScops() const { return subScops; }
 
 private:
 
 	static void resolveScop(const poly::IterationVector& 	iterVec, 
 					 poly::IterationDomain 					parentDomain, 
 			 	   	 const ScopRegion& 						region,
+					 size_t&								pos,
 					 const poly::ScatteringFunction& 		curScat,
 					 IteratorOrder& 						iterators,
-					 ScatteringMatrix& 						finalScat);
+					 ScatteringMatrix& 						finalScat,
+					 size_t&								sched_dim);
 
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;
@@ -203,9 +214,9 @@ private:
 	 *  
 	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
 	 */
-	AddressList subScops;
+	SubScopList subScops;
 
-	boost::optional<ScatteringMatrix> scattering;
+	boost::optional<ScatteringPair> scattering;
 };
 
 /**************************************************************************************************
@@ -243,13 +254,11 @@ public:
 	}
 };
 
-typedef std::vector< std::pair<core::NodeAddress, poly::IterationVector> > ScopList;
-
 /**************************************************************************************************
  * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an
  * empty list in the case no SCoP was found). 
  *************************************************************************************************/ 
-ScopList mark(const core::NodePtr& root);
+AddressList mark(const core::NodePtr& root);
 
 /**************************************************************************************************
  * printSCoP is a debug function which is used mainly as a proof of concept for the mechanism which
@@ -258,6 +267,7 @@ ScopList mark(const core::NodePtr& root);
  * function.
  *************************************************************************************************/
 void printSCoP(std::ostream& out, const core::NodePtr& scop);
+void computeDataDependence(const core::NodePtr& root) ;
 
 } // end namespace scop
 } // end namespace analysis

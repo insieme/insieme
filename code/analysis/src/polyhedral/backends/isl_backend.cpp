@@ -40,20 +40,20 @@
 
 #include "insieme/utils/logging.h"
 #include "isl/constraint.h"
+#include "isl/flow.h"
 
 namespace insieme {
 namespace analysis {
 namespace poly {
-namespace backend {
 
 namespace {
 
 // Utility function used to print to a stream the ISL internal representation of a set
-void printIslSet(std::ostream& out, isl_ctx* ctx, isl_set* set) {
+void printIslSet(std::ostream& out, isl_ctx* ctx, isl_union_set* set) {
 	isl_printer* printer = isl_printer_to_str(ctx);
 	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
 	isl_printer_set_indent(printer, 1);
-	isl_printer_print_set(printer, set);
+	isl_printer_print_union_set(printer, set);
 	isl_printer_flush(printer);
 	char* str = isl_printer_get_str(printer);
 	out << str;
@@ -63,11 +63,11 @@ void printIslSet(std::ostream& out, isl_ctx* ctx, isl_set* set) {
 
 // Utility function used to print to an output stream the ISL internal representation of maps (or
 // relations)
-void printIslMap(std::ostream& out, isl_ctx* ctx, isl_map* map) {
+void printIslMap(std::ostream& out, isl_ctx* ctx, isl_union_map* map) {
 	isl_printer* printer = isl_printer_to_str(ctx);
 	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
 	isl_printer_set_indent(printer, 1);
-	isl_printer_print_map(printer, map);
+	isl_printer_print_union_map(printer, map);
 	isl_printer_flush(printer);
 	char* str =  isl_printer_get_str(printer);
 	out << str;
@@ -89,6 +89,7 @@ isl_constraint* convertConstraint( isl_ctx *islCtx, isl_dim* dim, const Constrai
 	size_t pos=0, sep=af.getIterationVector().getIteratorNum(), size=af.getIterationVector().size();
 
 	for(AffineFunction::iterator it=af.begin(), end=af.end(); it!=end; ++it, ++pos) {
+		assert(pos < size);
 		AffineFunction::Term&& t = *it;
 		if(t.second == 0) {	continue; }
 
@@ -173,7 +174,9 @@ struct ISLConstraintConverterVisitor : public ConstraintVisitor {
 template <class IterT>
 void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin, IterT const& end) {
 	for(IterT it = begin; it != end; ++it) {
-		isl_dim_set_name(dim, type, std::distance(begin, it), it->getVariable()->toString().c_str());
+		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
+		const poly::Expr& var = static_cast<const Expr&>(*it);
+		isl_dim_set_name(dim, type, std::distance(begin, it), var.getExpr()->toString().c_str());
 	}
 }
 
@@ -181,7 +184,13 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 
 //==== IslSet ====================================================================================
 
-IslSet::IslSet(IslContext& ctx, const IterationVector& iterVec) : Set(ctx, iterVec) {
+Set<IslContext>::Set(
+		IslContext& ctx, 
+		const IterationVector& iterVec, 
+		const ConstraintCombinerPtr& constraint,
+		const std::string& tuple_name 
+		) : ctx(ctx)
+{
 	// Build the dim object
 	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
 
@@ -191,25 +200,33 @@ IslSet::IslSet(IslContext& ctx, const IterationVector& iterVec) : Set(ctx, iterV
 	// Set the names for the parameters of this dim
 	setVariableName(dim, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 
-	// creates an universe set containing the dimensionatility of the iteration vector
-	set = isl_set_universe( isl_dim_copy(dim) );
+	// Set the name of the tuple 
+	dim = isl_dim_set_tuple_name(dim, isl_dim_set, tuple_name.c_str());
+
+	isl_set* tset = isl_set_universe( isl_dim_copy(dim) );
+
+	// If a non empty constraint is provided, then add it to the universe set 
+	if (constraint) {
+		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
+		constraint->accept(ccv);
+		tset = isl_set_intersect(tset, ccv.getResult());
+	} 
+	set = isl_union_set_from_set(tset);
 }
 
-std::ostream& IslSet::printTo(std::ostream& out) const {
+bool Set<IslContext>::isEmpty() const { return isl_union_set_is_empty(set);	}
+
+std::ostream& Set<IslContext>::printTo(std::ostream& out) const {
 	printIslSet(out, ctx.getRawContext(), set); 
 	return out;
 }
 
-void IslSet::applyConstraint(const ConstraintCombinerPtr& cc) {
-	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
-	cc->accept(ccv);
-
-	set = isl_set_intersect(set, ccv.getResult());
-}
-
 //==== IslMap ====================================================================================
 
-IslMap::IslMap(IslContext& ctx, const IterationVector& iterVec, const AffineSystem& affSys) : Map(ctx, iterVec) {
+Map<IslContext>::Map(IslContext& ctx, const AffineSystem& affSys, const std::string& in_tuple_name, const std::string& out_tuple_name) : ctx(ctx)
+{
+	const IterationVector& iterVec = affSys.getIterationVector();
+
 	// Build the dim object
 	dim = isl_dim_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum(), affSys.size());
 
@@ -218,6 +235,13 @@ IslMap::IslMap(IslContext& ctx, const IterationVector& iterVec, const AffineSyst
 
 	// Set the names for the parameters of this dim
 	setVariableName(dim, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
+
+	// Set the input tuple name if specified
+	if ( !in_tuple_name.empty() )
+		dim = isl_dim_set_tuple_name(dim, isl_dim_in, in_tuple_name.c_str());
+
+	if ( !out_tuple_name.empty() )
+		dim = isl_dim_set_tuple_name(dim, isl_dim_out, out_tuple_name.c_str());
 	
 	// creates an universe set containing the dimensionatility of the iteration vector
 	size_t idx=0;
@@ -237,19 +261,94 @@ IslMap::IslMap(IslContext& ctx, const IterationVector& iterVec, const AffineSyst
 		bmap = isl_basic_map_add_constraint(bmap, cons);
 	}
 	// convert the basic map into a map
-	map = isl_map_from_basic_map(bmap);
+	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
 }
 
-std::ostream& IslMap::printTo(std::ostream& out) const {
+std::ostream& Map<IslContext>::printTo(std::ostream& out) const {
 	printIslMap(out, ctx.getRawContext(), map); 
 	return out;
 }
 
-void IslMap::intersect(const Set<IslContext>& set) {
-	map = isl_map_intersect_domain( map, isl_set_copy(static_cast<const IslSet&>(set).set) );
+bool Map<IslContext>::isEmpty() const { return isl_union_map_is_empty(map);	}
+
+// void IslMap::intersect(const Set<IslContext>& set) {
+//	map = isl_map_intersect_domain( map, isl_set_copy(static_cast<const IslSet&>(set).set) );
+//}
+
+template <>
+std::shared_ptr<Set<IslContext>> set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs) {
+	isl_union_set* set = isl_union_set_union(
+			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
+	);
+	return std::make_shared<Set<IslContext>>(ctx, isl_union_set_get_dim(set), set);
 }
 
-} // end backends namespace 
+template <>
+std::shared_ptr<Set<IslContext>> set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs) {
+	isl_union_set* set = isl_union_set_intersect(
+			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
+	);
+	return std::make_shared<Set<IslContext>>(ctx, isl_union_set_get_dim(set), set);
+}
+
+template <>
+std::shared_ptr<Map<IslContext>> map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs) {
+	isl_union_map* map = isl_union_map_union(
+			isl_union_map_copy( lhs.getAsIslMap() ), 
+			isl_union_map_copy( rhs.getAsIslMap() )
+	);
+	return std::make_shared<Map<IslContext>>(ctx, isl_union_map_get_dim(map), map);
+}
+
+template <>
+std::shared_ptr<Map<IslContext>> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs) {
+	isl_union_map* map = isl_union_map_intersect(
+			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
+	);
+	return std::make_shared<Map<IslContext>>(ctx, isl_union_map_get_dim(map), map);
+}
+
+template <>
+std::shared_ptr<Map<IslContext>> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom) {
+	isl_union_map* map = isl_union_map_intersect_domain( 
+			isl_union_map_copy(lhs.getAsIslMap()), isl_union_set_copy(dom.getAsIslSet()) 
+		);
+	return std::make_shared<Map<IslContext>>(ctx, isl_union_map_get_dim(map), map);
+}
+
+template <>
+void buildDependencies( 
+		IslContext& 								ctx,
+		const std::shared_ptr<Set<IslContext>>& 	domain, 
+		const std::shared_ptr<Map<IslContext>>& 	schedule, 
+		const std::shared_ptr<Map<IslContext>>& 	sinks, 
+		const std::shared_ptr<Map<IslContext>>& 	mustSources,
+		const std::shared_ptr<Map<IslContext>>& 	maySources
+) {
+	std::shared_ptr<Map<IslContext>> schedDom = map_intersect_domain(ctx, *schedule, *domain);
+	std::shared_ptr<Map<IslContext>> sinksDom = map_intersect_domain(ctx, *sinks, *domain);
+	std::shared_ptr<Map<IslContext>> mustSourcesDom = map_intersect_domain(ctx, *mustSources, *domain);
+//	std::shared_ptr<Map<IslContext>> maySourcesDom = map_intersect_domain(ctx, *maySources, *domain);
+
+	//DependenceInfo<IslContext> depInfo;
+	isl_union_map *must_dep, *may_dep, *must_no_source, *may_no_source;
+
+	isl_union_map* empty = isl_union_map_empty( isl_union_map_get_dim( schedule->getAsIslMap() ) );
+	
+	isl_union_map_compute_flow(
+			isl_union_map_copy(sinksDom->getAsIslMap()),
+			isl_union_map_copy(mustSourcesDom->getAsIslMap()),
+			empty,
+			isl_union_map_copy(schedDom->getAsIslMap()),
+			&must_dep,
+			NULL,
+			NULL,
+			NULL
+		);	
+	
+	printIslMap(std::cout, ctx.getRawContext(), must_dep);
+}
+
 } // end poly namespace 
 } // end analysis namespace 
 } // end insieme namespace 

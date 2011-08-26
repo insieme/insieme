@@ -63,7 +63,7 @@ namespace backend {
 	TypeIncludeTable getBasicTypeIncludeTable();
 
 
-	typedef std::function<TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
+	typedef std::function<const TypeInfo*(const Converter&, const core::TypePtr&)> TypeHandler;
 
 	typedef vector<TypeHandler> TypeHandlerList;
 
@@ -94,6 +94,9 @@ namespace backend {
 		virtual const VectorTypeInfo& getTypeInfo(const core::VectorTypePtr& type);
 
 		virtual const ChannelTypeInfo& getTypeInfo(const core::ChannelTypePtr& type);
+
+		// this one is only working for already resolved types
+		virtual const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type);
 	};
 
 
@@ -130,14 +133,6 @@ namespace backend {
 		c_ast::CodeFragmentPtr declaration;
 
 		c_ast::CodeFragmentPtr definition;
-
-		TypeInfo() {}
-
-		TypeInfo(const TypeInfo& info)
-			: lValueType(info.lValueType), rValueType(info.rValueType),
-			  externalType(info.externalType), externalize(info.externalize),
-			  internalize(info.internalize), declaration(info.declaration),
-			  definition(info.definition) { }
 
 		virtual ~TypeInfo() {};
 	};

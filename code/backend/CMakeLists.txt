@@ -7,7 +7,7 @@ include(../environment.cmake)
 
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_backend_srcs 	src/*.cpp )
-file(GLOB_RECURSE insieme_backend_incs 	include/*.h )
+file(GLOB_RECURSE insieme_backend_incs 	include/*.h include/*.def)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/kernel_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/backend/ocl_kernel/kernel_config.h)
 
@@ -45,7 +45,11 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} insieme_utils)
 	target_link_libraries(${case_name} insieme_backend)
 	
-	add_unit_test(${case_name})
+	if(${case_name} STREQUAL ut_be_opencl_test)
+		add_unit_test(${case_name} off)
+	else()
+		add_unit_test(${case_name})
+	endif()
 endforeach(case_file)
 
 # --- INSTALL --------------------------------------------------------------------

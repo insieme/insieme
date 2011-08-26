@@ -50,6 +50,7 @@
 
 #include "insieme/core/types.h"
 #include "insieme/core/ast_builder.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/logging.h"
 
@@ -71,28 +72,6 @@ namespace backend {
 		template<> struct info_trait<core::FunctionType> { typedef FunctionTypeInfo type; };
 		template<> struct info_trait<core::RecType> { typedef TypeInfo type; };
 
-
-		class TypeInfoPtr {
-			TypeInfo* ptr;
-			bool owner;
-
-		public:
-			TypeInfoPtr(TypeInfo* ptr, bool owner=true)
-				: ptr(ptr), owner(owner) {}
-
-			operator TypeInfo*() const {
-				return ptr;
-			}
-
-			TypeInfo* getPointer() const {
-				return ptr;
-			}
-
-			bool isOwner() const {
-				return owner;
-			}
-		};
-
 		class TypeInfoStore {
 
 			const Converter& converter;
@@ -101,17 +80,19 @@ namespace backend {
 
 			TypeHandlerList typeHandlers;
 
-			utils::map::PointerMap<core::TypePtr, TypeInfoPtr> typeInfos;
+			utils::map::PointerMap<core::TypePtr, const TypeInfo*> typeInfos; // < may contain duplicates
+
+			std::set<const TypeInfo*> allInfos;
 
 		public:
 
 			TypeInfoStore(const Converter& converter, const TypeIncludeTable& includeTable, const TypeHandlerList& typeHandlers)
-				: converter(converter), includeTable(includeTable), typeHandlers(typeHandlers), typeInfos() {}
+				: converter(converter), includeTable(includeTable), typeHandlers(typeHandlers), typeInfos(), allInfos() {}
 
 			~TypeInfoStore() {
 				// free all stored type information instances
-				for_each(typeInfos, [](const std::pair<core::TypePtr, TypeInfoPtr>& cur) {
-					if (cur.second.isOwner()) delete cur.second.getPointer();
+				for_each(allInfos, [](const TypeInfo* cur) {
+					delete cur;
 				});
 			}
 
@@ -125,40 +106,49 @@ namespace backend {
 			 */
 			template<
 				typename T,
-				typename result_type = typename info_trait<typename boost::remove_const<typename T::element_type>::type>::type*
+				typename result_type = const typename info_trait<typename boost::remove_const<typename T::element_type>::type>::type*
 			>
 			result_type resolveType(const T& type) {
 				// lookup type information using internal mechanism
-				TypeInfo* info = resolveInternal(type);
+				const TypeInfo* info = resolveInternal(type);
 				assert(dynamic_cast<result_type>(info));
 				return static_cast<result_type>(info);
+			}
+
+			const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type) const {
+				auto pos = std::find_if(allInfos.begin(), allInfos.end(), [&](const TypeInfo* cur) { return *cur->rValueType == *type; });
+				if (pos != allInfos.end()) {
+					return (*pos)->definition;
+				}
+				return c_ast::CodeFragmentPtr();
 			}
 
 		private:
 
 			// --------------- Internal resolution utilities -----------------
 
-			TypeInfo* resolveInternal(const core::TypePtr& type);
+			const TypeInfo* addInfo(const core::TypePtr& type, const TypeInfo* info);
+			const TypeInfo* resolveInternal(const core::TypePtr& type);
 
-			TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
-			TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
+			const TypeInfo* resolveTypeVariable(const core::TypeVariablePtr& ptr);
+			const TypeInfo* resolveGenericType(const core::GenericTypePtr& ptr);
 
-			TypeInfo* resolveNamedCompositType(const core::NamedCompositeTypePtr&, bool);
-			TypeInfo* resolveStructType(const core::StructTypePtr& ptr);
-			TypeInfo* resolveUnionType(const core::UnionTypePtr& ptr);
-			TypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
+			const TypeInfo* resolveNamedCompositType(const core::NamedCompositeTypePtr&, bool);
+			const TypeInfo* resolveStructType(const core::StructTypePtr& ptr);
+			const TypeInfo* resolveUnionType(const core::UnionTypePtr& ptr);
+			const TypeInfo* resolveTupleType(const core::TupleTypePtr& ptr);
 
-			ArrayTypeInfo* resolveArrayType(const core::ArrayTypePtr& ptr);
-			VectorTypeInfo* resolveVectorType(const core::VectorTypePtr& ptr);
-			ChannelTypeInfo* resolveChannelType(const core::ChannelTypePtr& ptr);
+			const ArrayTypeInfo* resolveArrayType(const core::ArrayTypePtr& ptr);
+			const VectorTypeInfo* resolveVectorType(const core::VectorTypePtr& ptr);
+			const ChannelTypeInfo* resolveChannelType(const core::ChannelTypePtr& ptr);
 
-			FunctionTypeInfo* resolveFunctionType(const core::FunctionTypePtr& ptr);
-			FunctionTypeInfo* resolvePlainFunctionType(const core::FunctionTypePtr& ptr);
-			FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolveFunctionType(const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolvePlainFunctionType(const core::FunctionTypePtr& ptr);
+			const FunctionTypeInfo* resolveThickFunctionType(const core::FunctionTypePtr& ptr);
 
-			RefTypeInfo* resolveRefType(const core::RefTypePtr& ptr);
+			const RefTypeInfo* resolveRefType(const core::RefTypePtr& ptr);
 
-			TypeInfo* resolveRecType(const core::RecTypePtr& ptr);
+			const TypeInfo* resolveRecType(const core::RecTypePtr& ptr);
 			void resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr);
 		};
 
@@ -206,6 +196,11 @@ namespace backend {
 		return *(store->resolveType(type));
 	}
 
+	const c_ast::CodeFragmentPtr TypeManager::getDefinitionOf(const c_ast::TypePtr& type) {
+		// as usual, ask store ...
+		return store->getDefinitionOf(type);
+	}
+
 	namespace type_info_utils {
 
 		c_ast::ExpressionPtr NoOp(const c_ast::SharedCNodeManager&, const c_ast::ExpressionPtr& node) {
@@ -229,10 +224,16 @@ namespace backend {
 
 		// --------------------- Type Specific Wrapper --------------------
 
+		const TypeInfo* TypeInfoStore::addInfo(const core::TypePtr& type, const TypeInfo* info) {
+			// register type information
+			typeInfos.insert(std::make_pair(type, info));
+			allInfos.insert(info);
+			return info;
+		}
 
 		// --------------------- Implementations of resolution utilities --------------------
 
-		TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
+		const TypeInfo* TypeInfoStore::resolveInternal(const core::TypePtr& type) {
 
 			// lookup information within cache
 			auto pos = typeInfos.find(type);
@@ -247,7 +248,7 @@ namespace backend {
 				// create new info referencing a header file
 				const string& header = pos2->second;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				typeInfos.insert(std::make_pair(type, info));
+				addInfo(type,info);
 				return info;
 			}
 
@@ -258,22 +259,22 @@ namespace backend {
 				// create new info referencing a header file
 				const string& header = pos2->second;
 				TypeInfo* info = type_info_utils::createInfo(converter.getFragmentManager(), name, header);
-				typeInfos.insert(std::make_pair(type, info));
+				addInfo(type,info);
 				return info;
 			}
 
 
 			// try resolving it using type handlers
 			for(auto it = typeHandlers.begin(); it!= typeHandlers.end(); ++it) {
-				TypeInfo* info = (*it)(converter, type);
+				const TypeInfo* info = (*it)(converter, type);
 				if (info) {
-					typeInfos.insert(std::make_pair(type, info));
+					addInfo(type,info);
 					return info;
 				}
 			}
 
 			// obtain type information
-			TypeInfo* info;
+			const TypeInfo* info;
 
 			// dispatch to corresponding sub-type implementation
 			switch(type->getNodeType()) {
@@ -306,18 +307,18 @@ namespace backend {
 			}
 
 			// store information
-			typeInfos.insert(std::make_pair(type, info));
+			addInfo(type,info);
 
 			// return pointer to obtained information
 			return info;
 		}
 
-		TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 			return type_info_utils::createInfo(manager, "<" + ptr->getVarName() + ">");
 		}
 
-		TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr)  {
+		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr)  {
 
 			auto& basic = converter.getNodeManager().getBasicGenerator();
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
@@ -352,8 +353,9 @@ namespace backend {
 				} else if (basic.isInt8(ptr)) {
 					type = c_ast::PrimitiveType::Int64;
 				} else {
-					assert(false && "Unsupported Integer type encountered!");
-					type = c_ast::PrimitiveType::Int32;
+					LOG(FATAL) << "Unsupported integer type: " << *ptr;
+					//assert(false && "Unsupported Integer type encountered!");
+					return type_info_utils::createUnsupportedInfo(manager);
 				}
 
 				// create primitive type + include dependency
@@ -398,20 +400,37 @@ namespace backend {
 				return type_info_utils::createInfo(boolType, definition);
 			}
 
-			// TODO: replace by work item / work item group concepts
-			// check for job types ...
-			if(basic.isJob(ptr)) {
-				return type_info_utils::createInfo(manager, "isbr_Job*");
+			// -------------- type literals -------------
+
+			if (basic.isTypeLiteralTypeGen(ptr)) {
+
+				// creates a empty struct and a new type "type"
+
+				// create type literal type
+				c_ast::IdentifierPtr name = manager.create("type");
+				c_ast::TypePtr typeType = manager.create<c_ast::NamedType>(name);
+				c_ast::TypeDefinitionPtr def = manager.create<c_ast::TypeDefinition>(manager.create<c_ast::StructType>(manager.create("_type")), name);
+
+				// also add empty instance
+				c_ast::VarDeclPtr decl = manager.create<c_ast::VarDecl>(manager.create<c_ast::Variable>(typeType, manager.create("type_token")));
+
+				c_ast::CodeFragmentPtr code = c_ast::CCodeFragment::createNew(converter.getFragmentManager(), def, decl);
+
+				// add dependency to header
+				return type_info_utils::createInfo(typeType, code);
 			}
-			if(basic.isThreadGroup(ptr)) {
-				return type_info_utils::createInfo(manager, "isbr_ThreadGroup");
+
+			if (core::analysis::isTypeLiteralType(ptr)) {
+				// use same info then for the generic case
+				return resolveInternal(basic.getTypeLiteralTypeGen());
 			}
 
 			// no match found => return unsupported type info
+			LOG(FATAL) << "Unsupported type: " << *ptr;
 			return type_info_utils::createUnsupportedInfo(manager);
 		}
 
-		TypeInfo* TypeInfoStore::resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, bool isStruct) {
+		const TypeInfo* TypeInfoStore::resolveNamedCompositType(const core::NamedCompositeTypePtr& ptr, bool isStruct) {
 
 			// The resolution of a named composite type is based on 3 steps
 			//		- first, get a name for the resulting C struct / union
@@ -466,15 +485,15 @@ namespace backend {
 			return type_info_utils::createInfo(type, declaration, definition);
 		}
 
-		TypeInfo* TypeInfoStore::resolveStructType(const core::StructTypePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveStructType(const core::StructTypePtr& ptr) {
 			return resolveNamedCompositType(ptr, true);
 		}
 
-		TypeInfo* TypeInfoStore::resolveUnionType(const core::UnionTypePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveUnionType(const core::UnionTypePtr& ptr) {
 			return resolveNamedCompositType(ptr, false);
 		}
 
-		TypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
 
 			// use struct conversion to resolve type => since tuple is represented using structs
 			core::ASTBuilder builder(ptr->getNodeManager());
@@ -487,7 +506,7 @@ namespace backend {
 			return resolveStructType(builder.structType(entries));
 		}
 
-		ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::ArrayTypePtr& ptr) {
+		const ArrayTypeInfo* TypeInfoStore::resolveArrayType(const core::ArrayTypePtr& ptr) {
 			auto manager = converter.getCNodeManager();
 
 			// obtain dimension of array
@@ -509,8 +528,8 @@ namespace backend {
 			// check whether this array type has been resolved while resolving the sub-type (due to recursion)
 			auto pos = typeInfos.find(ptr);
 			if (pos != typeInfos.end()) {
-				assert(dynamic_cast<ArrayTypeInfo*>(pos->second.getPointer()));
-				return static_cast<ArrayTypeInfo*>(pos->second.getPointer());
+				assert(dynamic_cast<const ArrayTypeInfo*>(pos->second));
+				return static_cast<const ArrayTypeInfo*>(pos->second);
 			}
 
 			// create array type information
@@ -539,7 +558,7 @@ namespace backend {
 			return res;
 		}
 
-		VectorTypeInfo* TypeInfoStore::resolveVectorType(const core::VectorTypePtr& ptr) {
+		const VectorTypeInfo* TypeInfoStore::resolveVectorType(const core::VectorTypePtr& ptr) {
 			auto manager = converter.getCNodeManager();
 
 			// obtain dimension of array
@@ -560,8 +579,8 @@ namespace backend {
 			// check whether the type has been resolved while resolving the sub-type
 			auto pos = typeInfos.find(ptr);
 			if (pos != typeInfos.end()) {
-				assert(dynamic_cast<VectorTypeInfo*>(pos->second.getPointer()));
-				return static_cast<VectorTypeInfo*>(pos->second.getPointer());
+				assert(dynamic_cast<const VectorTypeInfo*>(pos->second));
+				return static_cast<const VectorTypeInfo*>(pos->second);
 			}
 
 			// compose resulting info instance
@@ -632,11 +651,11 @@ namespace backend {
 			return res;
 		}
 
-		ChannelTypeInfo* TypeInfoStore::resolveChannelType(const core::ChannelTypePtr& ptr) {
+		const ChannelTypeInfo* TypeInfoStore::resolveChannelType(const core::ChannelTypePtr& ptr) {
 			return type_info_utils::createUnsupportedInfo<ChannelTypeInfo>(*converter.getCNodeManager());
 		}
 
-		RefTypeInfo* TypeInfoStore::resolveRefType(const core::RefTypePtr& ptr) {
+		const RefTypeInfo* TypeInfoStore::resolveRefType(const core::RefTypePtr& ptr) {
 
 			auto manager = converter.getCNodeManager();
 
@@ -645,13 +664,13 @@ namespace backend {
 
 			// obtain information covering sub-type
 			auto elementNodeType = ptr->getElementType()->getNodeType();
-			TypeInfo* subType = resolveType(ptr->getElementType());
+			const TypeInfo* subType = resolveType(ptr->getElementType());
 
 			// check whether this ref type has been resolved while resolving the sub-type (due to recursion)
 			auto pos = typeInfos.find(ptr);
 			if (pos != typeInfos.end()) {
-				assert(dynamic_cast<RefTypeInfo*>(pos->second.getPointer()));
-				return static_cast<RefTypeInfo*>(pos->second.getPointer());
+				assert(dynamic_cast<const RefTypeInfo*>(pos->second));
+				return static_cast<const RefTypeInfo*>(pos->second);
 			}
 
 			// produce R and L value type
@@ -734,7 +753,7 @@ namespace backend {
 		}
 
 
-		FunctionTypeInfo* TypeInfoStore::resolveFunctionType(const core::FunctionTypePtr& ptr) {
+		const FunctionTypeInfo* TypeInfoStore::resolveFunctionType(const core::FunctionTypePtr& ptr) {
 			// dispatch to pointer-specific type!
 			if (ptr->isPlain()) {
 				return resolvePlainFunctionType(ptr);
@@ -742,7 +761,7 @@ namespace backend {
 			return resolveThickFunctionType(ptr);
 		}
 
-		FunctionTypeInfo* TypeInfoStore::resolvePlainFunctionType(const core::FunctionTypePtr& ptr) {
+		const FunctionTypeInfo* TypeInfoStore::resolvePlainFunctionType(const core::FunctionTypePtr& ptr) {
 			assert(ptr->isPlain() && "Only supported for plain function types!");
 
 			auto manager = converter.getCNodeManager();
@@ -754,7 +773,7 @@ namespace backend {
 			res->plain = true;
 
 			// construct the C AST function type token
-			TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
+			const TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
 			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType);
 
 			// add result type dependencies
@@ -763,7 +782,7 @@ namespace backend {
 
 			// add remaining parameters
 			for_each(ptr->getParameterTypes(), [&](const core::TypePtr& cur) {
-				TypeInfo* info = resolveType(cur);
+				const TypeInfo* info = resolveType(cur);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
 			});
@@ -795,7 +814,7 @@ namespace backend {
 
 		}
 
-		FunctionTypeInfo* TypeInfoStore::resolveThickFunctionType(const core::FunctionTypePtr& ptr) {
+		const FunctionTypeInfo* TypeInfoStore::resolveThickFunctionType(const core::FunctionTypePtr& ptr) {
 			assert(!ptr->isPlain() && "Only supported for non-plain function types!");
 
 			auto manager = converter.getCNodeManager();
@@ -819,7 +838,7 @@ namespace backend {
 
 
 			// construct the C AST function type token
-			TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
+			const TypeInfo* retTypeInfo = resolveType(ptr->getReturnType());
 			c_ast::FunctionTypePtr functionType = manager->create<c_ast::FunctionType>(retTypeInfo->rValueType);
 
 			// add parameter capturing the closure
@@ -832,7 +851,7 @@ namespace backend {
 
 			// add remaining parameters
 			for_each(ptr->getParameterTypes(), [&](const core::TypePtr& cur) {
-				TypeInfo* info = resolveType(cur);
+				const TypeInfo* info = resolveType(cur);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
 				defDependencies.push_back(info->definition);
@@ -932,7 +951,7 @@ namespace backend {
 		}
 
 
-		TypeInfo* TypeInfoStore::resolveRecType(const core::RecTypePtr& ptr) {
+		const TypeInfo* TypeInfoStore::resolveRecType(const core::RecTypePtr& ptr) {
 
 			// the magic is done by resolving the recursive type definition
 			resolveRecTypeDefinition(ptr->getDefinition());
@@ -988,19 +1007,21 @@ namespace backend {
 				// fix name of unrolled struct
 				nameManager.setName(unrolled, nameManager.getName(recType));
 
-				TypeInfoPtr& entry = typeInfos.at(recType);
-				TypeInfo* curInfo = entry.getPointer();
-				TypeInfo* newInfo = resolveType(unrolled);
+				// get reference to pointer within map (needs to be updated)
+				TypeInfo*& curInfo = const_cast<TypeInfo*&>(typeInfos.at(recType));
+				TypeInfo* newInfo = const_cast<TypeInfo*>(resolveType(unrolled));
 
 				assert(curInfo && newInfo && "Both should be available now!");
 				assert(curInfo != newInfo);
 
 				// combine them and updated within type info map (not being owned by the pointer)
 				newInfo->declaration = curInfo->declaration;
-				entry = TypeInfoPtr(newInfo, false);
 
 				// remove old information
 				delete curInfo;
+
+				// use new information
+				curInfo = newInfo;
 			});
 
 		}

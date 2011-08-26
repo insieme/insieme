@@ -118,9 +118,11 @@ namespace runtime {
 
 		vector<Entry> entries;
 
+		TypeTable& table;
+
 	public:
 
-		TypeTableStore(const Converter& converter) : converter(converter) {}
+		TypeTableStore(const Converter& converter, TypeTable& table) : converter(converter), table(table) {}
 
 		const Entry& resolve(const c_ast::TypePtr& type) {
 
@@ -144,6 +146,7 @@ namespace runtime {
 		const Entry& addEntry(Entry& entry) {
 			entry.index = entries.size();
 			entries.push_back(entry);
+			table.addDependency(converter.getTypeManager().getDefinitionOf(entry.type));
 			return *entries.rbegin();
 		}
 
@@ -235,7 +238,7 @@ namespace runtime {
 
 
 	TypeTable::TypeTable(const Converter& converter)
-		: converter(converter), store(new TypeTableStore(converter)) {}
+		: converter(converter), store(new TypeTableStore(converter, *this)) {}
 
 	TypeTable::~TypeTable() {
 		delete store;
@@ -291,7 +294,8 @@ namespace runtime {
 	unsigned TypeTable::registerType(const core::TypePtr& type) {
 
 		// look up type information
-		const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+		TypeManager& typeManager = converter.getTypeManager();
+		const TypeInfo& info = typeManager.getTypeInfo(type);
 
 		// add dependency to type definition
 		addDependency(info.definition);
@@ -302,6 +306,12 @@ namespace runtime {
 
 
 	// -- Implementation Table --------------------------------------------------------------
+
+	class ImplementationStore {
+
+
+
+	};
 
 
 	struct WorkItemVariantCode {
@@ -315,7 +325,8 @@ namespace runtime {
 	};
 
 	ImplementationTable::ImplementationTable(const Converter& converter)
-		: converter(converter), workItems() {}
+		: converter(converter) {}
+
 
 	ImplementationTablePtr ImplementationTable::get(const Converter& converter) {
 		static string ENTRY_NAME = "ImplementationTable";
@@ -332,10 +343,19 @@ namespace runtime {
 		return static_pointer_cast<const ImplementationTable>(res);
 	}
 
-	void ImplementationTable::registerWorkItemImpl(const WorkItemImpl& implementation) {
+	unsigned ImplementationTable::registerWorkItemImpl(const core::ExpressionPtr& implementation) {
+
+		// check whether implementation has already been resolved
+		auto pos = index.find(implementation);
+		if (pos != index.end()) {
+			return pos->second;
+		}
+
+		// decode implementation information
+		WorkItemImpl impl = WorkItemImpl::decode(implementation);
 
 		vector<WorkItemVariantCode> variants;
-		for_each(implementation.getVariants(), [&](const WorkItemVariant& cur) {
+		for_each(impl.getVariants(), [&](const WorkItemVariant& cur) {
 
 			// resolve entry point
 			const FunctionInfo& info = converter.getFunctionManager().getInfo(cur.getImplementation());
@@ -348,7 +368,10 @@ namespace runtime {
 		});
 
 		// add implementation to list of implementations
+		unsigned id = workItems.size();
+		index.insert(std::make_pair(implementation, id));
 		workItems.push_back(WorkItemImplCode(variants));
+		return id;
 	}
 
 

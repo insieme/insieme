@@ -13,5 +13,6 @@ build*
 \#*/*
 
 *.cfg
+*.xml
 !test.cfg
 

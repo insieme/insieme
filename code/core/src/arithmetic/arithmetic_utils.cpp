@@ -86,15 +86,9 @@ namespace {
 		Formula visitCallExpr(const CallExprPtr& call) {
 			checkType(call);
 
-			// Handling of deref expressions, which like cast expressions
-			// should be not considered in this phase
-
-			if (core::analysis::isCallOf(call, lang.getRefDeref())) {
-				// we assume a deref operator is always applied to a variable
-				if ( VariablePtr&& var = dynamic_pointer_cast<const Variable>(call->getArgument(0)) ) {
-					return var;
-				}
-				return visit(call->getArgument(0));
+			// check for terminal values
+			if (Value::isValue(call)) {
+				return Value(call);
 			}
 
 			// check number of arguments

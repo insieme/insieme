@@ -880,18 +880,21 @@ namespace {
 		ADD_FORMATTER(basic.getCharLe(), { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
 
 		ADD_FORMATTER(basic.getUnsignedIntEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getUnsignedIntNe(), { PRINT_ARG(0); OUT("!="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntGe(), { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntGt(), { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntLt(), { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getUnsignedIntLe(), { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
 
 		ADD_FORMATTER(basic.getSignedIntEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getSignedIntNe(), { PRINT_ARG(0); OUT("!="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntGe(), { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntGt(), { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntLt(), { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getSignedIntLe(), { PRINT_ARG(0); OUT("<="); PRINT_ARG(1); });
 
 		ADD_FORMATTER(basic.getRealEq(), { PRINT_ARG(0); OUT("=="); PRINT_ARG(1); });
+		ADD_FORMATTER(basic.getRealNe(), { PRINT_ARG(0); OUT("!="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealGe(), { PRINT_ARG(0); OUT(">="); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealGt(), { PRINT_ARG(0); OUT(">"); PRINT_ARG(1); });
 		ADD_FORMATTER(basic.getRealLt(), { PRINT_ARG(0); OUT("<"); PRINT_ARG(1); });

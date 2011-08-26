@@ -186,6 +186,11 @@ public:
 	/**
 	 * Creates an expression accessing the corresponding member of the given struct.
 	 */
+	ExpressionPtr accessMember(ExpressionPtr structExpr, string member) const;
+
+	/**
+	 * Creates an expression accessing the corresponding member of the given struct.
+	 */
 	ExpressionPtr accessMember(ExpressionPtr structExpr, IdentifierPtr member) const;
 
 	/**

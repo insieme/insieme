@@ -40,6 +40,7 @@
 
 #include "insieme/backend/converter.h"
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
 namespace insieme {
 namespace backend {
@@ -122,6 +123,8 @@ namespace runtime {
 
 		const Converter& converter;
 
+		utils::map::PointerMap<core::ExpressionPtr, unsigned> index;
+
 		vector<WorkItemImplCode> workItems;
 
 	public:
@@ -132,7 +135,7 @@ namespace runtime {
 
 		const c_ast::ExpressionPtr getImplementationTable();
 
-		void registerWorkItemImpl(const WorkItemImpl& implementation);
+		unsigned registerWorkItemImpl(const core::ExpressionPtr& implementation);
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 

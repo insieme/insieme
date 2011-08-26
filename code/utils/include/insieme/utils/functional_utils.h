@@ -39,6 +39,7 @@
 #include <boost/functional/hash.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
+#include <boost/type_traits/is_base_of.hpp>
 #include <boost/utility/enable_if.hpp>
 
 
@@ -199,6 +200,110 @@ struct RejectAll {
 };
 
 
+// -------------------- Member function wrapper ---------------------
+//  A functor wrapping member function calls to known objects.
+// ------------------------------------------------------------------
+
+/**
+ * A functor combining an object pointer and a member function pointer
+ * and invoking the member function on the given object when being
+ * invoked.
+ *
+ * Instances of this functor can be used to bridge the gap between
+ * std::function instances and member function pointers.
+ *
+ * WARNING: Instances of this functor are only valid as long as the
+ * underlying object is still alive. The functor will not keep it alive.
+ */
+template<typename C, typename R, typename ... A>
+struct member_function {
+	typedef R (C::* member_function_ptr)( A ... );
+	typedef R (* pointer_to_member_function)(C*, A...);
+
+	/**
+	 * An extension of GCC allows to obtain a function pointer to the actual
+	 * implementation of a member function. This way, the overhead of walking through
+	 * virtual tables is only introduced during construction
+	 *
+	 * See:
+	 * http://gcc.gnu.org/onlinedocs/gcc/Bound-member-functions.html#Bound-member-functions
+	 *
+	 * NOTE: this optimization was disabled since it is looking up the virtual function
+	 * table based on the static type of the pointer. Hence, resolving the real type
+	 * of a this pointer within a abstract super class was not supported.
+	 */
+
+	C* object;
+
+	member_function_ptr fun;  // member function version
+
+	member_function(C& object, const member_function_ptr& member)
+		: object(&object), fun(member) {}
+
+	R operator()(A...args) const {
+		return (object->*fun)(args...);
+	}
+
+};
+
+// the same as above, for const member functions
+template<typename C, typename R, typename ... A>
+struct member_function_const {
+	typedef R (C::* member_function_ptr)( A ... ) const;
+	typedef R (* pointer_to_member_function)(const C*, A...);
+
+	const C* object;
+
+	member_function_ptr fun;  // member function version
+
+	member_function_const(const C& object, const member_function_ptr& member)
+		: object(&object), fun(member) {}
+
+	R operator()(A...args) const {
+		return (object->*fun)(args...);
+	}
+
+};
+
+
+/**
+ * A utility factory method reducing the amount of code required to generate
+ * a member function functor by eliminating the requirement of specifying all
+ * the type parameters.
+ *
+ * @tparam C the class the member function is defined for
+ * @tparam O the class of the object representing the target
+ * @tparam R the result produced by the member function
+ * @tparam A the argument types of the member function
+ * @param object the object to be bound to
+ * @param fun the member function pointer to be bound
+ * @return a member function functor invoking the given member function on the
+ * 		given object upon invocation
+ */
+template<typename C, typename O, typename R, typename ... A>
+typename boost::enable_if<boost::is_base_of<C,O>,member_function<C,R,A...>>::type
+fun(O& object, R (C::* fun)( A ... )) {
+	return member_function<C,R,A...>(object, fun);
+}
+template<typename C, typename O, typename R, typename ... A>
+typename boost::enable_if<boost::is_base_of<C,O>,member_function_const<C,R,A...>>::type
+fun(const O& object, R (C::* fun)( A ... ) const) {
+	return member_function_const<C,R,A...>(object, fun);
+}
+
+template<typename T>
+struct member_function_trait;
+
+template<typename C, typename R, typename ... A>
+struct member_function_trait<R(C::*)(A...)> {
+	typedef member_function<C,R,A...> type;
+};
+
+template<typename C, typename R, typename ... A>
+struct member_function_trait<R(C::*)(A...) const> {
+	typedef member_function_const<C,R,A...> type;
+};
+
 // -------------------- Type List traits ----------------------------
 
 
@@ -253,6 +358,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(void) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 0);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef type_list<> argument_types;
 	};
@@ -261,6 +367,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 1);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T1 argument_type;
@@ -271,6 +378,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1, T2) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 2);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -283,6 +391,7 @@ namespace detail {
 	struct lambda_traits_helper<R (C::*)(T1, T2, T3) const>
 	{
 	  BOOST_STATIC_CONSTANT(unsigned, arity = 3);
+	  typedef C class_type;
 	  typedef R result_type;
 	  typedef T1 arg1_type;
 	  typedef T2 arg2_type;
@@ -293,6 +402,7 @@ namespace detail {
 	template <typename R, typename C, typename T1, typename T2, typename T3, typename ... A >
 	struct lambda_traits_helper<R (C::*)( T1, T2, T3, A ... ) const>  {
 		BOOST_STATIC_CONSTANT(unsigned, arity = 3 + sizeof...(A));
+		typedef C class_type;
 		typedef R result_type;
 		typedef T1 arg1_type;
 	    typedef T2 arg2_type;

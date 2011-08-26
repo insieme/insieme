@@ -42,6 +42,11 @@ cl_command_queue gqueue = NULL;
 short* short_host_ptr;
 cl_mem dev_ptr1 = NULL;
 cl_event event = NULL;
+cl_kernel kernel[2] = {NULL};
+
+cl_int subfunction(cl_command_queue queue, size_t* globalSize, size_t* localSize, cl_event event) {
+	return clEnqueueNDRangeKernel(queue, kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
+}
 
 //#pragma insieme mark
 int main(int argc, char **argv) {
@@ -49,7 +54,6 @@ int main(int argc, char **argv) {
 	cl_device_id* device;// = (cl_device_id*)malloc(sizeof(cl_device_id*));
 	cl_command_queue* queue;
 	cl_context context;
-	cl_kernel kernel[2];
 
 	context = clCreateContext(0, 1, &device[0], NULL, NULL, &err);
 	gcontext = clCreateContext(0, 1, device, NULL, NULL, &err);
@@ -57,7 +61,7 @@ int main(int argc, char **argv) {
 	gqueue = clCreateCommandQueue(gcontext, device[0], CL_QUEUE_PROFILING_ENABLE, &err);
 
 	float* host_ptr;
-	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
+	cl_mem dev_ptr2 = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(cl_float) * 100, host_ptr, NULL);
 	cl_mem dev_ptr3 = clCreateBuffer(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(cl_float) * 100, host_ptr, &err);
 	cl_mem dev_ptr4;
 
@@ -89,6 +93,7 @@ int main(int argc, char **argv) {
 	size_t localSize[] = { 3, 5, 6 };
 
 	err = clEnqueueNDRangeKernel(queue[0], kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
+//	err = subfunction(queue[0], globalSize, localSize, event);
 
 	err = clWaitForEvents(1, &event);
 

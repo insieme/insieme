@@ -39,7 +39,6 @@
 #include "declarations.h"
 
 typedef struct _irt_parallel_job {
-	irt_work_group* parent;
 	uint32 min;
 	uint32 max;
 	uint32 mod;
@@ -48,4 +47,4 @@ typedef struct _irt_parallel_job {
 } irt_parallel_job;
 
 irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args);
-irt_work_group* irt_parallel(const irt_parallel_job* job);
+irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job);

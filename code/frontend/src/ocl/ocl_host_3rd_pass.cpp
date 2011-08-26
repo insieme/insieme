@@ -263,6 +263,113 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 							builder.returnStmt(vDecl->getVariable()))), arg);
 }
 
+const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr, const CallExprPtr& newCall, const size_t offset) {
+	// get kernel function
+	ExpressionPtr k = callExpr->getArgument(1-offset);
+
+	// check if argument is a call to ref.deref
+	k = tryRemove(BASIC.getRefDeref(), k, builder);
+/*std::cout << "\nKernel: " << k << std::endl;
+	// get corresponding lambda expression
+//equal_target<ExpressionPtr> cmp;
+for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
+std::cout << "\nArguments: " << ka.first << "\n";
+//for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
+});
+std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;*/
+	assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
+	LambdaExprPtr lambda = kernelLambdas[k];
+
+	assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
+	vector<ExpressionPtr>& args = kernelArgs[k];
+
+	// make a three element vector out of the global and local size
+	const ExpressionPtr global = anythingToVec3(newCall->getArgument(2-offset), newCall->getArgument(4-2*offset));
+	const ExpressionPtr local = anythingToVec3(newCall->getArgument(2-offset), newCall->getArgument(5-2*offset));
+
+	vector<ExpressionPtr> newArgs;
+	// construct call to kernel function
+	if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
+		// if there is no local memory in argument, the arguments can simply be copyied
+		for_each(args, [&](ExpressionPtr& arg) {
+				assert(!!arg && "Kernel has illegal global memory argument");
+				//global and private memory arguments must be variables
+				arg = getVarOutOfCrazyInspireConstruct(arg, builder);
+				newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), dynamic_pointer_cast<const Expression>(this->resolveElement(arg))));
+			});
+
+		// add global and local size to arguments
+		newArgs.push_back(global);
+		newArgs.push_back(local);
+
+		NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
+		copyAnnotations(callExpr, kernelCall);
+		return kernelCall;
+	}
+	// add declarations for argument local variables if any, warping a function around it
+
+	vector<StatementPtr> declsAndKernelCall;
+	for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
+			assert(!!decl && "Kernel has illegal local memory argument");
+			declsAndKernelCall.push_back(decl);
+		});
+
+	vector<VariablePtr> params;
+	vector<ExpressionPtr> innerArgs;
+	vector<TypePtr> wrapperInterface;
+
+	for_each(args, [&](ExpressionPtr& arg) {
+			assert(!!arg && "Kernel has illegal global memory argument");
+			bool local = false;
+			//global and private memory arguments must be variables
+			arg = getVarOutOfCrazyInspireConstruct(arg, builder);
+			// local args are declared in localMemDecls
+			for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
+					assert(!!decl && "Kernel has illegal local memory argument");
+					if(arg == decl->getVariable()) {
+						// will be declared inside wrapper function
+						local = true;
+					}
+				});
+			if(!local) {
+				// global and private memory arguments will be passed to the wrapper function as agrument
+				ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
+				assert(!!newArg && "Argument of kernel function must be an Expression");
+				newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), newArg));
+				wrapperInterface.push_back(newArgs.back()->getType());
+
+				// kernel funtion will take a new variable as argument
+				params.push_back(builder.variable(newArgs.back()->getType()));
+				// the kernel call will use the params of the outer call as arguments, they must be an expression
+				innerArgs.push_back(params.back());
+			} else {
+				// furthermore we have to add local variables
+				innerArgs.push_back(arg);
+			}
+		});
+
+	// add global and local size to arguments
+	TypePtr vec3type = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
+	newArgs.push_back(global);
+	VariablePtr globalVar = builder.variable(vec3type);
+	params.push_back(globalVar);
+	innerArgs.push_back(globalVar);
+	wrapperInterface.push_back(vec3type);
+
+	newArgs.push_back(local);
+	VariablePtr localVar = builder.variable(vec3type);
+	params.push_back(localVar);
+	innerArgs.push_back(localVar);
+	wrapperInterface.push_back(vec3type);
+
+	NodePtr kernelCall = builder.returnStmt(builder.callExpr(BASIC.getInt4(), lambda, innerArgs));
+	copyAnnotations(callExpr, kernelCall);
+
+	declsAndKernelCall.push_back(dynamic_pointer_cast<const Statement>(kernelCall));
+	const FunctionTypePtr& wrapperType = builder.functionType(wrapperInterface, BASIC.getInt4());
+	return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
+}
+
 const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	// stopp recursion at type level
 	if (element->getNodeCategory() == NodeCategory::NC_Type) {
@@ -276,7 +383,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
 		if(cl_mems.find(var) != cl_mems.end()) {
-//			std::cout << "cl_mems: " << cl_mems << std::endl;
+//			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
 			return cl_mems[var];
 		}
 	}
@@ -385,19 +492,26 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				// check if parameter has already been replaced, replace only once
 				if(const VariablePtr& vArg = getVariableArg(arg, builder)) {
 					// todo fix dirty hack
-					if((params.at(cnt)->getType()->toString().find("array<_cl_")) != string::npos)
+					if(params.at(cnt)->getType()->toString().find("array<_cl_") != string::npos) {
 					if(cl_mems.find(params.at(cnt)) != cl_mems.end()) {
 						newParams.at(cnt) = cl_mems[params.at(cnt)];
 						changed = true;
 					// else check if the passed has a diffetent type
 					} else if(cl_mems.find(vArg) != cl_mems.end()) {
-						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getNonRefType(vArg), getNonRefType(cl_mems[vArg]));
+						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getBaseType(arg),
+								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))));
+//						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
+//								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))) << std::endl;
 						if(const TypePtr& newType = dynamic_pointer_cast<const Type>(nt)){
 							newParams.at(cnt) = builder.variable(newType);
 							cl_mems[params.at(cnt)] = newParams.at(cnt);
 							changed = true;
 						}
-					}
+					}}/* else if(cl_mems.find(vArg) != cl_mems.end()){
+						TypePtr argTy = getBaseType(arg);
+						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << argTy << "\ncl_mems[vArg] " <<
+								(static_pointer_cast<const Expression>(resolveElement(arg)))->getType() << std::endl;
+					}*/
 				}
 				++cnt;
 			});
@@ -494,111 +608,11 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this))) {
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
-				if(fun->getValue() == "clEnqueueNDRangeKernel" ) {
-//std::cout << "lit: " << fun->getValue() << kernelLambdas.size() <<  std::endl;
-					// get kernel function
-					ExpressionPtr k = callExpr->getArgument(1);
-
-					// check if argument is a call to ref.deref
-					k = tryRemove(BASIC.getRefDeref(), k, builder);
-
-					// get corresponding lambda expression
-//equal_target<ExpressionPtr> cmp;
-/*for_each(kernelLambdas, [](std::pair<core::ExpressionPtr, core::LambdaExprPtr > ka) {
-	std::cout << "Arguments: " << ka.first << "\n";
-});
-std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;*/
-					assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
-					LambdaExprPtr lambda = kernelLambdas[k];
-
-					assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
-					vector<ExpressionPtr>& args = kernelArgs[k];
-
-					// make a three element vector out of the global and local size
-					const ExpressionPtr global = anythingToVec3(newCall->getArgument(2), newCall->getArgument(4));
-					const ExpressionPtr local = anythingToVec3(newCall->getArgument(2), newCall->getArgument(5));
-
-					vector<ExpressionPtr> newArgs;
-					// construct call to kernel function
-					if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
-						// if there is no local memory in argument, the arguments can simply be copyied
-						for_each(args, [&](ExpressionPtr& arg) {
-								assert(!!arg && "Kernel has illegal global memory argument");
-								//global and private memory arguments must be variables
-								arg = getVarOutOfCrazyInspireConstruct(arg, builder);
-								newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), dynamic_pointer_cast<const Expression>(this->resolveElement(arg))));
-							});
-
-						// add global and local size to arguments
-						newArgs.push_back(global);
-						newArgs.push_back(local);
-
-						NodePtr kernelCall = builder.callExpr(BASIC.getInt4(), lambda, newArgs);
-						copyAnnotations(callExpr, kernelCall);
-						return kernelCall;
-					}
-					// add declarations for argument local variables if any, warping a function around it
-
-					vector<StatementPtr> declsAndKernelCall;
-					for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
-							assert(!!decl && "Kernel has illegal local memory argument");
-							declsAndKernelCall.push_back(decl);
-						});
-
-					vector<VariablePtr> params;
-					vector<ExpressionPtr> innerArgs;
-					vector<TypePtr> wrapperInterface;
-
-					for_each(args, [&](ExpressionPtr& arg) {
-							assert(!!arg && "Kernel has illegal global memory argument");
-							bool local = false;
-							//global and private memory arguments must be variables
-							arg = getVarOutOfCrazyInspireConstruct(arg, builder);
-							// local args are declared in localMemDecls
-							for_each(localMemDecls[k], [&](DeclarationStmtPtr decl) {
-									assert(!!decl && "Kernel has illegal local memory argument");
-									if(arg == decl->getVariable()) {
-										// will be declared inside wrapper function
-										local = true;
-									}
-								});
-							if(!local) {
-								// global and private memory arguments will be passed to the wrapper function as agrument
-								ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
-								assert(!!newArg && "Argument of kernel function must be an Expression");
-								newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), newArg));
-								wrapperInterface.push_back(newArgs.back()->getType());
-
-								// kernel funtion will take a new variable as argument
-								params.push_back(builder.variable(newArgs.back()->getType()));
-								// the kernel call will use the params of the outer call as arguments, they must be an expression
-								innerArgs.push_back(params.back());
-							} else {
-								// furthermore we have to add local variables
-								innerArgs.push_back(arg);
-							}
-						});
-
-					// add global and local size to arguments
-					TypePtr vec3type = builder.vectorType(BASIC.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3)));
-					newArgs.push_back(global);
-					VariablePtr globalVar = builder.variable(vec3type);
-					params.push_back(globalVar);
-					innerArgs.push_back(globalVar);
-					wrapperInterface.push_back(vec3type);
-
-					newArgs.push_back(local);
-					VariablePtr localVar = builder.variable(vec3type);
-					params.push_back(localVar);
-					innerArgs.push_back(localVar);
-					wrapperInterface.push_back(vec3type);
-
-					NodePtr kernelCall = builder.returnStmt(builder.callExpr(BASIC.getInt4(), lambda, innerArgs));
-					copyAnnotations(callExpr, kernelCall);
-
-					declsAndKernelCall.push_back(dynamic_pointer_cast<const Statement>(kernelCall));
-					const FunctionTypePtr& wrapperType = builder.functionType(wrapperInterface, BASIC.getInt4());
-					return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
+				if(fun->getValue() == "clEnqueueNDRangeKernel") {
+					return handleNDRangeKernel(callExpr, newCall, 0);
+				}
+				if(fun->getValue() == "irt_ocl_run_kernel" ) {
+					return handleNDRangeKernel(callExpr, newCall, 1);
 				}
 			}
 			if(newCall->getFunctionExpr() == BASIC.getCompositeRefElem()) {

@@ -43,68 +43,15 @@
 namespace insieme {
 namespace transform {
 
-
-	class InsertS : public Transformation {
-
-		/**
-		 * The node to be inserted.
-		 */
-		const core::NodePtr content;
+	class DeadCodeElimination : public Transformation {
 
 	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
 
-	};
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
 
+		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException);
 
-	class Parallel : public Transformation {
-
-		std::vector<TransformationPtr> transformations;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-
-	class Pipeline : public Transformation {
-
-		std::vector<TransformationPtr> transformations;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-
-
-	class Conditional : public Transformation {
-
-		const TransformationPtr transformation;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-
-	};
-
-
-
-	class ForAllChild : public Transformation {
-
-		const TransformationPtr transformation;
-
-	public:
-		virtual core::NodePtr apply(const core::NodePtr& target);
-		virtual bool checkPrecondition(const core::NodePtr& target);
-		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
 
 	};
 

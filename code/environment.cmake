@@ -174,6 +174,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
 	# add general flags
 	add_definitions( -fshow-column )
+	add_definitions( -fdiagnostics-show-option )
 	add_definitions( -Wall )
 	# add_definitions( -Wextra )
 	# add_definitions( -pedantic )
@@ -261,6 +262,7 @@ if (NOT MEMORY_CHECK_SETUP)
 						--show-reachable=no
 						--track-fds=yes
 						--error-exitcode=1
+						--track-origins=yes
 						#--log-file=${CMAKE_CURRENT_BINARY_DIR}/valgrind.log.${case_name}
 						${CMAKE_CURRENT_BINARY_DIR}/${case_name}
 					WORKING_DIRECTORY

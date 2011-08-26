@@ -44,6 +44,26 @@ namespace insieme {
 namespace core {
 namespace arithmetic {
 
+TEST(ArithmeticTest, Values) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr varA = builder.variable(type, 1);
+	VariablePtr varB = builder.variable(type, 2);
+	VariablePtr varC = builder.variable(type, 3);
+
+	EXPECT_PRED1(Value::isValue, varA);
+	EXPECT_PRED1(Value::isValue, varB);
+	EXPECT_PRED1(Value::isValue, varC);
+
+	// check < operator
+	EXPECT_LT(Value(varA), Value(varB));
+	EXPECT_LT(Value(varA), Value(varC));
+
+}
+
 
 TEST(ArithmeticTest, Products) {
 
@@ -455,6 +475,19 @@ TEST(ArithmeticTest, FormulaSubscriptOperator) {
 	// some none-existing terms
 	EXPECT_EQ(0, f[i*i]);
 	EXPECT_EQ(0, f[j]);
+
+}
+
+TEST(ArithmeticTest, NastyExample) {
+	NodeManager manager;
+	ASTBuilder builder(manager);
+
+	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
+	TypePtr type = builder.getBasicGenerator().getInt4();
+	VariablePtr var = builder.variable(type, 1);
+
+	auto f = (((0*4)*4) + (0*4)) + var;
+	EXPECT_EQ("v1", toString(f));
 
 }
 

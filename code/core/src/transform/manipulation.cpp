@@ -327,6 +327,9 @@ namespace {
 		ExpressionPtr body;
 		if (ReturnStmtPtr returnStmt = dynamic_pointer_cast<const ReturnStmt>(bodyStmt)) {
 			body = returnStmt->getReturnExpr();
+		} else if (bodyStmt->getNodeCategory() == core::NC_Expression){
+			// single expression => can also be inlined
+			body = static_pointer_cast<const core::Expression>(bodyStmt);
 		} else {
 			// no in-lining possible (not a simple expression)
 			return call;

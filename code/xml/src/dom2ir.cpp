@@ -185,7 +185,8 @@ public:
 			paramTypes.push_back(createNode<Type>(*iter));
 		}
 		TypePtr&& retType = createNode<Type>(elem, "returnType","typePtr");
-		return createIrNode<FunctionType>(elem, paramTypes, retType);
+		bool plain = numeric_cast<bool>(elem.getAttr("plain"));
+		return createIrNode<FunctionType>(elem, paramTypes, retType, plain);
 	}
 
 private:

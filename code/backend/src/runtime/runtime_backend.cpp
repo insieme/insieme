@@ -101,10 +101,9 @@ namespace runtime {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-				makePreProcessor<IfThenElseInlining>(),
-				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>(),
-				makePreProcessor<runtime::WorkItemExtractor>()
+				getBasicPreProcessorSequence(),
+				makePreProcessor<runtime::WorkItemizer>(),
+				makePreProcessor<runtime::StandaloneWrapper>()
 		);
 		converter.setPreProcessor(preprocessor);
 
@@ -145,7 +144,16 @@ namespace runtime {
 			// add runtime-specific includes
 			res["irt_get_default_worker_count"] 	= "standalone.h";
 			res["irt_runtime_standalone"] 			= "standalone.h";
+
+			res["irt_parallel"] 					= "ir_interface.h";
+			res["irt_merge"] 						= "ir_interface.h";
+			res["irt_pfor"]							= "ir_interface.h";
+
+			res["irt_wg_join"]						= "irt_all_impls.h";
 			res["irt_wi_end"]						= "irt_all_impls.h";
+			res["irt_wi_get_current"]				= "irt_all_impls.h";
+			res["irt_wi_get_wg"]					= "irt_all_impls.h";
+			res["irt_wg_barrier"]					= "irt_all_impls.h";
 
 			return res;
 		}
@@ -153,7 +161,10 @@ namespace runtime {
 		TypeIncludeTable getTypeIncludeTable() {
 			TypeIncludeTable res = getBasicTypeIncludeTable();
 
-			// nothing added yet
+			// some runtime types ...
+			res["irt_parallel_job"]				= "ir_interface.h";
+			res["irt_work_item_range"]			= "irt_all_impls.h";
+			res["irt_wi_implementation_id"]		= "irt_all_impls.h";
 
 			return res;
 		}

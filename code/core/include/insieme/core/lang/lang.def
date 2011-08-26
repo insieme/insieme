@@ -420,6 +420,11 @@ LITERAL(AccuracyFastUnary,       "accuracy.fast.unary", "(('a)->'b) -> ('a)->'b"
 LITERAL(VarlistPack, "varlist.pack", "('alpha) -> var_list")
 LITERAL(IfThenElse, "ite", "(bool, () => 'b, () => 'b) -> 'b")
 
+
+// Tunable Options ----------------------------------------------------------------------------------------------------
+
+LITERAL(Pick, "pick", "(list<'a>)->'a")
+
 // Parallel Constructs ------------------------------------------------------------------------------------------------
 
 GROUP(ParallelOp, Parallel, ParallelDetached)
@@ -451,8 +456,9 @@ LITERAL(PFor, "pfor", "(threadgroup, int<#a>, int<#a>, int<#a>, (int<#a>)=>'a)->
 
 TYPE(JobRange, "JobRange")
 
-LITERAL(CreateMinRange,     "MinRange",    "(uint<#8>)->JobRange")					// lower boundery only
-LITERAL(CreateBoundRange,   "BoundRange",    "(uint<#8>, uint<#8>)->JobRange")		// lower and upper bound
+LITERAL(CreateMinRange,     "MinRange",    		"(uint<#8>)->JobRange")							// lower boundery only
+LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<#8>, uint<#8>)->JobRange")				// lower and upper bound
+LITERAL(CreateBoundRangeMod,"BoundRange",    	"(uint<#8>, uint<#8>, uint<#8>)->JobRange")		// lower, upper and modula bound
 
 
 // --------------------------------------------------------------------------------------------------------------------

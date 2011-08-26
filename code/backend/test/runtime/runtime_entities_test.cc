@@ -36,10 +36,13 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ast_builder.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/lang/extension.h"
 
 #include "insieme/backend/runtime/runtime_extensions.h"
+#include "insieme/backend/runtime/runtime_entities.h"
 
 namespace insieme {
 namespace backend {
@@ -70,7 +73,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 	// test encoding
 	WorkItemVariant variant(getDummyImpl(manager));
 	core::ExpressionPtr encoded = enc::toIR(manager, variant);
-	EXPECT_EQ("WorkItemVariant(fun(ref<WorkItem> v1){ })", toString(core::printer::PrettyPrinter(encoded)));
+	EXPECT_EQ("WorkItemVariant(fun(ref<irt_wi> v1){ })", toString(core::printer::PrettyPrinter(encoded)));
 
 	// test decoding
 	WorkItemVariant decoded = enc::toValue<WorkItemVariant>(encoded);
@@ -99,7 +102,7 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 	WorkItemImpl impl(toVector(WorkItemVariant(getDummyImpl(manager))));
 	core::ExpressionPtr encoded = enc::toIR(manager, impl);
 	EXPECT_TRUE(encoded);
-	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun(ref<WorkItem> v1){ })])", toString(core::printer::PrettyPrinter(encoded)));
+	EXPECT_EQ("WorkItemImpl([WorkItemVariant(fun(ref<irt_wi> v1){ })])", toString(core::printer::PrettyPrinter(encoded)));
 
 	// test decoding
 	WorkItemImpl decoded = enc::toValue<WorkItemImpl>(encoded);
@@ -123,7 +126,7 @@ TEST(RuntimeExtensions, DataItem) {
 
 	core::TypePtr lwDataItem = DataItem::toLWDataItemType(tupleType);
 
-	EXPECT_EQ("LWDataItem<()>", toString(*lwDataItem));
+	EXPECT_EQ("irt_lwdi<()>", toString(*lwDataItem));
 	EXPECT_TRUE(DataItem::isLWDataItemType(lwDataItem));
 }
 

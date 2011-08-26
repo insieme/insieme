@@ -41,6 +41,7 @@
 #include "isl/ctx.h"
 #include "isl/dim.h"
 #include "isl/set.h"
+#include "isl/union_set.h"
 #include "isl/map.h"
 
 #include <boost/utility.hpp>
@@ -48,7 +49,6 @@
 namespace insieme {
 namespace analysis {
 namespace poly {
-namespace backend {
 
 /**************************************************************************************************
  * The IslContext contains the isl_ctx object which is created to store the polyhedral set/maps. 
@@ -62,7 +62,7 @@ class IslContext : public boost::noncopyable {
 public:
 	// Build an ISL context and allocate the underlying isl_ctx object
 	explicit IslContext() : ctx( isl_ctx_alloc() ) { }
-	
+
 	isl_ctx* getRawContext() { return ctx; }
 
 	// because we do not allows copy of this class, we can safely remove the context once this
@@ -70,53 +70,103 @@ public:
 	~IslContext() { isl_ctx_free(ctx); }
 };
 
+/** Define the type traits for ISL based data structures */
+template <Backend B>
+struct BackendTraits {
+	typedef IslContext ctx_type;
+};
+
 /**************************************************************************************************
- * IslSet: is a wrapper to isl_sets, this class allows to easily convert a set of constraints,
+ * Set<IslContext>: is a wrapper to isl_sets, this class allows to easily convert a set of constraints,
  * represented by a constraint combiner to isl representation. Output of the isl library will be
  * represented with this same abstraction which allows for isl sets to be converted back into
  * Constraints as defined in the poly namepsace
  *************************************************************************************************/
-class IslSet : public Set<IslContext> {
-	isl_dim* dim;
-	isl_set* set;
+template <>
+class Set<IslContext> : public boost::noncopyable {
+	IslContext& 	ctx;
+	isl_dim* 		dim;
+	isl_union_set* 	set;
 	
-	friend class IslMap;
 public:
-	IslSet(IslContext& ctx, const IterationVector& iterVec);
+	Set (	
+			IslContext& ctx, 
+			const IterationVector& iterVec, 
+			const ConstraintCombinerPtr& constraint,
+			const std::string& tuple_name = std::string()
+		);
+
+	Set( IslContext& ctx, isl_dim* dim, isl_union_set* rawSet ) : ctx(ctx), dim(dim), set(rawSet) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	void applyConstraint(const ConstraintCombinerPtr& c);
+	bool isEmpty() const;
 
-	const isl_set* getAsIslSet() const { return set; }
+	inline isl_union_set* getAsIslSet() const { return set; }
 
-	~IslSet() { 
+	~Set() { 
 		isl_dim_free(dim);
-		isl_set_free(set);
+		isl_union_set_free(set);
 	}
 };
 
 /**************************************************************************************************
- * IslMap: is the abstraction used to represent relations (or maps) in the ISL library. 
+ * Map<IslContext>: is the abstraction used to represent relations (or maps) in the ISL library. 
  *************************************************************************************************/
-class IslMap : public Map<IslContext> {
-	isl_dim* dim;
-	isl_map* map;
+template <>
+class Map<IslContext> : public boost::noncopyable {
+	IslContext&				ctx;
+	isl_dim* 				dim;
+	isl_union_map* 			map;
 
 public:
-	IslMap(IslContext& ctx, const IterationVector& iterVec, const AffineSystem& affSys);
+	Map (
+			IslContext& ctx, 
+			const AffineSystem& affSys,
+			const std::string& in_tuple_name = std::string(), 
+			const std::string& out_tuple_name = std::string()
+		);
+	
+	Map( IslContext& ctx, isl_dim* dim, isl_union_map* rawMap ) : ctx(ctx), dim(dim), map(rawMap) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	void intersect(const Set<IslContext>& set);
+	inline isl_union_map* getAsIslMap() const { return map; }
+	
+	bool isEmpty() const;
 
-	~IslMap() { 
+	~Map() { 
 		isl_dim_free(dim);
-		isl_map_free(map);
+		isl_union_map_free(map);
 	}
 };
 
-} // end backends namespace 
+template <> std::shared_ptr<Set<IslContext>> 
+set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+
+template <> std::shared_ptr<Set<IslContext>> 
+set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+
+template <> std::shared_ptr<Map<IslContext>> 
+map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+
+template <> std::shared_ptr<Map<IslContext>> 
+map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+
+template <> std::shared_ptr<Map<IslContext>> 
+map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
+
+
+template <>
+void buildDependencies( 
+		IslContext&									ctx,
+		const std::shared_ptr<Set<IslContext>>& 	domain, 
+		const std::shared_ptr<Map<IslContext>>& 	schedule, 
+		const std::shared_ptr<Map<IslContext>>& 	sinks, 
+		const std::shared_ptr<Map<IslContext>>& 	must_sources,
+		const std::shared_ptr<Map<IslContext>>& 	may_sourcs
+);
+
 } // end poly namespace 
 } // end analysis namespace 
 } // end insieme namespace 

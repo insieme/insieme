@@ -56,13 +56,15 @@
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
+#include "insieme/backend/ocl_host/host_extensions.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
 	using namespace insieme::annotations::ocl;
 
-	namespace {
+namespace {
 
 		/**
 		 * Tests whether the given lambda is marked to converted into an OpenCL kernel.
@@ -377,12 +379,46 @@ namespace ocl_kernel {
 
 				core::ASTBuilder builder(manager);
 				auto& basic = manager.getBasicGenerator();
+				auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
 
 				// perform conversion in post-order
 				core::NodePtr res = ptr->substitute(manager, *this);
 
+				// check whether this is the call to a kernel
+				if (res->getNodeType() == core::NT_CallExpr) {
+					core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
+					core::ExpressionPtr fun = call->getFunctionExpr();
+
+					// if this is a call to the kernel ...
+					if (core::analysis::isCallOf(fun, extensions.kernelWrapper)) {
+						// ... drop final two arguments
+						const core::ExpressionList& args = call->getArguments();
+						assert(args.size() >= 2 && "Call should have 2 or more arguments");
+						core::ExpressionList newArgs = core::ExpressionList(args.begin(), args.end()-2);
+
+						core::FunctionTypePtr funType = static_pointer_cast<const core::FunctionType>(fun->getType());
+						const core::TypeList& paramTypes = funType->getParameterTypes();
+						assert(paramTypes.size() == newArgs.size());
+
+						// add type wrappers where necessary
+						for(std::size_t i = 0; i < paramTypes.size(); i++) {
+							if (extensions.isGlobalType(paramTypes[i])) {
+								newArgs[i] = builder.callExpr(paramTypes[i], extensions.wrapGlobal, newArgs[i]);
+							} else if (extensions.isLocalType(paramTypes[i])) {
+								newArgs[i] = builder.callExpr(paramTypes[i], extensions.wrapLocal, newArgs[i]);
+							} else if (extensions.isConstType(paramTypes[i])) {
+								newArgs[i] = builder.callExpr(paramTypes[i], extensions.wrapConst, newArgs[i]);
+							}
+						}
+
+						//return builder.callExpr(funType->getReturnType(), fun, newArgs);
+						core::CallExprPtr kernel_args = builder.callExpr(basic.getVarList(), basic.getVarlistPack(), builder.tupleExpr(newArgs));
+						return builder.callExpr(basic.getUnit(), hostExt.callKernel, toVector(fun, *(args.end()-1), *(args.end()-2), kernel_args));
+					}
+				}
+
 				// only interested in lambda expressions
-				if (ptr->getNodeType() != core::NT_LambdaExpr) {
+				if (res->getNodeType() != core::NT_LambdaExpr) {
 					return res;
 				}
 
@@ -392,15 +428,6 @@ namespace ocl_kernel {
 				if (!isKernel(kernel)) {
 					return res;
 				}
-
-
-				// TODO:
-				// 		- replace build ins
-				//		- add address space modifier
-
-				// replace some build-ins
-
-
 
 				// create kernel function
 				core::StatementPtr core = getKernelCore(kernel);
@@ -511,10 +538,7 @@ namespace ocl_kernel {
 	}
 
 
-	core::NodePtr OCLPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
-
-		// TODO:
-		// 		- find kernel lambdas, updated types
+	core::NodePtr KernelPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// the converter does the magic
 		TypeWrapper wrapper(manager);

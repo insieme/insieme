@@ -50,9 +50,13 @@
 #include "insieme/backend/function_manager.h"
 #include "insieme/backend/parallel_manager.h"
 #include "insieme/backend/statement_converter.h"
+
 #include "insieme/backend/ocl_host/host_backend.h"
-#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 #include "insieme/backend/ocl_host/host_operator.h"
+#include "insieme/backend/ocl_host/host_preprocessor.h"
+#include "insieme/backend/ocl_host/host_stmt_handler.h"
+
+#include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -66,6 +70,7 @@ namespace ocl_host {
 
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
 
+		StmtHandlerList getStmtHandlerList();
 	}
 
 	OCLHostBackendPtr OCLHostBackend::getDefault() {
@@ -90,10 +95,9 @@ namespace ocl_host {
 
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
-			makePreProcessor<IfThenElseInlining>(),
-			makePreProcessor<RestoreGlobals>(),
-			makePreProcessor<InitZeroSubstitution>(),
-			makePreProcessor<ocl_kernel::OCLPreprocessor>()
+			getBasicPreProcessorSequence(),
+			makePreProcessor<ocl_kernel::KernelPreprocessor>(),
+			makePreProcessor<HostPreprocessor>()
 		);
 		converter.setPreProcessor(preprocessor);
 
@@ -108,7 +112,7 @@ namespace ocl_host {
 		TypeManager typeManager(converter, getBasicTypeIncludeTable(), TypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
-		StmtConverter stmtConverter(converter);
+		StmtConverter stmtConverter(converter, getStmtHandlerList());
 		converter.setStmtConverter(&stmtConverter);
 
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getBasicFunctionIncludeTable());
@@ -126,6 +130,12 @@ namespace ocl_host {
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res = getBasicOperatorTable(manager);
 			return addOpenCLHostSpecificOps(manager, res);
+		}
+
+		StmtHandlerList getStmtHandlerList() {
+			StmtHandlerList res;
+			res.push_back(OpenCLStmtHandler);
+			return res;
 		}
 	}
 

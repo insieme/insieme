@@ -44,14 +44,23 @@ namespace backend {
 namespace runtime {
 
 	/**
-	 * The work item extractor mainly consists of a pre-processing step which is
-	 * converting e.g. pfor and job expressions into equivalent runtime function calls.
+	 * A pre-processor wrapping the entry point of the given code into a newly generated
+	 * lambda instantiating and running a standalone version of the insieme runtime.
 	 */
-	class WorkItemExtractor : public PreProcessor {
+	class StandaloneWrapper : public PreProcessor {
 	public:
-		/**
-		 * An invocation of this method will conduct the necessary extractions.
-		 */
+		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+	};
+
+	/**
+	 * A pre-processor converting all job expressions, calls to parallel and pfors into runtime
+	 * equivalents. After this pass, the resulting program will no longer contain any of those
+	 * primitives.
+	 *
+	 * Yes, the name is a working title ...
+	 */
+	class WorkItemizer : public PreProcessor {
+	public:
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 

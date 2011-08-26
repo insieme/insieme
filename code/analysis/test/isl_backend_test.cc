@@ -38,24 +38,16 @@
 
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
+#include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "insieme/core/expressions.h"
+
+#include "isl/map.h"
+#include "isl/union_map.h"
 
 using namespace insieme;
 using namespace insieme::analysis;
 using namespace insieme::core;
-
-void printIslSet(std::ostream& out, isl_ctx* ctx, isl_set* set) {
-	isl_printer* printer = isl_printer_to_str(ctx);
-	isl_printer_set_output_format(printer, ISL_FORMAT_ISL);
-	isl_printer_set_indent(printer, 1);
-	isl_printer_print_set(printer, set);
-	isl_printer_flush(printer);
-	char* str = isl_printer_get_str(printer);
-	out << str;
-	free(str); // free the allocated string by the library
-	isl_printer_free(printer);
-}
 
 #define CREATE_ITER_VECTOR \
 	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); \
@@ -68,14 +60,18 @@ void printIslSet(std::ostream& out, isl_ctx* ctx, isl_set* set) {
 	iterVec.add( poly::Parameter(param) ); \
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size()); \
 
+
 TEST(IslBackend, SetCreation) {
 	
 	NodeManager mgr;	
 	CREATE_ITER_VECTOR; 
 
-	poly::backend::IslContext ctx;
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, poly::ConstraintCombinerPtr(), "S0");
 
-	poly::backend::IslSet set(ctx, iterVec);
+	std::ostringstream ss;
+	set->printTo(ss);
+	EXPECT_EQ("[v3] -> { S0[v1] }", ss.str());
 	
 }
 
@@ -86,24 +82,22 @@ TEST(IslBackend, SetConstraint) {
 	poly::AffineFunction af(iterVec, {0,3,10} );
 	poly::Constraint c(af, poly::Constraint::LT);
 
-	poly::backend::IslContext ctx;
-	poly::backend::IslSet set(ctx, iterVec);
-
-	set.applyConstraint( makeCombiner(c) );
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c), "S0");
 
 	std::ostringstream ss;
-	ss << set;
-	EXPECT_EQ("[v3] -> { [v1] : v3 <= -4 }", ss.str());
+	set->printTo(ss);
+	EXPECT_EQ("[v3] -> { S0[v1] : v3 <= -4 }", ss.str());
 
 	// Build directly the ISL set
-	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
-			"[v3] -> {[v1] : 3v3 + 10 < 0}", -1
+	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
+			"[v3] -> {S0[v1] : 3v3 + 10 < 0}", -1
 		);
-
+	isl_union_set* tmp = isl_union_set_from_set(refSet);
 	// check for equality
-	EXPECT_TRUE(isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())));
+	EXPECT_TRUE( isl_union_set_is_equal(tmp , const_cast<isl_union_set*>(set->getAsIslSet())) );
 	
-	isl_set_free(refSet);
+	isl_union_set_free(tmp);
 }
 
 TEST(IslBackend, SetConstraintNormalized) {
@@ -117,23 +111,23 @@ TEST(IslBackend, SetConstraintNormalized) {
 
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
-	poly::backend::IslContext ctx;
-	poly::backend::IslSet set(ctx, iterVec);
-	set.applyConstraint( makeCombiner(c) );
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c), "S0");
 
 	std::ostringstream ss;
-	ss << set;
-	EXPECT_EQ("[v3] -> { [v1] : v1 <= -11 or v1 >= -9 }", ss.str());
+	set->printTo(ss);
+	EXPECT_EQ("[v3] -> { S0[v1] : v1 <= -11 or v1 >= -9 }", ss.str());
 
 	// Build directly the ISL set
-	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
-			"[v3] -> {[v1] : v1 + 10 < 0 or v1 + 10 > 0}", -1
+	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
+			"[v3] -> {S0[v1] : v1 + 10 < 0 or v1 + 10 > 0}", -1
 		);
-
-	// check for equality
-	EXPECT_TRUE(isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())));
 	
-	isl_set_free(refSet);
+	isl_union_set* tmp = isl_union_set_from_set(refSet);
+	// check for equality
+	EXPECT_TRUE(isl_union_set_is_equal(tmp, const_cast<isl_union_set*>(set->getAsIslSet())));
+	
+	isl_union_set_free(tmp);
 }
 
 TEST(IslBackend, FromCombiner) {
@@ -157,38 +151,106 @@ TEST(IslBackend, FromCombiner) {
 	
 // 	std::cout << *ptr << std::endl;
 
-	poly::backend::IslContext ctx;
-	poly::backend::IslSet set(ctx, iterVec);
-	set.applyConstraint(ptr);
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, ptr, "S0");
 
 	std::ostringstream ss;
-	ss << set;
-	EXPECT_EQ("[v3] -> { [v1] : v3 = -5 or 2v1 >= -10 - 3v3 }", ss.str());
+	set->printTo(ss);
+	EXPECT_EQ("[v3] -> { S0[v1] : v3 = -5 or 2v1 >= -10 - 3v3 }", ss.str());
 
 	// Build directly the ISL set
-	isl_set* refSet = isl_set_read_from_str(ctx.getRawContext(), 
-			"[v3] -> {[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}", -1
+	isl_set* refSet = isl_set_read_from_str(ctx->getRawContext(), 
+			"[v3] -> {S0[v1] : 2*v3 + 10 = 0 or 2*v1 +3*v3 +10 >= 0}", -1
 		);
 	
-	printIslSet(std::cout, ctx.getRawContext(), refSet);
+	isl_union_set* tmp = isl_union_set_from_set(refSet);
 	// check for equality
-	EXPECT_TRUE( isl_set_is_equal(refSet, const_cast<isl_set*>(set.getAsIslSet())) );
+	EXPECT_TRUE( isl_union_set_is_equal(tmp, const_cast<isl_union_set*>(set->getAsIslSet())) );
 	
-	isl_set_free(refSet);
+	isl_union_set_free(tmp);
+}
+
+TEST(IslBackend, SetUnion) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+	poly::Constraint c1(poly::AffineFunction(iterVec, {0,3,10}), poly::Constraint::LT);
+	poly::Constraint c2(poly::AffineFunction(iterVec, {1,-1,0}), poly::Constraint::EQ);
+
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c1), "S0");
+	auto&& set2 = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c2), "S1");
+
+	auto&& set = set_union(*ctx, *set1, *set2);
+	
+	// Build directly the ISL set
+	isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
+			"[v3] -> {S0[v1] : 3*v3 + 10 < 0; S1[v1] : 1*v1 -1*v3 = 0}"
+		);
+
+	EXPECT_TRUE( isl_union_set_is_equal(refSet, const_cast<isl_union_set*>(set->getAsIslSet())) );
+
+	isl_union_set_free(refSet);
 }
 
 TEST(IslBackend, SimpleMap) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystem affSys(iterVec);
+	poly::AffineSystemPtr affSys = std::make_shared<poly::AffineSystem>(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys.appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
-	affSys.appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
-	affSys.appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
 	
-	poly::backend::IslContext ctx;
-	poly::backend::IslMap map(ctx,iterVec,affSys);
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& map = poly::makeMap<poly::ISL>(*ctx, *affSys, "S0");
+
+	std::ostringstream ss;
+	map->printTo(ss);
+	EXPECT_EQ("[v3] -> { S0[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
+
+	isl_union_map* refMap = isl_union_map_read_from_str(ctx->getRawContext(), 
+			"[v3] -> {S0[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; }"
+		);
+
+	EXPECT_TRUE( isl_union_map_is_equal(refMap, const_cast<isl_union_map*>(map->getAsIslMap())) );
+
+	isl_union_map_free(refMap);
+}
+
+TEST(IslBackend, MapUnion) {
+	NodeManager mgr;
+	CREATE_ITER_VECTOR;
+
+	poly::AffineSystemPtr affSys = std::make_shared<poly::AffineSystem>(iterVec);
+	// 0*v1 + 2*v2 + 10
+	affSys->appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
+	affSys->appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
+	
+	auto&& ctx = poly::createContext<poly::ISL>();
+	auto&& map = poly::makeMap<poly::ISL>(*ctx, *affSys, "S0");
+
+	std::ostringstream ss;
+	map->printTo(ss);
+	EXPECT_EQ("[v3] -> { S0[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
+	
+	poly::AffineSystemPtr affSys2 = std::make_shared<poly::AffineSystem>(iterVec);
+	// 0*v1 + 2*v2 + 10
+	affSys2->appendRow( poly::AffineFunction(iterVec, {1,-2,0}) );
+	affSys2->appendRow( poly::AffineFunction(iterVec, {1,8,4}) );
+	affSys2->appendRow( poly::AffineFunction(iterVec, {-5,-1,4}) );
+
+	auto&& map2 = poly::makeMap<poly::ISL>(*ctx, *affSys2, "S1");
+
+	std::ostringstream ss2;
+	map2->printTo(ss2);
+	EXPECT_EQ("[v3] -> { S1[v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss2.str());
+
+	auto&& mmap = map_union(*ctx, *map, *map2);
+	std::ostringstream  ss3;
+	mmap->printTo(ss3);
+	EXPECT_EQ("[v3] -> { S0[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; S1[v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());
 
 }
 

@@ -52,6 +52,7 @@
 #include "insieme/core/checks/imperativechecks.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
+#include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/simple_backend/simple_backend.h"
 
 #include "insieme/utils/compiler/compiler.h"
@@ -61,6 +62,8 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/timer.h"
+
+#include "insieme/driver/driver_config.h"
 
 
 #ifdef USE_XML
@@ -108,77 +111,6 @@ inline vector<TypePtr> getTypes(const vector<ExpressionPtr>& expressions) {
 	return res;
 }
 
-// the type definition (specifying the parameter type)
-class TypeVariableDeductionTest : public ::testing::TestWithParam<IntegrationTestCase> { };
-
-// define the test case pattern
-TEST_P(TypeVariableDeductionTest, DeriveTypes) {
-	core::NodeManager manager;
-//	core::NodeManager& manager = testGlobalManager;
-
-	// disable logger output
-	Logger::get(std::cerr, DEBUG, 1);
-
-	// obtain test case
-	utils::test::IntegrationTestCase testCase = GetParam();
-
-
-//	// load the code using the frontend
-//	std::cout << "Loading the first time ..." << std::endl;
-//	insieme::utils::Timer firstLoad("First Load ...");
-//	core::ProgramPtr code = load(manager, testCase);
-//	firstLoad.stop();
-//	std::cout << firstLoad;
-//
-//	std::cout << "Loading the second time ..." << std::endl;
-//	insieme::utils::Timer secondLoad("Second Load ...");
-//	core::ProgramPtr code2 = load(manager, testCase);
-//	secondLoad.stop();
-//	std::cout << secondLoad;
-//
-//	NodeManager manager2;
-//	std::cout << "Copying tree from one manager to another ..." << std::endl;
-//	insieme::utils::Timer copyTimer("Copying between Manager ...");
-//	core::ProgramPtr code3 = manager2.get(code2);
-//	copyTimer.stop();
-//	std::cout << copyTimer;
-//
-//
-//	// check presents ...
-//	std::cout << "Looking up same tree of different manager ..." << std::endl;
-//	insieme::utils::Timer lookup1("Lookup non-local ...");
-//	core::ProgramPtr code4 = manager2.get(code2);
-//	lookup1.stop();
-//	std::cout << lookup1;
-//
-//	std::cout << "Looking up same tree of same manager ..." << std::endl;
-//	insieme::utils::Timer lookup2("Lookup local ...");
-//	core::ProgramPtr code5 = manager2.get(code3);
-//	lookup2.stop();
-//	std::cout << lookup2;
-//
-//
-//	std::cout << "Done" << std::endl;
-
-//	// and now, apply the check
-//	core::visitAll(code, core::makeLambdaPtrVisitor([&](const NodePtr& cur){
-//		if (cur->getNodeType() == NT_CallExpr) {
-//			CallExprPtr call = static_pointer_cast<const CallExpr>(cur);
-//			EXPECT_TRUE(analysis::getTypeVariableInstantiation(manager, call))
-////					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
-//					<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
-//					<< "Argument Types: " << getTypes(call->getArguments());
-//
-//		}
-//	}, false));
-
-
-}
-
-// instantiate the test case
-//INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
-
-
 // ---------------------------------- Check the frontend -------------------------------------
 
 // the type definition (specifying the parameter type)
@@ -224,6 +156,38 @@ TEST_P(FrontendIntegrationTest, SemanticChecks) {
 
 // instantiate the test case
 INSTANTIATE_TEST_CASE_P(FrontendIntegrationCheck, FrontendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
+
+
+// ---------------------------------- Check the type checker -------------------------------------
+
+// the type definition (specifying the parameter type)
+class TypeVariableDeductionTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(TypeVariableDeductionTest, DeriveTypes) {
+	core::NodeManager manager;
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+
+	// load the code using the frontend
+	core::ProgramPtr code = load(manager, testCase);
+
+	// and now, apply the check and see whether a solution could be found
+	core::visitDepthFirstOnce(code, [&](const core::CallExprPtr& call){
+		EXPECT_TRUE(analysis::getTypeVariableInstantiation(manager, call))
+//					<< "Processing:     " << core::printer::PrettyPrinter(call) << "\n"
+				<< "FunctionType:   " << *(call->getFunctionExpr()->getType()) << "\n"
+				<< "Argument Types: " << getTypes(call->getArguments());
+	});
+}
+
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, ::testing::ValuesIn(getAllCases()));
+
+
 
 // ---------------------------------- Check transfomations -------------------------------------
 
@@ -340,51 +304,50 @@ TEST_P(SimpleBackendIntegrationTest, CompileableCode) {
 //INSTANTIATE_TEST_CASE_P(SimpleBackendIntegrationCheck, SimpleBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
 
 
-//// ------------------------------------ Semantic Checks -------------------------------------------
-//
-//// the type definition (specifying the parameter type)
-//class SemanticCheckPerformanceTest : public ::testing::TestWithParam<IntegrationTestCase> { };
-//
-//// define the test case pattern
-//TEST_P(SemanticCheckPerformanceTest, AllTests) {
-//	core::NodeManager manager;
-//
-//	// disable logger output
-//	Logger::get(std::cerr, ERROR, 0);
-//
-//	// obtain test case
-//	utils::test::IntegrationTestCase testCase = GetParam();
-//
-//	// get program code
-//	core::ProgramPtr program = load(manager, testCase);
-//
-//	core::CheckPtr check = core::checks::getFullCheck();
-//
-//	vector<std::pair<string, core::CheckPtr>> checks;
-//	checks.push_back(std::make_pair("All", core::checks::getFullCheck()));
-//	checks.push_back(std::make_pair("Keyword", makeVisitOnce(core::make_check<core::checks::KeywordCheck>())));
-//	checks.push_back(std::make_pair("CallExprType", makeVisitOnce(core::make_check<core::checks::CallExprTypeCheck>())));
-//	checks.push_back(std::make_pair("FunctionType", makeVisitOnce(core::make_check<core::checks::FunctionTypeCheck>())));
-//	checks.push_back(std::make_pair("ReturnType", makeVisitOnce(core::make_check<core::checks::ReturnTypeCheck>())));
-//	checks.push_back(std::make_pair("DeclarationStmtType", makeVisitOnce(core::make_check<core::checks::DeclarationStmtTypeCheck>())));
-//
-//	checks.push_back(std::make_pair("UndeclaredVariable", makeVisitOnce(core::make_check<core::checks::UndeclaredVariableCheck>())));
-//	checks.push_back(std::make_pair("DeclaredOnce", core::make_check<core::checks::DeclaredOnceCheck>()));
-//
-//
-//
-//	for(auto it = checks.begin(); it != checks.end(); ++it ) {
-//		// run all checks
-//		insieme::utils::Timer checkTime("Running check " + it->first + " ...");
-//		core::check(program, it->second);
-//		checkTime.stop();
-//		std::cout << checkTime;
-//	}
-//
-//}
-//
-//// instantiate the test case
-//INSTANTIATE_TEST_CASE_P(SemanticCheckPerformanceCheck, SemanticCheckPerformanceTest, ::testing::ValuesIn(getAllCases()));
+
+
+// ---------------------------------- Check the runtime backend -------------------------------------
+
+// the type definition (specifying the parameter type)
+class RuntimeBackendIntegrationTest : public ::testing::TestWithParam<IntegrationTestCase> { };
+
+// define the test case pattern
+TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
+	core::NodeManager manager;
+
+	// obtain test case
+	utils::test::IntegrationTestCase testCase = GetParam();
+
+	SCOPED_TRACE("Testing Case: " + testCase.getName());
+	LOG(INFO) << "Testing Case: " + testCase.getName();
+
+	if (testCase.getName() == "ocl_kernel") {
+		LOG(INFO) << "Skipping kernel test ...";
+		return;
+	}
+
+	// load the code using the frontend
+	core::ProgramPtr code = load(manager, testCase);
+
+
+	// create target code using the runtime backend
+	auto target = backend::runtime::RuntimeBackend::getDefault()->convert(code);
+
+	// see whether target code can be compiled
+	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+	compiler.addFlag("-I " SRC_DIR "../../runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
+
+
+//	// test whether result can be compiled
+//	auto compiler = utils::compiler::Compiler::getDefaultC99Compiler();
+//	compiler.addFlag("-I/home/herbert/insieme/code/simple_backend/include/insieme/simple_backend/runtime");
+//	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
+}
+
+// instantiate the test case
+INSTANTIATE_TEST_CASE_P(RuntimeBackendIntegrationCheck, RuntimeBackendIntegrationTest, ::testing::ValuesIn(getAllCases()));
+
 
 
 #ifdef USE_XML

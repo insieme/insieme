@@ -34,7 +34,8 @@
  * regarding third party software licenses.
  */
 
-#ifndef NO_INSIEME  // must be set when using the kernel function outside of the insieme compiler
+// TODO positive definition check fucks up intetgration tests shuld be fixed 
+#ifndef NO_INSIEME  //should be set when using the kernel function with the insieme compiler
 #include "ocl_device.h"
 #endif
 

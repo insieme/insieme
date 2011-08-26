@@ -52,6 +52,7 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
 	using namespace insieme::core::arithmetic;
+
 	// extract the Formula object 
 	Formula&& formula = toFormula(expr);
 	
@@ -77,14 +78,15 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
 
 		if ( !prod.isOne() ) {
-			const core::VariablePtr& var = prod.getFactors().front().first;
+			const core::ExpressionPtr& var = prod.getFactors().front().first;
 			// We make sure the variable is not already among the iterators
-			if ( iterVec.getIdx( Iterator(var) ) == -1 ) {
+			if ( var->getNodeType() != core::NT_Variable || 
+					iterVec.getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) ) == -1 ) 
+			{
 				iterVec.add( Parameter(var) );
 			}
 		}
 	});
-
 	// now the iteration vector is inlined with the Formula object extracted from the expression,
 	// the size of the coefficient vector can be set.
 	coeffs.resize(iterVec.size());
@@ -218,30 +220,33 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 		return sep == other.sep && std::equal(coeffs.begin(), coeffs.end(), other.coeffs.begin());
 
 	// if the two iteration vector are not the same we need to determine if at least the position
-	// for which a coefficient is specified is the same 	
-	iterator thisIt = begin(), otherIt = other.begin(); 
-	while( thisIt!=end() ) {
-		Term &&thisTerm = *thisIt, &&otherTerm = *otherIt;
-		const Element::Type& thisType = thisTerm.first.getType();
-		const Element::Type& otherType = otherTerm.first.getType();
-
-		if ( (thisType == Element::PARAM && otherType == Element::ITER) || 
-			(thisType == Element::CONST && otherType != Element::CONST) ) 
-		{
-			if (otherTerm.second != 0) { return false; }
-			++otherIt;
-		} else if ( (thisType == Element::ITER && otherType == Element::PARAM) || 
-			(thisType != Element::CONST && otherType == Element::CONST) )	
-		{
-			if (thisTerm.second != 0) { return false; }
-			++thisIt;
-		} else if (thisTerm == otherTerm) {
-			// iterators aligned 
-			++thisIt;
-			++otherIt;
-		} else return false;
-	}	
-	return true;
+	// for which a coefficient is specified is the same 
+	auto&& this_filt = 
+		filterIterator<
+			AffineFunction::iterator, 
+			AffineFunction::Term, 
+			AffineFunction::Term*, 
+			AffineFunction::Term
+		>(begin(), end(), [](const AffineFunction::Term& cur) -> bool { 
+				return cur.second == 0; 
+		});	
+	auto&& other_filt = 
+		filterIterator<
+			AffineFunction::iterator, 
+			AffineFunction::Term, 
+			AffineFunction::Term*, 
+			AffineFunction::Term
+		>(other.begin(), other.end(), [](const AffineFunction::Term& cur) -> bool { 
+				return cur.second == 0; 
+		});	
+	
+	std::set<AffineFunction::Term> diff;
+	std::set_difference(
+		this_filt.first, this_filt.second, other_filt.first, other_filt.second, 
+		std::inserter(diff, diff.begin())
+	);
+	
+	return diff.empty();
 }
 
 AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {

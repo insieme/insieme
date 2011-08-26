@@ -251,6 +251,7 @@ ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const Const
 // Equality constraints remains the same while inequalities must be rewritten to be GE (>=)
 ConstraintCombinerPtr normalize(const Constraint& c);
 
+const IterationVector& extractIterationVector(const ConstraintCombinerPtr& constraint);
 
 //==== Operator definitions for Constraint =========================================================
 

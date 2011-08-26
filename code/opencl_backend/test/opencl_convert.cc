@@ -88,7 +88,7 @@ TEST(OpenCLBackend, baseTest) {
 	std::cout << "Done.\n";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
-	insieme::frontend::ocl::HostCompiler hc(program, manager);
+	insieme::frontend::ocl::HostCompiler hc(program);
 	hc.compile();
 
 	insieme::core::printer::PrettyPrinter pp(program);

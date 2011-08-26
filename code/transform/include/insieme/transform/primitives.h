@@ -34,11 +34,32 @@
  * regarding third party software licenses.
  */
 
-#include "ocl_device.h"
-#pragma insieme mark
-__kernel void hello(__global int *src, __global int *dst, int factor){
-                    int i = get_global_id(0);
-                    dst[i] = src[i] * factor;
+#pragma once
+
+#include <vector>
+#include "insieme/transform/transformation.h"
 
 
-}
+namespace insieme {
+namespace transform {
+
+
+	class AbstractTransformation : public Transformation {
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
+
+	};
+
+
+	class NoOp : public Transformation {
+	public:
+
+	};
+
+
+} // end namespace transform
+} // end namespace insieme

@@ -61,11 +61,11 @@ int main() {
 				}
 				C[i*K+j] = sum;
 			}
-		} 
+		}
 	}
 
 	// verify result
-	int success = 1;	
+	int success = 1;
 	for (int i=0; i<N; i++) {
 		for (int j=0; j<MIN(M,K); j++) {
 			if (A[i*M+j] != C[i*K+j]) {

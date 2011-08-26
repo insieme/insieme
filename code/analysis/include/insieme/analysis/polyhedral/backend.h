@@ -53,22 +53,13 @@ struct Set : public utils::Printable {
 	
 	typedef Ctx ctx_type;
 
-	// Creates a universe Set based on the dimensionality of the given iteration vector. 
-	// Once creates, the iteration vector on which the set is based cannot been changed. 
-	Set(Ctx& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { } 
-	
-	// Adds a new constraint to this set. 
-	//
-	// The iteration vector on which c is expressed must be compatibile with the iterVec
-	virtual void applyConstraint(const ConstraintCombinerPtr& c) = 0;
+	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+	bool isEmpty() const = 0;
 
-	virtual ~Set() { }
-
-protected:
-	Ctx& ctx;
-	const IterationVector& iterVec;
+	~Set() { }
+private:
+	Set();
 };
 
 template <class Ctx> 
@@ -76,42 +67,84 @@ struct Map : public utils::Printable {
 
 	typedef Ctx ctx_type;
 
-	Map(Ctx& ctx, const IterationVector& iterVec) : ctx(ctx), iterVec(iterVec) { }
+	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	virtual void intersect(const Set<Ctx>& set) = 0;
+	bool isEmpty() const = 0;
 
-	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+	~Map() { }
 
-	virtual ~Map() { }
-protected:
-	Ctx& ctx;
-	const IterationVector& iterVec;
+private:
+	Map();
 };
 
-template <class SetTy>
-SetTy set_union(const SetTy& lhs, const SetTy& rhs);
+template <class Ctx>
+std::shared_ptr<Set<Ctx>> set_union(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
 
-template <class SetTy>
-SetTy set_intersect(const SetTy& lhs, const SetTy& rhs);
+template <class Ctx>
+std::shared_ptr<Set<Ctx>> set_intersect(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
 
-//template <class SetTy>
-//SetTy set_negate(const SetTy& lhs);
+template <class Ctx>
+std::shared_ptr<Map<Ctx>> map_union(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+
+template <class Ctx>
+std::shared_ptr<Map<Ctx>> map_intersect(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+
+template <class Ctx>
+std::shared_ptr<Map<Ctx>> map_intersect_domain(Ctx& ctx, const Map<Ctx>& lhs, const Set<Ctx>& dom);
+
+
+//===== Dependency analysis =======================================================================
+
+template <class Ctx>
+struct DependenceInfo {
+	Map<Ctx> mustDep;
+	Map<Ctx> mayDep;
+	Map<Ctx> mustNoSource;
+	Map<Ctx> mayNoSource;
+};
+
+template <class Ctx>
+void buildDependencies( 
+		Ctx&								ctx,
+		const std::shared_ptr<Set<Ctx>>& 	domain, 
+		const std::shared_ptr<Map<Ctx>>& 	schedule, 
+		const std::shared_ptr<Map<Ctx>>& 	sinks, 
+		const std::shared_ptr<Map<Ctx>>& 	must_sources = std::shared_ptr<Map<Ctx>>(), 
+		const std::shared_ptr<Map<Ctx>>& 	may_sourcs = std::shared_ptr<Map<Ctx>>()
+);
 
 //===== Conversion Utilities ======================================================================
-// Utilities to convert data structures represented as IR annotations
-template <class SetTy>
-SetTy convertIterationDomain(typename SetTy::ctx_type& ctx, const poly::IterationVector& iv, 
-		const ConstraintCombinerPtr& constraints) 
+
+enum Backend { ISL };
+
+/**
+ * Defines type traits which are used to determine the type of the context for implementing backends 
+ */
+template <Backend B>
+struct BackendTraits;
+
+template <Backend B>
+std::shared_ptr<typename BackendTraits<B>::ctx_type>
+createContext() { return std::make_shared<typename BackendTraits<B>::ctx_type>(); }
+
+template <Backend B>
+std::shared_ptr<Set<typename BackendTraits<B>::ctx_type>> 
+makeSet( typename BackendTraits<B>::ctx_type& ctx, 
+		 const IterationVector& iterVec,
+		 const ConstraintCombinerPtr& constraint,
+		 const std::string& tuple_name = std::string())
 {
-	SetTy set(ctx, iv);
-	if ( constraints ) { set.applyConstraint(constraints); } // FIXME
-	return set;
+	return std::make_shared<Set<typename BackendTraits<B>::ctx_type>>(ctx, iterVec, constraint, tuple_name);
 }
 
-template <class MapTy>
-MapTy convertScatteringFunction(typename MapTy::ctx_type& ctx, const AffineSystem& scat) {
-	MapTy map(ctx, scat.getIterationVector(), scat);
-	return map;
+template <Backend B>
+std::shared_ptr<Map<typename BackendTraits<B>::ctx_type>>
+makeMap( typename BackendTraits<B>::ctx_type& ctx,  
+		 const AffineSystem& affSys,
+		 const std::string& in_tuple_name = std::string(),
+		 const std::string& out_tuple_name = std::string())
+{
+	return std::make_shared<Map<typename BackendTraits<B>::ctx_type>>(ctx, affSys, in_tuple_name, out_tuple_name);
 }
 
 } // end poly namespace

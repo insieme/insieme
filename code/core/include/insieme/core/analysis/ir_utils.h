@@ -156,6 +156,16 @@ bool isTypeLiteralType(const GenericTypePtr& type);
  */
 bool isTypeLiteralType(const TypePtr& type);
 
+/**
+ * Extracts the represented type from the given type literal type.
+ *
+ * @param type the type literal type
+ * @return the represented type
+ */
+static inline TypePtr getRepresentedType(const TypePtr& type) {
+	assert(isTypeLiteralType(type));
+	return static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
+}
 
 
 } // end namespace utils

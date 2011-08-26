@@ -402,7 +402,7 @@ TypePtr getSmallestCommonSuperType(const TypePtr& typeA, const TypePtr& typeB);
  */
 template<typename Container>
 TypePtr getSmallestCommonSuperType(const Container& types) {
-	assert(!types.empty() && "Illegal call - cannot be computed for a empty type list!");
+	if (types.empty()) { return 0; }
 	auto it = types.begin();
 	TypePtr res = *it;
 	for(++it; res && it != types.end(); ++it) {
@@ -428,7 +428,7 @@ TypePtr getBiggestCommonSubType(const TypePtr& typeA, const TypePtr& typeB);
  */
 template<typename Container>
 TypePtr getBiggestCommonSubType(const Container& types) {
-	assert(!types.empty() && "Illegal call - cannot be computed for a empty type list!");
+	if (types.empty()) { return 0; }
 	auto it = types.begin();
 	TypePtr res = *it;
 	for(++it; res && it != types.end(); ++it) {
