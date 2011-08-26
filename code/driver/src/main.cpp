@@ -266,14 +266,14 @@ void markSCoPs(const ProgramPtr& program) {
 	if (!CommandLineOptions::MarkScop) { return; }
 	using namespace insieme::analysis::scop;
 
-	ScopList sl = measureTimeFor<ScopList>("IR.SCoP.Analysis ", 
-		[&]() -> ScopList { return mark(program); });
+	AddressList sl = measureTimeFor<AddressList>("IR.SCoP.Analysis ", 
+		[&]() -> AddressList { return mark(program); });
 
 	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
-	std::for_each(sl.begin(), sl.end(),	[](ScopList::value_type& cur){ 
-			printSCoP(LOG_STREAM(INFO), cur.first); 
+	std::for_each(sl.begin(), sl.end(),	[](AddressList::value_type& cur){ 
+			printSCoP(LOG_STREAM(INFO), cur); 
 			// performing dependence analysis
-			computeDataDependence(cur.first);
+			computeDataDependence(cur);
 		}
 	);	
 }

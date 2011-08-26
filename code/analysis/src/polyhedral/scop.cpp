@@ -198,7 +198,7 @@ SubScopList toSubScopList(const AddressList& scops) {
 
 struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
-	ScopList& scopList;
+	AddressList& scopList;
 	AddressList subScops;
 
 	// Stack utilized to keep track of statements which are inside a SCoP.
@@ -207,7 +207,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	typedef std::stack<ScopStmtList> RegionStmtStack;
 	RegionStmtStack regionStmts;
 
-	ScopVisitor(ScopList& scopList) : 
+	ScopVisitor(AddressList& scopList) : 
 		ASTVisitor<IterationVector, Address>(false), scopList(scopList) 
 	{
 		regionStmts.push( RegionStmtStack::value_type() );
@@ -319,12 +319,12 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	
 		if ( isThenSCOP && !isElseSCOP ) {
 			// then is a root of a ScopRegion, we add it to the list of scops
-			scopList.push_back( std::make_pair(thenAddr, saveThen) ); // FIXME annotate this nodes?			
+			scopList.push_back( thenAddr ); // FIXME annotate this nodes?			
 		}
 
 		if ( !isThenSCOP && isElseSCOP ) {
 			// else is a root of a ScopRegion, we add it to the list of scops
-			scopList.push_back( std::make_pair(elseAddr, saveElse) ); // FIXME annotate this nodes?
+			scopList.push_back( elseAddr ); // FIXME annotate this nodes?
 		}
 
 		// if either one of the branches is not a ScopRegion it means the if statement is not a
@@ -412,9 +412,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// get the addess of the expression of this case stmt 
 			ExpressionAddress exprAddr = 
 				AS_EXPR_ADDR(switchStmt.getAddressOfChild( 
-					1 /* switchExpr */ + 
-					caseID*2 /* each case 2 pointers */ + 
-					0 )
+					1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 0 )
 				);
 
 			ExpressionPtr&& expr =
@@ -426,22 +424,30 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					exprAddr.getAddressedNode()
 				);
 
-			IterationVector iv;
-			AffineFunction af(ret, expr);
-
-			IterationDomain caseCons = makeCombiner( Constraint(af, Constraint::EQ) );
-			defaultCons = !defaultCons ? not_( caseCons ) : defaultCons and not_( caseCons );
-			
 			try {
+				IterationVector iv;
+
 				StatementAddress stmtAddr = 
-					AS_STMT_ADDR(switchStmt.getAddressOfChild( 
-						1 /* switchExpr */ + 
-						caseID*2 /* each case 2 pointers */ + 
-						1 )
+					AS_STMT_ADDR(switchStmt.getAddressOfChild
+						( 1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 1 )
 					);
 				subScops.clear();
 					// build an address for the expression and the statement 
-				ret = merge(ret, visitStmt(stmtAddr));
+				ret = merge(iv, visitStmt(stmtAddr));
+
+				// If the case statement is not a compound statement, the ScopRegion annotation will
+				// not be inserted by default. Therefore we add the annotation to simplify the
+				// resolution of the SCoP when the analysis is invoked 
+				if (!stmtAddr->hasAnnotation(ScopRegion::KEY)) {
+					// else body is not a compound stmt
+					stmtAddr->addAnnotation( std::make_shared<ScopRegion>(iv) );
+				}
+
+				IterationDomain caseCons = makeCombiner( 
+						Constraint(AffineFunction(ret, expr), Constraint::EQ) 
+					);
+				defaultCons = !defaultCons ? not_( caseCons ) : defaultCons and not_( caseCons );
+
 				// Add this statement to the subScops
 				scops.push_back( SubScop(stmtAddr, caseCons) );
 			} catch (NotASCoP&& e) { isSCoP = false; }
@@ -450,23 +456,45 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		if (switchStmt->getDefaultCase()) {
 			try {
 				StatementAddress defAddr = 
-					AS_STMT_ADDR(switchStmt.getAddressOfChild( 
-						1 /* switchExpr */ + 
-						cases.size()*2 /* each case 2 pointers */ + 
-						0 )
+					AS_STMT_ADDR(switchStmt.getAddressOfChild
+						( 1 /* switchExpr */ + cases.size()*2 /* each case 2 pointers */ + 0 )
 					);
 				subScops.clear();
-				// build an address for the expression and the statement 
-				ret = merge(ret, visitStmt(defAddr));
+
+				IterationVector&& iv = visitStmt(defAddr);
+
+				// If the case statement is not a compound statement, the ScopRegion annotation will
+				// not be inserted by default. Therefore we add the annotation to simplify the
+				// resolution of the SCoP when the analysis is invoked 
+				if (!defAddr->hasAnnotation(ScopRegion::KEY)) {
+					// default body is not a compound stmt
+					defAddr->addAnnotation( std::make_shared<ScopRegion>(iv) );
+				}
+
+				ret = merge(ret, iv);
 				scops.push_back( SubScop(defAddr, defaultCons) );
 			} catch (NotASCoP&& e) { isSCoP = false; }
 		}
 
 		if ( !isSCoP ) {
+			// Add the entry points to the ScopList 
+			for(size_t caseID = 0; caseID < cases.size(); ++caseID) {
+				// get the addess of the expression of this case stmt 
+				StatementAddress caseStmtAddr = 
+					AS_EXPR_ADDR(switchStmt.getAddressOfChild( 
+						1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 1 )
+					);
+				if( caseStmtAddr->hasAnnotation(ScopRegion::KEY) ) {
+					scopList.push_back( caseStmtAddr ); 
+				}
+
+			}
 			throw NotASCoP( switchStmt.getAddressedNode() );
 		}
 
-		switchStmt->addAnnotation( std::make_shared<ScopRegion>(ret, IterationDomain(), regionStmts.top(), scops) );
+		switchStmt->addAnnotation( 
+				std::make_shared<ScopRegion>(ret, IterationDomain(), regionStmts.top(), scops) 
+			);
 
 		subScops.clear();
 		subScops.push_back(switchStmt);
@@ -608,9 +636,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				}
 
 				if (addr->hasAnnotation(ScopRegion::KEY)) { 
-					scopList.push_back( 
-						std::make_pair(addr, addr->getAnnotation(ScopRegion::KEY)->getIterationVector()) 
-					); 
+					scopList.push_back( addr ); 
 				}
 			}
 			throw NotASCoP(compStmt.getAddressedNode()); 
@@ -657,7 +683,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		}
 		regionStmts.pop();
 
-		scopList.push_back( std::make_pair(lambda, bodyIV) );
+		scopList.push_back( lambda );
 
 		// subScops.clear();
 		// subScops.push_back( lambda );
@@ -919,8 +945,8 @@ std::ostream& AccessFunction::printTo(std::ostream& out) const {
 }
 
 //===== mark ======================================================================
-ScopList mark(const core::NodePtr& root) {
-	ScopList ret;
+AddressList mark(const core::NodePtr& root) {
+	AddressList ret;
 	LOG(DEBUG) << std::setfill('=') << std::setw(80) << std::left << "# Starting SCoP analysis";
 	ScopVisitor sv(ret);
 	try {

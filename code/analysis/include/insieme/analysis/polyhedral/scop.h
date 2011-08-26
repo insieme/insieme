@@ -254,13 +254,11 @@ public:
 	}
 };
 
-typedef std::vector< std::pair<core::NodeAddress, poly::IterationVector> > ScopList;
-
 /**************************************************************************************************
  * Finds and marks the SCoPs contained in the root subtree and returns a list of found SCoPs (an
  * empty list in the case no SCoP was found). 
  *************************************************************************************************/ 
-ScopList mark(const core::NodePtr& root);
+AddressList mark(const core::NodePtr& root);
 
 /**************************************************************************************************
  * printSCoP is a debug function which is used mainly as a proof of concept for the mechanism which

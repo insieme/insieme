@@ -228,7 +228,7 @@ TEST(ScopRegion, SwitchStmt) {
 		);
 	std::cout << "Parsed Stmt: " << compStmt << std::endl;
 	
-
+	
 
 	scop::mark(compStmt);
 }
