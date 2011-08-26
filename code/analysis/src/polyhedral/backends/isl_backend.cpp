@@ -347,6 +347,11 @@ void buildDependencies(
 		);	
 	
 	printIslMap(std::cout, ctx.getRawContext(), must_dep);
+
+	isl_union_map* deltas = isl_union_map_deltas_map( must_dep );
+	std::cout << "\nDELTAS: " << std::endl;
+	printIslMap(std::cout, ctx.getRawContext(), deltas);
+
 }
 
 } // end poly namespace 
