@@ -53,6 +53,7 @@
 
 #include "insieme/backend/ocl_host/host_backend.h"
 #include "insieme/backend/ocl_host/host_operator.h"
+#include "insieme/backend/ocl_host/host_preprocessor.h"
 #include "insieme/backend/ocl_host/host_stmt_handler.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
@@ -95,7 +96,8 @@ namespace ocl_host {
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 			getBasicPreProcessorSequence(),
-			makePreProcessor<ocl_kernel::OCLPreprocessor>()
+			makePreProcessor<ocl_kernel::KernelPreprocessor>(),
+			makePreProcessor<HostPreprocessor>()
 		);
 		converter.setPreProcessor(preprocessor);
 

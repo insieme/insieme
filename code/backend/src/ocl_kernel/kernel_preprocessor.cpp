@@ -64,7 +64,7 @@ namespace ocl_kernel {
 
 	using namespace insieme::annotations::ocl;
 
-	namespace {
+namespace {
 
 		/**
 		 * Tests whether the given lambda is marked to converted into an OpenCL kernel.
@@ -429,15 +429,6 @@ namespace ocl_kernel {
 					return res;
 				}
 
-
-				// TODO:
-				// 		- replace build ins
-				//		- add address space modifier
-
-				// replace some build-ins
-
-
-
 				// create kernel function
 				core::StatementPtr core = getKernelCore(kernel);
 
@@ -547,10 +538,7 @@ namespace ocl_kernel {
 	}
 
 
-	core::NodePtr OCLPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
-
-		// TODO:
-		// 		- find kernel lambdas, updated types
+	core::NodePtr KernelPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// the converter does the magic
 		TypeWrapper wrapper(manager);
