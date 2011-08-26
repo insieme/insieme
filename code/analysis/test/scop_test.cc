@@ -92,12 +92,7 @@ TEST(ScopRegion, IfStmt) {
 		EXPECT_EQ("(|v4,v5,v7,v8|1)", ss.str());
 	}
 
-	EXPECT_TRUE( static_cast<bool>(annIf.getDomainConstraints()) );
-	{ 
-		std::ostringstream ss;
-		ss << *annIf.getDomainConstraints();
-		EXPECT_EQ("(1*v4 + -1*v5 <= 0)", ss.str());
-	}
+	EXPECT_FALSE( static_cast<bool>(annIf.getDomainConstraints()) );
 
 	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& annThen = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
@@ -187,7 +182,7 @@ TEST(ScopRegion, ForStmt) {
 
 	// check the then body
 	scop::ScopRegion& ann = *ifStmt->getAnnotation(scop::ScopRegion::KEY);
-	poly::IterationVector iterVec = ann.getIterationVector(); 
+	const poly::IterationVector& iterVec = ann.getIterationVector(); 
 
 	EXPECT_EQ(static_cast<size_t>(3), iterVec.size());
 	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
@@ -199,11 +194,6 @@ TEST(ScopRegion, ForStmt) {
 		EXPECT_EQ("(|v12,v16|1)", ss.str());
 	}
 
-	{
-		std::ostringstream ss;
-		ss << *ann.getDomainConstraints();
-		EXPECT_EQ("(1*v12 + -25*1 > 0)", ss.str());
-	}
 }
 
 TEST(ScopRegion, SwitchStmt) {
