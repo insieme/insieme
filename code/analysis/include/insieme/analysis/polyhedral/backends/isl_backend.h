@@ -141,20 +141,20 @@ public:
 	}
 };
 
-template <>
-std::shared_ptr<Set<IslContext>> set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+template <> std::shared_ptr<Set<IslContext>> 
+set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
 
-template <>
-std::shared_ptr<Set<IslContext>> set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+template <> std::shared_ptr<Set<IslContext>> 
+set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
 
-template <>
-std::shared_ptr<Map<IslContext>> map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+template <> std::shared_ptr<Map<IslContext>> 
+map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
 
-template <>
-std::shared_ptr<Map<IslContext>> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+template <> std::shared_ptr<Map<IslContext>> 
+map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
 
-template <>
-std::shared_ptr<Map<IslContext>> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
+template <> std::shared_ptr<Map<IslContext>> 
+map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
 
 
 template <>

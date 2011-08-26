@@ -204,9 +204,33 @@ TEST(ScopRegion, ForStmt) {
 		ss << *ann.getDomainConstraints();
 		EXPECT_EQ("(1*v12 + -25*1 > 0)", ss.str());
 	}
+}
+
+TEST(ScopRegion, SwitchStmt) {
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto compStmt = static_pointer_cast<const CompoundStmt>( 
+		parser.parseStatement("\
+			{ \
+			int<4>:i; \
+			ref<array<int<4>,1>>:v; \
+			ref<int<4>>:b; \
+			switch(i) { \
+				case 0: \
+					{ (op<array.ref.elem.1D>(v, (i-b))); } \
+				case 1: \
+					{ (int<4>:h = (op<array.ref.elem.1D>(v, ((int<4>:n+i)-1)))); }\
+				default: \
+					{ (op<array.ref.elem.1D>(v, (i+b))); } \
+				}; \
+			}") 
+		);
+	std::cout << "Parsed Stmt: " << compStmt << std::endl;
+	
 
 
-
+	scop::mark(compStmt);
 }
 
 

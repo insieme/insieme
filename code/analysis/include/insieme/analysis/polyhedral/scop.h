@@ -51,7 +51,9 @@ namespace insieme {
 namespace analysis {
 namespace scop {
 
-typedef std::vector<core::NodeAddress> AddressList;
+typedef std::vector<core::NodeAddress>	AddressList;
+typedef std::pair<core::NodeAddress, poly::IterationDomain> 	SubScop;
+typedef std::vector<SubScop> SubScopList;
 
 // Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 // be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
@@ -124,22 +126,28 @@ public:
 			core::StatementAddress, 
 			poly::IterationDomain, 
 			poly::ScatteringFunctionPtr, 
-			AccessInfoList > 					StmtScattering;
+			AccessInfoList > 						StmtScattering;
 
-	typedef std::vector<StmtScattering> 		ScatteringMatrix;
+	typedef std::vector<StmtScattering> 			ScatteringMatrix;
 	typedef std::pair<size_t, ScatteringMatrix> 	ScatteringPair;
 	
-	typedef std::vector<poly::Iterator> 		IteratorOrder;
+	typedef std::vector<poly::Iterator> 			IteratorOrder;
 
 	ScopRegion( const poly::IterationVector& iv, 
 			const poly::IterationDomain& comb = poly::IterationDomain(),
 			const ScopStmtList& stmts = ScopStmtList(),
-			const AddressList& subScops = AddressList() ) : 
+			const SubScopList& subScops_ = SubScopList() ) : 
 		core::NodeAnnotation(),
 		iterVec(iv), 
 		stmts(stmts),
-		constraints( poly::cloneConstraint(iterVec, comb) ), // Switch the base to the this->iterVec 
-		subScops(subScops) { } 
+		constraints( poly::cloneConstraint(iterVec, comb) ) // Switch the base to the this->iterVec 
+	{ 
+		
+		for_each(subScops_.begin(), subScops_.end(), 
+			[&] (const SubScop& cur) { 
+				subScops.push_back( SubScop(cur.first, poly::cloneConstraint(iterVec, cur.second)) ); 
+			});	
+	} 
 
 	virtual std::ostream& printTo(std::ostream& out) const;
 
@@ -178,7 +186,7 @@ public:
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
 	 * current iteration domain
 	 */
-	const AddressList& getSubScops() const { return subScops; }
+	const SubScopList& getSubScops() const { return subScops; }
 
 private:
 
@@ -206,7 +214,7 @@ private:
 	 *  
 	 * In the case there are no sub SCoPs for the current SCoP, the list of sub sub SCoPs is empty
 	 */
-	AddressList subScops;
+	SubScopList subScops;
 
 	boost::optional<ScatteringPair> scattering;
 };
