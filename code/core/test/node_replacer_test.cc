@@ -38,6 +38,11 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/core/checks/ir_checks.h"
+
+#include "insieme/utils/test/test_utils.h"
 
 #include "dummy_annotations.inc"
 
@@ -157,6 +162,46 @@ TEST(NodeReplacer, ReplaceByAddress) {
 
 	mod = transform::replaceNode(manager, addrD, typeX);
 	EXPECT_EQ("X", toString(*mod));
+}
+
+TEST(NodeReplacer, ReplaceVariable) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr boolType  = basic.getBool();
+
+	LiteralPtr zero = builder.literal(uint4, "2");
+
+	VariablePtr varA = builder.variable(builder.refType(uint4), 1);
+	VariablePtr varB = builder.variable(builder.refType(boolType), 2);
+
+	VariablePtr param = builder.variable(uint4, 3);
+	FunctionTypePtr funType = builder.functionType(toVector(uint4), uint4);
+	LambdaExprPtr lambda = builder.lambdaExpr(funType, toVector(param), builder.returnStmt(param));
+
+
+	StatementPtr stmt = builder.compoundStmt(toVector<StatementPtr>(
+			builder.declarationStmt(varA, builder.refVar(zero)),
+			builder.callExpr(basic.getRefAssign(), varA, builder.callExpr(uint4, lambda, builder.deref(varA)))
+	));
+//	EXPECT_EQ("", toString(printer::PrettyPrinter(stmt)));
+
+	CheckPtr all = core::checks::getFullCheck();
+
+	EXPECT_EQ("[]", toString(check(stmt, all)));
+
+	// apply recursive variable replacer
+	utils::map::PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>> map;
+	map[varA] = std::make_pair(varB, builder.refVar(builder.literal(boolType, "false")));
+	StatementPtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map);
+
+	EXPECT_EQ("[]", toString(check(stmt2, all)));
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool> v2 =  var(false)");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(bool");
+
 }
 
 

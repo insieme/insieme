@@ -40,13 +40,13 @@
 
 namespace insieme {
 namespace backend {
-namespace ocl_kernel {
+namespace ocl_host {
 
-	class KernelPreprocessor : public PreProcessor {
+	class HostPreprocessor : public PreProcessor {
 	public:
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};
 
-} // end namespace ocl_kernel
+} // end namespace ocl_host
 } // end namespace backend
 } // end namespace insieme

@@ -74,9 +74,10 @@ namespace ocl_host {
 		table[ext.callKernel] = OP_CONVERTER({
 			/*
 			irt_ocl_rt_run_kernel(0,	1, &szGlobalWorkSize, &szLocalWorkSize,
-									 3,	(size_t)0, (void *)buf_input,
-									 (size_t)0, (void *)buf_output,
-									 sizeof(cl_long), (void *)&len_input);
+										3,
+										(size_t)0, buf_input,
+										(size_t)0, buf_output,
+										sizeof(cl_long), &len_input);
 			*/
 
 			const Converter& converter = context.getConverter();

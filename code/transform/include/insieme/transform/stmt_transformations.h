@@ -36,17 +36,24 @@
 
 #pragma once
 
-#include "insieme/backend/preprocessor.h"
+#include <vector>
+#include "insieme/transform/transformation.h"
+
 
 namespace insieme {
-namespace backend {
-namespace ocl_kernel {
+namespace transform {
 
-	class KernelPreprocessor : public PreProcessor {
+	class DeadCodeElimination : public Transformation {
+
 	public:
-		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException);
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
+
 	};
 
-} // end namespace ocl_kernel
-} // end namespace backend
-} // end namespace insieme
+}
+}
