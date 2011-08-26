@@ -174,6 +174,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
 	# add general flags
 	add_definitions( -fshow-column )
+	add_definitions( -fdiagnostics-show-option )
 	add_definitions( -Wall )
 	# add_definitions( -Wextra )
 	# add_definitions( -pedantic )

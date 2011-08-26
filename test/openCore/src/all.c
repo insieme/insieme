@@ -43,7 +43,7 @@ int main()  {
     int* interSec = 0;
     ght_hash_table_t* elements = 0;
 	int elast = 0;
-CHKERRQ(4);
+
 	unsigned int numShellSections;
 	int sumNumLay;
 	size_t elementsused;
@@ -163,8 +163,9 @@ CHKERRQ(4);
     sprintf(filenameAddition, "before-1-0.5-");
 
     printf("Reading input data from files\n");
+    size_t vertices = 0;
     size_t elems = setAll(path, filenameAddition, &sigPtr, &strPtr, &Dsig, &Dstr, &invF, &invFT, &G, &P11q, &P22, &P21, &T3Ptr, &fe1q, &fe2, &fs,
-            &u, &LBase, &XG, &nrOfOrder, &icoShellSections, &elsets, &issSize, &elsetSize, &mat, &interSec, &elements, &elast);
+            &u, &LBase, &XG, &nrOfOrder, &icoShellSections, &elsets, &issSize, &elsetSize, &mat, &interSec, &elements, &elast, &vertices);
 
     printf("Calling initCalcQMHS4firstTime\n");
 //    if(initCalcQMHS4firstTime(&cLElemQMHS4, 1024, 1) != 0) {
@@ -1369,7 +1370,7 @@ CHKERRQ(4);
     printf("Writing output files\n");
 //    sprintf(path, "/home/klaus/dpsnfs/save/gc/");
     sprintf(filenameAddition, "gc/c-");
-    saveAll(path, filenameAddition, sigPtr, strPtr, Dsig, Dstr, invF, invFT, G, P11q, P22, P21, T3Ptr, fe1q, fe2, fs, elems, 1088);
+    saveAll(path, filenameAddition, sigPtr, strPtr, Dsig, Dstr, invF, invFT, G, P11q, P22, P21, T3Ptr, fe1q, fe2, fs, elems, vertices);
 
 //    destructCLElemQMHS4(&cLElemQMHS4);
 	{

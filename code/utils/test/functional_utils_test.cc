@@ -146,5 +146,48 @@ TEST(FunctionExperiment, TryStdFunction) {
 	EXPECT_EQ(1, funcB());
 	EXPECT_EQ(2, funcB());
 
+}
+
+struct A {
+	virtual int f() const { return 0; }
+	virtual int g(int a) { return a + 1; };
+};
+
+struct B : public A {
+	virtual int f() const { return 1; }
+	virtual int g(int a) { return a + 2; };
+};
+
+TEST(FunctionExperiment, MemberFunctionWrapper) {
+
+	A a;
+	B b;
+
+	// try a ordinary member function pointer
+	int(A::*p)()const = &A::f;
+	EXPECT_EQ(0, (a.*p)());
+	EXPECT_EQ(1, (b.*p)());
+
+
+	// invoke same operation using the member function functor
+	auto f = fun(a, &A::f);
+	EXPECT_EQ(0, f());
+
+	f = fun(b, &A::f);
+	EXPECT_EQ(1, f());
+
+	auto g = fun(a, &A::g);
+	EXPECT_EQ(4, g(3));
+
+	g = fun(b, &A::g);
+	EXPECT_EQ(5, g(3));
+
+
+	// test compatibility to std::function
+	std::function<int()> sf = f;
+	EXPECT_EQ(1, sf());
+
+	std::function<int(int)> sg = g;
+	EXPECT_EQ(6, sg(4));
 
 }
