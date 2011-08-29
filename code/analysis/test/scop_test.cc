@@ -217,8 +217,27 @@ TEST(ScopRegion, SwitchStmt) {
 			}") 
 		);
 	std::cout << "Parsed Stmt: " << compStmt << std::endl;
+	scop::mark(compStmt);
+
+	EXPECT_TRUE( compStmt->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_EQ( NT_SwitchStmt, (*compStmt)[3]->getNodeType() );
+	const SwitchStmtPtr& switchStmt = static_pointer_cast<const SwitchStmt>((*compStmt)[3]);
 	
+	EXPECT_TRUE( switchStmt->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// check the then body
+	scop::ScopRegion& ann = *switchStmt->getAnnotation(scop::ScopRegion::KEY);
+	const poly::IterationVector& iterVec = ann.getIterationVector(); 
+
+	EXPECT_EQ(static_cast<size_t>(4), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.getParameterNum());
 	
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(|v12,v13|1)", ss.str());
+	}
 
 	scop::mark(compStmt);
 }

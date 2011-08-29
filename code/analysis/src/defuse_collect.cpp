@@ -75,7 +75,9 @@ std::string Ref::refTypeToStr(const RefType& type) {
 Ref::Ref(const RefType& type, const core::ExpressionAddress& var, const UseType& usage) : 
 	 baseExpr(var), type(type), usage(usage) 
 { 
-	assert(var->getType()->getNodeType() == core::NT_RefType && "TYpe of base expression must be of RefType"); 
+	assert(var->getType()->getNodeType() == core::NT_RefType && 
+			"TYpe of base expression must be of RefType"
+		); 
 }
 
 std::ostream& Ref::printTo(std::ostream& out) const {
@@ -84,7 +86,8 @@ std::ostream& Ref::printTo(std::ostream& out) const {
 
 //===== ScalarRef =======================================================================================
 
-ScalarRef::ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage) : Ref(Ref::SCALAR, var, usage) { }
+ScalarRef::ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage) : 
+	Ref(Ref::SCALAR, var, usage) { }
 
 const core::VariableAddress& ScalarRef::getVariable() const { 
 	return AS_VAR_ADDR(baseExpr);
@@ -101,7 +104,8 @@ std::ostream& ArrayRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);
 	out << "(" << *baseExpr << ")";
 	out << " IDX: {" << 
-		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ jout << *cur; } ) << "}";
+		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ 
+				jout << *cur; } ) << "}";
 	//if (!idxExpr.empty())
     //	out << "\n\tSurrounding expr: " << *exprPtr;
 	return out;
@@ -109,7 +113,9 @@ std::ostream& ArrayRef::printTo(std::ostream& out) const {
 
 //===== MemberRef =====================================================================================
 
-MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage) : Ref(Ref::MEMBER, memberAcc, usage) { 
+MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage) : 
+	Ref(Ref::MEMBER, memberAcc, usage) 
+{ 
 	assert (memberAcc->getNodeType() == core::NT_CallExpr);
 
 	core::NodeManager& mgr = memberAcc->getNodeManager();

@@ -184,7 +184,8 @@ class RefList: public std::vector<RefPtr> {
 	
 public:
 	template <class T>
-	class ref_iterator : public boost::forward_iterator_helper<ref_iterator<T>, const std::shared_ptr<T>> { 
+	class ref_iterator : 
+		public boost::forward_iterator_helper<ref_iterator<T>, const std::shared_ptr<T>> { 
 		
 		RefList::const_iterator it, end;
 		Ref::RefType type;

@@ -37,6 +37,26 @@
 #include "insieme/analysis/polyhedral/affine_func.h"
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
+
+namespace {
+
+using namespace insieme;
+
+// Remove expression which are used in the IR for semantics checks (like derefs and refs)
+core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
+	const core::NodeManager& mgr = expr->getNodeManager();
+	
+	while (expr->getNodeType() == core::NT_CallExpr &&
+		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.basic.getRefDeref())) {
+
+			expr = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);	
+	}
+
+	return expr;
+}
+
+} // end anonymous namespace
 
 namespace insieme {
 namespace analysis {
@@ -78,8 +98,9 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
 
 		if ( !prod.isOne() ) {
-			const core::ExpressionPtr& var = prod.getFactors().front().first;
-			// We make sure the variable is not already among the iterators
+			core::ExpressionPtr&& var = removeSugar(prod.getFactors().front().first);
+			// we get rid of eventual deref operations occurring 
+						// We make sure the variable is not already among the iterators
 			if ( var->getNodeType() != core::NT_Variable || 
 					iterVec.getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) ) == -1 ) 
 			{
@@ -87,6 +108,7 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 			}
 		}
 	});
+
 	// now the iteration vector is inlined with the Formula object extracted from the expression,
 	// the size of the coefficient vector can be set.
 	coeffs.resize(iterVec.size());
@@ -97,7 +119,7 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 		if ( prod.isOne() ) {
 			coeffs.back() = cur.second;
 		} else {
-			int idx = iterVec.getIdx( prod.getFactors().front().first );
+			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
 			assert (idx != -1);
 			coeffs[idx] = cur.second;
 		}
