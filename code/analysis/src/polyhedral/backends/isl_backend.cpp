@@ -276,58 +276,57 @@ bool Map<IslContext>::isEmpty() const { return isl_union_map_is_empty(map);	}
 //}
 
 template <>
-std::shared_ptr<Set<IslContext>> set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs) {
+SetPtr<IslContext> set_union(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs) {
 	isl_union_set* set = isl_union_set_union(
-			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
+			isl_union_set_copy( lhs->getAsIslSet() ), isl_union_set_copy( rhs->getAsIslSet() )
 	);
-	return std::make_shared<Set<IslContext>>(ctx, isl_union_set_get_dim(set), set);
+	return SetPtr<IslContext>(ctx, isl_union_set_get_dim(set), set);
 }
 
 template <>
-std::shared_ptr<Set<IslContext>> set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs) {
+SetPtr<IslContext> set_intersect(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs) {
 	isl_union_set* set = isl_union_set_intersect(
-			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
+			isl_union_set_copy( lhs->getAsIslSet() ), isl_union_set_copy( rhs->getAsIslSet() )
 	);
-	return std::make_shared<Set<IslContext>>(ctx, isl_union_set_get_dim(set), set);
+	return SetPtr<IslContext>(ctx, isl_union_set_get_dim(set), set);
 }
 
 template <>
-std::shared_ptr<Map<IslContext>> map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs) {
-	isl_union_map* map = isl_union_map_union(
-			isl_union_map_copy( lhs.getAsIslMap() ), 
-			isl_union_map_copy( rhs.getAsIslMap() )
+MapPtr<IslContext> map_union(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs) {
+	isl_union_map* map = isl_union_map_union( 
+			isl_union_map_copy( lhs->getAsIslMap() ), isl_union_map_copy( rhs->getAsIslMap() )
 	);
-	return std::make_shared<Map<IslContext>>(ctx, isl_union_map_get_dim(map), map);
+	return MapPtr<IslContext>(ctx, isl_union_map_get_dim(map), map);
 }
 
 template <>
-std::shared_ptr<Map<IslContext>> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs) {
+MapPtr<IslContext> map_intersect(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs) {
 	isl_union_map* map = isl_union_map_intersect(
-			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
+			isl_union_map_copy( lhs->getAsIslMap() ), isl_union_map_copy( rhs->getAsIslMap() )
 	);
-	return std::make_shared<Map<IslContext>>(ctx, isl_union_map_get_dim(map), map);
+	return MapPtr<IslContext>(ctx, isl_union_map_get_dim(map), map);
 }
 
 template <>
-std::shared_ptr<Map<IslContext>> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom) {
+MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const MapPtr<IslContext>& lhs, const SetPtr<IslContext>& dom) {
 	isl_union_map* map = isl_union_map_intersect_domain( 
-			isl_union_map_copy(lhs.getAsIslMap()), isl_union_set_copy(dom.getAsIslSet()) 
+			isl_union_map_copy(lhs->getAsIslMap()), isl_union_set_copy(dom->getAsIslSet()) 
 		);
-	return std::make_shared<Map<IslContext>>(ctx, isl_union_map_get_dim(map), map);
+	return MapPtr<IslContext>(ctx, isl_union_map_get_dim(map), map);
 }
 
 template <>
 void buildDependencies( 
-		IslContext& 								ctx,
-		const std::shared_ptr<Set<IslContext>>& 	domain, 
-		const std::shared_ptr<Map<IslContext>>& 	schedule, 
-		const std::shared_ptr<Map<IslContext>>& 	sinks, 
-		const std::shared_ptr<Map<IslContext>>& 	mustSources,
-		const std::shared_ptr<Map<IslContext>>& 	maySources
+		IslContext& 				ctx,
+		const SetPtr<IslContext>& 	domain, 
+		const MapPtr<IslContext>& 	schedule, 
+		const MapPtr<IslContext>& 	sinks, 
+		const MapPtr<IslContext>& 	mustSources,
+		const MapPtr<IslContext>& 	maySources
 ) {
-	std::shared_ptr<Map<IslContext>> schedDom = map_intersect_domain(ctx, *schedule, *domain);
-	std::shared_ptr<Map<IslContext>> sinksDom = map_intersect_domain(ctx, *sinks, *domain);
-	std::shared_ptr<Map<IslContext>> mustSourcesDom = map_intersect_domain(ctx, *mustSources, *domain);
+	MapPtr<IslContext> schedDom = map_intersect_domain(ctx, schedule, domain);
+	MapPtr<IslContext> sinksDom = map_intersect_domain(ctx, sinks, domain);
+	MapPtr<IslContext> mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
 //	std::shared_ptr<Map<IslContext>> maySourcesDom = map_intersect_domain(ctx, *maySources, *domain);
 
 	//DependenceInfo<IslContext> depInfo;

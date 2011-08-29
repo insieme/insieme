@@ -141,30 +141,29 @@ public:
 	}
 };
 
-template <> std::shared_ptr<Set<IslContext>> 
-set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+template <> 
+SetPtr<IslContext> set_union(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs);
 
-template <> std::shared_ptr<Set<IslContext>> 
-set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+template <>
+SetPtr<IslContext> set_intersect(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs);
 
-template <> std::shared_ptr<Map<IslContext>> 
-map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+template <> 
+MapPtr<IslContext> map_union(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs);
 
-template <> std::shared_ptr<Map<IslContext>> 
-map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+template <> 
+MapPtr<IslContext> map_intersect(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs);
 
-template <> std::shared_ptr<Map<IslContext>> 
-map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
-
+template <> 
+MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const MapPtr<IslContext>& lhs, const SetPtr<IslContext>& dom);
 
 template <>
 void buildDependencies( 
-		IslContext&									ctx,
-		const std::shared_ptr<Set<IslContext>>& 	domain, 
-		const std::shared_ptr<Map<IslContext>>& 	schedule, 
-		const std::shared_ptr<Map<IslContext>>& 	sinks, 
-		const std::shared_ptr<Map<IslContext>>& 	must_sources,
-		const std::shared_ptr<Map<IslContext>>& 	may_sourcs
+		IslContext&					ctx,
+		const SetPtr<IslContext>& 	domain, 
+		const MapPtr<IslContext>& 	schedule, 
+		const MapPtr<IslContext>& 	sinks, 
+		const MapPtr<IslContext>& 	must_sources,
+		const MapPtr<IslContext>& 	may_sourcs
 );
 
 } // end poly namespace 

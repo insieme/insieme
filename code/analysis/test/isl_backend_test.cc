@@ -180,7 +180,7 @@ TEST(IslBackend, SetUnion) {
 	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c1), "S0");
 	auto&& set2 = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c2), "S1");
 
-	auto&& set = set_union(*ctx, *set1, *set2);
+	auto&& set = set_union(*ctx, set1, set2);
 	
 	// Build directly the ISL set
 	isl_union_set* refSet = isl_union_set_read_from_str(ctx->getRawContext(), 
@@ -247,7 +247,7 @@ TEST(IslBackend, MapUnion) {
 	map2->printTo(ss2);
 	EXPECT_EQ("[v3] -> { S1[v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss2.str());
 
-	auto&& mmap = map_union(*ctx, *map, *map2);
+	auto&& mmap = map_union(*ctx, map, map2);
 	std::ostringstream  ss3;
 	mmap->printTo(ss3);
 	EXPECT_EQ("[v3] -> { S0[v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1]; S1[v1] -> [-2v3 + v1, 4 + 8v3 + v1, 4 - v3 - 5v1] }", ss3.str());

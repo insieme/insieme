@@ -969,10 +969,10 @@ void computeDataDependence(const NodePtr& root) {
 	const IterationVector& iterVec = ann.getIterationVector();
 	auto&& ctx = BackendTraits<POLYHEDRAL_BACKEND>::ctx_type();
 
-	std::shared_ptr<Set<IslContext>> domain;
-	std::shared_ptr<Map<IslContext>> schedule;
-	std::shared_ptr<Map<IslContext>> reads;
-	std::shared_ptr<Map<IslContext>> writes;
+	SetPtr<IslContext> domain;
+	MapPtr<IslContext> schedule;
+	MapPtr<IslContext> reads;
+	MapPtr<IslContext> writes;
 
 	size_t stmtID = 0;
 	std::for_each(scat.second.begin(), scat.second.end(), 
@@ -981,7 +981,7 @@ void computeDataDependence(const NodePtr& root) {
 			IterationDomain id = std::get<1>(cur);
 
 			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, iterVec, id, stmtid);
-			domain = !domain ? ids : set_union(ctx, *domain, *ids);
+			domain = !domain ? ids : set_union(ctx, domain, ids);
 
 			ScatteringFunctionPtr sf = std::get<2>(cur);
 			// Because the scheduling of every statement has to have the same number of elements
@@ -991,7 +991,7 @@ void computeDataDependence(const NodePtr& root) {
 				sf->appendRow( AffineFunction(iterVec) );
 			}
 			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
-			schedule = !schedule ? scattering : map_union(ctx, *schedule, *scattering);
+			schedule = !schedule ? scattering : map_union(ctx, schedule, scattering);
 				
 			// Access Functions 
 			const ScopRegion::AccessInfoList& ail = std::get<3>(cur);
@@ -1004,14 +1004,14 @@ void computeDataDependence(const NodePtr& root) {
 
 					switch ( std::get<1>(cur) ) {
 					case Ref::USE: 
-						reads = !reads ? access : map_union(ctx, *reads, *access);
+						reads = !reads ? access : map_union(ctx, reads, access);
 						break;
 					case Ref::DEF:
-						writes = !writes ? access : map_union(ctx, *writes, *access);
+						writes = !writes ? access : map_union(ctx, writes, access);
 						break;
 					case Ref::UNKNOWN:
-						reads = !reads ? access : map_union(ctx, *reads, *access);
-						writes = !writes ? access : map_union(ctx, *writes, *access);
+						reads = !reads ? access : map_union(ctx, reads, access);
+						writes = !writes ? access : map_union(ctx, writes, access);
 						break;
 					default:
 						assert(false);

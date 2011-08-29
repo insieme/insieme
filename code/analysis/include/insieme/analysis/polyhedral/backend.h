@@ -77,25 +77,55 @@ private:
 	Map();
 };
 
-template <class Ctx>
-std::shared_ptr<Set<Ctx>> set_union(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
+template <typename Ctx>
+struct SetPtr: public std::shared_ptr<Set<Ctx>> {
 
-template <class Ctx>
-std::shared_ptr<Set<Ctx>> set_intersect(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
+	// builds an empty set 
+	SetPtr(): std::shared_ptr<Set<Ctx>>() { }
 
-template <class Ctx>
-std::shared_ptr<Map<Ctx>> map_union(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+	SetPtr( const SetPtr<Ctx>& other ) : std::shared_ptr<Set<Ctx>>( other ) { }
 
-template <class Ctx>
-std::shared_ptr<Map<Ctx>> map_intersect(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+	template <typename ...Args>
+	SetPtr( Ctx& ctx, const Args&... args ) : 
+		std::shared_ptr<Set<Ctx>>( std::make_shared<Set<Ctx>>(ctx, args...) ) { }
 
-template <class Ctx>
-std::shared_ptr<Map<Ctx>> map_intersect_domain(Ctx& ctx, const Map<Ctx>& lhs, const Set<Ctx>& dom);
+};
+
+template <typename Ctx>
+struct MapPtr: public std::shared_ptr<Map<Ctx>> {
+
+	MapPtr(): std::shared_ptr<Map<Ctx>>() { }
+
+	MapPtr( const MapPtr<Ctx>& other ) : std::shared_ptr<Map<Ctx>>( other ) { }
+
+	template <typename ...Args>
+	MapPtr( Ctx& ctx, const Args&... args ) : 
+		std::shared_ptr<Map<Ctx>>( std::make_shared<Map<Ctx>>(ctx, args...) ) { }
+
+};
+
+template <typename Ctx>
+SetPtr<Ctx> set_union(Ctx& ctx, const SetPtr<Ctx>& lhs, const SetPtr<Ctx>& rhs);
+
+template <typename Ctx>
+SetPtr<Ctx> set_intersect(Ctx& ctx, const SetPtr<Ctx>& lhs, const SetPtr<Ctx>& rhs);
+
+template <typename Ctx>
+MapPtr<Ctx> map_union(Ctx& ctx, const MapPtr<Ctx>& lhs, const MapPtr<Ctx>& rhs);
+
+template <typename Ctx>
+MapPtr<Ctx> map_intersect(Ctx& ctx, const MapPtr<Ctx>& lhs, const MapPtr<Ctx>& rhs);
+
+/*
+ * Intersect a map with a domain 
+ */
+template <typename Ctx>
+MapPtr<Ctx> map_intersect_domain(Ctx& ctx, const MapPtr<Ctx>& lhs, const SetPtr<Ctx>& dom);
 
 
 //===== Dependency analysis =======================================================================
 
-template <class Ctx>
+template <typename Ctx>
 struct DependenceInfo {
 	Map<Ctx> mustDep;
 	Map<Ctx> mayDep;
@@ -105,12 +135,12 @@ struct DependenceInfo {
 
 template <class Ctx>
 void buildDependencies( 
-		Ctx&								ctx,
-		const std::shared_ptr<Set<Ctx>>& 	domain, 
-		const std::shared_ptr<Map<Ctx>>& 	schedule, 
-		const std::shared_ptr<Map<Ctx>>& 	sinks, 
-		const std::shared_ptr<Map<Ctx>>& 	must_sources = std::shared_ptr<Map<Ctx>>(), 
-		const std::shared_ptr<Map<Ctx>>& 	may_sourcs = std::shared_ptr<Map<Ctx>>()
+		Ctx&				ctx,
+		const SetPtr<Ctx>& 	domain, 
+		const MapPtr<Ctx>& 	schedule, 
+		const MapPtr<Ctx>& 	sinks, 
+		const MapPtr<Ctx>& 	must_sources = MapPtr<Ctx>(), 
+		const MapPtr<Ctx>& 	may_sourcs = MapPtr<Ctx>()
 );
 
 //===== Conversion Utilities ======================================================================
@@ -128,23 +158,23 @@ std::shared_ptr<typename BackendTraits<B>::ctx_type>
 createContext() { return std::make_shared<typename BackendTraits<B>::ctx_type>(); }
 
 template <Backend B>
-std::shared_ptr<Set<typename BackendTraits<B>::ctx_type>> 
+SetPtr<typename BackendTraits<B>::ctx_type>
 makeSet( typename BackendTraits<B>::ctx_type& ctx, 
 		 const IterationVector& iterVec,
 		 const ConstraintCombinerPtr& constraint,
 		 const std::string& tuple_name = std::string())
 {
-	return std::make_shared<Set<typename BackendTraits<B>::ctx_type>>(ctx, iterVec, constraint, tuple_name);
+	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, iterVec, constraint, tuple_name);
 }
 
 template <Backend B>
-std::shared_ptr<Map<typename BackendTraits<B>::ctx_type>>
+MapPtr<typename BackendTraits<B>::ctx_type>
 makeMap( typename BackendTraits<B>::ctx_type& ctx,  
 		 const AffineSystem& affSys,
 		 const std::string& in_tuple_name = std::string(),
 		 const std::string& out_tuple_name = std::string())
 {
-	return std::make_shared<Map<typename BackendTraits<B>::ctx_type>>(ctx, affSys, in_tuple_name, out_tuple_name);
+	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, affSys, in_tuple_name, out_tuple_name);
 }
 
 } // end poly namespace
