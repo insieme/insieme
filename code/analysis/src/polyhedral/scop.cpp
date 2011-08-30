@@ -970,19 +970,19 @@ void computeDataDependence(const NodePtr& root) {
 	const IterationVector& iterVec = ann.getIterationVector();
 	auto&& ctx = BackendTraits<POLYHEDRAL_BACKEND>::ctx_type();
 
-	SetPtr<IslContext> domain;
-	MapPtr<IslContext> schedule;
-	MapPtr<IslContext> reads;
-	MapPtr<IslContext> writes;
+	// universe set 
+	SetPtr<IslContext> domain = makeSet<POLYHEDRAL_BACKEND>(ctx, IterationDomain(iterVec));
+	MapPtr<IslContext> schedule = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
+	MapPtr<IslContext> reads = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
+	MapPtr<IslContext> writes = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
 
 	size_t stmtID = 0;
 	std::for_each(scat.second.begin(), scat.second.end(), 
 		[ & ] (const ScopRegion::StmtScattering& cur) { 
-			std::string stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
-			IterationDomain id = std::get<1>(cur);
+			std::string&& stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
 
-			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, id, stmtid);
-			domain = !domain ? ids : set_union(ctx, domain, ids);
+			auto&& domainSet = makeSet<POLYHEDRAL_BACKEND>(ctx, std::get<1>(cur), stmtid);
+			domain = set_union(ctx, *domain, *domainSet);
 
 			ScatteringFunctionPtr sf = std::get<2>(cur);
 			// Because the scheduling of every statement has to have the same number of elements
@@ -992,7 +992,7 @@ void computeDataDependence(const NodePtr& root) {
 				sf->appendRow( AffineFunction(iterVec) );
 			}
 			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
-			schedule = !schedule ? scattering : map_union(ctx, schedule, scattering);
+			schedule = map_union(ctx, *schedule, *scattering);
 				
 			// Access Functions 
 			const ScopRegion::AccessInfoList& ail = std::get<3>(cur);
@@ -1004,55 +1004,42 @@ void computeDataDependence(const NodePtr& root) {
 					auto&& access = makeMap<POLYHEDRAL_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
 
 					switch ( std::get<1>(cur) ) {
-					case Ref::USE: 
-						reads = !reads ? access : map_union(ctx, reads, access);
-						break;
-					case Ref::DEF:
-						writes = !writes ? access : map_union(ctx, writes, access);
-						break;
-					case Ref::UNKNOWN:
-						reads = !reads ? access : map_union(ctx, reads, access);
-						writes = !writes ? access : map_union(ctx, writes, access);
-						break;
+					case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
+					case Ref::DEF: 		writes = map_union(ctx, *writes, *access);	break;
+					case Ref::UNKNOWN:	reads  = map_union(ctx, *reads, *access);
+										writes = map_union(ctx, *writes, *access);
+										break;
 					default:
-						assert(false);
+						assert( false && "Usage kind not defined!" );
 					}
 				}
 			});
 		}
 	);
 
-	if(domain && schedule && reads && writes ) {
-
-	std::cout << "D:=";
-	domain->printTo(std::cout);
-	std::cout << std::endl;
-	std::cout << "S:=";	
-	schedule->printTo(std::cout);
-	std::cout << std::endl;
-	if (reads) {
-		std::cout << "R:=";
-		reads->printTo(std::cout);
-		std::cout << std::endl;
-	}
-	if (writes) {
-		std::cout << "W:=";	
-		writes->printTo(std::cout);
-		std::cout << std::endl;
-	}
 	LOG(DEBUG) << "Computing RAW dependencies: ";
-	buildDependencies(ctx, domain, schedule, reads, writes);
+	DependenceInfo<IslContext> depInfo = 
+		buildDependencies(ctx, *domain, *schedule, *reads, *writes, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
+	LOG(DEBUG) << depInfo;
+	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
 	
 	std::cout << std::endl;
 
 	LOG(DEBUG) << "Computing WAW dependencies: ";	
-	buildDependencies(ctx, domain, schedule, writes, writes);
+	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *writes, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
 	std::cout << std::endl;
+	LOG(DEBUG) << depInfo;
+
+	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
+
 
 	LOG(DEBUG) << "Computing WAR dependencies: ";
-	buildDependencies(ctx, domain, schedule, writes, reads);
+	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *reads, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
 	std::cout << std::endl;
-	}
+	LOG(DEBUG) << depInfo;
+
+	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
+
 }
 
 //===== printSCoP ===================================================================

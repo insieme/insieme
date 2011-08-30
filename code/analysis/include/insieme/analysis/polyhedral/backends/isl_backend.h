@@ -141,29 +141,33 @@ public:
 };
 
 template <> 
-SetPtr<IslContext> set_union(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs);
+SetPtr<IslContext> set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
 
 template <>
-SetPtr<IslContext> set_intersect(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs);
+SetPtr<IslContext> set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
 
 template <> 
-MapPtr<IslContext> map_union(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs);
+MapPtr<IslContext> map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
 
 template <> 
-MapPtr<IslContext> map_intersect(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs);
+MapPtr<IslContext> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
 
 template <> 
-MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const MapPtr<IslContext>& lhs, const SetPtr<IslContext>& dom);
+MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
 
 template <>
-void buildDependencies( 
-		IslContext&					ctx,
-		const SetPtr<IslContext>& 	domain, 
-		const MapPtr<IslContext>& 	schedule, 
-		const MapPtr<IslContext>& 	sinks, 
-		const MapPtr<IslContext>& 	must_sources,
-		const MapPtr<IslContext>& 	may_sourcs
+DependenceInfo<IslContext> buildDependencies( 
+		IslContext&				ctx,
+		const Set<IslContext>& 	domain, 
+		const Map<IslContext>& 	schedule, 
+		const Map<IslContext>& 	sinks, 
+		const Map<IslContext>& 	must_sources,
+		const Map<IslContext>& 	may_sourcs
 );
+
+template <>
+std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const;
+
 
 } // end poly namespace 
 } // end analysis namespace 
