@@ -156,8 +156,8 @@ int main(int argc, char *argv []){
 	//============================================================60
 	if(argc == 1) {
 		// set default values
-		xmax = 1000;
-		workload = 2000;
+		xmax = 200;
+		workload = 200;
 		mode = 0;
 		threads = 1;
 	}
