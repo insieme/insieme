@@ -166,7 +166,7 @@ public:
 		// real types
 		case BuiltinType::Float:		return gen.getFloat();
 		case BuiltinType::Double:		return gen.getDouble();
-		case BuiltinType::LongDouble:	// unsopported FIXME
+		case BuiltinType::LongDouble:	return gen.getDouble(); // unsopported FIXME
 
 		// not supported types
 		case BuiltinType::NullPtr:		

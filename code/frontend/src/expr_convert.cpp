@@ -2250,6 +2250,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.isResolvingRecFuncBody = true;
 	}
 
+	VLOG(2) << "Visiting function body!";
 	// set up context to contain current list of parameters and convert body
 	ConversionContext::ParameterList oldList = ctx.curParameter;
 	ctx.curParameter = &params;
