@@ -96,7 +96,7 @@ void read(	char* filename,
 
 	fid = fopen(filename, "r");
 	if( fid == NULL ){
-		// printf( "The file was not opened for reading\n" );
+		printf( "The file was not opened for reading\n" );
 		return;
 	}
 
