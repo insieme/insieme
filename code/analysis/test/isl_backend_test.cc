@@ -67,7 +67,7 @@ TEST(IslBackend, SetCreation) {
 	CREATE_ITER_VECTOR; 
 
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, poly::ConstraintCombinerPtr(), "S0");
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(iterVec), "S0");
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -83,7 +83,7 @@ TEST(IslBackend, SetConstraint) {
 	poly::Constraint c(af, poly::Constraint::LT);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c), "S0");
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)), "S0");
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -112,7 +112,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c), "S0");
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)), "S0");
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -149,10 +149,8 @@ TEST(IslBackend, FromCombiner) {
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
 	poly::ConstraintCombinerPtr ptr =  c1 or (not_(c2));
 	
-// 	std::cout << *ptr << std::endl;
-
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set = poly::makeSet<poly::ISL>(*ctx, iterVec, ptr, "S0");
+	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(ptr), "S0");
 
 	std::ostringstream ss;
 	set->printTo(ss);
@@ -177,8 +175,8 @@ TEST(IslBackend, SetUnion) {
 	poly::Constraint c2(poly::AffineFunction(iterVec, {1,-1,0}), poly::Constraint::EQ);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c1), "S0");
-	auto&& set2 = poly::makeSet<poly::ISL>(*ctx, iterVec, makeCombiner(c2), "S1");
+	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c1)), "S0");
+	auto&& set2 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c2)), "S1");
 
 	auto&& set = set_union(*ctx, set1, set2);
 	

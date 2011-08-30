@@ -77,6 +77,7 @@ namespace {
  * Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
  */
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL) {
+
 	InsiemeSema S(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
 
 	Parser P(comp.getPreprocessor(), S);

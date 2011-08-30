@@ -182,15 +182,15 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 
 } // end anonynous namespace
 
-//==== IslSet ====================================================================================
+//==== Set ====================================================================================
 
 Set<IslContext>::Set(
-		IslContext& ctx, 
-		const IterationVector& iterVec, 
-		const ConstraintCombinerPtr& constraint,
-		const std::string& tuple_name 
+		IslContext& 			ctx, 
+		const IterationDomain& 	domain,
+		const std::string& 		tuple_name 
 		) : ctx(ctx)
 {
+	const IterationVector& iterVec = domain.getIterationVector();
 	// Build the dim object
 	dim = isl_dim_set_alloc( ctx.getRawContext(), iterVec.getParameterNum(), iterVec.getIteratorNum() );
 
@@ -203,15 +203,22 @@ Set<IslContext>::Set(
 	// Set the name of the tuple 
 	dim = isl_dim_set_tuple_name(dim, isl_dim_set, tuple_name.c_str());
 
-	isl_set* tset = isl_set_universe( isl_dim_copy(dim) );
+	if (domain.isEmpty()) {
+		set = isl_union_set_empty( isl_dim_copy(dim) );
+		return;
+	}
+
+	if ( domain.isUniverse() ) {
+		set = isl_union_set_from_set( isl_set_universe( isl_dim_copy(dim) ) );
+		return;
+	}
+
+	assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty");
 
 	// If a non empty constraint is provided, then add it to the universe set 
-	if (constraint) {
-		ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
-		constraint->accept(ccv);
-		tset = isl_set_intersect(tset, ccv.getResult());
-	} 
-	set = isl_union_set_from_set(tset);
+	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
+	domain.getConstraint()->accept(ccv);
+	set = isl_union_set_from_set( ccv.getResult() );
 }
 
 bool Set<IslContext>::isEmpty() const { return isl_union_set_is_empty(set);	}
@@ -221,9 +228,13 @@ std::ostream& Set<IslContext>::printTo(std::ostream& out) const {
 	return out;
 }
 
-//==== IslMap ====================================================================================
+//==== Map ====================================================================================
 
-Map<IslContext>::Map(IslContext& ctx, const AffineSystem& affSys, const std::string& in_tuple_name, const std::string& out_tuple_name) : ctx(ctx)
+Map<IslContext>::Map(IslContext& 			ctx, 
+					 const AffineSystem& 	affSys, 
+					 const std::string& 	in_tuple_name, 
+					 const std::string& 	out_tuple_name 
+					) : ctx(ctx)
 {
 	const IterationVector& iterVec = affSys.getIterationVector();
 
@@ -271,9 +282,7 @@ std::ostream& Map<IslContext>::printTo(std::ostream& out) const {
 
 bool Map<IslContext>::isEmpty() const { return isl_union_map_is_empty(map);	}
 
-// void IslMap::intersect(const Set<IslContext>& set) {
-//	map = isl_map_intersect_domain( map, isl_set_copy(static_cast<const IslSet&>(set).set) );
-//}
+//==== Sets and Maps operations ===================================================================
 
 template <>
 SetPtr<IslContext> set_union(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs) {

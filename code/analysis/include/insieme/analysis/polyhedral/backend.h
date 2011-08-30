@@ -160,11 +160,10 @@ createContext() { return std::make_shared<typename BackendTraits<B>::ctx_type>()
 template <Backend B>
 SetPtr<typename BackendTraits<B>::ctx_type>
 makeSet( typename BackendTraits<B>::ctx_type& ctx, 
-		 const IterationVector& iterVec,
-		 const ConstraintCombinerPtr& constraint,
+		 const IterationDomain& domain,
 		 const std::string& tuple_name = std::string())
 {
-	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, iterVec, constraint, tuple_name);
+	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, domain, tuple_name);
 }
 
 template <Backend B>

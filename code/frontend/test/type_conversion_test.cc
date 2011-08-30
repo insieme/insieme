@@ -67,7 +67,7 @@ namespace fe = insieme::frontend;
 
 TEST(TypeConversion, HandleBuildinType) {
 
-	Logger::get(std::cerr, INFO, 0);
+	Logger::get(std::cerr, DEBUG, 2);
 
 	NodeManager manager;
 	fe::Program prog(manager);

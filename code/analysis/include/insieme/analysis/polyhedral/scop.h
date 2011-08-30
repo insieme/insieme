@@ -51,9 +51,9 @@ namespace insieme {
 namespace analysis {
 namespace scop {
 
-typedef std::vector<core::NodeAddress>	AddressList;
+typedef std::vector<core::NodeAddress> AddressList;
 typedef std::pair<core::NodeAddress, poly::IterationDomain> 	SubScop;
-typedef std::vector<SubScop> SubScopList;
+typedef std::list<SubScop> SubScopList;
 
 // Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 // be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
@@ -128,24 +128,24 @@ public:
 			poly::ScatteringFunctionPtr, 
 			AccessInfoList > 						StmtScattering;
 
-	typedef std::vector<StmtScattering> 			ScatteringMatrix;
+	typedef std::list<StmtScattering> 			ScatteringMatrix;
 	typedef std::pair<size_t, ScatteringMatrix> 	ScatteringPair;
 	
 	typedef std::vector<poly::Iterator> 			IteratorOrder;
 
 	ScopRegion( const poly::IterationVector& iv, 
-			const poly::IterationDomain& comb = poly::IterationDomain(),
+			const poly::IterationDomain& comb,
 			const ScopStmtList& stmts = ScopStmtList(),
 			const SubScopList& subScops_ = SubScopList() ) : 
 		core::NodeAnnotation(),
 		iterVec(iv), 
 		stmts(stmts),
-		constraints( poly::cloneConstraint(iterVec, comb) ) // Switch the base to the this->iterVec 
+		domain( iterVec, comb ) // Switch the base to the this->iterVec 
 	{ 
 		
 		for_each(subScops_.begin(), subScops_.end(), 
 			[&] (const SubScop& cur) { 
-				subScops.push_back( SubScop(cur.first, poly::cloneConstraint(iterVec, cur.second)) ); 
+				subScops.push_back( SubScop(cur.first, poly::IterationDomain(iterVec, cur.second)) ); 
 			});	
 	} 
 
@@ -170,7 +170,7 @@ public:
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::IterationDomain& getDomainConstraints() const { return constraints; }
+	inline const poly::IterationDomain& getDomainConstraints() const { return domain; }
 
 	inline const ScopStmtList& getDirectRegionStmts() const { return stmts; }
 
@@ -206,7 +206,7 @@ private:
 	ScopStmtList stmts;
 
 	// List of constraints which this SCoP defines 
-	poly::ConstraintCombinerPtr constraints;
+	poly::IterationDomain domain;
 
 	/**
 	 * Ordered list of sub SCoPs accessible from this SCoP, the SCoPs are ordered in terms of their
@@ -216,7 +216,7 @@ private:
 	 */
 	SubScopList subScops;
 
-	boost::optional<ScatteringPair> scattering;
+	std::shared_ptr<ScatteringPair> scattering;
 };
 
 /**************************************************************************************************

@@ -312,7 +312,7 @@ public:
 				 * variable has to be restored when exiting the loop.
 				 *
 				 * 		{
-				 * 			for(_i = init; _i < cond; _i += step) { _i... }
+				 * 			for(int _i = init; _i < cond; _i += step) { _i... }
 				 * 			i = ceil((cond-init)/step) * step + init;
 				 * 		}
 				 */

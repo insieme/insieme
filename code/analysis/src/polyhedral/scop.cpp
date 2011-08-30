@@ -126,11 +126,11 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 				IterationDomain&& lhs = extractFromCondition(iv, callExpr->getArgument(0));
 				IterationDomain&& rhs = extractFromCondition(iv, callExpr->getArgument(1));
 
-				if (op == BasicGenerator::LAnd)	{ return lhs and rhs; }
-				else 							{ return lhs or rhs; }
+				if (op == BasicGenerator::LAnd)	{ return lhs && rhs; }
+				else 							{ return lhs || rhs; }
 			}
 		case BasicGenerator::LNot:
-			 return not_( extractFromCondition(iv, callExpr->getArgument(0)) );
+			 return !extractFromCondition(iv, callExpr->getArgument(0));
 		default:
 			break;
 		}
@@ -156,7 +156,7 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 				default:
 					assert(false && "Operation not supported!");
 			}
-			return makeCombiner( Constraint(af, type) );
+			return IterationDomain( makeCombiner( Constraint(af, type) ) );
 		} catch (arithmetic::NotAFormulaException&& e) { 
 			throw NotASCoP(e.getExpr()); 
 		} catch (NotAffineExpr&& e) { 
@@ -186,10 +186,10 @@ IterationVector markAccessExpression(const ExpressionPtr& expr) {
 	}	 
 }
 
-SubScopList toSubScopList(const AddressList& scops) {
+SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& scops) {
 	SubScopList subScops;
 	for_each(scops.begin(), scops.end(), [&](const NodeAddress& cur) { 
-			subScops.push_back( SubScop(cur, IterationDomain()) );
+			subScops.push_back( SubScop(cur, IterationDomain(iterVec)) );
 	});
 	return subScops;
 }
@@ -337,7 +337,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		ret = IterationVector();
 
 		// check the condition expression
-		IterationDomain&& comb = extractFromCondition(ret, condAddr.getAddressedNode());
+		IterationDomain&& cond = extractFromCondition(ret, condAddr.getAddressedNode());
 	
 		// At this point we are sure that both the then, else body are SCoPs and the condition of
 		// this If statement is also an affine linear function. 
@@ -347,7 +347,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		if (!elseAddr->hasAnnotation(ScopRegion::KEY)) {
 			// else body is not a compound stmt
-			elseAddr->addAnnotation( std::make_shared<ScopRegion>(saveElse) );
+			elseAddr->addAnnotation( std::make_shared<ScopRegion>(saveElse, IterationDomain(saveElse)) );
 		}
 		assert(regionStmts.top().size() == 1);
 		ifScopStmts.push_back( regionStmts.top().front() );
@@ -358,7 +358,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		if (!thenAddr->hasAnnotation(ScopRegion::KEY)) {
 			// else body is not a compound stmt
-			thenAddr->addAnnotation( std::make_shared<ScopRegion>(saveThen) );
+			thenAddr->addAnnotation( std::make_shared<ScopRegion>(saveThen, IterationDomain(saveThen)) );
 		}
 		
 		assert(regionStmts.top().size() == 1);
@@ -369,8 +369,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		faThen.setEnabled(false);
 
 		ifStmt->addAnnotation( 
-			std::make_shared<ScopRegion>(ret, IterationDomain(), ScopStmtList(ifScopStmts.rbegin(),ifScopStmts.rend()), 
-				SubScopList( { SubScop(thenAddr, comb), SubScop(elseAddr, not_(comb)) } )
+			std::make_shared<ScopRegion>(ret, IterationDomain(ret), 
+				ScopStmtList(ifScopStmts.rbegin(),ifScopStmts.rend()), 
+				SubScopList( { SubScop(thenAddr, cond), SubScop(elseAddr, !cond) } )
 			)
 		);
 		
@@ -403,7 +404,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		ASTBuilder builder( switchStmt->getNodeManager() );
 			
 		SubScopList scops;
-		IterationDomain defaultCons; // FIXME: replace with universe constraint
+		IterationDomain defaultCons(ret); // FIXME: replace with universe constraint
 	
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
@@ -425,6 +426,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				);
 
 			try {
+
 				IterationVector iv;
 
 				StatementAddress stmtAddr = 
@@ -440,16 +442,15 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// resolution of the SCoP when the analysis is invoked 
 				if (!stmtAddr->hasAnnotation(ScopRegion::KEY)) {
 					// else body is not a compound stmt
-					stmtAddr->addAnnotation( std::make_shared<ScopRegion>(iv) );
+					stmtAddr->addAnnotation( std::make_shared<ScopRegion>(iv, IterationDomain(iv)) );
 				}
 
-				IterationDomain caseCons = makeCombiner( 
-						Constraint(AffineFunction(ret, expr), Constraint::EQ) 
-					);
-				defaultCons = !defaultCons ? not_( caseCons ) : defaultCons and not_( caseCons );
+				IterationDomain caseCons( makeCombiner(Constraint(AffineFunction(ret, expr), Constraint::EQ)) );
+				defaultCons &= !caseCons;
 
 				// Add this statement to the subScops
 				scops.push_back( SubScop(stmtAddr, caseCons) );
+
 			} catch (NotASCoP&& e) { isSCoP = false; }
 		} 
 
@@ -468,7 +469,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// resolution of the SCoP when the analysis is invoked 
 				if (!defAddr->hasAnnotation(ScopRegion::KEY)) {
 					// default body is not a compound stmt
-					defAddr->addAnnotation( std::make_shared<ScopRegion>(iv) );
+					defAddr->addAnnotation( std::make_shared<ScopRegion>(iv, IterationDomain(iv)) );
 				}
 
 				ret = merge(ret, iv);
@@ -493,7 +494,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		}
 
 		switchStmt->addAnnotation( 
-				std::make_shared<ScopRegion>(ret, IterationDomain(), regionStmts.top(), scops) 
+				std::make_shared<ScopRegion>(ret, IterationDomain(ret), regionStmts.top(), scops) 
 			);
 
 		subScops.clear();
@@ -529,8 +530,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			NodeManager& mgr = forStmt->getNodeManager();
 			ASTBuilder builder(mgr);
 
-			IterationDomain cons; 
-
 			try {
 				ret = merge(ret, bodyIV);	
 
@@ -548,9 +547,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 							forStmt.getAddressedNode()->getEnd())
 						);
 				// set the constraint: iter >= lb && iter < ub
-				cons = Constraint(lb, Constraint::GE) and Constraint(ub, Constraint::LT);
+				IterationDomain cons(Constraint(lb, Constraint::GE) and Constraint(ub, Constraint::LT));
 
-				forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, regionStmts.top(), toSubScopList(subScops)) ); 
+				forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, regionStmts.top(), toSubScopList(ret, subScops)) ); 
 				
 				fa.setEnabled(false);
 
@@ -644,7 +643,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		// Mark this CompoundStmts because it is a Scop
 		compStmt->addAnnotation( 
-			std::make_shared<scop::ScopRegion>(ret, IterationDomain(), regionStmts.top(), toSubScopList(subScops)) 
+			std::make_shared<scop::ScopRegion>(ret, IterationDomain(ret), regionStmts.top(), 
+				toSubScopList(ret, subScops)
+			) 
 		);
 
 		subScops.clear();
@@ -676,7 +677,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 			//FIXME
 			lambda->addAnnotation( 
-					std::make_shared<ScopRegion>(bodyIV, IterationDomain(), regionStmts.top(), toSubScopList(subScops)) 
+					std::make_shared<ScopRegion>(bodyIV, IterationDomain(bodyIV), regionStmts.top(), 
+						toSubScopList(bodyIV, subScops)
+					) 
 				);
 
 			fa.setEnabled( false );
@@ -748,9 +751,11 @@ const utils::StringKey<ScopRegion> ScopRegion::KEY("SCoPAnnotationKey");
 
 std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	out << "IterationVector: " << iterVec;
-	if (constraints) {
-		out << "\\nConstraints: " << *constraints;
-	}
+	if (domain.isEmpty()) 
+		out << "\\nDomain: { } ";
+	else
+		out << "\\nDomain: " << domain;
+	
 	out << "\\nNumber of direct stmts: " << stmts.size();
 	if (!subScops.empty()) {
 		out << "\\nSubScops: " << subScops.size();
@@ -759,11 +764,10 @@ std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	out << "\\nsubScops: {";
 	std::for_each(subScops.begin(), subScops.end(), [&](const SubScop& cur) { 
 			out << i++ << ": ";
-			if (!cur.second) {
+			if ( cur.second.isEmpty() ) {
 				out << "{}";
 			} else {
-				LOG(DEBUG) << *cur.second;
-			 	out << *cur.second;
+			 	out << cur.second;
 			} 
 			out <<  ", "; 
 	});
@@ -792,7 +796,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 {
 	typedef std::set<Iterator> IteratorSet;
 	// assert( parentDomain->getIterationVector() == iterVec );
-	IterationDomain currDomain = parentDomain and poly::cloneConstraint(iterVec, region.getDomainConstraints());
+	IterationDomain currDomain = parentDomain && IterationDomain(iterVec, region.getDomainConstraints());
 	const ScopStmtList& scopStmts = region.stmts;
 	
 	// for every access in this region, convert the affine constraint to the new iteration vector 
@@ -815,7 +819,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 		if (fit != region.subScops.end() ) {
 			// add the IterationDomain stored in the pointer to the current domain and recursively
 			// resolve the ScopRegion 
-			thisDomain = thisDomain and poly::cloneConstraint(iterVec, fit->second);
+			thisDomain &= IterationDomain(iterVec, fit->second);
 
 			if(curPtr->getNodeType() != NT_ForStmt) {
 				assert(cur->hasAnnotation(ScopRegion::KEY));
@@ -893,7 +897,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			);
 			
 		// save the domain 
-		IterationDomain saveDomain = currDomain;
+		ConstraintCombinerPtr saveDomain = currDomain.getConstraint();
 
 		// set to zero all the not used iterators 
 		std::for_each(notUsed.begin(), notUsed.end(), 
@@ -901,13 +905,13 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 					AffineFunction af(iterVec);
 					af.setCoeff(curIt, 1);
 					af.setCoeff(poly::Constant(), 0);
-					currDomain = currDomain and Constraint(af, Constraint::EQ);
+					saveDomain = saveDomain and Constraint(af, Constraint::EQ);
 				}
 			);
 
+		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
 		scat.push_back( 
-			std::make_tuple(cur.getAddr(), currDomain, 
-				std::make_shared<poly::ScatteringFunction>(newScat), accInfo
+			std::make_tuple(cur.getAddr(), iterDom,	std::make_shared<poly::ScatteringFunction>(newScat), accInfo
 			) 
 		);
 	
@@ -915,8 +919,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 		if (newScat.size() > sched_dim) {
 			sched_dim = newScat.size();
 		}
-		// Set back the domain
-		currDomain = saveDomain;
+
 	} ); 
 }
 
@@ -924,14 +927,12 @@ const ScopRegion::ScatteringPair ScopRegion::getScatteringInfo() {
 	if ( !scattering ) {
 		// we compute the full scattering information for this domain and we cache the result for
 		// later use. 
-		ScopRegion::ScatteringPair ret;
+		scattering = std::make_shared<ScopRegion::ScatteringPair>();
 		ScatteringFunction sf(iterVec);
 		ScopRegion::IteratorOrder iterOrder;
 
 		size_t pos=0;
-		resolveScop(iterVec, constraints, *this, pos, sf, iterOrder, ret.second, ret.first);
-
-		scattering = ret; // cache the result to be used for successive call to this function
+		resolveScop(iterVec, domain, *this, pos, sf, iterOrder, scattering->second, scattering->first);
 	}
 	return *scattering;
 }
@@ -980,7 +981,7 @@ void computeDataDependence(const NodePtr& root) {
 			std::string stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
 			IterationDomain id = std::get<1>(cur);
 
-			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, iterVec, id, stmtid);
+			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, id, stmtid);
 			domain = !domain ? ids : set_union(ctx, domain, ids);
 
 			ScatteringFunctionPtr sf = std::get<2>(cur);
@@ -1082,14 +1083,12 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 			IterationDomain id = std::get<1>(cur);
 			out << " -> ID ";
 			
-			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, ann.getIterationVector(), id, stmtid);
+			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, id, stmtid);
 
-			if (!id) { out << "{}"; }
-			else 	 { 
-				out << *id << std::endl; 
-				out << " => ISL: ";
-				ids->printTo(out);
-			}
+			out << id << std::endl; 
+			out << " => ISL: ";
+			ids->printTo(out);
+			
 			out << std::endl;
 			ScatteringFunctionPtr sf = std::get<2>(cur);
 			out << *sf;

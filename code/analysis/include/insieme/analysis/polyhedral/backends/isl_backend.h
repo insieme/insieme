@@ -91,8 +91,7 @@ class Set<IslContext> : public boost::noncopyable {
 public:
 	Set (	
 			IslContext& ctx, 
-			const IterationVector& iterVec, 
-			const ConstraintCombinerPtr& constraint,
+			const IterationDomain& domain,
 			const std::string& tuple_name = std::string()
 		);
 
