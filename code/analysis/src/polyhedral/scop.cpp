@@ -240,13 +240,23 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					break;
 				}
 				case Ref::SCALAR:
+				{
+					const ScalarRef& scalRef = static_cast<const ScalarRef&>(*cur);
+					// if we have a DEF or UNKNOWN for one of the loop iterators or parameters of
+					// the iteration vector, this cannot be considered a SCoP and therefore we have
+					// to throw an exception 
+					if ( (scalRef.getUsage() == Ref::DEF || scalRef.getUsage() == Ref::UNKNOWN) && 
+						iterVec.getIdx( scalRef.getBaseExpression().getAddressedNode() ) != -1 ) 
+					{
+						throw NotASCoP( body.getAddressedNode() );
+					}
+				}
 				case Ref::CALL:
 				case Ref::MEMBER:
 					break;
 				default:
 					LOG(WARNING) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
 				}
-
 			});
 		return refs;
 	}
@@ -426,7 +436,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				);
 
 			try {
-
 				IterationVector iv;
 
 				StatementAddress stmtAddr = 
@@ -657,8 +666,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
 		STACK_SIZE_GUARD;
 
-		// assert(subScops.empty());
-
 		if ( lambda->hasAnnotation(ScopRegion::KEY) ) {
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// function, therefore we can return the iteration vector already precomputed 
@@ -666,12 +673,16 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			return lambda->getAnnotation(ScopRegion::KEY)->getIterationVector();
 		}
 
+		AddressList scops(subScops);
+
 		IterationVector bodyIV;
 		// otherwise we have to visit the body and attach the ScopRegion annotation 
 		{
 			regionStmts.push( RegionStmtStack::value_type() );
 			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
+		
+			subScops.clear();
 
 			bodyIV = visitStmt( lambda.getAddressOfChild(lambda->getChildList().size()-1) /*getBody()*/ );
 
@@ -688,8 +699,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		scopList.push_back( lambda );
 
-		// subScops.clear();
-		// subScops.push_back( lambda );
+		subScops.clear();
+		std::copy(scops.begin(), scops.end(), std::back_inserter(subScops));
+		subScops.push_back( lambda );
 
 		return bodyIV;
 	}
@@ -861,6 +873,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 				poly::AffineSystemPtr idx = std::make_shared<poly::AffineSystem>(iterVec);
 				switch(curRef->getType()) {
 				case Ref::SCALAR:
+				case Ref::MEMBER:
 					// A scalar is treated as a zero dimensional array 
 					idx->appendRow( AffineFunction(iterVec) );
 					break;
