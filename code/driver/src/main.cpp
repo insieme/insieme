@@ -268,12 +268,11 @@ void markSCoPs(const ProgramPtr& program) {
 	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
 	size_t numStmtsInScops = 0;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
-			printSCoP(LOG_STREAM(INFO), cur); 
-			// performing dependence analysis
-			computeDataDependence(cur);
-			numStmtsInScops += cur->getAnnotation(ScopRegion::KEY)->getScatteringInfo().second.size();
-		}
-	);	
+		printSCoP(LOG_STREAM(INFO), cur); 
+		// performing dependence analysis
+		computeDataDependence(cur);
+		numStmtsInScops += cur->getAnnotation(ScopRegion::KEY)->getScatteringInfo().second.size();
+	});	
 	LOG(INFO) << "SCoP coverage = " << numStmtsInScops;
 }
 

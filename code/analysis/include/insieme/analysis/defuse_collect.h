@@ -66,21 +66,26 @@ typedef std::shared_ptr<Ref> RefPtr;
  *************************************************************************************************/
 struct Ref : public utils::Printable {
 
-	// possible usage of a variable can be of three types: 
-	// 	USE: 	 the variable is being accessed, therefore the memory location is read and not modified 
-	// 	DEF: 	 the variable is being redefined (declaration and assignment), this means that the
-	// 	    	  memory associated to that variable is being written 
-	// 	UNKNOWN: the variable is being used as input parameter to a function which can either read
-	// 	         or modify the value. UNKNOWN type of usages can be refined through advanced dataflow
-	// 	         analysis
-	// 	ANY: 	 utilized in the RefList class to iterate through any type of usage
+	/**********************************************************************************************
+	 * possible usage of a variable can be of three types: 
+	 *  USE: 	 the variable is being accessed, therefore the memory location is read and not 
+	 *  		 modified 
+	 *  DEF: 	 the variable is being redefined (declaration and assignment), this means that the
+	 *   	  	 memory associated to that variable is being written 
+	 * 	UNKNOWN: the variable is being used as input parameter to a function which can either read
+	 * 	         or modify the value. UNKNOWN type of usages can be refined through advanced 
+	 * 	         dataflow analysis
+	 * 	ANY: 	 utilized in the RefList class to iterate through any type of usage
+	 *********************************************************************************************/
 	enum UseType { ANY_USE=-1, DEF, USE, UNKNOWN };
 
-	// Possible type of references are:
-	// SCALAR: reference to scalar variables 
-	// ARRAY:  reference to arrays 
-	// CALL:   return value of a function returning a reference 
-	// ANY:    used in the RefList class in order to iterate through any reference type 
+	/*********************************************************************************************
+	 * Possible type of references are:
+	 * SCALAR: reference to scalar variables 
+	 * ARRAY:  reference to arrays 
+	 * CALL:   return value of a function returning a reference 
+	 * ANY:    used in the RefList class in order to iterate through any reference type 
+	 ********************************************************************************************/
 	enum RefType { ANY_REF=-1, SCALAR, ARRAY, MEMBER, CALL };
 
 	std::ostream& printTo(std::ostream& out) const;
@@ -112,8 +117,10 @@ private:
 class ScalarRef;
 typedef std::shared_ptr<ScalarRef> ScalarRefPtr;
 
-// Thsi class represents a reference to a scalar variable. Because the baseExpr points to the
-// variable, we can safely cast the base expression to a variable reference  
+/**************************************************************************************************
+ * Thsi class represents a reference to a scalar variable. Because the baseExpr points to the
+ * variable, we can safely cast the base expression to a variable reference  
+ *************************************************************************************************/
 struct ScalarRef : public Ref {
 
 	ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage);
@@ -125,8 +132,10 @@ struct ScalarRef : public Ref {
 class MemberRef;
 typedef std::shared_ptr<MemberRef> MemberRefPtr;
 
-// This class represents a reference to a struct member. It provides utility methods to easily
-// access to the field name being accessed and the type of the composite 
+/**************************************************************************************************
+ * This class represents a reference to a struct member. It provides utility methods to easily
+ * access to the field name being accessed and the type of the composite 
+ *************************************************************************************************/
 struct MemberRef: public Ref {
 
 	MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage);
@@ -144,8 +153,10 @@ private:
 class ArrayRef;
 typedef std::shared_ptr<ArrayRef> ArrayRefPtr;
 
-// In the case of arrays (or vectors), we also store the list of expressions used to index each of the
-// array dimensions. The baseExpr is used to point at the entire array subscript expression. 
+/**************************************************************************************************
+ * In the case of arrays (or vectors), we also store the list of expressions used to index each of 
+ * the array dimensions. The baseExpr is used to point at the entire array subscript expression. 
+ *************************************************************************************************/
 struct ArrayRef : public Ref { 
 	
 	typedef std::vector<core::ExpressionAddress> ExpressionList;  
@@ -174,8 +185,10 @@ private:
 class CallRef;
 typedef std::shared_ptr<CallRef> CallRefPtr;
 
-// This class represents a reference to a struct member. It provides utility methods to easily
-// access to the field name being accessed and the type of the composite 
+/**************************************************************************************************
+ * This class represents a reference to a struct member. It provides utility methods to easily
+ * access to the field name being accessed and the type of the composite 
+ *************************************************************************************************/
 struct CallRef: public Ref {
 
 	CallRef(const core::CallExprAddress& callExpr, const UseType& usage);
@@ -267,16 +280,16 @@ public:
 	inline RefList::ref_iterator<CallRef> calls_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<CallRef>(end(), end(), Ref::CALL, usage); 
 	}
-
-	// add iterators for members/callexpr
 };
 
-// Main entry method, visits the IR starting from the root node collecting refs. The list of
-// detected refs is returned to the caller.
-//
-// The method also takes a set of statements which should not be skipped during the analysis. This
-// is useful in the case the def-use analysis has been performed on a sub tree of the current root
-// and we want to perform the analysis only on the remaining part of the tree 
+/**************************************************************************************************
+ * Main entry method, visits the IR starting from the root node collecting refs. The list of
+ * detected refs is returned to the caller.
+ *
+ * The method also takes a set of statements which should not be skipped during the analysis. This
+ * is useful in the case the def-use analysis has been performed on a sub tree of the current root
+ * and we want to perform the analysis only on the remaining part of the tree 
+ *************************************************************************************************/
 RefList collectDefUse(const core::NodePtr& root, const core::StatementSet& skipList = core::StatementSet());
 
 } // end namespace analysis 

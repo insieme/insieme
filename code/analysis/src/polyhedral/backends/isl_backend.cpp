@@ -225,6 +225,11 @@ Set<IslContext>::Set(
 
 bool Set<IslContext>::isEmpty() const { return isl_union_set_is_empty(set);	}
 
+void Set<IslContext>::simplify() {
+	set = isl_union_set_coalesce( set );
+	set = isl_union_set_detect_equalities( set );
+}
+
 std::ostream& Set<IslContext>::printTo(std::ostream& out) const {
 	printIslSet(out, ctx.getRawContext(), set); 
 	return out;
@@ -285,6 +290,18 @@ Map<IslContext>::Map(IslContext& 			ctx,
 std::ostream& Map<IslContext>::printTo(std::ostream& out) const {
 	printIslMap(out, ctx.getRawContext(), map); 
 	return out;
+}
+
+void Map<IslContext>::simplify() {
+	map = isl_union_map_coalesce( map );
+	map = isl_union_map_detect_equalities( map );
+}
+
+SetPtr<IslContext> Map<IslContext>::deltas() const {
+	
+	isl_union_set* deltas = isl_union_map_deltas( isl_union_map_copy(map) );
+	return SetPtr<IslContext>(ctx, isl_union_set_get_dim(deltas), deltas);
+
 }
 
 bool Map<IslContext>::isEmpty() const { return isl_union_map_is_empty(map);	}
@@ -375,8 +392,13 @@ DependenceInfo<IslContext> buildDependencies(
 
 template <>
 std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const {
+	mustDep->simplify();
 	out << std::endl << "* MUST dependencies: " << std::endl;
 	mustDep->printTo(out);
+	out << "@ Deltas: " << std::endl;
+	mustDep->deltas()->printTo(out);
+
+	mayDep->simplify();
 	out << std::endl << "* MAY dependencies: " << std::endl;
 	mayDep->printTo(out);
 	//out << "MUST NO SOURCE dependencies: " << std::endl;

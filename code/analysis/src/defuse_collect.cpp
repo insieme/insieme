@@ -243,7 +243,7 @@ public:
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			//visit(callExpr.getAddressOfChild(2)); // arg(0)
+			visit(callExpr.getAddressOfChild(2)); // arg(0)
 			return;
 		}
 

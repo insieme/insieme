@@ -36,14 +36,17 @@
 
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/polyhedral/backend.h"
-
-// INCLUDE THE BACKENDS 
-// this is needed for compiling this class as templates are used and the template specializations
-// for Sets and Maps are needed in order to compile this translation unit 
+/**************************************************************************************************
+ * INCLUDE THE BACKENDS 
+ * this is needed for compiling this class as templates are used and the template specializations
+ * for Sets and Maps are needed in order to compile this translation unit 
+ *************************************************************************************************/
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 #include "isl/flow.h"
 
-#define POLYHEDRAL_BACKEND ISL
+#define POLY_BACKEND ISL
+
+/*************************************************************************************************/
 
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/ast_address.h"
@@ -559,7 +562,43 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 							forStmt.getAddressedNode()->getEnd())
 						);
 				// set the constraint: iter >= lb && iter < ub
-				IterationDomain cons(Constraint(lb, Constraint::GE) and Constraint(ub, Constraint::LT));
+
+				poly::ConstraintCombinerPtr&& loopBounds = 
+					Constraint(lb, Constraint::GE) and Constraint(ub, Constraint::LT);
+				// extract the Formula object 
+				const ExpressionPtr& step = forStmt.getAddressedNode()->getStep();
+				arithmetic::Formula&& formula = arithmetic::toFormula( step );
+				
+				if ( !(formula.isLinear() || formula.isOne()) && !formula.isConstant() ) 
+					throw NotAffineExpr( step );
+
+				if ( !formula.isOne() ) {
+					// Add a new constraint to the loop bound which satisfy the step 
+
+					// We add a new dimension to the iteration vector (an unbounded parameter) and
+					// set a new constraint in the form : exist(a: step*a = i) 
+					
+					assert(formula.isConstant() && "Stride value of for loop is not constant.");
+
+					VariablePtr existenceVar = ASTBuilder(mgr).variable(mgr.basic.getInt4());
+					ret.add( Parameter( existenceVar ) );
+
+					AffineFunction existenceCons( ret );
+					existenceCons.setCoeff( existenceVar, -formula.getTerms().front().second );
+					existenceCons.setCoeff( decl->getVariable(), 1 );
+
+					// WE still have to make sure the loop iterator assume the value given by the
+					// loop lower bound, therefore i == lb
+					AffineFunction lowerBound( ret, 
+						builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), 
+							decl->getInitialization()) 
+						);
+
+					loopBounds = loopBounds and 
+						(Constraint(lowerBound, Constraint::EQ) or Constraint( existenceCons, Constraint::EQ ) );
+				}
+
+				IterationDomain cons( loopBounds );
 
 				forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, regionStmts.top(), toSubScopList(ret, subScops)) ); 
 				
@@ -1006,20 +1045,20 @@ void computeDataDependence(const NodePtr& root) {
 	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
 	const ScopRegion::ScatteringPair&& scat = ann.getScatteringInfo();
 	const IterationVector& iterVec = ann.getIterationVector();
-	auto&& ctx = BackendTraits<POLYHEDRAL_BACKEND>::ctx_type();
+	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 
 	// universe set 
-	SetPtr<IslContext> domain = makeSet<POLYHEDRAL_BACKEND>(ctx, IterationDomain(iterVec));
-	MapPtr<IslContext> schedule = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
-	MapPtr<IslContext> reads = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
-	MapPtr<IslContext> writes = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
+	SetPtr<IslContext> domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
+	MapPtr<IslContext> schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	MapPtr<IslContext> reads = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	MapPtr<IslContext> writes = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 
 	size_t stmtID = 0;
 	std::for_each(scat.second.begin(), scat.second.end(), 
 		[ & ] (const ScopRegion::StmtScattering& cur) { 
 			std::string&& stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
 
-			auto&& domainSet = makeSet<POLYHEDRAL_BACKEND>(ctx, std::get<1>(cur), stmtid);
+			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, std::get<1>(cur), stmtid);
 			domain = set_union(ctx, *domain, *domainSet);
 
 			ScatteringFunctionPtr sf = std::get<2>(cur);
@@ -1029,7 +1068,7 @@ void computeDataDependence(const NodePtr& root) {
 			for ( size_t s = sf->size(); s < scat.first; ++s ) {
 				sf->appendRow( AffineFunction(iterVec) );
 			}
-			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
+			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
 			schedule = map_union(ctx, *schedule, *scattering);
 				
 			// Access Functions 
@@ -1039,7 +1078,7 @@ void computeDataDependence(const NodePtr& root) {
 				AffineSystemPtr accessInfo = std::get<2>(cur);
 
 				if (accessInfo) {
-					auto&& access = makeMap<POLYHEDRAL_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
+					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
 
 					switch ( std::get<1>(cur) ) {
 					case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
@@ -1057,14 +1096,14 @@ void computeDataDependence(const NodePtr& root) {
 
 	LOG(DEBUG) << "Computing RAW dependencies: ";
 	DependenceInfo<IslContext> depInfo = 
-		buildDependencies(ctx, *domain, *schedule, *reads, *writes, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
+		buildDependencies(ctx, *domain, *schedule, *reads, *writes, *makeEmptyMap<POLY_BACKEND>(ctx, iterVec));
 	LOG(DEBUG) << depInfo;
 	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
 	
 	std::cout << std::endl;
 
 	LOG(DEBUG) << "Computing WAW dependencies: ";	
-	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *writes, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
+	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *writes, *makeEmptyMap<POLY_BACKEND>(ctx, iterVec));
 	std::cout << std::endl;
 	LOG(DEBUG) << depInfo;
 
@@ -1072,7 +1111,7 @@ void computeDataDependence(const NodePtr& root) {
 
 
 	LOG(DEBUG) << "Computing WAR dependencies: ";
-	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *reads, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
+	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *reads, *makeEmptyMap<POLY_BACKEND>(ctx, iterVec));
 	std::cout << std::endl;
 	LOG(DEBUG) << depInfo;
 
@@ -1090,7 +1129,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 		return ;
 	}
 	
-	auto&& ctx = BackendTraits<POLYHEDRAL_BACKEND>::ctx_type();
+	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 
 	ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
 	const ScopRegion::ScatteringMatrix&& scat = ann.getScatteringInfo().second;
@@ -1108,7 +1147,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 			IterationDomain id = std::get<1>(cur);
 			out << " -> ID ";
 			
-			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, id, stmtid);
+			auto&& ids = makeSet<POLY_BACKEND>(ctx, id, stmtid);
 
 			out << id << std::endl; 
 			out << " => ISL: ";
@@ -1117,7 +1156,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 			out << std::endl;
 			ScatteringFunctionPtr sf = std::get<2>(cur);
 			out << *sf;
-			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
+			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
 			out << " => ISL: ";
 			scattering->printTo(out);
 			out << std::endl;
@@ -1132,7 +1171,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 					[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
 				out << std::endl;
 				if (accessInfo) {
-					auto&& access = makeMap<POLYHEDRAL_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
+					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
 					// map.intersect(ids);
 					out << " => ISL: "; 
 					access->printTo(out);
