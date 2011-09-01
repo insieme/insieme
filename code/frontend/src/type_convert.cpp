@@ -53,6 +53,7 @@
 
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
+#include <clang/AST/DeclTemplate.h>
 
 using namespace clang;
 using namespace insieme;
@@ -426,6 +427,7 @@ public:
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTagType(const TagType* tagType) {
+		std::cerr << "visittagtype " << tagType << "\n";
 		if(!convFact.ctx.recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
 			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
@@ -462,6 +464,7 @@ public:
 				// Enums are converted into integers
 				return convFact.builder.getBasicGenerator().getInt4();
 			} else {
+
 
 
 
@@ -534,32 +537,36 @@ public:
 				}
 
 
-				// TODO
-				// c++ constructors
-				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
 
-				if(recDeclCXX){
-					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
-							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
-						//CXXRecordDecl::ctor_iterator::value_type curr = *xit;
-						CXXConstructorDecl * curr = *xit;
-						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-						curr->dumpDeclContext(); // on cerr
-						//std::cerr<<"enddumpconstr\n";
-						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-					}
 
-					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-						CXXMethodDecl * curr = *mit;
-						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-						curr->dumpDeclContext(); // on cerr
-						//std::cerr<<"enddumpconstr\n";
-						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-					}
-				}
+
+
+//				// TODO
+//				// c++ constructors
+//				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+//
+//				if(recDeclCXX){
+//					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
+//							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+//						//CXXRecordDecl::ctor_iterator::value_type curr = *xit;
+//						CXXConstructorDecl * curr = *xit;
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+//
+//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+//						CXXMethodDecl * curr = *mit;
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+//				}
 
 				// For debug only ...
 //				std::cerr << "\n***************Type graph\n";
@@ -652,6 +659,7 @@ public:
 	    elabType->desugar().getTypePtr()->dump();
 	    std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
 */
+		std::cerr << "elabtype " << elabType << "\n";
 	    return Visit(elabType->desugar().getTypePtr());
 //		assert(false && "ElaboratedType not yet handled!");
 	}

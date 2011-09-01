@@ -674,7 +674,6 @@ namespace conversion {
 class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
-	core::ExpressionPtr currentThisPtr;
 
 	core::ExpressionPtr wrapVariable(clang::Expr* expr) {
 		const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
@@ -1198,8 +1197,8 @@ public:
 		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		currentThisPtr.ptr->printTo(std::cerr);
-		args.push_back(currentThisPtr);
+		//currentThisPtr.ptr->printTo(std::cerr);
+		//args.push_back(currentThisPtr);
 
 		retExpr = builder.callExpr( funcPtr, args );
 
@@ -1245,6 +1244,9 @@ public:
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
 
+		core::ExpressionPtr retExpr;
+		retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
+
 
 		////clang::Stmt* Body = constructorDecl->getBody();
 		////const FunctionProtoType *FnType = callExpr->getType()->getAs<FunctionProtoType>();
@@ -1255,7 +1257,6 @@ public:
 		callingClass->viewInheritance(callingClass->getASTContext());
 
 		core::IdentifierPtr ident = builder.identifier(constructorDecl->getNameAsString());
-		core::ExpressionPtr retExpr;
 		core::ExpressionPtr op = gen.getCompositeMemberAccess();
 
 		////Expr** functionArgs = callExpr->getArgs();
@@ -1294,15 +1295,11 @@ public:
 
 		std::cerr << "***************Function graph\n";
 		convFact.exprConv->funcDepGraph.print( std::cerr );
+		std::cerr << "*****\n";
+		std::cerr << convFact.ctx.thisStack;
+		std::cerr << "*****\n";
 
-
-		for (std::map<const clang::ValueDecl*, core::VariablePtr>::const_iterator it = convFact.ctx.varDeclMap.begin(),
-				end = convFact.ctx.varDeclMap.end(); it!=end; it++){
-			(*it).second->printTo(std::cerr) ;
-			std::cerr << "\n" << (*it).second->getId() << std::endl;
-		}
-
-		return currentThisPtr;
+		return convFact.ctx.thisStack;
 		//assert(false && "VisitCXXThisExpr not yet handled");
 		//return NULL;
 	}
@@ -1371,6 +1368,9 @@ public:
 		if (base->getType()->getNodeType() == core::NT_RefType) {
 			resType = builder.refType(resType);
 		}
+
+		// cache "this"
+		convFact.ctx.thisStack = base;
 
 		// build member access expression
 		retExpr = builder.callExpr(resType, op, base, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy));
@@ -1893,7 +1893,6 @@ public:
 		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
-			currentThisPtr = retExpr;
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
 		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
@@ -2124,6 +2123,12 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			 << "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl
 			 << "\tEmpty map: "    << ctx.recVarExprMap.size();
 
+	bool isConstructor = false;
+	const clang::CXXConstructorDecl * ctorDecl;
+	if (ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl)){
+		isConstructor = true;
+	}
+
 	if ( !ctx.isRecSubFunc ) {
 		// add this type to the type graph (if not present)
 		exprConv->funcDepGraph.addNode(funcDecl);
@@ -2150,9 +2155,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	std::for_each(subComponents.begin(), subComponents.end(), 
 		[&](const FunctionDecl* cur){ 
+
 			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 			const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
-			
+
 			if ( clangTU ) {
 				// update the translation unit
 				this->currTU = &Program::getTranslationUnit(clangTU);
@@ -2162,8 +2168,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				if ( fit == ctx.lambdaExprCache.end() ) {
 					// perfrom the conversion only if this is the first time this
 					// function is encountred 
-					convertFunctionDecl(decl, false); 
-					ctx.recVarExprMap.clear();
+
+					//convertFunctionDecl(decl, false); //TODO why is main subcomp of a constructor???
+					//ctx.recVarExprMap.clear();		//TODO
 				}
 			}
 		}
@@ -2253,6 +2260,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// set up context to contain current list of parameters and convert body
 	ConversionContext::ParameterList oldList = ctx.curParameter;
 	ctx.curParameter = &params;
+
+	std::cerr << "******************stmt body dump\n";
+	funcDecl->getBody()->dump();
+
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	ctx.curParameter = oldList;
 
