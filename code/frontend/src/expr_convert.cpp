@@ -1186,6 +1186,7 @@ public:
 	//						CXX MEMBER CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		//todo: CXX extensions
 		core::ExpressionPtr retExpr;
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1213,20 +1214,21 @@ public:
 
 		retExpr = builder.callExpr( funcPtr, args );
 
-		return retExpr;
-
-		////clang::Expr * callObject = callExpr->getImplicitObjectArgument();
-
 		assert(false && "CXXMemberCallExpr not yet handled");
+		VLOG(2) << "End of expression\n";
+		return retExpr;
+		////clang::Expr * callObject = callExpr->getImplicitObjectArgument();
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX OPERATOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		//todo: CXX extensions
 		// call to an overloaded operator
 		assert(false && "CXXOperatorCallExpr not yet handled");
+		VLOG(2) << "End of expression\n";
 	}
 
 private:
@@ -1254,7 +1256,7 @@ public:
 		FunctionDecl* funcDecl = constructorDecl;
 		core::FunctionTypePtr funcTy =
 			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
-		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+		//ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
 
 		core::ExpressionPtr retExpr;
@@ -1275,6 +1277,7 @@ public:
 		////Expr** functionArgs = callExpr->getArgs();
 		////unsigned numArgs = callExpr->getNumArgs();
 
+		VLOG(2) << "End of expression\n";
 		return retExpr;
 
 		//assert(false && "VisitCXXConstructExpr not yet handled");
@@ -1285,6 +1288,7 @@ public:
 	//						CXX NEW CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		assert(false && "VisitCXXNewExpr not yet handled");
 		//return NULL;
 	}
@@ -1292,7 +1296,9 @@ public:
 	//						CXX DELETE CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		assert(false && "VisitCXXDeleteExpr not yet handled");
+		VLOG(2) << "End of expression\n";
 		//return NULL;
 	}
 
@@ -1300,8 +1306,8 @@ public:
 	//						CXX THIS CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
-		clang::SourceLocation&& source = callExpr->getLocation();
-		//source.dump(convFact.currTU->getCompiler().getSourceManager());
+		START_LOG_EXPR_CONVERSION(callExpr);
+		//clang::SourceLocation&& source = callExpr->getLocation();
 
 		VLOG(2) << "CXXThisExpr: \n";
 		if( VLOG_IS_ON(2) ) {
@@ -1315,7 +1321,7 @@ public:
 
 		VLOG(2) << "THIS: " << convFact.ctx.thisStack  << std::endl;
 
-
+		VLOG(2) << "End of expression\n";
 		return convFact.ctx.thisStack;
 		//assert(false && "VisitCXXThisExpr not yet handled");
 		//return NULL;
@@ -1326,7 +1332,9 @@ public:
 	//					EXCEPTION CXX THROW EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXThrowExpr(clang::CXXThrowExpr* throwExpr) {
+		START_LOG_EXPR_CONVERSION(throwExpr);
 		assert(false && "VisitCXXThrowExpr not yet handled");
+		VLOG(2) << "End of expression\n";
 		//return NULL;
 	}
 
@@ -1394,7 +1402,8 @@ public:
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, membExpr, convFact);
-		VLOG(2) << base << "end member expr \n";
+
+		VLOG(2) << "End of expression\n";
 		return annotatedNode;
 	}
 
@@ -1910,7 +1919,6 @@ public:
 		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
-			convFact.ctx.thisStack = retExpr;
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
 		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
@@ -2142,9 +2150,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			 << "\tEmpty map: "    << ctx.recVarExprMap.size();
 
 	bool isConstructor = false;
-	const clang::CXXConstructorDecl * ctorDecl;
-	if (ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl)){
+
+	if (const clang::CXXConstructorDecl * ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl)){
 		isConstructor = true;
+		ctorDecl->isCopyOrMoveConstructor();
 	}
 
 	if ( !ctx.isRecSubFunc ) {

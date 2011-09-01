@@ -292,7 +292,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	 * Conversion of the variable type
 	 */
 	QualType&& varTy = valDecl->getType();
-	std::cerr << varTy.getAsString() << std::endl;// cm
+	VLOG(2) << varTy.getAsString() << std::endl; // cm
 
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 	if( !(varTy.isConstQualified() ||
@@ -343,6 +343,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	if (attr) {
 		var->addAnnotation(attr);
 	}
+
 	return var;
 }
 
