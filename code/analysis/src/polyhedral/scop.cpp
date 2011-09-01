@@ -581,7 +581,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					assert(formula.isConstant() && "Stride value of for loop is not constant.");
 
 					VariablePtr existenceVar = ASTBuilder(mgr).variable(mgr.basic.getInt4());
-					ret.add( Parameter( existenceVar ) );
+					ret.add( Iterator( existenceVar, true ) );
 
 					AffineFunction existenceCons( ret );
 					existenceCons.setCoeff( existenceVar, -formula.getTerms().front().second );
@@ -979,6 +979,8 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 		// set to zero all the not used iterators 
 		std::for_each(notUsed.begin(), notUsed.end(), 
 				[&] (const poly::Iterator& curIt) { 
+					if ( curIt.isExistential() ) { return; }
+
 					AffineFunction af(iterVec);
 					af.setCoeff(curIt, 1);
 					af.setCoeff(poly::Constant(), 0);

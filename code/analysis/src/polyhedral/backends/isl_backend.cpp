@@ -220,7 +220,20 @@ Set<IslContext>::Set(
 	// If a non empty constraint is provided, then add it to the universe set 
 	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);
 	domain.getConstraint()->accept(ccv);
-	set = isl_union_set_from_set( ccv.getResult() );
+
+	isl_set* cset = ccv.getResult();
+	size_t pos = 0;
+	std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
+		[&]( const Iterator& iter ) {
+			// peel out this dimension by projecting it 
+			if ( iter.isExistential() ) { cset = isl_set_project_out( cset, isl_dim_set, pos, 1); }
+			pos++;
+		}
+	);
+
+	isl_dim_free(dim);
+	dim = isl_set_get_dim( cset );
+	set = isl_union_set_from_set( cset );
 }
 
 bool Set<IslContext>::isEmpty() const { return isl_union_set_is_empty(set);	}
@@ -283,6 +296,19 @@ Map<IslContext>::Map(IslContext& 			ctx,
 		// Add constraint to the basic map
 		bmap = isl_basic_map_add_constraint(bmap, cons);
 	}
+
+	//size_t pos = 0;
+	//std::for_each ( iterVec.iter_begin(), iterVec.iter_end(),
+		//[&]( const Iterator& iter ) {
+			//// peel out this dimension by projecting it 
+			//if ( iter.isExistential() ) { bmap = isl_basic_map_project_out( bmap, isl_dim_in, pos, 1); }
+			//pos++;
+		//}
+	//);
+
+	//isl_dim_free(dim);
+	//dim = isl_basic_map_get_dim( bmap );
+
 	// convert the basic map into a map
 	map = isl_union_map_from_map(isl_map_from_basic_map(bmap));
 }
