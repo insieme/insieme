@@ -37,7 +37,6 @@
 #pragma once 
 
 #include <vector>
-#include <map>
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_address.h"
@@ -45,15 +44,13 @@
 
 #include "insieme/analysis/defuse_collect.h"
 
-#include "boost/optional.hpp"
-
 namespace insieme {
 namespace analysis {
 namespace scop {
 
-typedef std::vector<core::NodeAddress> AddressList;
-typedef std::pair<core::NodeAddress, poly::IterationDomain> 	SubScop;
-typedef std::list<SubScop> SubScopList;
+typedef std::vector<core::NodeAddress> 						AddressList;
+typedef std::pair<core::NodeAddress, poly::IterationDomain> SubScop;
+typedef std::list<SubScop> 									SubScopList;
 
 // Set of array accesses which appears strictly within this SCoP, array access in sub SCoPs will
 // be directly referred from sub SCoPs. The accesses are ordered by the appearance in the SCoP
@@ -75,20 +72,20 @@ typedef std::vector<RefPtr> RefAccessList;
  *************************************************************************************************/
 class ScopStmt { 
 	
-	core::StatementAddress 			address;
-	RefAccessList					accesses;
+	core::StatementAddress 		address;
+	RefAccessList				accesses;
 
 public:
 	ScopStmt(const core::StatementAddress& addr, const RefAccessList& accesses) : 
 		address(addr), accesses(accesses) { }
 
-	const core::StatementAddress& getAddr() const { return address; }
+	inline const core::StatementAddress& getAddr() const { return address; }
 	
-	const core::StatementAddress& operator->() const { return address; }
+	inline const core::StatementAddress& operator->() const { return address; }
 
-	const RefAccessList& getRefAccesses() const { return accesses; }
+	inline const RefAccessList& getRefAccesses() const { return accesses; }
 
-	bool operator<(const ScopStmt& other) const { return address < other.address; }
+	inline bool operator<(const ScopStmt& other) const { return address < other.address; }
 	
 	~ScopStmt() { }
 };
@@ -108,8 +105,8 @@ typedef std::vector<ScopStmt> ScopStmtList;
  * directly listed in the current region but retrieval is possible via the aforementioned pointer to
  * the sub scops. 
  *************************************************************************************************/
-class ScopRegion: public core::NodeAnnotation {
-public:
+struct ScopRegion: public core::NodeAnnotation {
+
 	static const string NAME;
 	static const utils::StringKey<ScopRegion> KEY;
 
@@ -119,8 +116,12 @@ public:
 	 * type of access (DEF or USE). The iteration domain which defines the domain on which this
 	 * access is defined and the access functions for each dimensions.
 	 *********************************************************************************************/
-	typedef std::tuple<core::ExpressionAddress, Ref::UseType, poly::AffineSystemPtr> AccessInfo;
-	typedef std::vector<AccessInfo> AccessInfoList;
+	typedef std::tuple<
+			core::ExpressionAddress, 
+			Ref::UseType, 
+			poly::AffineSystemPtr > 				AccessInfo;
+
+	typedef std::vector<AccessInfo> 				AccessInfoList;
 
 	typedef std::tuple<
 			core::StatementAddress, 
@@ -128,16 +129,16 @@ public:
 			poly::ScatteringFunctionPtr, 
 			AccessInfoList > 						StmtScattering;
 
-	typedef std::list<StmtScattering> 			ScatteringMatrix;
+	typedef std::list<StmtScattering> 				ScatteringMatrix;
 	typedef std::pair<size_t, ScatteringMatrix> 	ScatteringPair;
 	
 	typedef std::vector<poly::Iterator> 			IteratorOrder;
 
-	ScopRegion( const poly::IterationVector& iv, 
-			const poly::IterationDomain& comb,
-			const ScopStmtList& stmts = ScopStmtList(),
-			const SubScopList& subScops_ = SubScopList() ) : 
-		core::NodeAnnotation(),
+	ScopRegion( const poly::IterationVector& 		iv, 
+				const poly::IterationDomain& 		comb,
+				const ScopStmtList& 				stmts = ScopStmtList(),
+				const SubScopList& 					subScops_ = SubScopList() ) 
+	:
 		iterVec(iv), 
 		stmts(stmts),
 		domain( iterVec, comb ) // Switch the base to the this->iterVec 
@@ -149,14 +150,15 @@ public:
 			});	
 	} 
 
-	virtual std::ostream& printTo(std::ostream& out) const;
+	std::ostream& printTo(std::ostream& out) const;
 
 	inline const std::string& getAnnotationName() const { return NAME; }
 
 	inline const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	inline bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
-			const core::NodePtr& after) const 
+	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
+						const core::NodePtr& before, 
+						const core::NodePtr& after) const 
 	{ 
 		return false; 
 	}
@@ -187,6 +189,8 @@ public:
 	 * current iteration domain
 	 */
 	const SubScopList& getSubScops() const { return subScops; }
+
+	bool containsLoopNest() const;
 
 private:
 
@@ -238,18 +242,19 @@ public:
 		iterVec(iv), 
 		access( access.toBase(iterVec) ) { }
 
-	const std::string& getAnnotationName() const { return NAME; }
+	inline const std::string& getAnnotationName() const { return NAME; }
 
-	const utils::AnnotationKey* getKey() const { return &KEY; }
+	inline const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	virtual std::ostream& printTo(std::ostream& out) const;
+	std::ostream& printTo(std::ostream& out) const;
 
-	const poly::AffineFunction& getAccessFunction() const { return access; }
+	inline const poly::AffineFunction& getAccessFunction() const { return access; }
 	
-	const poly::IterationVector& getIterationVector() const { return iterVec; }
+	inline const poly::IterationVector& getIterationVector() const { return iterVec; }
 
-	bool migrate(const core::NodeAnnotationPtr& ptr, const core::NodePtr& before, 
-			const core::NodePtr& after) const { 
+	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
+						const core::NodePtr& before, 
+						const core::NodePtr& after) const { 
 		return false; 
 	}
 };
@@ -267,6 +272,8 @@ AddressList mark(const core::NodePtr& root);
  * function.
  *************************************************************************************************/
 void printSCoP(std::ostream& out, const core::NodePtr& scop);
+
+
 void computeDataDependence(const core::NodePtr& root) ;
 
 } // end namespace scop

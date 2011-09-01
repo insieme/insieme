@@ -176,7 +176,9 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 	for(IterT it = begin; it != end; ++it) {
 		assert(dynamic_cast<const Expr*>(&*it) != NULL && "Element of not Variable type");
 		const poly::Expr& var = static_cast<const Expr&>(*it);
-		isl_dim_set_name(dim, type, std::distance(begin, it), var.getExpr()->toString().c_str());
+		std::ostringstream ss;
+		ss << var;
+		isl_dim_set_name(dim, type, std::distance(begin, it), ss.str().c_str());
 	}
 }
 
@@ -203,7 +205,7 @@ Set<IslContext>::Set(
 	// Set the name of the tuple 
 	dim = isl_dim_set_tuple_name(dim, isl_dim_set, tuple_name.c_str());
 
-	if (domain.isEmpty()) {
+	if ( domain.isEmpty() ) {
 		set = isl_union_set_empty( isl_dim_copy(dim) );
 		return;
 	}
@@ -213,7 +215,7 @@ Set<IslContext>::Set(
 		return;
 	}
 
-	assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty");
+	assert( domain.getConstraint() && "Constraints for this iteration domain cannot be empty" );
 
 	// If a non empty constraint is provided, then add it to the universe set 
 	ISLConstraintConverterVisitor ccv(ctx.getRawContext(), dim);

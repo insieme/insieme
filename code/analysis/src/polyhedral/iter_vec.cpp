@@ -37,6 +37,8 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/analysis/ir_utils.h"
+
 namespace insieme {
 namespace analysis {
 namespace poly {
@@ -70,9 +72,50 @@ bool Element::operator<(const Element& other) const {
 	return false;
 }
 	
-std::ostream& Iterator::printTo(std::ostream& out) const { return out << *getVariable(); }
+std::ostream& Iterator::printTo(std::ostream& out) const { 
+	return out << *getVariable();
+}
 
-std::ostream& Parameter::printTo(std::ostream& out) const { return out << *getExpr(); }
+namespace {
+
+std::ostream& prettyPrintExpr( std::ostream& out, const core::ExpressionPtr& expr ) {
+	using namespace insieme;
+
+	core::NodeManager& mgr = expr->getNodeManager();
+	if ( expr->getNodeType() == core::NT_CallExpr ) {
+		const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(expr);
+
+		if( core::analysis::isCallOf(callExpr, mgr.basic.getArraySubscript1D()) ||
+			core::analysis::isCallOf(callExpr, mgr.basic.getArrayRefElem1D()) || 
+			core::analysis::isCallOf(callExpr, mgr.basic.getVectorRefElem()) || 
+			core::analysis::isCallOf(callExpr, mgr.basic.getVectorSubscript()) ) 
+		{
+			prettyPrintExpr( out, callExpr->getArgument(0) );
+			out << "[";
+			prettyPrintExpr( out, callExpr->getArgument(1) );
+			return out << "]";
+		}
+
+		if (core::analysis::isCallOf(callExpr, mgr.basic.getCompositeMemberAccess()) || 
+			core::analysis::isCallOf(callExpr, mgr.basic.getCompositeRefElem() )) 
+		{
+			prettyPrintExpr( out, callExpr->getArgument(0) );
+			out << "."; 
+			return prettyPrintExpr( out, callExpr->getArgument(1) );
+		}
+	}
+
+	if ( expr->getNodeType() == core::NT_CastExpr )
+		return prettyPrintExpr( out, core::static_pointer_cast<const core::CastExpr>(expr)->getSubExpression() );
+
+	return out << *expr;
+}
+
+} // end anonymous namespace 
+
+std::ostream& Parameter::printTo(std::ostream& out) const { 
+	return prettyPrintExpr(out, getExpr());
+}
 
 //====== IterationVector ==========================================================================
 

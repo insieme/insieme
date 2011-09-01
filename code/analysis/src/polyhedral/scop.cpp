@@ -248,6 +248,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					if ( (scalRef.getUsage() == Ref::DEF || scalRef.getUsage() == Ref::UNKNOWN) && 
 						iterVec.getIdx( scalRef.getBaseExpression().getAddressedNode() ) != -1 ) 
 					{
+						LOG(WARNING) << "Invalidating SCoP because iterator/parameter " <<
+							*scalRef.getBaseExpression().getAddressedNode() << " ie being assigned."; 
 						throw NotASCoP( body.getAddressedNode() );
 					}
 				}
@@ -316,6 +318,11 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the then body
 			saveThen = visitStmt(thenAddr);
+
+			if (!thenAddr->hasAnnotation(ScopRegion::KEY)) {
+				// else body is not a compound stmt
+				thenAddr->addAnnotation( std::make_shared<ScopRegion>(saveThen, IterationDomain(saveThen)) );
+			}
 		} catch (NotASCoP&& e) { isThenSCOP = false; }
 
 		regionStmts.push( RegionStmtStack::value_type() );
@@ -325,6 +332,11 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the else body
 			saveElse = visitStmt(elseAddr);
+
+			if (!elseAddr->hasAnnotation(ScopRegion::KEY)) {
+				// else body is not a compound stmt
+				elseAddr->addAnnotation( std::make_shared<ScopRegion>(saveElse, IterationDomain(saveElse)) );
+			}
 		} catch (NotASCoP&& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
@@ -355,10 +367,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	
 		ScopStmtList ifScopStmts;
 
-		if (!elseAddr->hasAnnotation(ScopRegion::KEY)) {
-			// else body is not a compound stmt
-			elseAddr->addAnnotation( std::make_shared<ScopRegion>(saveElse, IterationDomain(saveElse)) );
-		}
 		assert(regionStmts.top().size() == 1);
 		ifScopStmts.push_back( regionStmts.top().front() );
 
@@ -366,11 +374,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		regionStmts.pop();
 		faElse.setEnabled(false);
 
-		if (!thenAddr->hasAnnotation(ScopRegion::KEY)) {
-			// else body is not a compound stmt
-			thenAddr->addAnnotation( std::make_shared<ScopRegion>(saveThen, IterationDomain(saveThen)) );
-		}
-		
 		assert(regionStmts.top().size() == 1);
 		ifScopStmts.push_back( regionStmts.top().front() );
 
@@ -792,6 +795,9 @@ std::ostream& ScopRegion::printTo(std::ostream& out) const {
 	return out;
 }
 
+bool ScopRegion::containsLoopNest() const {
+	return iterVec.getIteratorNum() > 0;
+}
 
 /**************************************************************************************************
  * Recursively process ScopRegions caching the information related to access functions and
@@ -825,7 +831,9 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 
 		// check wheather the statement is a SCoP
 		auto fit = std::find_if(region.subScops.begin(), region.subScops.end(), 
-			[&](const SubScop& subScop) -> bool { return subScop.first.getAddressedNode() == cur.getAddr().getAddressedNode(); } 
+			[&](const SubScop& subScop) -> bool { 
+				return subScop.first.getAddressedNode() == cur.getAddr().getAddressedNode(); 
+			} 
 		);
 
 		if (fit != region.subScops.end() ) {
@@ -835,7 +843,15 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 
 			if(curPtr->getNodeType() != NT_ForStmt) {
 				assert(cur->hasAnnotation(ScopRegion::KEY));
-				resolveScop(iterVec, thisDomain, *cur->getAnnotation(ScopRegion::KEY), pos, curScat, iterators, scat, sched_dim);
+				resolveScop( iterVec, 
+							 thisDomain, 
+							 *cur->getAnnotation(ScopRegion::KEY), 
+							 pos, 
+							 curScat, 
+							 iterators, 
+							 scat, 
+							 sched_dim
+						   );
 				return;
 			}
 		}
@@ -860,7 +876,16 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 			} 
 
 			size_t nestedPos = 0;
-			resolveScop(iterVec, thisDomain, *cur->getAnnotation(ScopRegion::KEY), nestedPos, newScat, iterators, scat, sched_dim);
+			resolveScop( iterVec, 
+						 thisDomain, 
+						 *cur->getAnnotation(ScopRegion::KEY), 
+						 nestedPos, 
+						 newScat, 
+						 iterators, 
+						 scat, 
+						 sched_dim
+					   );
+
 			// pop back the iterator in the case the statement was a for stmt
 			if ( curPtr->getNodeType() == NT_ForStmt ) { iterators.pop_back(); }
 			return;

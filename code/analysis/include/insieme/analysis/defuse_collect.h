@@ -67,17 +67,17 @@ typedef std::shared_ptr<Ref> RefPtr;
 struct Ref : public utils::Printable {
 
 	// possible usage of a variable can be of three types: 
-	// 	USE: the variable is being accessed, therefore the memory location is read and not modified 
-	// 	DEF: the variable is being redefined (declaration and assignment), this means that the
-	// 	     memory associated to that variable is being written 
+	// 	USE: 	 the variable is being accessed, therefore the memory location is read and not modified 
+	// 	DEF: 	 the variable is being redefined (declaration and assignment), this means that the
+	// 	    	  memory associated to that variable is being written 
 	// 	UNKNOWN: the variable is being used as input parameter to a function which can either read
 	// 	         or modify the value. UNKNOWN type of usages can be refined through advanced dataflow
 	// 	         analysis
-	// 	ANY: utilized in the RefList class to iterate through any type of usage
+	// 	ANY: 	 utilized in the RefList class to iterate through any type of usage
 	enum UseType { ANY_USE=-1, DEF, USE, UNKNOWN };
 
 	// Possible type of references are:
-	// VAR:    reference to scalar variables 
+	// SCALAR: reference to scalar variables 
 	// ARRAY:  reference to arrays 
 	// CALL:   return value of a function returning a reference 
 	// ANY:    used in the RefList class in order to iterate through any reference type 
@@ -85,11 +85,11 @@ struct Ref : public utils::Printable {
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	const UseType& getUsage() const { return usage; }
+	inline const UseType& getUsage() const { return usage; }
 	
-	const RefType& getType() const { return type; }
+	inline const RefType& getType() const { return type; }
 
-	const core::ExpressionAddress& getBaseExpression() const { return baseExpr; }
+	inline const core::ExpressionAddress& getBaseExpression() const { return baseExpr; }
 	
 	static std::string useTypeToStr(const UseType& usage);
 	static std::string refTypeToStr(const RefType& type);
@@ -131,10 +131,11 @@ struct MemberRef: public Ref {
 
 	MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage);
 
-	const core::NamedCompositeTypePtr& getCompositeType() const { return type; }
-	const core::LiteralPtr& getIdentifier() const { return identifier; }
+	inline const core::NamedCompositeTypePtr& getCompositeType() const { return type; }
+	inline const core::LiteralPtr& getIdentifier() const { return identifier; }
 
 	std::ostream& printTo(std::ostream& out) const;
+
 private:
 	core::NamedCompositeTypePtr	type;
 	core::LiteralPtr 			identifier;
@@ -149,15 +150,21 @@ struct ArrayRef : public Ref {
 	
 	typedef std::vector<core::ExpressionAddress> ExpressionList;  
 
-	ArrayRef(const core::ExpressionAddress& arrayVar, const ExpressionList& idxExpr, 
-			const core::ExpressionAddress& exprPtr, const UseType& usage = USE) :
-		Ref(Ref::ARRAY, arrayVar, usage), exprPtr(exprPtr), idxExpr(idxExpr) { }
+	ArrayRef(const core::ExpressionAddress&  arrayVar, 
+			 const ExpressionList& 			 idxExpr, 
+			 const core::ExpressionAddress&  exprPtr, 
+			 const UseType& 				 usage = USE) 
+	: Ref(Ref::ARRAY, arrayVar, usage), 
+	  exprPtr(exprPtr), 
+	  idxExpr(idxExpr) { }
 
 	std::ostream& printTo(std::ostream& out) const;	
 
-	const ExpressionList& getIndexExpressions() const { return idxExpr; }
+	inline const ExpressionList& getIndexExpressions() const { return idxExpr; }
 	
-	const core::ExpressionAddress& getSubscriptExpression() const { return !exprPtr ? baseExpr : exprPtr; }
+	inline const core::ExpressionAddress& getSubscriptExpression() const { 
+		return !exprPtr ? baseExpr : exprPtr; 
+	}
 
 private:
 	core::ExpressionAddress exprPtr;
@@ -204,56 +211,60 @@ public:
 			{ ++it; } // increment until we find an element which satisfy the filter
 		}
 	public:
-		ref_iterator(RefList::const_iterator begin, RefList::const_iterator end, 
-				Ref::RefType type=Ref::ANY_REF, Ref::UseType usage=Ref::ANY_USE) : 
-			it(begin), end(end), type(type), usage(usage) { inc(true); }
+		ref_iterator( RefList::const_iterator 	begin, 
+					  RefList::const_iterator 	end, 
+	  				  Ref::RefType 				type=Ref::ANY_REF, 
+					  Ref::UseType 				usage=Ref::ANY_USE ) 
+			: it(begin), end(end), type(type), usage(usage) { inc(true); }
 
-		const std::shared_ptr<T> operator*() const { 
+		inline const std::shared_ptr<T> operator*() const { 
 			assert(it != end && "Iterator out of bounds"); 
 			return std::static_pointer_cast<T>(*it);
 		}
 
-		ref_iterator<T>& operator++() { inc(); return *this; }
+		inline ref_iterator<T>& operator++() { inc(); return *this; }
 
-		bool operator==(const ref_iterator<T>& rhs) const { return it == rhs.it && usage == rhs.usage && type == rhs.type; }
+		inline bool operator==(const ref_iterator<T>& rhs) const { 
+			return it == rhs.it && usage == rhs.usage && type == rhs.type;
+		}
 	};
 	// Iterates through all the references 
-	RefList::ref_iterator<Ref> refs_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<Ref> refs_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<Ref>(begin(), end(), Ref::ANY_REF, usage);
 	}
-	RefList::ref_iterator<Ref> refs_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<Ref> refs_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<Ref>(end(), end(), Ref::ANY_REF, usage); 
 	}
 
 	// Iterates through the scalar references only 
-	RefList::ref_iterator<ScalarRef> scalars_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<ScalarRef> scalars_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<ScalarRef>(begin(), end(), Ref::SCALAR, usage); 
 	}
-	RefList::ref_iterator<ScalarRef> scalars_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<ScalarRef> scalars_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<ScalarRef>(end(), end(), Ref::SCALAR, usage); 
 	}
 
 	// Iterates through the array references only 
-	RefList::ref_iterator<ArrayRef> arrays_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<ArrayRef> arrays_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<ArrayRef>(begin(), end(), Ref::ARRAY, usage); 
 	}
-	RefList::ref_iterator<ArrayRef> arrays_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<ArrayRef> arrays_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<ArrayRef>(end(), end(), Ref::ARRAY, usage); 
 	}
 
 	// Iterates through the Member references only 
-	RefList::ref_iterator<MemberRef> members_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<MemberRef> members_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<MemberRef>(begin(), end(), Ref::MEMBER, usage); 
 	}
-	RefList::ref_iterator<MemberRef> members_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<MemberRef> members_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<MemberRef>(end(), end(), Ref::MEMBER, usage); 
 	}
 
 	// Iterates through the call expr references only 
-	RefList::ref_iterator<CallRef> calls_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<CallRef> calls_begin(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<CallRef>(begin(), end(), Ref::CALL, usage); 
 	}
-	RefList::ref_iterator<CallRef> calls_end(const Ref::UseType& usage=Ref::ANY_USE) { 
+	inline RefList::ref_iterator<CallRef> calls_end(const Ref::UseType& usage=Ref::ANY_USE) { 
 		return ref_iterator<CallRef>(end(), end(), Ref::CALL, usage); 
 	}
 

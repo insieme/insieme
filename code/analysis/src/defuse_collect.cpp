@@ -47,7 +47,6 @@
 #define AS_CALLEXPR_ADDR(addr) 	core::static_address_cast<const core::CallExpr>(addr)
 #define AS_VAR_ADDR(addr) 		core::static_address_cast<const core::Variable>(addr)
 
-
 namespace insieme {
 namespace analysis {
 
@@ -106,8 +105,6 @@ std::ostream& ArrayRef::printTo(std::ostream& out) const {
 	out << " IDX: {" << 
 		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ 
 				jout << *cur; } ) << "}";
-	//if (!idxExpr.empty())
-    //	out << "\n\tSurrounding expr: " << *exprPtr;
 	return out;
 }
 
@@ -246,7 +243,7 @@ public:
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			visit(callExpr.getAddressOfChild(2)); // arg(0)
+			//visit(callExpr.getAddressOfChild(2)); // arg(0)
 			return;
 		}
 
