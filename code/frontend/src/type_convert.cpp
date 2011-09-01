@@ -427,7 +427,7 @@ public:
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTagType(const TagType* tagType) {
-		std::cerr << "visittagtype " << tagType << "\n";
+		VLOG(2)<< "visittagtype " << tagType << "\n";
 		if(!convFact.ctx.recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
 			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
@@ -659,7 +659,7 @@ public:
 	    elabType->desugar().getTypePtr()->dump();
 	    std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
 */
-		std::cerr << "elabtype " << elabType << "\n";
+		VLOG(2) << "elabtype " << elabType << "\n";
 	    return Visit(elabType->desugar().getTypePtr());
 //		assert(false && "ElaboratedType not yet handled!");
 	}

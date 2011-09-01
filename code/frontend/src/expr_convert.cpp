@@ -598,6 +598,19 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		if ( def ) { callGraph.insert(def); }
 	}
 
+	void VisitCXXConstructExpr (clang::CXXConstructExpr* ctorExpr) {
+		// connects the constructor expression to the function graph
+		addFunctionDecl(ctorExpr->getConstructor());
+		VisitStmt(ctorExpr);
+	}
+
+	void VisitCXXMemberCallExpr (clang::CXXMemberCallExpr* mcExpr) {
+		// connects the member call expression to the function graph
+		assert(false && "in next clang version");
+		//// addFunctionDecl(mcExpr->getMethodDecl());
+		VisitStmt(mcExpr);
+	}
+
 	void VisitCallExpr (clang::CallExpr* callExpr) {
 		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			addFunctionDecl(funcDecl);
@@ -1197,8 +1210,6 @@ public:
 		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		//currentThisPtr.ptr->printTo(std::cerr);
-		//args.push_back(currentThisPtr);
 
 		retExpr = builder.callExpr( funcPtr, args );
 
@@ -1220,8 +1231,10 @@ public:
 
 private:
 	void dumpDecl(clang::Decl * decl) {
-		std::cout << "********\n***\n*********\n";
-		decl->dump();
+		if(VLOG_IS_ON(2)){
+			VLOG(2) << "Decl dump\n";
+			decl->dump();
+		}
 	}
 
 public:
@@ -1290,14 +1303,18 @@ public:
 		clang::SourceLocation&& source = callExpr->getLocation();
 		//source.dump(convFact.currTU->getCompiler().getSourceManager());
 
-		std::cerr << "CXXThisExpr: \n";
-		callExpr->dump();
+		VLOG(2) << "CXXThisExpr: \n";
+		if( VLOG_IS_ON(2) ) {
+			callExpr->dump();
+		}
 
-		std::cerr << "***************Function graph\n";
-		convFact.exprConv->funcDepGraph.print( std::cerr );
-		std::cerr << "*****\n";
-		std::cerr << convFact.ctx.thisStack;
-		std::cerr << "*****\n";
+		if( VLOG_IS_ON(2) ) {
+			std::cerr << "***************Function graph\n";
+			convFact.exprConv->funcDepGraph.print( std::cerr );
+		}
+
+		VLOG(2) << "THIS: " << convFact.ctx.thisStack  << std::endl;
+
 
 		return convFact.ctx.thisStack;
 		//assert(false && "VisitCXXThisExpr not yet handled");
@@ -1323,7 +1340,10 @@ public:
 		START_LOG_EXPR_CONVERSION(membExpr);
 		const core::ASTBuilder& builder = convFact.builder;
 
+		// base for "this": (CXXThisExpr 0x262e998 'class TheClass *' this)
+
 		core::ExpressionPtr&& base = Visit(membExpr->getBase());
+		VLOG(2) << base << "after base\n\n";
 
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		if(membExpr->isArrow()) {
@@ -1369,15 +1389,12 @@ public:
 			resType = builder.refType(resType);
 		}
 
-		// cache "this"
-		convFact.ctx.thisStack = base;
-
 		// build member access expression
 		retExpr = builder.callExpr(resType, op, base, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy));
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, membExpr, convFact);
-
+		VLOG(2) << base << "end member expr \n";
 		return annotatedNode;
 	}
 
@@ -1893,6 +1910,7 @@ public:
 		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
+			convFact.ctx.thisStack = retExpr;
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
 		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
@@ -2169,8 +2187,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					// perfrom the conversion only if this is the first time this
 					// function is encountred 
 
-					//convertFunctionDecl(decl, false); //TODO why is main subcomp of a constructor???
-					//ctx.recVarExprMap.clear();		//TODO
+					convertFunctionDecl(decl, false); //TODO why is main subcomp of a constructor???
+					ctx.recVarExprMap.clear();		//TODO
 				}
 			}
 		}
@@ -2262,8 +2280,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ConversionContext::ParameterList oldList = ctx.curParameter;
 	ctx.curParameter = &params;
 
-	std::cerr << "******************stmt body dump\n";
-	funcDecl->getBody()->dump();
+	if( VLOG_IS_ON(2) ) { \
+		VLOG(2) << "Dump of stmt body: \n" \
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+					funcDecl->getBody()->dump(); \
+	}
 
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	ctx.curParameter = oldList;
