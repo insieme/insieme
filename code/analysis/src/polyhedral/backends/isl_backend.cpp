@@ -257,6 +257,11 @@ Map<IslContext>::Map(IslContext& 			ctx,
 	// creates an universe set containing the dimensionatility of the iteration vector
 	size_t idx=0;
 
+	if (affSys.size() == 0) {
+		// create an empty map
+		map = isl_union_map_from_map( isl_map_empty( isl_dim_copy(dim) ) );
+		return;
+	}
 	isl_basic_map* bmap = isl_basic_map_universe( isl_dim_copy(dim) );
 	for(AffineSystem::AffineList::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
 		isl_constraint* cons = convertConstraint(ctx.getRawContext(), dim, Constraint(*it, Constraint::EQ), isl_dim_in);
@@ -285,81 +290,98 @@ bool Map<IslContext>::isEmpty() const { return isl_union_map_is_empty(map);	}
 //==== Sets and Maps operations ===================================================================
 
 template <>
-SetPtr<IslContext> set_union(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs) {
+SetPtr<IslContext> 
+set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs) {
 	isl_union_set* set = isl_union_set_union(
-			isl_union_set_copy( lhs->getAsIslSet() ), isl_union_set_copy( rhs->getAsIslSet() )
+			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
 	return SetPtr<IslContext>(ctx, isl_union_set_get_dim(set), set);
 }
 
 template <>
-SetPtr<IslContext> set_intersect(IslContext& ctx, const SetPtr<IslContext>& lhs, const SetPtr<IslContext>& rhs) {
+SetPtr<IslContext> 
+set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs) {
 	isl_union_set* set = isl_union_set_intersect(
-			isl_union_set_copy( lhs->getAsIslSet() ), isl_union_set_copy( rhs->getAsIslSet() )
+			isl_union_set_copy( lhs.getAsIslSet() ), isl_union_set_copy( rhs.getAsIslSet() )
 	);
 	return SetPtr<IslContext>(ctx, isl_union_set_get_dim(set), set);
 }
 
 template <>
-MapPtr<IslContext> map_union(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs) {
+MapPtr<IslContext> 
+map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs) {
 	isl_union_map* map = isl_union_map_union( 
-			isl_union_map_copy( lhs->getAsIslMap() ), isl_union_map_copy( rhs->getAsIslMap() )
+			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
 	return MapPtr<IslContext>(ctx, isl_union_map_get_dim(map), map);
 }
 
 template <>
-MapPtr<IslContext> map_intersect(IslContext& ctx, const MapPtr<IslContext>& lhs, const MapPtr<IslContext>& rhs) {
+MapPtr<IslContext> 
+map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs) {
 	isl_union_map* map = isl_union_map_intersect(
-			isl_union_map_copy( lhs->getAsIslMap() ), isl_union_map_copy( rhs->getAsIslMap() )
+			isl_union_map_copy( lhs.getAsIslMap() ), isl_union_map_copy( rhs.getAsIslMap() )
 	);
 	return MapPtr<IslContext>(ctx, isl_union_map_get_dim(map), map);
 }
 
 template <>
-MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const MapPtr<IslContext>& lhs, const SetPtr<IslContext>& dom) {
+MapPtr<IslContext> 
+map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom) {
 	isl_union_map* map = isl_union_map_intersect_domain( 
-			isl_union_map_copy(lhs->getAsIslMap()), isl_union_set_copy(dom->getAsIslSet()) 
+			isl_union_map_copy(lhs.getAsIslMap()), isl_union_set_copy(dom.getAsIslSet()) 
 		);
 	return MapPtr<IslContext>(ctx, isl_union_map_get_dim(map), map);
 }
 
+//==== Dependence Resolution ======================================================================
+
 template <>
-void buildDependencies( 
-		IslContext& 				ctx,
-		const SetPtr<IslContext>& 	domain, 
-		const MapPtr<IslContext>& 	schedule, 
-		const MapPtr<IslContext>& 	sinks, 
-		const MapPtr<IslContext>& 	mustSources,
-		const MapPtr<IslContext>& 	maySources
+DependenceInfo<IslContext> buildDependencies( 
+		IslContext&				ctx,
+		const Set<IslContext>& 	domain, 
+		const Map<IslContext>& 	schedule, 
+		const Map<IslContext>& 	sinks, 
+		const Map<IslContext>& 	mustSources,
+		const Map<IslContext>& 	maySources
 ) {
-	MapPtr<IslContext> schedDom = map_intersect_domain(ctx, schedule, domain);
-	MapPtr<IslContext> sinksDom = map_intersect_domain(ctx, sinks, domain);
-	MapPtr<IslContext> mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
-//	std::shared_ptr<Map<IslContext>> maySourcesDom = map_intersect_domain(ctx, *maySources, *domain);
+	MapPtr<IslContext>&& schedDom = map_intersect_domain(ctx, schedule, domain);
+	MapPtr<IslContext>&& sinksDom = map_intersect_domain(ctx, sinks, domain);
 
-	//DependenceInfo<IslContext> depInfo;
-	isl_union_map *must_dep, *may_dep, *must_no_source, *may_no_source;
+	MapPtr<IslContext>&& mustSourcesDom = map_intersect_domain(ctx, mustSources, domain);
+	MapPtr<IslContext>&& maySourcesDom = map_intersect_domain(ctx, maySources, domain);
 
-	isl_union_map* empty = isl_union_map_empty( isl_union_map_get_dim( schedule->getAsIslMap() ) );
-	
+	isl_union_map *must_dep = NULL, *may_dep = NULL, *must_no_source = NULL, *may_no_source = NULL;
+
 	isl_union_map_compute_flow(
 			isl_union_map_copy(sinksDom->getAsIslMap()),
 			isl_union_map_copy(mustSourcesDom->getAsIslMap()),
-			empty,
+			maySourcesDom ? isl_union_map_copy(maySourcesDom->getAsIslMap()) : NULL,
 			isl_union_map_copy(schedDom->getAsIslMap()),
 			&must_dep,
-			NULL,
-			NULL,
-			NULL
+			&may_dep,
+			&must_no_source,
+			&may_no_source
 		);	
 	
-	printIslMap(std::cout, ctx.getRawContext(), must_dep);
+	return DependenceInfo<IslContext>( 
+			MapPtr<IslContext>(ctx, isl_union_map_get_dim(must_dep), must_dep ),
+			MapPtr<IslContext>(ctx, isl_union_map_get_dim(may_dep), may_dep ),
+			MapPtr<IslContext>(ctx, isl_union_map_get_dim(must_no_source), must_no_source ),
+			MapPtr<IslContext>(ctx, isl_union_map_get_dim(may_no_source), may_no_source ) );
+}
 
-	isl_union_map* deltas = isl_union_map_deltas_map( must_dep );
-	std::cout << "\nDELTAS: " << std::endl;
-	printIslMap(std::cout, ctx.getRawContext(), deltas);
-
+template <>
+std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const {
+	out << std::endl << "* MUST dependencies: " << std::endl;
+	mustDep->printTo(out);
+	out << std::endl << "* MAY dependencies: " << std::endl;
+	mayDep->printTo(out);
+	//out << "MUST NO SOURCE dependencies: " << std::endl;
+	//mustNoSource->printTo(out);
+	//out << "MAY NO SOURCE dependencies: " << std::endl;
+	//mayNoSource->printTo(out);
+	return out << std::endl;
 }
 
 } // end poly namespace 

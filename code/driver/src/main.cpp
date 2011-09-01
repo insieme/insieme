@@ -253,10 +253,6 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 		}
 	);
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
-
-	// LOG(INFO) << "====================== Pretty Print INSPIRE Detail ==============================";
-	// LOG(INFO) << insieme::core::printer::PrettyPrinter(program, insieme::core::printer::PrettyPrinter::OPTIONS_DETAIL);
-	// LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
 
 //***************************************************************************************
@@ -270,12 +266,15 @@ void markSCoPs(const ProgramPtr& program) {
 		[&]() -> AddressList { return mark(program); });
 
 	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
-	std::for_each(sl.begin(), sl.end(),	[](AddressList::value_type& cur){ 
+	size_t numStmtsInScops = 0;
+	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
 			printSCoP(LOG_STREAM(INFO), cur); 
 			// performing dependence analysis
 			computeDataDependence(cur);
+			numStmtsInScops += cur->getAnnotation(ScopRegion::KEY)->getScatteringInfo().second.size();
 		}
 	);	
+	LOG(INFO) << "SCoP coverage = " << numStmtsInScops;
 }
 
 //***************************************************************************************

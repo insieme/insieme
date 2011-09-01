@@ -106,20 +106,22 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 
 			// add the variable to the list of global vars (if not already there)
 			if(globals.find(varDecl) == globals.end()) {
-				if(varDecl->hasExternalStorage()) {
+				if(!varDecl->hasExternalStorage()) {
 					/*
-					 * look for the definition. If we find it it means we have
-					 * access to the translation unit defining this variable
+					 * look for the definition. If we find it it means we have access to the
+					 * translation unit defining this variable
 					 */
-					const VarDecl* def = varDecl->getDefinition();
-					if(!def) {
-						globals.insert( std::make_pair(varDecl, true) );
-						varTU.insert( std::make_pair(varDecl, currTU) );
-						return true;
-					}
+		//			VarDecl* def = varDecl->getActingDefinition();
+		//			if( !def ) {
+		//				globals.insert( std::make_pair(varDecl, true) );
+		//				varTU.insert( std::make_pair(varDecl, currTU) );
+		//				return true;
+		//			}
+		//			varDecl = def;
+		//		}
+					globals.insert( std::make_pair(varDecl, false) );
+					varTU.insert( std::make_pair(varDecl, currTU) );
 				}
-				globals.insert( std::make_pair(varDecl, false) );
-				varTU.insert( std::make_pair(varDecl, currTU) );
 			}
 		}
 	}

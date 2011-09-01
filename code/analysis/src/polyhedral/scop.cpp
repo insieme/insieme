@@ -240,13 +240,23 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					break;
 				}
 				case Ref::SCALAR:
+				{
+					const ScalarRef& scalRef = static_cast<const ScalarRef&>(*cur);
+					// if we have a DEF or UNKNOWN for one of the loop iterators or parameters of
+					// the iteration vector, this cannot be considered a SCoP and therefore we have
+					// to throw an exception 
+					if ( (scalRef.getUsage() == Ref::DEF || scalRef.getUsage() == Ref::UNKNOWN) && 
+						iterVec.getIdx( scalRef.getBaseExpression().getAddressedNode() ) != -1 ) 
+					{
+						throw NotASCoP( body.getAddressedNode() );
+					}
+				}
 				case Ref::CALL:
 				case Ref::MEMBER:
 					break;
 				default:
 					LOG(WARNING) << "Reference of type " << Ref::refTypeToStr(cur->getType()) << " not handled!";
 				}
-
 			});
 		return refs;
 	}
@@ -426,7 +436,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				);
 
 			try {
-
 				IterationVector iv;
 
 				StatementAddress stmtAddr = 
@@ -657,8 +666,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
 		STACK_SIZE_GUARD;
 
-		// assert(subScops.empty());
-
 		if ( lambda->hasAnnotation(ScopRegion::KEY) ) {
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// function, therefore we can return the iteration vector already precomputed 
@@ -666,12 +673,16 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			return lambda->getAnnotation(ScopRegion::KEY)->getIterationVector();
 		}
 
+		AddressList scops(subScops);
+
 		IterationVector bodyIV;
 		// otherwise we have to visit the body and attach the ScopRegion annotation 
 		{
 			regionStmts.push( RegionStmtStack::value_type() );
 			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
+		
+			subScops.clear();
 
 			bodyIV = visitStmt( lambda.getAddressOfChild(lambda->getChildList().size()-1) /*getBody()*/ );
 
@@ -688,8 +699,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		scopList.push_back( lambda );
 
-		// subScops.clear();
-		// subScops.push_back( lambda );
+		subScops.clear();
+		std::copy(scops.begin(), scops.end(), std::back_inserter(subScops));
+		subScops.push_back( lambda );
 
 		return bodyIV;
 	}
@@ -861,6 +873,7 @@ void ScopRegion::resolveScop(const poly::IterationVector& 	iterVec,
 				poly::AffineSystemPtr idx = std::make_shared<poly::AffineSystem>(iterVec);
 				switch(curRef->getType()) {
 				case Ref::SCALAR:
+				case Ref::MEMBER:
 					// A scalar is treated as a zero dimensional array 
 					idx->appendRow( AffineFunction(iterVec) );
 					break;
@@ -970,19 +983,19 @@ void computeDataDependence(const NodePtr& root) {
 	const IterationVector& iterVec = ann.getIterationVector();
 	auto&& ctx = BackendTraits<POLYHEDRAL_BACKEND>::ctx_type();
 
-	SetPtr<IslContext> domain;
-	MapPtr<IslContext> schedule;
-	MapPtr<IslContext> reads;
-	MapPtr<IslContext> writes;
+	// universe set 
+	SetPtr<IslContext> domain = makeSet<POLYHEDRAL_BACKEND>(ctx, IterationDomain(iterVec));
+	MapPtr<IslContext> schedule = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
+	MapPtr<IslContext> reads = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
+	MapPtr<IslContext> writes = makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec);
 
 	size_t stmtID = 0;
 	std::for_each(scat.second.begin(), scat.second.end(), 
 		[ & ] (const ScopRegion::StmtScattering& cur) { 
-			std::string stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
-			IterationDomain id = std::get<1>(cur);
+			std::string&& stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
 
-			auto&& ids = makeSet<POLYHEDRAL_BACKEND>(ctx, id, stmtid);
-			domain = !domain ? ids : set_union(ctx, domain, ids);
+			auto&& domainSet = makeSet<POLYHEDRAL_BACKEND>(ctx, std::get<1>(cur), stmtid);
+			domain = set_union(ctx, *domain, *domainSet);
 
 			ScatteringFunctionPtr sf = std::get<2>(cur);
 			// Because the scheduling of every statement has to have the same number of elements
@@ -992,7 +1005,7 @@ void computeDataDependence(const NodePtr& root) {
 				sf->appendRow( AffineFunction(iterVec) );
 			}
 			auto&& scattering = makeMap<POLYHEDRAL_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
-			schedule = !schedule ? scattering : map_union(ctx, schedule, scattering);
+			schedule = map_union(ctx, *schedule, *scattering);
 				
 			// Access Functions 
 			const ScopRegion::AccessInfoList& ail = std::get<3>(cur);
@@ -1004,55 +1017,42 @@ void computeDataDependence(const NodePtr& root) {
 					auto&& access = makeMap<POLYHEDRAL_BACKEND>(ctx, *accessInfo, stmtid, addr->toString());
 
 					switch ( std::get<1>(cur) ) {
-					case Ref::USE: 
-						reads = !reads ? access : map_union(ctx, reads, access);
-						break;
-					case Ref::DEF:
-						writes = !writes ? access : map_union(ctx, writes, access);
-						break;
-					case Ref::UNKNOWN:
-						reads = !reads ? access : map_union(ctx, reads, access);
-						writes = !writes ? access : map_union(ctx, writes, access);
-						break;
+					case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
+					case Ref::DEF: 		writes = map_union(ctx, *writes, *access);	break;
+					case Ref::UNKNOWN:	reads  = map_union(ctx, *reads, *access);
+										writes = map_union(ctx, *writes, *access);
+										break;
 					default:
-						assert(false);
+						assert( false && "Usage kind not defined!" );
 					}
 				}
 			});
 		}
 	);
 
-	if(domain && schedule && reads && writes ) {
-
-	std::cout << "D:=";
-	domain->printTo(std::cout);
-	std::cout << std::endl;
-	std::cout << "S:=";	
-	schedule->printTo(std::cout);
-	std::cout << std::endl;
-	if (reads) {
-		std::cout << "R:=";
-		reads->printTo(std::cout);
-		std::cout << std::endl;
-	}
-	if (writes) {
-		std::cout << "W:=";	
-		writes->printTo(std::cout);
-		std::cout << std::endl;
-	}
 	LOG(DEBUG) << "Computing RAW dependencies: ";
-	buildDependencies(ctx, domain, schedule, reads, writes);
+	DependenceInfo<IslContext> depInfo = 
+		buildDependencies(ctx, *domain, *schedule, *reads, *writes, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
+	LOG(DEBUG) << depInfo;
+	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
 	
 	std::cout << std::endl;
 
 	LOG(DEBUG) << "Computing WAW dependencies: ";	
-	buildDependencies(ctx, domain, schedule, writes, writes);
+	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *writes, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
 	std::cout << std::endl;
+	LOG(DEBUG) << depInfo;
+
+	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
+
 
 	LOG(DEBUG) << "Computing WAR dependencies: ";
-	buildDependencies(ctx, domain, schedule, writes, reads);
+	depInfo = buildDependencies(ctx, *domain, *schedule, *writes, *reads, *makeEmptyMap<POLYHEDRAL_BACKEND>(ctx, iterVec));
 	std::cout << std::endl;
-	}
+	LOG(DEBUG) << depInfo;
+
+	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();
+
 }
 
 //===== printSCoP ===================================================================
