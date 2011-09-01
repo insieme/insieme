@@ -541,32 +541,47 @@ public:
 
 
 
-//				// TODO
-//				// c++ constructors
-//				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
-//
-//				if(recDeclCXX){
-//					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
-//							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
-//						//CXXRecordDecl::ctor_iterator::value_type curr = *xit;
-//						CXXConstructorDecl * curr = *xit;
-//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-//						curr->dumpDeclContext(); // on cerr
-//						//std::cerr<<"enddumpconstr\n";
-//						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-//						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-//					}
-//
-//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-//						CXXMethodDecl * curr = *mit;
-//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-//						curr->dumpDeclContext(); // on cerr
-//						//std::cerr<<"enddumpconstr\n";
-//						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-//						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-//					}
-//				}
+				// TODO
+				// c++ constructors
+				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+
+				if(recDeclCXX){
+					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
+							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+						//CXXRecordDecl::ctor_iterator::value_type curr = *xit;
+						CXXConstructorDecl * curr = *xit;
+
+
+
+
+						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(curr) );
+						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
+						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
+
+						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
+
+
+
+
+
+						convFact.convertFunctionDecl(curr);
+						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+						//curr->dumpDeclContext(); // on cerr
+						//std::cerr<<"enddumpconstr\n";
+						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+					}
+
+					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+						CXXMethodDecl * curr = *mit;
+						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+						//curr->dumpDeclContext(); // on cerr
+						//std::cerr<<"enddumpconstr\n";
+						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+					}
+				}
 
 				// For debug only ...
 //				std::cerr << "\n***************Type graph\n";
@@ -649,6 +664,24 @@ public:
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
+
+
+	//TODO
+	core::FunctionTypePtr addCXXThisToFunctionType(const core::ASTBuilder& builder,
+							 	 	 	 	 	   const core::TypePtr& globals,
+							 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
+
+		const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes();
+
+		std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
+
+		std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin()+1);
+		// function is receiving a reference to the global struct as the first argument
+		argTypes[0] = builder.refType(globals);
+		return builder.functionType( argTypes, funcType->getReturnType() );
+
+	}
+
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ELABORATED TYPE (TODO)
