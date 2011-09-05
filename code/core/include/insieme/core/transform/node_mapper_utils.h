@@ -38,7 +38,9 @@
 
 #include "insieme/core/ast_node.h"
 
+#include "insieme/utils/functional_utils.h"
 #include "insieme/utils/map_utils.h"
+#include "insieme/utils/cache_utils.h"
 
 namespace insieme {
 namespace core {
@@ -50,11 +52,24 @@ namespace transform {
 class CachedNodeMapping : public NodeMapping {
 
 	/**
+	 * Defines the type of the internal factory used within the cache.
+	 * By specifying the factory type explicitly, the indirection of the std::function
+	 * id avoided.
+	 */
+	typedef member_function_trait<const NodePtr(CachedNodeMapping::*)(const NodePtr&)>::type FactoryType;
+
+	/**
 	 * The cache to be used for reusing results.
 	 */
-	insieme::utils::map::PointerMap<NodePtr, NodePtr> cache;
+	insieme::utils::cache::PointerCache<NodePtr, NodePtr, FactoryType> cache;
 
 public:
+
+	/**
+	 * A default constructor initializing the factory method of the
+	 * internally maintained cache.
+	 */
+	CachedNodeMapping() : cache(fun(*this, &CachedNodeMapping::resolveElement)) {};
 
 	/**
 	 * The mapping function which is checking whether the given node has already been
@@ -64,17 +79,8 @@ public:
 	 * NOTE: should not be overridden by sub-class
 	 */
 	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-
-		// search element within the cache
-		auto pos = cache.find(ptr);
-		if (pos != cache.end()) {
-			return pos->second;
-		}
-
-		// resolve element and add to the cache
-		NodePtr res = resolveElement(ptr);
-		cache.insert(std::make_pair(ptr, res));
-		return res;
+		// just look up content of cache (will be resolved automatically)
+		return cache.get(ptr);
 	}
 
 	/**

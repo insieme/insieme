@@ -160,6 +160,13 @@ class ConversionFactory : public boost::noncopyable {
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
+
+		core::ExpressionPtr thisStack;
+
+		//
+		typedef std::map<const clang::TagDecl*, core::VariablePtr> ClassDeclMap;
+		ClassDeclMap classDeclMap;
+
 		ConversionContext() :
 			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false) { }
 	};

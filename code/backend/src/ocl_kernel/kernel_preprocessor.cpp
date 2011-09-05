@@ -56,13 +56,15 @@
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
 
+#include "insieme/backend/ocl_host/host_extensions.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
 	using namespace insieme::annotations::ocl;
 
-	namespace {
+namespace {
 
 		/**
 		 * Tests whether the given lambda is marked to converted into an OpenCL kernel.
@@ -377,6 +379,7 @@ namespace ocl_kernel {
 
 				core::ASTBuilder builder(manager);
 				auto& basic = manager.getBasicGenerator();
+				auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
 
 				// perform conversion in post-order
 				core::NodePtr res = ptr->substitute(manager, *this);
@@ -408,7 +411,9 @@ namespace ocl_kernel {
 							}
 						}
 
-						return builder.callExpr(funType->getReturnType(), fun, newArgs);
+						//return builder.callExpr(funType->getReturnType(), fun, newArgs);
+						core::CallExprPtr kernel_args = builder.callExpr(basic.getVarList(), basic.getVarlistPack(), builder.tupleExpr(newArgs));
+						return builder.callExpr(basic.getUnit(), hostExt.callKernel, toVector(fun, *(args.end()-1), *(args.end()-2), kernel_args));
 					}
 				}
 
@@ -423,15 +428,6 @@ namespace ocl_kernel {
 				if (!isKernel(kernel)) {
 					return res;
 				}
-
-
-				// TODO:
-				// 		- replace build ins
-				//		- add address space modifier
-
-				// replace some build-ins
-
-
 
 				// create kernel function
 				core::StatementPtr core = getKernelCore(kernel);
@@ -542,10 +538,7 @@ namespace ocl_kernel {
 	}
 
 
-	core::NodePtr OCLPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
-
-		// TODO:
-		// 		- find kernel lambdas, updated types
+	core::NodePtr KernelPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// the converter does the magic
 		TypeWrapper wrapper(manager);

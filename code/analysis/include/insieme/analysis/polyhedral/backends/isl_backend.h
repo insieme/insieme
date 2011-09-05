@@ -91,8 +91,7 @@ class Set<IslContext> : public boost::noncopyable {
 public:
 	Set (	
 			IslContext& ctx, 
-			const IterationVector& iterVec, 
-			const ConstraintCombinerPtr& constraint,
+			const IterationDomain& domain,
 			const std::string& tuple_name = std::string()
 		);
 
@@ -101,6 +100,8 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	bool isEmpty() const;
+
+	void simplify();
 
 	inline isl_union_set* getAsIslSet() const { return set; }
 
@@ -132,6 +133,10 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 
 	inline isl_union_map* getAsIslMap() const { return map; }
+
+	void simplify();
+
+	SetPtr<IslContext> deltas() const;
 	
 	bool isEmpty() const;
 
@@ -141,31 +146,34 @@ public:
 	}
 };
 
-template <>
-std::shared_ptr<Set<IslContext>> set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+template <> 
+SetPtr<IslContext> set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
 
 template <>
-std::shared_ptr<Set<IslContext>> set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+SetPtr<IslContext> set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+
+template <> 
+MapPtr<IslContext> map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+
+template <> 
+MapPtr<IslContext> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+
+template <> 
+MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
 
 template <>
-std::shared_ptr<Map<IslContext>> map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
-
-template <>
-std::shared_ptr<Map<IslContext>> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
-
-template <>
-std::shared_ptr<Map<IslContext>> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
-
-
-template <>
-void buildDependencies( 
-		IslContext&									ctx,
-		const std::shared_ptr<Set<IslContext>>& 	domain, 
-		const std::shared_ptr<Map<IslContext>>& 	schedule, 
-		const std::shared_ptr<Map<IslContext>>& 	sinks, 
-		const std::shared_ptr<Map<IslContext>>& 	must_sources,
-		const std::shared_ptr<Map<IslContext>>& 	may_sourcs
+DependenceInfo<IslContext> buildDependencies( 
+		IslContext&				ctx,
+		const Set<IslContext>& 	domain, 
+		const Map<IslContext>& 	schedule, 
+		const Map<IslContext>& 	sinks, 
+		const Map<IslContext>& 	must_sources,
+		const Map<IslContext>& 	may_sourcs
 );
+
+template <>
+std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const;
+
 
 } // end poly namespace 
 } // end analysis namespace 

@@ -598,6 +598,19 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		if ( def ) { callGraph.insert(def); }
 	}
 
+	void VisitCXXConstructExpr (clang::CXXConstructExpr* ctorExpr) {
+		// connects the constructor expression to the function graph
+		addFunctionDecl(ctorExpr->getConstructor());
+		VisitStmt(ctorExpr);
+	}
+
+	void VisitCXXMemberCallExpr (clang::CXXMemberCallExpr* mcExpr) {
+		// connects the member call expression to the function graph
+		assert(false && "in next clang version");
+		//// addFunctionDecl(mcExpr->getMethodDecl());
+		VisitStmt(mcExpr);
+	}
+
 	void VisitCallExpr (clang::CallExpr* callExpr) {
 		if ( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(callExpr->getDirectCallee()) ) {
 			addFunctionDecl(funcDecl);
@@ -674,7 +687,6 @@ namespace conversion {
 class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConverter, core::ExpressionPtr> {
 	ConversionFactory& convFact;
 	ConversionContext& ctx;
-	core::ExpressionPtr currentThisPtr;
 
 	core::ExpressionPtr wrapVariable(clang::Expr* expr) {
 		const DeclRefExpr* ref = utils::skipSugar<const DeclRefExpr>(expr);
@@ -1174,6 +1186,7 @@ public:
 	//						CXX MEMBER CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		//todo: CXX extensions
 		core::ExpressionPtr retExpr;
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1198,31 +1211,32 @@ public:
 		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-		currentThisPtr.ptr->printTo(std::cerr);
-		args.push_back(currentThisPtr);
 
 		retExpr = builder.callExpr( funcPtr, args );
 
-		return retExpr;
-
-		////clang::Expr * callObject = callExpr->getImplicitObjectArgument();
-
 		assert(false && "CXXMemberCallExpr not yet handled");
+		VLOG(2) << "End of expression\n";
+		return retExpr;
+		////clang::Expr * callObject = callExpr->getImplicitObjectArgument();
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX OPERATOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		//todo: CXX extensions
 		// call to an overloaded operator
 		assert(false && "CXXOperatorCallExpr not yet handled");
+		VLOG(2) << "End of expression\n";
 	}
 
 private:
 	void dumpDecl(clang::Decl * decl) {
-		std::cout << "********\n***\n*********\n";
-		decl->dump();
+		if(VLOG_IS_ON(2)){
+			VLOG(2) << "Decl dump\n";
+			decl->dump();
+		}
 	}
 
 public:
@@ -1242,8 +1256,11 @@ public:
 		FunctionDecl* funcDecl = constructorDecl;
 		core::FunctionTypePtr funcTy =
 			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
-		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+		//ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
+
+		core::ExpressionPtr retExpr;
+		retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
 
 
 		////clang::Stmt* Body = constructorDecl->getBody();
@@ -1255,12 +1272,12 @@ public:
 		callingClass->viewInheritance(callingClass->getASTContext());
 
 		core::IdentifierPtr ident = builder.identifier(constructorDecl->getNameAsString());
-		core::ExpressionPtr retExpr;
 		core::ExpressionPtr op = gen.getCompositeMemberAccess();
 
 		////Expr** functionArgs = callExpr->getArgs();
 		////unsigned numArgs = callExpr->getNumArgs();
 
+		VLOG(2) << "End of expression\n";
 		return retExpr;
 
 		//assert(false && "VisitCXXConstructExpr not yet handled");
@@ -1271,6 +1288,7 @@ public:
 	//						CXX NEW CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		assert(false && "VisitCXXNewExpr not yet handled");
 		//return NULL;
 	}
@@ -1278,7 +1296,9 @@ public:
 	//						CXX DELETE CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
+		START_LOG_EXPR_CONVERSION(callExpr);
 		assert(false && "VisitCXXDeleteExpr not yet handled");
+		VLOG(2) << "End of expression\n";
 		//return NULL;
 	}
 
@@ -1286,23 +1306,23 @@ public:
 	//						CXX THIS CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
-		clang::SourceLocation&& source = callExpr->getLocation();
-		//source.dump(convFact.currTU->getCompiler().getSourceManager());
+		START_LOG_EXPR_CONVERSION(callExpr);
+		//clang::SourceLocation&& source = callExpr->getLocation();
 
-		std::cerr << "CXXThisExpr: \n";
-		callExpr->dump();
-
-		std::cerr << "***************Function graph\n";
-		convFact.exprConv->funcDepGraph.print( std::cerr );
-
-
-		for (std::map<const clang::ValueDecl*, core::VariablePtr>::const_iterator it = convFact.ctx.varDeclMap.begin(),
-				end = convFact.ctx.varDeclMap.end(); it!=end; it++){
-			(*it).second->printTo(std::cerr) ;
-			std::cerr << "\n" << (*it).second->getId() << std::endl;
+		VLOG(2) << "CXXThisExpr: \n";
+		if( VLOG_IS_ON(2) ) {
+			callExpr->dump();
 		}
 
-		return currentThisPtr;
+		if( VLOG_IS_ON(2) ) {
+			std::cerr << "***************Function graph\n";
+			convFact.exprConv->funcDepGraph.print( std::cerr );
+		}
+
+		VLOG(2) << "THIS: " << convFact.ctx.thisStack  << std::endl;
+
+		VLOG(2) << "End of expression\n";
+		return convFact.ctx.thisStack;
 		//assert(false && "VisitCXXThisExpr not yet handled");
 		//return NULL;
 	}
@@ -1312,7 +1332,9 @@ public:
 	//					EXCEPTION CXX THROW EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXThrowExpr(clang::CXXThrowExpr* throwExpr) {
+		START_LOG_EXPR_CONVERSION(throwExpr);
 		assert(false && "VisitCXXThrowExpr not yet handled");
+		VLOG(2) << "End of expression\n";
 		//return NULL;
 	}
 
@@ -1326,7 +1348,10 @@ public:
 		START_LOG_EXPR_CONVERSION(membExpr);
 		const core::ASTBuilder& builder = convFact.builder;
 
+		// base for "this": (CXXThisExpr 0x262e998 'class TheClass *' this)
+
 		core::ExpressionPtr&& base = Visit(membExpr->getBase());
+		VLOG(2) << base << "after base\n\n";
 
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		if(membExpr->isArrow()) {
@@ -1378,6 +1403,7 @@ public:
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, membExpr, convFact);
 
+		VLOG(2) << "End of expression\n";
 		return annotatedNode;
 	}
 
@@ -1893,7 +1919,6 @@ public:
 		core::ExpressionPtr retExpr;
 		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
-			currentThisPtr = retExpr;
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
 		} else if (EnumConstantDecl* enumDecl = dyn_cast<EnumConstantDecl>(declRef->getDecl() ) ) {
@@ -2064,6 +2089,19 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 		return convertInitializerList( listExpr, type );
 	}
 
+	// init the cpp class / struct and return
+	if(kind == core::NT_StructType){
+		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+						const core::TypePtr& res = refTy->getElementType();
+						return builder.refVar(
+							builder.callExpr( res,
+								(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res)
+							)
+						);
+					}
+	}
+
+
 	// Convert the expression like any other expression
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
@@ -2104,7 +2142,9 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 
 }
 
+
 }
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
@@ -2150,9 +2190,10 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	std::for_each(subComponents.begin(), subComponents.end(), 
 		[&](const FunctionDecl* cur){ 
+
 			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
 			const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
-			
+
 			if ( clangTU ) {
 				// update the translation unit
 				this->currTU = &Program::getTranslationUnit(clangTU);
@@ -2162,7 +2203,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				if ( fit == ctx.lambdaExprCache.end() ) {
 					// perfrom the conversion only if this is the first time this
 					// function is encountred 
-					convertFunctionDecl(decl, false); 
+
+					convertFunctionDecl(decl, false);
 					ctx.recVarExprMap.clear();
 				}
 			}
@@ -2222,6 +2264,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
+
+	// we have a c++ constructor declaration - a new parameter is added
+	bool isConstructor = false;
+	const CXXConstructorDecl* ctorDecl;
+	const CXXRecordDecl * baseClassDecl;
+	if (isa<CXXConstructorDecl>(funcDecl)){
+		ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl);
+		baseClassDecl = ctorDecl->getParent();
+		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
+		assert(baseClassDecl->getNameAsString()==ctorDecl->getNameAsString() && "wrong constructor");
+
+		std::map<const clang::Type*, insieme::core::TypeVariablePtr>::iterator vit;
+		for ( vit=ctx.recVarMap.begin() ; vit != ctx.recVarMap.end(); vit++ ){
+		    VLOG(2) << (*vit).first << " => " << (*vit).second ;
+		}
+
+		//TODO
+		//ConversionContext::RecTypeMap::const_iterator rit = ctx.recTypeCache.find(new clang::Record( baseClassDecl)));
+		//if(rit != convFact.ctx.recTypeCache.end())
+		//	return rit->second;
+
+		isConstructor = true;
+	}
+
+
+
 	// init parameter set
 	vector<core::VariablePtr> params;
 
@@ -2243,6 +2311,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	);
 
+	if(isConstructor){
+		//params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(dyn_cast<clang::ValueDecl>(dyn_cast<clang::NamedDecl>(baseClassDecl))) ) );
+	}
+
+
 	// this lambda is not yet in the map, we need to create it and add it to the cache
 	assert( (components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && 
 			"~~~ Something odd happened, you are allowed by all means to blame Simone ~~~" );
@@ -2250,9 +2323,17 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		ctx.isResolvingRecFuncBody = true;
 	}
 
+	VLOG(2) << "Visiting function body!";
 	// set up context to contain current list of parameters and convert body
 	ConversionContext::ParameterList oldList = ctx.curParameter;
 	ctx.curParameter = &params;
+
+	if( VLOG_IS_ON(2) ) { \
+		VLOG(2) << "Dump of stmt body: \n" \
+				 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+					funcDecl->getBody()->dump(); \
+	}
+
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
 	ctx.curParameter = oldList;
 
@@ -2441,6 +2522,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			currTU = oldTU;
 		}
 	);
+
+
 	VLOG(2) << "Converted Into: " << *retLambdaExpr;
 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);

@@ -56,17 +56,76 @@ namespace ocl_host {
 
 	OperatorConverterTable& addOpenCLHostSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
-		//auto& ext = manager.getLangExtension<Extensions>();
+		const Extensions& ext = manager.getLangExtension<Extensions>();
 		auto& kernelExt = manager.getLangExtension<ocl_kernel::Extensions>();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 
 		table[kernelExt.wrapGlobal] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+			return CONVERT_ARG(0);
+			//return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
 		});
 
 		table[kernelExt.wrapConst] = OP_CONVERTER({
-			return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+			return CONVERT_ARG(0);
+			//return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+		});
+
+		table[ext.callKernel] = OP_CONVERTER({
+			/*
+			irt_ocl_rt_run_kernel(0,	1, &szGlobalWorkSize, &szLocalWorkSize,
+										3,
+										(size_t)0, buf_input,
+										(size_t)0, buf_output,
+										sizeof(cl_long), &len_input);
+			*/
+
+			const Converter& converter = context.getConverter();
+			StmtConverter& stmtConverter = converter.getStmtConverter();
+
+			// register kernel
+			KernelCodeTablePtr table = KernelCodeTable::get(converter);
+			context.addDependency(table);
+
+			unsigned kernelID = table->registerKernel(ARG(0));
+
+			const ocl_kernel::Extensions& ext = converter.getNodeManager().getLangExtension<ocl_kernel::Extensions>();
+
+			c_ast::TypePtr sizeType = C_NODE_MANAGER->create<c_ast::NamedType>(C_NODE_MANAGER->create("size_t"));
+			c_ast::ExpressionPtr zero = c_ast::lit(sizeType, "0");
+
+			core::VectorTypePtr vecType = static_pointer_cast<const core::VectorType>(ARG(2)->getType());
+
+			core::ExpressionPtr values = static_pointer_cast<const core::CallExpr>(ARG(3))->getArgument(0);
+			const vector<core::ExpressionPtr>& kernelArgs = static_pointer_cast<const core::TupleExpr>(values)->getExpressions();
+
+			vector<c_ast::ExpressionPtr> args;
+			args.push_back(c_ast::lit(sizeType, utils::numeric_cast<string>(kernelID)));
+			args.push_back(c_ast::lit(sizeType, toString(*vecType->getSize())));
+
+			args.push_back(c_ast::ref(CONVERT_ARG(1)));
+			args.push_back(c_ast::ref(CONVERT_ARG(2)));
+
+			args.push_back(c_ast::lit(sizeType, utils::numeric_cast<string>(kernelArgs.size())));
+
+			for_each(kernelArgs, [&](const core::ExpressionPtr& cur) {
+				c_ast::ExpressionPtr arg = stmtConverter.convertExpression(context, cur);
+				if (ext.isWrapperType(cur->getType())) {
+					args.push_back(c_ast::cast(sizeType, zero));
+					args.push_back(arg);
+				} else {
+					args.push_back(c_ast::sizeOf(stmtConverter.convertType(context, cur->getType())));
+					args.push_back(c_ast::ref(arg));
+				}
+
+			});
+
+			c_ast::ExpressionPtr fun = C_NODE_MANAGER->create<c_ast::Literal>("irt_ocl_rt_run_kernel");
+			return c_ast::call(fun, args);
+
+			//return converter.getCNodeManager()->create<c_ast::Literal>(format(codeTemplate, kernelID, numArgs, argList.str().c_str()));
+
+			//return CONVERT_ARG(0);
 		});
 
 		#include "insieme/backend/operator_converter_end.inc"

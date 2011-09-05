@@ -50,12 +50,7 @@ namespace ocl_host {
 	class Extensions : public core::lang::Extension {
 	public:
 
-		const core::LiteralPtr getDevice;
-
-		const core::LiteralPtr createAllKernels;
-		const core::LiteralPtr releaseAllKernels;
-		const core::LiteralPtr setKernelNDrange;
-		const core::LiteralPtr runKernel;
+		const core::LiteralPtr callKernel;
 
 		const core::LiteralPtr createBuffer;
 		const core::LiteralPtr readBuffer;

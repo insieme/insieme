@@ -45,20 +45,6 @@ namespace ocl_host{
 
 	namespace {
 
-		const core::TypePtr getKernelType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create the irt_ocl_kernel type as a generic type
-			return builder.genericType("irt_ocl_kernel");
-		}
-
-		const core::TypePtr getDeviceType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-
-			// create the irt_ocl_device type as a generic type
-			return builder.genericType("irt_ocl_device");
-		}
-
 		const core::TypePtr getBufferType(core::NodeManager& manager) {
 			core::ASTBuilder builder(manager);
 
@@ -66,77 +52,8 @@ namespace ocl_host{
 			return builder.genericType("irt_ocl_buffer");
 		}
 
-		const core::LiteralPtr getGetDevice(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr refDeviceType = builder.refType(getDeviceType(manager));
-			core::TypePtr uint4Type = basic.getUInt4();
-
-			// irt_ocl_device* irt_ocl_get_device(cl_uint id);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(uint4Type), refDeviceType);
-
-			return builder.literal(type, "irt_ocl_get_device");
-		}
-
-		const core::LiteralPtr getCreateAllKernels(core::NodeManager& manager) {
-					core::ASTBuilder builder(manager);
-					auto& basic = manager.basic;
-
-					core::TypePtr refKernelType = builder.refType(getKernelType(manager));
-					core::TypePtr refDeviceType = builder.refType(getDeviceType(manager));
-					core::TypePtr refCharType = builder.refType(basic.getChar());
-					core::TypePtr enumType = builder.genericType("irt_ocl_create_kernel_flag");
-
-
-					//irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
-					// FIXME: Wrong type
-					core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refDeviceType, refCharType, refCharType,refCharType, enumType), refKernelType);
-
-					return builder.literal(type, "irt_ocl_rt_create_all_kernels");
-		}
-
-		const core::LiteralPtr getSetKernelNDrange(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr refKernelType = builder.refType(getKernelType(manager));
-			core::TypePtr uint4Type = basic.getUInt4();
-			core::TypePtr refUint4Type = builder.refType(uint4Type);
-
-			// void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refKernelType, uint4Type, refUint4Type, refUint4Type), basic.getUnit());
-
-			return builder.literal(type, "irt_ocl_set_kernel_ndrange");
-		}
-
-
-		const core::LiteralPtr getRunKernel(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr refKernelType = builder.refType(getKernelType(manager));
-			core::TypePtr uint4Type = basic.getUInt4();
-			core::TypePtr varListType = basic.getVarList();
-
-			// void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refKernelType, uint4Type, varListType), basic.getUnit()); // FIXME: variable number parameters
-
-			return builder.literal(type, "irt_ocl_run_kernel");
-		}
-
-
-		const core::LiteralPtr getReleaseAllKernels(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
-
-			core::TypePtr refKernelType = builder.refType(getKernelType(manager));
-
-			//irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size)
-			//FIXME: wrong type
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refKernelType), basic.getUnit());
-
-			return builder.literal(type, "irt_ocl_rt_release_all_kernels");
+		const core::LiteralPtr getCallKernel(core::NodeManager& manager) {
+			return core::lang::getLiteral(manager, "('a,vector<uint<4>,#l>,vector<uint<4>,#l>,var_list)->unit", "call_kernel");
 		}
 
 		const core::LiteralPtr getCreateBuffer(core::NodeManager& manager) {
@@ -144,12 +61,11 @@ namespace ocl_host{
 			auto& basic = manager.basic;
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
-			core::TypePtr refDeviceType = builder.refType(getDeviceType(manager));
-			core::TypePtr uint4Type = basic.getUInt4();
+			core::TypePtr uint8Type = basic.getUInt8();
 			core::TypePtr enumType = builder.genericType("cl_mem_flags");
 
-			// irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refDeviceType, enumType, uint4Type), refBufferType);
+			// irt_ocl_buffer* irt_ocl_create_buffer(cl_mem_flags flags, size_t size);
+			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(enumType, uint8Type), refBufferType);
 
 			return builder.literal(type, "irt_ocl_create_buffer");
 		}
@@ -160,10 +76,10 @@ namespace ocl_host{
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr boolType = basic.getBool();
-			core::TypePtr uint4Type = basic.getUInt4();
+			core::TypePtr uint8Type = basic.getUInt8();
 
 			// void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refBufferType, boolType, uint4Type, basic.getAnyRef()),  basic.getUnit());
+			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refBufferType, boolType, uint8Type, basic.getAnyRef()),  basic.getUnit());
 
 			return builder.literal(type, "irt_ocl_read_buffer");
 		}
@@ -174,10 +90,10 @@ namespace ocl_host{
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr boolType = basic.getBool();
-			core::TypePtr uint4Type = basic.getUInt4();
+			core::TypePtr uint8Type = basic.getUInt8();
 
 			// void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr);
-			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refBufferType, boolType, uint4Type, basic.getAnyRef()),  basic.getUnit());
+			core::TypePtr type = builder.functionType(toVector<core::TypePtr>(refBufferType, boolType, uint8Type, basic.getAnyRef()),  basic.getUnit());
 
 			return builder.literal(type, "irt_ocl_write_buffer");
 		}
@@ -198,10 +114,7 @@ namespace ocl_host{
 
 
 	Extensions::Extensions(core::NodeManager& manager)
-		  : getDevice(getGetDevice(manager)),
-
-			createAllKernels(getCreateAllKernels(manager)), releaseAllKernels(getReleaseAllKernels(manager)),
-			setKernelNDrange(getSetKernelNDrange(manager)), runKernel(getRunKernel(manager)),
+		  : callKernel(getCallKernel(manager)),
 
 			createBuffer(getCreateBuffer(manager)), readBuffer(getReadBuffer(manager)),
 			writeBuffer(getWriteBuffer(manager)), releaseBuffer(getReleaseBuffer(manager)) {}

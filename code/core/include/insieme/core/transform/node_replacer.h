@@ -118,6 +118,34 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
 	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
 }
 
+
+/**
+ * Replaces all variables within the given map within the current scope by the associated elements. If
+ * variables are passed to functions accepting different types, a new version of the function accepting
+ * the correct type will be generated.
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param replacements the map mapping variables to their replacements
+ */
+NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
+		const utils::map::PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>>& replacements);
+
+/**
+ * Replaces all variables within the given map within the current scope by the associated elements. If
+ * variables are passed to functions accepting different types, a new version of the function accepting
+ * the correct type will be generated.
+ *
+ * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
+ * @param root the root of the sub-tree to be manipulated
+ * @param replacements the map mapping variables to their replacements
+ */
+template<typename T>
+Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
+		const utils::map::PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>>& replacements) {
+	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements));
+}
+
 /**
  * Replaces all occurrences of the type variables and int type parameters within the top level scope of the
  * given root node by the values assigned to them within the given substitution.

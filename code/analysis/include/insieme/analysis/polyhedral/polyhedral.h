@@ -56,7 +56,49 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
-typedef ConstraintCombinerPtr IterationDomain;
+/**************************************************************************************************
+ * IterationDomain: the iteration domain represent the domain on which a statement is valid.
+ * Therefore it is a represented by a set of constraints (ConstraintCombiner). However, the
+ * iteration domain also allows the creation of empty and universe sets which are used to represent
+ * statement which are not bound by any constraint
+ **************************************************************************************************/
+
+class IterationDomain : public utils::Printable {
+
+	const IterationVector& iterVec;
+	ConstraintCombinerPtr  constraint;
+	bool empty;
+
+public:
+	IterationDomain( const IterationVector& iterVec, bool empty=false) : 
+		iterVec(iterVec), empty(empty) { }
+
+	explicit IterationDomain( const ConstraintCombinerPtr& constraint ) : 
+		iterVec( extractIterationVector(constraint) ), constraint(constraint), empty(false) { }
+
+	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom) : 
+		iterVec(iv), constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), empty(false) { }
+	
+	const IterationVector& getIterationVector() const { return iterVec; }
+
+	const ConstraintCombinerPtr& getConstraint() const { return constraint; }
+
+	bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
+
+	bool isEmpty() const { return empty; }
+
+	IterationDomain& operator&=(const IterationDomain& other) {
+		assert(iterVec == other.iterVec);
+		constraint = constraint and other.constraint;
+		return *this;
+	}
+
+	std::ostream& printTo(std::ostream& out) const;
+};
+
+IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rhs);
+IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs);
+IterationDomain operator!(const IterationDomain& other);
 
 struct AffineSystem : public utils::Printable {
 	

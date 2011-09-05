@@ -257,6 +257,172 @@ private:
 	}
 };
 
+
+class RecVariableMapReplacer : public CachedNodeMapping {
+
+	NodeManager& manager;
+	ASTBuilder builder;
+	const PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>>& replacements;
+
+public:
+
+	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>>& replacements)
+		: manager(manager), builder(manager), replacements(replacements) { }
+
+private:
+	/**
+	 * Performs the recursive clone operation on all nodes passed on to this visitor.
+	 */
+	virtual const NodePtr resolveElement(const NodePtr& ptr) {
+		// check whether the element has been found
+		if (ptr->getNodeType() == NT_Variable) {
+			auto pos = replacements.find(static_pointer_cast<const Variable>(ptr));
+			if(pos != replacements.end()) {
+				return pos->second.first;
+			}
+		}
+
+		// shortcut for types => will never be changed
+		if (ptr->getNodeCategory() == NC_Type) {
+			return ptr;
+		}
+
+		// handle scope limiting elements
+		switch(ptr->getNodeType()) {
+		case NT_LambdaExpr:
+			// enters a new scope => variable will no longer occur
+			return ptr;
+		default: { }
+		}
+
+		// compute result
+		NodePtr res = ptr;
+
+		// update calls to functions recursively
+		if (res->getNodeType() == NT_CallExpr) {
+			res = handleCall(static_pointer_cast<const CallExpr>(res));
+		} else if (res->getNodeType() == NT_DeclarationStmt) {
+			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
+		} else {
+			// recursive replacement has to be continued
+			res = res->substitute(manager, *this);
+		}
+
+		// check whether something has changed ...
+		if (res == ptr) {
+			// => nothing changed
+			return ptr;
+		}
+
+		// preserve annotations
+		utils::migrateAnnotations(ptr, res);
+
+		// done
+		return res;
+	}
+
+	NodePtr handleDeclStmt(const DeclarationStmtPtr& decl) {
+		auto pos = replacements.find(decl->getVariable());
+		if(pos != replacements.end()) {
+			return builder.declarationStmt(pos->second.first, pos->second.second);
+		}
+
+		// continue replacement recursively
+		return decl->substitute(manager, *this);
+	}
+
+	CallExprPtr handleCall(const CallExprPtr& call) {
+
+		// handle recursive push-through-calls
+
+		// investigate call
+		const ExpressionPtr& fun = call->getFunctionExpr();
+		const ExpressionList& args = call->getArguments();
+
+		// test whether args contains something which changed
+		ExpressionList newArgs = ::transform(args, [&](const ExpressionPtr& cur)->ExpressionPtr {
+			return static_pointer_cast<const Expression>(this->resolveElement(cur));
+		});
+
+		// test whether there has been a change
+		if (args == newArgs) {
+			return call;
+		}
+
+		if (fun->getNodeType() == NT_LambdaExpr) {
+			return handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
+		}
+
+		if (fun->getNodeType() == NT_Literal) {
+			return handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
+		}
+
+		assert(false && "Unsupported call-target encountered - sorry!");
+		return call;
+	}
+
+	CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
+
+		const Lambda::ParamList& params = lambda->getParameterList();
+		if (params.size() != args.size()) {
+			// wrong number of arguments => don't touch this!
+			return builder.callExpr(resType, lambda, args);
+		}
+
+		// create replacement map
+		Lambda::ParamList newParams;
+		insieme::utils::map::PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>> map;
+		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
+			VariablePtr param = cur.first;
+			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
+				param = this->builder.variable(cur.second->getType());
+				map[cur.first] = std::make_pair(param, ExpressionPtr());
+			}
+			newParams.push_back(param);
+		});
+
+		// construct new body
+		StatementPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map);
+
+		// obtain return type
+		TypeList typeList;
+		visitDepthFirst(newBody, [&](const ReturnStmtPtr& ret) {
+			typeList.push_back(ret->getReturnExpr()->getType());
+		});
+
+		TypePtr returnType = getSmallestCommonSuperType(typeList);
+		if (!returnType) {
+			returnType = builder.getBasicGenerator().getUnit();
+		}
+
+		// assemble new lambda
+		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
+		FunctionTypePtr funType = builder.functionType(newParamTypes, returnType);
+
+		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
+		return builder.callExpr(returnType, newLambda, args);
+
+	}
+
+	CallExprPtr handleCallToLiteral(const TypePtr& resType, const LiteralPtr& literal, const ExpressionList& args) {
+		// only supported for function types
+		assert(literal->getType()->getNodeType() == NT_FunctionType);
+
+		// do not touch build-in literals
+		if (manager.getBasicGenerator().isBuiltIn(literal)) {
+			// use type inference for the return type
+			return builder.callExpr(literal, args);
+		}
+
+		// assemble new argument types
+		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
+
+		FunctionTypePtr newType = builder.functionType(newParamTypes, resType);
+		return builder.callExpr(builder.literal(newType, literal->getValue()), args);
+	}
+};
+
+
 class TypeVariableReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
@@ -428,6 +594,18 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 
 	// conduct actual substitutions
 	auto mapper = ::VariableMapReplacer<ExpressionPtr>(mgr, replacements);
+	return applyReplacer(mgr, root, mapper);
+}
+
+
+NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, std::pair<VariablePtr,ExpressionPtr>>& replacements) {
+	// special handling for empty replacement maps
+	if (replacements.empty()) {
+		return mgr.get(root);
+	}
+
+	// conduct actual substitutions
+	auto mapper = ::RecVariableMapReplacer(mgr, replacements);
 	return applyReplacer(mgr, root, mapper);
 }
 

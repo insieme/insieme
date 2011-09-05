@@ -47,7 +47,6 @@
 #define AS_CALLEXPR_ADDR(addr) 	core::static_address_cast<const core::CallExpr>(addr)
 #define AS_VAR_ADDR(addr) 		core::static_address_cast<const core::Variable>(addr)
 
-
 namespace insieme {
 namespace analysis {
 
@@ -62,7 +61,7 @@ std::string Ref::useTypeToStr(const UseType& usage) {
 
 std::string Ref::refTypeToStr(const RefType& type) {
 	switch(type) {
-	case Ref::VAR:		return "SCALAR"; 
+	case Ref::SCALAR:	return "SCALAR"; 
 	case Ref::ARRAY:	return "ARRAY"; 
 	case Ref::MEMBER:	return "MEMBER"; 
 	case Ref::CALL: 	return "CALL"; 
@@ -75,7 +74,9 @@ std::string Ref::refTypeToStr(const RefType& type) {
 Ref::Ref(const RefType& type, const core::ExpressionAddress& var, const UseType& usage) : 
 	 baseExpr(var), type(type), usage(usage) 
 { 
-	assert(var->getType()->getNodeType() == core::NT_RefType && "TYpe of base expression must be of RefType"); 
+	assert(var->getType()->getNodeType() == core::NT_RefType && 
+			"TYpe of base expression must be of RefType"
+		); 
 }
 
 std::ostream& Ref::printTo(std::ostream& out) const {
@@ -84,7 +85,8 @@ std::ostream& Ref::printTo(std::ostream& out) const {
 
 //===== ScalarRef =======================================================================================
 
-ScalarRef::ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage) : Ref(Ref::VAR, var, usage) { }
+ScalarRef::ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage) : 
+	Ref(Ref::SCALAR, var, usage) { }
 
 const core::VariableAddress& ScalarRef::getVariable() const { 
 	return AS_VAR_ADDR(baseExpr);
@@ -101,15 +103,16 @@ std::ostream& ArrayRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);
 	out << "(" << *baseExpr << ")";
 	out << " IDX: {" << 
-		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ jout << *cur; } ) << "}";
-	//if (!idxExpr.empty())
-    //	out << "\n\tSurrounding expr: " << *exprPtr;
+		join("; ", idxExpr, [&](std::ostream& jout, const core::ExpressionPtr& cur){ 
+				jout << *cur; } ) << "}";
 	return out;
 }
 
 //===== MemberRef =====================================================================================
 
-MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage) : Ref(Ref::MEMBER, memberAcc, usage) { 
+MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& usage) : 
+	Ref(Ref::MEMBER, memberAcc, usage) 
+{ 
 	assert (memberAcc->getNodeType() == core::NT_CallExpr);
 
 	core::NodeManager& mgr = memberAcc->getNodeManager();
@@ -163,7 +166,7 @@ class DefUseCollect : public core::ASTVisitor<void, core::Address> {
 
 	const core::StatementSet& skipStmts;
 
-	void addVariable(const core::ExpressionAddress& var, const Ref::RefType& refType=Ref::VAR) {
+	void addVariable(const core::ExpressionAddress& var, const Ref::RefType& refType=Ref::SCALAR) {
 		const core::TypePtr& type = var->getType(); 
 		
 		// If the variable is not a ref we are not interested in its usage 

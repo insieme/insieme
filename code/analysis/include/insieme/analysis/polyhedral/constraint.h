@@ -59,7 +59,7 @@ struct Constraint : public utils::Printable,
 	public boost::equality_comparable<Constraint>,
 	public boost::less_than_comparable<Constraint> 
 {
-	/**
+	/**************************************************************************************************
 	 * Define the possible type of expressions: 
 	 * 		EQ -> f(x) == 0, NE -> f(x) != 0, GT -> f(x)  > 0
 	 * 		LT -> f(x)  < 0, GE -> f(x) >= 0, LE -> f(x) <= 0
@@ -68,7 +68,7 @@ struct Constraint : public utils::Printable,
 	 * 		>= 0, but newer libraries like ISL allows for representation of more complex relationships,
 	 * 		therefore we keep at this stage the constraints in this form and let the backend deal with
 	 * 		the representation in the chosen library. 
-	 */
+	 *************************************************************************************************/
 	 enum Type { GT, LT, EQ, NE, GE, LE };	
 
 	Constraint(const AffineFunction& af, const Type& type) : af(af), type(type) { }
@@ -271,8 +271,8 @@ typename boost::enable_if<
 		boost::mpl::or_<boost::is_same<C2,Constraint>, boost::is_same<C2,ConstraintCombinerPtr>>
 	>, ConstraintCombinerPtr>::type 
 operator and(const C1& lhs, const C2& rhs) { 
-	ConstraintCombinerPtr lhsPtr = makeCombiner(lhs);
-	ConstraintCombinerPtr rhsPtr = makeCombiner(rhs);
+	ConstraintCombinerPtr&& lhsPtr = makeCombiner(lhs);
+	ConstraintCombinerPtr&& rhsPtr = makeCombiner(rhs);
 	if (!lhsPtr) return rhsPtr;
 	if (!rhsPtr) return lhsPtr;
 	// FIXME: check whether the iteration vectors of lhs and rhs are compatible for the constraints

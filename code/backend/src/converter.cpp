@@ -60,7 +60,7 @@ namespace backend {
 		// -------------------------- PRE-PROCESSING ---------------------
 
 		// only for debugging purposes ...
-//		LOG(INFO) << "\n\nBefore Preprocessed code: \n" << core::printer::PrettyPrinter(source);
+//		LOG(INFO) << "\n\nBefore Preprocessed code: \n" << core::printer::PrettyPrinter(source, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 //		LOG(INFO) << "Semantic Checks: " << core::check(source, core::checks::getFullCheck());
 //		assert(core::check(source, core::checks::getFullCheck()).empty() && "Expected error free input program!");
 
@@ -73,7 +73,7 @@ namespace backend {
 		LOG(INFO) << timer;
 
 		// only for debugging purposes ...
-//		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed);
+//		LOG(INFO) << "\nPreprocessed code: \n" << core::printer::PrettyPrinter(processed, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 //		LOG(INFO) << "Semantic Checks: " << core::check(processed, core::checks::getFullCheck());
 //		for_each(core::check(processed, core::checks::getFullCheck()).getAll(), [](const core::Message& msg) {
 //			LOG(INFO) << msg << " @ " << *msg.getAddress();
