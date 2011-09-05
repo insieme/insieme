@@ -163,6 +163,10 @@ class ConversionFactory : public boost::noncopyable {
 
 		core::ExpressionPtr thisStack;
 
+		//
+		typedef std::map<const clang::TagDecl*, core::VariablePtr> ClassDeclMap;
+		ClassDeclMap classDeclMap;
+
 		ConversionContext() :
 			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false) { }
 	};

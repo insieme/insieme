@@ -427,7 +427,7 @@ public:
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTagType(const TagType* tagType) {
-		VLOG(2)<< "visittagtype " << tagType << "\n";
+		VLOG(2)<< "VisitTagType " << tagType << "\n";
 		if(!convFact.ctx.recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
 			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
@@ -543,49 +543,50 @@ public:
 
 				// TODO
 				// c++ constructors
-				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
-
-				if(recDeclCXX){
-					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
-							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
-						//CXXRecordDecl::ctor_iterator::value_type curr = *xit;
-						CXXConstructorDecl * curr = *xit;
-
-
-
-
-						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(curr) );
-						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
-						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
-
-						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
-
-
-
-
-
-						convFact.convertFunctionDecl(curr);
-						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-						//curr->dumpDeclContext(); // on cerr
-						//std::cerr<<"enddumpconstr\n";
-						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-					}
-
-					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-						CXXMethodDecl * curr = *mit;
-						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-						//curr->dumpDeclContext(); // on cerr
-						//std::cerr<<"enddumpconstr\n";
-						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-					}
-				}
+//				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+//
+//				if(recDeclCXX){
+//					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
+//							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+//						CXXConstructorDecl * ctorDecl = *xit;
+//						VLOG(1) << "~ Converting constructor: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
+//
+//
+//
+//
+//
+//						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(ctorDecl) );
+//						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
+//						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
+//
+//						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
+//
+//
+//
+//
+//
+//						convFact.convertFunctionDecl(ctorDecl);
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						//curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+//
+//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+//						CXXMethodDecl * curr = *mit;
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						//curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+//				}
 
 				// For debug only ...
-//				std::cerr << "\n***************Type graph\n";
-//				typeGraph.print(std::cerr);
+				// std::cerr << "\n***************Type graph\n";
+				// typeGraph.print(std::cerr);
 
 				// build a struct or union IR type
 				retTy = handleTagType(tagDecl, structElements);

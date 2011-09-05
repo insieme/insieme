@@ -292,7 +292,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	 * Conversion of the variable type
 	 */
 	QualType&& varTy = valDecl->getType();
-	VLOG(2) << varTy.getAsString() << std::endl; // cm
+	VLOG(2) << varTy.getAsString(); // cm
 
 	core::TypePtr&& irType = convertType( varTy.getTypePtr() );
 	if( !(varTy.isConstQualified() ||
@@ -522,6 +522,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 	}
 	// logging
+	VLOG(2) << "End of converting VarDecl";
 	VLOG(1) << "Converted into IR stmt: ";
 	VLOG(1) << "\t" << *retStmt;
 	return retStmt;

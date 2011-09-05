@@ -2089,6 +2089,19 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 		return convertInitializerList( listExpr, type );
 	}
 
+	// init the cpp class / struct and return
+	if(kind == core::NT_StructType){
+		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+						const core::TypePtr& res = refTy->getElementType();
+						return builder.refVar(
+							builder.callExpr( res,
+								(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res)
+							)
+						);
+					}
+	}
+
+
 	// Convert the expression like any other expression
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
 
@@ -2129,7 +2142,9 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 
 }
 
+
 }
+
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //						CONVERT FUNCTION DECLARATION
@@ -2148,13 +2163,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			 << "\tIsRecSubType: " << ctx.isRecSubFunc << std::endl
 			 << "\tisResolvingRecFuncBody: " << ctx.isResolvingRecFuncBody << std::endl
 			 << "\tEmpty map: "    << ctx.recVarExprMap.size();
-
-	bool isConstructor = false;
-
-	if (const clang::CXXConstructorDecl * ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl)){
-		isConstructor = true;
-		ctorDecl->isCopyOrMoveConstructor();
-	}
 
 	if ( !ctx.isRecSubFunc ) {
 		// add this type to the type graph (if not present)
@@ -2196,8 +2204,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					// perfrom the conversion only if this is the first time this
 					// function is encountred 
 
-					convertFunctionDecl(decl, false); //TODO why is main subcomp of a constructor???
-					ctx.recVarExprMap.clear();		//TODO
+					convertFunctionDecl(decl, false);
+					ctx.recVarExprMap.clear();
 				}
 			}
 		}
@@ -2256,6 +2264,32 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
+
+	// we have a c++ constructor declaration - a new parameter is added
+	bool isConstructor = false;
+	const CXXConstructorDecl* ctorDecl;
+	const CXXRecordDecl * baseClassDecl;
+	if (isa<CXXConstructorDecl>(funcDecl)){
+		ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl);
+		baseClassDecl = ctorDecl->getParent();
+		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
+		assert(baseClassDecl->getNameAsString()==ctorDecl->getNameAsString() && "wrong constructor");
+
+		std::map<const clang::Type*, insieme::core::TypeVariablePtr>::iterator vit;
+		for ( vit=ctx.recVarMap.begin() ; vit != ctx.recVarMap.end(); vit++ ){
+		    VLOG(2) << (*vit).first << " => " << (*vit).second ;
+		}
+
+		//TODO
+		//ConversionContext::RecTypeMap::const_iterator rit = ctx.recTypeCache.find(new clang::Record( baseClassDecl)));
+		//if(rit != convFact.ctx.recTypeCache.end())
+		//	return rit->second;
+
+		isConstructor = true;
+	}
+
+
+
 	// init parameter set
 	vector<core::VariablePtr> params;
 
@@ -2276,6 +2310,11 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(currParam) ) );
 		}
 	);
+
+	if(isConstructor){
+		//params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(dyn_cast<clang::ValueDecl>(dyn_cast<clang::NamedDecl>(baseClassDecl))) ) );
+	}
+
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
 	assert( (components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && 
@@ -2483,6 +2522,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			currTU = oldTU;
 		}
 	);
+
+
 	VLOG(2) << "Converted Into: " << *retLambdaExpr;
 
 	return attachFuncAnnotations(retLambdaExpr, funcDecl);
