@@ -517,6 +517,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
 
 		ctx.thisStack = initExpr;
+		ctx.thisStack2 = var;
 
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {

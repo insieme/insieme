@@ -162,6 +162,7 @@ class ConversionFactory : public boost::noncopyable {
 
 
 		core::ExpressionPtr thisStack;
+		core::VariablePtr thisStack2;
 
 		//
 		typedef std::map<const clang::TagDecl*, core::VariablePtr> ClassDeclMap;

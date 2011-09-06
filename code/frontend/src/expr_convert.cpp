@@ -1256,16 +1256,22 @@ public:
 		core::FunctionTypePtr funcTy =
 			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
+		// collects the type of each argument of the expression
+		ExpressionList&& args = getFunctionArguments(convFact.builder, callExpr, funcTy);
+
+		assert( convFact.currTU && "Translation unit not set.");
+
+
 		// convert the function declaration
-		retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
+		ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
+		core::ExpressionPtr lambdaExpr =
+				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
 		// get class declaration
 		CXXRecordDecl * callingClass = constructorDecl->getParent();
 		assert(callingClass);
 		callingClass->viewInheritance(callingClass->getASTContext());
-
-		////Expr** functionArgs = callExpr->getArgs();
-		////unsigned numArgs = callExpr->getNumArgs();
 
 		VLOG(2) << "End of CXXConstructExpr \n";
 		return retExpr;
@@ -1295,6 +1301,7 @@ public:
 	core::ExpressionPtr VisitCXXThisExpr(clang::CXXThisExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
 		//clang::SourceLocation&& source = callExpr->getLocation();
+		assert(convFact.ctx.thisStack2 && "THIS is empty");
 
 		VLOG(2) << "CXXThisExpr: \n";
 		if( VLOG_IS_ON(2) ) {
@@ -1306,10 +1313,10 @@ public:
 			convFact.exprConv->funcDepGraph.print( std::cerr );
 		}
 
-		VLOG(2) << "THIS: " << convFact.ctx.thisStack  << std::endl;
+		VLOG(2) << "THIS: " << convFact.ctx.thisStack2  << std::endl;
 
-		VLOG(2) << "End of expression\n";
-		return convFact.ctx.thisStack;
+		VLOG(2) << "End of expression CXXThisExpr \n";
+		return convFact.ctx.thisStack2;
 		//assert(false && "VisitCXXThisExpr not yet handled");
 		//return NULL;
 	}
@@ -1338,7 +1345,6 @@ public:
 		// base for "this": (CXXThisExpr 0x262e998 'class TheClass *' this)
 
 		core::ExpressionPtr&& base = Visit(membExpr->getBase());
-		VLOG(2) << base << "after base\n\n";
 
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		if(membExpr->isArrow()) {
@@ -1390,7 +1396,7 @@ public:
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, membExpr, convFact);
 
-		VLOG(2) << "End of expression\n";
+		VLOG(2) << "End of expression MemberExpr\n";
 		return annotatedNode;
 	}
 
@@ -2302,9 +2308,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	);
 
-	if(isConstructor){
-		//params.push_back( core::static_pointer_cast<const core::Variable>( this->lookUpVariable(dyn_cast<clang::ValueDecl>(dyn_cast<clang::NamedDecl>(baseClassDecl))) ) );
-	}
 
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
