@@ -1992,6 +1992,7 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 			// if ( !core::analysis::isCallOf(convExpr, mgr.basic.getRefVar()) ) {
 			// 	convExpr = builder.refVar(convExpr);
 			// }
+			assert(convExpr && "convExpr is empty");
 			elements.push_back( castToType(elemTy, convExpr) );
 		}
 		if (elements.size() == 1 && currType->getNodeType() == core::NT_VectorType) { 
@@ -2087,9 +2088,9 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 					(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res)
 				)
 			);
+			assert(ret && "call expression is empty");
+			return ret;
 		}
-
-		return ret;
 	}
 
 	// Convert the expression like any other expression
