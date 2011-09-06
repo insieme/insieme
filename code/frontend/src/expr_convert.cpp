@@ -606,8 +606,8 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 
 	void VisitCXXMemberCallExpr (clang::CXXMemberCallExpr* mcExpr) {
 		// connects the member call expression to the function graph
-		assert(false && "in next clang version");
-		//// addFunctionDecl(mcExpr->getMethodDecl());
+		//assert(false && "in next clang version");
+		addFunctionDecl(dyn_cast<FunctionDecl>(mcExpr->getCalleeDecl()) );
 		VisitStmt(mcExpr);
 	}
 
@@ -1187,37 +1187,40 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		//todo: CXX extensions
+
+		Expr* ThisArg = callExpr->getImplicitObjectArgument();
+		VLOG(2) << ThisArg ;
+
 		core::ExpressionPtr retExpr;
 		const core::ASTBuilder& builder = convFact.builder;
-		core::ExpressionPtr funcPtr = convFact.tryDeref( Visit( callExpr->getCallee() ) );
 
 		const Expr * callee = callExpr->getCallee()->IgnoreParens();
 		const MemberExpr * memberExpr = cast<MemberExpr>(callee);
-		const CXXMethodDecl * methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
+		CXXMethodDecl * methodDecl = cast<CXXMethodDecl>(memberExpr->getMemberDecl());
+		assert(methodDecl && "there is no method declaration");
 
 		if (methodDecl->isStatic()) {
 			// static method
 		}
 
+		clang::FunctionDecl * funcDecl = methodDecl;
+		core::FunctionTypePtr funcTy =
+				core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
 
-
-		core::TypePtr subTy = funcPtr->getType();
-		if ( subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
-			subTy = core::static_pointer_cast<const core::SingleElementType>( subTy )->getElementType();
-			funcPtr = builder.callExpr( subTy, builder.getBasicGenerator().getArraySubscript1D(), funcPtr, builder.uintLit(0) );
-		}
-		assert(subTy->getNodeType() == core::NT_FunctionType && "Using () operator on a non function object");
-		const core::FunctionTypePtr& funcTy = core::static_pointer_cast<const core::FunctionType>(subTy);
+		// get the arguments of the function
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
+		assert(convFact.currTU && "Translation unit not set.");
 
-		retExpr = builder.callExpr( funcPtr, args );
+		// convert the function declaration
+		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
+		core::ExpressionPtr lambdaExpr =
+				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
-		assert(false && "CXXMemberCallExpr not yet handled");
-		VLOG(2) << "End of expression\n";
+		//assert(false && "CXXMemberCallExpr not yet handled");
+		VLOG(2) << "End of expression CXXMemberCallExpr \n";
 		return retExpr;
-		////clang::Expr * callObject = callExpr->getImplicitObjectArgument();
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
