@@ -515,6 +515,9 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
+
+		ctx.thisStack = initExpr;
+
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
 		// this variable is extern
@@ -558,7 +561,12 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
 
     // -------------------------------------------------- C NAME ------------------------------------------------------
     // annotate with the C name of the function
-    node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getName() ) );
+    if( const clang::CXXConstructorDecl * ctorDecl = dyn_cast<clang::CXXConstructorDecl>(funcDecl) ){
+    	// for c++ constructors - getName() return NULL on them
+    	node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( ctorDecl->getNameAsString() )  );
+    } else {
+    	node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getName() ) );
+    }
 
     // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
     /*

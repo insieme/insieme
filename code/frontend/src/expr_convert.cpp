@@ -1245,43 +1245,30 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXConstructExpr(clang::CXXConstructExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		const core::ASTBuilder& builder = convFact.builder;
-		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+
+		core::ExpressionPtr retExpr;
 
 		CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor());
 		assert(constructorDecl);
 		dumpDecl(constructorDecl);
 
-
 		FunctionDecl* funcDecl = constructorDecl;
 		core::FunctionTypePtr funcTy =
 			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
-		//ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
 
-
-		core::ExpressionPtr retExpr;
+		// convert the function declaration
 		retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
-
-
-		////clang::Stmt* Body = constructorDecl->getBody();
-		////const FunctionProtoType *FnType = callExpr->getType()->getAs<FunctionProtoType>();
 
 		// get class declaration
 		CXXRecordDecl * callingClass = constructorDecl->getParent();
 		assert(callingClass);
 		callingClass->viewInheritance(callingClass->getASTContext());
 
-		core::IdentifierPtr ident = builder.identifier(constructorDecl->getNameAsString());
-		core::ExpressionPtr op = gen.getCompositeMemberAccess();
-
 		////Expr** functionArgs = callExpr->getArgs();
 		////unsigned numArgs = callExpr->getNumArgs();
 
-		VLOG(2) << "End of expression\n";
+		VLOG(2) << "End of CXXConstructExpr \n";
 		return retExpr;
-
-		//assert(false && "VisitCXXConstructExpr not yet handled");
-		//return NULL;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2089,18 +2076,21 @@ ConversionFactory::convertInitExpr(const clang::Expr* expr, const core::TypePtr&
 		return convertInitializerList( listExpr, type );
 	}
 
-	// init the cpp class / struct and return
+	// init the cpp class / struct
 	if(kind == core::NT_StructType){
-		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
-						const core::TypePtr& res = refTy->getElementType();
-						return builder.refVar(
-							builder.callExpr( res,
-								(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res)
-							)
-						);
-					}
-	}
+		core::ExpressionPtr ret;
 
+		if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(type) ) {
+			const core::TypePtr& res = refTy->getElementType();
+			ret =  builder.refVar(
+				builder.callExpr( res,
+					(zeroInit ? mgr.basic.getInitZero() : mgr.basic.getUndefined()), mgr.basic.getTypeLiteral(res)
+				)
+			);
+		}
+
+		return ret;
+	}
 
 	// Convert the expression like any other expression
 	core::ExpressionPtr&& retExpr = convertExpr( expr );
