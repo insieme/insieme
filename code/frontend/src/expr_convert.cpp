@@ -1230,21 +1230,35 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXOperatorCallExpr(clang::CXXOperatorCallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		//todo: CXX extensions
-		// call to an overloaded operator
-		assert(false && "CXXOperatorCallExpr not yet handled");
-		VLOG(2) << "End of expression\n";
+
+		core::ExpressionPtr retExpr;
+		const core::ASTBuilder& builder = convFact.builder;
+
+		clang::OverloadedOperatorKind kind = callExpr->getOperator();
+		VLOG(2) << "operator" << getOperatorSpelling(kind);
+
+		clang::FunctionDecl * funcDecl = dyn_cast<clang::FunctionDecl>(callExpr->getCalleeDecl());
+		core::FunctionTypePtr funcTy =
+				core::static_pointer_cast<const core::FunctionType>(convFact.convertType(GET_TYPE_PTR(funcDecl)) );
+
+		// get the arguments of the function
+		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
+
+		assert(convFact.currTU && "Translation unit not set.");
+
+		// convert the function declaration
+		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
+		core::ExpressionPtr lambdaExpr =
+				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+
+
+		//assert(false && "CXXOperatorCallExpr not yet handled");
+		VLOG(2) << "End of expression CXXOperatorCallExpr \n";
+		return retExpr;
 	}
 
-private:
-	void dumpDecl(clang::Decl * decl) {
-		if(VLOG_IS_ON(2)){
-			VLOG(2) << "Decl dump\n";
-			decl->dump();
-		}
-	}
 
-public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1255,7 +1269,6 @@ public:
 
 		CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor());
 		assert(constructorDecl);
-		dumpDecl(constructorDecl);
 
 		FunctionDecl* funcDecl = constructorDecl;
 		core::FunctionTypePtr funcTy =

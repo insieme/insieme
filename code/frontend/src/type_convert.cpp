@@ -536,34 +536,41 @@ public:
 						);
 				}
 
-
-
-
-
-
 				// TODO
 				// c++ constructors
-//				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
-//
-//				if(recDeclCXX){
+				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+
+				if(recDeclCXX){
+
+					for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
+							bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+						VLOG(2) << bit;
+						const CXXBaseSpecifier * base = bit;
+						RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
+
+						for(RecordDecl::field_iterator it=baseRecord->field_begin(), end=baseRecord->field_end(); it != end; ++it) {
+							RecordDecl::field_iterator::value_type curr = *it;
+							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
+							core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+							structElements.push_back(
+									core::NamedCompositeType::Entry(id, fieldType )
+								);
+						}
+
+					}
+
+
 //					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
 //							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
 //						CXXConstructorDecl * ctorDecl = *xit;
 //						VLOG(1) << "~ Converting constructor: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 //
-//
-//
-//
-//
+
 //						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(ctorDecl) );
 //						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
 //						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
 //
 //						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
-//
-//
-//
-//
 //
 //						convFact.convertFunctionDecl(ctorDecl);
 //						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
@@ -582,7 +589,8 @@ public:
 //						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
 //						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
 //					}
-//				}
+				}  // end if recDeclCXX
+
 
 				// For debug only ...
 				// std::cerr << "\n***************Type graph\n";
