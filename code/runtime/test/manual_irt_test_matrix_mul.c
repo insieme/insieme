@@ -48,7 +48,6 @@
 
 #ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"
-#include "irt_ocl_config.h"
 #endif
 
 #define N 1000
