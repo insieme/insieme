@@ -1188,8 +1188,27 @@ public:
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
 
-		Expr* ThisArg = callExpr->getImplicitObjectArgument();
-		VLOG(2) << ThisArg ;
+		// getting variable of THIS and store it in context
+		Expr* thisArg = callExpr->getImplicitObjectArgument();
+		VLOG(2)<<thisArg;
+		if(ImplicitCastExpr* castExpr = dyn_cast<ImplicitCastExpr>(thisArg)){
+			thisArg = castExpr->getSubExpr();
+		}
+		assert(thisArg && dyn_cast<DeclRefExpr>(thisArg) && "THIS can not be retrieved");
+		ValueDecl * varDecl = dyn_cast<DeclRefExpr>(thisArg)->getDecl();
+		assert(varDecl && "no variable declaration");
+		const VarDecl* definition = dyn_cast<VarDecl>(varDecl)->getDefinition();
+		clang::QualType clangType = definition->getType();
+		if( !clangType.isCanonical() ) {
+			clangType = clangType->getCanonicalTypeInternal();
+		}
+		if ( definition->hasGlobalStorage() ) {
+			throw GlobalVariableDeclarationException();
+		}
+		core::VariablePtr&& var = core::dynamic_pointer_cast<const core::Variable>(convFact.lookUpVariable(definition));
+		convFact.ctx.thisStack2 = var;
+		assert(var && "Variable for THIS not set");
+
 
 		core::ExpressionPtr retExpr;
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1331,7 +1350,7 @@ public:
 			convFact.exprConv->funcDepGraph.print( std::cerr );
 		}
 
-		VLOG(2) << "THIS: " << convFact.ctx.thisStack2  << std::endl;
+		VLOG(2) << "THIS: " << convFact.ctx.thisStack2 ;
 
 		VLOG(2) << "End of expression CXXThisExpr \n";
 		return convFact.ctx.thisStack2;
@@ -1386,7 +1405,7 @@ public:
 			op = gen.getCompositeRefElem();
 		}
 
-
+		//VLOG(2)<<structTy->getNodeType() <<" "<<core::NT_RefType <<" "<<core::NT_VectorType <<" "<<core::NT_ArrayType <<" "<<core::NT_RecType <<" "<<core::NT_TupleType <<" "<<core::NT_FunctionType <<" "<<core::NT_TypeVariable  <<" "<<core::NT_StructType  <<" "<<core::NT_UnionType <<" "<<core::NT_GenericType ;
 		// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
 		assert((structTy->getNodeType() == core::NT_StructType || structTy->getNodeType() == core::NT_UnionType  ||
 				structTy->getNodeType() == core::NT_RecType) &&
@@ -2203,21 +2222,22 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	const TranslationUnit* oldTU = currTU;
 	std::set<const FunctionDecl*>&& subComponents = exprConv->funcDepGraph.getSubComponents( funcDecl );
 
-	std::for_each(subComponents.begin(), subComponents.end(), 
-		[&](const FunctionDecl* cur){ 
+	std::for_each(subComponents.begin(), subComponents.end(),
+		[&](const FunctionDecl* cur){
 
 			FunctionDecl* decl = const_cast<FunctionDecl*>(cur);
+			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
 			const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 
 			if ( clangTU ) {
 				// update the translation unit
 				this->currTU = &Program::getTranslationUnit(clangTU);
 				// look up the lambda cache to see if this function has been
-				// already converted into an IR lambda expression. 
+				// already converted into an IR lambda expression.
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
 				if ( fit == ctx.lambdaExprCache.end() ) {
 					// perfrom the conversion only if this is the first time this
-					// function is encountred 
+					// function is encountred
 
 					convertFunctionDecl(decl, false);
 					ctx.recVarExprMap.clear();

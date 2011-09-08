@@ -160,8 +160,6 @@ class ConversionFactory : public boost::noncopyable {
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
-
-		core::ExpressionPtr thisStack;
 		core::VariablePtr thisStack2;
 
 		//
