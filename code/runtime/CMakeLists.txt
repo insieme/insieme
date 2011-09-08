@@ -4,7 +4,6 @@
 project(insieme_runtime C CXX)
 cmake_minimum_required(VERSION 2.6)
 
-#--------------------------------- REMOVE IT
 find_library(pthread_LIB pthread)
 
 # enable C99 support within gcc
@@ -28,9 +27,6 @@ endif()
 
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
-
-#---------------------------------
-
 
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
 file(GLOB_RECURSE insieme_runtime_incs 	include/*.h )
