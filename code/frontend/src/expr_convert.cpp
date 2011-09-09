@@ -1235,6 +1235,7 @@ public:
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		packedArgs.push_back(convFact.ctx.thisStack2);
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
 		//assert(false && "CXXMemberCallExpr not yet handled");
@@ -1269,6 +1270,7 @@ public:
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		packedArgs.push_back(convFact.ctx.thisStack2);
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
 
@@ -1299,10 +1301,11 @@ public:
 		assert( convFact.currTU && "Translation unit not set.");
 
 
-		// convert the function declaration
+		// convert the function declaration and add THIS as last parameter
 		ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		packedArgs.push_back(ctx.thisStack2);
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
 		// get class declaration
@@ -2176,6 +2179,21 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 
 }
 
+core::FunctionTypePtr addThisArgToFunctionType(const core::ASTBuilder& builder,
+						 	 	 	 	 	   const core::TypePtr& structTy,
+						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
+
+	const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes();
+
+	std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
+
+	std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin());
+	// move THIS to the last position
+	argTypes[oldArgs.size()] = builder.refType(structTy);
+	return builder.functionType( argTypes, funcType->getReturnType() );
+
+}
+
 
 }
 
@@ -2246,6 +2264,29 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	);
 
+
+	// we have a c++ declaration
+	bool isCXX = false;
+	const CXXRecordDecl * baseClassDecl;
+	if (dyn_cast<CXXConstructorDecl>(funcDecl)){
+		const CXXConstructorDecl* cxxMethodDecl;
+		cxxMethodDecl = dyn_cast<CXXConstructorDecl>(funcDecl);
+		baseClassDecl = cxxMethodDecl->getParent();
+		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
+		assert(baseClassDecl->getNameAsString()==cxxMethodDecl->getNameAsString() && "wrong constructor");
+
+		isCXX = true;
+	} else if (dyn_cast<CXXMethodDecl>(funcDecl)){
+		const CXXMethodDecl* cxxMethodDecl;
+		cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl);
+		baseClassDecl = cxxMethodDecl->getParent();
+		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
+
+		isCXX = true;
+	}
+
+
+
 	// reset the translation unit
 	currTU = oldTU;
 
@@ -2299,29 +2340,18 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
-
-	// we have a c++ constructor declaration - a new parameter is added
-	bool isConstructor = false;
-	const CXXConstructorDecl* ctorDecl;
-	const CXXRecordDecl * baseClassDecl;
-	if (isa<CXXConstructorDecl>(funcDecl)){
-		ctorDecl = dyn_cast<CXXConstructorDecl>(funcDecl);
-		baseClassDecl = ctorDecl->getParent();
-		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
-		assert(baseClassDecl->getNameAsString()==ctorDecl->getNameAsString() && "wrong constructor");
-
-		std::map<const clang::Type*, insieme::core::TypeVariablePtr>::iterator vit;
-		for ( vit=ctx.recVarMap.begin() ; vit != ctx.recVarMap.end(); vit++ ){
-		    VLOG(2) << (*vit).first << " => " << (*vit).second ;
+	VLOG(2)<<isCXX;
+	core::TypePtr classTypePtr;
+	if (isCXX){
+		ConversionContext::ClassDeclMap::const_iterator cit = ctx.classDeclMap.find(baseClassDecl);
+		if(cit != ctx.classDeclMap.end()){
+			classTypePtr = cit->second;
 		}
-
-		//TODO
-		//ConversionContext::RecTypeMap::const_iterator rit = ctx.recTypeCache.find(new clang::Record( baseClassDecl)));
-		//if(rit != convFact.ctx.recTypeCache.end())
-		//	return rit->second;
-
-		isConstructor = true;
+		assert(classTypePtr && "no class declaration to type pointer mapping");
 	}
+
+
+
 
 
 
@@ -2346,7 +2376,14 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	);
 
-
+	// for cpp methods add the type of THIS at the end of the parameter list
+	core::VariablePtr parentThisVar = ctx.thisVar;
+	if(isCXX){
+		////core::VariablePtr&& var = builder.variable( builder.refType(classTypePtr) );
+		core::VariablePtr var = ctx.thisStack2;
+		params.push_back( var );
+		ctx.thisVar = var;
+	}
 
 	// this lambda is not yet in the map, we need to create it and add it to the cache
 	assert( (components.empty() || (!components.empty() && !ctx.isResolvingRecFuncBody)) && 
@@ -2438,8 +2475,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		funcType = addGlobalsToFunctionType(builder, ctx.globalStruct.first, funcType);
 	}
 
+	if(isCXX){
+		funcType = addThisArgToFunctionType(builder, classTypePtr, funcType);
+	}
+
 	// reset old global var
 	ctx.globalVar = parentGlobalVar;
+
+	ctx.thisVar = parentThisVar;
+
+	VLOG(2)<<funcType <<"\n"<<params<<"\n"<<body;
 
 	if ( components.empty() ) {
 		core::LambdaExprPtr&& retLambdaExpr = builder.lambdaExpr( funcType, params, body);
@@ -2451,6 +2496,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
         // Adding the lambda function to the list of converted functions
         ctx.lambdaExprCache.insert( std::make_pair(funcDecl, retLambdaExpr) );
 
+        VLOG(2)<<retLambdaExpr << " + function declaration: "<<funcDecl;
         return attachFuncAnnotations(retLambdaExpr, funcDecl);
 		return retLambdaExpr;
 	}

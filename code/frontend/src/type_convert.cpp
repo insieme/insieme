@@ -452,6 +452,11 @@ public:
 		VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
 
 		const TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
+		ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(tagDecl);
+		if(cit != convFact.ctx.classDeclMap.end()){
+			return cit->second;
+		}
+
 		// iterate through all the re-declarations to see if one of them provides a definition
 		TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
 		for(i = tagDecl->redecls_begin(); i != e && !i->isDefinition(); ++i) ;
@@ -665,6 +670,7 @@ public:
 
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
+				convFact.ctx.classDeclMap.insert(std::make_pair(tagDecl, retTy));
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type

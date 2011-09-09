@@ -161,9 +161,10 @@ class ConversionFactory : public boost::noncopyable {
 		WrapRefMap wrapRefMap;
 
 		core::VariablePtr thisStack2;
+		core::VariablePtr thisVar; // used in Functions as reference
 
 		//
-		typedef std::map<const clang::TagDecl*, core::VariablePtr> ClassDeclMap;
+		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
 
 		ConversionContext() :
