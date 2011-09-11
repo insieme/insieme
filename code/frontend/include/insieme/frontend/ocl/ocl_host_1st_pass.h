@@ -198,6 +198,8 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	vector<core::ExpressionPtr> kernelEntries;
 	LocalMemDecls localMemDecls;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+	EquivalenceMap eqMap;
+	size_t eqIdx;
 
 
 	// check if the call is a call to ref.assign
@@ -244,6 +246,7 @@ public:
 	KernelArgs& getKernelArgs() { return kernelArgs; }
 	KernelNames& getKernelNames() { return kernelNames; }
 	LocalMemDecls& getLocalMemDecls() {	return localMemDecls; }
+	EquivalenceMap& getEquivalenceMap() { return eqMap; }
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& getReplacements() { return replacements; }
 };
 

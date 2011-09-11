@@ -360,7 +360,8 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build.getNodeManager()), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
-		hash_target_specialized(build),	equal_variables(build)) {
+		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)) {
+		eqIdx = 1;
 	ADD_Handler(builder, o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
@@ -877,6 +878,22 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				}
 				copyAnnotations(callExpr, ret);
 				return ret;
+			}
+		} else {
+			// add all variables used as arguments and the corresponding parameters to the equivalence map
+			LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
+			if(lambda->getType()->toString().find("array<_cl_cl_kernel,1>") != string::npos) { // TODO may extend it to other types
+				auto paramIt = lambda->getParameterList().begin();
+				for_each(callExpr->getArguments(), [&](ExpressionPtr arg) {
+					if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(arg)) {
+						if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos) {
+							eqMap[var] = eqIdx;
+							eqMap[*paramIt] = eqIdx++;
+						}
+					}
+					if(paramIt != lambda->getParameterList().end()) // should always be true, only for security reasons
+						++paramIt;
+				});
 			}
 		}
 

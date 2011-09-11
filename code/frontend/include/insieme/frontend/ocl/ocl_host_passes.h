@@ -46,7 +46,7 @@ namespace insieme {
 namespace frontend {
 namespace ocl {
 
-
+typedef insieme::utils::map::PointerMap<core::ExpressionPtr, size_t > EquivalenceMap;
 /**
  * This specialized hasher hashes array accesses to the same variable to the same bin
  * regardless of the array index
@@ -54,8 +54,9 @@ namespace ocl {
 struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 
 	core::ASTBuilder builder;
+	EquivalenceMap& eqMap;
 
-	hash_target_specialized(core::ASTBuilder build) : hash_target(), builder(build) {}
+	hash_target_specialized(core::ASTBuilder build, EquivalenceMap& equalityMap) : hash_target(), builder(build), eqMap(equalityMap) {}
 
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to. For subscript operations only the subscripted variable/call
@@ -73,6 +74,13 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 //		while(const core::CallExprPtr& tmp = dynamic_pointer_cast<const core::CallExpr>(call->getArgument(0)))
 //			call = tmp;
 
+		if(const core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(expr)){
+			if(eqMap.find(var) != eqMap.end())
+				return hasher(*builder.uintLit(eqMap[var]));
+			else
+				return hasher(*var);
+		}
+
 		if(builder.getNodeManager().basic.isSubscriptOperator(call->getFunctionExpr()))
 			return this->operator ()(call->getArgument(0));
 
@@ -87,8 +95,9 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 struct equal_variables {// : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
 	// needed to perform isSubscriptOperator()
 	core::ASTBuilder& builder;
+	EquivalenceMap& eqMap;
 
-	equal_variables(core::ASTBuilder& build) : builder(build) {}
+	equal_variables(core::ASTBuilder& build, EquivalenceMap& equalityMap) : builder(build), eqMap(equalityMap) {}
 
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
@@ -102,14 +111,20 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return true;
 
 		core::CallExprPtr xCall =  dynamic_pointer_cast<const core::CallExpr>(x);
-
 		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
 
-		if(builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
-			if(builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
+		if(!!xCall && builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
+			if(!! yCall && builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
 				if(this->operator ()(xCall->getArgument(0), yCall->getArgument(0)) )
 					return true;
 
+
+		const core::VariablePtr& xVar = dynamic_pointer_cast<const core::Variable>(x);
+		const core::VariablePtr& yVar = dynamic_pointer_cast<const core::Variable>(y);
+
+		if(eqMap.find(xVar) != eqMap.end() && eqMap.find(yVar) != eqMap.end())
+			if(eqMap[xVar] == eqMap[yVar])
+				return true;
 
 		return false;
 	}
