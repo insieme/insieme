@@ -527,19 +527,6 @@ public:
 				// Note: if a field is referring one of the type in the cyclic dependency, a reference
 				//       to the TypeVar will be returned.
 				core::NamedCompositeType::Entries structElements;
-				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
-					RecordDecl::field_iterator::value_type curr = *it;
-					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
-					// if the type is not const we have to add a ref because the value could be accessed and changed
-					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
-					//	fieldType = convFact.builder.refType(fieldType);
-
-					core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-
-					structElements.push_back(
-							core::NamedCompositeType::Entry(id, fieldType )
-						);
-				}
 
 				// TODO
 				// c++ constructors
@@ -596,6 +583,21 @@ public:
 //					}
 				}  // end if recDeclCXX
 
+				
+				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
+					RecordDecl::field_iterator::value_type curr = *it;
+					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
+					// if the type is not const we have to add a ref because the value could be accessed and changed
+					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
+					//	fieldType = convFact.builder.refType(fieldType);
+
+					core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+
+					structElements.push_back(
+							core::NamedCompositeType::Entry(id, fieldType )
+						);
+				}
+				
 
 				// For debug only ...
 				// std::cerr << "\n***************Type graph\n";
