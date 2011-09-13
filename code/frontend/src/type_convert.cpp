@@ -531,6 +531,7 @@ public:
 				// TODO
 				// c++ constructors
 				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+				VLOG(2)<<recDeclCXX;
 
 				if(recDeclCXX){
 

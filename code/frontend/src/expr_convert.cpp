@@ -254,6 +254,7 @@ core::ExpressionPtr convertRefScalarToRefArray(const core::ASTBuilder& builder, 
 core::ExpressionPtr 
 convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	const core::ExpressionPtr& expr) {
 	// list the all possible conversions 
+	VLOG(2)<< "\t~ Starting converting into Type "<< trgTy->getNodeType();
 	const core::TypePtr& argTy = expr->getType();
 	const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 	
@@ -893,6 +894,13 @@ public:
 		// handle implicit casts according to their kind
 		switch(castExpr->getCastKind()) {
 		case CK_LValueToRValue: retExpr = asRValue(retExpr); break;
+		case CK_UncheckedDerivedToBase:
+			VLOG(2)<< "UncheckedDerivedToBase Cast on "<<convFact.ctx.curTy;
+			if(convFact.ctx.curTy){
+				retExpr = convFact.castToType(convFact.builder.refType(convFact.ctx.curTy), retExpr);
+				convFact.ctx.curTy=0;
+				break;
+			}
 		default : {
 			// use default cast expr handling (fallback)
 			retExpr = VisitCastExpr(castExpr);
@@ -1188,10 +1196,21 @@ public:
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
 
+		// get record decl and store it
+		core::TypePtr classType;
+		// getRecordDecl() returns the RecordDecl where the method is declared
+		ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(callExpr->getRecordDecl());
+		if(cit != convFact.ctx.classDeclMap.end()){
+			classType = cit->second;
+		}
+		convFact.ctx.curTy = classType;
+
 		// getting variable of THIS and store it in context
 		Expr* thisArg = callExpr->getImplicitObjectArgument();
 		VLOG(2)<<thisArg;
+		core::ExpressionPtr castedThisPtr;
 		if(ImplicitCastExpr* castExpr = dyn_cast<ImplicitCastExpr>(thisArg)){
+			castedThisPtr = Visit(thisArg);
 			thisArg = castExpr->getSubExpr();
 		}
 		assert(thisArg && dyn_cast<DeclRefExpr>(thisArg) && "THIS can not be retrieved");
@@ -1235,7 +1254,11 @@ public:
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
-		packedArgs.push_back(convFact.ctx.thisStack2);
+		if (castedThisPtr){
+			packedArgs.push_back(castedThisPtr);
+		} else {
+			packedArgs.push_back(convFact.ctx.thisStack2);
+		}
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
 		//assert(false && "CXXMemberCallExpr not yet handled");
