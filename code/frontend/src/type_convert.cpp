@@ -527,23 +527,11 @@ public:
 				// Note: if a field is referring one of the type in the cyclic dependency, a reference
 				//       to the TypeVar will be returned.
 				core::NamedCompositeType::Entries structElements;
-				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
-					RecordDecl::field_iterator::value_type curr = *it;
-					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
-					// if the type is not const we have to add a ref because the value could be accessed and changed
-					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
-					//	fieldType = convFact.builder.refType(fieldType);
-
-					core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-
-					structElements.push_back(
-							core::NamedCompositeType::Entry(id, fieldType )
-						);
-				}
 
 				// TODO
 				// c++ constructors
 				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+				VLOG(2)<<recDeclCXX;
 
 				if(recDeclCXX){
 
@@ -570,7 +558,6 @@ public:
 //						CXXConstructorDecl * ctorDecl = *xit;
 //						VLOG(1) << "~ Converting constructor: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
 //
-
 //						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(ctorDecl) );
 //						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
 //						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
@@ -585,17 +572,35 @@ public:
 //						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
 //					}
 //
-//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-//						CXXMethodDecl * curr = *mit;
-//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-//						//curr->dumpDeclContext(); // on cerr
-//						//std::cerr<<"enddumpconstr\n";
-//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-//					}
+					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+						CXXMethodDecl * curr = *mit;
+						//convFact.convertFunctionDecl(curr, false);
+
+						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+						//curr->dumpDeclContext(); // on cerr
+						//std::cerr<<"enddumpconstr\n";
+						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+					}
+
 				}  // end if recDeclCXX
 
+				
+				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
+					RecordDecl::field_iterator::value_type curr = *it;
+					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
+					// if the type is not const we have to add a ref because the value could be accessed and changed
+					//if(!(curr->getType().isConstQualified() || core::dynamic_pointer_cast<const core::VectorType>(fieldType)))
+					//	fieldType = convFact.builder.refType(fieldType);
+
+					core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+
+					structElements.push_back(
+							core::NamedCompositeType::Entry(id, fieldType )
+						);
+				}
+				
 
 				// For debug only ...
 				// std::cerr << "\n***************Type graph\n";

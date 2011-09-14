@@ -574,6 +574,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 				return res;
 			}
 		case NT_GenericType:
+		case NT_StructType: // also necessary for c++ inheritance
 			// this cast is allowed (for now)
 			return res;
 		default:
