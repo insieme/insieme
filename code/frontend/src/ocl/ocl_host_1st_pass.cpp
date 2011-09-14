@@ -176,7 +176,6 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 		KernelCodeRetriver kcr(pathVar, root, builder);
 		visitDepthFirst(mProgram, kcr);
 		string kernelFilePath = kcr.getKernelFilePath();
-std::cout << "path: " << tryRemove(BASIC.getRefDeref(), path, builder) << "\nkfp " << kernelFilePath  << std::endl;
 		if(kernelFilePath.size() > 0)
 			kernels = loadKernelsFromFile(kernelFilePath, builder);
 	}
@@ -362,6 +361,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)) {
 		eqIdx = 1;
+//		eqMap[builder.stringLit("fucking placeholder")] = 0;
 	ADD_Handler(builder, o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
@@ -479,6 +479,9 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			// get argument vector
 			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(1), builder);
 //			tryStructExtract(k, builder);
+
+//			std::cout << "\nEqMap: " << eqMap;
+//			std::cout << "\nKernelARgs: " << kernelArgs << "\nkernel: " << k << std::endl;
 			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
 
 			std::vector<core::ExpressionPtr> args = kernelArgs[k];
@@ -759,7 +762,6 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 
 bool HostMapper::lookForKernelFilePragma(const core::TypePtr& type, const core::ExpressionPtr& createProgramWithSource) {
 	if(type == POINTER(builder.genericType("_cl_program"))) {
-std::cout << "CPWS " << createProgramWithSource << std::endl;
 		if(CallExprPtr cpwsCall = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(createProgramWithSource, builder))) {
 			if(annotations::ocl::KernelFileAnnotationPtr kfa = dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>
 					(createProgramWithSource->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
@@ -859,14 +861,14 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 	 }
 
 	 if(const MarkerStmtPtr& marker = dynamic_pointer_cast<const MarkerStmt>(element)) {
-	 std::cerr << "MarkerStmt: " << marker << std::endl;
+	 std::cout << "MarkerStmt: " << marker << std::endl;
 	 }*/
 
 	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
 
 		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(fun)) {
-			callExpr->substitute(builder.getNodeManager(), *this);
+//			callExpr->substitute(builder.getNodeManager(), *this);
 			if(const HandlerPtr& replacement = findHandler(literal->getValue())) {
 				NodePtr ret = replacement->handleNode(callExpr);
 				// check if new kernels have been created
@@ -882,17 +884,23 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 		} else {
 			// add all variables used as arguments and the corresponding parameters to the equivalence map
 			LambdaExprPtr lambda = static_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr());
-			if(lambda->getType()->toString().find("array<_cl_cl_kernel,1>") != string::npos) { // TODO may extend it to other types
+//std::cout << "WRiting to the eqMap\ntype " << lambda->getType()->toString() << std::endl;
+			if(lambda->getType()->toString().find("array<_cl_kernel,1>") != string::npos) { // TODO may extend it to other types
+//std::cout << "found cl_kernel\n";
 				auto paramIt = lambda->getParameterList().begin();
 				for_each(callExpr->getArguments(), [&](ExpressionPtr arg) {
 					if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(arg)) {
+//std::cout << "found a variable\n";
 						if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos) {
+//std::cout << "Variable " << callExpr << " has the right type\n";
 							eqMap[var] = eqIdx;
 							eqMap[*paramIt] = eqIdx++;
 						}
 					}
 					if(paramIt != lambda->getParameterList().end()) // should always be true, only for security reasons
 						++paramIt;
+					else
+						assert(false && "This parameter is unexpecetdly not inside the lambdas parameter list");
 				});
 			}
 		}
@@ -1012,10 +1020,6 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 	}
 
 	if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
-		if(annotations::ocl::KernelFileAnnotationPtr kfa =
-				dynamic_pointer_cast<annotations::ocl::KernelFileAnnotation>(decl->getInitialization()->getAnnotation(annotations::ocl::KernelFileAnnotation::KEY))) {
-			std::cout << "\nFound annotation in " << decl << std::endl;
-		}
 		const VariablePtr& var = decl->getVariable();
 		if(var->getType() == POINTER(builder.genericType("_cl_mem"))) {
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), decl->getInitialization(), builder))) {

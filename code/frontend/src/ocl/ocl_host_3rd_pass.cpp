@@ -276,8 +276,11 @@ for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
 });
-std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl;*/
+std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; */
+/*std::cout << "\nREACHED" << k << "\n";
+std::cout << kernelLambdas << std::endl;
 	assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
+std::cout << "passed\n";//*/
 	LambdaExprPtr lambda = kernelLambdas[k];
 
 	assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");

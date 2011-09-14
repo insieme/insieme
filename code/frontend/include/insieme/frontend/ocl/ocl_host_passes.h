@@ -56,7 +56,7 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 	core::ASTBuilder builder;
 	EquivalenceMap& eqMap;
 
-	hash_target_specialized(core::ASTBuilder build, EquivalenceMap& equalityMap) : hash_target(), builder(build), eqMap(equalityMap) {}
+	hash_target_specialized(core::ASTBuilder build, EquivalenceMap& equivalenceMap) : hash_target(), builder(build), eqMap(equivalenceMap) {}
 
 	/**
 	 * Computes the hash value of the given pointer based on the target it is pointing to. For subscript operations only the subscripted variable/call
@@ -66,6 +66,14 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 		if(!expr)
 			return 0;
 
+		if(const core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(expr)){
+/*			if(eqMap.find(var) != eqMap.end()) {
+				return hasher(*builder.uintLit(eqMap[var]));
+			}
+			else*/
+				return 0; // all variables are mapped to the same bin
+		}
+
 		const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(expr);
 
 		if(!call)
@@ -74,15 +82,14 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 //		while(const core::CallExprPtr& tmp = dynamic_pointer_cast<const core::CallExpr>(call->getArgument(0)))
 //			call = tmp;
 
-		if(const core::VariablePtr var = dynamic_pointer_cast<const core::Variable>(expr)){
-			if(eqMap.find(var) != eqMap.end())
-				return hasher(*builder.uintLit(eqMap[var]));
-			else
-				return hasher(*var);
-		}
-
 		if(builder.getNodeManager().basic.isSubscriptOperator(call->getFunctionExpr()))
-			return this->operator ()(call->getArgument(0));
+			return this->operator()(call->getArgument(0));
+
+		if(builder.getNodeManager().basic.isMemberAccess(call->getFunctionExpr())) {
+			// the type argument can be ignored since it should always be related to the identifier/index
+//std::cout << "\nReturning " << call << " : " << this->operator()(call->getArgument(0)) << " + " << this->operator()(call->getArgument(1)) << std::endl;
+			return this->operator()(call->getArgument(0)) + this->operator()(call->getArgument(1));
+		}
 
 		return hasher(*expr);
 	}
@@ -113,18 +120,28 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		core::CallExprPtr xCall =  dynamic_pointer_cast<const core::CallExpr>(x);
 		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
 
+std::cout << "\ncomparing " << x << " and\n          " << y << "\neqMap: " << eqMap << std::endl;
 		if(!!xCall && builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
-			if(!! yCall && builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
-				if(this->operator ()(xCall->getArgument(0), yCall->getArgument(0)) )
-					return true;
+			if(!!yCall && builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
+				return this->operator ()(xCall->getArgument(0), yCall->getArgument(0));
 
+		if(!!xCall && builder.getNodeManager().basic.isMemberAccess(xCall->getFunctionExpr()))
+			if(!!yCall && builder.getNodeManager().basic.isMemberAccess(yCall->getFunctionExpr())){
+				// the type argument can be ignored since it should always be related to the identifier/index
+				return this->operator()(xCall->getArgument(0), yCall->getArgument(0)) && this->operator()(xCall->getArgument(1), yCall->getArgument(1));
+			}
 
 		const core::VariablePtr& xVar = dynamic_pointer_cast<const core::Variable>(x);
 		const core::VariablePtr& yVar = dynamic_pointer_cast<const core::Variable>(y);
 
-		if(eqMap.find(xVar) != eqMap.end() && eqMap.find(yVar) != eqMap.end())
-			if(eqMap[xVar] == eqMap[yVar])
+		if(!xVar || !yVar) {
+			return false;
+		}
+		if(eqMap.find(yVar) != eqMap.end() && eqMap.find(xVar) != eqMap.end()) {
+			if(eqMap[xVar] == eqMap[yVar]) {
 				return true;
+			}
+		}
 
 		return false;
 	}
