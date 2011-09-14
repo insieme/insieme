@@ -400,6 +400,8 @@ LITERAL(CompositeMemberAccess, "composite.member.access", "('a, identifier, type
 LITERAL(TupleRefElem,      "tuple.ref.elem",      "(ref<'a>, uint<8>, type<'b>) -> ref<'b>")
 LITERAL(TupleMemberAccess, "tuple.member.access", "('a, uint<8>, type<'b>) -> 'b")
 
+GROUP(MemberAccess, CompositeRefElem, CompositeMemberAccess, TupleRefElem, TupleMemberAccess)
+
 
 // Strings ------------------------------------------------------------------------------------------------------------
 
