@@ -1254,7 +1254,8 @@ public:
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
-		if (castedThisPtr){
+		// last element in the args is the THIS pointer - should be of the correct type
+		if (castedThisPtr ){
 			packedArgs.push_back(castedThisPtr);
 		} else {
 			packedArgs.push_back(convFact.ctx.thisStack2);
@@ -1369,11 +1370,6 @@ public:
 		VLOG(2) << "CXXThisExpr: \n";
 		if( VLOG_IS_ON(2) ) {
 			callExpr->dump();
-		}
-
-		if( VLOG_IS_ON(2) ) {
-			std::cerr << "***************Function graph\n";
-			convFact.exprConv->funcDepGraph.print( std::cerr );
 		}
 
 		VLOG(2) << "THIS: " << convFact.ctx.thisStack2 ;
@@ -2202,6 +2198,7 @@ core::FunctionTypePtr addGlobalsToFunctionType(const core::ASTBuilder& builder,
 
 }
 
+// The THIS argument is added on the last position of the parameters
 core::FunctionTypePtr addThisArgToFunctionType(const core::ASTBuilder& builder,
 						 	 	 	 	 	   const core::TypePtr& structTy,
 						 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
@@ -2251,7 +2248,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// look up the lambda cache to see if this function has been
 	// already converted into an IR lambda expression.
 	ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find( funcDecl );
-
 	if ( fit != ctx.lambdaExprCache.end() ) {
 		return fit->second;
 	}
@@ -2374,10 +2370,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	}
 
 
-
-
-
-
 	// init parameter set
 	vector<core::VariablePtr> params;
 
@@ -2402,8 +2394,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	// for cpp methods add the type of THIS at the end of the parameter list
 	core::VariablePtr parentThisVar = ctx.thisVar;
 	if(isCXX){
-		////core::VariablePtr&& var = builder.variable( builder.refType(classTypePtr) );
-		core::VariablePtr var = ctx.thisStack2;
+		core::VariablePtr&& var = builder.variable( builder.refType(classTypePtr) );
+		//core::VariablePtr var = ctx.thisStack2;
 		params.push_back( var );
 		ctx.thisVar = var;
 	}
@@ -2463,8 +2455,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	);
 
+	if(isCXX){
+		//decls.push_back( this->builder.declarationStmt(ctx.thisVar,	this->builder.refVar( ctx.thisStack2 ) ));
+		body = core::static_pointer_cast<const core::Statement>(
+				core::transform::replaceAll( this->builder.getNodeManager(), body, ctx.thisStack2,
+						ctx.thisVar)
+		);
+	}
+
 	// if we introduce new decls we have to introduce them just before the body of the function
-	if ( !decls.empty() ) {
+	if ( !decls.empty() || isCXX ) {
 		// push the old body
 		decls.push_back(body);
 		body = builder.compoundStmt(decls);
@@ -2487,6 +2487,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 		body = builder.compoundStmt(stmts);
 	}
+
 
 	core::TypePtr convertedType = convertType( GET_TYPE_PTR(funcDecl) );
 	assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");

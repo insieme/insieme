@@ -166,12 +166,14 @@ class ConversionFactory : public boost::noncopyable {
 		// current Type of class
 		core::TypePtr curTy;
 
+		bool useClassCast;
+
 		//
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
 
 		ConversionContext() :
-			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false) { }
+			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(false) { }
 	};
 
 	ConversionContext 		ctx;
