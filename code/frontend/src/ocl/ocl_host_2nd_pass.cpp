@@ -48,21 +48,21 @@ using namespace insieme::core;
 
 void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 {
-/*	std::cout << "kernelNames:\n" << kernelNames << std::endl;
+//	std::cout << "kernelNames:\n" << kernelNames << std::endl;
 	std::map<string, int> checkDuplicates;
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
 			if(const LambdaExprPtr& lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
 			if(auto cname = lambdaEx->getLambda()->getAnnotation(annotations::c::CNameAnnotation::KEY)) {
-std::cout << "Cname: " << cname->getName() << std::endl;
+//std::cout << "Cname: " << cname->getName() << std::endl;
 				assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
 				checkDuplicates[cname->getName()] = 1;
-std::cout << "found " << kernelNames[cname->getName()];
+//std::cout << "found " << kernelNames[cname->getName()];
 				if(ExpressionPtr clKernel = kernelNames[cname->getName()]) {
 					kernelLambdas[clKernel] = lambdaEx;
 				}
 			}
 		});
-}*/
+}
 
 ClmemTable& Host2ndPass::getCleanedStructures() {
 	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr>& var) {
