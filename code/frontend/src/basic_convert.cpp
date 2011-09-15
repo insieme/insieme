@@ -561,12 +561,7 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
 
     // -------------------------------------------------- C NAME ------------------------------------------------------
     // annotate with the C name of the function
-    if( const clang::CXXConstructorDecl * ctorDecl = dyn_cast<clang::CXXConstructorDecl>(funcDecl) ){
-    	// for c++ constructors - getName() return NULL on them
-    	node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( ctorDecl->getNameAsString() )  );
-    } else {
-    	node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getName() ) );
-    }
+    node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getNameAsString() ) );
 
     // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
     /*
