@@ -62,7 +62,8 @@ std::cout << "found " << kernelNames[cname->getName()];
 				}
 			}
 		});
-}*/
+*/
+}
 
 ClmemTable& Host2ndPass::getCleanedStructures() {
 	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr>& var) {
