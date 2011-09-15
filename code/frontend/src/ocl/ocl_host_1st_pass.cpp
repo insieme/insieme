@@ -237,7 +237,6 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	// check if the index argument is a (casted) integer literal
 	const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(index);
 	const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index);
-
 	if(!!idx && BASIC.isInt(idx)) {
 		// use the literal as index for the argument
 		unsigned int pos = atoi(idx->getValue().c_str());
@@ -359,8 +358,10 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build.getNodeManager()), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
+		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)), localMemDecls(
+		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)) {
-		eqIdx = 1;
+	eqIdx = 1;
 //		eqMap[builder.stringLit("fucking placeholder")] = 0;
 	ADD_Handler(builder, o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
@@ -893,8 +894,12 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 //std::cout << "found a variable\n";
 						if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos) {
 //std::cout << "Variable " << callExpr << " has the right type\n";
-							eqMap[var] = eqIdx;
-							eqMap[*paramIt] = eqIdx++;
+							if(eqMap.find(var) != eqMap.end())
+								eqMap[*paramIt] = eqMap[var];
+							else {
+								eqMap[var] = eqIdx;
+								eqMap[*paramIt] = eqIdx++;
+							}
 						}
 					}
 					if(paramIt != lambda->getParameterList().end()) // should always be true, only for security reasons
