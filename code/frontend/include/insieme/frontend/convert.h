@@ -168,9 +168,13 @@ class ConversionFactory : public boost::noncopyable {
 
 		bool useClassCast;
 
-		//
+		// maps the resulting type pointer to the declaration of a class
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
+
+		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
+		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
+		CtorInitializerMap ctorInitializerMap;
 
 		ConversionContext() :
 			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(false) { }

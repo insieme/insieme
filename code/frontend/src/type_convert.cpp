@@ -572,17 +572,17 @@ public:
 //						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
 //					}
 //
-					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-						CXXMethodDecl * curr = *mit;
-						//convFact.convertFunctionDecl(curr, false);
-
-						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-						//curr->dumpDeclContext(); // on cerr
-						//std::cerr<<"enddumpconstr\n";
-						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-					}
+//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+//						CXXMethodDecl * curr = *mit;
+//						//convFact.convertFunctionDecl(curr, false);
+//
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						//curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
 
 				}  // end if recDeclCXX
 

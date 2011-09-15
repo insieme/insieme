@@ -1343,16 +1343,20 @@ public:
 		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
 				iend = constructorDecl->init_end(); iit!=iend; iit++){
 			clang::CXXCtorInitializer * initializer = *iit;
-			FieldDecl *fieldDecl = initializer->getMember();
-			RecordDecl *recordDecl = fieldDecl->getParent();
 
-			core::TypePtr recordTypePtr ;
-			ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
-			if(cit != convFact.ctx.classDeclMap.end()){
-				recordTypePtr = cit->second;
+			if(initializer->isMemberInitializer()){
+				FieldDecl *fieldDecl = initializer->getMember();
+				RecordDecl *recordDecl = fieldDecl->getParent();
+
+				core::TypePtr recordTypePtr ;
+				ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+				if(cit != convFact.ctx.classDeclMap.end()){
+					recordTypePtr = cit->second;
+				}
+
+				VLOG(2)<<initializer << "->" <<fieldDecl->getNameAsString() << "="<< Visit(initializer->getInit()) ;
+				convFact.ctx.ctorInitializerMap.insert( std::make_pair(fieldDecl, Visit(initializer->getInit())) );
 			}
-
-			VLOG(2)<<initializer << "->" <<fieldDecl->getNameAsString() << "="<< Visit(initializer->getInit()) ;
 		}
 
 		// convert the function declaration and add THIS as last parameter
@@ -2316,8 +2320,9 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	);
 
 
-	// we have a c++ declaration
-	bool isCXX = false;
+	// we have a c++ method declaration and the special case constructor
+	bool isCXX  = false;
+	bool isCtor = false;
 	const CXXRecordDecl * baseClassDecl;
 	if (dyn_cast<CXXConstructorDecl>(funcDecl)){
 		const CXXConstructorDecl* cxxMethodDecl;
@@ -2325,8 +2330,8 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		baseClassDecl = cxxMethodDecl->getParent();
 		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
 		assert(baseClassDecl->getNameAsString()==cxxMethodDecl->getNameAsString() && "wrong constructor");
-
-		isCXX = true;
+		isCtor = true;
+		isCXX  = true;
 	} else if (dyn_cast<CXXMethodDecl>(funcDecl)){
 		const CXXMethodDecl* cxxMethodDecl;
 		cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl);
@@ -2391,7 +2396,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	}
 
-	VLOG(2)<<isCXX;
+	// find the class type
 	core::TypePtr classTypePtr;
 	if (isCXX){
 		ConversionContext::ClassDeclMap::const_iterator cit = ctx.classDeclMap.find(baseClassDecl);
@@ -2496,6 +2501,36 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
 	// if we introduce new decls we have to introduce them just before the body of the function
 	if ( !decls.empty() || isCXX ) {
+		// there are constructor initializers that has to be handled - these are inserted befor the body
+		if ( !ctx.ctorInitializerMap.empty() ) {
+			const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+
+			for (std::map<const clang::FieldDecl*, core::ExpressionPtr>::iterator iit = ctx.ctorInitializerMap.begin(),
+					iend = ctx.ctorInitializerMap.end(); iit!=iend; iit++){
+				const FieldDecl * fieldDecl = (*iit).first;
+
+				core::IdentifierPtr ident = builder.identifier(fieldDecl->getNameAsString());
+				const core::TypePtr& memberTy = core::static_pointer_cast<const core::NamedCompositeType>(classTypePtr)->getTypeOfMember(ident);
+
+				// create access to the member of the struct/class
+				core::ExpressionPtr&& init = builder.callExpr(
+						builder.refType( memberTy ),
+						gen.getCompositeRefElem(),
+						toVector<core::ExpressionPtr>( ctx.thisVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy) )
+					);
+				// create the assign
+				core::StatementPtr assign = builder.callExpr(
+						gen.getUnit(),
+						gen.getRefAssign(),
+						init,
+						(*iit).second
+						);
+
+				decls.push_back(assign);
+			}
+			ctx.ctorInitializerMap.clear();
+		}
+
 		// push the old body
 		decls.push_back(body);
 		body = builder.compoundStmt(decls);
