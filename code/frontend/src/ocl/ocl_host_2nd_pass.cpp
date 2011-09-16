@@ -62,10 +62,6 @@ void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 				}
 			}
 		});
-<<<<<<< HEAD:code/frontend/src/ocl/ocl_host_2nd_pass.cpp
-=======
-*/
->>>>>>> 55d4962cb92573117a95e891a3d8ddeb47c74ab0:code/frontend/src/ocl/ocl_host_2nd_pass.cpp
 }
 
 ClmemTable& Host2ndPass::getCleanedStructures() {
