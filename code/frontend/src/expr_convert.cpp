@@ -605,6 +605,12 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		VisitStmt(ctorExpr);
 	}
 
+	void VisitCXXNewExpr (clang::CXXNewExpr* callExpr) {
+		// connects the constructor expression to the function graph
+		addFunctionDecl(callExpr->getConstructor());
+		VisitStmt(callExpr);
+	}
+
 	void VisitCXXMemberCallExpr (clang::CXXMemberCallExpr* mcExpr) {
 		// connects the member call expression to the function graph
 		//assert(false && "in next clang version");
@@ -1406,13 +1412,43 @@ public:
 				)
 			);
 
-		//malloced = convFact.castToType(convFact.builder.refType(refType), malloced);
+		malloced = convFact.castToType(refType, malloced);
 
-		//TODO call the right constructor
+		// create new Variable
+		core::VariablePtr&& var = builder.variable( refType );
+		core::StatementPtr assign = builder.declarationStmt(var, malloced);
+		VLOG(2)<<var << " with assignment "<<assign;
 
-		VLOG(2)<<malloced;
+		// convert the constructor
+		ExpressionList args;
+		// initializers ?
+		// convert the function declaration and add THIS as last parameter
+		ExpressionList packedArgs = tryPack(builder, funcTy, args);
+		core::VariablePtr parentThisStack = convFact.ctx.thisStack2;
+		convFact.ctx.thisStack2 = var;
+		core::ExpressionPtr constructorExpr =
+				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+
+		// prepare THIS (deref and array subscript and ref again) to match the constructor call
+		core::ExpressionPtr&& thisPtr =	builder.callExpr(
+				classType,
+				gen.getArraySubscript1D(),
+				builder.deref(ctx.thisStack2),
+				builder.literal("0", gen.getUInt4())
+			);
+		packedArgs.push_back( builder.refVar(thisPtr) );
+		convFact.ctx.thisStack2 = parentThisStack;
+		constructorExpr = builder.callExpr(funcTy->getReturnType(), constructorExpr, packedArgs);
+		VLOG(2)<<constructorExpr;
+
+		// build new Function
+		core::CompoundStmtPtr&& body = builder.compoundStmt(
+				assign,
+				/*constructorExpr,*/
+				builder.returnStmt(var)
+			);
 		VLOG(2) << "End of expression CXXNewExpr \n";
-		return malloced;
+		return builder.createCallExprFromBody(body, refType);
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX DELETE CALL EXPRESSION
