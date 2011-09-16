@@ -1380,17 +1380,57 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		assert(false && "VisitCXXNewExpr not yet handled");
-		//return NULL;
+		CXXConstructorDecl* constructorDecl = callExpr->getConstructor();
+		assert(constructorDecl);
+
+		FunctionDecl* funcDecl = constructorDecl;
+		core::FunctionTypePtr funcTy =
+			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+		CXXRecordDecl * baseClassDecl = constructorDecl->getParent();
+
+		// class to generate
+		core::TypePtr classType;
+		ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(baseClassDecl);
+		if(cit != convFact.ctx.classDeclMap.end()){
+			classType = cit->second;
+		}
+		const core::ASTBuilder& builder = convFact.getASTBuilder();
+		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+
+		// build the malloc
+		const core::RefTypePtr& refType = builder.refType(builder.arrayType(classType));
+		const core::ArrayTypePtr& arrayType = core::static_pointer_cast<const core::ArrayType>(refType->getElementType());
+		const core::TypePtr& elemType = arrayType->getElementType();
+		core::ExpressionPtr&& malloced = builder.refNew(builder.callExpr(arrayType, gen.getArrayCreate1D(),
+				gen.getTypeLiteral(elemType), builder.literal("1", gen.getUInt4())
+				)
+			);
+
+		//malloced = convFact.castToType(convFact.builder.refType(refType), malloced);
+
+		//TODO call the right constructor
+
+		VLOG(2)<<malloced;
+		VLOG(2) << "End of expression CXXNewExpr \n";
+		return malloced;
 	}
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX DELETE CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		assert(false && "VisitCXXDeleteExpr not yet handled");
-		VLOG(2) << "End of expression\n";
-		//return NULL;
+		const core::ASTBuilder& builder = convFact.builder;
+		const FunctionDecl * funcDecl = callExpr->getOperatorDelete();
+		core::FunctionTypePtr funcTy =
+			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+
+		VLOG(2) << "End of expression CXXDeleteExpr \n";
+
+		// build the free statement with the correct variable
+		return builder.callExpr(
+				builder.getBasicGenerator().getRefDelete(),
+				builder.deref( Visit(callExpr->getArgument()) )
+			);
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1987,7 +2027,7 @@ public:
             assert(accessor.size() <= 4 && "ExtVectorElementExpr has unknown format");
         }
 
-        // The type of the indes is always uint<4>
+        // The type of the index is always uint<4>
         core::ExpressionPtr&& idx = convFact.builder.literal(pos, gen.getUInt4());
         // if the type of the vector is a refType, we deref it
         base = convFact.tryDeref(base);
