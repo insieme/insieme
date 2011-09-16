@@ -272,8 +272,8 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
 	k = tryRemove(BASIC.getRefDeref(), k, builder);
 
 	// get corresponding lambda expression
-equal_target<ExpressionPtr> cmp;
-/*for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
+/*equal_target<ExpressionPtr> cmp;
+for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
 });
@@ -295,7 +295,6 @@ std::cout << kernelLambdas << std::endl;//*/
 	ExpressionPtr idx;
 	if(const CallExprPtr& callK = dynamic_pointer_cast<const CallExpr>(k))
 		if(BASIC.isSubscriptOperator(callK->getFunctionExpr())) {
-			std::cout << "\nk is a subscript: " << std::endl;
 //			if(dynamic_pointer_cast<const Variable>(tryRemove(callK->getArgument(1)); //TODO might limit this to variables only?
 				idx  = callK->getArgument(1);
 		}
@@ -496,8 +495,11 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			}
 		} else {
 // remove delarations of opencl type variables. Should not be used any more
-			if(var->getType()->toString().find("array<_cl_") != string::npos /*&& var->getNodeCategory() != NT_StructType*/)
+			if(var->getType()->toString().find("array<_cl_") != string::npos
+					&& getNonRefType(var)->getNodeType() != NT_StructType) //TODO remove this line!
+			{
 				return BASIC.getNoOp();
+			}
 		}
 
 	}

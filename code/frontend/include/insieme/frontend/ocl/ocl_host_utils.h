@@ -96,6 +96,18 @@ core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core
  */
 void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink);
 
+/*
+ * Visitor returns true if the passed ast contains a zero literal
+ */
+class NullLitSearcher: public core::ASTVisitor<bool> {
+private:
+	core::ASTBuilder& builder;
+public:
+	NullLitSearcher(core::ASTBuilder build) : core::ASTVisitor<bool>(false), builder(build) {}
+
+	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
+	bool visitLiteral(const core::LiteralPtr& literal);
+};
 
 } //namespace ocl
 } //namespace frontend

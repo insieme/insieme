@@ -97,6 +97,8 @@ public:
 			core::ExpressionPtr& size, core::TypePtr& type);
 
 	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr);
+	core::ExpressionPtr getClCopyBuffer();
+	core::ExpressionPtr getClCopyBufferFallback();
 	core::ExpressionPtr getClWriteBuffer();
 	core::ExpressionPtr getClWriteBufferFallback();
 	core::ExpressionPtr getClReadBuffer();
