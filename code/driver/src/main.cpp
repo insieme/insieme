@@ -418,18 +418,9 @@ int main(int argc, char** argv) {
 			// do the actual clang to IR conversion
 			program = measureTimeFor<core::ProgramPtr>("Frontend.convert ", [&]() { return p.convert(); } );
 
-			InverseStmtMap stmtMap;
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
-
-			// run OpenCL frontend
-			applyOpenCLFrontend(program);
-
-			// run OMP frontend
-			applyOpenMPFrontend(program);
-			// check again if the OMP flag is on
-			if ((CommandLineOptions::OpenMP || CommandLineOptions::OpenCL) && CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
 
 			// This function is a hook useful when some hack needs to be tested
 			testModule(program);
@@ -440,10 +431,19 @@ int main(int argc, char** argv) {
 			// Dump the Inter procedural Control Flow Graph associated to this program
 			dumpCFG(program, CommandLineOptions::CFG);
 			
+			InverseStmtMap stmtMap;
 			printIR(program, stmtMap);
+
+			// run OpenCL frontend
+			applyOpenCLFrontend(program);
 
 			// Perform SCoP region analysis 
 			markSCoPs(program);
+
+			// run OMP frontend
+			applyOpenMPFrontend(program);
+			// check again if the OMP flag is on
+			if (CommandLineOptions::OpenMP) { checkSema(program, errors, stmtMap); }
 			
 			// IR statistics
 			showStatistics(program);
