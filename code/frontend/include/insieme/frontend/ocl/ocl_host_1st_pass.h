@@ -86,11 +86,12 @@ public:
  */
 struct Ocl2Inspire {
 private:
+	core::ASTBuilder& builder;
 	core::parse::IRParser parser;
 
 public:
-	Ocl2Inspire(core::NodeManager& mgr) :
-		parser(mgr) {
+	Ocl2Inspire(core::ASTBuilder& build) :
+		builder(build), parser(build.getNodeManager()) {
 	}
 
 	bool extractSizeFromSizeof(const core::ExpressionPtr& arg,

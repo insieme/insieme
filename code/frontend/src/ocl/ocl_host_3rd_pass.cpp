@@ -566,6 +566,14 @@ std::cout << "]\n";*/
 		}
 
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
+
+		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(fun)) {
+			if(lit->toString().find("Buffer") != string::npos) {
+				std::cout << "FOUND " << lit << std::endl;
+				assert(false);
+			}
+		}
+
 		if(fun == BASIC.getRefAssign()) {
 			// get rid of some not needed functions
 			const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this));
@@ -700,9 +708,9 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 				for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
 					// extra check to not remove e.g. sizeof
 					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
-						if(lit->getValue().find("sizeof") == string::npos)
+						if(lit->getValue().find("sizeof") == string::npos && lit->getValue().find("composite.ref.elem") == string::npos )
 							if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
-			//					std::cout << "-> " << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
+//std::cout << "\n-> " << newCall->getType() << " " << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
 								return getZeroElem(newCall->getType());
 							}
 				}
