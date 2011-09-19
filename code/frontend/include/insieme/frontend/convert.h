@@ -163,6 +163,9 @@ class ConversionFactory : public boost::noncopyable {
 		core::VariablePtr thisStack2;
 		core::VariablePtr thisVar; // used in Functions as reference
 
+		typedef std::map<const clang::SourceLocation, core::VariablePtr> ThisMap;
+		ThisMap thisMap;
+
 		// current Type of class
 		core::TypePtr curTy;
 
