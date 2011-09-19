@@ -1308,6 +1308,9 @@ public:
 
 		assert(convFact.currTU && "Translation unit not set.");
 
+		// store THIS
+		core::VariablePtr parentThisStack = convFact.ctx.thisStack2;
+
 		// convert the function declaration
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
 		core::ExpressionPtr lambdaExpr =
@@ -1316,6 +1319,9 @@ public:
 			packedArgs.push_back(convFact.ctx.thisStack2);
 		}
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+
+		// reset to parent THIS
+		convFact.ctx.thisStack2 = parentThisStack;
 
 
 		//assert(false && "CXXOperatorCallExpr not yet handled");
@@ -1360,10 +1366,13 @@ public:
 					recordTypePtr = cit->second;
 				}
 
-				VLOG(2)<<initializer << "->" <<fieldDecl->getNameAsString() << "="<< Visit(initializer->getInit()) ;
+				VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = "<< Visit(initializer->getInit()) ;
 				convFact.ctx.ctorInitializerMap.insert( std::make_pair(fieldDecl, Visit(initializer->getInit())) );
 			}
 		}
+
+		// preserve THIS
+		core::VariablePtr parentThisStack = convFact.ctx.thisStack2;
 
 		// convert the function declaration and add THIS as last parameter
 		ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
@@ -1371,6 +1380,9 @@ public:
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 		packedArgs.push_back(ctx.thisStack2);
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
+
+		// rescue THIS
+		convFact.ctx.thisStack2 = parentThisStack;
 
 		// get class declaration
 		CXXRecordDecl * callingClass = constructorDecl->getParent();
@@ -1439,7 +1451,7 @@ public:
 		packedArgs.push_back( builder.refVar(thisPtr) );
 		convFact.ctx.thisStack2 = parentThisStack;
 		constructorExpr = builder.callExpr(funcTy->getReturnType(), constructorExpr, packedArgs);
-		VLOG(2)<<constructorExpr;
+		VLOG(2) << constructorExpr;
 
 		// build new Function
 		core::CompoundStmtPtr&& body = builder.compoundStmt(
@@ -1476,6 +1488,8 @@ public:
 		START_LOG_EXPR_CONVERSION(callExpr);
 		//clang::SourceLocation&& source = callExpr->getLocation();
 		assert(convFact.ctx.thisStack2 && "THIS is empty");
+
+		VLOG(2) << callExpr->getLocation().getRawEncoding();
 
 		VLOG(2) << "CXXThisExpr: \n";
 		if( VLOG_IS_ON(2) ) {
@@ -1514,6 +1528,7 @@ public:
 		// base for "this": (CXXThisExpr 0x262e998 'class TheClass *' this)
 
 		core::ExpressionPtr&& base = Visit(membExpr->getBase());
+		VLOG(2)<<membExpr->getBase();
 
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		if(membExpr->isArrow()) {
@@ -1526,17 +1541,18 @@ public:
 		}
 
 		core::IdentifierPtr ident = builder.identifier(membExpr->getMemberDecl()->getNameAsString());
-		VLOG(2)<<"Identifier of the structure "<<base << " is " << ident;
 		core::ExpressionPtr retExpr;
 
 		core::ExpressionPtr op = gen.getCompositeMemberAccess();
 		core::TypePtr structTy = base->getType();
+		VLOG(2)<<"Identifier of the structure "<<base << " with type "<< structTy << " is " << ident;
 
 		if (structTy->getNodeType() == core::NT_RefType) {
 			// skip over reference wrapper
 			structTy = core::analysis::getReferencedType(structTy);
 			op = gen.getCompositeRefElem();
 		}
+		VLOG(2)<<structTy;
 
 		//VLOG(2)<<structTy->getNodeType() <<" "<<core::NT_RefType <<" "<<core::NT_VectorType <<" "<<core::NT_ArrayType <<" "<<core::NT_RecType <<" "<<core::NT_TupleType <<" "<<core::NT_FunctionType <<" "<<core::NT_TypeVariable  <<" "<<core::NT_StructType  <<" "<<core::NT_UnionType <<" "<<core::NT_GenericType ;
 		// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
@@ -1549,6 +1565,7 @@ public:
 		if ( structTy->getNodeType() == core::NT_RecType ) {
 			structTy = core::static_pointer_cast<const core::RecType>(structTy)->unroll(convFact.mgr);
 		}
+		VLOG(2)<<structTy;
 
 		// derive type of accessed member
 		const core::TypePtr& memberTy =
@@ -2378,7 +2395,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 			VLOG(2) << "Analyzing FuncDecl as sub component: " << decl->getNameAsString();
 			const clang::idx::TranslationUnit* clangTU = this->getTranslationUnitForDefinition(decl);
 
-			if ( clangTU ) {
+			if ( clangTU && !isa<CXXConstructorDecl>(decl) ) { // not for constructors
 				// update the translation unit
 				this->currTU = &Program::getTranslationUnit(clangTU);
 				// look up the lambda cache to see if this function has been
@@ -2600,9 +2617,30 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 						gen.getRefAssign(),
 						init,
 						(*iit).second
-						);
+					);
 
-				decls.push_back(assign);
+				core::ExpressionPtr expr = (*iit).second;
+				if(isCtor && dynamic_cast<const core::CallExpr*>(&(*expr))){
+					// build new constructor call for a class/struct member inside a class
+					core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
+					const core::ExpressionPtr function = call->getFunctionExpr();
+					const vector<core::ExpressionPtr> args = call->getArguments();
+					vector<core::ExpressionPtr> newArgs;
+					for(int i = 0; i<args.size()-1; i++){
+						newArgs.push_back(args[i]);
+					}
+					newArgs.push_back(init);
+
+					core::ExpressionPtr&& newCall = builder.callExpr(
+							gen.getUnit(),
+							function,
+							newArgs
+						);
+					decls.push_back(newCall);
+				} else {
+					// add normal assignment
+					decls.push_back(assign);
+				}
 			}
 			ctx.ctorInitializerMap.clear();
 		}
