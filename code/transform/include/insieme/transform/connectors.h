@@ -39,10 +39,159 @@
 #include <vector>
 
 #include "insieme/transform/transformation.h"
+#include "insieme/transform/primitives.h"
 #include "insieme/utils/cache_utils.h"
 
 namespace insieme {
 namespace transform {
+
+	/**
+	 * Connectors:
+	 *
+	 * Connectors for expressive power:
+	 * 		- pipeline ... (simply applies a sequence of transformations)
+	 * 		- for_each ... (supports filters + recursion / bottom up / top down / ...)
+	 * 		- fixpoint	... (repeats until fix-points has been obtained or a limit is reached)
+	 * 		- try - otherwise
+	 * 		- check ... a simple one-element wrapper adding additional checks
+	 * 		- conditional ... (applies transformation if a certain condition is satisfied, false otherwise)
+	 *
+	 * Connectors for performance reasons:
+	 * 		- cached transformation
+	 *
+	 */
+
+
+	class Pipeline : public AbstractTransformation {
+
+		vector<TransformationPtr> transformations;
+
+	public:
+
+		template<class ... T>
+		Pipeline(T ... transforms) : transformations(toVector<TransformationPtr>(transforms ...)) {};
+
+		Pipeline(const vector<TransformationPtr>& transformations)
+			: transformations(transformations) {}
+
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const {
+			//  check pre-condition of first transformation
+			return transformations.empty() || (*transformations.begin())->checkPreCondition(target);
+		}
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const {
+			// apply all transformations, one after another
+			// if one is failing, the entire transformation is failing
+			core::NodePtr res = target;
+			for_each(transformations, [&](const TransformationPtr& cur) {
+				res = cur->apply(res);
+			});
+			return target;
+		}
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
+			// check post-condition of last transformation
+			return transformations.empty() || (*transformations.rbegin())->checkPostCondition(before, after);
+		}
+
+	};
+
+
+	class ForEach : public AbstractTransformation {
+
+		typedef std::function<bool(const core::NodePtr&)> Filter;
+
+		Filter filter;
+
+		TransformationPtr transformation;
+
+		unsigned maxDepth;
+
+	public:
+
+		ForEach(const TransformationPtr& transform, unsigned maxDepth = std::numeric_limits<unsigned>::max())
+			: filter(AcceptAll<const core::NodePtr&>()), transformation(transform), maxDepth(maxDepth) {}
+
+		ForEach(const Filter& filter, const TransformationPtr& transform, unsigned maxDepth = std::numeric_limits<unsigned>::max())
+			: filter(filter), transformation(transform), maxDepth(maxDepth) {}
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
+
+		const Filter& getFilter() const {
+			return filter;
+		}
+
+		const TransformationPtr& getTransformation() const {
+			return transformation;
+		}
+
+	};
+
+
+	class Fixpoint : public AbstractTransformation {
+
+		unsigned maxIterations;
+
+		TransformationPtr transformation;
+
+	public:
+
+		Fixpoint(const TransformationPtr& transform, unsigned maxIterations = 100)
+			: maxIterations(maxIterations), transformation(transform) {}
+
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const {
+			return transformation->checkPreCondition(target);
+		}
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
+			return transformation->checkPostCondition(before, after);
+		}
+
+	};
+
+
+
+	class Condition : public Transformation {
+
+	public:
+
+		typedef std::function<bool(const core::NodePtr&)> condition_type;
+
+	private:
+
+		condition_type condition;
+
+		TransformationPtr thenTransform;
+		TransformationPtr elseTransform;
+
+	public:
+
+		Condition(const condition_type& condition, const TransformationPtr& thenTrans, const TransformationPtr& elseTrans)
+			: condition(condition), thenTransform(thenTrans), elseTransform(elseTrans) { }
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const {
+			return (condition(target)) ?
+				thenTransform->checkPreCondition(target) :
+				elseTransform->checkPreCondition(target);
+		}
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const {
+			return (condition(target)) ?
+				thenTransform->apply(target) :
+				elseTransform->apply(target);
+		}
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
+			return (condition(before)) ?
+				thenTransform->checkPostCondition(before, after) :
+				elseTransform->checkPostCondition(before, after);
+		}
+
+	};
 
 
 	class Sequence : public Transformation {
@@ -53,9 +202,9 @@ namespace transform {
 
 		virtual bool checkPreCondition(const core::NodePtr& target) const;
 
-		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException) =0;
+		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
-		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const =0;
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
 
 	};
 
