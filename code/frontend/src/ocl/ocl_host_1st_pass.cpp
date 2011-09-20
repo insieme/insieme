@@ -89,6 +89,7 @@ const ProgramPtr loadKernelsFromFile(string path, const ASTBuilder& builder) {
 
 	frontend::Program fkernels(builder.getNodeManager());
 	fkernels.addTranslationUnit(path);
+
 	return fkernels.convert();
 }
 
@@ -187,8 +188,8 @@ const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, con
 
 	TypePtr type;
 	ExpressionPtr size;
-	bool sizeFound = o2i.extractSizeFromSizeof(sizeArg, size, type);
-	assert(sizeFound && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
+	o2i.extractSizeFromSizeof(sizeArg, size, type);
+	assert(size && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
 
 	vector<ExpressionPtr> args;
 	args.push_back(BASIC.getTypeLiteral(type));
@@ -211,8 +212,8 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		TypePtr type;
 		ExpressionPtr hostPtr;
 
-		bool sizeFound = o2i.extractSizeFromSizeof(sizeArg, size, type);
-		assert(sizeFound && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+		o2i.extractSizeFromSizeof(sizeArg, size, type);
+		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 
 		// declare a new variable to be used as argument
 		VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
@@ -260,7 +261,9 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 	}
 
 	if (const CallExprPtr& call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
+		// check if there is a multiplication
 		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
+			// recursively look into arguments of multiplication
 			if(extractSizeFromSizeof(call->getArgument(0), size, type)) {
 				if(size)
 					size = builder.callExpr(call->getType(), call->getFunctionExpr(), size, call->getArgument(1));
@@ -276,23 +279,12 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 				return true;
 			}
 		}
-/*			for (int i = 0; i < 2; ++i) {
-				// get rid of casts
-				core::NodePtr arg = mul->getArgument(i);
-				while (arg->getNodeType() == core::NT_CastExpr) {
-					arg = arg->getChildList().at(1);
-				}*/
-//				if (const CallExprPtr& sizeof_ = dynamic_pointer_cast<const CallExpr>(mul)) {
-					if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
-						// extract the type to be allocated
-						type = dynamic_pointer_cast<const Type> (call->getArgument(0)->getType()->getChildList().at(0));
-						// extract the number of elements to be allocated
-//						size = call->getArgument(1 - i);
-						return true;
-					}
-//				}
-//			}
-//			uncasted = mul->getArgument(0);
+		// check if we reached a sizeof call
+		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
+			// extract the type to be allocated
+			type = dynamic_pointer_cast<const Type> (call->getArgument(0)->getType()->getChildList().at(0));
+			return true;
+		}
 	}
 	return false;
 }
@@ -444,15 +436,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
 			args.push_back(node->getArgument(4));
-			args.push_back(foundSizeOf ? size : node->getArgument(5));
-			return builder.callExpr(foundSizeOf ? o2i.getClCopyBuffer() : o2i.getClCopyBufferFallback(), args);
+			args.push_back(size ? size : node->getArgument(5));
+			return builder.callExpr(size ? o2i.getClCopyBuffer() : o2i.getClCopyBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "clEnqueueWriteBuffer",
@@ -461,16 +453,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			TypePtr type;
 			NullLitSearcher nls(builder);
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
-			bool offsetSizeOf = o2i.extractSizeFromSizeof(node->getArgument(3), size, type) || visitDepthFirstInterruptable(node->getArgument(3), nls);
+			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
-			args.push_back(offsetSizeOf ? size : node->getArgument(3));
-			args.push_back(foundSizeOf ? size : node->getArgument(4));
+			args.push_back(node->getArgument(3));
+			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "irt_ocl_write_buffer",
@@ -478,15 +469,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(0));
 			args.push_back(node->getArgument(1));
 			args.push_back(builder.uintLit(0)); // offset not supported
-			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "clEnqueueReadBuffer",
@@ -494,15 +485,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			args.push_back(foundSizeOf ? size : node->getArgument(4));
+			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "irt_ocl_read_buffer",
@@ -510,15 +501,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(0));
 			args.push_back(node->getArgument(1));
 			args.push_back(builder.uintLit(0)); // offset not supported
-			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "clSetKernelArg",
@@ -1104,6 +1095,12 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			return BASIC.getNoOp();
 		}
 
+		if(dynamic_pointer_cast<const StructType>(getNonRefType(var))) {
+			if(var->getType()->toString().find("array<_cl_") != string::npos) {
+				// if the structure contains some cl_ variables, add it to cl_mem map so that it will be cleaned in second pass
+				cl_mems[var] = var;
+			}
+		}
 	}
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
