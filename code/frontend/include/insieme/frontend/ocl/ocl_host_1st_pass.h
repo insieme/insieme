@@ -104,6 +104,7 @@ public:
 	core::ExpressionPtr getClWriteBufferFallback();
 	core::ExpressionPtr getClReadBuffer();
 	core::ExpressionPtr getClReadBufferFallback();
+	core::ExpressionPtr getClGetIDs();
 };
 
 /**

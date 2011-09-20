@@ -319,7 +319,7 @@ ExpressionPtr Ocl2Inspire::getClCopyBuffer() {
             for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
                 ( (op<array.ref.elem.1D>(dstBuffer, (i + do) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + so) )) )) ); \
             return 0; \
-    }}");
+    	}}");
 }
 
 ExpressionPtr Ocl2Inspire::getClCopyBufferFallback() {
@@ -332,7 +332,7 @@ ExpressionPtr Ocl2Inspire::getClCopyBufferFallback() {
 			for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
                 ( (op<array.ref.elem.1D>(dstBuffer, (i + dstOffset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + dstOffset) )) )) ); \
             return 0; \
-    }}");
+    	}}");
 }
 
 ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
@@ -345,7 +345,7 @@ ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
             for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
                 ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
             return 0; \
-    }}");
+    	}}");
 }
 
 ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
@@ -359,7 +359,7 @@ ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
             for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
                 ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
             return 0; \
-    }}");
+    	}}");
 }
 
 ExpressionPtr Ocl2Inspire::getClReadBuffer() {
@@ -372,7 +372,7 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 			for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
 				( (op<array.ref.elem.1D>(hp, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, (i + o) )) )) );\
             return 0; \
-    }}");
+    	}}");
 	/*
 	 */
 }
@@ -391,6 +391,14 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
     }}");
 }
 
+ExpressionPtr Ocl2Inspire::getClGetIDs() {
+	// does simply set the number of devices to 1 and returns 0 = CL_SUCCESS
+	// TODO add functionality
+	return parser.parseExpression("fun(ref<array<uint<4>, 1> >:num_devices) -> int<4> {{ \
+			( (op<array.ref.elem.1D>(num_devices, lit<uint<8>, 0>) ) = 1); \
+			return 0; \
+		}}");
+}
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
@@ -399,6 +407,34 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)) {
 	eqIdx = 1;
 //		eqMap[builder.stringLit("fucking placeholder")] = 0;
+
+	// TODO at the moment there will always be one platform and one device, change that!
+	ADD_Handler(builder, o2i, "clGetDeviceIDs",
+			NullLitSearcher nls(builder);
+			ExpressionPtr ret;
+			if(visitDepthFirstInterruptable(node->getArgument(4), nls))
+				ret = builder.intLit(0);
+			else
+				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(4));
+std::cout << "Ndevices: " << node->getArgument(4) << std::endl;
+			return ret;
+	);
+
+	ADD_Handler(builder, o2i, "clGetPlatformIDs",
+std::cout << "\nNplatforms: " << node->getArgument(2) << std::endl;
+			NullLitSearcher nls(builder);
+			ExpressionPtr ret;
+			if(visitDepthFirstInterruptable(node->getArgument(2), nls))
+				ret = builder.intLit(0);
+			else
+				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(2));
+			return ret;
+	);
+
+	ADD_Handler(builder, o2i, "irt_ocl_get_num_devices",
+			return builder.literal("1", BASIC.getUInt4());
+	)
+
 	ADD_Handler(builder, o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 

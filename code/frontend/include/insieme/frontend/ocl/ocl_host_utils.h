@@ -106,6 +106,7 @@ public:
 	NullLitSearcher(core::ASTBuilder build) : core::ASTVisitor<bool>(false), builder(build) {}
 
 	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
+	bool visitCallExpr(const core::CallExprPtr& call);
 	bool visitLiteral(const core::LiteralPtr& literal);
 };
 
