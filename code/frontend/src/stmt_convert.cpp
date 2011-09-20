@@ -997,6 +997,7 @@ public:
 	FORWARD_VISITOR_CALL(CXXDeleteExpr)
 	FORWARD_VISITOR_CALL(CXXThisExpr)
 	FORWARD_VISITOR_CALL(CXXThrowExpr)
+	FORWARD_VISITOR_CALL(CXXDefaultArgExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ] (Stmt* stmt) { this->Visit(stmt); });

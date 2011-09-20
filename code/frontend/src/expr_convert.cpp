@@ -1224,6 +1224,7 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXMemberCallExpr(clang::CXXMemberCallExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
+		const core::lang::BasicGenerator& gen = convFact.builder.getBasicGenerator();
 
 		// get record decl and store it
 		core::TypePtr classType;
@@ -1247,6 +1248,7 @@ public:
 		}
 		assert(thisArg && "THIS can not be retrieved");
 
+		// THIS can be retrieved by calling the underlying declaration reference
 		if(dyn_cast<DeclRefExpr>(thisArg)){
 			ValueDecl * varDecl = dyn_cast<DeclRefExpr>(thisArg)->getDecl();
 			assert(varDecl && "no variable declaration");
@@ -1265,7 +1267,6 @@ public:
 			convFact.ctx.thisStack2 = var;
 			assert(var && "Variable for THIS not set");
 		}
-
 
 		core::ExpressionPtr retExpr;
 		const core::ASTBuilder& builder = convFact.builder;
@@ -1290,10 +1291,25 @@ public:
 
 		// convert the function declaration
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
+
+		// check THIS for pointer type
+		VLOG(2)<< convFact.ctx.thisStack2->getType()->getNodeType();
+
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 		// last element in the args is the THIS pointer - should be of the correct type
-		if (castedThisPtr ){
+		if (convFact.ctx.thisStack2->getType()->getNodeType()==core::NT_RefType &&
+				core::static_pointer_cast<const core::RefType>(convFact.ctx.thisStack2->getType())->getElementType()->getNodeType()==core::NT_RefType &&
+				core::static_pointer_cast<const core::RefType>(core::static_pointer_cast<const core::RefType>(convFact.ctx.thisStack2->getType())->getElementType())->getElementType()->getNodeType()==core::NT_ArrayType){
+			// prepare THIS (deref and array subscript and ref again) to match the constructor call
+			core::ExpressionPtr&& thisPtr =	builder.callExpr(
+					classType,
+					gen.getArraySubscript1D(),
+					builder.deref(builder.deref(ctx.thisStack2)),
+					builder.literal("0", gen.getUInt4())
+				);
+			packedArgs.push_back( builder.refVar(thisPtr) );
+		} else if (castedThisPtr ){
 			packedArgs.push_back(castedThisPtr);
 		} else {
 			packedArgs.push_back(convFact.ctx.thisStack2);
@@ -1540,6 +1556,28 @@ public:
 
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					CXX DEFAULT ARG EXPRESSION
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::ExpressionPtr VisitCXXDefaultArgExpr(clang::CXXDefaultArgExpr* defaultArgExpr) {
+		assert(convFact.currTU && "Translation unit not correctly set"); \
+		VLOG(1) << "\n****************************************************************************************\n" \
+				 << "Converting expression [class: '" << defaultArgExpr->getStmtClassName() << "']\n" \
+				 << "-> at location: (" <<	\
+					utils::location(defaultArgExpr->getUsedLocation(), convFact.currTU->getCompiler().getSourceManager()) << "): "; \
+		if( VLOG_IS_ON(2) ) { \
+			VLOG(2) << "Dump of clang expression: \n" \
+					 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"; \
+			defaultArgExpr->dump(); \
+		}
+		assert(defaultArgExpr->getExpr() && "no default value");
+		VLOG(2) << "Default value: " << Visit(defaultArgExpr->getExpr());
+		VLOG(2) << "End of expression CXXDefaultArgExpr\n";
+
+		return Visit(defaultArgExpr->getExpr());
+	}
+
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							MEMBER EXPRESSION
 	//
 	// [C99 6.5.2.3] Structure and Union Members. X->F and X.F.
@@ -1575,7 +1613,13 @@ public:
 			structTy = core::analysis::getReferencedType(structTy);
 			op = gen.getCompositeRefElem();
 		}
-		VLOG(2)<<structTy;
+
+		// we have a pointer type - unpack it
+		if (structTy->getNodeType() == core::NT_RefType) {
+			structTy = core::analysis::getReferencedType(structTy);
+			assert(structTy->getNodeType() == core::NT_ArrayType && "must be array type for pointer");
+			structTy = core::static_pointer_cast<const core::ArrayType>(structTy)->getElementType();
+		}
 
 		//VLOG(2)<<structTy->getNodeType() <<" "<<core::NT_RefType <<" "<<core::NT_VectorType <<" "<<core::NT_ArrayType <<" "<<core::NT_RecType <<" "<<core::NT_TupleType <<" "<<core::NT_FunctionType <<" "<<core::NT_TypeVariable  <<" "<<core::NT_StructType  <<" "<<core::NT_UnionType <<" "<<core::NT_GenericType ;
 		// There are 2 basic cases which need to be handled: Struct/Unions and Recursive Types
@@ -2121,7 +2165,10 @@ public:
 		START_LOG_EXPR_CONVERSION(declRef);
 		// check whether this is a reference to a variable
 		core::ExpressionPtr retExpr;
-		if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
+		if (ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())){
+			VLOG(2)<<"Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr());
+			retExpr = convFact.lookUpVariable( parmDecl );
+		} else if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
 		} else if( FunctionDecl* funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()) ) {
 			retExpr = core::static_pointer_cast<const core::Expression>( convFact.convertFunctionDecl(funcDecl) );
