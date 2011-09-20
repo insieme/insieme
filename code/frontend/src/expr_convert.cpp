@@ -894,12 +894,32 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitImplicitCastExpr(clang::ImplicitCastExpr* castExpr) {
 		START_LOG_EXPR_CONVERSION(castExpr);
+		const core::ASTBuilder& builder = convFact.builder;
 
 		core::ExpressionPtr retExpr = Visit(castExpr->getSubExpr());
+		core::TypePtr classTypePtr; // used for CK_DerivedToBase
 
 		// handle implicit casts according to their kind
 		switch(castExpr->getCastKind()) {
 		case CK_LValueToRValue: retExpr = asRValue(retExpr); break;
+		case CK_DerivedToBase:
+			for (CastExpr::path_iterator I = castExpr->path_begin(), E = castExpr->path_end(); I != E; ++I) {
+				const CXXBaseSpecifier* base = *I;
+				const CXXRecordDecl* recordDecl = cast<CXXRecordDecl>(base->getType()->getAs<RecordType>()->getDecl());
+
+				// find the class type
+				ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+				if(cit != convFact.ctx.classDeclMap.end()){
+					classTypePtr = cit->second;
+				}
+				assert(classTypePtr && "no class declaration to type pointer mapping");
+				VLOG(2) << recordDecl->getName().data();
+			}
+			VLOG(2)<< "DerivedToBase Cast on "<<classTypePtr;
+			// build ref-array to struct, if it is not lvalue
+			assert(classTypePtr && "no class declaration to type pointer mapping");
+			retExpr = builder.castExpr(builder.refType(builder.arrayType(classTypePtr)), retExpr);
+			break;
 		case CK_UncheckedDerivedToBase:
 			VLOG(2)<< "UncheckedDerivedToBase Cast on "<<convFact.ctx.curTy;
 			if(convFact.ctx.curTy){
@@ -907,6 +927,9 @@ public:
 				convFact.ctx.curTy=0;
 				break;
 			}
+			// use default
+			retExpr = VisitCastExpr(castExpr);
+			break;
 		default : {
 			// use default cast expr handling (fallback)
 			retExpr = VisitCastExpr(castExpr);
@@ -2626,7 +2649,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					const core::ExpressionPtr function = call->getFunctionExpr();
 					const vector<core::ExpressionPtr> args = call->getArguments();
 					vector<core::ExpressionPtr> newArgs;
-					for(int i = 0; i<args.size()-1; i++){
+					for(unsigned int i = 0; i<args.size()-1; i++){
 						newArgs.push_back(args[i]);
 					}
 					newArgs.push_back(init);
