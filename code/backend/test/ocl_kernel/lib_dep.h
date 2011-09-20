@@ -34,33 +34,3 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include <stdbool.h>
-#include <string.h>
-#include <stdarg.h>
-
-typedef enum _irt_errcode {
-	IRT_ERR_NONE,			// no error
-	IRT_ERR_IO,			// I/O error
-	IRT_ERR_INIT,			// error related to initialization
-	IRT_ERR_INTERNAL,		// internal error caused by runtime system
-	IRT_ERR_APP,			// error caused by the user application running on the IRT
-	IRT_ERR_OCL			// error caused by the opencl runtime system
-} irt_errcode;
-
-struct _irt_error {
-	irt_errcode errcode;
-	int additional_bytes;
-};
-// IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting platforms: \"%s\"", _irt_error_string(err_code));
-#define IRT_ASSERT(__condition, __errcode, __message, ...) \
-if(!(__condition)) { \
-	fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
-	printf(__message, ##__VA_ARGS__); \
-	printf("\n"); \
-}
-
-#define IRT_INFO(__message, ...) { \
-	printf(__message, ##__VA_ARGS__); \
-}
