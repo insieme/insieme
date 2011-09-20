@@ -282,6 +282,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(valDecl);
 	if ( fit != ctx.varDeclMap.end() ) {
 		// variable found in the map
+		VLOG(2)<<fit->first << " " << fit->second;
 		return fit->second;
 	}
 

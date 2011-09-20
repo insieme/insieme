@@ -49,9 +49,6 @@ namespace ba = boost::algorithm;
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/naming.h"
 
-
-#include "insieme/annotations/c/naming.h"
-
 namespace insieme {
 namespace frontend {
 namespace ocl {
@@ -128,7 +125,7 @@ ProgramPtr HostCompiler::compile() {
 		mProgram = newProg;
 	//			return newProg;
 	} else
-	assert(newProg && "Second pass of OclHostCompiler corrupted the program");
+	assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 
 	return mProgram;
 }

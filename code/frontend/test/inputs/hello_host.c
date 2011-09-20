@@ -52,8 +52,13 @@ cl_int subfunction(cl_command_queue queue, size_t* globalSize, size_t* localSize
 int main(int argc, char **argv) {
 	cl_int err;
 	cl_device_id* device;// = (cl_device_id*)malloc(sizeof(cl_device_id*));
+	cl_platform_id* platforms;
 	cl_command_queue* queue;
 	cl_context context;
+
+	cl_uint n;
+	err = clGetPlatformIDs(10, platforms, NULL);
+	clGetDeviceIDs(platforms[0], 0, 1, device, &n);
 
 	context = clCreateContext(0, 1, &device[0], NULL, NULL, &err);
 	gcontext = clCreateContext(0, 1, device, NULL, NULL, &err);
@@ -119,6 +124,7 @@ int main(int argc, char **argv) {
 	clReleaseEvent(event);
 	clReleaseKernel(kernel[0]);
 //	free(device);
+
 
 	return 0;
 }
