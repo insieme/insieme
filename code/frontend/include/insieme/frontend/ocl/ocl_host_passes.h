@@ -120,7 +120,7 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		core::CallExprPtr xCall =  dynamic_pointer_cast<const core::CallExpr>(x);
 		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
 
-std::cout << "\ncomparing " << x << " and\n          " << y << "\neqMap: " << eqMap << std::endl;
+//std::cout << "\ncomparing " << x << " and\n          " << y << "\neqMap: " << eqMap << std::endl;
 		if(!!xCall && builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
 			if(!!yCall && builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
 				return this->operator ()(xCall->getArgument(0), yCall->getArgument(0));
@@ -152,7 +152,7 @@ typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPt
 //typedef insieme::utils::map::PointerMap<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
 typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr, hash_target_specialized, equal_variables> KernelLambdas;
-typedef insieme::utils::map::PointerMap<core::ExpressionPtr, vector<core::DeclarationStmtPtr> > LocalMemDecls;
+typedef boost::unordered_map<core::ExpressionPtr, vector<core::DeclarationStmtPtr>, hash_target_specialized, equal_variables > LocalMemDecls;
 
 
 } //namespace ocl

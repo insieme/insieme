@@ -88,7 +88,6 @@ public:
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) = 0;
 
-
 };
 
 

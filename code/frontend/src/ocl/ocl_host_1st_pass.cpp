@@ -89,6 +89,7 @@ const ProgramPtr loadKernelsFromFile(string path, const ASTBuilder& builder) {
 
 	frontend::Program fkernels(builder.getNodeManager());
 	fkernels.addTranslationUnit(path);
+
 	return fkernels.convert();
 }
 
@@ -187,8 +188,8 @@ const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, con
 
 	TypePtr type;
 	ExpressionPtr size;
-	bool sizeFound = o2i.extractSizeFromSizeof(sizeArg, size, type);
-	assert(sizeFound && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
+	o2i.extractSizeFromSizeof(sizeArg, size, type);
+	assert(size && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
 
 	vector<ExpressionPtr> args;
 	args.push_back(BASIC.getTypeLiteral(type));
@@ -211,8 +212,8 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 		TypePtr type;
 		ExpressionPtr hostPtr;
 
-		bool sizeFound = o2i.extractSizeFromSizeof(sizeArg, size, type);
-		assert(sizeFound && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
+		o2i.extractSizeFromSizeof(sizeArg, size, type);
+		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
 
 		// declare a new variable to be used as argument
 		VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
@@ -237,7 +238,6 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	// check if the index argument is a (casted) integer literal
 	const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(index);
 	const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index);
-
 	if(!!idx && BASIC.isInt(idx)) {
 		// use the literal as index for the argument
 		unsigned int pos = atoi(idx->getValue().c_str());
@@ -260,25 +260,31 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 		uncasted = uncasted->getChildList().at(1);
 	}
 
-	while (const CallExprPtr& mul = dynamic_pointer_cast<const CallExpr> (uncasted)) {
-		if(mul->getArguments().size() == 2)
-			for (int i = 0; i < 2; ++i) {
-				// get rid of casts
-				core::NodePtr arg = mul->getArgument(i);
-				while (arg->getNodeType() == core::NT_CastExpr) {
-					arg = arg->getChildList().at(1);
-				}
-				if (const CallExprPtr& sizeof_ = dynamic_pointer_cast<const CallExpr>(arg)) {
-					if (sizeof_->toString().substr(0, 6).find("sizeof") != string::npos) {
-						// extract the type to be allocated
-						type = dynamic_pointer_cast<const Type> (sizeof_->getArgument(0)->getType()->getChildList().at(0));
-						// extract the number of elements to be allocated
-						size = mul->getArgument(1 - i);
-						return true;
-					}
-				}
+	if (const CallExprPtr& call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
+		// check if there is a multiplication
+		if(call->getFunctionExpr()->toString().find(".mul") != string::npos && call->getArguments().size() == 2) {
+			// recursively look into arguments of multiplication
+			if(extractSizeFromSizeof(call->getArgument(0), size, type)) {
+				if(size)
+					size = builder.callExpr(call->getType(), call->getFunctionExpr(), size, call->getArgument(1));
+				else
+					size = call->getArgument(1);
+				return true;
 			}
-			uncasted = mul->getArgument(0);
+			if(extractSizeFromSizeof(call->getArgument(1), size, type)){
+				if(size)
+					size = builder.callExpr(call->getType(), call->getFunctionExpr(), call->getArgument(0), size);
+				else
+					size = call->getArgument(0);
+				return true;
+			}
+		}
+		// check if we reached a sizeof call
+		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
+			// extract the type to be allocated
+			type = dynamic_pointer_cast<const Type> (call->getArgument(0)->getType()->getChildList().at(0));
+			return true;
+		}
 	}
 	return false;
 }
@@ -304,16 +310,42 @@ ExpressionPtr Ocl2Inspire::getClCreateBuffer(bool copyHostPtr) {
        }}");
 }
 
+ExpressionPtr Ocl2Inspire::getClCopyBuffer() {
+	// event stuff removed
+	// always returns 0 = CL_SUCCESS
+	return parser.parseExpression("fun(ref<array<'a, 1> >:srcBuffer, ref<array<'a, 1> >:dstBuffer, uint<8>:srcOffset, uint<8>:dstOffset, uint<8>:cb) -> int<4> {{ \
+			decl uint<8>:do = (dstOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
+			decl uint<8>:so = (srcOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
+            for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+                ( (op<array.ref.elem.1D>(dstBuffer, (i + do) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + so) )) )) ); \
+            return 0; \
+    	}}");
+}
+
+ExpressionPtr Ocl2Inspire::getClCopyBufferFallback() {
+	// event stuff removed
+	// always returns 0 = CL_SUCCESS
+	return parser.parseExpression("fun(ref<array<'a, 1> >:srcBuffer, ref<array<'a, 1> >:dstBuffer, uint<8>:srcOffset, uint<8>:dstOffset, uint<8>:cb) -> int<4> {{ \
+            decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
+			decl uint<8>:do = (dstOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
+			decl uint<8>:so = (srcOffset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
+			for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
+                ( (op<array.ref.elem.1D>(dstBuffer, (i + dstOffset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(srcBuffer, (i + dstOffset) )) )) ); \
+            return 0; \
+    	}}");
+}
+
 ExpressionPtr Ocl2Inspire::getClWriteBuffer() {
 	// blocking_write ignored
 	// event stuff removed
 	// always returns 0 = CL_SUCCESS
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_write, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
             decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
+			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
             for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
-                ( (op<array.ref.elem.1D>(devicePtr, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
+                ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
             return 0; \
-    }}");
+    	}}");
 }
 
 ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
@@ -322,11 +354,12 @@ ExpressionPtr Ocl2Inspire::getClWriteBufferFallback() {
 	// always returns 0 = CL_SUCCESS
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_write, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
             decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type(array('a ,1)) > )); \
+			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
             decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
             for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
-                ( (op<array.ref.elem.1D>(devicePtr, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
+                ( (op<array.ref.elem.1D>(devicePtr, (i + o) )) = (op<ref.deref>( (op<array.ref.elem.1D>(hp, i )) )) ); \
             return 0; \
-    }}");
+    	}}");
 }
 
 ExpressionPtr Ocl2Inspire::getClReadBuffer() {
@@ -335,10 +368,11 @@ ExpressionPtr Ocl2Inspire::getClReadBuffer() {
 	// always returns 0 = CL_SUCCESS
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_read, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
 			decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
-				for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
-					( (op<array.ref.elem.1D>(hp, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, i )) )) );\
+			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
+			for(decl uint<8>:i = lit<uint<8>, 0> .. cb : 1) \
+				( (op<array.ref.elem.1D>(hp, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, (i + o) )) )) );\
             return 0; \
-    }}");
+    	}}");
 	/*
 	 */
 }
@@ -350,18 +384,57 @@ ExpressionPtr Ocl2Inspire::getClReadBufferFallback() {
 	return parser.parseExpression("fun(ref<array<'a, 1> >:devicePtr, uint<4>:blocking_read, uint<8>:offset, uint<8>:cb, anyRef:hostPtr) -> int<4> {{ \
             decl ref<array<'a, 1> >:hp = (op<anyref.to.ref>(hostPtr, lit<type<array<'a, 1> >, type<array<'a ,1 > )); \
             decl uint<8>:size = (cb / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
+			decl uint<8>:o = (offset / (op<sizeof>( lit<type<'a>, type('a) > )) ); \
             for(decl uint<8>:i = lit<uint<8>, 0> .. size : 1) \
-                ( (op<array.ref.elem.1D>(hp, (i + offset) )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, i )) )) ); \
+                ( (op<array.ref.elem.1D>(hp, i )) = (op<ref.deref>( (op<array.ref.elem.1D>(devicePtr, (i + o) )) )) ); \
             return 0; \
     }}");
 }
 
+ExpressionPtr Ocl2Inspire::getClGetIDs() {
+	// does simply set the number of devices to 1 and returns 0 = CL_SUCCESS
+	// TODO add functionality
+	return parser.parseExpression("fun(ref<array<uint<4>, 1> >:num_devices) -> int<4> {{ \
+			( (op<array.ref.elem.1D>(num_devices, lit<uint<8>, 0>) ) = 1); \
+			return 0; \
+		}}");
+}
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
-	builder(build), o2i(build.getNodeManager()), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
+	builder(build), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
+		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
+		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)), localMemDecls(
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)) {
-		eqIdx = 1;
+	eqIdx = 1;
 //		eqMap[builder.stringLit("fucking placeholder")] = 0;
+
+	// TODO at the moment there will always be one platform and one device, change that!
+	ADD_Handler(builder, o2i, "clGetDeviceIDs",
+			NullLitSearcher nls(builder);
+			ExpressionPtr ret;
+			if(visitDepthFirstInterruptable(node->getArgument(4), nls))
+				ret = builder.intLit(0);
+			else
+				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(4));
+std::cout << "Ndevices: " << node->getArgument(4) << std::endl;
+			return ret;
+	);
+
+	ADD_Handler(builder, o2i, "clGetPlatformIDs",
+std::cout << "\nNplatforms: " << node->getArgument(2) << std::endl;
+			NullLitSearcher nls(builder);
+			ExpressionPtr ret;
+			if(visitDepthFirstInterruptable(node->getArgument(2), nls))
+				ret = builder.intLit(0);
+			else
+				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(2));
+			return ret;
+	);
+
+	ADD_Handler(builder, o2i, "irt_ocl_get_num_devices",
+			return builder.literal("1", BASIC.getUInt4());
+	)
+
 	ADD_Handler(builder, o2i, "clCreateBuffer",
 			std::set<enum CreateBufferFlags> flags = this->getFlags<enum CreateBufferFlags>(node->getArgument(1));
 
@@ -394,20 +467,37 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 					BASIC.getTypeLiteral(builder.arrayType(BASIC.getInt4())))); // errorcode_ret, never set
 	);
 
-	ADD_Handler(builder, o2i, "clEnqueueWriteBuffer",
+	ADD_Handler(builder, o2i, "clEnqueueCopyBuffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			args.push_back(foundSizeOf ? size : node->getArgument(4));
+			args.push_back(node->getArgument(4));
+			args.push_back(size ? size : node->getArgument(5));
+			return builder.callExpr(size ? o2i.getClCopyBuffer() : o2i.getClCopyBufferFallback(), args);
+	);
+
+	ADD_Handler(builder, o2i, "clEnqueueWriteBuffer",
+			// extract the size form argument size, relying on it using a multiple of sizeof(type)
+			ExpressionPtr size;
+			TypePtr type;
+			NullLitSearcher nls(builder);
+
+			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
+
+			vector<ExpressionPtr> args;
+			args.push_back(node->getArgument(1));
+			args.push_back(node->getArgument(2));
+			args.push_back(node->getArgument(3));
+			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "irt_ocl_write_buffer",
@@ -415,15 +505,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(0));
 			args.push_back(node->getArgument(1));
 			args.push_back(builder.uintLit(0)); // offset not supported
-			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(foundSizeOf ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "clEnqueueReadBuffer",
@@ -431,15 +521,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(4), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(1));
 			args.push_back(node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			args.push_back(foundSizeOf ? size : node->getArgument(4));
+			args.push_back(size ? size : node->getArgument(4));
 			args.push_back(node->getArgument(5));
-			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "irt_ocl_read_buffer",
@@ -447,15 +537,15 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			ExpressionPtr size;
 			TypePtr type;
 
-			bool foundSizeOf = o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
+			o2i.extractSizeFromSizeof(node->getArgument(2), size, type);
 
 			vector<ExpressionPtr> args;
 			args.push_back(node->getArgument(0));
 			args.push_back(node->getArgument(1));
 			args.push_back(builder.uintLit(0)); // offset not supported
-			args.push_back(foundSizeOf ? size : node->getArgument(2));
+			args.push_back(size ? size : node->getArgument(2));
 			args.push_back(node->getArgument(3));
-			return builder.callExpr(foundSizeOf ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
+			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
 	ADD_Handler(builder, o2i, "clSetKernelArg",
@@ -482,20 +572,6 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 
 //			std::cout << "\nEqMap: " << eqMap;
 //			std::cout << "\nKernelARgs: " << kernelArgs << "\nkernel: " << k << std::endl;
-			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
-
-			std::vector<core::ExpressionPtr> args = kernelArgs[k];
-			// adding global and local size to the argument vector
-			args.push_back(node->getArgument(4) );
-			args.push_back(node->getArgument(5) );
-
-			return node;
-	);
-
-	ADD_Handler(builder, o2i, "clEnqueueNDRangeKernel",
-			// get argument vector
-			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(1), builder);
-//			tryStructExtract(k, builder);
 			assert(kernelArgs.find(k) != kernelArgs.end() && "Cannot find any arguments for kernel function");
 
 			std::vector<core::ExpressionPtr> args = kernelArgs[k];
@@ -868,9 +944,11 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
 
 		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(fun)) {
-//			callExpr->substitute(builder.getNodeManager(), *this);
+//std::cout << "\nTry to handle " << literal->getValue();
+			//			callExpr->substitute(builder.getNodeManager(), *this);
 			if(const HandlerPtr& replacement = findHandler(literal->getValue())) {
 				NodePtr ret = replacement->handleNode(callExpr);
+//std::cout << "\nHandling fct " << literal->getValue() << " -> " << ret << std::endl;
 				// check if new kernels have been created
 				const vector<ExpressionPtr>& kernels = replacement->getKernels();
 				if(kernels.size() > 0) {
@@ -893,8 +971,12 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 //std::cout << "found a variable\n";
 						if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos) {
 //std::cout << "Variable " << callExpr << " has the right type\n";
-							eqMap[var] = eqIdx;
-							eqMap[*paramIt] = eqIdx++;
+							if(eqMap.find(var) != eqMap.end())
+								eqMap[*paramIt] = eqMap[var];
+							else {
+								eqMap[var] = eqIdx;
+								eqMap[*paramIt] = eqIdx++;
+							}
 						}
 					}
 					if(paramIt != lambda->getParameterList().end()) // should always be true, only for security reasons
@@ -1049,6 +1131,12 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			return BASIC.getNoOp();
 		}
 
+		if(dynamic_pointer_cast<const StructType>(getNonRefType(var))) {
+			if(var->getType()->toString().find("array<_cl_") != string::npos) {
+				// if the structure contains some cl_ variables, add it to cl_mem map so that it will be cleaned in second pass
+				cl_mems[var] = var;
+			}
+		}
 	}
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);

@@ -87,6 +87,13 @@ ProgramPtr HostCompiler::compile() {
 	const ProgramPtr& progWithEntries = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 	const ProgramPtr& progWithKernels = core::Program::remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
 
+/*	for_each(oclHostMapper.getEquivalenceMap(), [](std::pair<ExpressionPtr, size_t> a) {
+		std::cout << "\nHate " << *a.first << " " << a.second;
+		if(auto cname = a.first->getAnnotation(annotations::c::CNameAnnotation::KEY))
+			std::cout << " " << cname->getName();
+	});
+	std::cout << std::endl  << std::endl;
+*/
 	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), oclHostMapper.getEquivalenceMap(), builder);
 	oh2nd.mapNamesToLambdas(kernelEntries);
 
@@ -118,7 +125,7 @@ ProgramPtr HostCompiler::compile() {
 		mProgram = newProg;
 	//			return newProg;
 	} else
-	assert(newProg && "Second pass of OclHostCompiler corrupted the program");
+	assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 
 	return mProgram;
 }

@@ -264,23 +264,24 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 }
 
 const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr, const CallExprPtr& newCall, const size_t offset) {
+
 	// get kernel function
 	ExpressionPtr k = callExpr->getArgument(1-offset);
 
 	// check if argument is a call to ref.deref
 	k = tryRemove(BASIC.getRefDeref(), k, builder);
-/*std::cout << "\nKernel: " << k << std::endl;
+
 	// get corresponding lambda expression
-//equal_target<ExpressionPtr> cmp;
+/*equal_target<ExpressionPtr> cmp;
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
 });
-std::cout << "k " << k << std::endl;//" compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; */
+std::cout << "\nk " << k << "\ny " << kernelLambdas.begin()->first << "\n compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; //*/
 /*std::cout << "\nREACHED" << k << "\n";
-std::cout << kernelLambdas << std::endl;
+std::cout << kernelLambdas << std::endl;//*/
 	assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
-std::cout << "passed\n";//*/
+
 	LambdaExprPtr lambda = kernelLambdas[k];
 
 	assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
@@ -290,6 +291,14 @@ std::cout << "passed\n";//*/
 	const ExpressionPtr global = anythingToVec3(newCall->getArgument(2-offset), newCall->getArgument(4-2*offset));
 	const ExpressionPtr local = anythingToVec3(newCall->getArgument(2-offset), newCall->getArgument(5-2*offset));
 
+	// very simple handling of loops around the call as well as around the variable declaraton. Will not work for 97 % of all real world cases
+	ExpressionPtr idx;
+	if(const CallExprPtr& callK = dynamic_pointer_cast<const CallExpr>(k))
+		if(BASIC.isSubscriptOperator(callK->getFunctionExpr())) {
+//			if(dynamic_pointer_cast<const Variable>(tryRemove(callK->getArgument(1)); //TODO might limit this to variables only?
+				idx  = callK->getArgument(1);
+		}
+
 	vector<ExpressionPtr> newArgs;
 	// construct call to kernel function
 	if(localMemDecls.find(k) == localMemDecls.end() || localMemDecls[k].size() == 0) {
@@ -298,8 +307,15 @@ std::cout << "passed\n";//*/
 				assert(!!arg && "Kernel has illegal global memory argument");
 				//global and private memory arguments must be variables
 				arg = getVarOutOfCrazyInspireConstruct(arg, builder);
+
+				if(const CallExprPtr& callArg = dynamic_pointer_cast<const CallExpr>(arg))
+					if(BASIC.isSubscriptOperator(callArg->getFunctionExpr())) {
+						if(idx) // TODO might limit this to (casted) variables only?
+							arg = builder.callExpr(callArg->getFunctionExpr(), callArg->getArgument(0), idx);
+					}
+
 				newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), dynamic_pointer_cast<const Expression>(this->resolveElement(arg))));
-			});
+		});
 
 		// add global and local size to arguments
 		newArgs.push_back(global);
@@ -338,6 +354,13 @@ std::cout << "passed\n";//*/
 				// global and private memory arguments will be passed to the wrapper function as agrument
 				ExpressionPtr newArg = dynamic_pointer_cast<const Expression>(this->resolveElement(arg));
 				assert(!!newArg && "Argument of kernel function must be an Expression");
+
+				if(const CallExprPtr& callArg = dynamic_pointer_cast<const CallExpr>(newArg))
+					if(BASIC.isSubscriptOperator(callArg->getFunctionExpr())) {
+						if(idx) // TODO might limit this to variables only?
+							newArg = builder.callExpr(callArg->getFunctionExpr(), callArg->getArgument(0), idx);
+					}
+
 				newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), newArg));
 				wrapperInterface.push_back(newArgs.back()->getType());
 
@@ -378,7 +401,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	if (element->getNodeCategory() == NodeCategory::NC_Type) {
 		return element;//->substitute(builder.getNodeManager(), *this);
 	}
-
 
 	// TODO make more efficient
 	if(replacements.find(element) != replacements.end())
@@ -473,15 +495,17 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			}
 		} else {
 // remove delarations of opencl type variables. Should not be used any more
-			if(var->getType()->toString().find("array<_cl_") != string::npos /*&& var->getNodeCategory() != NT_StructType*/)
+			if(var->getType()->toString().find("array<_cl_") != string::npos
+					&& getNonRefType(var)->getNodeType() != NT_StructType) //TODO remove this line!
+			{
 				return BASIC.getNoOp();
+			}
 		}
 
 	}
 
 
 	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
-
 		// check if arguments have been replaced
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr())) {
 			Lambda::ParamList params = lambda->getParameterList();
@@ -536,11 +560,20 @@ std::cout << "]\n";*/
 				const LambdaExprPtr& newLambda = builder.lambdaExpr(callExpr->getType(), lambda->getBody(), newParams);
 				NodePtr ret = builder.callExpr(callExpr->getType(), newLambda, args);
 				copyAnnotations(callExpr, ret);
+
 				return ret->substitute(builder.getNodeManager(), *this);
 			}
 		}
 
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
+
+		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(fun)) {
+			if(lit->toString().find("Buffer") != string::npos) {
+				std::cout << "FOUND " << lit << std::endl;
+				assert(false);
+			}
+		}
+
 		if(fun == BASIC.getRefAssign()) {
 			// get rid of some not needed functions
 			const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this));
@@ -608,7 +641,6 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 			}
 		}
 
-
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this))) {
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 				if(fun->getValue() == "clEnqueueNDRangeKernel") {
@@ -623,9 +655,9 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 				const VariablePtr& newStruct = dynamic_pointer_cast<const Variable>(newCall->getArgument(0));
 				const VariablePtr& oldStruct = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0));
 //				std::cout << "OldStruct: " << callExpr->getArgument(0) << "\nNewStruct: " << newCall->getArgument(0) << std::endl;
-
 				//TODO test quickfix if NULL, e.g. struct is inside an array
 				//assert(oldStruct && newStruct && "First argument of composite.ref.elem must be a struct variable");
+
 				if(!!newStruct && (newStruct != oldStruct)) { // struct variable has been replaced, may need to update type of composite.ref.elem
 					const TypePtr& newType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct->getType()));
 					assert(newType && "First argument of composite.ref.elem must be a struct variable");
@@ -676,9 +708,9 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 				for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
 					// extra check to not remove e.g. sizeof
 					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr()))
-						if(lit->getValue().find("sizeof") == string::npos)
+						if(lit->getValue().find("sizeof") == string::npos && lit->getValue().find("composite.ref.elem") == string::npos )
 							if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
-			//					std::cout << "-> " << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
+//std::cout << "\n-> " << newCall->getType() << " " << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
 								return getZeroElem(newCall->getType());
 							}
 				}
