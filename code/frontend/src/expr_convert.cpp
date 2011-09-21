@@ -1353,6 +1353,18 @@ public:
 
 		// convert the function declaration
 		ExpressionList&& packedArgs = tryPack(builder, funcTy, args);
+
+		if (packedArgs.size()>1) {
+			convFact.ctx.lhsThis = packedArgs[0];
+			convFact.ctx.rhsThis = packedArgs[1];
+		} else if (packedArgs.size()==1) {
+			convFact.ctx.lhsThis = convFact.ctx.thisStack2;
+			convFact.ctx.rhsThis = packedArgs[0];
+		} else {
+			convFact.ctx.lhsThis = packedArgs[0];
+		}
+		convFact.ctx.isCXXOperator=true;
+
 		core::ExpressionPtr lambdaExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 		if(args.size()<2){
@@ -1363,6 +1375,9 @@ public:
 		// reset to parent THIS
 		convFact.ctx.thisStack2 = parentThisStack;
 
+		convFact.ctx.isCXXOperator=false;
+		convFact.ctx.lhsThis = 0;
+		convFact.ctx.rhsThis = 0;
 
 		//assert(false && "CXXOperatorCallExpr not yet handled");
 		VLOG(2) << "End of expression CXXOperatorCallExpr \n";
@@ -1547,6 +1562,10 @@ public:
 		VLOG(2) << "CXXThisExpr: \n";
 		if( VLOG_IS_ON(2) ) {
 			callExpr->dump();
+		}
+
+		if(convFact.ctx.isCXXOperator){
+			return convFact.ctx.lhsThis;
 		}
 
 		VLOG(2) << "THIS: " << convFact.ctx.thisStack2 ;
