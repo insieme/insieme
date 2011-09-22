@@ -163,10 +163,6 @@ class ConversionFactory : public boost::noncopyable {
 		core::VariablePtr thisStack2;
 		core::VariablePtr thisVar; // used in Functions as reference
 
-		// for operators
-		core::VariablePtr lhsThis;
-		core::VariablePtr rhsThis;
-
 		typedef std::map<const clang::SourceLocation, core::VariablePtr> ThisMap;
 		ThisMap thisMap;
 
@@ -175,16 +171,25 @@ class ConversionFactory : public boost::noncopyable {
 
 		bool useClassCast;
 
+		// for operators
+		bool isCXXOperator;
+		core::ExpressionPtr lhsThis;
+		core::ExpressionPtr rhsThis;
+
 		// maps the resulting type pointer to the declaration of a class
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
 		ClassDeclMap classDeclMap;
+
+		// maps a constructor declaration to the call expression with memory allocation - such
+		// a call expression returns a pointer to the allocated and initialized object
+		LambdaExprMap lambdaExprCacheNewObject;
 
 		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
 		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
 		CtorInitializerMap ctorInitializerMap;
 
 		ConversionContext() :
-			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(false) { }
+			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(false), isCXXOperator(false) { }
 	};
 
 	ConversionContext 		ctx;

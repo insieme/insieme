@@ -516,6 +516,7 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
+		assert(initExpr && "not correct initialization of the variable");
 
 		ctx.thisStack2 = var;
 
