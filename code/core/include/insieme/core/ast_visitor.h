@@ -54,7 +54,6 @@
 #include "insieme/core/program.h"
 #include "insieme/core/statements.h"
 #include "insieme/core/types.h"
-#include "insieme/core/placeholder.h"
 
 // Once more, gcc sucks
 #if defined WIN32

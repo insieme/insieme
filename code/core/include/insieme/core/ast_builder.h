@@ -106,6 +106,16 @@ public:
 		return manager.basic;
 	}
 
+	template<typename T, typename ... Children>
+	Pointer<T> create(Children ... child) {
+		return T::get(manager, child ...);
+	}
+
+	template<typename T>
+	Pointer<T> createFromList(const Node::ChildList& children) {
+		return T::get(manager, children);
+	}
+
 	ProgramPtr createProgram(const Program::EntryPointList& entryPoints = Program::EntryPointList(), bool main = false);
 
 #include "ast_builder.inl"

@@ -38,13 +38,15 @@
 #include <cassert>
 #include <stdexcept>
 
+#include "insieme/core/types.h"
+
 #include <boost/algorithm/string/join.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/core/types.h"
+#include "insieme/core/ast_mapper.h"
 
 using namespace insieme::core;
 
