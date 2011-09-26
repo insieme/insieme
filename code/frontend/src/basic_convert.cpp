@@ -562,8 +562,16 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
     }
 
     // -------------------------------------------------- C NAME ------------------------------------------------------
-    // annotate with the C name of the function
-    node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getNameAsString() ) );
+
+    // check for overloaded operator "function" (normal function has kind OO_None)
+	clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
+	if(operatorKind!=OO_None){
+		string operatorAsString = boost::lexical_cast<string>( operatorKind);
+		node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>("operator"+operatorAsString) );
+	} else {
+	    // annotate with the C name of the function
+	    node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getNameAsString() ) );
+	}
 
     // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
     /*

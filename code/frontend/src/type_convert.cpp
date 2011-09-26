@@ -535,13 +535,14 @@ public:
 
 				if(recDeclCXX){
 
-					for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
-							bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
-						VLOG(2) << bit;
-						const CXXBaseSpecifier * base = bit;
-						RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
+					vector<clang::RecordDecl*> bases = getAllBases(recDeclCXX);
+					VLOG(2) << "has "<< bases.size() << " bases";
+					for(vector<clang::RecordDecl*>::iterator bit=bases.begin(),
+							bend=bases.end(); bit != bend; ++bit) {
+						RecordDecl *baseRecord = *bit;
 
-						for(RecordDecl::field_iterator it=baseRecord->field_begin(), end=baseRecord->field_end(); it != end; ++it) {
+						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
+								end=baseRecord->field_end(); it != end; ++it) {
 							RecordDecl::field_iterator::value_type curr = *it;
 							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
 							core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
@@ -669,10 +670,6 @@ public:
 
 
 
-
-
-
-
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
 				convFact.ctx.classDeclMap.insert(std::make_pair(tagDecl, retTy));
@@ -685,6 +682,20 @@ public:
 		return retTy;
 	}
 
+	// Returns all bases of a c++ record declaration
+	vector<RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
+		vector<RecordDecl*> bases;
+
+		for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
+				bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+			const CXXBaseSpecifier * base = bit;
+			RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
+			bases.push_back(baseRecord);
+			vector<RecordDecl*> subBases = getAllBases(dyn_cast<clang::CXXRecordDecl>(baseRecord));
+			bases.insert(bases.end(), subBases.begin(), subBases.end());
+		}
+		return bases;
+	}
 
 	//TODO
 	core::FunctionTypePtr addCXXThisToFunctionType(const core::ASTBuilder& builder,
