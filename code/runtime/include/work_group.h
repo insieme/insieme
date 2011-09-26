@@ -59,6 +59,7 @@ struct _irt_work_group {
 	void** redistribute_data_array;
 	irt_work_item* pfor_wi_list[IRT_WG_RING_BUFFER_SIZE];
 	uint32 pfor_count;
+	uint32 joined_pfor_count;
 };
 
 struct _irt_wi_wg_membership {
