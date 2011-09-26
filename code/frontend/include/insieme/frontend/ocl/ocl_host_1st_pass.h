@@ -86,21 +86,25 @@ public:
  */
 struct Ocl2Inspire {
 private:
+	core::ASTBuilder& builder;
 	core::parse::IRParser parser;
 
 public:
-	Ocl2Inspire(core::NodeManager& mgr) :
-		parser(mgr) {
+	Ocl2Inspire(core::ASTBuilder& build) :
+		builder(build), parser(build.getNodeManager()) {
 	}
 
 	bool extractSizeFromSizeof(const core::ExpressionPtr& arg,
 			core::ExpressionPtr& size, core::TypePtr& type);
 
 	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr);
+	core::ExpressionPtr getClCopyBuffer();
+	core::ExpressionPtr getClCopyBufferFallback();
 	core::ExpressionPtr getClWriteBuffer();
 	core::ExpressionPtr getClWriteBufferFallback();
 	core::ExpressionPtr getClReadBuffer();
 	core::ExpressionPtr getClReadBufferFallback();
+	core::ExpressionPtr getClGetIDs();
 };
 
 /**
@@ -198,6 +202,8 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	vector<core::ExpressionPtr> kernelEntries;
 	LocalMemDecls localMemDecls;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+	EquivalenceMap eqMap;
+	size_t eqIdx;
 
 
 	// check if the call is a call to ref.assign
@@ -244,6 +250,7 @@ public:
 	KernelArgs& getKernelArgs() { return kernelArgs; }
 	KernelNames& getKernelNames() { return kernelNames; }
 	LocalMemDecls& getLocalMemDecls() {	return localMemDecls; }
+	EquivalenceMap& getEquivalenceMap() { return eqMap; }
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& getReplacements() { return replacements; }
 };
 

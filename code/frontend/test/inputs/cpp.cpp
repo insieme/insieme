@@ -34,5 +34,26 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define IRT_OCL_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/"
+// ignore warnings
+#pragma GCC diagnostic ignored "-Wall"
+
+void init_class() {
+	#pragma test \
+	"struct<a:int<4>,b:int<4>,c:int<4>>"
+	class TheClass{
+		public:
+		int a;
+		int b;
+		int c;
+	};
+
+	#pragma test \
+	"decl ref<struct<a:int<4>,b:int<4>,c:int<4>>> v1 = ( var(undefined(type<struct<a:int<4>,b:int<4>,c:int<4>>>)))"
+	TheClass a;
+
+
+
+}
+
+
+

@@ -45,6 +45,18 @@ namespace insieme {
 namespace transform {
 
 	/**
+	 * NOTES:
+	 * This header file defines the basic interface for transformations and
+	 * some of the routines to be used for applying those. Further header files
+	 * are defining concrete transformations or transformation connectors.
+	 *
+	 * Ideas:
+	 * 	- prohibit direct creation of transformation instances => use factories
+	 */
+
+
+
+	/**
 	 * The common abstract base class / interface for all transformations handled
 	 * within the Insieme Transformation Framework.
 	 */
@@ -68,6 +80,10 @@ namespace transform {
 		 * Requests this transformation to be applied on the given target. The result
 		 * should be the transformed version of the node. During the transformation, the
 		 * node manager of the given node will be used to create new instances of IR nodes.
+		 *
+		 * The transformation conducted during this step is requested to be deterministic and pure.
+		 * Hence, given the same input, the same result is produced and no global state will be able to
+		 * effect the transformations behavior.
 		 *
 		 * @param target the node to be transformed
 		 * @return the transformed node
@@ -106,9 +122,9 @@ namespace transform {
 
 	public:
 		InvalidTargetException(const string& cause) : msg(cause) {};
-		InvalidTargetException(const core::NodePtr& node);
+		//InvalidTargetException(const core::NodePtr& node);
 		virtual ~InvalidTargetException() throw() { }
-		virtual const char* what() const throw();
+		virtual const char* what() const throw() { return msg.c_str(); }
 	};
 
 

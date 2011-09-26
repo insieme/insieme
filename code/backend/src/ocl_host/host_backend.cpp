@@ -79,11 +79,8 @@ namespace ocl_host {
 
 	TargetCodePtr OCLHostBackend::convert(const core::NodePtr& code) const {
 
-		// basic setup
-		ConverterConfig config = ConverterConfig::getDefault();
-
 		// create and set up the converter
-		Converter converter(config);
+		Converter converter;
 
 		// set up the node manager (for temporals)
 		core::NodeManager& nodeManager = code->getNodeManager();
@@ -117,9 +114,6 @@ namespace ocl_host {
 
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getBasicFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
-
-		ParallelManager parallelManager;
-		converter.setParallelManager(&parallelManager);
 
 		// conduct conversion
 		return converter.convert(code);

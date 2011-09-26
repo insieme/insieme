@@ -78,7 +78,7 @@ namespace backend {
 //		for_each(core::check(processed, core::checks::getFullCheck()).getAll(), [](const core::Message& msg) {
 //			LOG(INFO) << msg << " @ " << *msg.getAddress();
 //		});
-		assert(core::check(processed, core::checks::getFullCheck()).getErrors().empty() && "Errors encountered after pre-processing");
+//		assert(core::check(processed, core::checks::getFullCheck()).getErrors().empty() && "Errors encountered after pre-processing");
 
 		// -------------------------- CONVERSION -------------------------
 

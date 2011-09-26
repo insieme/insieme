@@ -282,6 +282,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(valDecl);
 	if ( fit != ctx.varDeclMap.end() ) {
 		// variable found in the map
+		VLOG(2)<<fit->first << " " << fit->second;
 		return fit->second;
 	}
 
@@ -515,6 +516,10 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 
 		// initialization value
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
+		assert(initExpr && "not correct initialization of the variable");
+
+		ctx.thisStack2 = var;
+
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {
 		// this variable is extern
@@ -557,8 +562,16 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
     }
 
     // -------------------------------------------------- C NAME ------------------------------------------------------
-    // annotate with the C name of the function
-    node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getName() ) );
+
+    // check for overloaded operator "function" (normal function has kind OO_None)
+	clang::OverloadedOperatorKind operatorKind = funcDecl->getOverloadedOperator();
+	if(operatorKind!=OO_None){
+		string operatorAsString = boost::lexical_cast<string>( operatorKind);
+		node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>("operator"+operatorAsString) );
+	} else {
+	    // annotate with the C name of the function
+	    node->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>( funcDecl->getNameAsString() ) );
+	}
 
     // ---------------------------------------- SourceLocation Annotation ---------------------------------------------
     /*

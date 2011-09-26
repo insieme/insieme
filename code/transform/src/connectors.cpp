@@ -36,10 +36,60 @@
 
 #include "insieme/transform/connectors.h"
 
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 namespace transform {
 
+	namespace {
+
+		class ForEachMapper : public core::transform::CachedNodeMapping {
+
+			const ForEach& setup;
+
+		public:
+
+			ForEachMapper(const ForEach& setup) : setup(setup) {}
+
+
+			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+				if (setup.getFilter()(ptr)) {
+					return setup.getTransformation()->apply(ptr);
+				}
+				return ptr;
+			}
+
+
+		};
+
+	}
+
+
+	core::NodePtr ForEach::apply(const core::NodePtr& target) const {
+		ForEachMapper mapper(*this);
+		return target->substitute(target->getNodeManager(), mapper);
+	}
+
+
+	core::NodePtr Fixpoint::apply(const core::NodePtr& target) const {
+		// apply transformation until result represents a fix-point of the sub-transformation
+		core::NodePtr cur = target;;
+		core::NodePtr last;
+		unsigned counter = 0;
+		do {
+			last = cur;
+			cur = transformation->apply(last);
+			counter++;
+		} while (*cur != *last && counter <= maxIterations);
+
+		// check whether fixpoint could be obtained
+		if (*cur != *last) {
+			throw InvalidTargetException("Fixpoint could not be obtained!");
+		}
+
+		// return fixpoint
+		return cur;
+	}
 
 
 

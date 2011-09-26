@@ -61,6 +61,66 @@ template<class KeyPtr, class ValueType>
 class PointerMultiMap : public boost::unordered_multimap<KeyPtr, ValueType, hash_target<KeyPtr>, equal_target<KeyPtr>> { };
 
 /**
+ * Crates a singleton mapping between the given key/value pair.
+ */
+template<class Key, class Value>
+PointerMap<Key, Value> mapPointerTo(const Key& key, const Value& value) {
+	PointerMap<Key, Value> res;
+	res[key] = value;
+	return res;
+}
+
+/**
+ * A utility function adding data to a given map. This is the terminal case,
+ * where there is no data to be added. The same function is overloaded for
+ * differnet parameters, allowing more data to be added.
+ *
+ * @param map the map to be extended with nothing.
+ */
+template<class Key, class Value>
+inline PointerMap<Key,Value>& addMappings(PointerMap<Key,Value>& map) {
+	return map;
+}
+
+/**
+ * A utility function adding data to a given map. The data after the given map
+ * will be interpreted as a sequence of key/value elements.
+ *
+ * @param map the map to be extended
+ * @param key the first key to be added to the given map
+ * @param value the value to be assigned to the given key
+ * @param rest the remaining key/value pairs being processed recursively
+ * @return a reference to the given map
+ */
+template<class Key, class Value, class ... Data>
+inline PointerMap<Key,Value>& addMappings(PointerMap<Key,Value>& map, const Key& key, const Value& value, Data ... rest) {
+	addMappings<Key, Value>(map, rest ...);
+	map.insert(std::make_pair(key,value));
+	return map;
+}
+
+/**
+ * A generic utility function allowing to compose pointer mappings within
+ * a single expression. The function will create a new map and fill it with
+ * key / value pairs as they are provided as additional parameters. If the
+ * same key occurs multiple times, the latest value will be assigned in the
+ * resulting map.
+ *
+ * @tparam Key the type of key to be used within the resulting map
+ * @tparam Value the type of value to be stored within the resulting map
+ * @tparam Data the variadic argument list covering the alternating key/value pairs
+ * @param key the first key to be inserted (for automatic type deduction)
+ * @param value the first value to be assigned to the given key
+ * @param rest the remaining data to be inserted into the resulting map
+ * @return a map containing all the given data
+ */
+template<class Key, class Value, class ... Data>
+inline PointerMap<Key,Value> toPointerMap(const Key& key, const Value& value, const Data ... rest) {
+	PointerMap<Key,Value> res;
+	return addMappings<Key, Value>(res, key, value, rest ...);
+}
+
+/**
  * Compares whether the two given maps are equal, hence they contain
  * the same set of keys and to each key, equivalent values are attacked.
  *

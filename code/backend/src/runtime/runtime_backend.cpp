@@ -85,11 +85,8 @@ namespace runtime {
 
 	TargetCodePtr RuntimeBackend::convert(const core::NodePtr& code) const {
 
-		// basic setup
-		ConverterConfig config = ConverterConfig::getDefault();
-
 		// create and set up the converter
-		Converter converter(config);
+		Converter converter;
 
 		// set up the node manager (for temporals)
 		core::NodeManager& nodeManager = code->getNodeManager();
@@ -123,9 +120,6 @@ namespace runtime {
 
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
-
-		ParallelManager parallelManager;
-		converter.setParallelManager(&parallelManager);
 
 		// conduct conversion
 		return converter.convert(code);

@@ -142,18 +142,28 @@ public:
 		// if there is only one declaration in the DeclStmt we return it
 
 	    if ( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
+			StmtWrapper retList;
+			clang::VarDecl * varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
 			try {
-				core::DeclarationStmtPtr&& retStmt =
-						convFact.convertVarDecl( dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()) );
+				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
 
                 // check if there is a kernelFile annotation
 				ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, convFact);
 				// handle eventual OpenMP pragmas attached to the Clang node
 				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-				return StmtWrapper( annotatedNode );
+				retList.push_back(annotatedNode);
+
+				// convert the constructor of a class
+				if(varDecl->getDefinition()->getInit()){
+					if(dyn_cast<clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())) {
+						core::ExpressionPtr ctor = convFact.convertExpr( (dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()))->getDefinition()->getInit() );
+						retList.push_back(ctor);
+					}
+				}
 			} catch ( const GlobalVariableDeclarationException& err ) {
 				return StmtWrapper();
 			}
+			return retList;
 		}
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
@@ -987,6 +997,7 @@ public:
 	FORWARD_VISITOR_CALL(CXXDeleteExpr)
 	FORWARD_VISITOR_CALL(CXXThisExpr)
 	FORWARD_VISITOR_CALL(CXXThrowExpr)
+	FORWARD_VISITOR_CALL(CXXDefaultArgExpr)
 
 	StmtWrapper VisitStmt(Stmt* stmt) {
 		std::for_each( stmt->child_begin(), stmt->child_end(), [ this ] (Stmt* stmt) { this->Visit(stmt); });

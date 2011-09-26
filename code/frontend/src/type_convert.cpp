@@ -452,6 +452,11 @@ public:
 		VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
 
 		const TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
+		ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(tagDecl);
+		if(cit != convFact.ctx.classDeclMap.end()){
+			return cit->second;
+		}
+
 		// iterate through all the re-declarations to see if one of them provides a definition
 		TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
 		for(i = tagDecl->redecls_begin(); i != e && !i->isDefinition(); ++i) ;
@@ -522,6 +527,67 @@ public:
 				// Note: if a field is referring one of the type in the cyclic dependency, a reference
 				//       to the TypeVar will be returned.
 				core::NamedCompositeType::Entries structElements;
+
+				// TODO
+				// c++ constructors
+				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+				VLOG(2)<<recDeclCXX;
+
+				if(recDeclCXX){
+
+					vector<clang::RecordDecl*> bases = getAllBases(recDeclCXX);
+					VLOG(2) << "has "<< bases.size() << " bases";
+					for(vector<clang::RecordDecl*>::iterator bit=bases.begin(),
+							bend=bases.end(); bit != bend; ++bit) {
+						RecordDecl *baseRecord = *bit;
+
+						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
+								end=baseRecord->field_end(); it != end; ++it) {
+							RecordDecl::field_iterator::value_type curr = *it;
+							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
+							core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+							structElements.push_back(
+									core::NamedCompositeType::Entry(id, fieldType )
+								);
+						}
+
+					}
+
+
+//					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
+//							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+//						CXXConstructorDecl * ctorDecl = *xit;
+//						VLOG(1) << "~ Converting constructor: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
+//
+//						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(ctorDecl) );
+//						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
+//						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
+//
+//						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
+//
+//						convFact.convertFunctionDecl(ctorDecl);
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						//curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+//
+//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+//						CXXMethodDecl * curr = *mit;
+//						//convFact.convertFunctionDecl(curr, false);
+//
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						//curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+
+				}  // end if recDeclCXX
+
+				
 				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
 					RecordDecl::field_iterator::value_type curr = *it;
 					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
@@ -535,54 +601,7 @@ public:
 							core::NamedCompositeType::Entry(id, fieldType )
 						);
 				}
-
-
-
-
-
-
-				// TODO
-				// c++ constructors
-//				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
-//
-//				if(recDeclCXX){
-//					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
-//							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
-//						CXXConstructorDecl * ctorDecl = *xit;
-//						VLOG(1) << "~ Converting constructor: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
-//
-//
-//
-//
-//
-//						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(ctorDecl) );
-//						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
-//						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
-//
-//						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
-//
-//
-//
-//
-//
-//						convFact.convertFunctionDecl(ctorDecl);
-//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-//						//curr->dumpDeclContext(); // on cerr
-//						//std::cerr<<"enddumpconstr\n";
-//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-//					}
-//
-//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-//						CXXMethodDecl * curr = *mit;
-//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-//						//curr->dumpDeclContext(); // on cerr
-//						//std::cerr<<"enddumpconstr\n";
-//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-//					}
-//				}
+				
 
 				// For debug only ...
 				// std::cerr << "\n***************Type graph\n";
@@ -651,12 +670,9 @@ public:
 
 
 
-
-
-
-
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
+				convFact.ctx.classDeclMap.insert(std::make_pair(tagDecl, retTy));
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type
@@ -666,6 +682,20 @@ public:
 		return retTy;
 	}
 
+	// Returns all bases of a c++ record declaration
+	vector<RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
+		vector<RecordDecl*> bases;
+
+		for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
+				bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+			const CXXBaseSpecifier * base = bit;
+			RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
+			bases.push_back(baseRecord);
+			vector<RecordDecl*> subBases = getAllBases(dyn_cast<clang::CXXRecordDecl>(baseRecord));
+			bases.insert(bases.end(), subBases.begin(), subBases.end());
+		}
+		return bases;
+	}
 
 	//TODO
 	core::FunctionTypePtr addCXXThisToFunctionType(const core::ASTBuilder& builder,
