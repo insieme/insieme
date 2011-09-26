@@ -121,19 +121,23 @@ bool _irt_wg_barrier_check(irt_work_item* wi) {
 	return wg->cur_barrier_count_down != 0;
 }
 
-void irt_wg_barrier(irt_work_group* wg) {
-	// Todo distributed
+void irt_wg_joining_barrier(irt_work_group* wg) {
 	// check if outstanding work group pfor joins required
 	uint32 pfor_c = wg->pfor_count, joined_pfor_c =  wg->joined_pfor_count;
 	while(joined_pfor_c < pfor_c) {
 		if(irt_atomic_bool_compare_and_swap(*wg->joined_pfor_count, joined_pfor_c, joined_pfor_c+1)) {
 			// join the outstanding pfor work item
-			IRT_ASSERT(pfor_c - joined_pfor_c < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
-			irt_wi_join(wg->pfor_wi_list[group->pfor_count % IRT_WG_RING_BUFFER_SIZE]);
+			IRT_ASSERT(pfor_c - (joined_pfor_c+1) < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
+			irt_wi_join(wg->pfor_wi_list[(joined_pfor_c+1) % IRT_WG_RING_BUFFER_SIZE]);
 		}
 		pfor_c = wg->pfor_count;
 		joined_pfor_c = wg->joined_pfor_count;
 	}
+	irt_wg_barrier(wg);
+}
+
+void irt_wg_barrier(irt_work_group* wg) {
+	// Todo distributed
 	// check if barrier down count is 0, otherwise wait for it to be
 	if(wg->cur_barrier_count_down != 0) {
 		irt_worker* self = irt_worker_get_current();

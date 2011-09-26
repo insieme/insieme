@@ -58,8 +58,8 @@ struct _irt_work_group {
 	uint32 cur_barrier_count_down;
 	void** redistribute_data_array;
 	irt_work_item* pfor_wi_list[IRT_WG_RING_BUFFER_SIZE];
-	uint32 pfor_count;
-	uint32 joined_pfor_count;
+	uint32 pfor_count; // index of the most recently added pfor
+	uint32 joined_pfor_count; // index of the latest joined pfor
 };
 
 struct _irt_wi_wg_membership {
@@ -87,6 +87,7 @@ static inline uint32 irt_wg_get_wi_num(irt_work_group* wg, irt_work_item* wi);
 static inline irt_wi_wg_membership* irt_wg_get_wi_membership(irt_work_group* wg, irt_work_item* wi);
 
 void irt_wg_barrier(irt_work_group* wg);
+void irt_wg_joining_barrier(irt_work_group* wg);
 void irt_wg_redistribute(irt_work_group* wg, irt_work_item* this_wi, void* my_data, void* result_data, irt_wg_redistribution_function* func);
 void irt_wg_join(irt_work_group* wg);
 
