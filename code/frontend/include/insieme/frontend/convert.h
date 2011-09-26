@@ -160,8 +160,8 @@ class ConversionFactory : public boost::noncopyable {
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
-		core::VariablePtr thisStack2;
-		core::VariablePtr thisVar; // used in Functions as reference
+		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
+		core::ExpressionPtr thisVar; // used in Functions as reference
 
 		typedef std::map<const clang::SourceLocation, core::VariablePtr> ThisMap;
 		ThisMap thisMap;
@@ -173,8 +173,13 @@ class ConversionFactory : public boost::noncopyable {
 
 		// for operators
 		bool isCXXOperator;
+
+		// type on which the operator is called
+		core::TypePtr operatorTy;
+
 		core::ExpressionPtr lhsThis;
 		core::ExpressionPtr rhsThis;
+
 
 		// maps the resulting type pointer to the declaration of a class
 		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
