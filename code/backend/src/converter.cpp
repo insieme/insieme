@@ -64,7 +64,7 @@ namespace backend {
 //		LOG(INFO) << "Semantic Checks: " << core::check(source, core::checks::getFullCheck());
 //		assert(core::check(source, core::checks::getFullCheck()).empty() && "Expected error free input program!");
 
-		utils::Timer timer = insieme::utils::Timer("Backend.Preprocessing");
+		utils::Timer timer = insieme::utils::Timer(getConverterName() + " Preprocessing");
 
 		// pre-process program
 		core::NodePtr processed = getPreProcessor()->process(getNodeManager(), source);
@@ -82,7 +82,7 @@ namespace backend {
 
 		// -------------------------- CONVERSION -------------------------
 
-		timer = insieme::utils::Timer("Backend.Conversions");
+		timer = insieme::utils::Timer(getConverterName() + " Conversions");
 
 		// create a context
 		ConversionContext context(*this);
@@ -103,7 +103,7 @@ namespace backend {
 
 		// ------------------------ POST-PROCESSING ----------------------
 
-		timer = insieme::utils::Timer("Backend.Postprocessing");
+		timer = insieme::utils::Timer(getConverterName() + " Postprocessing");
 
 		// apply post-processing passes
 		applyToAll(getPostProcessor(), fragments);

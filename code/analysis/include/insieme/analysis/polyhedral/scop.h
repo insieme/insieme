@@ -118,6 +118,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	 *********************************************************************************************/
 	typedef std::tuple<
 			core::ExpressionAddress, 
+			Ref::RefType,
 			Ref::UseType, 
 			poly::AffineSystemPtr > 				AccessInfo;
 
@@ -156,6 +157,8 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	inline const utils::AnnotationKey* getKey() const { return &KEY; }
 
+	inline bool isResolved() const { return static_cast<bool>(scattering); }
+
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
 						const core::NodePtr& after) const 
@@ -193,15 +196,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	bool containsLoopNest() const;
 
 private:
-
-	static void resolveScop(const poly::IterationVector& 	iterVec, 
-					 poly::IterationDomain 					parentDomain, 
-			 	   	 const ScopRegion& 						region,
-					 size_t&								pos,
-					 const poly::ScatteringFunction& 		curScat,
-					 IteratorOrder& 						iterators,
-					 ScatteringMatrix& 						finalScat,
-					 size_t&								sched_dim);
+	friend void resolveFrom(const core::NodePtr& root);
 
 	// Iteration Vector on which constraints are defined 
 	poly::IterationVector iterVec;
@@ -254,7 +249,8 @@ public:
 
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
-						const core::NodePtr& after) const { 
+						const core::NodePtr& after) const 
+	{ 
 		return false; 
 	}
 };
@@ -273,6 +269,15 @@ AddressList mark(const core::NodePtr& root);
  *************************************************************************************************/
 void printSCoP(std::ostream& out, const core::NodePtr& scop);
 
+/**************************************************************************************************
+ * Adds a SCoP to the list of entry SCoPs. This function also check whether inside this SCoP
+ * there are operations which invalidates this SCoP, for example the following properties are
+ * checked: 
+ *   * Assignments to iterators or parameters within the outerscop iteration vector should be
+ *     avoided
+ *   * ...
+ **************************************************************************************************/
+void resolveFrom(const core::NodePtr& root);
 
 void computeDataDependence(const core::NodePtr& root) ;
 

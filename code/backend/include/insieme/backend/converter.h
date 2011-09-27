@@ -141,15 +141,17 @@ namespace backend {
 		// NOTE: shared pointer, since it has to survive the conversion process
 		c_ast::SharedCodeFragmentManager fragmentManager;
 
+		const std::string converterName;
+
 	public:
 
 		/**
 		 * Creates a new uninitialized converter. Before using the resulting
 		 * converter, the required managers need to be initialized.
 		 */
-		Converter() :
+		Converter(std::string name = "Backend") :
 			preProcessor(), postProcessor(), nameManager(0), typeManager(0), stmtConverter(0),
-			functionManager(0) {}
+			functionManager(0), converterName(name) {}
 
 		/**
 		 * A call to this member function triggers the actual conversion process.
@@ -236,6 +238,8 @@ namespace backend {
 		}
 
 		const c_ast::SharedCNodeManager& getCNodeManager() const;
+
+		const std::string& getConverterName() const { return converterName; }
 
 	};
 
