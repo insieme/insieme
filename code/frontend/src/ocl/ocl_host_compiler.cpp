@@ -123,7 +123,7 @@ ProgramPtr HostCompiler::compile() {
 	});
 */
 
-	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), fu, tmp))) {
+	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), fu, tmp, false))) {
 //std::cout << "Replacements: \n" << tmp << std::endl;
 
 		transform::utils::MemberAccessLiteralUpdater malu(builder);
