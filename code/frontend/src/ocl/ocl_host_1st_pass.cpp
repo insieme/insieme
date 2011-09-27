@@ -943,6 +943,7 @@ const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar
 		if(alreadyThere) {
 			assert((cl_mems[lhsVar]->getType() == newType) && "cl_mem variable allocated several times with different types.");
 		}
+
 		NodePtr ret;
 
 		if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(getVarOutOfCrazyInspireConstruct(newCall, builder))) {
@@ -962,7 +963,6 @@ const NodePtr HostMapper::handleCreateBufferAssignment(const VariablePtr& lhsVar
 					callExpr->getArgument(1)->getType(), newCall->getType()));
 			ret = builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), newLhs, newCall);
 		}
-
 		copyAnnotations(callExpr, ret);
 		return ret;
 	}
@@ -1152,7 +1152,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 				}
 
 				// handling clCreateBuffer
-				if(lhsVar->getType()->toString().find("_irt_ocl_buffer=struct<mem:ref<array<_cl_mem,1>>") != string::npos){
+				if(lhsVar->getType()->toString().find("ref<ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
 					if(callExpr->getArgument(1)->toString().find("irt_ocl_create_buffer") != string::npos){
 						return handleCreateBufferAssignment(lhsVar, callExpr);
 					}
@@ -1196,7 +1196,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 			assert(decl->getInitialization()->getNodeType() == NT_CallExpr && "Unexpected initialization of cl_mem variable");
 		}
 
-		if(var->getType()->toString().find("_irt_ocl_buffer=struct<mem:ref<array<_cl_mem,1>>") != string::npos){
+		if(var->getType()->toString().find("ref<ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), decl->getInitialization(), builder))) {
 				if(const LiteralPtr& literal = core::dynamic_pointer_cast<const core::Literal>(initFct->getFunctionExpr())) {
 					if(literal->getValue() == "irt_ocl_create_buffer") {
