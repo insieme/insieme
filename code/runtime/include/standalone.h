@@ -146,7 +146,18 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 }
 
 uint32 irt_get_default_worker_count() {
+#ifdef _SC_NPROCESSORS_ONLN
+	// Linux
+	return sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(_SC_NPROC_ONLN)
+	// Irix
+	return sysconf(_SC_NPROC_ONLN);
+#elif defined(MPC_GETNUMSPUS)
+	// HPUX
+	return mpctl(MPC_GETNUMSPUS, NULL, NULL);
+#else
 	return 1;
+#endif
 }
 
 bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
