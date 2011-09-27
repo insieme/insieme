@@ -147,12 +147,13 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 	}
 };
 typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;
+typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target_specialized, equal_variables> KernelArgsOld;
 typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target_specialized, equal_variables> KernelArgs;
 //typedef std::map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, equal_variables> KernelArgs;
 //typedef insieme::utils::map::PointerMap<core::ExpressionPtr, std::vector<core::ExpressionPtr> > KernelArgs;
 typedef boost::unordered_map<string, core::ExpressionPtr, boost::hash<string> > KernelNames;
 typedef boost::unordered_map<core::ExpressionPtr, core::LambdaExprPtr, hash_target_specialized, equal_variables> KernelLambdas;
-typedef boost::unordered_map<core::ExpressionPtr, vector<core::DeclarationStmtPtr>, hash_target_specialized, equal_variables > LocalMemDecls;
+typedef boost::unordered_map<core::ExpressionPtr, std::vector<core::DeclarationStmtPtr>, hash_target_specialized, equal_variables > LocalMemDecls;
 
 
 } //namespace ocl

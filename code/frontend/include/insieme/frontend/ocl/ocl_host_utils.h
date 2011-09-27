@@ -110,6 +110,21 @@ public:
 	bool visitLiteral(const core::LiteralPtr& literal);
 };
 
+/*
+ * Visitor returns true if the passed ast the identifier passed to the construtor
+ */
+class IdSearcher: public core::ASTVisitor<bool> {
+private:
+	core::ASTBuilder& builder;
+	core::IdentifierPtr& searchedId;
+public:
+	IdSearcher(core::ASTBuilder build, core::IdentifierPtr lookFor) : core::ASTVisitor<bool>(false), builder(build), searchedId(lookFor) {}
+
+	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
+	bool visitIdentifier(const core::IdentifierPtr& id);
+};
+
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme
