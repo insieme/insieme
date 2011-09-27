@@ -86,7 +86,7 @@ namespace runtime {
 	TargetCodePtr RuntimeBackend::convert(const core::NodePtr& code) const {
 
 		// create and set up the converter
-		Converter converter;
+		Converter converter("RuntimeBackend");
 
 		// set up the node manager (for temporals)
 		core::NodeManager& nodeManager = code->getNodeManager();
