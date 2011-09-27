@@ -17,7 +17,7 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 
 USE_SMP = 1
 USE_SEQ = 0
-USE_RUN = 0
+USE_RUN = 1
 
 # compiler flags
 SRC_DIR = "${CMAKE_SOURCE_DIR}"
