@@ -115,8 +115,9 @@ protected:
 	core::ProgramPtr kernels;
 	const core::ASTBuilder& builder;
 	Ocl2Inspire o2i;
+	size_t argCnt;
 public:
-	Handler(const core::ASTBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire) {
+	Handler(const core::ASTBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire), argCnt(0) {
 		kernels = core::Program::create(build.getNodeManager());
 	}
 
@@ -136,7 +137,7 @@ public:
 
 	// puts the passed argument in the right place inside the kernelArgs map
 	const core::ExpressionPtr collectArgument(const core::ExpressionPtr& kernelArg, const core::ExpressionPtr& index, const core::ExpressionPtr& sizeArg,
-			core::ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls);
+			core::ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls, ClmemTable& cl_mems);
 };
 
 /*
@@ -237,7 +238,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	}
 	const core::ExpressionPtr collectArgument(const string& handleName, const core::ExpressionPtr& kernel, const core::ExpressionPtr& index,
 			const core::ExpressionPtr& sizeArg, const core::ExpressionPtr& arg) {
-		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls);
+		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls, cl_mems);
 	}
 public:
 	HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);

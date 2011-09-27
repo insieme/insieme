@@ -37,6 +37,7 @@
 #include "insieme/core/ast_node.h"
 
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/utils/member_access_literal_updater.h"
 
 #include "insieme/frontend/ocl/ocl_host_compiler.h"
 #include "insieme/frontend/ocl/ocl_host_1st_pass.h"
@@ -121,11 +122,17 @@ ProgramPtr HostCompiler::compile() {
 		}
 	});
 */
+
 	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), fu, tmp))) {
-		mProgram = newProg;
+//std::cout << "Replacements: \n" << tmp << std::endl;
+
+		transform::utils::MemberAccessLiteralUpdater malu(builder);
+		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 	//			return newProg;
 	} else
-	assert(newProg && "Third pass of OclHostCompiler corrupted the program");
+		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
+
+	assert(mProgram && "OclHostCompiler corrupted the program");
 
 	return mProgram;
 }

@@ -116,11 +116,16 @@ void irt_error_handler(int signal) {
 	exit(-error->errcode);
 }
 
+void irt_interrupt_handler(int signal) {
+	// do nothing
+}
+
 void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
 	irt_g_runtime_behaviour = behaviour;
 
 	// initialize error and termination signal handlers
 	signal(IRT_SIG_ERR, &irt_error_handler);
+	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
 	atexit(&irt_exit_handler);
