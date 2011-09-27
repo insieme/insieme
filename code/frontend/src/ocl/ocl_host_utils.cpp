@@ -169,6 +169,12 @@ bool NullLitSearcher::visitLiteral(const core::LiteralPtr& literal) {
 	return false;
 }
 
+bool IdSearcher::visitIdentifier(const core::IdentifierPtr& id) {
+	if(id == searchedId)
+		return true;
+	return false;
+}
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

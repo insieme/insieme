@@ -72,10 +72,11 @@ ClmemTable& Host2ndPass::getCleanedStructures() {
 				StructType::Entries newEntries;
 
 				for_each(entries, [&](std::pair<IdentifierPtr, TypePtr>& entry) {
-							if(entry.second->toString().find("_cl_") == string::npos) {
-								newEntries.push_back(entry);
-							}
-						});
+					// todo remove kernel for irt_ version
+						if(entry.second->toString().find("_cl_") == string::npos || entry.second->toString().find("_cl_kernel") != string::npos) {
+							newEntries.push_back(entry);
+						}
+					});
 
 				// update struct in replacement map
 				NodePtr replacement = builder.variable(builder.refType(builder.structType(newEntries)));

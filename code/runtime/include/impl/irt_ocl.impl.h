@@ -501,13 +501,13 @@ inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
 	buf->used = false;
 }
 
-inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr) {
-	cl_int err_code = clEnqueueWriteBuffer(buf->queue, buf->mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
+inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t offset, size_t size, const void* source_ptr) {
+	cl_int err_code = clEnqueueWriteBuffer(buf->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error writing buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
-inline void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr) {
-	cl_int err_code = clEnqueueReadBuffer(buf->queue, buf->mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
+inline void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t offset, size_t size, void* source_ptr) {
+	cl_int err_code = clEnqueueReadBuffer(buf->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error reading buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
