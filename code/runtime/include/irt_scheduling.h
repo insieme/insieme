@@ -60,10 +60,16 @@ struct _irt_wi_scheduling_data;
 typedef struct _irt_wi_scheduling_data irt_wi_scheduling_data;
 
 
-/* The scheduling loop for a worker. Responsibilities include
+/* The scheduling iteration for a worker. Responsibilities include
  * executing work items assigned to the worker (and potentially distributing
  * and/or splitting them) as well as checking the process-wide event queue
  * from time to time.
+ */
+int irt_scheduling_iteration(irt_worker* self);
+
+/* The scheduling loop which repeatedly runs scheduling iterations.
+ * Should take care not to cause too much overhead when there is nothing
+ * to schedule.
  */
 void irt_scheduling_loop(irt_worker* self);
 
