@@ -64,6 +64,9 @@ FUN("stdio.h", fwrite)
 FUN("stdio.h", fclose)
 FUN("stdio.h", sprintf)
 
+FUN("stdio.h", sscanf)
+FUN("stdio.h", fprintf)
+
 TYPE("stdio.h", "FILE")
 
 FUN("stdlib.h", malloc)

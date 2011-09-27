@@ -277,7 +277,7 @@ namespace formatting {
 				const string& typeName = info.rValueName;
 
 				const core::TypePtr elementType = static_pointer_cast<const core::ArrayType>(CALL->getType())->getElementType();
-				const TypeManager::TypeInfo& elemInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, CALL->getType());
+				const TypeManager::TypeInfo& elemInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, elementType);
 				const string& elementName = elemInfo.rValueName;
 
 				CODE->addDependency(info.utilities);

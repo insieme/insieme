@@ -42,9 +42,6 @@
 
 #include "insieme/core/ast_node.h"
 
-#include "insieme/utils/hash_utils.h"
-#include "insieme/utils/instance_manager.h"
-
 namespace insieme {
 namespace core {
 
