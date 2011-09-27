@@ -86,8 +86,8 @@ irt_ocl_device* irt_ocl_get_device(cl_uint id);
 void irt_ocl_release_devices();
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size);
-void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr);
-void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr);
+void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t offset, size_t size, void* source_ptr);
+void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t offset, size_t size, const void* source_ptr);
 void irt_ocl_copy_buffer(irt_ocl_buffer* src_buf, irt_ocl_buffer* dest_buf, size_t size);
 void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size);
 void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
