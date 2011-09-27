@@ -59,27 +59,37 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 	NodePtr res = ptr->substitute(builder.getNodeManager(), *this);
 
 	if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(res)) {
+		ExpressionPtr fun = call->getFunctionExpr();
 		// struct access
-		if(BASIC.isCompositeMemberAccess(call->getFunctionExpr())) {
+		if(BASIC.isCompositeMemberAccess(fun)) {
 			const StructTypePtr& structTy = static_pointer_cast<const StructType>(call->getArgument(0)->getType());
 			// TODO find better way to extract Identifier from IdentifierLiteral
 			const IdentifierPtr& id = builder.identifier(static_pointer_cast<const Literal>(call->getArgument(1))->getValue());
 			const TypePtr& type = structTy->getTypeOfMember(id);
 			if(call->getArgument(2)->getType() != type || call->getType() != type)
-				res = builder.callExpr(type, call->getFunctionExpr(), call->getArgument(0), call->getArgument(1), BASIC.getTypeLiteral(type));
+				res = builder.callExpr(type, fun, call->getArgument(0), call->getArgument(1), BASIC.getTypeLiteral(type));
 		}
 
-		if(BASIC.isCompositeRefElem(call->getFunctionExpr())) {
+		if(BASIC.isCompositeRefElem(fun)) {
 			const StructTypePtr& structTy = static_pointer_cast<const StructType>(
 					static_pointer_cast<const RefType>(call->getArgument(0)->getType())->getElementType());
 			// TODO find better way to extract Identifier from IdentifierLiteral
 			const IdentifierPtr& id = builder.identifier(static_pointer_cast<const Literal>(call->getArgument(1))->getValue());
 			const RefTypePtr& refTy = builder.refType(structTy->getTypeOfMember(id));
 			if(call->getArgument(2)->getType() != refTy->getElementType() || call->getType() != refTy)
-				res = builder.callExpr(refTy, call->getFunctionExpr(), call->getArgument(0), call->getArgument(1),
+				res = builder.callExpr(refTy, fun, call->getArgument(0), call->getArgument(1),
 					BASIC.getTypeLiteral(refTy->getElementType()));
 		}
-	}
+
+		if(BASIC.isSubscriptOperator(fun)) {
+			const RefTypePtr& refTy = dynamic_pointer_cast<const RefType>(call->getArgument(0)->getType());
+			const SingleElementTypePtr& seTy = static_pointer_cast<const SingleElementType>( refTy ? refTy->getElementType() : call->getArgument(0)->getType());
+			const TypePtr& type = refTy ? builder.refType(seTy->getElementType()) : seTy->getElementType();
+
+			if(call->getType() != type)
+				res = builder.callExpr(type, fun, call->getArguments());
+		}
+}
 
 
 	// check whether something has changed ...

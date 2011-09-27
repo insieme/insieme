@@ -84,7 +84,7 @@ namespace ocl_kernel {
 	TargetCodePtr OCLKernelBackend::convert(const core::NodePtr& code) const {
 
 		// create and set up the converter
-		Converter converter;
+		Converter converter("OpenCL Kernel Backend");
 
 		// set up the node manager (for temporals)
 		core::NodeManager& nodeManager = code->getNodeManager();

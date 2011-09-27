@@ -324,8 +324,8 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	irt_ocl_buffer* buff_B = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_B);
 	irt_ocl_buffer* buff_C = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_C);
 
-	irt_ocl_write_buffer(buff_A, CL_FALSE, mem_size_A, &A[subrange[0].begin][0]);
-	irt_ocl_write_buffer(buff_B, CL_FALSE, mem_size_B, &B[0][0]);
+	irt_ocl_write_buffer(buff_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin][0]);
+	irt_ocl_write_buffer(buff_B, CL_FALSE, 0, mem_size_B, &B[0][0]);
 
 	size_t localWS = 16;
 	float multiplier = hA/(float)localWS;
@@ -352,7 +352,7 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 								sizeof(cl_long), (void *)&wA,
 								sizeof(cl_long), (void *)&wB);
 
-	irt_ocl_read_buffer(buff_C, CL_TRUE, mem_size_C, &C[subrange[0].begin][0]);
+	irt_ocl_read_buffer(buff_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin][0]);
 
 	irt_ocl_release_buffer(buff_A);
 	irt_ocl_release_buffer(buff_B);
