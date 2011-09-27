@@ -60,6 +60,8 @@ irt_work_group* irt_wg_create() {
 	wg->cur_barrier_count_down = 0;
 	wg->redistribute_data_array = NULL;
 	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
+	wg->pfor_count = 0;
+	wg->joined_pfor_count = 0;
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
@@ -117,6 +119,21 @@ bool _irt_wg_barrier_check_down(irt_work_item* wi) {
 bool _irt_wg_barrier_check(irt_work_item* wi) {
 	irt_work_group *wg = (irt_work_group*)wi->ready_check.data;
 	return wg->cur_barrier_count_down != 0;
+}
+
+void irt_wg_joining_barrier(irt_work_group* wg) {
+	// check if outstanding work group pfor joins required
+	uint32 pfor_c = wg->pfor_count, joined_pfor_c =  wg->joined_pfor_count;
+	while(joined_pfor_c < pfor_c) {
+		if(irt_atomic_bool_compare_and_swap(&wg->joined_pfor_count, joined_pfor_c, joined_pfor_c+1)) {
+			// join the outstanding pfor work item
+			IRT_ASSERT(pfor_c - (joined_pfor_c+1) < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
+			irt_wi_join(wg->pfor_wi_list[(joined_pfor_c+1) % IRT_WG_RING_BUFFER_SIZE]);
+		}
+		pfor_c = wg->pfor_count;
+		joined_pfor_c = wg->joined_pfor_count;
+	}
+	irt_wg_barrier(wg);
 }
 
 void irt_wg_barrier(irt_work_group* wg) {

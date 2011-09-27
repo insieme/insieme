@@ -147,7 +147,9 @@ namespace runtime {
 			res["irt_wi_end"]						= "irt_all_impls.h";
 			res["irt_wi_get_current"]				= "irt_all_impls.h";
 			res["irt_wi_get_wg"]					= "irt_all_impls.h";
+
 			res["irt_wg_barrier"]					= "irt_all_impls.h";
+			res["irt_wg_joining_barrier"]			= "irt_all_impls.h";
 
 			return res;
 		}

@@ -1345,9 +1345,6 @@ public:
 
 		// get the arguments of the function
 		ExpressionList&& args = getFunctionArguments(builder, callExpr, funcTy);
-		//int numOfArgs = args.size();
-
-		assert(convFact.currTU && "Translation unit not set.");
 
 		// store THIS
 		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
@@ -2828,7 +2825,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 
         VLOG(2)<<retLambdaExpr << " + function declaration: "<<funcDecl;
         return attachFuncAnnotations(retLambdaExpr, funcDecl);
-		return retLambdaExpr;
+		//return retLambdaExpr;
 	}
 
 	core::LambdaPtr&& retLambdaNode = builder.lambda( funcType, params, body );

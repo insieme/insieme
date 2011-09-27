@@ -48,6 +48,7 @@
 #include "insieme/utils/set_utils.h"
 
 #include "insieme/core/ast_pointer.h"
+#include "insieme/core/ast_mapper.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
@@ -57,19 +58,6 @@
 namespace insieme {
 namespace core {
 
-/**
- * Typedefs for some widely used base type collections.
- */
-typedef std::vector<NodePtr> NodeList;
-typedef std::vector<StatementPtr> StatementList;
-typedef std::vector<ExpressionPtr> ExpressionList;
-typedef std::vector<TypePtr> TypeList;
-
-typedef utils::set::PointerSet<NodePtr> NodeSet;
-typedef utils::set::PointerSet<StatementPtr> StatementSet;
-typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
-typedef utils::set::PointerSet<TypePtr> TypeSet;
-typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
 
 /**
  * Defines an enumeration containing an entry for every node type. This
@@ -110,14 +98,13 @@ enum { NUM_CONCRETE_NODE_TYPES = 0
  * An enumeration covering the five basic node categories.
  */
 enum NodeCategory {
-	NC_Support, /* < The node represents a supporting element. */
-	NC_IntTypeParam, /* < The node represents a int-type parameter */
-	NC_Type, /* < The node represents a type. */
-	NC_Expression, /* < The node represents an expression. */
-	NC_Statement, /* < The node represents a statement. */
-	NC_Program /* < The node represents a program. */
+	NC_Support, 		/* < The class of nodes representing supporting elements. */
+	NC_IntTypeParam, 	/* < The class of nodes represents int-type parameters */
+	NC_Type, 			/* < The class of nodes represents types. */
+	NC_Expression, 		/* < The class of nodes represents expressions. */
+	NC_Statement, 		/* < The class of nodes represents statements. */
+	NC_Program 			/* < The class of nodes represents programs. */
 };
-
 
 /**
  * Implements a node manager to be used for maintaining AST node instances.
@@ -161,102 +148,6 @@ public:
 	}
 };
 
-
-// forward declaration of the clonePtr operation
-template<typename T> Pointer<T> clonePtr(NodeManager& manager, const Pointer<T>& ptr);
-
-/**
- * This class constitutes an interface for utility class required for transforming AST nodes.
- * Instances of this class represent mappings between nodes. During the transformation process,
- * each referenced pointer is replaced by the element is mapped to.
- */
-class NodeMapping {
-
-protected:
-
-	/**
-	 * Implements the actual mapping operation by mapping the given pointer (and the context information)
-	 * to a new pointer.
-	 *
-	 * @param index the index of the ptr within the parents child list
-	 * @param ptr the pointer to be resolved
-	 * @return the pointer the given pointer is mapped to by this mapper
-	 */
-	virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) =0;
-
-public:
-
-	/**
-	 * A virtual destructor of the mapping for a proper cleanup.
-	 */
-	virtual ~NodeMapping() { };
-
-	/**
-	 * A generic version of the map operation to be applied on a root node.
-	 */
-	template<typename T>
-	inline Pointer<T> map(const Pointer<T>& ptr) {
-		return map<T>(0, ptr);
-	}
-
-	/**
-	 * A generic version of the map operation handling pointer types properly.
-	 */
-	template<typename T>
-	inline Pointer<T> map(unsigned index, const Pointer<T>& ptr) {
-		// short-cut for null
-		if (!ptr) {
-			return static_pointer_cast<T> (ptr);
-		}
-
-		// map and cast
-		const NodePtr res = mapElement(index, ptr);
-		// during development, make cast secure
-		assert(dynamic_pointer_cast<T> (res) && "Invalid conversion");
-		return static_pointer_cast<T> (res);
-	}
-
-	/**
-	 * Obtains a container of pointers referencing clones of nodes referenced by a given
-	 * container of pointers. Thereby, annotations are properly preserved and isolated.
-	 *
-	 * @param container the container including the pointers to be cloned
-	 * @return a new container including pointers referencing clones of the nodes referenced
-	 * 		   by the original container.
-	 */
-	template<typename Container>
-	Container map(unsigned offset, const Container& container) {
-		Container res;
-
-		auto first = container.begin();
-		auto last = container.end();
-		auto out = inserter(res, res.end());
-		for (auto it = first; it != last; ++it) {
-			*out = map(offset++, *it);
-			out++;
-		}
-
-		return res;
-	}
-
-};
-
-template<typename Lambda>
-class LambdaNodeMapper: public NodeMapping {
-	Lambda lambda;
-public:
-	LambdaNodeMapper(Lambda lambda)
-		: lambda(lambda) { };
-
-	const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-		return lambda(index, ptr);
-	}
-};
-
-template<typename Lambda>
-LambdaNodeMapper<Lambda> makeLambdaMapper(Lambda lambda) {
-	return LambdaNodeMapper<Lambda> (lambda);
-}
 
 // a forward declaration of the node annotation class and a pointer type referencing it
 class NodeAnnotation;

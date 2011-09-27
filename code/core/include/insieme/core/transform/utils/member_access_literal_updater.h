@@ -34,23 +34,29 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/core/placeholder.h"
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 namespace core {
+namespace transform {
+namespace utils {
 
-TEST(Placeholder, Basic) {
+/**
+ * Visitor which checks if the type literal argument of compostite and tuple calls are aligned witht the actual type of the struct/tuple.
+ * If not the type literal is replaced with the appropriate one
+ */
+class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
+	ASTBuilder builder;
+public:
+	MemberAccessLiteralUpdater(ASTBuilder& build) : builder(build) {}
+	const core::NodePtr resolveElement(const core::NodePtr& element);
 
-	NodeManager manager;
-
-	PlaceholderPtr placeholder = Placeholder::get(manager, 'A');
-
-	EXPECT_EQ(toString(*placeholder), "A");
+};
 
 }
-
-} // end namespace core
-} // end namespace insieme
-
+}
+}
+}
