@@ -66,41 +66,40 @@ void irt_scheduling_init_worker(irt_worker* self) {
 	irt_work_item_deque_init(&self->sched_data.pool);
 }
 
-void irt_scheduling_loop(irt_worker* self) {
-	while(self->state != IRT_WORKER_STATE_STOP) {
-		// try to take a ready WI from the pool
-		irt_work_item* next_wi = irt_work_item_deque_pop_front(&self->sched_data.pool);
-		if(next_wi != NULL) {
-			if(next_wi->ready_check.fun && !next_wi->ready_check.fun(next_wi)) {
-				irt_work_item_deque_insert_back(&self->sched_data.pool, next_wi);
-			} else {
-				_irt_worker_switch_to_wi(self, next_wi);
-				continue;
-			}
+int irt_scheduling_iteration(irt_worker* self) {
+	// try to take a ready WI from the pool
+	irt_work_item* next_wi = irt_work_item_deque_pop_front(&self->sched_data.pool);
+	if(next_wi != NULL) {
+		if(next_wi->ready_check.fun && !next_wi->ready_check.fun(next_wi)) {
+			irt_work_item_deque_insert_back(&self->sched_data.pool, next_wi);
+		} else {
+			_irt_worker_switch_to_wi(self, next_wi);
+			return 1;
 		}
-
-		// if that failed, try to take a work item from the queue
-		irt_work_item* new_wi = irt_work_item_cdeque_pop_front(&self->sched_data.queue);
-		// if none available, try to steal from another thread
-		if(new_wi == NULL) new_wi = _irt_sched_steal_from_prev_thread(self);
-		if(new_wi != NULL) {
-			if(_irt_sched_split_decision_max_queued_min_size(new_wi, self, 4, 50)) {
-				_irt_sched_split_work_item_binary(new_wi, self);
-				continue;
-			}
-			_irt_worker_switch_to_wi(self, new_wi);
-			continue;
-		}
-
-		// if that failed as well, look in the IPC message queue
-		_irt_sched_check_ipc_queue(self);
-
-		pthread_yield();
 	}
+
+	// if that failed, try to take a work item from the queue
+	irt_work_item* new_wi = irt_work_item_cdeque_pop_front(&self->sched_data.queue);
+	// if none available, try to steal from another thread
+	if(new_wi == NULL) new_wi = _irt_sched_steal_from_prev_thread(self);
+	if(new_wi != NULL) {
+		if(_irt_sched_split_decision_max_queued_min_size(new_wi, self, 4, 50)) {
+			_irt_sched_split_work_item_binary(new_wi, self);
+			irt_scheduling_notify(self);
+			return 1;
+		}
+		_irt_worker_switch_to_wi(self, new_wi);
+		return 1;
+	}
+
+	// if that failed as well, look in the IPC message queue
+	_irt_sched_check_ipc_queue(self);
+	return 0;
 }
 
 void irt_scheduling_assign_wi(irt_worker* target, irt_work_item* wi) {
 	irt_work_item_cdeque_insert_front(&target->sched_data.queue, wi);
+	irt_scheduling_notify(0);
 }
 
 irt_work_item* irt_scheduling_optional_wi(irt_worker* target, irt_work_item* wi) {

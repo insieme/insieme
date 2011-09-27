@@ -45,3 +45,32 @@
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_LAZY_BINARY_SPLIT
 #include "sched_policies/impl/irt_sched_lazy_binary_splitting.impl.h"
 #endif
+
+#include <time.h>
+
+void irt_scheduling_loop(irt_worker* self) {
+	static const long sched_start_nsecs = 10000l; // 10 micros 
+	static const long sched_max_nsecs = 100000000l; // 100 millis 
+	struct timespec wait_time;
+	wait_time.tv_sec = 0;
+	wait_time.tv_nsec = sched_max_nsecs;
+	while(self->state != IRT_WORKER_STATE_STOP) {
+		if(irt_scheduling_iteration(self)) {
+			wait_time.tv_nsec = sched_start_nsecs;
+			continue;
+		}
+		// nothing to schedule, sleep with fallback
+		wait_time.tv_nsec *= 2;
+		if(wait_time.tv_nsec > sched_max_nsecs) wait_time.tv_nsec = sched_max_nsecs;
+		self->state = IRT_WORKER_STATE_WAITING;
+		nanosleep(&wait_time, NULL);
+		self->state = IRT_WORKER_STATE_RUNNING;
+	}
+}
+
+void irt_scheduling_notify(irt_worker* from) {
+	for(int i=0; i<irt_g_worker_count; ++i) {
+		irt_worker *w = irt_g_workers[i];
+		if(w != from && w->state == IRT_WORKER_STATE_WAITING) pthread_kill(w->pthread, IRT_SIG_INTERRUPT);
+	}
+}

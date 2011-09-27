@@ -234,7 +234,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	irt_ocl_buffer* buf_input = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_input);
 	irt_ocl_buffer* buf_output = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_output);
 
-	irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);
+	irt_ocl_write_buffer(buf_input, CL_FALSE, 0, mem_size_input, &input[wi->range.begin]);
 
 	size_t szLocalWorkSize = 256;
 	float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
@@ -248,7 +248,7 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 									(size_t)0, buf_output,
 									sizeof(cl_long), &len_input);
 
-	irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
+	irt_ocl_read_buffer(buf_output, CL_TRUE, 0, mem_size_output, &output[wi->range.begin]);
 	//clFinish(dev->cl_queue); // ??
 
 	irt_ocl_release_buffer(buf_input);

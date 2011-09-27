@@ -242,7 +242,6 @@ TEST(XmlTest, FunctionTypeTest) {
 	s1 = xml.convertDomToString();
 	xml.convertStringToDom(s1, true);
 
-	manager2;
 	root2 = xml.convertDomToIr(manager2);
 
 	EXPECT_EQ(*root, *root2);

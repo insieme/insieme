@@ -52,9 +52,16 @@ int main(int argc, char* argv[]) {
 		input2[i] = i*2;
 	}
 
-	irt_ocl_init_devices();
+	//irt_ocl_timer* time1 = irt_ocl_init_timer(IRT_OCL_SEC);
+	//irt_ocl_start_timer(time1);
+	irt_ocl_init_devices(IRT_OCL_CPU);
+	//printf("%f\n", irt_ocl_stop_timer(time1));
+	
 	if (irt_ocl_get_num_devices() != 0) {
 		irt_ocl_device* dev = irt_ocl_get_device(0);
+
+		//irt_ocl_print_device_infos(dev);
+		//irt_ocl_print_device_short_info(dev);
 		irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "vec_add.cl", "vec_add", "", IRT_OCL_SOURCE);
 		
 		irt_ocl_buffer* buf_input1;
@@ -83,7 +90,11 @@ int main(int argc, char* argv[]) {
 		irt_ocl_release_buffer(buf_output);
 		irt_ocl_release_kernel(kernel);
 	}
+	//irt_ocl_restart_timer(time1);
 	irt_ocl_release_devices();
+	//printf("%f\n", irt_ocl_stop_timer(time1));
+	//irt_ocl_release_timer(time1);
+	
 
 	// CHECK for output
 	printf("======================\n= Vector Addition Done\n");

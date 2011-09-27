@@ -116,11 +116,16 @@ void irt_error_handler(int signal) {
 	exit(-error->errcode);
 }
 
+void irt_interrupt_handler(int signal) {
+	// do nothing
+}
+
 void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
 	irt_g_runtime_behaviour = behaviour;
 
 	// initialize error and termination signal handlers
 	signal(IRT_SIG_ERR, &irt_error_handler);
+	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
 	atexit(&irt_exit_handler);
@@ -146,7 +151,18 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 }
 
 uint32 irt_get_default_worker_count() {
+#ifdef _SC_NPROCESSORS_ONLN
+	// Linux
+	return sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(_SC_NPROC_ONLN)
+	// Irix
+	return sysconf(_SC_NPROC_ONLN);
+#elif defined(MPC_GETNUMSPUS)
+	// HPUX
+	return mpctl(MPC_GETNUMSPUS, NULL, NULL);
+#else
 	return 1;
+#endif
 }
 
 bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
