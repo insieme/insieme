@@ -57,7 +57,12 @@
 #include "insieme/backend/ocl_host/host_stmt_handler.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+
+#include "insieme/backend/runtime/runtime_backend.h"
 #include "insieme/backend/runtime/runtime_preprocessor.h"
+#include "insieme/backend/runtime/runtime_operator.h"
+#include "insieme/backend/runtime/runtime_type_handler.h"
+#include "insieme/backend/runtime/runtime_stmt_handler.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -70,6 +75,8 @@ namespace ocl_host {
 	namespace {
 
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
+
+		TypeHandlerList getTypeHandlerList();
 
 		StmtHandlerList getStmtHandlerList();
 	}
@@ -95,7 +102,9 @@ namespace ocl_host {
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 			getBasicPreProcessorSequence(),
 			makePreProcessor<ocl_kernel::KernelPreprocessor>(),
-			makePreProcessor<HostPreprocessor>()
+			makePreProcessor<HostPreprocessor>(),
+			makePreProcessor<runtime::WorkItemizer>(),
+			makePreProcessor<runtime::StandaloneWrapper>()
 		);
 		converter.setPreProcessor(preprocessor);
 
@@ -107,13 +116,17 @@ namespace ocl_host {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter, getBasicTypeIncludeTable(), TypeHandlerList());
+		TypeIncludeTable typeIncludeTable = getBasicTypeIncludeTable();
+		runtime::addRuntimeTypeIncludes(typeIncludeTable);
+		TypeManager typeManager(converter, typeIncludeTable, getTypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter, getStmtHandlerList());
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getBasicFunctionIncludeTable());
+		FunctionIncludeTable functionIncludeTable = getBasicFunctionIncludeTable();
+		runtime::addRuntimeFunctionIncludes(functionIncludeTable);
+		FunctionManager functionManager(converter, getOperatorTable(nodeManager), functionIncludeTable);
 		converter.setFunctionManager(&functionManager);
 
 		// conduct conversion
@@ -124,12 +137,20 @@ namespace ocl_host {
 	namespace {
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res = getBasicOperatorTable(manager);
+			runtime::addRuntimeSpecificOps(manager, res);
 			return addOpenCLHostSpecificOps(manager, res);
+		}
+
+		TypeHandlerList getTypeHandlerList() {
+			TypeHandlerList res;
+			res.push_back(runtime::RuntimeTypeHandler);
+			return res;
 		}
 
 		StmtHandlerList getStmtHandlerList() {
 			StmtHandlerList res;
 			res.push_back(OpenCLStmtHandler);
+			res.push_back(runtime::RuntimeStmtHandler);
 			return res;
 		}
 	}
