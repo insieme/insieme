@@ -37,12 +37,15 @@
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
 #include "insieme/core/ast_node.h"
 #include "insieme/core/transform/manipulation_utils.h"
+#include "insieme/core/ast_visitor.h"
 
 namespace insieme {
 namespace core {
 namespace transform {
 #define BASIC builder.getNodeManager().basic
 namespace utils {
+
+
 
 
 /**
@@ -54,6 +57,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 	if (ptr->getNodeCategory() == NC_Type || ptr->getNodeCategory() == NC_IntTypeParam) {
 		return ptr;
 	}
+
 
 	// recursive replacement has to be continued
 	NodePtr res = ptr->substitute(builder.getNodeManager(), *this);
@@ -89,7 +93,24 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			if(call->getType() != type)
 				res = builder.callExpr(type, fun, call->getArguments());
 		}
-}
+
+		if(BASIC.isTupleRefElem(fun) || BASIC.isTupleMemberAccess(fun)) {
+			ExpressionPtr arg = call->getArgument(2);
+			int idx = -1;
+
+			// search for the literal in the second argument
+			auto lambdaVisitor = makeLambdaVisitor([&arg,this](const NodePtr& node) {
+				// check for literal, assuming it will always be a valid integer
+				if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(node)) {
+					std::cout << "TRY " << lit << std::endl;
+					return atoi(lit->getValue().c_str());
+				}
+				return 0;
+			});
+
+			visitDepthFirst(call, lambdaVisitor);
+		}
+	}
 
 
 	// check whether something has changed ...
