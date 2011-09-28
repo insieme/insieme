@@ -56,7 +56,7 @@
 #include "insieme/backend/runtime/runtime_operator.h"
 #include "insieme/backend/runtime/runtime_type_handler.h"
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
-#include "insieme/backend/runtime/runtime_preprocessing.h"
+#include "insieme/backend/runtime/runtime_preprocessor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 

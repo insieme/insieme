@@ -40,6 +40,10 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
+#include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ast_check.h"
+#include "insieme/core/checks/ir_checks.h"
+
 #include "insieme/backend/ocl_host/host_extensions.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
 
@@ -61,7 +65,7 @@ namespace ocl_host {
 			manager(manager),  extensions(manager.getLangExtension<Extensions>()) {}
 
 		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-
+		//LOG(INFO) << "Before Host preprocessing: " << core::printer::PrettyPrinter(ptr);
 			//core::ASTBuilder builder(manager);
 			//auto& basic = manager.getBasicGenerator();
 			//auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();

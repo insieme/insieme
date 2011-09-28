@@ -57,6 +57,7 @@
 #include "insieme/backend/ocl_host/host_stmt_handler.h"
 
 #include "insieme/backend/ocl_kernel/kernel_preprocessor.h"
+#include "insieme/backend/runtime/runtime_preprocessor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
