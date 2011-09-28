@@ -187,16 +187,22 @@ TEST(NodeReplacer, ReplaceVariable) {
 			builder.declarationStmt(varA, builder.refVar(zero)),
 			builder.callExpr(basic.getRefAssign(), varA, builder.callExpr(uint4, lambda, builder.deref(varA)))
 	));
-//	EXPECT_EQ("", toString(printer::PrettyPrinter(stmt)));
+	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt)));
 
 	CheckPtr all = core::checks::getFullCheck();
 
 	EXPECT_EQ("[]", toString(check(stmt, all)));
 
 	// apply recursive variable replacer
-	utils::map::PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>> map;
-	map[varA] = std::make_pair(varB, builder.refVar(builder.literal(boolType, "false")));
-	StatementPtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map);
+	utils::map::PointerMap<VariablePtr, VariablePtr> map;
+	map[varA] = varB;
+	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map);
+
+	// fix initalization
+	stmt2 = transform::replaceAll(manager, stmt2, builder.refVar(zero), builder.refVar(builder.literal(boolType, "false")));
+
+	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt2)));
+	
 
 	EXPECT_EQ("[]", toString(check(stmt2, all)));
 	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool> v2 =  var(false)");
