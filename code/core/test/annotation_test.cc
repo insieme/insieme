@@ -143,6 +143,24 @@ TEST(Annotation, EqualsTest) {
 	EXPECT_FALSE(equalsWithAnnotations(type1->getTypeParameter()[0], type2->getTypeParameter()[0]));
 }
 
+TEST(Annotation, ValueAnnotaitons) {
+
+	NodeManager manager;
+	TypePtr ptr = GenericType::get(manager, "A");
+
+	EXPECT_FALSE(ptr->hasAttachedValue<int>());
+
+	ptr->attachValue<int>(12);
+
+	EXPECT_TRUE(ptr->hasAttachedValue<int>());
+	EXPECT_EQ(12,ptr->getAttachedValue<int>());
+
+	ptr->detachValue<int>();
+
+	EXPECT_FALSE(ptr->hasAttachedValue<int>());
+
+}
+
 } // end namespace core
 } // end namespace insieme
 
