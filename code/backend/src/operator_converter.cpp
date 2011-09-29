@@ -48,6 +48,7 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/encoder/encoder.h"
 #include "insieme/core/transform/manipulation.h"
 
 
@@ -489,6 +490,50 @@ namespace backend {
 			// access the type
 			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), field));
 		});
+
+
+
+		// -- tuples --
+
+		res[basic.getTupleMemberAccess()] = OP_CONVERTER({
+			// signature of operation:
+			//		('a, uint<8>, type<'b>) -> 'b
+
+			// add a dependency to the accessed type definition before accessing the type
+			const core::TypePtr tupleType = ARG(0)->getType();
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(tupleType);
+			context.getDependencies().insert(info.definition);
+
+			// create member access
+			core::ExpressionPtr index = ARG(1);
+			while(index->getNodeType() == core::NT_CastExpr) {
+				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
+			}
+			assert(index->getNodeType() == core::NT_Literal);
+			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getValue());
+			return c_ast::access(CONVERT_ARG(0), field);
+		});
+
+		res[basic.getTupleRefElem()] = OP_CONVERTER({
+			// signature of operation:
+			//		(ref<'a>, uint<8>, type<'b>) -> ref<'b>
+
+			// add a dependency to the accessed type definition before accessing the type
+			const core::TypePtr tupleType = core::analysis::getReferencedType(ARG(0)->getType());
+			const TypeInfo& info = context.getConverter().getTypeManager().getTypeInfo(tupleType);
+			context.getDependencies().insert(info.definition);
+
+			core::ExpressionPtr index = ARG(1);
+			while(index->getNodeType() == core::NT_CastExpr) {
+				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
+			}
+			assert(index->getNodeType() == core::NT_Literal);
+			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getValue());
+
+			// access the type
+			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), field));
+		});
+
 
 
 		// -- pointer --

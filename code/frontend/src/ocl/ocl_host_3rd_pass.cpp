@@ -106,14 +106,14 @@ const ExpressionPtr HostMapper3rdPass::genGetKernelLambda() {
 // with an appropriate return value
 bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::NodePtr& newCall) {
 
-
+/*
 	if(oldCall->getType()->toString().find("_cl_kernel") != string::npos){
 		std::cout << "\nBlack Death\n" << oldCall->getType() << " " << oldCall << std::endl;
 //	if(newCall->getType()->toString().find("_cl_kernel") != string::npos)
 //		const ExpressionPtr& newCall = static_pointer_cast<const Expression>(callExpr->substitute(builder.getNodeManager(), *this));
 //		std::cout << "\n   Riders of the Apokalypse\n" << newCall->getType() << " " << newCall << std::endl;
 	}
-
+*/
 
 	ExpressionPtr fun = oldCall->getFunctionExpr();
 	const TypePtr& oldType = oldCall->getType();

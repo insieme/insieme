@@ -59,7 +59,7 @@ namespace transform {
  * @param replacement the node to be used as a substitution for the toReplace node
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const NodePtr& toReplace, const NodePtr& replacement);
+		const NodePtr& toReplace, const NodePtr& replacement, bool limitScope = true);
 
 /**
  * Replaces all occurrences of the specified variable within the given sub-tree with the given replacement.
@@ -70,7 +70,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * @param replacement the node to be used as a substitution for the toReplace node
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const VariablePtr& toReplace, const NodePtr& replacement);
+		const VariablePtr& toReplace, const NodePtr& replacement, bool limitScope = true);
 
 /**
  * Replaces all occurrences of a specific nodes within the given AST sub-tree with a given replacement.
@@ -86,7 +86,7 @@ NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
  * 				and returned.
  */
 NodePtr replaceAll(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<NodePtr, NodePtr>& replacements);
+		const utils::map::PointerMap<NodePtr, NodePtr>& replacements, bool limitScope = true);
 
 /**
  * Replaces all occurrences of the variables within the given map and the current scope by the element associated
@@ -129,7 +129,7 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
  * @param replacements the map mapping variables to their replacements
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>>& replacements);
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements);
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -142,7 +142,7 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
-		const utils::map::PointerMap<VariablePtr, std::pair<VariablePtr, ExpressionPtr>>& replacements) {
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
 	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements));
 }
 

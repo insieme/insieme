@@ -37,6 +37,8 @@
 #pragma once
 
 #include "insieme/backend/backend.h"
+#include "insieme/backend/function_manager.h"
+#include "insieme/backend/type_manager.h"
 
 namespace insieme {
 namespace backend {
@@ -71,6 +73,10 @@ namespace runtime {
 		backend::TargetCodePtr convert(const core::NodePtr& source) const;
 
 	};
+
+	FunctionIncludeTable& addRuntimeFunctionIncludes(FunctionIncludeTable& table);
+
+	TypeIncludeTable& addRuntimeTypeIncludes(TypeIncludeTable& table);
 
 
 }

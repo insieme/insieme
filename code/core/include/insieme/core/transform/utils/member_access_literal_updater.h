@@ -38,14 +38,17 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/expressions.h"
+#include "insieme/core/ast_visitor.h"
 
 namespace insieme {
 namespace core {
 namespace transform {
 namespace utils {
 
+
 /**
- * Visitor which checks if the type literal argument of compostite and tuple calls are aligned witht the actual type of the struct/tuple.
+ * NodeMapper which checks if the type literal argument of compostite and tuple calls are aligned witht the actual type of the struct/tuple.
  * If not the type literal is replaced with the appropriate one
  */
 class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
