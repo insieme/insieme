@@ -70,6 +70,10 @@ namespace runtime {
 
 		const Converter& converter;
 
+		vector<string> initExpressions;
+
+		vector<string> cleanupExpressions;
+
 	public:
 
 		ContextHandlingFragment(const Converter& converter);
@@ -81,6 +85,31 @@ namespace runtime {
 		const c_ast::IdentifierPtr getCleanupFunctionName();
 
 		virtual std::ostream& printTo(std::ostream& out) const;
+
+		/**
+		 * This method allows to add additional expressions to the initialization method.
+		 * The given expression should be a valid C statement and may contain formating
+		 * symbols (like printf). The one parameter to be passed to the formatting will
+		 * be the name of the context variable.
+		 *
+		 * e.g. given the pattern "do_something_with_context(%s);" will be instantiated as
+		 * "do_something_with_context(context);" if context is the name of the variable.
+		 *
+		 * @param expr the initialization expression to be added
+		 */
+		void addInitExpression(const string& expr) {
+			initExpressions.push_back(expr);
+		}
+
+		/**
+		 * This method allows to add an additional statement to the cleanup method. As for
+		 * the initialization method, the given expression may have formatting symbols.
+		 *
+		 * @param expr the expression to be added to the cleanup method.
+		 */
+		void addCleanupExpression(const string& expr) {
+			cleanupExpressions.push_back(expr);
+		}
 
 	};
 

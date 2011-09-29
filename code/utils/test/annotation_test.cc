@@ -235,6 +235,44 @@ TEST(Annotation, CopyTests) {
 	EXPECT_FALSE ( c.hasAnnotation(DummyAnnotation2::DummyKey));
 }
 
+TEST(Annotation, ValueAnnotation) {
+
+	// create first instance
+	Annotatable<> a;
+
+	EXPECT_FALSE(a.hasAttachedValue<int>());
+	EXPECT_FALSE(a.hasAttachedValue<string>());
+
+	a.attachValue<int>(123);
+
+	EXPECT_TRUE(a.hasAttachedValue<int>());
+	EXPECT_FALSE(a.hasAttachedValue<string>());
+
+	a.attachValue<string>("Hello");
+
+	EXPECT_TRUE(a.hasAttachedValue<int>());
+	EXPECT_TRUE(a.hasAttachedValue<string>());
+
+	EXPECT_EQ("Hello", a.getAttachedValue<string>());
+
+	a.attachValue<string>("World");
+	EXPECT_TRUE(a.hasAttachedValue<string>());
+	EXPECT_EQ("World", a.getAttachedValue<string>());
+
+	EXPECT_EQ(123, a.getAttachedValue<int>());
+
+	a.detachValue<int>();
+
+	EXPECT_FALSE(a.hasAttachedValue<int>());
+	EXPECT_TRUE(a.hasAttachedValue<string>());
+
+	a.detachValue<string>();
+
+	EXPECT_FALSE(a.hasAttachedValue<int>());
+	EXPECT_FALSE(a.hasAttachedValue<string>());
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

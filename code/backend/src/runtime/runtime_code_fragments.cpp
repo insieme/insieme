@@ -87,14 +87,25 @@ namespace runtime {
 	}
 
 	std::ostream& ContextHandlingFragment::printTo(std::ostream& out) const {
-		return out <<
+		out <<
 				"void " INIT_CONTEXT_NAME "(irt_context* context) {\n"
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
-				"    context->impl_table = " IMPL_TABLE_NAME ";\n"
+				"    context->impl_table = " IMPL_TABLE_NAME ";\n";
+
+		for_each(initExpressions, [&](const string& cur) {
+			out << format(cur.c_str(), "context");
+		});
+
+		out <<
 				"}\n"
 				"\n"
-				"void " CLEAN_CONTEXT_NAME "(irt_context* context) {\n"
-				"    // nothing to do \n"
+				"void " CLEAN_CONTEXT_NAME "(irt_context* context) {\n";
+
+		for_each(cleanupExpressions, [&](const string& cur) {
+			out << format(cur.c_str(), "context");
+		});
+
+		return out <<
 				"}\n\n";
 	}
 
