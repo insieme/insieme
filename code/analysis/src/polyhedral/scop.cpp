@@ -100,8 +100,18 @@ public:
 	}
 
 	virtual const char* what() const throw() { return msg.c_str(); }
+	
+	const NodePtr& node() const { return root; }
 
 	virtual ~NotASCoP() throw() { }
+};
+
+class DiscardSCoPException: public NotASCoP {
+	const ExpressionPtr& expr;
+public: 
+	DiscardSCoPException(const NodePtr& root, const ExpressionPtr& expr) : NotASCoP(root), expr(expr) { }
+
+	const ExpressionPtr& expression() const { return expr; }
 };
 
 /**************************************************************************************************
@@ -306,10 +316,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		bool isThenSCOP = true, isElseSCOP = true;
 		
 		if ( ifStmt->hasAnnotation(ScopRegion::KEY) ) {
+			ScopRegion& ann = *ifStmt->getAnnotation(ScopRegion::KEY);
+			if ( !ann.isValid() ) { throw NotASCoP(ifStmt.getAddressedNode()); }
+
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// function, therefore we can return the iteration vector already precomputed 
 			subScops.push_back( ifStmt );
-			return ifStmt->getAnnotation(ScopRegion::KEY)->getIterationVector();
+			return ann.getIterationVector();
 		}
 
 		ExpressionAddress condAddr = AS_EXPR_ADDR(ifStmt.getAddressOfChild(0));
@@ -411,6 +424,16 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	 *********************************************************************************************/
 	IterationVector visitSwitchStmt(const SwitchStmtAddress& switchStmt) {
 		STACK_SIZE_GUARD;
+		
+		if ( switchStmt->hasAnnotation(ScopRegion::KEY) ) {
+			ScopRegion& ann = *switchStmt->getAnnotation(ScopRegion::KEY);
+			if ( !ann.isValid() ) { throw NotASCoP(switchStmt.getAddressedNode()); }
+
+			// if the SCopRegion annotation is already attached, it means we already visited this
+			// compoundstmt, therefore we can return the iteration vector already precomputed 
+			subScops.push_back(switchStmt);
+			return ann.getIterationVector();
+		}
 
 		typedef std::vector<SwitchStmt::Case> CaseList;
 		typedef std::vector<IterationVector> IterationVectorList;
@@ -528,9 +551,12 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		// if we already visited this forStmt, just return the precomputed iteration vector 
 		if (forStmt->hasAnnotation(ScopRegion::KEY)) {
+			ScopRegion& ann = *forStmt->getAnnotation(ScopRegion::KEY);
+			if ( !ann.isValid() ) { throw NotASCoP(forStmt.getAddressedNode()); }
+
 			// return the cached value
 			subScops.push_back(forStmt);
-			return forStmt->getAnnotation(ScopRegion::KEY)->getIterationVector();
+			return ann.getIterationVector();
 		}
 
 		// Create a new scope for region stmts
@@ -645,10 +671,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		assert(subScops.empty());
 
 		if ( compStmt->hasAnnotation(ScopRegion::KEY) ) {
+			ScopRegion& ann = *compStmt->getAnnotation(ScopRegion::KEY);
+			if ( !ann.isValid() ) { throw NotASCoP(compStmt.getAddressedNode()); }
+
 			// if the SCopRegion annotation is already attached, it means we already visited this
 			// compoundstmt, therefore we can return the iteration vector already precomputed 
 			subScops.push_back(compStmt);
-			return compStmt->getAnnotation(ScopRegion::KEY)->getIterationVector();
+			return ann.getIterationVector();
 		}
 
 		regionStmts.push( RegionStmtStack::value_type() );
@@ -709,16 +738,14 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
-		STACK_SIZE_GUARD;
+		assert( subScops.empty() );
 
-		if ( lambda->hasAnnotation(ScopRegion::KEY) ) {
-			// if the SCopRegion annotation is already attached, it means we already visited this
-			// function, therefore we can return the iteration vector already precomputed 
-			subScops.push_back( lambda );
-			return lambda->getAnnotation(ScopRegion::KEY)->getIterationVector();
-		}
-
-		AddressList scops(subScops);
+		/*if ( lambda->hasAnnotation(ScopRegion::KEY) ) {*/
+			//// if the SCopRegion annotation is already attached, it means we already visited this
+			//// function, therefore we can return the iteration vector already precomputed 
+			//subScops.push_back( lambda );
+			//return lambda->getAnnotation(ScopRegion::KEY)->getIterationVector();
+		/*}*/
 
 		IterationVector bodyIV;
 		// otherwise we have to visit the body and attach the ScopRegion annotation 
@@ -727,11 +754,16 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
 		
-			subScops.clear();
+			StatementAddress addr = AS_STMT_ADDR(lambda.getAddressOfChild(lambda->getChildList().size()-1));  /*getBody()*/
+			bodyIV = visitStmt( addr );
 
-			bodyIV = visitStmt( lambda.getAddressOfChild(lambda->getChildList().size()-1) /*getBody()*/ );
-
-			//FIXME
+			if (!addr->hasAnnotation(ScopRegion::KEY)) {
+				// else body is not a compound stmt
+				addr->addAnnotation( std::make_shared<ScopRegion>(bodyIV, IterationDomain(bodyIV)) );
+				subScops.push_back( addr );
+			}
+			assert(subScops.size() == 1 && "A Lambda cannot have more than one sub SCoP");
+			
 			lambda->addAnnotation( 
 					std::make_shared<ScopRegion>(bodyIV, IterationDomain(bodyIV), regionStmts.top(), 
 						toSubScopList(bodyIV, subScops)
@@ -740,14 +772,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 			fa.setEnabled( false );
 		}
-		regionStmts.pop();
-
-		postProcessSCoP( lambda, scopList );
-
-		subScops.clear();
-		std::copy(scops.begin(), scops.end(), std::back_inserter(subScops));
-		subScops.push_back( lambda );
-
 		return bodyIV;
 	}
 
@@ -760,6 +784,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitCallExpr(const CallExprAddress& callExpr) {
+		STACK_SIZE_GUARD;
 
 		const ExpressionPtr& func = AS_EXPR_ADDR(callExpr.getAddressOfChild(1));
 		const BasicGenerator& gen = callExpr->getNodeManager().getBasicGenerator();
@@ -776,14 +801,42 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			if ( !isPure ) { throw NotASCoP(callExpr.getAddressedNode()); }
 		}
 
-		return visitNode(callExpr);
+		AddressList scops(subScops);
+		subScops.clear();
+		IterationVector iterVec;
+		{ 
+			iterVec = visitNode(callExpr);
+			if ( func->getNodeType() == NT_LambdaExpr ) {
+
+				FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
+				assert( subScops.size() == 1 && !regionStmts.top().empty() );
+			
+				callExpr->addAnnotation( 
+					std::make_shared<ScopRegion>(iterVec, IterationDomain(iterVec), 
+						regionStmts.top(), toSubScopList(iterVec, subScops)
+					)
+				);
+				scops.push_back( callExpr );		
+			}
+		}
+
+		subScops.clear();
+		std::copy(scops.begin(), scops.end(), std::back_inserter(subScops));
+
+		return iterVec;
 	}
 
 	IterationVector visitProgram(const ProgramAddress& prog) {
 		for(size_t i=0, end=prog->getEntryPoints().size(); i!=end; ++i) {
 			try { 
-				visit( prog.getAddressOfChild(i) ); 
-			} catch(NotASCoP&& e) { subScops.empty(); }
+				NodeAddress&& addr = prog.getAddressOfChild(i);
+				visit( addr ); 
+				assert( subScops.size() == 1 );
+				postProcessSCoP( subScops.front(), scopList );
+			} catch(NotASCoP&& e) { 
+				LOG(WARNING) << e.what();
+				subScops.empty(); 
+			}
 		} 
 		return IterationVector();
 	}
@@ -800,63 +853,75 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	
 };
 
-// Adds a SCoP to the list of entry SCoPs. This function also check whether inside this SCoP
-// there are operations which invalidates this SCoP, for example the following properties are
-// checked: 
-//  * Assignments to iterators or parameters within the outerscop iteration vector should be
-//  avoided
-//  * ...
-//
+void recurScop(const IterationVector& iterVec, const NodeAddress& scop) {
+	assert ( scop->hasAnnotation(ScopRegion::KEY) );
+
+	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
+	const ScopStmtList& stmts = region.getDirectRegionStmts();
+
+	std::for_each(stmts.begin(), stmts.end(), 
+		[&](const ScopStmt& curStmt) {
+			const RefAccessList& ail = curStmt.getRefAccesses();
+
+			std::for_each(ail.begin(), ail.end(), 
+				[&] (const RefPtr& cur) {
+
+					// if( usage != Ref::SCALAR && usage != Ref::MEMBER) { continue; }
+
+					const ExpressionAddress& addr = cur->getBaseExpression();
+					switch ( cur->getUsage() ) {
+					case Ref::DEF:
+					case Ref::UNKNOWN:
+						if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) {
+							// This SCoP has to be discarded because one of the iterators or parameters
+							// of the iteration domain has been overwritten within the body of the SCoP
+							throw DiscardSCoPException( curStmt.getAddr().getAddressedNode(), addr.getAddressedNode() );
+						}
+					default:
+						break;
+					}
+				});
+		});
+
+	// now check stmts of the subScops
+	const SubScopList& subScops = region.getSubScops();
+	std::for_each(subScops.begin(), subScops.end(), [&](const SubScop& cur) { recurScop(iterVec, cur.first); } );
+
+}
+
 void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
-	resolveFrom( scop );
-
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	const ScopRegion::ScatteringMatrix& scat = region.getScatteringInfo().second;
-
 	const IterationVector& iterVec = region.getIterationVector();
-
-	bool discardSCoP=false;
-	for(ScopRegion::ScatteringMatrix::const_iterator&& it=scat.begin(), end=scat.end(); it!=end && !discardSCoP; ++it) {
-		const ScopRegion::AccessInfoList& ail = std::get<3>(*it);
-
-		for(ScopRegion::AccessInfoList::const_iterator&& ait = ail.begin(), aend=ail.end(); ait!=aend && !discardSCoP; ++ait) {
-			const ScopRegion::AccessInfo& cur = *ait; 
-			if( std::get<1>(cur) !=  Ref::SCALAR ) { continue; }
-
-			const ExpressionAddress& addr = std::get<0>(cur);
-			switch ( std::get<2>(cur) ) {
-			case Ref::DEF: 			
-			case Ref::UNKNOWN:	
-				if ( iterVec.getIdx( addr.getAddressedNode() ) != -1 ) 
-				{
-					LOG(WARNING) << "Invalidating SCoP because iterator/parameter " <<
-						*addr.getAddressedNode() << " is being assigned."; 
-					// This SCoP has to be discarded because one of the iterators or parameters
-					// of the iteration domain has been overwritten within the body of the SCoP
-					discardSCoP = true;
-				}
-			default:
-				break;
-			}
-		}
+	
+	if (iterVec.getIteratorNum() == 0) {
+		// A top level SCoP containing no loops. This is considered not a SCoP in the terminology of
+		// the polyhedral model, therefore is discarded. However we don't set the flag to invalid
+		// because this region could be inside another SCoP contanining loops therefore forming a
+		// valid SCoP
+		LOG(WARNING) << "Invalidating SCoP because it contains no loops "; 
+		return;
 	}
 
-	if (discardSCoP) {
+	try {
+
+		recurScop(iterVec, scop);
+		scopList.push_back( scop );
+
+	}catch( DiscardSCoPException&& e ) { 
+		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
+					*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
+
 		// Recur on every subscop to identify minimal SCoPs
 		std::for_each(region.getSubScops().begin(), region.getSubScops().end(), 
 				[&](const SubScop& subScop) { postProcessSCoP(subScop.first, scopList); });
 
-		// Remove the annotation for this SCoP 
-		scop->remAnnotation( ScopRegion::KEY );
-		return;
+		// Invalidate the annotation for this SCoP, we can set the valid flag to false because we
+		// are sure that within this SCoP there are issues with makes the SCoP not valid. 
+		region.setValid(false);
 	} 
-	if (iterVec.getIteratorNum() == 0) {
-		// A SCoP without loop statements is of any use
-		return;
-	}
-	scopList.push_back( scop );
+
 }
 
 } // end namespace anonymous 
@@ -1093,7 +1158,7 @@ AddressList mark(const core::NodePtr& root) {
 	try {
 		sv.visit( NodeAddress(root) );
 	} catch (NotASCoP&& e) { LOG(WARNING) << e.what(); }
-
+	LOG(DEBUG) << ret.size();
 	return ret;
 }
 
