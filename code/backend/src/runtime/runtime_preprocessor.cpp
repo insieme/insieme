@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/backend/runtime/runtime_preprocessing.h"
+#include "insieme/backend/runtime/runtime_preprocessor.h"
 
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"

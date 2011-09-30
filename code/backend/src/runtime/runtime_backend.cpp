@@ -56,7 +56,7 @@
 #include "insieme/backend/runtime/runtime_operator.h"
 #include "insieme/backend/runtime/runtime_type_handler.h"
 #include "insieme/backend/runtime/runtime_stmt_handler.h"
-#include "insieme/backend/runtime/runtime_preprocessing.h"
+#include "insieme/backend/runtime/runtime_preprocessor.h"
 
 #include "insieme/backend/c_ast/c_code.h"
 
@@ -68,10 +68,6 @@ namespace runtime {
 	namespace {
 
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager);
-
-		FunctionIncludeTable getFunctionIncludeTable();
-
-		TypeIncludeTable getTypeIncludeTable();
 
 		TypeHandlerList getTypeHandlerList();
 
@@ -112,17 +108,53 @@ namespace runtime {
 		SimpleNameManager nameManager;
 		converter.setNameManager(&nameManager);
 
-		TypeManager typeManager(converter, getTypeIncludeTable(), getTypeHandlerList());
+		TypeIncludeTable typeIncludeTable = getBasicTypeIncludeTable();
+		runtime::addRuntimeTypeIncludes(typeIncludeTable);
+		TypeManager typeManager(converter, typeIncludeTable, getTypeHandlerList());
 		converter.setTypeManager(&typeManager);
 
 		StmtConverter stmtConverter(converter);
 		converter.setStmtConverter(&stmtConverter);
 
-		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
+		FunctionIncludeTable functionIncludeTable = getBasicFunctionIncludeTable();
+		runtime::addRuntimeFunctionIncludes(functionIncludeTable);
+		FunctionManager functionManager(converter, getOperatorTable(nodeManager), functionIncludeTable);
 		converter.setFunctionManager(&functionManager);
 
 		// conduct conversion
 		return converter.convert(code);
+	}
+
+
+	FunctionIncludeTable& addRuntimeFunctionIncludes(FunctionIncludeTable& table) {
+
+		// add runtime-specific includes
+		table["irt_get_default_worker_count"] 	= "standalone.h";
+		table["irt_runtime_standalone"] 			= "standalone.h";
+
+		table["irt_parallel"] 					= "ir_interface.h";
+		table["irt_merge"] 						= "ir_interface.h";
+		table["irt_pfor"]							= "ir_interface.h";
+
+		table["irt_wg_join"]						= "irt_all_impls.h";
+		table["irt_wi_end"]						= "irt_all_impls.h";
+		table["irt_wi_get_current"]				= "irt_all_impls.h";
+		table["irt_wi_get_wg"]					= "irt_all_impls.h";
+
+		table["irt_wg_barrier"]					= "irt_all_impls.h";
+		table["irt_wg_joining_barrier"]			= "irt_all_impls.h";
+
+		return table;
+	}
+
+	TypeIncludeTable& addRuntimeTypeIncludes(TypeIncludeTable& table) {
+
+		// some runtime types ...
+		table["irt_parallel_job"]				= "ir_interface.h";
+		table["irt_work_item_range"]			= "irt_all_impls.h";
+		table["irt_wi_implementation_id"]		= "irt_all_impls.h";
+
+		return table;
 	}
 
 	namespace {
@@ -130,39 +162,6 @@ namespace runtime {
 		OperatorConverterTable getOperatorTable(core::NodeManager& manager) {
 			OperatorConverterTable res = getBasicOperatorTable(manager);
 			return addRuntimeSpecificOps(manager, res);
-		}
-
-		FunctionIncludeTable getFunctionIncludeTable() {
-			FunctionIncludeTable res = getBasicFunctionIncludeTable();
-
-			// add runtime-specific includes
-			res["irt_get_default_worker_count"] 	= "standalone.h";
-			res["irt_runtime_standalone"] 			= "standalone.h";
-
-			res["irt_parallel"] 					= "ir_interface.h";
-			res["irt_merge"] 						= "ir_interface.h";
-			res["irt_pfor"]							= "ir_interface.h";
-
-			res["irt_wg_join"]						= "irt_all_impls.h";
-			res["irt_wi_end"]						= "irt_all_impls.h";
-			res["irt_wi_get_current"]				= "irt_all_impls.h";
-			res["irt_wi_get_wg"]					= "irt_all_impls.h";
-
-			res["irt_wg_barrier"]					= "irt_all_impls.h";
-			res["irt_wg_joining_barrier"]			= "irt_all_impls.h";
-
-			return res;
-		}
-
-		TypeIncludeTable getTypeIncludeTable() {
-			TypeIncludeTable res = getBasicTypeIncludeTable();
-
-			// some runtime types ...
-			res["irt_parallel_job"]				= "ir_interface.h";
-			res["irt_work_item_range"]			= "irt_all_impls.h";
-			res["irt_wi_implementation_id"]		= "irt_all_impls.h";
-
-			return res;
 		}
 
 		TypeHandlerList getTypeHandlerList() {

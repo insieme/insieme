@@ -47,6 +47,8 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/ocl_kernel/kernel_backend.h"
 
+#include "insieme/backend/runtime/runtime_code_fragments.h"
+
 namespace insieme {
 namespace backend {
 namespace ocl_host {
@@ -68,6 +70,19 @@ namespace ocl_host {
 			KernelCodeTablePtr table = manager->create<KernelCodeTable>(boost::ref(converter));
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
+
+			// add initialization and cleanup lines
+			runtime::ContextHandlingFragmentPtr fragments = runtime::ContextHandlingFragment::get(converter);
+			fragments->addInitExpression(
+					"    #ifdef USE_OPENCL\n"
+					"    irt_ocl_rt_create_all_kernels(%s, " KERNEL_TABLE_NAME ", g_kernel_code_table_size);\n"
+					"    #endif\n"
+			);
+			fragments->addCleanupExpression(
+					"    #ifdef USE_OPENCL\n"
+					"    irt_ocl_rt_release_all_kernels(%s, g_kernel_code_table_size);\n"
+					"    #endif\n"
+			);
 		}
 		return static_pointer_cast<const KernelCodeTable>(res);
 	}

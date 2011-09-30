@@ -245,6 +245,11 @@ namespace encoder {
 					throw InvalidExpression(should, is);
 				}
 
+				// handle casts
+				if (expr->getNodeType() == core::NT_CastExpr) {
+					return (*this)(static_pointer_cast<const core::CastExpr>(expr)->getSubExpression());
+				}
+
 				// check node-type
 				if (expr->getNodeType() != core::NT_Literal) {
 					throw InvalidExpression(expr);

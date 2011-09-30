@@ -38,6 +38,7 @@
 #include "insieme/core/ast_node.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/ast_visitor.h"
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
@@ -95,20 +96,38 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 		}
 
 		if(BASIC.isTupleRefElem(fun) || BASIC.isTupleMemberAccess(fun)) {
-			ExpressionPtr arg = call->getArgument(2);
+			ExpressionPtr arg = call->getArgument(1);
 			int idx = -1;
 
 			// search for the literal in the second argument
-			auto lambdaVisitor = makeLambdaVisitor([&arg,this](const NodePtr& node) {
+			auto lambdaVisitor = makeLambdaVisitor([&idx, this](const NodePtr& node)->bool {
 				// check for literal, assuming it will always be a valid integer
 				if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(node)) {
-					std::cout << "TRY " << lit << std::endl;
-					return atoi(lit->getValue().c_str());
+					if(BASIC.isInt(lit->getType())) {
+						idx = atoi(lit->getValue().c_str());
+						return true;
+					}
 				}
-				return 0;
+				return false;
 			});
 
-			visitDepthFirst(call, lambdaVisitor);
+			if(!visitDepthFirstInterruptable(arg, lambdaVisitor) || idx == -1){
+				LOG(ERROR) << fun;
+				assert(false && "Tuple access does not contain a literal as index");
+			}
+
+			const RefTypePtr& isRef = dynamic_pointer_cast<const RefType>(call->getArgument(0)->getType());
+			const TupleTypePtr tupleTy = dynamic_pointer_cast<const TupleType>( isRef ? isRef->getElementType() : call->getArgument(0)->getType());
+			const TypePtr& elemTy = tupleTy->getElementTypes().at(idx);
+
+			const TypePtr& retTy = isRef ? builder.refType(elemTy) : elemTy;
+			const LiteralPtr& elemTyLit = BASIC.getTypeLiteral(elemTy);
+
+
+			if(*call->getType() != *retTy || *call->getArgument(2)->getType() != *elemTyLit->getType()) {
+				res = builder.callExpr(retTy, isRef ? BASIC.getTupleRefElem() : BASIC.getTupleMemberAccess(), call->getArgument(0), call->getArgument(1),
+						elemTyLit);
+			}
 		}
 	}
 

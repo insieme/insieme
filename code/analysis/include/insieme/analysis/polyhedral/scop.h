@@ -142,7 +142,8 @@ struct ScopRegion: public core::NodeAnnotation {
 	:
 		iterVec(iv), 
 		stmts(stmts),
-		domain( iterVec, comb ) // Switch the base to the this->iterVec 
+		domain( iterVec, comb ), // Switch the base to the this->iterVec 
+		valid(true)
 	{ 
 		
 		for_each(subScops_.begin(), subScops_.end(), 
@@ -195,6 +196,10 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	bool containsLoopNest() const;
 
+	bool isValid() const { return valid; }
+
+	void setValid(bool value) { valid = value; }
+
 private:
 	friend void resolveFrom(const core::NodePtr& root);
 
@@ -216,6 +221,8 @@ private:
 	SubScopList subScops;
 
 	std::shared_ptr<ScatteringPair> scattering;
+
+	bool valid;
 };
 
 /**************************************************************************************************

@@ -52,6 +52,7 @@ namespace ocl_host{
 			return builder.genericType("irt_ocl_buffer");
 		}
 
+		// irt_ocl_rt_run_kernel(...)
 		const core::LiteralPtr getCallKernel(core::NodeManager& manager) {
 			return core::lang::getLiteral(manager, "('a,vector<uint<4>,#l>,vector<uint<4>,#l>,var_list)->unit", "call_kernel");
 		}
