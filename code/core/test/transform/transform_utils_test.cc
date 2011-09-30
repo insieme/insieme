@@ -70,12 +70,11 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 				mgr.basic.getIdentifierLiteral(builder.identifier("second")), mgr.basic.getTypeLiteral(mgr.basic.getReal4())));
 		const StatementPtr& structAccess = builder.compoundStmt(saStmts);
 
-		std::cout << structAccess << std::endl;
-
 		// test for errors
 		auto errors = core::check(structAccess, insieme::core::checks::getFullCheck()).getAll();
 		EXPECT_EQ(4u, errors.size());
 
+		// correct errors
 		utils::MemberAccessLiteralUpdater malu(builder);
 		NodePtr corrected = malu.mapElement(0, structAccess);
 
@@ -91,14 +90,35 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 	saStmts.clear();
 	{
 		// construct a tuple variable
-		const VariablePtr& tupleVar = builder.variable(builder.refType(builder.tupleType(toVector(mgr.basic.getInt4(), mgr.basic.getChar()))));
+		const TupleTypePtr& tupleTy = builder.tupleType(toVector(mgr.basic.getInt4(), mgr.basic.getChar()));
+		const VariablePtr& tupleVar = builder.variable(builder.refType(tupleTy));
 		std::vector<ExpressionPtr> init;
 		init.push_back(builder.intLit(1));
 		init.push_back(builder.literal(mgr.basic.getChar(), "a"));
-		saStmts.push_back(builder.declarationStmt(tupleVar, builder.tupleExpr(init)));
+		saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), mgr.basic.getRefVar(), builder.tupleExpr(init))));
 		// TupleMemberAcces
-		saStmts.push_back(builder.callExpr(mgr.basic.getInt4(), mgr.basic.getTupleMemberAccess(), tupleVar, builder.intLit(0),
-				mgr.basic.getTypeLiteral(mgr.basic.getInt4())));
+		saStmts.push_back(builder.callExpr(mgr.basic.getUInt2(), mgr.basic.getTupleMemberAccess(), builder.callExpr(tupleTy, mgr.basic.getRefDeref(), tupleVar),
+				builder.literal(mgr.basic.getUInt8(), "0"), mgr.basic.getTypeLiteral(mgr.basic.getInt4())));
+		// TupleRefElem
+		saStmts.push_back(builder.callExpr(mgr.basic.getChar(), mgr.basic.getTupleRefElem(), tupleVar, builder.castExpr(mgr.basic.getUInt8(), builder.intLit(1)),
+				mgr.basic.getTypeLiteral(mgr.basic.getWChar())));
+		const StatementPtr& tupleAccess = builder.compoundStmt(saStmts);
+
+		// test for errors
+		auto errors = core::check(tupleAccess, insieme::core::checks::getFullCheck()).getAll();
+		EXPECT_EQ(2u, errors.size());
+
+		// correct errors
+		utils::MemberAccessLiteralUpdater malu(builder);
+		NodePtr corrected = malu.mapElement(0, tupleAccess);
+
+		// test for errors again
+		errors = core::check(corrected, insieme::core::checks::getFullCheck()).getAll();
+		EXPECT_EQ(0u, errors.size());
+		std::sort(errors.begin(), errors.end());
+		for_each(errors, [](const core::Message& cur) {
+			LOG(INFO) << cur << std::endl;
+		});
 	}
 }
 

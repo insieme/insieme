@@ -2,7 +2,7 @@
 
 
 int main() {
-    int i = 0;
+	int i = 0;
 	int sum = 0;
 
  	// sure, it isn't nice, but ...
