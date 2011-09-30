@@ -255,6 +255,8 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
 
+
+
 //***************************************************************************************
 // Mark SCoPs 
 //***************************************************************************************
@@ -267,13 +269,31 @@ void markSCoPs(const ProgramPtr& program) {
 
 	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
 	size_t numStmtsInScops = 0;
+	size_t loopNests = 0;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
-		printSCoP(LOG_STREAM(INFO), cur); 
+		resolveFrom(cur);
+		// printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
 		// computeDataDependence(cur);
-		numStmtsInScops += cur->getAnnotation(ScopRegion::KEY)->getScatteringInfo().second.size();
+		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
+		numStmtsInScops += reg.getScatteringInfo().second.size();
+		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScatteringInfo().second);
+		LOG(DEBUG) << loopNest;
+		loopNests += loopNest;
 	});	
-	LOG(INFO) << "SCoP coverage = " << numStmtsInScops;
+	LOG(INFO) << std::setfill(' ') << std::endl
+			  << "#########################################" << std::endl
+			  << "#             SCoP COVERAGE             #" << std::endl
+			  << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#" << std::endl
+			  << "# Tot # of SCoPs                :" << std::setw(7) 
+			  		<< sl.size() << "#" << std::endl
+			  << "# Tot # of stms covered by SCoPs:" << std::setw(7) 
+			  		<< numStmtsInScops << "#" << std::endl
+			  << "# Avg stmt per SCoP             :" << std::setw(7) 
+			  		<< std::setprecision(4) << (double)numStmtsInScops/sl.size() << "#" << std::endl
+			  << "# Avg loop nests per SCoP       :" << std::setw(7) 
+			  		<< std::setprecision(4) << (double)loopNests/sl.size() << "#" << std::endl
+			  << "#########################################";
 }
 
 //***************************************************************************************
