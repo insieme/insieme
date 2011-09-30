@@ -5,13 +5,13 @@ int main() {
 	int m = 0;
 	#pragma omp parallel
 	{
-	m++;
-    //printf("multiple\n");
-    #pragma omp single
-	{
-		s++;
-		printf("single\n");
-	}
+		m++;
+		//printf("multiple\n");
+		#pragma omp single
+		{
+			s++;
+			printf("single\n");
+		}
 	}
 
 	if (m > 0 && s == 1) {
