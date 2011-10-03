@@ -254,7 +254,7 @@ TEST(NodeReplacer, Performance) {
 
 	StatementPtr stmt = builder.compoundStmt(stmts);
 
-	std::cout << printer::PrettyPrinter(stmt) << std::endl;;
+//	std::cout << printer::PrettyPrinter(stmt) << std::endl;;
 
 	CheckPtr all = core::checks::getFullCheck();
 
@@ -276,16 +276,15 @@ TEST(NodeReplacer, Performance) {
 //	std::cout << "Replacements " << map << std::endl;
 	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map);
 //	std::cout << stmt2 << std::endl;
-
 	// fix initalization
 	NodePtr kernelInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
 			basic.getTypeLiteral(kernelReplacementTy->getElementType())));
-	stmt2 = transform::replaceAll(manager, stmt2, kernelInit, kernelInitReplacement);
+	stmt2 = transform::replaceAll(manager, stmt2, kernelInit, kernelInitReplacement, false);
 	NodePtr clMemInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
 			basic.getTypeLiteral(clMemReplacementTy->getElementType())));
-	stmt2 = transform::replaceAll(manager, stmt2, argInit, clMemInitReplacement);
+	stmt2 = transform::replaceAll(manager, stmt2, argInit, clMemInitReplacement, false);
 
-	std::cout << ":(" << std::endl << printer::PrettyPrinter(stmt2) << std::endl;;
+//	std::cout << ":(" << std::endl << printer::PrettyPrinter(stmt2) << std::endl;;
 	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt2)));
 
 
