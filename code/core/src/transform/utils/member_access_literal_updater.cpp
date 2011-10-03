@@ -59,7 +59,6 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 		return ptr;
 	}
 
-
 	// recursive replacement has to be continued
 	NodePtr res = ptr->substitute(builder.getNodeManager(), *this);
 
@@ -67,6 +66,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 		ExpressionPtr fun = call->getFunctionExpr();
 		// struct access
 		if(BASIC.isCompositeMemberAccess(fun)) {
+
 			const StructTypePtr& structTy = static_pointer_cast<const StructType>(call->getArgument(0)->getType());
 			// TODO find better way to extract Identifier from IdentifierLiteral
 			const IdentifierPtr& id = builder.identifier(static_pointer_cast<const Literal>(call->getArgument(1))->getValue());
@@ -76,6 +76,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 		}
 
 		if(BASIC.isCompositeRefElem(fun)) {
+
 			const StructTypePtr& structTy = static_pointer_cast<const StructType>(
 					static_pointer_cast<const RefType>(call->getArgument(0)->getType())->getElementType());
 			// TODO find better way to extract Identifier from IdentifierLiteral
@@ -96,6 +97,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 		}
 
 		if(BASIC.isTupleRefElem(fun) || BASIC.isTupleMemberAccess(fun)) {
+
 			ExpressionPtr arg = call->getArgument(1);
 			int idx = -1;
 
@@ -118,14 +120,14 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 
 			const RefTypePtr& isRef = dynamic_pointer_cast<const RefType>(call->getArgument(0)->getType());
 			const TupleTypePtr tupleTy = dynamic_pointer_cast<const TupleType>( isRef ? isRef->getElementType() : call->getArgument(0)->getType());
-if(!tupleTy)
+if(!tupleTy) //TODO remove dirty workaround
 	return res;
 			assert(tupleTy && "Tuple acces on a non tuple variable called");
 			const TypePtr& elemTy = tupleTy->getElementTypes().at(idx);
 
+
 			const TypePtr& retTy = isRef ? builder.refType(elemTy) : elemTy;
 			const LiteralPtr& elemTyLit = BASIC.getTypeLiteral(elemTy);
-
 
 			if(*call->getType() != *retTy || *call->getArgument(2)->getType() != *elemTyLit->getType()) {
 				res = builder.callExpr(retTy, isRef ? BASIC.getTupleRefElem() : BASIC.getTupleMemberAccess(), call->getArgument(0), call->getArgument(1),
