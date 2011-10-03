@@ -265,11 +265,13 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 	ASTBuilder builder;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
 	bool limitScope;
+	std::function<NodePtr (const NodePtr&)> transform;
 
 public:
 
-	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope)
-		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope) { }
+	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
+			std::function<NodePtr (const NodePtr&)>& functor)
+		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), transform(functor) { }
 
 private:
 
@@ -362,7 +364,7 @@ private:
 			return false;
 
 
-		for(int cnt = 0; cnt < a.size(); ++cnt) {
+		for(unsigned int cnt = 0; cnt < a.size(); ++cnt) {
 			if(a.at(cnt) != b.at(cnt)->getType()) {
 				return false;
 			}
@@ -534,7 +536,7 @@ class NodeAddressReplacer : public NodeMapping {
 	public:
 
 		NodeAddressReplacer(unsigned index, const NodePtr& replacement)
-			: indexToReplace(index), replacement(replacement) { }
+			: indexToReplace(index), replacement(replacement) {}
 
 	private:
 
@@ -645,14 +647,14 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 
 
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
-		bool limitScope) {
+		bool limitScope, std::function<NodePtr (const NodePtr&)> functor) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
 		return mgr.get(root);
 	}
 
 	// conduct actual substitutions
-	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope);
+	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, functor);
 	return applyReplacer(mgr, root, mapper);
 }
 
@@ -701,6 +703,8 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 	// done
 	return res;
 }
+
+
 
 
 } // End transform namespace
