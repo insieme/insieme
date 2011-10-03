@@ -117,7 +117,7 @@ ProgramPtr HostCompiler::compile() {
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
 
 	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
-	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
+/*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 //		tmp[t.first] = t.second;
 //		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
 			// replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
@@ -126,15 +126,14 @@ ProgramPtr HostCompiler::compile() {
 			std::cout << "Replacing ALL \n" << t.first << " " << t.first->getType() << "\nwith\n" << t.second << " " << t.second->getType() << "\n";
 //		}
 	});
-
+*/
 	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
 std::cout << "Replacements: \n" << cl_mems << std::endl;
 		transform::utils::MemberAccessLiteralUpdater malu(builder);
-		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, core::transform::replaceVarsRecursive(builder.getNodeManager(), newProg,
-				cl_mems, false)));
+		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 
-		mProgram = dynamic_pointer_cast<const core::Program>(core::transform::replaceVarsRecursive(builder.getNodeManager(), mProgram,
-				ohm3rd.getVarReplacements(), false));
+//		mProgram = dynamic_pointer_cast<const core::Program>(core::transform::replaceVarsRecursive(builder.getNodeManager(), mProgram,
+//				ohm3rd.getVarReplacements(), false));
 
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
