@@ -305,7 +305,25 @@ private:
 
 		// update calls to functions recursively
 		if (res->getNodeType() == NT_CallExpr) {
-			res = handleCall(static_pointer_cast<const CallExpr>(res));
+			CallExprPtr call = handleCall(static_pointer_cast<const CallExpr>(res));
+
+			// check arguments?
+
+			// check return type
+			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
+
+			// extract function type
+			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType());
+			assert(funType->getParameterTypes().size() == call->getArguments().size() && "Invalid number of arguments!");
+
+			TypeList argumentTypes;
+			::transform(call->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+			const TypePtr retTy = call->getType();//deduceReturnType(funType, argumentTypes);
+			if(call->getType() != retTy) {
+				// do something
+				assert(false && "tatatatatata\n");
+			}
+			res = call;
 //		} else if (res->getNodeType() == NT_DeclarationStmt) {
 //			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
 
