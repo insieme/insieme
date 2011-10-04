@@ -328,11 +328,9 @@ private:
 			}
 
 			res = call;
-//		} else if (res->getNodeType() == NT_DeclarationStmt) {
-//			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
+		} else if (res->getNodeType() == NT_DeclarationStmt) {
+			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
 
-			// check if interface has to be adapted
-//			deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
 		} else {
 			// recursive replacement has to be continued
 			res = res->substitute(manager, *this);
@@ -354,7 +352,11 @@ private:
 	NodePtr handleDeclStmt(const DeclarationStmtPtr& decl) {
 		auto pos = replacements.find(decl->getVariable());
 		if(pos != replacements.end()) {
-			return builder.declarationStmt(pos->second, decl->getInitialization());
+			ExpressionPtr newInit = static_pointer_cast<const Expression>(this->resolveElement(decl->getInitialization()));
+			if(pos->second->getType() != newInit->getType())
+				return (builder.declarationStmt(pos->second, newInit));
+
+			return builder.declarationStmt(pos->second, newInit);
 		}
 
 		// continue replacement recursively
