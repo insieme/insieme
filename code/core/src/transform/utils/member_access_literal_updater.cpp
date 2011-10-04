@@ -120,10 +120,11 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 
 			const RefTypePtr& isRef = dynamic_pointer_cast<const RefType>(call->getArgument(0)->getType());
 			const TupleTypePtr tupleTy = dynamic_pointer_cast<const TupleType>( isRef ? isRef->getElementType() : call->getArgument(0)->getType());
-if(!tupleTy)
-	return res; //TODO remove temorary fix
-			//TODO check if condition is needed at all
-			const TypePtr& elemTy = tupleTy ? tupleTy->getElementTypes().at(idx) : call->getArgument(0)->getType();
+if(!tupleTy) //TODO remove dirty workaround
+	return res;
+			assert(tupleTy && "Tuple acces on a non tuple variable called");
+			const TypePtr& elemTy = tupleTy->getElementTypes().at(idx);
+
 
 			const TypePtr& retTy = isRef ? builder.refType(elemTy) : elemTy;
 			const LiteralPtr& elemTyLit = BASIC.getTypeLiteral(elemTy);

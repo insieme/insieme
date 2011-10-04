@@ -119,6 +119,7 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
 }
 
 
+//std::function<NodePtr (const NodePtr&)> defaultFunctor = [](const NodePtr& node)->NodePtr { return node; };
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
  * variables are passed to functions accepting different types, a new version of the function accepting
@@ -129,7 +130,8 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
  * @param replacements the map mapping variables to their replacements
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements);
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		std::function<NodePtr (const NodePtr&)> functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); });
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -142,8 +144,8 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
-	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements));
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true) {
+	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope));
 }
 
 /**

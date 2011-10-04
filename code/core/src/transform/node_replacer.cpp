@@ -45,6 +45,7 @@
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/type_utils.h"
 
 namespace {
 
@@ -263,11 +264,14 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 	NodeManager& manager;
 	ASTBuilder builder;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
+	bool limitScope;
+	std::function<NodePtr (const NodePtr&)> transform;
 
 public:
 
-	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements)
-		: manager(manager), builder(manager), replacements(replacements) { }
+	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
+			std::function<NodePtr (const NodePtr&)>& functor)
+		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), transform(functor) { }
 
 private:
 
@@ -289,11 +293,13 @@ private:
 		}
 
 		// handle scope limiting elements
-		switch(ptr->getNodeType()) {
-		case NT_LambdaExpr:
-			// enters a new scope => variable will no longer occur
-			return ptr;
-		default: { }
+		if(limitScope) {
+			switch(ptr->getNodeType()) {
+			case NT_LambdaExpr:
+				// enters a new scope => variable will no longer occur
+				return ptr;
+			default: { }
+			}
 		}
 
 		// compute result
@@ -301,9 +307,30 @@ private:
 
 		// update calls to functions recursively
 		if (res->getNodeType() == NT_CallExpr) {
-			res = handleCall(static_pointer_cast<const CallExpr>(res));
+			CallExprPtr call = handleCall(static_pointer_cast<const CallExpr>(res));
+
+			// check arguments?
+
+			// check return type
+			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
+
+			// extract function type
+			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType());
+			assert(funType->getParameterTypes().size() == call->getArguments().size() && "Invalid number of arguments!");
+
+			TypeList argumentTypes;
+			::transform(call->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
+			const TypePtr retTy = call->getType();//deduceReturnType(funType, argumentTypes);
+			if(call->getType() != retTy) {
+				// do something
+				assert(false && "tatatatatata\n");
+			}
+			res = call;
 //		} else if (res->getNodeType() == NT_DeclarationStmt) {
 //			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
+
+			// check if interface has to be adapted
+//			deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
 		} else {
 			// recursive replacement has to be continued
 			res = res->substitute(manager, *this);
@@ -332,6 +359,20 @@ private:
 		return decl->substitute(manager, *this);
 	}
 
+	bool typesMatch(ExpressionList a, ExpressionList b) {
+		if(a.size() != b.size())
+			return false;
+
+
+		for(unsigned int cnt = 0; cnt < a.size(); ++cnt) {
+			if(a.at(cnt) != b.at(cnt)->getType()) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	CallExprPtr handleCall(const CallExprPtr& call) {
 
 		// handle recursive push-through-calls
@@ -345,13 +386,13 @@ private:
 			return static_pointer_cast<const Expression>(this->resolveElement(cur));
 		});
 
-		// test whether there has been a change
-		if (args == newArgs) {
-			return call;
-		}
 
 		if (fun->getNodeType() == NT_LambdaExpr) {
 			return handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
+		}
+		// test whether there has been a change
+		if (args == newArgs) {
+			return call;
 		}
 
 		if (fun->getNodeType() == NT_Literal) {
@@ -363,6 +404,7 @@ private:
 	}
 
 	CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
+		std::cout << "." << std::flush;
 
 		const Lambda::ParamList& params = lambda->getParameterList();
 		if (params.size() != args.size()) {
@@ -494,7 +536,7 @@ class NodeAddressReplacer : public NodeMapping {
 	public:
 
 		NodeAddressReplacer(unsigned index, const NodePtr& replacement)
-			: indexToReplace(index), replacement(replacement) { }
+			: indexToReplace(index), replacement(replacement) {}
 
 	private:
 
@@ -604,14 +646,15 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 }
 
 
-NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
+NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
+		bool limitScope, std::function<NodePtr (const NodePtr&)> functor) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
 		return mgr.get(root);
 	}
 
 	// conduct actual substitutions
-	auto mapper = ::RecVariableMapReplacer(mgr, replacements);
+	auto mapper = ::RecVariableMapReplacer(mgr, replacements, limitScope, functor);
 	return applyReplacer(mgr, root, mapper);
 }
 
@@ -660,6 +703,8 @@ NodePtr replaceNode(NodeManager& manager, const NodeAddress& toReplace, const No
 	// done
 	return res;
 }
+
+
 
 
 } // End transform namespace
