@@ -471,7 +471,7 @@ namespace automata {
 		 *
 		 * @param other the automata which's state should be imported - it will be cleared
 		 */
-		void import(Automata<Pattern>& other) {
+		void import(Automata<Pattern, Matcher>& other) {
 
 			// import all states of the other automata
 			allStates.insert(other.allStates.begin(), other.allStates.end());

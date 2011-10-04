@@ -107,7 +107,7 @@ namespace automata {
 	 * @param pattern the pattern to be covered by the resulting language.
 	 */
 	template<typename Pattern, typename Matcher = std::equal_to<Pattern>>
-	RegularLanguage<Pattern> single(const Pattern& pattern) {
+	RegularLanguage<Pattern, Matcher> single(const Pattern& pattern) {
 		return RegularLanguage<Pattern, Matcher>(pattern);
 	}
 
@@ -121,11 +121,11 @@ namespace automata {
 	 * @return a new language forming the concatenation of the given languages
 	 */
 	template<typename Pattern, typename Matcher = std::equal_to<Pattern>>
-	RegularLanguage<Pattern> sequence(RegularLanguage<Pattern> langA, RegularLanguage<Pattern> langB) {
-		typedef typename Automata<Pattern>::state_type State;
+	RegularLanguage<Pattern, Matcher> sequence(RegularLanguage<Pattern, Matcher> langA, RegularLanguage<Pattern, Matcher> langB) {
+		typedef typename Automata<Pattern, Matcher>::state_type State;
 
-		Automata<Pattern>& a1 = langA.getAutomata();
-		Automata<Pattern>& a2 = langB.getAutomata();
+		Automata<Pattern, Matcher>& a1 = langA.getAutomata();
+		Automata<Pattern, Matcher>& a2 = langB.getAutomata();
 
 		// extract start/stop states
 		State s1 = a1.getInitialState();
@@ -157,7 +157,7 @@ namespace automata {
 	 * @return a new language forming the concatenation of the given languages
 	 */
 	template<typename Pattern, typename Matcher = std::equal_to<Pattern>, typename ... L>
-	RegularLanguage<Pattern> sequence(RegularLanguage<Pattern> langA, RegularLanguage<Pattern> langB, L ... rest) {
+	RegularLanguage<Pattern, Matcher> sequence(RegularLanguage<Pattern, Matcher> langA, RegularLanguage<Pattern, Matcher> langB, L ... rest) {
 		return sequence(sequence(langA, langB), rest ...);
 	}
 
@@ -169,12 +169,12 @@ namespace automata {
 	 * @param langB the second language
 	 * @return a language accepting every word of both languages.
 	 */
-	template<typename Pattern>
-	RegularLanguage<Pattern> alternativ(RegularLanguage<Pattern> langA, RegularLanguage<Pattern> langB) {
-		typedef typename Automata<Pattern>::state_type State;
+	template<typename Pattern, typename Matcher = std::equal_to<Pattern>>
+	RegularLanguage<Pattern, Matcher> alternativ(RegularLanguage<Pattern, Matcher> langA, RegularLanguage<Pattern, Matcher> langB) {
+		typedef typename Automata<Pattern, Matcher>::state_type State;
 
-		Automata<Pattern>& a1 = langA.getAutomata();
-		Automata<Pattern>& a2 = langB.getAutomata();
+		Automata<Pattern, Matcher>& a1 = langA.getAutomata();
+		Automata<Pattern, Matcher>& a2 = langB.getAutomata();
 
 		// extract start/stop states
 		State s1 = a1.getInitialState();
@@ -212,7 +212,7 @@ namespace automata {
 	 * @return a new language forming the union of the given languages
 	 */
 	template<typename Pattern, typename Matcher = std::equal_to<Pattern>, typename ... L>
-	RegularLanguage<Pattern> alternativ(RegularLanguage<Pattern> langA, RegularLanguage<Pattern> langB, L ... rest) {
+	RegularLanguage<Pattern, Matcher> alternativ(RegularLanguage<Pattern, Matcher> langA, RegularLanguage<Pattern, Matcher> langB, L ... rest) {
 		return alternativ(alternativ(langA, langB), rest ...);
 	}
 
@@ -224,11 +224,11 @@ namespace automata {
 	 * @param lang the language to be repeated
 	 * @return the requested language.
 	 */
-	template<typename Pattern>
-	RegularLanguage<Pattern> repetition(RegularLanguage<Pattern> lang) {
-		typedef typename Automata<Pattern>::state_type State;
+	template<typename Pattern, typename Matcher = std::equal_to<Pattern>>
+	RegularLanguage<Pattern, Matcher> repetition(RegularLanguage<Pattern, Matcher> lang) {
+		typedef typename Automata<Pattern, Matcher>::state_type State;
 
-		Automata<Pattern>& a = lang.getAutomata();
+		Automata<Pattern, Matcher>& a = lang.getAutomata();
 
 		// extract start/stop states
 		State s = a.getInitialState();

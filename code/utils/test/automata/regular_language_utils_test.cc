@@ -65,7 +65,7 @@ TEST(RegLang, Composition) {
 
 	Lang x= sequence(a, repetition(alternativ(b,c)), d);
 
-	//	EXPECT_EQ("", toDotGraph(x.getAutomata()));
+	// EXPECT_EQ("", toDotGraph(x.getAutomata()));
 
 	EXPECT_TRUE(match(x, "ad"));
 	EXPECT_TRUE(match(x, "abd"));
@@ -76,7 +76,7 @@ TEST(RegLang, Composition) {
 
 	// compress it to a NFA
 	auto n = toNFA(x.getAutomata());
-	//	EXPECT_EQ("", toDotGraph(n));
+	// EXPECT_EQ("", toDotGraph(n));
 
 	EXPECT_TRUE(accepts(n, string("ad")));
 	EXPECT_TRUE(accepts(n, string("abd")));

@@ -72,22 +72,13 @@ namespace pattern {
 //	bool match(TreePatternPtr, TreePtr);
 //	bool match(NodePatternPtr, TreePtr);
 
-	class MatchContext {
+	class MatchContext : public utils::Printable {
 		typedef std::unordered_map<std::string, const TreePtr> VarMap;
 		VarMap boundVariables;
 		TreePatternPtr recursion;
 
 	public:
 		MatchContext() { }
-
-		MatchContext(const MatchContext& from)  {
-			boundVariables = VarMap(from.boundVariables);
-		}
-
-		MatchContext& operator=(const MatchContext& from) {
-			boundVariables = from.boundVariables;
-			return *this;
-		}
 
 		void bindVar(const std::string& var, const TreePtr match) {
 			assert(!isBound(var) && "Variable bound twice");
@@ -107,13 +98,12 @@ namespace pattern {
 		void setRecursion(const TreePatternPtr& rec) {
 			recursion = rec;
 		}
+
+		virtual std::ostream& printTo(std::ostream& out) const;
 	};
 
 
-	class Pattern {
-	public:
-		virtual std::ostream& printTo(std::ostream& out) const =0;
-	};
+	class Pattern : public utils::Printable { };
 
 	namespace nodes {
 		class Single;
@@ -135,15 +125,17 @@ namespace pattern {
 
 	// An abstract base node for node patterns
 	class NodePattern : public Pattern {
-		friend class trees::NodeTreePattern;
 	public:
-		bool match(const TreePtr& tree) const;
-	// protected: TODO: make this protected again
-		/**
-		 * Consumes parts of the vector starting from the given position. The return value
-		 * points to the next element not consumed so far or -1 if the pattern is not matching.
-		 */
-		virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const =0;
+		bool match(const std::vector<TreePtr>& trees) const {
+			MatchContext context;
+			return match(context, trees);
+		}
+
+		bool match(MatchContext& context, const std::vector<TreePtr>& trees) const {
+			return match(context, trees, 0, trees.size());
+		}
+//	protected:
+		virtual bool match(MatchContext& context, const std::vector<TreePtr>& trees, unsigned start, unsigned end) const =0;
 	};
 
 
@@ -163,28 +155,6 @@ namespace pattern {
 			}
 		};
 
-		// A simple variable
-		class Variable : public TreePattern {
-			const std::string name;
-		public:
-			Variable(const std::string& name) : name(name) {}
-			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "%" << name << "%";
-			}
-			const std::string& getName() {
-				return name;
-			}
-		protected:
-			virtual bool match(MatchContext& context, const TreePtr& tree) const {
-				if(context.isBound(name)) {
-					return *context.getBound(name) == *tree;
-				} else {
-					context.bindVar(name, tree);
-				}
-				return true;
-			}
-		};
-
 		// A wildcard for the pattern matching of a tree - accepts everything
 		class Wildcard : public TreePattern {
 		public:
@@ -194,6 +164,43 @@ namespace pattern {
 		protected:
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
 				return true;
+			}
+		};
+
+
+		// A simple variable
+		class Variable : public TreePattern {
+			const static TreePatternPtr any;
+			const std::string name;
+			const TreePatternPtr pattern;
+		public:
+			Variable(const std::string& name, const TreePatternPtr& pattern = any) : name(name), pattern(pattern) {}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				out << "%" << name << "%";
+				if(pattern && pattern != any) {
+					out << ":" << *pattern;
+				}
+				return out;
+			}
+			const std::string& getName() {
+				return name;
+			}
+		protected:
+			virtual bool match(MatchContext& context, const TreePtr& tree) const {
+
+				// check whether the variable is already bound
+				if(context.isBound(name)) {
+					return *context.getBound(name) == *tree;
+				}
+
+				// check filter-pattern of this variable
+				if (pattern->match(context, tree)) {
+					context.bindVar(name, tree);
+					return true;
+				}
+
+				// tree is not a valid substitution for this variable
+				return false;
 			}
 		};
 
@@ -216,6 +223,7 @@ namespace pattern {
 		protected:
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
 				if(terminal) {
+					assert(context.getRecursion() && "Recursion not set!");
 					return context.getRecursion()->match(context, tree);
 				} else {
 					context.setRecursion(pattern);
@@ -224,11 +232,12 @@ namespace pattern {
 			}
 		};
 
-
 		// bridge to Node Pattern
 		class NodeTreePattern : public TreePattern {
+
 			const NodePatternPtr pattern;
 			const int id;
+
 		public:
 			NodeTreePattern(const NodePatternPtr& pattern) : pattern(pattern), id(-1) {}
 			NodeTreePattern(const int id, const NodePatternPtr& pattern) : pattern(pattern), id(id) {}
@@ -244,9 +253,9 @@ namespace pattern {
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
 				if(id != -1 && id != tree->getId()) return false;
 				// match list of sub-nodes
-				auto list = tree->getSubTrees();
-				return pattern->match(context, list, 0) == static_cast<int>(list.size());
+				return pattern->match(context, tree->getSubTrees());
 			}
+
 		};
 
 
@@ -267,10 +276,10 @@ namespace pattern {
 		protected:
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
 				// create context copy for rollback
-				MatchContext contextCopy(context);
+				MatchContext copy(context);
 				if(alternative1->match(context, tree)) return true;
 				// restore context
-				context = contextCopy;
+				context = copy;
 				return alternative2->match(context, tree);
 			}
 		};
@@ -320,16 +329,15 @@ namespace pattern {
 			virtual std::ostream& printTo(std::ostream& out) const {
 				return element->printTo(out);
 			}
+
 		protected:
-			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
-				if (start < 0 || start >= static_cast<int>(trees.size())) {
-					return -1;
-				}
-				if (!element->match(context, trees[start])) {
-					return -1;
-				}
-				return start+1;
+			virtual bool match(MatchContext& context, const std::vector<TreePtr>& trees, unsigned start, unsigned end) const {
+				// range has to be exactly one ...
+				if (end - start != 1) return false;
+				// ... and the pattern has to match
+				return element->match(context, trees[start]);
 			}
+
 		};
 
 		// A sequence node pattern representing the composition of two node patterns
@@ -345,10 +353,18 @@ namespace pattern {
 				right->printTo(out);
 				return out;
 			}
+
 		protected:
-			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
-				// just concatenate the two patterns
-				return right->match(context, trees, left->match(context, trees, start));
+			virtual bool match(MatchContext& context, const std::vector<TreePtr>& trees, unsigned start, unsigned end) const {
+				// search for the split-point ...
+				for(unsigned i = start; i<=end; i++) {
+					MatchContext caseContext = context;
+					if (left->match(caseContext, trees, start, i) && right->match(caseContext, trees, i, end)) {
+						context = caseContext; // make temporal context permanent
+						return true;
+					}
+				}
+				return false;
 			}
 		};
 
@@ -365,16 +381,17 @@ namespace pattern {
 				alternative2->printTo(out);
 				return out;
 			}
+
 		protected:
-			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
-				// create context copy for rollback
-				MatchContext contextCopy(context);
-				int res = alternative1->match(context, trees, start);
-				if (res >= 0) {
-					return res;
+			virtual bool match(MatchContext& context, const std::vector<TreePtr>& trees, unsigned start, unsigned end) const {
+				// try both alternatives using a private context
+				MatchContext copy(context);
+				if (alternative1->match(copy, trees, start, end)) {
+					// make temporal context permanent ..
+					context = copy;
+					return true;
 				}
-				context = contextCopy;
-				return alternative2->match(context, trees, start);
+				return alternative2->match(context, trees, start, end);
 			}
 		};
 
@@ -392,17 +409,31 @@ namespace pattern {
 			}
 
 		protected:
-			virtual int match(MatchContext& context, const std::vector<TreePtr>& trees, int start) const {
-				int last = start;
-				int cur = start;
-				// match greedy
-				while (cur != -1) {
-					last = cur;
-					// isolate context for each try
-					MatchContext contextCopy(context);
-					cur = pattern->match(contextCopy, trees, cur);
+			virtual bool match(MatchContext& context, const std::vector<TreePtr>& trees, unsigned start, unsigned end) const {
+
+				// empty is accepted (terminal case)
+				if (start == end) {
+					return true;
 				}
-				return last;
+
+				// test special case of a single iteration
+				MatchContext copy = context;
+				if (pattern->match(copy, trees, start, end)) {
+					return true;
+				}
+
+				// try one pattern + a recursive repedition
+				for (unsigned i=start; i<end; i++) {
+					MatchContext copyA = context;
+					MatchContext copyB = context;
+					if (pattern->match(copyA, trees, start, i) && match(copyB, trees, i, end)) {
+						// found a match!
+						return true;
+					}
+				}
+
+				// the pattern does not match!
+				return false;
 			}
 		};
 
@@ -430,8 +461,8 @@ namespace pattern {
 		return std::make_shared<trees::NodeTreePattern>(id, pattern);
 	}
 
-	inline TreePatternPtr var(const std::string& name) {
-		return std::make_shared<trees::Variable>(name);
+	inline TreePatternPtr var(const std::string& name, const TreePatternPtr& pattern = any) {
+		return std::make_shared<trees::Variable>(name, pattern);
 	}
 
 	template<typename ... Patterns>

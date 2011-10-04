@@ -51,6 +51,14 @@ namespace pattern {
 		return !match(pattern, tree);
 	}
 
+	bool matchList(const NodePatternPtr& pattern, const vector<TreePtr>& list) {
+		return pattern->match(list);
+	}
+
+	bool notMatchList(const NodePatternPtr& pattern, const vector<TreePtr>& list) {
+		return !matchList(pattern, list);
+	}
+
 	TEST(TreePattern, Basic) {
 
 		TreePtr treeA = makeTree('a');
@@ -134,6 +142,34 @@ namespace pattern {
 		EXPECT_PRED2(match, pattern5, treeAsAB);
 	}
 	
+	TEST(TreePattern, VariablesWithSubPattern) {
+
+		TreePtr treeA = makeTree('a');
+		TreePtr treeB = makeTree('b');
+
+		TreePatternPtr pattern;
+
+		pattern = var("x");
+		EXPECT_EQ("%x%", toString(pattern));
+		EXPECT_PRED2(match, pattern, treeA);
+		EXPECT_PRED2(match, pattern, treeB);
+
+		pattern = var("x", atom(treeA));
+		EXPECT_EQ("%x%:a", toString(pattern));
+		EXPECT_PRED2(match, pattern, treeA);
+		EXPECT_PRED2(notMatch, pattern, treeB);
+
+		TreePatternPtr inner = node('a', single(any));
+		TreePtr treeC = makeTree('a', makeTree('b'));
+
+		pattern = var("x", inner);
+		EXPECT_EQ("%x%:(id:97|_)", toString(pattern));
+		EXPECT_PRED2(notMatch, pattern, treeA);
+		EXPECT_PRED2(notMatch, pattern, treeB);
+		EXPECT_PRED2(match, pattern, treeC);
+
+	}
+
 	TEST(TreePattern, Recursion) {
 		
 		TreePtr a = makeTree('a');
@@ -148,6 +184,7 @@ namespace pattern {
 		TreePtr treeE = makeTree(a,makeTree(b,makeTree(a,makeTree(d,makeTree(c)))));
 
 		auto pattern = node(atom(a) << rT((atom(b) << recurse) | single(c)));
+
 		EXPECT_PRED2(match, pattern, treeA);
 		EXPECT_PRED2(match, pattern, treeB);
 		EXPECT_PRED2(notMatch, pattern, treeC);
@@ -237,6 +274,109 @@ namespace pattern {
 		EXPECT_PRED2(notMatch, node(pattern), treeC);
 	}
 
+	TEST(Sequence, Basic) {
+
+		TreePtr treeA = makeTree('a');
+		TreePtr treeB = makeTree('b');
+
+		EXPECT_EQ("a", toString(treeA));
+		EXPECT_EQ("b", toString(treeB));
+
+		NodePatternPtr pattern = single(treeA);
+
+		EXPECT_PRED2(matchList, pattern, toVector(treeA));
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeA, treeA));
+
+		pattern = single(treeA) << single(treeA);
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeA));
+
+		pattern = single(treeA) << single(treeB);
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeA, treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeB));
+
+		TreePatternPtr x = var("x");
+		pattern = single(x) << single(x);
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeA));
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeA, treeB));
+
+		// test wildcard
+		pattern = any << single(treeA);
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeA));
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeA, treeB));
+
+		// test potential empty left side
+		pattern = *any << single(treeA);
+		EXPECT_PRED2(matchList, pattern, toVector(treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeB, treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeA, treeA));
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeA, treeB));
+
+		// test potential empty right side
+		pattern = single(treeA) << *any;
+		EXPECT_PRED2(matchList, pattern, toVector(treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeB, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeA, treeB));
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeB, treeA));
+
+		// test both sides being of abitrary length
+		pattern = (*any << single(treeA)) << *any;
+		EXPECT_PRED2(matchList, pattern, toVector(treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeB, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeA, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeB, treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeA, treeB));
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeB, treeB));
+
+		pattern = *any << (single(treeA) << *any);
+		EXPECT_PRED2(matchList, pattern, toVector(treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeB, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeA, treeB));
+		EXPECT_PRED2(matchList, pattern, toVector(treeB, treeB, treeA));
+		EXPECT_PRED2(matchList, pattern, toVector(treeA, treeA, treeB));
+		EXPECT_PRED2(notMatchList, pattern, toVector(treeB, treeB));
+
+	}
+
+	TEST(Repedition, Basic) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+
+		EXPECT_EQ("a", toString(a));
+		EXPECT_EQ("b", toString(b));
+
+		NodePatternPtr pattern = single(a);
+
+		EXPECT_PRED2(matchList, pattern, toVector(a));
+
+		pattern = *single(a);
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>());
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(notMatchList, pattern, toVector(a,b,a));
+
+		// test variable binding
+		TreePatternPtr x = var("x");
+		pattern = *single(x);
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,b));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,b,a));
+
+		// test pre-bined variable
+		pattern = single(x) << *single(x);
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(b,b));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a,a));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,a,b));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,b,a,b));
+	}
 
 	TEST(NodePattern, Extended) {
 

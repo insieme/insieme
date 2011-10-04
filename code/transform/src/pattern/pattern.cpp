@@ -37,22 +37,34 @@
 #include "insieme/transform/pattern/pattern.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
+
+	std::ostream& MatchContext::printTo(std::ostream& out) const {
+		typedef typename VarMap::value_type Element;
+
+		out << "Match(";
+		out << "{" <<  join(", ", boundVariables, [](std::ostream& out, const Element& cur) {
+			out << cur.first << "=" << cur.second;
+		}) << "}";
+//		out << boundVariables;
+		out << ", ";
+		if (recursion) {
+			out << *recursion;
+		} else {
+			out << "null";
+		}
+		return out << ")";
+	}
 
 	bool TreePattern::match(const TreePtr& tree) const {
 		MatchContext context;
 		return match(context, tree);
 	}
 
-	bool NodePattern::match(const TreePtr& tree) const {
-		MatchContext context;
-		auto list = tree->getSubTrees();
-		return match(context, list, 0) == static_cast<int>(list.size());
-	}
-	
 	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
 	const TreePatternPtr recurse = std::make_shared<trees::Recursion>();
 
@@ -69,6 +81,8 @@ namespace pattern {
 	}
 
 	namespace trees {
+
+		const TreePatternPtr Variable::any = pattern::any;
 
 		bool contains(MatchContext& context, const TreePtr& tree, const TreePatternPtr& pattern) {
 			bool res = false;
