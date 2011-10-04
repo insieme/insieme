@@ -265,13 +265,13 @@ class RecVariableMapReplacer : public CachedNodeMapping {
 	ASTBuilder builder;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
 	bool limitScope;
-	std::function<NodePtr (const NodePtr&)> transform;
+	const std::function<NodePtr (const NodePtr&)>& functor;
 
 public:
 
 	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
-			std::function<NodePtr (const NodePtr&)>& functor)
-		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), transform(functor) { }
+			const std::function<NodePtr (const NodePtr&)>& functor)
+		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) { }
 
 private:
 
@@ -309,22 +309,24 @@ private:
 		if (res->getNodeType() == NT_CallExpr) {
 			CallExprPtr call = handleCall(static_pointer_cast<const CallExpr>(res));
 
-			// check arguments?
-
 			// check return type
 			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
 
 			// extract function type
 			FunctionTypePtr funType = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType());
 			assert(funType->getParameterTypes().size() == call->getArguments().size() && "Invalid number of arguments!");
-
+/*
+			if (static_pointer_cast<const CallExpr>(call)->getFunctionExpr()->getNodeType() == NT_Literal) {
+				std::cout << "ARRR " << call << std::endl;
+			}*/
 			TypeList argumentTypes;
 			::transform(call->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
-			const TypePtr retTy = call->getType();//deduceReturnType(funType, argumentTypes);
-			if(call->getType() != retTy) {
-				// do something
-				assert(false && "tatatatatata\n");
+			try {
+				tryDeduceReturnType(funType, argumentTypes);
+			} catch(ReturnTypeDeductionException rtde) {
+				functor(call);
 			}
+
 			res = call;
 //		} else if (res->getNodeType() == NT_DeclarationStmt) {
 //			res = handleDeclStmt(static_pointer_cast<const DeclarationStmt>(res));
@@ -392,6 +394,7 @@ private:
 		}
 		// test whether there has been a change
 		if (args == newArgs) {
+//			if (fun->getNodeType() == NT_Literal) std::cout << "Not changing " << fun << std::endl;
 			return call;
 		}
 
@@ -404,7 +407,6 @@ private:
 	}
 
 	CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
-		std::cout << "." << std::flush;
 
 		const Lambda::ParamList& params = lambda->getParameterList();
 		if (params.size() != args.size()) {
@@ -425,7 +427,7 @@ private:
 		});
 
 		// construct new body
-		StatementPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map);
+		StatementPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
 
 		// obtain return type
 		TypeList typeList;
@@ -454,7 +456,26 @@ private:
 		// do not touch build-in literals
 		if (manager.getBasicGenerator().isBuiltIn(literal)) {
 			// use type inference for the return type
-			return builder.callExpr(literal, args);
+
+			if(manager.getBasicGenerator().isCompositeRefElem(literal)) {
+				return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
+						static_pointer_cast<const Literal>(args.at(1))->getValue()));
+			}
+			if(manager.getBasicGenerator().isCompositeMemberAccess(literal)) {
+				return static_pointer_cast<const CallExpr>(builder.accessMember(args.at(0),
+						static_pointer_cast<const Literal>(args.at(1))->getValue()));
+			}
+			if(manager.getBasicGenerator().isTupleRefElem(literal)) {
+				return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
+			}
+			if(manager.getBasicGenerator().isTupleMemberAccess(literal)) {
+				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
+			}
+
+
+			CallExprPtr newCall = builder.callExpr(literal, args);
+
+			return newCall;
 		}
 
 		// assemble new argument types
@@ -647,7 +668,7 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 
 
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
-		bool limitScope, std::function<NodePtr (const NodePtr&)> functor) {
+		bool limitScope, const std::function<NodePtr (const NodePtr&)>& functor) {
 	// special handling for empty replacement maps
 	if (replacements.empty()) {
 		return mgr.get(root);

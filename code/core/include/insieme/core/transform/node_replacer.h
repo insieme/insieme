@@ -128,10 +128,12 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
  * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping variables to their replacements
+ * @param limitScope a flag determining if also variables in inner scopes should be considered
+ * @param functor a function to be called if the correct return type cannot be determined by default
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
 		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
-		std::function<NodePtr (const NodePtr&)> functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); });
+		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); });
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -141,11 +143,14 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping variables to their replacements
+ * @param limitScope a flag determining if also variables in inner scopes should be considered
+ * @param functor a function to be called if the correct return type cannot be determined by default
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true) {
-	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope));
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); }) {
+	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, functor));
 }
 
 /**
