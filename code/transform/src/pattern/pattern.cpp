@@ -43,20 +43,12 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 
-	std::ostream& MatchContext::printTo(std::ostream& out) const {
-		typedef typename VarMap::value_type Element;
 
+	std::ostream& MatchContext::printTo(std::ostream& out) const {
 		out << "Match(";
-		out << "{" <<  join(", ", boundVariables, [](std::ostream& out, const Element& cur) {
-			out << cur.first << "=" << cur.second;
-		}) << "}";
-//		out << boundVariables;
-		out << ", ";
-		if (recursion) {
-			out << *recursion;
-		} else {
-			out << "null";
-		}
+		out << boundTreeVariables << ", ";
+		out << boundNodeVariables << ", ";
+		out << boundRecursiveVariables;
 		return out << ")";
 	}
 
@@ -66,19 +58,9 @@ namespace pattern {
 	}
 
 	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
-	const TreePatternPtr recurse = std::make_shared<trees::Recursion>();
+	const TreePatternPtr recurse = std::make_shared<trees::Recursion>("x");
 
-	std::ostream& operator<<(std::ostream& out, const PatternPtr& pattern) {
-		return (pattern)?(pattern->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const TreePatternPtr& pattern) {
-		return (pattern)?(pattern->printTo(out)):(out << "null");
-	}
-
-	std::ostream& operator<<(std::ostream& out, const NodePatternPtr& pattern) {
-		return (pattern)?(pattern->printTo(out)):(out << "null");
-	}
+	const NodePatternPtr anyList = *any;
 
 	namespace trees {
 
@@ -103,9 +85,29 @@ namespace pattern {
 			});
 		}
 
+	}
 
+	namespace nodes {
+
+		const NodePatternPtr Variable::any = pattern::anyList;
 	}
 
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::PatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreePatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::NodePatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+} // end namespace std

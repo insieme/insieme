@@ -54,6 +54,9 @@ namespace pattern {
 	class Tree;
 	typedef std::shared_ptr<Tree> TreePtr;
 
+	typedef vector<TreePtr> TreeList;
+	typedef TreeList::const_iterator TreeListIterator;
+
 	class Tree : public utils::Printable {
 	public:
 
@@ -64,7 +67,7 @@ namespace pattern {
 	protected:
 
 		const int id;
-		std::vector<TreePtr> subTrees;
+		TreeList subTrees;
 		Value value;
 
 	public:
@@ -86,7 +89,7 @@ namespace pattern {
 		virtual bool operator==(const Tree& other) const;
 		virtual bool operator!=(const Tree& other) const { return !(*this == other); }
 
-		virtual std::vector<TreePtr>& getSubTrees() { return subTrees; }
+		virtual TreeList& getSubTrees() { return subTrees; }
 		const int getId() const { return id; }
 	};
 
