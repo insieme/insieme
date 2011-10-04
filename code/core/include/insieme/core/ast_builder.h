@@ -209,13 +209,26 @@ public:
 	ExpressionPtr refMember(ExpressionPtr structExpr, IdentifierPtr member) const;
 
 	/**
+	 * Creates an expression obtaining a reference to a member of a struct.
+	 */
+	ExpressionPtr refMember(ExpressionPtr structExpr, string member) const;
+
+	/**
 	 * Creates an expression accessing the given component of the given tuple value.
 	 */
 	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;
+	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+
+	/**
+	 * Creates an expression accessing the reference to a component of the given tuple value.
+	 */
+	ExpressionPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
+	ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
 	// Utilities
 private:
 	static TypeList extractParamTypes(const ParamList& params);
+	unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
 };
 
 } // namespace core
