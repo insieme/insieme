@@ -271,7 +271,24 @@ public:
 
 	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
 			const std::function<NodePtr (const NodePtr&)>& functor)
-		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) { }
+		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) {
+/*		functor = [](const NodePtr& node)->NodePtr {
+			CallExprPtr res = dynamic_pointer_cast<const CallExpr>(node);
+
+			// check whether something has changed ...
+			if (res == node) {
+				// => nothing changed
+				return res;
+			}
+
+			// preserve annotations
+			transform::utils::migrateAnnotations(node, res);
+
+			// done
+			return node;
+
+	 };*/
+	}
 
 private:
 
@@ -323,7 +340,7 @@ private:
 			::transform(call->getArguments(), back_inserter(argumentTypes), [](const ExpressionPtr& cur) { return cur->getType(); });
 			try {
 				tryDeduceReturnType(funType, argumentTypes);
-			} catch(ReturnTypeDeductionException rtde) {
+			} catch(ReturnTypeDeductionException& rtde) {
 				functor(call);
 			}
 
@@ -354,7 +371,7 @@ private:
 		if(pos != replacements.end()) {
 			ExpressionPtr newInit = static_pointer_cast<const Expression>(this->resolveElement(decl->getInitialization()));
 			if(pos->second->getType() != newInit->getType())
-				return (builder.declarationStmt(pos->second, newInit));
+				return functor(builder.declarationStmt(pos->second, newInit));
 
 			return builder.declarationStmt(pos->second, newInit);
 		}
@@ -668,6 +685,49 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 	return applyReplacer(mgr, root, mapper);
 }
 
+// functor which updates the type literal inside a call to undefined in a declareation
+std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& builder){
+	return [&builder](const NodePtr& node)->NodePtr {
+		NodePtr res = node;
+		const lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+		// update init undefined
+		if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(node)) {
+			if(const CallExprPtr& init = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
+				const VariablePtr& var = decl->getVariable();
+				const ExpressionPtr& fun = init->getFunctionExpr();
+				// handle ref variables
+				if((init->getType() != var->getType()) && (basic.isRefVar(fun) || basic.isRefNew(fun))) {
+					const RefTypePtr varTy = static_pointer_cast<const RefType>(var->getType());
+					if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(init->getArgument(0))) {
+						if(basic.isUndefined(undefined->getFunctionExpr()))
+							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(varTy->getElementType(),
+									basic.getUndefined(), basic.getTypeLiteral(varTy->getElementType()))));
+					}
+				}
+				// handle non ref variables
+				if((init->getType() != var->getType()) && basic.isUndefined(fun)) {
+					const TypePtr varTy = var->getType();
+					res = builder.declarationStmt(var, builder.callExpr(varTy, fun, basic.getTypeLiteral(varTy)));
+				}
+			}
+		}
+
+		// check whether something has changed ...
+		if (res == node) {
+			// => nothing changed
+			return node;
+		}
+
+		// preserve annotations
+		transform::utils::migrateAnnotations(node, res);
+
+		// done
+		return res;
+
+	};
+
+}
 
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root, const insieme::utils::map::PointerMap<VariablePtr, VariablePtr>& replacements,
 		bool limitScope, const std::function<NodePtr (const NodePtr&)>& functor) {
