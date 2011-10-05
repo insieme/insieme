@@ -42,6 +42,7 @@
 #include <unordered_map>
 
 #include "insieme/transform/pattern/structure.h"
+#include "insieme/transform/pattern/match.h"
 
 #include "insieme/utils/logging.h"
 
@@ -74,69 +75,83 @@ namespace pattern {
 
 	class MatchContext : public utils::Printable {
 
-		typedef std::unordered_map<string, TreePtr> TreeVarMap;
 		typedef std::unordered_map<string, TreeList> NodeVarMap;
 		typedef std::unordered_map<string, TreePatternPtr> RecVarMap;
 
-		TreeVarMap boundTreeVariables;
-		NodeVarMap boundNodeVariables;
+		MatchPath path;
+
+		Match match;
 		RecVarMap boundRecursiveVariables;
 
 	public:
+
 		MatchContext() { }
+
+		const Match& getMatch() const {
+			return match;
+		}
+
+		// -- The Match Path ---------------------------
+
+		void push() {
+			path.push(0);
+		}
+
+		void inc() {
+			path.inc();
+		}
+
+		void pop() {
+			path.pop();
+		}
+
 
 		// -- Tree Variables ---------------------------
 
 		bool isTreeVarBound(const std::string& var) const {
-			return boundTreeVariables.find(var) != boundTreeVariables.end();
+			return match.isTreeVarBound(path, var);
 		}
 
-		void bindTreeVar(const std::string& var, const TreePtr match) {
-			assert(!isTreeVarBound(var) && "Variable bound twice");
-			boundTreeVariables.insert(TreeVarMap::value_type(var, match));
+		void bindTreeVar(const std::string& var, const TreePtr value) {
+			match.bindTreeVar(path, var, value);
 		}
 
 		TreePtr getTreeVarBinding(const std::string& var) const {
-			assert(isTreeVarBound(var) && "Requesting bound value for unbound tree variable");
-			return boundTreeVariables.find(var)->second;
+			return match.getTreeVarBinding(path, var);
 		}
 
 		// -- Node Variables --------------------------
 
 		bool isNodeVarBound(const std::string& var) const {
-			return boundNodeVariables.find(var) != boundNodeVariables.end();
-		}
-
-		void bindNodeVar(const std::string& var, const TreeList& match) {
-			assert(!isNodeVarBound(var) && "Variable bound twice");
-			boundNodeVariables.insert(NodeVarMap::value_type(var, match));
+			return match.isListVarBound(path, var);
 		}
 
 		void bindNodeVar(const std::string& var, const TreeListIterator& begin, const TreeListIterator& end) {
-			assert(!isNodeVarBound(var) && "Variable bound twice");
-			TreeList& match = boundNodeVariables[var];
-			match.insert(match.end(), begin, end);
+			match.bindListVar(path, var, begin, end);
 		}
 
-		const TreeList& getNodeVarBinding(const std::string& var) const {
-			assert(isNodeVarBound(var) && "Requesting bound value for unbound tree variable");
-			return boundNodeVariables.find(var)->second;
+		TreeList getNodeVarBinding(const std::string& var) const {
+			return match.getListVarBinding(path, var);
 		}
 
 		// -- Recursive Variables ---------------------------
+
+		bool isRecVarBound(const std::string& var) const {
+			return boundRecursiveVariables.find(var) != boundRecursiveVariables.end();
+		}
 
 		void bindRecVar(const std::string& var, const TreePatternPtr& pattern) {
 			assert(!isRecVarBound(var) && "Variable bound twice");
 			boundRecursiveVariables.insert(RecVarMap::value_type(var, pattern));
 		}
 
-		bool isRecVarBound(const std::string& var) const {
-			return boundRecursiveVariables.find(var) != boundRecursiveVariables.end();
-		}
-
 		TreePatternPtr getRecVarBinding(const std::string& var) const {
 			assert(isRecVarBound(var) && "Requesting bound value for unbound tree variable");
 			return boundRecursiveVariables.find(var)->second;
+		}
+
+		void unbindRecVar(const std::string& var) {
+			boundRecursiveVariables.erase(var);
 		}
 
 
@@ -155,8 +170,15 @@ namespace pattern {
 		friend class nodes::Single;
 //		const std::vector<FilterPtr> filter;
 	public:
-		bool match(const TreePtr& tree) const;
-	// protected: TODO: make this protected again
+
+		MatchOpt match(const TreePtr& tree) const{
+			MatchContext context;
+			if (match(context, tree)) {
+				return context.getMatch();
+			}
+			return 0;
+		}
+
 		virtual bool match(MatchContext& context, const TreePtr& tree) const =0;
 	};
 
@@ -270,7 +292,9 @@ namespace pattern {
 					return context.getRecVarBinding(name)->match(context, tree);
 				} else {
 					context.bindRecVar(name, pattern);
-					return pattern->match(context, tree);
+					bool res = pattern->match(context, tree);
+					context.unbindRecVar(name);
+					return res;
 				}
 			}
 		};
@@ -453,7 +477,15 @@ namespace pattern {
 
 		protected:
 			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
+				context.push();
+				bool res = matchInternal(context, begin, end);
+				context.pop();
+				return res;
+			}
 
+		private:
+
+			bool matchInternal(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
 				// empty is accepted (terminal case)
 				if (begin == end) {
 					return true;
@@ -462,22 +494,38 @@ namespace pattern {
 				// test special case of a single iteration
 				MatchContext copy = context;
 				if (pattern->match(copy, begin, end)) {
+					context = copy;
 					return true;
 				}
 
 				// try one pattern + a recursive repedition
 				for (auto i=begin; i<end; ++i) {
-					MatchContext copyA = context;
-					MatchContext copyB = context;
-					if (pattern->match(copyA, begin, i) && match(copyB, i, end)) {
-						// found a match!
-						return true;
+
+					// private copy for this try
+					MatchContext copy = context;
+
+					if (!pattern->match(copy, begin, i)) {
+						// does not match ... try next!
+						continue;
 					}
+
+					// increment repedition counter
+					copy.inc();
+
+					if (!matchInternal(copy, i, end)) {
+						// does not fit any more ... try next!
+						continue;
+					}
+
+					// found a match!
+					context = copy;
+					return true;
 				}
 
 				// the pattern does not match!
 				return false;
 			}
+
 		};
 
 		// A simple variable
@@ -501,6 +549,8 @@ namespace pattern {
 			}
 		protected:
 			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
+
+std::cout << "Matching: " << context << "\n";
 
 				// check whether the variable is already bound
 				if(context.isNodeVarBound(name)) {

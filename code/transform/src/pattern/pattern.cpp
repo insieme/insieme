@@ -46,16 +46,12 @@ namespace pattern {
 
 	std::ostream& MatchContext::printTo(std::ostream& out) const {
 		out << "Match(";
-		out << boundTreeVariables << ", ";
-		out << boundNodeVariables << ", ";
+		out << path << ", ";
+		out << match << ", ";
 		out << boundRecursiveVariables;
 		return out << ")";
 	}
 
-	bool TreePattern::match(const TreePtr& tree) const {
-		MatchContext context;
-		return match(context, tree);
-	}
 
 	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
 	const TreePatternPtr recurse = std::make_shared<trees::Recursion>("x");

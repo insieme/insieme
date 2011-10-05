@@ -510,6 +510,61 @@ namespace pattern {
 
 	}
 
+
+	TEST(TreePattern, MatchResult) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+
+		TreePatternPtr pattern;
+		MatchOpt res;
+
+		// something easy ...
+		pattern = var("x");
+
+		res = pattern->match(a);
+		EXPECT_TRUE(res);
+		EXPECT_EQ("Match({x=a})", toString(*res));
+
+		res = pattern->match(b);
+		EXPECT_TRUE(res);
+		EXPECT_EQ("Match({x=b})", toString(*res));
+
+
+		// something more challenging
+		pattern = node(*var("x"));
+
+		res = pattern->match(makeTree(a,b,a));
+		EXPECT_TRUE(res);
+		EXPECT_EQ("Match({x=[a,b,a]})", toString(*res));
+
+		// even more challenging
+		pattern = node(var("x") << *var("x"));
+
+		res = pattern->match(makeTree(a,b,a));
+		EXPECT_FALSE(res);
+
+		res = pattern->match(makeTree(a,a,a));
+		EXPECT_TRUE(res);
+		EXPECT_EQ("Match({x=a})", toString(*res));
+
+
+		// and one more
+		pattern = node(*pattern);
+
+		res = pattern->match(makeTree(makeTree(a,a,a), makeTree(b,b,b,b)));
+		EXPECT_TRUE(res);
+		EXPECT_EQ("Match({x=[a,b]})", toString(*res));
+
+
+		// and one more
+		pattern = node(*node(*var("x")));
+
+		res = pattern->match(makeTree(makeTree(a,b,a), makeTree(b,a,a,b)));
+		EXPECT_TRUE(res);
+		EXPECT_EQ("Match({x=[[a,b,a],[b,a,a,b]]})", toString(*res));
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
