@@ -143,7 +143,7 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& buil
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
 		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
-		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); });
+		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); return 0; });
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If

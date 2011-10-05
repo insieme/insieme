@@ -225,7 +225,7 @@ TEST(CFGBuilder, IfStmt1) {
 	const cfg::Block& thenBlock = cfg->getBlock(blocks[THEN]);
 	EXPECT_EQ(static_cast<unsigned>(1), thenBlock.size());
 	EXPECT_FALSE(thenBlock.hasTerminator());
-	EXPECT_EQ(*thenBlock.stmt_begin(), ifStmt->getThenBody());
+	EXPECT_EQ(*thenBlock.stmt_begin(), ifStmt->getThenBody()->getStatements().front());
 	CHECK_CONNECTED(blocks[THEN], toVector<CFG::VertexTy>(blocks[EXIT]), cfg);
 	CHECK_NOT_CONNECTED(blocks[THEN], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[ELSE]), cfg);
 
@@ -233,7 +233,7 @@ TEST(CFGBuilder, IfStmt1) {
 	const cfg::Block& elseBlock = cfg->getBlock(blocks[ELSE]);
 	EXPECT_EQ(static_cast<unsigned>(1), elseBlock.size());
 	EXPECT_FALSE(elseBlock.hasTerminator());
-	EXPECT_EQ(*elseBlock.stmt_begin(), ifStmt->getElseBody());
+	EXPECT_EQ(*elseBlock.stmt_begin(), ifStmt->getElseBody()->getStatements().front());
 	CHECK_CONNECTED(blocks[ELSE], toVector<CFG::VertexTy>(blocks[EXIT]), cfg);
 	CHECK_NOT_CONNECTED(blocks[ELSE], toVector<CFG::VertexTy>(blocks[ENTRY], blocks[IF], blocks[THEN]), cfg);
 
@@ -510,12 +510,12 @@ TEST(CFGBlockIterator, SuccessorsIterator) {
 	EXPECT_FALSE(succIT == end);
 
 	const cfg::Block& thenBlock = *succIT;
-	EXPECT_TRUE(*thenBlock.stmt_begin() == ifStmt->getThenBody());
+	EXPECT_TRUE(*thenBlock.stmt_begin() == ifStmt->getThenBody()->getStatements().front());
 	++succIT;
 
 	const cfg::Block& elseBlock = *succIT;
 	EXPECT_FALSE(succIT == end);
-	EXPECT_TRUE(*elseBlock.stmt_begin() == ifStmt->getElseBody());
+	EXPECT_TRUE(*elseBlock.stmt_begin() == ifStmt->getElseBody()->getStatements().front());
 	++succIT;
 	EXPECT_TRUE(succIT == end);
 }
@@ -529,12 +529,12 @@ TEST(CFGBlockIterator, PredecessorIterator) {
 
 	EXPECT_FALSE(predIT == end);
 	const cfg::Block& thenBlock = *predIT;
-	EXPECT_TRUE(*thenBlock.stmt_begin() == ifStmt->getThenBody());
+	EXPECT_TRUE(*thenBlock.stmt_begin() == ifStmt->getThenBody()->getStatements().front());
 	++predIT;
 
 	EXPECT_FALSE(predIT == end);
 	const cfg::Block& elseBlock = *predIT;
-	EXPECT_TRUE(*elseBlock.stmt_begin() == ifStmt->getElseBody());
+	EXPECT_TRUE(*elseBlock.stmt_begin() == ifStmt->getElseBody()->getStatements().front());
 	++predIT;
 
 	EXPECT_TRUE(predIT == end);
