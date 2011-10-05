@@ -407,20 +407,32 @@ private:
 			return static_pointer_cast<const Expression>(this->resolveElement(cur));
 		});
 
-
 		if (fun->getNodeType() == NT_LambdaExpr) {
-			return handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
+			const CallExprPtr newCall = handleCallToLamba(call->getType(), static_pointer_cast<const LambdaExpr>(fun), newArgs);
+/*			if(call->getType() != newCall->getType()) {
+				std::cout << call->getType() << " " << call << std::endl << newCall->getType() << " " << newCall << "\n\n\n";
+			}
+*/
+			return newCall;
 		}
 		// test whether there has been a change
-		if (args == newArgs) {
+		if (args == newArgs && fun->getNodeType() != NT_Literal) {
 //			if (fun->getNodeType() == NT_Literal) std::cout << "Not changing " << fun << std::endl;
 			return call;
 		}
 
+		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(call->getFunctionExpr()))
+					if (manager.getBasicGenerator().isBuiltIn(literal))
+//			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;
 		if (fun->getNodeType() == NT_Literal) {
-			return handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
-		}
 
+			const CallExprPtr newCall = handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
+/*			if(call->getType() != newCall->getType()) {
+				std::cout << call->getType() << " " << call << std::endl << newCall->getType() << " " << newCall << "\n\n\n";
+			}
+*/
+			return newCall;
+		}
 		assert(false && "Unsupported call-target encountered - sorry!");
 		return call;
 	}
@@ -435,13 +447,30 @@ private:
 
 		// create replacement map
 		Lambda::ParamList newParams;
+		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
 		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
 			VariablePtr param = cur.first;
 			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
+/*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
+					if(type->getNodeType() == NT_TypeVariable) {
+						std::cerr << param->getType() << " - " << type << std::endl;
+						return true;
+					}
+					return false;
+				}, true , true);
+				if(foundTypeVariable) {
+					TypePtr tyVars = unify(manager, param->getType(), cur.second->getType());
+					if(tyVars) {
+						tyVars->applyTo(manager, )
+					}
+				}*/
+
 				param = this->builder.variable(cur.second->getType());
 				map[cur.first] = param;
 			}
+
+
 			newParams.push_back(param);
 		});
 
@@ -462,16 +491,22 @@ private:
 		// assemble new lambda
 		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
 		FunctionTypePtr funType = builder.functionType(newParamTypes, returnType);
-
 		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
-		return builder.callExpr(returnType, newLambda, args);
+
+		TypePtr callTy;
+		try {
+			callTy = tryDeduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes);
+		} catch(ReturnTypeDeductionException& rtde) {
+			callTy = returnType;
+		}
+
+		return builder.callExpr(callTy, newLambda, args);
 
 	}
 
 	CallExprPtr handleCallToLiteral(const TypePtr& resType, const LiteralPtr& literal, const ExpressionList& args) {
 		// only supported for function types
 		assert(literal->getType()->getNodeType() == NT_FunctionType);
-
 		// do not touch build-in literals
 		if (manager.getBasicGenerator().isBuiltIn(literal)) {
 			// use type inference for the return type
@@ -491,6 +526,9 @@ private:
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
 
+			if(manager.getBasicGenerator().isSubscriptOperator(literal)) {
+//				std::cout << "---------->" << literal << args << std::endl;
+			}
 
 			CallExprPtr newCall = builder.callExpr(literal, args);
 
