@@ -441,8 +441,6 @@ TypePtr getBiggestCommonSubType(const Container& types) {
 //                                                    Utilities
 // -------------------------------------------------------------------------------------------------------------------------
 
-
-
 /**
  * Checks whether the given node x is referenced directly or indirectly
  * within the given term.
@@ -452,6 +450,28 @@ TypePtr getBiggestCommonSubType(const Container& types) {
  * @return true if present, false otherwise
  */
 bool occurs(const NodePtr& x, const NodePtr& term);
+
+/**
+ * An exception type used if a return type could not successfully be deduced.
+ */
+class ReturnTypeDeductionException : public std::exception {
+	// the message describing this type of exception
+	static const char* msg;
+public:
+	virtual const char* what() const throw() { return msg; }
+};
+
+/**
+ * This function is trying to deduce the type returned when calling a function having the
+ * given type by passing parameters of the given types. If the type cannot be deduced,
+ * an exception is raised.
+ *
+ * @param funType the type of the function to be invoked, for which the return type should be deduced
+ * @param argumentTypes the types of arguments passed to this function
+ * @return the deduced, most generic return type
+ * @throws ReturnTypeDeductionException if the requested type cannot be deduced
+ */
+TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
 
 /**
  * This function is deducing the type returned when calling a function having the given

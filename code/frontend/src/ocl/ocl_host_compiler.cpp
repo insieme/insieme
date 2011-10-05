@@ -55,24 +55,29 @@ namespace frontend {
 namespace ocl {
 using namespace insieme::core;
 
-
-/*class fuVisitor: public core::ASTVisitor<void> {
+/*
+class fuVisitor: public core::ASTVisitor<void> {
 	void visitNode(const NodePtr& node) {
 		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa =
 				dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>(node->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
 			std::cout << "Found kernel file Pragma at node \n" << node << std::endl;
 		}
 	}
+	void visitCallExpr(const CallExprPtr& call) {
+		if(call->getType()->toString().find("type") != string::npos){
+			std::cout << " -> " << call->getType() << " " << call << std::endl;
+		}
+	}
 public:
 	fuVisitor(): ASTVisitor<void>(true) {}
-};
-*/
+};*/
+
 ProgramPtr HostCompiler::compile() {
+//	fuVisitor FAKK;
+//	visitDepthFirst(transformedProg,FAKK);
+
 	//    HostVisitor oclHostVisitor(builder, mProgram);
 	HostMapper oclHostMapper(builder, mProgram);
-
-//	fuVisitor FAKK;
-//	visitDepthFirst(mProgram,FAKK);
 
 	const ProgramPtr& interProg = dynamic_pointer_cast<const core::Program>(oclHostMapper.mapElement(0, mProgram));
 	assert(interProg && "First pass of OclHostCompiler corrupted the program");
@@ -100,7 +105,7 @@ ProgramPtr HostCompiler::compile() {
 
 	ClmemTable cl_mems = oh2nd.getCleanedStructures();
 	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
-		oh2nd.getKernelLambdas(), oclHostMapper.getReplacements());
+		oh2nd.getKernelLambdas(), oclHostMapper.getEquivalenceMap(), oclHostMapper.getReplacements());
 
 	/*	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
 	 mProgram = newProg;
@@ -109,26 +114,27 @@ ProgramPtr HostCompiler::compile() {
 	 assert(newProg && "Second pass of OclHostCompiler corrupted the program");
 	 */
 
-	NodePtr fu = ohm3rd.mapElement(0, progWithKernels);
+	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
 
 	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
 /*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
-		tmp[t.first] = t.second;
-		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
+//		tmp[t.first] = t.second;
+//		if(dynamic_pointer_cast<const StructType>(t.second->getType())) {
 			// replacing the types of all structs with the same type. Should get rid of cl_* stuff in structs
 			// HIGHLY experimental and untested
-			tmp[t.first->getType()] = t.second->getType();
-//			std::cout << "Replacing ALL \n" << t.first << "\nwith\n" << t.second << "\n";
-		}
+//			tmp[t.first->getType()] = t.second->getType();
+			std::cout << "Replacing ALL \n" << t.first << " " << t.first->getType() << "\nwith\n" << t.second << " " << t.second->getType() << "\n";
+//		}
 	});
 */
-
-	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), fu, tmp, false))) {
-//std::cout << "Replacements: \n" << tmp << std::endl;
-
+	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
+std::cout << "Replacements: \n" << cl_mems << std::endl;
 		transform::utils::MemberAccessLiteralUpdater malu(builder);
 		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
-	//			return newProg;
+
+//		mProgram = dynamic_pointer_cast<const core::Program>(core::transform::replaceVarsRecursive(builder.getNodeManager(), mProgram,
+//				ohm3rd.getVarReplacements(), false));
+
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 

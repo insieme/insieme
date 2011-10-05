@@ -105,6 +105,7 @@ public:
 	core::ExpressionPtr getClReadBuffer();
 	core::ExpressionPtr getClReadBufferFallback();
 	core::ExpressionPtr getClGetIDs();
+	core::ExpressionPtr getClSetKernelArg();
 };
 
 /**
@@ -137,7 +138,7 @@ public:
 
 	// puts the passed argument in the right place inside the kernelArgs map
 	const core::ExpressionPtr collectArgument(const core::ExpressionPtr& kernelArg, const core::ExpressionPtr& index, const core::ExpressionPtr& sizeArg,
-			core::ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls, ClmemTable& cl_mems);
+			core::ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls, ClmemTable& cl_mems, EquivalenceMap& eqMap);
 };
 
 /*
@@ -238,7 +239,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	}
 	const core::ExpressionPtr collectArgument(const string& handleName, const core::ExpressionPtr& kernel, const core::ExpressionPtr& index,
 			const core::ExpressionPtr& sizeArg, const core::ExpressionPtr& arg) {
-		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls, cl_mems);
+		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls, cl_mems, eqMap);
 	}
 public:
 	HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);

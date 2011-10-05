@@ -36,83 +36,60 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/utils/automata/regular_language_utils.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
-namespace transform {
-namespace pattern {
+namespace utils {
+namespace automata {
 
-	TEST(Tree, Basic) {
+using namespace set;
 
-		TreePtr tree = makeTree();
-		EXPECT_EQ("()", toString(tree));
+typedef Automata<>::state_type State;
+typedef RegularLanguage<> Lang;
 
-		tree = makeTree(tree, tree, tree);
-		EXPECT_EQ("((),(),())", toString(tree));
+bool match(Lang l, const char* str) {
+	return accepts(l.getAutomata(), string(str));
+}
 
-		tree = makeTree(tree, makeTree());
-		EXPECT_EQ("(((),(),()),())", toString(tree));
+TEST(RegLang, Composition) {
 
-		tree = makeTree('a');
-		EXPECT_EQ("a", toString(tree));
 
-		tree = makeTree(tree, makeTree('b'), makeTree());
-		EXPECT_EQ("(a,b,())", toString(tree));
+	// a larger example
+	Lang a('a');
+	Lang b('b');
+	Lang c('c');
+	Lang d('d');
 
-		// test values:
-		tree = makeValue(true);
-		EXPECT_EQ("true", toString(tree));
+	// pattern a(b|c)*d
 
-		tree = makeValue(false);
-		EXPECT_EQ("false", toString(tree));
+	Lang x= sequence(a, repetition(alternativ(b,c)), d);
 
-		tree = makeValue(15);
-		EXPECT_EQ("15", toString(tree));
+	// EXPECT_EQ("", toDotGraph(x.getAutomata()));
 
-		tree = makeValue<string>("Hello");
-		EXPECT_EQ("\"Hello\"", toString(tree));
+	EXPECT_TRUE(match(x, "ad"));
+	EXPECT_TRUE(match(x, "abd"));
+	EXPECT_TRUE(match(x, "abcd"));
+	EXPECT_TRUE(match(x, "acbbcccbbcbcd"));
 
-	}
+	EXPECT_FALSE(match(x, "abc"));
 
-	TEST(Tree, Equality) {
+	// compress it to a NFA
+	auto n = toNFA(x.getAutomata());
+	// EXPECT_EQ("", toDotGraph(n));
 
-		TreePtr a;
-		TreePtr b;
+	EXPECT_TRUE(accepts(n, string("ad")));
+	EXPECT_TRUE(accepts(n, string("abd")));
+	EXPECT_TRUE(accepts(n, string("abcd")));
+	EXPECT_TRUE(accepts(n, string("acbbcccbbcbcd")));
 
-		a = makeValue(true);
-		b = makeValue(true);
+	EXPECT_FALSE(accepts(n, string("abc")));
 
-		EXPECT_EQ(*a,*b);
+}
 
-		b = makeValue(false);
-		EXPECT_NE(*a,*b);
 
-		a = makeValue(14);
-		b = makeValue(14);
-		EXPECT_EQ(*a,*b);
 
-		b = makeValue(15);
-		EXPECT_NE(*a,*b);
-
-		// simple tree test
-		a = makeTree('a');
-		b = makeTree('a');
-		EXPECT_EQ(*a,*b);
-
-		b = makeTree('b');
-		EXPECT_NE(*a,*b);
-
-		// larger tree test
-		a = makeTree('a', makeTree('b'), makeValue(14));
-		b = makeTree('a', makeTree('b'), makeValue(14));
-		EXPECT_EQ(*a,*b);
-
-		b = makeTree('a', makeTree('b'), makeValue(16));
-		EXPECT_NE(*a,*b);
-
-	}
-
-} // end namespace pattern
-} // end namespace transform
+} // end namespace automata
+} // end namespace core
 } // end namespace insieme
 

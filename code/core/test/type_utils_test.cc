@@ -359,6 +359,11 @@ TEST(TypeUtils, ReturnTypeDeduction) {
 	EXPECT_EQ("typeB", toString(*deduceReturnType(funType, toVector<TypePtr>(genSpecB, typeB))));
 	EXPECT_EQ("'a", toString(*deduceReturnType(funType, toVector<TypePtr>(genA, varA))));
 
+	// test invalid call
+	funType = FunctionType::get(manager, toVector<TypePtr>(typeA), typeA);
+	EXPECT_EQ("unit", toString(*deduceReturnType(funType, toVector<TypePtr>(typeB))));
+	EXPECT_THROW(tryDeduceReturnType(funType, toVector<TypePtr>(typeB)), ReturnTypeDeductionException);
+
 
 //	// make a call requiring sub-type deduction
 //	funType = FunctionType::get(manager, toVector<TypePtr>(varA, varA), varA);

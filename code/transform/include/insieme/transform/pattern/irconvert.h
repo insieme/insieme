@@ -59,7 +59,7 @@ public:
 	typedef std::function<void(IRTree& self)> EvalFunctor;
 protected:
 	const core::NodeAddress data;
-	bool evaluated;
+	mutable bool evaluated;
 	const EvalFunctor evalFunctor;
 public:
 	IRTree(const core::NodeAddress& data, const EvalFunctor& evalFunctor = [](IRTree& self){}) 
@@ -67,9 +67,10 @@ public:
 	
 	virtual const core::NodeAddress& getData() const { return data; }
 	virtual std::ostream& printTo(std::ostream& out) const;
-	virtual bool operator==(Tree& other);
-	void evaluate();
+	virtual bool operator==(const Tree& other) const;
 	virtual std::vector<TreePtr>& getSubTrees();
+
+	void evaluate() const; // modifies mutable values
 };
 
 /** Represents a simple IR node (no children, but an address).
@@ -81,7 +82,7 @@ public:
 	IRLeaf(const core::NodeAddress& data) : IRTree(data) {}
 		
 	virtual std::ostream& printTo(std::ostream& out) const;
-	virtual bool operator==(Tree& other);
+	virtual bool operator==(const Tree& other) const;
 };
 
 /** Represents a non-node IR structure (no children, no address).
@@ -92,7 +93,7 @@ public:
 	IRBlob(const string& blob) : Tree(100000), blob(blob) {}
 		
 	virtual std::ostream& printTo(std::ostream& out) const;
-	virtual bool operator==(Tree& other);
+	virtual bool operator==(const Tree& other) const;
 };
 
 /** Visitor that converts any IR address to the tree structure used by the pattern matcher.

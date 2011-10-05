@@ -46,6 +46,10 @@
 
 #include "dummy_annotations.inc"
 
+
+#include "insieme/utils/logging.h"
+#include "insieme/core/transform/manipulation_utils.h"
+
 namespace insieme {
 namespace core {
 
@@ -210,11 +214,50 @@ TEST(NodeReplacer, ReplaceVariable) {
 
 }
 
-TEST(NodeReplacer, Performance) {
-
+TEST(NodeReplacer, RecVarsReplacement) {
 	NodeManager manager;
 	ASTBuilder builder(manager);
 	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+	std::function<NodePtr (const NodePtr&)> functor = [&builder](const NodePtr& node)->NodePtr {
+		NodePtr res = node;
+		const lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+		// update init undefined
+		if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(node)) {
+			if(const CallExprPtr& init = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
+				const VariablePtr& var = decl->getVariable();
+				const ExpressionPtr& fun = init->getFunctionExpr();
+				// handle ref variables
+				if((init->getType() != var->getType()) && (basic.isRefVar(fun) || basic.isRefNew(fun))) {
+					const RefTypePtr varTy = static_pointer_cast<const RefType>(var->getType());
+					if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(init->getArgument(0))) {
+						if(basic.isUndefined(undefined->getFunctionExpr()))
+							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(varTy->getElementType(),
+									basic.getUndefined(), basic.getTypeLiteral(varTy->getElementType()))));
+					}
+				}
+				// handle non ref variables
+				if((init->getType() != var->getType()) && basic.isUndefined(fun)) {
+					const TypePtr varTy = var->getType();
+					res = builder.declarationStmt(var, builder.callExpr(varTy, fun, basic.getTypeLiteral(varTy)));
+				}
+			}
+		}
+
+		// check whether something has changed ...
+		if (res == node) {
+			// => nothing changed
+			return node;
+		}
+
+		// preserve annotations
+		transform::utils::migrateAnnotations(node, res);
+
+		// done
+		return res;
+
+ };
 
 	TypePtr kernelType = builder.refType(builder.arrayType(builder.genericType("_cl_kernel")));
 	VariablePtr kernel = builder.variable(builder.refType(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(
@@ -223,38 +266,38 @@ TEST(NodeReplacer, Performance) {
 	VariablePtr arg = builder.variable(builder.refType(clMemType));
 
 
-	FunctionTypePtr fTy = builder.functionType(toVector(kernelType, clMemType), manager.basic.getInt4());
+	FunctionTypePtr fTy = builder.functionType(toVector(kernelType, clMemType), basic.getInt4());
 	VariablePtr tuple = builder.variable(kernelType);
 
 	VariablePtr src = builder.variable(clMemType);
 	Lambda::ParamList params = toVector(tuple, src);
 	CompoundStmt::StatementList body;
-	body.push_back(builder.callExpr(manager.basic.getUnit(), manager.basic.getRefAssign(), builder.callExpr(manager.basic.getTupleRefElem(), tuple,
-			builder.literal(manager.basic.getUInt8(), "0"),
-			manager.basic.getTypeLiteral(src->getType())), src));
+	body.push_back(builder.callExpr(basic.getUnit(), basic.getRefAssign(), builder.callExpr(basic.getTupleRefElem(), tuple,
+			builder.literal(basic.getUInt8(), "0"),
+			basic.getTypeLiteral(src->getType())), src));
 	body.push_back(builder.returnStmt(builder.intLit(0)));
 	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
-	ExpressionPtr accessStruct = builder.callExpr(manager.basic.getVectorRefElem(),
-			builder.callExpr( manager.basic.getCompositeRefElem(),
-			kernel, manager.basic.getIdentifierLiteral(builder.identifier("kernel")), manager.basic.getTypeLiteral(
-					builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))), builder.literal(manager.basic.getUInt8(), "0"));
+	ExpressionPtr accessStruct = builder.callExpr(basic.getVectorRefElem(),
+			builder.callExpr( basic.getCompositeRefElem(),
+			kernel, basic.getIdentifierLiteral(builder.identifier("kernel")), basic.getTypeLiteral(
+					builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))), builder.literal(basic.getUInt8(), "0"));
 
 	StatementList stmts;
-	ExpressionPtr kernelInit = builder.callExpr(manager.basic.getRefVar(), builder.callExpr(manager.basic.getUndefined(),
-			manager.basic.getTypeLiteral(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(builder.identifier("kernel"),
+	ExpressionPtr kernelInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(builder.identifier("kernel"),
 				builder.vectorType(kernelType, builder.concreteIntTypeParam(2))))))));
-	ExpressionPtr argInit = builder.callExpr(manager.basic.getRefVar(), builder.callExpr(manager.basic.getUndefined(),
-			manager.basic.getTypeLiteral(clMemType)));
+	ExpressionPtr argInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(clMemType)));
 	stmts.push_back(builder.declarationStmt(kernel, kernelInit));
 	stmts.push_back(builder.declarationStmt(arg, argInit));
-	stmts.push_back(builder.callExpr(manager.basic.getInt4(), function,
-			builder.callExpr( manager.basic.getRefDeref(),accessStruct),
-			builder.callExpr(clMemType, manager.basic.getRefDeref(), arg)));
+	stmts.push_back(builder.callExpr(basic.getInt4(), function,
+			builder.callExpr( basic.getRefDeref(),accessStruct),
+			builder.callExpr(clMemType, basic.getRefDeref(), arg)));
 
 	StatementPtr stmt = builder.compoundStmt(stmts);
 
-	std::cout << printer::PrettyPrinter(stmt) << std::endl;;
+//	std::cout << printer::PrettyPrinter(stmt) << std::endl;;
 
 	CheckPtr all = core::checks::getFullCheck();
 
@@ -262,38 +305,39 @@ TEST(NodeReplacer, Performance) {
 
 	// Set up replacement map
 	utils::map::PointerMap<VariablePtr, VariablePtr> map;
-	RefTypePtr kernelReplacementTy = static_pointer_cast<const RefType>(transform::replaceAll(manager, kernel->getType(), kernelType, builder.tupleType(
-			toVector<TypePtr>(builder.refType(builder.arrayType(manager.basic.getReal4()))))));
+	RefTypePtr kernelReplacementTy = static_pointer_cast<const RefType>(transform::replaceAll(manager, kernel->getType(), kernelType, builder.refType(
+			builder.tupleType(toVector<TypePtr>(builder.refType(builder.arrayType(basic.getReal4())))))));
 
 	map[kernel] = builder.variable(kernelReplacementTy);
 
 	RefTypePtr clMemReplacementTy = static_pointer_cast<const RefType>(transform::replaceAll(manager, arg->getType(), builder.genericType("_cl_mem"),
-			manager.basic.getReal4()));
+			basic.getReal4()));
 
 	map[arg] = builder.variable(clMemReplacementTy);
 
 	// apply recursive variable replacer
 //	std::cout << "Replacements " << map << std::endl;
-	NodePtr stmt2 = stmt;//transform::replaceVarsRecursiveGen(manager, stmt, map);
+	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map, false, transform::getVarInitUpdater(builder));
 //	std::cout << stmt2 << std::endl;
-
 	// fix initalization
-	NodePtr kernelInitReplacement = builder.callExpr(manager.basic.getRefVar(), builder.callExpr(manager.basic.getUndefined(),
-			manager.basic.getTypeLiteral(kernelReplacementTy->getElementType())));
-	stmt2 = transform::replaceAll(manager, stmt2, kernelInit, kernelInitReplacement);
-	NodePtr clMemInitReplacement = builder.callExpr(manager.basic.getRefVar(), builder.callExpr(manager.basic.getUndefined(),
-			manager.basic.getTypeLiteral(clMemReplacementTy->getElementType())));
-	stmt2 = transform::replaceAll(manager, stmt2, argInit, clMemInitReplacement);
+/* fixed by functor passed to replaceVarsRecutsiveGen
+	NodePtr kernelInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(kernelReplacementTy->getElementType())));
+	stmt2 = transform::replaceAll(manager, stmt2, kernelInit, kernelInitReplacement, false);
+	NodePtr clMemInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(clMemReplacementTy->getElementType())));
+	stmt2 = transform::replaceAll(manager, stmt2, argInit, clMemInitReplacement, false);
 
 	std::cout << ":(" << std::endl << printer::PrettyPrinter(stmt2) << std::endl;;
+	std::cout << "(N)" << std::endl << stmt2 << std::endl;*/
 	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt2)));
 
 
-/*	EXPECT_EQ("[]", toString(check(stmt2, all)));
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<struct<kernel:vector<(ref<array<real<4>,1>>),2>>> v1 =\
-  var(undefined(type<struct<kernel:vector<(ref<array<real<4>,1>>),2>>>));");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<ref<array<real<4>>>> v2 =  var(undefined(type<ref<array<real<4>,1>>>))");
-	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<(ref<array<real<4>,1>>)> v3, ref<array<real<4>>> v4)");
+	EXPECT_EQ("[]", toString(check(stmt2, all)));
+/*	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v9 =\
+  var(undefined(type<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>>));");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<ref<array<real<4>,1>>> v10 =  var(undefined(type<ref<array<real<4>,1>>>))");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<(ref<array<real<4>,1>>)> v11, ref<array<real<4>,1>> v12)");
 */
 }
 

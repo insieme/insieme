@@ -210,7 +210,7 @@ const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, con
 }
 
 const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, const ExpressionPtr& index, const ExpressionPtr& sizeArg,
-		ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls, ClmemTable& cl_mems) {
+		ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls, ClmemTable& cl_mems, EquivalenceMap& eqMap) {
 	// arg_index must either be an integer literal or all arguments have to be specified in the right order in the source code
 	ExpressionPtr kernel = tryRemove(BASIC.getRefDeref(), kernelArg, builder);
 
@@ -242,6 +242,7 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 		// should I really have access to private members or HostMapper here or is this a compiler bug?
 		localMemDecls[kernel][pos] = localDecl;
 		arg = localMem;*/
+
 		// initialize local memory place with undefined
 		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
 				builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(type)),
@@ -292,10 +293,31 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 	}*/
 
 //	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
+//std::cout << "ARGUMENT: \n\t" << o2i.getClSetKernelArg() << std::endl;
+/*
+	FunctionTypePtr fTy = builder.functionType(kernel->getType(), arg->getType());
+	VariablePtr tuple = builder.variable(kernel->getType());
+	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
+	eqMap[tuple] = eqMap[kernel];
+	VariablePtr src = builder.variable(arg->getType());
+	Lambda::ParamList params = toVector(tuple, src);
+	CompoundStmt::StatementList body;
+	body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
+			(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
+			BASIC.getTypeLiteral(src->getType())), src));
+	body.push_back(builder.returnStmt(builder.intLit(0)));
+	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
+//	std::cout << "SET PARAM: \n" << function << std::endl;
 	// store argument in a tuple
 	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
 			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), arg);
+*/
+	// TODO remove quickfix
+	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
+			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), arg);
+
+//	return builder.callExpr(BASIC.getUInt8(), function, kernel, arg);
 }
 
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type) {
@@ -442,6 +464,15 @@ ExpressionPtr Ocl2Inspire::getClGetIDs() {
 			return 0; \
 		}}");
 }
+
+ExpressionPtr Ocl2Inspire::getClSetKernelArg() {
+	// alsways returns 0 = CL_SUCCESS
+	return parser.parseExpression("fun(ref<'a>:argTuple, uint<8>:idx, type<'b>:ty, 'b:src) -> int<4> {{\
+            ( (op<tuple.ref.elem>(argTuple, idx, ty)) = src );\
+            return 0; \
+    }}");
+}
+
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
@@ -1163,7 +1194,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					if(handleClCreateKernel(callExpr->getArgument(0), newCall, NULL)) {
 						return BASIC.getNoOp();
 					}
-
+/* not needed any more since replace of clSetKernelArg with an Inpire function*/
 						if(callExpr->getArgument(1)->toString().find("clSetKernelArg") != string::npos){
 							std::vector<StatementPtr> stmts;
 							// set error value to CL_SUCCESS

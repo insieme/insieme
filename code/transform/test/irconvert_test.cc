@@ -84,6 +84,14 @@ TEST(IRConvert, Basic) {
 	TreePatternPtr patternC = irp::tupleType(any << atom(converter.visit(NodeAddress(t("float<8>")))) << any);
 	EXPECT_PRED2(match, patternC, treeA);
 	EXPECT_PRED2(notMatch, patternC, treeB);
+
+	TreePatternPtr patternD = irp::tupleType(*any << atom(converter.visit(NodeAddress(t("float<8>")))) << *any);
+	EXPECT_PRED2(match, patternD, treeA);
+	EXPECT_PRED2(match, patternD, treeB);
+
+	TreePatternPtr patternE = irp::tupleType(*any << atom(converter.visit(NodeAddress(t("uint<1>")))) << *any);
+	EXPECT_PRED2(match, patternE, treeA);
+	EXPECT_PRED2(notMatch, patternE, treeB);
 }
 
 

@@ -463,6 +463,13 @@ LITERAL(CreateBoundRange,   "BoundRange",    	"(uint<#8>, uint<#8>)->JobRange")	
 LITERAL(CreateBoundRangeMod,"BoundRange",    	"(uint<#8>, uint<#8>, uint<#8>)->JobRange")		// lower, upper and modula bound
 
 
+// Locks -----------------------------------------------------------
+
+TYPE(LockType, "lock")
+
+LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
+LITERAL(LockRelease, "lock.release", "(lock)->unit")
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #undef TYPE
