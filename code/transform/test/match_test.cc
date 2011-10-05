@@ -146,6 +146,19 @@ namespace pattern {
 		EXPECT_EQ("[[[a,b],[b,a,a,b]]]", toString(value));
 		EXPECT_TRUE(value.hasListValue(path));
 
+		path.pop();
+		path.inc();
+		path.push();
+
+		list = toVector<TreePtr>();
+
+		EXPECT_FALSE(value.hasListValue(path));
+		value.addListValue(path, list);
+		EXPECT_EQ(list, value.getListValue(path));
+		EXPECT_EQ("[[[a,b],[b,a,a,b]],[[]]]", toString(value));
+		EXPECT_TRUE(value.hasListValue(path));
+
+
 	}
 
 
