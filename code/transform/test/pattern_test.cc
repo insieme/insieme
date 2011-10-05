@@ -472,6 +472,44 @@ namespace pattern {
 		EXPECT_PRED2(match, patternD, treeE);
 	}
 
+
+	TEST(NodePattern, Variables) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+
+		NodePatternPtr pattern;
+
+		pattern = nodeVar("x");
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>());
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a,b));
+
+		pattern = nodeVar("x") << nodeVar("x");
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>());
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,b));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,b,b));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,a,b));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,b,a,b));
+
+
+		// with limited pattern
+		pattern = nodeVar("x", *single(a));
+		pattern = pattern << pattern;  	// requests an even number of as
+
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>());
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,a));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,b,b));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,a,b));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a,a,a));
+
+	}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

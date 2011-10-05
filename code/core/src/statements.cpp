@@ -255,16 +255,34 @@ CompoundStmtPtr CompoundStmt::get(NodeManager& manager) {
 	return manager.get(CompoundStmt(vector<StatementPtr>()));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const StatementPtr& stmt) {
+	if (stmt->getNodeType() == NT_CompoundStmt) {
+		return static_pointer_cast<const CompoundStmt>(stmt);
+	}
 	return manager.get(CompoundStmt(toVector(stmt)));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const vector<StatementPtr>& stmts) {
+
+	// check length of list
+	if (stmts.size() == static_cast<std::size_t>(1)) {
+		return get(manager, stmts.front());
+	}
+
+	// create result
 	return manager.get(CompoundStmt(stmts));
+}
+
+namespace {
+
+	CompoundStmtPtr wrapInCompound(const StatementPtr& stmt) {
+		return CompoundStmt::get(stmt->getNodeManager(), stmt);
+	}
+
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
 
 namespace {
-	std::size_t hashWhileStmt(const ExpressionPtr& condition, const StatementPtr& body) {
+	std::size_t hashWhileStmt(const ExpressionPtr& condition, const CompoundStmtPtr& body) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, HS_WhileStmt);
 		boost::hash_combine(seed, condition->hash());
@@ -273,7 +291,7 @@ namespace {
 	}
 }
 
-WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
+WhileStmt::WhileStmt(const ExpressionPtr& condition, const CompoundStmtPtr& body)
 	: Statement(NT_WhileStmt, hashWhileStmt(condition, body)), condition(isolate(condition)), body(isolate(body)) {
 }
 
@@ -300,13 +318,13 @@ Node::OptionChildList WhileStmt::getChildNodes() const {
 }
 
 WhileStmtPtr WhileStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
-	return manager.get(WhileStmt(condition, body));
+	return manager.get(WhileStmt(condition, wrapInCompound(body)));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
 
 namespace {
-	std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
+	std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const CompoundStmtPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, HS_ForStmt);
 		boost::hash_combine(seed, declaration->hash());
@@ -317,7 +335,7 @@ namespace {
 	}
 }
 
-ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
+ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const CompoundStmtPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
 	: Statement(NT_ForStmt, hashForStmt(declaration, body, end, step)), declaration(isolate(declaration)), body(isolate(body)), end(isolate(end)), step(isolate(step)) {}
 
 std::ostream& ForStmt::printTo(std::ostream& out) const {
@@ -352,12 +370,12 @@ Node::OptionChildList ForStmt::getChildNodes() const {
 
 ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end,
 		const ExpressionPtr& step) {
-	return manager.get(ForStmt(declaration, body, end, step));
+	return manager.get(ForStmt(declaration, wrapInCompound(body), end, step));
 }
 
 // ------------------------------------- IfStmt ---------------------------------
 
-std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) {
+std::size_t hashIfStmt(const ExpressionPtr& condition, const CompoundStmtPtr& thenBody, const CompoundStmtPtr& elseBody) {
 	std::size_t seed = 0;
 	boost::hash_combine(seed, HS_IfStmt);
 	boost::hash_combine(seed, condition->hash());
@@ -366,7 +384,7 @@ std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenB
 	return seed;
 }
 
-IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) :
+IfStmt::IfStmt(const ExpressionPtr& condition, const CompoundStmtPtr& thenBody, const CompoundStmtPtr& elseBody) :
 	Statement(NT_IfStmt, hashIfStmt(condition, thenBody, elseBody)), condition(isolate(condition)), thenBody(isolate(thenBody)), elseBody(isolate(elseBody)) {
 }
 
@@ -399,12 +417,12 @@ Node::OptionChildList IfStmt::getChildNodes() const {
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
 	// default to empty else block
-	return get(manager, condition, body, manager.basic.getNoOp());
+	return get(manager, condition, wrapInCompound(body), manager.basic.getNoOp());
 }
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
 	// default to empty else block
-	return manager.get(IfStmt(condition, body, elseBody));
+	return manager.get(IfStmt(condition, wrapInCompound(body), wrapInCompound(elseBody)));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------

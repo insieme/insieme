@@ -93,25 +93,25 @@ TEST(Manipulation, Insert) {
 
 
 	// check for deeper scope
-	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound));
-	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1));
+	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound,stmts[0]));
+	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1,stmts[0]));
 	target = static_address_cast<const CompoundStmt>(NodeAddress(outer2).getAddressOfChild(0).getAddressOfChild(0));
 
 	res = transform::insert(manager, target, stmt, 0);
-	EXPECT_EQ("{{{X; A; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{X; A; B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::insert(manager, target, stmt, 1);
-	EXPECT_EQ("{{{A; X; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; X; B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::insert(manager, target, stmt, 2);
-	EXPECT_EQ("{{{A; B; X; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; X; C;}; A;}; A;}", toString(*res));
 
 	res = transform::insert(manager, target, stmt, 3);
-	EXPECT_EQ("{{{A; B; C; X;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; C; X;}; A;}; A;}", toString(*res));
 
 	// TEST exceeding indices
 	res = transform::insert(manager, target, stmt, 15);
-	EXPECT_EQ("{{{A; B; C; X;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; C; X;}; A;}; A;}", toString(*res));
 }
 
 TEST(Manipulation, InsertList) {
@@ -244,18 +244,18 @@ TEST(Manipulation, ReplaceList) {
 
 
 	// check for deeper scope
-	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound));
-	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1));
+	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound, stmts[0]));
+	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1, stmts[0]));
 	target = static_address_cast<const CompoundStmt>(NodeAddress(outer2).getAddressOfChild(0).getAddressOfChild(0));
 
 	res = transform::replace(manager, target, 0, insertStmts);
-	EXPECT_EQ("{{{X; Y; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{X; Y; B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::replace(manager, target, 1, insertStmts);
-	EXPECT_EQ("{{{A; X; Y; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; X; Y; C;}; A;}; A;}", toString(*res));
 
 	res = transform::replace(manager, target, 2, insertStmts);
-	EXPECT_EQ("{{{A; B; X; Y;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; X; Y;}; A;}; A;}", toString(*res));
 
 }
 
@@ -286,18 +286,18 @@ TEST(Manipulation, Replace) {
 
 
 	// check for deeper scope
-	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound));
-	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1));
+	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound, stmts[0]));
+	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1, stmts[0]));
 	target = static_address_cast<const CompoundStmt>(NodeAddress(outer2).getAddressOfChild(0).getAddressOfChild(0));
 
 	res = transform::replace(manager, target, 0, stmt);
-	EXPECT_EQ("{{{X; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{X; B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::replace(manager, target, 1, stmt);
-	EXPECT_EQ("{{{A; X; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; X; C;}; A;}; A;}", toString(*res));
 
 	res = transform::replace(manager, target, 2, stmt);
-	EXPECT_EQ("{{{A; B; X;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; X;}; A;}; A;}", toString(*res));
 
 }
 
@@ -326,18 +326,18 @@ TEST(Manipulation, Remove) {
 
 
 	// check for deeper scope
-	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound));
-	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1));
+	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound, stmts[0]));
+	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1, stmts[0]));
 	target = static_address_cast<const CompoundStmt>(NodeAddress(outer2).getAddressOfChild(0).getAddressOfChild(0));
 
 	res = transform::remove(manager, target, 0);
-	EXPECT_EQ("{{{B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::remove(manager, target, 1);
-	EXPECT_EQ("{{{A; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; C;}; A;}; A;}", toString(*res));
 
 	res = transform::remove(manager, target, 2);
-	EXPECT_EQ("{{{A; B;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B;}; A;}; A;}", toString(*res));
 
 }
 
@@ -391,43 +391,43 @@ TEST(Manipulation, Move) {
 	EXPECT_EQ("{B; C; A;}", toString(*res));
 
 	// check for deeper scope
-	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound));
-	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1));
+	CompoundStmtPtr outer1 = builder.compoundStmt(toVector<StatementPtr>(compound, stmts[0]));
+	CompoundStmtPtr outer2 = builder.compoundStmt(toVector<StatementPtr>(outer1, stmts[0]));
 	target = static_address_cast<const CompoundStmt>(NodeAddress(outer2).getAddressOfChild(0).getAddressOfChild(0));
 
 	res = transform::move(manager, target, 0, 0);
-	EXPECT_EQ("{{{A; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 0, 1);
-	EXPECT_EQ("{{{B; A; C;};};}", toString(*res));
+	EXPECT_EQ("{{{B; A; C;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 0, 2);
-	EXPECT_EQ("{{{B; C; A;};};}", toString(*res));
+	EXPECT_EQ("{{{B; C; A;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 1, -1);
-	EXPECT_EQ("{{{B; A; C;};};}", toString(*res));
+	EXPECT_EQ("{{{B; A; C;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 1, 0);
-	EXPECT_EQ("{{{A; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 1, 1);
-	EXPECT_EQ("{{{A; C; B;};};}", toString(*res));
+	EXPECT_EQ("{{{A; C; B;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 2, -2);
-	EXPECT_EQ("{{{C; A; B;};};}", toString(*res));
+	EXPECT_EQ("{{{C; A; B;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 2, -1);
-	EXPECT_EQ("{{{A; C; B;};};}", toString(*res));
+	EXPECT_EQ("{{{A; C; B;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 2, 0);
-	EXPECT_EQ("{{{A; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; C;}; A;}; A;}", toString(*res));
 
 	// TEST exceeding displacement
 	res = transform::move(manager, target, 0, -1);
-	EXPECT_EQ("{{{A; B; C;};};}", toString(*res));
+	EXPECT_EQ("{{{A; B; C;}; A;}; A;}", toString(*res));
 
 	res = transform::move(manager, target, 0, 3);
-	EXPECT_EQ("{{{B; C; A;};};}", toString(*res));
+	EXPECT_EQ("{{{B; C; A;}; A;}; A;}", toString(*res));
 
 }
 
