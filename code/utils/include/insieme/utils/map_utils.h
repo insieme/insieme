@@ -226,6 +226,8 @@ std::size_t computeHash(const Map& map) {
 } // end namespace: utils
 } // end namespace: insieme
 
+namespace std {
+
 /**
  * Allows to print unordered maps including printable elements.
  *
@@ -273,3 +275,6 @@ std::ostream& operator<<(std::ostream& out, const std::map<Key, Mapped, Compare,
 		out << cur.first << "=" << cur.second;
 	}) << "}";
 }
+
+}
+
