@@ -244,9 +244,9 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 		arg = localMem;*/
 
 		// initialize local memory place with undefined
-		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
-				builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(type)),
-				builder.callExpr(type, BASIC.getUndefined(), BASIC.getTypeLiteral(type)));
+		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel,
+				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
+				BASIC.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), BASIC.getTypeLiteral(type), size)));
 
 	}
 
@@ -315,7 +315,7 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 */
 	// TODO remove quickfix
 	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
-			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), arg);
+			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), builder.callExpr(BASIC.getRefDeref(), arg));
 
 //	return builder.callExpr(BASIC.getUInt8(), function, kernel, arg);
 }
