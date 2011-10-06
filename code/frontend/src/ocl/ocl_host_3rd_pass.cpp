@@ -534,7 +534,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
 		if(cl_mems.find(var) != cl_mems.end()) {
-			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
+//			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
 			return cl_mems[var];
 		}
 	}
@@ -588,7 +588,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 													VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
 															cl_mems[var], builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))), tty));
-//std::cout << "\nMapping " <<  newMembers.at(i).second << " and " << tty << "\n to " << newType << std::endl;
 
 													replacements[var] = newVar;
 													replacements[cl_mems[var]] = newVar;
@@ -714,8 +713,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						changed = true;
 					// else check if the passed has a diffetent type
 					} else if(cl_mems.find(vArg) != cl_mems.end()) {
-						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getBaseType(arg),
-								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))));
+						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), arg->getType(),
+								static_pointer_cast<const Expression>(resolveElement(arg))->getType());
 //						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
 //								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))) << std::endl;
 						if(const TypePtr& newType = dynamic_pointer_cast<const Type>(nt)){
