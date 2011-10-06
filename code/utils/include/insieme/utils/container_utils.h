@@ -460,6 +460,8 @@ vector<typename PairContainer::value_type::second_type> projectToSecond(const Pa
 	return res;
 }
 
+namespace std {
+
 /**
  * Allows to print vectors including printable elements.
  *
@@ -509,3 +511,4 @@ std::ostream& operator<<(std::ostream& out, const std::pair<First,Second>& pair)
 	return out;
 }
 
+}

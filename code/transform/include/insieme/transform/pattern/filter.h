@@ -34,85 +34,48 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/transform/pattern/structure.h"
+#include "insieme/utils/functional_utils.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
 
-	TEST(Tree, Basic) {
 
-		TreePtr tree = makeTree();
-		EXPECT_EQ("()", toString(tree));
+/**
+ * A struct bridging the gap between patterns and filter functors.
+ */
+struct NodePatternFilter : public std::unary_function<const core::NodePtr&, bool> {
 
-		tree = makeTree(tree, tree, tree);
-		EXPECT_EQ("((),(),())", toString(tree));
+	/**
+	 * The pattern to be used for the filtering.
+	 */
+	PatternPtr pattern;
 
-		tree = makeTree(tree, makeTree());
-		EXPECT_EQ("(((),(),()),())", toString(tree));
-
-		tree = makeTree('a');
-		EXPECT_EQ("a", toString(tree));
-
-		tree = makeTree(tree, makeTree('b'), makeTree());
-		EXPECT_EQ("(a,b,())", toString(tree));
-
-		// test values:
-		tree = makeValue(true);
-		EXPECT_EQ("true", toString(tree));
-
-		tree = makeValue(false);
-		EXPECT_EQ("false", toString(tree));
-
-		tree = makeValue(15);
-		EXPECT_EQ("15", toString(tree));
-
-		tree = makeValue<string>("Hello");
-		EXPECT_EQ("\"Hello\"", toString(tree));
-
+	/**
+	 * Conducts the actual filtering operation. It tests whether
+	 * the given IR structure is accepted by the represented pattern.
+	 *
+	 * @param node the IR structure to be tested
+	 * @return true if it is matching the pattern, false otherwise
+	 */
+	bool operator()(const core::NodePtr& node) const {
+		return pattern->match(convertIR(node));
 	}
 
-	TEST(Tree, Equality) {
+};
 
-		TreePtr a;
-		TreePtr b;
-
-		a = makeValue(true);
-		b = makeValue(true);
-
-		EXPECT_EQ(*a,*b);
-
-		b = makeValue(false);
-		EXPECT_NE(*a,*b);
-
-		a = makeValue(14);
-		b = makeValue(14);
-		EXPECT_EQ(*a,*b);
-
-		b = makeValue(15);
-		EXPECT_NE(*a,*b);
-
-		// simple tree test
-		a = makeTree('a');
-		b = makeTree('a');
-		EXPECT_EQ(*a,*b);
-
-		b = makeTree('b');
-		EXPECT_NE(*a,*b);
-
-		// larger tree test
-		a = makeTree('a', makeTree('b'), makeValue(14));
-		b = makeTree('a', makeTree('b'), makeValue(14));
-		EXPECT_EQ(*a,*b);
-
-		b = makeTree('a', makeTree('b'), makeValue(16));
-		EXPECT_NE(*a,*b);
-
-	}
+/**
+ * A constructor for a node pattern filter. This utility can help keeping code readable.
+ *
+ * @param pattern the pattern to be used for filtering node structures.
+ */
+NodePatternFilter filter(const PatternPtr& pattern) {
+	return NodePatternFilter(pattern);
+}
 
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
-

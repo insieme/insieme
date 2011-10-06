@@ -71,6 +71,7 @@ TEST(UndeclaredVariableCheck, Basic) {
 	errorAdr = errorAdr.getAddressOfChild(1);
 	errorAdr = errorAdr.getAddressOfChild(1);
 	errorAdr = errorAdr.getAddressOfChild(1);
+	errorAdr = errorAdr.getAddressOfChild(0);
 	errorAdr = errorAdr.getAddressOfChild(1);
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
 }
@@ -154,7 +155,7 @@ TEST(UndeclaredVariableCheck, CompoundStmt) {
 	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varB);
 
 	err = builder.compoundStmt(builder.compoundStmt(declA, varB));
-	EXPECT_EQ("{{A v1 = X; v2;};}", toString(*err));
+	EXPECT_EQ("{A v1 = X; v2;}", toString(*err));
 	EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
 	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varB);
 

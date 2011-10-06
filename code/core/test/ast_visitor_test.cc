@@ -224,7 +224,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	visitor.reset();
 	recVisitor.visit(ifStmt);
-	EXPECT_EQ ( 6, visitor.counter );
+	EXPECT_EQ ( 7, visitor.counter );
 
 
 	// ------ test for addresses ----
@@ -237,7 +237,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	adrVisitor.reset();
 	recAdrVisitor.visit(NodeAddress(ifStmt));
-	EXPECT_EQ ( 6, adrVisitor.counter );
+	EXPECT_EQ ( 7, adrVisitor.counter );
 
 
 	// test without types
@@ -250,7 +250,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	noTypePtrVisitor.reset();
 	recNoTypeVisitor.visit(ifStmt);
-	EXPECT_EQ ( 4, noTypePtrVisitor.counter );
+	EXPECT_EQ ( 5, noTypePtrVisitor.counter );
 
 	CountingAddressVisitor noTypeAdrVisitor(false);
 	auto recNoTypeAdrVisitor = makeDepthFirstVisitor(noTypeAdrVisitor);
@@ -261,7 +261,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 	noTypeAdrVisitor.reset();
 	recNoTypeAdrVisitor.visit(NodeAddress(ifStmt));
-	EXPECT_EQ ( 4, noTypeAdrVisitor.counter );
+	EXPECT_EQ ( 5, noTypeAdrVisitor.counter );
 
 
 }
@@ -464,7 +464,7 @@ TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
 
 	limit10.reset();
 	EXPECT_FALSE(visitDepthFirstInterruptable(ifStmt, limit10));
-	EXPECT_EQ ( 6, limit10.counter );
+	EXPECT_EQ ( 7, limit10.counter );
 
 	// ------ test for addresses ----
 	InterruptingVisitor<Address> limitA3(3);
@@ -477,7 +477,7 @@ TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
 	limitA10.reset();
 	visitDepthFirstInterruptable(ifStmt, limit10);
 	EXPECT_FALSE(visitDepthFirstInterruptable(NodeAddress(ifStmt), limitA10));
-	EXPECT_EQ ( 6, limitA10.counter );
+	EXPECT_EQ ( 7, limitA10.counter );
 }
 
 
@@ -503,12 +503,12 @@ TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
 
 	limit10.reset();
 	EXPECT_FALSE(visitDepthFirstOnceInterruptable(ifStmt, limit10));
-	EXPECT_EQ ( 5, limit10.counter );
+	EXPECT_EQ ( 6, limit10.counter );
 
 	// check number of nodes when visiting all nodes
 	limit10.reset();
 	visitDepthFirstOnce(ifStmt, limit10);
-	EXPECT_EQ( 5, limit10.counter);
+	EXPECT_EQ( 6, limit10.counter);
 
 	// ------ test for addresses ----
 	InterruptingVisitor<Address> limitA3(3);
@@ -520,12 +520,12 @@ TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
 
 	limitA10.reset();
 	EXPECT_FALSE(visitDepthFirstOnceInterruptable(NodeAddress(ifStmt), limitA10));
-	EXPECT_EQ ( 5, limitA10.counter );
+	EXPECT_EQ ( 6, limitA10.counter );
 
 	// check number of nodes when visiting all nodes
 	limitA10.reset();
 	visitDepthFirstOnce(NodeAddress(ifStmt), limitA10);
-	EXPECT_EQ( 5, limitA10.counter);
+	EXPECT_EQ( 6, limitA10.counter);
 }
 
 
@@ -600,7 +600,7 @@ TEST(ASTVisitor, VisitOncePrunableVisitorTest) {
 	// check number of nodes when visiting all nodes
 	limitB.reset();
 	visitDepthFirstOnce(NodeAddress(ifStmt), limitB);
-	EXPECT_EQ( 5, limitB.counter);
+	EXPECT_EQ( 6, limitB.counter);
 }
 
 
@@ -633,7 +633,7 @@ TEST(ASTVisitor, SingleTypeLambdaVisitor) {
 			counter++;
 		});
 		visitDepthFirst(ifStmt, visitor);
-		EXPECT_EQ(counter, 1);
+		EXPECT_EQ(counter, 2);
 	}
 
 }
@@ -720,8 +720,8 @@ TEST(ASTVisitor, ParameterTest) {
 	m = 0;
 	auto recVisitor = makeDepthFirstVisitor(visitor);
 	recVisitor.visit(ifStmt, n, m);
-	EXPECT_EQ(6, n);
-	EXPECT_EQ(-6, m);
+	EXPECT_EQ(7, n);
+	EXPECT_EQ(-7, m);
 
 	// this should work - but it does not ...
 //	visitAllP(type, visitor, false, n, m);

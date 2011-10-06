@@ -48,6 +48,8 @@ namespace core {
 class Substitution;
 typedef boost::optional<Substitution> SubstitutionOpt;
 
+class ASTBuilder;
+
 namespace transform {
 
 /**
@@ -118,6 +120,15 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
 	return static_pointer_cast<T>(replaceVars(mgr, root, replacements));
 }
 
+/**
+ * pre-implemented functors to be used with replaceVarRecursive[Gen]
+ */
+// default functor, doing nothing
+static std::function<NodePtr (const NodePtr&)> getDefaultFunctor(){ return [](const NodePtr& node)->NodePtr { return node; }; }
+
+// functor which updates the type literal inside a call to undefined in a declareation
+
+std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& builder);
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -127,9 +138,12 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
  * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping variables to their replacements
+ * @param limitScope a flag determining if also variables in inner scopes should be considered
+ * @param functor a function to be called if the correct return type cannot be determined by default
  */
 NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements);
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		const std::function<NodePtr (const NodePtr&)>& functor = [](const NodePtr& node)->NodePtr { assert(false && "No handler function defined"); return 0; });
 
 /**
  * Replaces all variables within the given map within the current scope by the associated elements. If
@@ -139,11 +153,14 @@ NodePtr replaceVarsRecursive(NodeManager& mgr, const NodePtr& root,
  * @param mgr the manager used to maintain new nodes, in case new nodes have to be formed
  * @param root the root of the sub-tree to be manipulated
  * @param replacements the map mapping variables to their replacements
+ * @param limitScope a flag determining if also variables in inner scopes should be considered
+ * @param functor a function to be called if the correct return type cannot be determined by default
  */
 template<typename T>
 Pointer<const T> replaceVarsRecursiveGen(NodeManager& mgr, const Pointer<const T>& root,
-		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements) {
-	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements));
+		const utils::map::PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope = true,
+		const std::function<NodePtr (const NodePtr&)>& functor = getDefaultFunctor()) {
+	return static_pointer_cast<const T>(replaceVarsRecursive(mgr, root, replacements, limitScope, functor));
 }
 
 /**

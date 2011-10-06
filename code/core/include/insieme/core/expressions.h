@@ -186,9 +186,9 @@ private:
 
 	const FunctionTypePtr type;
 	const ParamList paramList;
-	const StatementPtr body;
+	const CompoundStmtPtr body;
 
-	Lambda(const FunctionTypePtr& type, const ParamList& paramList, const StatementPtr& body);
+	Lambda(const FunctionTypePtr& type, const ParamList& paramList, const CompoundStmtPtr& body);
 	virtual Lambda* createCopyUsing(NodeMapping& mapper) const;
 
 protected:
@@ -212,7 +212,7 @@ public:
 
 	const FunctionTypePtr& getType() const { return type; }
 	const ParamList& getParameterList() const { return paramList; }
-	const StatementPtr& getBody() const { return body; }
+	const CompoundStmtPtr& getBody() const { return body; }
 
 	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body);
 
@@ -438,7 +438,7 @@ public:
 	/**
 	 * Obtains a reference to the body of this lambda.
 	 */
-	const StatementPtr& getBody() const;
+	const CompoundStmtPtr& getBody() const;
 
 	/**
 	 * Determines whether this function is recursively defined or not.

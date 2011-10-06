@@ -55,7 +55,7 @@ std::ostream& IRTree::printTo(std::ostream& out) const {
 	}
 }
 
-bool IRTree::operator==(Tree& other) {
+bool IRTree::operator==(const Tree& other) const {
 	// do not evaluate if ids different
 	// this is a stupid idea since pattern matching will not see the subtree!
 	//if(id != other.getId()) {
@@ -64,14 +64,14 @@ bool IRTree::operator==(Tree& other) {
 	//}
 	evaluate();
 	bool otherIsIR = typeid(other) == typeid(IRTree);
-	if(otherIsIR) static_cast<IRTree&>(other).evaluate();
+	if(otherIsIR) static_cast<const IRTree&>(other).evaluate();
 	return Tree::operator==(other);
 }
 
-void IRTree::evaluate() {
+void IRTree::evaluate() const {
 	if(!evaluated) {
 		evaluated = true;
-		evalFunctor(*this);
+		evalFunctor(*const_cast<IRTree*>(this));
 	}
 }
 
@@ -86,12 +86,12 @@ std::ostream& IRLeaf::printTo(std::ostream& out) const {
 	return out << "irleaf(" << getId() << "," << *data << ")";
 }
 
-bool IRLeaf::operator==(Tree& other) {
+bool IRLeaf::operator==(const Tree& other) const {
 	if(this == &other) {
 		return true;
 	}
 	bool otherIsIR = typeid(other) == typeid(IRTree);
-	if(otherIsIR) static_cast<IRTree&>(other).evaluate();
+	if(otherIsIR) static_cast<const IRTree&>(other).evaluate();
 	if(getId() != other.getId()) {
 		return false;
 	}
@@ -106,12 +106,12 @@ std::ostream& IRBlob::printTo(std::ostream& out) const {
 	return out << "irblob(" << blob << ")";
 }
 
-bool IRBlob::operator==(Tree& other) {
+bool IRBlob::operator==(const Tree& other) const {
 	if(this == &other) {
 		return true;
 	}
 	bool otherIsIR = typeid(other) == typeid(IRTree);
-	if(otherIsIR) static_cast<IRTree&>(other).evaluate();
+	if(otherIsIR) static_cast<const IRTree&>(other).evaluate();
 	if(getId() != other.getId()) {
 		return false;
 	}

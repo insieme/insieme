@@ -159,10 +159,7 @@ namespace {
 			auto& basic = call->getNodeManager().getBasicGenerator();
 
 			core::LambdaExprPtr fun = static_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr());
-			auto body = fun->getBody();
-			if (body->getNodeType() == core::NT_CompoundStmt) {
-				body = static_pointer_cast<const core::CompoundStmt>(body)->getStatements()[0];
-			}
+			auto body = fun->getBody()->getStatements()[0];
 
 			// check for termination
 			if (!core::analysis::isCallOf(body, basic.getParallel())) {

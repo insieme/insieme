@@ -36,14 +36,45 @@
 
 #include "insieme/transform/pattern/structure.h"
 
+#include <boost/lexical_cast.hpp>
+
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
 
+	const int Tree::VALUE_ID = -1;
+
+	namespace {
+
+		struct ValuePrinter {
+			typedef string result_type;
+
+			string operator()(bool value) const {
+				return (value)?"true":"false";
+			}
+
+			string operator()(const string& value) const {
+				return "\"" + value + "\"";
+			}
+
+			template<typename T>
+			string operator()(const T& value) const {
+				return boost::lexical_cast<string>(value);
+			}
+		};
+
+	}
+
 
 	std::ostream& Tree::printTo(std::ostream& out) const {
+
+		// handle values differently
+		if (id == VALUE_ID) {
+			return out << boost::apply_visitor(ValuePrinter(), value);
+		}
+
 		// print symbol if present
 		if (id) out << (char)id;
 
@@ -59,11 +90,11 @@ namespace pattern {
 		return out;
 	}
 
-	bool Tree::operator==(Tree& other) {
+	bool Tree::operator==(const Tree& other) const {
 		if (this == &other) {
 			return true;
 		}
-		return id == other.id && equals(subTrees, other.subTrees, equal_target<TreePtr>());
+		return id == other.id && equals(subTrees, other.subTrees, equal_target<TreePtr>()) && value == other.value;
 	}
 
 	std::ostream& operator<<(std::ostream& out, const Tree& tree) {

@@ -129,8 +129,8 @@ bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::
 					std::cout << "VECTOR " << seType << std::endl;
 				else
 					std::cout << "NOTHING " << seType << oldCall->getFunctionExpr() << std::endl;
-*/std::cout << "seType " << seType << " oldbt " << oldBType << std::endl;
-assert(seType->toString().find("_cl_kernel") == string::npos && "SDF");
+*///std::cout << "seType " << seType << " oldbt " << oldBType << std::endl;
+assert(seType->toString().find("_cl_kernel") == string::npos && "Kernel variable has not been replaced nor removed");
 
 				if(getBaseType(seType) != oldBType) {
 					TypePtr newRetType = dynamic_pointer_cast<const Type>(core::transform::replaceAll(builder.getNodeManager(), oldType,
@@ -397,8 +397,8 @@ std::cout << kernelLambdas << std::endl;//*/
 							arg = builder.callExpr(callArg->getFunctionExpr(), callArg->getArgument(0), idx);
 					}
 */
-				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), k, builder.literal(BASIC.getUInt8(), toString(i)),
-						BASIC.getTypeLiteral(interface.at(i)->getType())));
+				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
+						builder.literal(BASIC.getUInt8(), toString(i)), BASIC.getTypeLiteral(interface.at(i)->getType())));
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // irt_ocl_run_kernel without local memory arguments
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
@@ -447,6 +447,7 @@ std::cout << kernelLambdas << std::endl;//*/
 			assert(!!newArg && "Argument of kernel function must be an Expression");
 
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), newArg));
+			//newArgs.push_back(builder.callExpr(tryDeref(newArg, builder)->getType(),BASIC.getRefDeref(), newArg));
 			wrapperInterface.push_back(newArgs.back()->getType());
 
 			// kernel funtion will take a new variable as argument
@@ -533,7 +534,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
 		if(cl_mems.find(var) != cl_mems.end()) {
-//			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
+			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
 			return cl_mems[var];
 		}
 	}
@@ -582,15 +583,19 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 													const TupleTypePtr& tty = builder.tupleType(elementTypes);
 													TypePtr newType = dynamic_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
-															newMembers.at(i).second, builder.arrayType(builder.genericType("_cl_kernel")), tty));
+															newMembers.at(i).second, builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
+															tty));
 
 													VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
-															cl_mems[var], builder.arrayType(builder.genericType("_cl_kernel")), tty));
+															cl_mems[var], builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))), tty));
 //std::cout << "\nMapping " <<  newMembers.at(i).second << " and " << tty << "\n to " << newType << std::endl;
 
 													replacements[var] = newVar;
 													replacements[cl_mems[var]] = newVar;
 													cl_mems[var] = newVar;
+
+													varReplacements[var] = newVar;
+													varReplacements[cl_mems[var]] = newVar;
 
 													core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
 															builder.callExpr(newType, BASIC.getUndefined(), BASIC.getTypeLiteral(newType)));
@@ -688,6 +693,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 
 	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
+
 		// check if arguments have been replaced
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr())) {
 			Lambda::ParamList params = lambda->getParameterList();
@@ -697,6 +703,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			bool changed = false;
 
 //std::cout << "vArg: " << callExpr->getArgument(0) << std::endl;
+
 			for_each(args, [&](const ExpressionPtr& arg) {
 				// check if parameter has already been replaced, replace only once
 				if(const VariablePtr& vArg = getVariableArg(arg, builder)) {
@@ -751,8 +758,8 @@ std::cout << "]\n";*/
 
 		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(fun)) {
 			if(lit->toString().find("Buffer") != string::npos) {
-				std::cout << "FOUND " << lit << std::endl;
-				assert(false);
+				LOG(ERROR) << "FOUND " << lit << std::endl;
+				assert(false && "Buffer has not been removed during compilation");
 			}
 
 		}
@@ -770,7 +777,8 @@ std::cout << "]\n";*/
 			}
 
 			// get rid of some not needed functions
-			const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this));
+			const CallExprPtr& newCall = static_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this));
+
 			if(CallExprPtr rhs = dynamic_pointer_cast<const CallExpr>(newCall->getArgument(1))) {
 				// check if it is embedded in a ref.deref
 				if(rhs->getArguments().size() > 0)
@@ -854,7 +862,7 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 				//assert(oldStruct && newStruct && "First argument of composite.ref.elem must be a struct variable");
 
 				if(!!newStruct && (newStruct != oldStruct)) { // struct variable has been replaced, may need to update type of composite.ref.elem
-					const TypePtr& newType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct->getType()));
+					const StructTypePtr& newType = dynamic_pointer_cast<const StructType>(getNonRefType(newStruct->getType()));
 
 					assert(newType && "First argument of composite.ref.elem must be a struct variable");
 
@@ -869,7 +877,8 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 //					for_each(replacements, [&](std::pair<const NodePtr, NodePtr> n) {
 //					});
 
-					const core::TypePtr& memberTy = static_pointer_cast<const NamedCompositeType>(newType)->getTypeOfMember(id);
+					const core::TypePtr& memberTy = newType->getTypeOfMember(id);
+
 					if(!memberTy) { // someone requested a field which has been removed from the struct -> will be deleted anyways
 						return newCall;
 					}
@@ -897,6 +906,7 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 //				std::cout << newCall->getFunctionExpr() << "(" << newCall->getArguments() << ")" << std::endl;
 				return newCall;
 			}*/
+
 			if(newCall->getType()->toString().find("array<_cl_") == string::npos) {
 				// remove remaining calls using cl_ objects, just return the zero-element
 				for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
@@ -911,6 +921,7 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 				}
 			}
 		}
+
 	}
 
 /*	if(const ExpressionPtr& callExpr = dynamic_pointer_cast<const Expression>(element))
@@ -918,10 +929,14 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 		std::cout << "\nElephants of the Apokalypse\n" << callExpr->getType() << " " << callExpr << std::endl;*/
 
 	NodePtr ret = element->substitute(builder.getNodeManager(), *this);
-
-/*	if(const ExpressionPtr& newCall = dynamic_pointer_cast<const Expression>(ret)) {
-		if(newCall->getType()->toString().find("_cl_kernel") != string::npos)
-		std::cout << "\n   Riders of the Apokalypse\n" << newCall->getType() << " " << newCall << std::endl;
+/*
+	if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(ret)) {
+		if(newCall->getType()->toString().find("type") != string::npos)
+		if(BASIC.isCompositeRefElem(newCall->getFunctionExpr()))
+		std::cout << "\n   Riders of the Apokalypse\n" << newCall->getType() << " " << newCall << "(\n\t" <<
+			newCall->getArgument(0)->getType() << " " << newCall->getArgument(0) << ", \n\t" <<
+			newCall->getArgument(1)->getType() << " " << newCall->getArgument(1) << ", \n\t" <<
+			newCall->getArgument(2)->getType() << " " << newCall->getArgument(2) << ")\n" << std::endl;
 	}
 */
 
