@@ -455,12 +455,12 @@ TEST(Manipulation, TryFixingParameter_simple) {
 	LiteralPtr value = builder.literal(type, "X");
 	LambdaExprPtr res = transform::tryFixParameter(manager, lambda, 0, value);
 	EXPECT_NE(*res, *lambda);
-	EXPECT_EQ("return op(X, v2)", toString(*res->getBody()));
+	EXPECT_EQ("{return op(X, v2);}", toString(*res->getBody()));
 	EXPECT_EQ("[]", toString(core::checks::check(res)));
 
 	res = transform::tryFixParameter(manager, lambda, 1, value);
 	EXPECT_NE(*res, *lambda);
-	EXPECT_EQ("return op(v1, X)", toString(*res->getBody()));
+	EXPECT_EQ("{return op(v1, X);}", toString(*res->getBody()));
 	EXPECT_EQ("[]", toString(core::checks::check(res)));
 
 	// nested lambdas

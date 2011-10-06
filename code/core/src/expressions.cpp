@@ -616,7 +616,7 @@ namespace {
 
 }
 
-Lambda::Lambda(const FunctionTypePtr& type, const ParamList& paramList, const StatementPtr& body)
+Lambda::Lambda(const FunctionTypePtr& type, const ParamList& paramList, const CompoundStmtPtr& body)
 	: Node(NT_Lambda, NC_Support, hashLambda(type, paramList, body)), type(isolate(type)),
 	  paramList(isolate(paramList)), body(isolate(body)) { };
 
@@ -665,7 +665,11 @@ std::ostream& Lambda::printTo(std::ostream& out) const {
 
 LambdaPtr Lambda::get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body) {
 	assert(type->isPlain() && "Lambdas should be plain functions!");
-	return manager.get(Lambda(type, params, body));
+	CompoundStmtPtr compound = dynamic_pointer_cast<const CompoundStmt>(body);
+	if(!compound) {
+		compound = CompoundStmt::get(manager, body);
+	}
+	return manager.get(Lambda(type, params, compound));
 }
 
 
@@ -895,7 +899,7 @@ const Lambda::ParamList& LambdaExpr::getParameterList() const {
 	return lambda->getParameterList();
 }
 
-const StatementPtr& LambdaExpr::getBody() const {
+const CompoundStmtPtr& LambdaExpr::getBody() const {
 	return lambda->getBody();
 }
 
