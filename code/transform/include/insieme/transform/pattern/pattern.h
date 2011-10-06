@@ -101,6 +101,10 @@ namespace pattern {
 			path.inc();
 		}
 
+		void dec() {
+			path.dec();
+		}
+
 		void pop() {
 			path.pop();
 		}
@@ -240,7 +244,7 @@ namespace pattern {
 		public:
 			Variable(const std::string& name, const TreePatternPtr& pattern = any) : name(name), pattern(pattern) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "%" << name << "%";
+				out << "$" << name;
 				if(pattern && pattern != any) {
 					out << ":" << *pattern;
 				}
@@ -289,10 +293,15 @@ namespace pattern {
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
 				if(terminal) {
 					assert(context.isRecVarBound(name) && "Recursive variable unbound!");
-					return context.getRecVarBinding(name)->match(context, tree);
+					context.inc();
+					bool res = context.getRecVarBinding(name)->match(context, tree);
+					context.dec();
+					return res;
 				} else {
 					context.bindRecVar(name, pattern);
+					context.push();
 					bool res = pattern->match(context, tree);
+					context.pop();
 					context.unbindRecVar(name);
 					return res;
 				}
@@ -538,7 +547,7 @@ namespace pattern {
 				: name(name), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "%" << name << "%";
+				out << "$" << name;
 				if(pattern && pattern != any) {
 					out << ":" << *pattern;
 				}
@@ -549,8 +558,6 @@ namespace pattern {
 			}
 		protected:
 			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
-
-std::cout << "Matching: " << context << "\n";
 
 				// check whether the variable is already bound
 				if(context.isNodeVarBound(name)) {

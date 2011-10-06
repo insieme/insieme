@@ -65,7 +65,7 @@ namespace pattern {
 
 		MatchPath() {}
 
-		void push(std::size_t index) {
+		void push(std::size_t index = 0) {
 			path.push_back(index);
 		}
 
@@ -75,6 +75,11 @@ namespace pattern {
 
 		void inc() {
 			path.back()++;
+		}
+
+		void dec() {
+			assert(path.back() > 0);
+			path.back()--;
 		}
 
 		iterator begin() const {

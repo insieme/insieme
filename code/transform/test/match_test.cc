@@ -158,9 +158,7 @@ namespace pattern {
 		EXPECT_EQ("[[[a,b],[b,a,a,b]],[[]]]", toString(value));
 		EXPECT_TRUE(value.hasListValue(path));
 
-
 	}
-
 
 
 } // end namespace pattern
