@@ -128,12 +128,11 @@ ProgramPtr HostCompiler::compile() {
 	});
 */
 	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
-std::cout << "Replacements: \n" << cl_mems << std::endl;
-		transform::utils::MemberAccessLiteralUpdater malu(builder);
-		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
+//std::cout << "Replacements: \n" << cl_mems.begin()->first->getType() << " " << cl_mems.begin()->second->getType() << std::endl;
+//		transform::utils::MemberAccessLiteralUpdater malu(builder);
+//		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 
-//		mProgram = dynamic_pointer_cast<const core::Program>(core::transform::replaceVarsRecursive(builder.getNodeManager(), mProgram,
-//				ohm3rd.getVarReplacements(), false));
+		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), newProg, cl_mems, false);
 
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");

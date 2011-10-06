@@ -46,6 +46,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/type_utils.h"
+#include "insieme/utils/logging.h"
 
 namespace {
 
@@ -271,24 +272,7 @@ public:
 
 	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
 			const std::function<NodePtr (const NodePtr&)>& functor)
-		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) {
-/*		functor = [](const NodePtr& node)->NodePtr {
-			CallExprPtr res = dynamic_pointer_cast<const CallExpr>(node);
-
-			// check whether something has changed ...
-			if (res == node) {
-				// => nothing changed
-				return res;
-			}
-
-			// preserve annotations
-			transform::utils::migrateAnnotations(node, res);
-
-			// done
-			return node;
-
-	 };*/
-	}
+		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) { }
 
 private:
 
@@ -421,18 +405,18 @@ private:
 			return call;
 		}
 
-		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(call->getFunctionExpr()))
+/*		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(call->getFunctionExpr()))
 					if (manager.getBasicGenerator().isBuiltIn(literal))
-//			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;
+			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;*/
 		if (fun->getNodeType() == NT_Literal) {
-
-			const CallExprPtr newCall = handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
+			const CallExprPtr& newCall = handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
 /*			if(call->getType() != newCall->getType()) {
 				std::cout << call->getType() << " " << call << std::endl << newCall->getType() << " " << newCall << "\n\n\n";
 			}
 */
 			return newCall;
 		}
+		LOG(ERROR) << call;
 		assert(false && "Unsupported call-target encountered - sorry!");
 		return call;
 	}
@@ -445,13 +429,17 @@ private:
 			return builder.callExpr(resType, lambda, args);
 		}
 
+		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
+		TypePtr callTy = deduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes, false);
+		if(callTy) {
+			return static_pointer_cast<const CallExpr>(builder.callExpr(callTy, lambda, args)->substitute(manager, *this));
+		}
+
 		// create replacement map
 		Lambda::ParamList newParams;
 		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
-		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map;
+		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
-			VariablePtr param = cur.first;
-			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
 /*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
 						std::cerr << param->getType() << " - " << type << std::endl;
@@ -465,6 +453,8 @@ private:
 						tyVars->applyTo(manager, )
 					}
 				}*/
+			VariablePtr param = cur.first;
+			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
 
 				param = this->builder.variable(cur.second->getType());
 				map[cur.first] = param;
@@ -473,7 +463,6 @@ private:
 
 			newParams.push_back(param);
 		});
-
 		// construct new body
 		StatementPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
 
@@ -489,11 +478,9 @@ private:
 		}
 
 		// assemble new lambda
-		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
 		FunctionTypePtr funType = builder.functionType(newParamTypes, returnType);
 		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
 
-		TypePtr callTy;
 		try {
 			callTy = tryDeduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes);
 		} catch(ReturnTypeDeductionException& rtde) {
@@ -520,14 +507,12 @@ private:
 						static_pointer_cast<const Literal>(args.at(1))->getValue()));
 			}
 			if(manager.getBasicGenerator().isTupleRefElem(literal)) {
+//std::cout << args.at(0)->getType() << " < " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
 			}
 			if(manager.getBasicGenerator().isTupleMemberAccess(literal)) {
+//std::cout << args.at(0)->getType() << " > " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
-			}
-
-			if(manager.getBasicGenerator().isSubscriptOperator(literal)) {
-//				std::cout << "---------->" << literal << args << std::endl;
 			}
 
 			CallExprPtr newCall = builder.callExpr(literal, args);

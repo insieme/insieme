@@ -1026,7 +1026,7 @@ inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, ASTVisitor<b
 
 template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-inline void visitDepthFirstOnceInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
 	return visitDepthFirstOnceInterruptable(root, makeLambdaVisitor(lambda, visitTypes), preorder);
 }
 

@@ -244,9 +244,9 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 		arg = localMem;*/
 
 		// initialize local memory place with undefined
-		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
-				builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(type)),
-				builder.callExpr(type, BASIC.getUndefined(), BASIC.getTypeLiteral(type)));
+		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel,
+				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
+				BASIC.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), BASIC.getTypeLiteral(type), size)));
 
 	}
 
@@ -293,8 +293,8 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 	}*/
 
 //	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
-//std::cout << "ARGUMENT: \n\t" << o2i.getClSetKernelArg() << std::endl;
-/*
+//std::cout << "ARGUMENT: \t" << kernel->getType() << std::endl;
+
 	FunctionTypePtr fTy = builder.functionType(kernel->getType(), arg->getType());
 	VariablePtr tuple = builder.variable(kernel->getType());
 	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
@@ -310,14 +310,11 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 
 //	std::cout << "SET PARAM: \n" << function << std::endl;
 	// store argument in a tuple
-	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
-			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), arg);
-*/
 	// TODO remove quickfix
-	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
-			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), arg);
+//	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
+//			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), builder.callExpr(BASIC.getRefDeref(), arg));
 
-//	return builder.callExpr(BASIC.getUInt8(), function, kernel, arg);
+	return builder.callExpr(BASIC.getInt4(), function, kernel, builder.callExpr(BASIC.getRefDeref(), arg));
 }
 
 bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::ExpressionPtr& size, core::TypePtr& type) {
@@ -1194,7 +1191,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 					if(handleClCreateKernel(callExpr->getArgument(0), newCall, NULL)) {
 						return BASIC.getNoOp();
 					}
-/* not needed any more since replace of clSetKernelArg with an Inpire function*/
+/* not needed any more since replace of clSetKernelArg with an Inpire function
 						if(callExpr->getArgument(1)->toString().find("clSetKernelArg") != string::npos){
 							std::vector<StatementPtr> stmts;
 							// set error value to CL_SUCCESS
@@ -1203,7 +1200,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 							// set tuple member to argument
 							stmts.push_back(newCall);
 							return builder.compoundStmt(stmts);
-						}
+						}*/
 				}
 
 				if(lookForKernelFilePragma(lhsVar->getType(), callExpr->getArgument(1))) {

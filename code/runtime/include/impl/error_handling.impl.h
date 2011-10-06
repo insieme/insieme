@@ -83,6 +83,6 @@ const char* irt_errcode_string(irt_errcode code) {
 
 void irt_print_error_info(FILE* target, irt_error* error) {
 	if(error->additional_bytes) {
-		fprintf(target, "%s", (char*)error+sizeof(irt_error));
+		fprintf(target, "%s\n", (char*)error+sizeof(irt_error));
 	}
 }

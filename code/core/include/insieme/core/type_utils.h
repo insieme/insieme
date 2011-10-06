@@ -481,7 +481,7 @@ TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argu
  * @param argumentTypes the types of arguments passed to this function
  * @return the deduced, most generic return type
  */
-TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes);
+TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes, bool unitOnFail = true);
 
 /**
  * Determines whether the given type is generic or not. A type is considered to be generic if it

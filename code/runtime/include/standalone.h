@@ -157,10 +157,10 @@ uint32 irt_get_default_worker_count() {
 	ret = sysconf(_SC_NPROCESSORS_ONLN);
 #elif defined(_SC_NPROC_ONLN)
 	// Irix
-	ret = sysconf(_SC_NPROC_ONLN)-1;
+	ret = sysconf(_SC_NPROC_ONLN);
 #elif defined(MPC_GETNUMSPUS)
 	// HPUX
-	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL)-1;
+	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL);
 #endif
 	if(ret<1) ret = 1;
 	return ret;
@@ -196,8 +196,5 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	_irt_wi_event_register_only(ev_reg);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
-	pthread_mutex_lock(&mutex);	
-	//irt_wi_event_check_and_register(main_wi, IRT_WI_STATE_DONE, )
-	// TODO solve with event handling
-	while(main_wi->state != IRT_WI_STATE_DONE) { usleep(10); };
+	pthread_mutex_lock(&mutex);
 }
