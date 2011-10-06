@@ -397,8 +397,8 @@ std::cout << kernelLambdas << std::endl;//*/
 							arg = builder.callExpr(callArg->getFunctionExpr(), callArg->getArgument(0), idx);
 					}
 */
-				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), k, builder.literal(BASIC.getUInt8(), toString(i)),
-						BASIC.getTypeLiteral(interface.at(i)->getType())));
+				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
+						builder.literal(BASIC.getUInt8(), toString(i)), BASIC.getTypeLiteral(interface.at(i)->getType())));
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // irt_ocl_run_kernel without local memory arguments
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
@@ -583,18 +583,19 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 													const TupleTypePtr& tty = builder.tupleType(elementTypes);
 													TypePtr newType = dynamic_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
-															newMembers.at(i).second, builder.arrayType(builder.genericType("_cl_kernel")), tty));
+															newMembers.at(i).second, builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
+															tty));
 
 													VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
-															cl_mems[var], builder.arrayType(builder.genericType("_cl_kernel")), tty));
+															cl_mems[var], builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))), tty));
 //std::cout << "\nMapping " <<  newMembers.at(i).second << " and " << tty << "\n to " << newType << std::endl;
 
 													replacements[var] = newVar;
 													replacements[cl_mems[var]] = newVar;
 													cl_mems[var] = newVar;
 
-//													varReplacements[var] = newVar;
-//													varReplacements[cl_mems[var]] = newVar;
+													varReplacements[var] = newVar;
+													varReplacements[cl_mems[var]] = newVar;
 
 													core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
 															builder.callExpr(newType, BASIC.getUndefined(), BASIC.getTypeLiteral(newType)));
@@ -757,8 +758,8 @@ std::cout << "]\n";*/
 
 		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(fun)) {
 			if(lit->toString().find("Buffer") != string::npos) {
-				std::cout << "FOUND " << lit << std::endl;
-				assert(false);
+				LOG(ERROR) << "FOUND " << lit << std::endl;
+				assert(false && "Buffer has not been removed during compilation");
 			}
 
 		}
