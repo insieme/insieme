@@ -56,10 +56,7 @@ namespace pattern {
 	class MatchExpression;
 	typedef std::shared_ptr<MatchExpression> MatchExpressionPtr;
 
-	class Generator : public utils::Printable {
-	public:
-		~Generator() {};
-	};
+	class Generator : public utils::Printable { };
 
 	class TreeGenerator : public Generator {
 	public:

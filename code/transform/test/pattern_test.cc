@@ -51,11 +51,11 @@ namespace pattern {
 		return !match(pattern, tree);
 	}
 
-	bool matchList(const NodePatternPtr& pattern, const vector<TreePtr>& list) {
+	bool matchList(const ListPatternPtr& pattern, const vector<TreePtr>& list) {
 		return pattern->match(list);
 	}
 
-	bool notMatchList(const NodePatternPtr& pattern, const vector<TreePtr>& list) {
+	bool notMatchList(const ListPatternPtr& pattern, const vector<TreePtr>& list) {
 		return !matchList(pattern, list);
 	}
 
@@ -199,7 +199,7 @@ namespace pattern {
 		EXPECT_PRED2(notMatch, pattern, treeE);
 	}
 
-	TEST(NodePattern, Basic) {
+	TEST(ListPattern, Basic) {
 
 		TreePtr treeA = makeTree('a');
 		TreePtr treeB = makeTree(treeA, treeA);
@@ -209,7 +209,7 @@ namespace pattern {
 		EXPECT_EQ("(a,a)", toString(treeB));
 		EXPECT_EQ("(a,a,(a,a))", toString(treeC));
 
-		NodePatternPtr pattern = single(atom(treeA));
+		ListPatternPtr pattern = single(atom(treeA));
 		TreePatternPtr treePattern = node(pattern);
 		EXPECT_EQ("a", toString(pattern));
 		EXPECT_EQ("(a)", toString(treePattern));
@@ -282,7 +282,7 @@ namespace pattern {
 		EXPECT_EQ("a", toString(treeA));
 		EXPECT_EQ("b", toString(treeB));
 
-		NodePatternPtr pattern = single(treeA);
+		ListPatternPtr pattern = single(treeA);
 
 		EXPECT_PRED2(matchList, pattern, toVector(treeA));
 		EXPECT_PRED2(notMatchList, pattern, toVector(treeA, treeA));
@@ -350,7 +350,7 @@ namespace pattern {
 		EXPECT_EQ("a", toString(a));
 		EXPECT_EQ("b", toString(b));
 
-		NodePatternPtr pattern = single(a);
+		ListPatternPtr pattern = single(a);
 
 		EXPECT_PRED2(matchList, pattern, toVector(a));
 
@@ -378,7 +378,7 @@ namespace pattern {
 		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,b,a,b));
 	}
 
-	TEST(NodePattern, Extended) {
+	TEST(ListPattern, Extended) {
 
 		TreePtr a = makeTree('a');
 		TreePtr b = makeTree('b');
@@ -473,12 +473,12 @@ namespace pattern {
 	}
 
 
-	TEST(NodePattern, Variables) {
+	TEST(ListPattern, Variables) {
 
 		TreePtr a = makeTree('a');
 		TreePtr b = makeTree('b');
 
-		NodePatternPtr pattern;
+		ListPatternPtr pattern;
 
 		pattern = nodeVar("x");
 		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>());
@@ -565,7 +565,7 @@ namespace pattern {
 		EXPECT_EQ("Match({x=[[a,b,a],[b,a,a,b]]})", toString(*res));
 	}
 
-	TEST(NodePattern, MatchResult) {
+	TEST(ListPattern, MatchResult) {
 
 		TreePtr a = makeTree('a');
 		TreePtr b = makeTree('b');
