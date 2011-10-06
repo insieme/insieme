@@ -311,7 +311,7 @@ TEST(ReturnTypeCheck, Basic) {
 	ASSERT_FALSE(check(err, returnTypeCheck).empty());
 	ASSERT_FALSE(check(err2, returnTypeCheck).empty());
 
-	EXPECT_PRED2(containsMSG, check(err,returnTypeCheck), Message(NodeAddress(err).getAddressOfChild(1), EC_TYPE_INVALID_RETURN_VALUE_TYPE, "", Message::ERROR));
+	EXPECT_PRED2(containsMSG, check(err,returnTypeCheck), Message(NodeAddress(err).getAddressOfChild(1).getAddressOfChild(0), EC_TYPE_INVALID_RETURN_VALUE_TYPE, "", Message::ERROR));
 }
 
 TEST(DeclarationStmtTypeCheck, Basic) {
