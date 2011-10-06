@@ -107,12 +107,14 @@ public:
 };
 
 class DiscardSCoPException: public NotASCoP {
-	const ExpressionPtr& expr;
+	const ExpressionPtr expr;
 public: 
 	DiscardSCoPException(const NodePtr& root, const ExpressionPtr& expr) : 
 		NotASCoP(root), expr(expr) { }
 
 	const ExpressionPtr& expression() const { return expr; }
+
+	virtual ~DiscardSCoPException() throw() { }
 };
 
 /**************************************************************************************************
@@ -945,7 +947,7 @@ void postProcessSCoP(const NodeAddress& scop, AddressList& scopList) {
 		detectInvalidSCoPs(iterVec, scop);
 		scopList.push_back( scop );
 
-	}catch( DiscardSCoPException&& e ) { 
+	} catch( DiscardSCoPException e ) { 
 		LOG(WARNING) << "Invalidating SCoP because iterator/parameter '" << 
 					*e.expression() << "' is being assigned in stmt: '" << *e.node() << "'";
 
@@ -1210,6 +1212,47 @@ void resolveFrom(const NodePtr& root) {
 		);
 
 	assert( region.isResolved() );
+}
+
+core::NodePtr toIR(const core::NodePtr& root) {
+	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
+		LOG(WARNING) << "Not possible to compute dependence information from a non static control region.";
+		return core::NodePtr();
+	}
+	
+	resolveFrom( root );
+
+	// We are in a Scop 
+	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
+	const ScopRegion::ScatteringPair&& scat = ann.getScatteringInfo();
+	const IterationVector& iterVec = ann.getIterationVector();
+	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
+
+	// universe set 
+	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
+	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
+	
+	size_t stmtID = 0;
+	std::for_each(scat.second.begin(), scat.second.end(), 
+		[ & ] (const ScopRegion::StmtScattering& cur) { 
+			std::string&& stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
+
+			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, stmtid);
+			domain = set_union(ctx, *domain, *domainSet);
+
+			ScatteringFunctionPtr sf = cur.scattering;
+			// Because the scheduling of every statement has to have the same number of elements
+			// (same dimensions) we append zeros until the size of the affine system is equal to 
+			// the number of dimensions used inside this SCoP for the scheduling functions 
+			for ( size_t s = sf->size(); s < scat.first; ++s ) {
+				sf->appendRow( AffineFunction(iterVec) );
+			}
+			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
+			schedule = map_union(ctx, *schedule, *scattering);
+		}
+	);
+
+	return poly::toIR(root->getNodeManager(), ann.getIterationVector(), ctx, *domain, *schedule);
 }
 
 void computeDataDependence(const NodePtr& root) {

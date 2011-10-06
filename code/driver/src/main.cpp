@@ -269,16 +269,21 @@ void markSCoPs(const ProgramPtr& program) {
 
 	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
 	size_t numStmtsInScops = 0;
-	size_t loopNests = 0;
+	size_t loopNests = 0, maxLoopNest=0;
+
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
 		resolveFrom(cur);
 		// printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
 		// computeDataDependence(cur);
+		
+		toIR(cur);
+
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		numStmtsInScops += reg.getScatteringInfo().second.size();
 		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScatteringInfo().second);
-		LOG(DEBUG) << loopNest;
+		
+		if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
 		loopNests += loopNest;
 	});	
 	LOG(INFO) << std::setfill(' ') << std::endl
@@ -286,13 +291,18 @@ void markSCoPs(const ProgramPtr& program) {
 			  << "#             SCoP COVERAGE             #" << std::endl
 			  << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#" << std::endl
 			  << "# Tot # of SCoPs                :" << std::setw(7) 
-			  		<< sl.size() << "#" << std::endl
+			  		<< std::right << sl.size() << " #" << std::endl
 			  << "# Tot # of stms covered by SCoPs:" << std::setw(7) 
-			  		<< numStmtsInScops << "#" << std::endl
+			  		<< std::right << numStmtsInScops << " #" << std::endl
 			  << "# Avg stmt per SCoP             :" << std::setw(7) 
-			  		<< std::setprecision(4) << (double)numStmtsInScops/sl.size() << "#" << std::endl
+			  		<< std::setprecision(4) << std::right 
+					<< (double)numStmtsInScops/sl.size() << " #" << std::endl
 			  << "# Avg loop nests per SCoP       :" << std::setw(7) 
-			  		<< std::setprecision(4) << (double)loopNests/sl.size() << "#" << std::endl
+			  		<< std::setprecision(4) << std::right 
+					<< (double)loopNests/sl.size() << " #" << std::endl
+			  << "# Max loop nests per SCoP       :" << std::setw(7) 
+			  		<< std::setprecision(4) << std::right 
+					<< maxLoopNest << " #" << std::endl
 			  << "#########################################";
 }
 

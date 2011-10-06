@@ -89,6 +89,27 @@ if(MSVC)
 	set (isl_LIB dummy)
 endif(MSVC)
 
+# lookup cloog library 
+if(NOT DEFINED CLOOG_HOME)
+	set (CLOOG_HOME $ENV{CLOOG_HOME})
+endif()
+include_directories( ${CLOOG_HOME}/include )
+find_library(cloog_LIB NAMES cloog-isl PATHS ${CLOOG_HOME}/lib)
+if(MSVC) 
+set (cloog_LIB dummy)
+endif(MSVC)
+
+
+FIND_LIBRARY(gmp_LIB NAMES gmp PATH /usr/lib)
+
+IF (gmp_LIB)
+   SET(GMP_FOUND TRUE)
+ENDIF (gmp_LIB)
+
+IF (NOT DEFINED GMP_FOUND)
+   MESSAGE(FATAL_ERROR "Could not find GMP")
+ENDIF ()
+
 # lookup pthread library
 find_library(pthread_LIB pthread)
 # http://fedetft.wordpress.com/2010/03/07/cmake-part-3-finding-libraries/

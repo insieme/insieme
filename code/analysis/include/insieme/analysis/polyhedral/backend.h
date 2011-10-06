@@ -188,6 +188,10 @@ DependenceInfo<Ctx> buildDependencies(
 		const Map<Ctx>& 	must_sources, 
 		const Map<Ctx>& 	may_sourcs
 );
+
+template <class Ctx>
+core::NodePtr toIR(core::NodeManager& mgr, const IterationVector& iterVec, Ctx& ctx, const Set<Ctx>& domain, const Map<Ctx>& schedule);
+
 } // end poly namespace
 } // end analysis namespace 
-} // end insieme namespace 
+} // end insieme namespace  
