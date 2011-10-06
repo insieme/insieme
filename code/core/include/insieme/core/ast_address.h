@@ -307,6 +307,30 @@ public:
 		: utils::HashableImmutableData<Address<T>>(from.hash()), path(from.getPath()) {}
 
 	/**
+	 * Finds *an* address with the given root and target.
+	 *
+	 * NOTE: generates the *first* address found that satisfies the criteria. Not necessarily unique (or what you wanted).
+	 *
+	 * @param target the element that the generated address points to
+	 * @param root the root node of the generated address
+	 *
+	 * @returns the address found, or the null address if not possible
+	 */
+	static Address<T> find(const Pointer<T>& target, const NodePtr& root) {
+		bool visitTypes = target->getNodeCategory() == NC_Type;
+		Address<T> ret;
+		visitDepthFirstOnceInterruptable(Address(root), [&](const Address<T>& addr) -> bool {
+			if(*addr.getAddressedNode() == *target) { 
+				ret = addr;
+				return true;
+			}
+			return false;
+		}, true, visitTypes);
+		return ret;
+	}
+
+
+	/**
 	 * Obtains a pointer to the root node this address is starting from.
 	 *
 	 * NOTE: nodes are not addressed in a unique way. Since nodes are shared, a single node might be accessible
