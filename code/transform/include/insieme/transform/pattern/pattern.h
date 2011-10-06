@@ -65,13 +65,6 @@ namespace pattern {
 	class Filter;
 	typedef std::shared_ptr<Filter> FilterPtr;
 
-	class Tree;
-	typedef std::shared_ptr<Tree> TreePtr;
-
-//	MatchPtr match(PatternPtr, TreePtr);
-
-//	bool match(TreePatternPtr, TreePtr);
-//	bool match(NodePatternPtr, TreePtr);
 
 	class MatchContext : public utils::Printable {
 
@@ -86,6 +79,10 @@ namespace pattern {
 	public:
 
 		MatchContext() { }
+
+		Match& getMatch() {
+			return match;
+		}
 
 		const Match& getMatch() const {
 			return match;
@@ -178,6 +175,8 @@ namespace pattern {
 		MatchOpt match(const TreePtr& tree) const{
 			MatchContext context;
 			if (match(context, tree)) {
+				// complete match result
+				context.getMatch().setRoot(tree);
 				return context.getMatch();
 			}
 			return 0;

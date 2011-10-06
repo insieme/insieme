@@ -120,6 +120,8 @@ namespace pattern {
 
 		MatchValue(const TreePtr& tree) : tree(tree), depth(0) {}
 
+		MatchValue(const TreeList& list) : children(::transform(list, [](const TreePtr& cur) { return MatchValue(cur); })), depth(1) {}
+
 		MatchValue(const vector<MatchValue>& children) : children(children), depth(children[0].getDepth()+1) {
 			assert(all(children, [&](const MatchValue& cur) { return cur.getDepth() == depth-1; })
 					&& "All children have to be of the same level!");
@@ -127,6 +129,16 @@ namespace pattern {
 
 		unsigned getDepth() const {
 			return depth;
+		}
+
+		const vector<MatchValue>& getValues() const {
+			assert(depth > 0 && "Cannot access child-values of leaf node!");
+			return children;
+		}
+
+		const MatchValue& getValue(unsigned index) const {
+			assert(index < children.size() && "Invalid index!");
+			return getValues()[index];
 		}
 
 		// only supported for depth = 0
@@ -173,14 +185,43 @@ namespace pattern {
 		return MatchValue(toVector<MatchValue>(matches ...));
 	}
 
-
 	class Match : public utils::Printable {
 
 		typedef std::unordered_map<string, MatchValue> ValueMap;
 
+		TreePtr root;
+
 		ValueMap map;
 
 	public:
+
+		TreePtr getRoot() const {
+			return root;
+		}
+
+		void setRoot(const TreePtr& tree) {
+			root = tree;
+		}
+
+		bool isVarBound(const std::string& var) const {
+			return map.find(var) != map.end();
+		}
+
+		const MatchValue& getVarBinding(const std::string& var) const {
+			assert(isVarBound(var) && "Requesting unbound variable!");
+			return map.find(var)->second;
+		}
+
+		void bindVar(const std::string& var, const MatchValue& value) {
+			auto pos = map.find(var);
+			if (pos != map.end()) {
+				// update existing value
+				pos->second = value;
+				return;
+			}
+			// add new value
+			map.insert(ValueMap::value_type(var, value));
+		}
 
 		bool isTreeVarBound(const MatchPath& path, const std::string& var) const {
 			auto pos = map.find(var);
@@ -226,6 +267,9 @@ namespace pattern {
 	};
 
 	typedef boost::optional<Match> MatchOpt;
+
+	// a super type for value manipulating operations
+	typedef std::function<MatchValue(const MatchValue&)> ValueOp;
 
 } // end namespace pattern
 } // end namespace transform
