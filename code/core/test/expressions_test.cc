@@ -227,8 +227,8 @@ TEST(ExpressionsTest, LambdaExpr) {
 	EXPECT_TRUE(even->isRecursive());
 	EXPECT_TRUE(odd->isRecursive());
 
-	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun(uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*even));
-	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) if(uint.eq(v3, 0)) return true else return bool.not(v2(v3)), v2=fun(uint<4> v3) if(uint.eq(v3, 0)) return false else return bool.not(v1(v3))}", toString(*odd));
+	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));}, v2=fun(uint<4> v3) if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));}}", toString(*even));
+	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));}, v2=fun(uint<4> v3) if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));}}", toString(*odd));
 }
 
 TEST(ExpressionsTest, BindExpr) {
