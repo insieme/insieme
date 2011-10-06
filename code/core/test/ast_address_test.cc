@@ -161,6 +161,22 @@ TEST(NodeAddressTest, MergePaths) {
 
 }
 
+TEST(NodeAddressTest, Find) {
+	ASTBuilder builder;
+
+	TypePtr typeA = builder.genericType("A",toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(builder.genericType("3")));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>());
+
+	TypePtr root = builder.genericType("root", toVector(typeA, typeB, typeC));
+
+	EXPECT_EQ("root<A<1,2>,B<3>,C>", toString(*root));
+
+	NodeAddress addrRoot(root);
+
+	EXPECT_EQ(Address<const Type>::find(typeC, root), addrRoot.getAddressOfChild(2));
+}
+
 } // end namespace core
 } // end namespace insieme
 
