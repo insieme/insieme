@@ -44,248 +44,122 @@ namespace insieme {
 namespace transform {
 namespace pattern {
 
-// IRTree
+namespace {
 
-std::ostream& IRTree::printTo(std::ostream& out) const {
-	if(!evaluated) {
-		return out << "irtree[lazy](" << getId() << "," << *data << ")";
-	}
-	else {
-		return out << "irtree[evaled](" << getId() << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
-	}
-}
+	using namespace core;
 
-bool IRTree::operator==(const Tree& other) const {
-	// do not evaluate if ids different
-	// this is a stupid idea since pattern matching will not see the subtree!
-	//if(id != other.getId()) {
-	//	LOG(INFO) << "~~~~~~~ this/other: " << *this << "/" << other;
-	//	return false;
-	//}
-	evaluate();
-	bool otherIsIR = typeid(other) == typeid(IRTree);
-	if(otherIsIR) static_cast<const IRTree&>(other).evaluate();
-	return Tree::operator==(other);
-}
+	/**
+	 * Represents a complex IR node (with children).
+	 * Children are converted lazily on demand.
+	 */
+	class IRTree : public Tree {
+	public:
+		typedef std::function<TreeList(const NodePtr&)> EvalFunctor;
 
-void IRTree::evaluate() const {
-	if(!evaluated) {
-		evaluated = true;
-		evalFunctor(*const_cast<IRTree*>(this));
-	}
-}
+	private:
+		const NodePtr node;
+		mutable bool evaluated;
+		const EvalFunctor evalFunctor;
 
-std::vector<TreePtr>& IRTree::getSubTrees() {
-	evaluate();
-	return subTrees;
-}
+	public:
 
-// IRLeaf
+		IRTree(const core::NodePtr& node, const EvalFunctor& evalFunctor = &convertChildren)
+			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {}
 
-std::ostream& IRLeaf::printTo(std::ostream& out) const {
-	return out << "irleaf(" << getId() << "," << *data << ")";
-}
+		const core::NodePtr& getNode() const {
+			return node;
+		}
 
-bool IRLeaf::operator==(const Tree& other) const {
-	if(this == &other) {
-		return true;
-	}
-	bool otherIsIR = typeid(other) == typeid(IRTree);
-	if(otherIsIR) static_cast<const IRTree&>(other).evaluate();
-	if(getId() != other.getId()) {
-		return false;
-	}
-	// other is also an IRLeaf
-	const IRLeaf& otherleaf = static_cast<const IRLeaf&>(other);
-	return *data == *otherleaf.data;
-}
+		std::ostream& printTo(std::ostream& out) const {
+			if(!evaluated) {
+				return out << "irtree[lazy](" << getId() << "," << *node << ")";
+			}
+			return out << "irtree[evaled](" << getId() << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
+		}
 
-// IRBlob
+		virtual const TreeList& getSubTrees() const {
+			if(!evaluated) {
+				evaluated = true;
+				const_cast<IRTree*>(this)->subTrees = evalFunctor(node);
+			}
+			return subTrees;
+		}
 
-std::ostream& IRBlob::printTo(std::ostream& out) const {
-	return out << "irblob(" << blob << ")";
-}
-
-bool IRBlob::operator==(const Tree& other) const {
-	if(this == &other) {
-		return true;
-	}
-	bool otherIsIR = typeid(other) == typeid(IRTree);
-	if(otherIsIR) static_cast<const IRTree&>(other).evaluate();
-	if(getId() != other.getId()) {
-		return false;
-	}
-	// other is also an IRBlob
-	const IRBlob& otherblob = static_cast<const IRBlob&>(other);
-	return blob == otherblob.blob;
-}
-
-// ConversionVisitor
-
-const IRTree::EvalFunctor& ConversionVisitor::getDefaultChildEvaluator() {
-	static IRTree::EvalFunctor eval = [](IRTree& self) {
-		auto children = self.getData().getChildAddresses();
-		std::transform(children.begin(), children.end(), back_inserter(self.getSubTrees()), 
-			[](const NodeAddress& cadd) { return convertIR(cadd); }); // prev: this->visit
+		static TreeList convertChildren(const NodePtr& node) {
+			auto children = node->getChildList();
+			TreeList res;
+			::transform(children, std::back_inserter(res), &toTree);
+			return res;
+		}
 	};
-	return eval;
-}
 
-// TYPES
+	typedef std::shared_ptr<IRTree> IRTreePtr;
 
-TreePtr ConversionVisitor::visitTypeVariable(const TypeVariableAddress& addr){
-	return make_shared<IRLeaf>(addr);
-}
-TreePtr ConversionVisitor::visitFunctionType(const FunctionTypeAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitTupleType(const TupleTypeAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitRecType(const RecTypeAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
+	/**
+	 * Visitor that converts any IR address to the tree structure used by the pattern matcher.
+	 */
+	class TreeConverter : public core::ASTVisitor<TreePtr> {
 
-TreePtr ConversionVisitor::visitGenericType(const GenericTypeAddress& addr){
-	static IRTree::EvalFunctor genEval = [this](IRTree& self){
-		auto selfGenNode = dynamic_pointer_cast<const GenericType>(self.getData().getAddressedNode());
-		self.getSubTrees().push_back(make_shared<IRBlob>(selfGenNode->getFamilyName()));
-		getDefaultChildEvaluator()(self);
+	public:
+
+		TreeConverter() : core::ASTVisitor<TreePtr>(true) { }
+
+		// NODES REQUIERING SPECIAL TREATMENT
+
+		TreePtr visitGenericType(const GenericTypePtr& node){
+			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
+				TreeList children;
+				children.push_back(makeValue(static_pointer_cast<const GenericType>(node)->getFamilyName()));
+				copy(IRTree::convertChildren(node), back_inserter(children));
+				return children;
+			};
+			return std::make_shared<IRTree>(node, eval);
+		}
+
+		TreePtr visitLiteral(const LiteralPtr& node){
+			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
+				TreeList res;
+				res.push_back(makeValue(static_pointer_cast<const Literal>(node)->getValue()));
+				copy(IRTree::convertChildren(node), back_inserter(res));
+				return res;
+			};
+			return make_shared<IRTree>(node, eval);
+		}
+		TreePtr visitCallExpr(const CallExprPtr& node){
+			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
+				auto children = node->getChildList();
+				TreeList res;
+				std::transform(children.begin()+1, children.end(), std::back_inserter(res), &toTree);
+				return res;
+			};
+			return make_shared<IRTree>(node, eval);
+		}
+
+		TreePtr visitVariableIntTypeParam(const VariableIntTypeParamPtr& node){
+			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()));
+		}
+
+		TreePtr visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& node){
+			return makeTree((int)node->getNodeType(), makeValue(node->getValue()));
+		}
+
+		// ALL REMAINING NODES
+
+		TreePtr visitNode(const NodePtr& node) {
+			// apply standard treatment
+			return make_shared<IRTree>(node);
+		}
 	};
-	return make_shared<IRTree>(addr, genEval);
+
 }
 
-TreePtr ConversionVisitor::visitStructType(const StructTypeAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitUnionType(const UnionTypeAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
+TreePtr toTree(const core::NodePtr& node) {
+	return TreeConverter().visit(node);
 }
 
-// STATEMENTS
-
-TreePtr ConversionVisitor::visitBreakStmt(const BreakStmtAddress& addr){
-	return make_shared<IRLeaf>(addr);
+core::NodePtr toIR(const TreePtr& tree){
+	return NodePtr();
 }
-TreePtr ConversionVisitor::visitContinueStmt(const ContinueStmtAddress& addr){
-	return make_shared<IRLeaf>(addr);
-}
-TreePtr ConversionVisitor::visitReturnStmt(const ReturnStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitDeclarationStmt(const DeclarationStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitCompoundStmt(const CompoundStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitWhileStmt(const WhileStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitForStmt(const ForStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitIfStmt(const IfStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitSwitchStmt(const SwitchStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-
-// EXPRESSIONS
-
-TreePtr ConversionVisitor::visitVariable(const VariableAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitLambdaExpr(const LambdaExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitBindExpr(const BindExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitLiteral(const LiteralAddress& addr){
-	static IRTree::EvalFunctor litEval = [this](IRTree& self){
-		auto selfLitNode = dynamic_pointer_cast<const Literal>(self.getData().getAddressedNode());
-		self.getSubTrees().push_back(make_shared<IRBlob>(selfLitNode->getValue()));
-		getDefaultChildEvaluator()(self);
-	};
-	return make_shared<IRTree>(addr, litEval);
-}
-TreePtr ConversionVisitor::visitCallExpr(const CallExprAddress& addr){
-	return make_shared<IRTree>(addr, [](IRTree& self) {
-		auto children = self.getData().getChildAddresses();
-		auto start = children.begin()+1;
-		std::transform(start, children.end(), back_inserter(self.getSubTrees()), 
-			[](const NodeAddress& cadd) { return convertIR(cadd); }); // prev: this->visit
-	} );
-}
-TreePtr ConversionVisitor::visitCastExpr(const CastExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitJobExpr(const JobExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitTupleExpr(const TupleExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitVectorExpr(const VectorExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitStructExpr(const StructExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitUnionExpr(const UnionExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitMemberAccessExpr(const MemberAccessExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitTupleProjectionExpr(const TupleProjectionExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-
-// PROGRAM
-
-TreePtr ConversionVisitor::visitProgram(const ProgramAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-
-// SUPPORTING
-
-TreePtr ConversionVisitor::visitIdentifier(const IdentifierAddress& addr){
-	return make_shared<IRLeaf>(addr);
-}
-
-TreePtr ConversionVisitor::visitVariableIntTypeParam(const VariableIntTypeParamAddress& addr){
-	return make_shared<IRLeaf>(addr);
-}
-TreePtr ConversionVisitor::visitConcreteIntTypeParam(const ConcreteIntTypeParamAddress& addr){
-	return make_shared<IRLeaf>(addr);
-}
-TreePtr ConversionVisitor::visitInfiniteIntTypeParam(const InfiniteIntTypeParamAddress& addr){
-	return make_shared<IRLeaf>(addr);
-}
-
-TreePtr ConversionVisitor::visitLambda(const LambdaAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitLambdaDefinition(const LambdaDefinitionAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-
-TreePtr ConversionVisitor::visitRecTypeDefinition(const RecTypeDefinitionAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-
-// MARKER
-
-TreePtr ConversionVisitor::visitMarkerExpr(const MarkerExprAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-TreePtr ConversionVisitor::visitMarkerStmt(const MarkerStmtAddress& addr){
-	return make_shared<IRTree>(addr, getDefaultChildEvaluator());
-}
-
 
 } // end namespace pattern
 } // end namespace transform
