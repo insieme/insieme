@@ -34,51 +34,33 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include <string>
-#include <memory>
-#include <ostream>
-#include <unordered_map>
-
-#include "insieme/transform/pattern/structure.h"
-#include "insieme/transform/pattern/pattern.h"
-
-#include "insieme/utils/logging.h"
+#include "insieme/transform/pattern/match.h"
+#include "insieme/transform/pattern/generator.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
-namespace irp {
-	using std::make_shared;
+namespace generator {
 
-	inline TreePatternPtr atom(const NodePtr& node) {
-		return atom(convertIR(node));
+
+	TEST(Generator, Atom) {
+
+		TreePtr a = makeTree('a');
+
+		TreeGeneratorPtr gen;
+		Match match;
+
+		gen = atom(a);
+
+		EXPECT_EQ(a, gen->generate(match));
+
 	}
 
-	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
-		return node(core::NT_TupleType, pattern);
-	}
-	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes) {
-		return node(core::NT_GenericType, atom(make_shared<IRBlob>(family)) << subtypes);
-	}
-	inline TreePatternPtr genericType(const ListPatternPtr& family, const ListPatternPtr& subtypes) {
-		return node(core::NT_GenericType, family << subtypes);
-	}
 
-	inline TreePatternPtr lit(const std::string& value, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, atom(make_shared<IRBlob>(value)) << single(typePattern));
-	}
-	inline TreePatternPtr lit(const TreePatternPtr& valuePattern, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, single(valuePattern) << single(typePattern));
-	}
-	inline TreePatternPtr call(const NodePtr& function, const ListPatternPtr& parameters) {
-		return node(core::NT_CallExpr, atom(function) << parameters);
-	}
-	inline TreePatternPtr call(const TreePatternPtr& function, const ListPatternPtr& parameters) {
-		return node(core::NT_CallExpr, single(function) << parameters);
-	}
-}
+} // end namespace replacement
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
+

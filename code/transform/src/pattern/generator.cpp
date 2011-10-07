@@ -34,51 +34,67 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/transform/pattern/generator.h"
 
-#include <string>
-#include <memory>
-#include <ostream>
-#include <unordered_map>
-
-#include "insieme/transform/pattern/structure.h"
-#include "insieme/transform/pattern/pattern.h"
-
-#include "insieme/utils/logging.h"
+#include "insieme/utils/container_utils.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
-namespace irp {
-	using std::make_shared;
+namespace generator {
 
-	inline TreePatternPtr atom(const NodePtr& node) {
-		return atom(convertIR(node));
+	namespace tree {
+
+		namespace {
+
+
+			TreePtr substitute(const TreePtr& target, const TreePtr& replacement, const TreePtr& var) {
+
+				// test current node
+				if (target == var) {
+					return replacement;
+				}
+
+				// replace nodes recursively
+				TreeList list = ::transform(target->getSubTrees(), [&](const TreePtr& tree) {
+					return substitute(tree, replacement, var);
+				});
+
+				return makeTree(target->getId(), list);
+			}
+
+		}
+
+		TreePtr Substitute::generate(const Match& match) const {
+
+			// eval sub-terms
+			TreePtr a = tree->generate(match);
+			TreePtr b = replacement->generate(match);
+			TreePtr c = var->generate(match);
+
+			// apply substitution
+			return substitute(a, b, c);
+		}
+
 	}
 
-	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
-		return node(core::NT_TupleType, pattern);
-	}
-	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes) {
-		return node(core::NT_GenericType, atom(make_shared<IRBlob>(family)) << subtypes);
-	}
-	inline TreePatternPtr genericType(const ListPatternPtr& family, const ListPatternPtr& subtypes) {
-		return node(core::NT_GenericType, family << subtypes);
-	}
 
-	inline TreePatternPtr lit(const std::string& value, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, atom(make_shared<IRBlob>(value)) << single(typePattern));
-	}
-	inline TreePatternPtr lit(const TreePatternPtr& valuePattern, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, single(valuePattern) << single(typePattern));
-	}
-	inline TreePatternPtr call(const NodePtr& function, const ListPatternPtr& parameters) {
-		return node(core::NT_CallExpr, atom(function) << parameters);
-	}
-	inline TreePatternPtr call(const TreePatternPtr& function, const ListPatternPtr& parameters) {
-		return node(core::NT_CallExpr, single(function) << parameters);
-	}
-}
+	const TreeGeneratorPtr root = std::make_shared<tree::Root>();
+
+
+} // end namespace generator
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreeGeneratorPtr& generator) {
+		return (generator)?(generator->printTo(out)):(out << "null");
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListGeneratorPtr& generator) {
+		return (generator)?(generator->printTo(out)):(out << "null");
+	}
+
+} // end namespace std

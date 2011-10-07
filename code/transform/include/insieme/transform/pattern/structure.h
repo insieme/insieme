@@ -77,7 +77,7 @@ namespace pattern {
 			assert(id != VALUE_ID && "Value ID must not be used!");
 		}
 
-		Tree(const std::vector<TreePtr>& children, int id) : id(id), subTrees(children) {
+		Tree(const TreeList& children, int id) : id(id), subTrees(children) {
 			assert(id != VALUE_ID && "Value ID must not be used!");
 		}
 
@@ -90,6 +90,7 @@ namespace pattern {
 		virtual bool operator!=(const Tree& other) const { return !(*this == other); }
 
 		virtual TreeList& getSubTrees() { return subTrees; }
+
 		const int getId() const { return id; }
 	};
 
@@ -101,6 +102,10 @@ namespace pattern {
 	template<typename... Args>
 	TreePtr makeTree(char symbol, const Args & ... args ) {
 		return std::make_shared<Tree>((int)symbol, args...);
+	}
+
+	inline TreePtr makeTree(int id, const TreeList& children) {
+		return std::make_shared<Tree>(children, id);
 	}
 
 	template<typename V>
