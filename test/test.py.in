@@ -21,7 +21,7 @@ USE_RUN = 1
 
 # compiler flags
 SRC_DIR = "${CMAKE_SOURCE_DIR}"
-INSIEME_FLAGS = "--std=c99 -I. --mark-scop"
+INSIEME_FLAGS = "--std=c99 -I."
 CFLAGS_GCC = "-O3 --std=c99 -I."
 CFLAGS_SMP = "-O3 --std=c99 -I. -I{SRC_DIR}/code/simple_backend/include/insieme/simple_backend/runtime".format(**{'SRC_DIR': SRC_DIR})
 CFLAGS_SEQ = "-O3 --std=c99 -I."
@@ -122,7 +122,7 @@ def check_diff(test_case_name, ref, test):
 
 def run_test_case(test_case_name, home_folder):
 	sys.stderr.write("#-----------------------------------------------------\n")
-	sys.stderr.write("# {0}  ".format(test_case_name))
+	sys.stderr.write("# {0}{1}  ".format(home_folder, test_case_name))
 
 	path = home_folder + "/" + test_case_name
 	save_path = os.getcwd()
