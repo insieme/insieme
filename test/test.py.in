@@ -122,7 +122,7 @@ def check_diff(test_case_name, ref, test):
 
 def run_test_case(test_case_name, home_folder):
 	sys.stderr.write("#-----------------------------------------------------\n")
-	sys.stderr.write("# {0}{1}  ".format(home_folder, test_case_name))
+	sys.stderr.write("# {0}/{1}  ".format(home_folder, test_case_name))
 
 	path = home_folder + "/" + test_case_name
 	save_path = os.getcwd()
@@ -508,9 +508,18 @@ def runIt( abortOnFail, basedir, tests ) :
 	failed = []
 	sys.stderr.write("@@ Running from base folder: {0} @@\n".format(basedir))
 	for cur in tests :
-		if os.path.exists(cur + "/test.cfg") :
+		head, tail = os.path.split(cur)
+		if len(head) != 0 and head != tail:
+			if run_test_case(tail, basedir + "/" + head) :
+				failed.append(cur)
+			else :
+				passed.append(cur)
+
+		elif os.path.exists(cur + "/test.cfg") :
 			subtest = [test_case for test_case in open(cur + '/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
-			runIt(abortOnFail, cur, subtest)
+			subFailed, subPassed = runIt(abortOnFail, cur, subtest)
+			failed += subFailed
+			passed += subPassed
 
 		elif len(failed) == 0 or (not abortOnFail) :
 			if run_test_case(cur, basedir) :
@@ -593,7 +602,7 @@ def main():
 		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
 		tests.sort() # sort the test cases by name
 
-	failed, passed = runIt( abortOnFail, "./", tests )
+	failed, passed = runIt( abortOnFail, ".", tests )
 
 	# failed = filter(lambda x: run_test_case(x), tests)
 
