@@ -440,7 +440,7 @@ public:
 			}
 
 			// DepthFirstly visit all sub-nodes
-			const Node::ChildList& children = cur->getChildList();
+			const NodeList& children = cur->getChildList();
 			for(std::size_t i=0; i<children.size(); i++) {
 				interrupted = interrupted || inner->visit(this->childFactory(cur, i));
 			}
@@ -508,7 +508,7 @@ public:
 		}
 
 		// DepthFirstly visit all sub-nodes
-		const Node::ChildList& children = node->getChildList();
+		const NodeList& children = node->getChildList();
 		for(std::size_t i=0; i<children.size(); i++) {
 			this->visit(childFactory(node, i), context...);
 		}
@@ -636,7 +636,7 @@ public:
 			}
 
 			// visit all child nodes DepthFirstly
-			const Node::ChildList& children = node->getChildList();
+			const NodeList& children = node->getChildList();
 			for(std::size_t i = 0; i<children.size(); i++) {
 				visitor->visit(this->childFactory(node, i));
 			}
@@ -717,7 +717,7 @@ public:
 			}
 
 			// visit all child nodes DepthFirstly
-			const Node::ChildList& children = node->getChildList();
+			const NodeList& children = node->getChildList();
 			for(std::size_t i = 0; i<children.size(); i++) {
 				visitor->visit(this->childFactory(node, i));
 			}
@@ -790,7 +790,7 @@ public:
 			}
 
 			// visit all child nodes DepthFirstly
-			const Node::ChildList& children = node->getChildList();
+			const NodeList& children = node->getChildList();
 			for(std::size_t i = 0; i<children.size(); i++) {
 				visitor->visit(this->childFactory(node, i));
 			}

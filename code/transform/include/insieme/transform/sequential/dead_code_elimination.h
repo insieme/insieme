@@ -36,49 +36,25 @@
 
 #pragma once
 
-#include <string>
-#include <memory>
-#include <ostream>
-#include <unordered_map>
-
-#include "insieme/transform/pattern/structure.h"
-#include "insieme/transform/pattern/pattern.h"
-
-#include "insieme/utils/logging.h"
+#include "insieme/transform/transformation.h"
 
 namespace insieme {
 namespace transform {
-namespace pattern {
-namespace irp {
-	using std::make_shared;
+namespace sequential {
 
-	inline TreePatternPtr atom(const core::NodePtr& node) {
-		return atom(toTree(node));
-	}
 
-	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
-		return node(core::NT_TupleType, pattern);
-	}
-	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes) {
-		return node(core::NT_GenericType, atom(makeValue(family)) << subtypes);
-	}
-	inline TreePatternPtr genericType(const ListPatternPtr& family, const ListPatternPtr& subtypes) {
-		return node(core::NT_GenericType, family << subtypes);
-	}
+	class DeadCodeElimination : public Transformation {
 
-	inline TreePatternPtr lit(const std::string& value, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, atom(makeValue(value)) << single(typePattern));
-	}
-	inline TreePatternPtr lit(const TreePatternPtr& valuePattern, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, single(valuePattern) << single(typePattern));
-	}
-	inline TreePatternPtr call(const core::NodePtr& function, const ListPatternPtr& parameters) {
-		return node(core::NT_CallExpr, atom(function) << parameters);
-	}
-	inline TreePatternPtr call(const TreePatternPtr& function, const ListPatternPtr& parameters) {
-		return node(core::NT_CallExpr, single(function) << parameters);
-	}
-}
-} // end namespace pattern
+	public:
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException);
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
+
+	};
+
+} // end namespace sequential
 } // end namespace transform
 } // end namespace insieme

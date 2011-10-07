@@ -72,24 +72,23 @@ TEST(IRConvert, Basic) {
 
 	//LOG(INFO) << *tupleA;
 
-	ConversionVisitor converter;
-	auto treeA = converter.visit(NodeAddress(tupleA));
-	auto treeB = converter.visit(NodeAddress(tupleB));
+	auto treeA = toTree(tupleA);
+	auto treeB = toTree(tupleB);
 	//LOG(INFO) << treeA;
 
-	TreePatternPtr patternA = aT(atom(converter.visit(NodeAddress(t("float<8>")))));
+	TreePatternPtr patternA = aT(atom(toTree(t("float<8>"))));
 	EXPECT_PRED2(match, patternA, treeA);
-	TreePatternPtr patternB = aT(atom(converter.visit(NodeAddress(t("uint<8>")))));
+	TreePatternPtr patternB = aT(atom(toTree(t("uint<8>"))));
 	EXPECT_PRED2(notMatch, patternB, treeA);
-	TreePatternPtr patternC = irp::tupleType(any << atom(converter.visit(NodeAddress(t("float<8>")))) << any);
+	TreePatternPtr patternC = irp::tupleType(any << atom(toTree(t("float<8>"))) << any);
 	EXPECT_PRED2(match, patternC, treeA);
 	EXPECT_PRED2(notMatch, patternC, treeB);
 
-	TreePatternPtr patternD = irp::tupleType(*any << atom(converter.visit(NodeAddress(t("float<8>")))) << *any);
+	TreePatternPtr patternD = irp::tupleType(*any << atom(toTree(t("float<8>"))) << *any);
 	EXPECT_PRED2(match, patternD, treeA);
 	EXPECT_PRED2(match, patternD, treeB);
 
-	TreePatternPtr patternE = irp::tupleType(*any << atom(converter.visit(NodeAddress(t("uint<1>")))) << *any);
+	TreePatternPtr patternE = irp::tupleType(*any << atom(toTree(t("uint<1>"))) << *any);
 	EXPECT_PRED2(match, patternE, treeA);
 	EXPECT_PRED2(notMatch, patternE, treeB);
 }
@@ -102,9 +101,8 @@ TEST(IRPattern, Types) {
 	TypePtr int8Type = t("int<8>");
 	TypePtr genericA = t("megatype<ultratype<int<8>,666>>");
 	
-	ConversionVisitor converter;
-	auto int8TypeTree = converter.visit(NodeAddress(int8Type));
-	auto genericATypeTree = converter.visit(NodeAddress(genericA));
+	auto int8TypeTree = toTree(int8Type);
+	auto genericATypeTree = toTree(genericA);
 
 	TreePatternPtr patternA = irp::genericType("megatype", single(any));
 	EXPECT_PRED2(notMatch, patternA, int8TypeTree); 
@@ -126,9 +124,9 @@ TEST(IRPattern, Expressions) {
 	ExpressionPtr intSubExp = e("(4 - 2)");
 	ExpressionPtr nestedExp = e("((4.2 + 3.1) * (4 - 2))");
 	
-	auto realAddTree = convertIR(realAddExp);
-	auto intSubTree = convertIR(intSubExp);
-	auto nestedTree = convertIR(nestedExp);
+	auto realAddTree = toTree(realAddExp);
+	auto intSubTree = toTree(intSubExp);
+	auto nestedTree = toTree(nestedExp);
 
 	TreePatternPtr patternA = irp::call(manager.basic.getRealAdd(), *any);
 	EXPECT_PRED2(match, patternA, realAddTree);

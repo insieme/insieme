@@ -115,7 +115,7 @@ public:
 	 * Creates a new child list mapping based on the given child list and the given mapping.
 	 * The represented list of replaced child nodes will be computed using the given list and mapping.
 	 */
-	ChildListMapping(const Node::ChildList& list, NodeMapping& mapping)
+	ChildListMapping(const NodeList& list, NodeMapping& mapping)
 		: NodeMapping(), children(mapping.map(0, list)), different(!equals(children, list)) {}
 
 	/**
@@ -126,7 +126,7 @@ public:
 	 * @param children the children to be offered as a substitute by this mapping
 	 * @param different a flag allowing to determine whether the given list of children differs from the original child list
 	 */
-	ChildListMapping(const Node::ChildList& children, bool different = true)
+	ChildListMapping(const NodeList& children, bool different = true)
 		: NodeMapping(), children(children), different(different) {}
 
 	/**

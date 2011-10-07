@@ -171,9 +171,9 @@ protected:
 	 * Creates the list of child nodes of this type. Since the type variable is a
 	 * terminal node, the resulting list will always be empty.
 	 */
-	virtual OptionChildList getChildNodes() const {
+	virtual NodeListOpt getChildNodes() const {
 		// return an option child list filled with an empty list
-		return OptionChildList(new ChildList());
+		return std::make_shared<NodeList>();
 	}
 
 	/**
@@ -254,7 +254,7 @@ protected:
 	/**
 	 * Creates the list of child nodes of this type.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 	/**
 	 * Compares this type with the given type.
@@ -342,7 +342,7 @@ protected:
 	/**
 	 * Creates a empty child list since this node represents a terminal node.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 	/**
 	 * Compares this type with the given type.
@@ -487,7 +487,7 @@ protected:
 	 * Obtains a list of all type parameters and the optional base type
 	 * referenced by this generic type.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 	/**
 	 * Compares this type with the given type.
@@ -618,7 +618,7 @@ protected:
 	/**
 	 * Obtains a list of child nodes.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 
@@ -733,7 +733,7 @@ protected:
 	/**
 	 * Obtains a list of all sub-nodes referenced by this AST node.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 	/**
 	 * Compares this type with the given type.
@@ -794,7 +794,7 @@ protected:
 	/**
 	 * Obtains a list of all child sub-types used within this struct.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 	/**
 	 * Compares this type with the given type.

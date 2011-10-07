@@ -94,6 +94,39 @@ enum { NUM_CONCRETE_NODE_TYPES = 0
 };
 #undef CONCRETE
 
+
+namespace detail {
+
+	/**
+	 * A helper for defining node traits ...
+	 */
+	template<typename T, NodeType N>
+	struct node_traits_helper {
+		typedef T type;
+		enum { nt_value = N };
+	};
+}
+
+/**
+ * A type trait linking node types to their properties.
+ */
+template<typename T>
+struct node_traits;
+
+/**
+ * A trait struct linking node type values to the represented node's properties.
+ */
+template<NodeType typ>
+struct to_node_type;
+
+#define CONCRETE(NAME) \
+	template<> struct node_traits<NAME> : public detail::node_traits_helper<NAME, NT_ ## NAME> {}; \
+	template<> struct to_node_type<NT_ ## NAME> : public node_traits<NAME> {};
+#include "insieme/core/ast_nodes.def"
+#undef CONCRETE
+
+
+
 /**
  * An enumeration covering the five basic node categories.
  */
@@ -146,6 +179,7 @@ public:
 		extensions[key] = new E(*this);
 		return getLangExtension<E>();
 	}
+
 };
 
 
@@ -196,14 +230,10 @@ public:
 	typedef NodeManager Manager;
 
 	/**
-	 * The type used to represent the list of children of a node.
-	 */
-	typedef vector<NodePtr> ChildList;
-
-	/**
 	 * A type used to represent a optionally available child list.
+	 * TODO: remove this type and its relation
 	 */
-	typedef std::shared_ptr<ChildList> OptionChildList;
+	typedef std::shared_ptr<NodeList> NodeListOpt;
 
 private:
 
@@ -235,7 +265,7 @@ private:
 	/**
 	 * The list of child nodes referenced by this node.
 	 */
-	mutable OptionChildList children;
+	mutable NodeListOpt children;
 
 	/**
 	 * The ID of the equality class of this node. This ID is used to significantly
@@ -308,7 +338,7 @@ protected:
 	/**
 	 * Requests a list of child nodes from the actual node implementation.
 	 */
-	virtual OptionChildList getChildNodes() const = 0;
+	virtual NodeListOpt getChildNodes() const = 0;
 
 public:
 
@@ -359,7 +389,7 @@ public:
 	 *
 	 * @return a reference to the internally maintained list of child nodes.
 	 */
-	const ChildList& getChildList() const;
+	const NodeList& getChildList() const;
 
 	/**
 	 * This pure abstract method is imposing the requirement to every node to

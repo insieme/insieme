@@ -78,9 +78,9 @@ bool BreakStmt::equalsStmt(const Statement&) const {
 	return true;
 }
 
-Node::OptionChildList BreakStmt::getChildNodes() const {
+Node::NodeListOpt BreakStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	return OptionChildList(new ChildList());
+	return std::make_shared<NodeList>();
 }
 
 BreakStmt* BreakStmt::createCopyUsing(NodeMapping&) const {
@@ -112,9 +112,9 @@ bool ContinueStmt::equalsStmt(const Statement&) const {
 	return true;
 }
 
-Node::OptionChildList ContinueStmt::getChildNodes() const {
+Node::NodeListOpt ContinueStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	return OptionChildList(new ChildList());
+	return std::make_shared<NodeList>();
 }
 
 ContinueStmt* ContinueStmt::createCopyUsing(NodeMapping&) const {
@@ -148,8 +148,8 @@ bool ReturnStmt::equalsStmt(const Statement& stmt) const {
 	return (*returnExpression == *rhs.returnExpression);
 }
 
-Node::OptionChildList ReturnStmt::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt ReturnStmt::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(returnExpression);
 	return res;
 }
@@ -192,9 +192,9 @@ DeclarationStmt* DeclarationStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new DeclarationStmt(mapper.map(0, variable), mapper.map(1, initExpression));
 }
 
-Node::OptionChildList DeclarationStmt::getChildNodes() const {
+Node::NodeListOpt DeclarationStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(variable);
 	res->push_back(initExpression);
 	return res;
@@ -240,9 +240,9 @@ CompoundStmt* CompoundStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new CompoundStmt(mapper.map(0, statements));
 }
 
-Node::OptionChildList CompoundStmt::getChildNodes() const {
+Node::NodeListOpt CompoundStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	std::copy(statements.cbegin(), statements.cend(), back_inserter(*res));
 	return res;
 }
@@ -309,9 +309,9 @@ WhileStmt* WhileStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new WhileStmt(mapper.map(0, condition), mapper.map(1, body));
 }
 
-Node::OptionChildList WhileStmt::getChildNodes() const {
+Node::NodeListOpt WhileStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(condition);
 	res->push_back(body);
 	return res;
@@ -358,9 +358,9 @@ ForStmt* ForStmt::createCopyUsing(NodeMapping& mapper) const {
 	);
 }
 
-Node::OptionChildList ForStmt::getChildNodes() const {
+Node::NodeListOpt ForStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(declaration);
 	res->push_back(end);
 	res->push_back(step);
@@ -406,9 +406,9 @@ bool IfStmt::equalsStmt(const Statement& stmt) const {
 	return (*condition == *rhs.condition) && (*thenBody == *rhs.thenBody) && (*elseBody == *rhs.elseBody);
 }
 
-Node::OptionChildList IfStmt::getChildNodes() const {
+Node::NodeListOpt IfStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(condition);
 	res->push_back(thenBody);
 	res->push_back(elseBody);
@@ -486,9 +486,9 @@ bool SwitchStmt::equalsStmt(const Statement& stmt) const {
 		}) && (*defaultCase == *rhs.defaultCase);
 }
 
-Node::OptionChildList SwitchStmt::getChildNodes() const {
+Node::NodeListOpt SwitchStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(switchExpr);
 	std::for_each(cases.cbegin(), cases.cend(), [&res](const Case& cur) {
 		res->push_back(cur.first);
@@ -539,8 +539,8 @@ bool MarkerStmt::equalsStmt(const Statement& expr) const {
 	return (rhs.id == id && *rhs.subStatement == *subStatement);
 }
 
-Node::OptionChildList MarkerStmt::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt MarkerStmt::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(subStatement);
 	return res;
 }

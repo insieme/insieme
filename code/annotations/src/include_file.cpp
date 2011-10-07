@@ -34,77 +34,15 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/pattern/structure.h"
-
-#include <boost/lexical_cast.hpp>
-
-#include "insieme/utils/logging.h"
+#include "insieme/annotations/c/include_file.h"
 
 namespace insieme {
-namespace transform {
-namespace pattern {
+namespace annotations {
+namespace c {
 
-	const int Tree::VALUE_ID = -1;
+const string IncludeFileAnnotation::NAME = "IncludeFileAnnotation";
+const utils::StringKey<IncludeFileAnnotation> IncludeFileAnnotation::KEY("IncludeFileAnnotationKey");
 
-	namespace {
-
-		struct ValuePrinter {
-			typedef string result_type;
-
-			string operator()(bool value) const {
-				return (value)?"true":"false";
-			}
-
-			string operator()(const string& value) const {
-				return "\"" + value + "\"";
-			}
-
-			template<typename T>
-			string operator()(const T& value) const {
-				return boost::lexical_cast<string>(value);
-			}
-		};
-
-	}
-
-
-	std::ostream& Tree::printTo(std::ostream& out) const {
-
-		// handle values differently
-		if (id == VALUE_ID) {
-			return out << boost::apply_visitor(ValuePrinter(), value);
-		}
-
-		// print symbol if present
-		if (id) out << (char)id;
-
-		// add sub-trees
-		if (!subTrees.empty()) {
-			out << "(" << join(",", subTrees, print<deref<TreePtr>>()) << ")";
-		}
-
-		// in case neither a symbol nor subtrees are given
-		if (!id && subTrees.empty()) {
-			out << "()";
-		}
-		return out;
-	}
-
-	bool Tree::operator==(const Tree& other) const {
-		if (this == &other) {
-			return true;
-		}
-		return id == other.id && equals(getSubTrees(), other.getSubTrees(), equal_target<TreePtr>()) && value == other.value;
-	}
-
-	std::ostream& operator<<(std::ostream& out, const Tree& tree) {
-		return tree.printTo(out);
-	}
-
-	std::ostream& operator<<(std::ostream& out, const TreePtr& tree) {
-		return out << *tree;
-	}
-
-} // end namespace pattern
-} // end namespace transform
-} // end namespace insieme
+}
+}
+}

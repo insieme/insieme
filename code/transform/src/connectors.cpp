@@ -43,31 +43,56 @@ namespace transform {
 
 	namespace {
 
-		class ForEachMapper : public core::transform::CachedNodeMapping {
-
-			const ForEach& setup;
-
-		public:
-
-			ForEachMapper(const ForEach& setup) : setup(setup) {}
+		// To be supported:
+		//   - Applying transformations in pre/post order
+		//   - on a filtered subset of all encountered nodes
+		//   - with a limited depth
+		//
 
 
-			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {
-				if (setup.getFilter()(ptr)) {
-					return setup.getTransformation()->apply(ptr);
-				}
-				return ptr;
-			}
 
-
-		};
 
 	}
 
 
 	core::NodePtr ForEach::apply(const core::NodePtr& target) const {
-		ForEachMapper mapper(*this);
-		return target->substitute(target->getNodeManager(), mapper);
+		return apply(target, maxDepth);
+	}
+
+
+	core::NodePtr ForEach::apply(const core::NodePtr& target, unsigned depth) const {
+
+		// terminate application of transformation at level zero
+		if (depth == 0) {
+			return target;
+		}
+
+		core::NodePtr res = target;
+
+		// conduct transformation in pre-order if requested
+		if (preorder && filter(res)) {
+			res = transformation->apply(res);
+		}
+
+		// conduct recursive decent - by transforming children
+		core::NodeList children = res->getChildList();
+		for_each(children, [&](core::NodePtr& cur) {
+			cur = apply(cur, depth-1);
+		});
+
+		// re-assemble transformed node from modified child list (if necessary)
+		if (!equals(children, res->getChildList(), equal_target<core::NodePtr>())) {
+			core::transform::ChildListMapping nodeMapper(children);
+			res = res->substitute(res->getNodeManager(), nodeMapper, false);
+		}
+
+		// conduct transformation in post-order if requested
+		if (!preorder && filter(res)) {
+			res = transformation->apply(res);
+		}
+
+		// done
+		return res;
 	}
 
 
@@ -84,6 +109,7 @@ namespace transform {
 
 		// check whether fixpoint could be obtained
 		if (*cur != *last) {
+			// => no fixpoint found!
 			throw InvalidTargetException("Fixpoint could not be obtained!");
 		}
 

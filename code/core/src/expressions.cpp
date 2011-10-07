@@ -167,8 +167,8 @@ bool TupleExpr::equalsExpr(const Expression& expr) const {
 	return ::equals(expressions, rhs.expressions, equal_target<ExpressionPtr>());
 }
 
-Node::OptionChildList TupleExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt TupleExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(type);
 	std::copy(expressions.cbegin(), expressions.cend(), back_inserter(*res));
 	return res;
@@ -215,8 +215,8 @@ bool VectorExpr::equalsExpr(const Expression& expr) const {
 	return ::equals(expressions, rhs.expressions, equal_target<ExpressionPtr>());
 }
 
-Node::OptionChildList VectorExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt VectorExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(type);
 	std::copy(expressions.cbegin(), expressions.cend(), back_inserter(*res));
 	return res;
@@ -312,8 +312,8 @@ bool StructExpr::equalsExpr(const Expression& expr) const {
 	});
 }
 
-Node::OptionChildList StructExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt StructExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(type);
 	for_each(members, [&](const Member& cur) {
 		res->push_back(cur.first);
@@ -361,8 +361,8 @@ bool UnionExpr::equalsExpr(const Expression& expr) const {
 	return *memberName == *other.memberName && *member == *other.member;
 }
 
-Node::OptionChildList UnionExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt UnionExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(type);
 	res->push_back(memberName);
 	res->push_back(member);
@@ -459,8 +459,8 @@ JobExpr* JobExpr::createCopyUsing(NodeMapping& mapper) const {
 			mapper.map(1, localDecls));
 }
 
-Node::OptionChildList JobExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt JobExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(threadNumRange);
 	std::copy(localDecls.cbegin(), localDecls.cend(), back_inserter(*res));
 	std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&res](const GuardedStmt& cur) {
@@ -542,8 +542,8 @@ bool CallExpr::equalsExpr(const Expression& expr) const {
 		::equals(arguments, rhs.arguments, equal_target<ExpressionPtr>());
 }
 
-Node::OptionChildList CallExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt CallExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(type);
 	res->push_back(functionExpr);
 	std::copy(arguments.cbegin(), arguments.cend(), back_inserter(*res));
@@ -585,8 +585,8 @@ bool CastExpr::equalsExpr(const Expression& expr) const {
 	return (*rhs.subExpression == *subExpression);
 }
 
-Node::OptionChildList CastExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt CastExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(type);
 	res->push_back(subExpression);
 	return res;
@@ -644,8 +644,8 @@ bool Lambda::equals(const Node& other) const {
 			*body == *rhs.body;
 }
 
-Node::OptionChildList Lambda::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt Lambda::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(type);
 	res->insert(res->end(), paramList.begin(), paramList.end());
 	res->push_back(body);
@@ -739,8 +739,8 @@ bool LambdaDefinition::equals(const Node& other) const {
 	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<LambdaPtr>());
 }
 
-Node::OptionChildList LambdaDefinition::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt LambdaDefinition::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	std::for_each(definitions.begin(), definitions.end(), [&res](const Definitions::value_type& cur) {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
@@ -859,8 +859,8 @@ LambdaExpr* LambdaExpr::createCopyUsing(NodeMapping& mapper) const {
 	return new LambdaExpr(mapper.map(0, variable), mapper.map(1, definition));
 }
 
-Node::OptionChildList LambdaExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt LambdaExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(variable);
 	res->push_back(definition);
 	return res;
@@ -942,8 +942,8 @@ BindExpr* BindExpr::createCopyUsing(NodeMapping& mapper) const {
 	);
 }
 
-Node::OptionChildList BindExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt BindExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	copy(parameters, std::back_inserter(*res));
 	res->push_back(call);
 	return res;
@@ -1027,8 +1027,8 @@ bool MemberAccessExpr::equalsExpr(const Expression& expr) const {
 	return (*rhs.subExpression == *subExpression && *rhs.member == *member);
 }
 
-Node::OptionChildList MemberAccessExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt MemberAccessExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(subExpression);
 	res->push_back(member);
 	return res;
@@ -1079,8 +1079,8 @@ bool TupleProjectionExpr::equalsExpr(const Expression& expr) const {
 	return (*rhs.subExpression == *subExpression && rhs.index == index);
 }
 
-Node::OptionChildList TupleProjectionExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt TupleProjectionExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(subExpression);
 	return res;
 }
@@ -1126,8 +1126,8 @@ bool MarkerExpr::equalsExpr(const Expression& expr) const {
 	return (rhs.id == id && *rhs.subExpression == *subExpression);
 }
 
-Node::OptionChildList MarkerExpr::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt MarkerExpr::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(subExpression);
 	return res;
 }
