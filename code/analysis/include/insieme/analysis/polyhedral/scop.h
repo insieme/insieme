@@ -136,8 +136,9 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * This class contains the scattering information of a statement contained in this SCoP from a
 	 * point of view of iteration vector of this entry point. For each statement we keep:
 	 * @addr: address (relative to this root node), 
-	 * @iterDom: iteration domain which contains the domain information for which the statment is 
-	 * 			 defined
+	 *
+	 * @iterDom:    iteration domain which contains the domain information for which the statment is 
+	 * 			    defined
 	 * @scattering: Which is the scattering infromation with the relative ordering of the statement 
 	 * 				within this region
 	 * @accessList: The list of ref accesses within the statement rewritten to the iteration vector
@@ -313,6 +314,8 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop);
 void resolveFrom(const core::NodePtr& root);
 
 void computeDataDependence(const core::NodePtr& root);
+
+core::NodePtr toIR(const core::NodePtr& root);
 
 size_t calcLoopNest(const poly::IterationVector& iterVec, const ScopRegion::ScatteringMatrix& scat);
 

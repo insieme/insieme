@@ -174,6 +174,16 @@ DependenceInfo<IslContext> buildDependencies(
 template <>
 std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const;
 
+/**************************************************************************************************
+ * CODE GENERATION
+ *************************************************************************************************/
+template <>
+core::NodePtr toIR(core::NodeManager& mgr,
+		const StmtMap& stmtMap,		
+		const IterationVector& iterVec,
+		IslContext&	ctx,
+		const Set<IslContext>& 	domain, 
+		const Map<IslContext>& 	schedule);
 
 } // end poly namespace 
 } // end analysis namespace 

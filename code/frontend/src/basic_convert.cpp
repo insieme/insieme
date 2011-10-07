@@ -132,7 +132,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	globColl(def);
 
 	VLOG(1) << globColl;
-	VLOG(2) <<  mFact.ctx.globalStruct.first;
+	VLOG(2) << mFact.ctx.globalStruct.first;
 
 	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
 	if (mFact.ctx.globalStruct.first) {
@@ -314,19 +314,24 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
-		core::IdentifierPtr ident = builder.identifier(varDecl->getNameAsString());
+		core::IdentifierPtr&& ident = builder.identifier(varDecl->getNameAsString());
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(ident);
 
 		assert(ctx.globalVar->getType()->getNodeType() == core::NT_RefType &&
 				"Global data structure passed as a non-ref");
 
-		return builder.callExpr(
+		// LOG(DEBUG) << *irType << " == " << 	*memberTy;
+		// assert(*irType == *builder.refType( memberTy ));
+
+		core::ExpressionPtr&& retExpr = builder.callExpr(
 				builder.refType( memberTy ),
 				gen.getCompositeRefElem(),
 				toVector<core::ExpressionPtr>(
 						ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)
 				)
 			);
+
+		return castToType( irType, retExpr );
 	}
 
 	/*

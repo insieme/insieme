@@ -120,11 +120,14 @@ def check_diff(test_case_name, ref, test):
 	remove_if_exist(testFile)
 	return not check_for_error(test_case_name, ret)
 
-def run_test_case(test_case_name):
+def run_test_case(test_case_name, home_folder):
 	sys.stderr.write("#-----------------------------------------------------\n")
-	sys.stderr.write("# {0}  ".format(test_case_name))
+	sys.stderr.write("# {0}/{1}  ".format(home_folder, test_case_name))
 
-	if not os.path.isdir(test_case_name):
+	path = home_folder + "/" + test_case_name
+	save_path = os.getcwd()
+
+	if not os.path.isdir(path):
 		sys.stderr.write(bcolors.FAIL + " --- NO SUCH TEST CASE!!" + bcolors.ENDC + "\n")
 		return 1
 
@@ -153,22 +156,22 @@ def run_test_case(test_case_name):
 
 	try:
 		inputs = test_case_name + '.c'
-		if os.path.exists(test_case_name + '/inputs.data'):
-			inputs = " ".join([x.strip() for x in open(test_case_name + '/inputs.data').read().split(',')])
+		if os.path.exists(path + '/inputs.data'):
+			inputs = " ".join([x.strip() for x in open(path + '/inputs.data').read().split(',')])
 
 		insiemeFlags = ''
-		if os.path.exists(test_case_name + '/insieme.flags'):
-			insiemeFlags = " ".join([x.strip() for x in open(test_case_name + '/insieme.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
+		if os.path.exists(path + '/insieme.flags'):
+			insiemeFlags = " ".join([x.strip() for x in open(path + '/insieme.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
 
 		gccFlagsRef = ''
-		if os.path.exists(test_case_name + '/ref-gcc.flags'):
-			gccFlagsRef = " ".join([x.strip() for x in open(test_case_name + '/ref-gcc.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
+		if os.path.exists(path + '/ref-gcc.flags'):
+			gccFlagsRef = " ".join([x.strip() for x in open(path + '/ref-gcc.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
 
 		gccFlagsTest = ''
-		if os.path.exists(test_case_name + '/test-gcc.flags'):
-			gccFlagsTest = " ".join([x.strip() for x in open(test_case_name + '/test-gcc.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
+		if os.path.exists(path + '/test-gcc.flags'):
+			gccFlagsTest = " ".join([x.strip() for x in open(path + '/test-gcc.flags').read().format(**{'SRC_DIR': SRC_DIR}).split(',')])
 
-		os.chdir(test_case_name)
+		os.chdir(path)
 
 		# clear reference files if requested
 		if cleanRef :
@@ -496,9 +499,36 @@ def run_test_case(test_case_name):
 #		sys.str ("Error: " + sys.exc_info()[0])
 
 	finally:
-		os.chdir("../")
+		os.chdir(save_path)
 
 	return 0
+
+def runIt( abortOnFail, basedir, tests ) :
+	passed = []
+	failed = []
+	sys.stderr.write("@@ Running from base folder: {0} @@\n".format(basedir))
+	for cur in tests :
+		head, tail = os.path.split(cur)
+		if len(head) != 0 and head != tail:
+			if run_test_case(tail, basedir + "/" + head) :
+				failed.append(cur)
+			else :
+				passed.append(cur)
+
+		elif os.path.exists(cur + "/test.cfg") :
+			subtest = [test_case for test_case in open(cur + '/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
+			subFailed, subPassed = runIt(abortOnFail, cur, subtest)
+			failed += subFailed
+			passed += subPassed
+
+		elif len(failed) == 0 or (not abortOnFail) :
+			if run_test_case(cur, basedir) :
+				failed.append(cur)
+			else :
+				passed.append(cur)
+
+	return failed, passed
+
 
 def main():
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
@@ -561,8 +591,6 @@ def main():
 			USE_RUN = 1
 			sys.argv.remove(arg)
 
-
-
 	tests = []
 	if len(sys.argv) > 1:
 		# run the specified tests only
@@ -574,14 +602,7 @@ def main():
 		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
 		tests.sort() # sort the test cases by name
 
-	passed = []
-	failed = []
-	for cur in tests :
-		if len(failed) == 0 or (not abortOnFail) :
-			if run_test_case(cur) :
-				failed.append(cur)
-			else :
-				passed.append(cur)
+	failed, passed = runIt( abortOnFail, ".", tests )
 
 	# failed = filter(lambda x: run_test_case(x), tests)
 

@@ -550,6 +550,14 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 		}
 	}
 
+	// [ ref<'a> -> ref<ref<'a>> ]
+	if ( trgTy->getNodeType() == core::NT_RefType && argTy->getNodeType() == core::NT_RefType ) {
+		const core::TypePtr& subArgTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
+		if (*subArgTy == *trgTy) {
+			return builder.deref( expr );
+		}
+	}
+
 	return builder.castExpr(trgTy, expr);
 	//LOG(ERROR) << ": converting expression '" << *expr << "' of type '" << *expr->getType() << "' to type '" 
 			   //<< *trgTy << "' not yet supported!";
