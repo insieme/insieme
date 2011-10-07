@@ -67,7 +67,7 @@ def run_cmd(cmd):
 	# waits for process and collects everything send to stdout/stderr
 	res = pid.communicate()[0]
 	elapsed = time.time() - start
-	sys.stderr.write(" [{0:.4f} secs]\n".format(elapsed) )
+	sys.stderr.write("[{0:.4f} secs]\n".format(elapsed) )
 
 	if verbose:
 		sys.stderr.write(bcolors.DEBUG)
@@ -185,7 +185,9 @@ def run_test_case(test_case_name, home_folder):
 				remove_if_exist(refRUN)
 
 		# RUN insieme, check semantic and generate CFG / XML and IR dump
-		sys.stderr.write(" * Running Compiler Checks...           ")
+		sys.stderr.write(" * Running Compiler Checks...            ")
+		sys.stderr.flush()
+
 		ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {INPUTS} --dump-ir={IR_DUMP} --dump-cfg {CFG_DUMP} --dump-xml {XML_DUMP} --col-wrap=120 -S {FLAGS}".format(
 						**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'INPUTS': inputs, 'IR_DUMP': testIr,
 						   'FLAGS': insiemeFlags, 'CFG_DUMP': testCfg, 'XML_DUMP' : testXML}))
@@ -197,21 +199,24 @@ def run_test_case(test_case_name, home_folder):
 
 			if USE_SMP:
 				# RUN insieme to generate simple-backend output code
-				sys.stderr.write(" * Running Compiler => SMP ...          ")
+				sys.stderr.write(" * Running Compiler => SMP ...           ")
+				sys.stderr.flush()
 				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b pthread -o {OUTPUT}".format(
 								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testSMP}))
 				if check_for_error(test_case_name, ret):
 					return 1
 
 			if USE_SEQ:
-				sys.stderr.write(" * Running Compiler => SEQ ...          ")
+				sys.stderr.write(" * Running Compiler => SEQ...            ")
+				sys.stderr.flush()
 				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b sequential -o {OUTPUT}".format(
 								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testSEQ}))
 				if check_for_error(test_case_name, ret):
 					return 1
 
 			if USE_RUN:
-				sys.stderr.write(" * Running Compiler => RUN ...          ")
+				sys.stderr.write(" * Running Compiler => RUN...            ")
+				sys.stderr.flush()
 				ret = run_cmd( "{INSIEMEC} {INSIEME_FLAGS} {FLAGS} {INPUTS} -b runtime -o {OUTPUT}".format(
 								**{'INSIEMEC': INSIEMEC, 'INSIEME_FLAGS':INSIEME_FLAGS, 'FLAGS': insiemeFlags, 'INPUTS': inputs, 'OUTPUT': testRUN}))
 				if check_for_error(test_case_name, ret):
@@ -226,7 +231,7 @@ def run_test_case(test_case_name, home_folder):
 			  runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 
 
-			sys.stderr.write(" * Comparing generated IR...            ")
+			sys.stderr.write(" * Comparing generated IR...             ")
 			if check_diff(test_case_name, refIr, testIr):
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 			else:
@@ -237,7 +242,7 @@ def run_test_case(test_case_name, home_folder):
 				shutil.copyfile(testCfg, refCfg)
 				runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 
-			sys.stderr.write(" * Comparing generated CFG...           ")
+			sys.stderr.write(" * Comparing generated CFG...            ")
 			if check_diff(test_case_name, refCfg, testCfg):
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 			else:
@@ -248,7 +253,7 @@ def run_test_case(test_case_name, home_folder):
 				if not os.path.exists(refSMP) and os.path.exists(testSMP):
 					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 				else:
-					sys.stderr.write(" * Comparing generated SMP output...    ")
+					sys.stderr.write(" * Comparing generated SMP output...     ")
 					if check_diff(test_case_name, refSMP, testSMP):
 						sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 					else:
@@ -259,7 +264,7 @@ def run_test_case(test_case_name, home_folder):
 				if not os.path.exists(refSEQ) and os.path.exists(testSEQ):
 					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 				else:
-					sys.stderr.write(" * Comparing generated SEQ output...    ")
+					sys.stderr.write(" * Comparing generated SEQ output...     ")
 					if check_diff(test_case_name, refSEQ, testSEQ):
 						sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 					else:
@@ -270,7 +275,7 @@ def run_test_case(test_case_name, home_folder):
 				if not os.path.exists(refRUN) and os.path.exists(testRUN):
 					runTests = 1 # Reference is not there, we have to run the test to make sure the translation was correct
 				else:
-					sys.stderr.write(" * Comparing generated RUN output...    ")
+					sys.stderr.write(" * Comparing generated RUN output...     ")
 					if check_diff(test_case_name, refRUN, testRUN):
 						sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 					else:
@@ -299,25 +304,33 @@ def run_test_case(test_case_name, home_folder):
 				test_seq_out = "seq.test.out"
 				test_run_out = "run.test.out"
 
-				sys.stderr.write(" * Compiling C input...                 ")
+				sys.stderr.write(" * Compiling C input...                  ")
+				sys.stderr.flush()
+
 				if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 									**{'CC':CC, 'CFLAGS':CFLAGS_GCC, 'INPUTS':inputs, 'OUTPUT':ref_exec, 'LDFLAGS':LDFLAGS_GCC, 'GCCFLAGS':gccFlagsRef})
 								)) : return 1
 
 				if USE_SMP:
-					sys.stderr.write(" * Compiling generated SMP output...    ")
+					sys.stderr.write(" * Compiling generated SMP output...     ")
+					sys.stderr.flush()
+
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 										**{'CC':CC, 'CFLAGS':CFLAGS_SMP, 'INPUTS':testSMP, 'OUTPUT':test_smp_exec, 'LDFLAGS':LDFLAGS_SMP, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
 
 				if USE_SEQ:
-					sys.stderr.write(" * Compiling generated SEQ output...    ")
+					sys.stderr.write(" * Compiling generated SEQ output...     ")
+					sys.stderr.flush()
+
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 										**{'CC':CC, 'CFLAGS':CFLAGS_SEQ, 'INPUTS':testSEQ, 'OUTPUT':test_seq_exec, 'LDFLAGS':LDFLAGS_SEQ, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
 
 				if USE_RUN:
-					sys.stderr.write(" * Compiling generated RUN output...    ")
+					sys.stderr.write(" * Compiling generated RUN output...     ")
+					sys.stderr.flush()
+
 					if check_for_error(test_case_name, run_cmd( "{CC} {CFLAGS} -o {OUTPUT} {INPUTS} {LDFLAGS} {GCCFLAGS}".format(
 										**{'CC':CC, 'CFLAGS':CFLAGS_RUN, 'INPUTS':testRUN, 'OUTPUT':test_run_exec, 'LDFLAGS':LDFLAGS_RUN, 'GCCFLAGS':gccFlagsTest})
 									)) : return 1
@@ -330,6 +343,8 @@ def run_test_case(test_case_name, home_folder):
 					input_args = open("prog.input").read().strip()
 
 				sys.stderr.write(" * Running input program...              ")
+				sys.stderr.flush()
+
 				start = time.time()
 				exitValue = os.system("./{0} {1} > {2}".format(ref_exec, input_args, ref_out)) >> 8
 
@@ -341,6 +356,8 @@ def run_test_case(test_case_name, home_folder):
 
 				if USE_SMP:
 					sys.stderr.write(" * Running SMP program...                ")
+					sys.stderr.flush()
+
 					ldPath = os.getenv("LD_LIBRARY_PATH", "");
 					os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
 					start = time.time()
@@ -358,6 +375,8 @@ def run_test_case(test_case_name, home_folder):
 
 				if USE_SEQ:
 					sys.stderr.write(" * Running SEQ program...                ")
+					sys.stderr.flush()
+
 					start = time.time()
 					exitValue = os.system("./{0} {1} > {2} 2> /dev/null".format(test_seq_exec,
 						input_args, test_seq_out)) >> 8;
@@ -372,6 +391,8 @@ def run_test_case(test_case_name, home_folder):
 
 				if USE_RUN:
 					sys.stderr.write(" * Running RUN program...                ")
+					sys.stderr.flush()
+
 					start = time.time()
 					exitValue = os.system("./{0} {1} > {2} 2> /dev/null".format(test_run_exec,
 						input_args, test_run_out)) >> 8;
@@ -390,17 +411,17 @@ def run_test_case(test_case_name, home_folder):
 				# ---------------------------- Checking Outputs ----------------------------
 
 				if USE_SMP:
-					sys.stderr.write(" * Checking SMP program output...       ")
+					sys.stderr.write(" * Checking SMP program output...        ")
 					if not check_diff(test_case_name, ref_out, test_smp_out):
 						return 1
 
 				if USE_SEQ:
-					sys.stderr.write(" * Checking SEQ program output...       ")
+					sys.stderr.write(" * Checking SEQ program output...        ")
 					if not check_diff(test_case_name, ref_out, test_seq_out):
 						return 1
 
 				if USE_RUN:
-					sys.stderr.write(" * Checking RUN program output...       ")
+					sys.stderr.write(" * Checking RUN program output...        ")
 					if not check_diff(test_case_name, ref_out, test_run_out):
 						return 1
 
