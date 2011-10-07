@@ -166,6 +166,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
 //				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
 
+	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
 		SourceLocation&& leftBracketLoc = SourceMgr.getInstantiationLoc(L);
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
@@ -174,7 +175,10 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		char const* lBracePos = strbchr(strData, '{');
 
 		// We know the location of the left bracket, we overwrite the value of L with the correct location
-		L = leftBracketLoc.getFileLocWithOffset(lBracePos - strData);
+		// but only if the location is valid as in getFileLocWithOffset() in SourceLocation
+		if((((leftBracketLoc.getRawEncoding() & ~MacroIDBit)+(lBracePos - strData)) & MacroIDBit)==0){
+			L = leftBracketLoc.getFileLocWithOffset(lBracePos - strData);
+		}
 	}
 	// the same is done for the right bracket
 
@@ -188,8 +192,10 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		const char *strData = buffer.begin() + locInfo.second;
 		char const* rBracePos = strbchr(strData, '}');
 
-		// We know the location of the left bracket, we overwrite the value of L with the correct location
-		R = rightBracketLoc.getFileLocWithOffset(rBracePos - strData);
+		// We know the location of the right bracket, we overwrite the value of R with the correct location
+		if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit)+(rBracePos - strData)) & MacroIDBit)==0){
+			R = rightBracketLoc.getFileLocWithOffset(rBracePos - strData);
+		}
 	}
 
 	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);

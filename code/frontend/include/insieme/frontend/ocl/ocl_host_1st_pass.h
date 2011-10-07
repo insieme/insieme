@@ -86,21 +86,26 @@ public:
  */
 struct Ocl2Inspire {
 private:
+	core::ASTBuilder& builder;
 	core::parse::IRParser parser;
 
 public:
-	Ocl2Inspire(core::NodeManager& mgr) :
-		parser(mgr) {
+	Ocl2Inspire(core::ASTBuilder& build) :
+		builder(build), parser(build.getNodeManager()) {
 	}
 
 	bool extractSizeFromSizeof(const core::ExpressionPtr& arg,
 			core::ExpressionPtr& size, core::TypePtr& type);
 
 	core::ExpressionPtr getClCreateBuffer(bool copyHostPtr);
+	core::ExpressionPtr getClCopyBuffer();
+	core::ExpressionPtr getClCopyBufferFallback();
 	core::ExpressionPtr getClWriteBuffer();
 	core::ExpressionPtr getClWriteBufferFallback();
 	core::ExpressionPtr getClReadBuffer();
 	core::ExpressionPtr getClReadBufferFallback();
+	core::ExpressionPtr getClGetIDs();
+	core::ExpressionPtr getClSetKernelArg();
 };
 
 /**
@@ -111,8 +116,9 @@ protected:
 	core::ProgramPtr kernels;
 	const core::ASTBuilder& builder;
 	Ocl2Inspire o2i;
+	size_t argCnt;
 public:
-	Handler(const core::ASTBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire) {
+	Handler(const core::ASTBuilder& build, Ocl2Inspire& ocl2inspire) : builder(build), o2i(ocl2inspire), argCnt(0) {
 		kernels = core::Program::create(build.getNodeManager());
 	}
 
@@ -132,7 +138,7 @@ public:
 
 	// puts the passed argument in the right place inside the kernelArgs map
 	const core::ExpressionPtr collectArgument(const core::ExpressionPtr& kernelArg, const core::ExpressionPtr& index, const core::ExpressionPtr& sizeArg,
-			core::ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls);
+			core::ExpressionPtr arg, KernelArgs& kernelArgs, LocalMemDecls& localMemDecls, ClmemTable& cl_mems, EquivalenceMap& eqMap);
 };
 
 /*
@@ -198,6 +204,8 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	vector<core::ExpressionPtr> kernelEntries;
 	LocalMemDecls localMemDecls;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+	EquivalenceMap eqMap;
+	size_t eqIdx;
 
 
 	// check if the call is a call to ref.assign
@@ -231,7 +239,7 @@ class HostMapper: public core::transform::CachedNodeMapping {
 	}
 	const core::ExpressionPtr collectArgument(const string& handleName, const core::ExpressionPtr& kernel, const core::ExpressionPtr& index,
 			const core::ExpressionPtr& sizeArg, const core::ExpressionPtr& arg) {
-		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls);
+		return handles[handleName]->collectArgument(kernel, index, sizeArg, arg, kernelArgs, localMemDecls, cl_mems, eqMap);
 	}
 public:
 	HostMapper(core::ASTBuilder& build, core::ProgramPtr& program);
@@ -244,6 +252,7 @@ public:
 	KernelArgs& getKernelArgs() { return kernelArgs; }
 	KernelNames& getKernelNames() { return kernelNames; }
 	LocalMemDecls& getLocalMemDecls() {	return localMemDecls; }
+	EquivalenceMap& getEquivalenceMap() { return eqMap; }
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& getReplacements() { return replacements; }
 };
 

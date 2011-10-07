@@ -121,7 +121,7 @@ protected:
 	/**
 	 * Obtains a list of all nodes referenced by this program node.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 

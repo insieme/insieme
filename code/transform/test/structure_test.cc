@@ -59,6 +59,57 @@ namespace pattern {
 		tree = makeTree(tree, makeTree('b'), makeTree());
 		EXPECT_EQ("(a,b,())", toString(tree));
 
+		// test values:
+		tree = makeValue(true);
+		EXPECT_EQ("true", toString(tree));
+
+		tree = makeValue(false);
+		EXPECT_EQ("false", toString(tree));
+
+		tree = makeValue(15);
+		EXPECT_EQ("15", toString(tree));
+
+		tree = makeValue<string>("Hello");
+		EXPECT_EQ("\"Hello\"", toString(tree));
+
+	}
+
+	TEST(Tree, Equality) {
+
+		TreePtr a;
+		TreePtr b;
+
+		a = makeValue(true);
+		b = makeValue(true);
+
+		EXPECT_EQ(*a,*b);
+
+		b = makeValue(false);
+		EXPECT_NE(*a,*b);
+
+		a = makeValue(14);
+		b = makeValue(14);
+		EXPECT_EQ(*a,*b);
+
+		b = makeValue(15);
+		EXPECT_NE(*a,*b);
+
+		// simple tree test
+		a = makeTree('a');
+		b = makeTree('a');
+		EXPECT_EQ(*a,*b);
+
+		b = makeTree('b');
+		EXPECT_NE(*a,*b);
+
+		// larger tree test
+		a = makeTree('a', makeTree('b'), makeValue(14));
+		b = makeTree('a', makeTree('b'), makeValue(14));
+		EXPECT_EQ(*a,*b);
+
+		b = makeTree('a', makeTree('b'), makeValue(16));
+		EXPECT_NE(*a,*b);
+
 	}
 
 } // end namespace pattern

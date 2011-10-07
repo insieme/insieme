@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/ast_mapper.h"
 
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -88,7 +89,6 @@ public:
 	 */
 	virtual const NodePtr resolveElement(const NodePtr& ptr) = 0;
 
-
 };
 
 
@@ -111,8 +111,23 @@ class ChildListMapping : public NodeMapping {
 
 public:
 
-	ChildListMapping(const Node::ChildList& list, NodeMapping& mapping)
+	/**
+	 * Creates a new child list mapping based on the given child list and the given mapping.
+	 * The represented list of replaced child nodes will be computed using the given list and mapping.
+	 */
+	ChildListMapping(const NodeList& list, NodeMapping& mapping)
 		: NodeMapping(), children(mapping.map(0, list)), different(!equals(children, list)) {}
+
+	/**
+	 * Create a new child list mapping based on the given list of children. The optional boolean
+	 * flag allows to specify whether this list of children is actually different from the original list
+	 * of children.
+	 *
+	 * @param children the children to be offered as a substitute by this mapping
+	 * @param different a flag allowing to determine whether the given list of children differs from the original child list
+	 */
+	ChildListMapping(const NodeList& children, bool different = true)
+		: NodeMapping(), children(children), different(different) {}
 
 	/**
 	 * Determines whether this mapping would cause any modification when being applied
@@ -135,7 +150,6 @@ public:
 	}
 
 };
-
 
 } // end namespace transform
 } // end namespace core

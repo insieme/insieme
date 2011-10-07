@@ -56,7 +56,12 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	LocalMemDecls& localMemDecls;
 	KernelNames& kernelNames;
 	KernelLambdas& kernelLambdas;
-	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+	EquivalenceMap& eqMap;
+	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& replacements;
+	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varReplacements;
+
+	// Generates a function which, taking the kernel name as a string as argument, returns the corresponding lambda
+	const core::ExpressionPtr genGetKernelLambda();
 
 	// get the zero element of the corresponding type
 	const core::ExpressionPtr getZeroElem(const core::TypePtr& type);
@@ -80,11 +85,14 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 
 public:
 	HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
-			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> oclReplacements) :
+			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, EquivalenceMap& equivalenceMap,
+			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& oclReplacements) :
 		builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs),	localMemDecls(oclLocalMemDecls), kernelNames(oclKernelNames),
-			kernelLambdas(oclKernelLambdas), replacements(oclReplacements) { }
+			kernelLambdas(oclKernelLambdas), eqMap(equivalenceMap), replacements(oclReplacements) { }
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
+
+	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr>& getVarReplacements(){ return varReplacements; }
 
 };
 

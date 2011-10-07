@@ -34,33 +34,28 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/transform/sequential/dead_code_elimination.h"
 
-#include <stdbool.h>
-#include <string.h>
-#include <stdarg.h>
+namespace insieme {
+namespace transform {
+namespace sequential {
 
-typedef enum _irt_errcode {
-	IRT_ERR_NONE,			// no error
-	IRT_ERR_IO,			// I/O error
-	IRT_ERR_INIT,			// error related to initialization
-	IRT_ERR_INTERNAL,		// internal error caused by runtime system
-	IRT_ERR_APP,			// error caused by the user application running on the IRT
-	IRT_ERR_OCL			// error caused by the opencl runtime system
-} irt_errcode;
 
-struct _irt_error {
-	irt_errcode errcode;
-	int additional_bytes;
-};
-// IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting platforms: \"%s\"", _irt_error_string(err_code));
-#define IRT_ASSERT(__condition, __errcode, __message, ...) \
-if(!(__condition)) { \
-	fprintf(stderr, "IRT Assertion failure in %s#%d:\n", __FILE__, __LINE__); \
-	printf(__message, ##__VA_ARGS__); \
-	printf("\n"); \
-}
+	bool DeadCodeElimination::checkPreCondition(const core::NodePtr& target) const {
+		// can only be applied to statements and expressions
+		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
+	}
 
-#define IRT_INFO(__message, ...) { \
-	printf(__message, ##__VA_ARGS__); \
-}
+	core::NodePtr DeadCodeElimination::apply(const core::NodePtr& target) const throw (InvalidTargetException) {
+		// do nothing so far
+		return target;
+	}
+
+	bool DeadCodeElimination::checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
+		// just check that the node type hasn't changed (no real post-conditions yet)
+		return before->getNodeType() == after->getNodeType();
+	}
+
+} // end namespace sequential
+} // end namespace transform
+} // end namespace insieme

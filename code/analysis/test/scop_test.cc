@@ -92,7 +92,7 @@ TEST(ScopRegion, IfStmt) {
 		EXPECT_EQ("(|v4,v5,v7,v8|1)", ss.str());
 	}
 
-	EXPECT_FALSE( static_cast<bool>(annIf.getDomainConstraints()) );
+	EXPECT_FALSE( annIf.getDomainConstraints().isEmpty() );
 
 	EXPECT_TRUE(ifStmt->getThenBody()->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& annThen = *ifStmt->getThenBody()->getAnnotation(scop::ScopRegion::KEY);
@@ -106,7 +106,7 @@ TEST(ScopRegion, IfStmt) {
 		ss << annThen.getIterationVector();
 		EXPECT_EQ("(|v7,v8|1)", ss.str());
 	}
-	EXPECT_FALSE( static_cast<bool>(annThen.getDomainConstraints()) );
+	EXPECT_FALSE( annThen.getDomainConstraints().isEmpty() );
 
 	EXPECT_TRUE(ifStmt->getElseBody()->hasAnnotation(scop::ScopRegion::KEY));
 	scop::ScopRegion& annElse = *ifStmt->getElseBody()->getAnnotation(scop::ScopRegion::KEY);
@@ -120,7 +120,7 @@ TEST(ScopRegion, IfStmt) {
 		ss << annElse.getIterationVector();
 		EXPECT_EQ("(|v7,v8|1)", ss.str());
 	}
-	EXPECT_FALSE( static_cast<bool>(annElse.getDomainConstraints()) );
+	EXPECT_FALSE( annElse.getDomainConstraints().isEmpty() );
 
 }
 
@@ -130,7 +130,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	parse::IRParser parser(mgr);
 
     auto forStmt = static_pointer_cast<const ForStmt>( parser.parseStatement("\
-		for(decl int<4>:i = 10 .. 50 : -1) { \
+		for(decl int<4>:i = 10 .. 50 : 1) { \
 			(op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b))); \
 		}") );
 	// std::cout << *forStmt << std::endl;
@@ -152,7 +152,7 @@ TEST(ScopRegion, SimpleForStmt) {
 	}
 	{ 
 		std::ostringstream ss;
-		ss << *ann.getDomainConstraints();
+		ss << ann.getDomainConstraints();
 		EXPECT_EQ("((1*v9 + -10*1 >= 0) AND (1*v9 + -50*1 < 0))", ss.str());
 	}
 	EXPECT_TRUE(forStmt->getBody()->hasAnnotation(scop::ScopRegion::KEY));
@@ -217,10 +217,49 @@ TEST(ScopRegion, SwitchStmt) {
 			}") 
 		);
 	std::cout << "Parsed Stmt: " << compStmt << std::endl;
+	scop::mark(compStmt);
+
+	EXPECT_TRUE( compStmt->hasAnnotation(scop::ScopRegion::KEY) );
+	EXPECT_EQ( NT_SwitchStmt, (*compStmt)[3]->getNodeType() );
+	const SwitchStmtPtr& switchStmt = static_pointer_cast<const SwitchStmt>((*compStmt)[3]);
 	
+	EXPECT_TRUE( switchStmt->hasAnnotation(scop::ScopRegion::KEY) );
+
+	// check the then body
+	scop::ScopRegion& ann = *switchStmt->getAnnotation(scop::ScopRegion::KEY);
+	const poly::IterationVector& iterVec = ann.getIterationVector(); 
+
+	EXPECT_EQ(static_cast<size_t>(4), iterVec.size());
+	EXPECT_EQ(static_cast<size_t>(0), iterVec.getIteratorNum());
+	EXPECT_EQ(static_cast<size_t>(3), iterVec.getParameterNum());
 	
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(|v17,v21,v19|1)", ss.str());
+	}
 
 	scop::mark(compStmt);
 }
+
+TEST(ScopRegion, NotAScopForStmt) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+
+    auto compStmt = static_pointer_cast<const CompoundStmt>( parser.parseStatement("{\
+		ref<int<4>>:N; \
+		for(decl int<4>:i = 10 .. N : 1) { \
+			(N = (op<array.ref.elem.1D>(ref<array<int<4>,1>>:v, (i+int<4>:b)))); \
+		}; \
+	}") );
+	// std::cout << *forStmt << std::endl;
+	scop::AddressList&& scops = scop::mark(compStmt);
+
+	EXPECT_FALSE(compStmt->hasAnnotation(scop::ScopRegion::KEY));
+	EXPECT_EQ(0, scops.size());
+}
+
+
 
 

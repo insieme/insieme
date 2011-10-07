@@ -112,3 +112,27 @@ void testMap() {
 	EXPECT_FALSE ( insieme::utils::map::equal(mapA, mapB) );
 }
 
+
+TEST(MapUtilsTest, toPointerMap) {
+
+	int a = 2;
+	int b = 3;
+	int c = 2;
+
+	auto map = toPointerMap<int*, string>(&a, "Hello");
+
+	EXPECT_EQ("Hello", map[&a]);
+	EXPECT_EQ("Hello", map[&c]);
+
+	map = toPointerMap<int*, string>(
+			&a, "Hello",
+			&b, "World",
+			&c, "Under");
+
+	EXPECT_EQ("Under", map[&a]);
+	EXPECT_EQ("World", map[&b]);
+
+	a = 3;
+	EXPECT_EQ("World", map[&a]);
+
+}

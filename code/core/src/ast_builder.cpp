@@ -114,6 +114,20 @@ namespace {
 
 }
 
+
+NodePtr ASTBuilder::get(NodeType type, const NodeList& children) const {
+
+	switch(type) {
+	#define CONCRETE(KIND) \
+		case NT_ ## KIND : return get< NT_## KIND >(children);
+	#include "insieme/core/ast_nodes.def"
+	#undef CONCRETE
+	}
+
+	assert(false && "Unsupported node type added!");
+	return NodePtr();
+}
+
 ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints, bool main) {
 	return Program::create(manager, entryPoints, main);
 }
@@ -467,7 +481,7 @@ ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, string member) 
 
 ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
 	core::TypePtr type = structExpr->getType();
-	assert(type->getNodeType() == core::NT_StructType);
+	assert(type->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
 
 	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
 	core::TypePtr memberType = structType->getTypeOfMember(member);
@@ -477,12 +491,16 @@ ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr m
 	return callExpr(memberType, access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
 }
 
+ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, string member) const {
+	return refMember(structExpr, identifier(member));
+}
+
 ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr member) const {
 	core::TypePtr type = structExpr->getType();
-	assert(type->getNodeType() == core::NT_RefType);
+	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
 	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
-	assert(elementType->getNodeType() == core::NT_StructType);
+	assert(elementType->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
 
 	core::StructTypePtr structType = static_pointer_cast<const core::StructType>(elementType);
 	core::TypePtr memberType = structType->getTypeOfMember(member);
@@ -490,6 +508,11 @@ ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr memb
 	// create access instruction
 	core::ExpressionPtr access = getBasicGenerator().getCompositeRefElem();
 	return callExpr(refType(memberType), access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+}
+
+ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+	unsigned idx = extractNumberFromExpression(component);
+	return accessComponent(tupleExpr, idx);
 }
 
 ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
@@ -507,6 +530,27 @@ ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned comp
 	return callExpr(componentType, access, tupleExpr, index, typeLiteral);
 }
 
+ExpressionPtr ASTBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+	unsigned idx = extractNumberFromExpression(component);
+	return refComponent(tupleExpr, idx);
+}
+ExpressionPtr ASTBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
+	core::TypePtr type = tupleExpr->getType();
+	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
+
+	core::TypePtr elementType = static_pointer_cast<const core::RefType>(type)->getElementType();
+	assert(elementType->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
+
+	core::TupleTypePtr tupleType = static_pointer_cast<const core::TupleType>(elementType);
+	assert(component < tupleType->getElementTypes().size() && "Component out of range!");
+	core::TypePtr componentType = tupleType->getElementTypes()[component];
+
+	// create access instruction
+	core::ExpressionPtr access = getBasicGenerator().getTupleRefElem();
+	core::ExpressionPtr index = literal(getBasicGenerator().getUInt8(), utils::numeric_cast<string>(component));
+	core::ExpressionPtr typeLiteral = getBasicGenerator().getTypeLiteral(componentType);
+	return callExpr(refType(componentType), access, tupleExpr, index, typeLiteral);
+}
 
 
 // ---------------------------- Utilities ---------------------------------------
@@ -516,6 +560,29 @@ ASTBuilder::TypeList ASTBuilder::extractParamTypes(const ParamList& params) {
 	std::transform(params.cbegin(), params.cend(), std::back_inserter(paramTypes),
 		[](const VariablePtr& p) { return p->getType(); });
 	return paramTypes;
+}
+
+unsigned ASTBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
+
+	unsigned idx = 0;
+	// search for the literal in the second argument
+	auto lambdaVisitor = makeLambdaVisitor([&idx, this](const NodePtr& node)->bool {
+		// check for literal, assuming it will always be a valid integer
+		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(node)) {
+			if(getBasicGenerator().isInt(lit->getType())) {
+				idx = atoi(lit->getValue().c_str());
+				return true;
+			}
+		}
+		return false;
+	});
+
+	if(!visitDepthFirstInterruptable(expr, lambdaVisitor)){
+		LOG(ERROR) << expr;
+		assert(false && "Expression does not contain a literal a number");
+	}
+
+	return idx;
 }
 
 #include "ast_builder_impl.inl"

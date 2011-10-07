@@ -17,7 +17,7 @@ INSIEMEC='${CMAKE_BINARY_DIR}/code/driver/main'
 
 USE_SMP = 1
 USE_SEQ = 0
-USE_RUN = 0
+USE_RUN = 1
 
 # compiler flags
 SRC_DIR = "${CMAKE_SOURCE_DIR}"
@@ -322,9 +322,14 @@ def run_test_case(test_case_name):
 				sys.stderr.write(" * -> " + bcolors.OKGREEN  +"Success." + bcolors.ENDC + "\n")
 
 
+				input_args = ""
+				if os.path.exists("prog.input"):
+					input_args = open("prog.input").read().strip()
+
 				sys.stderr.write(" * Running input program...              ")
 				start = time.time()
-				exitValue = os.system("./{0} > {1}".format(ref_exec, ref_out)) >> 8
+				exitValue = os.system("./{0} {1} > {2}".format(ref_exec, input_args, ref_out)) >> 8
+
 				if exitValue != 0:
 					sys.stderr.write(bcolors.FAIL + '[FAILED - {0}]'.format(exitValue) + bcolors.ENDC + '\n');
 					return 1
@@ -336,7 +341,8 @@ def run_test_case(test_case_name):
 					ldPath = os.getenv("LD_LIBRARY_PATH", "");
 					os.putenv("LD_LIBRARY_PATH", ldPath + ":${CMAKE_BINARY_DIR}/code/simple_backend");
 					start = time.time()
-					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_smp_exec, test_smp_out)) >> 8;
+					exitValue = os.system("./{0} {1} > {2} 2> /dev/null".format(test_smp_exec,
+						input_args, test_smp_out)) >> 8;
 					if exitValue != 0:
 						if exitValue == 139:
 							sys.stderr.write(bcolors.FAIL + '[FAILED - SegFault]' + bcolors.ENDC + '\n');
@@ -350,7 +356,8 @@ def run_test_case(test_case_name):
 				if USE_SEQ:
 					sys.stderr.write(" * Running SEQ program...                ")
 					start = time.time()
-					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_seq_exec, test_seq_out)) >> 8;
+					exitValue = os.system("./{0} {1} > {2} 2> /dev/null".format(test_seq_exec,
+						input_args, test_seq_out)) >> 8;
 					if exitValue != 0:
 						if exitValue == 139:
 							sys.stderr.write(bcolors.FAIL + '[FAILED - SegFault]' + bcolors.ENDC + '\n');
@@ -363,7 +370,8 @@ def run_test_case(test_case_name):
 				if USE_RUN:
 					sys.stderr.write(" * Running RUN program...                ")
 					start = time.time()
-					exitValue = os.system("./{0} > {1} 2> /dev/null".format(test_run_exec, test_run_out)) >> 8;
+					exitValue = os.system("./{0} {1} > {2} 2> /dev/null".format(test_run_exec,
+						input_args, test_run_out)) >> 8;
 					if exitValue != 0:
 						if exitValue == 139:
 							sys.stderr.write(bcolors.FAIL + '[FAILED - SegFault]' + bcolors.ENDC + '\n');

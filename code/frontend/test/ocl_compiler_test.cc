@@ -118,7 +118,7 @@ public:
     void visitJobExpr(const core::JobExprPtr& job) {
 //        std::cout << ": get a job!\n";
 
-        core::JobExpr::ChildList childs = job->getChildList();
+        const core::NodeList& childs = job->getChildList();
         //at least the local and global range has to be captured as well as the type and the  range
         EXPECT_LE(static_cast<unsigned>(4), childs.size());
 /*

@@ -160,8 +160,41 @@ class ConversionFactory : public boost::noncopyable {
 		typedef utils::map::PointerMap<insieme::core::VariablePtr, insieme::core::VariablePtr> WrapRefMap;
 		WrapRefMap wrapRefMap;
 
+		core::ExpressionPtr thisStack2; // not only of type core::Variable - in nested classes
+		core::ExpressionPtr thisVar; // used in Functions as reference
+
+		typedef std::map<const clang::SourceLocation, core::VariablePtr> ThisMap;
+		ThisMap thisMap;
+
+		// current Type of class
+		core::TypePtr curTy;
+
+		bool useClassCast;
+
+		// for operators
+		bool isCXXOperator;
+
+		// type on which the operator is called
+		core::TypePtr operatorTy;
+
+		core::ExpressionPtr lhsThis;
+		core::ExpressionPtr rhsThis;
+
+
+		// maps the resulting type pointer to the declaration of a class
+		typedef std::map<const clang::TagDecl*, core::TypePtr> ClassDeclMap;
+		ClassDeclMap classDeclMap;
+
+		// maps a constructor declaration to the call expression with memory allocation - such
+		// a call expression returns a pointer to the allocated and initialized object
+		LambdaExprMap lambdaExprCacheNewObject;
+
+		// maps the values of each constructor initializer to its declaration, e.g. A() a(0) {} => a...field, 0...value
+		typedef std::map<const clang::FieldDecl*, core::ExpressionPtr> CtorInitializerMap;
+		CtorInitializerMap ctorInitializerMap;
+
 		ConversionContext() :
-			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false) { }
+			isRecSubFunc(false), isResolvingRecFuncBody(false), curParameter(0), isRecSubType(false), isResolvingFunctionType(false), useClassCast(false), isCXXOperator(false) { }
 	};
 
 	ConversionContext 		ctx;

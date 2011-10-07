@@ -85,7 +85,7 @@ class BreakStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -100,7 +100,7 @@ class ContinueStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -117,7 +117,7 @@ class ReturnStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -137,7 +137,7 @@ class DeclarationStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -155,7 +155,7 @@ class CompoundStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	typedef vector<StatementPtr> StatementList;
@@ -178,41 +178,41 @@ private:
 
 class WhileStmt: public Statement {
 	ExpressionPtr condition;
-	StatementPtr body;
+	CompoundStmtPtr body;
 
-	WhileStmt(const ExpressionPtr& condition, const StatementPtr& body);
+	WhileStmt(const ExpressionPtr& condition, const CompoundStmtPtr& body);
 	virtual WhileStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const ExpressionPtr& getCondition() const { return condition; }
-	const StatementPtr& getBody() const { return body; }
+	const CompoundStmtPtr& getBody() const { return body; }
 
 	static WhileStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body);
 };
 
 class ForStmt: public Statement {
 	DeclarationStmtPtr declaration;
-	StatementPtr body;
+	CompoundStmtPtr body;
 	ExpressionPtr end, step;
 
-	ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step);
+	ForStmt(const DeclarationStmtPtr& declaration, const CompoundStmtPtr& body, const ExpressionPtr& end, const ExpressionPtr& step);
 	virtual ForStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 
 	const DeclarationStmtPtr& getDeclaration() const { return declaration; }
-	const StatementPtr& getBody() const { return body; }
+	const CompoundStmtPtr& getBody() const { return body; }
 	const ExpressionPtr& getEnd() const { return end; }
 	const ExpressionPtr& getStep() const { return step; }
 	
@@ -222,22 +222,22 @@ public:
 
 class IfStmt: public Statement {
 	ExpressionPtr condition;
-	StatementPtr thenBody;
-	StatementPtr elseBody;
+	CompoundStmtPtr thenBody;
+	CompoundStmtPtr elseBody;
 	
-	IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody);
+	IfStmt(const ExpressionPtr& condition, const CompoundStmtPtr& thenBody, const CompoundStmtPtr& elseBody);
 	virtual IfStmt* createCopyUsing(NodeMapping& mapper) const;
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
 	
 	const ExpressionPtr& getCondition() const { return condition; }
-	const StatementPtr& getThenBody() const { return thenBody; }
-	const StatementPtr& getElseBody() const { return elseBody; }
+	const CompoundStmtPtr& getThenBody() const { return thenBody; }
+	const CompoundStmtPtr& getElseBody() const { return elseBody; }
 
 	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& thenBody);
 	static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody);
@@ -257,7 +257,7 @@ private:
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -284,7 +284,7 @@ class MarkerStmt : public Statement {
 protected:
 
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 

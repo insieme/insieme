@@ -251,6 +251,24 @@ std::size_t computeHash(const Set& set) {
 } // end namespace: insieme
 
 /**
+ * Allows to print sets containing printable elements.
+ *
+ * @param out the stream to which the given vector should be printed to
+ * @param container the set to be printed
+ * @return the handed in ostream to chain operation invocations.
+ */
+template<typename Key, typename Compare, typename Allocator>
+std::ostream& operator<<(std::ostream& out, const std::set<Key, Compare, Allocator>& container) {
+
+	// convert elements into strings
+	std::vector<std::string> list;
+	std::transform(container.begin(), container.end(), back_inserter(list), &toString<Key>);
+
+	// print and done
+	return out << "{" << boost::join(list, ",") << "}";
+}
+
+/**
  * Allows to print unordered sets including printable elements.
  *
  * @param out the stream to which the given vector should be printed to

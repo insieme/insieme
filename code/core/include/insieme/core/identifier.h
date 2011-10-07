@@ -42,9 +42,6 @@
 
 #include "insieme/core/ast_node.h"
 
-#include "insieme/utils/hash_utils.h"
-#include "insieme/utils/instance_manager.h"
-
 namespace insieme {
 namespace core {
 
@@ -92,8 +89,8 @@ namespace core {
 		/**
 		 * Obtains an empty child list.
 		 */
-		virtual OptionChildList getChildNodes() const {
-			return std::make_shared<ChildList>();
+		virtual NodeListOpt getChildNodes() const {
+			return std::make_shared<NodeList>();
 		}
 
 		/**

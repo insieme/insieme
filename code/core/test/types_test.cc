@@ -53,7 +53,7 @@ namespace insieme {
 namespace core {
 
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, const Node::ChildList& children = Node::ChildList());
+void basicTypeTests(PT type, bool concrete, const NodeList& children = NodeList());
 
 TEST(TypeTest, NodeManager ) {
 
@@ -186,7 +186,7 @@ TEST(TypeTest, GenericType) {
 		basicTypeTests(typeF, true, toVector<NodePtr>(typeA));
 	}{
 		SCOPED_TRACE ( "typeG" );
-		Node::ChildList list = toList(typeListA);
+		NodeList list = toList(typeListA);
 		list.push_back(paramB);
 		list.push_back(typeA);
 		basicTypeTests(typeG, true, list);
@@ -345,8 +345,8 @@ TEST(TypeTest, RecType) {
 
 namespace {
 
-	Node::ChildList extractChildren(const NamedCompositeType::Entries& entries) {
-		Node::ChildList res;
+	NodeList extractChildren(const NamedCompositeType::Entries& entries) {
+		NodeList res;
 		for_each(entries, [&](const NamedCompositeType::Entry& cur) {
 			res.push_back(cur.first);
 			res.push_back(cur.second);
@@ -660,7 +660,7 @@ TEST(TypeTest, IntTypeParam) {
 
 
 template<typename PT>
-void basicTypeTests(PT type, bool concrete, const Node::ChildList& children) {
+void basicTypeTests(PT type, bool concrete, const NodeList& children) {
 
 	typedef typename PT::element_type T;
 

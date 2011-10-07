@@ -53,6 +53,7 @@
 
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/ExprCXX.h>
+#include <clang/AST/DeclTemplate.h>
 
 using namespace clang;
 using namespace insieme;
@@ -166,7 +167,7 @@ public:
 		// real types
 		case BuiltinType::Float:		return gen.getFloat();
 		case BuiltinType::Double:		return gen.getDouble();
-		case BuiltinType::LongDouble:	// unsopported FIXME
+		case BuiltinType::LongDouble:	return gen.getDouble(); // unsopported FIXME
 
 		// not supported types
 		case BuiltinType::NullPtr:		
@@ -426,6 +427,7 @@ public:
 	//					TAG TYPE: STRUCT | UNION | CLASS | ENUM
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitTagType(const TagType* tagType) {
+		VLOG(2)<< "VisitTagType " << tagType << "\n";
 		if(!convFact.ctx.recVarMap.empty()) {
 			// check if this type has a typevar already associated, in such case return it
 			ConversionContext::TypeRecVarMap::const_iterator fit = convFact.ctx.recVarMap.find(tagType);
@@ -450,6 +452,11 @@ public:
 		VLOG(1) << "~ Converting TagType: " << tagType->getDecl()->getName().str();
 
 		const TagDecl* tagDecl = tagType->getDecl()->getCanonicalDecl();
+		ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(tagDecl);
+		if(cit != convFact.ctx.classDeclMap.end()){
+			return cit->second;
+		}
+
 		// iterate through all the re-declarations to see if one of them provides a definition
 		TagDecl::redecl_iterator i,e = tagDecl->redecls_end();
 		for(i = tagDecl->redecls_begin(); i != e && !i->isDefinition(); ++i) ;
@@ -462,6 +469,7 @@ public:
 				// Enums are converted into integers
 				return convFact.builder.getBasicGenerator().getInt4();
 			} else {
+
 
 
 
@@ -519,6 +527,67 @@ public:
 				// Note: if a field is referring one of the type in the cyclic dependency, a reference
 				//       to the TypeVar will be returned.
 				core::NamedCompositeType::Entries structElements;
+
+				// TODO
+				// c++ constructors
+				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
+				VLOG(2)<<recDeclCXX;
+
+				if(recDeclCXX){
+
+					vector<clang::RecordDecl*> bases = getAllBases(recDeclCXX);
+					VLOG(2) << "has "<< bases.size() << " bases";
+					for(vector<clang::RecordDecl*>::iterator bit=bases.begin(),
+							bend=bases.end(); bit != bend; ++bit) {
+						RecordDecl *baseRecord = *bit;
+
+						for(RecordDecl::field_iterator it=baseRecord->field_begin(),
+								end=baseRecord->field_end(); it != end; ++it) {
+							RecordDecl::field_iterator::value_type curr = *it;
+							core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
+							core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+							structElements.push_back(
+									core::NamedCompositeType::Entry(id, fieldType )
+								);
+						}
+
+					}
+
+
+//					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
+//							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
+//						CXXConstructorDecl * ctorDecl = *xit;
+//						VLOG(1) << "~ Converting constructor: '" << funcDecl->getNameAsString() << "' isRec?: " << ctx.isRecSubFunc;
+//
+//						core::TypePtr convertedType = convFact.convertType( GET_TYPE_PTR(ctorDecl) );
+//						assert(convertedType->getNodeType() == core::NT_FunctionType && "Converted type has to be a function type!");
+//						core::FunctionTypePtr funcType = core::static_pointer_cast<const core::FunctionType>(convertedType);
+//
+//						//TODO funcType = addGlobalsToFunctionType(convFact.builder, convFact.ctx.globalStruct.first, funcType);
+//
+//						convFact.convertFunctionDecl(ctorDecl);
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						//curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+//
+//					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
+//							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
+//						CXXMethodDecl * curr = *mit;
+//						//convFact.convertFunctionDecl(curr, false);
+//
+//						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
+//						//curr->dumpDeclContext(); // on cerr
+//						//std::cerr<<"enddumpconstr\n";
+//						//core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
+//						//core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
+//					}
+
+				}  // end if recDeclCXX
+
+				
 				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
 					RecordDecl::field_iterator::value_type curr = *it;
 					core::TypePtr&& fieldType = Visit( const_cast<Type*>(GET_TYPE_PTR(curr)) );
@@ -532,38 +601,11 @@ public:
 							core::NamedCompositeType::Entry(id, fieldType )
 						);
 				}
-
-
-				// TODO
-				// c++ constructors
-				const CXXRecordDecl* recDeclCXX = dyn_cast<const CXXRecordDecl>(recDecl);
-
-				if(recDeclCXX){
-					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
-							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
-						//CXXRecordDecl::ctor_iterator::value_type curr = *xit;
-						CXXConstructorDecl * curr = *xit;
-						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-						curr->dumpDeclContext(); // on cerr
-						//std::cerr<<"enddumpconstr\n";
-						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-					}
-
-					for(CXXRecordDecl::method_iterator mit=recDeclCXX->method_begin(),
-							mend=recDeclCXX->method_end(); mit != mend; ++mit) {
-						CXXMethodDecl * curr = *mit;
-						//std::cerr<<"dumpconstr: "<< curr->getNameAsString() << " ";
-						curr->dumpDeclContext(); // on cerr
-						//std::cerr<<"enddumpconstr\n";
-						core::StatementPtr&& body = convFact.convertStmt(curr->getBody());
-						core::IdentifierPtr id = convFact.builder.identifier(curr->getNameAsString());
-					}
-				}
+				
 
 				// For debug only ...
-//				std::cerr << "\n***************Type graph\n";
-//				typeGraph.print(std::cerr);
+				// std::cerr << "\n***************Type graph\n";
+				// typeGraph.print(std::cerr);
 
 				// build a struct or union IR type
 				retTy = handleTagType(tagDecl, structElements);
@@ -628,12 +670,9 @@ public:
 
 
 
-
-
-
-
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
+				convFact.ctx.classDeclMap.insert(std::make_pair(tagDecl, retTy));
 			}
 		} else {
 			// We didn't find any definition for this type, so we use a name and define it as a generic type
@@ -642,6 +681,38 @@ public:
 		END_LOG_TYPE_CONVERSION( retTy );
 		return retTy;
 	}
+
+	// Returns all bases of a c++ record declaration
+	vector<RecordDecl*> getAllBases(const clang::CXXRecordDecl* recDeclCXX ){
+		vector<RecordDecl*> bases;
+
+		for(CXXRecordDecl::base_class_const_iterator bit=recDeclCXX->bases_begin(),
+				bend=recDeclCXX->bases_end(); bit != bend; ++bit) {
+			const CXXBaseSpecifier * base = bit;
+			RecordDecl *baseRecord = base->getType()->getAs<RecordType>()->getDecl();
+			bases.push_back(baseRecord);
+			vector<RecordDecl*> subBases = getAllBases(dyn_cast<clang::CXXRecordDecl>(baseRecord));
+			bases.insert(bases.end(), subBases.begin(), subBases.end());
+		}
+		return bases;
+	}
+
+	//TODO
+	core::FunctionTypePtr addCXXThisToFunctionType(const core::ASTBuilder& builder,
+							 	 	 	 	 	   const core::TypePtr& globals,
+							 	 	 	 	 	   const core::FunctionTypePtr& funcType) {
+
+		const std::vector<core::TypePtr>& oldArgs = funcType->getParameterTypes();
+
+		std::vector<core::TypePtr> argTypes(oldArgs.size()+1);
+
+		std::copy(oldArgs.begin(), oldArgs.end(), argTypes.begin()+1);
+		// function is receiving a reference to the global struct as the first argument
+		argTypes[0] = builder.refType(globals);
+		return builder.functionType( argTypes, funcType->getReturnType() );
+
+	}
+
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							ELABORATED TYPE (TODO)
@@ -652,6 +723,7 @@ public:
 	    elabType->desugar().getTypePtr()->dump();
 	    std::cerr << elabType->getBaseElementTypeUnsafe() << std::endl <<"ElaboratedType not yet handled!!!!\n";
 */
+		VLOG(2) << "elabtype " << elabType << "\n";
 	    return Visit(elabType->desugar().getTypePtr());
 //		assert(false && "ElaboratedType not yet handled!");
 	}

@@ -608,7 +608,9 @@ namespace {
 
 }
 
-TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes) {
+const char* ReturnTypeDeductionException::msg = "Unable to deduce return type.";
+
+TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes) {
 
 	NodeManager& manager = funType->getNodeManager();
 
@@ -617,12 +619,7 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 
 	// check whether derivation was successful
 	if (!varInstantiation) {
-		// print a warning
-		LOG(WARNING) << "Unable to deduce return type for call to function of type "
-				<< toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
-
-		// return unit type
-		return manager.basic.getUnit();
+		throw ReturnTypeDeductionException();
 	}
 
 	// extract return type
@@ -630,6 +627,22 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 
 	// compute and return the expected return type
 	return varInstantiation->applyTo(manager, resType);
+}
+
+TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumentTypes, bool unitOnFail) {
+	try {
+
+		// try deducing the return type ...
+		return tryDeduceReturnType(funType, argumentTypes);
+
+	} catch (const ReturnTypeDeductionException&) {
+		// didn't work => print a warning
+		LOG(WARNING) << "Unable to deduce return type for call to function of type "
+				<< toString(*funType) << " using arguments " << join(", ", argumentTypes, print<deref<TypePtr>>());
+
+	}
+	// return null ptr
+	return unitOnFail ? funType->getNodeManager().getBasicGenerator().getUnit() : TypePtr();
 }
 
 

@@ -110,7 +110,8 @@ public:
  * levels. 
  *************************************************************************************************/
 struct Iterator : public Expr {
-	Iterator(const core::VariablePtr& var) : Expr(Element::ITER, var) { } 
+	Iterator(const core::VariablePtr& var, bool existence=false) : 
+		Expr(Element::ITER, var), existence(existence) { } 
 	
 	const core::VariablePtr& getVariable() const { 
 		return core::static_pointer_cast<const core::Variable>(getExpr()); 
@@ -122,6 +123,11 @@ struct Iterator : public Expr {
 	
 	// Implements the printable interface
 	std::ostream& printTo(std::ostream& out) const;
+
+	inline bool isExistential() const { return existence; }
+
+private:
+	bool existence;
 };
 
 /**************************************************************************************************

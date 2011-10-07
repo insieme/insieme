@@ -62,37 +62,77 @@ namespace backend {
 	class VariableManager;
 	class StmtConverter;
 	class FunctionManager;
-	class ParallelManager;
 
 	class TargetCode;
 	typedef std::shared_ptr<TargetCode> TargetCodePtr;
 
-
-	struct ConverterConfig {
-
-		// - no configuration so far -
-
-		static ConverterConfig getDefault() {
-			ConverterConfig res;
-			return res;
-		}
-	};
-
+	/**
+	 * The core converter class of the backend framework. A converter instance
+	 * collects a list of pointers to managers handling particular parts of the backend
+	 * conversion process. For each of those managers, an abstract virtual base class
+	 * (interface) is defined. Individual implementations of backends may exchange the
+	 * particular implementations to customize the code generation.
+	 */
 	class Converter : private boost::noncopyable {
 
 		// ------- The Pre- and Post- Processors applied before the conversion -----------
 
+		/**
+		 * The pre-processor will be applied on the IR before the conversion into the
+		 * target code (C AST) will be conducted. Preprocessors should be used to conduct
+		 * analysis on the given IR required during the conversion process to simplify the
+		 * actual conversion within the subsequent converter and manager implementations.
+		 *
+		 * Also, pre-processors should be used to specialize implementations for individual
+		 * target platforms (sequential code, shared memory, distributed memory or OpenCL)
+		 * and to conduct target specific optimizations.
+		 */
 		PreProcessorPtr preProcessor;
+
+		/**
+		 * The post-processor will be applied on the resulting C AST after the conversion
+		 * IR <=> C AST took place. Post-processors may be used to introduce additional C
+		 * constructs like instrumentation code into the resulting AST or to performe some
+		 * target code based code optimizations.
+		 */
 		PostProcessorPtr postProcessor;
 
 		// ------- Manager involved in the conversion process -----------
 
+		/**
+		 * The name manager is used to obtain identifiers for types, variables and functions
+		 * within the generated code. This manager serves mainly cosmetic purposes.
+		 */
 		NameManager* nameManager;
+
+		/**
+		 * The type manager is responsible for resolving IR types and converting them into
+		 * equivalent C code. Also, it is responsible for ensuring that type declarations
+		 * and definitions are properly arranged within the resulting C code.
+		 */
 		TypeManager* typeManager;
-		VariableManager* variableManager;
+
+		/**
+		 * The statement (and expression) converter is responsible for converting
+		 * all IR statements and expressions into equivalent C constructs. It further
+		 * supports the conversion of IR programs. It therefore uses the services
+		 * offered by the remaining manages and may also be used recursively by the
+		 * other managers.
+		 *
+		 * The statement converter is the main entry point when triggering a IR to C
+		 * conversion.
+		 */
 		StmtConverter* stmtConverter;
+
+		/**
+		 * The function manager is responsible for creating function declarations and
+		 * definitions. Further, it is responsible for resolving function calls and handling
+		 * functions when being passed as first class citizens within the IR. Whenever
+		 * a function call, a bind or a lambda expression is encountered during the
+		 * conversion process, the handling of those is being passed on to the function
+		 * manager (by the statement converter).
+		 */
 		FunctionManager* functionManager;
-		ParallelManager* parallelManager;
 
 		// -------- Node Managers for Source and Target Code ------------
 
@@ -101,20 +141,28 @@ namespace backend {
 		// NOTE: shared pointer, since it has to survive the conversion process
 		c_ast::SharedCodeFragmentManager fragmentManager;
 
-		// ----------- Overall Conversion Configuration ----------------
-
-		ConverterConfig config;
+		const std::string converterName;
 
 	public:
 
-		Converter() :
-			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
-			functionManager(0), parallelManager(0), config(ConverterConfig::getDefault()) {}
+		/**
+		 * Creates a new uninitialized converter. Before using the resulting
+		 * converter, the required managers need to be initialized.
+		 */
+		Converter(std::string name = "Backend") :
+			preProcessor(), postProcessor(), nameManager(0), typeManager(0), stmtConverter(0),
+			functionManager(0), converterName(name) {}
 
-		Converter(const ConverterConfig& config) :
-			preProcessor(), postProcessor(), nameManager(0), typeManager(0), variableManager(0), stmtConverter(0),
-			functionManager(0), parallelManager(0), config(config) {}
-
+		/**
+		 * A call to this member function triggers the actual conversion process.
+		 * The given IR code fragment will be converted into equivalent target code. The
+		 * function may be invoked multiple times, however, the result may not be the same
+		 * when being invoked using the same input multiple times (e.g. variable names
+		 * may change).
+		 *
+		 * @param code the code to be converted
+		 * @return the resulting target code
+		 */
 		backend::TargetCodePtr convert(const core::NodePtr& code);
 
 		const PreProcessorPtr& getPreProcessor() const {
@@ -171,15 +219,6 @@ namespace backend {
 			functionManager = manager;
 		}
 
-		ParallelManager& getParallelManager() const {
-			assert(parallelManager);
-			return *parallelManager;
-		}
-
-		void setParallelManager(ParallelManager* manager) {
-			parallelManager = manager;
-		}
-
 		core::NodeManager& getNodeManager() const {
 			assert(nodeManager);
 			return *nodeManager;
@@ -200,20 +239,18 @@ namespace backend {
 
 		const c_ast::SharedCNodeManager& getCNodeManager() const;
 
-		ConverterConfig& getConfig() {
-			return config;
-		}
-
-		const ConverterConfig& getConfig() const {
-			return config;
-		}
-
-		void setConfig(const ConverterConfig& newConfig) {
-			config = newConfig;
-		}
+		const std::string& getConverterName() const { return converterName; }
 
 	};
 
+	/**
+	 * The conversion context offers a common data container which can be used to
+	 * maintain conversion specific information during a single run of the conversion
+	 * process. A fresh instance will be default constructed before starting a conversion
+	 * and forwarded recursively throughout the translation process. It should therefore
+	 * allow to implement the actual conversion routines in a stateless manner such that
+	 * multiple, concurrent calls may be supportable in the future.
+	 */
 	class ConversionContext :  public boost::noncopyable {
 
 		/**
@@ -241,12 +278,19 @@ namespace backend {
 		VariableManager variableManager;
 
 		/**
-		 * The list of includes depending on.
+		 * The list of include files the currently converted code fragment is
+		 * depending on.
 		 */
 		std::set<string> includes;
 
 	public:
 
+		/**
+		 * Creates a new, empty context instance to be used during a conversion
+		 * run of the given converter.
+		 *
+		 * @param converter the converter which will be using the resulting context.
+		 */
 		ConversionContext(const Converter& converter)
 			: converter(converter), dependencies(), requirements(), variableManager(), includes() {}
 

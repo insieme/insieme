@@ -40,6 +40,35 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
+
+//==== IterationDomain ==============================================================================
+
+IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rhs) {
+	assert(lhs.getIterationVector() == rhs.getIterationVector());
+	if(lhs.isUniverse()) return rhs;
+	if(rhs.isUniverse()) return lhs;
+
+	return IterationDomain( lhs.getConstraint() and rhs.getConstraint() ); 
+}
+
+IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs) {
+	assert(lhs.getIterationVector() == rhs.getIterationVector());
+	if(lhs.isUniverse()) return rhs;
+	if(rhs.isUniverse()) return lhs;
+
+	return IterationDomain( lhs.getConstraint() or rhs.getConstraint() ); 
+}
+
+IterationDomain operator!(const IterationDomain& other) {
+	return IterationDomain( not_(other.getConstraint()) ); 
+}
+
+std::ostream& IterationDomain::printTo(std::ostream& out) const { 
+	if (isEmpty()) return out << "{}";
+	if (isUniverse()) return out << "{ universe }";
+	return out << *constraint; 
+}
+
 //==== ScatteringFunction ==============================================================================
 
 std::ostream& AffineSystem::printTo(std::ostream& out) const {

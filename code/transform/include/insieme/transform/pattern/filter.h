@@ -34,52 +34,48 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/placeholder.h"
+#pragma once
 
+#include "insieme/utils/functional_utils.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
-namespace core {
+namespace transform {
+namespace pattern {
 
 
-	// private constructor for this placeholder node
-	// TODO: use real hash seed
-	Placeholder::Placeholder(char symbol) : Node(NT_Placeholder, NC_Support, symbol), symbol(symbol) {}
-
-
-	PlaceholderPtr Placeholder::get(NodeManager& manager, char symbol) {
-		return manager.get(Placeholder(symbol));
-	}
-
-	// --- inherited from node ---
-
-	Node* Placeholder::createCopyUsing(NodeMapping& mapper) const {
-		return new Placeholder(symbol);
-	}
-
-	Node::OptionChildList Placeholder::getChildNodes() const {
-		return OptionChildList(new ChildList());
-	}
-
-	std::ostream& Placeholder::printTo(std::ostream& out) const {
-		return out << symbol;
-	}
+/**
+ * A struct bridging the gap between patterns and filter functors.
+ */
+struct NodePatternFilter : public std::unary_function<const core::NodePtr&, bool> {
 
 	/**
-	 * Compares this placeholder instance with a given node.
+	 * The pattern to be used for the filtering.
 	 */
-	bool Placeholder::equals(const Node& other) const {
-		if (this == &other) {
-			return true;
-		}
+	PatternPtr pattern;
 
-		if (other.getNodeType() != NT_Placeholder) {
-			return false;
-		}
-
-		const Placeholder &otherPlaceholder = static_cast<const Placeholder&>(other);
-		return symbol == otherPlaceholder.symbol;
+	/**
+	 * Conducts the actual filtering operation. It tests whether
+	 * the given IR structure is accepted by the represented pattern.
+	 *
+	 * @param node the IR structure to be tested
+	 * @return true if it is matching the pattern, false otherwise
+	 */
+	bool operator()(const core::NodePtr& node) const {
+		return pattern->match(convertIR(node));
 	}
 
+};
 
-} // end namespace core
+/**
+ * A constructor for a node pattern filter. This utility can help keeping code readable.
+ *
+ * @param pattern the pattern to be used for filtering node structures.
+ */
+NodePatternFilter filter(const PatternPtr& pattern) {
+	return NodePatternFilter(pattern);
+}
+
+} // end namespace pattern
+} // end namespace transform
 } // end namespace insieme

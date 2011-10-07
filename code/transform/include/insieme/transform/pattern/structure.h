@@ -39,30 +39,58 @@
 #include <ostream>
 #include <memory>
 
+#include <boost/variant.hpp>
+
+#include "insieme/utils/functional_utils.h"
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
+#include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
 
+
 	class Tree;
 	typedef std::shared_ptr<Tree> TreePtr;
 
-	class Tree {
-	protected:
-		const int id;
-		std::vector<TreePtr> subTrees;
-	public:
-		template<typename... Args>
-		Tree(int id, Args && ... args) : id(id), subTrees(toVector<TreePtr>(args...)) {}
+	typedef vector<TreePtr> TreeList;
+	typedef TreeList::const_iterator TreeListIterator;
 
-		Tree(const std::vector<TreePtr>& children, int id) : id(id), subTrees(children) {}
+	class Tree : public utils::Printable {
+	public:
+
+		static const int VALUE_ID;
+
+		typedef boost::variant<bool,int,std::size_t,string> Value;
+
+	protected:
+
+		const int id;
+		TreeList subTrees;
+		Value value;
+
+	public:
+
+		Tree(const Value& value) : id(VALUE_ID), subTrees(), value(value) {}
+
+		template<typename... Args>
+		Tree(int id, Args && ... args) : id(id), subTrees(toVector<TreePtr>(args...)) {
+			assert(id != VALUE_ID && "Value ID must not be used!");
+		}
+
+		Tree(const TreeList& children, int id) : id(id), subTrees(children) {
+			assert(id != VALUE_ID && "Value ID must not be used!");
+		}
+
+		virtual ~Tree() {};
 
 		virtual std::ostream& printTo(std::ostream& out) const;
-		virtual bool operator==(Tree& other);
+		virtual bool operator==(const Tree& other) const;
+		virtual bool operator!=(const Tree& other) const { return !(*this == other); }
 
-		virtual std::vector<TreePtr>& getSubTrees() { return subTrees; }
+		virtual const TreeList& getSubTrees() const { return subTrees; }
+
 		const int getId() const { return id; }
 	};
 
@@ -74,6 +102,20 @@ namespace pattern {
 	template<typename... Args>
 	TreePtr makeTree(char symbol, const Args & ... args ) {
 		return std::make_shared<Tree>((int)symbol, args...);
+	}
+
+	template<typename... Args>
+	TreePtr makeTree(int id, const Args & ... args ) {
+		return std::make_shared<Tree>(id, args...);
+	}
+
+	inline TreePtr makeTree(int id, const TreeList& children) {
+		return std::make_shared<Tree>(children, id);
+	}
+
+	template<typename V>
+	TreePtr makeValue(const V& value) {
+		return std::make_shared<Tree>(Tree::Value(value));
 	}
 
 	std::ostream& operator<<(std::ostream& out, const Tree& tree);

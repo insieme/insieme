@@ -168,15 +168,15 @@ void if_stmt_test() {
 
 	int a=1;
 	#pragma test \
-	"ite((( *v1)!=0), bind(){fun(ref<int<4>> v4)return (( *v4)+1)(v1)}, bind(){fun(ref<int<4>> v2)return (( *v2)-1)(v1)})"
+	"ite((( *v1)!=0), bind(){fun(ref<int<4>> v4){ return (( *v4)+1);}(v1)}, bind(){fun(ref<int<4>> v2){ return (( *v2)-1);}(v1)})"
 	a ? a+1 : a-1;
 
 	#pragma test \
-	"ite((( *v1)==0), bind(){fun(ref<int<4>> v4)return (( *v4)+1)(v1)}, bind(){fun(ref<int<4>> v2)return (( *v2)-1)(v1)})"
+	"ite((( *v1)==0), bind(){fun(ref<int<4>> v4){ return (( *v4)+1);}(v1)}, bind(){fun(ref<int<4>> v2){ return (( *v2)-1);}(v1)})"
 	a == 0 ? a+1 : a-1;
 
 	#pragma test \
-	"if(((( *v1)>0)&&bind(){fun(ref<int<4>> v2)return (( *v2)!=1)(v1)})) { { };} else { }"
+	"if(((( *v1)>0)&&bind(){fun(ref<int<4>> v2){ return (( *v2)!=1);}(v1)})) { } else { }"
 	if(cond > 0 && cond != 1) {	; }
 }
 
@@ -187,7 +187,7 @@ void for_stmt_test() {
 
 	// standard for loop
 	#pragma test \
-	"for(decl int<4> v2 = 0 .. 100 : 1) { { };}"
+	"for(decl int<4> v2 = 0 .. 100 : 1) { }"
 	for(int i=0; i<100; i++) { ; }
 
 	// for loop using a variable declared outside
@@ -200,7 +200,7 @@ void for_stmt_test() {
 	for(it=a; it<100; it+=6) { a=it; }
 
 	#pragma test \
-	"while((( *v1)<100)) { { { }; }; (v1 := (( *v1)+1));}"
+	"while((( *v1)<100)) { { }; (v1 := (( *v1)+1));}"
 	for(; it<100; it+=1) { ; }
 
 	#pragma test \

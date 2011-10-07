@@ -34,23 +34,27 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include "insieme/core/placeholder.h"
+#include "insieme/transform/transformation.h"
 
 namespace insieme {
-namespace core {
+namespace transform {
+namespace sequential {
 
-TEST(Placeholder, Basic) {
 
-	NodeManager manager;
+	class DeadCodeElimination : public Transformation {
 
-	PlaceholderPtr placeholder = Placeholder::get(manager, 'A');
+	public:
 
-	EXPECT_EQ(toString(*placeholder), "A");
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
 
-}
+		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException);
 
-} // end namespace core
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
+
+	};
+
+} // end namespace sequential
+} // end namespace transform
 } // end namespace insieme
-

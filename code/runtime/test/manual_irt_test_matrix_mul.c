@@ -48,7 +48,6 @@
 
 #ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"
-#include "irt_ocl_config.h"
 #endif
 
 #define N 1000
@@ -306,10 +305,6 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	double** B = (double**)blockB->data;
 	double** C = (double**)blockC->data;
 	
-	irt_ocl_device* dev = irt_ocl_get_device(0);
-	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][0];
-	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
-	
 	cl_long hA = (subrange[0].end-subrange[0].begin);
 	cl_long wA = (subrange[1].end-subrange[1].begin);
 	cl_long hB = (fullrange[0].end-fullrange[0].begin);
@@ -325,12 +320,12 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 	unsigned int mem_size_B = sizeof(double) * len_B;
 	unsigned int mem_size_C = sizeof(double) * len_C;
 
-	irt_ocl_buffer* buff_A = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_A);
-	irt_ocl_buffer* buff_B = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_B);
-	irt_ocl_buffer* buff_C = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_C);
+	irt_ocl_buffer* buff_A = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_A);
+	irt_ocl_buffer* buff_B = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_B);
+	irt_ocl_buffer* buff_C = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_C);
 
-	irt_ocl_write_buffer(buff_A, CL_FALSE, mem_size_A, &A[subrange[0].begin][0]);
-	irt_ocl_write_buffer(buff_B, CL_FALSE, mem_size_B, &B[0][0]);
+	irt_ocl_write_buffer(buff_A, CL_FALSE, 0, mem_size_A, &A[subrange[0].begin][0]);
+	irt_ocl_write_buffer(buff_B, CL_FALSE, 0, mem_size_B, &B[0][0]);
 
 	size_t localWS = 16;
 	float multiplier = hA/(float)localWS;
@@ -347,18 +342,17 @@ void insieme_wi_mul_implementation2(irt_work_item* wi) {
 
 	size_t szLocalWorkSize[2] = {localWS, localWS};
 	size_t szGlobalWorkSize[2] = {globalh, globalw};
-	
-	irt_ocl_set_kernel_ndrange(kernel, 2, szGlobalWorkSize, szLocalWorkSize);
 
-	irt_ocl_run_kernel(kernel, 6,
-					(size_t)0, (void *)buff_A,
-					(size_t)0, (void *)buff_B,
-					(size_t)0, (void *)buff_C,
-					sizeof(cl_long), (void *)&hA,
-					sizeof(cl_long), (void *)&wA,
-					sizeof(cl_long), (void *)&wB);
+	irt_ocl_rt_run_kernel(	0,
+							2,  szGlobalWorkSize, szLocalWorkSize,
+							6,	(size_t)0, (void *)buff_A,
+								(size_t)0, (void *)buff_B,
+								(size_t)0, (void *)buff_C,
+								sizeof(cl_long), (void *)&hA,
+								sizeof(cl_long), (void *)&wA,
+								sizeof(cl_long), (void *)&wB);
 
-	irt_ocl_read_buffer(buff_C, CL_TRUE, mem_size_C, &C[subrange[0].begin][0]);
+	irt_ocl_read_buffer(buff_C, CL_TRUE, 0, mem_size_C, &C[subrange[0].begin][0]);
 
 	irt_ocl_release_buffer(buff_A);
 	irt_ocl_release_buffer(buff_B);
@@ -398,10 +392,6 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	double** A = (double**)blockA->data; 
 	double** B = (double**)blockB->data;
 	double** C = (double**)blockC->data;
-	
-	irt_ocl_device* dev = irt_ocl_get_device(0);
-	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][0];
-	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
 
 	cl_long hA = (subrange[0].end-subrange[0].begin);
 	cl_long wA = (subrange[1].end-subrange[1].begin);
@@ -418,13 +408,13 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	unsigned int mem_size_B = sizeof(double) * len_B;
 	unsigned int mem_size_C = sizeof(double) * len_C;
 
-	irt_ocl_buffer* buff_Ad = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_A);
-	irt_ocl_buffer* buff_Bd = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_B);
-	irt_ocl_buffer* buff_Cd = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_C);
+	irt_ocl_buffer* buff_Ad = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_A);
+	irt_ocl_buffer* buff_Bd = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_B);
+	irt_ocl_buffer* buff_Cd = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_C);
 	
-	irt_ocl_buffer* buff_Ah = irt_ocl_create_buffer(dev, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_A);
-	irt_ocl_buffer* buff_Bh = irt_ocl_create_buffer(dev, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_B);
-	irt_ocl_buffer* buff_Ch = irt_ocl_create_buffer(dev, CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, mem_size_C);
+	irt_ocl_buffer* buff_Ah = irt_ocl_rt_create_buffer(CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_A);
+	irt_ocl_buffer* buff_Bh = irt_ocl_rt_create_buffer(CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, mem_size_B);
+	irt_ocl_buffer* buff_Ch = irt_ocl_rt_create_buffer(CL_MEM_ALLOC_HOST_PTR | CL_MEM_WRITE_ONLY, mem_size_C);
 			
 	double* Data_A = irt_ocl_map_buffer(buff_Ah, CL_TRUE, CL_MAP_WRITE, mem_size_A);
 	double* Data_B = irt_ocl_map_buffer(buff_Bh, CL_TRUE, CL_MAP_WRITE, mem_size_B);
@@ -457,15 +447,14 @@ void insieme_wi_mul_implementation3(irt_work_item* wi) {
 	size_t szLocalWorkSize[2] = {localWS, localWS};
 	size_t szGlobalWorkSize[2] = {globalh, globalw};
 	
-	irt_ocl_set_kernel_ndrange(kernel, 2, szGlobalWorkSize, szLocalWorkSize);
-
-	irt_ocl_run_kernel(kernel, 6,
-					(size_t)0, (void *)buff_Ad,
-					(size_t)0, (void *)buff_Bd,
-					(size_t)0, (void *)buff_Cd,
-					sizeof(cl_long), (void *)&hA,
-					sizeof(cl_long), (void *)&wA,
-					sizeof(cl_long), (void *)&wB);
+	irt_ocl_rt_run_kernel(	0,
+							2,  szGlobalWorkSize, szLocalWorkSize,
+							6,	(size_t)0, (void *)buff_Ad,
+								(size_t)0, (void *)buff_Bd,
+								(size_t)0, (void *)buff_Cd,
+								sizeof(cl_long), (void *)&hA,
+								sizeof(cl_long), (void *)&wA,
+								sizeof(cl_long), (void *)&wB);
 
 	irt_ocl_copy_buffer(buff_Cd, buff_Ch, mem_size_C);
 	

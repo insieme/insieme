@@ -106,6 +106,29 @@ public:
 		return manager.basic;
 	}
 
+	template<typename T, typename ... Children>
+	Pointer<T> get(Children ... child) const {
+		return T::get(manager, child ...);
+	}
+
+	template<typename T>
+	Pointer<T> get(const NodeList& children) const {
+		return T::get(manager, children);
+	}
+
+	template<
+		NodeType type,
+		typename Node = typename to_node_type<type>::type
+	>
+	Pointer<const Node> get(const NodeList& children) const {
+		// use factory method of Node implementation
+		// TODO: enable when implemented!
+		return Pointer<const Node>();
+//		return Node::get(*this, children);
+	}
+
+	NodePtr get(NodeType type, const NodeList& children) const;
+
 	ProgramPtr createProgram(const Program::EntryPointList& entryPoints = Program::EntryPointList(), bool main = false);
 
 #include "ast_builder.inl"
@@ -199,13 +222,26 @@ public:
 	ExpressionPtr refMember(ExpressionPtr structExpr, IdentifierPtr member) const;
 
 	/**
+	 * Creates an expression obtaining a reference to a member of a struct.
+	 */
+	ExpressionPtr refMember(ExpressionPtr structExpr, string member) const;
+
+	/**
 	 * Creates an expression accessing the given component of the given tuple value.
 	 */
 	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, unsigned component) const;
+	ExpressionPtr accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
+
+	/**
+	 * Creates an expression accessing the reference to a component of the given tuple value.
+	 */
+	ExpressionPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
+	ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
 	// Utilities
 private:
 	static TypeList extractParamTypes(const ParamList& params);
+	unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
 };
 
 } // namespace core

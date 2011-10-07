@@ -34,69 +34,62 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include <gtest/gtest.h>
 
-#include "insieme/core/types.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/statements.h"
-
+#include "insieme/utils/automata/regular_language_utils.h"
+#include "insieme/utils/test/test_utils.h"
 
 namespace insieme {
-namespace core {
+namespace utils {
+namespace automata {
 
-	/**
-	 * Within this file a special IR node is defined, which can be placed anywhere within the IR. Instances of placeholder
-	 * instances can be used to represent variable parts within IR pattern matching routines.
-	 */
+using namespace set;
 
+typedef Automata<>::state_type State;
+typedef RegularLanguage<> Lang;
 
-	class Placeholder : public Node {
+bool match(Lang l, const char* str) {
+	return accepts(l.getAutomata(), string(str));
+}
 
-		/**
-		 * The symbol to be used to represent this placeholder instance.
-		 */
-		const char symbol;
-
-		Placeholder(char symbol);
-
-	public:
-
-		// factory methods
-
-		static PlaceholderPtr get(NodeManager& manager, char symbol);
-
-		// getter/setter
-
-		char getSymbol();
+TEST(RegLang, Composition) {
 
 
-//		// --- inherited from expression ---
-//
-//		virtual bool equals(const Node& stmt) const;
-//		virtual bool equalsExpr(const Expression& expr) const;
-//
-//		// --- inherited from type ---
-//
-//		virtual std::ostream& printTypeTo(std::ostream& out) const;
-//		virtual bool equalsType(const Type& type) const;
+	// a larger example
+	Lang a('a');
+	Lang b('b');
+	Lang c('c');
+	Lang d('d');
 
-		// --- inherited from node ---
+	// pattern a(b|c)*d
 
-		virtual Node* createCopyUsing(NodeMapping& mapper) const;
-		virtual OptionChildList getChildNodes() const;
-		virtual std::ostream& printTo(std::ostream& out) const;
+	Lang x= sequence(a, repetition(alternativ(b,c)), d);
 
-		/**
-		 * Implements equals for placeholders. Two placeholders are considered
-		 * equal if they represent the same symbol.
-		 */
-		bool equals(const Node& other) const;
+	// EXPECT_EQ("", toDotGraph(x.getAutomata()));
+
+	EXPECT_TRUE(match(x, "ad"));
+	EXPECT_TRUE(match(x, "abd"));
+	EXPECT_TRUE(match(x, "abcd"));
+	EXPECT_TRUE(match(x, "acbbcccbbcbcd"));
+
+	EXPECT_FALSE(match(x, "abc"));
+
+	// compress it to a NFA
+	auto n = toNFA(x.getAutomata());
+	// EXPECT_EQ("", toDotGraph(n));
+
+	EXPECT_TRUE(accepts(n, string("ad")));
+	EXPECT_TRUE(accepts(n, string("abd")));
+	EXPECT_TRUE(accepts(n, string("abcd")));
+	EXPECT_TRUE(accepts(n, string("acbbcccbbcbcd")));
+
+	EXPECT_FALSE(accepts(n, string("abc")));
+
+}
 
 
-	};
 
-
+} // end namespace automata
 } // end namespace core
 } // end namespace insieme
-
 

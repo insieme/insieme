@@ -116,11 +116,16 @@ void irt_error_handler(int signal) {
 	exit(-error->errcode);
 }
 
+void irt_interrupt_handler(int signal) {
+	// do nothing
+}
+
 void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_count) {
 	irt_g_runtime_behaviour = behaviour;
 
 	// initialize error and termination signal handlers
 	signal(IRT_SIG_ERR, &irt_error_handler);
+	signal(IRT_SIG_INTERRUPT, &irt_interrupt_handler);
 	signal(SIGTERM, &irt_term_handler);
 	signal(SIGINT, &irt_term_handler);
 	atexit(&irt_exit_handler);
@@ -146,7 +151,19 @@ void irt_runtime_start(irt_runtime_behaviour_flags behaviour, uint32 worker_coun
 }
 
 uint32 irt_get_default_worker_count() {
-	return 1;
+	uint32 ret = 1;
+#ifdef _SC_NPROCESSORS_ONLN
+	// Linux
+	ret = sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(_SC_NPROC_ONLN)
+	// Irix
+	ret = sysconf(_SC_NPROC_ONLN);
+#elif defined(MPC_GETNUMSPUS)
+	// HPUX
+	ret = mpctl(MPC_GETNUMSPUS, NULL, NULL);
+#endif
+	if(ret<1) ret = 1;
+	return ret;
 }
 
 bool _irt_runtime_standalone_end_func(irt_wi_event_register* source_event_register, void *mutexp) {
@@ -179,8 +196,5 @@ void irt_runtime_standalone(uint32 worker_count, init_context_fun* init_fun, cle
 	_irt_wi_event_register_only(ev_reg);
 	// ]] event handling
 	irt_scheduling_assign_wi(irt_g_workers[0], main_wi);
-	pthread_mutex_lock(&mutex);	
-	//irt_wi_event_check_and_register(main_wi, IRT_WI_STATE_DONE, )
-	// TODO solve with event handling
-	while(main_wi->state != IRT_WI_STATE_DONE) { usleep(10); };
+	pthread_mutex_lock(&mutex);
 }

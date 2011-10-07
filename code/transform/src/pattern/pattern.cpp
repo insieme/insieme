@@ -37,38 +37,41 @@
 #include "insieme/transform/pattern/pattern.h"
 
 #include "insieme/utils/container_utils.h"
+#include "insieme/utils/map_utils.h"
 
 namespace insieme {
 namespace transform {
 namespace pattern {
 
-	bool TreePattern::match(const TreePtr& tree) const {
+
+	MatchOpt TreePattern::match(const TreePtr& tree) const {
 		MatchContext context;
-		return match(context, tree);
+		if (match(context, tree)) {
+			// complete match result
+			context.getMatch().setRoot(tree);
+			return context.getMatch();
+		}
+		return 0;
 	}
 
-	bool NodePattern::match(const TreePtr& tree) const {
-		MatchContext context;
-		auto list = tree->getSubTrees();
-		return match(context, list, 0) == static_cast<int>(list.size());
-	}
-	
-	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
-	const TreePatternPtr recurse = std::make_shared<trees::Recursion>();
 
-	std::ostream& operator<<(std::ostream& out, const PatternPtr& pattern) {
-		return (pattern)?(pattern->printTo(out)):(out << "null");
+	std::ostream& MatchContext::printTo(std::ostream& out) const {
+		out << "Match(";
+		out << path << ", ";
+		out << match << ", ";
+		out << boundRecursiveVariables;
+		return out << ")";
 	}
 
-	std::ostream& operator<<(std::ostream& out, const TreePatternPtr& pattern) {
-		return (pattern)?(pattern->printTo(out)):(out << "null");
-	}
 
-	std::ostream& operator<<(std::ostream& out, const NodePatternPtr& pattern) {
-		return (pattern)?(pattern->printTo(out)):(out << "null");
-	}
+	const TreePatternPtr any = std::make_shared<tree::Wildcard>();
+	const TreePatternPtr recurse = std::make_shared<tree::Recursion>("x");
 
-	namespace trees {
+	const ListPatternPtr anyList = *any;
+
+	namespace tree {
+
+		const TreePatternPtr Variable::any = pattern::any;
 
 		bool contains(MatchContext& context, const TreePtr& tree, const TreePatternPtr& pattern) {
 			bool res = false;
@@ -89,9 +92,29 @@ namespace pattern {
 			});
 		}
 
+	}
 
+	namespace list {
+
+		const ListPatternPtr Variable::any = pattern::anyList;
 	}
 
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::PatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreePatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListPatternPtr& pattern) {
+		return (pattern)?(pattern->printTo(out)):(out << "null");
+	}
+
+} // end namespace std
