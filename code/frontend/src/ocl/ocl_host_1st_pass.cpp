@@ -219,6 +219,14 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 	const ExpressionPtr& idxExpr = cast ? cast->getSubExpression() : index;
 	const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(idxExpr);
 
+	VariablePtr tuple = builder.variable(kernel->getType());
+	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
+	eqMap[tuple] = eqMap[kernel];
+	VariablePtr src = builder.variable(arg->getType());
+	Lambda::ParamList params;
+	params.push_back(tuple);
+	CompoundStmt::StatementList body;
+
 	if(isNullPtr(arg, builder)) {
 		// in this case arg is a local variable which has to be declared in host code
 		// need to read size parameter
@@ -243,11 +251,19 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 		localMemDecls[kernel][pos] = localDecl;
 		arg = localMem;*/
 
+		FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4()); //!
+		body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
+				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
+				BASIC.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), BASIC.getTypeLiteral(type), size))));
+		body.push_back(builder.returnStmt(builder.intLit(0)));
+		LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
+
+		return builder.callExpr(BASIC.getInt4(), function, kernel);
 		// initialize local memory place with undefined
-		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel,
+/*		return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(type), BASIC.getTupleRefElem(), kernel,
 				(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
 				BASIC.getTypeLiteral(type)), builder.refVar(builder.callExpr(type, BASIC.getArrayCreate1D(), BASIC.getTypeLiteral(type), size)));
-
+*/
 	}
 
 	arg = getVarOutOfCrazyInspireConstruct(arg, builder);
@@ -295,13 +311,8 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 //	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
 //std::cout << "ARGUMENT: \t" << kernel->getType() << std::endl;
 
-	FunctionTypePtr fTy = builder.functionType(kernel->getType(), arg->getType());
-	VariablePtr tuple = builder.variable(kernel->getType());
-	// set the new tuple equivalent with the kernel to be able to replace it by a tuple with correct type in 3rd pass
-	eqMap[tuple] = eqMap[kernel];
-	VariablePtr src = builder.variable(arg->getType());
-	Lambda::ParamList params = toVector(tuple, src);
-	CompoundStmt::StatementList body;
+	FunctionTypePtr fTy = builder.functionType(toVector(kernel->getType(), arg->getType()), BASIC.getInt4());
+	params.push_back(src);
 	body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
 			(BASIC.isUInt8(idx) ? idxExpr :	builder.castExpr(BASIC.getUInt8(), idx)),
 			BASIC.getTypeLiteral(src->getType())), src));
