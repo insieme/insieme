@@ -122,7 +122,7 @@ namespace transform {
 
 	public:
 		InvalidTargetException(const string& cause) : msg(cause) {};
-		//InvalidTargetException(const core::NodePtr& node);
+		InvalidTargetException(const core::NodePtr& node);
 		virtual ~InvalidTargetException() throw() { }
 		virtual const char* what() const throw() { return msg.c_str(); }
 	};

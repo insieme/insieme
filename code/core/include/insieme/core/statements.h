@@ -85,7 +85,7 @@ class BreakStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -100,7 +100,7 @@ class ContinueStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -117,7 +117,7 @@ class ReturnStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -137,7 +137,7 @@ class DeclarationStmt : public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -155,7 +155,7 @@ class CompoundStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	typedef vector<StatementPtr> StatementList;
@@ -185,7 +185,7 @@ class WhileStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -206,7 +206,7 @@ class ForStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -230,7 +230,7 @@ class IfStmt: public Statement {
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -257,7 +257,7 @@ private:
 	
 protected:
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -284,7 +284,7 @@ class MarkerStmt : public Statement {
 protected:
 
 	virtual bool equalsStmt(const Statement& stmt) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 

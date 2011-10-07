@@ -34,43 +34,28 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/transform/transformation.h"
+#include "insieme/transform/sequential/dead_code_elimination.h"
 
 namespace insieme {
 namespace transform {
+namespace sequential {
 
-	InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
-		: msg(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
 
-//
-//	// ------------------------------------------------------------
-//  	IntegerRepresentationType::IntegerRepresentationType() {
-//	// ------------------------------------------------------------
-//  		name = "integer";
-//  		}
-//	// ------------------------------------------------------------
-//
-//	// ------------------------------------------------------------
-//	IntegerParameterType::IntegerParameterType(){
-//	// ------------------------------------------------------------
-//		name = "integer";
-//		supertype = NULL;
-//		representationtype = &Types::integerRepresentationType;
-//		}
-//	// ------------------------------------------------------------
-//	UnrollingDepthParameterType::UnrollingDepthParameterType() {
-//	// ------------------------------------------------------------
-//		name = "unrolling_depth";
-//		supertype = &Types::integerParameterType;
-//		representationtype = supertype->getRepresentationType();
-//		}
-//	// ------------------------------------------------------------
-//
-//		IntegerRepresentationType Types::integerRepresentationType;
-//		IntegerParameterType Types::integerParameterType;
-//		UnrollingDepthParameterType Types::unrollingDepthParameterType;
-//
-//		// UnrollingDepthParameter* defaultUnrollingDepth = new UnrollingDepthParameter(0);
-//		// Transformation* descrLoopUnrolling = new LoopUnrolling(defaultUnrollingDepth);
+	bool DeadCodeElimination::checkPreCondition(const core::NodePtr& target) const {
+		// can only be applied to statements and expressions
+		return target->getNodeCategory() == core::NC_Statement || target->getNodeCategory() == core::NC_Expression;
+	}
+
+	core::NodePtr DeadCodeElimination::apply(const core::NodePtr& target) const throw (InvalidTargetException) {
+		// do nothing so far
+		return target;
+	}
+
+	bool DeadCodeElimination::checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
+		// just check that the node type hasn't changed (no real post-conditions yet)
+		return before->getNodeType() == after->getNodeType();
+	}
+
+} // end namespace sequential
 } // end namespace transform
 } // end namespace insieme

@@ -54,7 +54,7 @@ namespace core {
 	 */
 	utils::SimpleIDGenerator<Node::EqualityID> Node::equalityClassIDGenerator;
 
-	const Node::ChildList& Node::getChildList() const {
+	const NodeList& Node::getChildList() const {
 		if (!children) {
 			children = getChildNodes();
 		}

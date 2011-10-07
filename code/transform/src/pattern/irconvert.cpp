@@ -35,7 +35,8 @@
  */
 
 #include "insieme/transform/pattern/irconvert.h"
-#include "insieme/core/ast_address.h"
+
+#include "insieme/core/ast_builder.h"
 #include "insieme/utils/container_utils.h"
 
 using std::make_shared;
@@ -157,7 +158,32 @@ TreePtr toTree(const core::NodePtr& node) {
 	return TreeConverter().visit(node);
 }
 
-core::NodePtr toIR(const TreePtr& tree){
+
+
+namespace {
+
+
+}
+
+core::NodePtr toIR(core::NodeManager& manager, const TreePtr& tree) {
+
+	// test node id
+	auto id = tree->getId();
+	assert( 0 <= id && id < core::NUM_CONCRETE_NODE_TYPES && "Invalid node type encountered!");
+
+	core::NodeType type = (core::NodeType)id;
+
+	core::ASTBuilder builder(manager);
+
+
+//	switch(type) {
+//	#define CONCRETE(KIND) \
+//		case NT_ ## KIND : return convert ## KIND (tree);
+//	#include "insieme/core/ast_nodes.def"
+//	#undef CONCRETE
+//	}
+
+	assert(false && "Some node type is missing ...");
 	return NodePtr();
 }
 

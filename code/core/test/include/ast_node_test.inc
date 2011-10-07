@@ -115,19 +115,19 @@ hash_t computeHash(const NodePtr& cur) {
 
 
 template<typename T>
-Node::ChildList toList(const vector<T>& list) {
-	Node::ChildList res;
+NodeList toList(const vector<T>& list) {
+	NodeList res;
 	std::copy(list.begin(), list.end(), back_inserter(res));
 	return res;
 }
 
-bool equalChildLists(const Node::ChildList& listA, const Node::ChildList& listB) {
+bool equalChildLists(const NodeList& listA, const NodeList& listB) {
 	return equals(listA, listB, equal_target<insieme::core::NodePtr>());
 }
 
 
 template<typename NP>
-void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()) {
+void basicNodeTests(NP node, const NodeList& children = NodeList()) {
 
 	typedef typename NP::element_type T;
 
@@ -141,8 +141,8 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	// ------------ Annotation Tests -------------
 
 	// check for shared annotations
-	Node::ChildList listA = node->getChildList();
-	Node::ChildList listB = node->getChildList();
+	NodeList listA = node->getChildList();
+	NodeList listB = node->getChildList();
 
 	EXPECT_TRUE ( equals( listA, listB ) );
 	EXPECT_TRUE ( equals( listA, listB, equal_target<insieme::core::NodePtr>()) );
@@ -169,12 +169,12 @@ void basicNodeTests(NP node, const Node::ChildList& children = Node::ChildList()
 	EXPECT_TRUE(clone2);
 
 	// and all children have to be in the new manager
-	const Node::ChildList& list = clone->getChildList();
+	const NodeList& list = clone->getChildList();
 	std::for_each(list.begin(), list.end(), [&manager](const NodePtr& cur) {
 		EXPECT_TRUE(manager.addressesLocal(cur));
 	});
 
-	const Node::ChildList& list2 = clone2->getChildList();
+	const NodeList& list2 = clone2->getChildList();
 	std::for_each(list2.begin(), list2.end(), [&manager2](const NodePtr& cur) {
 		EXPECT_TRUE(manager2.addressesLocal(cur));
 	});

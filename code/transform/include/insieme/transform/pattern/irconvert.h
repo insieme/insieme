@@ -51,7 +51,7 @@ namespace pattern {
 
 TreePtr toTree(const core::NodePtr& node);
 
-core::NodePtr toIR(const TreePtr& tree);
+core::NodePtr toIR(core::NodeManager& manager, const TreePtr& tree);
 
 } // end namespace pattern
 } // end namespace transform

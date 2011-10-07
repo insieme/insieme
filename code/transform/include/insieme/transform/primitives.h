@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include "insieme/core/expressions.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/transform/transformation.h"
 
@@ -122,29 +123,29 @@ namespace transform {
 	// Further primitives:
 	// 	- Variable Replacer (with limited scope)
 
-//	class ReplaceVariable : public AbstractTransformation {
-//
-//		/**
-//		 * A type definition for the type used to represent target/replacement
-//		 * mappings.
-//		 */
-//		typedef utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> Map;
-//
-//		Map replacements;
-//
-//	public:
-//
-//		ReplaceVariable(const core::VariablePtr& var, const core::ExpressionPtr& value)
-//			: replacements(utils::map::toPointerMap(var, value)) {}
-//
-//		ReplaceVariable(const Map& replacements) : replacements(replacements) {}
-//
-//		virtual core::NodePtr apply(const core::NodePtr& target) const {
-//			// use core utility to replace variables
-//			return core::transform::replaceVars(target->getNodeManager(), target, replacements);
-//		}
-//
-//	};
+	class ReplaceVariable : public AbstractTransformation {
+
+		/**
+		 * A type definition for the type used to represent target/replacement
+		 * mappings.
+		 */
+		typedef utils::map::PointerMap<core::VariablePtr, core::ExpressionPtr> Map;
+
+		Map replacements;
+
+	public:
+
+		ReplaceVariable(const core::VariablePtr& var, const core::ExpressionPtr& value)
+			: replacements(utils::map::toPointerMap(var, value)) {}
+
+		ReplaceVariable(const Map& replacements) : replacements(replacements) {}
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const {
+			// use core utility to replace variables
+			return core::transform::replaceVars(target->getNodeManager(), target, replacements);
+		}
+
+	};
 
 
 } // end namespace transform

@@ -74,9 +74,9 @@ namespace core {
 		 *
 		 * @return an empty child list
 		 */
-		virtual OptionChildList getChildNodes() const {
+		virtual NodeListOpt getChildNodes() const {
 			// not int type parameter has a child node
-			return std::make_shared<ChildList>();
+			return std::make_shared<NodeList>();
 		}
 
 	public:

@@ -107,13 +107,22 @@ public:
 	}
 
 	template<typename T, typename ... Children>
-	Pointer<T> create(Children ... child) {
+	Pointer<T> get(Children ... child) {
 		return T::get(manager, child ...);
 	}
 
 	template<typename T>
-	Pointer<T> createFromList(const Node::ChildList& children) {
+	Pointer<T> get(const NodeList& children) {
 		return T::get(manager, children);
+	}
+
+	template<
+		NodeType type,
+		typename Node = typename to_node_type<type>::type
+	>
+	Pointer<const Node> get(const NodeList& children) {
+		// use factory method of Node implementation
+		return Node::get(*this, children);
 	}
 
 	ProgramPtr createProgram(const Program::EntryPointList& entryPoints = Program::EntryPointList(), bool main = false);

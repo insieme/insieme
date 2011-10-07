@@ -34,43 +34,27 @@
  * regarding third party software licenses.
  */
 
+#pragma once
+
 #include "insieme/transform/transformation.h"
 
 namespace insieme {
 namespace transform {
+namespace sequential {
 
-	InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
-		: msg(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
 
-//
-//	// ------------------------------------------------------------
-//  	IntegerRepresentationType::IntegerRepresentationType() {
-//	// ------------------------------------------------------------
-//  		name = "integer";
-//  		}
-//	// ------------------------------------------------------------
-//
-//	// ------------------------------------------------------------
-//	IntegerParameterType::IntegerParameterType(){
-//	// ------------------------------------------------------------
-//		name = "integer";
-//		supertype = NULL;
-//		representationtype = &Types::integerRepresentationType;
-//		}
-//	// ------------------------------------------------------------
-//	UnrollingDepthParameterType::UnrollingDepthParameterType() {
-//	// ------------------------------------------------------------
-//		name = "unrolling_depth";
-//		supertype = &Types::integerParameterType;
-//		representationtype = supertype->getRepresentationType();
-//		}
-//	// ------------------------------------------------------------
-//
-//		IntegerRepresentationType Types::integerRepresentationType;
-//		IntegerParameterType Types::integerParameterType;
-//		UnrollingDepthParameterType Types::unrollingDepthParameterType;
-//
-//		// UnrollingDepthParameter* defaultUnrollingDepth = new UnrollingDepthParameter(0);
-//		// Transformation* descrLoopUnrolling = new LoopUnrolling(defaultUnrollingDepth);
+	class DeadCodeElimination : public Transformation {
+
+	public:
+
+		virtual bool checkPreCondition(const core::NodePtr& target) const;
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const throw (InvalidTargetException);
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
+
+	};
+
+} // end namespace sequential
 } // end namespace transform
 } // end namespace insieme

@@ -348,7 +348,7 @@ Path Path::extendForChild(unsigned index) const {
 	assert(element && "Invalid Path cannot be extended.");
 
 	const NodePtr& cur = element->ptr;
-	const Node::ChildList& list = cur->getChildList();
+	const NodeList& list = cur->getChildList();
 	assert(index < list.size() && "Child Index out of bound!");
 
 	return Path(new detail::PathElement(list[index], index, element));
