@@ -503,6 +503,24 @@ def run_test_case(test_case_name, home_folder):
 
 	return 0
 
+def runIt( abortOnFail, basedir, tests ) :
+	passed = []
+	failed = []
+	sys.stderr.write("@@ Running from base folder: {0} @@\n".format(basedir))
+	for cur in tests :
+		if os.path.exists(cur + "/test.cfg") :
+			subtest = [test_case for test_case in open(cur + '/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
+			runIt(abortOnFail, cur, subtest)
+
+		elif len(failed) == 0 or (not abortOnFail) :
+			if run_test_case(cur, basedir) :
+				failed.append(cur)
+			else :
+				passed.append(cur)
+
+	return failed, passed
+
+
 def main():
 	os.chdir('${CMAKE_CURRENT_SOURCE_DIR}/test/')
 
@@ -564,8 +582,6 @@ def main():
 			USE_RUN = 1
 			sys.argv.remove(arg)
 
-
-
 	tests = []
 	if len(sys.argv) > 1:
 		# run the specified tests only
@@ -577,23 +593,7 @@ def main():
 		tests = [x for x in os.listdir(".") if os.path.isdir(os.path.join('./', x)) and not x.startswith('#')]
 		tests.sort() # sort the test cases by name
 
-	passed = []
-	failed = []
-	for cur in tests :
-		if os.path.exists(cur + "/test.cfg") :
-			subtest = [test_case for test_case in open(cur + '/test.cfg').read().split('\n') if len(test_case) > 0 and not test_case.startswith('#')]
-			for scur in subtest :
-				if run_test_case(scur, cur) :
-					failed.append(scur)
-				else :
-					passed.append(scur)
-			continue
-
-		if len(failed) == 0 or (not abortOnFail) :
-			if run_test_case(cur, "./") :
-				failed.append(cur)
-			else :
-				passed.append(cur)
+	failed, passed = runIt( abortOnFail, "./", tests )
 
 	# failed = filter(lambda x: run_test_case(x), tests)
 
