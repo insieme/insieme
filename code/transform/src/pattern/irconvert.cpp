@@ -162,10 +162,186 @@ TreePtr toTree(const core::NodePtr& node) {
 
 namespace {
 
+	NodePtr convertTypeVariable(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertFunctionType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertTupleType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertRecType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertGenericType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertArrayType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertVectorType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertRefType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertChannelType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertStructType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertUnionType(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertBreakStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertContinueStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertReturnStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertDeclarationStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertCompoundStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertWhileStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertForStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertIfStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertSwitchStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertVariable(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertLambdaExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertBindExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertLiteral(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertCallExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertCastExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertJobExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertTupleExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertVectorExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertStructExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertUnionExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertMemberAccessExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertTupleProjectionExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertProgram(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertIdentifier(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertVariableIntTypeParam(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertConcreteIntTypeParam(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertInfiniteIntTypeParam(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertLambda(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertLambdaDefinition(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertRecTypeDefinition(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertMarkerExpr(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
+
+	NodePtr convertMarkerStmt(core::NodeManager& manager, const TreePtr& tree) {
+		return NodePtr();
+	}
 
 }
 
 core::NodePtr toIR(core::NodeManager& manager, const TreePtr& tree) {
+
+	// test for an IR tree;
+	if (IRTreePtr irTree = dynamic_pointer_cast<IRTree>(tree)) {
+		return irTree->getNode();
+	}
 
 	// test node id
 	auto id = tree->getId();
@@ -173,15 +349,13 @@ core::NodePtr toIR(core::NodeManager& manager, const TreePtr& tree) {
 
 	core::NodeType type = (core::NodeType)id;
 
-	core::ASTBuilder builder(manager);
 
-
-//	switch(type) {
-//	#define CONCRETE(KIND) \
-//		case NT_ ## KIND : return convert ## KIND (tree);
-//	#include "insieme/core/ast_nodes.def"
-//	#undef CONCRETE
-//	}
+	switch(type) {
+	#define CONCRETE(KIND) \
+		case NT_ ## KIND : return convert ## KIND (manager, tree);
+	#include "insieme/core/ast_nodes.def"
+	#undef CONCRETE
+	}
 
 	assert(false && "Some node type is missing ...");
 	return NodePtr();
