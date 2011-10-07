@@ -94,6 +94,8 @@ core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
+	static size_t markerID=0;
+
 	omp::BaseAnnotation::AnnotationList anns;
 	std::for_each(iter.first, iter.second,
 		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
@@ -110,7 +112,7 @@ core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy
 	// otherwise create a marker node and attach the annotation to the marker
 	typedef typename marker_type_trait<NodeTy>::marker_type MarkerTy;
 	// create an expression marker
-	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode);
+	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode, markerID++);
 	// attach the annotation to the marker node
 	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 	return marker;

@@ -775,6 +775,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 						toSubScopList(bodyIV, subScops)
 					) 
 				);
+	
+			postProcessSCoP(addr, scopList) ;
 
 			//fa.setEnabled( false );
 		}
@@ -827,6 +829,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	
 		if ( func->getNodeType() == NT_LambdaExpr ) {
 			assert( lambdaScop );
+			
+			throw NotASCoP( callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
 			const ScopStmtList& stmts = lambda.getDirectRegionStmts();
@@ -1232,10 +1236,15 @@ core::NodePtr toIR(const core::NodePtr& root) {
 	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
 	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 	
+	poly::StmtMap stmtMap;
 	size_t stmtID = 0;
 	std::for_each(scat.second.begin(), scat.second.end(), 
 		[ & ] (const ScopRegion::StmtScattering& cur) { 
 			std::string&& stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
+
+			// Build the map which associates stmt ids to IR statements, this is important in order
+			// to rebuild the IR from the polyhedral representation 
+			stmtMap.insert( std::make_pair(stmtid, cur.addr.getAddressedNode()) ); 
 
 			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, stmtid);
 			domain = set_union(ctx, *domain, *domainSet);
@@ -1252,7 +1261,7 @@ core::NodePtr toIR(const core::NodePtr& root) {
 		}
 	);
 
-	return poly::toIR(root->getNodeManager(), ann.getIterationVector(), ctx, *domain, *schedule);
+	return poly::toIR(root->getNodeManager(), stmtMap, ann.getIterationVector(), ctx, *domain, *schedule);
 }
 
 void computeDataDependence(const NodePtr& root) {

@@ -179,6 +179,7 @@ std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const;
  *************************************************************************************************/
 template <>
 core::NodePtr toIR(core::NodeManager& mgr,
+		const StmtMap& stmtMap,		
 		const IterationVector& iterVec,
 		IslContext&	ctx,
 		const Set<IslContext>& 	domain, 
