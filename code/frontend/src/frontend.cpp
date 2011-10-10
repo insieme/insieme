@@ -55,13 +55,8 @@ ConversionJob::ConversionJob(core::NodeManager& manager, const vector<string>& f
 
 core::ProgramPtr ConversionJob::execute() {
 
-	// since the frontend is using ugly ugly singletons, the configuration has to be updated ... ugly :)
-
 	// create the program parser
 	frontend::Program program(manager);
-
-	// set up the translation units
-	program.addTranslationUnits(files);
 
 	// setup the include directories
 	CommandLineOptions::IncludePaths = includeDirs;
@@ -75,6 +70,9 @@ core::ProgramPtr ConversionJob::execute() {
 	// setup additional flags
 	CommandLineOptions::OpenMP = hasOption(OpenMP);
 	CommandLineOptions::OpenCL = hasOption(OpenCL);
+
+	// set up the translation units
+	program.addTranslationUnits(files);
 
 	// convert the program
 	return program.convert();
