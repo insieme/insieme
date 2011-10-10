@@ -104,11 +104,14 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		assert(enclosingFunc);
 		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
 
-		auto&& fit = globals.find(varDecl);
+		auto&& fit = std::find_if(globals.begin(), globals.end(), 
+				[&varDecl] (const VarDecl* cur) -> bool { return varDecl->getNameAsString() == cur->getNameAsString(); }  
+			);
 		// add the variable to the list of global vars (if not already there)
 		if(fit == globals.end()) {
 			globals.insert( varDecl );
-			varTU.insert( std::make_pair(varDecl, currTU) );
+			auto ret = varTU.insert( std::make_pair(varDecl, currTU) );
+			assert(ret.second && "Variable name already exists within the list of global variables.");
 		} else {
 			//it could be that a variable is already in the list of globals with an external storage
 			//specifier and we encounter the global declaration in another translation unit, in that

@@ -12,7 +12,7 @@ BPNN *net;
   int nr, nc, imgsize, i, j, k;
 
   nr = layer_size;
-  
+
   imgsize = nr * nc;
   units = net->input_units;
 

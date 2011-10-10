@@ -100,7 +100,7 @@ namespace {
 template <class Ret=void>
 Ret measureTimeFor(const std::string& timerName, const std::function<Ret ()>& task) {
 	utils::Timer timer(timerName);
-	Ret ret = task(); // execute the job
+	Ret&& ret = task(); // execute the job
 	timer.stop();
 	LOG(INFO) << timer;
 	return ret;
@@ -463,6 +463,8 @@ int main(int argc, char** argv) {
 			applyOpenCLFrontend(program);
 
 			InverseStmtMap stmtMap;
+			printIR(program, stmtMap);
+
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
