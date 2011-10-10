@@ -87,14 +87,25 @@ namespace runtime {
 	}
 
 	std::ostream& ContextHandlingFragment::printTo(std::ostream& out) const {
-		return out <<
+		out <<
 				"void " INIT_CONTEXT_NAME "(irt_context* context) {\n"
 				"    context->type_table = " TYPE_TABLE_NAME ";\n"
-				"    context->impl_table = " IMPL_TABLE_NAME ";\n"
+				"    context->impl_table = " IMPL_TABLE_NAME ";\n";
+
+		for_each(initExpressions, [&](const string& cur) {
+			out << format(cur.c_str(), "context");
+		});
+
+		out <<
 				"}\n"
 				"\n"
-				"void " CLEAN_CONTEXT_NAME "(irt_context* context) {\n"
-				"    // nothing to do \n"
+				"void " CLEAN_CONTEXT_NAME "(irt_context* context) {\n";
+
+		for_each(cleanupExpressions, [&](const string& cur) {
+			out << format(cur.c_str(), "context");
+		});
+
+		return out <<
 				"}\n\n";
 	}
 
@@ -118,9 +129,11 @@ namespace runtime {
 
 		vector<Entry> entries;
 
+		TypeTable& table;
+
 	public:
 
-		TypeTableStore(const Converter& converter) : converter(converter) {}
+		TypeTableStore(const Converter& converter, TypeTable& table) : converter(converter), table(table) {}
 
 		const Entry& resolve(const c_ast::TypePtr& type) {
 
@@ -144,6 +157,7 @@ namespace runtime {
 		const Entry& addEntry(Entry& entry) {
 			entry.index = entries.size();
 			entries.push_back(entry);
+			table.addDependency(converter.getTypeManager().getDefinitionOf(entry.type));
 			return *entries.rbegin();
 		}
 
@@ -235,7 +249,7 @@ namespace runtime {
 
 
 	TypeTable::TypeTable(const Converter& converter)
-		: converter(converter), store(new TypeTableStore(converter)) {}
+		: converter(converter), store(new TypeTableStore(converter, *this)) {}
 
 	TypeTable::~TypeTable() {
 		delete store;
@@ -291,7 +305,8 @@ namespace runtime {
 	unsigned TypeTable::registerType(const core::TypePtr& type) {
 
 		// look up type information
-		const TypeInfo& info = converter.getTypeManager().getTypeInfo(type);
+		TypeManager& typeManager = converter.getTypeManager();
+		const TypeInfo& info = typeManager.getTypeInfo(type);
 
 		// add dependency to type definition
 		addDependency(info.definition);

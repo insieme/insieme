@@ -99,7 +99,7 @@ TEST(FunctionCall, VectorReduction) {
 
     core::ProgramPtr program = parser.parseProgram("main: fun ()->unit:\
             mainfct in { ()->unit:mainfct = ()->unit{ { \
-                (fun() -> unit {{ \
+                (fun() -> int<4> {{ \
                     return (op<vector.reduction>( vector<int<4>,4>(1,2,3,4), 0, op<int.add> )); \
                 }}() ); \
             } } }");

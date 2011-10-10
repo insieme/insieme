@@ -1,1 +1,1 @@
-../../code/frontend/test/ocl_device.h
+../../code/frontend/test/inputs/ocl_device.h

@@ -115,6 +115,14 @@ namespace backend {
 				return static_cast<result_type>(info);
 			}
 
+			const c_ast::CodeFragmentPtr getDefinitionOf(const c_ast::TypePtr& type) const {
+				auto pos = std::find_if(allInfos.begin(), allInfos.end(), [&](const TypeInfo* cur) { return *cur->rValueType == *type; });
+				if (pos != allInfos.end()) {
+					return (*pos)->definition;
+				}
+				return c_ast::CodeFragmentPtr();
+			}
+
 		private:
 
 			// --------------- Internal resolution utilities -----------------
@@ -186,6 +194,11 @@ namespace backend {
 	const ChannelTypeInfo& TypeManager::getTypeInfo(const core::ChannelTypePtr& type) {
 		// take value from store
 		return *(store->resolveType(type));
+	}
+
+	const c_ast::CodeFragmentPtr TypeManager::getDefinitionOf(const c_ast::TypePtr& type) {
+		// as usual, ask store ...
+		return store->getDefinitionOf(type);
 	}
 
 	namespace type_info_utils {
@@ -341,8 +354,8 @@ namespace backend {
 					type = c_ast::PrimitiveType::Int64;
 				} else {
 					LOG(FATAL) << "Unsupported integer type: " << *ptr;
-					assert(false && "Unsupported Integer type encountered!");
-					type = c_ast::PrimitiveType::Int32;
+					//assert(false && "Unsupported Integer type encountered!");
+					return type_info_utils::createUnsupportedInfo(manager);
 				}
 
 				// create primitive type + include dependency

@@ -36,10 +36,86 @@
 
 #include "insieme/transform/connectors.h"
 
+#include "insieme/core/transform/node_mapper_utils.h"
 
 namespace insieme {
 namespace transform {
 
+	namespace {
+
+		// To be supported:
+		//   - Applying transformations in pre/post order
+		//   - on a filtered subset of all encountered nodes
+		//   - with a limited depth
+		//
+
+
+
+
+	}
+
+
+	core::NodePtr ForEach::apply(const core::NodePtr& target) const {
+		return apply(target, maxDepth);
+	}
+
+
+	core::NodePtr ForEach::apply(const core::NodePtr& target, unsigned depth) const {
+
+		// terminate application of transformation at level zero
+		if (depth == 0) {
+			return target;
+		}
+
+		core::NodePtr res = target;
+
+		// conduct transformation in pre-order if requested
+		if (preorder && filter(res)) {
+			res = transformation->apply(res);
+		}
+
+		// conduct recursive decent - by transforming children
+		core::NodeList children = res->getChildList();
+		for_each(children, [&](core::NodePtr& cur) {
+			cur = apply(cur, depth-1);
+		});
+
+		// re-assemble transformed node from modified child list (if necessary)
+		if (!equals(children, res->getChildList(), equal_target<core::NodePtr>())) {
+			core::transform::ChildListMapping nodeMapper(children);
+			res = res->substitute(res->getNodeManager(), nodeMapper, false);
+		}
+
+		// conduct transformation in post-order if requested
+		if (!preorder && filter(res)) {
+			res = transformation->apply(res);
+		}
+
+		// done
+		return res;
+	}
+
+
+	core::NodePtr Fixpoint::apply(const core::NodePtr& target) const {
+		// apply transformation until result represents a fix-point of the sub-transformation
+		core::NodePtr cur = target;;
+		core::NodePtr last;
+		unsigned counter = 0;
+		do {
+			last = cur;
+			cur = transformation->apply(last);
+			counter++;
+		} while (*cur != *last && counter <= maxIterations);
+
+		// check whether fixpoint could be obtained
+		if (*cur != *last) {
+			// => no fixpoint found!
+			throw InvalidTargetException("Fixpoint could not be obtained!");
+		}
+
+		// return fixpoint
+		return cur;
+	}
 
 
 

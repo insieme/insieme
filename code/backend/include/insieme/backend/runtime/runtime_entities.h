@@ -47,14 +47,14 @@ namespace runtime {
 	//   A data infrastructure to handle runtime items
 	// ------------------------------------------------------------
 
-	struct Range {
-		uint64_t min;
-		uint64_t max;
-		uint64_t mod;
+	struct WorkItemRange {
+		core::ExpressionPtr min;
+		core::ExpressionPtr max;
+		core::ExpressionPtr mod;
 
 	public:
 
-		Range(uint64_t min, uint64_t max, uint64_t mod)
+		WorkItemRange(const core::ExpressionPtr& min, const core::ExpressionPtr& max, const core::ExpressionPtr& mod)
 			: min(min), max(max), mod(mod) {}
 	};
 
@@ -138,30 +138,28 @@ namespace encoder {
 	// -- Ranges ---------------------------------
 
 	template<>
-	struct type_factory<rbe::Range> {
+	struct type_factory<rbe::WorkItemRange> {
 		core::TypePtr operator()(core::NodeManager& manager) const {
 			return manager.getBasicGenerator().getJobRange();
 		}
 	};
 
 	template<>
-	struct value_to_ir_converter<rbe::Range> {
-		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::Range& value) const {
+	struct value_to_ir_converter<rbe::WorkItemRange> {
+		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemRange& value) const {
 			ASTBuilder builder(manager);
 			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
 
 			// create a call to the range constructor using the given values
-			core::ExpressionPtr min = toIR(manager, value.min);
-			core::ExpressionPtr max = toIR(manager, value.max);
-			core::ExpressionPtr mod = toIR(manager, value.mod);
-			return builder.callExpr(basic.getJobRange(), basic.getCreateBoundRangeMod(), toVector(min, max, mod));
+			return builder.callExpr(basic.getJobRange(), basic.getCreateBoundRangeMod(), toVector(value.min, value.max, value.mod));
 		}
 	};
 
 	template<>
-	struct ir_to_value_converter<rbe::Range> {
-		rbe::Range operator()(const core::ExpressionPtr& expr) const {
-			const lang::BasicGenerator& basic = expr->getNodeManager().getBasicGenerator();
+	struct ir_to_value_converter<rbe::WorkItemRange> {
+		rbe::WorkItemRange operator()(const core::ExpressionPtr& expr) const {
+			core::NodeManager& manager = expr->getNodeManager();
+			const lang::BasicGenerator& basic = manager.getBasicGenerator();
 
 			// check for call
 			if (expr->getNodeType() != core::NT_CallExpr) {
@@ -172,29 +170,29 @@ namespace encoder {
 			const core::ExpressionPtr& fun = call->getFunctionExpr();
 			const core::ExpressionList& args = call->getArguments();
 
-			uint64_t min = 1;
-			uint64_t max = std::numeric_limits<uint32_t>::max(); // target filed is 32 bit only ...
-			uint64_t mod = 1;
+			core::ExpressionPtr min;;
+			core::ExpressionPtr max = toIR<uint64_t>(manager, std::numeric_limits<uint32_t>::max()); // target filed is 32 bit only ...
+			core::ExpressionPtr mod = toIR<uint64_t>(manager, 1);
 			if (basic.isCreateMinRange(fun)) {
-				min = toValue<uint64_t>(args[0]);
+				min = args[0];
 			} else if (basic.isCreateBoundRange(fun)) {
-				min = toValue<uint64_t>(args[0]);
-				max = toValue<uint64_t>(args[1]);
+				min = args[0];
+				max = args[1];
 			} else if (basic.isCreateBoundRangeMod(fun)) {
-				min = toValue<uint64_t>(args[0]);
-				max = toValue<uint64_t>(args[1]);
-				mod = toValue<uint64_t>(args[2]);
+				min = args[0];
+				max = args[1];
+				mod = args[2];
 			} else {
 				throw InvalidExpression(expr);
 			}
 
 			// construct result
-			return rbe::Range(min, max, mod);
+			return rbe::WorkItemRange(min, max, mod);
 		}
 	};
 
 	template<>
-	struct is_encoding_of<rbe::Range> {
+	struct is_encoding_of<rbe::WorkItemRange> {
 		bool operator()(const core::ExpressionPtr& expr) const {
 
 			// check call expr
@@ -221,7 +219,7 @@ namespace encoder {
 
 			// check number and encoding of arguments
 			const core::ExpressionList& args = call->getArguments();
-			return args.size() == numArgs && all(args, [](const core::ExpressionPtr& cur) { return isEncodingOf<uint64_t>(cur); });
+			return args.size() == numArgs;
 		}
 	};
 

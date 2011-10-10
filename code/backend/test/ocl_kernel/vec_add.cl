@@ -35,10 +35,9 @@
  */
 
 #ifdef INSIEME
- #include "/home/klaus/insieme/code/frontend/test/ocl_device.h"
- // OpenCL Kernel Function for element by element vector addition
- #pragma insieme mark
- #endif
+#include "ocl_device.h"
+#pragma insieme mark
+#endif
 __kernel void vec_add(__global int* input1, __global int* input2, __global int* output, int num_elements) {
 	int gid = get_global_id(0);
 	if (gid >= num_elements) return;

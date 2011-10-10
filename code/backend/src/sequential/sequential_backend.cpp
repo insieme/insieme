@@ -67,11 +67,8 @@ namespace sequential {
 
 	TargetCodePtr SequentialBackend::convert(const core::NodePtr& code) const {
 
-		// basic setup
-		ConverterConfig config = ConverterConfig::getDefault();
-
 		// create and set up the converter
-		Converter converter(config);
+		Converter converter("SequentialBackend");
 
 		// set up the node manager (for temporals)
 		core::NodeManager& nodeManager = code->getNodeManager();
@@ -103,9 +100,6 @@ namespace sequential {
 
 		FunctionManager functionManager(converter, getBasicOperatorTable(nodeManager), getBasicFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
-
-		ParallelManager parallelManager;
-		converter.setParallelManager(&parallelManager);
 
 		// conduct conversion
 		return converter.convert(code);

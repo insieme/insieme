@@ -37,6 +37,26 @@
 #include "insieme/analysis/polyhedral/affine_func.h"
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
+
+namespace {
+
+using namespace insieme;
+
+// Remove expression which are used in the IR for semantics checks (like derefs and refs)
+core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
+	const core::NodeManager& mgr = expr->getNodeManager();
+	
+	while (expr->getNodeType() == core::NT_CallExpr &&
+		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.basic.getRefDeref())) {
+
+			expr = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);	
+	}
+
+	return expr;
+}
+
+} // end anonymous namespace
 
 namespace insieme {
 namespace analysis {
@@ -52,6 +72,7 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 	iterVec(iterVec), sep(iterVec.getIteratorNum())
 {
 	using namespace insieme::core::arithmetic;
+
 	// extract the Formula object 
 	Formula&& formula = toFormula(expr);
 	
@@ -77,9 +98,12 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 		assert(prod.getFactors().size() <= 1 && "Not a linear expression");
 
 		if ( !prod.isOne() ) {
-			const core::VariablePtr& var = prod.getFactors().front().first;
-			// We make sure the variable is not already among the iterators
-			if ( iterVec.getIdx( Iterator(var) ) == -1 ) {
+			core::ExpressionPtr&& var = removeSugar(prod.getFactors().front().first);
+			// we get rid of eventual deref operations occurring 
+						// We make sure the variable is not already among the iterators
+			if ( var->getNodeType() != core::NT_Variable || 
+					iterVec.getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) ) == -1 ) 
+			{
 				iterVec.add( Parameter(var) );
 			}
 		}
@@ -95,7 +119,7 @@ AffineFunction::AffineFunction(IterationVector& iterVec, const insieme::core::Ex
 		if ( prod.isOne() ) {
 			coeffs.back() = cur.second;
 		} else {
-			int idx = iterVec.getIdx( prod.getFactors().front().first );
+			int idx = iterVec.getIdx( removeSugar(prod.getFactors().front().first));
 			assert (idx != -1);
 			coeffs[idx] = cur.second;
 		}
@@ -218,30 +242,33 @@ bool AffineFunction::operator==(const AffineFunction& other) const {
 		return sep == other.sep && std::equal(coeffs.begin(), coeffs.end(), other.coeffs.begin());
 
 	// if the two iteration vector are not the same we need to determine if at least the position
-	// for which a coefficient is specified is the same 	
-	iterator thisIt = begin(), otherIt = other.begin(); 
-	while( thisIt!=end() ) {
-		Term &&thisTerm = *thisIt, &&otherTerm = *otherIt;
-		const Element::Type& thisType = thisTerm.first.getType();
-		const Element::Type& otherType = otherTerm.first.getType();
-
-		if ( (thisType == Element::PARAM && otherType == Element::ITER) || 
-			(thisType == Element::CONST && otherType != Element::CONST) ) 
-		{
-			if (otherTerm.second != 0) { return false; }
-			++otherIt;
-		} else if ( (thisType == Element::ITER && otherType == Element::PARAM) || 
-			(thisType != Element::CONST && otherType == Element::CONST) )	
-		{
-			if (thisTerm.second != 0) { return false; }
-			++thisIt;
-		} else if (thisTerm == otherTerm) {
-			// iterators aligned 
-			++thisIt;
-			++otherIt;
-		} else return false;
-	}	
-	return true;
+	// for which a coefficient is specified is the same 
+	auto&& this_filt = 
+		filterIterator<
+			AffineFunction::iterator, 
+			AffineFunction::Term, 
+			AffineFunction::Term*, 
+			AffineFunction::Term
+		>(begin(), end(), [](const AffineFunction::Term& cur) -> bool { 
+				return cur.second == 0; 
+		});	
+	auto&& other_filt = 
+		filterIterator<
+			AffineFunction::iterator, 
+			AffineFunction::Term, 
+			AffineFunction::Term*, 
+			AffineFunction::Term
+		>(other.begin(), other.end(), [](const AffineFunction::Term& cur) -> bool { 
+				return cur.second == 0; 
+		});	
+	
+	std::set<AffineFunction::Term> diff;
+	std::set_difference(
+		this_filt.first, this_filt.second, other_filt.first, other_filt.second, 
+		std::inserter(diff, diff.begin())
+	);
+	
+	return diff.empty();
 }
 
 AffineFunction AffineFunction::toBase(const IterationVector& iterVec, const IndexTransMap& idxMap) const {

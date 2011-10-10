@@ -53,9 +53,11 @@ struct Set : public utils::Printable {
 	
 	typedef Ctx ctx_type;
 
-	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	virtual ~Set() { }
+	bool isEmpty() const = 0;
+
+	~Set() { }
 private:
 	Set();
 };
@@ -65,22 +67,55 @@ struct Map : public utils::Printable {
 
 	typedef Ctx ctx_type;
 
-	virtual std::ostream& printTo(std::ostream& out) const = 0; 
+	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	virtual ~Map() { }
+	bool isEmpty() const = 0;
+
+	~Map() { }
 
 private:
 	Map();
 };
 
-template <class SetTy>
-SetTy set_union(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
+template <typename Ctx>
+struct SetPtr: public std::shared_ptr<Set<Ctx>> {
 
-template <class SetTy>
-SetTy set_intersect(const SetTy& lhs, const SetTy& rhs) { assert(false && "TO BE IMPLEMENTED!"); }
+	SetPtr( const SetPtr<Ctx>& other ) : std::shared_ptr<Set<Ctx>>( other ) { }
 
-template <class SetTy>
-SetTy set_negate(const SetTy& lhs) { assert(false && "TO BE IMPLEMENTED!"); }
+	template <typename ...Args>
+	SetPtr( Ctx& ctx, const Args&... args ) : 
+		std::shared_ptr<Set<Ctx>>( std::make_shared<Set<Ctx>>(ctx, args...) ) { }
+
+};
+
+template <typename Ctx>
+struct MapPtr: public std::shared_ptr<Map<Ctx>> {
+
+	MapPtr( const MapPtr<Ctx>& other ) : std::shared_ptr<Map<Ctx>>( other ) { }
+
+	template <typename ...Args>
+	MapPtr( Ctx& ctx, const Args&... args ) : 
+		std::shared_ptr<Map<Ctx>>( std::make_shared<Map<Ctx>>(ctx, args...) ) { }
+
+};
+
+template <typename Ctx>
+SetPtr<Ctx> set_union(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
+
+template <typename Ctx>
+SetPtr<Ctx> set_intersect(Ctx& ctx, const Set<Ctx>& lhs, const Set<Ctx>& rhs);
+
+template <typename Ctx>
+MapPtr<Ctx> map_union(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+
+template <typename Ctx>
+MapPtr<Ctx> map_intersect(Ctx& ctx, const Map<Ctx>& lhs, const Map<Ctx>& rhs);
+
+/*
+ * Intersect a map with a domain 
+ */
+template <typename Ctx>
+MapPtr<Ctx> map_intersect_domain(Ctx& ctx, const Map<Ctx>& lhs, const Set<Ctx>& dom);
 
 //===== Conversion Utilities ======================================================================
 
@@ -97,22 +132,74 @@ std::shared_ptr<typename BackendTraits<B>::ctx_type>
 createContext() { return std::make_shared<typename BackendTraits<B>::ctx_type>(); }
 
 template <Backend B>
-std::shared_ptr<Set<typename BackendTraits<B>::ctx_type>> 
+SetPtr<typename BackendTraits<B>::ctx_type>
 makeSet( typename BackendTraits<B>::ctx_type& ctx, 
-		 const IterationVector& iterVec,
-		 const ConstraintCombinerPtr& constraint) 
+		 const IterationDomain& domain,
+		 const std::string& tuple_name = std::string())
 {
-	return std::make_shared<Set<typename BackendTraits<B>::ctx_type>>(ctx, iterVec, constraint);
+	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, domain, tuple_name);
 }
 
 template <Backend B>
-std::shared_ptr<Map<typename BackendTraits<B>::ctx_type>>
-makeMap( typename BackendTraits<B>::ctx_type& ctx, 
-		 const AffineSystem& affSys)
+MapPtr<typename BackendTraits<B>::ctx_type>
+makeMap( typename BackendTraits<B>::ctx_type& ctx,  
+		 const AffineSystem& affSys,
+		 const std::string& in_tuple_name = std::string(),
+		 const std::string& out_tuple_name = std::string())
 {
-	return std::make_shared<Map<typename BackendTraits<B>::ctx_type>>(ctx, affSys);
+	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, affSys, in_tuple_name, out_tuple_name);
 }
+
+template <Backend B>
+MapPtr<typename BackendTraits<B>::ctx_type>
+makeEmptyMap( typename BackendTraits<B>::ctx_type& ctx, const IterationVector& iterVec)
+{
+	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, poly::AffineSystem(iterVec));
+}
+
+//===== Dependency analysis =======================================================================
+
+template <typename Ctx>
+struct DependenceInfo : public utils::Printable {
+	MapPtr<Ctx> mustDep;
+	MapPtr<Ctx> mayDep;
+	MapPtr<Ctx> mustNoSource; // for now this two sets are not considered significant 
+	MapPtr<Ctx> mayNoSource; //
+
+	DependenceInfo( const MapPtr<Ctx>& mustDep, 
+					const MapPtr<Ctx>& mayDep, 
+					const MapPtr<Ctx>& mustNoSource, 
+					const MapPtr<Ctx>& mayNoSource ): 
+		mustDep(mustDep), mayDep(mayDep), mustNoSource(mustNoSource), mayNoSource(mayNoSource) { }
+
+	bool isEmpty() const {
+		return mustDep->isEmpty() && mayDep->isEmpty();
+	}
+
+	std::ostream& printTo(std::ostream& out) const;
+};
+
+template <class Ctx>
+DependenceInfo<Ctx> buildDependencies( 
+		Ctx&				ctx,
+		const Set<Ctx>& 	domain, 
+		const Map<Ctx>& 	schedule, 
+		const Map<Ctx>& 	sinks, 
+		const Map<Ctx>& 	must_sources, 
+		const Map<Ctx>& 	may_sourcs
+);
+
+typedef std::map<std::string, insieme::core::StatementPtr> StmtMap;
+
+template <class Ctx>
+core::NodePtr toIR(core::NodeManager& mgr, 
+		const StmtMap& stmtMap,
+		const IterationVector& iterVec, 
+		Ctx& ctx, 
+		const Set<Ctx>& domain, 
+		const Map<Ctx>& schedule
+	);
 
 } // end poly namespace
 } // end analysis namespace 
-} // end insieme namespace 
+} // end insieme namespace  

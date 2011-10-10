@@ -60,6 +60,8 @@ class SemaVisitor : public core::ASTVisitor<bool, core::Address> {
 	bool visitMarkerStmt(const core::MarkerStmtAddress& mark);
 	bool visitMarkerExpr(const core::MarkerExprAddress& mark);
 
+	core::ProgramPtr handleBarrier(const core::NodeAddress& node, const BarrierPtr& barrier);
+
 	core::NodePtr handleParallel(const core::StatementAddress& stmt, const ParallelPtr& par);
 	core::NodePtr handleFor(const core::StatementAddress& stmt, const ForPtr& forP);
 	core::NodePtr handleSingle(const core::StatementAddress& stmt, const SinglePtr& singleP);

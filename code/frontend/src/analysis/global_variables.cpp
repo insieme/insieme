@@ -86,7 +86,7 @@ void GlobalVarCollector::operator()(const clang::Decl* decl) {
 
 bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* decl) {
 	if(decl->hasGlobalStorage()) {
-		globals.insert( std::make_pair(decl, false) );
+		globals.insert( decl );
 		varTU.insert( std::make_pair(decl, currTU) );
 
 		const FunctionDecl* enclosingFunc = funcStack.top();
@@ -98,27 +98,32 @@ bool GlobalVarCollector::VisitVarDecl(clang::VarDecl* decl) {
 
 bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 	if(VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl())) {
-		if(varDecl->hasGlobalStorage()) {
+		if( !varDecl->hasGlobalStorage() ) { return true; }
 
-			const FunctionDecl* enclosingFunc = funcStack.top();
-			assert(enclosingFunc);
-			usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
+		const FunctionDecl* enclosingFunc = funcStack.top();
+		assert(enclosingFunc);
+		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
 
-			// add the variable to the list of global vars (if not already there)
-			if(globals.find(varDecl) == globals.end()) {
-				if(varDecl->hasExternalStorage()) {
-					/*
-					 * look for the definition. If we find it it means we have
-					 * access to the translation unit defining this variable
-					 */
-					const VarDecl* def = varDecl->getDefinition();
-					if(!def) {
-						globals.insert( std::make_pair(varDecl, true) );
-						varTU.insert( std::make_pair(varDecl, currTU) );
-						return true;
-					}
-				}
-				globals.insert( std::make_pair(varDecl, false) );
+		auto&& fit = std::find_if(globals.begin(), globals.end(), 
+				[&varDecl] (const VarDecl* cur) -> bool { return varDecl->getNameAsString() == cur->getNameAsString(); }  
+			);
+		// add the variable to the list of global vars (if not already there)
+		if(fit == globals.end()) {
+			globals.insert( varDecl );
+			auto ret = varTU.insert( std::make_pair(varDecl, currTU) );
+			assert(ret.second && "Variable name already exists within the list of global variables.");
+		} else {
+			//it could be that a variable is already in the list of globals with an external storage
+			//specifier and we encounter the global declaration in another translation unit, in that
+			//case we have to replace the collected VarDecl with this new instance 
+			if ( !varDecl->hasExternalStorage() && (*fit)->hasExternalStorage() ) {
+				// do replace
+				globals.erase(fit);
+				
+				auto&& vit = varTU.find( *fit );
+				varTU.erase( vit );
+
+				globals.insert(varDecl);
 				varTU.insert( std::make_pair(varDecl, currTU) );
 			}
 		}
@@ -166,7 +171,7 @@ bool GlobalVarCollector::VisitCallExpr(clang::CallExpr* callExpr) {
  * This function synthetized the global structure that will be used to hold the
  * global variables used within the functions of the input program.
  */
-GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conversion::ConversionFactory& fact) const {
+GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conversion::ConversionFactory& fact)  {
 	// no global variable found, we return an empty tuple
 	if ( globals.empty() ) {
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
@@ -177,7 +182,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conv
 	core::StructExpr::Members members;
 	for ( auto it = globals.begin(), end = globals.end(); it != end; ++it ) {
 		// get entry type and wrap it into a reference if necessary
-		auto fit = varTU.find(it->first);
+		auto fit = varTU.find(*it);
 		assert(fit != varTU.end());
 
 		/*
@@ -185,11 +190,10 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conv
 		 * unit has to be set properly
 		 */
 		fact.setTranslationUnit(fact.getProgram().getTranslationUnit(fit->second));
-		core::IdentifierPtr ident = builder.identifier(it->first->getNameAsString());
+		core::IdentifierPtr ident = builder.identifier((*it)->getNameAsString());
 
-		bool addPtr = false;
-		core::TypePtr&& type = fact.convertType(it->first->getType().getTypePtr());
-		if ( it->second ) {
+		core::TypePtr&& type = fact.convertType((*it)->getType().getTypePtr());
+		if ( (*it)->hasExternalStorage() ) {
 			/*
 			 * the variable is defined as extern, so we don't have to allocate memory
 			 * for it just refer to the memory location someone else has initialized
@@ -200,23 +204,22 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct(conv
 		// add type to the global struct
 		entries.push_back( core::StructType::Entry( ident, type ) );
 		// add initialization
+		varIdentMap.insert( std::make_pair(*it, ident) ); 
 
 		/*
 		 * we have to initialize the value of this ref with the value of the extern
 		 * variable which we assume will be visible from the entry point
 		 */
 		core::ExpressionPtr initExpr;
-		if(it->second) {
-			initExpr = builder.literal(it->first->getNameAsString(), type);
+		if( (*it)->hasExternalStorage() ) {
+			assert (type->getNodeType() == core::NT_RefType);
+			core::TypePtr derefTy = core::static_pointer_cast<const core::RefType>( type )->getElementType();
+			// build a literal which points to the name of the external variable 
+			initExpr = builder.refVar( builder.literal((*it)->getNameAsString(), derefTy) );
 		} else {
-			if ( it->first->getInit() ) {
+			if ( (*it)->getInit() ) {
 				// this means the variable is not declared static inside a function so we have to initialize its value
-				initExpr = fact.convertInitExpr(it->first->getInit(), type, false);
-				if ( addPtr ) {
-					initExpr = builder.callExpr(type, builder.getBasicGenerator().getArrayCreate1D(),
-						initExpr, builder.intLit(1)
-					);
-				}
+				initExpr = fact.convertInitExpr((*it)->getInit(), type, false);
 			} else {
 				initExpr = fact.defaultInitVal(type);
 			}

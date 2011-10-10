@@ -57,10 +57,10 @@ namespace c_ast {
 		switch(op) {
 		case UnaryOperation::UnaryPlus: 	return 14;
 		case UnaryOperation::UnaryMinus: 	return 14;
-		case UnaryOperation::PrefixInc: 	return 13;
-		case UnaryOperation::PrefixDec: 	return 13;
-		case UnaryOperation::PostfixInc: 	return 14;
-		case UnaryOperation::PostfixDec: 	return 14;
+		case UnaryOperation::PrefixInc: 	return 14;
+		case UnaryOperation::PrefixDec: 	return 14;
+		case UnaryOperation::PostfixInc: 	return 15;
+		case UnaryOperation::PostfixDec: 	return 15;
 		case UnaryOperation::LogicNot: 		return 14;
 		case UnaryOperation::BitwiseNot: 	return 14;
 		case UnaryOperation::Indirection: 	return 14;

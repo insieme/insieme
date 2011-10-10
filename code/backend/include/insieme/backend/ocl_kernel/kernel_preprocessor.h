@@ -42,7 +42,7 @@ namespace insieme {
 namespace backend {
 namespace ocl_kernel {
 
-	class OCLPreprocessor : public PreProcessor {
+	class KernelPreprocessor : public PreProcessor {
 	public:
 		virtual core::NodePtr process(core::NodeManager& manager, const core::NodePtr& code);
 	};

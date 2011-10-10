@@ -78,9 +78,9 @@ bool BreakStmt::equalsStmt(const Statement&) const {
 	return true;
 }
 
-Node::OptionChildList BreakStmt::getChildNodes() const {
+Node::NodeListOpt BreakStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	return OptionChildList(new ChildList());
+	return std::make_shared<NodeList>();
 }
 
 BreakStmt* BreakStmt::createCopyUsing(NodeMapping&) const {
@@ -112,9 +112,9 @@ bool ContinueStmt::equalsStmt(const Statement&) const {
 	return true;
 }
 
-Node::OptionChildList ContinueStmt::getChildNodes() const {
+Node::NodeListOpt ContinueStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	return OptionChildList(new ChildList());
+	return std::make_shared<NodeList>();
 }
 
 ContinueStmt* ContinueStmt::createCopyUsing(NodeMapping&) const {
@@ -148,8 +148,8 @@ bool ReturnStmt::equalsStmt(const Statement& stmt) const {
 	return (*returnExpression == *rhs.returnExpression);
 }
 
-Node::OptionChildList ReturnStmt::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt ReturnStmt::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(returnExpression);
 	return res;
 }
@@ -192,9 +192,9 @@ DeclarationStmt* DeclarationStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new DeclarationStmt(mapper.map(0, variable), mapper.map(1, initExpression));
 }
 
-Node::OptionChildList DeclarationStmt::getChildNodes() const {
+Node::NodeListOpt DeclarationStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(variable);
 	res->push_back(initExpression);
 	return res;
@@ -240,9 +240,9 @@ CompoundStmt* CompoundStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new CompoundStmt(mapper.map(0, statements));
 }
 
-Node::OptionChildList CompoundStmt::getChildNodes() const {
+Node::NodeListOpt CompoundStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	std::copy(statements.cbegin(), statements.cend(), back_inserter(*res));
 	return res;
 }
@@ -255,16 +255,34 @@ CompoundStmtPtr CompoundStmt::get(NodeManager& manager) {
 	return manager.get(CompoundStmt(vector<StatementPtr>()));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const StatementPtr& stmt) {
+	if (stmt->getNodeType() == NT_CompoundStmt) {
+		return static_pointer_cast<const CompoundStmt>(stmt);
+	}
 	return manager.get(CompoundStmt(toVector(stmt)));
 }
 CompoundStmtPtr CompoundStmt::get(NodeManager& manager, const vector<StatementPtr>& stmts) {
+
+	// check length of list
+	if (stmts.size() == static_cast<std::size_t>(1)) {
+		return get(manager, stmts.front());
+	}
+
+	// create result
 	return manager.get(CompoundStmt(stmts));
+}
+
+namespace {
+
+	CompoundStmtPtr wrapInCompound(const StatementPtr& stmt) {
+		return CompoundStmt::get(stmt->getNodeManager(), stmt);
+	}
+
 }
 
 // ------------------------------------- WhileStmt ---------------------------------
 
 namespace {
-	std::size_t hashWhileStmt(const ExpressionPtr& condition, const StatementPtr& body) {
+	std::size_t hashWhileStmt(const ExpressionPtr& condition, const CompoundStmtPtr& body) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, HS_WhileStmt);
 		boost::hash_combine(seed, condition->hash());
@@ -273,7 +291,7 @@ namespace {
 	}
 }
 
-WhileStmt::WhileStmt(const ExpressionPtr& condition, const StatementPtr& body)
+WhileStmt::WhileStmt(const ExpressionPtr& condition, const CompoundStmtPtr& body)
 	: Statement(NT_WhileStmt, hashWhileStmt(condition, body)), condition(isolate(condition)), body(isolate(body)) {
 }
 
@@ -291,22 +309,22 @@ WhileStmt* WhileStmt::createCopyUsing(NodeMapping& mapper) const {
 	return new WhileStmt(mapper.map(0, condition), mapper.map(1, body));
 }
 
-Node::OptionChildList WhileStmt::getChildNodes() const {
+Node::NodeListOpt WhileStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(condition);
 	res->push_back(body);
 	return res;
 }
 
 WhileStmtPtr WhileStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
-	return manager.get(WhileStmt(condition, body));
+	return manager.get(WhileStmt(condition, wrapInCompound(body)));
 }
 
 // ------------------------------------- ForStmt ---------------------------------
 
 namespace {
-	std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
+	std::size_t hashForStmt(const DeclarationStmtPtr& declaration, const CompoundStmtPtr& body, const ExpressionPtr& end, const ExpressionPtr& step) {
 		std::size_t seed = 0;
 		boost::hash_combine(seed, HS_ForStmt);
 		boost::hash_combine(seed, declaration->hash());
@@ -317,7 +335,7 @@ namespace {
 	}
 }
 
-ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
+ForStmt::ForStmt(const DeclarationStmtPtr& declaration, const CompoundStmtPtr& body, const ExpressionPtr& end, const ExpressionPtr& step)
 	: Statement(NT_ForStmt, hashForStmt(declaration, body, end, step)), declaration(isolate(declaration)), body(isolate(body)), end(isolate(end)), step(isolate(step)) {}
 
 std::ostream& ForStmt::printTo(std::ostream& out) const {
@@ -340,9 +358,9 @@ ForStmt* ForStmt::createCopyUsing(NodeMapping& mapper) const {
 	);
 }
 
-Node::OptionChildList ForStmt::getChildNodes() const {
+Node::NodeListOpt ForStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(declaration);
 	res->push_back(end);
 	res->push_back(step);
@@ -352,12 +370,12 @@ Node::OptionChildList ForStmt::getChildNodes() const {
 
 ForStmtPtr ForStmt::get(NodeManager& manager, const DeclarationStmtPtr& declaration, const StatementPtr& body, const ExpressionPtr& end,
 		const ExpressionPtr& step) {
-	return manager.get(ForStmt(declaration, body, end, step));
+	return manager.get(ForStmt(declaration, wrapInCompound(body), end, step));
 }
 
 // ------------------------------------- IfStmt ---------------------------------
 
-std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) {
+std::size_t hashIfStmt(const ExpressionPtr& condition, const CompoundStmtPtr& thenBody, const CompoundStmtPtr& elseBody) {
 	std::size_t seed = 0;
 	boost::hash_combine(seed, HS_IfStmt);
 	boost::hash_combine(seed, condition->hash());
@@ -366,7 +384,7 @@ std::size_t hashIfStmt(const ExpressionPtr& condition, const StatementPtr& thenB
 	return seed;
 }
 
-IfStmt::IfStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) :
+IfStmt::IfStmt(const ExpressionPtr& condition, const CompoundStmtPtr& thenBody, const CompoundStmtPtr& elseBody) :
 	Statement(NT_IfStmt, hashIfStmt(condition, thenBody, elseBody)), condition(isolate(condition)), thenBody(isolate(thenBody)), elseBody(isolate(elseBody)) {
 }
 
@@ -388,9 +406,9 @@ bool IfStmt::equalsStmt(const Statement& stmt) const {
 	return (*condition == *rhs.condition) && (*thenBody == *rhs.thenBody) && (*elseBody == *rhs.elseBody);
 }
 
-Node::OptionChildList IfStmt::getChildNodes() const {
+Node::NodeListOpt IfStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(condition);
 	res->push_back(thenBody);
 	res->push_back(elseBody);
@@ -399,12 +417,12 @@ Node::OptionChildList IfStmt::getChildNodes() const {
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
 	// default to empty else block
-	return get(manager, condition, body, manager.basic.getNoOp());
+	return get(manager, condition, wrapInCompound(body), manager.basic.getNoOp());
 }
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
 	// default to empty else block
-	return manager.get(IfStmt(condition, body, elseBody));
+	return manager.get(IfStmt(condition, wrapInCompound(body), wrapInCompound(elseBody)));
 }
 
 // ------------------------------------- SwitchStmt ---------------------------------
@@ -468,9 +486,9 @@ bool SwitchStmt::equalsStmt(const Statement& stmt) const {
 		}) && (*defaultCase == *rhs.defaultCase);
 }
 
-Node::OptionChildList SwitchStmt::getChildNodes() const {
+Node::NodeListOpt SwitchStmt::getChildNodes() const {
 	// does not have any sub-nodes
-	OptionChildList res(new ChildList());
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(switchExpr);
 	std::for_each(cases.cbegin(), cases.cend(), [&res](const Case& cur) {
 		res->push_back(cur.first);
@@ -521,8 +539,8 @@ bool MarkerStmt::equalsStmt(const Statement& expr) const {
 	return (rhs.id == id && *rhs.subStatement == *subStatement);
 }
 
-Node::OptionChildList MarkerStmt::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt MarkerStmt::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(subStatement);
 	return res;
 }

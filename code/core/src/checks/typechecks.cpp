@@ -91,8 +91,8 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	if (numArguments != numParameter) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_NUMBER_OF_ARGUMENTS,
-						format("Wrong number of arguments - expected: \n%d", numParameter) +
-						format("actual: \n%d\n ", numArguments) +
+						format("Wrong number of arguments - expected: %d\n", numParameter) +
+						format("actual: %d\n ", numArguments) +
 						format("- function type: \n%s", toString(*functionType).c_str()),
 						Message::ERROR));
 		return res;
@@ -574,6 +574,7 @@ OptionalMessageList CastCheck::visitCastExpr(const CastExprAddress& address) {
 				return res;
 			}
 		case NT_GenericType:
+		case NT_StructType: // also necessary for c++ inheritance
 			// this cast is allowed (for now)
 			return res;
 		default:

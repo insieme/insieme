@@ -42,6 +42,7 @@
 #include "insieme/utils/compiler/compiler.h"
 
 #include "insieme/frontend/frontend.h"
+#include "insieme/frontend/omp/omp_sema.h"
 
 #include "insieme/core/ast_node.h"
 #include "insieme/core/program.h"
@@ -59,11 +60,12 @@ TEST(FullBackend, HelloWorld) {
 //	core::NodeManager manager;
 //
 //	// load hello world test case
-//	auto testCase = utils::test::getCase("args");
+//	auto testCase = utils::test::getCase("simple_pfor");
 //	ASSERT_TRUE(testCase) << "Could not load test case!";
 //
 //	// convert test case into IR using the frontend
 //	auto code = frontend::ConversionJob(manager, testCase->getFiles(), testCase->getIncludeDirs()).execute();
+//	code = frontend::omp::applySema(code, manager);
 //	ASSERT_TRUE(code) << "Unable to load input code!";
 //
 //	// print IR code

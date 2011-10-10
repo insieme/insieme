@@ -47,6 +47,7 @@
 #include "insieme/core/expressions.h"
 #include "insieme/core/ast_builder.h"
 
+
 using namespace std;
 using namespace insieme::core;
 using namespace insieme::utils::set;
@@ -66,8 +67,8 @@ Program* Program::createCopyUsing(NodeMapping& mapper) const {
 /**
  * Obtains a list of all nodes referenced by this program node.
  */
-Node::OptionChildList Program::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt Program::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	std::copy(entryPoints.cbegin(), entryPoints.cend(), back_inserter(*res));
 	return res;
 }

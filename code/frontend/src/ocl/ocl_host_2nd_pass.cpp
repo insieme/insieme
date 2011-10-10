@@ -48,14 +48,15 @@ using namespace insieme::core;
 
 void Host2ndPass::mapNamesToLambdas(const vector<ExpressionPtr>& kernelEntries)
 {
-	std::cout << "kernelNames:\n" << kernelNames << std::endl;
+//	std::cout << "kernelNames:\n" << kernelNames << std::endl;
 	std::map<string, int> checkDuplicates;
 	for_each(kernelEntries, [&](ExpressionPtr entryPoint) {
 			if(const LambdaExprPtr& lambdaEx = dynamic_pointer_cast<const LambdaExpr>(entryPoint))
 			if(auto cname = lambdaEx->getLambda()->getAnnotation(annotations::c::CNameAnnotation::KEY)) {
+//std::cout << "Cname: " << cname->getName() << std::endl;
 				assert(checkDuplicates[cname->getName()] == 0 && "Multiple kernels with the same name not supported");
 				checkDuplicates[cname->getName()] = 1;
-
+//std::cout << "found " << kernelNames[cname->getName()];
 				if(ExpressionPtr clKernel = kernelNames[cname->getName()]) {
 					kernelLambdas[clKernel] = lambdaEx;
 				}
@@ -71,10 +72,11 @@ ClmemTable& Host2ndPass::getCleanedStructures() {
 				StructType::Entries newEntries;
 
 				for_each(entries, [&](std::pair<IdentifierPtr, TypePtr>& entry) {
-							if(entry.second->toString().find("_cl_") == string::npos) {
-								newEntries.push_back(entry);
-							}
-						});
+					// todo remove kernel for irt_ version
+						if(entry.second->toString().find("_cl_") == string::npos || entry.second->toString().find("_cl_kernel") != string::npos) {
+							newEntries.push_back(entry);
+						}
+					});
 
 				// update struct in replacement map
 				NodePtr replacement = builder.variable(builder.refType(builder.structType(newEntries)));

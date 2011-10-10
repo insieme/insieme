@@ -41,6 +41,7 @@
 #include "isl/ctx.h"
 #include "isl/dim.h"
 #include "isl/set.h"
+#include "isl/union_set.h"
 #include "isl/map.h"
 
 #include <boost/utility.hpp>
@@ -69,61 +70,120 @@ public:
 	~IslContext() { isl_ctx_free(ctx); }
 };
 
+/** Define the type traits for ISL based data structures */
 template <Backend B>
 struct BackendTraits {
 	typedef IslContext ctx_type;
 };
 
 /**************************************************************************************************
- * IslSet: is a wrapper to isl_sets, this class allows to easily convert a set of constraints,
+ * Set<IslContext>: is a wrapper to isl_sets, this class allows to easily convert a set of constraints,
  * represented by a constraint combiner to isl representation. Output of the isl library will be
  * represented with this same abstraction which allows for isl sets to be converted back into
  * Constraints as defined in the poly namepsace
  *************************************************************************************************/
 template <>
 class Set<IslContext> : public boost::noncopyable {
-	IslContext& 					ctx;
-	const IterationVector& 			iterVec;
-	const ConstraintCombinerPtr& 	constraint;
-
-	isl_dim* dim;
-	isl_set* set;
+	IslContext& 	ctx;
+	isl_dim* 		dim;
+	isl_union_set* 	set;
 	
-	friend class IslMap;
 public:
-	Set(IslContext& ctx, const IterationVector& iterVec, const ConstraintCombinerPtr& constraint);
+	Set (	
+			IslContext& ctx, 
+			const IterationDomain& domain,
+			const std::string& tuple_name = std::string()
+		);
+
+	Set( IslContext& ctx, isl_dim* dim, isl_union_set* rawSet ) : ctx(ctx), dim(dim), set(rawSet) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	const isl_set* getAsIslSet() const { return set; }
+	bool isEmpty() const;
+
+	void simplify();
+
+	inline isl_union_set* getAsIslSet() const { return set; }
 
 	~Set() { 
 		isl_dim_free(dim);
-		isl_set_free(set);
+		isl_union_set_free(set);
 	}
 };
 
 /**************************************************************************************************
- * IslMap: is the abstraction used to represent relations (or maps) in the ISL library. 
+ * Map<IslContext>: is the abstraction used to represent relations (or maps) in the ISL library. 
  *************************************************************************************************/
 template <>
-class Map<IslContext> {
+class Map<IslContext> : public boost::noncopyable {
 	IslContext&				ctx;
-	const AffineSystem& 	affSys;
-
-	isl_dim* dim;
-	isl_map* map;
+	isl_dim* 				dim;
+	isl_union_map* 			map;
 
 public:
-	Map(IslContext& ctx, const AffineSystem& affSys);
+	Map (
+			IslContext& ctx, 
+			const AffineSystem& affSys,
+			const std::string& in_tuple_name = std::string(), 
+			const std::string& out_tuple_name = std::string()
+		);
+	
+	Map( IslContext& ctx, isl_dim* dim, isl_union_map* rawMap ) : ctx(ctx), dim(dim), map(rawMap) { }
 
 	std::ostream& printTo(std::ostream& out) const;
 
+	inline isl_union_map* getAsIslMap() const { return map; }
+
+	void simplify();
+
+	SetPtr<IslContext> deltas() const;
+	
+	bool isEmpty() const;
+
 	~Map() { 
 		isl_dim_free(dim);
-		isl_map_free(map);
+		isl_union_map_free(map);
 	}
 };
+
+template <> 
+SetPtr<IslContext> set_union(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+
+template <>
+SetPtr<IslContext> set_intersect(IslContext& ctx, const Set<IslContext>& lhs, const Set<IslContext>& rhs);
+
+template <> 
+MapPtr<IslContext> map_union(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+
+template <> 
+MapPtr<IslContext> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, const Map<IslContext>& rhs);
+
+template <> 
+MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
+
+template <>
+DependenceInfo<IslContext> buildDependencies( 
+		IslContext&				ctx,
+		const Set<IslContext>& 	domain, 
+		const Map<IslContext>& 	schedule, 
+		const Map<IslContext>& 	sinks, 
+		const Map<IslContext>& 	must_sources,
+		const Map<IslContext>& 	may_sourcs
+);
+
+template <>
+std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const;
+
+/**************************************************************************************************
+ * CODE GENERATION
+ *************************************************************************************************/
+template <>
+core::NodePtr toIR(core::NodeManager& mgr,
+		const StmtMap& stmtMap,		
+		const IterationVector& iterVec,
+		IslContext&	ctx,
+		const Set<IslContext>& 	domain, 
+		const Map<IslContext>& 	schedule);
 
 } // end poly namespace 
 } // end analysis namespace 

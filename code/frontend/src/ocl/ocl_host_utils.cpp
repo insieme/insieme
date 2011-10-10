@@ -44,15 +44,18 @@ namespace ocl {
 #define BASIC builder.getNodeManager().basic
 
 core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder) {
+	core::CallExprPtr&& stripped = dynamic_pointer_cast<const core::CallExpr>(arg);
 // remove stuff added by (void*)&
 	if(const core::CallExprPtr& refToAnyref = dynamic_pointer_cast<const core::CallExpr>(arg))
-		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef())
-			if(const core::CallExprPtr& makingRef = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0))) {
-				if(makingRef->getFunctionExpr() == BASIC.getScalarToArray())
-					return makingRef->getArgument(0);
-				if(makingRef->getFunctionExpr() == BASIC.getRefDeref())
-					return makingRef->getArgument(0);
-			}
+		if(refToAnyref->getFunctionExpr() == BASIC.getRefToAnyRef() )
+			if(const core::CallExprPtr& makingRef = dynamic_pointer_cast<const core::CallExpr>(refToAnyref->getArgument(0)))
+				stripped = makingRef;
+
+	if(!!stripped && stripped->getFunctionExpr() == BASIC.getScalarToArray())
+		return stripped->getArgument(0);
+	if(!!stripped && stripped->getFunctionExpr() == BASIC.getRefDeref())
+		return stripped->getArgument(0);
+
 
 	return arg;
 }
@@ -125,6 +128,18 @@ core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::E
 }
 
 /*
+ * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
+ */
+core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::ASTBuilder& builder) {
+	if(const core::CallExprPtr& call = core::dynamic_pointer_cast<const core::CallExpr>(expr)) {
+		if(call->getFunctionExpr() == BASIC.getRefNew() || call->getFunctionExpr() == BASIC.getRefVar())
+			return tryRemoveAlloc(call->getArgument(0), builder);
+	}
+	return expr;
+}
+
+
+/*
  * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
  * Usefull to get variable out of nests of array and struct accesses
  */
@@ -142,7 +157,23 @@ void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink) {
 	sink->setAnnotations(source->getAnnotations());
 }
 
+bool NullLitSearcher::visitCallExpr(const core::CallExprPtr& call) {
+	if(BASIC.isGetNull(call->getFunctionExpr()))
+		return true;
+	return false;
+}
 
+bool NullLitSearcher::visitLiteral(const core::LiteralPtr& literal) {
+	if(literal == builder.literal(literal->getType(), "0"))
+		return true;
+	return false;
+}
+
+bool IdSearcher::visitIdentifier(const core::IdentifierPtr& id) {
+	if(id == searchedId)
+		return true;
+	return false;
+}
 
 } //namespace ocl
 } //namespace frontend

@@ -77,6 +77,7 @@ namespace {
  * Instantiate the clang parser and sema to build the clang AST. Pragmas are stored during the parsing
  */
 void parseClangAST(ClangCompiler &comp, clang::ASTConsumer *Consumer, bool CompleteTranslationUnit, PragmaList& PL) {
+
 	InsiemeSema S(PL, comp.getPreprocessor(), comp.getASTContext(), *Consumer, CompleteTranslationUnit);
 
 	Parser P(comp.getPreprocessor(), S);
@@ -288,6 +289,7 @@ const core::ProgramPtr& Program::convert() {
 		// We start the conversion from the main function and then visit all the
 		// called functions according to the callgraph of the input program.
 		clang::CallGraphNode* main = pimpl->mCallGraph.getRoot();
+		assert(main && "Program has no main()");
 		mProgram = conv.handleFunctionDecl(dyn_cast<const FunctionDecl>(pimpl->mCallGraph.getDecl(main)), true);
 	}
 	LOG(INFO) << "=== Adding Parallelism to sequential IR ===";

@@ -41,23 +41,31 @@
 #define SIZE 1000
 
 int main(int argc, char* argv[]) {
-	int len_input = SIZE;
+	int size = SIZE;
 
 	int* input1 = (int*)malloc(sizeof(int) * SIZE);
-	int* input2 = (int*)malloc(sizeof(int) * SIZE);
-	int* output = (int*)malloc(sizeof(int) * SIZE);
+	int* input2 = (int*) malloc(sizeof(int) * SIZE);
+	int* output = (int *)malloc(sizeof(int) * SIZE);
 	
 	for(int i=0; i < SIZE; ++i) {
 		input1[i] = i;
 		input2[i] = i*2;
 	}
 
-	irt_ocl_init_devices();
+	//irt_ocl_timer* time1 = irt_ocl_init_timer(IRT_OCL_SEC);
+	//irt_ocl_start_timer(time1);
+	irt_ocl_init_devices(IRT_OCL_CPU);
+	//printf("%f\n", irt_ocl_stop_timer(time1));
+	
 	if (irt_ocl_get_num_devices() != 0) {
 		irt_ocl_device* dev = irt_ocl_get_device(0);
+
+		//irt_ocl_print_device_infos(dev);
+		//irt_ocl_print_device_short_info(dev);
 		irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "vec_add.cl", "vec_add", "", IRT_OCL_SOURCE);
 		
-		irt_ocl_buffer* buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
+		irt_ocl_buffer* buf_input1;
+		buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
 		irt_ocl_buffer* buf_input2 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
 		irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * SIZE);
 
@@ -70,21 +78,23 @@ int main(int argc, char* argv[]) {
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
 	
-		irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
-
-		irt_ocl_run_kernel(kernel, 4,   sizeof(cl_mem), (void *)&(buf_input1->cl_mem),
-						sizeof(cl_mem), (void *)&(buf_input2->cl_mem),
-						sizeof(cl_mem), (void *)&(buf_output->cl_mem),
-						sizeof(cl_int), (void *)&len_input);
+		irt_ocl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, 4,   (size_t)0, (void *)buf_input1,
+											(size_t)0, (void *)buf_input2,
+											(size_t)0, (void *)buf_output,
+											sizeof(cl_int), (void *)&size);
 
 		irt_ocl_read_buffer(buf_output, CL_TRUE, sizeof(int) * SIZE, &output[0]);
 	
 		irt_ocl_release_buffer(buf_input1);
 		irt_ocl_release_buffer(buf_input2);
-		irt_ocl_release_buffer(buf_output);	
+		irt_ocl_release_buffer(buf_output);
 		irt_ocl_release_kernel(kernel);
 	}
+	//irt_ocl_restart_timer(time1);
 	irt_ocl_release_devices();
+	//printf("%f\n", irt_ocl_stop_timer(time1));
+	//irt_ocl_release_timer(time1);
+	
 
 	// CHECK for output
 	printf("======================\n= Vector Addition Done\n");

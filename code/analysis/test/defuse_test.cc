@@ -94,7 +94,7 @@ TEST(DefUseCollect, SimpleArray) {
 				if (cur->getType() == Ref::ARRAY) {
 					EXPECT_EQ(static_cast<size_t>(1), static_cast<ArrayRef&>(*cur).getIndexExpressions().size());
 				} else {
-					EXPECT_TRUE(cur->getType() == Ref::VAR);
+					EXPECT_TRUE(cur->getType() == Ref::SCALAR);
 				}
 			});
 
@@ -123,7 +123,7 @@ TEST(DefUseCollect, Assignment) {
 
 	//	std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
 		
-		EXPECT_TRUE(ref.getType() == Ref::VAR);
+		EXPECT_TRUE(ref.getType() == Ref::SCALAR);
 
 	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
 
@@ -159,6 +159,37 @@ TEST(DefUseCollect, ArrayAccess) {
 }
 
 TEST(DefUseCollect, ArrayAssignment) {
+	
+	NodeManager mgr;
+	parse::IRParser parser(mgr);
+	// even if the expression is completely wrong (because it works with refs),
+	// still valid as a test case 
+	try {
+		auto compStmt = parser.parseStatement(
+			"{\
+				((op<vector.ref.elem>(ref<vector<int<4>,10>>:a, (op<array.ref.elem.1D>(ref<array<int<4>,1>>:c, int<4>:b)))) = ref<int<4>>:d);\
+			}"
+		);
+		// std::cout << *compStmt << std::endl;
+
+		RefList&& refs = collectDefUse(compStmt);
+		EXPECT_EQ(static_cast<size_t>(3), refs.size());
+
+		RefList::ref_iterator<ArrayRef> it = refs.arrays_begin(), end = refs.arrays_end();
+		EXPECT_TRUE((*it)->getUsage() == Ref::USE);
+		++it;
+		EXPECT_TRUE(it != end);
+		EXPECT_TRUE((*it)->getUsage() == Ref::DEF);
+		++it;
+		EXPECT_TRUE(it == end);
+
+	// std::for_each(refs.begin(), refs.end(), [](const RefPtr& cur){ std::cout << *cur << std::endl; });
+	
+	} catch(parse::ParseException& e) { std::cout << e.what() << std::endl;}
+
+}
+
+TEST(DefUseCollect, ArrayAssignment2) {
 	
 	NodeManager mgr;
 	parse::IRParser parser(mgr);

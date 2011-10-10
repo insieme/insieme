@@ -44,6 +44,7 @@
 //#define IRT_VERBOSE 1
 
 #define IRT_SIG_ERR SIGUSR1
+#define IRT_SIG_INTERRUPT SIGUSR2
 
 /* ------------------------------ data structures ----- */
 

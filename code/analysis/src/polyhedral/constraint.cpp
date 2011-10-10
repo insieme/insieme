@@ -201,10 +201,11 @@ ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const Const
 }
 
 const IterationVector& extractIterationVector(const ConstraintCombinerPtr& constraint) {
-	assert( static_cast<bool>(constraint) && "Passing an empty constraint");
+	assert( constraint && "Passing an empty constraint" );
 
 	IterVecExtractor ive;
 	constraint->accept(ive);
+
 	assert(ive.iterVec != NULL);
 	return *ive.iterVec;
 }

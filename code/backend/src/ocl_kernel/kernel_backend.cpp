@@ -83,11 +83,8 @@ namespace ocl_kernel {
 
 	TargetCodePtr OCLKernelBackend::convert(const core::NodePtr& code) const {
 
-		// basic setup
-		ConverterConfig config = ConverterConfig::getDefault();
-
 		// create and set up the converter
-		Converter converter(config);
+		Converter converter("OpenCL Kernel Backend");
 
 		// set up the node manager (for temporals)
 		core::NodeManager& nodeManager = code->getNodeManager();
@@ -100,7 +97,7 @@ namespace ocl_kernel {
 		// set up pre-processing
 		PreProcessorPtr preprocessor =  makePreProcessor<PreProcessingSequence>(
 				getBasicPreProcessorSequence(),
-				makePreProcessor<OCLPreprocessor>()
+				makePreProcessor<KernelPreprocessor>()
 		);
 		converter.setPreProcessor(preprocessor);
 
@@ -120,9 +117,6 @@ namespace ocl_kernel {
 
 		FunctionManager functionManager(converter, getOperatorTable(nodeManager), getFunctionIncludeTable());
 		converter.setFunctionManager(&functionManager);
-
-		ParallelManager parallelManager;
-		converter.setParallelManager(&parallelManager);
 
 		// conduct conversion
 		return converter.convert(code);

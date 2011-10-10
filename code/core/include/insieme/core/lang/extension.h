@@ -38,9 +38,13 @@
 
 #include <boost/noncopyable.hpp>
 
+#include "insieme/core/forward_decls.h"
+
 namespace insieme {
 namespace core {
 namespace lang {
+
+	using std::string;
 
 	/**
 	 * This class represents the common base class of language extensions. Such
@@ -59,6 +63,26 @@ namespace lang {
 		virtual ~Extension() {}
 	};
 
+	/**
+	 * A utility simplifying the creation of a type within language extensions. The
+	 * given type string will be parsed and returned.
+	 *
+	 * @param manager the node manager to be used for creating the type
+	 * @param type the string to be parsed
+	 * @return the requested type
+	 */
+	core::TypePtr getType(core::NodeManager& manager, const string& type);
+
+	/**
+	 * A utility simplifying the creation of literals within language extensions.
+	 * The type of the literal is passed as a string which will internally be parsed.
+	 *
+	 * @param manager the node manager to be used for creating the resulting literal
+	 * @param type the type of the resulting literal, encoded as a string
+	 * @param value the value of the resulting literal
+	 * @return the requested literal
+	 */
+	core::LiteralPtr getLiteral(core::NodeManager& manager, const string& type, const string& value);
 
 } // end namespace lang
 } // end namespace core

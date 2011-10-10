@@ -118,7 +118,7 @@ public:
     void visitJobExpr(const core::JobExprPtr& job) {
 //        std::cout << ": get a job!\n";
 
-        core::JobExpr::ChildList childs = job->getChildList();
+        const core::NodeList& childs = job->getChildList();
         //at least the local and global range has to be captured as well as the type and the  range
         EXPECT_LE(static_cast<unsigned>(4), childs.size());
 /*
@@ -139,11 +139,11 @@ TEST(OclCompilerTest, HelloCLTest) {
     core::ProgramPtr program = core::Program::create(manager);
 
 
-    LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "hello.cl" << "' to IR...";
+    LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";
     fe::Program prog(manager);
 
     std::cout << SRC_DIR << std::endl;
-    prog.addTranslationUnit(std::string(SRC_DIR) + "hello.cl");
+    prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello.cl");
     program = prog.convert();
     LOG(INFO) << "Done.";
 

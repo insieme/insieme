@@ -36,6 +36,9 @@
 
 #pragma once
 
+#include <vector>
+
+#include "insieme/utils/set_utils.h"
 #include "insieme/core/ast_pointer.h"
 
 namespace insieme {
@@ -73,6 +76,20 @@ namespace core {
 		class BasicGenerator;
 	} // end namespace lang
 
+
+	/**
+	 * Typedefs for some widely used base type collections.
+	 */
+	typedef std::vector<NodePtr> NodeList;
+	typedef std::vector<TypePtr> TypeList;
+	typedef std::vector<StatementPtr> StatementList;
+	typedef std::vector<ExpressionPtr> ExpressionList;
+
+	typedef utils::set::PointerSet<NodePtr> NodeSet;
+	typedef utils::set::PointerSet<TypePtr> TypeSet;
+	typedef utils::set::PointerSet<StatementPtr> StatementSet;
+	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
+	typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
 
 } // end namespace core
 } // end namespace insieme

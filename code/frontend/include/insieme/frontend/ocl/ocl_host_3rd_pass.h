@@ -56,7 +56,12 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	LocalMemDecls& localMemDecls;
 	KernelNames& kernelNames;
 	KernelLambdas& kernelLambdas;
-	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+	EquivalenceMap& eqMap;
+	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& replacements;
+	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varReplacements;
+
+	// Generates a function which, taking the kernel name as a string as argument, returns the corresponding lambda
+	const core::ExpressionPtr genGetKernelLambda();
 
 	// get the zero element of the corresponding type
 	const core::ExpressionPtr getZeroElem(const core::TypePtr& type);
@@ -74,13 +79,20 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	// with an appropriate return value
 	bool updateReturnVal(const core::CallExprPtr& oldCall, core::NodePtr& newCall);
 
+	// do all the replacements needed to create a normal function call out of an clEnqueueNDRangeKernel/irt_ocl_run_kernel call
+	// callExpr is the original call to the NDRangeKernle function, newCall is the substituted one
+	const core::NodePtr handleNDRangeKernel(const core::CallExprPtr& callExpr, const core::CallExprPtr&  newCall, const size_t offset);
+
 public:
 	HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
-			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> oclReplacements) :
+			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, EquivalenceMap& equivalenceMap,
+			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& oclReplacements) :
 		builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs),	localMemDecls(oclLocalMemDecls), kernelNames(oclKernelNames),
-			kernelLambdas(oclKernelLambdas), replacements(oclReplacements) { }
+			kernelLambdas(oclKernelLambdas), eqMap(equivalenceMap), replacements(oclReplacements) { }
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
+
+	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr>& getVarReplacements(){ return varReplacements; }
 
 };
 

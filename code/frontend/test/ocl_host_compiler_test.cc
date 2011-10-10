@@ -88,6 +88,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	//    LOG(INFO) << pp;
 
 	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
 		LOG(INFO) << cur << std::endl;
@@ -103,6 +104,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 TEST(OclHostCompilerTest, VecAddTest) {
 	Logger::get(std::cerr, DEBUG);
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "inputs");
+	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR));
 	CommandLineOptions::IncludePaths.push_back(std::string(SRC_DIR) + "../../backend/test/ocl_kernel");
 
 	CommandLineOptions::Defs.push_back("INSIEME");
@@ -128,6 +130,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	//    LOG(INFO) << pp;
 
 	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
 		LOG(INFO) << cur << std::endl;

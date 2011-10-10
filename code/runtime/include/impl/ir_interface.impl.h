@@ -42,6 +42,8 @@
 #include "work_group.impl.h"
 #include "irt_atomic.h"
 
+#define IRT_SANE_PARALLEL_MAX 64
+
 irt_work_item* irt_pfor(irt_work_item* self, irt_work_group* group, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* args) {
 	irt_wi_wg_membership* mem = irt_wg_get_wi_membership(group, self);
 	mem->pfor_count++;
@@ -67,14 +69,17 @@ irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job
 	// TODO: make optional, better scheduling,
 	// speedup using custom implementation without adding each item individually to group
 	irt_work_group* ret = irt_wg_create();
-	uint32 num_threads = (job->max+job->min)/2;
+	uint32 num_threads = (job->max/2+job->min/2);
+	if(job->min == 1 && job->max > IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
 	num_threads -= num_threads%job->mod;
-	irt_work_item* wis[num_threads]; 
-	for(int i=0; i<num_threads; ++i) {
+	if(num_threads<job->min) num_threads = job->min;
+	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;
+	irt_work_item** wis = (irt_work_item**)alloca(sizeof(irt_work_item*)*num_threads);
+	for(uint32 i=0; i<num_threads; ++i) {
 		wis[i] = irt_wi_create(irt_g_wi_range_one_elem, job->impl_id, job->args);
 		irt_wg_insert(ret, wis[i]);
 	}
-	for(int i=0; i<num_threads; ++i) {
+	for(uint32 i=0; i<num_threads; ++i) {
 		irt_scheduling_assign_wi(irt_g_workers[i%irt_g_worker_count], wis[i]);
 	}
 	return ret;

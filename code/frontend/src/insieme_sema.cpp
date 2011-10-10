@@ -72,7 +72,7 @@ void EraseMatchedPragmas(PendingPragmaList& pending, PragmaList& matched) {
 		assert(it != pending.end() && "Current matched pragma is not in the list of pending pragmas");
 		pending.erase(it);
 	}
-}
+} // end anonymous namespace 
 
 /**
  * Given a range, the PragmaFilter returns the pragmas with are defined between that range.
@@ -85,7 +85,7 @@ class PragmaFilter {
 	void inc(bool first) {
 		while ( first && I != E && isAfterRange(bounds, (*I)->getStartLocation(), sm) )
 			++I;
-		if(!first)	++I;
+		if (!first)	++I;
 	}
 
 public:
@@ -96,9 +96,11 @@ public:
 
 	PragmaPtr operator*() const {
 		if ( I == E ) return PragmaPtr();
+
 		if ( isInsideRange(bounds, (*I)->getStartLocation(), sm)) {
 			return *I;
 		}
+
 		return PragmaPtr();
 	}
 
@@ -117,10 +119,15 @@ struct InsiemeSema::InsiemeSemaImpl {
 	InsiemeSemaImpl(PragmaList& pragma_list) :	pragma_list(pragma_list) {	}
 };
 
-InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang::ASTContext& ctxt,
-						 clang::ASTConsumer& consumer, bool CompleteTranslationUnit,
-						 clang::CodeCompleteConsumer* CompletionConsumer) :
-	clang::Sema(pp, ctxt, consumer, CompleteTranslationUnit, CompletionConsumer),
+InsiemeSema::InsiemeSema(
+		PragmaList& 					pragma_list, 
+		clang::Preprocessor& 			pp, 
+		clang::ASTContext& 				ctx,
+		clang::ASTConsumer& 			consumer, 
+		bool 							CompleteTranslationUnit,
+		clang::CodeCompleteConsumer* 	CompletionConsumer) 
+:
+	clang::Sema(pp, ctx, consumer, CompleteTranslationUnit, CompletionConsumer),
 	pimpl(new InsiemeSemaImpl(pragma_list)),
 	isInsideFunctionDef(false) { }
 	//TODO: Visual Studios 2010 fix - please recheck (clang::Sema::Sema -> clang::Sema and include header)
@@ -128,9 +135,8 @@ InsiemeSema::InsiemeSema(PragmaList& pragma_list, clang::Preprocessor& pp, clang
 InsiemeSema::~InsiemeSema() { delete pimpl; }
 
 /*
- * The function search for the character c in the input stream backwards.
- * The assumption is the character will be in the input stream so no
- * termination condition is needed.
+ * The function search for the character c in the input stream backwards. The assumption is the
+ * character will be in the input stream so no termination condition is needed.
  */
 const char* strbchr(const char* stream, char c) {
 	// soon or later we are going to find the char we are looking for, no need for further termination condition
@@ -160,6 +166,7 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 //	DLOG(INFO) << util::Line(L, SourceMgr) << ":" << util::Column(L, SourceMgr) << ", " <<
 //				util::Line(R, SourceMgr) << ":" << util::Column(R, SourceMgr) << std::endl;
 
+	enum {MacroIDBit = 1U << 31}; // from clang/Basic/SourceLocation.h for use with cpp classes
 	{
 		SourceLocation&& leftBracketLoc = SourceMgr.getInstantiationLoc(L);
 		std::pair<FileID, unsigned>&& locInfo = SourceMgr.getDecomposedLoc(leftBracketLoc);
@@ -168,7 +175,10 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		char const* lBracePos = strbchr(strData, '{');
 
 		// We know the location of the left bracket, we overwrite the value of L with the correct location
-		L = leftBracketLoc.getFileLocWithOffset(lBracePos - strData);
+		// but only if the location is valid as in getFileLocWithOffset() in SourceLocation
+		if((((leftBracketLoc.getRawEncoding() & ~MacroIDBit)+(lBracePos - strData)) & MacroIDBit)==0){
+			L = leftBracketLoc.getFileLocWithOffset(lBracePos - strData);
+		}
 	}
 	// the same is done for the right bracket
 
@@ -182,8 +192,10 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 		const char *strData = buffer.begin() + locInfo.second;
 		char const* rBracePos = strbchr(strData, '}');
 
-		// We know the location of the left bracket, we overwrite the value of L with the correct location
-		R = rightBracketLoc.getFileLocWithOffset(rBracePos - strData);
+		// We know the location of the right bracket, we overwrite the value of R with the correct location
+		if((((rightBracketLoc.getRawEncoding() & ~MacroIDBit)+(rBracePos - strData)) & MacroIDBit)==0){
+			R = rightBracketLoc.getFileLocWithOffset(rBracePos - strData);
+		}
 	}
 
 	StmtResult&& ret = Sema::ActOnCompoundStmt(L, R, clang::move(Elts), isStmtExpr);
@@ -249,8 +261,8 @@ clang::StmtResult InsiemeSema::ActOnCompoundStmt(clang::SourceLocation L, clang:
 void InsiemeSema::matchStmt(clang::Stmt* S, const clang::SourceRange& bounds, const clang::SourceManager& sm,
 							PragmaList& matched) {
 
-	for ( PragmaFilter filter = PragmaFilter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
-		PragmaPtr P = *filter;
+	for ( PragmaFilter filter(bounds, sm,  pimpl->pending_pragma); *filter; ++filter ) {
+		PragmaPtr&& P = *filter;
 		P->setStatement(S);
 		matched.push_back(P);
 	}

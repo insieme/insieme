@@ -48,10 +48,9 @@
 
 #ifdef USE_OPENCL 
 #include "impl/irt_ocl.impl.h"
-#include "irt_ocl_config.h"
 #endif
 
-#define NUM_ELEMENTS 100000000
+#define NUM_ELEMENTS 10000000
 
 #define INSIEME_BOOL_T_INDEX 0
 #define INSIEME_INT_T_INDEX 1
@@ -229,20 +228,16 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 	insieme_struct1* input = (insieme_struct1*)inputblock->data;
 	uint64* output = (uint64*)outputblock->data;
 
-	irt_ocl_device* dev = irt_ocl_get_device(0);
-	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][0];
-	irt_ocl_print_device_info(dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
-
 	cl_long len_input = (wi->range.end - wi->range.begin);
 	cl_long len_output = (wi->range.end - wi->range.begin);
 
 	unsigned int mem_size_input = sizeof(insieme_struct1) * len_input;
 	unsigned int mem_size_output = sizeof(uint64) * len_output;
 
-	irt_ocl_buffer* buf_input = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, mem_size_input);
-	irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, mem_size_output);
+	irt_ocl_buffer* buf_input = irt_ocl_rt_create_buffer(CL_MEM_READ_ONLY, mem_size_input);
+	irt_ocl_buffer* buf_output = irt_ocl_rt_create_buffer(CL_MEM_WRITE_ONLY, mem_size_output);
 
-	irt_ocl_write_buffer(buf_input, CL_FALSE, mem_size_input, &input[wi->range.begin]);
+	irt_ocl_write_buffer(buf_input, CL_FALSE, 0, mem_size_input, &input[wi->range.begin]);
 
 	size_t szLocalWorkSize = 256;
 	float multiplier = NUM_ELEMENTS/(float)szLocalWorkSize;
@@ -250,15 +245,13 @@ void insieme_wi_add_implementation2(irt_work_item* wi) {
 		multiplier += 1;
 	}
 	size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
-	
-	irt_ocl_set_kernel_ndrange(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize);
 
-	irt_ocl_run_kernel(kernel, 3,   sizeof(cl_mem), (void *)&(buf_input->cl_mem),
-									sizeof(cl_mem), (void *)&(buf_output->cl_mem),
-									sizeof(cl_long), (void *)&len_input);
+	irt_ocl_rt_run_kernel(0,	1, &szGlobalWorkSize, &szLocalWorkSize,
+								3,	(size_t)0, buf_input,
+									(size_t)0, buf_output,
+									sizeof(cl_long), &len_input);
 
-	irt_ocl_read_buffer(buf_output, CL_TRUE, mem_size_output, &output[wi->range.begin]);
-	//clFinish(dev->cl_queue); // ??	
+	irt_ocl_read_buffer(buf_output, CL_TRUE, 0, mem_size_output, &output[wi->range.begin]);
 	
 	irt_ocl_release_buffer(buf_input);
 	irt_ocl_release_buffer(buf_output);

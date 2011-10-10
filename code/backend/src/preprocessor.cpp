@@ -49,6 +49,7 @@
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
+#include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace backend {
@@ -60,7 +61,8 @@ namespace backend {
 				makePreProcessor<GenericLambdaInstantiator>(),
 				makePreProcessor<IfThenElseInlining>(),
 				makePreProcessor<RestoreGlobals>(),
-				makePreProcessor<InitZeroSubstitution>()
+				makePreProcessor<InitZeroSubstitution>(),
+				makePreProcessor<MakeVectorArrayCastsExplicit>()
 		);
 	}
 
@@ -522,6 +524,171 @@ namespace backend {
 		// fix the global variable
 		newBody = core::transform::fixVariable(manager, newBody, globals, replacement);
 		return core::transform::replaceAll(manager, code, body, newBody);
+	}
+
+
+
+
+	// --------------------------------------------------------------------------------------------------------------
+	//      Adding explicit Vector to Array casts
+	// --------------------------------------------------------------------------------------------------------------
+
+	class VectorToArrayConverter : public core::transform::CachedNodeMapping {
+
+		core::NodeManager& manager;
+
+	public:
+
+		VectorToArrayConverter(core::NodeManager& manager) : manager(manager) {}
+
+		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
+
+			// do not touch types ...
+			if (ptr->getNodeCategory() == core::NC_Type) {
+				return ptr;
+			}
+
+			// apply recursively - bottom up
+			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+
+			// handle calls
+			if (ptr->getNodeType() == core::NT_CallExpr) {
+				res = handleCallExpr(core::static_pointer_cast<const core::CallExpr>(res));
+			}
+
+			// handle declarations
+			if (ptr->getNodeType() == core::NT_DeclarationStmt) {
+				res = handleDeclarationStmt(core::static_pointer_cast<const core::DeclarationStmt>(res));
+			}
+
+			// handle rest
+			return res;
+		}
+
+	private:
+
+		/**
+		 * This method replaces vector arguments with vector2array conversions whenever necessary.
+		 */
+		core::CallExprPtr handleCallExpr(core::CallExprPtr call) {
+
+			// extract node manager
+			core::ASTBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+
+			// check whether there is a argument which is a vector but the parameter is not
+			const core::TypePtr& type = call->getFunctionExpr()->getType();
+			assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
+			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
+
+			const core::TypeList& paramTypes = funType->getParameterTypes();
+			const core::ExpressionList& args = call->getArguments();
+
+			// check number of arguments
+			if (paramTypes.size() != args.size()) {
+				// => invalid call, don't touch this
+				return call;
+			}
+
+			bool conversionRequired = false;
+			std::size_t size = args.size();
+			for (std::size_t i = 0; !conversionRequired && i < size; i++) {
+				conversionRequired = conversionRequired || (args[i]->getType()->getNodeType() == core::NT_VectorType && paramTypes[i]->getNodeType() != core::NT_VectorType);
+			}
+
+			// check whether a vector / non-vector argument/parameter pair has been found
+			if (!conversionRequired) {
+				// => no deduction required
+				return call;
+			}
+
+			// derive type variable instantiation
+			auto instantiation = core::analysis::getTypeVariableInstantiation(manager, call);
+			if (!instantiation) {
+				// => invalid call, don't touch this
+				return call;
+			}
+
+			// obtain argument list
+			vector<core::TypePtr> argTypes;
+			::transform(args, std::back_inserter(argTypes), [](const core::ExpressionPtr& cur) { return cur->getType(); });
+
+			// apply match on parameter list
+			core::TypeList newParamTypes = paramTypes;
+			for (std::size_t i=0; i<newParamTypes.size(); i++) {
+				newParamTypes[i] = instantiation->applyTo(manager, newParamTypes[i]);
+			}
+
+			// generate new argument list
+			bool changed = false;
+			core::ExpressionList newArgs = call->getArguments();
+			for (unsigned i=0; i<size; i++) {
+
+				// ignore identical types
+				if (*newParamTypes[i] == *argTypes[i]) {
+					continue;
+				}
+
+				core::TypePtr argType = argTypes[i];
+				core::TypePtr paramType = newParamTypes[i];
+
+				// strip references
+				bool ref = false;
+				if (argType->getNodeType() == core::NT_RefType && paramType->getNodeType() == core::NT_RefType) {
+					ref = true;
+					argType = core::static_pointer_cast<const core::RefType>(argType)->getElementType();
+					paramType = core::static_pointer_cast<const core::RefType>(paramType)->getElementType();
+				}
+
+				// handle vector->array
+				if (argType->getNodeType() == core::NT_VectorType && paramType->getNodeType() == core::NT_ArrayType) {
+					// conversion needed
+					newArgs[i] = builder.callExpr((ref)?basic.getRefVectorToRefArray():basic.getVectorToArray(), newArgs[i]);
+					changed = true;
+				}
+			}
+			if (!changed) {
+				// return original call
+				return call;
+			}
+
+			// exchange parameters and done
+			return core::CallExpr::get(manager, instantiation->applyTo(call->getType()), call->getFunctionExpr(), newArgs);
+		}
+
+		/**
+		 * This method replaces vector initialization values with vector2array conversions whenever necessary.
+		 */
+		core::DeclarationStmtPtr handleDeclarationStmt(core::DeclarationStmtPtr declaration) {
+
+			// only important for array types
+			core::TypePtr type = declaration->getVariable()->getType();
+			if (type->getNodeType() != core::NT_ArrayType) {
+				return declaration;
+			}
+
+			// get initialization value
+			type = declaration->getInitialization()->getType();
+			if (type->getNodeType() != core::NT_VectorType) {
+				return declaration;
+			}
+
+			// extract some values from the declaration statement
+			core::NodeManager& manager = declaration->getNodeManager();
+			const core::VariablePtr& var = declaration->getVariable();
+			const core::ExpressionPtr& oldInit = declaration->getInitialization();
+
+			// construct a new init statement
+			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.basic.getVectorToArray(), toVector(oldInit));
+			return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
+		}
+	};
+
+	core::NodePtr MakeVectorArrayCastsExplicit::process(core::NodeManager& manager, const core::NodePtr& code) {
+		// the converter does the magic
+		VectorToArrayConverter converter(manager);
+		return converter.map(code);
 	}
 
 } // end namespace backend

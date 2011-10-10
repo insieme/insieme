@@ -54,12 +54,12 @@ namespace test {
 
 	namespace {
 
-		vector<IntegrationTestCase> loadAllCases() {
+		vector<IntegrationTestCase> loadAllCases(const std::string& testDirStr) {
 			// create a new result vector
 			vector<IntegrationTestCase> res;
 
 			// obtain access to the test directory
-			const fs::path testDir(TEST_ROOT_DIR);
+			const fs::path testDir(testDirStr /*TEST_ROOT_DIR*/);
 
 			// check whether the directory is correct
 			if (!fs::exists(testDir)) {
@@ -102,6 +102,15 @@ namespace test {
 					LOG(log::WARNING) << "Directory for test case " + cur + " not found!";
 					continue;
 				}
+
+				const fs::path subTestConfig = testCaseDir / "test.cfg";
+				if (fs::exists(subTestConfig)) {
+					std::cout << (testCaseDir).string();
+					vector<IntegrationTestCase>&& subCases = loadAllCases((testCaseDir).string());
+					std::copy(subCases.begin(), subCases.end(), std::back_inserter(res));	
+					continue;
+				}
+
 
 				// read inputs.data (if present)
 				vector<string> files;
@@ -152,7 +161,7 @@ namespace test {
 	const vector<IntegrationTestCase>& getAllCases() {
 		// check whether cases have been loaded before
 		if (!TEST_CASES) {
-			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases());
+			TEST_CASES = boost::optional<vector<IntegrationTestCase>>(loadAllCases(TEST_ROOT_DIR));
 		}
 		return *TEST_CASES;
 	}

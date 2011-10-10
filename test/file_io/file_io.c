@@ -17,6 +17,7 @@ void printFile(char* name) {
 		cur = fgetc(fp);
 	}
 	printf("Closing file ...\n");
+	fflush(fp);
 	fclose(fp);
 }
 
@@ -25,4 +26,6 @@ int main() {
 	printFile("file.txt");
 	printFile("file2.txt");
 	printf("Done.\n");
+
+	//fflush(stderr);
 }

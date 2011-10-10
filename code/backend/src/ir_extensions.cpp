@@ -63,7 +63,8 @@ namespace backend {
 
 			// construct type ()->unit
 			core::TypePtr unit = builder.getBasicGenerator().getUnit();
-			core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(), unit);
+			core::TypePtr alpha = builder.getBasicGenerator().getAlpha();
+			core::FunctionTypePtr funType = builder.functionType(toVector(alpha), unit);
 
 			return builder.literal(funType, "initGlobals");
 		}

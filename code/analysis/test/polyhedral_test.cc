@@ -117,7 +117,7 @@ TEST(IterationVector, MergeEmpty) {
 	poly::IterationVector iterVec2; 
 
 	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
-	// std::cout << itv;
+	
 	poly::IterationVector::iterator it = itv.begin();
 	EXPECT_EQ(poly::Iterator(iter1), *(it++));
 	EXPECT_EQ(poly::Iterator(iter2), *(it++));
@@ -134,7 +134,33 @@ TEST(IterationVector, MergeEmpty) {
 
 }
 
-TEST(IterationVector, Merge) {
+TEST(IterationVector, MergeNotEmpty) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Parameter(param) ); 
+	std::cout << iterVec1 << std::endl;
+
+	poly::IterationVector iterVec2; 
+	iterVec2.add( poly::Parameter(param) ); 
+	iterVec2.add( poly::Iterator(iter2) ); 
+	std::cout << iterVec2 << std::endl; 
+
+	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
+	std::cout << itv << std::endl;
+	poly::IterationVector::iterator it = itv.begin();
+	EXPECT_EQ(poly::Iterator(iter1), *(it++));
+	EXPECT_EQ(poly::Iterator(iter2), *(it++));
+	EXPECT_EQ(poly::Parameter(param), *(it++));
+	EXPECT_EQ(poly::Constant(), *it);
+}
+
+TEST(IterVec, Transform) {
 	NodeManager mgr;
 
 	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
@@ -145,20 +171,24 @@ TEST(IterationVector, Merge) {
 	iterVec1.add( poly::Iterator(iter1) ); 
 	iterVec1.add( poly::Parameter(param) ); 
 	// std::cout << iterVec1 << std::endl;
-
+	
+	VariablePtr iter3 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
+	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 5); 
+	
 	poly::IterationVector iterVec2; 
-	iterVec2.add( poly::Parameter(param) ); 
+	iterVec2.add( poly::Iterator(iter3) ); 
+	iterVec2.add( poly::Iterator(iter1) ); 
 	iterVec2.add( poly::Iterator(iter2) ); 
-	// std::cout << iterVec2 << std::endl; 
-
-	poly::IterationVector itv = poly::merge(iterVec1, iterVec2);
-	// std::cout << itv;
-	poly::IterationVector::iterator it = itv.begin();
-	EXPECT_EQ(poly::Iterator(iter1), *(it++));
-	EXPECT_EQ(poly::Iterator(iter2), *(it++));
-	EXPECT_EQ(poly::Parameter(param), *(it++));
-	EXPECT_EQ(poly::Constant(), *it);
+	iterVec2.add( poly::Parameter(param2) ); 
+	iterVec2.add( poly::Parameter(param) ); 
+	// std::cout << iterVec2 << std::endl;
+	
+	const poly::IndexTransMap&& transMap = poly::transform(iterVec2, iterVec1);
+	EXPECT_EQ(transMap, poly::IndexTransMap({1,4,5}));
+	
 }
+
+//==== AffineFunction =========================================================
 
 TEST(AffineFunction, Creation) {
 	NodeManager mgr;
@@ -238,7 +268,68 @@ TEST(AffineFunction, CreationFromExpr) {
 		af.printTo(ss);
 		EXPECT_EQ("1*v1 + 1*v3", ss.str());
 	}
+}
 
+TEST(AffineFunction, Equality) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Parameter(iter2) ); 
+	
+	poly::AffineFunction af1(iterVec1, {1,1,0});
+	
+	poly::IterationVector iterVec2; 
+	iterVec2.add( poly::Iterator(iter2) ); 
+	iterVec2.add( poly::Parameter(iter1) ); 
+		
+	poly::AffineFunction af2(iterVec2, {1,1,0});
+	
+	EXPECT_NE(af1, af2);
+}
+
+TEST(AffineFunction, AFChangeBase) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter2) ); 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Parameter(param) ); 
+	// std::cout << iterVec1 << std::endl;
+	
+	poly::AffineFunction af1(iterVec1, {0,1,1,9});
+	
+	VariablePtr iter3 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
+	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 5); 
+	
+	poly::IterationVector iterVec2; 
+	iterVec2.add( poly::Iterator(iter3) ); 
+	iterVec2.add( poly::Iterator(iter1) ); 
+	iterVec2.add( poly::Iterator(iter2) ); 
+	iterVec2.add( poly::Parameter(param2) ); 
+	iterVec2.add( poly::Parameter(param) ); 
+	// std::cout << iterVec2 << std::endl;
+	
+	const poly::IndexTransMap&& transMap = poly::transform(iterVec2, iterVec1);
+	EXPECT_EQ(transMap, poly::IndexTransMap({2,1,4,5}));
+	
+	poly::AffineFunction aft = af1.toBase(iterVec2, transMap);
+	EXPECT_EQ(af1, aft);
+	
+	iterVec1.add( poly::Iterator(iter3) );
+	poly::AffineFunction af2(iterVec1, {0,1,0,1,9});
+	EXPECT_EQ(af2, aft);
+	
+	af2.setCoeff(poly::Iterator(iter3), 3);
+	EXPECT_NE(af2, aft);
 }
 
 TEST(Constraint, Creation) {

@@ -41,14 +41,21 @@
 
 #include "insieme/utils/iterator_utils.h"
 
+#include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/printer/pretty_printer.h"
+
 namespace insieme {
 namespace core {
 namespace arithmetic {
 
 	namespace {
 
-		inline vector<Product::Factor> getSingle(const core::VariablePtr& var, int exponent) {
-			return toVector(std::make_pair(var, exponent));
+		inline vector<Product::Factor> getSingle(const Value& value, int exponent) {
+			if (exponent == 0) {
+				// do not create an entry if exponent is zero
+				return toVector<Product::Factor>();
+			}
+			return toVector(std::make_pair(value, exponent));
 		}
 
 		template<typename Combinator, typename Extractor, typename Container>
@@ -138,20 +145,146 @@ namespace arithmetic {
 			return 0;
 		}
 
+		/**
+		 * Tests whether node A is less than node B. This
+		 * implementation is used to order values within products, hence formulas
+		 * and may not be applicable in general.
+		 */
+		bool lessThan(const NodePtr& a, const NodePtr& b) {
+			// check for identity
+			if (*a == *b) {
+				return false;
+			}
+
+			// handle types (compare string representation)
+			if (a->getNodeCategory() == NC_Type && b->getNodeCategory() == NC_Type) {
+				return toString(*a) < toString(*b);
+			}
+
+			// extract node types
+			NodeType typeA = a->getNodeType();
+			NodeType typeB = b->getNodeType();
+
+			// most important - node type
+			if (typeA != typeB) {
+				return typeA < typeB;
+			}
+
+			// special handling of variables
+			if (typeA == core::NT_Variable) {
+				const VariablePtr& varA = static_pointer_cast<const Variable>(a);
+				const VariablePtr& varB = static_pointer_cast<const Variable>(b);
+				return *varA < *varB;
+			}
+
+			// special handling for identifiers
+			if (typeA == core::NT_Identifier) {
+				const IdentifierPtr& identA = static_pointer_cast<const Identifier>(a);
+				const IdentifierPtr& identB = static_pointer_cast<const Identifier>(b);
+				return identA->getName() < identB->getName();
+			}
+
+			// handle remaining expressions => lexicographically
+			const NodeList& listA = a->getChildList();
+			const NodeList& listB = b->getChildList();
+			return std::lexicographical_compare(listA.begin(), listA.end(), listB.begin(), listB.end(),
+					[](const NodePtr& a, const NodePtr& b) { return lessThan(a,b); });
+		}
+
 	}
 
-	Product::Product(const core::VariablePtr& var, int exponent)
+
+	Value::Value(const ExpressionPtr& value) : value(value) {
+		if (!isValue(value)) {
+			// TODO: exchange with not a value exception
+			throw NotAFormulaException(value);
+		}
+	}
+
+	bool Value::isValue(const ExpressionPtr& expr) {
+
+		// ---------------------------------------------------
+		//  This function is recursively determining whether
+		//  a given expression is something considered to
+		//  be a value within a formula.
+		// ---------------------------------------------------
+
+		// all variables are values
+		if (expr->getNodeType() == core::NT_Variable) {
+			return true;
+		}
+
+		// all the rest has to be a call expression
+		if (expr->getNodeType() != core::NT_CallExpr) {
+			return false;
+		}
+
+		const lang::BasicGenerator& basic = expr->getNodeManager().getBasicGenerator();
+		const CallExprPtr& call = static_pointer_cast<const CallExpr>(expr);
+		const ExpressionPtr& fun = call->getFunctionExpr();
+		const ExpressionList& args = call->getArguments();
+
+		// handle references
+		if (basic.isRefDeref(fun)) {
+			return isValue(args[0]);
+		}
+
+		// handle tuples
+		if (basic.isTupleRefElem(fun) || basic.isTupleMemberAccess(fun)) {
+			return isValue(args[0]);
+		}
+
+		// handle composites
+		if (basic.isCompositeRefElem(fun) || basic.isCompositeMemberAccess(fun)) {
+			return isValue(args[0]);
+		}
+
+		try {
+
+			// handle vectors
+			if (basic.isVectorSubscript(fun) || basic.isVectorRefElem(fun)) {
+				return isValue(args[0]) && toFormula(args[1]).isConstant();
+			}
+
+			// handle arrays
+			if (basic.isArraySubscript1D(fun) || basic.isArrayRefElem1D(fun)) {
+				return isValue(args[0]) && toFormula(args[1]).isConstant();
+			}
+
+		} catch (const NotAFormulaException& nafe) {
+			// subscript was not a constant ..
+			return false;
+		}
+
+		// everything else is not a value
+		return false;
+	}
+
+	bool Value::operator<(const Value& other) const {
+		return lessThan(value, other.value);
+	}
+
+	std::ostream& Value::printTo(std::ostream& out) const {
+		// just use pretty printer to format value
+		return out << printer::PrettyPrinter(value);
+	}
+
+
+	Product::Product(const VariablePtr& var, int exponent)
 		: factors(getSingle(var, exponent)) {};
+
+	Product::Product(const Value& value, int exponent)
+		: factors(getSingle(value, exponent)) {};
 
 	Product::Product(const vector<Factor>&& factors)
 		: factors(factors) {};
 
 	Product Product::operator*(const Product& other) const {
-		return Product(combine<std::plus<int>, deref<VariablePtr>>(factors, other.factors));
+		return Product(combine<std::plus<int>, id<Value>>(factors, other.factors));
 	}
 
 	Product Product::operator/(const Product& other) const {
-		return Product(combine<std::minus<int>, deref<VariablePtr>>(factors, other.factors));
+		return Product(combine<std::minus<int>, id<Value>>(factors, other.factors));
 	}
 
 	bool Product::operator<(const Product& other) const {
@@ -177,12 +310,12 @@ namespace arithmetic {
 
 		while (it1 != end1 && it2 != end2) {
 
-			const pair<core::VariablePtr, int>& a = *it1;
-			const pair<core::VariablePtr, int>& b = *it2;
+			const pair<Value, int>& a = *it1;
+			const pair<Value, int>& b = *it2;
 
 			// make distinction based on first element
-			if (*a.first != *b.first) {
-				return *a.first < *b.first;
+			if (a.first != b.first) {
+				return a.first < b.first;
 			}
 
 			// first element is the same => consider exponent
@@ -198,8 +331,8 @@ namespace arithmetic {
 		return it1!=end1;
 	}
 
-	int Product::operator[](const VariablePtr& var) const {
-		return findAssignedValue<deref<VariablePtr>>(factors, var);
+	int Product::operator[](const Value& var) const {
+		return findAssignedValue<id<Value>>(factors, var);
 	}
 
 	std::ostream& Product::printTo(std::ostream& out) const {
@@ -211,7 +344,7 @@ namespace arithmetic {
 
 		// print individual factors
 		return out << join("*", factors, [](std::ostream& out, const Factor& cur) {
-			out << *cur.first;
+			out << cur.first;
 			if (cur.second != 1) {
 				out << "^" << cur.second;
 			}
@@ -250,6 +383,11 @@ namespace arithmetic {
 	};
 
 	Formula::Formula(const core::VariablePtr& var, int exponent, int coefficient) : terms(toVector(std::make_pair(Product(var, exponent), coefficient))) {
+		assert(exponent != 0 && "Exponent must be != 0!");
+		assert(coefficient != 0 && "Coefficient must be != 0!");
+	};
+
+	Formula::Formula(const Value& value, int exponent, int coefficient) : terms(toVector(std::make_pair(Product(value, exponent), coefficient))) {
 		assert(exponent != 0 && "Exponent must be != 0!");
 		assert(coefficient != 0 && "Coefficient must be != 0!");
 	};

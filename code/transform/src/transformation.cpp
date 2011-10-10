@@ -37,38 +37,40 @@
 #include "insieme/transform/transformation.h"
 
 namespace insieme {
-
 namespace transform {
 
-	// ------------------------------------------------------------
-  	IntegerRepresentationType::IntegerRepresentationType() {
-	// ------------------------------------------------------------
-  		name = "integer";
-  		}
-	// ------------------------------------------------------------
+	InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
+		: msg(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
 
-	// ------------------------------------------------------------
-	IntegerParameterType::IntegerParameterType(){
-	// ------------------------------------------------------------
-		name = "integer";
-		supertype = NULL;
-		representationtype = &Types::integerRepresentationType;
-		}
-	// ------------------------------------------------------------
-	UnrollingDepthParameterType::UnrollingDepthParameterType() {
-	// ------------------------------------------------------------
-		name = "unrolling_depth";
-		supertype = &Types::integerParameterType;
-		representationtype = supertype->getRepresentationType();
-		}
-	// ------------------------------------------------------------
-
-		IntegerRepresentationType Types::integerRepresentationType;
-		IntegerParameterType Types::integerParameterType;
-		UnrollingDepthParameterType Types::unrollingDepthParameterType;
-
-		// UnrollingDepthParameter* defaultUnrollingDepth = new UnrollingDepthParameter(0); 
-		// Transformation* descrLoopUnrolling = new LoopUnrolling(defaultUnrollingDepth);
-}
-
-}
+//
+//	// ------------------------------------------------------------
+//  	IntegerRepresentationType::IntegerRepresentationType() {
+//	// ------------------------------------------------------------
+//  		name = "integer";
+//  		}
+//	// ------------------------------------------------------------
+//
+//	// ------------------------------------------------------------
+//	IntegerParameterType::IntegerParameterType(){
+//	// ------------------------------------------------------------
+//		name = "integer";
+//		supertype = NULL;
+//		representationtype = &Types::integerRepresentationType;
+//		}
+//	// ------------------------------------------------------------
+//	UnrollingDepthParameterType::UnrollingDepthParameterType() {
+//	// ------------------------------------------------------------
+//		name = "unrolling_depth";
+//		supertype = &Types::integerParameterType;
+//		representationtype = supertype->getRepresentationType();
+//		}
+//	// ------------------------------------------------------------
+//
+//		IntegerRepresentationType Types::integerRepresentationType;
+//		IntegerParameterType Types::integerParameterType;
+//		UnrollingDepthParameterType Types::unrollingDepthParameterType;
+//
+//		// UnrollingDepthParameter* defaultUnrollingDepth = new UnrollingDepthParameter(0);
+//		// Transformation* descrLoopUnrolling = new LoopUnrolling(defaultUnrollingDepth);
+} // end namespace transform
+} // end namespace insieme

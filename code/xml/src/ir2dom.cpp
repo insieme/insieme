@@ -159,7 +159,8 @@ public:
 
 	void visitFunctionType(const FunctionTypePtr& cur) {
 		XmlElement functionType("functionType", doc);
-		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur)));
+		rootElem << (functionType << XmlElement::Attribute("id", GET_ID(cur))
+								  << XmlElement::Attribute("plain", numeric_cast<std::string>(cur->isPlain())));
 		
 		appendList(functionType, cur->getParameterTypes(), "parameterTypeList", "typePtr");
 

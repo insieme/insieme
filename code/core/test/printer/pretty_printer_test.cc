@@ -109,7 +109,7 @@ TEST(PrettyPrinter, Wrapper) {
 	SourceLocationMap::const_iterator it = srcMap.begin();
 	EXPECT_EQ(forStmt, it->second);
 	EXPECT_EQ(SourceLocation(0,0), it->first.first );
-	EXPECT_EQ(SourceLocation(2,0), it->first.second );
+	EXPECT_EQ(SourceLocation(2,1), it->first.second );
 	
 	++it;
 
@@ -155,8 +155,15 @@ TEST(PrettyPrinter, Wrapper) {
 
 	++it;
 
-	// for loop body (lit) loc
+	// for loop body (compound) loc
 	EXPECT_EQ(forStmt->getBody(), it->second);
+	EXPECT_EQ(SourceLocation(0,34), it->first.first );
+	EXPECT_EQ(SourceLocation(2,1), it->first.second );
+
+	++it;
+
+	// for loop body (lit) loc
+	EXPECT_EQ(forStmt->getBody()->getStatements()[0], it->second);
 	EXPECT_EQ(SourceLocation(1,4), it->first.first );
 	EXPECT_EQ(SourceLocation(1,30), it->first.second );
 

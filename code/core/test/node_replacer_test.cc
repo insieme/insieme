@@ -38,8 +38,17 @@
 
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/printer/pretty_printer.h"
+
+#include "insieme/core/checks/ir_checks.h"
+
+#include "insieme/utils/test/test_utils.h"
 
 #include "dummy_annotations.inc"
+
+
+#include "insieme/utils/logging.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 namespace insieme {
 namespace core {
@@ -159,6 +168,138 @@ TEST(NodeReplacer, ReplaceByAddress) {
 	EXPECT_EQ("X", toString(*mod));
 }
 
+TEST(NodeReplacer, ReplaceVariable) {
+
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+	TypePtr uint4 = basic.getUInt4();
+	TypePtr boolType  = basic.getBool();
+
+	LiteralPtr zero = builder.literal(uint4, "2");
+
+	VariablePtr varA = builder.variable(builder.refType(uint4), 1);
+	VariablePtr varB = builder.variable(builder.refType(boolType), 2);
+
+	VariablePtr param = builder.variable(uint4, 3);
+	FunctionTypePtr funType = builder.functionType(toVector(uint4), uint4);
+	LambdaExprPtr lambda = builder.lambdaExpr(funType, toVector(param), builder.returnStmt(param));
+
+
+	StatementPtr stmt = builder.compoundStmt(toVector<StatementPtr>(
+			builder.declarationStmt(varA, builder.refVar(zero)),
+			builder.callExpr(basic.getRefAssign(), varA, builder.callExpr(uint4, lambda, builder.deref(varA)))
+	));
+	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt)));
+
+	CheckPtr all = core::checks::getFullCheck();
+
+	EXPECT_EQ("[]", toString(check(stmt, all)));
+
+	// apply recursive variable replacer
+	utils::map::PointerMap<VariablePtr, VariablePtr> map;
+	map[varA] = varB;
+	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map);
+
+	// fix initalization
+	stmt2 = transform::replaceAll(manager, stmt2, builder.refVar(zero), builder.refVar(builder.literal(boolType, "false")));
+
+	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt2)));
+	
+
+	EXPECT_EQ("[]", toString(check(stmt2, all)));
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<bool> v2 =  var(false)");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(bool");
+
+}
+
+TEST(NodeReplacer, RecVarsReplacement) {
+	NodeManager manager;
+	ASTBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+
+	TypePtr kernelType = builder.refType(builder.arrayType(builder.genericType("_cl_kernel")));
+	VariablePtr kernel = builder.variable(builder.refType(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(
+			builder.identifier("kernel"), builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))))));
+	TypePtr clMemType = builder.refType(builder.arrayType(builder.genericType("_cl_mem")));
+	VariablePtr arg = builder.variable(builder.refType(clMemType));
+
+
+	FunctionTypePtr fTy = builder.functionType(toVector(kernelType, clMemType), basic.getInt4());
+	VariablePtr tuple = builder.variable(kernelType);
+
+	VariablePtr src = builder.variable(clMemType);
+	Lambda::ParamList params = toVector(tuple, src);
+	CompoundStmt::StatementList body;
+	body.push_back(builder.callExpr(basic.getUnit(), basic.getRefAssign(), builder.callExpr(basic.getTupleRefElem(), tuple,
+			builder.literal(basic.getUInt8(), "0"),
+			basic.getTypeLiteral(src->getType())), src));
+	body.push_back(builder.returnStmt(builder.intLit(0)));
+	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
+
+	ExpressionPtr accessStruct = builder.callExpr(basic.getVectorRefElem(),
+			builder.callExpr( basic.getCompositeRefElem(),
+			kernel, basic.getIdentifierLiteral(builder.identifier("kernel")), basic.getTypeLiteral(
+					builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))), builder.literal(basic.getUInt8(), "0"));
+
+	StatementList stmts;
+	ExpressionPtr kernelInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(builder.identifier("kernel"),
+				builder.vectorType(kernelType, builder.concreteIntTypeParam(2))))))));
+	ExpressionPtr argInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(clMemType)));
+	stmts.push_back(builder.declarationStmt(kernel, kernelInit));
+	stmts.push_back(builder.declarationStmt(arg, argInit));
+	stmts.push_back(builder.callExpr(basic.getInt4(), function,
+			builder.callExpr( basic.getRefDeref(),accessStruct),
+			builder.callExpr(clMemType, basic.getRefDeref(), arg)));
+
+	StatementPtr stmt = builder.compoundStmt(stmts);
+
+//	std::cout << printer::PrettyPrinter(stmt) << std::endl;;
+
+	CheckPtr all = core::checks::getFullCheck();
+
+	EXPECT_EQ("[]", toString(check(stmt, all)));
+
+	// Set up replacement map
+	utils::map::PointerMap<VariablePtr, VariablePtr> map;
+	RefTypePtr kernelReplacementTy = static_pointer_cast<const RefType>(transform::replaceAll(manager, kernel->getType(), kernelType, builder.refType(
+			builder.tupleType(toVector<TypePtr>(builder.refType(builder.arrayType(basic.getReal4())))))));
+
+	map[kernel] = builder.variable(kernelReplacementTy);
+
+	RefTypePtr clMemReplacementTy = static_pointer_cast<const RefType>(transform::replaceAll(manager, arg->getType(), builder.genericType("_cl_mem"),
+			basic.getReal4()));
+
+	map[arg] = builder.variable(clMemReplacementTy);
+
+	// apply recursive variable replacer
+//	std::cout << "Replacements " << map << std::endl;
+	NodePtr stmt2 = transform::replaceVarsRecursiveGen(manager, stmt, map, false, transform::getVarInitUpdater(builder));
+//	std::cout << stmt2 << std::endl;
+	// fix initalization
+/* fixed by functor passed to replaceVarsRecutsiveGen
+	NodePtr kernelInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(kernelReplacementTy->getElementType())));
+	stmt2 = transform::replaceAll(manager, stmt2, kernelInit, kernelInitReplacement, false);
+	NodePtr clMemInitReplacement = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
+			basic.getTypeLiteral(clMemReplacementTy->getElementType())));
+	stmt2 = transform::replaceAll(manager, stmt2, argInit, clMemInitReplacement, false);
+
+	std::cout << ":(" << std::endl << printer::PrettyPrinter(stmt2) << std::endl;;
+	std::cout << "(N)" << std::endl << stmt2 << std::endl;*/
+	//EXPECT_EQ("", toString(printer::PrettyPrinter(stmt2)));
+
+
+	EXPECT_EQ("[]", toString(check(stmt2, all)));
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>> v9 =\
+  var(undefined(type<struct<kernel:vector<ref<(ref<array<real<4>,1>>)>,2>>>));");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "decl ref<ref<array<real<4>,1>>> v10 =  var(undefined(type<ref<array<real<4>,1>>>))");
+	EXPECT_PRED2(containsSubString, toString(printer::PrettyPrinter(stmt2)), "fun(ref<(ref<array<real<4>,1>>)> v11, ref<array<real<4>,1>> v12)");
+
+}
 
 } // end namespace core
 } // end namespace insieme

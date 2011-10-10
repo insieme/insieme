@@ -38,13 +38,15 @@
 #include <cassert>
 #include <stdexcept>
 
+#include "insieme/core/types.h"
+
 #include <boost/algorithm/string/join.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/core/types.h"
+#include "insieme/core/ast_mapper.h"
 
 using namespace insieme::core;
 
@@ -149,8 +151,8 @@ std::ostream& TupleType::printTypeTo(std::ostream& out) const {
 	return out << '(' << join(",", elementTypes, print<deref<TypePtr>>()) << ')';
 }
 
-Node::OptionChildList TupleType::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt TupleType::getChildNodes() const {
+	NodeListOpt res(new NodeList());
 	std::copy(elementTypes.cbegin(), elementTypes.cend(), back_inserter(*res));
 	return res;
 }
@@ -188,8 +190,8 @@ FunctionType* FunctionType::createCopyUsing(NodeMapping& mapper) const {
 	return new FunctionType(mapper.map(0, parameterTypes), mapper.map(parameterTypes.size(), returnType), plain);
 }
 
-Node::OptionChildList FunctionType::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt FunctionType::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	std::copy(parameterTypes.begin(), parameterTypes.end(), std::back_inserter(*res));
 	res->push_back(returnType);
 	return res;
@@ -299,8 +301,8 @@ GenericTypePtr GenericType::getFromID(NodeManager& manager,
  *
  * @return the
  */
-Node::OptionChildList GenericType::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt GenericType::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	std::copy(typeParams.cbegin(), typeParams.cend(), back_inserter(*res));
 	std::copy(intParams.cbegin(), intParams.cend(), back_inserter(*res));
 	if (baseType) {
@@ -399,8 +401,8 @@ bool RecTypeDefinition::equals(const Node& other) const {
 	return insieme::utils::map::equal(definitions, rhs.definitions, equal_target<TypePtr>());
 }
 
-Node::OptionChildList RecTypeDefinition::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt RecTypeDefinition::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	std::for_each(definitions.begin(), definitions.end(), [&res](const RecTypeDefs::value_type& cur) {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
@@ -485,8 +487,8 @@ RecType* RecType::createCopyUsing(NodeMapping& mapper) const {
 	return new RecType(mapper.map(0, typeVariable), mapper.map(1, definition));
 }
 
-Node::OptionChildList RecType::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt RecType::getChildNodes() const {
+	NodeListOpt res = std::make_shared<NodeList>();
 	res->push_back(typeVariable);
 	res->push_back(definition);
 	return res;
@@ -559,8 +561,8 @@ NamedCompositeType::NamedCompositeType(NodeType nodeType, std::size_t hashSeed, 
 	}
 }
 
-Node::OptionChildList NamedCompositeType::getChildNodes() const {
-	OptionChildList res(new ChildList());
+Node::NodeListOpt NamedCompositeType::getChildNodes() const {
+	NodeListOpt res(new NodeList());
 	for_each(entries, [&](const Entry& cur) {
 		res->push_back(cur.first);
 		res->push_back(cur.second);
