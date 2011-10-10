@@ -140,7 +140,8 @@ ProgramPtr HostCompiler::compile() {
 					const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
 
 					if( fArg &&	builder.getNodeManager().basic.isRefDeref(fArg->getFunctionExpr()) &&
-							!dynamic_pointer_cast<const RefType>(arg->getType()) && !!dynamic_pointer_cast<const RefType>(params.at(cnt))) {
+							!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType &&
+							(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
 						update = true;
 						newArgs.push_back(fArg->getArgument(0));
 					} else {
@@ -156,7 +157,7 @@ ProgramPtr HostCompiler::compile() {
 			return element->substitute(builder.getNodeManager(), *h);
 		});
 		h = &mapper;
-		mProgram = dynamic_pointer_cast<const core::Program>(h->map(0, newProg));
+		mProgram = (h->map(0, newProg));
 //std::cout << "Replacements: \n" << cl_mems.begin()->first->getType() << " " << cl_mems.begin()->second->getType() << std::endl;
 //		transform::utils::MemberAccessLiteralUpdater malu(builder);
 //		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
