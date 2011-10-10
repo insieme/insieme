@@ -94,7 +94,7 @@ namespace {
 		if (pos != loadedCodes.end()) {
 			return manager.get(pos->second);
 		}
-
+	
 		// not loaded yet => load and cache code
 		core::ProgramPtr code = frontend::ConversionJob(testGlobalManager, testCase.getFiles(), testCase.getIncludeDirs()).execute();
 
@@ -297,6 +297,7 @@ TEST_P(SimpleBackendIntegrationTest, CompileableCode) {
 	// test whether result can be compiled
 	auto compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 	compiler.addFlag("-I/home/herbert/insieme/code/simple_backend/include/insieme/simple_backend/runtime");
+
 	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
 }
 
@@ -336,6 +337,7 @@ TEST_P(RuntimeBackendIntegrationTest, CompileableCode) {
 	// see whether target code can be compiled
 	utils::compiler::Compiler compiler = utils::compiler::Compiler::getDefaultC99Compiler();
 	compiler.addFlag("-I " SRC_DIR "../../runtime/include -D_XOPEN_SOURCE=700 -D_GNU_SOURCE -ldl -lrt -lpthread -lm");
+
 	EXPECT_TRUE(utils::compiler::compile(*target, compiler));
 
 
