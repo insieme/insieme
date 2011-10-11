@@ -300,6 +300,14 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 		return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getIsNull(), expr ) );
 	}
 
+	// [ anyref -> Boolean ]
+	// 
+	//		if( ref )  ->  if( ref != Null )
+	if ( gen.isBool(trgTy) && gen.isAnyRef(argTy) ) {
+		return builder.callExpr(gen.getBoolLNot(), 
+				builder.callExpr( gen.getBool(), gen.getIsNull(), convertExprTo(builder, builder.refType(gen.getUnit()), expr) ) );
+	}
+
 	// [ Signed integer -> Boolean ]
 	//
 	// cast a signed integer to boolean value, this happens for integer numbers when appear in conditional

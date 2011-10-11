@@ -50,8 +50,10 @@
 
 static inline void lwt_prepare(irt_work_item *wi, intptr_t *basestack) {
 	// heap allocated thread memory
-	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
-	wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
+	if (!wi->stack_start) {
+		wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
+		wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
+	}
 
 	// let stack be allocated by the OS kernel
 	// see http://www.evanjones.ca/software/threading.html
