@@ -66,15 +66,25 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 	if(self->wi_reuse_stack) {
 		ret = self->wi_reuse_stack;
 		self->wi_reuse_stack = ret->next_reuse;
+		printf("RE\n");
+		if(self->wi_reuse_stack) printf("R2\n");
 	} else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
 		ret->stack_start = 0;
+		printf("FU\n");
 	}
 	return ret;
 }
 static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
+	printf("CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
-	self->wi_reuse_stack = wi->next_reuse;
+	self->wi_reuse_stack = wi;
+	if(self->wi_reuse_stack->next_reuse) printf("C2\n");
+	
+	irt_work_item* last = self->wi_reuse_stack;
+	int i = 0;
+	while((last = last->next_reuse)) ++i;
+	printf("CCC %d : %d\n", self->id.value.components.thread, i);
 }
 
 static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
@@ -86,24 +96,28 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
 }
 
-irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
-	irt_worker *self = irt_worker_get_current();
+static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	wi->id.cached = wi;
+	wi->impl_id = impl_id;
+	wi->context_id = context;
+	wi->num_groups = 0;
+	wi->wg_memberships = NULL;
+	wi->parameters = params;
+	wi->range = range;
+	wi->state = IRT_WI_STATE_NEW;
+	wi->ready_check = irt_g_null_readiness_check;
+	wi->source_id = irt_work_item_null_id();
+	wi->num_fragments = 0;
+}
+
+irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new(self);
-	retval->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	retval->id.cached = retval;
-	retval->impl_id = impl_id;
-	retval->context_id = self->cur_context;
-	retval->num_groups = 0;
-	retval->wg_memberships = NULL;
-	retval->parameters = params;
-	retval->range = range;
-	retval->state = IRT_WI_STATE_NEW;
-	// retval->stack_start = 0;
-	retval->ready_check = irt_g_null_readiness_check;
-	//retval->stack_ptr = 0;
-	retval->source_id = irt_work_item_null_id();
-	retval->num_fragments = 0;
+	_irt_wi_init(self->cur_context, retval, range, impl_id, params);
 	return retval;
+}
+static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	return _irt_wi_create(irt_worker_get_current(), range, impl_id, params);
 }
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {
 	irt_worker *self = irt_worker_get_current();

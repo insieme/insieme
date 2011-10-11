@@ -56,7 +56,7 @@ typedef intptr_t minlwt_context;
 typedef ucontext_t minlwt_context;
 #endif
 
-static inline void lwt_prepare(irt_work_item *wi, minlwt_context *basestack);
+static inline void lwt_prepare(int tid, irt_work_item *wi, minlwt_context *basestack);
 void lwt_start(irt_work_item *wi, minlwt_context *basestack, wi_implementation_func* func);
 void lwt_continue(minlwt_context *newstack, minlwt_context *basestack);
 void lwt_end(minlwt_context *basestack);
