@@ -542,9 +542,11 @@ def runIt( abortOnFail, basedir, tests ) :
 			failed += subFailed
 			passed += subPassed
 
-		elif len(failed) == 0 or (not abortOnFail) :
+		elif len(failed) == 0 :
 			if run_test_case(cur, basedir) :
 				failed.append(cur)
+				if ( abortOnFail ) :
+					return failed, passed
 			else :
 				passed.append(cur)
 
