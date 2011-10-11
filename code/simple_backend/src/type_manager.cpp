@@ -482,7 +482,7 @@ TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedComposite
 	// add struct definition
 	code << prefix << " " << name << " { \n";
 	for_each(ptr->getEntries(), [&, this](const NamedCompositeType::Entry& entry) {
-		code << "    " << formatParamter(code, entry.second, entry.first->getName(), true) << ";\n";
+		code << "    " << formatParamter(code, entry.second, entry.first->getName(), false) << ";\n";
 	});
 	code << "};\n";
 
