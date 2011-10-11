@@ -78,6 +78,7 @@ struct _irt_work_item {
 	irt_work_item_id source_id;
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
+	irt_work_item *next_reuse;
 	irt_wi_readiness_check ready_check;
 	minlwt_context stack_ptr;
 	intptr_t stack_start;
@@ -93,7 +94,6 @@ static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, u
 static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 
 irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
-void irt_wi_destroy(irt_work_item* wi);
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 

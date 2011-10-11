@@ -93,17 +93,15 @@ ProgramPtr HostCompiler::compile() {
 	const ProgramPtr& progWithEntries = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 	const ProgramPtr& progWithKernels = core::Program::remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
 
-/*	for_each(oclHostMapper.getEquivalenceMap(), [](std::pair<ExpressionPtr, size_t> a) {
-		std::cout << "\nHate " << *a.first << " " << a.second;
-		if(auto cname = a.first->getAnnotation(annotations::c::CNameAnnotation::KEY))
-			std::cout << " " << cname->getName();
-	});
-	std::cout << std::endl  << std::endl;
-*/
 	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), oclHostMapper.getEquivalenceMap(), builder);
 	oh2nd.mapNamesToLambdas(kernelEntries);
 
 	ClmemTable cl_mems = oh2nd.getCleanedStructures();
+/*	for_each(cl_mems, [](std::pair<VariablePtr, VariablePtr> a) {
+		std::cout << "\nHate " << *a.first << " " << a.second->getType();
+	});*/
+	std::cout << std::endl  << std::endl;
+
 	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
 		oh2nd.getKernelLambdas(), oclHostMapper.getEquivalenceMap(), oclHostMapper.getReplacements());
 
@@ -128,12 +126,43 @@ ProgramPtr HostCompiler::compile() {
 	});
 */
 	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(core::transform::replaceAll(builder.getNodeManager(), transformedProg, tmp, false))) {
+
+		// remove unnecessary derefs
+
+		NodeMapping* h;
+		auto mapper = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
+			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
+				const vector<TypePtr>& params = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType())->getParameterTypes();
+				ExpressionList newArgs;
+				bool update = false;
+				int cnt = 0;
+				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
+					const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
+
+					if( fArg &&	builder.getNodeManager().basic.isRefDeref(fArg->getFunctionExpr()) &&
+							!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType &&
+							(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
+						update = true;
+						newArgs.push_back(fArg->getArgument(0));
+					} else {
+						newArgs.push_back(arg);
+					}
+					++cnt;
+				});
+				if(update) {
+					return builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs)->substitute(builder.getNodeManager(), *h);
+				}
+			}
+
+			return element->substitute(builder.getNodeManager(), *h);
+		});
+		h = &mapper;
+		mProgram = (h->map(0, newProg));
 //std::cout << "Replacements: \n" << cl_mems.begin()->first->getType() << " " << cl_mems.begin()->second->getType() << std::endl;
 //		transform::utils::MemberAccessLiteralUpdater malu(builder);
 //		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 
-		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), newProg, cl_mems, false);
-
+		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), mProgram, cl_mems, false);
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 

@@ -104,6 +104,8 @@ void* _irt_worker_func(void *argvp) {
 	self->lazy_count = 0;
 	// init reuse lists
 	self->wi_ev_register_list = NULL; // prepare some?
+	self->wg_ev_register_list = NULL; // prepare some?
+	self->wi_reuse_stack = NULL; // prepare some?
 
 	arg->ready = true;
 

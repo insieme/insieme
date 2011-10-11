@@ -67,6 +67,7 @@ struct _irt_worker {
 	// memory reuse stuff
 	irt_wi_event_register *wi_ev_register_list;
 	irt_wg_event_register *wg_ev_register_list;
+	irt_work_item *wi_reuse_stack;
 };
 
 /* ------------------------------ operations ----- */
