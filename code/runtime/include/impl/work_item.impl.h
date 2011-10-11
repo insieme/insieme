@@ -68,6 +68,7 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 		self->wi_reuse_stack = ret->next_reuse;
 	} else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
+		ret->stack_start = 0;
 	}
 	return ret;
 }
@@ -97,7 +98,7 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 	retval->parameters = params;
 	retval->range = range;
 	retval->state = IRT_WI_STATE_NEW;
-	retval->stack_start = 0;
+	// retval->stack_start = 0;
 	retval->ready_check = irt_g_null_readiness_check;
 	//retval->stack_ptr = 0;
 	retval->source_id = irt_work_item_null_id();
