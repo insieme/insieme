@@ -40,6 +40,8 @@
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/statement_converter.h"
 
+#include "insieme/utils/set_utils.h"
+
 namespace insieme {
 namespace simple_backend {
 
@@ -103,6 +105,7 @@ string FunctionManager::getFunctionName(const CodeFragmentPtr& context, const co
 }
 
 CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
+
 	// lookup element
 	auto pos = externalFunctions.find(literal);
 	if (pos != externalFunctions.end()) {
@@ -122,7 +125,14 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	externalFunctions.insert(std::make_pair(literal, protoType));
 
 	TypeManager& typeManager = cc.getTypeManager();
-	if (name != "atoi") { // TODO: fix list of functions included via headers
+
+	// create list of functions included via header (yes, it is a hack)
+	static std::set<string> INCLUDED = utils::set::toSet<std::set<string>>(
+			"atoi", "atof", "atol", "fprintf", "printf", "malloc", "alloca",
+			"fopen", "fread", "fwrite", "fgetc", "fflush", "fclose", "fscanf", "sscanf",
+			"sprintf" );
+
+	if (INCLUDED.find(name) == INCLUDED.end()) {
 		protoType << typeManager.getTypeInfo(protoType, returnType).externName << " " << name << "(";
 		//protoType << typeManager.getTypeName(protoType, type->getReturnType(), true) << " " << name << "(";
 		protoType << join(", ", type->getParameterTypes(), [&, this](std::ostream& out, const TypePtr& cur) {
