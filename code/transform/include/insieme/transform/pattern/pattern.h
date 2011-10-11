@@ -42,6 +42,7 @@
 #include <unordered_map>
 
 #include "insieme/transform/pattern/structure.h"
+#include "insieme/transform/pattern/match.h"
 
 #include "insieme/utils/logging.h"
 
@@ -55,8 +56,8 @@ namespace pattern {
 	class TreePattern;
 	typedef std::shared_ptr<TreePattern> TreePatternPtr;
 
-	class NodePattern;
-	typedef std::shared_ptr<NodePattern> NodePatternPtr;
+	class ListPattern;
+	typedef std::shared_ptr<ListPattern> ListPatternPtr;
 
 	class Match;
 	typedef std::shared_ptr<Match> MatchPtr;
@@ -64,74 +65,86 @@ namespace pattern {
 	class Filter;
 	typedef std::shared_ptr<Filter> FilterPtr;
 
-	class Tree;
-	typedef std::shared_ptr<Tree> TreePtr;
-
-//	MatchPtr match(PatternPtr, TreePtr);
-
-//	bool match(TreePatternPtr, TreePtr);
-//	bool match(NodePatternPtr, TreePtr);
 
 	class MatchContext : public utils::Printable {
 
-		typedef std::unordered_map<string, TreePtr> TreeVarMap;
 		typedef std::unordered_map<string, TreeList> NodeVarMap;
 		typedef std::unordered_map<string, TreePatternPtr> RecVarMap;
 
-		TreeVarMap boundTreeVariables;
-		NodeVarMap boundNodeVariables;
+		MatchPath path;
+
+		Match match;
+
 		RecVarMap boundRecursiveVariables;
 
 	public:
+
 		MatchContext() { }
+
+		Match& getMatch() {
+			return match;
+		}
+
+		const Match& getMatch() const {
+			return match;
+		}
+
+		// -- The Match Path ---------------------------
+
+		void push() {
+			path.push(0);
+		}
+
+		void inc() {
+			path.inc();
+		}
+
+		void dec() {
+			path.dec();
+		}
+
+		void pop() {
+			path.pop();
+		}
+
 
 		// -- Tree Variables ---------------------------
 
 		bool isTreeVarBound(const std::string& var) const {
-			return boundTreeVariables.find(var) != boundTreeVariables.end();
+			return match.isTreeVarBound(path, var);
 		}
 
-		void bindTreeVar(const std::string& var, const TreePtr match) {
-			assert(!isTreeVarBound(var) && "Variable bound twice");
-			boundTreeVariables.insert(TreeVarMap::value_type(var, match));
+		void bindTreeVar(const std::string& var, const TreePtr value) {
+			match.bindTreeVar(path, var, value);
 		}
 
 		TreePtr getTreeVarBinding(const std::string& var) const {
-			assert(isTreeVarBound(var) && "Requesting bound value for unbound tree variable");
-			return boundTreeVariables.find(var)->second;
+			return match.getTreeVarBinding(path, var);
 		}
 
 		// -- Node Variables --------------------------
 
 		bool isNodeVarBound(const std::string& var) const {
-			return boundNodeVariables.find(var) != boundNodeVariables.end();
-		}
-
-		void bindNodeVar(const std::string& var, const TreeList& match) {
-			assert(!isNodeVarBound(var) && "Variable bound twice");
-			boundNodeVariables.insert(NodeVarMap::value_type(var, match));
+			return match.isListVarBound(path, var);
 		}
 
 		void bindNodeVar(const std::string& var, const TreeListIterator& begin, const TreeListIterator& end) {
-			assert(!isNodeVarBound(var) && "Variable bound twice");
-			TreeList& match = boundNodeVariables[var];
-			match.insert(match.end(), begin, end);
+			match.bindListVar(path, var, begin, end);
 		}
 
-		const TreeList& getNodeVarBinding(const std::string& var) const {
-			assert(isNodeVarBound(var) && "Requesting bound value for unbound tree variable");
-			return boundNodeVariables.find(var)->second;
+		TreeList getNodeVarBinding(const std::string& var) const {
+			return match.getListVarBinding(path, var);
 		}
 
 		// -- Recursive Variables ---------------------------
 
+		bool isRecVarBound(const std::string& var) const {
+			return boundRecursiveVariables.find(var) != boundRecursiveVariables.end();
+		}
+
 		void bindRecVar(const std::string& var, const TreePatternPtr& pattern) {
 			assert(!isRecVarBound(var) && "Variable bound twice");
 			boundRecursiveVariables.insert(RecVarMap::value_type(var, pattern));
-		}
-
-		bool isRecVarBound(const std::string& var) const {
-			return boundRecursiveVariables.find(var) != boundRecursiveVariables.end();
 		}
 
 		TreePatternPtr getRecVarBinding(const std::string& var) const {
@@ -139,6 +152,9 @@ namespace pattern {
 			return boundRecursiveVariables.find(var)->second;
 		}
 
+		void unbindRecVar(const std::string& var) {
+			boundRecursiveVariables.erase(var);
+		}
 
 		virtual std::ostream& printTo(std::ostream& out) const;
 	};
@@ -146,26 +162,21 @@ namespace pattern {
 
 	class Pattern : public utils::Printable { };
 
-	namespace nodes {
-		class Single;
-	}
 
 	// The abstract base class for tree patterns
 	class TreePattern : public Pattern {
-		friend class nodes::Single;
+		// TODO: add filter support
 //		const std::vector<FilterPtr> filter;
 	public:
-		bool match(const TreePtr& tree) const;
-	// protected: TODO: make this protected again
+
+		MatchOpt match(const TreePtr& tree) const;
+
 		virtual bool match(MatchContext& context, const TreePtr& tree) const =0;
 	};
 
-	namespace trees {
-		class NodeTreePattern;
-	}
 
 	// An abstract base node for node patterns
-	class NodePattern : public Pattern {
+	class ListPattern : public Pattern {
 	public:
 
 		bool match(const std::vector<TreePtr>& trees) const {
@@ -176,12 +187,12 @@ namespace pattern {
 		bool match(MatchContext& context, const std::vector<TreePtr>& trees) const {
 			return match(context, trees.begin(), trees.end());
 		}
-//	protected:
+
 		virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const =0;
 	};
 
 
-	namespace trees {
+	namespace tree {
 
 		// An atomic value - a pure IR node
 		class Atom : public TreePattern {
@@ -218,7 +229,7 @@ namespace pattern {
 		public:
 			Variable(const std::string& name, const TreePatternPtr& pattern = any) : name(name), pattern(pattern) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "%" << name << "%";
+				out << "$" << name;
 				if(pattern && pattern != any) {
 					out << ":" << *pattern;
 				}
@@ -267,10 +278,17 @@ namespace pattern {
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
 				if(terminal) {
 					assert(context.isRecVarBound(name) && "Recursive variable unbound!");
-					return context.getRecVarBinding(name)->match(context, tree);
+					context.inc();
+					bool res = context.getRecVarBinding(name)->match(context, tree);
+					context.dec();
+					return res;
 				} else {
 					context.bindRecVar(name, pattern);
-					return pattern->match(context, tree);
+					context.push();
+					bool res = pattern->match(context, tree);
+					context.pop();
+					context.unbindRecVar(name);
+					return res;
 				}
 			}
 		};
@@ -278,12 +296,12 @@ namespace pattern {
 		// bridge to Node Pattern
 		class NodeTreePattern : public TreePattern {
 
-			const NodePatternPtr pattern;
+			const ListPatternPtr pattern;
 			const int id;
 
 		public:
-			NodeTreePattern(const NodePatternPtr& pattern) : pattern(pattern), id(-1) {}
-			NodeTreePattern(const int id, const NodePatternPtr& pattern) : pattern(pattern), id(id) {}
+			NodeTreePattern(const ListPatternPtr& pattern) : pattern(pattern), id(-1) {}
+			NodeTreePattern(const int id, const ListPatternPtr& pattern) : pattern(pattern), id(id) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if(id != -1) {
@@ -362,10 +380,10 @@ namespace pattern {
 
 	}
 
-	namespace nodes {
+	namespace list {
 
 		// The most simple node pattern covering a single tree
-		class Single : public NodePattern {
+		class Single : public ListPattern {
 			const TreePatternPtr element;
 		public:
 			Single(const TreePatternPtr& element) : element(element) {}
@@ -384,11 +402,11 @@ namespace pattern {
 		};
 
 		// A sequence node pattern representing the composition of two node patterns
-		class Sequence : public NodePattern {
-			const NodePatternPtr left;
-			const NodePatternPtr right;
+		class Sequence : public ListPattern {
+			const ListPatternPtr left;
+			const ListPatternPtr right;
 		public:
-			Sequence(const NodePatternPtr& left, const NodePatternPtr& right) : left(left), right(right) {}
+			Sequence(const ListPatternPtr& left, const ListPatternPtr& right) : left(left), right(right) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				left->printTo(out);
@@ -412,11 +430,11 @@ namespace pattern {
 		};
 
 		// A node pattern alternative
-		class Alternative : public NodePattern {
-			const NodePatternPtr alternative1;
-			const NodePatternPtr alternative2;
+		class Alternative : public ListPattern {
+			const ListPatternPtr alternative1;
+			const ListPatternPtr alternative2;
 		public:
-			Alternative(const NodePatternPtr& A, const NodePatternPtr& B) : alternative1(A), alternative2(B) {}
+			Alternative(const ListPatternPtr& A, const ListPatternPtr& B) : alternative1(A), alternative2(B) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				alternative1->printTo(out);
@@ -439,10 +457,10 @@ namespace pattern {
 		};
 
 		// Realizes the star operator for node patterns
-		class Repetition : public NodePattern {
-			const NodePatternPtr pattern;
+		class Repetition : public ListPattern {
+			const ListPatternPtr pattern;
 		public:
-			Repetition(const NodePatternPtr& pattern) : pattern(pattern) {}
+			Repetition(const ListPatternPtr& pattern) : pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
 				out << "[";
@@ -453,7 +471,15 @@ namespace pattern {
 
 		protected:
 			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
+				context.push();
+				bool res = matchInternal(context, begin, end);
+				context.pop();
+				return res;
+			}
 
+		private:
+
+			bool matchInternal(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
 				// empty is accepted (terminal case)
 				if (begin == end) {
 					return true;
@@ -462,35 +488,51 @@ namespace pattern {
 				// test special case of a single iteration
 				MatchContext copy = context;
 				if (pattern->match(copy, begin, end)) {
+					context = copy;
 					return true;
 				}
 
 				// try one pattern + a recursive repedition
 				for (auto i=begin; i<end; ++i) {
-					MatchContext copyA = context;
-					MatchContext copyB = context;
-					if (pattern->match(copyA, begin, i) && match(copyB, i, end)) {
-						// found a match!
-						return true;
+
+					// private copy for this try
+					MatchContext copy = context;
+
+					if (!pattern->match(copy, begin, i)) {
+						// does not match ... try next!
+						continue;
 					}
+
+					// increment repedition counter
+					copy.inc();
+
+					if (!matchInternal(copy, i, end)) {
+						// does not fit any more ... try next!
+						continue;
+					}
+
+					// found a match!
+					context = copy;
+					return true;
 				}
 
 				// the pattern does not match!
 				return false;
 			}
+
 		};
 
 		// A simple variable
-		class Variable : public NodePattern {
-			const static NodePatternPtr any;
+		class Variable : public ListPattern {
+			const static ListPatternPtr any;
 			const std::string name;
-			const NodePatternPtr pattern;
+			const ListPatternPtr pattern;
 		public:
-			Variable(const std::string& name, const NodePatternPtr& pattern = any)
+			Variable(const std::string& name, const ListPatternPtr& pattern = any)
 				: name(name), pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "%" << name << "%";
+				out << "$" << name;
 				if(pattern && pattern != any) {
 					out << ":" << *pattern;
 				}
@@ -525,89 +567,89 @@ namespace pattern {
 	extern const TreePatternPtr any;
 	extern const TreePatternPtr recurse;
 
-	extern const NodePatternPtr anyList;
+	extern const ListPatternPtr anyList;
 
 	inline TreePatternPtr atom(const TreePtr& tree) {
-		return std::make_shared<trees::Atom>(tree);
+		return std::make_shared<tree::Atom>(tree);
 	}
 
 	inline TreePatternPtr operator|(const TreePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<trees::Alternative>(a,b);
+		return std::make_shared<tree::Alternative>(a,b);
 	}
 
 	inline TreePatternPtr operator!(const TreePatternPtr& a) {
-		return std::make_shared<trees::Negation>(a);
+		return std::make_shared<tree::Negation>(a);
 	}
 	
-	inline TreePatternPtr node(const NodePatternPtr& pattern) {
-		return std::make_shared<trees::NodeTreePattern>(pattern);
+	inline TreePatternPtr node(const ListPatternPtr& pattern) {
+		return std::make_shared<tree::NodeTreePattern>(pattern);
 	}
-	inline TreePatternPtr node(const int id, const NodePatternPtr& pattern) {
-		return std::make_shared<trees::NodeTreePattern>(id, pattern);
+	inline TreePatternPtr node(const int id, const ListPatternPtr& pattern) {
+		return std::make_shared<tree::NodeTreePattern>(id, pattern);
 	}
 
 	inline TreePatternPtr var(const std::string& name, const TreePatternPtr& pattern = any) {
-		return std::make_shared<trees::Variable>(name, pattern);
+		return std::make_shared<tree::Variable>(name, pattern);
 	}
 
 	inline TreePatternPtr treeVar(const std::string& name, const TreePatternPtr& pattern = any) {
-		return std::make_shared<trees::Variable>(name, pattern);
+		return std::make_shared<tree::Variable>(name, pattern);
 	}
 
-	inline NodePatternPtr nodeVar(const std::string& name, const NodePatternPtr& pattern = anyList) {
-		return std::make_shared<nodes::Variable>(name, pattern);
+	inline ListPatternPtr nodeVar(const std::string& name, const ListPatternPtr& pattern = anyList) {
+		return std::make_shared<list::Variable>(name, pattern);
 	}
 
 	template<typename ... Patterns>
 	inline TreePatternPtr aT(Patterns ... patterns) {
-		return std::make_shared<trees::Descendant>(patterns...);
+		return std::make_shared<tree::Descendant>(patterns...);
 	}
 
 	inline TreePatternPtr rT(const TreePatternPtr& pattern, const string& varName = "x") {
-		return std::make_shared<trees::Recursion>(varName, pattern);
+		return std::make_shared<tree::Recursion>(varName, pattern);
 	}
-	inline TreePatternPtr rT(const NodePatternPtr& pattern, const string& varName = "x") {
-		return std::make_shared<trees::Recursion>(varName, node(pattern));
+	inline TreePatternPtr rT(const ListPatternPtr& pattern, const string& varName = "x") {
+		return std::make_shared<tree::Recursion>(varName, node(pattern));
 	}
 	inline TreePatternPtr rec(const string& varName) {
-		return std::make_shared<trees::Recursion>(varName);
+		return std::make_shared<tree::Recursion>(varName);
 	}
 	
-	inline NodePatternPtr single(const TreePatternPtr& pattern) {
-		return std::make_shared<nodes::Single>(pattern);
+	inline ListPatternPtr single(const TreePatternPtr& pattern) {
+		return std::make_shared<list::Single>(pattern);
 	}
-	inline NodePatternPtr single(const TreePtr& tree) {
+	inline ListPatternPtr single(const TreePtr& tree) {
 		return single(atom(tree));
 	}
 	
-	inline NodePatternPtr operator|(const NodePatternPtr& a, const NodePatternPtr& b) {
-		return std::make_shared<nodes::Alternative>(a,b);
+	inline ListPatternPtr operator|(const ListPatternPtr& a, const ListPatternPtr& b) {
+		return std::make_shared<list::Alternative>(a,b);
 	}
-	inline NodePatternPtr operator|(const TreePatternPtr& a, const NodePatternPtr& b) {
-		return std::make_shared<nodes::Alternative>(single(a),b);
+	inline ListPatternPtr operator|(const TreePatternPtr& a, const ListPatternPtr& b) {
+		return std::make_shared<list::Alternative>(single(a),b);
 	}
-	inline NodePatternPtr operator|(const NodePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<nodes::Alternative>(a,single(b));
-	}
-
-	inline NodePatternPtr operator*(const NodePatternPtr& pattern) {
-		return std::make_shared<nodes::Repetition>(pattern);
-	}
-	inline NodePatternPtr operator*(const TreePatternPtr& pattern) {
-		return std::make_shared<nodes::Repetition>(single(pattern));
+	inline ListPatternPtr operator|(const ListPatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<list::Alternative>(a,single(b));
 	}
 
-	inline NodePatternPtr operator<<(const NodePatternPtr& a, const NodePatternPtr& b) {
-		return std::make_shared<nodes::Sequence>(a,b);
+	inline ListPatternPtr operator*(const ListPatternPtr& pattern) {
+		return std::make_shared<list::Repetition>(pattern);
 	}
-	inline NodePatternPtr operator<<(const TreePatternPtr& a, const NodePatternPtr& b) {
-		return std::make_shared<nodes::Sequence>(single(a),b);
+	inline ListPatternPtr operator*(const TreePatternPtr& pattern) {
+		return std::make_shared<list::Repetition>(single(pattern));
 	}
-	inline NodePatternPtr operator<<(const NodePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<nodes::Sequence>(a,single(b));
+
+	inline ListPatternPtr operator<<(const ListPatternPtr& a, const ListPatternPtr& b) {
+		return std::make_shared<list::Sequence>(a,b);
 	}
-	inline NodePatternPtr operator<<(const TreePatternPtr& a, const TreePatternPtr& b) {
-		return std::make_shared<nodes::Sequence>(single(a),single(b));
+	inline ListPatternPtr operator<<(const TreePatternPtr& a, const ListPatternPtr& b) {
+		return std::make_shared<list::Sequence>(single(a),b);
+	}
+	inline ListPatternPtr operator<<(const ListPatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<list::Sequence>(a,single(b));
+	}
+	inline ListPatternPtr operator<<(const TreePatternPtr& a, const TreePatternPtr& b) {
+		return std::make_shared<list::Sequence>(single(a),single(b));
 	}
 
 } // end namespace pattern
@@ -618,6 +660,6 @@ namespace std {
 
 	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::PatternPtr& pattern);
 	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::TreePatternPtr& pattern);
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::NodePatternPtr& pattern);
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListPatternPtr& pattern);
 
 } // end namespace std

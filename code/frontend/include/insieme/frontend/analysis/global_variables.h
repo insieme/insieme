@@ -76,7 +76,7 @@ public:
 	 * variable has to be initialized or it was defined as external and a reference
 	 * to  the existing value has to be generated
 	 */
-	typedef std::map<const clang::VarDecl*, bool> GlobalVarVect;
+	typedef std::set<const clang::VarDecl*> GlobalVarSet;
 
 	typedef std::map<const clang::VarDecl*, const clang::idx::TranslationUnit*> VarTUMap;
 
@@ -97,6 +97,7 @@ public:
 	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
+	typedef std::map<const clang::VarDecl*, core::IdentifierPtr> GlobalVarMap;
 
 	GlobalVarCollector(const clang::idx::TranslationUnit* currTU, clang::idx::Indexer& indexer,
 			UseGlobalFuncMap& globalFuncMap) : currTU(currTU), indexer(indexer), usingGlobals(globalFuncMap) { }
@@ -112,7 +113,7 @@ public:
 	 * a boolean flag indicating if the variable needs to be initialized
 	 * or not (in the case the global variable is marked as external)
 	 */
-	const GlobalVarVect& getGlobals() const { return globals; }
+	GlobalVarSet getGlobals() const { return globals; }
 
 	/**
 	 * Returns the list of functions which needs access (directly or
@@ -123,11 +124,12 @@ public:
 
 	void dump(std::ostream& out) const ;
 
-	GlobalStructPair createGlobalStruct(conversion::ConversionFactory& fact) const;
+	GlobalStructPair createGlobalStruct(conversion::ConversionFactory& fact);
 
 private:
-	GlobalVarVect 	globals;
+	GlobalVarSet	globals;
 	VarTUMap		varTU;
+	GlobalVarMap	varIdentMap;
 	const clang::idx::TranslationUnit* currTU;
 	VisitedFuncSet 	visited;
 	FunctionStack	funcStack;

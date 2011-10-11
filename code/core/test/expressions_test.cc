@@ -457,7 +457,7 @@ TEST(ExpressionsTest, JobExpr) {
 }
 
 template<typename PT>
-void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children) {
+void basicExprTests(PT expression, const TypePtr& type, const NodeList& children) {
 
 	typedef typename PT::element_type T;
 

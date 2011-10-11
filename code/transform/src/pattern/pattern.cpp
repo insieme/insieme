@@ -44,25 +44,32 @@ namespace transform {
 namespace pattern {
 
 
+	MatchOpt TreePattern::match(const TreePtr& tree) const {
+		MatchContext context;
+		if (match(context, tree)) {
+			// complete match result
+			context.getMatch().setRoot(tree);
+			return context.getMatch();
+		}
+		return 0;
+	}
+
+
 	std::ostream& MatchContext::printTo(std::ostream& out) const {
 		out << "Match(";
-		out << boundTreeVariables << ", ";
-		out << boundNodeVariables << ", ";
+		out << path << ", ";
+		out << match << ", ";
 		out << boundRecursiveVariables;
 		return out << ")";
 	}
 
-	bool TreePattern::match(const TreePtr& tree) const {
-		MatchContext context;
-		return match(context, tree);
-	}
 
-	const TreePatternPtr any = std::make_shared<trees::Wildcard>();
-	const TreePatternPtr recurse = std::make_shared<trees::Recursion>("x");
+	const TreePatternPtr any = std::make_shared<tree::Wildcard>();
+	const TreePatternPtr recurse = std::make_shared<tree::Recursion>("x");
 
-	const NodePatternPtr anyList = *any;
+	const ListPatternPtr anyList = *any;
 
-	namespace trees {
+	namespace tree {
 
 		const TreePatternPtr Variable::any = pattern::any;
 
@@ -87,9 +94,9 @@ namespace pattern {
 
 	}
 
-	namespace nodes {
+	namespace list {
 
-		const NodePatternPtr Variable::any = pattern::anyList;
+		const ListPatternPtr Variable::any = pattern::anyList;
 	}
 
 } // end namespace pattern
@@ -106,7 +113,7 @@ namespace std {
 		return (pattern)?(pattern->printTo(out)):(out << "null");
 	}
 
-	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::NodePatternPtr& pattern) {
+	std::ostream& operator<<(std::ostream& out, const insieme::transform::pattern::ListPatternPtr& pattern) {
 		return (pattern)?(pattern->printTo(out)):(out << "null");
 	}
 

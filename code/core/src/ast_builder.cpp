@@ -114,6 +114,20 @@ namespace {
 
 }
 
+
+NodePtr ASTBuilder::get(NodeType type, const NodeList& children) const {
+
+	switch(type) {
+	#define CONCRETE(KIND) \
+		case NT_ ## KIND : return get< NT_## KIND >(children);
+	#include "insieme/core/ast_nodes.def"
+	#undef CONCRETE
+	}
+
+	assert(false && "Unsupported node type added!");
+	return NodePtr();
+}
+
 ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints, bool main) {
 	return Program::create(manager, entryPoints, main);
 }

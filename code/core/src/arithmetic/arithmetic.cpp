@@ -185,8 +185,8 @@ namespace arithmetic {
 			}
 
 			// handle remaining expressions => lexicographically
-			const Node::ChildList& listA = a->getChildList();
-			const Node::ChildList& listB = b->getChildList();
+			const NodeList& listA = a->getChildList();
+			const NodeList& listB = b->getChildList();
 			return std::lexicographical_compare(listA.begin(), listA.end(), listB.begin(), listB.end(),
 					[](const NodePtr& a, const NodePtr& b) { return lessThan(a,b); });
 		}

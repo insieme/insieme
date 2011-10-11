@@ -62,7 +62,7 @@ namespace pattern {
 
 		static const int VALUE_ID;
 
-		typedef boost::variant<bool,int,string> Value;
+		typedef boost::variant<bool,int,std::size_t,string> Value;
 
 	protected:
 
@@ -72,16 +72,16 @@ namespace pattern {
 
 	public:
 
+		Tree(const Value& value) : id(VALUE_ID), subTrees(), value(value) {}
+
 		template<typename... Args>
 		Tree(int id, Args && ... args) : id(id), subTrees(toVector<TreePtr>(args...)) {
 			assert(id != VALUE_ID && "Value ID must not be used!");
 		}
 
-		Tree(const std::vector<TreePtr>& children, int id) : id(id), subTrees(children) {
+		Tree(const TreeList& children, int id) : id(id), subTrees(children) {
 			assert(id != VALUE_ID && "Value ID must not be used!");
 		}
-
-		Tree(const Value& value) : id(VALUE_ID), subTrees(), value(value) {}
 
 		virtual ~Tree() {};
 
@@ -89,7 +89,8 @@ namespace pattern {
 		virtual bool operator==(const Tree& other) const;
 		virtual bool operator!=(const Tree& other) const { return !(*this == other); }
 
-		virtual TreeList& getSubTrees() { return subTrees; }
+		virtual const TreeList& getSubTrees() const { return subTrees; }
+
 		const int getId() const { return id; }
 	};
 
@@ -101,6 +102,15 @@ namespace pattern {
 	template<typename... Args>
 	TreePtr makeTree(char symbol, const Args & ... args ) {
 		return std::make_shared<Tree>((int)symbol, args...);
+	}
+
+	template<typename... Args>
+	TreePtr makeTree(int id, const Args & ... args ) {
+		return std::make_shared<Tree>(id, args...);
+	}
+
+	inline TreePtr makeTree(int id, const TreeList& children) {
+		return std::make_shared<Tree>(children, id);
 	}
 
 	template<typename V>

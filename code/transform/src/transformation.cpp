@@ -38,6 +38,10 @@
 
 namespace insieme {
 namespace transform {
+
+	InvalidTargetException::InvalidTargetException(const core::NodePtr& node)
+		: msg(format("Transformation could not be applied on node %s", toString(node).c_str())) {};
+
 //
 //	// ------------------------------------------------------------
 //  	IntegerRepresentationType::IntegerRepresentationType() {

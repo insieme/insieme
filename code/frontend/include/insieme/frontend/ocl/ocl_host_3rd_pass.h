@@ -58,7 +58,6 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	KernelLambdas& kernelLambdas;
 	EquivalenceMap& eqMap;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& replacements;
-	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varReplacements;
 
 	// Generates a function which, taking the kernel name as a string as argument, returns the corresponding lambda
 	const core::ExpressionPtr genGetKernelLambda();
@@ -91,8 +90,6 @@ public:
 			kernelLambdas(oclKernelLambdas), eqMap(equivalenceMap), replacements(oclReplacements) { }
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
-
-	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr>& getVarReplacements(){ return varReplacements; }
 
 };
 

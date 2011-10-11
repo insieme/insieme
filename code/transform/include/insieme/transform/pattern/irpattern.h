@@ -52,30 +52,30 @@ namespace pattern {
 namespace irp {
 	using std::make_shared;
 
-	inline TreePatternPtr atom(const NodePtr& node) {
-		return atom(convertIR(node));
+	inline TreePatternPtr atom(const core::NodePtr& node) {
+		return atom(toTree(node));
 	}
 
-	inline TreePatternPtr tupleType(const NodePatternPtr& pattern) {
+	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
 		return node(core::NT_TupleType, pattern);
 	}
-	inline TreePatternPtr genericType(const std::string& family, const NodePatternPtr& subtypes) {
-		return node(core::NT_GenericType, atom(make_shared<IRBlob>(family)) << subtypes);
+	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes) {
+		return node(core::NT_GenericType, atom(makeValue(family)) << subtypes);
 	}
-	inline TreePatternPtr genericType(const NodePatternPtr& family, const NodePatternPtr& subtypes) {
+	inline TreePatternPtr genericType(const ListPatternPtr& family, const ListPatternPtr& subtypes) {
 		return node(core::NT_GenericType, family << subtypes);
 	}
 
 	inline TreePatternPtr lit(const std::string& value, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, atom(make_shared<IRBlob>(value)) << single(typePattern));
+		return node(core::NT_Literal, atom(makeValue(value)) << single(typePattern));
 	}
 	inline TreePatternPtr lit(const TreePatternPtr& valuePattern, const TreePatternPtr& typePattern) {
 		return node(core::NT_Literal, single(valuePattern) << single(typePattern));
 	}
-	inline TreePatternPtr call(const NodePtr& function, const NodePatternPtr& parameters) {
+	inline TreePatternPtr call(const core::NodePtr& function, const ListPatternPtr& parameters) {
 		return node(core::NT_CallExpr, atom(function) << parameters);
 	}
-	inline TreePatternPtr call(const TreePatternPtr& function, const NodePatternPtr& parameters) {
+	inline TreePatternPtr call(const TreePatternPtr& function, const ListPatternPtr& parameters) {
 		return node(core::NT_CallExpr, single(function) << parameters);
 	}
 }

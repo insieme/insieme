@@ -168,8 +168,8 @@ tbi
 		}
 	}
 
-//std::cout << "\nDIE BART, DIE " << fun << std::endl;
 	if(fun == BASIC.getVectorRefElem() || fun == BASIC.getArrayRefElem1D()) {
+
 		const TypePtr& retTy = builder.refType(static_pointer_cast<const SingleElementType>(static_pointer_cast<const RefType>(
 				oldCall->getArgument(0)->getType())->getElementType())->getElementType());
 
@@ -527,14 +527,14 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	}
 
 	// TODO make more efficient
-	if(replacements.find(element) != replacements.end()) {
+/*	if(replacements.find(element) != replacements.end()) {
 //		std::cout << "Replacing " << element << " with " << replacements[element];
 		return replacements[element];
 	}
-
+*/
 	if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(element)) {
 		if(cl_mems.find(var) != cl_mems.end()) {
-			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
+//			std::cout << "cl_mems: " << var->getType() << " " << var << " -> " << cl_mems[var]->getType() << " " << cl_mems[var] << std::endl;
 			return cl_mems[var];
 		}
 	}
@@ -588,14 +588,10 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 													VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
 															cl_mems[var], builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))), tty));
-//std::cout << "\nMapping " <<  newMembers.at(i).second << " and " << tty << "\n to " << newType << std::endl;
 
-													replacements[var] = newVar;
-													replacements[cl_mems[var]] = newVar;
+//													replacements[var] = newVar;
+//													replacements[cl_mems[var]] = newVar;
 													cl_mems[var] = newVar;
-
-													varReplacements[var] = newVar;
-													varReplacements[cl_mems[var]] = newVar;
 
 													core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
 															builder.callExpr(newType, BASIC.getUndefined(), BASIC.getTypeLiteral(newType)));
@@ -675,7 +671,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				const VariablePtr& tVar = builder.variable(builder.refType(tty));
 //std::cout << "\nreplacing " << var << " with " << tVar << std::endl;
 				// replace the kernel with the newly created tuple variable
-				replacements[var] = tVar;
+				cl_mems[var] = tVar;
 
 				return builder.declarationStmt(tVar, builder.callExpr(builder.refType(tty), BASIC.getRefNew(),
 						builder.callExpr(tty, BASIC.getUndefined(), BASIC.getTypeLiteral(tty))));
@@ -714,8 +710,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						changed = true;
 					// else check if the passed has a diffetent type
 					} else if(cl_mems.find(vArg) != cl_mems.end()) {
-						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), getBaseType(arg),
-								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))));
+						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), arg->getType(),
+								static_pointer_cast<const Expression>(resolveElement(arg))->getType());
 //						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
 //								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))) << std::endl;
 						if(const TypePtr& newType = dynamic_pointer_cast<const Type>(nt)){

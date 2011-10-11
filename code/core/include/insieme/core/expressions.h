@@ -67,7 +67,7 @@ class Expression : public Statement {
 	 * Allow the test case to access private methods.
 	 */
 	template<typename PT>
-	friend void basicExprTests(PT, const TypePtr&, const Node::ChildList& children = Node::ChildList());
+	friend void basicExprTests(PT, const TypePtr&, const NodeList& children = NodeList());
 
 protected:
 
@@ -88,8 +88,8 @@ protected:
 	 * The Expression class provides this default implementation of the getChildNodes() method
 	 * returning a list containing only the type of the expression.
 	 */
-	virtual OptionChildList getChildNodes() const {
-		return OptionChildList(new ChildList(1, type));
+	virtual NodeListOpt getChildNodes() const {
+		return std::make_shared<NodeList>(1,type);
 	}
 
 public:
@@ -205,7 +205,7 @@ protected:
 	/**
 	 * Retrieves a list of all directly referenced nodes.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -260,7 +260,7 @@ protected:
 	/**
 	 * Retrieves a list of all directly referenced nodes.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 
@@ -362,7 +362,7 @@ class LambdaExpr : public Expression {
 	/**
 	 * Obtains a list of all sub-nodes referenced by this AST node.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 	/**
 	 * Compares this recursive lambda expression with the given expression. If they
@@ -487,7 +487,7 @@ class BindExpr : public Expression {
 	/**
 	 * Obtains a list of all sub-nodes referenced by this node.
 	 */
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 	/**
 	 * Compares this expression with the given expression. If they
@@ -551,7 +551,7 @@ class TupleExpr : public Expression {
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -572,7 +572,7 @@ class VectorExpr : public Expression {
 protected:
 
 	bool equalsExpr(const Expression& expr) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -596,7 +596,7 @@ private:
 
 protected:
 	bool equalsExpr(const Expression& expr) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	const Members& getMembers() const{ return members; }
@@ -615,7 +615,7 @@ class UnionExpr : public Expression {
 
 protected:
 	bool equalsExpr(const Expression& expr) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	const IdentifierPtr& getMemberName() const { return memberName; }
@@ -645,7 +645,7 @@ private:
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -674,7 +674,7 @@ private:
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	class ArgumentOutOfRangeException : public std::exception {
@@ -701,7 +701,7 @@ class CastExpr : public Expression {
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -722,7 +722,7 @@ class MemberAccessExpr : public Expression {
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -745,7 +745,7 @@ class TupleProjectionExpr : public Expression {
 protected:
 	bool equalsExpr(const Expression& expr) const;
 
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 	virtual std::ostream& printTo(std::ostream& out) const;
@@ -771,7 +771,7 @@ class MarkerExpr : public Expression {
 protected:
 
 	bool equalsExpr(const Expression& expr) const;
-	virtual OptionChildList getChildNodes() const;
+	virtual NodeListOpt getChildNodes() const;
 
 public:
 

@@ -178,7 +178,7 @@ TEST(StatementsTest, Break) {
 	EXPECT_EQ ("break", toString(*stmt));
 
 	// check hash codes, children and cloning
-	basicNodeTests(stmt, Node::ChildList());
+	basicNodeTests(stmt, NodeList());
 }
 
 TEST(StatementsTest, Continue) {
@@ -189,7 +189,7 @@ TEST(StatementsTest, Continue) {
 	EXPECT_EQ ("continue", toString(*stmt));
 
 	// check hash codes, children and cloning
-	basicNodeTests(stmt, Node::ChildList());
+	basicNodeTests(stmt, NodeList());
 }
 
 TEST(StatementsTest, Return) {

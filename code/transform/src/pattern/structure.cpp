@@ -94,7 +94,7 @@ namespace pattern {
 		if (this == &other) {
 			return true;
 		}
-		return id == other.id && equals(subTrees, other.subTrees, equal_target<TreePtr>()) && value == other.value;
+		return id == other.id && equals(getSubTrees(), other.getSubTrees(), equal_target<TreePtr>()) && value == other.value;
 	}
 
 	std::ostream& operator<<(std::ostream& out, const Tree& tree) {

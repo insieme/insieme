@@ -44,6 +44,7 @@
 #include "insieme/core/ast_statistic.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/backend/backend.h"
 
@@ -99,7 +100,7 @@ namespace {
 template <class Ret=void>
 Ret measureTimeFor(const std::string& timerName, const std::function<Ret ()>& task) {
 	utils::Timer timer(timerName);
-	Ret ret = task(); // execute the job
+	Ret&& ret = task(); // execute the job
 	timer.stop();
 	LOG(INFO) << timer;
 	return ret;
@@ -257,49 +258,12 @@ void printIR(const NodePtr& program, InverseStmtMap& stmtMap) {
 
 
 
-//***************************************************************************************
-// Mark SCoPs 
-//***************************************************************************************
-void markSCoPs(const ProgramPtr& program) {
-	if (!CommandLineOptions::MarkScop) { return; }
-	using namespace insieme::analysis::scop;
 
-	AddressList sl = measureTimeFor<AddressList>("IR.SCoP.Analysis ", 
-		[&]() -> AddressList { return mark(program); });
-
-	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
-	size_t numStmtsInScops = 0;
-	size_t loopNests = 0;
-	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
-		resolveFrom(cur);
-		// printSCoP(LOG_STREAM(INFO), cur); 
-		// performing dependence analysis
-		// computeDataDependence(cur);
-		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
-		numStmtsInScops += reg.getScatteringInfo().second.size();
-		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScatteringInfo().second);
-		LOG(DEBUG) << loopNest;
-		loopNests += loopNest;
-	});	
-	LOG(INFO) << std::setfill(' ') << std::endl
-			  << "#########################################" << std::endl
-			  << "#             SCoP COVERAGE             #" << std::endl
-			  << "#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#" << std::endl
-			  << "# Tot # of SCoPs                :" << std::setw(7) 
-			  		<< sl.size() << "#" << std::endl
-			  << "# Tot # of stms covered by SCoPs:" << std::setw(7) 
-			  		<< numStmtsInScops << "#" << std::endl
-			  << "# Avg stmt per SCoP             :" << std::setw(7) 
-			  		<< std::setprecision(4) << (double)numStmtsInScops/sl.size() << "#" << std::endl
-			  << "# Avg loop nests per SCoP       :" << std::setw(7) 
-			  		<< std::setprecision(4) << (double)loopNests/sl.size() << "#" << std::endl
-			  << "#########################################";
-}
 
 //***************************************************************************************
 // Check Semantics 
 //***************************************************************************************
-void checkSema(const core::ProgramPtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
+void checkSema(const core::NodePtr& program, MessageList& list, const InverseStmtMap& stmtMap) {
 	using namespace insieme::core::printer;
 
 	// Skip semantics checks if the flag is not set
@@ -343,6 +307,63 @@ void checkSema(const core::ProgramPtr& program, MessageList& list, const Inverse
 	}
 
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+}
+
+//***************************************************************************************
+// Mark SCoPs 
+//***************************************************************************************
+void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& stmtMap) {
+	if (!CommandLineOptions::MarkScop) { return; }
+	using namespace insieme::analysis::scop;
+
+	AddressList sl = measureTimeFor<AddressList>("IR.SCoP.Analysis ", 
+		[&]() -> AddressList { return mark(program); });
+
+	LOG(INFO) << "SCOP Analysis: " << sl.size() << std::endl;
+	size_t numStmtsInScops = 0;
+	size_t loopNests = 0, maxLoopNest=0;
+
+	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
+	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
+		resolveFrom(cur);
+		// printSCoP(LOG_STREAM(INFO), cur); 
+		// performing dependence analysis
+		// computeDataDependence(cur);
+
+		core::NodePtr ir = toIR(cur);
+		// checkSema(ir, errors, stmtMap);
+		replacements.insert( std::make_pair(cur.getAddressedNode(), ir) );
+
+		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
+		numStmtsInScops += reg.getScatteringInfo().second.size();
+		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScatteringInfo().second);
+		
+		if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
+		loopNests += loopNest;
+	});	
+
+	program = core::static_pointer_cast<const core::Program>(
+			core::transform::replaceAll(program->getNodeManager(), program, replacements)
+		);
+
+	LOG(INFO) << std::setfill(' ') << std::endl
+			  << "=========================================" << std::endl
+			  << "=             SCoP COVERAGE             =" << std::endl
+			  << "=~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~=" << std::endl
+			  << "= Tot # of SCoPs                :" << std::setw(6) 
+			  		<< std::right << sl.size() << " =" << std::endl
+			  << "= Tot # of stms covered by SCoPs:" << std::setw(6) 
+			  		<< std::right << numStmtsInScops << " =" << std::endl
+			  << "= Avg stmt per SCoP             :" << std::setw(6) 
+			  		<< std::setprecision(4) << std::right 
+					<< (double)numStmtsInScops/sl.size() << " =" << std::endl
+			  << "= Avg loop nests per SCoP       :" << std::setw(6) 
+			  		<< std::setprecision(4) << std::right 
+					<< (double)loopNests/sl.size() << " =" << std::endl
+			  << "= Max loop nests per SCoP       :" << std::setw(6) 
+			  		<< std::setprecision(4) << std::right 
+					<< maxLoopNest << " =" << std::endl
+			  << "=========================================";
 }
 
 //***************************************************************************************
@@ -442,6 +463,8 @@ int main(int argc, char** argv) {
 			applyOpenCLFrontend(program);
 
 			InverseStmtMap stmtMap;
+			printIR(program, stmtMap);
+
 			// perform checks
 			MessageList errors;
 			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
@@ -463,8 +486,9 @@ int main(int argc, char** argv) {
 			printIR(program, stmtMap);
 
 			// Perform SCoP region analysis 
-			markSCoPs(program);
-			
+			markSCoPs(program, errors, stmtMap);
+			printIR(program, stmtMap);
+			if(CommandLineOptions::CheckSema) {	checkSema(program, errors, stmtMap);	}
 			// IR statistics
 			showStatistics(program);
 

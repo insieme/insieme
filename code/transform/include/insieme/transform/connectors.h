@@ -108,6 +108,8 @@ namespace transform {
 
 		unsigned maxDepth;
 
+		bool preorder;
+
 	public:
 
 		ForEach(const TransformationPtr& transform, unsigned maxDepth = std::numeric_limits<unsigned>::max())
@@ -125,6 +127,27 @@ namespace transform {
 		const TransformationPtr& getTransformation() const {
 			return transformation;
 		}
+
+		unsigned getMaxDepth() const {
+			return maxDepth;
+		}
+
+		bool isPreOrder() const {
+			return preorder;
+		}
+
+	private:
+
+		/**
+		 * The recursive function realizing the core of for-each transformation. It is decending
+		 * recursively into a tree to be transformed, thereby applying a given transformation
+		 * to each encountered node in pre/post order whenever the given node filter is satisfied.
+		 *
+		 * @param target the current node inspected
+		 * @param depth the current level above the end of the recursive decent
+		 * @return the transformed node
+		 */
+		core::NodePtr apply(const core::NodePtr& target, unsigned depth) const;
 
 	};
 
@@ -148,7 +171,8 @@ namespace transform {
 		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
 		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
-			return transformation->checkPostCondition(before, after);
+			// check whether post-condition of transformation is satisfied and whether after is a fixpoint!
+			return transformation->checkPostCondition(before, after) && *after == *transformation->apply(after);
 		}
 
 	};
@@ -193,18 +217,32 @@ namespace transform {
 
 	};
 
+	class TryOtherwise : public Transformation {
 
-	class Sequence : public Transformation {
-
-		const std::vector<TransformationPtr> transformations;
+		TransformationPtr tryTransform;
+		TransformationPtr otherwiseTransform;
 
 	public:
 
-		virtual bool checkPreCondition(const core::NodePtr& target) const;
+		TryOtherwise(const TransformationPtr& tryTransform, const TransformationPtr& otherwiseTransform)
+			: tryTransform(tryTransform), otherwiseTransform(otherwiseTransform) { }
 
-		virtual core::NodePtr apply(const core::NodePtr& target) const;
 
-		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const;
+		virtual bool checkPreCondition(const core::NodePtr& target) const {
+			return tryTransform->checkPreCondition(target) || otherwiseTransform->checkPreCondition(target);
+		}
+
+		virtual core::NodePtr apply(const core::NodePtr& target) const {
+			try {
+				return tryTransform->apply(target);
+			} catch(InvalidTargetException ite) {
+				return otherwiseTransform->apply(target);
+			}
+		}
+
+		virtual bool checkPostCondition(const core::NodePtr& before, const core::NodePtr& after) const {
+			return tryTransform->checkPostCondition(before, after) || otherwiseTransform->checkPostCondition(before, after);
+		}
 
 	};
 
@@ -236,66 +274,5 @@ namespace transform {
 
 	};
 
-//	class Sequence : public Transformation {
-//
-//		const std::vector<TransformationPtr> transformations;
-//
-//	public:
-//		virtual core::NodePtr apply(const core::NodePtr& target);
-//		virtual bool checkPrecondition(const core::NodePtr& target);
-//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-//
-//	};
-//
-//
-//	class Parallel : public Transformation {
-//
-//		const std::vector<TransformationPtr> transformations;
-//
-//	public:
-//		virtual core::NodePtr apply(const core::NodePtr& target);
-//		virtual bool checkPrecondition(const core::NodePtr& target);
-//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-//
-//	};
-//
-//
-//	class Pipeline : public Transformation {
-//
-//		const std::vector<TransformationPtr> transformations;
-//
-//	public:
-//		virtual core::NodePtr apply(const core::NodePtr& target);
-//		virtual bool checkPrecondition(const core::NodePtr& target);
-//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-//
-//	};
-//
-//
-//
-//	class Conditional : public Transformation {
-//
-//		const TransformationPtr transformation;
-//
-//	public:
-//		virtual core::NodePtr apply(const core::NodePtr& target);
-//		virtual bool checkPrecondition(const core::NodePtr& target);
-//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-//
-//	};
-//
-//
-//
-//	class ForAllChild : public Transformation {
-//
-//		const TransformationPtr transformation;
-//
-//	public:
-//		virtual core::NodePtr apply(const core::NodePtr& target);
-//		virtual bool checkPrecondition(const core::NodePtr& target);
-//		virtual bool checkPostcondition(const core::NodePtr& before, const core::NodePtr& after);
-//
-//	};
-
-}
-}
+} // end namespace transform
+} // end namespace insieme
