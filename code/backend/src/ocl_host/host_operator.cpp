@@ -66,6 +66,11 @@ namespace ocl_host {
 			//return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
 		});
 
+		table[kernelExt.wrapLocal] = OP_CONVERTER({
+			return CONVERT_ARG(0);
+			//return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
+		});
+
 		table[kernelExt.wrapConst] = OP_CONVERTER({
 			return CONVERT_ARG(0);
 			//return c_ast::call(C_NODE_MANAGER->create("moveToGPU"), CONVERT_ARG(0));
