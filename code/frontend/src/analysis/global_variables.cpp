@@ -274,13 +274,15 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 			initExpr = builder.refVar( builder.literal((*it)->getNameAsString(), derefTy) );
 		} else {
 			// this means the variable is not declared static inside a function so we have to initialize its value
-			initExpr = (*it)->getInit() ? convFact.convertInitExpr((*it)->getInit(), type, false) : convFact.defaultInitVal(type);
+			initExpr = (*it)->getInit() ? 
+				convFact.convertInitExpr((*it)->getInit(), type, false) : 
+				convFact.defaultInitVal(type);
 		}
 		// default initialization
 		members.push_back( core::StructExpr::Member(ident, initExpr) );
 
 	}
-	VLOG(1) << "Building __insieme_globals data structure";
+	VLOG(1) << "Building '__insieme_globals' data structure";
 	core::StructTypePtr&& structTy = builder.structType(entries);
 	// we name this structure as '__insieme_globals'
 	structTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(std::string("__insieme_globals")) );

@@ -453,11 +453,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     			return builder.callExpr(mgr.basic.getGetNull(), mgr.basic.getTypeLiteral(arrTy));
     		}
     	}
-		return castToType(arrTy, defaultInitVal(arrTy->getElementType()));
-
-		//return builder.callExpr(
-				//arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
-			//);
+		return builder.callExpr(arrTy, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(arrTy));
     }
 
     // handle any-ref initialization
