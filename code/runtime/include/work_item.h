@@ -41,6 +41,7 @@
 #include "irt_context.h"
 #include "utils/minlwt.h"
 #include "irt_scheduling.h"
+#include "wi_performance.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -74,6 +75,7 @@ struct _irt_work_item {
 	irt_wi_wg_membership* wg_memberships;
 	volatile irt_work_item_state state;
 	irt_lw_data_item *parameters;
+	irt_wi_pd_table* performance_data;
 	// wi splitting related
 	irt_work_item_id source_id;
 	uint32 num_fragments;

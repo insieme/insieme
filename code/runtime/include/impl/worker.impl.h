@@ -47,6 +47,7 @@
 #include "utils/impl/minlwt.impl.h"
 #include "utils/affinity.h"
 #include "impl/error_handling.impl.h"
+#include "impl/wi_performance.impl.h"
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
@@ -131,6 +132,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		self->cur_wi = wi;
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
+		irt_wi_insert_performance_start(wi->performance_data);
 		lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
