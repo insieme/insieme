@@ -48,14 +48,14 @@ TEST(TypeListTrait, DealingWithListTraits) {
 	EXPECT_TRUE(typeid(type_list<int,double>::head) == typeid(int));
 	EXPECT_TRUE(typeid(type_list<int,double>::rest::head) == typeid(double));
 
-	EXPECT_TRUE(typeid(element_type<1,int,double>::type) == typeid(int));
-	EXPECT_TRUE(typeid(element_type<2,int,double>::type) == typeid(double));
+	EXPECT_TRUE(typeid(element_type<0,int,double>::type) == typeid(int));
+	EXPECT_TRUE(typeid(element_type<1,int,double>::type) == typeid(double));
 
-	EXPECT_TRUE(typeid(type_at<1,type_list<int,double>>::type) == typeid(int));
-	EXPECT_TRUE(typeid(type_at<2,type_list<int,double>>::type) == typeid(double));
+	EXPECT_TRUE(typeid(type_at<0,type_list<int,double>>::type) == typeid(int));
+	EXPECT_TRUE(typeid(type_at<1,type_list<int,double>>::type) == typeid(double));
 
-	EXPECT_FALSE(typeid(type_at<1,type_list<int,double>>::type) == typeid(double));
-	EXPECT_FALSE(typeid(type_at<2,type_list<int,double>>::type) == typeid(int));
+	EXPECT_FALSE(typeid(type_at<0,type_list<int,double>>::type) == typeid(double));
+	EXPECT_FALSE(typeid(type_at<1,type_list<int,double>>::type) == typeid(int));
 
 }
 

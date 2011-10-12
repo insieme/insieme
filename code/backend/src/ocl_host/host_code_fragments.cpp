@@ -84,7 +84,7 @@ namespace ocl_host {
 					"    #endif\n"
 			);
 		}
-		return static_pointer_cast<const KernelCodeTable>(res);
+		return static_pointer_cast<KernelCodeTable>(res);
 	}
 
 	unsigned KernelCodeTable::registerKernel(const core::ExpressionPtr& kernel) {

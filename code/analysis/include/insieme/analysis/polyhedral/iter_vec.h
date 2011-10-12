@@ -113,7 +113,7 @@ struct Iterator : public Expr {
 	Iterator(const core::VariablePtr& var, bool existence=false) : 
 		Expr(Element::ITER, var), existence(existence) { } 
 	
-	const core::VariablePtr& getVariable() const { 
+	const core::VariablePtr getVariable() const {
 		return core::static_pointer_cast<const core::Variable>(getExpr()); 
 	}
 	
