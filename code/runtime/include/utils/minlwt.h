@@ -48,7 +48,7 @@
 #include "declarations.h"
 
 // determine if reusable stacks can be stolen from other worker's pools 
-#define LWT_STACK_STEALING_ENABLED
+//#define LWT_STACK_STEALING_ENABLED
 
 typedef struct _lwt_reused_stack {
 	struct _lwt_reused_stack *next;
