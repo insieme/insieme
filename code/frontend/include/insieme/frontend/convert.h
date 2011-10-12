@@ -153,6 +153,9 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 		UseGlobalFuncMap globalFuncMap;
 
+		typedef std::map<const clang::VarDecl*, core::IdentifierPtr> GlobalIdentMap;
+		GlobalIdentMap globalIdentMap;
+
 		/*
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>
 		 * a new variable is created in function body and the value of the input parameter assigned to it

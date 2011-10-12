@@ -97,10 +97,18 @@ public:
 	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
-	typedef std::map<const clang::VarDecl*, core::IdentifierPtr> GlobalVarMap;
+	typedef std::map<const clang::VarDecl*, core::IdentifierPtr> GlobalIdentMap;
 
-	GlobalVarCollector(const clang::idx::TranslationUnit* currTU, clang::idx::Indexer& indexer,
-			UseGlobalFuncMap& globalFuncMap) : currTU(currTU), indexer(indexer), usingGlobals(globalFuncMap) { }
+	GlobalVarCollector(
+		conversion::ConversionFactory& 		convFact,
+		const clang::idx::TranslationUnit* 	currTU, 
+		clang::idx::Indexer& 				indexer,
+		UseGlobalFuncMap& 					globalFuncMap) 
+	: 
+	  convFact(convFact),
+	  currTU(currTU), 
+	  indexer(indexer), 
+	  usingGlobals(globalFuncMap) { }
 
 	bool VisitVarDecl(clang::VarDecl* decl);
 	bool VisitDeclRefExpr(clang::DeclRefExpr* decl);
@@ -113,7 +121,7 @@ public:
 	 * a boolean flag indicating if the variable needs to be initialized
 	 * or not (in the case the global variable is marked as external)
 	 */
-	GlobalVarSet getGlobals() const { return globals; }
+	inline const GlobalVarSet& getGlobals() const { return globals; }
 
 	/**
 	 * Returns the list of functions which needs access (directly or
@@ -121,21 +129,28 @@ public:
 	 * @return
 	 */
 	const UseGlobalFuncMap& getUsingGlobals() const { return usingGlobals; }
+	
+	const GlobalIdentMap& getIdentifierMap() const { return varIdentMap; }
 
 	void dump(std::ostream& out) const ;
 
-	GlobalStructPair createGlobalStruct(conversion::ConversionFactory& fact);
+	GlobalStructPair createGlobalStruct();
 
 private:
-	GlobalVarSet	globals;
-	VarTUMap		varTU;
-	GlobalVarMap	varIdentMap;
-	const clang::idx::TranslationUnit* currTU;
-	VisitedFuncSet 	visited;
-	FunctionStack	funcStack;
 
-	clang::idx::Indexer& indexer;
-	UseGlobalFuncMap& usingGlobals;
+	core::IdentifierPtr 
+	buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
+
+	conversion::ConversionFactory& 		convFact;
+	GlobalVarSet						globals;
+	VarTUMap							varTU;
+	GlobalIdentMap						varIdentMap;
+	const clang::idx::TranslationUnit* 	currTU;
+	VisitedFuncSet 						visited;
+	FunctionStack						funcStack;
+
+	clang::idx::Indexer& 				indexer;
+	UseGlobalFuncMap& 					usingGlobals;
 };
 
 } // end analysis namespace
