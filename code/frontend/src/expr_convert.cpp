@@ -78,6 +78,7 @@ std::ostream& operator<<(std::ostream& out, const clang::FunctionDecl* funcDecl)
 #define GET_REF_ELEM_TYPE(type) core::static_pointer_cast<const core::RefType>(type)->getElementType()
 
 namespace {
+
 // Returns a string of the text within the source range of the input stream
 std::string GetStringFromStream(const SourceManager& srcMgr, const SourceLocation& start) {
 	/*
@@ -197,6 +198,7 @@ core::ExpressionPtr getCArrayElemRef(const core::ASTBuilder& builder, const core
 
 		if(subTy->getNodeType() == core::NT_VectorType || subTy->getNodeType() == core::NT_ArrayType ) {
 			core::TypePtr elemTy = core::static_pointer_cast<const core::SingleElementType>(subTy)->getElementType();
+
 			return builder.callExpr( 
 				builder.refType(elemTy), 
 			 	( subTy->getNodeType() == core::NT_VectorType ? 
@@ -795,8 +797,6 @@ class ConversionFactory::ClangExprConverter: public StmtVisitor<ClangExprConvert
 		}
 		return value;
 	}
-
-
 
 public:
 
@@ -2238,7 +2238,7 @@ public:
 		// check whether this is a reference to a variable
 		core::ExpressionPtr retExpr;
 		if (ParmVarDecl* parmDecl = dyn_cast<ParmVarDecl>(declRef->getDecl())){
-			VLOG(2)<<"Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr());
+			VLOG(2) << "Parameter type: " << convFact.convertType(parmDecl->getOriginalType().getTypePtr() );
 			retExpr = convFact.lookUpVariable( parmDecl );
 		} else if ( VarDecl* varDecl = dyn_cast<VarDecl>(declRef->getDecl()) ) {
 			retExpr = convFact.lookUpVariable( varDecl );
@@ -2335,9 +2335,12 @@ ConversionFactory::convertInitializerList(const clang::InitListExpr* initList, c
 			const core::VectorTypePtr& vecTy = core::static_pointer_cast<const core::VectorType>(currType);
 			// In C when the initializer list contains 1 elements then all the elements of the
 			// vector (or array) must be initialized with the same value 
-			const core::ConcreteIntTypeParamPtr& vecArgSize = core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTy->getSize());
+			const core::ConcreteIntTypeParamPtr& vecArgSize = 
+				core::static_pointer_cast<const core::ConcreteIntTypeParam>(vecTy->getSize());
+
 			retExpr = builder.callExpr(vecTy, builder.getBasicGenerator().getVectorInitUniform(), elements.front(), 
-						builder.getBasicGenerator().getIntTypeParamLiteral(vecArgSize) );
+					builder.getBasicGenerator().getIntTypeParamLiteral(vecArgSize) );
+
 		} else {
 			retExpr = builder.vectorExpr(elements);
 		}
