@@ -614,6 +614,43 @@ Address<const T> concat(const Address<const T>& head, const Address<const T>& ta
 	return Address<const T>(newPath);
 }
 
+
+
+template<typename Visitor, typename T>
+void visitPathBottomUp(const Address<const T>& addr, Visitor& visitor) {
+	visitor.visit(addr);
+	if (addr.getDepth() != 1) {
+		visitPathBottomUp(addr.getParentAddress(), visitor);
+	}
+}
+
+template<typename Visitor, typename T>
+void visitPathTopDown(const Address<const T>& addr, Visitor& visitor) {
+	if (addr.getDepth() != 1) {
+		visitPathTopDown(addr.getParentAddress(), visitor);
+	}
+	visitor.visit(addr);
+}
+
+template<typename Visitor, typename T>
+bool visitPathBottomUpInterruptable(const Address<const T>& addr, Visitor& visitor) {
+	bool res = visitor.visit(addr);
+	if (!res && addr.getDepth() != 1) {
+		return !visitPathBottomUpInterruptable(addr.getParentAddress(), visitor);
+	}
+	return !res;
+}
+
+template<typename Visitor, typename T>
+bool visitPathTopDownInterruptable(const Address<const T>& addr, Visitor& visitor) {
+	bool res = true;
+	if (addr.getDepth() != 1) {
+		res = visitPathTopDownInterruptable(addr.getParentAddress(), visitor);
+	}
+	return res || visitor.visit(addr);
+}
+
+
 } // end namespace core
 } // end namespace insieme
 
