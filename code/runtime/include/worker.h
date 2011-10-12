@@ -57,7 +57,7 @@ struct _irt_worker {
 	uint64 generator_id;
 	irt_affinity_mask affinity;
 	pthread_t pthread;
-	minlwt_context basestack;
+	lwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
 	irt_worker_state state;

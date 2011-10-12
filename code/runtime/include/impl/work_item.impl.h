@@ -66,25 +66,25 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 	if(self->wi_reuse_stack) {
 		ret = self->wi_reuse_stack;
 		self->wi_reuse_stack = ret->next_reuse;
-		printf("RE\n");
-		if(self->wi_reuse_stack) printf("R2\n");
+		IRT_DEBUG("WI_RE\n");
 	} else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
-		ret->stack_start = 0;
-		printf("FU\n");
+		IRT_DEBUG("WI_FU\n");
 	}
 	return ret;
 }
 static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
-	printf("CYC\n");
+	IRT_DEBUG("WI_CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
 	self->wi_reuse_stack = wi;
-	if(self->wi_reuse_stack->next_reuse) printf("C2\n");
+	//lwt_recycle(self->id.value.components.thread, wi);
 	
-	irt_work_item* last = self->wi_reuse_stack;
-	int i = 0;
-	while((last = last->next_reuse)) ++i;
-	printf("CCC %d : %d\n", self->id.value.components.thread, i);
+	IRT_VERBOSE_ONLY(
+		irt_work_item* last = self->wi_reuse_stack;
+		int i = 0;
+		while((last = last->next_reuse)) ++i;
+		printf("WI_CCC %d : %d\n", self->id.value.components.thread, i);
+		);
 }
 
 static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
@@ -237,6 +237,10 @@ void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	irt_wi_split(wi, 2, offsets, out_wis);
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis) {
+	if(elements == 1) {
+		out_wis[0] = wi;
+		return;
+	}
 	irt_worker *self = irt_worker_get_current();
 	irt_work_item_range range = wi->range;
 	for(uint32 i=0; i<elements; ++i) {

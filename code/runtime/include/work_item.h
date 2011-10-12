@@ -80,8 +80,8 @@ struct _irt_work_item {
 	// private implementation details, do not need to be migrated
 	irt_work_item *next_reuse;
 	irt_wi_readiness_check ready_check;
-	minlwt_context stack_ptr;
-	intptr_t stack_start;
+	lwt_context stack_ptr;
+	lwt_reused_stack* stack_storage;
 	irt_wi_scheduling_data sched_data;
 };
 

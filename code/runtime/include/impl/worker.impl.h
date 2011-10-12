@@ -126,7 +126,7 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	if(wi->state == IRT_WI_STATE_NEW) {
 		// start WI from scratch
 		wi->state = IRT_WI_STATE_STARTED;
-		lwt_prepare(wi, &self->basestack);
+		lwt_prepare(self->id.value.components.thread, wi, &self->basestack);
 
 		self->cur_wi = wi;
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
