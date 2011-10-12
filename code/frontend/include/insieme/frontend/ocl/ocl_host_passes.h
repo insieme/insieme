@@ -116,7 +116,7 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		if(x == y || *x == *y)
 			return true;
 
-		core::CallExprPtr xCall =  dynamic_pointer_cast<const core::CallExpr>(x);
+		core::CallExprPtr xCall = dynamic_pointer_cast<const core::CallExpr>(x);
 		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
 
 //std::cout << "\ncomparing " << x << " and\n          " << y << "\neqMap: " << eqMap << std::endl;
@@ -137,24 +137,38 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return false;
 		}
 
-/*
-		core::NodeAddress xAddr = core::Address<core::Variable>::find(xVar, root);
-		core::NodeAddress yAddr;
-std::cout << xAddr.getDepth() << "\nasdfasdfasdfasdf\n\n";
+
+		core::NodeAddress xAddr = core::Address<const core::Variable>::find(xVar, root);
+		core::NodeAddress yAddr = core::Address<const core::Variable>::find(yVar, root);
+//std::cout << xAddr.getDepth() << "  " << yAddr.getDepth() << "\nasdfasdfasdfasdf\n\n";
+		bool reverse;
 		if(xAddr.getDepth() < yAddr.getDepth()) {
 			core::NodeAddress tmp = xAddr;
 			xAddr = yAddr;
 			yAddr = tmp;
+			reverse = true;
 		}
-		std::cout << "\nNODE " << x << "PARE " << xAddr.getParentNode();
+//		std::cout << "\nNODE " << x << "\nPARE " << *yAddr;
 
-		auto fu = core::makeLambdaVisitor([&yAddr](const core::NodeAddress& addr) {
-			if(1)
-				return true;
+		auto fu = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
+			bool ret = false;
+			if(const core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(addr)) {
+				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
+					for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
+							[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
+						if(*yAddr == *cur.first) {
+							if(*xAddr == *cur.second)
+								ret = true;
+							ret = this->operator ()(cur.second, reverse ? y : x);
+						}
+					});
+				}
+			}
+			return ret;
 		});
 
-		return core::visitPathBottomUpInterruptable(xAddr, fu);
-*/
+		return core::visitPathBottomUpInterruptable(yAddr, fu);
+
 		return false;
 	}
 };
