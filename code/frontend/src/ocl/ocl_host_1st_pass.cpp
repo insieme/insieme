@@ -484,9 +484,9 @@ ExpressionPtr Ocl2Inspire::getClSetKernelArg() {
 HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	builder(build), o2i(build), mProgram(program), kernelArgs( // specify constructor arguments to pass the builder to the compare class
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
-		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)), localMemDecls(
+		hash_target_specialized(build, eqMap), equal_variables(build, program)), localMemDecls(
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
-		hash_target_specialized(build, eqMap), equal_variables(build, eqMap)) {
+		hash_target_specialized(build, eqMap), equal_variables(build, program)) {
 	eqIdx = 1;
 //		eqMap[builder.stringLit("fucking placeholder")] = 0;
 

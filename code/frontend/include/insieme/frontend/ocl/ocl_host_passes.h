@@ -100,11 +100,10 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
  * regardless of the index
  */
 struct equal_variables {// : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
-	// needed to perform isSubscriptOperator()
 	core::ASTBuilder& builder;
-	EquivalenceMap& eqMap;
+	const core::ProgramPtr& root;
 
-	equal_variables(core::ASTBuilder& build, EquivalenceMap& equalityMap) : builder(build), eqMap(equalityMap) {}
+	equal_variables(core::ASTBuilder& build, const core::ProgramPtr& program) : builder(build), root(program) {}
 
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
@@ -137,12 +136,25 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		if(!xVar || !yVar) {
 			return false;
 		}
-		if(eqMap.find(yVar) != eqMap.end() && eqMap.find(xVar) != eqMap.end()) {
-			if(eqMap[xVar] == eqMap[yVar]) {
-				return true;
-			}
-		}
 
+/*
+		core::NodeAddress xAddr = core::Address<core::Variable>::find(xVar, root);
+		core::NodeAddress yAddr;
+std::cout << xAddr.getDepth() << "\nasdfasdfasdfasdf\n\n";
+		if(xAddr.getDepth() < yAddr.getDepth()) {
+			core::NodeAddress tmp = xAddr;
+			xAddr = yAddr;
+			yAddr = tmp;
+		}
+		std::cout << "\nNODE " << x << "PARE " << xAddr.getParentNode();
+
+		auto fu = core::makeLambdaVisitor([&yAddr](const core::NodeAddress& addr) {
+			if(1)
+				return true;
+		});
+
+		return core::visitPathBottomUpInterruptable(xAddr, fu);
+*/
 		return false;
 	}
 };

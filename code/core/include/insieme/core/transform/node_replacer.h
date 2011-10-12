@@ -126,8 +126,7 @@ core::Pointer<T> replaceVarsGen(NodeManager& mgr, const core::Pointer<T>& root,
 // default functor, doing nothing
 static std::function<NodePtr (const NodePtr&)> getDefaultFunctor(){ return [](const NodePtr& node)->NodePtr { return node; }; }
 
-// functor which updates the type literal inside a call to undefined in a declareation
-
+// functor which updates the type literal inside a call to undefined in a declaration
 std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& builder);
 
 /**
