@@ -706,7 +706,7 @@ public:
 	}
 
 	core::StatementPtr getIR() const {
-		assert( stmtStack.size() == 1);
+		assert( stmtStack.size() == 1 );
 		core::ASTBuilder builder(mgr);
 
 		return builder.compoundStmt( stmtStack.top() );
