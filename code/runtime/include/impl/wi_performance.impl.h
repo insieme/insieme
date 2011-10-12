@@ -36,49 +36,53 @@
 
 #pragma once
 
-#include "declarations.h"
+#include "wi_performance.h"
 
-#include <pthread.h>
+#define IRT_WI_PD_BLOCKSIZE 4
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-
-/* ------------------------------ data structures ----- */
-
-IRT_MAKE_ID_TYPE(worker);
-
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
-
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	lwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state;
-	irt_worker_scheduling_data sched_data;
-	irt_work_item lazy_wi;
-	uint64 lazy_count;
-	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
-};
-
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
+//used for getting clock cycles
+unsigned long long getTicks(void) {
+	volatile unsigned long long a, d;
+	__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+	return (a | (d << 32));
 }
 
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-void _irt_worker_cancel_all_others();
+void resize(irt_wi_pd_table* table) {
+	table->size += table->blocksize;
+	table->data = realloc(table->data, sizeof(_irt_wi_performance_data)*table->size);
+}
 
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+irt_wi_pd_table* irt_wi_create_performance_table(unsigned blocksize) {
+
+	irt_wi_pd_table* table = malloc(sizeof(irt_wi_pd_table));
+	table->size = blocksize * 2;
+	table->number_of_elements = 0;
+	table->data = malloc(sizeof(_irt_wi_performance_data) * table->size);
+	return table;
+}
+
+void irt_wi_destroy_performance_table(irt_wi_pd_table* table) {
+	free(table->data);
+	free(table);
+}
+
+void irt_wi_insert_performance_start(irt_wi_pd_table* table) {
+
+	unsigned long long time = getTicks();
+
+	if(table->number_of_elements >= table->size)
+		resize(table);
+
+	(table->data[table->number_of_elements]).start = time;
+}
+
+void irt_wi_insert_performance_end(irt_wi_pd_table* table) {
+
+	unsigned long long time = getTicks();
+
+	if(table->number_of_elements >= table->size)
+		resize(table);
+
+	table->data[(table->number_of_elements)++].end = time;
+}
+

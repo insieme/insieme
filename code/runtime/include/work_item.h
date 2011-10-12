@@ -41,6 +41,7 @@
 #include "irt_context.h"
 #include "utils/minlwt.h"
 #include "irt_scheduling.h"
+#include "wi_performance.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -74,14 +75,15 @@ struct _irt_work_item {
 	irt_wi_wg_membership* wg_memberships;
 	volatile irt_work_item_state state;
 	irt_lw_data_item *parameters;
+	irt_wi_pd_table* performance_data;
 	// wi splitting related
 	irt_work_item_id source_id;
 	uint32 num_fragments;
 	// private implementation details, do not need to be migrated
 	irt_work_item *next_reuse;
 	irt_wi_readiness_check ready_check;
-	minlwt_context stack_ptr;
-	intptr_t stack_start;
+	lwt_context stack_ptr;
+	lwt_reused_stack* stack_storage;
 	irt_wi_scheduling_data sched_data;
 };
 
@@ -93,7 +95,8 @@ static inline bool irt_wi_is_fragment(irt_work_item *wi) { return wi->source_id.
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index);
 static inline irt_work_group* irt_wi_get_wg(irt_work_item *wi, uint32 index);
 
-irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
+irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
+static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params);
 

@@ -119,7 +119,12 @@ static inline void irt_##__type__##_table_remove(irt_##__type__##_id id) { \
 	irt_##__type__ *element, *previous; \
 	pthread_spin_lock(&irt_g_##__type__##_table_locks[hash_val]); \
 	element = irt_g_##__type__##_table[hash_val]; \
-	if(element && element->id.value.full == id.value.full) { \
+	if(!element) { \
+		pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); \
+		irt_throw_string_error(IRT_ERR_INTERNAL, "Removing nonexistent element from " #__type__ " table."); \
+		return; \
+	} \
+	if(element->id.value.full == id.value.full) { \
 		irt_g_##__type__##_table[hash_val] = element->__next_name__; \
 		pthread_spin_unlock(&irt_g_##__type__##_table_locks[hash_val]); \
 		return; \

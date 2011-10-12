@@ -48,7 +48,7 @@
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"
 #include "impl/irt_events.impl.h"
-
+#include "impl/wi_performance.impl.h"
 
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) { 
 	return wi->wg_memberships[index]; 
@@ -66,14 +66,25 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 	if(self->wi_reuse_stack) {
 		ret = self->wi_reuse_stack;
 		self->wi_reuse_stack = ret->next_reuse;
+		IRT_DEBUG("WI_RE\n");
 	} else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
+		IRT_DEBUG("WI_FU\n");
 	}
 	return ret;
 }
 static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
+	IRT_DEBUG("WI_CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
-	self->wi_reuse_stack = wi->next_reuse;
+	self->wi_reuse_stack = wi;
+	//lwt_recycle(self->id.value.components.thread, wi);
+	
+	IRT_VERBOSE_ONLY(
+		irt_work_item* last = self->wi_reuse_stack;
+		int i = 0;
+		while((last = last->next_reuse)) ++i;
+		printf("WI_CCC %d : %d\n", self->id.value.components.thread, i);
+		);
 }
 
 static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
@@ -85,24 +96,29 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
 }
 
-irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
-	irt_worker *self = irt_worker_get_current();
+static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	wi->id.cached = wi;
+	wi->impl_id = impl_id;
+	wi->context_id = context;
+	wi->num_groups = 0;
+	wi->wg_memberships = NULL;
+	wi->parameters = params;
+	wi->range = range;
+	wi->state = IRT_WI_STATE_NEW;
+	wi->ready_check = irt_g_null_readiness_check;
+	wi->source_id = irt_work_item_null_id();
+	wi->num_fragments = 0;
+	wi->performance_data = irt_wi_create_performance_table(IRT_WI_PD_BLOCKSIZE);
+}
+
+irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
 	irt_work_item* retval = _irt_wi_new(self);
-	retval->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	retval->id.cached = retval;
-	retval->impl_id = impl_id;
-	retval->context_id = self->cur_context;
-	retval->num_groups = 0;
-	retval->wg_memberships = NULL;
-	retval->parameters = params;
-	retval->range = range;
-	retval->state = IRT_WI_STATE_NEW;
-	retval->stack_start = 0;
-	retval->ready_check = irt_g_null_readiness_check;
-	//retval->stack_ptr = 0;
-	retval->source_id = irt_work_item_null_id();
-	retval->num_fragments = 0;
+	_irt_wi_init(self->cur_context, retval, range, impl_id, params);
 	return retval;
+}
+static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	return _irt_wi_create(irt_worker_get_current(), range, impl_id, params);
 }
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {
 	irt_worker *self = irt_worker_get_current();
@@ -112,6 +128,7 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
+	retval->performance_data = irt_wi_create_performance_table(IRT_WI_PD_BLOCKSIZE);
 	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
@@ -182,6 +199,9 @@ void irt_wi_join(irt_work_item* wi) {
 //}
 
 void irt_wi_end(irt_work_item* wi) {
+	irt_wi_insert_performance_end(wi->performance_data);
+
+        printf("WI: %lu, WI_IMPL: %d, split?: %d, start: %llu, end: %llu\n", wi->id.value.full, wi->impl_id, irt_wi_is_fragment(wi), wi->performance_data->data[0].start, wi->performance_data->data[0].end);
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
 	if(worker->lazy_count>0) {
@@ -222,6 +242,10 @@ void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	irt_wi_split(wi, 2, offsets, out_wis);
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis) {
+	if(elements == 1) {
+		out_wis[0] = wi;
+		return;
+	}
 	irt_worker *self = irt_worker_get_current();
 	irt_work_item_range range = wi->range;
 	for(uint32 i=0; i<elements; ++i) {

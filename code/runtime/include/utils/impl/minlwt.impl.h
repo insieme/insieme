@@ -40,18 +40,77 @@
 #include "work_item.h"
 #include "wi_implementation.h"
 #include "impl/error_handling.impl.h"
+#include "irt_atomic.h"
 
 #include "sys/mman.h"
+
+struct _lwt_g_stack_reuse {
+	lwt_reused_stack* stacks[IRT_MAX_WORKERS];
+} lwt_g_stack_reuse;
+
+lwt_reused_stack* _lwt_get_stack(int w_id) {
+	lwt_reused_stack* ret = lwt_g_stack_reuse.stacks[w_id];
+#ifdef LWT_STACK_STEALING_ENABLED
+	if(ret) {
+		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next)) {
+			IRT_DEBUG("LWT_RE\n");
+			return ret;
+		} else {
+			return _lwt_get_stack(w_id);
+		}
+	} else {
+		for(int i=0; i<irt_g_worker_count; ++i) {
+			ret = lwt_g_stack_reuse.stacks[i];
+			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next)) {
+				IRT_DEBUG("LWT_ST\n");
+				return ret;
+			}
+		}
+	}
+#else
+	if(ret) {
+		IRT_DEBUG("LWT_RE\n");
+		lwt_g_stack_reuse.stacks[w_id] = ret->next;
+		return ret;
+	}
+#endif
+	
+	// create new
+	IRT_DEBUG("LWT_FU\n");
+	ret = malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
+	ret->next = NULL;
+	return ret;
+}
+
+static inline void lwt_recycle(int tid, irt_work_item *wi) {
+	if(!wi->stack_storage) return;
+#ifdef LWT_STACK_STEALING_ENABLED
+	for(;;) {
+		lwt_reused_stack* top = lwt_g_stack_reuse.stacks[tid];
+		wi->stack_storage->next = top;
+		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage)) {
+			IRT_DEBUG("LWT_CYC\n");
+			return;
+		} else {
+			IRT_DEBUG("LWT_FCY\n");
+		}
+	}
+#else
+	wi->stack_storage->next = lwt_g_stack_reuse.stacks[tid];
+	lwt_g_stack_reuse.stacks[tid] = wi->stack_storage;
+	IRT_DEBUG("LWT_CYC\n");
+#endif
+}
 
 #ifdef USING_MINLWT
 
 // ----------------------------------------------------------------------------
 // x86-64 implementation
 
-static inline void lwt_prepare(irt_work_item *wi, intptr_t *basestack) {
+static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) {
 	// heap allocated thread memory
-	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
-	wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
+	wi->stack_storage = _lwt_get_stack(tid);
+	wi->stack_ptr = (intptr_t)(&wi->stack_storage->stack) + IRT_WI_STACK_SIZE;
 
 	// let stack be allocated by the OS kernel
 	// see http://www.evanjones.ca/software/threading.html

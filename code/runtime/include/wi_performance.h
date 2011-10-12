@@ -36,49 +36,24 @@
 
 #pragma once
 
-#include "declarations.h"
+typedef struct _irt_wi_performance_data {
+	long long unsigned start;
+	long long unsigned end;
+} _irt_wi_performance_data;
 
-#include <pthread.h>
+typedef struct irt_wi_pd_table {
+	unsigned size;
+	unsigned number_of_elements;
+	unsigned blocksize;
+	_irt_wi_performance_data* data;
+} irt_wi_pd_table;
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
+irt_wi_pd_table* irt_wi_create_performance_table(unsigned blocksize);
 
-/* ------------------------------ data structures ----- */
+void irt_wi_destroy_performance_table(irt_wi_pd_table* table);
 
-IRT_MAKE_ID_TYPE(worker);
+void irt_wi_insert_performance_start(irt_wi_pd_table* table); 
 
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
+void irt_wi_insert_performance_end(irt_wi_pd_table* table);
 
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	lwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state;
-	irt_worker_scheduling_data sched_data;
-	irt_work_item lazy_wi;
-	uint64 lazy_count;
-	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
-};
 
-/* ------------------------------ operations ----- */
-
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
-}
-
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-void _irt_worker_cancel_all_others();
-
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
