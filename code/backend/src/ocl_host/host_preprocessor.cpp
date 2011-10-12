@@ -40,9 +40,11 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/core/ast_check.h"
+#include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/ocl_host/host_extensions.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
@@ -73,6 +75,13 @@ namespace ocl_host {
 
 			// perform conversion in post-order
 			core::NodePtr res = ptr->substitute(manager, *this);
+
+			// only interested in lambda expressions
+			if (res->getNodeType() != core::NT_LambdaExpr) {
+				return res;
+			}
+
+			//LOG(INFO) << "CODE: " << core::printer::PrettyPrinter(res);
 
 			return res;
 		}
