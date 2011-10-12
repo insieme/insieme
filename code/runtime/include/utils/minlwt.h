@@ -47,16 +47,25 @@
 
 #include "declarations.h"
 
+// determine if reusable stacks can be stolen from other worker's pools 
+#define LWT_STACK_STEALING_ENABLED
+
+typedef struct _lwt_reused_stack {
+	struct _lwt_reused_stack *next;
+	char stack[];
+} lwt_reused_stack;
+
 #ifdef __x86_64__
 //#if 0
 #define USING_MINLWT 1
-typedef intptr_t minlwt_context;
+typedef intptr_t lwt_context;
 #else
 #include <ucontext.h>
-typedef ucontext_t minlwt_context;
+typedef ucontext_t lwt_context;
 #endif
 
-static inline void lwt_prepare(irt_work_item *wi, minlwt_context *basestack);
-void lwt_start(irt_work_item *wi, minlwt_context *basestack, wi_implementation_func* func);
-void lwt_continue(minlwt_context *newstack, minlwt_context *basestack);
-void lwt_end(minlwt_context *basestack);
+static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack);
+static inline void lwt_recycle(int tid, irt_work_item *wi);
+void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func);
+void lwt_continue(lwt_context *newstack, lwt_context *basestack);
+void lwt_end(lwt_context *basestack);

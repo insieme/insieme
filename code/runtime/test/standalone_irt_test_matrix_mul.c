@@ -147,12 +147,11 @@ irt_ocl_kernel_code g_kernel_code_table[] = {
 
 // initialization
 void insieme_init_context(irt_context* context) {
+	context->type_table = g_insieme_type_table;
+	context->impl_table = g_insieme_impl_table;
 	#ifdef USE_OPENCL
 	irt_ocl_rt_create_all_kernels(context, g_kernel_code_table, g_kernel_code_table_size);
 	#endif
-
-	context->type_table = g_insieme_type_table;
-	context->impl_table = g_insieme_impl_table;
 }
 
 void insieme_cleanup_context(irt_context* context) {
@@ -160,7 +159,7 @@ void insieme_cleanup_context(irt_context* context) {
 	irt_ocl_rt_release_all_kernels(context, g_kernel_code_table_size);
 	#endif
 	// nothing
-	printf("Cleaning up manual IRT test matrix mul\n");
+	printf("Cleaning up standalone IRT test matrix mul\n");
 }
 
 // work item function definitions

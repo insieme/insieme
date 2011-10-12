@@ -57,7 +57,7 @@ struct _irt_worker {
 	uint64 generator_id;
 	irt_affinity_mask affinity;
 	pthread_t pthread;
-	minlwt_context basestack;
+	lwt_context basestack;
 	irt_context_id cur_context;
 	irt_work_item* cur_wi;
 	irt_worker_state state;
@@ -68,6 +68,7 @@ struct _irt_worker {
 	irt_wi_event_register *wi_ev_register_list;
 	irt_wg_event_register *wg_ev_register_list;
 	irt_work_item *wi_reuse_stack;
+	intptr_t *stack_reuse_stack;
 };
 
 /* ------------------------------ operations ----- */

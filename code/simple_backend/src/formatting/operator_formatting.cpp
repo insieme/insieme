@@ -85,6 +85,9 @@ namespace formatting {
 					// skip ref.var / ref.new
 					CallExprPtr call = static_pointer_cast<const CallExpr>(arg);
 					STMT_CONVERTER.convert(call->getArgument(0));
+				} else if (core::analysis::isCallOf(arg, basic.getGetNull())) {
+					// no * infront of 0
+					VISIT_ARG(0);
 				} else {
 					// just add deref
 					OUT("*");
@@ -101,7 +104,49 @@ namespace formatting {
 				VISIT_ARG(1);
 		});
 
-		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, { handleRefConstructor(STMT_CONVERTER, CALL->getType(), ARG(0), false); });
+		ADD_FORMATTER_DETAIL(res, basic.getRefVar(), false, {
+//				handleRefConstructor(STMT_CONVERTER, CALL->getType(), ARG(0), false);
+
+
+				// get some manager
+				const core::lang::BasicGenerator& basic = CONTEXT.getNodeManager().getBasicGenerator();
+
+				// extract type
+				core::ExpressionPtr initValue = call->getArgument(0);
+				core::TypePtr type = initValue->getType();
+				const TypeManager::TypeInfo& valueTypeInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, type);
+				const TypeManager::TypeInfo& resTypeInfo = CONTEXT.getTypeManager().getTypeInfo(CODE, call->getType());
+
+				// cast to target type
+				OUT("(" + resTypeInfo.rValueName + ")");
+
+				// check whether new memory location needs to be initialized
+				if (!(core::analysis::isCallOf(initValue, basic.getVectorInitUndefined()) ||
+						core::analysis::isCallOf(initValue, basic.getUndefined()))) {
+
+					if (type->getNodeType() != core::NT_ArrayType) {
+						OUT("memcpy(alloca(sizeof(");
+						OUT(valueTypeInfo.rValueName);
+						OUT(")),&");
+						VISIT_ARG(0);
+						OUT(",sizeof(");
+						OUT(valueTypeInfo.rValueName);
+						OUT("))");
+					} else {
+						// not memcpy for arrays
+						if (core::analysis::isRefType(type)) {
+							OUT("&");
+						}
+						VISIT_ARG(0);
+					}
+
+				} else {
+					OUT("alloca(sizeof("); OUT(valueTypeInfo.rValueName); OUT("))");
+				}
+
+		});
+
+
 		ADD_FORMATTER_DETAIL(res, basic.getRefNew(), false, {
 				//handleRefConstructor(STMT_CONVERTER, ARG(0), true);
 
@@ -133,8 +178,7 @@ namespace formatting {
 					}
 				}
 
-				const TypePtr& type = ARG(0)->getType();
-				assert(type->getNodeType() == NT_RefType && "Cannot free a non-ref type!");
+				assert(ARG(0)->getType()->getNodeType() == NT_RefType && "Cannot free a non-ref type!");
 
 				OUT("free(");
 				VISIT_ARG(0);
