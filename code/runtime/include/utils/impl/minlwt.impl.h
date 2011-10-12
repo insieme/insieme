@@ -53,7 +53,7 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 #ifdef LWT_STACK_STEALING_ENABLED
 	if(ret) {
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next)) {
-			IRT_INFO("LWT_RE\n");
+			IRT_DEBUG("LWT_RE\n");
 			return ret;
 		} else {
 			return _lwt_get_stack(w_id);
@@ -62,42 +62,43 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 		for(int i=0; i<irt_g_worker_count; ++i) {
 			ret = lwt_g_stack_reuse.stacks[i];
 			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next)) {
-				IRT_INFO("LWT_ST\n");
+				IRT_DEBUG("LWT_ST\n");
 				return ret;
 			}
 		}
 	}
 #else
 	if(ret) {
-		IRT_INFO("LWT_RE\n");
+		IRT_DEBUG("LWT_RE\n");
 		lwt_g_stack_reuse.stacks[w_id] = ret->next;
 		return ret;
 	}
 #endif
 	
 	// create new
-	IRT_INFO("LWT_FU\n");
+	IRT_DEBUG("LWT_FU\n");
 	ret = malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
 	ret->next = NULL;
 	return ret;
 }
 
 static inline void lwt_recycle(int tid, irt_work_item *wi) {
+	if(!wi->stack_storage) return;
 #ifdef LWT_STACK_STEALING_ENABLED
 	for(;;) {
 		lwt_reused_stack* top = lwt_g_stack_reuse.stacks[tid];
 		wi->stack_storage->next = top;
 		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage)) {
-			IRT_INFO("LWT_CYC\n");
+			IRT_DEBUG("LWT_CYC\n");
 			return;
 		} else {
-			IRT_INFO("LWT_FCY\n");
+			IRT_DEBUG("LWT_FCY\n");
 		}
 	}
 #else
 	wi->stack_storage->next = lwt_g_stack_reuse.stacks[tid];
 	lwt_g_stack_reuse.stacks[tid] = wi->stack_storage;
-	IRT_INFO("LWT_CYC\n");
+	IRT_DEBUG("LWT_CYC\n");
 #endif
 }
 
