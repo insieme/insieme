@@ -48,6 +48,7 @@
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"
 #include "impl/irt_events.impl.h"
+#include "impl/wi_performance.impl.h"
 
 
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) { 
@@ -102,12 +103,14 @@ irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id
 	//retval->stack_ptr = 0;
 	retval->source_id = irt_work_item_null_id();
 	retval->num_fragments = 0;
+	retval->performance_data = irt_wi_create_performance_table(IRT_WI_PD_BLOCKSIZE);
 	return retval;
 }
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {
 	irt_worker *self = irt_worker_get_current();
 	irt_work_item* retval = _irt_wi_new(self);
 	memcpy(retval, source, sizeof(irt_work_item));
+	retval->performance_data = irt_wi_create_performance_table(IRT_WI_PD_BLOCKSIZE);
 	retval->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
@@ -182,6 +185,10 @@ void irt_wi_join(irt_work_item* wi) {
 //}
 
 void irt_wi_end(irt_work_item* wi) {
+	irt_wi_insert_performance_end(wi->performance_data);
+
+	printf("WI: %lu, WI_IMPL: %d, split?: %d, start: %llu, end: %llu\n", wi->id.value.full, wi->impl_id, irt_wi_is_fragment(wi), wi->performance_data->data[0].start, wi->performance_data->data[0].end);
+
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
 	if(worker->lazy_count>0) {
