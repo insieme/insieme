@@ -68,7 +68,7 @@ public:
 	 */
 	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
 	operator const Ptr<B>() const {
-		return *reinterpret_cast<const Ptr<B>* >(this);
+		return Ptr<B>(ptr);
 	}
 
 	operator bool() const {
@@ -173,16 +173,16 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>>::type dynamic_p
  * @return the down-casted pointer pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>&>::type static_pointer_cast(Ptr<T>& src) {
+inline typename boost::enable_if<boost::is_base_of<T,B>, Ptr<B>>::type static_pointer_cast(Ptr<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return *(reinterpret_cast<Ptr<B>* >(&src));
+	return Ptr<B>(static_cast<B*>(src.ptr));
 }
 
 // the same as above, only for constant pointers
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const Ptr<B>&>::type static_pointer_cast(const Ptr<T>& src) {
+inline typename boost::enable_if<boost::is_base_of<T,B>, const Ptr<B>>::type static_pointer_cast(const Ptr<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return *(reinterpret_cast<const Ptr<B>* >(&src));
+	return Ptr<B>(static_cast<B*>(src.ptr));
 }
 
 template<typename T>

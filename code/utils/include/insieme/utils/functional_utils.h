@@ -326,7 +326,7 @@ template<unsigned pos, typename L>
 struct type_at;
 
 template<typename H, typename ...R>
-struct type_at<1, type_list<H,R...>> {
+struct type_at<0, type_list<H,R...>> {
 	typedef H type;
 };
 
@@ -421,7 +421,7 @@ template<unsigned pos, typename ...R>
 struct element_type;
 
 template<typename H, typename ...R>
-struct element_type<1,H,R...> {
+struct element_type<0,H,R...> {
 	typedef H type;
 };
 
