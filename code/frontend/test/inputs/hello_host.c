@@ -44,8 +44,8 @@ cl_mem dev_ptr1 = NULL;
 cl_event event = NULL;
 cl_kernel kernel[2] = {NULL};
 
-cl_int subfunction(cl_command_queue queue, size_t* globalSize, size_t* localSize, cl_event event) {
-	return clEnqueueNDRangeKernel(queue, kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
+cl_int subfunction(size_t* globalSize, size_t* localSize) {
+	return clEnqueueNDRangeKernel(gqueue, kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
 }
 
 //#pragma insieme mark
@@ -98,9 +98,9 @@ int main(int argc, char **argv) {
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
 
-	for(int i = 0; i < 1; ++i)
-		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
-//	err = subfunction(queue[0], globalSize, localSize, event);
+//	for(int i = 0; i < 1; ++i)
+//		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
+	err = subfunction(globalSize, localSize);
 
 	err = clWaitForEvents(1, &event);
 

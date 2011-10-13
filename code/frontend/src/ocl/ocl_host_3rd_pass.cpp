@@ -119,6 +119,7 @@ bool HostMapper3rdPass::updateReturnVal(const core::CallExprPtr& oldCall, core::
 	const TypePtr& oldType = oldCall->getType();
 	// check if return type of array/vector subscript calls are still valid
 	if(oldType->toString().find("array<_cl_mem,1>") != string::npos) {
+
 		if(BASIC.isSubscriptOperator(fun)) {
 //		std::cout << "-----------------------\n" << oldCall << std::endl << std::endl << oldCall->getArgument(0)->getType() << std::endl;
 			if(const SingleElementTypePtr& seType = dynamic_pointer_cast<const SingleElementType>((oldCall->getArgument(0)->getType()))) {
@@ -160,14 +161,6 @@ tbi
 */
 	}
 
-	if(fun == BASIC.getRefDeref()) {
-		const TypePtr& retTy = tryDeref(oldCall->getArgument(0), builder)->getType();
-		if(oldType != retTy) {
-			newCall = builder.callExpr(retTy, fun, oldCall->getArgument(0));
-			return true;
-		}
-	}
-
 	if(fun == BASIC.getVectorRefElem() || fun == BASIC.getArrayRefElem1D()) {
 
 		const TypePtr& retTy = builder.refType(static_pointer_cast<const SingleElementType>(static_pointer_cast<const RefType>(
@@ -190,6 +183,15 @@ tbi
 	}
 
 
+#if 0
+	if(fun == BASIC.getRefDeref()) {
+		const TypePtr& retTy = tryDeref(oldCall->getArgument(0), builder)->getType();
+		if(oldType != retTy) {
+			newCall = builder.callExpr(retTy, fun, oldCall->getArgument(0));
+			return true;
+		}
+	}
+
 	if(fun == BASIC.getCompositeMemberAccess()) {
 		const TypePtr& retTy = oldCall->getArgument(2)->getType();
 		if(oldType != retTy) {
@@ -205,7 +207,7 @@ tbi
 			return true;
 		}
 	}
-
+#endif
 	return false;
 }
 
@@ -357,6 +359,8 @@ std::cout << "\nArguments: " << ka.first << "\n";
 std::cout << "\nk " << k << "\ny " << kernelLambdas.begin()->first << "\n compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; //*/
 /*std::cout << "\nREACHED" << k << "\n";
 std::cout << kernelLambdas << std::endl;//*/
+    equal_variables shit(builder, program);
+
     assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
 
     LambdaExprPtr lambda = kernelLambdas[k];
@@ -552,7 +556,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							core::StructExpr::Members newInitMembers;
 							core::NamedCompositeType::Entries newMembers = sType->getEntries();
 							size_t i = 0;
-
 							for_each(oldInit->getMembers(), [&](core::StructExpr::Member oldInitMember) {
 								// assuming that the order of the (exisiting) elements in newMembers and oldMember is the same,
 								// we always have to compare only one element
@@ -567,10 +570,31 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 //std::cout << "\nMembers: " << newMembers.at(i) << " \n" << kernelLambdas.begin()->first << std::endl;
 									} else if(newMembers.at(i).second->toString().find("array<_cl_kernel,1>") != string::npos /*&&
 											kernelLambdas.find(var) != kernelLambdas.end()*/) {
-
 										for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
 											// check if the variable is right
-											if(var == getVariableArg(kl.first, builder)) {
+											core::NodeAddress vAddr = core::Address<const core::Variable>::find(var, program);
+											core::NodeAddress lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
+// TODO make crap prettier!
+											auto visitor = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
+												bool ret = false;
+												if(const core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(addr)) {
+													if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
+														for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
+																[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
+															if(*lAddr == *cur.first) {
+																if(*vAddr == *cur.second)
+																	ret = true;
+																else
+																	lAddr = core::Address<const core::Variable>::find(getVariableArg(cur.second, builder), program);
+															}
+														});
+													}
+												}
+												return ret;
+											});
+
+
+											if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, visitor)) {
 												IdSearcher ids(builder, oldInitMember.first);
 												// check identifier
 												if(visitDepthFirstInterruptable(kl.first, ids)) {
@@ -635,7 +659,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 			}
 
-
 			if(oldType->toString().find("array<_cl_mem,1>") != string::npos) {
 				// get new element type
 				while(const SingleElementTypePtr & interType = dynamic_pointer_cast<const SingleElementType>(oldType) )
@@ -671,6 +694,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				const VariablePtr& tVar = builder.variable(builder.refType(tty));
 //std::cout << "\nreplacing " << var << " with " << tVar << std::endl;
 				// replace the kernel with the newly created tuple variable
+//std::cout << var->getType() << " " << var << " 2-> " << tVar->getType() << " " << tVar << std::endl;
 				cl_mems[var] = tVar;
 
 				return builder.declarationStmt(tVar, builder.callExpr(builder.refType(tty), BASIC.getRefNew(),
@@ -686,7 +710,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		}
 
 	}
-
 
 	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
 
@@ -716,6 +739,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 //								getBaseType(static_pointer_cast<const Expression>(resolveElement(arg))) << std::endl;
 						if(const TypePtr& newType = dynamic_pointer_cast<const Type>(nt)){
 							newParams.at(cnt) = builder.variable(newType);
+//std::cout << callExpr->getFunctionExpr()->getType() << " " << params.at(cnt) << " 3-> " << newParams.at(cnt)->getType() << " " << newParams.at(cnt) << std::endl;
 							cl_mems[params.at(cnt)] = newParams.at(cnt);
 							changed = true;
 						}

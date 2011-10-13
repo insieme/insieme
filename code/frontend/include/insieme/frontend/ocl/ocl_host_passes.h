@@ -47,6 +47,12 @@ namespace frontend {
 namespace ocl {
 
 typedef insieme::utils::map::PointerMap<core::ExpressionPtr, size_t > EquivalenceMap;
+
+/**
+ * A visitor that checks if two variables lie on the same path in the ast
+ */
+
+
 /**
  * This specialized hasher hashes array accesses to the same variable to the same bin
  * regardless of the array index
@@ -100,10 +106,10 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
  * regardless of the index
  */
 struct equal_variables {// : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
-	core::ASTBuilder& builder;
+	const core::ASTBuilder& builder;
 	const core::ProgramPtr& root;
 
-	equal_variables(core::ASTBuilder& build, const core::ProgramPtr& program) : builder(build), root(program) {}
+	equal_variables(const core::ASTBuilder& build, const core::ProgramPtr& program) : builder(build), root(program) {}
 
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
@@ -142,15 +148,14 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		core::NodeAddress yAddr = core::Address<const core::Variable>::find(yVar, root);
 //std::cout << xAddr.getDepth() << "  " << yAddr.getDepth() << "\nasdfasdfasdfasdf\n\n";
 		bool reverse;
-		if(xAddr.getDepth() < yAddr.getDepth()) {
+		if(xAddr.getDepth() > yAddr.getDepth()) {
 			core::NodeAddress tmp = xAddr;
 			xAddr = yAddr;
 			yAddr = tmp;
 			reverse = true;
 		}
-//		std::cout << "\nNODE " << x << "\nPARE " << *yAddr;
 
-		auto fu = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
+		auto visitor = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
 			bool ret = false;
 			if(const core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(addr)) {
 				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
@@ -159,7 +164,8 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 						if(*yAddr == *cur.first) {
 							if(*xAddr == *cur.second)
 								ret = true;
-							ret = this->operator ()(cur.second, reverse ? y : x);
+							else
+								ret = this->operator ()(cur.second, reverse ? y : x);
 						}
 					});
 				}
@@ -167,9 +173,7 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return ret;
 		});
 
-		return core::visitPathBottomUpInterruptable(yAddr, fu);
-
-		return false;
+		return core::visitPathBottomUpInterruptable(yAddr, visitor);
 	}
 };
 typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;

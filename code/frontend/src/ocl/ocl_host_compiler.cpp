@@ -102,7 +102,7 @@ ProgramPtr HostCompiler::compile() {
 	});*/
 
 	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
-		oh2nd.getKernelLambdas(), oclHostMapper.getEquivalenceMap(), oclHostMapper.getReplacements());
+		oh2nd.getKernelLambdas(), oclHostMapper.getEquivalenceMap(), oclHostMapper.getReplacements(), progWithKernels);
 
 	/*	if(core::ProgramPtr newProg = dynamic_pointer_cast<const core::Program>(ohm3rd.mapElement(0, progWithKernels))) {
 	 mProgram = newProg;
@@ -160,9 +160,7 @@ ProgramPtr HostCompiler::compile() {
 //		transform::utils::MemberAccessLiteralUpdater malu(builder);
 //		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 
-		std::cout << "You must die "<< std::endl  << std::endl;
 		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), mProgram, cl_mems, false);
-		std::cout << "I alone am best"<< std::endl;
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 
