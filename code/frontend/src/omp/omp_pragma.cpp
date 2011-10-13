@@ -200,6 +200,8 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 									!( comma >> expr["chunk_size"] ) >> r_paren)
 								// collapse( expr )
 							|	(kwd("collapse") >> l_paren >> expr["collapse"] >> r_paren)
+								// ordered
+							|   kwd("ordered")
 								// nowait
 							|	kwd("nowait")
 							);

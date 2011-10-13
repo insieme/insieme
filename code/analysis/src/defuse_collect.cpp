@@ -88,7 +88,7 @@ std::ostream& Ref::printTo(std::ostream& out) const {
 ScalarRef::ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage) : 
 	Ref(Ref::SCALAR, var, usage) { }
 
-const core::VariableAddress& ScalarRef::getVariable() const { 
+core::VariableAddress ScalarRef::getVariable() const { 
 	return AS_VAR_ADDR(baseExpr);
 }
 
@@ -140,7 +140,7 @@ std::ostream& MemberRef::printTo(std::ostream& out) const {
 //===== CallRef =====================================================================================
 CallRef::CallRef(const core::CallExprAddress& callExpr, const UseType& usage) : Ref::Ref(Ref::CALL, callExpr, usage) { }
 
-const core::CallExprAddress& CallRef::getCallExpr() const { return AS_CALLEXPR_ADDR(baseExpr); }
+core::CallExprAddress CallRef::getCallExpr() const { return AS_CALLEXPR_ADDR(baseExpr); }
 
 std::ostream& CallRef::printTo(std::ostream& out) const {
 	Ref::printTo(out);

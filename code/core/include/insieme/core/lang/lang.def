@@ -278,8 +278,8 @@ OPERATION(SignedInt, Not,    "int.not",    "(int<#a>) -> int<#a>")
 OPERATION(SignedInt, And,    "int.and",    "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Or,     "int.or",     "(int<#a>,int<#a>) -> int<#a>")
 OPERATION(SignedInt, Xor,    "int.xor",    "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, LShift, "int.lshift", "(int<#a>,int<#a>) -> int<#a>")
-OPERATION(SignedInt, RShift, "int.rshift", "(int<#a>,int<#a>) -> int<#a>")
+OPERATION(SignedInt, LShift, "int.lshift", "(int<#a>,int<4>) -> int<#a>")
+OPERATION(SignedInt, RShift, "int.rshift", "(int<#a>,int<4>) -> int<#a>")
 
 GROUP(BitwiseUIntOp, UnsignedIntNot, UnsignedIntAnd, UnsignedIntOr, UnsignedIntXor, UnsignedIntLShift, UnsignedIntRShift)
 
@@ -287,8 +287,8 @@ OPERATION(UnsignedInt, Not,    "uint.not",    "(uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, And,    "uint.and",    "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Or,     "uint.or",     "(uint<#a>,uint<#a>) -> uint<#a>")
 OPERATION(UnsignedInt, Xor,    "uint.xor",    "(uint<#a>,uint<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,int<#a>) -> uint<#a>")
-OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,int<#a>) -> uint<#a>")
+OPERATION(UnsignedInt, LShift, "uint.lshift", "(uint<#a>,int<4>) -> uint<#a>")
+OPERATION(UnsignedInt, RShift, "uint.rshift", "(uint<#a>,int<4>) -> uint<#a>")
 
 GROUP(BitwiseOp, BitwiseIntOp, BitwiseUIntOp)
 
@@ -385,7 +385,9 @@ LITERAL(VectorRefProjection, 	"vector.ref.projection",
 
 LITERAL(VectorToArray, 			"vector.to.array",				"(vector<'elem,#l>) -> array<'elem,1>")
 LITERAL(RefVectorToRefArray, 	"ref.vector.to.ref.array",		"(ref<vector<'elem,#l>>) -> ref<array<'elem,1>>")
-							 
+						
+LITERAL(ArrayView, 				"array.view",					"(ref<array<'elem,1>>, uint<8>) -> ref<array<'elem,1>>")
+
 // Arrays and Vectors -------------------------------------------------------------------------------------------------
 
 GROUP(SubscriptOperator, ArraySubscript1D, ArraySubscriptND, VectorSubscript, ArrayRefElem1D, ArrayRefElemND, VectorRefElem)

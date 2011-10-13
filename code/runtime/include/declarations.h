@@ -47,6 +47,7 @@
 
 // TODO : better configurability, maybe per-wi stack size set by compiler?
 // updated to 8MB due to failing test cases (quicksort, jacobi)
+// don't misalign!
 #define IRT_WI_STACK_SIZE 8 * 1024 * 1024
 
 #define IRT_MAX_WORK_GROUPS 16
