@@ -316,8 +316,16 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	//
 	// cast a signed integer to boolean value, this happens for integer numbers when appear in conditional
 	// expressions, for loop exit conditions or while stmt
-	if ( gen.isBool(trgTy) && gen.isInt(argTy) ) {
-		return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), toVector(expr, builder.uintLit(0)));
+	if ( gen.isBool(trgTy) && gen.isSignedInt(argTy) ) {
+		return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), toVector(expr, builder.intLit(0)));
+	}
+	
+	// [ Unsigned integer -> Boolean ]
+	//
+	// cast an unsigned integer to boolean value, this happens for integer numbers when appear in conditional
+	// expressions, for loop exit conditions or while stmt
+	if ( gen.isBool(trgTy) && gen.isUnsignedInt(argTy) ) {
+		return builder.callExpr(gen.getBool(), gen.getUnsignedIntNe(), toVector(expr, builder.uintLit(0)));
 	}
 
 	// [ Boolean -> Int ]
@@ -2140,7 +2148,7 @@ public:
 		const core::ASTBuilder& builder = convFact.builder;
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 
-		core::TypePtr&& retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
+		core::TypePtr retTy = convFact.convertType( GET_TYPE_PTR(condOp) );
 		core::ExpressionPtr&& trueExpr = Visit(condOp->getTrueExpr());
 		core::ExpressionPtr&& falseExpr = Visit(condOp->getFalseExpr());
 		core::ExpressionPtr&& condExpr = Visit( condOp->getCond() );
@@ -2149,7 +2157,7 @@ public:
 
 		// Dereference eventual references
 		if ( retTy->getNodeType() == core::NT_RefType ) {
-			retTy= GET_REF_ELEM_TYPE(retTy);
+			retTy = GET_REF_ELEM_TYPE(retTy);
 		}
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(retTy, gen.getIfThenElse(),
