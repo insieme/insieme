@@ -2000,7 +2000,7 @@ public:
 		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << 
 			      " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
-        core::ExpressionPtr&& retExpr = convFact.builder.callExpr( opFunc, lhs, rhs );
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);
