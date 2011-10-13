@@ -445,7 +445,7 @@ void testorder()
 
   for (k=0; k<=OUTERREPS; k++){
     start  = getclock(); 
-#pragma omp parallel for schedule (static,1) //ordered
+#pragma omp parallel for ordered schedule (static,1)
     for (j=0; j<innerreps; j++){
 #pragma omp ordered
       delay(delaylength); 

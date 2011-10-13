@@ -1,1 +1,1 @@
-synchbench.c delay.c getclock.c
+syncbench.c delay.c getclock.c
