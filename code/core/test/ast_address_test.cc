@@ -217,12 +217,12 @@ TEST(NodeAddressTest, Visiting) {
 
 	// bottom up visitor
 	list.clear();
-	visitPathBottomUp(ABD, interruptCollector);
+	EXPECT_TRUE(visitPathBottomUpInterruptable(ABD, interruptCollector));
 	EXPECT_EQ(toVector<TypePtr>(typeD, typeB), list);
 
 	// top down visitor
 	list.clear();
-	visitPathTopDown(ABD, interruptCollector);
+	EXPECT_TRUE(visitPathTopDownInterruptable(ABD, interruptCollector));
 	EXPECT_EQ(toVector<TypePtr>(typeA, typeB), list);
 
 

@@ -636,14 +636,14 @@ template<typename Visitor, typename T>
 bool visitPathBottomUpInterruptable(const Address<const T>& addr, Visitor& visitor) {
 	bool res = visitor.visit(addr);
 	if (!res && addr.getDepth() != 1) {
-		return !visitPathBottomUpInterruptable(addr.getParentAddress(), visitor);
+		return visitPathBottomUpInterruptable(addr.getParentAddress(), visitor);
 	}
-	return !res;
+	return res;
 }
 
 template<typename Visitor, typename T>
 bool visitPathTopDownInterruptable(const Address<const T>& addr, Visitor& visitor) {
-	bool res = true;
+	bool res = false;
 	if (addr.getDepth() != 1) {
 		res = visitPathTopDownInterruptable(addr.getParentAddress(), visitor);
 	}
