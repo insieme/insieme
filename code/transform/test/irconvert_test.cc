@@ -139,6 +139,47 @@ TEST(IRPattern, Expressions) {
 	EXPECT_PRED2(notMatch, patternB, nestedTree);
 }
 
+TEST(IRPattern, ifStmt) {
+	NodeManager manager;
+	auto at = [&manager](string stmtString) { return irp::atom(manager, stmtString); };
+
+	StatementPtr stmt1 = parse::parseStatement(manager, "if(0) { return 0; } else { return (1+2); }");
+	StatementPtr stmt2 = parse::parseStatement(manager, "if(0) { return 0; }");
+	StatementPtr stmt3 = parse::parseStatement(manager, "if((1 != 0)) { return 0; }");
+
+	auto tree1 = toTree(stmt1);
+	auto tree2 = toTree(stmt2);
+	auto tree3 = toTree(stmt3);
+
+	TreePatternPtr pattern1 = irp::ifStmt(any, at("{ return 0; }"), irp::returnStmt(any));
+	TreePatternPtr pattern2 = irp::ifStmt(any, irp::returnStmt(any), irp::returnStmt(any));
+	TreePatternPtr pattern3 = irp::ifStmt(any, irp::returnStmt(at("1")|at("0")), irp::returnStmt(any));
+	TreePatternPtr pattern4 = irp::ifStmt(any, at("{ return 0; }"), any);
+	TreePatternPtr pattern5 = irp::ifStmt(any, at("{ return 0; }"), at("{ }"));
+	TreePatternPtr pattern6 = irp::ifStmt(at("(1 != 0)"), at("{ return 0; }"), at("{ }"));
+
+	EXPECT_PRED2(match, pattern1, tree1);
+	EXPECT_PRED2(match, pattern2, tree1);
+	EXPECT_PRED2(match, pattern3, tree1);
+	EXPECT_PRED2(match, pattern4, tree1);
+	EXPECT_PRED2(notMatch, pattern5, tree1);
+	EXPECT_PRED2(notMatch, pattern6, tree1);
+
+	EXPECT_PRED2(notMatch, pattern1, tree2);
+	EXPECT_PRED2(notMatch, pattern2, tree2);
+	EXPECT_PRED2(notMatch, pattern3, tree2);
+	EXPECT_PRED2(match, pattern4, tree2);
+	EXPECT_PRED2(match, pattern5, tree2);
+	EXPECT_PRED2(notMatch, pattern6, tree1);
+
+	EXPECT_PRED2(notMatch, pattern1, tree3);
+	EXPECT_PRED2(notMatch, pattern2, tree3);
+	EXPECT_PRED2(notMatch, pattern3, tree3);
+	EXPECT_PRED2(match, pattern4, tree3);
+	EXPECT_PRED2(match, pattern5, tree3);
+	EXPECT_PRED2(match, pattern6, tree3);
+}
+
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

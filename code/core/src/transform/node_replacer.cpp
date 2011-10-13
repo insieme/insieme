@@ -272,7 +272,10 @@ public:
 
 	RecVariableMapReplacer(NodeManager& manager, const PointerMap<VariablePtr, VariablePtr>& replacements, bool limitScope,
 			const std::function<NodePtr (const NodePtr&)>& functor)
-		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) { }
+		: manager(manager), builder(manager), replacements(replacements), limitScope(limitScope), functor(functor) {
+
+//		std::cout << replacements << std::endl;
+	}
 
 private:
 
@@ -507,11 +510,11 @@ private:
 						static_pointer_cast<const Literal>(args.at(1))->getValue()));
 			}
 			if(manager.getBasicGenerator().isTupleRefElem(literal)) {
-//std::cout << args.at(0)->getType() << " < " << args << std::endl;
+//std::cout << "TRRRRRRRRR " << args.at(0)->getType() << " < " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
 			}
 			if(manager.getBasicGenerator().isTupleMemberAccess(literal)) {
-//std::cout << args.at(0)->getType() << " > " << args << std::endl;
+//std::cout << "BAMBAM " << args.at(0)->getType() << " > " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
 

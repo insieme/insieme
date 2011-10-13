@@ -46,6 +46,8 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/utils/timer.h"
+
 #include "insieme/core/program.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -129,6 +131,8 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	// Extract globals starting from this entry point
 	mFact.ctx.globalFuncMap.clear();
 	analysis::GlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+
+	insieme::utils::Timer t("Globals.collect");
 	globColl(def);
 
 	VLOG(1) << globColl;
@@ -140,8 +144,11 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	}
 	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
 
+	t.stop();
+	LOG(INFO) << t;
+
 	const core::ExpressionPtr& expr =
-			core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(def, true));
+			core::static_pointer_cast<const core::Expression>( mFact.convertFunctionDecl(def, true) );
 	
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
 
@@ -389,14 +396,6 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	}
 
     	return builder.refVar(initValue);
-
-//        // initialize pointer/reference types with the null value
-//    	const core::NodeType& nodeTy = refTy->getElementType()->getNodeType();
-//
-//    	if(nodeTy == core::NT_ArrayType || nodeTy == core::NT_VectorType || nodeTy == core::NT_StructType)
-//    		return builder.refNew( defaultInitVal(refTy->getElementType()) );
-//
-//    	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
     if ( mgr.basic.isString(type) ) {
@@ -410,14 +409,6 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
-//    	core::StructExpr::Members members;
-//    	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
-//    	std::for_each(entries.begin(), entries.end(),
-//    		[ this, &members ](const core::NamedCompositeType::Entry& curr) {
-//    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
-//    		}
-//    	);
-    	//return builder.structExpr(structTy, members);
     	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
     }
 
