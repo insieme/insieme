@@ -28,6 +28,7 @@ configure_file(
 # Create a variable called insieme_compiler_core_SOURCES containing all .cpp files:
 file(GLOB_RECURSE insieme_driver_srcs 	src/*.cpp )
 file(GLOB_RECURSE insieme_driver_incs 	include/*.h )
+file(GLOB_RECURSE insieme_driver_defs 	include/*.def )
 
 # --------------------------------------------------------------------------------------
 # We repeat the search for Xerces library here because adding this line to 
@@ -62,7 +63,7 @@ endif (USE_XML)
 
 
 # Build dummy executable
-add_executable( main ${insieme_driver_srcs} )
+add_executable( main ${insieme_driver_srcs} ${insieme_driver_incs} ${insieme_driver_defs})
 
 # add dependencies
 add_dependencies( main insieme_core insieme_utils insieme_frontend insieme_backend 

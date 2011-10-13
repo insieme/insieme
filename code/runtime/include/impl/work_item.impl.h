@@ -77,7 +77,7 @@ static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
 	IRT_DEBUG("WI_CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
 	self->wi_reuse_stack = wi;
-	//lwt_recycle(self->id.value.components.thread, wi);
+	lwt_recycle(self->id.value.components.thread, wi);
 	
 	IRT_VERBOSE_ONLY(
 		irt_work_item* last = self->wi_reuse_stack;
@@ -201,7 +201,7 @@ void irt_wi_join(irt_work_item* wi) {
 void irt_wi_end(irt_work_item* wi) {
 	irt_wi_insert_performance_end(wi->performance_data);
 
-        printf("WI: %lu, WI_IMPL: %d, split?: %d, start: %llu, end: %llu\n", wi->id.value.full, wi->impl_id, irt_wi_is_fragment(wi), wi->performance_data->data[0].start, wi->performance_data->data[0].end);
+    IRT_DEBUG("WI: %lu, WI_IMPL: %d, split?: %d, start: %llu, end: %llu\n", wi->id.value.full, wi->impl_id, irt_wi_is_fragment(wi), wi->performance_data->data[0].start, wi->performance_data->data[0].end);
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
 	if(worker->lazy_count>0) {

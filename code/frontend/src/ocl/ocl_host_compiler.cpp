@@ -93,14 +93,13 @@ ProgramPtr HostCompiler::compile() {
 	const ProgramPtr& progWithEntries = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 	const ProgramPtr& progWithKernels = core::Program::remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
 
-	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), oclHostMapper.getEquivalenceMap(), builder);
+	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), oclHostMapper.getEquivalenceMap(), progWithKernels, builder);
 	oh2nd.mapNamesToLambdas(kernelEntries);
 
 	ClmemTable cl_mems = oh2nd.getCleanedStructures();
 /*	for_each(cl_mems, [](std::pair<VariablePtr, VariablePtr> a) {
 		std::cout << "\nHate " << *a.first << " " << a.second->getType();
 	});*/
-	std::cout << std::endl  << std::endl;
 
 	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
 		oh2nd.getKernelLambdas(), oclHostMapper.getEquivalenceMap(), oclHostMapper.getReplacements());
@@ -111,9 +110,8 @@ ProgramPtr HostCompiler::compile() {
 	 } else
 	 assert(newProg && "Second pass of OclHostCompiler corrupted the program");
 	 */
-
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
-
+	assert(progWithKernels->toString().find("v134") == string::npos);
 	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
 /*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 //		tmp[t.first] = t.second;
@@ -162,7 +160,9 @@ ProgramPtr HostCompiler::compile() {
 //		transform::utils::MemberAccessLiteralUpdater malu(builder);
 //		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 
+		std::cout << "You must die "<< std::endl  << std::endl;
 		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), mProgram, cl_mems, false);
+		std::cout << "I alone am best"<< std::endl;
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 

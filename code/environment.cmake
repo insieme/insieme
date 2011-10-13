@@ -96,7 +96,7 @@ endif()
 include_directories( ${CLOOG_HOME}/include )
 find_library(cloog_LIB NAMES cloog-isl PATHS ${CLOOG_HOME}/lib)
 if(MSVC) 
-set (cloog_LIB dummy)
+	set (cloog_LIB dummy)
 endif(MSVC)
 
 
@@ -106,9 +106,12 @@ IF (gmp_LIB)
    SET(GMP_FOUND TRUE)
 ENDIF (gmp_LIB)
 
-IF (NOT DEFINED GMP_FOUND)
+IF (NOT DEFINED GMP_FOUND AND NOT MSVC)
    MESSAGE(FATAL_ERROR "Could not find GMP")
 ENDIF ()
+if(MSVC) 
+	set (gmp_LIB dummy)
+endif(MSVC)
 
 # lookup pthread library
 find_library(pthread_LIB pthread)

@@ -128,16 +128,17 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	// Extract globals starting from this entry point
 	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+	analysis::GlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
 	globColl(def);
 
 	VLOG(1) << globColl;
 	VLOG(2) << mFact.ctx.globalStruct.first;
 
-	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
+	mFact.ctx.globalStruct = globColl.createGlobalStruct();
 	if (mFact.ctx.globalStruct.first) {
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 	}
+	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
 
 	const core::ExpressionPtr& expr =
 			core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(def, true));
@@ -314,20 +315,29 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
-		core::IdentifierPtr&& ident = builder.identifier(varDecl->getNameAsString());
-		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(ident);
+		
+		LOG(DEBUG) << varDecl->getNameAsString();
+
+		auto&& fit = ctx.globalIdentMap.find(varDecl); 
+		assert(fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
+		
+		LOG(DEBUG) << fit->second;
+		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
+		assert(memberTy && "Member not found within global struct");
 
 		assert(ctx.globalVar->getType()->getNodeType() == core::NT_RefType &&
 				"Global data structure passed as a non-ref");
 
-		// LOG(DEBUG) << *irType << " == " << 	*memberTy;
+		LOG(DEBUG) << *irType << " == " << 	*memberTy;
 		// assert(*irType == *builder.refType( memberTy ));
+
+		LOG(DEBUG) << *fit->second << " " << varDecl->getNameAsString();
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(
 				builder.refType( memberTy ),
 				gen.getCompositeRefElem(),
 				toVector<core::ExpressionPtr>(
-						ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)
+						ctx.globalVar, gen.getIdentifierLiteral(fit->second), gen.getTypeLiteral(memberTy)
 				)
 			);
 
@@ -443,11 +453,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     			return builder.callExpr(mgr.basic.getGetNull(), mgr.basic.getTypeLiteral(arrTy));
     		}
     	}
-		return castToType(arrTy, defaultInitVal(arrTy->getElementType()));
-
-		//return builder.callExpr(
-				//arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
-			//);
+		return builder.callExpr(arrTy, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(arrTy));
     }
 
     // handle any-ref initialization
