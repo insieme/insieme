@@ -56,7 +56,7 @@ namespace insieme {
 namespace backend {
 namespace ocl_host {
 
-	class BufferReplacer : public core::transform::CachedNodeMapping {
+	/*class BufferReplacer : public core::transform::CachedNodeMapping {
 
 		core::NodeManager& manager;
 		const Extensions& extensions;
@@ -85,13 +85,16 @@ namespace ocl_host {
 
 			return res;
 		}
-	};
+	};*/
 
 	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// the converter does the magic
-		BufferReplacer replacer(manager);
-		return replacer.map(code);
+		//BufferReplacer replacer(manager);
+		//return replacer.map(code);
+
+		std::cout << core::printer::PrettyPrinter(code);
+		return code;
 	}
 
 } // end namespace ocl_host
