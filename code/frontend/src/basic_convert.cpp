@@ -283,7 +283,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(valDecl);
 	if ( fit != ctx.varDeclMap.end() ) {
 		// variable found in the map
-		VLOG(2)<<fit->first << " " << fit->second;
 		return fit->second;
 	}
 
@@ -316,22 +315,14 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		// access the global data structure
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
 		
-		LOG(DEBUG) << varDecl->getNameAsString();
-
 		auto&& fit = ctx.globalIdentMap.find(varDecl); 
 		assert(fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
 		
-		LOG(DEBUG) << fit->second;
 		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
 		assert(memberTy && "Member not found within global struct");
 
 		assert(ctx.globalVar->getType()->getNodeType() == core::NT_RefType &&
 				"Global data structure passed as a non-ref");
-
-		LOG(DEBUG) << *irType << " == " << 	*memberTy;
-		// assert(*irType == *builder.refType( memberTy ));
-
-		LOG(DEBUG) << *fit->second << " " << varDecl->getNameAsString();
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(
 				builder.refType( memberTy ),

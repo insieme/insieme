@@ -49,6 +49,7 @@
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/numeric_cast.h"
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -316,7 +317,7 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	// cast a signed integer to boolean value, this happens for integer numbers when appear in conditional
 	// expressions, for loop exit conditions or while stmt
 	if ( gen.isBool(trgTy) && gen.isInt(argTy) ) {
-		return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), toVector(expr, builder.intLit(0)));
+		return builder.callExpr(gen.getBool(), gen.getSignedIntNe(), toVector(expr, builder.uintLit(0)));
 	}
 
 	// [ Boolean -> Int ]
@@ -811,12 +812,18 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitIntegerLiteral(clang::IntegerLiteral* intLit) {
 		START_LOG_EXPR_CONVERSION(intLit);
+
+		std::string&& strVal = 
+			GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc() );
+
+		core::GenericTypePtr intTy = 
+			core::static_pointer_cast<const core::GenericType>(convFact.convertType( GET_TYPE_PTR(intLit) ) );
+
 		core::ExpressionPtr&& retExpr =
 			convFact.builder.literal(
 				// retrieve the string representation from the source code
-				GetStringFromStream( convFact.currTU->getCompiler().getSourceManager(), intLit->getExprLoc() ),
-				convFact.convertType( GET_TYPE_PTR(intLit) )
-			);
+				strVal,	intTy );
+
 		END_LOG_EXPR_CONVERSION(retExpr);
 		return retExpr;
 	}
@@ -1895,8 +1902,7 @@ public:
 			VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc <<
 				      " RHS(" << *rhs << "[" << *rhs->getType() << "])";
 
-			if ( lhsTy->getNodeType() != core::NT_RefType || rhsTy->getNodeType() != core::NT_RefType) {
-
+			if ( lhsTy->getNodeType() != core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 				// ----------------------------- Hack begin --------------------------------
 				// TODO: this is a quick solution => maybe clang allows you to determine the actual type
 				// => otherwise the sub-type checks within the core may be used
@@ -1913,21 +1919,44 @@ public:
 						exprTy = rhsTy;
 					}
 				}
-
 				// ----------------------------- Hack end --------------------------------
 				lhs = convFact.castToType(exprTy, lhs);
 				rhs = convFact.castToType(exprTy, rhs);
 				// Handle pointers arithmetic
 				VLOG(2) << "Lookup for operation: " << op << ", for type: " << *exprTy;
 				opFunc = gen.getOperator(exprTy, op);
+
+			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
+				// Capture pointer arithmetics 
+				// Base op must be either a + or a -
+				assert( (baseOp == BO_Add || baseOp == BO_Sub) && 
+						"Operators allowed in pointer arithmetic are + and - only");
+
+				// LHS must be a ref<array<'a>>
+				const core::TypePtr& subRefTy = 
+					core::static_pointer_cast<const core::RefType>(lhsTy)->getElementType();
+
+				if ( subRefTy->getNodeType() == core::NT_VectorType ) {
+					lhs = builder.callExpr(gen.getRefVectorToRefArray(), lhs);
+				}
+
+				assert(GET_REF_ELEM_TYPE(lhs->getType())->getNodeType() == core::NT_ArrayType && 
+						"LHS operator must be of type ref<array<'a,#l>>");
+
+				// check whether the RHS is of integer type
+				assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
+
+				core::ExpressionPtr&& retExpr = builder.callExpr(gen.getArrayView(), lhs, rhs);
+				return retExpr;
+
 			} else {
 				assert(lhsTy->getNodeType() == core::NT_RefType
 						&& rhsTy->getNodeType() == core::NT_RefType && "Comparing pointers");
 
-				core::ExpressionPtr retExpr = convFact.builder.callExpr( gen.getBool(), gen.getPtrEq(), lhs, rhs );
+				core::ExpressionPtr retExpr = builder.callExpr( gen.getBool(), gen.getPtrEq(), lhs, rhs );
 				if ( baseOp == BO_NE ) {
 					// comparing two refs
-					retExpr = convFact.builder.callExpr( gen.getBool(), gen.getBoolLNot(), retExpr );
+					retExpr = builder.callExpr( gen.getBool(), gen.getBoolLNot(), retExpr );
 				} 
 				
 				// handle eventual pragmas attached to the Clang node
@@ -1947,10 +1976,31 @@ public:
 		    ocl::attatchOclAnnotation(rhs, binOp, convFact);
 		}
 		assert(opFunc);
+
+		/*if ( !isAssignment ) {*/
+			//// We know thie operator now we have to make sure that all the arguments are of the correct type 
+			//core::FunctionTypePtr funcTy = core::static_pointer_cast<const core::FunctionType>( opFunc->getType() );
+			//assert(funcTy->getParameterTypes().size() == 2);
+
+			//core::TypePtr lhsFuncTy = funcTy->getParameterTypes()[0];
+			//if (!gen.isUIntGen(lhsFuncTy) && !gen.isRealGen(lhsFuncTy) && !gen.isIntGen(lhsFuncTy)) {
+				//lhs = convFact.castToType(lhsFuncTy, lhs);
+			//}
+			//core::TypePtr rhsFuncTy = funcTy->getParameterTypes()[1];
+			//if (!gen.isUIntGen(rhsFuncTy) && !gen.isRealGen(rhsFuncTy) && !gen.isIntGen(rhsFuncTy)) {
+				//rhs = convFact.castToType(rhsFuncTy, rhs);
+			//}
+
+			//if (*lhsFuncTy == *rhsFuncType && *lhs->getType() != *rhs->getType()) {
+				//// we still need to adjust 
+
+			//}
+		/*}*/
 		// add source code annotation to the rhs if present
 		VLOG(2) << "LHS( " << *lhs << "[" << *lhs->getType() << "]) " << opFunc << 
 			      " RHS(" << *rhs << "[" << *rhs->getType() << "])";
-        core::ExpressionPtr&& retExpr = convFact.builder.callExpr( exprTy, opFunc, lhs, rhs );
+
+        core::ExpressionPtr&& retExpr = convFact.builder.callExpr( opFunc, lhs, rhs );
 
 		// handle eventual pragmas attached to the Clang node
 		core::ExpressionPtr&& annotatedNode = omp::attachOmpAnnotation(retExpr, binOp, convFact);

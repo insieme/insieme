@@ -82,8 +82,12 @@ struct VarRefFinder: public StmtVisitor<VarRefFinder>, public insieme::frontend:
 };
 
 insieme::core::ExpressionPtr addOne(const insieme::core::ASTBuilder& builder, const insieme::core::ExpressionPtr& expr) {
-	return builder.callExpr( expr->getType(), builder.getBasicGenerator().getOperator(expr->getType(), insieme::core::lang::BasicGenerator::Add),
-			expr, builder.literal(builder.getBasicGenerator().getInt4(), "1") );
+
+	return builder.callExpr( expr->getType(), 
+			builder.getBasicGenerator().getOperator(expr->getType(), insieme::core::lang::BasicGenerator::Add),
+			expr, 
+			builder.literal(expr->getType(), "1") 
+		);
 }
 
 }
