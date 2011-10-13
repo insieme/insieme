@@ -39,7 +39,7 @@
 #include "insieme/utils/container_utils.h"
 
 #include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"

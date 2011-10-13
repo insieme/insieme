@@ -38,7 +38,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ast_builder.h"
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/type_utils.h"

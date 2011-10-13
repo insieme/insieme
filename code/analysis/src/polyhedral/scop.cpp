@@ -49,7 +49,7 @@
 /*************************************************************************************************/
 
 #include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/ast_builder.h"

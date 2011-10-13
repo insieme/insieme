@@ -36,7 +36,7 @@
 
 #include <boost/pool/singleton_pool.hpp>
 
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/utils/hash_utils.h"
 
