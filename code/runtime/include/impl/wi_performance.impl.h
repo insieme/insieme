@@ -47,10 +47,12 @@ unsigned long long getTicks(void) {
 	return (a | (d << 32));
 }
 
-void resize(irt_wi_pd_table* table) {
+void _irt_wi_performance_table_resize(irt_wi_pd_table* table) {
 	table->size += table->blocksize;
 	table->data = realloc(table->data, sizeof(_irt_wi_performance_data)*table->size);
 }
+
+#ifdef IRT_ENABLE_INSTRUMENTATION
 
 irt_wi_pd_table* irt_wi_create_performance_table(unsigned blocksize) {
 
@@ -68,21 +70,36 @@ void irt_wi_destroy_performance_table(irt_wi_pd_table* table) {
 
 void irt_wi_insert_performance_start(irt_wi_pd_table* table) {
 
-	unsigned long long time = getTicks();
+	uint64 time = getTicks();
 
 	if(table->number_of_elements >= table->size)
-		resize(table);
+		_irt_wi_performance_table_resize(table);
 
 	(table->data[table->number_of_elements]).start = time;
 }
 
 void irt_wi_insert_performance_end(irt_wi_pd_table* table) {
 
-	unsigned long long time = getTicks();
+	uint64 time = getTicks();
 
 	if(table->number_of_elements >= table->size)
-		resize(table);
+		_irt_wi_performance_table_resize(table);
 
 	table->data[(table->number_of_elements)++].end = time;
 }
 
+#else
+// no instrumentation //////////////////////////////////////////////////////////////////
+
+irt_wi_pd_table* irt_wi_create_performance_table(unsigned blocksize) {
+	return NULL;
+}
+void irt_wi_destroy_performance_table(irt_wi_pd_table* table) {
+}
+
+void irt_wi_insert_performance_start(irt_wi_pd_table* table) {
+}
+void irt_wi_insert_performance_end(irt_wi_pd_table* table) {
+}
+
+#endif

@@ -201,7 +201,7 @@ void irt_wi_join(irt_work_item* wi) {
 void irt_wi_end(irt_work_item* wi) {
 	irt_wi_insert_performance_end(wi->performance_data);
 
-        printf("WI: %lu, WI_IMPL: %d, split?: %d, start: %llu, end: %llu\n", wi->id.value.full, wi->impl_id, irt_wi_is_fragment(wi), wi->performance_data->data[0].start, wi->performance_data->data[0].end);
+    IRT_DEBUG("WI: %lu, WI_IMPL: %d, split?: %d, start: %llu, end: %llu\n", wi->id.value.full, wi->impl_id, irt_wi_is_fragment(wi), wi->performance_data->data[0].start, wi->performance_data->data[0].end);
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
 	if(worker->lazy_count>0) {

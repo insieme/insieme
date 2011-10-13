@@ -52,7 +52,7 @@
 
 typedef struct _lwt_reused_stack {
 	struct _lwt_reused_stack *next;
-	char stack[];
+	char stack[] __attribute__ ((aligned (__BIGGEST_ALIGNMENT__)));
 } lwt_reused_stack;
 
 #ifdef __x86_64__
