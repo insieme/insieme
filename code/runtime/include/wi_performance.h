@@ -36,24 +36,24 @@
 
 #pragma once
 
+//#define IRT_ENABLE_INSTRUMENTATION
+
 typedef struct _irt_wi_performance_data {
-	long long unsigned start;
-	long long unsigned end;
+	uint64 start;
+	uint64 end;
 } _irt_wi_performance_data;
 
 typedef struct irt_wi_pd_table {
-	unsigned size;
-	unsigned number_of_elements;
-	unsigned blocksize;
+	uint32 size;
+	uint32 number_of_elements;
+	uint32 blocksize;
 	_irt_wi_performance_data* data;
 } irt_wi_pd_table;
 
 irt_wi_pd_table* irt_wi_create_performance_table(unsigned blocksize);
-
 void irt_wi_destroy_performance_table(irt_wi_pd_table* table);
 
 void irt_wi_insert_performance_start(irt_wi_pd_table* table); 
-
 void irt_wi_insert_performance_end(irt_wi_pd_table* table);
 
 

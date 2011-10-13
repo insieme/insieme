@@ -473,7 +473,9 @@ public:
 									makeOperation( // (cond-init)/step
 										builder,
 										builder.castExpr(convFact.mgr.basic.getDouble(),
-											makeOperation(builder, cond, init, core::lang::BasicGenerator::Sub) // cond - init
+											makeOperation(builder, 
+												cond, init, core::lang::BasicGenerator::Sub
+											) // cond - init
 										),
 										builder.castExpr(convFact.mgr.basic.getDouble(), step),
 										core::lang::BasicGenerator::Div
