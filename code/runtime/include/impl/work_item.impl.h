@@ -77,7 +77,7 @@ static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
 	IRT_DEBUG("WI_CYC\n");
 	wi->next_reuse = self->wi_reuse_stack;
 	self->wi_reuse_stack = wi;
-	//lwt_recycle(self->id.value.components.thread, wi);
+	lwt_recycle(self->id.value.components.thread, wi);
 	
 	IRT_VERBOSE_ONLY(
 		irt_work_item* last = self->wi_reuse_stack;
