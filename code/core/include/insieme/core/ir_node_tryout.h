@@ -134,6 +134,10 @@ namespace core {
 			return boost::get<pair<NodeType, NodeList>>(data).first;
 		}
 
+		const NodePtr& getChild(std::size_t index) const {
+			return boost::get<pair<NodeType, NodeList>>(data).second[index];
+		}
+
 		const NodeList& getChildList() const {
 			return boost::get<pair<NodeType, NodeList>>(data).second;
 		}
@@ -147,21 +151,20 @@ namespace core {
 	};
 
 
-	template<typename ... Children>
+	template<
+		typename Derived,
+		typename ... Children
+	>
 	class FixedSizeNode {
 
-		const NodeList& list;
-
 	public:
-
-		FixedSizeNode(const NodeList& list) : list(list) {};
 
 		template<
 			unsigned index,
 			typename Res = typename type_at<index, type_list<Children...>>::type
 		>
 		const Ptr<Res> get() const {
-			return static_pointer_cast<Res>(list[index]);
+			return static_pointer_cast<Res>(static_cast<const Derived*>(this)->getChild(index));
 		}
 
 	};
@@ -178,6 +181,7 @@ namespace core {
 		const Ptr<ValueType> get() const {
 			return static_pointer_cast<ValueType>(list[index]);
 		}
+
 	};
 
 
@@ -198,7 +202,7 @@ namespace core {
 
 	class Type : public Node {
 	public:
-		typedef EmptyBind<Type> bind_type;
+		typedef EmptyBind<Type> accessor_type;
 
 		Type(NodeType type, const NodeList& list) : Node(type, list) {};
 	};
@@ -206,7 +210,7 @@ namespace core {
 	class Statement : public Node {
 	public:
 
-		typedef EmptyBind<Statement> bind_type;
+		typedef EmptyBind<Statement> accessor_type;
 
 		template<typename ... Children>
 		Statement(NodeType type, const Children& ... child) : Node(type, child ...) {};
@@ -216,7 +220,7 @@ namespace core {
 	class Expression : public Statement {
 	public:
 
-		typedef EmptyBind<Adr<Expression>> bind_type;
+		typedef EmptyBind<Adr<Expression>> accessor_type;
 
 		template<typename ... Children>
 		Expression(NodeType type, const Children& ... child) : Statement(type, child ...) {};
@@ -248,52 +252,56 @@ namespace core {
 
 	public:
 
-		typedef EmptyBind<TupleType> bind_type;
+		typedef EmptyBind<TupleType> accessor_type;
 
 		TupleType(const vector<TypePtr>& list)
 			: Type(NT_TupleType, toNodeList(list)), ListNode<Type>(getChildList()) {}
 
 	};
 
-	class Literal : public Expression, public FixedSizeNode<> {
+	class Literal : public Expression, public FixedSizeNode<Literal> {
 	public:
 
-		typedef EmptyBind<Literal> bind_type;
+		typedef EmptyBind<Literal> accessor_type;
 
-		Literal() : Expression(NT_Literal), FixedSizeNode<>(getChildList()) {}
+		Literal() : Expression(NT_Literal) {}
 	};
 
 
 	template<typename T> class Adr;
-	template<typename T> struct IfBind;
 
-	class If : public Statement, public FixedSizeNode<Expression, Statement, Statement> {
+	template<
+		typename Derived,
+		template<typename T> class Ptr
+	>
+	struct IfAccessor : public FixedSizeNode<Derived, Expression, Statement, Statement> {
+		Ptr<Expression> getCondition() const { return static_cast<const Derived*>(this)->template get<0>(); }
+		Ptr<Statement> getThenStatement() const { return static_cast<const Derived*>(this)->template get<1>(); }
+		Ptr<Statement> getElseStatement() const { return static_cast<const Derived*>(this)->template get<2>(); }
+	};
+
+	class If : public Statement, public IfAccessor<If, Ptr> {
 
 	public:
 
-		typedef IfBind<Adr<If>> bind_type;
+		typedef IfAccessor<Adr<If>,Adr> accessor_type;
 
 		If(const ExpressionPtr& condition, const StatementPtr& thenStmt, const StatementPtr& elseStmt)
-			: Statement(NT_If, condition, thenStmt, elseStmt), FixedSizeNode<Expression, Statement, Statement>(getChildList()) {}
+			: Statement(NT_If, condition, thenStmt, elseStmt), IfAccessor<If, Ptr>(*this) {}
 
-		ExpressionPtr getCondition() const {
-			return get<0>();
-		}
 	};
 
 
 	template<
 		typename T
 	>
-	struct Adr {
+	struct Adr : public T::accessor_type {
 
 		NodeList list;
 
-		typename T::bind_type bind;
+		Adr(NodePtr root) : T::accessor_type(*this), list(toVector(root)) {}
 
-		Adr(NodePtr root) : list(toVector(root)), bind(*this) {}
-
-		Adr(NodeList list) : list(list), bind(*this) {}
+		Adr(NodeList list) : T::accessor_type(*this), list(list) {}
 
 		Ptr<T> getAddressedNode() const {
 			return static_pointer_cast<T>(list.back());
@@ -314,19 +322,11 @@ namespace core {
 			return list.back();
 		}
 
-		const typename T::bind_type* operator->() const {
-			return &bind; // return subst
+		const typename T::accessor_type* operator->() const {
+			return this; // return subst
 		}
 	};
 
-	template<typename T>
-	struct IfBind {
-		const T& adr;
-		IfBind(const T& adr) : adr(adr) {}
-		ExpressionAdr getCondition() const { return adr.template get<0>(); }
-		StatementAdr getThenStatement() const { return adr.template get<1>(); }
-		StatementAdr getElseStatement() const { return adr.template get<2>(); }
-	};
 
 } // end namespace core
 } // end namespace insieme

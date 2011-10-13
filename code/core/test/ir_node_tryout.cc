@@ -153,12 +153,17 @@ TEST(Node, MemberAccess) {
 //	StatementAdr stmtAdr = If::getCondition(adr);
 
 	ptr->get<0>();
+	adr.get<0>();
 
 	ExpressionPtr stmtPtr = ptr->getCondition();
 	ExpressionAdr stmtAdr = adr->getCondition();
 
+	ptr->getThenStatement();
+	ptr->getElseStatement();
 
-//	adr.get<0>();
+	adr->getThenStatement();
+	adr->getElseStatement();
+
 }
 
 } // end namespace core

@@ -167,9 +167,14 @@ inline std::size_t appendHash(std::size_t& seed) {
  * @param rest the remaining elements to be hashed and appended
  * @return the resulting hash value
  */
-template<typename T, typename... Args>
+template<
+	typename T,
+	typename Extractor = id<T>,
+	typename... Args
+>
 inline std::size_t appendHash(std::size_t& seed, const T& first, const Args&... rest) {
-	boost::hash_combine(seed, first);
+	static Extractor ext;
+	boost::hash_combine(seed, ext(first));
 	appendHash(seed, rest...);
 	return seed;
 }
@@ -191,13 +196,17 @@ inline std::size_t combineHashes() {
  * @param rest the remaining elements to be hashed
  * @return the resulting hash value
  */
-template<typename T, typename ... Args>
+template<
+	typename T,
+	typename Extractor = id<T>,
+	typename ... Args
+>
 inline std::size_t combineHashes(const T& first, const Args&... rest) {
 	// initialize hash seed
 	std::size_t seed = 0;
 
 	// append all the hash values
-	appendHash(seed, first, rest...);
+	appendHash<T,Extractor>(seed, first, rest...);
 	return seed;
 }
 
