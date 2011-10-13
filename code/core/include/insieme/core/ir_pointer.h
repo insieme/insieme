@@ -137,15 +137,19 @@ struct PointerChildFactory {
 } // end namespace core
 } // end namespace insieme
 
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
-	out << "AP(";
-	if (!!ptr) {
-		out << *ptr;
-	} else {
-		out << "NULL";
+namespace std {
+
+	template<typename T>
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
+		out << "AP(";
+		if (!!ptr) {
+			out << *ptr;
+		} else {
+			out << "NULL";
+		}
+		out << ")";
+		return out;
 	}
-	out << ")";
-	return out;
+
 }
 

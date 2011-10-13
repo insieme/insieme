@@ -160,7 +160,10 @@ namespace pattern {
 	};
 
 
-	class Pattern : public utils::Printable { };
+	class Pattern : public utils::Printable {
+	public:
+		virtual std::ostream& printTo(std::ostream& out) const = 0;
+	};
 
 
 	// The abstract base class for tree patterns
@@ -200,7 +203,7 @@ namespace pattern {
 		public:
 			Atom(const TreePtr& atom) : atom(atom) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return atom->printTo(out);
+				return out << *atom;
 			}
 		protected:
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
@@ -269,9 +272,7 @@ namespace pattern {
 			virtual std::ostream& printTo(std::ostream& out) const {
 				if(terminal) return out << "rec." << name;
 				else {
-					out << "rT." << name << "(";
-					pattern->printTo(out);
-					return out << ")";
+					return out << "rT." << name << "(" << *pattern << ")";
 				}
 			}
 		protected:
@@ -307,8 +308,7 @@ namespace pattern {
 				if(id != -1) {
 					out << "(id:" << id << "|";
 				} else out << "(";
-				pattern->printTo(out);
-				return out << ")";
+				return out << *pattern << ")";
 			}
 		protected:
 			virtual bool match(MatchContext& context, const TreePtr& tree) const {
@@ -328,10 +328,7 @@ namespace pattern {
 			Alternative(const TreePatternPtr& a, const TreePatternPtr& b) : alternative1(a), alternative2(b) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				alternative1->printTo(out);
-				out << " | ";
-				alternative2->printTo(out);
-				return out;
+				return out << *alternative1 << " | " << *alternative2;
 			}
 
 		protected:
@@ -352,10 +349,7 @@ namespace pattern {
 			Negation(const TreePatternPtr& pattern) : pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "!(";
-				pattern->printTo(out);
-				out << ")";
-				return out;
+				return out << "!(" << *pattern << ")";
 			}
 
 		protected:
@@ -388,7 +382,7 @@ namespace pattern {
 		public:
 			Single(const TreePatternPtr& element) : element(element) {}
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return element->printTo(out);
+				return out << *element;
 			}
 
 		protected:
@@ -409,10 +403,7 @@ namespace pattern {
 			Sequence(const ListPatternPtr& left, const ListPatternPtr& right) : left(left), right(right) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				left->printTo(out);
-				out << ",";
-				right->printTo(out);
-				return out;
+				return out << *left << "," << *right;
 			}
 
 		protected:
@@ -437,10 +428,7 @@ namespace pattern {
 			Alternative(const ListPatternPtr& A, const ListPatternPtr& B) : alternative1(A), alternative2(B) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				alternative1->printTo(out);
-				out << "|";
-				alternative2->printTo(out);
-				return out;
+				return out << *alternative1 << "|" << *alternative2;
 			}
 
 		protected:
@@ -463,10 +451,7 @@ namespace pattern {
 			Repetition(const ListPatternPtr& pattern) : pattern(pattern) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				out << "[";
-				pattern->printTo(out);
-				out << "]*";
-				return out;
+				return out << "[" << *pattern << "]*";
 			}
 
 		protected:

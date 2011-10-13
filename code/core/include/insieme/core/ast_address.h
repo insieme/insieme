@@ -654,23 +654,28 @@ bool visitPathTopDownInterruptable(const Address<const T>& addr, Visitor& visito
 } // end namespace core
 } // end namespace insieme
 
-/**
- * Allows path elements to be printed to an output stream.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element);
 
-/**
- * Allows paths to be printed to a an output stream.
- */
-std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path);
+namespace std {
 
-/**
- * Allows node addresses to be printed to a stream (especially useful during debugging and
- * within test cases where equals expects values to be printable).
- */
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const insieme::core::Address<T>& node) {
-	return out << node.getPath();
+	/**
+	 * Allows path elements to be printed to an output stream.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element);
+
+	/**
+	 * Allows paths to be printed to a an output stream.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path);
+
+	/**
+	 * Allows node addresses to be printed to a stream (especially useful during debugging and
+	 * within test cases where equals expects values to be printable).
+	 */
+	template<typename T>
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Address<T>& node) {
+		return out << node.getPath();
+	}
+
 }
 
 

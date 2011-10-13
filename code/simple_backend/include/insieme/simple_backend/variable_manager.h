@@ -37,7 +37,7 @@
 #pragma once
 
 
-#include "insieme/core/ast_pointer.h"
+#include "insieme/core/ir_pointer.h"
 
 #include "insieme/utils/map_utils.h"
 

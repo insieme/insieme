@@ -445,13 +445,17 @@ std::ostream& Path::printTo(std::ostream& out) const {
 } // end namespace core
 } // end namespace insieme
 
-std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element) {
-	if (element.parent) {
-		return out << *element.parent << "-" << element.index;
-	}
-	return out << element.index;
-}
+namespace std {
 
-std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path) {
-	return path.printTo(out);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element) {
+		if (element.parent) {
+			return out << *element.parent << "-" << element.index;
+		}
+		return out << element.index;
+	}
+
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path) {
+		return path.printTo(out);
+	}
+
 }

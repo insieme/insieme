@@ -47,6 +47,7 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
+#include "insieme/core/ir_pointer.h"
 
 namespace insieme {
 namespace core {
@@ -73,7 +74,14 @@ namespace core {
 	// 									Node Categories
 	// **********************************************************************************
 
-	enum NodeCategory {};
+	enum NodeCategory {
+		NC_Value,
+		NC_Type,
+		NC_Expression,
+		NC_Statement,
+		NC_Program,
+		NC_Composed
+	};
 
 
 
@@ -235,17 +243,21 @@ namespace core {
 		private:
 
 			/**
-			 * The type used internally to store the data associated to a node. The data
-			 * might either cover a pair aggregating a NodeType and a child list or a value -
-			 * depending on which grammar rule has generated the represented node.
+			 * The type of node the concrete instance is representing.
 			 */
-			typedef boost::variant<pair<NodeType, NodeList>, Value> NodeData;
+			NodeType nodeType;
 
 			/**
-			 * The data defining this node. This data might either be a value or
-			 * a pair aggregating a NodeType an a Child-NodeList.
+			 * The list of child nodes of this node (will be empty
+			 * if this node is a value node).
 			 */
-			NodeData data;
+			NodeList children;
+
+			/**
+			 * The value represented by this node (only valid if it
+			 * is in deed a value node).
+			 */
+			Value value;
 
 
 			// --------------------------------------------
@@ -289,70 +301,247 @@ namespace core {
 			 * @param hashCode the hash code of the new node
 			 */
 			template<typename ... Nodes>
-			Node(const NodeType nodeType, const NodeCategory nodeCategory, const Ptr<Nodes>& ... children)
-				: HashableImmutableData(hash(nodeType, children ...)),
-				  data(std::make_pair(nodeType, toVector<NodePtr>(children...))),
-				  nodeCategory(nodeCategory), equalityID(0) {}
+			Node(const NodeType nodeType, const NodeCategory nodeCategory, const Pointer<Nodes>& ... children)
+				: HashableImmutableData(hashNodes(nodeType, children ...)),
+				  nodeType(nodeType), children(toVector<NodePtr>(children...)),
+				  nodeCategory(nodeCategory), equalityID(0) {
 
-			Node(const Value& value);
+				// ensure that there no non-value node is of the value type
+				assert(nodeCategory != NC_Value && "Must not be a value node!");
+			}
 
-			Node(const Node& node);
+			/**
+			 * Constructs a new node instance based on the given value. The resulting node
+			 * represent the given value.
+			 *
+			 * @param nodeType the type of node to be represented
+			 * @param value the value to be represented
+			 */
+			Node(const NodeType nodeType, const Value& value);
 
 			/**
 			 * Defines the new operator to be protected. This prevents instances of AST nodes to be
-			 * created on the heap, thereby enforcing the usage of the static factory methods and
-			 * NodeManager.
+			 * created on the heap or stack without a NodeManager, thereby enforcing the usage of the
+			 * static factory methods and NodeManager.
 			 */
 			static void* operator new(size_t);
 
 			/**
 			 * Defines the delete operator to be protected. This prevents instances of AST nodes to be
-			 * created on the heap, thereby enforcing the usage of the static factory methods and
-			 * NodeManager.
+			 * created on the heap or stack without a NodeManager, thereby enforcing the usage of the
+			 * static factory methods and NodeManager.
 			 */
 			void operator delete(void*);
 
 			/**
 			 * Defines the new operator for arrays to be protected. This prevents instances of AST nodes to be
-			 * created on the heap, thereby enforcing the usage of the static factory methods and
-			 * NodeManager.
+			 * created on the heap or stack without a NodeManager, thereby enforcing the usage of the
+			 * static factory methods and NodeManager.
 			 */
 			static void* operator new[](size_t);
 
 			/**
 			 * Defines the delete operator for arrays to be protected. This prevents instances of AST nodes to be
-			 * created on the heap, thereby enforcing the usage of the static factory methods and
-			 * NodeManager.
+			 * created on the heap or stack without a NodeManager, thereby enforcing the usage of the
+			 * static factory methods and NodeManager.
 			 */
 			void operator delete[](void*, size_t);
 
 		public:
 
-			bool isValue() const;
-
+			/**
+			 * Determines the type of this node.
+			 *
+			 * @return the node type of this instance
+			 */
 			NodeType getNodeType() const {
-				return boost::get<pair<NodeType, NodeList>>(data).first;
+				return nodeType;
 			}
 
+			/**
+			 * Determines the category of this node.
+			 *
+			 * @return the node category of this instance
+			 */
+			NodeCategory getNodeCategory() const {
+				return nodeCategory;
+			}
+
+			/**
+			 * Determines whether this node is representing a value or not.
+			 *
+			 * @return true if it is a value type, false otherwise
+			 */
+			bool isValue() const {
+				return nodeCategory == NC_Value;
+			}
+
+			/**
+			 * Obtains access to a concrete child of this node.
+			 *
+			 * @param index the index of the child
+			 * @return a pointer to the requested child
+			 */
 			const NodePtr& getChild(std::size_t index) const {
-				return boost::get<pair<NodeType, NodeList>>(data).second[index];
+				assert(!isValue() && "Node represents a value!");
+				assert((index < children.size()) && "Index out of bound!");
+				return children[index];
 			}
 
+			/**
+			 * Obtains a reference to the entire list of children stored internally.
+			 *
+			 * @return a reference to the internally maintained child list
+			 */
 			const NodeList& getChildList() const {
-				return boost::get<pair<NodeType, NodeList>>(data).second;
+				assert(!isValue() && "Node represents a value!");
+				return children;
 			}
 
-			virtual std::ostream& printTo(std::ostream& out) const;
+			/**
+			 * Obtains a reference to the manager maintaining this node instance. In case this
+			 * node is not managed by any node manager (by any reason), an assertion will be violated.
+			 *
+			 * @return a reference to the manager maintaining this node
+			 */
+			inline NodeManager& getNodeManager() const {
+				assert(manager && "NodeManager must not be null - unmanaged node detected!");
+				return *manager;
+			}
+
+			/**
+			 * Obtains a pointer to the manager maintaining this node instance. In case this
+			 * node is not managed by any node manager (by any reason), NULL will be returned.
+			 *
+			 * @return a pointer to the manager maintaining this node
+			 */
+			inline NodeManager* getNodeManagerPtr() const {
+				return manager;
+			}
+
+			/**
+			 * A default implementation of the equals operator comparing the actual
+			 * names of the types.
+			 */
+			bool operator==(const Node& other) const {
+				// test for identity (most identifying)
+				if (this == &other) {
+					return true;
+				}
+
+				// quick hash code test (most distinctive)
+				if (hash() != other.hash()) {
+					return false;
+				}
+
+				// check node type (almost most distinctive)
+				if (nodeType != other.nodeType) {
+					return false;
+				}
+
+				// check equality ID (having different IDs does not mean it is different)
+				if (equalityID != 0 && other.equalityID != 0 && equalityID == other.equalityID) {
+					// has been identified to be equivalent earlier
+					return true;
+				}
+
+				// check whether values are represented
+				bool res = true;
+				res = res && isValue() == other.isValue();
+
+				// compare content ..
+				if (isValue()) {
+					// .. if it is a value
+					res = res && getValue() == other.getValue();
+				} else {
+					// .. if it is a inner node
+					res = res && getNodeType() == other.getNodeType();
+					res = res && ::equals(getChildList(), other.getChildList(), equal_target<NodePtr>());
+				}
+
+				// infect both nodes with a new ID
+				if (res) {
+					// update equality IDs - both should have the same id
+					if (equalityID == 0 && other.equalityID == 0) {
+						// non is set yet => pick a new ID and use for both
+						equalityID = equalityClassIDGenerator.getNext();
+						other.equalityID = equalityID;
+					} else if (equalityID == 0) {
+						// other.equalityID != 0 ... update local ID with other ID
+						equalityID = other.equalityID;
+					} else if (other.equalityID == 0){
+						// equality ID != 0 ... update other ID
+						other.equalityID = equalityID;
+					} else {
+						// both are != 0
+						assert(equalityID != 0 && other.equalityID != 0 && "Equality IDs should be != 0");
+
+						// pick smaller ID for both
+						if (equalityID < other.equalityID) {
+							other.equalityID = equalityID;
+						} else {
+							equalityID = other.equalityID;
+						}
+					}
+				}
+
+				// return the comparison result.
+				return res;
+			}
 
 		protected:
 
-			virtual bool equals(const Node& other) const { return this == &other; }
+			// ----------------------------------------------------------
+			//   Access Members
+			//      Those are protected and made public by sub-classes
+			// ----------------------------------------------------------
+
+			/**
+			 * Obtains a reference to the value represented by this node if
+			 * it is representing a value.
+			 *
+			 * @return a reference to the internally maintained value
+			 */
+			const Value& getValue() const {
+				assert(isValue() && "Node does not represent a value!");
+				return value;
+			}
+
+			/**
+			 * Prints this node to the given stream.
+			 *
+			 * @param out the stream to be printed to
+			 * @return the handed in stream
+			 */
+			virtual std::ostream& printTo(std::ostream& out) const;
+
+			/**
+			 * Compares this node instance with the given instance. Internally the
+			 * operator== is used for comparison.
+			 *
+			 * This function is required by the HashableImmutableData base class.
+			 *
+			 * @param other the node to be compared with
+			 * @return true if equal, false otherwise
+			 */
+			virtual bool equals(const Node& other) const {
+				// use equal operator
+				return *this == other;
+			}
 
 		private:
 
+			/**
+			 * A static utility function used for hashing a node type and its child nodes
+			 * during the construction of a new node.
+			 *
+			 * @param type the type of the node to be hashed
+			 * @param nodes its child nodes
+			 * @return a hash value for the resulting node
+			 */
 			template<typename ... Nodes>
-			inline std::size_t static hash(NodeType type, const Nodes& ... nodes) {
-				std::size_t seed;
+			inline std::size_t static hashNodes(NodeType type, const Nodes& ... nodes) {
+				std::size_t seed = 0;
 				boost::hash_combine(seed, type);
 				utils::appendHash<NodePtr, deref<NodePtr>>(seed, nodes ...);
 				return seed;
@@ -360,10 +549,115 @@ namespace core {
 
 	};
 
-	// -- Node Utilities -----------------
 
-	// FixedSizeNode
-	// ListNode
+
+
+	// **********************************************************************************
+	// 							    Node Utilities
+	// **********************************************************************************
+
+
+	/**
+	 * A node extension forming a common sub-class of all value nodes.
+	 */
+	class ValueNode : public Node {
+
+	protected:
+
+		/**
+		 * A constructor limiting subclasses to a value-node construction.
+		 *
+		 * @param type the type of the resulting node
+		 * @param value the value to be represented
+		 */
+		ValueNode(const NodeType type, const Node::Value& value) : Node(type, value) {}
+
+	public:
+
+		/**
+		 * Obtains a reference to the value represented by this node if
+		 * it is representing a value.
+		 *
+		 * @return a reference to the internally maintained value
+		 */
+		const Value& getValue() const {
+			// forward call to protected parent method
+			return Node::getValue();
+		}
+
+	};
+
+	/**
+	 * A node utility supporting the implementation of nodes having a fixed number
+	 * of child nodes. This utility is extended by the actual node (via multiple
+	 * inheritance) to inherit type save operations on the child nodes.
+	 *
+	 * @tparam Derived the derived class, for static polymorthism
+	 * @tparam Children the list of child node types
+	 */
+	template<
+		typename Derived,
+		typename ... Children
+	>
+	class FixedSizeNodeHelper {
+	public:
+
+		/**
+		 * A constructor helping to ensure the proper list of child nodes.
+		 * Although it is not actually carrying out any operation it has to be
+		 * invoked with the correct combination of parameters. Thereby the
+		 * type of the children is checked by the compiler.
+		 *
+		 * @param children the children of the created node.
+		 */
+		FixedSizeNodeHelper(const Pointer<Children>& ... children) {}
+
+		/**
+		 * The mayor contribution of this helper - a type save access to the
+		 * child nodes.
+		 *
+		 * @tparam index the index of the child to be accessed
+		 * @tparam Res the type of the child, automatically inferred
+		 */
+		template<
+			unsigned index,
+			typename Res = typename type_at<index, type_list<Children...>>::type
+		>
+		const Pointer<Res> get() const {
+			// access the child via static polymorthism and cast result to known type
+			return static_pointer_cast<Res>(static_cast<const Derived*>(this)->getChild(index));
+		}
+
+	};
+
+	/**
+	 * A node utility supporting the implementation of variable sized list like
+	 * node types - consisting of a list of nodes of equal types.
+	 *
+	 * @tparam Derived the derived class, for static polymorthism
+	 * @tparam ValueType the type of the nodes to be listed
+	 */
+	template<
+		typename Derived,
+		typename ValueType
+	>
+	class ListNodeHelper {
+
+	public:
+
+		/**
+		 * The mayor contribution of this helper - a type save access to the
+		 * child nodes.
+		 *
+		 * @tparam index the index of the child to be accessed
+		 */
+		template<unsigned index>
+		const Pointer<ValueType> get() const {
+			return static_pointer_cast<ValueType>(static_cast<const Derived*>(this)->getChild(index));
+		}
+
+	};
+
 
 } // end namespace core
 } // end namespace insieme

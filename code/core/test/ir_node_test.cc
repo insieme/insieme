@@ -34,79 +34,22 @@
  * regarding third party software licenses.
  */
 
-#include <string>
-
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_pointer.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
 
-#include "dummy_annotations.inc"
-
-using std::string;
-
-using namespace insieme::core;
-
-// ------------- utility classes required for the test case --------------
-
-struct A {
-	void f() {};
-};
-struct B : public A { };
+namespace insieme {
+namespace core {
 
 
-// testing basic properties
-TEST(Pointer, Basic) {
+	TEST(Node, Instantiation) {
 
-	// FIXME: annotated pointer are getting bigger and bigger ...
-	// Size has been reduced from 40 bytes + a unordered map to 8 bytes (64-bit)
-	EXPECT_EQ ( sizeof(Pointer<int>) , sizeof(int*) );
+		Node* node = 0;
 
-	int a = 10;
-	int b = 15;
+	}
 
-	// test simple creation
-	Pointer<int> refA(&a);
-	EXPECT_EQ (*refA, a);
 
-	// ... and for another element
-	Pointer<int> refB(&b);
-	EXPECT_EQ (*refB, b);
+} // end namespace core
+} // end namespace insieme
 
-	// test whether modifications are reflected
-	a++;
-	EXPECT_EQ (*refA, a);
-
-}
-
-TEST(Pointer, UpCast) {
-
-	// create two related instances
-	A a;
-	B b;
-
-	// create references
-	Pointer<A> refA(&a);
-	Pointer<B> refB(&b);
-
-	// make assignment (if it compiles, test passed!)
-	refA = refB;
-}
-
-TEST(Pointer, SimplePointerTest) {
-
-	int value = 3;
-	Pointer<int> ptr(&value);
-
-	EXPECT_EQ( 3, value);
-	EXPECT_EQ( 3, *ptr);
-
-	value = 4;
-	EXPECT_EQ( 4, value);
-	EXPECT_EQ( 4, *ptr);
-
-	*ptr = 5;
-	EXPECT_EQ( 5, value);
-	EXPECT_EQ( 5, *ptr);
-}
 

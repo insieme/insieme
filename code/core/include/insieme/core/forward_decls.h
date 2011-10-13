@@ -39,7 +39,6 @@
 #include <vector>
 
 #include "insieme/utils/set_utils.h"
-#include "insieme/core/ast_pointer.h"
 
 namespace insieme {
 namespace core {
