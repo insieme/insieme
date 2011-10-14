@@ -125,7 +125,7 @@ struct ScalarRef : public Ref {
 
 	ScalarRef(const core::VariableAddress& var, const Ref::UseType& usage);
 
-	const core::VariableAddress& getVariable() const;
+	core::VariableAddress getVariable() const;
 	std::ostream& printTo(std::ostream& out) const;
 };
 
@@ -195,7 +195,7 @@ struct CallRef: public Ref {
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	const core::CallExprAddress& getCallExpr() const;
+	core::CallExprAddress getCallExpr() const;
 };
 
 

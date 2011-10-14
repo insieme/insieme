@@ -41,8 +41,10 @@
 #include <ostream>
 #include <unordered_map>
 
+#include "insieme/core/forward_decls.h"
 #include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/pattern.h"
+#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"
 
@@ -54,6 +56,16 @@ namespace irp {
 
 	inline TreePatternPtr atom(const core::NodePtr& node) {
 		return atom(toTree(node));
+	}
+
+	inline TreePatternPtr atom(core::NodeManager& manager, const char* code) {
+		auto a = [&manager] (const string& statementSpec) {return core::parse::parseStatement(manager, statementSpec); };
+		return atom(a(string(code)));
+	}
+
+	inline TreePatternPtr atom(core::NodeManager& manager, string& code) {
+		auto a = [&manager] (const string& statementSpec) {return core::parse::parseStatement(manager, statementSpec); };
+		return atom(a(code));
 	}
 
 	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
@@ -77,6 +89,23 @@ namespace irp {
 	}
 	inline TreePatternPtr call(const TreePatternPtr& function, const ListPatternPtr& parameters) {
 		return node(core::NT_CallExpr, single(function) << parameters);
+	}
+
+	inline TreePatternPtr wrap_body(const TreePatternPtr& body) {
+		return body | node(core::NT_CompoundStmt, single(body));
+	}
+
+	inline TreePatternPtr compoundStmt(const ListPatternPtr& stmts) {
+		return node(core::NT_CompoundStmt, stmts);
+	}
+
+	inline TreePatternPtr ifStmt(const TreePatternPtr& condition, const TreePatternPtr& thenBody, const TreePatternPtr& elseBody){
+		return node(core::NT_IfStmt, single(condition) << wrap_body(thenBody) << wrap_body(elseBody));
+	}
+
+
+	inline TreePatternPtr returnStmt(const TreePatternPtr& returnExpression){
+		return node(core::NT_ReturnStmt, single(returnExpression));
 	}
 }
 } // end namespace pattern
