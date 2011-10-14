@@ -90,6 +90,7 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1);
 	wi->wg_memberships[group_num].wg_id = wg->id;
 	wi->wg_memberships[group_num].num = mem_num;
+	wi->wg_memberships[group_num].pfor_count = 0;
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
