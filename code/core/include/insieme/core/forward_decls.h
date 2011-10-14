@@ -43,6 +43,9 @@
 namespace insieme {
 namespace core {
 
+	using std::string;
+	using std::pair;
+	using std::vector;
 
 	// ---------------- Pointers and Addresses ----------------------
 

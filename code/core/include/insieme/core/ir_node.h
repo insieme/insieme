@@ -48,14 +48,10 @@
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace core {
-
-	// TODO: move to forward declaration
-	using std::string;
-	using std::pair;
-	using std::vector;
 
 
 	// **********************************************************************************
