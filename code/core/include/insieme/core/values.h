@@ -34,33 +34,59 @@
  * regarding third party software licenses.
  */
 
-#include <gtest/gtest.h>
+#pragma once
 
 #include "insieme/core/ir_node.h"
-#include "insieme/core/new_int_type_param.h"
 
 namespace insieme {
 namespace core {
 namespace new_core {
 
 
-	TEST(Node, Instantiation) {
+	/**
+	 * A macro defining value nodes based on a name and the type of value to be presented.
+	 */
+	#define VALUE_NODE(NAME,TYPE) \
+		class NAME ## Value : public ValueNode<NAME ## Value> { \
+			NAME ## Value(const TYPE value) : ValueNode(NT_ ## NAME ## Value, value) {} \
+		public: \
+			TYPE getValue() const { \
+				return boost::get<TYPE>(ValueNode::getValue()); \
+			} \
+			static NAME ## ValuePtr get(NodeManager& manager, const TYPE value) { \
+				return manager.get(NAME ## Value(value)); \
+			} \
+		}
 
-		Node* node = 0;
+	/**
+	 * The BoolValue node represents a single, boolean value.
+	 */
+	VALUE_NODE(Bool, bool);
+
+	/**
+	 * The CharValue node represents a character value within the IR structure.
+	 */
+	VALUE_NODE(Char, char);
+
+	/**
+	 * The IntValue node represents an integer value within the IR structure.
+	 */
+	VALUE_NODE(Int, int);
+
+	/**
+	 * The UIntValue node representing an unsigned integer value within the IR structure.
+	 */
+	VALUE_NODE(UInt, unsigned);
+
+	/**
+	 * The StringValue node represents a string value e.g. naming a type or an identifer within
+	 * the IR structure.
+	 */
+	VALUE_NODE(String, string&);
 
 
-		NodeManager manager;
-		ConcreteIntTypeParamPtr param = ConcreteIntTypeParam::get(manager, 12);
-
-
-
-//		param->get<0>();
-//		param->getParam();
-	}
-
+	#undef VALUE_NODE
 
 } // end namespace new_core
 } // end namespace core
 } // end namespace insieme
-
-

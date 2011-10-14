@@ -36,13 +36,21 @@
 
 #include "insieme/core/ir_node.h"
 
+#include "insieme/core/ir_mapper.h"
+
 namespace insieme {
 namespace core {
+namespace new_core {
 
 
 	// **********************************************************************************
 	// 							    Abstract Node Base
 	// **********************************************************************************
+
+	/**
+	 * Defining the equality ID generator.
+	 */
+	utils::SimpleIDGenerator<Node::EqualityID> Node::equalityClassIDGenerator;
 
 	namespace detail {
 
@@ -86,8 +94,41 @@ namespace core {
 		  nodeType(nodeType), value(value), nodeCategory(NC_Value), equalityID(0) {
 
 		// make sure value nodes are extending the value node type
-		assert(dynamic_cast<ValueNode*>(this) && "Value node not being of proper sub-type encountered!");
+		//assert(dynamic_cast<ValueNode*>(this) && "Value node not being of proper sub-type encountered!");
 	}
 
+
+	std::ostream& Node::printTo(std::ostream& out) const {
+		return out << "I owe you a nice node-printer!";
+	}
+
+	const Node* Node::cloneTo(NodeManager& manager) const {
+		// NOTE: this method is performing the all-IR-node work, the rest is done by createCloneUsing(...)
+
+		// check whether cloning is necessary
+		if (this->manager == &manager) {
+			return this;
+		}
+
+		// trigger the creation of a clone
+		auto cloner = makeLambdaMapper([&manager](unsigned, const NodePtr& ptr) {
+			return manager.get(ptr);
+		});
+		Node* res = createCopyUsing(cloner);
+
+		// update manager
+		res->manager = &manager;
+
+		// update equality ID
+		res->equalityID = equalityID;
+
+		// copy annotations
+		res->setAnnotations(getAnnotations());
+
+		// done
+		return res;
+	}
+
+} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

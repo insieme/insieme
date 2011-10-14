@@ -45,19 +45,10 @@
 #include "insieme/utils/hash_utils.h"
 
 #include "insieme/core/ast_node.h"
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace core {
-
-
-// --- Forward declarations: ---
-
-// declare address type
-template<typename T> class Address;
-typedef Address<const Node> NodeAddress;
-
-template<typename T> class Pointer;
-typedef Pointer<const Node> NodePtr;
 
 /**
  * A forward declaration of the node type used for realizing paths.

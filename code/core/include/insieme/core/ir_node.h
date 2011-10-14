@@ -47,22 +47,43 @@
 
 #include "insieme/core/lang/basic.h"
 #include "insieme/core/lang/extension.h"
-#include "insieme/core/ir_pointer.h"
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace core {
+namespace new_core {
 
 
 	// **********************************************************************************
 	// 									Node Types
 	// **********************************************************************************
 
-	enum NodeType {};
+	/**
+	 * Defines an enumeration containing an entry for every node type. This
+	 * enumeration can than be used to identify the actual type of AST nodes
+	 * in case the exact type cannot be determined statically.
+	 */
+	#define CONCRETE(name) NT_ ## name,
+	enum NodeType {
+		// the necessary information is obtained from the node-definition file
+		#include "insieme/core/ir_nodes.def"
+	};
+	#undef CONCRETE
 
-	// - node type enumeration
-	// - number of node types
-	// - node type trait linking enum to type and visa vice
+	/**
+	 * A constant defining the number of node types.
+	 */
+	#define CONCRETE(name) +1
+	enum { NUM_CONCRETE_NODE_TYPES = 0
+		// the necessary information is obtained from the node-definition file
+		#include "insieme/core/ir_nodes.def"
+	};
+	#undef CONCRETE
+
+
+	// TODO: add node type trait linking enum to type and visa vice
 
 
 
@@ -70,13 +91,19 @@ namespace core {
 	// 									Node Categories
 	// **********************************************************************************
 
+	/**
+	 * Defines a set of categories nodes might belong to. Every node has to belong to
+	 * exactly one of the enlisted categories.
+	 */
 	enum NodeCategory {
-		NC_Value,
-		NC_Type,
-		NC_Expression,
-		NC_Statement,
-		NC_Program,
-		NC_Composed
+		NC_Value,			// < a leaf node representing a value
+		NC_IntTypeParam,	// < a node representing an int-type-param
+		NC_Type,			// < a node representing a type
+		NC_Expression,		// < a node representing an expression
+		NC_Statement,		// < a node representing a statement
+		NC_Program,			// < a node representing a program
+		NC_Composed,		// < a utility used to realize a complex data structure
+		NC_Support			// < additional supporting nodes
 	};
 
 
@@ -108,7 +135,7 @@ namespace core {
 		 * An instance of the basic generator offering access to essential INSPIRE
 		 * specific language constructs.
 		 */
-		const lang::BasicGenerator basic;
+//		const lang::BasicGenerator basic;
 
 		/**
 		 * The store maintaining language extensions.
@@ -120,7 +147,7 @@ namespace core {
 		/**
 		 * A default constructor creating a fresh, empty node manager instance.
 		 */
-		NodeManager() : basic(*this), extensions() { }
+		NodeManager() : /* basic(*this), */ extensions() { }
 
 		/**
 		 * The destructor cleaning up all language extensions.
@@ -132,12 +159,12 @@ namespace core {
 			});
 		}
 
-		/**
-		 * Obtains access to the generator of the basic language constructs.
-		 */
-		const lang::BasicGenerator& getBasicGenerator() const {
-			return basic;
-		}
+//		/**
+//		 * Obtains access to the generator of the basic language constructs.
+//		 */
+//		const lang::BasicGenerator& getBasicGenerator() const {
+//			return basic;
+//		}
 
 		/**
 		 * Obtains access to a generic language extension to be offered by this
@@ -231,10 +258,15 @@ namespace core {
 		public:
 
 			/**
+			 * The type of instance manager to be used with this type.
+			 */
+			typedef NodeManager Manager;
+
+			/**
 			 * The union of all the values which can directly be represented using nodes. If
 			 * a node represents a value, it is representing a value of this type.
 			 */
-			typedef boost::variant<bool,int,string> Value;
+			typedef boost::variant<bool,int,unsigned,string> Value;
 
 		private:
 
@@ -297,7 +329,7 @@ namespace core {
 			 * @param hashCode the hash code of the new node
 			 */
 			template<typename ... Nodes>
-			Node(const NodeType nodeType, const NodeCategory nodeCategory, const Pointer<Nodes>& ... children)
+			Node(const NodeType nodeType, const NodeCategory nodeCategory, const Pointer<const Nodes>& ... children)
 				: HashableImmutableData(hashNodes(nodeType, children ...)),
 				  nodeType(nodeType), children(toVector<NodePtr>(children...)),
 				  nodeCategory(nodeCategory), equalityID(0) {
@@ -320,14 +352,18 @@ namespace core {
 			 * created on the heap or stack without a NodeManager, thereby enforcing the usage of the
 			 * static factory methods and NodeManager.
 			 */
-			static void* operator new(size_t);
+			static void* operator new(size_t size){
+				return ::operator new(size);
+			}
 
 			/**
 			 * Defines the delete operator to be protected. This prevents instances of AST nodes to be
 			 * created on the heap or stack without a NodeManager, thereby enforcing the usage of the
 			 * static factory methods and NodeManager.
 			 */
-			void operator delete(void*);
+			void operator delete(void* ptr) {
+				return ::operator delete(ptr);
+			}
 
 			/**
 			 * Defines the new operator for arrays to be protected. This prevents instances of AST nodes to be
@@ -485,6 +521,18 @@ namespace core {
 				return res;
 			}
 
+			/**
+			 * Compares this and the given node for inequality. A call to this
+			 * is equivalent to !(*this == other).
+			 *
+			 * @param other the node to be compared with
+			 * @return true if not equal, false otherwise
+			 */
+			bool operator!=(const Node& other) const {
+				// just use inverse of == operator
+				return !(*this == other);
+			}
+
 		protected:
 
 			// ----------------------------------------------------------
@@ -528,6 +576,30 @@ namespace core {
 		private:
 
 			/**
+			 * Retrieves a clone of this node, hence a newly allocated instance representing the same value
+			 * as the current instance. The new instance (and all its referenced nodes) should be maintained
+			 * by the given manager.
+			 *
+			 * @param manager the manager which should maintain all referenced nodes
+			 * @return a clone of this instance referencing elements maintained exclusively by the given manager
+			 */
+			const Node* cloneTo(NodeManager& manager) const;
+
+			/**
+			 * A virtual method to be implemented by sub-classes to realize the actual creation of
+			 * modified instances of AST nodes.
+			 *
+			 * @param mapper a mapping allowing to alter pointer instances during the copy process. For instance
+			 * 			the mapper may re-direct all pointers to point to instances maintained by a different
+			 * 			node manager (node migration) or to a totally different instance during transformations.
+			 * @return a pointer to a new instance, representing an independent, transformed instance.
+			 */
+			virtual Node* createCopyUsing(NodeMapping& mapper) const {
+				// TODO: implement!!
+				return 0;
+			}
+
+			/**
 			 * A static utility function used for hashing a node type and its child nodes
 			 * during the construction of a new node.
 			 *
@@ -552,10 +624,22 @@ namespace core {
 	// 							    Node Utilities
 	// **********************************************************************************
 
+	/**
+	 * A type trait determining the type of a node child.
+	 *
+	 * @tparam Node the node type to be queried
+	 * @tparam index the index of the child node to be queried
+	 */
+	template<typename Node, unsigned index>
+	struct node_child_type {
+		typedef decltype(((Node*)0)->template get<index>()) ptr_type;
+		typedef typename ptr_type::element_type type;
+	};
 
 	/**
 	 * A node extension forming a common sub-class of all value nodes.
 	 */
+	template<typename Derived>
 	class ValueNode : public Node {
 
 	protected:
@@ -581,6 +665,20 @@ namespace core {
 			return Node::getValue();
 		}
 
+	public:
+
+		/**
+		 * Value nodes can be cloned using a simple copy constructor. This method
+		 * is implementing the corresponding operation.
+		 *
+		 * @param mapper the mapper updating child nodes - will be ignored
+		 * @return a copy of this node equivalent to this node
+		 */
+		virtual Node* createCopyUsing(NodeMapping& mapper) const {
+			// clone the current object by using the copy constructor
+			return new Derived(*static_cast<const Derived*>(this));
+		}
+
 	};
 
 	/**
@@ -599,16 +697,6 @@ namespace core {
 	public:
 
 		/**
-		 * A constructor helping to ensure the proper list of child nodes.
-		 * Although it is not actually carrying out any operation it has to be
-		 * invoked with the correct combination of parameters. Thereby the
-		 * type of the children is checked by the compiler.
-		 *
-		 * @param children the children of the created node.
-		 */
-		FixedSizeNodeHelper(const Pointer<Children>& ... children) {}
-
-		/**
 		 * The mayor contribution of this helper - a type save access to the
 		 * child nodes.
 		 *
@@ -619,9 +707,9 @@ namespace core {
 			unsigned index,
 			typename Res = typename type_at<index, type_list<Children...>>::type
 		>
-		const Pointer<Res> get() const {
+		const Pointer<const Res> getElement() const {
 			// access the child via static polymorthism and cast result to known type
-			return static_pointer_cast<Res>(static_cast<const Derived*>(this)->getChild(index));
+			return static_pointer_cast<const Res>(static_cast<const Derived*>(this)->getChild(index));
 		}
 
 	};
@@ -648,12 +736,67 @@ namespace core {
 		 * @tparam index the index of the child to be accessed
 		 */
 		template<unsigned index>
-		const Pointer<ValueType> get() const {
+		const Pointer<ValueType> getElement() const {
 			return static_pointer_cast<ValueType>(static_cast<const Derived*>(this)->getChild(index));
 		}
 
 	};
 
+	/**
+	 * A helper which can be extended by concrete node implementations to inherite all kind
+	 * of accessor type implementations.
+	 */
+	template<
+		typename Derived,
+		template<typename D, template <typename P> class P> class Accessor
+	>
+	struct AccessorHelper {
+		typedef Accessor<Pointer<const Derived>, Pointer> ptr_accessor_type;
+		typedef Accessor<Address<const Derived>, Address> adr_accessor_type;
+	};
 
+
+
+	// **********************************************************************************
+	// 							    Node Macros
+	// **********************************************************************************
+
+	/**
+	 * The following macros should be used to simplify the definition of new node types
+	 * within the corresponding header files. They should not be used by the end user.
+	 */
+
+	/**
+	 * A macro starting a node declaration with the given name and base type.
+	 */
+	#define IR_NODE(NAME, BASE) \
+		class NAME : public BASE, public NAME ## Accessor<NAME>, \
+		public AccessorHelper<NAME, NAME ## Accessor>
+
+	/**
+	 * Starts the definition of an accessor struct which is determining how fields of
+	 * a node can be accessed by linking names to child node IDs. Properties within
+	 * accessors can be defined easiest using the NODE_PROPERTY macro.
+	 *
+	 * @param NAME the name of the node type this accessor is accociated to
+	 * @param ... the types of the child nodes of the accociated node
+	 */
+	#define IR_NODE_ACCESSOR(NAME, ... ) \
+		template<typename Derived,template<typename T> class Ptr = Pointer> \
+		struct NAME ## Accessor : public FixedSizeNodeHelper<Derived, __VA_ARGS__>
+
+	/**
+	 * A macro adding new properties to an accessor by linking a name to a
+	 * type and an index within the child list.
+	 *
+	 * @param TYPE the type of the property
+	 * @param NAME the name of the property
+	 * @param INDEX the index of the property within the child list
+	 */
+	#define IR_NODE_PROPERTY(TYPE, NAME, INDEX) \
+		TYPE ## Ptr get ## NAME() const { return static_cast<const Derived*>(this)->template getElement<INDEX>(); }
+
+
+} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

@@ -289,6 +289,10 @@ namespace core {
 		If(const ExpressionPtr& condition, const StatementPtr& thenStmt, const StatementPtr& elseStmt)
 			: Statement(NT_If, condition, thenStmt, elseStmt), IfAccessor<If, Ptr>(*this) {}
 
+
+//		int get(int a) {
+//			return a;
+//		}
 	};
 
 

@@ -46,13 +46,12 @@ namespace new_core {
 
 	TEST(Node, Instantiation) {
 
-		Node* node = 0;
-
 
 		NodeManager manager;
 		ConcreteIntTypeParamPtr param = ConcreteIntTypeParam::get(manager, 12);
 
-
+		param->getElement<0>();
+		param->getParam();
 
 //		param->get<0>();
 //		param->getParam();

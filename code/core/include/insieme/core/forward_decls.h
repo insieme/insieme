@@ -63,9 +63,25 @@ namespace core {
 		typedef Address<const NAME> NAME ## Address;
 
 		// take all nodes from within the definition file
-		#include "insieme/core/ast_nodes.def"
+		#include "insieme/core/ir_nodes.def"
 
 	#undef NODE
+
+	namespace new_core {
+		/**
+		 * Adds forward declarations for all AST node types. Further, for each
+		 * type a type definition for a corresponding annotated pointer is added.
+		 */
+		#define NODE(NAME) \
+			class NAME; \
+			typedef Pointer<const NAME> NAME ## Ptr; \
+			typedef Address<const NAME> NAME ## Address;
+
+			// take all nodes from within the definition file
+			#include "insieme/core/ir_nodes.def"
+
+		#undef NODE
+	}
 
 
 	// ---------------- Supporting Utilities ----------------------
@@ -93,5 +109,32 @@ namespace core {
 	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
 	typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
 
+
+	namespace new_core {
+
+		class IRBuilder;
+		class NodeManager;
+		class NodeMapping;
+
+//		namespace lang {
+//			class BasicGenerator;
+//		} // end namespace lang
+
+
+		/**
+		 * Typedefs for some widely used base type collections.
+		 */
+		typedef std::vector<NodePtr> NodeList;
+		typedef std::vector<TypePtr> TypeList;
+		typedef std::vector<StatementPtr> StatementList;
+		typedef std::vector<ExpressionPtr> ExpressionList;
+
+		typedef utils::set::PointerSet<NodePtr> NodeSet;
+		typedef utils::set::PointerSet<TypePtr> TypeSet;
+		typedef utils::set::PointerSet<StatementPtr> StatementSet;
+		typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
+		typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
+
+	}
 } // end namespace core
 } // end namespace insieme

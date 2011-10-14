@@ -161,6 +161,19 @@ inline std::size_t appendHash(std::size_t& seed) {
 }
 
 /**
+ * An alternative terminal case for the hash append function accepting specified
+ * template parameters.
+ */
+template<
+	typename T,
+	typename Extractor = id<T>
+>
+inline std::size_t appendHash(std::size_t& seed) {
+	// nothing to do
+	return seed;
+}
+
+/**
  * The generic implementation of the hash combine operation.
  * @param seed the hash seed to which the hash values of the given arguments should be appended to
  * @param first the first of the elements to be hashed and appended
