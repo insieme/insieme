@@ -292,12 +292,12 @@ public:
 				 * we insert all the variable declarations (excluded the induction
 				 * variable) before the body of the for loop
 				 */
-				std::copy_if(begin(initExpr), end(initExpr), std::back_inserter(retStmt),
+				std::copy_if(initExpr.begin(), initExpr.end(), std::back_inserter(retStmt),
 						std::bind(negation, inductionVarFilter, std::placeholders::_1) );
 
 				// we now look for the declaration statement which contains the induction variable
 				std::vector<core::StatementPtr>::const_iterator&& fit =
-						std::find_if(begin(initExpr), end(initExpr),
+						std::find_if(initExpr.begin(), initExpr.end(),
 								std::bind( inductionVarFilter, std::placeholders::_1 )
 						);
 
@@ -734,7 +734,7 @@ public:
 		StatementList stmts;
 		if ( core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body) ) {
 			const StatementList& compStmts = compStmt->getStatements();
-			std::copy(begin(compStmts), end(compStmts), std::back_inserter(stmts));
+			std::copy(compStmts.begin(), compStmts.end(), std::back_inserter(stmts));
 		}
 
 		stmts.push_back(builder.whileStmt(condExpr, body));
@@ -955,7 +955,7 @@ public:
 			// 		int<a> a = 0; int<4> b = 1;
 			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				StmtWrapper&& convertedStmt = Visit(stmt);
-				copy(begin(convertedStmt), end(convertedStmt), std::back_inserter(stmtList));
+				copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 			}
 		);
 		return (retIr = convFact.builder.compoundStmt(stmtList));
