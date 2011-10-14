@@ -41,7 +41,11 @@
 namespace insieme {
 namespace transform {
 namespace pattern {
+namespace irp {
+	const TreePatternPtr breakStmt = atom(makeTree((int)core::NT_BreakStmt));
+	const TreePatternPtr continueStmt = atom(makeTree((int)core::NT_ContinueStmt));
 
+} // end namespace irp
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme
