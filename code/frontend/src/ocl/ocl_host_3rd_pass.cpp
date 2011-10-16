@@ -672,21 +672,35 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		} else {
 			if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos && kernelLambdas.find(var) != kernelLambdas.end()) {
 				// declare tuple to hold the arguments for the kernel
-				Lambda::ParamList pl = kernelLambdas[var]->getParameterList();
-				TypeList elementTypes;
-				for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
-					elementTypes.push_back(pl.at(i)->getType());
+				LambdaSearcher lambdaSearcher(builder, var, program);
+				NodePtr newDecl;
+				for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
+					const NodeAddress& lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
+
+					lambdaSearcher.setLambdaVariable(getVariableArg(kl.first, builder));
+					// check if the variable is right
+					if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, lambdaSearcher)) {
+						Lambda::ParamList pl = kl.second->getParameterList();
+						TypeList elementTypes;
+						for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
+							elementTypes.push_back(pl.at(i)->getType());
+						}
+
+						const TupleTypePtr& tty = builder.tupleType(elementTypes);
+						const VariablePtr& tVar = builder.variable(builder.refType(tty));
+		//std::cout << "\nreplacing " << var << " with " << tVar << std::endl;
+						// replace the kernel with the newly created tuple variable
+		//std::cout << var->getType() << " " << var << " 2-> " << tVar->getType() << " " << tVar << std::endl;
+						cl_mems[var] = tVar;
+
+						newDecl = builder.declarationStmt(tVar, builder.callExpr(builder.refType(tty), BASIC.getRefNew(),
+								builder.callExpr(tty, BASIC.getUndefined(), BASIC.getTypeLiteral(tty))));
+					}
+				});
+				if(newDecl) {
+					copyAnnotations(decl, newDecl);
+					return newDecl;
 				}
-
-				const TupleTypePtr& tty = builder.tupleType(elementTypes);
-				const VariablePtr& tVar = builder.variable(builder.refType(tty));
-//std::cout << "\nreplacing " << var << " with " << tVar << std::endl;
-				// replace the kernel with the newly created tuple variable
-//std::cout << var->getType() << " " << var << " 2-> " << tVar->getType() << " " << tVar << std::endl;
-				cl_mems[var] = tVar;
-
-				return builder.declarationStmt(tVar, builder.callExpr(builder.refType(tty), BASIC.getRefNew(),
-						builder.callExpr(tty, BASIC.getUndefined(), BASIC.getTypeLiteral(tty))));
 			}
 
 // remove delarations of opencl type variables. Should not be used any more
