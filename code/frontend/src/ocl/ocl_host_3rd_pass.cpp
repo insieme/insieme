@@ -524,34 +524,17 @@ std::cout << kernelLambdas << std::endl;//*/
 	return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
 }
 
-void HostMapper3rdPass::translateKernelToTuple(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
+void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
 		NamedCompositeType::Entries& newMembers, const VariablePtr& var, const size_t i) {
-	// TODO make crap prettier!
 
+	LambdaSearcher lambdaSearcher(builder, var, program);
+	IdSearcher ids(builder, oldInitMember.first);
 	for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
-		// check if the variable is right
-		core::NodeAddress vAddr = core::Address<const core::Variable>::find(var, program);
-		core::NodeAddress lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
+		const NodeAddress& lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
 
-		auto visitor = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
-			bool ret = false;
-			if(const core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(addr)) {
-				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
-					for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
-							[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
-						if(*lAddr == *cur.first) {
-							if(*vAddr == *cur.second)
-								ret = true;
-							else
-								lAddr = core::Address<const core::Variable>::find(getVariableArg(cur.second, builder), program);
-						}
-					});
-				}
-			}
-			return ret;
-		});
-		if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, visitor)) {
-			IdSearcher ids(builder, oldInitMember.first);
+		lambdaSearcher.setLambdaVariable(getVariableArg(kl.first, builder));
+		// check if the variable is right
+		if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, lambdaSearcher)) {
 			// check identifier
 			if(visitDepthFirstInterruptable(kl.first, ids)) {
 				// now we found the right kernelLambda
@@ -628,7 +611,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 //std::cout << "\nMembers: " << newMembers.at(i) << " \n" << kernelLambdas.begin()->first << std::endl;
 									} else if(newMembers.at(i).second->toString().find("array<_cl_kernel,1>") != string::npos /*&&
 											kernelLambdas.find(var) != kernelLambdas.end()*/) {
-										translateKernelToTuple(oldInitMember, newInitMembers, newMembers, var, i);
+										addTupletoStruct(oldInitMember, newInitMembers, newMembers, var, i);
 									} else
 										newInitMembers.push_back(oldInitMember);
 									++i;
@@ -669,7 +652,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				// get new element type
 				while(const SingleElementTypePtr & interType = dynamic_pointer_cast<const SingleElementType>(oldType) )
 					oldType = interType->getElementType();
-
 //				if(initFct->getArgument(0) == builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem")))) // default init
 //						|| initFct->getArgument(0) == builder.castExpr(builder.arrayType(builder.genericType("_cl_mem")),
 //								builder.callExpr(BASIC.getGetNull(), BASIC.getTypeLiteral(BASIC.getInt8())))) { // init with NULL

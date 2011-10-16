@@ -84,7 +84,7 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	// callExpr is the original call to the NDRangeKernle function, newCall is the substituted one
 	const core::NodePtr handleNDRangeKernel(const core::CallExprPtr& callExpr, const core::CallExprPtr&  newCall, const size_t offset);
 
-	void translateKernelToTuple(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
+	void addTupletoStruct(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
 			core::NamedCompositeType::Entries& newMembers, const core::VariablePtr& var, const size_t i);
 
 
