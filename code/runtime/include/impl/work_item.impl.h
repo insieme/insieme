@@ -69,6 +69,7 @@ static inline irt_work_item* _irt_wi_new(irt_worker* self) {
 		IRT_DEBUG("WI_RE\n");
 	} else {
 		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
+		ret->wg_memberships = NULL;
 		IRT_DEBUG("WI_FU\n");
 	}
 	return ret;
@@ -102,7 +103,6 @@ static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_w
 	wi->impl_id = impl_id;
 	wi->context_id = context;
 	wi->num_groups = 0;
-	wi->wg_memberships = NULL;
 	wi->parameters = params;
 	wi->range = range;
 	wi->state = IRT_WI_STATE_NEW;

@@ -66,7 +66,7 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 	const ClangCompiler& comp = tu.getCompiler();
 
 	EXPECT_FALSE(pl.empty());
-	EXPECT_EQ(pl.size(), (size_t) 2);
+	EXPECT_EQ(pl.size(), (size_t) 4);
 
 	// first pragma is at location [(4:2) - (4:22)]
 	PragmaPtr p = pl[0];
@@ -141,6 +141,53 @@ TEST(PragmaMatcherTest, HandleOmpParallel) {
 		EXPECT_FALSE(dit->second.empty());
 		EXPECT_EQ(*dit->second[0]->get<std::string*>(), "shared");
 	}
+
+	p = pl[2];
+	{
+		// check pragma start location
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 15, 2);
+		// check pragma end location
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 15, 20);
+
+		EXPECT_EQ(p->getType(), "omp::master");
+
+		// pragma associated to a statement
+		EXPECT_TRUE(p->isStatement());
+		const clang::Stmt* stmt = p->getStatement();
+
+		// check stmt start location
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 16, 2);
+		// check stmt end location
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 16, 24);
+
+		// check the omp parallel is empty
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		EXPECT_TRUE(omp->getMap().empty());
+	}
+
+	p = pl[3];
+	{
+		// check pragma start location
+		CHECK_LOCATION(p->getStartLocation(), comp.getSourceManager(), 19, 2);
+		// check pragma end location
+		CHECK_LOCATION(p->getEndLocation(), comp.getSourceManager(), 19, 20);
+
+		EXPECT_EQ(p->getType(), "omp::single");
+
+		// pragma associated to a statement
+		EXPECT_TRUE(p->isStatement());
+		const clang::Stmt* stmt = p->getStatement();
+
+		// check stmt start location
+		CHECK_LOCATION(stmt->getLocStart(), comp.getSourceManager(), 20, 2);
+		// check stmt end location
+		CHECK_LOCATION(stmt->getLocEnd(), comp.getSourceManager(), 20, 23);
+
+		// check the omp parallel is empty
+		omp::OmpPragma* omp = static_cast<omp::OmpPragma*>(p.get());
+		EXPECT_TRUE(omp->getMap().empty());
+	}
+
 }
 
 TEST(PragmaMatcherTest, HandleOmpFor) {

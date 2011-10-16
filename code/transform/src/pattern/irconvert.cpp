@@ -74,8 +74,10 @@ namespace {
 		std::ostream& printTo(std::ostream& out) const {
 			if(!evaluated) {
 				return out << "irtree[lazy](" << getId() << "," << *node << ")";
+				//return out << "irtree[lazy](" << core::getNodeTypeName((core::NodeType)getId()) << "," << *node << ")";
 			}
 			return out << "irtree[evaled](" << getId() << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
+			//return out << "irtree[evaled](" << core::getNodeTypeName((core::NodeType)getId()) << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
 		}
 
 		virtual const TreeList& getSubTrees() const {
@@ -138,6 +140,10 @@ namespace {
 
 		TreePtr visitVariableIntTypeParam(const VariableIntTypeParamPtr& node){
 			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()));
+		}
+
+		TreePtr visitVariable(const VariablePtr& node){
+			return makeTree((int)node->getNodeType(), toTree(node->getType()), makeValue((int)node->getId()));
 		}
 
 		TreePtr visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& node){

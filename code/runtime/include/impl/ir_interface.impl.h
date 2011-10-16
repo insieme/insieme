@@ -70,7 +70,7 @@ irt_work_group* irt_parallel(irt_work_group* parent, const irt_parallel_job* job
 	// speedup using custom implementation without adding each item individually to group
 	irt_work_group* ret = irt_wg_create();
 	uint32 num_threads = (job->max/2+job->min/2);
-	if(job->min == 1 && job->max > IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
+	if(job->max >= IRT_SANE_PARALLEL_MAX) num_threads = irt_g_worker_count;
 	num_threads -= num_threads%job->mod;
 	if(num_threads<job->min) num_threads = job->min;
 	if(num_threads>IRT_SANE_PARALLEL_MAX) num_threads = IRT_SANE_PARALLEL_MAX;

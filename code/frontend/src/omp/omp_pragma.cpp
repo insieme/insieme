@@ -88,9 +88,11 @@ struct marker_type_trait<core::Expression> {
  * to the IR node
  */
 template <class NodeTy>
-core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy>& irNode,
-		const clang::Stmt* clangNode, conversion::ConversionFactory& fact)
-{
+core::Pointer<const NodeTy> attachOmpAnnotation(
+		const core::Pointer<const NodeTy>& irNode,
+		const clang::Stmt* clangNode, 
+		conversion::ConversionFactory& fact
+) {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
 
@@ -99,20 +101,19 @@ core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy
 	omp::BaseAnnotation::AnnotationList anns;
 	std::for_each(iter.first, iter.second,
 		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
-			const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) );
-			if(ompPragma) {
+			if(const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) )) {
 				VLOG(1) << "@ Statement has an OpenMP pragma attached";
 				anns.push_back( ompPragma->toAnnotation(fact) );
 			}
 	});
 	// If we didn't find OMP annotations, return the node
-	if(anns.empty())
-		return irNode;
+	if(anns.empty()) { return irNode; }
 
 	// otherwise create a marker node and attach the annotation to the marker
 	typedef typename marker_type_trait<NodeTy>::marker_type MarkerTy;
+
 	// create an expression marker
-	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode, markerID++);
+	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode);
 	// attach the annotation to the marker node
 	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 	return marker;
