@@ -45,30 +45,13 @@ namespace core {
 namespace new_core {
 
 
-	// ----------------------- Variable Integer Type Parameter ------------------------
-
-	VariableIntTypeParam::VariableIntTypeParam(const CharValuePtr& symbol)
-		: IntTypeParam(NT_VariableIntTypeParam, symbol) {}
-
-	VariableIntTypeParamPtr VariableIntTypeParam::get(NodeManager& manager, char symbol) {
-		return manager.get(VariableIntTypeParam(CharValue::get(manager, symbol)));
-	}
-
-	bool VariableIntTypeParam::operator<(const IntTypeParam& other) const {
-		// variable int type parameters are smaller than all other parameters
-		if (other.getNodeType() != NT_VariableIntTypeParam) {
-			return false;
-		}
-
-		// compare the symbol
-		return getSymbol()->getValue() < static_cast<const VariableIntTypeParam&>(other).getSymbol()->getValue();
-	}
-
-
 	// ----------------------- Concrete Integer Type Parameter ------------------------
 
 	ConcreteIntTypeParam::ConcreteIntTypeParam(const UIntValuePtr& value)
 		: IntTypeParam(NT_ConcreteIntTypeParam, value) {}
+
+	ConcreteIntTypeParam::ConcreteIntTypeParam(const NodeList& children)
+		: IntTypeParam(NT_ConcreteIntTypeParam, children) {}
 
 	ConcreteIntTypeParamPtr ConcreteIntTypeParam::get(NodeManager& manager, std::size_t value) {
 		return manager.get(ConcreteIntTypeParam(UIntValue::get(manager, value)));
@@ -91,11 +74,39 @@ namespace new_core {
 	}
 
 
+
+	// ----------------------- Variable Integer Type Parameter ------------------------
+
+	VariableIntTypeParam::VariableIntTypeParam(const CharValuePtr& symbol)
+		: IntTypeParam(NT_VariableIntTypeParam, symbol) {}
+
+	VariableIntTypeParam::VariableIntTypeParam(const NodeList& children)
+		: IntTypeParam(NT_VariableIntTypeParam, children) {}
+
+	VariableIntTypeParamPtr VariableIntTypeParam::get(NodeManager& manager, char symbol) {
+		return manager.get(VariableIntTypeParam(CharValue::get(manager, symbol)));
+	}
+
+	bool VariableIntTypeParam::operator<(const IntTypeParam& other) const {
+		// variable int type parameters are smaller than all other parameters
+		if (other.getNodeType() != NT_VariableIntTypeParam) {
+			return false;
+		}
+
+		// compare the symbol
+		return getSymbol()->getValue() < static_cast<const VariableIntTypeParam&>(other).getSymbol()->getValue();
+	}
+
+
+
 	// ----------------------- Infinite Integer Type Parameter ------------------------
 
 
 	InfiniteIntTypeParam::InfiniteIntTypeParam()
 		: IntTypeParam(NT_InfiniteIntTypeParam) {}
+
+	InfiniteIntTypeParam::InfiniteIntTypeParam(const NodeList& children)
+		: IntTypeParam(NT_InfiniteIntTypeParam, children) {}
 
 	InfiniteIntTypeParamPtr InfiniteIntTypeParam::get(NodeManager& manager) {
 		return manager.get(InfiniteIntTypeParam());

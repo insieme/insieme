@@ -92,6 +92,7 @@ class InstanceManager : private boost::noncopyable {
 
 		// make sure clone is valid
 //		assert( hash_value(*instance) == hash_value(*clone) && "Incorrect hash value of clone!" );
+//		assert( orig != clone && "Not realy cloned!");
 //		assert( *orig == *clone && "Clone not equivalent to original!" );
 
 		// step 2 - cast back to original type

@@ -69,6 +69,15 @@ namespace new_core {
 		IntTypeParam(const NodeType nodeType, const Pointer<const Nodes>& ... children)
 			: Node(nodeType, NC_IntTypeParam, children ...) { }
 
+		/**
+		 * A constructor creating a new instance of this type based on a given child-node list.
+		 *
+		 * @param nodeType the type of the newly created node
+		 * @param children the child nodes to be used to create the new node
+		 */
+		IntTypeParam(const NodeType nodeType, const NodeList& children)
+			: Node(nodeType, NC_IntTypeParam, children) { }
+
 	public:
 
 		/**
@@ -97,7 +106,7 @@ namespace new_core {
 	/**
 	 * A node type representing concrete int-type parameters.
 	 */
-	IR_NODE(ConcreteIntTypeParam, IntTypeParam) {
+	IR_NODE(ConcreteIntTypeParam, IntTypeParam)
 
 		/**
 		 * A constructor for this type of int type parameters accepting the value
@@ -106,6 +115,14 @@ namespace new_core {
 		 * @param value the value to be represented.
 		 */
 		ConcreteIntTypeParam(const UIntValuePtr& value);
+
+		/**
+		 * A constructor creating a new instance if this node type based on the
+		 * given child list.
+		 *
+		 * @param children the list of children to be used
+		 */
+		ConcreteIntTypeParam(const NodeList& children);
 
 	public:
 
@@ -140,7 +157,7 @@ namespace new_core {
 	/**
 	 * A node type representing variable int-type parameters.
 	 */
-	IR_NODE(VariableIntTypeParam, IntTypeParam) {
+	IR_NODE(VariableIntTypeParam, IntTypeParam)
 
 		/**
 		 * A constructor for this type of int type parameters accepting the value
@@ -149,6 +166,8 @@ namespace new_core {
 		 * @param symbol the symbol to be used to represent the resulting variable
 		 */
 		VariableIntTypeParam(const CharValuePtr& symbol);
+
+		VariableIntTypeParam(const NodeList& children);
 
 	public:
 
@@ -179,12 +198,14 @@ namespace new_core {
 	/**
 	 * A node type representing infinite int-type parameters.
 	 */
-	IR_NODE(InfiniteIntTypeParam, IntTypeParam) {
+	IR_NODE(InfiniteIntTypeParam, IntTypeParam)
 
 		/**
 		 * A constructor for this type of int type parameter.
 		 */
 		InfiniteIntTypeParam();
+
+		InfiniteIntTypeParam(const NodeList& children);
 
 	public:
 

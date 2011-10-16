@@ -49,7 +49,7 @@
 #include "insieme/core/lang/extension.h"
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_pointer.h"
-#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_mapper.h"
 
 namespace insieme {
 namespace core {
@@ -83,10 +83,6 @@ namespace new_core {
 	#undef CONCRETE
 
 
-	// TODO: add node type trait linking enum to type and visa vice
-
-
-
 	// **********************************************************************************
 	// 									Node Categories
 	// **********************************************************************************
@@ -105,6 +101,47 @@ namespace new_core {
 		NC_Composed,		// < a utility used to realize a complex data structure
 		NC_Support			// < additional supporting nodes
 	};
+
+
+
+
+	// **********************************************************************************
+	// 									Node Type Traits
+	// **********************************************************************************
+
+	namespace detail {
+
+		/**
+		 * A helper for defining node traits ...
+		 */
+		template<typename T, NodeType N>
+		struct node_type_helper {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+			typedef Address<const T> adr_type;
+			enum { nt_value = N };
+		};
+
+	}
+
+	/**
+	 * A type trait linking node types to their properties.
+	 */
+	template<typename T>
+	struct node_type;
+
+	/**
+	 * A trait struct linking node type values to the represented node's properties.
+	 */
+	template<NodeType typ>
+	struct to_node_type;
+
+	#define CONCRETE(NAME) \
+		template<> struct node_type<NAME> : public detail::node_type_helper<NAME, NT_ ## NAME> {}; \
+		template<> struct to_node_type<NT_ ## NAME> : public node_type<NAME> {};
+	#include "insieme/core/ir_nodes.def"
+	#undef CONCRETE
+
 
 
 
@@ -253,7 +290,7 @@ namespace new_core {
 			/**
 			 * Allow the instance manager to access private methods to create / destroy nodes.
 			 */
-			friend class InstanceManager<Node, Pointer> ;
+			friend class InstanceManager<Node, Pointer>;
 
 		public:
 
@@ -332,7 +369,7 @@ namespace new_core {
 			Node(const NodeType nodeType, const NodeCategory nodeCategory, const Pointer<const Nodes>& ... children)
 				: HashableImmutableData(hashNodes(nodeType, children ...)),
 				  nodeType(nodeType), children(toVector<NodePtr>(children...)),
-				  nodeCategory(nodeCategory), equalityID(0) {
+				  nodeCategory(nodeCategory), manager(0), equalityID(0) {
 
 				// ensure that there no non-value node is of the value type
 				assert(nodeCategory != NC_Value && "Must not be a value node!");
@@ -346,6 +383,15 @@ namespace new_core {
 			 * @param value the value to be represented
 			 */
 			Node(const NodeType nodeType, const Value& value);
+
+			/**
+			 * Constructs a new node instance based on the given type, category and child list.
+			 *
+			 * @param nodeType the type of the resulting node
+			 * @param nodeCategory the category of the resulting node
+			 * @param children the list of children to be used when constructing the new node
+			 */
+			Node(const NodeType nodeType, const NodeCategory nodeCategory, const NodeList& children);
 
 			/**
 			 * Defines the new operator to be protected. This prevents instances of AST nodes to be
@@ -573,6 +619,16 @@ namespace new_core {
 				return *this == other;
 			}
 
+			/**
+			 * This function is required to be implemented by sub-classes by instantiating
+			 * a new instance of the corresponding sub-type based on the given list of child
+			 * list.
+			 *
+			 * @param children the children to be used for the construction
+			 * @return a pointer to a new, fresh instance of the requested node
+			 */
+			virtual Node* createCopyUsing(const NodeList& children) const =0;
+
 		private:
 
 			/**
@@ -584,20 +640,6 @@ namespace new_core {
 			 * @return a clone of this instance referencing elements maintained exclusively by the given manager
 			 */
 			const Node* cloneTo(NodeManager& manager) const;
-
-			/**
-			 * A virtual method to be implemented by sub-classes to realize the actual creation of
-			 * modified instances of AST nodes.
-			 *
-			 * @param mapper a mapping allowing to alter pointer instances during the copy process. For instance
-			 * 			the mapper may re-direct all pointers to point to instances maintained by a different
-			 * 			node manager (node migration) or to a totally different instance during transformations.
-			 * @return a pointer to a new instance, representing an independent, transformed instance.
-			 */
-			virtual Node* createCopyUsing(NodeMapping& mapper) const {
-				// TODO: implement!!
-				return 0;
-			}
 
 			/**
 			 * A static utility function used for hashing a node type and its child nodes
@@ -634,51 +676,6 @@ namespace new_core {
 	struct node_child_type {
 		typedef decltype(((Node*)0)->template get<index>()) ptr_type;
 		typedef typename ptr_type::element_type type;
-	};
-
-	/**
-	 * A node extension forming a common sub-class of all value nodes.
-	 */
-	template<typename Derived>
-	class ValueNode : public Node {
-
-	protected:
-
-		/**
-		 * A constructor limiting subclasses to a value-node construction.
-		 *
-		 * @param type the type of the resulting node
-		 * @param value the value to be represented
-		 */
-		ValueNode(const NodeType type, const Node::Value& value) : Node(type, value) {}
-
-	public:
-
-		/**
-		 * Obtains a reference to the value represented by this node if
-		 * it is representing a value.
-		 *
-		 * @return a reference to the internally maintained value
-		 */
-		const Value& getValue() const {
-			// forward call to protected parent method
-			return Node::getValue();
-		}
-
-	public:
-
-		/**
-		 * Value nodes can be cloned using a simple copy constructor. This method
-		 * is implementing the corresponding operation.
-		 *
-		 * @param mapper the mapper updating child nodes - will be ignored
-		 * @return a copy of this node equivalent to this node
-		 */
-		virtual Node* createCopyUsing(NodeMapping& mapper) const {
-			// clone the current object by using the copy constructor
-			return new Derived(*static_cast<const Derived*>(this));
-		}
-
 	};
 
 	/**
@@ -771,7 +768,20 @@ namespace new_core {
 	 */
 	#define IR_NODE(NAME, BASE) \
 		class NAME : public BASE, public NAME ## Accessor<NAME>, \
-		public AccessorHelper<NAME, NAME ## Accessor>
+		public AccessorHelper<NAME, NAME ## Accessor> { \
+		\
+		protected: \
+			/* The function required for the clone process. */ \
+			virtual NAME* createCopyUsing(const NodeList& children) const { \
+				return new NAME(children); \
+			} \
+		public: \
+			/* A factory method creating instances based on a child list */ \
+			static NAME ## Ptr get(NodeManager& manager, const NodeList& children) { \
+				return manager.get(NAME(children)); \
+			} \
+		private: \
+
 
 	/**
 	 * Starts the definition of an accessor struct which is determining how fields of
@@ -800,3 +810,12 @@ namespace new_core {
 } // end namespace new_core
 } // end namespace core
 } // end namespace insieme
+
+namespace std {
+
+	/**
+	 * Allows node types to be printed using names.
+	 */
+	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::NodeType& type);
+
+} // end namespace std

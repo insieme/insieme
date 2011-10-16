@@ -53,6 +53,7 @@ namespace new_core {
 		param->getElement<0>();
 		param->getParam();
 
+
 //		param->get<0>();
 //		param->getParam();
 	}

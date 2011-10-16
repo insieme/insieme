@@ -43,6 +43,7 @@ namespace core {
 namespace new_core {
 
 
+
 	// **********************************************************************************
 	// 							    Abstract Node Base
 	// **********************************************************************************
@@ -79,6 +80,22 @@ namespace new_core {
 		}
 
 		/**
+		 * Obtains a hash value for the given tree instance.
+		 *
+		 * @param value the value to be hashed
+		 * @param children the list of children to be hashed
+		 * @return the hash code for the given tree object
+		 */
+		inline std::size_t hash(const NodeType type, const NodeList& children) {
+			std::size_t seed = 0;
+			boost::hash_combine(seed, type);
+			for_each(children, [&](const NodePtr& cur) {
+				utils::appendHash(seed, *cur);
+			});
+			return seed;
+		}
+
+		/**
 		 * A static visitor determining whether an element within a boost::variant
 		 * is a value or not.
 		 */
@@ -91,30 +108,30 @@ namespace new_core {
 
 	Node::Node(const NodeType nodeType, const Value& value)
 		: HashableImmutableData(detail::hash(nodeType, value)),
-		  nodeType(nodeType), value(value), nodeCategory(NC_Value), equalityID(0) {
+		  nodeType(nodeType), value(value), nodeCategory(NC_Value),
+		  manager(0), equalityID(0) { }
 
-		// make sure value nodes are extending the value node type
-		//assert(dynamic_cast<ValueNode*>(this) && "Value node not being of proper sub-type encountered!");
-	}
+	Node::Node(const NodeType nodeType, const NodeCategory nodeCategory, const NodeList& children)
+		: HashableImmutableData(detail::hash(nodeType, children)),
+		  nodeType(nodeType), children(children), nodeCategory(nodeCategory),
+		  manager(0), equalityID(0) { }
 
-
-	std::ostream& Node::printTo(std::ostream& out) const {
-		return out << "I owe you a nice node-printer!";
-	}
 
 	const Node* Node::cloneTo(NodeManager& manager) const {
+		static const NodeList emptyList;
+
 		// NOTE: this method is performing the all-IR-node work, the rest is done by createCloneUsing(...)
 
 		// check whether cloning is necessary
 		if (this->manager == &manager) {
+			std::cout << "Manager is the same: " << this->manager << " vs. " << &manager << "\n";
 			return this;
 		}
 
-		// trigger the creation of a clone
-		auto cloner = makeLambdaMapper([&manager](unsigned, const NodePtr& ptr) {
-			return manager.get(ptr);
-		});
-		Node* res = createCopyUsing(cloner);
+		// trigger the create a clone using children within the new manager
+		Node* res = (isValue())?
+				createCopyUsing(emptyList) :
+				createCopyUsing(manager.getAll(getChildList()));
 
 		// update manager
 		res->manager = &manager;
@@ -129,6 +146,29 @@ namespace new_core {
 		return res;
 	}
 
+
+	std::ostream& Node::printTo(std::ostream& out) const {
+		if(isValue()) {
+			return out << value;
+		}
+		return out << "(" << nodeType << "|" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
+	}
+
 } // end namespace new_core
 } // end namespace core
 } // end namespace insieme
+
+namespace std {
+
+	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::NodeType& type) {
+		switch(type) {
+			#define CONCRETE(NAME) case insieme::core::new_core::NT_ ## NAME : return out << #NAME;
+				#include "insieme/core/ir_nodes.def"
+			#undef CONCRETE
+		}
+
+		assert(false && "Unsupported node type encountered!");
+		return out << "UnknownType";
+	}
+
+} // end namespace std

@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/values.h"
 #include "insieme/core/new_int_type_param.h"
 
 namespace insieme {
@@ -50,6 +51,8 @@ namespace new_core {
 
 
 		NodeManager manager;
+
+		NodePtr value = UIntValue::get(manager, 12);
 		ConcreteIntTypeParamPtr param = ConcreteIntTypeParam::get(manager, 12);
 
 

@@ -44,10 +44,42 @@ namespace new_core {
 
 
 	/**
+	 * A node forming a common base type for all value nodes.
+	 */
+	class ValueNode : public Node {
+
+	protected:
+
+		/**
+		 * A constructor limiting subclasses to a value-node construction.
+		 *
+		 * @param type the type of the resulting node
+		 * @param value the value to be represented
+		 */
+		ValueNode(const NodeType type, const Node::Value& value) : Node(type, value) {}
+
+	public:
+
+		/**
+		 * Obtains a reference to the value represented by this node if
+		 * it is representing a value.
+		 *
+		 * @return a reference to the internally maintained value
+		 */
+		const Value& getValue() const {
+			// forward call to protected parent method
+			return Node::getValue();
+		}
+
+	};
+
+
+
+	/**
 	 * A macro defining value nodes based on a name and the type of value to be presented.
 	 */
 	#define VALUE_NODE(NAME,TYPE) \
-		class NAME ## Value : public ValueNode<NAME ## Value> { \
+		class NAME ## Value : public ValueNode { \
 			NAME ## Value(const TYPE value) : ValueNode(NT_ ## NAME ## Value, value) {} \
 		public: \
 			TYPE getValue() const { \
@@ -55,6 +87,14 @@ namespace new_core {
 			} \
 			static NAME ## ValuePtr get(NodeManager& manager, const TYPE value) { \
 				return manager.get(NAME ## Value(value)); \
+			} \
+			operator TYPE() const { \
+				return getValue(); \
+			} \
+		protected: \
+			virtual Node* createCopyUsing(const NodeList& children) const { \
+				assert(children.empty() && "Value nodes must no have children!"); \
+				return new NAME ## Value(*this); \
 			} \
 		}
 
