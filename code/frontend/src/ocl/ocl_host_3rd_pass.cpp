@@ -552,8 +552,6 @@ void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInit
 				VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
 						cl_mems[var], builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))), tty));
 
-//													replacements[var] = newVar;
-//													replacements[cl_mems[var]] = newVar;
 				cl_mems[var] = newVar;
 
 				core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
@@ -585,6 +583,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	}
 
 	if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(element)) {
+
 		const VariablePtr& var = decl->getVariable();
 		if(cl_mems.find(var) != cl_mems.end()) {
 //std::cout << "Clmems " << cl_mems << std::endl;
@@ -670,7 +669,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			//	}
 			}
 		} else {
-			if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos && kernelLambdas.find(var) != kernelLambdas.end()) {
+			if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos) {
 				// declare tuple to hold the arguments for the kernel
 				LambdaSearcher lambdaSearcher(builder, var, program);
 				NodePtr newDecl;
@@ -685,16 +684,17 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
 							elementTypes.push_back(pl.at(i)->getType());
 						}
-
 						const TupleTypePtr& tty = builder.tupleType(elementTypes);
-						const VariablePtr& tVar = builder.variable(builder.refType(tty));
-		//std::cout << "\nreplacing " << var << " with " << tVar << std::endl;
-						// replace the kernel with the newly created tuple variable
-		//std::cout << var->getType() << " " << var << " 2-> " << tVar->getType() << " " << tVar << std::endl;
-						cl_mems[var] = tVar;
+						const TypePtr newType = static_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
+								var->getType(), builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
+								tty));
 
-						newDecl = builder.declarationStmt(tVar, builder.callExpr(builder.refType(tty), BASIC.getRefNew(),
-								builder.callExpr(tty, BASIC.getUndefined(), BASIC.getTypeLiteral(tty))));
+						const VariablePtr newVar = builder.variable(newType);
+						const TypePtr initType = static_pointer_cast<const RefType>(newType)->getElementType();
+
+						cl_mems[var] = newVar;
+						newDecl = builder.declarationStmt(newVar, builder.callExpr(newType, BASIC.getRefNew(),
+								builder.callExpr(initType, BASIC.getUndefined(), BASIC.getTypeLiteral(initType))));
 					}
 				});
 				if(newDecl) {
