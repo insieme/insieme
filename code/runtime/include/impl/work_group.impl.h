@@ -90,6 +90,7 @@ void irt_wg_insert(irt_work_group* wg, irt_work_item* wi) {
 	uint32 group_num = irt_atomic_fetch_and_add(&wi->num_groups, 1);
 	wi->wg_memberships[group_num].wg_id = wg->id;
 	wi->wg_memberships[group_num].num = mem_num;
+	wi->wg_memberships[group_num].pfor_count = 0;
 }
 void irt_wg_remove(irt_work_group* wg, irt_work_item* wi) {
 	// Todo distributed
@@ -125,7 +126,9 @@ void irt_wg_joining_barrier(irt_work_group* wg) {
 	// check if outstanding work group pfor joins required
 	uint32 pfor_c = wg->pfor_count, joined_pfor_c =  wg->joined_pfor_count;
 	while(joined_pfor_c < pfor_c) {
+		IRT_DEBUG("% 4d: joined_pfor_c(%d) < pfor_c(%d)\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num, joined_pfor_c, pfor_c);
 		if(irt_atomic_bool_compare_and_swap(&wg->joined_pfor_count, joined_pfor_c, joined_pfor_c+1)) {
+			IRT_DEBUG("% 4d: JOINED\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num);
 			// join the outstanding pfor work item
 			IRT_ASSERT(pfor_c - (joined_pfor_c+1) < IRT_WG_RING_BUFFER_SIZE, IRT_ERR_OVERFLOW, "Work group ring buffer overflow (due to outstanding pfor joins)");
 			irt_wi_join(wg->pfor_wi_list[(joined_pfor_c+1) % IRT_WG_RING_BUFFER_SIZE]);
@@ -133,7 +136,9 @@ void irt_wg_joining_barrier(irt_work_group* wg) {
 		pfor_c = wg->pfor_count;
 		joined_pfor_c = wg->joined_pfor_count;
 	}
+	IRT_DEBUG("% 4d: PRE barrier\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num);
 	irt_wg_barrier(wg);
+	IRT_DEBUG("% 4d: POST barrier\n", irt_wi_get_wg_membership(irt_wi_get_current(), 0).num);
 }
 
 void irt_wg_barrier(irt_work_group* wg) {

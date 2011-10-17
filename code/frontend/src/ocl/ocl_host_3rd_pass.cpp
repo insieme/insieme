@@ -524,6 +524,47 @@ std::cout << kernelLambdas << std::endl;//*/
 	return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
 }
 
+void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
+		NamedCompositeType::Entries& newMembers, const VariablePtr& var, const size_t i) {
+
+	LambdaSearcher lambdaSearcher(builder, var, program);
+	IdSearcher ids(builder, oldInitMember.first);
+	for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
+		const NodeAddress& lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
+
+		lambdaSearcher.setLambdaVariable(getVariableArg(kl.first, builder));
+		// check if the variable is right
+		if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, lambdaSearcher)) {
+			// check identifier
+			if(visitDepthFirstInterruptable(kl.first, ids)) {
+				// now we found the right kernelLambda
+				Lambda::ParamList pl = kl.second->getParameterList();
+				TypeList elementTypes;
+				for(size_t j = 0; j < pl.size()-2 /*global and local size not considered*/; ++j) {
+					elementTypes.push_back(pl.at(j)->getType());
+				}
+
+				const TupleTypePtr& tty = builder.tupleType(elementTypes);
+				TypePtr newType = dynamic_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
+						newMembers.at(i).second, builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
+						tty));
+
+				VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
+						cl_mems[var], builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))), tty));
+
+//													replacements[var] = newVar;
+//													replacements[cl_mems[var]] = newVar;
+				cl_mems[var] = newVar;
+
+				core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
+						builder.callExpr(newType, BASIC.getUndefined(), BASIC.getTypeLiteral(newType)));
+				newInitMembers.push_back(newInitMember);
+			}
+		}
+	});
+}
+
+
 const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	// stopp recursion at type level
 	if (element->getNodeCategory() == NodeCategory::NC_Type) {
@@ -557,7 +598,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 							core::NamedCompositeType::Entries newMembers = sType->getEntries();
 							size_t i = 0;
 							for_each(oldInit->getMembers(), [&](core::StructExpr::Member oldInitMember) {
-								// assuming that the order of the (exisiting) elements in newMembers and oldMember is the same,
+								// assuming that the order of the (existing) elements in newMembers and oldMember is the same,
 								// we always have to compare only one element
 								if(newMembers.size() > i && oldInitMember.first == newMembers.at(i).first) {
 									// check if the type of the init expression is the same as the type of the field (type of field may changed)
@@ -570,59 +611,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 //std::cout << "\nMembers: " << newMembers.at(i) << " \n" << kernelLambdas.begin()->first << std::endl;
 									} else if(newMembers.at(i).second->toString().find("array<_cl_kernel,1>") != string::npos /*&&
 											kernelLambdas.find(var) != kernelLambdas.end()*/) {
-										for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
-											// check if the variable is right
-											core::NodeAddress vAddr = core::Address<const core::Variable>::find(var, program);
-											core::NodeAddress lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
-// TODO make crap prettier!
-											auto visitor = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
-												bool ret = false;
-												if(const core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(addr)) {
-													if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
-														for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
-																[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
-															if(*lAddr == *cur.first) {
-																if(*vAddr == *cur.second)
-																	ret = true;
-																else
-																	lAddr = core::Address<const core::Variable>::find(getVariableArg(cur.second, builder), program);
-															}
-														});
-													}
-												}
-												return ret;
-											});
-
-
-											if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, visitor)) {
-												IdSearcher ids(builder, oldInitMember.first);
-												// check identifier
-												if(visitDepthFirstInterruptable(kl.first, ids)) {
-													// now we found the right kernelLambda
-													Lambda::ParamList pl = kl.second->getParameterList();
-													TypeList elementTypes;
-													for(size_t j = 0; j < pl.size()-2 /*global and local size not considered*/; ++j) {
-														elementTypes.push_back(pl.at(j)->getType());
-													}
-
-													const TupleTypePtr& tty = builder.tupleType(elementTypes);
-													TypePtr newType = dynamic_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
-															newMembers.at(i).second, builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
-															tty));
-
-													VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
-															cl_mems[var], builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))), tty));
-
-//													replacements[var] = newVar;
-//													replacements[cl_mems[var]] = newVar;
-													cl_mems[var] = newVar;
-
-													core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
-															builder.callExpr(newType, BASIC.getUndefined(), BASIC.getTypeLiteral(newType)));
-													newInitMembers.push_back(newInitMember);
-												}
-											}
-										});
+										addTupletoStruct(oldInitMember, newInitMembers, newMembers, var, i);
 									} else
 										newInitMembers.push_back(oldInitMember);
 									++i;
@@ -663,7 +652,6 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				// get new element type
 				while(const SingleElementTypePtr & interType = dynamic_pointer_cast<const SingleElementType>(oldType) )
 					oldType = interType->getElementType();
-
 //				if(initFct->getArgument(0) == builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem")))) // default init
 //						|| initFct->getArgument(0) == builder.castExpr(builder.arrayType(builder.genericType("_cl_mem")),
 //								builder.callExpr(BASIC.getGetNull(), BASIC.getTypeLiteral(BASIC.getInt8())))) { // init with NULL
@@ -684,21 +672,35 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 		} else {
 			if(var->getType()->toString().find("array<_cl_kernel,1>") != string::npos && kernelLambdas.find(var) != kernelLambdas.end()) {
 				// declare tuple to hold the arguments for the kernel
-				Lambda::ParamList pl = kernelLambdas[var]->getParameterList();
-				TypeList elementTypes;
-				for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
-					elementTypes.push_back(pl.at(i)->getType());
+				LambdaSearcher lambdaSearcher(builder, var, program);
+				NodePtr newDecl;
+				for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
+					const NodeAddress& lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
+
+					lambdaSearcher.setLambdaVariable(getVariableArg(kl.first, builder));
+					// check if the variable is right
+					if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, lambdaSearcher)) {
+						Lambda::ParamList pl = kl.second->getParameterList();
+						TypeList elementTypes;
+						for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
+							elementTypes.push_back(pl.at(i)->getType());
+						}
+
+						const TupleTypePtr& tty = builder.tupleType(elementTypes);
+						const VariablePtr& tVar = builder.variable(builder.refType(tty));
+		//std::cout << "\nreplacing " << var << " with " << tVar << std::endl;
+						// replace the kernel with the newly created tuple variable
+		//std::cout << var->getType() << " " << var << " 2-> " << tVar->getType() << " " << tVar << std::endl;
+						cl_mems[var] = tVar;
+
+						newDecl = builder.declarationStmt(tVar, builder.callExpr(builder.refType(tty), BASIC.getRefNew(),
+								builder.callExpr(tty, BASIC.getUndefined(), BASIC.getTypeLiteral(tty))));
+					}
+				});
+				if(newDecl) {
+					copyAnnotations(decl, newDecl);
+					return newDecl;
 				}
-
-				const TupleTypePtr& tty = builder.tupleType(elementTypes);
-				const VariablePtr& tVar = builder.variable(builder.refType(tty));
-//std::cout << "\nreplacing " << var << " with " << tVar << std::endl;
-				// replace the kernel with the newly created tuple variable
-//std::cout << var->getType() << " " << var << " 2-> " << tVar->getType() << " " << tVar << std::endl;
-				cl_mems[var] = tVar;
-
-				return builder.declarationStmt(tVar, builder.callExpr(builder.refType(tty), BASIC.getRefNew(),
-						builder.callExpr(tty, BASIC.getUndefined(), BASIC.getTypeLiteral(tty))));
 			}
 
 // remove delarations of opencl type variables. Should not be used any more

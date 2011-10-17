@@ -175,6 +175,22 @@ bool IdSearcher::visitIdentifier(const core::IdentifierPtr& id) {
 	return false;
 }
 
+bool LambdaSearcher::visitCallExpr(const core::CallExprAddress& call) {
+	bool ret = false;
+	if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
+		for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
+				[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
+			if(*lAddr == *cur.first) {
+				if(*vAddr == *cur.second)
+					ret = true;
+				else
+					lAddr = core::Address<const core::Variable>::find(getVariableArg(cur.second, builder), root);
+			}
+		});
+	}
+	return ret;
+}
+
 } //namespace ocl
 } //namespace frontend
 } //namespace insieme

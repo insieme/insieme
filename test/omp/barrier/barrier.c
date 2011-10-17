@@ -8,7 +8,7 @@ int main() {
  	// sure, it isn't nice, but ...
 	for (int k=0; k<1000; ++k) {
 		int m = 0;
-		#pragma omp parallel
+		#pragma omp parallel 
 		{
 			i=1;
 			#pragma omp barrier
