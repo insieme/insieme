@@ -60,7 +60,7 @@
 // - other: use phoenix::bind and phoenix::construct instead of plain calls
 // ----------------------- - Peter
 // - error: has no member named ‘parse’ --> check your operators (>>!)
-// - error: is not a class, struct, or union type --> chek function name and argument list
+// - error: is not a class, struct, or union type --> check function name and argument list
 
 namespace insieme {
 namespace core {

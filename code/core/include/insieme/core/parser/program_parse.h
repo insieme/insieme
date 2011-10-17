@@ -63,10 +63,33 @@ struct ProgramGrammar : public qi::grammar<ParseIt, P(), qi::space_type> {
     qi::rule<ParseIt, P(), qi::locals<vector<T> >, qi::space_type> getProgram();
     qi::rule<ParseIt, P(), qi::space_type> getProgramRule();
 
-protected:
     // member functions providing the rules
     P mainProgramHelp(const T& mainProg);
     P programHelp(const vector<T>& progs);
+
+};
+
+
+// parser usage:
+// T = ProgramPtr
+// U = ExpressionPtr
+template <typename P = ProgramPtr, typename T = ExpressionPtr, typename U = StatementPtr, typename V = TypePtr, typename W = IntTypeParamPtr,
+        typename X = IdentifierPtr, typename Y = LambdaPtr, typename Z = LambdaDefinitionPtr>
+struct IRGrammar : public qi::grammar<ParseIt, NodePtr(), qi::space_type> {
+    TypeGrammar<V, W, X> *typeG;                        // pointer for weak coupling
+    ProgramGrammar<P, T, U, V, W, X, Y, Z> *progG;
+    StatementGrammar<U, T, V, W, X, Y, Z> *stmtG;
+
+    NodeManager& nodeMan;
+
+    IRGrammar(NodeManager& nMan);
+    ~IRGrammar();
+
+    qi::rule<ParseIt, NodePtr(), qi::space_type> irRule;
+    qi::rule<ParseIt, P(), qi::space_type> mainProg;
+
+    // member functions applying the rules
+    qi::rule<ParseIt, NodePtr(), qi::space_type> getIRRule();
 
 };
 

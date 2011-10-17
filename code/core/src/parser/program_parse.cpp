@@ -98,7 +98,43 @@ ProgramGrammar<P, T, U, V, W, X, Y, Z>::~ProgramGrammar() {
 }
 
 // explicit template instantiation
-template struct ProgramGrammar<ProgramPtr, ExpressionPtr>;
+template struct ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
+
+
+
+template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+IRGrammar<P, T, U, V, W, X, Y, Z>::IRGrammar(NodeManager& nMan) : IRGrammar::base_type(irRule),
+	typeG(new TypeGrammar<V, W, X>(nMan)),
+	progG(new ProgramGrammar<P, T, U, V, W, X, Y, Z>(nMan)),
+	stmtG(new StatementGrammar<U, T, V, W, X, Y, Z>(nMan, NULL, NULL)),
+	nodeMan(nMan) {
+
+	mainProg = ( qi::lit("main") >> ':' >> stmtG->exprG->expressionRule )    [ qi::_val = ph::bind(&ProgramGrammar<P, T, U, V, W, X, Y, Z>::mainProgramHelp, progG, qi::_1) ];
+
+	irRule = getIRRule();
+
+
+//    BOOST_SPIRIT_DEBUG_NODE(programRule);
+}
+template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+IRGrammar<P, T, U, V, W, X, Y, Z>::~IRGrammar() {
+    delete typeG;
+    delete progG;
+    delete stmtG;
+}
+
+
+template<typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+qi::rule<ParseIt, NodePtr(), qi::space_type> IRGrammar<P, T, U, V, W, X, Y, Z>::getIRRule() {
+    return  mainProg                                                         [ qi::_val = ph::construct<P>(qi::_1) ]
+    	  | typeG->typeRule                                                  [ qi::_val = ph::construct<V>(qi::_1) ]
+		  | stmtG->statementRule                                             [ qi::_val = ph::construct<U>(qi::_1) ];
+
+}
+
+
+// explicit template instantiation
+template struct IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
 
 }
 }
