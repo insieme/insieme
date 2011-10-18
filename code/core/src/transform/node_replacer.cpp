@@ -520,7 +520,7 @@ private:
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
 
-if(resType->toString().find("_cl_kernel") != string::npos)
+//if(resType->toString().find("_cl_kernel") != string::npos)
 			CallExprPtr newCall = builder.callExpr(literal, args);
 
 			return newCall;
