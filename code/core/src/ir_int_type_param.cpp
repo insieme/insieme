@@ -50,9 +50,6 @@ namespace new_core {
 	ConcreteIntTypeParam::ConcreteIntTypeParam(const UIntValuePtr& value)
 		: IntTypeParam(NT_ConcreteIntTypeParam, value) {}
 
-	ConcreteIntTypeParam::ConcreteIntTypeParam(const NodeList& children)
-		: IntTypeParam(NT_ConcreteIntTypeParam, children) {}
-
 	ConcreteIntTypeParamPtr ConcreteIntTypeParam::get(NodeManager& manager, std::size_t value) {
 		return manager.get(ConcreteIntTypeParam(UIntValue::get(manager, value)));
 	}
@@ -80,9 +77,6 @@ namespace new_core {
 	VariableIntTypeParam::VariableIntTypeParam(const CharValuePtr& symbol)
 		: IntTypeParam(NT_VariableIntTypeParam, symbol) {}
 
-	VariableIntTypeParam::VariableIntTypeParam(const NodeList& children)
-		: IntTypeParam(NT_VariableIntTypeParam, children) {}
-
 	VariableIntTypeParamPtr VariableIntTypeParam::get(NodeManager& manager, char symbol) {
 		return manager.get(VariableIntTypeParam(CharValue::get(manager, symbol)));
 	}
@@ -104,9 +98,6 @@ namespace new_core {
 
 	InfiniteIntTypeParam::InfiniteIntTypeParam()
 		: IntTypeParam(NT_InfiniteIntTypeParam) {}
-
-	InfiniteIntTypeParam::InfiniteIntTypeParam(const NodeList& children)
-		: IntTypeParam(NT_InfiniteIntTypeParam, children) {}
 
 	InfiniteIntTypeParamPtr InfiniteIntTypeParam::get(NodeManager& manager) {
 		return manager.get(InfiniteIntTypeParam());

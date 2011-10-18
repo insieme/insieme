@@ -53,6 +53,12 @@ namespace new_core {
 	// ---------------------------------------- An abstract base type ------------------------------
 
 	/**
+	 * The accessor for instances of type expressions.
+	 */
+	template<typename D,template<typename T> class P>
+	struct TypeAccessor : public NodeAccessor<D,P> {};
+
+	/**
 	 * The base type for all type nodes. Type nodes are used to represent the type of data elements, literals
 	 * and functions - hence all expressions - within the IR.
 	 */
@@ -81,15 +87,13 @@ namespace new_core {
 
 	};
 
-
-
 	// ------------------------------------ A class representing type variables  ------------------------------
 
 	/**
 	 * The accessor associated to a type variable. Each type variable has a single child node - a string value representing
 	 * the name of the variable.
 	 */
-	IR_NODE_ACCESSOR(TypeVariable, StringValue) {
+	IR_NODE_ACCESSOR(TypeVariable, Type, StringValue)
 		/**
 		 * Obtains the name of this type variable.
 		 */
@@ -108,14 +112,6 @@ namespace new_core {
 		 * @param name the name of the new type variable
 		 */
 		TypeVariable(const StringValuePtr& name);
-
-		/**
-		 * A constructor creating a new instance if this node type based on the
-		 * given child list.
-		 *
-		 * @param children the list of children to be used
-		 */
-		TypeVariable(const NodeList& children);
 
 	public:
 

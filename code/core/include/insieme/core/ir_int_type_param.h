@@ -91,6 +91,8 @@ namespace new_core {
 	struct IntTypeParamAccessor : public NodeAccessor<D,P> {};
 
 
+
+
 	// **********************************************************************************
 	// 							Concrete Int-Type Parameters
 	// **********************************************************************************
@@ -98,7 +100,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to a concrete int-type parameter.
 	 */
-	IR_NODE_ACCESSOR(ConcreteIntTypeParam, UIntValue) {
+	IR_NODE_ACCESSOR(ConcreteIntTypeParam, IntTypeParam, UIntValue)
 		/**
 		 * Obtains the child node representing the concrete value represented by this parameter.
 		 */
@@ -118,14 +120,6 @@ namespace new_core {
 		 */
 		ConcreteIntTypeParam(const UIntValuePtr& value);
 
-		/**
-		 * A constructor creating a new instance if this node type based on the
-		 * given child list.
-		 *
-		 * @param children the list of children to be used
-		 */
-		ConcreteIntTypeParam(const NodeList& children);
-
 	public:
 
 		/**
@@ -142,6 +136,7 @@ namespace new_core {
 
 
 
+
 	// **********************************************************************************
 	// 							Variable Int-Type Parameters
 	// **********************************************************************************
@@ -149,7 +144,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to a variable int-type parameter.
 	 */
-	IR_NODE_ACCESSOR(VariableIntTypeParam, CharValue) {
+	IR_NODE_ACCESSOR(VariableIntTypeParam, IntTypeParam, CharValue)
 		/**
 		 * Obtains the child node representing the symbol represented by this parameter.
 		 */
@@ -168,8 +163,6 @@ namespace new_core {
 		 * @param symbol the symbol to be used to represent the resulting variable
 		 */
 		VariableIntTypeParam(const CharValuePtr& symbol);
-
-		VariableIntTypeParam(const NodeList& children);
 
 	public:
 
@@ -195,7 +188,8 @@ namespace new_core {
 	/**
 	 * The accessor associated to a concrete int-type parameter.
 	 */
-	IR_NODE_ACCESSOR(InfiniteIntTypeParam) {};
+	IR_NODE_ACCESSOR(InfiniteIntTypeParam, IntTypeParam)
+	};
 
 	/**
 	 * A node type representing infinite int-type parameters.
@@ -206,8 +200,6 @@ namespace new_core {
 		 * A constructor for this type of int type parameter.
 		 */
 		InfiniteIntTypeParam();
-
-		InfiniteIntTypeParam(const NodeList& children);
 
 	public:
 

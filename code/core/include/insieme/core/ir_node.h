@@ -132,7 +132,7 @@ namespace new_core {
 			template<typename D, template <typename P> class P> class Accessor
 		>
 		struct concrete_node_type_helper : public node_type_helper<T,Accessor> {
-			enum { nt_value = N };
+			BOOST_STATIC_CONSTANT(NodeType, nt_value=N);
 		};
 
 	}
@@ -739,6 +739,44 @@ namespace new_core {
 			return static_pointer_cast<const Res>(static_cast<const Derived*>(this)->getChild(index));
 		}
 
+
+		/**
+		 * Checks whether the nodes within the given list are valid to be child nodes of
+		 * an instance of this fixed sized node type.
+		 */
+		static bool checkChildList(const NodeList& list) {
+			// the list has to have the correct length and composition of types
+			return list.size() == type_list<Children...>::length
+					&& checkTypes<NodeList::const_iterator, Children...>(list.begin(), list.end());
+		}
+
+	private:
+
+		/**
+		 * Checks whether the given range is composed of node pointers of the given types.
+		 *
+		 * @tparam First the first type to be occuring within the list
+		 * @tparam Rest the remaining types to be occuring wihtin the list
+		 * @param begin the begin of the range
+		 * @param end the end of the range to be checked
+		 */
+		template<typename Iterator, typename First, typename ... Rest>
+		static bool checkTypes(const Iterator& begin, const Iterator& end) {
+			return dynamic_pointer_cast<const First>(*begin) && checkTypes<Iterator, Rest...>(begin+1, end);
+		}
+
+		/**
+		 * The terminal case of the type check, in case there are no more types to be checked.
+		 *
+		 * @param begin the begin of the range to be checked
+		 * @param end the end of the range to be checked
+		 */
+		template<typename Iterator>
+		static bool checkTypes(const Iterator& begin, const Iterator& end) {
+			// the iterator has to have reached the end
+			return begin == end;
+		}
+
 	};
 
 	/**
@@ -765,6 +803,15 @@ namespace new_core {
 		template<unsigned index>
 		const Pointer<ValueType> getElement() const {
 			return static_pointer_cast<ValueType>(static_cast<const Derived*>(this)->getChild(index));
+		}
+
+		/**
+		 * Checks whether the nodes within the given list are valid to be child nodes of
+		 * an instance of this list node.
+		 */
+		static bool checkChildList(const NodeList& list) {
+			// check the content of the list - all need to by castable to the given value type
+			return all(list, &dynamic_pointer_cast<Pointer<const ValueType>>);
 		}
 
 	};
@@ -829,6 +876,9 @@ namespace new_core {
 	 */
 	#define IR_NODE(NAME, BASE) \
 		class NAME : public BASE, public NAME ## Accessor<NAME> { \
+			NAME(const NodeList& children) : BASE(NT_ ## NAME, children) { \
+				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
+			} \
 		\
 		protected: \
 			/* The function required for the clone process. */ \
@@ -851,9 +901,13 @@ namespace new_core {
 	 * @param NAME the name of the node type this accessor is accociated to
 	 * @param ... the types of the child nodes of the accociated node
 	 */
-	#define IR_NODE_ACCESSOR(NAME, ... ) \
-		template<typename Derived,template<typename T> class Ptr = Pointer> \
-		struct NAME ## Accessor : public FixedSizeNodeHelper<Derived, __VA_ARGS__>, public NodeAccessor<Derived, Ptr>
+	#define IR_NODE_ACCESSOR(NAME, BASE, ... ) \
+		template<typename Derived, template<typename T> class Ptr = Pointer> \
+		struct NAME ## Accessor : public FixedSizeNodeHelper<Derived, ## __VA_ARGS__>, public BASE ## Accessor<Derived, Ptr> {
+
+	#define IR_LIST_NODE_ACCESSOR(NAME, ELEMENT) \
+		template<typename Derived, template<typename T> class Ptr = Pointer> \
+		struct NAME ## Accessor : public ListNodeHelper<Derived, ELEMENT>, public BASE ## Accessor<Derived, Ptr> {
 
 	/**
 	 * A macro adding new properties to an accessor by linking a name to a

@@ -313,11 +313,13 @@ struct type_list;
 template<>
 struct type_list<> {
 	BOOST_STATIC_CONSTANT(bool, empty=true);
+	BOOST_STATIC_CONSTANT(unsigned, length=0);
 };
 
 template<typename H, typename ... R>
 struct type_list<H,R...> {
 	BOOST_STATIC_CONSTANT(bool, empty=false);
+	BOOST_STATIC_CONSTANT(unsigned, length=type_list<R...>::length + 1);
 	typedef H head;
 	typedef type_list<R...> rest;
 };

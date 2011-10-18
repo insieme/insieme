@@ -45,9 +45,6 @@ namespace new_core {
 	TypeVariable::TypeVariable(const StringValuePtr& name)
 		: Type(NT_TypeVariable, name) { }
 
-	TypeVariable::TypeVariable(const NodeList& children)
-		: Type(NT_TypeVariable, children) { }
-
 
 } // end namespace new_core
 } // end namespace core

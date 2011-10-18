@@ -112,6 +112,16 @@ namespace new_core {
 		EXPECT_EQ(UIntValue::get(manager, 12), a->getParam().getAddressedNode());
 	}
 
+	TEST(FixedSizeNode, ChildListTest) {
+		NodeManager manager;
+
+		EXPECT_TRUE(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(UIntValue::get(manager, 12))));
+
+		// death tests do not pass valgrind test
+//		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>()), ".*");
+//		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(BoolValue::get(manager, false))), ".*");
+	}
+
 } // end namespace new_core
 } // end namespace core
 } // end namespace insieme
