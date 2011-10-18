@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/new_int_type_param.h"
+#include "insieme/core/ir_int_type_param.h"
 #include "insieme/core/values.h"
 
 #include "insieme/utils/hash_utils.h"

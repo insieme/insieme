@@ -3,7 +3,7 @@ signatures = []
 simpleGetterExp = /static (.*?) get\((.*?)& manager *?\);/
 getterExp = /static (.*?) get\((.*?)& manager, ?([^{}]*?)\);/
 
-Dir["**/*.h"].each { |header|
+Dir["**/expressions.h", "**/statements.h", "**/types.h", "**/program.h", "**/identifier.h", "**/int_type_param.h"].each { |header|
 	code = IO.read(header)
 	# strip comments
 	code.gsub!(/\/\/.*?$/, "")

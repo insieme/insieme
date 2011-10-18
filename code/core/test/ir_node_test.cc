@@ -37,30 +37,80 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/values.h"
-#include "insieme/core/new_int_type_param.h"
+#include "insieme/core/ir_int_type_param.h"
 
 namespace insieme {
 namespace core {
 namespace new_core {
 
 
-	TEST(Node, Instantiation) {
+	TEST(NodeType, Print) {
 
-		Node* node = 0;
+		EXPECT_EQ("TypeVariable", toString(NT_TypeVariable));
 
+	}
+
+	TEST(NodePtr, Casts) {
 
 		NodeManager manager;
 
-		NodePtr value = UIntValue::get(manager, 12);
-		ConcreteIntTypeParamPtr param = ConcreteIntTypeParam::get(manager, 12);
+		ValuePtr value = BoolValue::get(manager, true);
+		ValuePtr value2 = IntValue::get(manager, 12);
 
+		EXPECT_TRUE(static_pointer_cast<const BoolValue>(value));
+		EXPECT_TRUE(static_pointer_cast<BoolValuePtr>(value));
 
+		EXPECT_TRUE(dynamic_pointer_cast<const BoolValue>(value));
+		EXPECT_TRUE(dynamic_pointer_cast<BoolValuePtr>(value));
 
-//		param->get<0>();
-//		param->getParam();
+		EXPECT_FALSE(dynamic_pointer_cast<const BoolValue>(value2));
+		EXPECT_FALSE(dynamic_pointer_cast<BoolValuePtr>(value2));
+
 	}
 
+	TEST(NodePtr, Access) {
+
+		NodeManager manager;
+
+		ConcreteIntTypeParamPtr p = ConcreteIntTypeParam::get(manager, 12);
+
+		EXPECT_TRUE(typeid(p->getParam()) == typeid(UIntValuePtr));
+		EXPECT_TRUE(p->getParam());
+		EXPECT_EQ(UIntValue::get(manager, 12), p->getParam());
+	}
+
+	TEST(AddressPtr, Casts) {
+
+		NodeManager manager;
+
+		ValueAddress value(BoolValue::get(manager, true));
+		ValueAddress value2(IntValue::get(manager, 12));
+
+		EXPECT_TRUE(static_address_cast<const BoolValue>(value));
+		EXPECT_TRUE(static_address_cast<BoolValueAddress>(value));
+
+		EXPECT_TRUE(dynamic_address_cast<const BoolValue>(value));
+		EXPECT_TRUE(dynamic_address_cast<BoolValueAddress>(value));
+
+		EXPECT_FALSE(dynamic_address_cast<const BoolValue>(value2));
+		EXPECT_FALSE(dynamic_address_cast<BoolValueAddress>(value2));
+
+	}
+
+	TEST(AddressPtr, Access) {
+
+		NodeManager manager;
+
+		ConcreteIntTypeParamAddress a(ConcreteIntTypeParam::get(manager, 12));
+
+		EXPECT_TRUE(typeid(a->getParam()) == typeid(UIntValueAddress));
+		EXPECT_TRUE(a->getParam());
+		EXPECT_EQ("0", toString(a));
+		EXPECT_EQ("0-0", toString(a->getParam()));
+		EXPECT_EQ(UIntValue::get(manager, 12), a->getParam().getAddressedNode());
+	}
 
 } // end namespace new_core
 } // end namespace core

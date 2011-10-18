@@ -114,11 +114,24 @@ namespace new_core {
 		/**
 		 * A helper for defining node traits ...
 		 */
-		template<typename T, NodeType N>
+		template<
+			typename T,
+			template<typename D, template <typename P> class P> class Accessor
+		>
 		struct node_type_helper {
 			typedef T type;
 			typedef Pointer<const T> ptr_type;
 			typedef Address<const T> adr_type;
+			typedef Accessor<Pointer<const T>, Pointer> ptr_accessor_type;
+			typedef Accessor<Address<const T>, Address> adr_accessor_type;
+		};
+
+		template<
+			typename T,
+			NodeType N,
+			template<typename D, template <typename P> class P> class Accessor
+		>
+		struct concrete_node_type_helper : public node_type_helper<T,Accessor> {
 			enum { nt_value = N };
 		};
 
@@ -130,6 +143,9 @@ namespace new_core {
 	template<typename T>
 	struct node_type;
 
+	template<typename T>
+	struct concrete_node_type;
+
 	/**
 	 * A trait struct linking node type values to the represented node's properties.
 	 */
@@ -137,11 +153,15 @@ namespace new_core {
 	struct to_node_type;
 
 	#define CONCRETE(NAME) \
-		template<> struct node_type<NAME> : public detail::node_type_helper<NAME, NT_ ## NAME> {}; \
-		template<> struct to_node_type<NT_ ## NAME> : public node_type<NAME> {};
+		template<> struct concrete_node_type<NAME> : public detail::concrete_node_type_helper<NAME, NT_ ## NAME, NAME ## Accessor> {}; \
+		template<> struct to_node_type<NT_ ## NAME> : public concrete_node_type<NAME> {};
 	#include "insieme/core/ir_nodes.def"
 	#undef CONCRETE
 
+	#define NODE(NAME) \
+		template<> struct node_type<NAME> : public detail::node_type_helper<NAME, NAME ## Accessor> {};
+	#include "insieme/core/ir_nodes.def"
+	#undef NODE
 
 
 
@@ -498,6 +518,16 @@ namespace new_core {
 			}
 
 			/**
+			 * Creates a new version of this node where every reference to a child node
+			 * is replaced by a pointer to the node returned by the given mapper.
+			 *
+			 * @param manager the manager to be used to create the new node
+			 * @param mapper the mapper used to translate child node references
+			 * @return a pointer to the modified node.
+			 */
+			NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
+
+			/**
 			 * A default implementation of the equals operator comparing the actual
 			 * names of the types.
 			 */
@@ -627,7 +657,7 @@ namespace new_core {
 			 * @param children the children to be used for the construction
 			 * @return a pointer to a new, fresh instance of the requested node
 			 */
-			virtual Node* createCopyUsing(const NodeList& children) const =0;
+			virtual Node* createInstanceUsing(const NodeList& children) const =0;
 
 		private:
 
@@ -674,7 +704,7 @@ namespace new_core {
 	 */
 	template<typename Node, unsigned index>
 	struct node_child_type {
-		typedef decltype(((Node*)0)->template get<index>()) ptr_type;
+		typedef decltype(((Node*)0)->template getElement<index>()) ptr_type;
 		typedef typename ptr_type::element_type type;
 	};
 
@@ -739,17 +769,48 @@ namespace new_core {
 
 	};
 
+
 	/**
-	 * A helper which can be extended by concrete node implementations to inherite all kind
-	 * of accessor type implementations.
+	 * A default implementation for a node accessor to be used whenever the derived
+	 * type is a node itself. Derivations of this class should be used as the base type
+	 * for all node accessors.
+	 *
+	 * @tparam Derived the type which is extended by this accessor (static polymorthism)
+	 * @tparam Ptr the type of pointer to be obtained by
 	 */
-	template<
-		typename Derived,
-		template<typename D, template <typename P> class P> class Accessor
-	>
-	struct AccessorHelper {
-		typedef Accessor<Pointer<const Derived>, Pointer> ptr_accessor_type;
-		typedef Accessor<Address<const Derived>, Address> adr_accessor_type;
+	template<typename Derived,template<typename T> class Ptr = Pointer>
+	struct NodeAccessor {
+
+		/**
+		 * Obtains access to the accessed node.
+		 */
+		inline const Derived& getNode() const {
+			return *static_cast<const Derived*>(this);
+		}
+	};
+
+	/**
+	 * A specialization of the NodeAccessor template which will be used in cases where
+	 * the accessor is inherited by a pointer (to support access to the same elements
+	 * as for pointers and nodes directly.
+	 */
+	template<typename Node, template<typename T> class Ptr>
+	struct NodeAccessor<Pointer<const Node>, Ptr> {
+		const Node& getNode() const {
+			return *(static_cast<const Pointer<const Node>*>(this));
+		}
+	};
+
+	/**
+	 * A specialization of the NodeAccessor template which will be used in cases where
+	 * the accessor is inherited by an address (to support access to the same elements
+	 * as for pointers and nodes directly.
+	 */
+	template<typename Node, template<typename T> class Ptr>
+	struct NodeAccessor<Address<const Node>, Ptr> {
+		const Node& getNode() const {
+			return *(static_cast<const Address<const Node>*>(this)->getAddressedNode());
+		}
 	};
 
 
@@ -767,12 +828,11 @@ namespace new_core {
 	 * A macro starting a node declaration with the given name and base type.
 	 */
 	#define IR_NODE(NAME, BASE) \
-		class NAME : public BASE, public NAME ## Accessor<NAME>, \
-		public AccessorHelper<NAME, NAME ## Accessor> { \
+		class NAME : public BASE, public NAME ## Accessor<NAME> { \
 		\
 		protected: \
 			/* The function required for the clone process. */ \
-			virtual NAME* createCopyUsing(const NodeList& children) const { \
+			virtual NAME* createInstanceUsing(const NodeList& children) const { \
 				return new NAME(children); \
 			} \
 		public: \
@@ -793,7 +853,7 @@ namespace new_core {
 	 */
 	#define IR_NODE_ACCESSOR(NAME, ... ) \
 		template<typename Derived,template<typename T> class Ptr = Pointer> \
-		struct NAME ## Accessor : public FixedSizeNodeHelper<Derived, __VA_ARGS__>
+		struct NAME ## Accessor : public FixedSizeNodeHelper<Derived, __VA_ARGS__>, public NodeAccessor<Derived, Ptr>
 
 	/**
 	 * A macro adding new properties to an accessor by linking a name to a
@@ -804,7 +864,7 @@ namespace new_core {
 	 * @param INDEX the index of the property within the child list
 	 */
 	#define IR_NODE_PROPERTY(TYPE, NAME, INDEX) \
-		TYPE ## Ptr get ## NAME() const { return static_cast<const Derived*>(this)->template getElement<INDEX>(); }
+		Ptr<const TYPE> get ## NAME() const { return static_cast<const Derived*>(this)->template getElement<INDEX>(); }
 
 
 } // end namespace new_core

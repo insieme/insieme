@@ -38,6 +38,8 @@
 
 #include "insieme/core/ir_mapper.h"
 
+#include "insieme/core/transform/manipulation_utils.h"
+
 namespace insieme {
 namespace core {
 namespace new_core {
@@ -130,8 +132,8 @@ namespace new_core {
 
 		// trigger the create a clone using children within the new manager
 		Node* res = (isValue())?
-				createCopyUsing(emptyList) :
-				createCopyUsing(manager.getAll(getChildList()));
+				createInstanceUsing(emptyList) :
+				createInstanceUsing(manager.getAll(getChildList()));
 
 		// update manager
 		res->manager = &manager;
@@ -146,6 +148,34 @@ namespace new_core {
 		return res;
 	}
 
+	NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper) const {
+
+		// skip operation if it is a value node
+		if (isValue()) {
+			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
+		}
+
+		// compute new child node list
+		NodeList children = mapper.map(getChildList());
+		if (::equals(children, getChildList(), equal_target<NodePtr>())) {
+			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
+		}
+
+		// create a version having everything substituted
+		Node* node = createInstanceUsing(children);
+
+		// obtain element within the manager
+		NodePtr res = manager.get(node);
+
+		// free temporary instance
+		delete node;
+
+		// migrate annotations
+		core::transform::utils::migrateAnnotations(NodePtr(this), res);
+
+		// return instance maintained within manager
+		return res;
+	}
 
 	std::ostream& Node::printTo(std::ostream& out) const {
 		if(isValue()) {

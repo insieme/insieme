@@ -37,6 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/values.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace core {
@@ -58,7 +59,7 @@ namespace new_core {
 		EXPECT_EQ(trueValue, trueValue2);
 		EXPECT_EQ(*trueValue, *trueValue2);
 
-		EXPECT_TRUE(typeid(trueValue->getValue()) == typeid(bool));
+		EXPECT_TRUE(typeid(trueValue->getValue()) == typeid(bool)) << typeid(trueValue->getValue()).name();
 
 		NodePtr node = trueValue;
 		EXPECT_EQ(node, trueValue);
@@ -143,6 +144,17 @@ namespace new_core {
 		NodePtr node = a;
 		EXPECT_EQ(node, a);
 	}
+
+	TEST(Value, Addresses) {
+		NodeManager manager;
+
+		BoolValuePtr value = BoolValue::get(manager, true);
+		BoolValueAddress adr(value);
+
+		EXPECT_TRUE(value->getValue());
+		EXPECT_TRUE(adr->getValue());
+	}
+
 
 } // end namespace new_core
 } // end namespace core

@@ -42,11 +42,26 @@ namespace insieme {
 namespace core {
 namespace new_core {
 
+	template<typename D,template<typename T> class P>
+	struct ValueAccessor : public NodeAccessor<D,P> {
+
+		/**
+		 * Obtains a reference to the value represented by this node if
+		 * it is representing a value.
+		 *
+		 * @return a reference to the internally maintained value
+		 */
+		const Node::Value& getValue() const {
+			// forward call to protected parent method
+			return NodeAccessor<D,P>::getNode().getValue();
+		}
+
+	};
 
 	/**
 	 * A node forming a common base type for all value nodes.
 	 */
-	class ValueNode : public Node {
+	class Value : public Node, public ValueAccessor<Value, Pointer> {
 
 	protected:
 
@@ -56,47 +71,41 @@ namespace new_core {
 		 * @param type the type of the resulting node
 		 * @param value the value to be represented
 		 */
-		ValueNode(const NodeType type, const Node::Value& value) : Node(type, value) {}
-
-	public:
-
-		/**
-		 * Obtains a reference to the value represented by this node if
-		 * it is representing a value.
-		 *
-		 * @return a reference to the internally maintained value
-		 */
-		const Value& getValue() const {
-			// forward call to protected parent method
-			return Node::getValue();
-		}
+		Value(const NodeType type, const Node::Value& value) : Node(type, value) {}
 
 	};
-
 
 
 	/**
 	 * A macro defining value nodes based on a name and the type of value to be presented.
 	 */
 	#define VALUE_NODE(NAME,TYPE) \
-		class NAME ## Value : public ValueNode { \
-			NAME ## Value(const TYPE value) : ValueNode(NT_ ## NAME ## Value, value) {} \
-		public: \
+		\
+		template<typename D,template<typename T> class P> \
+		struct NAME ## ValueAccessor : public ValueAccessor<D,P> { \
 			TYPE getValue() const { \
-				return boost::get<TYPE>(ValueNode::getValue()); \
+				return NodeAccessor<D,P>::getNode().getValue(); \
 			} \
+		}; \
+		\
+		class NAME ## Value : public Value, public NAME ## ValueAccessor<NAME ## Value, Pointer> { \
+			NAME ## Value(const TYPE value) : Value(NT_ ## NAME ## Value, value) {} \
+		public: \
 			static NAME ## ValuePtr get(NodeManager& manager, const TYPE value) { \
 				return manager.get(NAME ## Value(value)); \
 			} \
-			operator TYPE() const { \
-				return getValue(); \
+			operator const TYPE&() const { \
+				return boost::get<TYPE>(Node::getValue()); \
+			} \
+			const TYPE& getValue() const { \
+				return boost::get<TYPE>(Node::getValue()); \
 			} \
 		protected: \
-			virtual Node* createCopyUsing(const NodeList& children) const { \
+			virtual Node* createInstanceUsing(const NodeList& children) const { \
 				assert(children.empty() && "Value nodes must no have children!"); \
 				return new NAME ## Value(*this); \
 			} \
-		}
+		};
 
 	/**
 	 * The BoolValue node represents a single, boolean value.
@@ -122,7 +131,7 @@ namespace new_core {
 	 * The StringValue node represents a string value e.g. naming a type or an identifer within
 	 * the IR structure.
 	 */
-	VALUE_NODE(String, string&);
+	VALUE_NODE(String, string);
 
 
 	#undef VALUE_NODE

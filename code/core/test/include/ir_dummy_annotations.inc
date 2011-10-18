@@ -34,40 +34,60 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace core {
-namespace transform {
-namespace utils {
+namespace new_core {
 
-/**
- * A utility function handling the migration of annotations between nodes during
- * transformations. It is invoking the migration handling routine of the node annotations
- * to determine whether and how the individual annotations should be migrated.
- */
-template<
-	typename Node,
-	template<typename T> class Ptr
->
-inline void migrateAnnotations(const Ptr<Node>& before, const Ptr<Node>& after) {
-	typedef typename Node::annotation_map_type AnnotationMap;
+	class DummyAnnotation : public NodeAnnotation {
+	public:
+		static const string NAME;
+		static const utils::StringKey<DummyAnnotation> DummyKey;
+		int value;
+		DummyAnnotation(int value) : value(value) { };
 
-	// check whether there is something to do
-	if (before == after || !before->hasAnnotations()) {
-		return;
-	}
+		virtual const utils::AnnotationKey* getKey() const {
+			return &DummyKey;
+		}
 
-	// migrate annotations individually
-	for_each(before->getAnnotations(), [&](const typename AnnotationMap::value_type& cur) {
-		cur.second->migrate(cur.second, before, after);
-	});
-}
+		const std::string& getAnnotationName() const {
+			 return NAME;
+		}
+		
+		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			return false;
+		}
+	};
 
-} // end namespace utils
-} // end namespace transform
+	class DummyAnnotation2 : public NodeAnnotation {
+	public:
+		static const string NAME; 
+		static const utils::StringKey<DummyAnnotation2> DummyKey;
+		int value;
+		DummyAnnotation2(int value) : value(value) { };
+
+		virtual const utils::AnnotationKey* getKey() const {
+			return &DummyKey;
+		}
+
+		const std::string& getAnnotationName() const {
+			 return NAME;
+		}
+		
+		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
+			assert(&*ptr == this && "Annotation pointer should reference this annotation.");
+			after->addAnnotation(ptr);
+			return false;
+		}
+	};
+
+	// initalization of the dummy key
+	const string DummyAnnotation::NAME = "DummyAnnotation";
+	const utils::StringKey<DummyAnnotation> DummyAnnotation::DummyKey("DummyKey");
+	const string DummyAnnotation2::NAME = "DummyAnnotation2";
+	const utils::StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
+
+} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

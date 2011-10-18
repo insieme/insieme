@@ -47,7 +47,7 @@
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/set_utils.h"
 
-#include "insieme/core/ir_pointer.h"
+#include "insieme/core/ast_pointer.h"
 #include "insieme/core/ast_mapper.h"
 
 #include "insieme/core/lang/basic.h"

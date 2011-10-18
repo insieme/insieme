@@ -40,19 +40,15 @@
 #include <algorithm>
 
 #include <boost/type_traits/is_base_of.hpp>
-#include <boost/type_traits/remove_const.hpp>
 #include <boost/utility/enable_if.hpp>
 
 #include "insieme/utils/hash_utils.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/values.h"
-#include "insieme/core/ir_int_type_param.h"
+#include "insieme/core/ast_node.h"
 #include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 /**
  * A forward declaration of the node type used for realizing paths.
@@ -251,9 +247,7 @@ struct AddressChildFactory;
  * TODO: extend documentation with usage scenarios
  */
 template<typename T>
-class Address :
-	public utils::HashableImmutableData<Address<T>>,
-	public node_type<typename boost::remove_const<T>::type>::adr_accessor_type {
+class Address : public utils::HashableImmutableData<Address<T>> {
 
 public:
 
@@ -270,12 +264,6 @@ public:
 	typedef T element_type;
 
 private:
-
-	/**
-	 * The accessor offered to gain convenient access to members of the referenced node
-	 */
-	typedef typename node_type<typename boost::remove_const<T>::type>::adr_accessor_type accessor_type;
-
 
 	/**
 	 * The path used to identify the node referenced by this address.
@@ -420,23 +408,6 @@ public:
 	}
 
 	/**
-	 * This generic method allows to access child nodes in a type-safe way. It is also used
-	 * by node accessors to obtain addresses of child nodes.
-	 *
-	 * @tparam index the index of the child node to be obtained
-	 * @tparam Res the type of the child node
-	 * @return the address of the requested child node
-	 */
-	template<
-		unsigned index,
-		typename Res = typename node_child_type<typename boost::remove_const<T>::type,index>::type
-	>
-	const Address<const Res> getElement() const {
-		// access the child via static polymorthism and cast result to known type
-		return Address<const Res>(getAddressOfChild(index).getPath());
-	}
-
-	/**
 	 * Obtains all child addresses.
 	 *
 	 * @return a vector containing addresses for all child nodes
@@ -516,11 +487,8 @@ public:
 		return *getAddressedNode();
 	}
 
-	/**
-	 * Obtains a accessor instance allowing to access the members of the addressed node.
-	 */
-	const accessor_type* operator->() const {
-		return this;
+	const T* operator->() const {
+		return &*getAddressedNode();
 	}
 
 	/**
@@ -647,7 +615,7 @@ struct DynamicAddressCast {
  */
 struct AddressChildFactory {
 	template<typename Source>
-	inline const Address<const Node> operator()(const Address<Source>& value, std::size_t childIndex) const {
+	inline const NodeAddress operator()(const Address<Source>& value, std::size_t childIndex) const {
 		return value.getAddressOfChild(childIndex);
 	}
 };
@@ -702,7 +670,6 @@ bool visitPathTopDownInterruptable(const Address<const T>& addr, Visitor& visito
 	return res || visitor.visit(addr);
 }
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 
@@ -712,19 +679,19 @@ namespace std {
 	/**
 	 * Allows path elements to be printed to an output stream.
 	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::detail::PathElement& element);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element);
 
 	/**
 	 * Allows paths to be printed to a an output stream.
 	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::Path& path);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path);
 
 	/**
 	 * Allows node addresses to be printed to a stream (especially useful during debugging and
 	 * within test cases where equals expects values to be printable).
 	 */
 	template<typename T>
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::Address<T>& node) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Address<T>& node) {
 		return out << node.getPath();
 	}
 

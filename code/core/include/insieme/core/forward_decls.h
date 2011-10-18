@@ -63,11 +63,16 @@ namespace core {
 		typedef Address<const NAME> NAME ## Address;
 
 		// take all nodes from within the definition file
-		#include "insieme/core/ir_nodes.def"
+		#include "insieme/core/ast_nodes.def"
 
 	#undef NODE
 
 	namespace new_core {
+
+		// forward declaration of pointer and address templates
+		template<typename T> class Pointer;
+		template<typename T> class Address;
+
 		/**
 		 * Adds forward declarations for all AST node types. Further, for each
 		 * type a type definition for a corresponding annotated pointer is added.
@@ -75,7 +80,8 @@ namespace core {
 		#define NODE(NAME) \
 			class NAME; \
 			typedef Pointer<const NAME> NAME ## Ptr; \
-			typedef Address<const NAME> NAME ## Address;
+			typedef Address<const NAME> NAME ## Address; \
+			template<typename D, template <typename P> class P> class NAME ## Accessor;
 
 			// take all nodes from within the definition file
 			#include "insieme/core/ir_nodes.def"

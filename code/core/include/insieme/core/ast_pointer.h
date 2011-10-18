@@ -46,7 +46,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 // Forward declaration of cast functor.
 struct StaticPointerCast;
@@ -148,14 +147,13 @@ struct PointerChildFactory {
 	}
 };
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 
 namespace std {
 
 	template<typename T>
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::Pointer<T>& ptr) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Pointer<T>& ptr) {
 		out << "AP(";
 		if (!!ptr) {
 			out << *ptr;

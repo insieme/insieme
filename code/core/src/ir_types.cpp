@@ -34,40 +34,22 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#include "insieme/core/ir_types.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_address.h"
 
 namespace insieme {
 namespace core {
-namespace transform {
-namespace utils {
+namespace new_core {
 
-/**
- * A utility function handling the migration of annotations between nodes during
- * transformations. It is invoking the migration handling routine of the node annotations
- * to determine whether and how the individual annotations should be migrated.
- */
-template<
-	typename Node,
-	template<typename T> class Ptr
->
-inline void migrateAnnotations(const Ptr<Node>& before, const Ptr<Node>& after) {
-	typedef typename Node::annotation_map_type AnnotationMap;
 
-	// check whether there is something to do
-	if (before == after || !before->hasAnnotations()) {
-		return;
-	}
+	TypeVariable::TypeVariable(const StringValuePtr& name)
+		: Type(NT_TypeVariable, name) { }
 
-	// migrate annotations individually
-	for_each(before->getAnnotations(), [&](const typename AnnotationMap::value_type& cur) {
-		cur.second->migrate(cur.second, before, after);
-	});
-}
+	TypeVariable::TypeVariable(const NodeList& children)
+		: Type(NT_TypeVariable, children) { }
 
-} // end namespace utils
-} // end namespace transform
+
+} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
+

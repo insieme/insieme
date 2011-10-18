@@ -87,6 +87,8 @@ namespace new_core {
 
 	};
 
+	template<typename D,template<typename T> class P>
+	struct IntTypeParamAccessor : public NodeAccessor<D,P> {};
 
 
 	// **********************************************************************************

@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/core/ast_node.h"
-#include "insieme/core/ir_address.h"
+#include "insieme/core/ast_address.h"
 
 namespace insieme {
 namespace core {
