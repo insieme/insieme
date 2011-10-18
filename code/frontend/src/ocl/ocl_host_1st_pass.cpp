@@ -494,7 +494,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 	ADD_Handler(builder, o2i, "clGetDeviceIDs",
 			NullLitSearcher nls(builder);
 			ExpressionPtr ret;
-			if(visitDepthFirstInterruptable(node->getArgument(4), nls))
+			if(visitDepthFirstInterruptible(node->getArgument(4), nls))
 				ret = builder.intLit(0);
 			else
 				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(4));
@@ -505,7 +505,7 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 			NullLitSearcher nls(builder);
 			ExpressionPtr ret;
 
-			if(visitDepthFirstInterruptable(node->getArgument(2), nls))
+			if(visitDepthFirstInterruptible(node->getArgument(2), nls))
 				ret = builder.intLit(0);
 			else
 				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(2));

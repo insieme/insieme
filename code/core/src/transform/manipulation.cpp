@@ -44,6 +44,8 @@
 
 #include "insieme/core/type_utils.h"
 
+#include "insieme/utils/logging.h"
+
 namespace insieme {
 namespace core {
 namespace transform {
@@ -631,6 +633,71 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 
 	// construct result
 	return LambdaExpr::get(manager, funType, params, body);
+}
+
+DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog) {
+	//if(!prog->isMain()) {
+	//	LOG(WARNING) << "createGlobalStruct called on non-main program.";
+	//}
+	LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
+	auto compound = lambda->getBody();
+	auto addr = CompoundStmtAddress::find(compound, prog);
+	ASTBuilder build(manager);
+	auto structType = build.structType(ASTBuilder::Entries());
+	auto declStmt = build.declarationStmt(structType, build.structExpr(ASTBuilder::Members()));
+	prog = static_pointer_cast<const Program>(insert(manager, addr, declStmt, 0));
+	return declStmt;
+}
+
+namespace {
+class VariableSearchVisitor : public ASTVisitor<bool, Address> {
+
+	VariablePtr target;
+	VariableAddress location;
+	NodePtr stopIndicator;
+public:
+	VariableSearchVisitor(const VariablePtr& target, const NodePtr& stopIndicator) : 
+		ASTVisitor<bool, Address>(false), target(target), stopIndicator(stopIndicator) {}
+	
+	bool visitNode(const NodeAddress& node) {
+		// interrupt if stop indicator reached
+		return *node == *stopIndicator;
+	}
+
+	bool visitCompoundStmt(const CompoundStmtAddress& compound) {
+		visitBreadthFirstInterruptible(compound, [&](const DeclarationStmtAddress& decl) -> bool {
+			if(*decl->getVariable() == *target) {
+				location = static_address_cast<const Variable>(decl.getAddressOfChild(0));
+				return true;
+			}
+			return false;
+		});
+		return location;
+	}
+
+	const VariableAddress& getLocation() { return location; }
+};
+} // end anonymous namespace
+
+VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location) {
+	// find variable address
+	VariableAddress va;
+	NodeAddress lastAddress;
+	auto varFinder = makeLambdaVisitor([&](const NodeAddress& node) -> bool {
+		VariableSearchVisitor searcher(var, lastAddress.getAddressedNode());
+		searcher.visit(node);
+		va = searcher.getLocation();
+		// if found, interrupt
+		if(va) return true;
+		lastAddress = node;
+		return false; // continue search
+	});
+	visitPathBottomUpInterruptible(location, varFinder);
+	if(!va) {
+		LOG(WARNING) << "transform::makeAvailable variable address not found";
+		return VariablePtr();
+	}
+	// forward variable through calls
 }
 
 } // end namespace transform

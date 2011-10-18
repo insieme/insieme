@@ -594,10 +594,10 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 											});
 
 
-											if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, visitor)) {
+											if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptible(lAddr, visitor)) {
 												IdSearcher ids(builder, oldInitMember.first);
 												// check identifier
-												if(visitDepthFirstInterruptable(kl.first, ids)) {
+												if(visitDepthFirstInterruptible(kl.first, ids)) {
 													// now we found the right kernelLambda
 													Lambda::ParamList pl = kl.second->getParameterList();
 													TypeList elementTypes;
@@ -820,7 +820,7 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 				}
 				// need to update array.create.1D type if type of variable did change or is still a cl_ type
 				ArrayCreat1DFinder ac1df(builder);
-				if(visitDepthFirstInterruptable(newCall, ac1df)) {
+				if(visitDepthFirstInterruptible(newCall, ac1df)) {
 					const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
 					const TypePtr& oldType = getInnermostType(newCall->getArgument(1)->getType());
 

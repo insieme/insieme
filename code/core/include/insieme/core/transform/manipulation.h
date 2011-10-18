@@ -233,6 +233,21 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
  */
 LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, const SubstitutionOpt& variableInstantiation);
 
+/**
+ * Creates a top-level structure for the program prog.
+ */
+DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog);
+
+/**
+ * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
+ *
+ * @param manager the manager used to crate new nodes
+ * @param var the the variable to be made available
+ * @param NodeAddress location indicating where the var should be made available
+ * @return the variable alias to use or a null pointer if the variable is not found
+ */
+VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location);
+
 } // end namespace transform
 } // end namespace core
 } // end namespace insieme

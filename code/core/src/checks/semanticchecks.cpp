@@ -47,7 +47,7 @@ namespace checks {
 namespace {
 	NodeAddress firstAddress(NodeAddress start, NodePtr node) {
 		NodeAddress retval;
-		visitDepthFirstInterruptable(start, [&](const NodeAddress& addr) -> bool {
+		visitDepthFirstInterruptible(start, [&](const NodeAddress& addr) -> bool {
 			if(*node == *addr.getAddressedNode()) {
 				retval = addr;
 				return true;

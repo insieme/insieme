@@ -173,7 +173,7 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return ret;
 		});
 
-		return core::visitPathBottomUpInterruptable(yAddr, visitor);
+		return core::visitPathBottomUpInterruptible(yAddr, visitor);
 	}
 };
 typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;

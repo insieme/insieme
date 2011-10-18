@@ -578,7 +578,7 @@ unsigned ASTBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 		return false;
 	});
 
-	if(!visitDepthFirstInterruptable(expr, lambdaVisitor)){
+	if(!visitDepthFirstInterruptible(expr, lambdaVisitor)){
 		LOG(ERROR) << expr;
 		assert(false && "Expression does not contain a literal a number");
 	}
