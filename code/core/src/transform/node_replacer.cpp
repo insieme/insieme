@@ -391,6 +391,9 @@ private:
 
 		// test whether args contains something which changed
 		ExpressionList newArgs = ::transform(args, [&](const ExpressionPtr& cur)->ExpressionPtr {
+/*if(call->getType()->toString().find("_cl_kernel") != string::npos)
+	std::cout << "\nARG " << call->getType() << " " << *call->getFunctionExpr() << "(" << *cur << " " << *cur->getType() << ")" << std::endl;
+*/
 			return static_pointer_cast<const Expression>(this->resolveElement(cur));
 		});
 
@@ -404,7 +407,6 @@ private:
 		}
 		// test whether there has been a change
 		if (args == newArgs && fun->getNodeType() != NT_Literal) {
-//			if (fun->getNodeType() == NT_Literal) std::cout << "Not changing " << fun << std::endl;
 			return call;
 		}
 
@@ -443,7 +445,7 @@ private:
 		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
 		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
-/*				bool foundTypeVariable = visitDepthFirstInterruptible(param->getType(), [&](const NodePtr& type) -> bool {
+/*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
 						std::cerr << param->getType() << " - " << type << std::endl;
 						return true;
@@ -518,6 +520,7 @@ private:
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
 
+if(resType->toString().find("_cl_kernel") != string::npos)
 			CallExprPtr newCall = builder.callExpr(literal, args);
 
 			return newCall;
