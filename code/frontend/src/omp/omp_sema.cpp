@@ -56,9 +56,10 @@ namespace um = utils::map;
 
 const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
 	ProgramPtr result = prog;
+	auto globalDecl = transform::createGlobalStruct(resultStorage, result);
 	for(;;) {
-		SemaVisitor v(resultStorage);
-		core::visitDepthFirstInterruptable(core::ProgramAddress(result), v);
+		SemaVisitor v(resultStorage, prog, globalDecl);
+		core::visitDepthFirstInterruptible(core::ProgramAddress(result), v);
 		if(v.getReplacement()) result = v.getReplacement();
 		else break;	
 	}
@@ -115,15 +116,10 @@ bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
 		LOG(INFO) << "omp expression annotation(s) on: \n" << *expr;
 		std::for_each(anno->getAnnotationListBegin(), anno->getAnnotationListEnd(), [&](AnnotationPtr subAnn) {
 			LOG(INFO) << "annotation: " << *subAnn;
-
 			if(auto barrierAnn = std::dynamic_pointer_cast<Barrier>(subAnn)) {
-				auto parent = mark.getParentAddress();
-				CompoundStmtAddress surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
-				assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
-				StatementList replacements;
-				replacements.push_back(build.barrier());
-				replacements.push_back(mark->getSubExpression());
-				replacement = dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, mark.getIndex(), replacements));
+				replacement = handleBarrier(mark, barrierAnn);
+			} else if(auto criticalAnn = std::dynamic_pointer_cast<Critical>(subAnn)) {
+				replacement = handleCritical(mark, criticalAnn);
 			} else if(auto singleAnn = std::dynamic_pointer_cast<Single>(subAnn)) {
 				replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, mark, handleSingle(expr, singleAnn)));
 			} 
@@ -132,6 +128,43 @@ bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
 		return true;
 	}
 	return false;
+}
+
+
+ProgramPtr SemaVisitor::handleCritical(const NodeAddress& node, const CriticalPtr& criticalP) {
+	auto parent = node.getParentAddress();
+	CompoundStmtAddress surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
+	assert(surroundingCompound && "OMP critical pragma not surrounded by compound statement");
+	StatementList replacements;
+	// push lock
+	if(criticalP->hasName()) {
+
+	} else {
+		
+	}
+	// push original code fragment
+	if(auto expMarker = dynamic_address_cast<const MarkerExpr>(node))
+		replacements.push_back(expMarker->getSubExpression());
+	else if(auto stmtMarker = dynamic_address_cast<const MarkerStmt>(node)) {
+		replacements.push_back(stmtMarker->getSubStatement());
+	}
+	// push unlock
+
+	return dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, node.getIndex(), replacements));
+}
+
+ProgramPtr SemaVisitor::handleBarrier(const NodeAddress& node, const BarrierPtr& barrier) {
+	auto parent = node.getParentAddress();
+	CompoundStmtAddress surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
+	assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
+	StatementList replacements;
+	replacements.push_back(build.barrier());
+	if(auto expMarker = dynamic_address_cast<const MarkerExpr>(node))
+		replacements.push_back(expMarker->getSubExpression());
+	else if(auto stmtMarker = dynamic_address_cast<const MarkerStmt>(node)) {
+		replacements.push_back(stmtMarker->getSubStatement());
+	}
+	return dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, node.getIndex(), replacements));
 }
 
 NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const ParallelPtr& par) {
