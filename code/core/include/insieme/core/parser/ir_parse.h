@@ -121,6 +121,7 @@ public:
 	ExpressionPtr parseExpression(const std::string& input);
 	StatementPtr parseStatement(const std::string& input);
 	ProgramPtr parseProgram(const std::string& input);
+	NodePtr parseIR(const std::string& input);
 };
 
 } // namespace parse 

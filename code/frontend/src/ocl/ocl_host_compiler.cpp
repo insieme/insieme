@@ -134,21 +134,24 @@ ProgramPtr HostCompiler::compile() {
 				ExpressionList newArgs;
 				bool update = false;
 				int cnt = 0;
-				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
-					const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
 
-					if( fArg &&	builder.getNodeManager().basic.isRefDeref(fArg->getFunctionExpr()) &&
-							!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType &&
-							(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
-						update = true;
-						newArgs.push_back(fArg->getArgument(0));
-					} else {
-						newArgs.push_back(arg);
+				if(params.size() == call->getArguments().size()) { // undefined functions have an empty parameter list
+					for_each(call->getArguments(), [&](const ExpressionPtr& arg){
+						const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
+
+						if( fArg &&	builder.getNodeManager().basic.isRefDeref(fArg->getFunctionExpr()) &&
+								(!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType ) &&
+								(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
+							update = true;
+							newArgs.push_back(fArg->getArgument(0));
+						} else {
+							newArgs.push_back(arg);
+						}
+						++cnt;
+					});
+					if(update) {
+						return builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs)->substitute(builder.getNodeManager(), *h);
 					}
-					++cnt;
-				});
-				if(update) {
-					return builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs)->substitute(builder.getNodeManager(), *h);
 				}
 			}
 
