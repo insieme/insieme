@@ -693,6 +693,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						const TypePtr initType = static_pointer_cast<const RefType>(newType)->getElementType();
 
 						cl_mems[var] = newVar;
+
 						newDecl = builder.declarationStmt(newVar, builder.callExpr(newType, BASIC.getRefNew(),
 								builder.callExpr(initType, BASIC.getUndefined(), BASIC.getTypeLiteral(initType))));
 					}
@@ -734,7 +735,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						newParams.at(cnt) = cl_mems[params.at(cnt)];
 						changed = true;
 					// else check if the passed has a diffetent type
-					} else if(cl_mems.find(vArg) != cl_mems.end()) {
+					} else if(/*false && */cl_mems.find(vArg) != cl_mems.end()) {
 						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), arg->getType(),
 								static_pointer_cast<const Expression>(resolveElement(arg))->getType());
 //						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
