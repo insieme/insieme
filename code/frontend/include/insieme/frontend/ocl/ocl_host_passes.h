@@ -151,6 +151,8 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return false;
 		}
 
+		if(xVar->getId() == 3 || xVar->getId() == 9)
+			std::cout << std::endl << *xVar->getType() << " " << *xVar << " vs " << *yVar->getType() << " " << *yVar << std::endl;
 
 		core::NodeAddress xAddr = core::Address<const core::Variable>::find(xVar, root);
 		core::NodeAddress yAddr = core::Address<const core::Variable>::find(yVar, root);
@@ -169,11 +171,18 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
 					for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
 							[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
-						// get rid of f**king deref operations
-						core::CallExprPtr refDerefChecker = dynamic_pointer_cast<const core::CallExpr>(cur.second);
-						core::ExpressionPtr arg = (!!refDerefChecker && builder.getNodeManager().basic.isRefDeref(refDerefChecker->getFunctionExpr()) ?
-								refDerefChecker->getArgument(0) : cur.second);
+						// get rid of f**king deref and vectorToArray operations
+						core::ExpressionPtr arg = cur.second;
+						core::CallExprPtr unneccecaryFunction = dynamic_pointer_cast<const core::CallExpr>(cur.second);
+						if(unneccecaryFunction && (
+							builder.getNodeManager().basic.isRefDeref(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().basic.isRefVectorToRefArray(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().basic.isVectorToArray(unneccecaryFunction->getFunctionExpr()) ))
+								arg = unneccecaryFunction->getArgument(0);
+
+//std::cout << "\n 1 " << *yAddr << " - " << *cur.first << std::endl;
 						if(*yAddr == *cur.first) {
+//std::cout << " 2 " << *xAddr << " - " << *arg << std::endl;
 							if(*xAddr == *arg)
 								ret = true;
 							else
