@@ -147,10 +147,10 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 
 		const core::VariablePtr& xVar = dynamic_pointer_cast<const core::Variable>(x);
 		const core::VariablePtr& yVar = dynamic_pointer_cast<const core::Variable>(y);
-
+/*
 		if(xVar->getId() == 3 || xVar->getId() == 9)
 			std::cout << std::endl  << " " << xVar << " vs "  << " " << yVar << std::endl;
-
+*/
 		if(!xVar || !yVar) {
 			return false;
 		}
@@ -181,9 +181,9 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 							builder.getNodeManager().basic.isVectorToArray(unneccecaryFunction->getFunctionExpr()) ))
 								arg = unneccecaryFunction->getArgument(0);
 
-std::cout << "\n 1 " << *yAddr << " - " << *cur.first << std::endl;
+//std::cout << "\n 1 " << *yAddr << " - " << *cur.first << std::endl;
 						if(*yAddr == *cur.first) {
-std::cout << " 2 " << *xAddr << " - " << *arg << std::endl;
+//std::cout << " 2 " << *xAddr << " - " << *arg << std::endl;
 							if(*xAddr == *arg)
 								ret = true;
 							else
