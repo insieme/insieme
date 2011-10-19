@@ -460,6 +460,7 @@ private:
 						tyVars->applyTo(manager, )
 					}
 				}*/
+
 			VariablePtr param = cur.first;
 			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
 				param = this->builder.variable(cur.second->getType());
@@ -478,8 +479,11 @@ private:
 			callTy = tryDeduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes);
 		} catch(ReturnTypeDeductionException& rtde) {
 			TypeList typeList;
-			visitDepthFirst(newBody, [&](const ReturnStmtPtr& ret) {
-				typeList.push_back(ret->getReturnExpr()->getType());
+
+			// only look for return statements at the first level of the body
+			for_each(newBody->getChildList(), [&typeList](const NodePtr& child) {
+				if(const ReturnStmtPtr& ret = dynamic_pointer_cast<const ReturnStmt>(child))
+					typeList.push_back(ret->getReturnExpr()->getType());
 			});
 
 			callTy = getSmallestCommonSuperType(typeList);
