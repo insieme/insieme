@@ -132,11 +132,13 @@ namespace core {
 		 */
 		typedef std::vector<NodePtr> NodeList;
 		typedef std::vector<TypePtr> TypeList;
+		typedef std::vector<IntTypeParamPtr> IntParamList;
 		typedef std::vector<StatementPtr> StatementList;
 		typedef std::vector<ExpressionPtr> ExpressionList;
 
 		typedef utils::set::PointerSet<NodePtr> NodeSet;
 		typedef utils::set::PointerSet<TypePtr> TypeSet;
+		typedef utils::set::PointerSet<IntTypeParamPtr> IntParamSet;
 		typedef utils::set::PointerSet<StatementPtr> StatementSet;
 		typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
 		typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;

@@ -121,6 +121,87 @@ namespace new_core {
 
 
 
+	// ---------------------------------------- Generic Type ------------------------------
+
+	/**
+	 * The accessor associated to generic types.
+	 */
+	IR_NODE_ACCESSOR(GenericType, Type, StringValue, TypeParamList, IntTypeParamList)
+		/**
+		 * Obtains the name of this generic type.
+		 */
+		IR_NODE_PROPERTY(StringValue, Name, 0);
+
+		/**
+		 * Obtains the list of type parameters of this generic type.
+		 */
+		IR_NODE_PROPERTY(TypeParamList, TypeParameter, 1);
+
+		/**
+		 * Obtains the list of int-type parameters of this generic type.
+		 */
+		IR_NODE_PROPERTY(IntTypeParamList, IntTypeParameter, 2);
+	};
+
+	/**
+	 * This type represents a generic type which can be used to represent arbitrary user defined
+	 * or derived types. Each generic type can be equipped with a number of generic type and integer
+	 * parameters. Those are represented using other types and IntTypeParam instances.
+	 */
+	IR_NODE(GenericType, Type)
+
+		/**
+		 * A simple constructor creating a new generic type based
+		 * on the given parameters.
+		 *
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+		 */
+		GenericType(const StringValuePtr& name, const TypeParamListPtr& typeParams, const IntTypeParamListPtr& intTypeParams)
+			: Type(NT_GenericType, name, typeParams, intTypeParams) {}
+
+	public:
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type pointer pointing toward a variable with the given name maintained by the
+		 * given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+		 */
+		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name,
+				const TypeParamListPtr& typeParams, const IntTypeParamListPtr& intTypeParams) {
+			return manager.get(GenericType(name, typeParams, intTypeParams));
+		}
+
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a generic type pointer pointing toward a variable with the given name maintained by the
+		 * given manager.
+		 *
+		 * @param manager		the manager to be used for creating the node (memory management)
+		 * @param name 			the name of the new type (only the prefix)
+		 * @param typeParams	the type parameters of this type, concrete or variable
+		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
+		 */
+		static GenericTypePtr get(NodeManager& manager,
+				const string& name,
+				const TypeList& typeParams = TypeList(),
+				const IntParamList& intTypeParams = IntParamList()) {
+			return get(manager, StringValue::get(manager, name),TypeParamList::get(manager, typeParams), IntTypeParamList::get(manager, intTypeParams));
+		}
+
+	};
+
+
+
+
+
 	// ------------------------------------ A class representing type variables  ------------------------------
 
 	/**
@@ -347,167 +428,6 @@ namespace new_core {
 //		 * Creates a clone of this node.
 //		 */
 //		virtual FunctionType* createCopyUsing(NodeMapping& mapper) const;
-//
-//	};
-//
-//
-//	// ---------------------------------------- Generic Type ------------------------------
-//
-//	/**
-//	 * This type represents a generic type which can be used to represent arbitrary user defined
-//	 * or derived types. Each generic type can be equipped with a number of generic type and integer
-//	 * parameters. Those are represented using other types and IntTypeParam instances.
-//	 */
-//	class GenericType: public Type {
-//
-//		/**
-//		 * The name of this generic type.
-//		 */
-//		const string familyName;
-//
-//		/**
-//		 * The list of type parameters being part of this type specification.
-//		 */
-//		const vector<TypePtr> typeParams;
-//
-//		/**
-//		 * The list of integer type parameter being part of this type specification.
-//		 */
-//		const vector<IntTypeParamPtr> intParams;
-//
-//		/**
-//		 * The base type of this type if there is any. The pointer is pointing toward
-//		 * the base type or is NULL in case there is no base type (hence, it would be
-//		 * an abstract type).
-//		 */
-//		const TypePtr baseType;
-//
-//	protected:
-//
-//		/**
-//		 * Creates an new generic type instance based on the given parameters.
-//		 *
-//		 * @param name 			the name of the new type (only the prefix)
-//		 * @param typeParams	the type parameters of this type, concrete or variable
-//		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
-//		 * @param baseType		the base type of this generic type
-//		 */
-//		GenericType(const string& name,
-//				const vector<TypePtr>& typeParams = vector<TypePtr> (),
-//				const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
-//				const TypePtr& baseType = NULL);
-//
-//		/**
-//		 * A special constructor which HAS to be used by all sub-classes to ensure
-//		 * that the node type token is matching the actual class type.
-//		 *
-//		 * @param nodeType		the token to be used to identify the type of this node
-//		 * @param hashSeed		the seed to be used for computing a hash value
-//		 * @param name 			the name of the new type (only the prefix)
-//		 * @param typeParams	the type parameters of this type, concrete or variable
-//		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
-//		 * @param baseType		the base type of this generic type
-//		 */
-//		GenericType(NodeType nodeType,
-//				std::size_t hashSeed,
-//				const string& name,
-//				const vector<TypePtr>& typeParams = vector<TypePtr> (),
-//				const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
-//				const TypePtr& baseType = NULL);
-//
-//
-//		/**
-//		 * Obtains a list of all type parameters and the optional base type
-//		 * referenced by this generic type.
-//		 */
-//		virtual NodeListOpt getChildNodes() const;
-//
-//		/**
-//		 * Compares this type with the given type.
-//		 */
-//		virtual bool equalsType(const Type& type) const;
-//
-//	public:
-//
-//		/**
-//		 * This method provides a static factory method for this type of node. It will return
-//		 * a generic type pointer pointing toward a variable with the given name maintained by the
-//		 * given manager.
-//		 *
-//		 * @param manager		the manager to be used for creating the node (memory management)
-//		 * @param name 			the name of the new type (only the prefix)
-//		 * @param typeParams	the type parameters of this type, concrete or variable
-//		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
-//		 * @param baseType		the base type of this generic type
-//		 */
-//		static GenericTypePtr get(NodeManager& manager,
-//				const string& name,
-//				const vector<TypePtr>& typeParams = vector<TypePtr>(),
-//				const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
-//				const TypePtr& baseType = NULL);
-//
-//		/**
-//		 * This method provides a static factory method for this type of node. It will return
-//		 * a generic type pointer pointing toward a variable with the given name maintained by the
-//		 * given manager.
-//		 *
-//		 * @param manager		the manager to be used for creating the node (memory management)
-//		 * @param name 			the name of the new type (only the prefix)
-//		 * @param typeParams	the type parameters of this type, concrete or variable
-//		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
-//		 * @param baseType		the base type of this generic type
-//		 */
-//		static GenericTypePtr getFromID(NodeManager& manager,
-//				const IdentifierPtr& name,
-//				const vector<TypePtr>& typeParams = vector<TypePtr> (),
-//				const vector<IntTypeParamPtr>& intTypeParams = vector<IntTypeParamPtr>(),
-//				const TypePtr& baseType = NULL);
-//
-//		/**
-//		 * Obtains the family name of this generic type.
-//		 */
-//		const string& getFamilyName() const {
-//			return familyName;
-//		}
-//
-//		/**
-//		 * Retrieves all type parameter associated to this generic type.
-//		 *
-//		 * @return a const reference to the internally maintained type parameter list.
-//		 */
-//		const vector<TypePtr>& getTypeParameter() const {
-//			return typeParams;
-//		}
-//
-//		/**
-//		 * Retrieves a list of all integer type parameters associated to this type.
-//		 *
-//		 * @return a const reference to the internally maintained integer type parameter list.
-//		 */
-//		const vector<IntTypeParamPtr>& getIntTypeParameter() const {
-//			return intParams;
-//		}
-//
-//		/**
-//		 * Retrieves a reference to the base type associated with this type.
-//		 *
-//		 * @return a reference to the base type of this type.
-//		 */
-//		const TypePtr& getBaseType() const {
-//			return baseType;
-//		}
-//
-//		/**
-//		 * Prints a string-representation of this type to the given output stream.
-//		 */
-//		virtual std::ostream& printTypeTo(std::ostream& out) const;
-//
-//	private:
-//
-//		/**
-//		 * Creates a clone of this node.
-//		 */
-//		virtual GenericType* createCopyUsing(NodeMapping& mapper) const;
 //
 //	};
 //

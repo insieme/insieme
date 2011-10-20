@@ -233,6 +233,19 @@ namespace new_core {
 	 * A node type representing a list of int-type parameters.
 	 */
 	IR_NODE(IntTypeParamList, Support)
+	public:
+
+		/**
+		 * This static factory method allows to construct a int-type parameter list based
+		 * on the given int-type parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param params the list of parameters to be included
+		 * @return the requested instance managed by the given manager
+		 */
+		static IntTypeParamListPtr get(NodeManager& manager, const IntParamList& params) {
+			return manager.get(IntTypeParamList(convertList(params)));
+		}
 	};
 
 

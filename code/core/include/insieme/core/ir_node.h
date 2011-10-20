@@ -682,7 +682,7 @@ namespace new_core {
 			inline std::size_t static hashNodes(NodeType type, const Nodes& ... nodes) {
 				std::size_t seed = 0;
 				boost::hash_combine(seed, type);
-				utils::appendHash<NodePtr, deref<NodePtr>>(seed, nodes ...);
+				utils::appendHash<deref>(seed, nodes ...);
 				return seed;
 			}
 

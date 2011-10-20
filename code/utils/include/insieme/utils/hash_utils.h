@@ -165,8 +165,7 @@ inline std::size_t appendHash(std::size_t& seed) {
  * template parameters.
  */
 template<
-	typename T,
-	typename Extractor = id<T>
+	template <typename H> class Extractor = id
 >
 inline std::size_t appendHash(std::size_t& seed) {
 	// nothing to do
@@ -181,15 +180,14 @@ inline std::size_t appendHash(std::size_t& seed) {
  * @return the resulting hash value
  */
 template<
+	template <typename H> class Extractor = id,
 	typename T,
-	typename Extractor = id<T>,
 	typename... Args
 >
 inline std::size_t appendHash(std::size_t& seed, const T& first, const Args&... rest) {
-	static Extractor ext;
+	static Extractor<T> ext;
 	boost::hash_combine(seed, ext(first));
-	appendHash(seed, rest...);
-	return seed;
+	return appendHash<Extractor>(seed, rest...);
 }
 
 
@@ -210,8 +208,8 @@ inline std::size_t combineHashes() {
  * @return the resulting hash value
  */
 template<
+	template <typename H> class Extractor = id,
 	typename T,
-	typename Extractor = id<T>,
 	typename ... Args
 >
 inline std::size_t combineHashes(const T& first, const Args&... rest) {
@@ -219,7 +217,7 @@ inline std::size_t combineHashes(const T& first, const Args&... rest) {
 	std::size_t seed = 0;
 
 	// append all the hash values
-	appendHash<T,Extractor>(seed, first, rest...);
+	appendHash<Extractor>(seed, first, rest...);
 	return seed;
 }
 

@@ -52,24 +52,24 @@ namespace new_core {
 template<typename PT>
 void basicTypeTests(PT type, bool concrete, const NodeList& children = NodeList());
 
-//TEST(TypeTest, NodeManager ) {
-//
-//	// create type manager
-//	NodeManager manager;
-//
-//	// get a type
-//	GenericTypePtr typeA1 = GenericType::get(manager, "A");
-//	GenericTypePtr typeA2 = GenericType::get(manager, "A");
-//	GenericTypePtr typeB = GenericType::get(manager, "B");
-//
-//	EXPECT_TRUE (!!typeA1);
-//	EXPECT_TRUE (!!typeA2);
-//	EXPECT_TRUE (!!typeB);
-//
-//	EXPECT_TRUE ( typeA1 == typeA2 );
-//	EXPECT_FALSE ( typeA1 == typeB );
-//
-//}
+TEST(TypeTest, NodeManager ) {
+
+	// create type manager
+	NodeManager manager;
+
+	// get a type
+	GenericTypePtr typeA1 = GenericType::get(manager, "A");
+	GenericTypePtr typeA2 = GenericType::get(manager, "A");
+	GenericTypePtr typeB = GenericType::get(manager, "B");
+
+	EXPECT_TRUE (!!typeA1);
+	EXPECT_TRUE (!!typeA2);
+	EXPECT_TRUE (!!typeB);
+
+	EXPECT_TRUE ( typeA1 == typeA2 );
+	EXPECT_FALSE ( typeA1 == typeB );
+
+}
 //
 //TEST(TypeTest, NodeManagerGetAllBug ) {
 //
@@ -229,7 +229,7 @@ TEST(TypeTest, TypeVariable) {
 	// perform basic type tests
 	basicTypeTests(varTypeA, false, toList(varTypeA->getVarName()));
 }
-//
+
 //TEST(TypeTest, TupleType) {
 //
 //	NodeManager manager;
