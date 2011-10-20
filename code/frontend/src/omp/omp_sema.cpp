@@ -136,19 +136,25 @@ ProgramPtr SemaVisitor::handleCritical(const NodeAddress& node, const CriticalPt
 	CompoundStmtAddress surroundingCompound = dynamic_address_cast<const CompoundStmt>(parent);
 	assert(surroundingCompound && "OMP critical pragma not surrounded by compound statement");
 	StatementList replacements;
-	// push lock
-	if(criticalP->hasName()) {
 
-	} else {
-		
+	// push lock
+	string prefix = "global_omp_critical_lock_";
+	string name = "default";
+	if(criticalP->hasName()) {
+		name = criticalP->getName();
 	}
+	name = prefix + name;
+	replacements.push_back(build.aquireLock(build.literal(nodeMan.basic.getLock(), name)));
+
 	// push original code fragment
 	if(auto expMarker = dynamic_address_cast<const MarkerExpr>(node))
 		replacements.push_back(expMarker->getSubExpression());
 	else if(auto stmtMarker = dynamic_address_cast<const MarkerStmt>(node)) {
 		replacements.push_back(stmtMarker->getSubStatement());
 	}
+
 	// push unlock
+	replacements.push_back(build.releaseLock(build.literal(nodeMan.basic.getLock(), name)));
 
 	return dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, node.getIndex(), replacements));
 }

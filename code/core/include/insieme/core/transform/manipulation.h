@@ -240,13 +240,27 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog);
 
 /**
  * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
+ * This overload should be used if you don't know the exact location where the variable is available.
  *
  * @param manager the manager used to crate new nodes
  * @param var the the variable to be made available
- * @param NodeAddress location indicating where the var should be made available
+ * @param location indicating where the var should be made available
+ * @param outNewRoot output parameter containing the root of the manipulated IR
  * @return the variable alias to use or a null pointer if the variable is not found
  */
-VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location);
+VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot);
+
+/**
+ * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.
+ * This overload should be used if you *do* know the *exact* location where the variable is available.
+ *
+ * @param manager the manager used to crate new nodes
+ * @param var the the variable to be made available
+ * @param location indicating where the var should be made available
+ * @param outNewRoot output parameter containing the root of the manipulated IR
+ * @return the variable alias to use or a null pointer if the variable is not found
+ */
+VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot);
 
 } // end namespace transform
 } // end namespace core
