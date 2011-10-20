@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/frontend/compiler.h"
+#include "insieme/utils/logging.h"
 
 #include <memory>
 #include <algorithm>
@@ -337,10 +338,11 @@ struct expr_p: public MappableNode<expr_p> {
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
+
 /**
  * Utility function for adding a token with a specific key to the matcher map.
  */
-void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, std::string const& map_str, MatchMap& mmap);
+void AddToMap(clang::tok::TokenKind tok, clang::Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap);
 std::string TokenToStr(clang::tok::TokenKind tok);
 std::string TokenToStr(const clang::Token& token);
 
@@ -349,13 +351,18 @@ std::string TokenToStr(const clang::Token& token);
  */
 template<clang::tok::TokenKind T>
 struct Tok: public MappableNode<Tok<T>> {
+	bool resolve;
+
 	Tok() { }
-	Tok(std::string const& str, bool addToMap = true) : MappableNode<Tok<T>>(str, addToMap) { }
+	Tok(std::string const& str, bool addToMap = true, bool resolve=false) : 
+		MappableNode<Tok<T>>(str, addToMap), resolve(resolve) { }
+	
+	node* copy() const { return new Tok<T>( MappableNode<Tok<T>>::getMapName(), MappableNode<Tok<T>>::isAddToMap(), resolve ); }
 
 	virtual bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const {
 		clang::Token& token = ParserProxy::get().ConsumeToken();
 		if (token.is(T)) {
-			if(MappableNode<Tok<T>>::isAddToMap()) AddToMap(T, token, MappableNode<Tok<T>>::getMapName(), mmap);
+			if (MappableNode<Tok<T>>::isAddToMap()) { AddToMap(T, token, resolve, MappableNode<Tok<T>>::getMapName(), mmap); }
 			return true;
 		}
 		errStack.addExpected(recID, ParserStack::Error("\'" + TokenToStr(T) + "\'", token.getLocation()));
@@ -378,6 +385,16 @@ struct kwd: public Tok<clang::tok::identifier> {
 	bool match(clang::Preprocessor& PP, MatchMap& mmap, ParserStack& errStack, size_t recID) const;
 };
 
+/**
+ * A var is an identifier which we have to resolve to get the actual variable identifer 
+ * This is an hack which has been done to solve the problem with OpenMP regions which receive an
+ * identifer as name and this could be arbitrary
+ */
+struct var_p: public Tok<clang::tok::identifier> {
+	var_p() : Tok<clang::tok::identifier>("", true, true) { }
+	var_p(std::string const& str) : Tok<clang::tok::identifier>(str, true, true) { }
+};
+
 // import token definitions from clang
 namespace tok {
 #define PUNCTUATOR(name, _) \
@@ -388,6 +405,7 @@ namespace tok {
 #undef PUNCTUATOR
 #undef TOK
 static expr_p expr = expr_p();
+static var_p  var  = var_p();
 
 } // End tok namespace
 } // End frontend namespace

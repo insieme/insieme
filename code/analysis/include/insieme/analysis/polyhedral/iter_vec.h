@@ -219,9 +219,11 @@ public:
 	
 		void inc(size_t n);
 	public:
-		iterator(const IterationVector& iterVec, IterVec::const_iterator iterIt, 
-				ParamVec::const_iterator paramIt, bool valid=true) :
-			iterVec(iterVec), iterIt(iterIt), paramIt(paramIt), constant(valid), valid(valid) { }
+		iterator(const IterationVector& 	iterVec, 
+				 IterVec::const_iterator 	iterIt, 
+				 ParamVec::const_iterator 	paramIt, 
+				 bool 						valid=true) 
+		: iterVec(iterVec), iterIt(iterIt), paramIt(paramIt), constant(valid), valid(valid) { }
 
         const Element& operator*() const;
 
@@ -251,7 +253,7 @@ public:
 	inline size_t add(const Iterator& iter) { return addTo(iter, iters); }
 	inline size_t add(const Parameter& param) { return addTo(param, params) + iters.size(); }
 
-	size_t add(const Element& elem) { 
+	inline size_t add(const Element& elem) { 
 		return elem.getType() == Element::ITER ? 
 				add(static_cast<const Iterator&>(elem)) : add(static_cast<const Parameter&>(elem)); 
 	}
@@ -267,11 +269,12 @@ public:
 	 * Search for a Variable inside this iteration vector, check if the variable is within the
 	 * iterators and the parameters, it returns -1 id the variable was not found
 	 * */
-	int getIdx(const core::ExpressionPtr& var) const {
+	inline int getIdx(const core::ExpressionPtr& var) const {
 		if (var->getNodeType() == core::NT_Variable) {
 			int idx = getIdx( Iterator(core::static_pointer_cast<const core::Variable>(var)) );
 			if ( idx != -1 ) {
-				assert(getIdx( Parameter(var) ) == -1 && "Variable is both among the iterators and parameters.");
+				assert(getIdx( Parameter(var) ) == -1 && 
+						"Variable is both among the iterators and parameters.");
 				return idx;
 			}
 		}
@@ -333,12 +336,16 @@ namespace std {
 
 template <>
 struct hash<insieme::analysis::poly::Iterator> {
-	size_t operator()(const insieme::analysis::poly::Iterator& it) const { return it.getExpr()->hash(); }
+	size_t operator()(const insieme::analysis::poly::Iterator& it) const { 
+		return it.getExpr()->hash(); 
+	}
 };
 
 template <>
 struct hash<insieme::analysis::poly::Parameter> {
-	size_t operator()(const insieme::analysis::poly::Parameter& it) const { return it.getExpr()->hash(); }
+	size_t operator()(const insieme::analysis::poly::Parameter& it) const { 
+		return it.getExpr()->hash(); 
+	}
 };
 
 } // end std namespace 

@@ -307,11 +307,7 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	if ( gen.isBool(trgTy) && argTy->getNodeType() == core::NT_RefType && 
 			GET_REF_ELEM_TYPE(argTy)->getNodeType() == core::NT_ArrayType ) 
 	{
-		//const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
-		//core::ExpressionPtr&& nullRef = builder.callExpr(argTy, gen.getAnyRefToRef(), 
-				//toVector<core::ExpressionPtr>(gen.getNull(), gen.getTypeLiteral(subTy) ) );
-
 		return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getIsNull(), expr ) );
 	}
 
@@ -1978,7 +1974,7 @@ public:
 
 			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 				// Capture pointer arithmetics 
-				// Base op must be either a + or a -
+				// 	Base op must be either a + or a -
 				assert( (baseOp == BO_Add || baseOp == BO_Sub) && 
 						"Operators allowed in pointer arithmetic are + and - only");
 
@@ -1993,8 +1989,8 @@ public:
 						"LHS operator must be of type ref<array<'a,#l>>");
 
 				// check whether the RHS is of integer type
-				assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
-
+				// assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
+				
 				return (retIr = builder.callExpr(gen.getArrayView(), lhs, rhs));
 
 			} else {

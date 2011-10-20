@@ -77,10 +77,10 @@ struct BackendTraits {
 };
 
 /**************************************************************************************************
- * Set<IslContext>: is a wrapper to isl_sets, this class allows to easily convert a set of constraints,
- * represented by a constraint combiner to isl representation. Output of the isl library will be
- * represented with this same abstraction which allows for isl sets to be converted back into
- * Constraints as defined in the poly namepsace
+ * Set<IslContext>: is a wrapper to isl_sets, this class allows to easily convert a set of
+ * constraints, represented by a constraint combiner to isl representation. Output of the isl
+ * library will be represented with this same abstraction which allows for isl sets to be converted
+ * back into Constraints as defined in the poly namepsace
  *************************************************************************************************/
 template <>
 class Set<IslContext> : public boost::noncopyable {

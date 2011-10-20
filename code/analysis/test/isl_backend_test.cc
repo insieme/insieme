@@ -196,9 +196,9 @@ TEST(IslBackend, SimpleMap) {
 
 	poly::AffineSystemPtr affSys = std::make_shared<poly::AffineSystem>(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys->appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
-	affSys->appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
-	affSys->appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
+	affSys->append( poly::AffineFunction(iterVec, {0,2,10}) );
+	affSys->append( poly::AffineFunction(iterVec, {1,1,0}) );
+	affSys->append( poly::AffineFunction(iterVec, {1,-1,8}) );
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& map = poly::makeMap<poly::ISL>(*ctx, *affSys, "S0");
@@ -222,9 +222,9 @@ TEST(IslBackend, MapUnion) {
 
 	poly::AffineSystemPtr affSys = std::make_shared<poly::AffineSystem>(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys->appendRow( poly::AffineFunction(iterVec, {0,2,10}) );
-	affSys->appendRow( poly::AffineFunction(iterVec, {1,1,0}) );
-	affSys->appendRow( poly::AffineFunction(iterVec, {1,-1,8}) );
+	affSys->append( poly::AffineFunction(iterVec, {0,2,10}) );
+	affSys->append( poly::AffineFunction(iterVec, {1,1,0}) );
+	affSys->append( poly::AffineFunction(iterVec, {1,-1,8}) );
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& map = poly::makeMap<poly::ISL>(*ctx, *affSys, "S0");
@@ -235,9 +235,9 @@ TEST(IslBackend, MapUnion) {
 	
 	poly::AffineSystemPtr affSys2 = std::make_shared<poly::AffineSystem>(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys2->appendRow( poly::AffineFunction(iterVec, {1,-2,0}) );
-	affSys2->appendRow( poly::AffineFunction(iterVec, {1,8,4}) );
-	affSys2->appendRow( poly::AffineFunction(iterVec, {-5,-1,4}) );
+	affSys2->append( poly::AffineFunction(iterVec, {1,-2,0}) );
+	affSys2->append( poly::AffineFunction(iterVec, {1,8,4}) );
+	affSys2->append( poly::AffineFunction(iterVec, {-5,-1,4}) );
 
 	auto&& map2 = poly::makeMap<poly::ISL>(*ctx, *affSys2, "S1");
 
