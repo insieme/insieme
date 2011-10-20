@@ -311,7 +311,14 @@ private:
 
 		// update calls to functions recursively
 		if (res->getNodeType() == NT_CallExpr) {
+
 			CallExprPtr call = handleCall(static_pointer_cast<const CallExpr>(res));
+
+			const ExpressionList args = call->getArguments();
+			// remove illegal deref operations
+			if(builder.getNodeManager().basic.isRefDeref(call->getFunctionExpr()) &&
+					(!dynamic_pointer_cast<const RefType>(args.at(0)->getType()) && args.at(0)->getType()->getNodeType() != NT_GenericType ))
+				return args.at(0);
 
 			// check return type
 			assert(call->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Function expression is not a function!");
@@ -391,6 +398,9 @@ private:
 
 		// test whether args contains something which changed
 		ExpressionList newArgs = ::transform(args, [&](const ExpressionPtr& cur)->ExpressionPtr {
+/*if(call->getType()->toString().find("_cl_kernel") != string::npos)
+	std::cout << "\nARG " << call->getType() << " " << *call->getFunctionExpr() << "(" << *cur << " " << *cur->getType() << ")" << std::endl;
+*/
 			return static_pointer_cast<const Expression>(this->resolveElement(cur));
 		});
 
@@ -404,7 +414,6 @@ private:
 		}
 		// test whether there has been a change
 		if (args == newArgs && fun->getNodeType() != NT_Literal) {
-//			if (fun->getNodeType() == NT_Literal) std::cout << "Not changing " << fun << std::endl;
 			return call;
 		}
 
@@ -412,12 +421,7 @@ private:
 					if (manager.getBasicGenerator().isBuiltIn(literal))
 			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;*/
 		if (fun->getNodeType() == NT_Literal) {
-			const CallExprPtr& newCall = handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
-/*			if(call->getType() != newCall->getType()) {
-				std::cout << call->getType() << " " << call << std::endl << newCall->getType() << " " << newCall << "\n\n\n";
-			}
-*/
-			return newCall;
+			return handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
 		}
 		LOG(ERROR) << call;
 		assert(false && "Unsupported call-target encountered - sorry!");
@@ -443,7 +447,7 @@ private:
 		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
 		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
-/*				bool foundTypeVariable = visitDepthFirstInterruptible(param->getType(), [&](const NodePtr& type) -> bool {
+/*				bool foundTypeVariable = visitDepthFirstInterruptable(param->getType(), [&](const NodePtr& type) -> bool {
 					if(type->getNodeType() == NT_TypeVariable) {
 						std::cerr << param->getType() << " - " << type << std::endl;
 						return true;
@@ -456,9 +460,9 @@ private:
 						tyVars->applyTo(manager, )
 					}
 				}*/
+
 			VariablePtr param = cur.first;
 			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
-
 				param = this->builder.variable(cur.second->getType());
 				map[cur.first] = param;
 			}
@@ -466,29 +470,31 @@ private:
 
 			newParams.push_back(param);
 		});
+
 		// construct new body
 		StatementPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
 
 		// obtain return type
-		TypeList typeList;
-		visitDepthFirst(newBody, [&](const ReturnStmtPtr& ret) {
-			typeList.push_back(ret->getReturnExpr()->getType());
-		});
-
-		TypePtr returnType = getSmallestCommonSuperType(typeList);
-		if (!returnType) {
-			returnType = builder.getBasicGenerator().getUnit();
-		}
-
-		// assemble new lambda
-		FunctionTypePtr funType = builder.functionType(newParamTypes, returnType);
-		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
-
 		try {
 			callTy = tryDeduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes);
 		} catch(ReturnTypeDeductionException& rtde) {
-			callTy = returnType;
+			TypeList typeList;
+
+			// only look for return statements at the first level of the body
+			for_each(newBody->getChildList(), [&typeList](const NodePtr& child) {
+				if(const ReturnStmtPtr& ret = dynamic_pointer_cast<const ReturnStmt>(child))
+					typeList.push_back(ret->getReturnExpr()->getType());
+			});
+
+			callTy = getSmallestCommonSuperType(typeList);
+			if (!callTy) {
+				callTy = builder.getBasicGenerator().getUnit();
+			}
 		}
+
+		// assemble new lambda
+		FunctionTypePtr funType = builder.functionType(newParamTypes, callTy);
+		LambdaExprPtr newLambda = builder.lambdaExpr(funType, newParams, newBody);
 
 		return builder.callExpr(callTy, newLambda, args);
 
@@ -499,8 +505,8 @@ private:
 		assert(literal->getType()->getNodeType() == NT_FunctionType);
 		// do not touch build-in literals
 		if (manager.getBasicGenerator().isBuiltIn(literal)) {
-			// use type inference for the return type
 
+			// use type inference for the return type
 			if(manager.getBasicGenerator().isCompositeRefElem(literal)) {
 				return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
 						static_pointer_cast<const Literal>(args.at(1))->getValue()));

@@ -119,7 +119,7 @@ LambdaPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPt
             paramTypes.push_back(var->getType());
             params.push_back(var);
         } else
-            throw ParseException();
+            throw ParseException("Invalid element in argument list of lambda");
     });
 
 //    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));

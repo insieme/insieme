@@ -693,6 +693,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						const TypePtr initType = static_pointer_cast<const RefType>(newType)->getElementType();
 
 						cl_mems[var] = newVar;
+
 						newDecl = builder.declarationStmt(newVar, builder.callExpr(newType, BASIC.getRefNew(),
 								builder.callExpr(initType, BASIC.getUndefined(), BASIC.getTypeLiteral(initType))));
 					}
@@ -714,7 +715,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 	}
 
 	if(const CallExprPtr& callExpr = dynamic_pointer_cast<const CallExpr>(element)) {
-
+#if 0 // should be done by node_replacer
 		// check if arguments have been replaced
 		if(const LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(callExpr->getFunctionExpr())) {
 			Lambda::ParamList params = lambda->getParameterList();
@@ -734,7 +735,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						newParams.at(cnt) = cl_mems[params.at(cnt)];
 						changed = true;
 					// else check if the passed has a diffetent type
-					} else if(cl_mems.find(vArg) != cl_mems.end()) {
+					} else if(false && cl_mems.find(vArg) != cl_mems.end()) {
 						NodePtr nt = transform::replaceAll(builder.getNodeManager(), arg->getType(), arg->getType(),
 								static_pointer_cast<const Expression>(resolveElement(arg))->getType());
 //						std::cout << "\narg->getType() " << arg->getType() << "\nvArg type " << getBaseType(arg) << "\ncl_mems[vArg] " <<
@@ -775,7 +776,7 @@ std::cout << "]\n";*/
 				return ret->substitute(builder.getNodeManager(), *this);
 			}
 		}
-
+#endif
 		const ExpressionPtr& fun = callExpr->getFunctionExpr();
 
 		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(fun)) {
