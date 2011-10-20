@@ -480,7 +480,7 @@ private:
 		} catch(ReturnTypeDeductionException& rtde) {
 			TypeList typeList;
 
-			// do not look for return statements inside call expressions of the body
+			// do not look for return statements inside lambdas of the body
 			NodeMapping* h;
 			auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
 				if(const ReturnStmtPtr& ret = dynamic_pointer_cast<const ReturnStmt>(element))

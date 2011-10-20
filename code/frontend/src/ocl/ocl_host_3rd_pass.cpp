@@ -357,9 +357,9 @@ std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
 });
 std::cout << "\nk " << k << "\ny " << kernelLambdas.begin()->first << "\n compare: " <<  cmp(kernelLambdas.begin()->first, k) << std::endl; //*/
-/*std::cout << "\nREACHED" << k << "\n";
-std::cout << kernelLambdas << std::endl;//*/
-    equal_variables shit(builder, program);
+/*std::cout << "\nREACHED " << *k << "\n";
+std::cout << kernelLambdas.begin()->first << std::endl;//*/
+//    equal_variables shit(builder, program);
 
     assert(kernelLambdas.find(k) != kernelLambdas.end() && "No lambda expression for kernel call found");
 
