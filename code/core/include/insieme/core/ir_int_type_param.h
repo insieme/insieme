@@ -216,6 +216,26 @@ namespace new_core {
 	};
 
 
+
+
+	// **********************************************************************************
+	// 							Int-Type Parameter List
+	// **********************************************************************************
+
+
+	/**
+	 * The accessor associated to an int-type parameter list.
+	 */
+	IR_LIST_NODE_ACCESSOR(IntTypeParamList, Support, IntTypeParam)
+	};
+
+	/**
+	 * A node type representing a list of int-type parameters.
+	 */
+	IR_NODE(IntTypeParamList, Support)
+	};
+
+
 } // end namespace new_core
 } // end namespace core
 } // end namespace insieme

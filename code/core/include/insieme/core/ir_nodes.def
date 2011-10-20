@@ -253,6 +253,10 @@ AST_TERMINAL(LambdaDefinition, Node)
 
 AST_TERMINAL(RecTypeDefinition, Node)
 
+AST_NODE(Support, Node)
+AST_TERMINAL(IntTypeParamList, Support)
+AST_TERMINAL(TypeParamList, Support)
+
 
 //
 // --- Marker ---

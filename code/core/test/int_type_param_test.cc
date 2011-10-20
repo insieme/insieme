@@ -37,27 +37,108 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/ir_int_type_param.h"
+
+#include "ir_node_test.inc"
 
 namespace insieme {
 namespace core {
 namespace new_core {
 
 
-	TEST(Node, Instantiation) {
-
+	TEST(IntTypeParam, Concrete) {
 
 		NodeManager manager;
-		ConcreteIntTypeParamPtr param = ConcreteIntTypeParam::get(manager, 12);
+		ConcreteIntTypeParamPtr paramA = ConcreteIntTypeParam::get(manager, 12);
+		ConcreteIntTypeParamPtr paramB = ConcreteIntTypeParam::get(manager, 14);
 
-		param->getElement<0>();
-		param->getParam();
+		// check name
+		EXPECT_EQ ( "(ConcreteIntTypeParam|12)", toString(*paramA) );
+		EXPECT_EQ ( "12", toString(*paramA->getParam()) );
+		EXPECT_EQ ( "12", toString(paramA->getParam()->getValue()) );
 
+		EXPECT_EQ ( "(ConcreteIntTypeParam|14)", toString(*paramB) );
+		EXPECT_EQ ( "14", toString(*paramB->getParam()) );
+		EXPECT_EQ ( "14", toString(paramB->getParam()->getValue()) );
 
-//		param->get<0>();
-//		param->getParam();
+		// perform basic type tests
+		basicNodeTests(paramA, toList(paramA->getParam()));
+		basicNodeTests(paramB, toList(paramB->getParam()));
+
 	}
 
+	TEST(IntTypeParam, Variable) {
+
+		NodeManager manager;
+		VariableIntTypeParamPtr paramA = VariableIntTypeParam::get(manager, 'a');
+		VariableIntTypeParamPtr paramB = VariableIntTypeParam::get(manager, 'b');
+
+		// check name
+		EXPECT_EQ ( "(VariableIntTypeParam|a)", toString(*paramA) );
+		EXPECT_EQ ( "a", toString(*paramA->getSymbol()) );
+		EXPECT_EQ ( "a", toString(paramA->getSymbol()->getValue()) );
+
+		EXPECT_EQ ( "(VariableIntTypeParam|b)", toString(*paramB) );
+		EXPECT_EQ ( "b", toString(*paramB->getSymbol()) );
+		EXPECT_EQ ( "b", toString(paramB->getSymbol()->getValue()) );
+
+		// perform basic type tests
+		basicNodeTests(paramA, toList(paramA->getSymbol()));
+		basicNodeTests(paramB, toList(paramB->getSymbol()));
+
+	}
+
+	TEST(IntTypeParam, Infinite) {
+
+		NodeManager manager;
+		InfiniteIntTypeParamPtr paramA = InfiniteIntTypeParam::get(manager);
+
+		// check name
+		EXPECT_EQ ( "(InfiniteIntTypeParam|)", toString(*paramA) );
+
+		// perform basic type tests
+		basicNodeTests(paramA, toList());
+
+	}
+
+	TEST(IntTypeParam, Lists) {
+
+		NodeManager manager;
+		IntTypeParamPtr paramA = ConcreteIntTypeParam::get(manager, 12);
+		IntTypeParamPtr paramB = VariableIntTypeParam::get(manager, 'a');
+
+		IntTypeParamListPtr empty = IntTypeParamList::get(manager, toList());
+		IntTypeParamListPtr list = IntTypeParamList::get(manager, toList(paramA, paramB));
+
+
+		EXPECT_EQ(static_cast<std::size_t>(0), empty->size());
+		EXPECT_EQ(static_cast<std::size_t>(2), list->size());
+
+		EXPECT_EQ(paramA, list->getElement(0));
+		EXPECT_EQ(paramB, list->getElement(1));
+
+		// check name
+		EXPECT_EQ ( "(IntTypeParamList|)", toString(*empty) );
+		EXPECT_EQ ( "(IntTypeParamList|(ConcreteIntTypeParam|12),(VariableIntTypeParam|a))", toString(*list) );
+
+
+		// test access using addresses
+		IntTypeParamListAddress adr1(empty);
+		IntTypeParamListAddress adr2(list);
+
+
+		EXPECT_EQ(static_cast<std::size_t>(0), adr1->size());
+		EXPECT_EQ(static_cast<std::size_t>(2), adr2->size());
+
+		EXPECT_EQ(adr2.getAddressOfChild(0), adr2->getElement(0));
+		EXPECT_EQ(adr2.getAddressOfChild(1), adr2->getElement(1));
+
+		// perform basic type tests
+		basicNodeTests(empty, toList());
+		basicNodeTests(list, toList(paramA, paramB));
+
+	}
 
 } // end namespace new_core
 } // end namespace core

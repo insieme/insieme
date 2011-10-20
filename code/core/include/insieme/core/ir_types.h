@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/values.h"
+#include "insieme/core/ir_int_type_param.h"
 
 using std::string;
 using std::vector;
@@ -86,6 +87,39 @@ namespace new_core {
 				: Node(nodeType, NC_Type, children) { }
 
 	};
+
+
+
+
+	// ------------------------------------ A class representing type parameter lists  ------------------------------
+
+	/**
+	 * The accessor associated to an type parameter list.
+	 */
+	IR_LIST_NODE_ACCESSOR(TypeParamList, Support, Type)
+	};
+
+	/**
+	 * A node type representing a list of type parameters.
+	 */
+	IR_NODE(TypeParamList, Support)
+	public:
+
+		/**
+		 * This static factory method allows to construct a type parameter list based
+		 * on the given type list.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param types the types to be included within the requested type parameter list
+		 * @return the requested type instance managed by the given manager
+		 */
+		static TypeParamListPtr get(NodeManager& manager, const TypeList& types) {
+			return manager.get(TypeParamList(convertList(types)));
+		}
+	};
+
+
+
 
 	// ------------------------------------ A class representing type variables  ------------------------------
 
@@ -142,79 +176,63 @@ namespace new_core {
 	};
 
 
-//
-//	// ---------------------------------------- A tuple type ------------------------------
-//
-//	/**
-//	 * The tuple type represents a special kind of type representing a simple aggregation
-//	 * (cross-product) of other types. It thereby forms the foundation for functions
-//	 * accepting multiple input parameters.
-//	 */
-//	class TupleType: public Type {
-//
-//		/**
-//		 * The list of element types this tuple is consisting of.
-//		 */
-//		const TypeList elementTypes;
-//
-//	private:
-//
-//		/**
-//		 * Creates a new tuple type based on the given element types.
-//		 */
-//		TupleType(const TypeList& elementTypes);
-//
-//	protected:
-//
-//		/**
-//		 * Creates the list of child nodes of this type.
-//		 */
-//		virtual NodeListOpt getChildNodes() const;
-//
-//		/**
-//		 * Compares this type with the given type.
-//		 */
-//		virtual bool equalsType(const Type& type) const;
-//
-//	public:
-//
-//		/**
-//		 * Obtains the list of types constituting this tuple type.
-//		 */
-//		const TypeList& getElementTypes() const {
-//			return elementTypes;
-//		}
-//
-//		/**
-//		 * This method provides a static factory method for an empty tuple type.
-//		 *
-//		 * @param manager the manager to obtain the new type reference from
-//		 */
-//		static TupleTypePtr getEmpty(NodeManager& manager);
-//
-//		/**
-//		 * This method provides a static factory method for this type of node. It will return
-//		 * a tuple type pointer pointing toward a variable with the given name maintained by the
-//		 * given manager.
-//		 *
-//		 * @param manager the manager to obtain the new type reference from
-//		 * @param elementTypes the list of element types to be used to form the tuple
-//		 */
-//		static TupleTypePtr get(NodeManager& manager, const TypeList& elementTypes = TypeList());
-//
-//		/**
-//		 * Prints a string-representation of this type to the given output stream.
-//		 */
-//		virtual std::ostream& printTypeTo(std::ostream& out) const;
-//
-//	private:
-//
-//		/**
-//		 * Creates a clone of this node.
-//		 */
-//		virtual TupleType* createCopyUsing(NodeMapping& mapper) const;
-//
-//	};
+
+
+
+	// ---------------------------------------- A tuple type ------------------------------
+
+	/**
+	 * The accessor associated to a tuple type. Each tuple type has a single child node - a type
+	 * parameter list listing the types of the elements.
+	 */
+	IR_NODE_ACCESSOR(TupleType, Type, TypeParamList)
+		/**
+		 * Obtains the name of this type variable.
+		 */
+		IR_NODE_PROPERTY(TypeParamList, ElementTypes, 0);
+	};
+
+	/**
+	 * A node type representing Tuple Type.
+	 */
+	IR_NODE(TupleType, Type)
+
+		/**
+		 * A simple constructor creating a new tuple type based
+		 * on the given type parameter list.
+		 *
+		 * @param elementTypes the types of the elements of the new tuple type
+		 */
+		TupleType(const TypeParamListPtr& elementTypes);
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a type variable based on a string value (its identifier).
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the identifier defining the name of the resulting type variable
+		 * @return the requested type instance managed by the given manager
+		 */
+		static TupleTypePtr get(NodeManager& manager, const TypeParamListPtr& types) {
+			return manager.get(TupleType(types));
+		}
+
+		/**
+		 * This method provides a static factory method for this type of node. It will return
+		 * a tuple type pointer pointing toward a variable with the given name maintained by the
+		 * given manager.
+		 *
+		 * @param manager the manager to obtain the new type reference from
+		 * @param elementTypes the list of element types to be used to form the tuple
+		 */
+		static TupleTypePtr get(NodeManager& manager, const TypeList& elementTypes = TypeList()) {
+			return get(manager, TypeParamList::get(manager, elementTypes));
+		}
+
+	};
+
+
 //
 //	// ---------------------------------------- Function Type ------------------------------
 //

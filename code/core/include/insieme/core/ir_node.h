@@ -98,8 +98,7 @@ namespace new_core {
 		NC_Expression,		// < a node representing an expression
 		NC_Statement,		// < a node representing a statement
 		NC_Program,			// < a node representing a program
-		NC_Composed,		// < a utility used to realize a complex data structure
-		NC_Support			// < additional supporting nodes
+		NC_Support			// < a utility used to realize a complex data structure
 	};
 
 
@@ -323,7 +322,7 @@ namespace new_core {
 			 * The union of all the values which can directly be represented using nodes. If
 			 * a node represents a value, it is representing a value of this type.
 			 */
-			typedef boost::variant<bool,int,unsigned,string> Value;
+			typedef boost::variant<bool,char,int,unsigned,string> Value;
 
 		private:
 
@@ -697,6 +696,24 @@ namespace new_core {
 	// **********************************************************************************
 
 	/**
+	 * A utility allowing to convert constant vectors of pointers to derived types to vectors
+	 * of pointers to base types.
+	 *
+	 * @tparam B the target-base type
+	 * @tparam D the derived type
+	 * @param list the list to be converted
+	 */
+	template<
+		typename B = Node, typename D,
+		typename boost::enable_if<boost::is_base_of<B,D>,int>::type = 0
+	>
+	const vector<Pointer<const B>>& convertList(const vector<Pointer<const D>>& list) {
+		// use a C-like cast since structurally the data is correct
+		// if this ever causes troubles, replace it by copying the vector
+		return (const vector<Pointer<const B>>&)list;
+	}
+
+	/**
 	 * A type trait determining the type of a node child.
 	 *
 	 * @tparam Node the node type to be queried
@@ -704,7 +721,7 @@ namespace new_core {
 	 */
 	template<typename Node, unsigned index>
 	struct node_child_type {
-		typedef decltype(((Node*)0)->template getElement<index>()) ptr_type;
+		typedef decltype(((Node*)0)->template getChildNodeReference<index>()) ptr_type;
 		typedef typename ptr_type::element_type type;
 	};
 
@@ -724,6 +741,14 @@ namespace new_core {
 	public:
 
 		/**
+		 * Obtains access to the child associated to the given index.
+		 * @param index the index of the child node to be accessed
+		 */
+		Pointer<const Node> getChildNodeReference(std::size_t index) const {
+			return static_cast<const Derived*>(this)->getChildList()[index];
+		}
+
+		/**
 		 * The mayor contribution of this helper - a type save access to the
 		 * child nodes.
 		 *
@@ -734,7 +759,7 @@ namespace new_core {
 			unsigned index,
 			typename Res = typename type_at<index, type_list<Children...>>::type
 		>
-		const Pointer<const Res> getElement() const {
+		Pointer<const Res> getChildNodeReference() const {
 			// access the child via static polymorthism and cast result to known type
 			return static_pointer_cast<const Res>(static_cast<const Derived*>(this)->getChild(index));
 		}
@@ -795,14 +820,22 @@ namespace new_core {
 	public:
 
 		/**
+		 * Obtains access to the child associated to the given index.
+		 * @param index the index of the child node to be accessed
+		 */
+		Pointer<const ValueType> getChildNodeReference(std::size_t index) const {
+			return static_pointer_cast<const ValueType>(static_cast<const Derived*>(this)->getChildList()[index]);
+		}
+
+		/**
 		 * The mayor contribution of this helper - a type save access to the
 		 * child nodes.
 		 *
 		 * @tparam index the index of the child to be accessed
 		 */
 		template<unsigned index>
-		const Pointer<ValueType> getElement() const {
-			return static_pointer_cast<ValueType>(static_cast<const Derived*>(this)->getChild(index));
+		Pointer<const ValueType> getChildNodeReference() const {
+			return getChildNodeReference(index);
 		}
 
 		/**
@@ -811,7 +844,14 @@ namespace new_core {
 		 */
 		static bool checkChildList(const NodeList& list) {
 			// check the content of the list - all need to by castable to the given value type
-			return all(list, &dynamic_pointer_cast<Pointer<const ValueType>>);
+			return all(list, [](const NodePtr& cur) { return (bool)dynamic_pointer_cast<Pointer<const ValueType>>(cur); });
+		}
+
+		/**
+		 * Obtains the number of elements within this list.
+		 */
+		std::size_t size() const {
+			return static_cast<const Derived*>(this)->getNode().getChildList().size();
 		}
 
 	};
@@ -825,7 +865,7 @@ namespace new_core {
 	 * @tparam Derived the type which is extended by this accessor (static polymorthism)
 	 * @tparam Ptr the type of pointer to be obtained by
 	 */
-	template<typename Derived,template<typename T> class Ptr = Pointer>
+	template<typename Derived,template<typename T> class Ptr>
 	struct NodeAccessor {
 
 		/**
@@ -833,18 +873,6 @@ namespace new_core {
 		 */
 		inline const Derived& getNode() const {
 			return *static_cast<const Derived*>(this);
-		}
-	};
-
-	/**
-	 * A specialization of the NodeAccessor template which will be used in cases where
-	 * the accessor is inherited by a pointer (to support access to the same elements
-	 * as for pointers and nodes directly.
-	 */
-	template<typename Node, template<typename T> class Ptr>
-	struct NodeAccessor<Pointer<const Node>, Ptr> {
-		const Node& getNode() const {
-			return *(static_cast<const Pointer<const Node>*>(this));
 		}
 	};
 
@@ -858,6 +886,28 @@ namespace new_core {
 		const Node& getNode() const {
 			return *(static_cast<const Address<const Node>*>(this)->getAddressedNode());
 		}
+	};
+
+
+	template<typename Derived, typename ElementType, template<typename T> class Ptr>
+	struct ListNodeAccessor {
+
+		/**
+		 * Obtains access to an element within this list.
+		 */
+		Ptr<const ElementType> getElement(std::size_t index) const {
+			typename Ptr<const ElementType>::StaticCast caster;
+			assert(index < static_cast<const Derived*>(this)->size() && "Accessing node out of range!");
+			return caster.template operator()<const ElementType>(static_cast<const Derived*>(this)->getChildNodeReference(index));
+		}
+
+		/**
+		 * Obtains access to a specific element within this list.
+		 */
+		Ptr<const ElementType> operator[](std::size_t index) const {
+			return getElement(index);
+		}
+
 	};
 
 
@@ -905,9 +955,9 @@ namespace new_core {
 		template<typename Derived, template<typename T> class Ptr = Pointer> \
 		struct NAME ## Accessor : public FixedSizeNodeHelper<Derived, ## __VA_ARGS__>, public BASE ## Accessor<Derived, Ptr> {
 
-	#define IR_LIST_NODE_ACCESSOR(NAME, ELEMENT) \
+	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, ELEMENT) \
 		template<typename Derived, template<typename T> class Ptr = Pointer> \
-		struct NAME ## Accessor : public ListNodeHelper<Derived, ELEMENT>, public BASE ## Accessor<Derived, Ptr> {
+		struct NAME ## Accessor : public ListNodeHelper<Derived, ELEMENT>, public ListNodeAccessor<Derived,ELEMENT,Ptr>, public BASE ## Accessor<Derived, Ptr> {
 
 	/**
 	 * A macro adding new properties to an accessor by linking a name to a
@@ -918,8 +968,45 @@ namespace new_core {
 	 * @param INDEX the index of the property within the child list
 	 */
 	#define IR_NODE_PROPERTY(TYPE, NAME, INDEX) \
-		Ptr<const TYPE> get ## NAME() const { return static_cast<const Derived*>(this)->template getElement<INDEX>(); }
+		Ptr<const TYPE> get ## NAME() const { return static_cast<const Derived*>(this)->template getChildNodeReference<INDEX>(); }
 
+
+	// -------------------------------- An abstract base type for supporting nodes ---------------------------
+
+	/**
+	 * The accessor for instances of type expressions.
+	 */
+	template<typename D,template<typename T> class P>
+	struct SupportAccessor : public NodeAccessor<D,P> {};
+
+	/**
+	 * The base type for all support nodes. Support nodes do not represent actual language constructs.
+	 * Instead, they are used to compose more complex data structures like lists and maps.
+	 */
+	class Support : public Node {
+	protected:
+
+			/**
+			 * A constructor for this kind of nodes ensuring that every sub-class is a member of the
+			 * Support node category.
+			 *
+			 * @param nodeType the actual node-type the resulting node will be representing
+			 * @param children the child nodes to be contained
+			 */
+			template<typename ... Nodes>
+			Support(const NodeType nodeType, const Pointer<const Nodes>& ... children)
+				: Node(nodeType, NC_Support, children ...) { }
+
+			/**
+			 * A constructor creating a new instance of this type based on a given child-node list.
+			 *
+			 * @param nodeType the type of the newly created node
+			 * @param children the child nodes to be used to create the new node
+			 */
+			Support(const NodeType nodeType, const NodeList& children)
+				: Node(nodeType, NC_Support, children) { }
+
+	};
 
 } // end namespace new_core
 } // end namespace core

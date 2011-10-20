@@ -423,6 +423,8 @@ public:
 	 * This generic method allows to access child nodes in a type-safe way. It is also used
 	 * by node accessors to obtain addresses of child nodes.
 	 *
+	 * Note: this function is required by the node accessors
+	 *
 	 * @tparam index the index of the child node to be obtained
 	 * @tparam Res the type of the child node
 	 * @return the address of the requested child node
@@ -431,9 +433,21 @@ public:
 		unsigned index,
 		typename Res = typename node_child_type<typename boost::remove_const<T>::type,index>::type
 	>
-	const Address<const Res> getElement() const {
+	const Address<const Res> getChildNodeReference() const {
 		// access the child via static polymorthism and cast result to known type
 		return Address<const Res>(getAddressOfChild(index).getPath());
+	}
+
+
+	/**
+	 * Obtains access to the child associated to the given index.
+	 *
+	 * Note: this function is required by the node accessors
+	 *
+	 * @param index the index of the child node to be accessed
+	 */
+	NodeAddress getChildNodeReference(std::size_t index) const {
+		return getAddressOfChild(index);
 	}
 
 	/**
