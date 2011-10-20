@@ -260,6 +260,7 @@ std::string TokenToStr(clang::tok::TokenKind token) {
 }
 
 std::string TokenToStr(const clang::Token& token) {
+	std::cout << token.isLiteral() << std::endl;
 	if (token.isLiteral()) {
 		return std::string(token.getLiteralData(), token.getLiteralData() + token.getLength());
 	} else {
@@ -267,10 +268,34 @@ std::string TokenToStr(const clang::Token& token) {
 	}
 }
 
-void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& map_str, MatchMap& mmap) {
-	if (!map_str.size())
-		return;
+void AddToMap(clang::tok::TokenKind tok, Token const& token, bool resolve, std::string const& map_str, MatchMap& mmap) {
+	if (!map_str.size()) { return; }
+
 	Sema& A = ParserProxy::get().getParser()->getActions();
+
+	// HACK: FIXME
+	// this hacks make it possible that if we have a token and we just want its string value 
+	// we do not invoke clang semantics action on it. 
+	if (!resolve) {
+		if (tok == clang::tok::identifier) {
+			UnqualifiedId Name;
+			Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
+			mmap[map_str].push_back( 
+				ValueUnionPtr(new ValueUnion(
+					std::string(
+						Name.Identifier->getNameStart(), 
+						Name.Identifier->getLength()
+					)
+				))
+			);
+			return;
+		}
+		mmap[map_str].push_back( ValueUnionPtr(new ValueUnion(TokenToStr(token))) );
+		return ;
+	}
+
+	// We want to use clang sema to actually get the Clang node which is found out of this
+	// identifier 
 	switch (tok) {
 	case clang::tok::numeric_constant:
 		mmap[map_str].push_back(ValueUnionPtr(
@@ -281,11 +306,13 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& 
 		UnqualifiedId Name;
 		CXXScopeSpec ScopeSpec;
 		Name.setIdentifier(token.getIdentifierInfo(), token.getLocation());
-
-		mmap[map_str].push_back(ValueUnionPtr(
-			new ValueUnion(
-				A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
-				&static_cast<clang::Sema&>(A).Context)
+			
+		mmap[map_str].push_back(
+			ValueUnionPtr(
+				new ValueUnion(
+					A.ActOnIdExpression(ParserProxy::get().CurrentScope(), ScopeSpec, Name, false, false).takeAs<Stmt>(),
+					&static_cast<clang::Sema&>(A).Context
+				)
 			));
 		break;
 	}
@@ -297,4 +324,4 @@ void AddToMap(clang::tok::TokenKind tok, Token const& token, std::string const& 
 }
 
 } // End frontend namespace
-} // End insieme namespace
+} // End insieme  namespace

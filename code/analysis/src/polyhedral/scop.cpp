@@ -333,11 +333,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the then body
 			saveThen = visitStmt(thenAddr);
-
-			if (!thenAddr->hasAnnotation(ScopRegion::KEY)) {
-				// else body is not a compound stmt
-				thenAddr->addAnnotation( std::make_shared<ScopRegion>(saveThen, IterationDomain(saveThen)) );
-			}
 		} catch (NotASCoP&& e) { isThenSCOP = false; }
 
 		regionStmts.push( RegionStmtStack::value_type() );
@@ -347,11 +342,6 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			subScops.clear();
 			// check the else body
 			saveElse = visitStmt(elseAddr);
-
-			if (!elseAddr->hasAnnotation(ScopRegion::KEY)) {
-				// else body is not a compound stmt
-				elseAddr->addAnnotation( std::make_shared<ScopRegion>(saveElse, IterationDomain(saveElse)) );
-			}
 		} catch (NotASCoP&& e) { isElseSCOP = false; }
 	
 		if ( isThenSCOP && !isElseSCOP ) {
@@ -397,7 +387,10 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		faThen.setEnabled(false);
 
 		ifStmt->addAnnotation( 
-			std::make_shared<ScopRegion>(ret, IterationDomain(ret), 
+			std::make_shared<ScopRegion>(
+				ifStmt.getAddressedNode(), 
+				ret, 
+				IterationDomain(ret), 
 				ScopStmtList(ifScopStmts.rbegin(),ifScopStmts.rend()), 
 				SubScopList( { SubScop(thenAddr, cond), SubScop(elseAddr, !cond) } )
 			)
@@ -477,10 +470,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// If the case statement is not a compound statement, the ScopRegion annotation will
 				// not be inserted by default. Therefore we add the annotation to simplify the
 				// resolution of the SCoP when the analysis is invoked 
-				if (!stmtAddr->hasAnnotation(ScopRegion::KEY)) {
-					// else body is not a compound stmt
-					stmtAddr->addAnnotation( std::make_shared<ScopRegion>(iv, IterationDomain(iv)) );
-				}
+				assert (stmtAddr->hasAnnotation(ScopRegion::KEY)); 
 
 				IterationDomain caseCons( makeCombiner(Constraint(AffineFunction(ret, expr), Constraint::EQ)) );
 				defaultCons &= !caseCons;
@@ -504,10 +494,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// If the case statement is not a compound statement, the ScopRegion annotation will
 				// not be inserted by default. Therefore we add the annotation to simplify the
 				// resolution of the SCoP when the analysis is invoked 
-				if (!defAddr->hasAnnotation(ScopRegion::KEY)) {
-					// default body is not a compound stmt
-					defAddr->addAnnotation( std::make_shared<ScopRegion>(iv, IterationDomain(iv)) );
-				}
+				assert (defAddr->hasAnnotation(ScopRegion::KEY)); 
 
 				ret = merge(ret, iv);
 				scops.push_back( SubScop(defAddr, defaultCons) );
@@ -532,7 +519,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		}
 
 		switchStmt->addAnnotation( 
-				std::make_shared<ScopRegion>(ret, IterationDomain(ret), regionStmts.top(), scops) 
+				std::make_shared<ScopRegion>(
+					switchStmt.getAddressedNode(), 
+					ret, 
+					IterationDomain(ret), 
+					regionStmts.top(), 
+					scops
+				) 
 			);
 
 		subScops.clear();
@@ -626,7 +619,15 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 				IterationDomain cons( loopBounds );
 
-				forStmt->addAnnotation( std::make_shared<ScopRegion>(ret, cons, regionStmts.top(), toSubScopList(ret, subScops)) ); 
+				forStmt->addAnnotation( 
+						std::make_shared<ScopRegion>(
+							forStmt.getAddressedNode(),
+							ret, 
+							cons, 
+							regionStmts.top(), 
+							toSubScopList(ret, subScops)
+						) 
+					); 
 				
 				fa.setEnabled(false);
 
@@ -723,7 +724,11 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		// Mark this CompoundStmts because it is a Scop
 		compStmt->addAnnotation( 
-			std::make_shared<scop::ScopRegion>(ret, IterationDomain(ret), regionStmts.top(), 
+			std::make_shared<scop::ScopRegion>(
+				compStmt.getAddressedNode(),
+				ret, 
+				IterationDomain(ret), 
+				regionStmts.top(), 
 				toSubScopList(ret, subScops)
 			) 
 		);
@@ -763,15 +768,15 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			StatementAddress addr = AS_STMT_ADDR(lambda.getAddressOfChild(lambda->getChildList().size()-1));  /*getBody()*/
 			bodyIV = visitStmt( addr );
 
-			if (!addr->hasAnnotation(ScopRegion::KEY)) {
-				// else body is not a compound stmt
-				addr->addAnnotation( std::make_shared<ScopRegion>(bodyIV, IterationDomain(bodyIV)) );
-				subScops.push_back( addr );
-			}
+			assert (addr->hasAnnotation(ScopRegion::KEY));
 			assert(subScops.size() == 1 && "A Lambda cannot have more than one sub SCoP");
 			
 			lambda->addAnnotation( 
-					std::make_shared<ScopRegion>(bodyIV, IterationDomain(bodyIV), regionStmts.top(), 
+					std::make_shared<ScopRegion>(
+						lambda.getAddressedNode(),
+						bodyIV, 
+						IterationDomain(bodyIV), 
+						regionStmts.top(), 
 						toSubScopList(bodyIV, subScops)
 					) 
 				);
@@ -1004,7 +1009,8 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 				 poly::IterationDomain		 	parentDomain, 
 	   		   	 const ScopRegion& 				region,
 				 size_t&						pos,
- 				 const ScatteringFunction& 		curScat,
+				 size_t&						id,
+ 				 const AffineSystem&	 		curScat,
 				 ScopRegion::IteratorOrder&		iterators,
 				 ScopRegion::ScatteringMatrix& 	scat,
 				 size_t&						sched_dim) 
@@ -1022,7 +1028,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 	
 		IterationDomain thisDomain = currDomain;
 
-		ScatteringFunction newScat(curScat);
+		AffineSystem newScat(curScat);
 		const IterationVector& iterVec = curScat.getIterationVector();
 		AffineFunction af( iterVec );
 
@@ -1044,6 +1050,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 							 thisDomain, 
 							 *cur->getAnnotation(ScopRegion::KEY), 
 							 pos, 
+							 id,
 							 curScat, 
 							 iterators, 
 							 scat, 
@@ -1054,7 +1061,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 		}
 
 		af.setCoeff(poly::Constant(), pos++);
-		newScat.appendRow( af );
+		newScat.append( af );
 
 		// this is a sub scop
 		if (curPtr->hasAnnotation(ScopRegion::KEY)) {
@@ -1067,7 +1074,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 
 				AffineFunction newAf( iterVec );
 				newAf.setCoeff( poly::Iterator(iter), 1 );
-				newScat.appendRow(newAf); 
+				newScat.append(newAf); 
 				
 				iterators.push_back(poly::Iterator(iter));
 			} 
@@ -1077,6 +1084,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 						 thisDomain, 
 						 *cur->getAnnotation(ScopRegion::KEY), 
 						 nestedPos, 
+						 id,
 						 newScat, 
 						 iterators, 
 						 scat, 
@@ -1097,7 +1105,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 				case Ref::SCALAR:
 				case Ref::MEMBER:
 					// A scalar is treated as a zero dimensional array 
-					idx->appendRow( AffineFunction(iterVec) );
+					idx->append( AffineFunction(iterVec) );
 					break;
 				case Ref::ARRAY:
 				{
@@ -1106,7 +1114,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 						[&](const ExpressionAddress& cur) { 
 							assert(cur->hasAnnotation(scop::AccessFunction::KEY));
 							scop::AccessFunction& ann = *cur->getAnnotation(scop::AccessFunction::KEY);
-							idx->appendRow( ann.getAccessFunction().toBase(iterVec) );
+							idx->append( ann.getAccessFunction().toBase(iterVec) );
 						}
 					);
 					break;
@@ -1149,7 +1157,13 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
 		scat.push_back( 
-			ScopRegion::StmtScattering(cur.getAddr(), iterDom, std::make_shared<poly::ScatteringFunction>(newScat), accInfo) 
+			ScopRegion::StmtScattering(
+				id++, 
+				cur.getAddr(), 
+				iterDom, 
+				std::make_shared<poly::AffineSystem>(newScat), 
+				accInfo
+			) 
 		);
 	
 		// keep track of the max dimension of the scheduling matrix 
@@ -1160,9 +1174,43 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 	} ); 
 }
 
-const ScopRegion::ScatteringPair ScopRegion::getScatteringInfo() {
-	assert(scattering);
-	return *scattering;
+void ScopRegion::resolve() {
+	assert( !isValid() && "Error Try to resolve an invalid SCoP");
+
+	// If the region has been already resolved, we simply return the cached result
+	if ( isResolved() ) { return; }
+
+	// we compute the full scattering information for this domain and we cache the result for
+	// later use. 
+	scattering = std::make_shared<ScopRegion::ScatteringPair>();
+
+	AffineSystem sf( getIterationVector() );
+	ScopRegion::IteratorOrder iterOrder;
+	
+	// in the case the entry point of this scop is a forloop, then we build the scattering matrix
+	// using the loop iterator index 
+	if (annNode->getNodeType() == NT_ForStmt) {
+		AffineFunction af( getIterationVector() );
+		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(annNode)->getDeclaration()->getVariable());
+		af.setCoeff( iter, 1 );
+		sf.append( af );
+		iterOrder.push_back(iter);
+	}
+
+	size_t pos=0, id=0;
+	resolveScop(
+			getIterationVector(), 
+			poly::IterationDomain(getIterationVector()), 
+			*this, 
+			pos, 
+			id,
+			sf, 
+			iterOrder, 
+			scattering->second, 
+			scattering->first
+		);
+
+	assert( isResolved() );
 }
 
 //===== AccessFunction ============================================================
@@ -1185,38 +1233,7 @@ AddressList mark(const core::NodePtr& root) {
 	return ret;
 }
 
-void resolveFrom(const NodePtr& root) {
-	if( !root->hasAnnotation( ScopRegion::KEY ) ) { throw NotASCoP(root); }
-	
-	ScopRegion& region = *root->getAnnotation(ScopRegion::KEY);
-	
-	// If the region has been already resolved, we simply return the cached result
-	if ( region.isResolved() ) { return; }
 
-	// we compute the full scattering information for this domain and we cache the result for
-	// later use. 
-	region.scattering = std::make_shared<ScopRegion::ScatteringPair>();
-
-	ScatteringFunction sf( region.getIterationVector() );
-	ScopRegion::IteratorOrder iterOrder;
-	
-	// in the case the entry point of this scop is a forloop, then we build the scattering matrix
-	// using the loop iterator index 
-	if (root->getNodeType() == NT_ForStmt) {
-		AffineFunction af( region.getIterationVector() );
-		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(root)->getDeclaration()->getVariable());
-		af.setCoeff( iter, 1 );
-		sf.appendRow( af );
-		iterOrder.push_back(iter);
-	}
-
-	size_t pos=0;
-	resolveScop(region.getIterationVector(), poly::IterationDomain(region.getIterationVector()), region, pos, sf, iterOrder, 
-			region.scattering->second, region.scattering->first
-		);
-
-	assert( region.isResolved() );
-}
 
 core::NodePtr toIR(const core::NodePtr& root) {
 	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
@@ -1224,10 +1241,11 @@ core::NodePtr toIR(const core::NodePtr& root) {
 		return core::NodePtr();
 	}
 	
-	resolveFrom( root );
-
 	// We are in a Scop 
 	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
+	
+	ann.resolve();
+
 	const ScopRegion::ScatteringPair&& scat = ann.getScatteringInfo();
 	const IterationVector& iterVec = ann.getIterationVector();
 	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
@@ -1249,12 +1267,12 @@ core::NodePtr toIR(const core::NodePtr& root) {
 			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, stmtid);
 			domain = set_union(ctx, *domain, *domainSet);
 
-			ScatteringFunctionPtr sf = cur.scattering;
+			AffineSystemPtr sf = cur.scattering;
 			// Because the scheduling of every statement has to have the same number of elements
 			// (same dimensions) we append zeros until the size of the affine system is equal to 
 			// the number of dimensions used inside this SCoP for the scheduling functions 
 			for ( size_t s = sf->size(); s < scat.first; ++s ) {
-				sf->appendRow( AffineFunction(iterVec) );
+				sf->append( AffineFunction(iterVec) );
 			}
 			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
 			schedule = map_union(ctx, *schedule, *scattering);
@@ -1271,10 +1289,11 @@ void computeDataDependence(const NodePtr& root) {
 		return ;
 	}
 	
-	resolveFrom( root );
-
 	// We are in a Scop 
 	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
+
+	ann.resolve();
+
 	const ScopRegion::ScatteringPair&& scat = ann.getScatteringInfo();
 	const IterationVector& iterVec = ann.getIterationVector();
 	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
@@ -1293,12 +1312,12 @@ void computeDataDependence(const NodePtr& root) {
 			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, stmtid);
 			domain = set_union(ctx, *domain, *domainSet);
 
-			ScatteringFunctionPtr sf = cur.scattering;
+			AffineSystemPtr sf = cur.scattering;
 			// Because the scheduling of every statement has to have the same number of elements
 			// (same dimensions) we append zeros until the size of the affine system is equal to 
 			// the number of dimensions used inside this SCoP for the scheduling functions 
 			for ( size_t s = sf->size(); s < scat.first; ++s ) {
-				sf->appendRow( AffineFunction(iterVec) );
+				sf->append( AffineFunction(iterVec) );
 			}
 			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
 			schedule = map_union(ctx, *schedule, *scattering);
@@ -1350,6 +1369,10 @@ void computeDataDependence(const NodePtr& root) {
 
 }
 
+bool ScopRegion::isParallel() {
+	return false;
+}
+
 //===== printSCoP ===================================================================
 void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	out << std::endl << std::setfill('=') << std::setw(80) << std::left << "@ SCoP PRINT";	
@@ -1362,9 +1385,8 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	
 	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 
-	resolveFrom( scop );
-
 	ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
+	ann.resolve();
 	const ScopRegion::ScatteringMatrix&& scat = ann.getScatteringInfo().second;
 	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
 		
@@ -1387,7 +1409,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 			ids->printTo(out);
 			
 			out << std::endl;
-			ScatteringFunctionPtr sf = cur.scattering;
+			AffineSystemPtr sf = cur.scattering;
 			out << *sf;
 			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
 			out << " => ISL: ";
