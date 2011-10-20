@@ -65,8 +65,7 @@ VariablePtr VariableTable::lookup(const IdentifierPtr& id) {
     auto entry = table.find(id);
 
     if(entry == table.end()) {
-//    	std::cout << "Variable " << id << " fucks you\n";
-        const string err = "Variable '" + id->toString() + "' not defined.\n";
+		const string err = "FAIL at '" + id->toString() + "'\n";
         throw ParseException(err);
     }
 
@@ -92,8 +91,10 @@ TypePtr IRParser::parseType(const std::string& input) {
 		parse_result = parse_result && (startIt == endIt);
 	} catch(ParseException& pe) {
 		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
 	}
-	if(!parse_result) throw ParseException();
+	if(!parse_result) throw ParseException("Parsing of Type FAILED");
 	return result;
 }
 
@@ -107,8 +108,10 @@ ExpressionPtr IRParser::parseExpression(const std::string& input) {
 		parse_result = parse_result && (startIt == endIt);
 	} catch(ParseException& pe) {
 		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
 	}
-	if(!parse_result) throw ParseException();
+	if(!parse_result) throw ParseException("Parsing of Expression FAILED");
 	return result;
 }
 
@@ -122,8 +125,10 @@ StatementPtr IRParser::parseStatement(const std::string& input) {
 		parse_result = parse_result && (startIt == endIt);
 	} catch(ParseException& pe) {
 		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
 	}
-    if(!parse_result) throw ParseException();
+	if(!parse_result) throw ParseException("Parsing of Statement FAILED");
     return result;
 }
 
@@ -136,9 +141,11 @@ ProgramPtr IRParser::parseProgram(const std::string& input) {
 		parse_result = qi::phrase_parse(startIt, endIt, progGrammar, qi::space, result);
 		parse_result = parse_result && (startIt == endIt);
 	} catch(ParseException& pe) {
-		std::cerr << "ERROR: " << pe.what() << std::endl;
+		std::cerr << "Parsing ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
 	}
-    if(!parse_result) throw ParseException();
+	if(!parse_result) throw ParseException("Parsing of Program FAILED");
     return result;
 }
 
@@ -152,8 +159,10 @@ NodePtr IRParser::parseIR(const std::string& input) {
 		parse_result = parse_result && (startIt == endIt);
 	} catch(insieme::core::parse::ParseException& pe) {
 		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
 	}
-    if(!parse_result) throw ParseException("Errors found in IR code");
+	if(!parse_result) throw ParseException("Parsing of IR Code FAILED");
     return result;
 }
 

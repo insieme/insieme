@@ -139,7 +139,7 @@ lambdaHelp(const TypePtr& retType, const vector<ExpressionPtr>& paramsExpr, cons
 		paramTypes.push_back(var->getType());
 		params.push_back(var);
 	} else
-		throw ParseException("Invalid element in argument list of lambda");
+		throw ParseException("Parameters of Lambda must to be variables");
 	});
 
 //	    return Lambda::get(nodeMan, build.functionType(paramTypes, retType, true), params, body);
