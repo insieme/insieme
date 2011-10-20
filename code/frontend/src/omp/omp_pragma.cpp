@@ -304,7 +304,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// #pragma omp critical [(name)] new-line
 	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaCritical>(
-			pp.getIdentifierInfo("critical"), !(l_paren >> identifier >> r_paren) >> tok::eod, "omp")
+			pp.getIdentifierInfo("critical"), !(l_paren >> identifier["critical"] >> r_paren) >> tok::eod, "omp")
 		);
 
 	//#pragma omp barrier new-line
@@ -667,21 +667,17 @@ AnnotationPtr OmpPragmaMaster::toAnnotation(conversion::ConversionFactory& fact)
 AnnotationPtr OmpPragmaCritical::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 
+	std::string name;
 	// checking region name (if existing)
-	core::VariablePtr criticalName = NULL;
 	auto fit = map.find("critical");
 	if(fit != map.end()) {
 		const ValueList& vars = fit->second;
 		assert(vars.size() == 1 && "Critical region has multiple names");
-		clang::Stmt* name = vars.front()->get<clang::Stmt*>();
-		clang::DeclRefExpr* refName = dyn_cast<clang::DeclRefExpr>(name);
-		assert(refName && "Clause not containing an identifier");
-
-		criticalName = core::dynamic_pointer_cast<const core::Variable>( fact.convertExpr( refName ) );
-		assert(criticalName && "Conversion to Insieme node failed!");
+		LOG(INFO) << "()()()()()()() UIUIUIUIIUI -- " << vars.front()->get<std::string*>();
+		name = *vars.front()->get<std::string*>();
 	}
 
-	return std::make_shared<Critical>( criticalName );
+	return std::make_shared<Critical>( name );
 }
 
 AnnotationPtr OmpPragmaBarrier::toAnnotation(conversion::ConversionFactory& fact) const {

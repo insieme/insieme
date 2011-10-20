@@ -467,7 +467,7 @@ LITERAL(CreateBoundRangeMod,"BoundRange",    	"(uint<#8>, uint<#8>, uint<#8>)->J
 
 // Locks -----------------------------------------------------------
 
-TYPE(LockType, "lock")
+TYPE(Lock, "lock")
 
 LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
