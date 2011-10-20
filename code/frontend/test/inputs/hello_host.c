@@ -42,14 +42,14 @@ cl_command_queue gqueue = NULL;
 short* short_host_ptr;
 cl_mem dev_ptr1 = NULL;
 cl_event event = NULL;
-cl_kernel kernel[2] = {NULL};
 
-cl_int subfunction(size_t* globalSize, size_t* localSize) {
-	return clEnqueueNDRangeKernel(gqueue, kernel[1], 2, NULL, globalSize, localSize, 0, NULL, &event);
+cl_int subfunction(cl_kernel kernel, cl_command_queue queue, size_t* globalSize, size_t* localSize) {
+	return clEnqueueNDRangeKernel(queue, kernel, 2, NULL, globalSize, localSize, 0, NULL, &event);
 }
 
 //#pragma insieme mark
 int main(int argc, char **argv) {
+	cl_kernel kernel[2] = {NULL};
 	cl_int err;
 	cl_device_id* device;// = (cl_device_id*)malloc(sizeof(cl_device_id*));
 	cl_platform_id* platforms;
@@ -98,9 +98,9 @@ int main(int argc, char **argv) {
 	size_t globalSize[] = { 8, 8 };
 	size_t localSize[] = { 3, 5, 6 };
 
-//	for(int i = 0; i < 1; ++i)
+	for(int i = 0; i < 1; ++i)
+	err = subfunction(kernel[i], queue, globalSize, localSize);
 //		err = clEnqueueNDRangeKernel(queue[0], kernel[i], 2, NULL, globalSize, localSize, 0, NULL, &event);
-	err = subfunction(globalSize, localSize);
 
 	err = clWaitForEvents(1, &event);
 
