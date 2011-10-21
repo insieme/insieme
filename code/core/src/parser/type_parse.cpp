@@ -176,24 +176,24 @@ Rule TypeGrammar<T, U, V>::getTypeVariable() {
 
 template<typename T, typename U, typename V>
 Rule TypeGrammar<T, U, V>::getRefType() {
-    return ( qi::lit("ref<") >> typeRule >> '>' )                   [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::refTypeHelp, this, qi::_1) ];
+	return ( qi::lit("ref")>> '<' >> typeRule >> '>' )                   [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::refTypeHelp, this, qi::_1) ];
 }
 
 template<typename T, typename U, typename V>
 Rule TypeGrammar<T, U, V>::getChannelType() {
-    return ( qi::lit("channel<") >> typeRule
+	return ( qi::lit("channel")>> '<' >> typeRule
         >> ',' >> intTypeParam >> '>' )                             [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::channelTypeHelp, this, qi::_1, qi::_2) ];
 }
 
 template<typename T, typename U, typename V>
 Rule TypeGrammar<T, U, V>::getVectorType() {
-    return ( qi::lit("vector<") >> typeRule
+	return ( qi::lit("vector")>> '<' >> typeRule
         >> ',' >> intTypeParam >> '>' )                             [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::vectorTypeHelp, this, qi::_1, qi::_2) ];
 }
 
 template<typename T, typename U, typename V>
 qi::rule<ParseIt, T(), qi::locals<T, U>, qi::space_type> TypeGrammar<T, U, V>::getArrayType() {
-    return ( qi::lit("array<") >> typeRule                          [ qi::_a = qi::_1 ]
+	return ( qi::lit("array")>> '<' >> typeRule                          [ qi::_a = qi::_1 ]
         >> ',' >> intTypeParam                                      [ qi::_b = qi::_1 ]
         >> '>' )                                                    [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::arrayTypeHelp, this, qi::_a, qi::_b) ];
 }
