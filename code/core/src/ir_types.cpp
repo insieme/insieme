@@ -42,10 +42,6 @@ namespace core {
 namespace new_core {
 
 
-	TypeVariable::TypeVariable(const StringValuePtr& name)
-		: Type(NT_TypeVariable, name) { }
-
-
 	std::ostream& GenericType::printTo(std::ostream& out) const {
 		// create output buffer
 		out << *getName();

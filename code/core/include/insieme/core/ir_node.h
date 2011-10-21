@@ -199,6 +199,12 @@ namespace new_core {
 		 */
 		ExtensionMap extensions;
 
+		/**
+		 * A static generator for generating IDs
+		 */
+		utils::SimpleIDGenerator<unsigned> idGenerator;
+
+
 	public:
 
 		/**
@@ -246,6 +252,13 @@ namespace new_core {
 			// create a new instance
 			extensions[key] = new E(*this);
 			return getLangExtension<E>();
+		}
+
+		/**
+		 * Obtains a fresh ID to be used within a node.
+		 */
+		unsigned getFreshID() {
+			return idGenerator.getNext();
 		}
 
 	};
@@ -899,6 +912,13 @@ namespace new_core {
 		}
 
 		/**
+		 * Obtains a reference to the list of internally maintained elements.
+		 */
+		const vector<Pointer<const ElementType>>& getElements() const {
+			return convertList<ElementType>(static_cast<const Derived*>(this)->getNode().getChildList());
+		}
+
+		/**
 		 * Obtains the number of elements within this list.
 		 */
 		std::size_t size() const {
@@ -935,6 +955,8 @@ namespace new_core {
 			NAME(const NodeList& children) : BASE(NT_ ## NAME, children) { \
 				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
 			} \
+			template<typename ... Children> \
+			NAME(const Pointer<const Children>& ... children) : BASE(NT_ ## NAME, children ...) {} \
 		\
 		protected: \
 			/* The function required for the clone process. */ \

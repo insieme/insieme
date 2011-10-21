@@ -116,15 +116,6 @@ namespace new_core {
 	 * A node type representing concrete int-type parameters.
 	 */
 	IR_NODE(ConcreteIntTypeParam, IntTypeParam)
-
-		/**
-		 * A constructor for this type of int type parameters accepting the value
-		 * to be represented.
-		 *
-		 * @param value the value to be represented.
-		 */
-		ConcreteIntTypeParam(const UIntValuePtr& value);
-
 	protected:
 
 		/**
@@ -169,15 +160,6 @@ namespace new_core {
 	 * A node type representing variable int-type parameters.
 	 */
 	IR_NODE(VariableIntTypeParam, IntTypeParam)
-
-		/**
-		 * A constructor for this type of int type parameters accepting the value
-		 * to be represented.
-		 *
-		 * @param symbol the symbol to be used to represent the resulting variable
-		 */
-		VariableIntTypeParam(const CharValuePtr& symbol);
-
 	protected:
 
 		/**
@@ -218,12 +200,6 @@ namespace new_core {
 	 * A node type representing infinite int-type parameters.
 	 */
 	IR_NODE(InfiniteIntTypeParam, IntTypeParam)
-
-		/**
-		 * A constructor for this type of int type parameter.
-		 */
-		InfiniteIntTypeParam();
-
 	protected:
 
 		/**

@@ -261,6 +261,11 @@ AST_TERMINAL(RecTypeDefinition, Support)
 
 AST_TERMINAL(NamedType, Support)
 
+AST_TERMINAL(SwitchCase, Support)
+AST_TERMINAL(SwitchCases, Support)
+
+AST_TERMINAL(Expressions, Support)
+
 //
 // --- Marker ---
 //

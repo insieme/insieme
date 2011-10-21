@@ -40,10 +40,6 @@
 #include "insieme/core/values.h"
 #include "insieme/core/ir_int_type_param.h"
 
-using std::string;
-using std::vector;
-using std::map;
-
 // ---------------------------------------------- IR Types -----------------------------------------------
 
 namespace insieme {
@@ -158,18 +154,6 @@ namespace new_core {
 	 * parameters. Those are represented using other types and IntTypeParam instances.
 	 */
 	IR_NODE(GenericType, Type)
-
-		/**
-		 * A simple constructor creating a new generic type based
-		 * on the given parameters.
-		 *
-		 * @param name 			the name of the new type (only the prefix)
-		 * @param typeParams	the type parameters of this type, concrete or variable
-		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
-		 */
-		GenericType(const StringValuePtr& name, const TypeParamListPtr& typeParams, const IntTypeParamListPtr& intTypeParams)
-			: Type(NT_GenericType, name, typeParams, intTypeParams) {}
-
 	protected:
 
 		/**
@@ -256,15 +240,6 @@ namespace new_core {
 	 * A node type representing concrete int-type parameters.
 	 */
 	IR_NODE(TypeVariable, Type)
-
-		/**
-		 * A simple constructor creating a new type variable based
-		 * on the given name.
-		 *
-		 * @param name the name of the new type variable
-		 */
-		TypeVariable(const StringValuePtr& name);
-
 	protected:
 
 		/**
@@ -309,51 +284,30 @@ namespace new_core {
 	// ---------------------------------------- A tuple type ------------------------------
 
 	/**
-	 * The accessor associated to a tuple type. Each tuple type has a single child node - a type
-	 * parameter list listing the types of the elements.
+	 * The accessor associated to a tuple type. Each tuple type is consisting of a list
+	 * of type pointers.
 	 */
-	IR_NODE_ACCESSOR(TupleType, Type, TypeParamList)
+	IR_LIST_NODE_ACCESSOR(TupleType, Type, Type)
 		/**
-		 * Obtains the name of this type variable.
+		 * Obtains the list of all elements within this tuple type.
 		 */
-		IR_NODE_PROPERTY(TypeParamList, ElementTypes, 0);
+		const TypeList& getElementTypes() const { return ListNodeAccessor<Derived,Type,Ptr>::getElements(); }
 	};
 
 	/**
 	 * A node type representing Tuple Type.
 	 */
 	IR_NODE(TupleType, Type)
-
-		/**
-		 * A simple constructor creating a new tuple type based
-		 * on the given type parameter list.
-		 *
-		 * @param elementTypes the types of the elements of the new tuple type
-		 */
-		TupleType(const TypeParamListPtr& elementTypes)
-			: Type(NT_TupleType, elementTypes) {}
-
 	protected:
 
 		/**
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << '(' << join(",", getElementTypes()->getChildList(), print<deref<NodePtr>>()) << ')';
+			return out << '(' << join(",", getElementTypes(), print<deref<NodePtr>>()) << ')';
 		}
 
 	public:
-
-		/**
-		 * This static factory method allows to construct a type variable based on a string value (its identifier).
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param name the identifier defining the name of the resulting type variable
-		 * @return the requested type instance managed by the given manager
-		 */
-		static TupleTypePtr get(NodeManager& manager, const TypeParamListPtr& types) {
-			return manager.get(TupleType(types));
-		}
 
 		/**
 		 * This method provides a static factory method for this type of node. It will return
@@ -364,7 +318,7 @@ namespace new_core {
 		 * @param elementTypes the list of element types to be used to form the tuple
 		 */
 		static TupleTypePtr get(NodeManager& manager, const TypeList& elementTypes = TypeList()) {
-			return get(manager, TypeParamList::get(manager, elementTypes));
+			return get(manager, convertList(elementTypes));
 		}
 
 	};
@@ -408,17 +362,6 @@ namespace new_core {
 	 * value returned by the members of this type.
 	 */
 	IR_NODE(FunctionType, Type)
-
-		/**
-		 * A simple constructor creating a new function type based on the given parameters.
-		 *
-		 * @param parameters the list of type of parameters accepted by the resulting function type
-		 * @param returnType the type of value returned by the resulting function type
-		 * @param plain a flag indicating whether this function type is a plain function or not
-		 */
-		FunctionType(const TypeParamListPtr& parameters, const TypePtr& returnType, const BoolValuePtr& plain)
-			: Type(NT_FunctionType, parameters, returnType, plain) {}
-
 	protected:
 
 		/**
@@ -486,16 +429,6 @@ namespace new_core {
 	 * A node type used to represent recursive type variable bindings.
 	 */
 	IR_NODE(RecTypeBinding, Support)
-
-		/**
-		 * A simple constructor creating a new binding between the given variable
-		 * and type.
-		 *
-		 * @param elementTypes the types of the elements of the new tuple type
-		 */
-		RecTypeBinding(const TypeVariablePtr& var, const TypePtr& type)
-			: Support(NT_RecTypeBinding, var, type) {}
-
 	protected:
 
 		/**
@@ -614,17 +547,6 @@ namespace new_core {
 	 * in which the definition of multiple recursive types are interleaved.
 	 */
 	IR_NODE(RecType, Type)
-
-		/**
-		 * A simple constructor creating a new recursive type representing the
-		 * recursive type bound to the given variable within the given type.
-		 *
-		 * @param var the variable defining the chosen definition
-		 * @param definition the definition of the actual recursive type
-		 */
-		RecType(const TypeVariablePtr& var, const RecTypeDefinitionPtr& definition)
-			: Type(NT_RecType, var, definition) {}
-
 	protected:
 
 		/**
@@ -693,16 +615,6 @@ namespace new_core {
 	 * A node type used to represent a named type within a struct or an union.
 	 */
 	IR_NODE(NamedType, Support)
-
-		/**
-		 * A simple constructor creating a new binding between the given variable
-		 * and type.
-		 *
-		 * @param elementTypes the types of the elements of the new tuple type
-		 */
-		NamedType(const StringValuePtr& name, const TypePtr& type)
-			: Support(NT_NamedType, name, type) {}
-
 	protected:
 
 		/**
@@ -812,16 +724,6 @@ namespace new_core {
 	 * The type used to represent struct / records.
 	 */
 	IR_NAMED_COMPOSITE_TYPE(StructType)
-
-		/**
-		 * A simple constructor creating a new struct type based on the
-		 * given element types.
-		 *
-		 * @param elements the elements of the resulting composite type
-		 */
-		StructType(const vector<NamedTypePtr>& elements)
-			: NamedCompositeType(NT_StructType, elements) {}
-
 	protected:
 
 		/**
@@ -844,7 +746,7 @@ namespace new_core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static StructTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			return manager.get(StructType(entries));
+			return manager.get(StructType(convertList(entries)));
 		}
 
 	};
@@ -857,16 +759,6 @@ namespace new_core {
 	 * The type used to represent unions.
 	 */
 	IR_NAMED_COMPOSITE_TYPE(UnionType)
-
-		/**
-		 * A simple constructor creating a new union type based on the
-		 * given element types.
-		 *
-		 * @param elements the elements of the resulting composite type
-		 */
-		UnionType(const vector<NamedTypePtr>& elements)
-			: NamedCompositeType(NT_UnionType, elements) {}
-
 	protected:
 
 		/**
@@ -889,7 +781,7 @@ namespace new_core {
 		 * 		   the same parameters will lead to pointers addressing the same instance.
 		 */
 		static UnionTypePtr get(NodeManager& manager, const vector<NamedTypePtr>& entries) {
-			return manager.get(UnionType(entries));
+			return manager.get(UnionType(convertList(entries)));
 		}
 
 	};
@@ -917,15 +809,6 @@ namespace new_core {
 	 * This intrinsic reference type used to represent mutable memory locations.
 	 */
 	IR_NODE(RefType, Type)
-
-		/**
-		 * A private constructor to create a new instance of this type class based on the
-		 * given element type.
-		 *
-		 * @param elementType the type the new type should reference to.
-		 */
-		RefType(const TypePtr& elementType) : Type(NT_RefType, elementType) {}
-
 	protected:
 
 		/**
@@ -979,7 +862,6 @@ namespace new_core {
 	 * of a generic type.
 	 */
 	class SingleElementType : public Type {
-
 	protected:
 
 		/**
@@ -1011,6 +893,8 @@ namespace new_core {
 			NAME(const NodeList& children) : SingleElementType(NT_ ## NAME, children) { \
 				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
 			} \
+			template<typename ... Children> \
+			NAME(const Pointer<const Children>& ... children) : SingleElementType(NT_ ## NAME, children ...) {} \
 		\
 		protected: \
 			/* The function required for the clone process. */ \
@@ -1050,16 +934,6 @@ namespace new_core {
 	 * within the type system.
 	 */
 	IR_SINGLE_ELEMENT_TYPE(ArrayType)
-
-		/**
-		 * Creates a new instance of this class using the given parameters.
-		 *
-		 * @param elementType the element type of this array
-		 * @param dim the dimension of the represented array
-		 */
-		ArrayType(const TypePtr& elementType, const IntTypeParamPtr& dim)
-			: SingleElementType(NT_ArrayType, elementType, dim) {}
-
 	protected:
 
 		/*
@@ -1126,16 +1000,6 @@ namespace new_core {
 	 * This intrinsic vector type used to represent fixed sized arrays (=vectors).
 	 */
 	IR_SINGLE_ELEMENT_TYPE(VectorType)
-
-		/**
-		 * Creates a new instance of a vector type token using the given element and size parameter.
-		 *
-		 * @param elementType the element type of the new vector
-		 * @param size the size of the new vector
-		 */
-		VectorType(const TypePtr& elementType, const IntTypeParamPtr& size)
-			: SingleElementType(NT_VectorType, elementType, size) {}
-
 	protected:
 
 		/*
@@ -1187,18 +1051,6 @@ namespace new_core {
 	 * This intrinsic reference type used to represent communication channels.
 	 */
 	IR_SINGLE_ELEMENT_TYPE(ChannelType)
-
-		/**
-		 * Creates a new channel.
-		 *
-		 * @param elementType	the type of data to be communicated through this channel
-		 * @param size			the buffer size of this channel, hence the number of elements which can be
-		 * 						obtained within this channel until it starts blocking writte operations. If
-		 * 						set to 0, the channel will represent a handshake channel.
-		 */
-		ChannelType(const TypePtr& elementType, const IntTypeParamPtr& size)
-			: SingleElementType(NT_ChannelType, elementType, size) {}
-
 	protected:
 
 			/*

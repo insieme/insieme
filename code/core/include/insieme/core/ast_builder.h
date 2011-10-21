@@ -54,6 +54,23 @@ namespace core {
 using std::vector;
 using std::string;
 
+
+namespace detail {
+
+//	/**
+//	 * A utility function wrapping a given statement into a compound statement (if necessary).
+//	 */
+//	CompoundStmtPtr wrapBody(const StatementPtr& stmt) {
+//		if (stmt->getNodeType() == NT_CompoundStmt) {
+//			return static_pointer_cast<CompoundStmtPtr>(stmt);
+//		}
+//		return CompoundStmt::get(stmt->getNodeManager(), stmt);
+//	}
+
+} // end namespace detail
+
+
+
 class ASTBuilder {
 
 	/**
