@@ -105,6 +105,11 @@ namespace new_core {
 		 * Obtains the child node representing the concrete value represented by this parameter.
 		 */
 		IR_NODE_PROPERTY(UIntValue, Param, 0);
+
+		/**
+		 * Overloads the get value for this node, allowing to access the represented value directly.
+		 */
+		unsigned getValue() const { return getParam()->getValue(); }
 	};
 
 	/**
@@ -119,6 +124,15 @@ namespace new_core {
 		 * @param value the value to be represented.
 		 */
 		ConcreteIntTypeParam(const UIntValuePtr& value);
+
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << getParam()->getValue();
+		}
 
 	public:
 
@@ -164,6 +178,15 @@ namespace new_core {
 		 */
 		VariableIntTypeParam(const CharValuePtr& symbol);
 
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "#" << getSymbol()->getValue();
+		}
+
 	public:
 
 		/**
@@ -201,6 +224,15 @@ namespace new_core {
 		 */
 		InfiniteIntTypeParam();
 
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "inf";
+		}
+
 	public:
 
 		/**
@@ -233,6 +265,15 @@ namespace new_core {
 	 * A node type representing a list of int-type parameters.
 	 */
 	IR_NODE(IntTypeParamList, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
 	public:
 
 		/**

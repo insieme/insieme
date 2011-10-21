@@ -54,11 +54,11 @@ namespace new_core {
 		ConcreteIntTypeParamPtr paramB = ConcreteIntTypeParam::get(manager, 14);
 
 		// check name
-		EXPECT_EQ ( "(ConcreteIntTypeParam|12)", toString(*paramA) );
+		EXPECT_EQ ( "12", toString(*paramA) );
 		EXPECT_EQ ( "12", toString(*paramA->getParam()) );
 		EXPECT_EQ ( "12", toString(paramA->getParam()->getValue()) );
 
-		EXPECT_EQ ( "(ConcreteIntTypeParam|14)", toString(*paramB) );
+		EXPECT_EQ ( "14", toString(*paramB) );
 		EXPECT_EQ ( "14", toString(*paramB->getParam()) );
 		EXPECT_EQ ( "14", toString(paramB->getParam()->getValue()) );
 
@@ -75,11 +75,11 @@ namespace new_core {
 		VariableIntTypeParamPtr paramB = VariableIntTypeParam::get(manager, 'b');
 
 		// check name
-		EXPECT_EQ ( "(VariableIntTypeParam|a)", toString(*paramA) );
+		EXPECT_EQ ( "#a", toString(*paramA) );
 		EXPECT_EQ ( "a", toString(*paramA->getSymbol()) );
 		EXPECT_EQ ( "a", toString(paramA->getSymbol()->getValue()) );
 
-		EXPECT_EQ ( "(VariableIntTypeParam|b)", toString(*paramB) );
+		EXPECT_EQ ( "#b", toString(*paramB) );
 		EXPECT_EQ ( "b", toString(*paramB->getSymbol()) );
 		EXPECT_EQ ( "b", toString(paramB->getSymbol()->getValue()) );
 
@@ -95,7 +95,7 @@ namespace new_core {
 		InfiniteIntTypeParamPtr paramA = InfiniteIntTypeParam::get(manager);
 
 		// check name
-		EXPECT_EQ ( "(InfiniteIntTypeParam|)", toString(*paramA) );
+		EXPECT_EQ ( "inf", toString(*paramA) );
 
 		// perform basic type tests
 		basicNodeTests(paramA, toList());
@@ -119,8 +119,8 @@ namespace new_core {
 		EXPECT_EQ(paramB, list->getElement(1));
 
 		// check name
-		EXPECT_EQ ( "(IntTypeParamList|)", toString(*empty) );
-		EXPECT_EQ ( "(IntTypeParamList|(ConcreteIntTypeParam|12),(VariableIntTypeParam|a))", toString(*list) );
+		EXPECT_EQ ( "[]", toString(*empty) );
+		EXPECT_EQ ( "[12,#a]", toString(*list) );
 
 
 		// test access using addresses

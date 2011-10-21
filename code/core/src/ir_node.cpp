@@ -177,12 +177,15 @@ namespace new_core {
 		return res;
 	}
 
-	std::ostream& Node::printTo(std::ostream& out) const {
-		if(isValue()) {
-			return out << value;
-		}
-		return out << "(" << nodeType << "|" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
-	}
+//	std::ostream& Node::printTo(std::ostream& out) const {
+//		if(isValue()) {
+//			if (nodeType == NT_BoolValue) {
+//				if ()
+//			}
+//			return out << value;
+//		}
+//		return out << "(" << nodeType << "|" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
+//	}
 
 } // end namespace new_core
 } // end namespace core

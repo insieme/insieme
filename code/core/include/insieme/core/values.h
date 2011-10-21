@@ -95,15 +95,18 @@ namespace new_core {
 				return manager.get(NAME ## Value(value)); \
 			} \
 			operator const TYPE&() const { \
-				return boost::get<TYPE>(Node::getValue()); \
+				return boost::get<TYPE>(Node::getNodeValue()); \
 			} \
 			const TYPE& getValue() const { \
-				return boost::get<TYPE>(Node::getValue()); \
+				return boost::get<TYPE>(Node::getNodeValue()); \
 			} \
 		protected: \
 			virtual Node* createInstanceUsing(const NodeList& children) const { \
 				assert(children.empty() && "Value nodes must no have children!"); \
 				return new NAME ## Value(*this); \
+			} \
+			virtual std::ostream& printTo(std::ostream& out) const { \
+				return out << getValue(); \
 			} \
 		};
 

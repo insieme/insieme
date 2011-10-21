@@ -39,6 +39,7 @@
 #include <map>
 
 #include <boost/variant.hpp>
+#include <boost/mpl/or.hpp>
 
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/hash_utils.h"
@@ -559,7 +560,7 @@ namespace new_core {
 				// compare content ..
 				if (isValue()) {
 					// .. if it is a value
-					res = res && getValue() == other.getValue();
+					res = res && getNodeValue() == other.getNodeValue();
 				} else {
 					// .. if it is a inner node
 					res = res && getNodeType() == other.getNodeType();
@@ -610,29 +611,25 @@ namespace new_core {
 
 		protected:
 
-			// ----------------------------------------------------------
-			//   Access Members
-			//      Those are protected and made public by sub-classes
-			// ----------------------------------------------------------
-
 			/**
 			 * Obtains a reference to the value represented by this node if
 			 * it is representing a value.
 			 *
 			 * @return a reference to the internally maintained value
 			 */
-			const Value& getValue() const {
+			const Value& getNodeValue() const {
 				assert(isValue() && "Node does not represent a value!");
 				return value;
 			}
 
 			/**
-			 * Prints this node to the given stream.
+			 * Prints this node to the given stream. The actual implementation of this
+			 * function is left over to the concrete node implementations.
 			 *
 			 * @param out the stream to be printed to
 			 * @return the handed in stream
 			 */
-			virtual std::ostream& printTo(std::ostream& out) const;
+			virtual std::ostream& printTo(std::ostream& out) const =0;
 
 			/**
 			 * Compares this node instance with the given instance. Internally the
@@ -705,7 +702,7 @@ namespace new_core {
 	 */
 	template<
 		typename B = Node, typename D,
-		typename boost::enable_if<boost::is_base_of<B,D>,int>::type = 0
+		typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,D>,boost::is_base_of<D,B>>,int>::type = 0
 	>
 	const vector<Pointer<const B>>& convertList(const vector<Pointer<const D>>& list) {
 		// use a C-like cast since structurally the data is correct
@@ -847,13 +844,6 @@ namespace new_core {
 			return all(list, [](const NodePtr& cur) { return (bool)dynamic_pointer_cast<Pointer<const ValueType>>(cur); });
 		}
 
-		/**
-		 * Obtains the number of elements within this list.
-		 */
-		std::size_t size() const {
-			return static_cast<const Derived*>(this)->getNode().getChildList().size();
-		}
-
 	};
 
 
@@ -908,6 +898,22 @@ namespace new_core {
 			return getElement(index);
 		}
 
+		/**
+		 * Obtains the number of elements within this list.
+		 */
+		std::size_t size() const {
+			return static_cast<const Derived*>(this)->getNode().getChildList().size();
+		}
+
+		/**
+		 * Checks whether the represented list of elements is empty or not.
+		 *
+		 * @return true if empty, false otherwise
+		 */
+		bool empty() const {
+			return static_cast<const Derived*>(this)->getNode().getChildList().empty();
+		}
+
 	};
 
 
@@ -925,7 +931,7 @@ namespace new_core {
 	 * A macro starting a node declaration with the given name and base type.
 	 */
 	#define IR_NODE(NAME, BASE) \
-		class NAME : public BASE, public NAME ## Accessor<NAME> { \
+		class NAME : public BASE, public NAME ## Accessor<NAME, Pointer>, public NAME ## Accessor<NAME, Pointer>::node_format_helper { \
 			NAME(const NodeList& children) : BASE(NT_ ## NAME, children) { \
 				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
 			} \
@@ -953,11 +959,13 @@ namespace new_core {
 	 */
 	#define IR_NODE_ACCESSOR(NAME, BASE, ... ) \
 		template<typename Derived, template<typename T> class Ptr = Pointer> \
-		struct NAME ## Accessor : public FixedSizeNodeHelper<Derived, ## __VA_ARGS__>, public BASE ## Accessor<Derived, Ptr> {
+		struct NAME ## Accessor : public BASE ## Accessor<Derived, Ptr> { \
+			typedef FixedSizeNodeHelper<Derived, ## __VA_ARGS__> node_format_helper;
 
 	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, ELEMENT) \
 		template<typename Derived, template<typename T> class Ptr = Pointer> \
-		struct NAME ## Accessor : public ListNodeHelper<Derived, ELEMENT>, public ListNodeAccessor<Derived,ELEMENT,Ptr>, public BASE ## Accessor<Derived, Ptr> {
+		struct NAME ## Accessor : public ListNodeAccessor<Derived,ELEMENT,Ptr>, public BASE ## Accessor<Derived, Ptr> { \
+			typedef ListNodeHelper<Derived, ELEMENT> node_format_helper;
 
 	/**
 	 * A macro adding new properties to an accessor by linking a name to a

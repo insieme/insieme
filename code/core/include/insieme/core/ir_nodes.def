@@ -251,12 +251,15 @@ AST_TERMINAL(Identifier, Node)
 AST_TERMINAL(Lambda, Node)
 AST_TERMINAL(LambdaDefinition, Node)
 
-AST_TERMINAL(RecTypeDefinition, Node)
 
 AST_NODE(Support, Node)
 AST_TERMINAL(IntTypeParamList, Support)
 AST_TERMINAL(TypeParamList, Support)
 
+AST_TERMINAL(RecTypeBinding, Support)
+AST_TERMINAL(RecTypeDefinition, Support)
+
+AST_TERMINAL(NamedType, Support)
 
 //
 // --- Marker ---

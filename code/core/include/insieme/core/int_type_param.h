@@ -261,7 +261,7 @@ namespace core {
 		 * Prints the name of this identifier to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "Inf";
+			return out << "inf";
 		}
 
 		/**

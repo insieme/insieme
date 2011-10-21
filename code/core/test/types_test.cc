@@ -630,7 +630,7 @@ TEST(TypeTest, IntTypeParam) {
 	EXPECT_EQ (toString(*p12), "12");
 
 	InfiniteIntTypeParamPtr inf = InfiniteIntTypeParam::get(manager);
-	EXPECT_EQ (toString(*inf), "Inf");
+	EXPECT_EQ (toString(*inf), "inf");
 
 	VariableIntTypeParamPtr pvp = VariableIntTypeParam::get(manager, 'p');
 	EXPECT_EQ (toString(*pvp), "#p");
