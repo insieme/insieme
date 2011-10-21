@@ -170,10 +170,10 @@ struct DependenceInfo : public utils::Printable {
 					const MapPtr<Ctx>& mayDep, 
 					const MapPtr<Ctx>& mustNoSource, 
 					const MapPtr<Ctx>& mayNoSource 
-		): mustDep(mustDep), 
-		   mayDep(mayDep), 
-		   mustNoSource(mustNoSource), 
-		   mayNoSource(mayNoSource) { }
+		) : mustDep(mustDep), 
+		    mayDep(mayDep), 
+		    mustNoSource(mustNoSource), 
+		    mayNoSource(mayNoSource) { }
 
 	bool isEmpty() const {
 		return mustDep->isEmpty() && mayDep->isEmpty();
