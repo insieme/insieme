@@ -135,6 +135,7 @@ namespace core {
 		typedef std::vector<IntTypeParamPtr> IntParamList;
 		typedef std::vector<StatementPtr> StatementList;
 		typedef std::vector<ExpressionPtr> ExpressionList;
+		typedef std::vector<VariablePtr> VariableList;
 
 		typedef utils::set::PointerSet<NodePtr> NodeSet;
 		typedef utils::set::PointerSet<TypePtr> TypeSet;

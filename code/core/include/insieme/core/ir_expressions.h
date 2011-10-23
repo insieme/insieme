@@ -70,11 +70,11 @@ namespace new_core {
 	public:
 
 		/**
-		 * This static factory method allows to construct a int-type parameter list based
-		 * on the given int-type parameters.
+		 * This static factory method allows to construct a expression list based
+		 * on the given expressions.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
-		 * @param params the list of parameters to be included
+		 * @param expressions the list of expressions to be included
 		 * @return the requested instance managed by the given manager
 		 */
 		static ExpressionsPtr get(NodeManager& manager, const ExpressionList& expressions) {
@@ -286,7 +286,7 @@ namespace new_core {
 		 * @param id the value of the requested variable
 		 * @return the requested type instance managed by the given manager
 		 */
-		static VariablePtr get(NodeManager& manager, const TypePtr& type, unsigned int id) {
+		static CallExprPtr get(NodeManager& manager, const TypePtr& type, unsigned int id) {
 			return get(manager, type, UIntValue::get(manager, id));
 		}
 
@@ -301,381 +301,381 @@ namespace new_core {
 		 * @param id the value of the requested variable
 		 * @return the requested type instance managed by the given manager
 		 */
-		static VariablePtr get(NodeManager& manager, const TypePtr& type) {
+		static CallExprPtr get(NodeManager& manager, const TypePtr& type) {
 			return get(manager, type, manager.getFreshID());
 		}
 
 	};
 
-//
-//class Lambda : public Node {
-//
-//public:
-//
-//	/**
-//	 * Type wrapper for the parameter list.
-//	 */
-//	typedef vector<VariablePtr> ParamList;
-//
-//private:
-//
-//	const FunctionTypePtr type;
-//	const ParamList paramList;
-//	const CompoundStmtPtr body;
-//
-//	Lambda(const FunctionTypePtr& type, const ParamList& paramList, const CompoundStmtPtr& body);
-//	virtual Lambda* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//
-//	/**
-//	 * Compares this instance with the given node. In case it is representing the
-//	 * same lambda, the return value will be true. In any other case the test-result
-//	 * will be negative.
-//	 *
-//	 * @return true if equivalent (though possibly not identical), false otherwise
-//	 */
-//	virtual bool equals(const Node& other) const;
-//
-//	/**
-//	 * Retrieves a list of all directly referenced nodes.
-//	 */
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	const FunctionTypePtr& getType() const { return type; }
-//	const ParamList& getParameterList() const { return paramList; }
-//	const CompoundStmtPtr& getBody() const { return body; }
-//
-//	static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParamList& params, const StatementPtr& body);
-//
-//};
-//
-//
-//class LambdaDefinition : public Node {
-//
-//public:
-//
-//	/**
-//	 * The internal data structure used for defining the actual functions.
-//	 */
-//	typedef std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr>> Definitions;
-//
-//private:
-//
-//	/**
-//	 * The definitions forming the body of this (recursive) lambda definition.
-//	 */
-//	const Definitions definitions;
-//
-//	/**
-//	 * Creates a new instance of this type based on a copy of the handed in definition.
-//	 */
-//	LambdaDefinition(const Definitions& definitions);
-//
-//	/**
-//	 * Creates a clone / deep copy of this instance referencing instances maintained
-//	 * by the given node manager.
-//	 */
-//	LambdaDefinition* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//
-//	/**
-//	 * Compares this instance with the given node. In case it is representing the
-//	 * same recursive function definitions, the return value will be true. In any
-//	 * other case the test-result will be negative.
-//	 *
-//	 * @return true if equivalent (though possibly not identical), false otherwise
-//	 */
-//	virtual bool equals(const Node& other) const;
-//
-//	/**
-//	 * Retrieves a list of all directly referenced nodes.
-//	 */
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//
-//	/**
-//	 * A static factory method to obtain a fresh pointer to a potentially shared instance
-//	 * of a (recursive) lambda definition instance representing the given definitions.
-//	 *
-//	 * @param manager the manager to be used for obtaining a proper instance
-//	 * @param definitions the definitions to be represented by the requested object
-//	 * @return a pointer to the requested recursive definition
-//	 */
-//	static LambdaDefinitionPtr get(NodeManager& manager, const Definitions& definitions);
-//
-//	/**
-//	 * Retrieves the definitions of the recursive functions represented by this instance.
-//	 */
-//	const Definitions& getDefinitions() const { return definitions; }
-//
-//	/**
-//	 * Obtains a pointer to the function body defining the recursive function represented
-//	 * by the given variable within this recursive definition.
-//	 *
-//	 * @param variable the variable used to define the requested recursive function within
-//	 * 				   this recursive function definition.
-//	 * @return a copy of the internally maintained pointer to the actual function definition.
-//	 */
-//	const LambdaPtr& getDefinitionOf(const VariablePtr& variable) const;
-//
-//	/**
-//	 * Determines whether the definition of the function referenced by the given variable within
-//	 * this lambda definition is recursive - hence, whether it is invoking itself or one of the other
-//	 * functions within this block.
-//	 *
-//	 * @param variable the variable identifying the function to be checked within this definition
-//	 * @return true if recursive, false otherwise
-//	 */
-//	bool isRecursive(const VariablePtr& variable) const;
-//
-//	/**
-//	 * Unrolls this definition once for the given variable.
-//	 *
-//	 * @param manager the manager to be used for maintaining the resulting reference
-//	 * @param variable the variable defining the definition to be unrolled once
-//	 * @return the resulting, unrolled lambda expression
-//	 */
-//	LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const;
-//
-//	/**
-//	 * Prints a readable representation of this instance to the given output stream.
-//	 *
-//	 * @param out the stream to be printed to
-//	 * @return a reference to the stream
-//	 */
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//};
-//
-//
-//class LambdaExpr : public Expression {
-//
-//	/**
-//	 * The variable used within the recursive definition to describe the
-//	 * recursive function to be represented by this expression.
-//	 */
-//	const VariablePtr variable;
-//
-//	/**
-//	 * The definition body of this lambda expression. Identical definitions may be
-//	 * shared among multiple lambda definitions.
-//	 */
-//	const LambdaDefinitionPtr definition;
-//
-//	/**
-//	 * A reference to the defining lambda (cached for faster access).
-//	 *
-//	 * NOTE: not stored within the XML
-//	 */
-//	const LambdaPtr& lambda;
-//
-//	/**
-//	 * A flag indicating whether this lambda is representing a recursive function.
-//	 */
-//	mutable boost::logic::tribool recursive;
-//
-//	/**
-//	 * A constructor for creating a new lambda.
-//	 *
-//	 * @param variable the variable identifying the recursive function within the definition block
-//	 * 				   to be represented by this expression.
-//	 * @param definition the recursive definitions to be based on.
-//	 */
-//	LambdaExpr(const VariablePtr& variable, const LambdaDefinitionPtr& definition);
-//
-//	/**
-//	 * Creates a clone of this node.
-//	 */
-//	virtual LambdaExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//	/**
-//	 * Obtains a list of all sub-nodes referenced by this AST node.
-//	 */
-//	virtual NodeListOpt getChildNodes() const;
-//
-//	/**
-//	 * Compares this recursive lambda expression with the given expression. If they
-//	 * are equivalent (though potentially not identical), true will be returned. Otherwise
-//	 * the result will be negative.
-//	 *
-//	 * @param expr the expression to be compared to.
-//	 * @return true if equivalent, false otherwise
-//	 */
-//	virtual bool equalsExpr(const Expression& expr) const;
-//
-//public:
-//
-//	/**
-//	 * A factory method for obtaining a new recursive lambda expression instance.
-//	 *
-//	 * @param manager the manager which should be maintaining the new instance
-//	 * @param lambda the definition of this non-recursive lambda function
-//	 * @return the requested lambda expression managed by the given manager
-//	 */
-//	static LambdaExprPtr get(NodeManager& manager, const LambdaPtr& lambda);
-//
-//	/**
-//	 * A factory method for obtaining a new recursive lambda expression instance.
-//	 *
-//	 * @param manager the manager which should be maintaining the new instance
-//	 * @param variable the name of the variable used within the recursive lambda definition for representing the
-//	 * 					   recursive function to be defined by the resulting expression.
-//	 * @param definition the definition of the recursive lambda.
-//	 * @return the requested lambda expression managed by the given manager
-//	 */
-//	static LambdaExprPtr get(NodeManager& manager, const VariablePtr& variable, const LambdaDefinitionPtr& definition);
-//
-//	/**
-//	 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
-//	 *
-//	 * @param manager the manager maintaining the resulting node instance
-//	 * @param type the type of the resulting lambda expression
-//	 * @param params the parameters accepted by the resulting lambda
-//	 * @param body the body of the resulting function
-//	 * @return the requested lambda expression managed by the given manager
-//	 */
-//	static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const Lambda::ParamList& params, const StatementPtr& body);
-//
-//	/**
-//	 * Prints a readable representation of this instance to the given output stream.
-//	 *
-//	 * @param out the stream to be printed to
-//	 * @return a reference to the stream
-//	 */
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	/**
-//	 * Obtains the variable used within the recursive definition for modeling this lambda.
-//	 */
-//	const VariablePtr& getVariable() const { return variable; }
-//
-//	/**
-//	 * The (potential) recursive definition of this lambda.
-//	 */
-//	const LambdaDefinitionPtr& getDefinition() const { return definition; }
-//
-//	/**
-//	 * Obtains a pointer to the defining lambda node.
-//	 */
-//	const LambdaPtr& getLambda() const { return lambda; }
-//
-//	/**
-//	 * Obtains a reference to the internally maintained parameter list of this lambda.
-//	 */
-//	const Lambda::ParamList& getParameterList() const;
-//
-//	/**
-//	 * Obtains a reference to the body of this lambda.
-//	 */
-//	const CompoundStmtPtr& getBody() const;
-//
-//	/**
-//	 * Determines whether this function is recursively defined or not.
-//	 */
-//	bool isRecursive() const {
-//		// evaluate lazily
-//		if (boost::logic::indeterminate(recursive)) {
-//			recursive = definition->isRecursive(variable);
-//		}
-//		return recursive;
-//	}
-//};
-//
-///**
-// * A bind expression allows to take a function, fix some of its parameters, reordering others and produce
-// * a new function which may than be called or forwarded to another call. Unlike static lambda structures, this
-// * bindings are evaluated during runtime.
-// */
-//class BindExpr : public Expression {
-//
-//	/**
-//	 * The list of parameters accepted by the resulting function.
-//	 */
-//	const vector<VariablePtr> parameters;
-//
-//	/**
-//	 * The call representing the function and the parameters binding.
-//	 */
-//	const CallExprPtr call;
-//
-//	/**
-//	 * Creates a new instance of this type of node based on the given parameters. The resulting
-//	 * value will be a function exposing the given parameters and if evaluated, the corresponding
-//	 * call with the bound values will be processed.
-//	 *
-//	 * @param parameters the parameters of the resulting function
-//	 * @param call the call including the bound and unbound parameters
-//	 */
-//	BindExpr(const vector<VariablePtr>& parameters, const CallExprPtr& call);
-//
-//	/**
-//	 * Creates a clone of this node.
-//	 */
-//	virtual BindExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//	/**
-//	 * Obtains a list of all sub-nodes referenced by this node.
-//	 */
-//	virtual NodeListOpt getChildNodes() const;
-//
-//	/**
-//	 * Compares this expression with the given expression. If they
-//	 * are equivalent (though potentially not identical), true will be returned. Otherwise
-//	 * the result will be false.
-//	 *
-//	 * @param expr the expression to be compared to.
-//	 * @return true if equivalent, false otherwise
-//	 */
-//	virtual bool equalsExpr(const Expression& expr) const;
-//
-//public:
-//
-//	/**
-//	 * A factory method for obtaining a bind expression node instance maintained by the given
-//	 * node manager.
-//	 *
-//	 * @param manager the manager which should be maintaining the new instance
-//	 * @param parameters the parameters of the resulting function
-//	 * @param call the call including the bound and unbound parameters
-//	 */
-//	static BindExprPtr get(NodeManager& manager, const vector<VariablePtr>& parameters, const CallExprPtr& call);
-//
-//	/**
-//	 * Prints a readable representation of this instance to the given output stream.
-//	 *
-//	 * @param out the stream to be printed to
-//	 * @return the same stream reference which has been passed as an argument
-//	 */
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	/**
-//	 * Obtains the parameters accepted by this bind expression.
-//	 */
-//	const vector<VariablePtr>& getParameters() const {
-//		return parameters;
-//	}
-//
-//	/**
-//	 * Obtains the call expression defining the function and its bound parameters defining
-//	 * the resulting function value.
-//	 */
-//	const CallExprPtr& getCall() const {
-//		return call;
-//	}
-//
-//	/**
-//	 * Obtains a list of all expressions which's resulting value is bound by this expression.
-//	 */
-//	vector<ExpressionPtr> getBoundExpressions() const;
-//
-//};
-//
+
+
+
+	// ------------------------------------- Parameter -----------------------------------
+
+	/**
+	 * The accessor associated to the parameter node.
+	 */
+	IR_LIST_NODE_ACCESSOR(Parameters, Support, Variable)
+	};
+
+	/**
+	 * A node type representing a list of parameter.
+	 */
+	IR_NODE(Parameters, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a parameter list based
+		 * on the given variables.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param parameter the list of parameters to be included
+		 * @return the requested instance managed by the given manager
+		 */
+		static ParametersPtr get(NodeManager& manager, const VariableList& parameter) {
+			return manager.get(Parameters(convertList(parameter)));
+		}
+	};
+
+
+
+	// ------------------------------------- Lambda -----------------------------------
+
+
+	/**
+	 * The accessor associated to the lambda node.
+	 */
+	IR_NODE_ACCESSOR(Lambda, Support, FunctionType, Parameters, CompoundStmt)
+
+		/**
+		 * Obtains a reference to the type of this lambda.
+		 */
+		IR_NODE_PROPERTY(FunctionType, Type, 0);
+
+		/**
+		 * Obtains a reference to the parameters accepted by this lambda.
+		 */
+		IR_NODE_PROPERTY(Parameters, Parameter, 1);
+
+		/**
+		 * Obtains a reference to the body of this lambda.
+		 */
+		IR_NODE_PROPERTY(CompoundStmt, Body, 2);
+	};
+
+	/**
+	 * The entity used to represent lambda nodes.
+	 */
+	IR_NODE(Lambda, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "fun(" << join(", ", getParameter()->getElements(), print<deref<NodePtr>>()) << ") " << *getBody();
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain an instance of a lambda node
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the lambda expression
+		 * @param params the list of parameters accepted by the requested lambda
+		 * @param body the body defining the requested lambda
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
+			return manager.get(Lambda(type, params, body));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------- Lambda Binding -----------------------------------
+
+	/**
+	 * The accessor associated to a lambda binding. A lambda binding is defining a variable
+	 * for a lambda within a lambda definition.
+	 */
+	IR_NODE_ACCESSOR(LambdaBinding, Support, Variable, Lambda)
+
+		/**
+		 * Obtains a reference to the variable bound within this binding.
+		 */
+		IR_NODE_PROPERTY(Variable, Variable, 0);
+
+		/**
+		 * Obtains a reference to the lambda bound to the variable referenced by this binding.
+		 */
+		IR_NODE_PROPERTY(Lambda, Lambda, 1);
+
+	};
+
+	/**
+	 * The entity used to represent lambda nodes.
+	 */
+	IR_NODE(LambdaBinding, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << *getVariable() << "=" << *getLambda();
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain an instance of a lambda node
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param var the variable to be bound to the given lambda
+		 * @param lambda the lambda to be bound to the given variable
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaBindingPtr get(NodeManager& manager, const VariablePtr& var, const LambdaPtr& lambda) {
+			return manager.get(LambdaBinding(var, lambda));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------- Lambda Definition -----------------------------------
+
+	/**
+	 * The accessor associated to a lambda definition
+	 */
+	IR_LIST_NODE_ACCESSOR(LambdaDefinition, Support, LambdaBinding)
+
+		/**
+		 * Retrieves the definitions of the recursive functions represented by this instance.
+		 */
+		const vector<LambdaBindingPtr>& getDefinitions() const {
+			return ListNodeAccessor<Derived,LambdaBinding,Ptr>::getElements();
+		}
+
+		/**
+		 * Obtains a pointer to the function body defining the recursive function represented
+		 * by the given variable within this recursive definition.
+		 *
+		 * @param variable the variable used to define the requested recursive function within
+		 * 				   this recursive function definition.
+		 * @return a copy of the internally maintained pointer to the actual function definition.
+		 */
+		const LambdaPtr& getDefinitionOf(const VariablePtr& variable) const;
+
+		/**
+		 * Determines whether the definition of the function referenced by the given variable within
+		 * this lambda definition is recursive - hence, whether it is invoking itself or one of the other
+		 * functions within this block.
+		 *
+		 * @param variable the variable identifying the function to be checked within this definition
+		 * @return true if recursive, false otherwise
+		 */
+		bool isRecursive(const VariablePtr& variable) const;
+
+		/**
+		 * Unrolls this definition once for the given variable.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting reference
+		 * @param variable the variable defining the definition to be unrolled once
+		 * @return the resulting, unrolled lambda expression
+		 */
+		LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const;
+	};
+
+	/**
+	 * The entity used to represent lambda definitions.
+	 */
+	IR_NODE(LambdaDefinition, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "{" << join(",", getChildList(), print<deref<NodePtr>>()) << "}";
+		}
+
+	public:
+
+		/**
+		 * This static factory method constructing a new lambda definition based
+		 * on a given list of lambda bindings.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param bindings the bindings to be included within this definition
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaDefinitionPtr get(NodeManager& manager, const vector<LambdaBindingPtr>& bindings) {
+			return manager.get(LambdaDefinition(convertList(bindings)));
+		}
+	};
+
+
+
+
+	// ------------------------------------- Lambda Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a lambda expression.
+	 */
+	IR_NODE_ACCESSOR(LambdaExpr, Expression, Type, Variable, LambdaDefinition)
+
+		/**
+		 * Obtains a reference to the variable identifying the represented lambda within the definition.
+		 */
+		IR_NODE_PROPERTY(Variable, Variable, 1);
+
+		/**
+		 * Obtains a reference to the definition of this lambda expression.
+		 */
+		IR_NODE_PROPERTY(LambdaDefinition, Definition, 2);
+
+	};
+
+	/**
+	 * The entity used to represent lambda expressions.
+	 */
+	IR_NODE(LambdaExpr, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "rec " << *getVariable() << "." << *getDefinition();
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain an instance of a lambda expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the requested lambda expression
+		 * @param var the variable identifying the lambda to be represented within the given definition
+		 * @param lambda the definition defining the lambda to be represented
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariablePtr& var, const LambdaDefinitionPtr& definition) {
+			return manager.get(LambdaExpr(type, var, definition));
+		}
+
+		/**
+		 * This static factory method allows to obtain an instance of a lambda expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param var the variable identifying the lambda to be represented within the given definition
+		 * @param lambda the definition defining the lambda to be represented
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const VariablePtr& var, const LambdaDefinitionPtr& definition) {
+			assert(dynamic_pointer_cast<FunctionTypePtr>(var->getType()) && "Variable type has to be a function type!");
+			return get(manager, static_pointer_cast<FunctionTypePtr>(var->getType()), var, definition);
+		}
+
+		/**
+		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
+		 *
+		 * @param manager the manager maintaining the resulting node instance
+		 * @param type the type of the resulting lambda expression
+		 * @param params the parameters accepted by the resulting lambda
+		 * @param body the body of the resulting function
+		 * @return the requested lambda expression managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
+			VariablePtr var = Variable::get(manager, type);
+			LambdaPtr lambda = Lambda::get(manager, type, params, body);
+			LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
+			LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
+			return manager.get(LambdaExpr(var, def));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------------ Bind ----------------------------------------
+
+	/**
+	 * The accessor associated to a bind node. A bind node is introducing a new function
+	 * by accepting a list of parameters and carrying out a pre-determined call.
+	 */
+	IR_NODE_ACCESSOR(BindExpr, Expression, Type, Parameters, CallExpr)
+
+		/**
+		 * Obtains a reference to the parameters accepted by this bind.
+		 */
+		IR_NODE_PROPERTY(Parameters, Parameters, 1);
+
+		/**
+		 * Obtains a reference to the call defining this bind expression.
+		 */
+		IR_NODE_PROPERTY(CallExpr, Call, 2);
+
+
+//		/**
+//		 * Obtains a list of all expressions which's resulting value is bound by this expression.
+//		 */
+//		vector<ExpressionPtr> getBoundExpressions() const;
+	};
+
+	/**
+	 * A bind expression allows to take a function, fix some of its parameters, reordering others and produce
+	 * a new function which may than be called or forwarded to another call. Unlike static lambda structures, this
+	 * bindings are evaluated during runtime.
+	 */
+	IR_NODE(BindExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "bind(" << join(",", getParameters()->getElements(), print<deref<VariablePtr>>()) << "){" << *getCall() << "}";
+		}
+
+	public:
+
+		/**
+		 * A factory method for obtaining a bind expression node instance maintained by the given
+		 * node manager.
+		 *
+		 * @param manager the manager which should be maintaining the new instance
+		 * @param type the type of the resulting function (hence, of the resulting expression)
+		 * @param parameters the parameters of the resulting function
+		 * @param call the call including the bound and unbound parameters
+		 * @return the requested bind expression managed by the given manager
+		 */
+		static BindExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& parameters, const CallExprPtr& call) {
+			return manager.get(BindExpr(type, parameters, call));
+		}
+
+	};
+
 //
 //class TupleExpr : public Expression {
 //	const vector<ExpressionPtr> expressions;
