@@ -119,7 +119,7 @@ LambdaPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPt
             paramTypes.push_back(var->getType());
             params.push_back(var);
         } else
-            throw ParseException();
+			throw SemanticException("Invalid element in argument list of lambda");
     });
 
 //    return Lambda::get(nodeMan, retType, captureList, params, build.compoundStmt(stmts));
@@ -133,14 +133,14 @@ LambdaDefinitionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntT
     std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > defs;
 
     if(funVarExpr.size() != lambdaExpr.size())
-        throw ParseException("LambdaDefinition has illegal form\n");
+		throw SemanticException("LambdaDefinition has illegal form\n");
 
     auto J = lambdaExpr.begin();
     for(auto I = funVarExpr.begin(); I != funVarExpr.end(); ++I, ++J) {
         if(VariablePtr def = dynamic_pointer_cast<const Variable>(*I) )
             defs[def] = *J;
         else
-            throw ParseException("LambdaDefinitions must be of form '{' funVarExpr '=' lambda '}'");
+			throw ParseException("LambdaDefinitions must be of form '{' funVarExpr '=' lambda '}'");
     }
 
     return LambdaDefinition::get(nodeMan, defs);
@@ -191,7 +191,7 @@ ExpressionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypePar
 
 void callDepthCheck(bool reset, unsigned& callDepthCount) {
     if(!reset) {
-        if(callDepthCount > 1000) throw ParseException();
+		if(callDepthCount > 1000) throw ParseException("Call Depth is too Long");
     } else {
         callDepthCount = 0;
     }

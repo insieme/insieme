@@ -184,7 +184,7 @@ std::ostream& Task::dump(std::ostream& out) const {
 std::ostream& Critical::dump(std::ostream& out) const {
 	out << "critical";
 	if(hasName())
-		out << "(" << *name << ")";
+		out << "(" << name << ")";
 	return out;
 }
 

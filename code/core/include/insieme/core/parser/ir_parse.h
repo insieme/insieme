@@ -75,6 +75,20 @@ public :
     ~ParseException() throw() {}
 };
 
+class SemanticException : std::exception {
+	string err;
+public :
+	const char* what() const throw() {
+		return ("IR Generation failed\n" + err).c_str();
+	}
+
+	SemanticException() : err("") {}
+
+	SemanticException(string errMsg) : err(errMsg) {}
+
+	~SemanticException() throw() {}
+};
+
 /** A helper function for parsing an IR type declaration.
  ** If more than one definition should be parsed it is better to generate a parser object and call the parseType method
  ** @param nodeMan the NodeManager the generated definitions will be added to
@@ -106,6 +120,14 @@ StatementPtr parseStatement(NodeManager& nodeMan, const string& input);
  ** @return a pointer to an AST node representing the generated program
  **/
 ProgramPtr parseProgram(NodeManager& nodeMan, const string& input);
+
+/** A helper function for parsing IR node.
+ ** If more than one node should be parsed it is better to generate a parser object and call the parseIR method
+ ** @param nodeMan the NodeManager the generated nodes will be added to
+ ** @param input the string representation of the IR program to be parsed
+ ** @return a pointer to an AST node representing the generated AST
+ **/
+NodePtr parseIR(NodeManager& nodeMan, const string& input);
 
 
 namespace qi = boost::spirit::qi;

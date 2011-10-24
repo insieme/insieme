@@ -675,11 +675,15 @@ public:
 		return location;
 	}
 
+	bool visitLambda(const CallExprAddress& call) {
+		
+	}
+
 	const VariableAddress& getLocation() { return location; }
 };
 } // end anonymous namespace
 
-VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location) {
+VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const NodeAddress& location, NodePtr& outNewRoot) {
 	// find variable address
 	VariableAddress va;
 	NodeAddress lastAddress;
@@ -698,6 +702,11 @@ VariablePtr makeAvailable(NodeManager& manager, const VariablePtr& var, const No
 		return VariablePtr();
 	}
 	// forward variable through calls
+	return makeAvailable(manager, va, location, outNewRoot);
+}
+
+VariablePtr makeAvailable(NodeManager& manager, const VariableAddress& var, const NodeAddress& location, NodePtr& outNewRoot) {
+
 }
 
 } // end namespace transform

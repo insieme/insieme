@@ -62,7 +62,6 @@ namespace poly {
  * iteration domain also allows the creation of empty and universe sets which are used to represent
  * statement which are not bound by any constraint
  **************************************************************************************************/
-
 class IterationDomain : public utils::Printable {
 
 	const IterationVector& iterVec;
@@ -79,14 +78,15 @@ public:
 	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom) : 
 		iterVec(iv), constraint( poly::cloneConstraint(iv, otherDom.constraint ) ), empty(false) { }
 	
-	const IterationVector& getIterationVector() const { return iterVec; }
+	inline const IterationVector& getIterationVector() const { return iterVec; }
 
-	const ConstraintCombinerPtr& getConstraint() const { return constraint; }
+	inline const ConstraintCombinerPtr& getConstraint() const { return constraint; }
 
-	bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
+	inline bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
 
-	bool isEmpty() const { return empty; }
+	inline bool isEmpty() const { return empty; }
 
+	// Intersect two iteration domains and return assign the result to this iteration domain
 	IterationDomain& operator&=(const IterationDomain& other) {
 		assert(iterVec == other.iterVec);
 		constraint = constraint and other.constraint;
@@ -100,7 +100,12 @@ IterationDomain operator&&(const IterationDomain& lhs, const IterationDomain& rh
 IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rhs);
 IterationDomain operator!(const IterationDomain& other);
 
-struct AffineSystem : public utils::Printable {
+/**************************************************************************************************
+ * AffineSystem: represents a set of affine functions. The invariant is that every affine function
+ * composing an affine system refers to the same iteration vector. Therefore changes to the
+ * iteration vector owned by this affine system results in changes to all the affine functions. 
+ *************************************************************************************************/
+struct AffineSystem : public utils::Printable, boost::noncopyable {
 	
 	typedef std::list<AffineFunction> AffineList;
 
@@ -109,15 +114,19 @@ struct AffineSystem : public utils::Printable {
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
-	void appendRow(const AffineFunction& af);
+	void append(const AffineFunction& af) { return insert(end(), af); }
+
+	void insert(const AffineList::iterator& pos, const AffineFunction& af);
 
 	inline size_t size() const { return funcs.size(); }
 
 	std::ostream& printTo(std::ostream& out) const;
 
-	AffineList::const_iterator begin() const { return funcs.begin(); }
+	AffineList::iterator begin() { return funcs.begin(); }
+	AffineList::iterator end() { return funcs.end(); }
 
-	AffineList::const_iterator end() const { return funcs.end(); }
+	inline AffineList::const_iterator begin() const { return funcs.cbegin(); }
+	inline AffineList::const_iterator end() const { return funcs.cend(); }
 
 private:	
 	void cloneRows(const AffineList&);
@@ -127,19 +136,6 @@ private:
 };
 
 typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
-
-//*****************************************************************************************************
-// ScatteringFunction: A scattering function represent the order of execution of statements inside a
-// SCoP
-//*****************************************************************************************************
-struct ScatteringFunction : public AffineSystem {
-
-	ScatteringFunction(const IterationVector& iterVec) : AffineSystem(iterVec) { }
-	ScatteringFunction(const ScatteringFunction& other) : AffineSystem(other) { }
-
-};
-
-typedef std::shared_ptr<ScatteringFunction> ScatteringFunctionPtr;
 
 } // end poly namespace
 } // end analysis namespace

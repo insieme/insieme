@@ -460,6 +460,7 @@ private:
 						tyVars->applyTo(manager, )
 					}
 				}*/
+
 			VariablePtr param = cur.first;
 			if (!isSubTypeOf(cur.second->getType(), param->getType())) {
 				param = this->builder.variable(cur.second->getType());
@@ -478,8 +479,26 @@ private:
 			callTy = tryDeduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes);
 		} catch(ReturnTypeDeductionException& rtde) {
 			TypeList typeList;
-			visitDepthFirst(newBody, [&](const ReturnStmtPtr& ret) {
-				typeList.push_back(ret->getReturnExpr()->getType());
+
+			// do not look for return statements inside lambdas of the body
+			NodeMapping* h;
+			auto mapper = makeLambdaMapper([&](unsigned index, const NodePtr& element)->NodePtr{
+				if(const ReturnStmtPtr& ret = dynamic_pointer_cast<const ReturnStmt>(element))
+					typeList.push_back(ret->getReturnExpr()->getType());
+
+				if(element->getNodeType() == NT_LambdaExpr)
+					return element;
+
+				return element->substitute(builder.getNodeManager(), *h);
+			});
+
+			h = &mapper;
+			h->map(0, newBody);
+
+
+			for_each(newBody->getChildList(), [&typeList](const NodePtr& child) {
+				if(const ReturnStmtPtr& ret = dynamic_pointer_cast<const ReturnStmt>(child))
+					typeList.push_back(ret->getReturnExpr()->getType());
 			});
 
 			callTy = getSmallestCommonSuperType(typeList);

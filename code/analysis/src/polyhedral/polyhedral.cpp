@@ -79,12 +79,12 @@ std::ostream& AffineSystem::printTo(std::ostream& out) const {
 	return out << "}" << std::endl;
 }
 
-void AffineSystem::appendRow(const AffineFunction& af) { 
+void AffineSystem::insert(const AffineList::iterator& pos, const AffineFunction& af) { 
 	assert( iterVec == af.getIterationVector() && 
 			"Adding an affine function to a scattering matrix with a different base");
 
 	// adding a row to this matrix 
-	funcs.push_back( af.toBase(iterVec) );
+	funcs.insert( pos, af.toBase(iterVec) );
 }
 
 void AffineSystem::cloneRows(const AffineList& src) { 

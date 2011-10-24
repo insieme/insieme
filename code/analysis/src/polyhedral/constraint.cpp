@@ -151,11 +151,11 @@ struct ConstraintCloner : public ConstraintVisitor {
 		
 		// we are really switching iteration vectors
 		if (transMap.empty() ) {
-			src = &c.getAffineFunction().getIterationVector();
+			src = &c.getIterationVector();
 			transMap = transform( trg, *src );
 		}
 
-		assert(c.getAffineFunction().getIterationVector() == *src);
+		assert(c.getIterationVector() == *src);
 		newCC = std::make_shared<RawConstraintCombiner>( c.toBase(trg, transMap) ); 
 	}
 
@@ -182,7 +182,7 @@ struct IterVecExtractor : public ConstraintVisitor {
 	IterVecExtractor() : iterVec(NULL) { }
 
 	void visit(const RawConstraintCombiner& rcc) { 
-		const IterationVector& thisIterVec = rcc.getConstraint().getAffineFunction().getIterationVector();
+		const IterationVector& thisIterVec = rcc.getConstraint().getIterationVector();
 		if (iterVec == NULL) {
 			iterVec = &thisIterVec;
 		} 

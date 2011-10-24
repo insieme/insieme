@@ -101,15 +101,76 @@ ProgramGrammar<P, T, U, V, W, X, Y, Z>::~ProgramGrammar() {
 template struct ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
 
 
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+class LambdaDefinitionPtr>
+ExpressionPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+optVarHelp(const TypePtr& type, const IdentifierPtr & id) {
+	try {
+		return stmtG->exprG->varTab.get(type, id);
+	}catch(ParseException& pe) {
+		return Variable::get(nodeMan, GenericType::get(nodeMan, "<unknown_type>"));
+	}
+}
+
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+class LambdaDefinitionPtr>
+ExpressionPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+optVarHelp(const IdentifierPtr & id) {
+	try {
+		return stmtG->exprG->varTab.lookup(id);
+	} catch(ParseException& pe) {
+		return Variable::get(nodeMan, GenericType::get(nodeMan, "<unknown_type>"));
+	}
+}
+
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+class LambdaDefinitionPtr>
+LambdaPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+lambdaHelp(const TypePtr& retType, const vector<ExpressionPtr>& paramsExpr, const StatementPtr& body) {
+	// build a stmtExpr bc the builder cannot at the moment
+	ASTBuilder build(nodeMan);
+	vector<VariablePtr> params;
+	vector<TypePtr> paramTypes;
+
+	// TODO make cast faster
+	// construct function type
+	for_each(paramsExpr, [&](const ExpressionPtr paramExpr) {
+	if(VariablePtr var = dynamic_pointer_cast<const Variable>(paramExpr)) {
+		paramTypes.push_back(var->getType());
+		params.push_back(var);
+	} else
+		throw ParseException("Parameters of Lambda must to be variables");
+	});
+
+//	    return Lambda::get(nodeMan, build.functionType(paramTypes, retType, true), params, body);
+	return build.lambda(build.functionType(paramTypes, retType, true), params, body);
+}
+
+template<typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
+qi::rule<ParseIt, Y(), qi::locals<vector<T> >, qi::space_type> IRGrammar<P, T, U, V, W, X, Y, Z>::getLambda() {
+/*	const FunctionTypePtr type;
+	const StatementPtr body;
+	vector<VariablePtr> params;
+    const boost::phoenix::actor<boost::phoenix::reference<insieme::core::NodeManager> > nManRef;*/
+    return ( '(' >> -(optVarExpr                                    [ ph::push_back(qi::_a, qi::_1) ]
+         % ',') >> ')' >> qi::lit("->")
+       >> stmtG->typeG->typeRule >> '{' >> stmtG->statementRule
+       >> '}')                                                      [ qi::_val = ph::bind(&IRGrammar<P, T, U, V, W, X, Y, Z>::lambdaHelp, this,
+                                                                        qi::_2, qi::_a, qi::_3 )];
+
+}
 
 template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
 IRGrammar<P, T, U, V, W, X, Y, Z>::IRGrammar(NodeManager& nMan) : IRGrammar::base_type(irRule),
-	typeG(new TypeGrammar<V, W, X>(nMan)),
 	progG(new ProgramGrammar<P, T, U, V, W, X, Y, Z>(nMan)),
 	stmtG(new StatementGrammar<U, T, V, W, X, Y, Z>(nMan, NULL, NULL)),
 	nodeMan(nMan) {
 
 	mainProg = ( qi::lit("main") >> ':' >> stmtG->exprG->expressionRule )    [ qi::_val = ph::bind(&ProgramGrammar<P, T, U, V, W, X, Y, Z>::mainProgramHelp, progG, qi::_1) ];
+
+	optVarExpr = (stmtG->typeG->typeRule >> ':' >> stmtG->typeG->identifier) [ qi::_val = ph::bind(&IRGrammar<P, T, U, V, W, X, Y, Z>::optVarHelp, this, qi::_1, qi::_2) ]
+		   | stmtG->typeG->identifier                                        [ qi::_val = ph::bind(&IRGrammar<P, T, U, V, W, X, Y, Z>::optVarHelp, this, qi::_1) ];
+	lambda = getLambda();
 
 	irRule = getIRRule();
 
@@ -118,7 +179,6 @@ IRGrammar<P, T, U, V, W, X, Y, Z>::IRGrammar(NodeManager& nMan) : IRGrammar::bas
 }
 template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
 IRGrammar<P, T, U, V, W, X, Y, Z>::~IRGrammar() {
-    delete typeG;
     delete progG;
     delete stmtG;
 }
@@ -127,7 +187,8 @@ IRGrammar<P, T, U, V, W, X, Y, Z>::~IRGrammar() {
 template<typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
 qi::rule<ParseIt, NodePtr(), qi::space_type> IRGrammar<P, T, U, V, W, X, Y, Z>::getIRRule() {
     return  mainProg                                                         [ qi::_val = ph::construct<P>(qi::_1) ]
-    	  | typeG->typeRule                                                  [ qi::_val = ph::construct<V>(qi::_1) ]
+	      | lambda                                                           [ qi::_val = ph::construct<Y>(qi::_1) ]
+    	  | stmtG->typeG->typeRule                                                  [ qi::_val = ph::construct<V>(qi::_1) ]
 		  | stmtG->statementRule                                             [ qi::_val = ph::construct<U>(qi::_1) ];
 
 }

@@ -161,6 +161,10 @@ public:
 	CallExprPtr vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const;
 	//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
 
+	// Locks
+	CallExprPtr aquireLock(const ExpressionPtr& lock) const;
+	CallExprPtr releaseLock(const ExpressionPtr& lock) const;
+
 	// Compound Statements
 	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const;
 	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const;

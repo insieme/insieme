@@ -77,6 +77,8 @@ struct Constraint : public utils::Printable,
 
 	inline const AffineFunction& getAffineFunction() const { return af; }
 
+	inline const IterationVector& getIterationVector() const { return af.getIterationVector(); }
+
 	std::ostream& printTo(std::ostream& out) const; 
 
 	bool operator==(const Constraint& other) const {
@@ -156,8 +158,11 @@ struct BinaryConstraintCombiner : public ConstraintCombiner {
 	
 	enum Type { AND, OR };
 
-	BinaryConstraintCombiner(const Type& type, const ConstraintCombinerPtr& lhs, 
-			const ConstraintCombinerPtr& rhs) : 
+	BinaryConstraintCombiner(
+			const Type& type, 
+			const ConstraintCombinerPtr& lhs, 
+			const ConstraintCombinerPtr& rhs
+	) : 
 		ConstraintCombiner(), type(type), lhs(lhs), rhs(rhs) { }
 
 	void accept(ConstraintVisitor& v) const;
@@ -211,11 +216,14 @@ class Combiner;
  *************************************************************************************************/
 template <class Head, class... Tail>
 struct Combiner<Head, Tail...> {
+
 	static ConstraintCombinerPtr 
 	make(const BinaryConstraintCombiner::Type& type, const Head& head, const Tail&... args) {
+
 		return std::make_shared<BinaryConstraintCombiner>( 
 				type, head, Combiner<Tail...>::make(type, args...) 
 			);
+
 	}
 };
 

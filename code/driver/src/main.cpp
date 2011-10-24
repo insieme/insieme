@@ -325,7 +325,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
-		resolveFrom(cur);
+		// resolveFrom(cur);
 		// printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
 		// computeDataDependence(cur);
