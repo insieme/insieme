@@ -42,6 +42,7 @@
 
 #include "insieme/utils/pointer.h"
 #include "insieme/utils/type_traits_utils.h"
+#include "insieme/core/ir_node_traits.h"
 
 
 namespace insieme {
@@ -54,7 +55,15 @@ struct DynamicPointerCast;
 struct PointerChildFactory;
 
 template<typename T>
-class Pointer : public Ptr<T> {
+class Pointer :
+	public Ptr<T> {
+//	public node_type<typename boost::remove_const<T>::type>::ptr_accessor_type {
+
+	/**
+	 * The accessor offered to gain convenient access to members of the referenced node
+	 */
+	typedef typename node_type<typename boost::remove_const<T>::type>::ptr_accessor_type accessor_type;
+
 public:
 
 	typedef StaticPointerCast StaticCast;
@@ -74,6 +83,34 @@ public:
 	operator const Pointer<B>() const {
 		return Pointer<B>(this->ptr);
 	}
+
+
+//	/**
+//	 * Obtains a accessor instance allowing to access the members of the referenced node.
+//	 */
+//	const accessor_type* operator->() const {
+//		return this;
+//	}
+//
+//	/**
+//	 * This generic method allows to access child nodes in a type-safe way. It is also used
+//	 * by node accessors to obtain addresses of child nodes.
+//	 *
+//	 * Note: this function is required by the node accessors
+//	 *
+//	 * @tparam index the index of the child node to be obtained
+//	 * @tparam Res the type of the child node
+//	 * @return the address of the requested child node
+//	 */
+//	template<
+//		unsigned index,
+//		typename Res = typename node_child_type<typename boost::remove_const<T>::type,index>::type
+//	>
+//	const Pointer<const Res> getChildNodeReference() const {
+//		// access the child via static polymorthism and cast result to known type
+//		return static_pointer_cast<Pointer<const Res>>(this->ptr->getChildList()[index]);
+//	}
+
 };
 
 template<typename B, typename T>

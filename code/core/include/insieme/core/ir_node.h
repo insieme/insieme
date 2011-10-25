@@ -51,37 +51,12 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_mapper.h"
+#include "insieme/core/ir_node_traits.h"
 
 namespace insieme {
 namespace core {
 namespace new_core {
 
-
-	// **********************************************************************************
-	// 									Node Types
-	// **********************************************************************************
-
-	/**
-	 * Defines an enumeration containing an entry for every node type. This
-	 * enumeration can than be used to identify the actual type of AST nodes
-	 * in case the exact type cannot be determined statically.
-	 */
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/core/ir_nodes.def"
-	};
-	#undef CONCRETE
-
-	/**
-	 * A constant defining the number of node types.
-	 */
-	#define CONCRETE(name) +1
-	enum { NUM_CONCRETE_NODE_TYPES = 0
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/core/ir_nodes.def"
-	};
-	#undef CONCRETE
 
 
 	// **********************************************************************************
@@ -101,67 +76,6 @@ namespace new_core {
 		NC_Program,			// < a node representing a program
 		NC_Support			// < a utility used to realize a complex data structure
 	};
-
-
-
-
-	// **********************************************************************************
-	// 									Node Type Traits
-	// **********************************************************************************
-
-	namespace detail {
-
-		/**
-		 * A helper for defining node traits ...
-		 */
-		template<
-			typename T,
-			template<typename D, template <typename P> class P> class Accessor
-		>
-		struct node_type_helper {
-			typedef T type;
-			typedef Pointer<const T> ptr_type;
-			typedef Address<const T> adr_type;
-			typedef Accessor<Pointer<const T>, Pointer> ptr_accessor_type;
-			typedef Accessor<Address<const T>, Address> adr_accessor_type;
-		};
-
-		template<
-			typename T,
-			NodeType N,
-			template<typename D, template <typename P> class P> class Accessor
-		>
-		struct concrete_node_type_helper : public node_type_helper<T,Accessor> {
-			BOOST_STATIC_CONSTANT(NodeType, nt_value=N);
-		};
-
-	}
-
-	/**
-	 * A type trait linking node types to their properties.
-	 */
-	template<typename T>
-	struct node_type;
-
-	template<typename T>
-	struct concrete_node_type;
-
-	/**
-	 * A trait struct linking node type values to the represented node's properties.
-	 */
-	template<NodeType typ>
-	struct to_node_type;
-
-	#define CONCRETE(NAME) \
-		template<> struct concrete_node_type<NAME> : public detail::concrete_node_type_helper<NAME, NT_ ## NAME, NAME ## Accessor> {}; \
-		template<> struct to_node_type<NT_ ## NAME> : public concrete_node_type<NAME> {};
-	#include "insieme/core/ir_nodes.def"
-	#undef CONCRETE
-
-	#define NODE(NAME) \
-		template<> struct node_type<NAME> : public detail::node_type_helper<NAME, NAME ## Accessor> {};
-	#include "insieme/core/ir_nodes.def"
-	#undef NODE
 
 
 
@@ -297,7 +211,6 @@ namespace new_core {
 
 
 
-
 	// **********************************************************************************
 	// 							    Abstract Node Base
 	// **********************************************************************************
@@ -324,6 +237,12 @@ namespace new_core {
 			 * Allow the instance manager to access private methods to create / destroy nodes.
 			 */
 			friend class InstanceManager<Node, Pointer>;
+
+			/**
+			 * The Node Accessor may access any internal data element.
+			 */
+			template<typename Derived,template<typename T> class Ptr>
+			friend struct NodeAccessor;
 
 		public:
 
@@ -702,6 +621,160 @@ namespace new_core {
 
 
 	// **********************************************************************************
+	// 							      Node Accessor
+	// **********************************************************************************
+
+	namespace detail {
+
+		/**
+		 * A general implementation of the node accessor helper which will be used in cases where
+		 * the accessor is inherited by a node directly.
+		 */
+		template<typename Derived>
+		struct node_access_helper {
+			/**
+			 * Obtains access to the accessed node.
+			 */
+			inline const Derived& getNode() const {
+				return *static_cast<const Derived*>(this);
+			}
+		};
+
+		/**
+		 * A specialization of the NodeAccessor template which will be used in cases where
+		 * the accessor is inherited by a pointer (to support access to the same elements
+		 * as for address and nodes directly).
+		 */
+		template<typename Derived>
+		struct node_access_helper<Pointer<const Derived>> {
+			/**
+			 * Obtains access to the accessed node.
+			 */
+			inline const Derived& getNode() const {
+				return **static_cast<const Pointer<const Derived>*>(this);
+			}
+		};
+
+		/**
+		 * A specialization of the NodeAccessor template which will be used in cases where
+		 * the accessor is inherited by an address (to support access to the same elements
+		 * as for pointers and nodes directly).
+		 */
+		template<typename Derived>
+		struct node_access_helper<Address<const Derived>> {
+			/**
+			 * Obtains access to the accessed node.
+			 */
+			inline const Derived& getNode() const {
+				return **static_cast<const Address<const Derived>*>(this);
+			}
+		};
+
+	}
+
+	/**
+	 * A default implementation for a node accessor to be used whenever the derived
+	 * type is a node itself. Derivations of this class should be used as the base type
+	 * for all node accessors.
+	 *
+	 * @tparam Derived the type which is extended by this accessor (static polymorthism)
+	 * @tparam Ptr the type of pointer to be obtained by
+	 */
+	template<typename Derived,template<typename T> class Ptr>
+	struct NodeAccessor : public detail::node_access_helper<Derived> {
+
+//		/**
+//		 * Determines the type of this node.
+//		 *
+//		 * @return the node type of this instance
+//		 */
+//		NodeType getNodeType() const {
+//			return getNode().nodeType;
+//		}
+//
+//		/**
+//		 * Determines the category of this node.
+//		 *
+//		 * @return the node category of this instance
+//		 */
+//		NodeCategory getNodeCategory() const {
+//			return getNode().nodeCategory;
+//		}
+//
+//		/**
+//		 * Determines whether this node is representing a value or not.
+//		 *
+//		 * @return true if it is a value type, false otherwise
+//		 */
+//		bool isValue() const {
+//			return getNode().nodeCategory == NC_Value;
+//		}
+//
+//		/**
+//		 * Obtains access to a concrete child of this node.
+//		 *
+//		 * @param index the index of the child
+//		 * @return a pointer to the requested child
+//		 */
+//		const NodePtr& getChild(std::size_t index) const {
+//			assert(!isValue() && "Node represents a value!");
+//			assert((index < getNode().children.size()) && "Index out of bound!");
+//			return getNode().children[index];
+//		}
+//
+//		/**
+//		 * Obtains a reference to the entire list of children stored internally.
+//		 *
+//		 * @return a reference to the internally maintained child list
+//		 */
+//		const NodeList& getChildList() const {
+//			assert(!isValue() && "Node represents a value!");
+//			return getNode().children;
+//		}
+//
+//		/**
+//		 * Obtains a reference to the manager maintaining this node instance. In case this
+//		 * node is not managed by any node manager (by any reason), an assertion will be violated.
+//		 *
+//		 * @return a reference to the manager maintaining this node
+//		 */
+//		inline NodeManager& getNodeManager() const {
+//			assert(getNode().manager && "NodeManager must not be null - unmanaged node detected!");
+//			return *getNode().manager;
+//		}
+//
+//		/**
+//		 * Obtains a pointer to the manager maintaining this node instance. In case this
+//		 * node is not managed by any node manager (by any reason), NULL will be returned.
+//		 *
+//		 * @return a pointer to the manager maintaining this node
+//		 */
+//		inline NodeManager* getNodeManagerPtr() const {
+//			return getNode().manager;
+//		}
+//
+//		/**
+//		 * Creates a new version of this node where every reference to a child node
+//		 * is replaced by a pointer to the node returned by the given mapper.
+//		 *
+//		 * @param manager the manager to be used to create the new node
+//		 * @param mapper the mapper used to translate child node references
+//		 * @return a pointer to the modified node.
+//		 */
+//		NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
+//
+//		/**
+//		 * Obtains a reference to the node accessed by this accessor.
+//		 *
+//		 * @return a reference to the accessed node.
+//		 */
+//		inline const Node& getNode() const {
+//			return detail::node_access_helper<Derived>::getNode();
+//		}
+	};
+
+
+	// **********************************************************************************
 	// 							    Node Utilities
 	// **********************************************************************************
 
@@ -722,18 +795,6 @@ namespace new_core {
 		// if this ever causes troubles, replace it by copying the vector
 		return (const vector<Pointer<const B>>&)list;
 	}
-
-	/**
-	 * A type trait determining the type of a node child.
-	 *
-	 * @tparam Node the node type to be queried
-	 * @tparam index the index of the child node to be queried
-	 */
-	template<typename Node, unsigned index>
-	struct node_child_type {
-		typedef decltype(((Node*)0)->template getChildNodeReference<index>()) ptr_type;
-		typedef typename ptr_type::element_type type;
-	};
 
 	/**
 	 * A node utility supporting the implementation of nodes having a fixed number
@@ -860,36 +921,6 @@ namespace new_core {
 	};
 
 
-	/**
-	 * A default implementation for a node accessor to be used whenever the derived
-	 * type is a node itself. Derivations of this class should be used as the base type
-	 * for all node accessors.
-	 *
-	 * @tparam Derived the type which is extended by this accessor (static polymorthism)
-	 * @tparam Ptr the type of pointer to be obtained by
-	 */
-	template<typename Derived,template<typename T> class Ptr>
-	struct NodeAccessor {
-
-		/**
-		 * Obtains access to the accessed node.
-		 */
-		inline const Derived& getNode() const {
-			return *static_cast<const Derived*>(this);
-		}
-	};
-
-	/**
-	 * A specialization of the NodeAccessor template which will be used in cases where
-	 * the accessor is inherited by an address (to support access to the same elements
-	 * as for pointers and nodes directly.
-	 */
-	template<typename Node, template<typename T> class Ptr>
-	struct NodeAccessor<Address<const Node>, Ptr> {
-		const Node& getNode() const {
-			return *(static_cast<const Address<const Node>*>(this)->getAddressedNode());
-		}
-	};
 
 
 	template<typename Derived, typename ElementType, template<typename T> class Ptr>
@@ -915,7 +946,7 @@ namespace new_core {
 		 * Obtains a reference to the list of internally maintained elements.
 		 */
 		const vector<Pointer<const ElementType>>& getElements() const {
-			return convertList<ElementType>(static_cast<const Derived*>(this)->getNode().getChildList());
+			return convertList<ElementType>(static_cast<const Derived*>(this)->getChildList());
 		}
 
 		/**
@@ -931,7 +962,7 @@ namespace new_core {
 		 * @return true if empty, false otherwise
 		 */
 		bool empty() const {
-			return static_cast<const Derived*>(this)->getNode().getChildList().empty();
+			return static_cast<const Derived*>(this)->getChildList().empty();
 		}
 
 	};

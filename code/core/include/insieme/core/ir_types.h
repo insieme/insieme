@@ -354,7 +354,7 @@ namespace new_core {
 		 * A utility function allowing to determine directly whether a function
 		 * is plain or not.
 		 */
-		bool isPlain() const { return NodeAccessor<Derived,Ptr>::getNode().getPlain()->getValue(); }
+		bool isPlain() const { return FunctionTypeAccessor<Derived,Ptr>::getPlain()->getValue(); }
 	};
 
 	/**
@@ -470,7 +470,7 @@ namespace new_core {
 		 * Obtains a specific definition maintained within this node.
 		 */
 		TypePtr getDefinitionOf(const TypeVariablePtr& variable) const {
-			auto list = convertList<RecTypeBinding>(NodeAccessor<Derived, Ptr>::getNode().getChildList());
+			auto list = convertList<RecTypeBinding>(RecTypeDefinitionAccessor<Derived, Ptr>::getNode().getChildList());
 			auto pos = std::find_if(list.begin(), list.end(), [&](const RecTypeBindingPtr& cur) {
 				return *cur->getVariable() == *variable;
 			});
@@ -581,7 +581,7 @@ namespace new_core {
 		 * Unrolls this recursive type.
 		 */
 		TypePtr unroll(NodeManager& manager) const {
-			return getDefinition()->unrollOnce(manager, getTypeVariable());
+			return (*getDefinition()).unrollOnce(manager, getTypeVariable());
 		}
 
 	};
