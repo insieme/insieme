@@ -46,6 +46,7 @@ static inline irt_work_group* _irt_wg_new() {
 	return (irt_work_group*)malloc(sizeof(irt_work_group));
 }
 static inline void _irt_wg_recycle(irt_work_group* wg) {
+	irt_destroy_performance_table(wg->performance_data);
 	free(wg->redistribute_data_array);
 	free(wg);
 }
@@ -62,6 +63,12 @@ irt_work_group* irt_wg_create() {
 	pthread_spin_init(&wg->lock, PTHREAD_PROCESS_PRIVATE);
 	wg->pfor_count = 0;
 	wg->joined_pfor_count = 0;
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	wg->performance_data = irt_create_performance_table(IRT_WG_PD_BLOCKSIZE);
+	irt_wg_instrumentation_event(wg, WORK_GROUP_CREATED);
+#else
+	wg->performance_data = 0;
+#endif
 	return wg;
 }
 void irt_wg_destroy(irt_work_group* wg) {
@@ -142,6 +149,7 @@ void irt_wg_joining_barrier(irt_work_group* wg) {
 }
 
 void irt_wg_barrier(irt_work_group* wg) {
+	irt_wi_instrumentation_event(irt_worker_get_current()->cur_wi, WORK_ITEM_SUSPENDED_BARRIER);
 	// Todo distributed
 	// check if barrier down count is 0, otherwise wait for it to be
 	if(wg->cur_barrier_count_down != 0) {
@@ -200,6 +208,7 @@ void irt_wg_join(irt_work_group* wg) {
 	irt_wg_event_lambda lambda = { &_irt_wg_join_event, &clo, NULL };
 	uint32 occ = irt_wg_event_check_and_register(wg->id, IRT_WG_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
+		irt_wi_instrumentation_event(swi, WORK_ITEM_SUSPENDED_GROUPJOIN);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
 	}

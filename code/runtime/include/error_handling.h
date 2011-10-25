@@ -79,13 +79,14 @@ if(!(__condition)) { \
 #define IRT_INFO(__message, ...) { \
 	printf(__message, ##__VA_ARGS__); \
 }
-#define IRT_DEBUG_ONLY(__code__) __code__
 #ifdef IRT_VERBOSE
+#define IRT_DEBUG_ONLY(__code__) __code__
 #define IRT_DEBUG(__message, ...) { \
 	printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
 	printf(__message "\n", ##__VA_ARGS__); \
 }
 #else
+#define IRT_DEBUG_ONLY(__code__)
 #define IRT_DEBUG(__message, ...)
 #endif
 #else
