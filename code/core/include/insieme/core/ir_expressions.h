@@ -310,7 +310,53 @@ namespace new_core {
 
 
 
-	// ------------------------------------- Parameter -----------------------------------
+	// ------------------------------------- Cast Expr -----------------------------------
+
+
+	/**
+	 * The accessor associated to the cast expression.
+	 */
+	IR_NODE_ACCESSOR(CastExpr, Expression, Type, Expression)
+		/**
+		 * Obtains a reference to the expression being casted.
+		 */
+		IR_NODE_PROPERTY(Expression, SubExpression, 1);
+	};
+
+	/**
+	 * The entity used to represent casts within the IR.
+	 */
+	IR_NODE(CastExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "cast<" << *getType() << ">" << "(" << *getSubExpression() <<")";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain an instance of a cast expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type the given value should be casted to
+		 * @param value the value to be casted
+		 * @return the requested type instance managed by the given manager
+		 */
+		static CastExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& value) {
+			return manager.get(CastExpr(type, value));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------- Parameters -----------------------------------
 
 	/**
 	 * The accessor associated to the parameter node.
@@ -636,11 +682,10 @@ namespace new_core {
 		 */
 		IR_NODE_PROPERTY(CallExpr, Call, 2);
 
-
-//		/**
-//		 * Obtains a list of all expressions which's resulting value is bound by this expression.
-//		 */
-//		vector<ExpressionPtr> getBoundExpressions() const;
+		/**
+		 * Obtains a list of all expressions which's resulting value is bound by this expression.
+		 */
+		vector<ExpressionPtr> getBoundExpressions() const;
 	};
 
 	/**
@@ -676,218 +721,438 @@ namespace new_core {
 
 	};
 
-//
-//class TupleExpr : public Expression {
-//	const vector<ExpressionPtr> expressions;
-//
-//	TupleExpr(const TupleTypePtr& type, const vector<ExpressionPtr>& expressions);
-//	virtual TupleExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	const vector<ExpressionPtr>& getExpressions() const { return expressions; }
-//
-//	static TupleExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
-//	static TupleExprPtr get(NodeManager& manager, const TupleTypePtr& type, const vector<ExpressionPtr>& expressions);
-//};
-//
-//
-//class VectorExpr : public Expression {
-//	const vector<ExpressionPtr> expressions;
-//
-//	VectorExpr(const VectorTypePtr& type, const vector<ExpressionPtr>& expressions);
-//	virtual VectorExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//
-//	bool equalsExpr(const Expression& expr) const;
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	const vector<ExpressionPtr>& getExpressions() const { return expressions; }
-//
-//	static VectorExprPtr get(NodeManager& manager, const vector<ExpressionPtr>& expressions);
-//	static VectorExprPtr get(NodeManager& manager, const VectorTypePtr& type, const vector<ExpressionPtr>& expressions);
-//};
-//
-//class StructExpr : public Expression {
-//public:
-//	typedef std::pair<IdentifierPtr, ExpressionPtr> Member;
-//	typedef std::vector<Member> Members;
-//
-//private:
-//	const Members members;
-//
-//	StructExpr(const StructTypePtr& type, const Members& members);
-//	virtual StructExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	const Members& getMembers() const{ return members; }
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//	static StructExprPtr get(NodeManager& manager, const Members& members);
-//	static StructExprPtr get(NodeManager& manager, const StructTypePtr& type, const Members& members);
-//};
-//
-//class UnionExpr : public Expression {
-//
-//	const IdentifierPtr memberName;
-//	const ExpressionPtr member;
-//
-//        UnionExpr(const TypePtr& type, const IdentifierPtr& memberName, const ExpressionPtr& member);
-//	virtual UnionExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	const IdentifierPtr& getMemberName() const { return memberName; }
-//	const ExpressionPtr& getMember() const { return member; }
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//        static UnionExprPtr get(NodeManager& manager, const TypePtr& type, const IdentifierPtr& memberName, const ExpressionPtr& member);
-//};
-//
-//
-//class JobExpr : public Expression {
-//public:
-//	typedef std::vector<DeclarationStmtPtr> LocalDecls;
-//	typedef std::pair<ExpressionPtr, ExpressionPtr> GuardedStmt;
-//	typedef std::vector<GuardedStmt> GuardedStmts;
-//
-//private:
-//
-//	const ExpressionPtr threadNumRange;
-//	const LocalDecls localDecls;
-//	const GuardedStmts guardedStmts;
-//	const ExpressionPtr defaultStmt;
-//
-//	JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecs);
-//
-//	virtual JobExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	const ExpressionPtr getThreadNumRange() const { return threadNumRange; }
-//	const LocalDecls& getLocalDecls() const { return localDecls; }
-//	const GuardedStmts& getGuardedStmts() const { return guardedStmts; }
-//	const ExpressionPtr& getDefaultStmt() const { return defaultStmt; }
-//
-//	static JobExprPtr get(NodeManager& manager, const ExpressionPtr& defaultStmt,
-//			const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
-//
-//	static JobExprPtr get(NodeManager& manager, const ExpressionPtr& threadNumRange, const ExpressionPtr& defaultStmt,
-//		const GuardedStmts& guardedStmts = GuardedStmts(), const LocalDecls& localDecs = LocalDecls());
-//};
-//
-//class CastExpr : public Expression {
-//	const ExpressionPtr subExpression;
-//
-//	CastExpr(const TypePtr& type, const ExpressionPtr& subExpression);
-//	virtual CastExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	const ExpressionPtr& getSubExpression() const { return subExpression; }
-//
-//	static CastExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& subExpression);
-//};
-//
-//
-//class MemberAccessExpr : public Expression {
-//	const ExpressionPtr subExpression;
-//	const IdentifierPtr member;
-//
-//	MemberAccessExpr(const ExpressionPtr& subExpression, const IdentifierPtr& member);
-//	virtual MemberAccessExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	const ExpressionPtr& getSubExpression() const { return subExpression; }
-//
-//	const IdentifierPtr& getMemberName() const { return member; }
-//
-//	static MemberAccessExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const IdentifierPtr& member);
-//};
-//
-//
-//class TupleProjectionExpr : public Expression {
-//	const ExpressionPtr subExpression;
-//	const unsigned index;
-//
-//	TupleProjectionExpr( const ExpressionPtr& subExpression, const unsigned index);
-//	virtual TupleProjectionExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//	bool equalsExpr(const Expression& expr) const;
-//
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//
-//	const ExpressionPtr& getSubExpression() const { return subExpression; }
-//
-//	const unsigned getIndex() const { return index; }
-//
-//	static TupleProjectionExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned index);
-//};
-//
-//
-//class MarkerExpr : public Expression {
-//
-//	static unsigned int counter;
-//
-//	const ExpressionPtr subExpression;
-//	const unsigned id;
-//
-//	MarkerExpr(const ExpressionPtr& subExpression, const unsigned id);
-//	virtual MarkerExpr* createCopyUsing(NodeMapping& mapper) const;
-//
-//protected:
-//
-//	bool equalsExpr(const Expression& expr) const;
-//	virtual NodeListOpt getChildNodes() const;
-//
-//public:
-//
-//	virtual std::ostream& printTo(std::ostream& out) const;
-//	static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression);
-//	static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpression, const unsigned id);
-//
-//
-//	const ExpressionPtr& getSubExpression() const { return subExpression; }
-//	const unsigned int getID() const { return id; }
-//};
+
+
+
+	// ------------------------------------- Tuple Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a tuple expression.
+	 */
+	IR_NODE_ACCESSOR(TupleExpr, Expression, TupleType, Expressions)
+		/**
+		 * Obtains a reference to the list of expressions aggregated to a tuple by
+		 * the represented node.
+		 */
+		IR_NODE_PROPERTY(Expressions, Expressions, 1);
+	};
+
+	/**
+	 * The entity used to represent tuple expressions. A tuple expression is composing
+	 * a given list of values into a single tuple containing those values.
+	 */
+	IR_NODE(TupleExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "tuple(" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
+		}
+
+	public:
+
+		/**
+		 * This static factory method constructing a new tuple expression based
+		 * on the resulting type and a given list of expressions.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the tuple constructed by the resulting expression
+		 * @param expressions the expressions to be packed into a tuple
+		 * @return the requested type instance managed by the given manager
+		 */
+		static TupleExprPtr get(NodeManager& manager, const TupleTypePtr& type, const ExpressionsPtr& expressions) {
+			return manager.get(TupleExpr(type, expressions));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------- Vector Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a vector expression.
+	 */
+	IR_NODE_ACCESSOR(VectorExpr, Expression, VectorType, Expressions)
+		/**
+		 * Obtains a reference to the list of expressions aggregated to a vector by
+		 * the represented node.
+		 */
+		IR_NODE_PROPERTY(Expressions, Expressions, 1);
+	};
+
+	/**
+	 * The entity used to represent vector expressions. A vector expression is composing
+	 * a given list of values into a vector containing those values.
+	 */
+	IR_NODE(VectorExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "{" << join(",", getChildList(), print<deref<NodePtr>>()) << "}";
+		}
+
+	public:
+
+		/**
+		 * This static factory method constructing a new vector expression based
+		 * on the resulting type and a given list of expressions.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the vector constructed by the resulting expression
+		 * @param expressions the expressions to be packed into a vector
+		 * @return the requested type instance managed by the given manager
+		 */
+		static VectorExprPtr get(NodeManager& manager, const VectorTypePtr& type, const ExpressionsPtr& expressions) {
+			return manager.get(VectorExpr(type, expressions));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------- Struct Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a struct expression.
+	 */
+	IR_NODE_ACCESSOR(StructExpr, Expression, StructType, Expressions)
+		/**
+		 * Obtains a reference to the list of expressions aggregated to a struct by
+		 * the represented node.
+		 */
+		IR_NODE_PROPERTY(Expressions, Expressions, 1);
+	};
+
+	/**
+	 * The entity used to represent struct expressions. A struct expression is composing
+	 * a given list of values into a struct containing those values.
+	 */
+	IR_NODE(StructExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			// print struct using member - value pairs
+			return out << "struct{" << join(",", getChildList(), print<deref<NodePtr>>()) << "}";
+		}
+
+	public:
+
+		/**
+		 * This static factory method constructing a new struct expression based
+		 * on the resulting type and a given list of expressions.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the struct constructed by the resulting expression
+		 * @param expressions the expressions to be packed into a vector
+		 * @return the requested type instance managed by the given manager
+		 */
+		static StructExprPtr get(NodeManager& manager, const StructTypePtr& type, const ExpressionsPtr& expressions) {
+			return manager.get(StructExpr(type, expressions));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------- Union Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a union expression.
+	 */
+	IR_NODE_ACCESSOR(UnionExpr, Expression, UnionType, StringValue, Expression)
+
+		/**
+		 * Obtains a reference to the type of union produced by this expression.
+		 */
+		IR_NODE_PROPERTY(UnionType, Type, 0);
+
+		/**
+		 * Obtains a reference to the name of the field initialized by this union
+		 */
+		IR_NODE_PROPERTY(StringValue, MemberName, 1);
+
+		/**
+		 * Obtains a reference to the value associated to the addressed member of the resulting union.
+		 */
+		IR_NODE_PROPERTY(Expression, Member, 2);
+	};
+
+	/**
+	 * The entity used to represent union expressions. A union expression is composing
+	 * a given list of values into a union containing those values.
+	 */
+	IR_NODE(UnionExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "union{" << *getMemberName() << "=" << *getMember() << "}";
+		}
+
+	public:
+
+		/**
+		 * This static factory method constructing a new union expression based
+		 * on the resulting type, a member name and a value.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the union constructed by the resulting expression
+		 * @param member the name of the member to be initialized
+		 * @param value the value to be used for the initialization
+		 * @return the requested type instance managed by the given manager
+		 */
+		static UnionExprPtr get(NodeManager& manager, const UnionTypePtr& type, const StringValuePtr& member, const ExpressionPtr& value) {
+			return manager.get(UnionExpr(type, member, value));
+		}
+
+	};
+
+
+
+
+
+
+	// ------------------------------------- Guarded Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a guarded expression.
+	 */
+	IR_NODE_ACCESSOR(GuardedExpr, Support, LambdaExpr, Expression)
+
+		/**
+		 * Obtains a reference to the lambda defining the guard.
+		 */
+		IR_NODE_PROPERTY(LambdaExpr, Guard, 0);
+
+		/**
+		 * Obtains a reference to the guarded expression.
+		 */
+		IR_NODE_PROPERTY(Expression, Expression, 1);
+
+	};
+
+	/**
+	 * The entity used to represent a guarded expression. A guarded expression
+	 * is a pair of a guard (represented by a lambda) and the expression being
+	 * computed in case the guard is triggering - if used within a job of course.
+	 */
+	IR_NODE(GuardedExpr, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "(" << *getGuard() << "," << *getExpression() << ")";
+		}
+
+	public:
+
+		/**
+		 * This static factory method constructing a new guarded expression based
+		 * on the given guard and expression.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param guard the guard to be used within the resulting node
+		 * @param expr the expression to be guarded within the resulting node
+		 * @return the requested node instance managed by the given manager
+		 */
+		static GuardedExprPtr get(NodeManager& manager, const LambdaExprPtr& guard, const ExpressionPtr& expr) {
+			return manager.get(GuardedExpr(guard, expr));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------- Parameters -----------------------------------
+
+	/**
+	 * The accessor associated to a list of guarded expressions.
+	 */
+	IR_LIST_NODE_ACCESSOR(GuardedExprs, Support, GuardedExpr)
+	};
+
+	/**
+	 * A node type representing a list of guarded expressions.
+	 */
+	IR_NODE(GuardedExprs, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a list of guarded expressions based
+		 * on the given expressions.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param exprs the list of guarded expressions to be included
+		 * @return the requested instance managed by the given manager
+		 */
+		static GuardedExprsPtr get(NodeManager& manager, const vector<GuardedExprPtr>& exprs) {
+			return manager.get(GuardedExprs(convertList(exprs)));
+		}
+	};
+
+
+
+
+	// ------------------------------------- Job Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a job expression.
+	 */
+	IR_NODE_ACCESSOR(JobExpr, Expression, GenericType, Expression, DeclarationStmts, GuardedExprs, Expression)
+
+		/**
+		 * Obtains a reference to the expression determining the range for the number of threads.
+		 */
+		IR_NODE_PROPERTY(Expression, ThreadNumRange, 1);
+
+		/**
+		 * Obtains a reference to the list of local declarations. Variables being locally declared
+		 * are bound to the life-time of the job. During the execution of the job, those
+		 * variables might be accessed at any time. During the initialization, those values might
+		 * be initialized using syntactically local values.
+		 */
+		IR_NODE_PROPERTY(DeclarationStmts, LocalDecls, 2);
+
+		/**
+		 * Obtains a reference to the list of guarded expressions.
+		 */
+		IR_NODE_PROPERTY(GuardedExprs, GuardedExprs, 3);
+
+		/**
+		 * Obtains a reference to the default expression evaluated in case none of the guarded expressions
+		 * is triggered.
+		 */
+		IR_NODE_PROPERTY(Expression, DefaultExpr, 4);
+	};
+
+	/**
+	 * The entity used to represent union expressions. A union expression is composing
+	 * a given list of values into a union containing those values.
+	 */
+	IR_NODE(JobExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	public:
+
+		/**
+		 * This static factory method constructing a new union expression based
+		 * on the resulting type, a member name and a value.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the resulting job expression
+		 * @param range the thread number range to be used for the construction
+		 * @param localDecls the list of local declarations to be used for the construction
+		 * @param guardedExpr the list of guarded expressions to be used for the construction
+		 * @param def the default expression to be evaluated in case none of the guarded expressions triggers
+		 * @return the requested type instance managed by the given manager
+		 */
+		static JobExprPtr get(NodeManager& manager, const GenericTypePtr& type,
+				const ExpressionPtr& range, const DeclarationStmtsPtr& localDecls,
+				const GuardedExprsPtr& guardedExpr, const ExpressionPtr& def) {
+			return manager.get(JobExpr(type, range, localDecls, guardedExpr, def));
+		}
+
+	};
+
+
+
+
+	// ---------------------------------------- Marker Expression ------------------------------
+
+	/**
+	 * The accessor associated to the marker expression.
+	 */
+	IR_NODE_ACCESSOR(MarkerExpr, Expression, Type, UIntValue, Expression)
+		/**
+		 * Obtains a reference to the ID of this marker.
+		 */
+		IR_NODE_PROPERTY(UIntValue, ID, 1);
+
+		/**
+		 * Obtains a reference to the covered expression.
+		 */
+		IR_NODE_PROPERTY(Expression, SubExpression,  2);
+
+		/**
+		 * Obtains the ID of this marker as a value.
+		 */
+		unsigned int getId() const { return getID()->getValue(); }
+
+	};
+
+	/**
+	 * The entity used to represent a marker expression within the IR.
+	 */
+	IR_NODE(MarkerExpr, Expression)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "<M id=" << *getID() << ">" << *getSubExpression() << "</M>";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain a marker expression instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param id the id of the new marker
+		 * @param subExpr the expression represented by the marker
+		 * @return the requested type instance managed by the given manager
+		 */
+		static MarkerExprPtr get(NodeManager& manager, const UIntValuePtr& id, const ExpressionPtr& subExpr) {
+			return manager.get(MarkerExpr(subExpr->getType(), id, subExpr));
+		}
+
+		/**
+		 * This static factory method allows to obtain a for statement instance
+		 * within the given node manager based on the given parameters. For the id
+		 * a new, fresh value will be used.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param subExpr the expression represented by the marker
+		 * @return the requested type instance managed by the given manager
+		 */
+		static MarkerExprPtr get(NodeManager& manager, const ExpressionPtr& subExpr) {
+			return get(manager, UIntValue::get(manager, manager.getFreshID()), subExpr);
+		}
+
+	};
 
 
 } // end namespace new_core

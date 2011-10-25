@@ -225,15 +225,12 @@ AST_TERMINAL(BindExpr, Expression)
 AST_TERMINAL(Literal, Expression)
 AST_TERMINAL(CallExpr, Expression)
 AST_TERMINAL(CastExpr, Expression)
-AST_TERMINAL(JobExpr, Expression)
+
 AST_TERMINAL(TupleExpr, Expression)
 AST_TERMINAL(VectorExpr, Expression)
-
 AST_TERMINAL(StructExpr, Expression)
 AST_TERMINAL(UnionExpr, Expression)
-
-AST_TERMINAL(MemberAccessExpr, Expression)
-AST_TERMINAL(TupleProjectionExpr, Expression)
+AST_TERMINAL(JobExpr, Expression)
 
 
 //
@@ -265,6 +262,10 @@ AST_TERMINAL(SwitchCases, Support)
 
 AST_TERMINAL(Expressions, Support)
 AST_TERMINAL(Parameters, Support)
+
+AST_TERMINAL(DeclarationStmts, Support)
+AST_TERMINAL(GuardedExpr, Support)
+AST_TERMINAL(GuardedExprs, Support)
 
 //
 // --- Marker ---

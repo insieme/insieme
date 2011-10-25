@@ -47,7 +47,7 @@
 
 #include "insieme/utils/functional_utils.h"
 
-#include "insieme/core/ir_pointer.h"
+#include "insieme/core/ast_pointer.h"
 #include "insieme/core/ast_address.h"
 #include "insieme/core/ast_node.h"
 #include "insieme/core/expressions.h"

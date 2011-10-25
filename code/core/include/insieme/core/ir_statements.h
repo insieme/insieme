@@ -121,7 +121,7 @@ namespace new_core {
 		 * Obtains the type of this expression. The first child node
 		 * of every expression has to be its type.
 		 */
-		IR_NODE_PROPERTY(Type, Type, 0);
+//		IR_NODE_PROPERTY(Type, Type, 0);
 	};
 
 	/**
@@ -151,6 +151,15 @@ namespace new_core {
 		Expression(const NodeType nodeType, const NodeList& children)
 			: Statement(nodeType, NC_Expression, children) { }
 
+	public:
+
+		/**
+		 * Obtains the type of this expression. The first child node
+		 * of every expression has to be its type.
+		 */
+		TypePtr getType() const {
+			return static_pointer_cast<TypePtr>(getChild(0));
+		}
 	};
 
 
@@ -318,6 +327,45 @@ namespace new_core {
 			return manager.get(DeclarationStmt(variable, initExpression));
 		}
 
+	};
+
+
+
+
+	// ------------------------------------- Declaration Statement List -----------------------------------
+
+	/**
+	 * The accessor associated to a list of declaration statements.
+	 */
+	IR_LIST_NODE_ACCESSOR(DeclarationStmts, Support, DeclarationStmt)
+	};
+
+	/**
+	 * A node type representing a list of declaration statements.
+	 */
+	IR_NODE(DeclarationStmts, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a node representing a list
+		 * of declaration statements.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param decls the list of declarations to be included
+		 * @return the requested instance managed by the given manager
+		 */
+		static DeclarationStmtsPtr get(NodeManager& manager, const vector<DeclarationStmtPtr>& decls) {
+			return manager.get(DeclarationStmts(convertList(decls)));
+		}
 	};
 
 
@@ -704,7 +752,7 @@ namespace new_core {
 		IR_NODE_PROPERTY(Statement, SubStatement,  1);
 
 		/**
-		 * Obtains the ID of this variable as a value.
+		 * Obtains the ID of this marker as a value.
 		 */
 		unsigned int getId() const { return getID()->getValue(); }
 
@@ -726,7 +774,7 @@ namespace new_core {
 	public:
 
 		/**
-		 * This static factory method allows to obtain a for statement instance
+		 * This static factory method allows to obtain a marker statement instance
 		 * within the given node manager based on the given parameters.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
@@ -734,8 +782,8 @@ namespace new_core {
 		 * @param subStmt the statement represented by the marker
 		 * @return the requested type instance managed by the given manager
 		 */
-		static MarkerStmtPtr get(NodeManager& manager, const UIntValuePtr& id, const StatementPtr& subExpr) {
-			return manager.get(MarkerStmt(id, subExpr));
+		static MarkerStmtPtr get(NodeManager& manager, const UIntValuePtr& id, const StatementPtr& subStmt) {
+			return manager.get(MarkerStmt(id, subStmt));
 		}
 
 		/**
@@ -747,8 +795,8 @@ namespace new_core {
 		 * @param subStmt the statement represented by the marker
 		 * @return the requested type instance managed by the given manager
 		 */
-		static MarkerStmtPtr get(NodeManager& manager, const StatementPtr& subExpr) {
-			return get(manager, UIntValue::get(manager, manager.getFreshID()), subExpr);
+		static MarkerStmtPtr get(NodeManager& manager, const StatementPtr& subStmt) {
+			return get(manager, UIntValue::get(manager, manager.getFreshID()), subStmt);
 		}
 
 	};
