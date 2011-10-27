@@ -38,6 +38,9 @@
 
 #include "insieme/utils/logging.h"
 
+#include "insieme/core/ast_builder.h"
+#include "insieme/core/lang/basic.h"
+
 namespace insieme {
 namespace analysis {
 namespace poly {
@@ -190,6 +193,62 @@ struct IterVecExtractor : public ConstraintVisitor {
 	}
 };
 
+struct ConstraintConverter : public ConstraintVisitor {
+	
+	core::NodeManager& mgr;
+	core::ASTBuilder   builder;
+	core::ExpressionPtr ret;
+
+	ConstraintConverter(core::NodeManager& mgr) : mgr(mgr), builder(mgr) { }
+
+	void visit(const RawConstraintCombiner& rcc) { 
+		const Constraint& c = rcc.getConstraint();
+		ret = toIR(mgr, c.getAffineFunction());
+
+		core::lang::BasicGenerator::Operator op;
+		switch(c.getType()) {
+			case Constraint::GT: op = core::lang::BasicGenerator::Operator::Gt;
+			case Constraint::LT: op = core::lang::BasicGenerator::Operator::Lt;
+			case Constraint::EQ: op = core::lang::BasicGenerator::Operator::Eq;
+			case Constraint::NE: op = core::lang::BasicGenerator::Operator::Ne;
+			case Constraint::GE: op = core::lang::BasicGenerator::Operator::Ge;
+			case Constraint::LE: op = core::lang::BasicGenerator::Operator::Le;
+		}
+	
+		ret = builder.callExpr( mgr.basic.getOperator(mgr.basic.getInt4(), op), ret, builder.intLit(0));
+
+		assert( mgr.basic.isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
+	}
+
+	virtual void visit(const NegatedConstraintCombiner& ucc) {
+		ucc.getSubConstraint()->accept(*this);
+		assert(ret && "Conversion of sub constraint went wrong");
+		ret = builder.callExpr( mgr.basic.getBoolLNot(), ret);
+	}
+
+	virtual void visit(const BinaryConstraintCombiner& bcc) {
+		bcc.getLHS()->accept(*this);
+		assert(ret && "Conversion of sub constraint went wrong");
+		core::ExpressionPtr lhs = ret;
+
+		bcc.getRHS()->accept(*this);
+		assert(ret && "Conversion of sub constraint went wrong");
+		core::ExpressionPtr rhs = ret;
+
+		core::lang::BasicGenerator::Operator op;
+		switch (bcc.getType()) {
+			case BinaryConstraintCombiner::AND: op = core::lang::BasicGenerator::Operator::LAnd;
+			case BinaryConstraintCombiner::OR:  op = core::lang::BasicGenerator::Operator::LOr;
+		}
+
+		ret = builder.callExpr( mgr.basic.getOperator(mgr.basic.getBool(), op), 
+				lhs, builder.createCallExprFromBody(builder.returnStmt(rhs), mgr.basic.getBool(), true) 
+			);
+		assert( mgr.basic.isBool(ret->getType()) && "Type of a constraint must be of boolean type" );
+	}
+
+};
+
 } // end anonymous namespace 
 
 ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const ConstraintCombinerPtr& old) {
@@ -209,6 +268,14 @@ const IterationVector& extractIterationVector(const ConstraintCombinerPtr& const
 	assert(ive.iterVec != NULL);
 	return *ive.iterVec;
 }
+
+insieme::core::ExpressionPtr toIR(core::NodeManager& mgr, const ConstraintCombinerPtr& c) {
+	ConstraintConverter cconv(mgr);
+	c->accept( cconv );
+	assert ( cconv.ret && "Conversion of constraint failed" );
+	return cconv.ret;
+}
+
 } // end poly namespace
 } // end analysis namespace 
 } // end insieme namespace 
