@@ -38,6 +38,7 @@
 
 #include "irt_scheduling.h"
 #include "utils/timing.h"
+#include "impl/instrumentation.impl.h"
 
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 #include "sched_policies/impl/irt_sched_static.impl.h"

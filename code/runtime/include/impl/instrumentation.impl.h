@@ -47,6 +47,14 @@
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 
+void (*irt_wi_instrumentation_event)(irt_work_item* wi, wi_instrumentation_event event) = &_irt_wi_instrumentation_event;
+
+void (*irt_wg_instrumentation_event)(irt_work_group* wg, wg_instrumentation_event event) = &_irt_wg_instrumentation_event;;
+
+void (*irt_di_instrumentation_event)(irt_data_item* di, di_instrumentation_event event) = &_irt_di_instrumentation_event;
+
+void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event) = &_irt_worker_instrumentation_event;
+
 // resizes table according to blocksize
 void _irt_performance_table_resize(irt_pd_table* table) {
 	table->size = table->size + (table->blocksize);
@@ -82,24 +90,25 @@ void _irt_instrumentation_event_insert(irt_pd_table* table, int event) {
 	pd->event = event;
 }
 
-void irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) {
+void _irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) {
 
 	_irt_instrumentation_event_insert(wi->performance_data, event);
+
 
 	if(event == WORK_ITEM_FINISHED) {
 		IRT_DEBUG_ONLY(irt_wi_instrumentation_output(wi));
 	}
 }
 
-void irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) {
+void _irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) {
 	_irt_instrumentation_event_insert(wg->performance_data, event);
 }
 
-void irt_worker_instrumentation_event(irt_worker* worker, wg_instrumentation_event event) {
+void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event) {
 	_irt_instrumentation_event_insert(worker->performance_data, event);
 }
 
-void irt_di_instrumentation_event(irt_data_item* di, wg_instrumentation_event event) {
+void _irt_di_instrumentation_event(irt_data_item* di, di_instrumentation_event event) {
 	_irt_instrumentation_event_insert(di->performance_data, event);
 }
 
@@ -230,16 +239,40 @@ void irt_di_instrumentation_output(irt_data_item* di) {
 	printf("\n");
 }
 
+void _irt_wi_no_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) { }
+
+void _irt_wg_no_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) { }
+
+void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event) { }
+
+void _irt_di_no_instrumentation_event(irt_data_item* di, di_instrumentation_event event) { }
+
 void irt_wi_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_wi_instrumentation_event = &_irt_wi_instrumentation_event;
+	else 
+		irt_wi_instrumentation_event = &_irt_wi_no_instrumentation_event;
 }
 
 void irt_wg_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_wg_instrumentation_event = &_irt_wg_instrumentation_event;
+	else
+		irt_wg_instrumentation_event = &_irt_wg_no_instrumentation_event;
 }
 
 void irt_worker_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_worker_instrumentation_event = &_irt_worker_instrumentation_event;
+	else
+		irt_worker_instrumentation_event = &_irt_worker_no_instrumentation_event;
 }
 
 void irt_di_toggle_instrumentation(bool enable) { 
+	if(enable)
+		irt_di_instrumentation_event = &_irt_di_instrumentation_event;
+	else
+		irt_di_instrumentation_event = &_irt_di_no_instrumentation_event;
 }
 
 void irt_all_toggle_instrumentation(bool enable) {
@@ -248,7 +281,6 @@ void irt_all_toggle_instrumentation(bool enable) {
 	irt_worker_toggle_instrumentation(enable);
 	irt_di_toggle_instrumentation(enable);
 }
-
 
 #else
 
@@ -262,9 +294,9 @@ void irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event ev
 
 void irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) { }
 
-void irt_worker_instrumentation_event(irt_worker* worker, wg_instrumentation_event event) { }
+void irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event) { }
 
-void irt_di_instrumentation_event(irt_data_item* di, wg_instrumentation_event event) { }
+void irt_di_instrumentation_event(irt_data_item* di, di_instrumentation_event event) { }
 
 void irt_wi_instrumentation_output(irt_work_item* wi) { }
 
