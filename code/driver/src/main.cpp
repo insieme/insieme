@@ -339,8 +339,8 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		reg.resolve();
 		std::for_each(reg.stmts_begin(), reg.stmts_end(), 
 			[] (const ScopRegion::StmtScattering& cur) { 
-				insieme::analysis::poly::IslContext ctx;
-				insieme::analysis::poly::Set<insieme::analysis::poly::IslContext> set(ctx, cur.iterDom);
+				insieme::analysis::poly::IslCtx ctx;
+				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur.iterDom);
 				set.getCard();
 			}
 		);
