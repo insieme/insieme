@@ -1,6 +1,6 @@
 
 PREFIX=/tmp/
-SLOTS=4
+SLOTS=8
 
 ISL_VER=isl-0.07
 BARVINOK_VER=barvinok-0.34
