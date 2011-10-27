@@ -228,24 +228,30 @@ void lwt_end(intptr_t *basestack) {
 // ----------------------------------------------------------------------------
 // Fallback ucontext implementation
 
-static inline void lwt_prepare(irt_work_item *wi, ucontext_t *basestack) {
-	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
+static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack) {
+	wi->stack_storage =  _lwt_get_stack(tid);
 	wi->stack_ptr.uc_link          = basestack;
-	wi->stack_ptr.uc_stack.ss_sp   = (char*)wi->stack_start;
+	wi->stack_ptr.uc_stack.ss_sp   = (char*)wi->stack_storage->stack;
 	wi->stack_ptr.uc_stack.ss_size = IRT_WI_STACK_SIZE;
 	getcontext(&wi->stack_ptr);
 }
 
-void lwt_start(irt_work_item *wi, ucontext_t *basestack, wi_implementation_func* func) {
+void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func) {
 	makecontext(&wi->stack_ptr, (void(*)(void))func, 1, wi);
 	swapcontext(basestack, &wi->stack_ptr);
 }
-void lwt_continue(ucontext_t *newstack, ucontext_t *basestack) {
+void lwt_continue(lwt_context *newstack, lwt_context *basestack) {
 	swapcontext(basestack, newstack);
 }
-void lwt_end(ucontext_t *basestack) {
+void lwt_end(lwt_context *basestack) {
 	setcontext(basestack);
 }
+
+//static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack);
+//static inline void lwt_recycle(int tid, irt_work_item *wi);
+//void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func);
+//void lwt_continue(lwt_context *newstack, lwt_context *basestack);
+//void lwt_end(lwt_context *basestack);
 
 //#endif
 #endif
