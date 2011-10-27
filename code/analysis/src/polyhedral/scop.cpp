@@ -1175,7 +1175,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 }
 
 void ScopRegion::resolve() {
-	assert( !isValid() && "Error Try to resolve an invalid SCoP");
+	assert( isValid() && "Error Try to resolve an invalid SCoP");
 
 	// If the region has been already resolved, we simply return the cached result
 	if ( isResolved() ) { return; }

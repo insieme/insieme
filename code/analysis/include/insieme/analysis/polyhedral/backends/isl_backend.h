@@ -105,6 +105,8 @@ public:
 
 	inline isl_union_set* getAsIslSet() const { return set; }
 
+	core::ExpressionPtr getCard() const;
+
 	~Set() { 
 		isl_dim_free(dim);
 		isl_union_set_free(set);
@@ -161,6 +163,9 @@ MapPtr<IslContext> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, co
 template <> 
 MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
 
+/**************************************************************************************************
+ * DEPENDENCE ANALYSIS
+ *************************************************************************************************/
 template <>
 DependenceInfo<IslContext> buildDependencies( 
 		IslContext&				ctx,

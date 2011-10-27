@@ -217,7 +217,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * constraints are based on.
 	 */
 	inline const poly::IterationVector& getIterationVector() const { 
-		assert(isValid() && "This is not a valid SCoP");
+		// assert(isValid() && "This is not a valid SCoP");
 		return iterVec; 
 	}
 	
@@ -225,7 +225,7 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
 	inline const poly::IterationDomain& getDomainConstraints() const { 
-		assert(isValid() && "This is not a valid SCoP");
+		// assert(isValid() && "This is not a valid SCoP");
 		return domain; 
 	}
 

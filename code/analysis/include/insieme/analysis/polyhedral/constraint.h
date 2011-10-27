@@ -95,6 +95,7 @@ private:
 	const Type type;
 };
 
+
 /******************************************************************************************************
  * ConstraintCombiner: The constraint combiner has the task to combine multiple constraints into 
  * conjunctions (AND) or disjunctions (OR) of constraints which can be either in positive form of 
@@ -260,6 +261,14 @@ ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const Const
 ConstraintCombinerPtr normalize(const Constraint& c);
 
 const IterationVector& extractIterationVector(const ConstraintCombinerPtr& constraint);
+
+// Converts a constraint, or a combination of constraints into an IR expression which can be 
+// used in the code 
+core::ExpressionPtr toIR(core::NodeManager& mgr, const ConstraintCombinerPtr& c);
+
+inline core::ExpressionPtr toIR(core::NodeManager& mgr, const Constraint& c) {
+	return toIR(mgr, makeCombiner(c));
+}
 
 //==== Operator definitions for Constraint =========================================================
 
