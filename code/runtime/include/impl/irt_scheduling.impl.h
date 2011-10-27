@@ -49,9 +49,10 @@
 #include <time.h>
 
 static inline unsigned long long irt_cur_ticks() {
-	volatile unsigned long long a, d;
-	__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
-	return (a | (d << 32));
+	//volatile unsigned long long a, d;
+	//__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+	//return (a | (d << 32));
+	return 0;
 }
 
 void irt_scheduling_loop(irt_worker* self) {

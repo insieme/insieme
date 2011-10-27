@@ -46,9 +46,10 @@
 
 //used for getting clock cycles
 unsigned long long get_ticks(void) {
-	volatile unsigned long long a, d;
-	__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
-	return (a | (d << 32));
+	//volatile unsigned long long a, d;
+	//__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+	//return (a | (d << 32));
+	return 0;
 }
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
