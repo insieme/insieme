@@ -616,7 +616,7 @@ public:
 	core::ExpressionPtr visitCloogStmt(const CloogStatement* cloogStmt) {
 		STACK_SIZE_GUARD;
 	
-		stmtStack.top().push_back( ctx.get( cloogStmt->name ) ); //FIXME: index replacement
+		stmtStack.top().push_back( core::static_address_cast<const core::Statement>(ctx.get( cloogStmt->name )) ); //FIXME: index replacement
 		
 		return core::ExpressionPtr();
 	}
@@ -710,7 +710,7 @@ public:
 	}
 
 private:
-	const IslContext&		isl;
+	const IslContext&		ctx;
 	core::NodeManager& 		mgr;
 	const IterationVector& 	iterVec;
 	IRVariableMap  			varMap;
@@ -760,7 +760,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 		dumper.visit(root);
 	}
 
-	ClastToIR converter(mgr, iterVec);
+	ClastToIR converter(ctx, mgr, iterVec);
 	converter.visit(root);
 	
 	core::StatementPtr&& retIR = converter.getIR();
