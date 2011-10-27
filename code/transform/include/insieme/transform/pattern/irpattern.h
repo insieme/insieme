@@ -41,8 +41,10 @@
 #include <ostream>
 #include <unordered_map>
 
+#include "insieme/core/forward_decls.h"
 #include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/pattern.h"
+#include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"
 
@@ -56,29 +58,136 @@ namespace irp {
 		return atom(toTree(node));
 	}
 
-	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
-		return node(core::NT_TupleType, pattern);
+	inline TreePatternPtr atom(core::NodeManager& manager, const char* code) {
+		auto a = [&manager] (const string& str) {return core::parse::parseIR(manager, str); };
+		return atom(a(string(code)));
 	}
+
+	inline TreePatternPtr atom(core::NodeManager& manager, string& code) {
+		auto a = [&manager] (const string& str) {return core::parse::parseIR(manager, str); };
+		return atom(a(code));
+	}
+
+	inline TreePatternPtr wrapBody(const TreePatternPtr& body) {
+		return body | node(core::NT_CompoundStmt, single(body));
+	}
+
 	inline TreePatternPtr genericType(const std::string& family, const ListPatternPtr& subtypes) {
 		return node(core::NT_GenericType, atom(makeValue(family)) << subtypes);
 	}
+
 	inline TreePatternPtr genericType(const ListPatternPtr& family, const ListPatternPtr& subtypes) {
 		return node(core::NT_GenericType, family << subtypes);
 	}
 
-	inline TreePatternPtr lit(const std::string& value, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, atom(makeValue(value)) << single(typePattern));
+	inline TreePatternPtr literal(const std::string& value, const TreePatternPtr& type) {
+		return node(core::NT_Literal, atom(makeValue(value)) << single(type));
 	}
-	inline TreePatternPtr lit(const TreePatternPtr& valuePattern, const TreePatternPtr& typePattern) {
-		return node(core::NT_Literal, single(valuePattern) << single(typePattern));
+
+	inline TreePatternPtr literal(const TreePatternPtr& valuePattern, const TreePatternPtr& type) {
+		return node(core::NT_Literal, single(valuePattern) << single(type));
 	}
-	inline TreePatternPtr call(const core::NodePtr& function, const ListPatternPtr& parameters) {
+
+	inline TreePatternPtr tupleType(const ListPatternPtr& pattern) {
+		return node(core::NT_TupleType, pattern);
+	}
+
+	inline TreePatternPtr variable(const TreePatternPtr& type, const TreePatternPtr& id) {
+		return node(core::NT_Variable, single(type) << single(id));
+	}
+
+	inline TreePatternPtr callExpr(const core::NodePtr& function, const ListPatternPtr& parameters) {
 		return node(core::NT_CallExpr, atom(function) << parameters);
 	}
-	inline TreePatternPtr call(const TreePatternPtr& function, const ListPatternPtr& parameters) {
+
+	inline TreePatternPtr callExpr(const TreePatternPtr& function, const ListPatternPtr& parameters) {
 		return node(core::NT_CallExpr, single(function) << parameters);
 	}
-}
+
+	inline TreePatternPtr castExpr(const TreePatternPtr& expression) {
+		return node(core::NT_CastExpr, single(expression));
+	}
+
+	inline TreePatternPtr bindExpr(const ListPatternPtr& parameters, const TreePatternPtr& call) {
+		return node(core::NT_BindExpr, parameters << single(call));
+	}
+
+	inline TreePatternPtr tupleExpr(const ListPatternPtr& expressions) {
+		return node(core::NT_TupleExpr, expressions);
+	}
+
+	inline TreePatternPtr vectorExpr(const ListPatternPtr& expressions) {
+		return node(core::NT_VectorExpr, expressions);
+	}
+
+	inline TreePatternPtr structExpr(const ListPatternPtr& members) {
+		return node(core::NT_StructExpr, members);
+	}
+
+	inline TreePatternPtr unionExpr(const TreePatternPtr& memberName, const TreePatternPtr& member) {
+		return node(core::NT_UnionExpr, single(memberName) << single(member));
+	}
+
+	inline TreePatternPtr memberAccessExpr(const TreePatternPtr& subExpression, const TreePatternPtr& member) {
+		return node(core::NT_MemberAccessExpr, single(subExpression) << single(member));
+	}
+
+	inline TreePatternPtr tupleProjectionExpr(const TreePatternPtr& subExpression, const TreePatternPtr& index) {
+		return node(core::NT_TupleProjectionExpr, single(subExpression) << single(index));
+	}
+
+	inline TreePatternPtr markerExpr(const TreePatternPtr& subExpression, const TreePatternPtr& id) {
+		return node(core::NT_MarkerExpr, single(subExpression) << single(id));
+	}
+
+	inline TreePatternPtr lambda(const TreePatternPtr& type, const ListPatternPtr& parameters, const TreePatternPtr& body) {
+		return node(core::NT_Lambda, single(type) << parameters << wrapBody(body));
+	}
+
+	inline TreePatternPtr lambdaExpr(const TreePatternPtr& variable, const TreePatternPtr& lambdaDef) {
+		return node(core::NT_LambdaExpr, single(variable) << single(lambdaDef));
+	}
+
+	inline TreePatternPtr lambdaDefinition(const ListPatternPtr& definitions) {
+		return node(core::NT_LambdaDefinition, definitions);
+	}
+
+	inline TreePatternPtr compoundStmt(const ListPatternPtr& stmts) {
+		return node(core::NT_CompoundStmt, stmts);
+	}
+
+	inline TreePatternPtr declarationStmt(const TreePatternPtr& variable, const TreePatternPtr& initExpr) {
+		return node(core::NT_DeclarationStmt, single(variable) << single(initExpr));
+	}
+
+	inline TreePatternPtr ifStmt(const TreePatternPtr& condition, const TreePatternPtr& thenBody, const TreePatternPtr& elseBody){
+		return node(core::NT_IfStmt, single(condition) << wrapBody(thenBody) << wrapBody(elseBody));
+	}
+
+	inline TreePatternPtr forStmt(const TreePatternPtr& declaration, const TreePatternPtr& end, const TreePatternPtr& step, const TreePatternPtr& body){
+		return node(core::NT_ForStmt, single(declaration) << single(end) << single(step) << wrapBody(body));
+	}
+
+	inline TreePatternPtr whileStmt(const TreePatternPtr& condition, const TreePatternPtr& body){
+		return node(core::NT_WhileStmt, single(condition) << wrapBody(body));
+	}
+
+	inline TreePatternPtr switchStmt(const TreePatternPtr& expression, const ListPatternPtr& cases, const TreePatternPtr& defaultCase){
+		return node(core::NT_SwitchStmt, single(expression) << cases << single(defaultCase));
+	}
+
+	inline TreePatternPtr returnStmt(const TreePatternPtr& returnExpression){
+		return node(core::NT_ReturnStmt, single(returnExpression));
+	}
+
+	inline TreePatternPtr markerStmt(const TreePatternPtr& subExpr, const TreePatternPtr& id){
+		return node(core::NT_MarkerStmt, single(subExpr) << single(id));
+	}
+
+	const TreePatternPtr continueStmt = atom(makeTree((int)core::NT_ContinueStmt));
+	const TreePatternPtr breakStmt = atom(makeTree((int)core::NT_BreakStmt));
+
+} // end namespace irp
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

@@ -382,7 +382,7 @@ namespace c_ast {
 				// avoid /* literal by composition of / and dereferencing *
 				if (node->operation == BinaryOperation::Division) {
 					if (node->operandB->getType() == NT_UnaryOperation) {
-						c_ast::UnaryOperationPtr opB = static_pointer_cast<const UnaryOperation>(node->operandB);
+						c_ast::UnaryOperationPtr opB = static_pointer_cast<UnaryOperation>(node->operandB);
 						if (opB->operation == UnaryOperation::Indirection) {
 							return out << print(node->operandA) << op << " " << print(node->operandB);
 						}

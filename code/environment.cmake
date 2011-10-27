@@ -96,9 +96,18 @@ endif()
 include_directories( ${CLOOG_HOME}/include )
 find_library(cloog_LIB NAMES cloog-isl PATHS ${CLOOG_HOME}/lib)
 if(MSVC) 
-set (cloog_LIB dummy)
+	set (cloog_LIB dummy)
 endif(MSVC)
 
+# lookup Barvinok library 
+if(NOT DEFINED BARVINOK_HOME)
+	set (BARVINOK_HOME $ENV{BARVINOK_HOME})
+endif()
+include_directories( ${BARVINOK_HOME}/include )
+find_library(barvinok_LIB NAMES barvinok PATHS ${BARVINOK_HOME}/lib)
+if(MSVC) 
+	set (barvinok_LIB dummy)
+endif(MSVC)
 
 FIND_LIBRARY(gmp_LIB NAMES gmp PATH /usr/lib)
 
@@ -106,9 +115,12 @@ IF (gmp_LIB)
    SET(GMP_FOUND TRUE)
 ENDIF (gmp_LIB)
 
-IF (NOT DEFINED GMP_FOUND)
+IF (NOT DEFINED GMP_FOUND AND NOT MSVC)
    MESSAGE(FATAL_ERROR "Could not find GMP")
 ENDIF ()
+if(MSVC) 
+	set (gmp_LIB dummy)
+endif(MSVC)
 
 # lookup pthread library
 find_library(pthread_LIB pthread)
@@ -207,7 +219,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 	# ENABLE PROFILING
-	# add_definitions( -pg )
+	#add_definitions( -pg )
 	#SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
 

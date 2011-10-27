@@ -47,6 +47,12 @@ namespace frontend {
 namespace ocl {
 
 typedef insieme::utils::map::PointerMap<core::ExpressionPtr, size_t > EquivalenceMap;
+
+/**
+ * A visitor that checks if two variables lie on the same path in the ast
+ */
+
+
 /**
  * This specialized hasher hashes array accesses to the same variable to the same bin
  * regardless of the array index
@@ -87,7 +93,6 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 
 		if(builder.getNodeManager().basic.isMemberAccess(call->getFunctionExpr())) {
 			// the type argument can be ignored since it should always be related to the identifier/index
-//std::cout << "\nReturning " << call << " : " << this->operator()(call->getArgument(0)) << " + " << this->operator()(call->getArgument(1)) << std::endl;
 			return this->operator()(call->getArgument(0)) + this->operator()(call->getArgument(1));
 		}
 
@@ -100,11 +105,10 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
  * regardless of the index
  */
 struct equal_variables {// : public std::binary_function<const core::ExpressionPtr&, const core::ExpressionPtr&, bool> {
-	// needed to perform isSubscriptOperator()
-	core::ASTBuilder& builder;
-	EquivalenceMap& eqMap;
+	const core::ASTBuilder& builder;
+	const core::ProgramPtr& root;
 
-	equal_variables(core::ASTBuilder& build, EquivalenceMap& equalityMap) : builder(build), eqMap(equalityMap) {}
+	equal_variables(const core::ASTBuilder& build, const core::ProgramPtr& program) : builder(build), root(program) {}
 
 	/**
 	 * Performs the actual comparison by using the operator== of the generic
@@ -117,13 +121,23 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		if(x == y || *x == *y)
 			return true;
 
-		core::CallExprPtr xCall =  dynamic_pointer_cast<const core::CallExpr>(x);
+		core::CallExprPtr xCall = dynamic_pointer_cast<const core::CallExpr>(x);
 		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
 
-//std::cout << "\ncomparing " << x << " and\n          " << y << "\neqMap: " << eqMap << std::endl;
+		// remove deref operation
+		// TODO of questionable use, maybe remove?
+/*		if(!!xCall && builder.getNodeManager().basic.isRefDeref(xCall->getFunctionExpr())) {
+			return this->operator ()(xCall->getArgument(0), y);
+		}
+		if(!!yCall && builder.getNodeManager().basic.isRefDeref(yCall->getFunctionExpr())) {
+			return this->operator ()(x, yCall->getArgument(0));
+		}
+*/
 		if(!!xCall && builder.getNodeManager().basic.isSubscriptOperator(xCall->getFunctionExpr()))
-			if(!!yCall && builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
-				return this->operator ()(xCall->getArgument(0), yCall->getArgument(0));
+			return this->operator ()(xCall->getArgument(0), y);
+
+		if(!!yCall && builder.getNodeManager().basic.isSubscriptOperator(yCall->getFunctionExpr()))
+			return this->operator ()(x, yCall->getArgument(0));
 
 		if(!!xCall && builder.getNodeManager().basic.isMemberAccess(xCall->getFunctionExpr()))
 			if(!!yCall && builder.getNodeManager().basic.isMemberAccess(yCall->getFunctionExpr())){
@@ -133,17 +147,55 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 
 		const core::VariablePtr& xVar = dynamic_pointer_cast<const core::Variable>(x);
 		const core::VariablePtr& yVar = dynamic_pointer_cast<const core::Variable>(y);
-
+/*
+		if(xVar->getId() == 3 || xVar->getId() == 9)
+			std::cout << std::endl  << " " << xVar << " vs "  << " " << yVar << std::endl;
+*/
 		if(!xVar || !yVar) {
 			return false;
 		}
-		if(eqMap.find(yVar) != eqMap.end() && eqMap.find(xVar) != eqMap.end()) {
-			if(eqMap[xVar] == eqMap[yVar]) {
-				return true;
-			}
+
+		core::NodeAddress xAddr = core::Address<const core::Variable>::find(xVar, root);
+		core::NodeAddress yAddr = core::Address<const core::Variable>::find(yVar, root);
+
+		bool reverse;
+		if(xAddr.getDepth() > yAddr.getDepth()) {
+			core::NodeAddress tmp = xAddr;
+			xAddr = yAddr;
+			yAddr = tmp;
+			reverse = true;
 		}
 
-		return false;
+		auto visitor = core::makeLambdaVisitor([&](const core::NodeAddress& addr) {
+			bool ret = false;
+			if(const core::CallExprAddress call = core::dynamic_address_cast<const core::CallExpr>(addr)) {
+				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr())) {
+					for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
+							[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
+						// get rid of f**king deref and vectorToArray operations
+						core::ExpressionPtr arg = cur.second;
+						core::CallExprPtr unneccecaryFunction = dynamic_pointer_cast<const core::CallExpr>(cur.second);
+						if(unneccecaryFunction && (
+							builder.getNodeManager().basic.isRefDeref(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().basic.isRefVectorToRefArray(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().basic.isVectorToArray(unneccecaryFunction->getFunctionExpr()) ))
+								arg = unneccecaryFunction->getArgument(0);
+
+//std::cout << "\n 1 " << *yAddr << " - " << *cur.first << std::endl;
+						if(*yAddr == *cur.first) {
+//std::cout << " 2 " << *xAddr << " - " << *arg << std::endl;
+							if(*xAddr == *arg)
+								ret = true;
+							else
+								ret = this->operator ()(arg, reverse ? y : x);
+						}
+					});
+				}
+			}
+			return ret;
+		});
+
+		return core::visitPathBottomUpInterruptible(yAddr, visitor);
 	}
 };
 typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;

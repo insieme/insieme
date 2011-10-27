@@ -201,7 +201,11 @@ public:
 	 */
 	AffineFunction 
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
+
 };
+
+// Converts an affine expression to an IR expression
+insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& aff); 
 
 } // end poly namespace
 } // end analysis namespace 

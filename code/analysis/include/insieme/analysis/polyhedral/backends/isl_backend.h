@@ -77,10 +77,10 @@ struct BackendTraits {
 };
 
 /**************************************************************************************************
- * Set<IslContext>: is a wrapper to isl_sets, this class allows to easily convert a set of constraints,
- * represented by a constraint combiner to isl representation. Output of the isl library will be
- * represented with this same abstraction which allows for isl sets to be converted back into
- * Constraints as defined in the poly namepsace
+ * Set<IslContext>: is a wrapper to isl_sets, this class allows to easily convert a set of
+ * constraints, represented by a constraint combiner to isl representation. Output of the isl
+ * library will be represented with this same abstraction which allows for isl sets to be converted
+ * back into Constraints as defined in the poly namepsace
  *************************************************************************************************/
 template <>
 class Set<IslContext> : public boost::noncopyable {
@@ -104,6 +104,8 @@ public:
 	void simplify();
 
 	inline isl_union_set* getAsIslSet() const { return set; }
+
+	core::ExpressionPtr getCard() const;
 
 	~Set() { 
 		isl_dim_free(dim);
@@ -161,6 +163,9 @@ MapPtr<IslContext> map_intersect(IslContext& ctx, const Map<IslContext>& lhs, co
 template <> 
 MapPtr<IslContext> map_intersect_domain(IslContext& ctx, const Map<IslContext>& lhs, const Set<IslContext>& dom);
 
+/**************************************************************************************************
+ * DEPENDENCE ANALYSIS
+ *************************************************************************************************/
 template <>
 DependenceInfo<IslContext> buildDependencies( 
 		IslContext&				ctx,

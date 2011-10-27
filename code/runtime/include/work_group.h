@@ -37,6 +37,7 @@
 #pragma once
 
 #include "declarations.h"
+#include "instrumentation.h"
 
 #include <pthread.h>
 
@@ -60,6 +61,7 @@ struct _irt_work_group {
 	irt_work_item* pfor_wi_list[IRT_WG_RING_BUFFER_SIZE];
 	uint32 pfor_count; // index of the most recently added pfor
 	uint32 joined_pfor_count; // index of the latest joined pfor
+	irt_pd_table* performance_data;
 };
 
 struct _irt_wi_wg_membership {

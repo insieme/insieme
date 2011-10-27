@@ -58,11 +58,13 @@ class Program;
 
 
 namespace {
+
 typedef vector<insieme::core::StatementPtr>  StatementList;
 typedef vector<insieme::core::ExpressionPtr> ExpressionList;
 
 #define GET_TYPE_PTR(type) (type)->getType().getTypePtr()
-}
+
+} // end anonymous namespace
 
 namespace insieme {
 namespace frontend {
@@ -152,6 +154,9 @@ class ConversionFactory : public boost::noncopyable {
 		 */
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 		UseGlobalFuncMap globalFuncMap;
+
+		typedef std::map<const clang::VarDecl*, core::IdentifierPtr> GlobalIdentMap;
+		GlobalIdentMap globalIdentMap;
 
 		/*
 		 * Every time an input parameter of a function of type 'a is improperly used as a ref<'a>

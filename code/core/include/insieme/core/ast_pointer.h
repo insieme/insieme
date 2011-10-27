@@ -71,7 +71,7 @@ public:
 	 */
 	template<typename B, typename boost::enable_if<boost::is_base_of<B,T>,int>::type = 0>
 	operator const Pointer<B>() const {
-		return *reinterpret_cast<const Pointer<B>* >(this);
+		return Pointer<B>(this->ptr);
 	}
 };
 
@@ -82,17 +82,17 @@ dynamic_pointer_cast(const Pointer<T>& src) {
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Pointer<B>&>::type
+inline typename boost::enable_if<boost::is_base_of<T,B>, Pointer<B>>::type
 static_pointer_cast(Pointer<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return reinterpret_cast<Pointer<B>&>(src);
+	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const Pointer<B>&>::type
+inline typename boost::enable_if<boost::is_base_of<T,B>, const Pointer<B>>::type
 static_pointer_cast(const Pointer<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
-	return reinterpret_cast<const Pointer<B>&>(src);
+	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 
 
@@ -103,7 +103,7 @@ static_pointer_cast(const Pointer<T>& src) {
  */
 struct StaticPointerCast {
 	template<typename Target, typename Source>
-	const Pointer<Target>& operator()(const Pointer<Source>& value) const {
+	const Pointer<Target> operator()(const Pointer<Source>& value) const {
 		return static_pointer_cast<Target>(value);
 	}
 };

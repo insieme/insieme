@@ -48,7 +48,7 @@
 #include "impl/error_handling.impl.h"
 #include "impl/irt_scheduling.impl.h"
 #include "impl/irt_events.impl.h"
-
+#include "impl/instrumentation.impl.h"
 
 static inline irt_wi_wg_membership irt_wi_get_wg_membership(irt_work_item *wi, uint32 index) { 
 	return wi->wg_memberships[index]; 
@@ -61,11 +61,31 @@ static inline irt_work_item* irt_wi_get_current() {
 	return irt_worker_get_current()->cur_wi;
 }
 
-static inline irt_work_item* _irt_wi_new() {
-	return (irt_work_item*)malloc(sizeof(irt_work_item));
+static inline irt_work_item* _irt_wi_new(irt_worker* self) {
+	irt_work_item* ret;
+	if(self->wi_reuse_stack) {
+		ret = self->wi_reuse_stack;
+		self->wi_reuse_stack = ret->next_reuse;
+		IRT_DEBUG("WI_RE\n");
+	} else {
+		ret = (irt_work_item*)malloc(sizeof(irt_work_item));
+		ret->wg_memberships = NULL;
+		IRT_DEBUG("WI_FU\n");
+	}
+	return ret;
 }
-static inline void _irt_wi_recycle(irt_work_item* wi) {
-	free(wi);
+static inline void _irt_wi_recycle(irt_work_item* wi, irt_worker* self) {
+	IRT_DEBUG("WI_CYC\n");
+	wi->next_reuse = self->wi_reuse_stack;
+	self->wi_reuse_stack = wi;
+	lwt_recycle(self->id.value.components.thread, wi);
+	
+	IRT_VERBOSE_ONLY(
+		irt_work_item* last = self->wi_reuse_stack;
+		int i = 0;
+		while((last = last->next_reuse)) ++i;
+		printf("WI_CCC %d : %d\n", self->id.value.components.thread, i);
+		);
 }
 
 static inline void _irt_wi_allocate_wgs(irt_work_item* wi) {
@@ -77,31 +97,48 @@ static inline void _irt_print_work_item_range(const irt_work_item_range* r) {
 	IRT_INFO("%ld..%ld : %ld", r->begin, r->end, r->step);
 }
 
-irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
-	irt_work_item* retval = _irt_wi_new();
-	retval->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
-	retval->id.cached = retval;
-	retval->impl_id = impl_id;
-	retval->context_id = irt_worker_get_current()->cur_context;
-	retval->num_groups = 0;
-	retval->wg_memberships = NULL;
-	retval->parameters = params;
-	retval->range = range;
-	retval->state = IRT_WI_STATE_NEW;
-	retval->stack_start = 0;
-	retval->ready_check = irt_g_null_readiness_check;
-	//retval->stack_ptr = 0;
-	retval->source_id = irt_work_item_null_id();
-	retval->num_fragments = 0;
+static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	wi->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
+	wi->id.cached = wi;
+	wi->impl_id = impl_id;
+	wi->context_id = context;
+	wi->num_groups = 0;
+	wi->parameters = params;
+	wi->range = range;
+	wi->state = IRT_WI_STATE_NEW;
+	wi->ready_check = irt_g_null_readiness_check;
+	wi->source_id = irt_work_item_null_id();
+	wi->num_fragments = 0;
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	wi->performance_data = irt_create_performance_table(IRT_WI_PD_BLOCKSIZE);
+#else
+	wi->performance_data = 0;
+#endif
+}
+
+irt_work_item* _irt_wi_create(irt_worker* self, irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	irt_work_item* retval = _irt_wi_new(self);
+	_irt_wi_init(self->cur_context, retval, range, impl_id, params);
+	irt_wi_instrumentation_event(retval, WORK_ITEM_CREATED);
 	return retval;
 }
+static inline irt_work_item* irt_wi_create(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
+	return _irt_wi_create(irt_worker_get_current(), range, impl_id, params);
+}
 irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_range range) {
-	irt_work_item* retval = _irt_wi_new();
+	irt_worker *self = irt_worker_get_current();
+	irt_work_item* retval = _irt_wi_new(self);
 	memcpy(retval, source, sizeof(irt_work_item));
 	retval->id = irt_generate_work_item_id(IRT_LOOKUP_GENERATOR_ID_PTR);
 	retval->id.cached = retval;
 	retval->num_fragments = 0;
 	retval->range = range;
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	retval->performance_data = irt_create_performance_table(IRT_WI_PD_BLOCKSIZE);
+	irt_wi_instrumentation_event(retval, WORK_ITEM_CREATED);
+#else
+	retval->performance_data = 0;
+#endif
 	if(irt_wi_is_fragment(source)) {
 		// splitting fragment wi
 		irt_work_item *base_source = source->source_id.cached; // TODO
@@ -111,9 +148,6 @@ irt_work_item* _irt_wi_create_fragment(irt_work_item* source, irt_work_item_rang
 		retval->source_id = source->id;
 	}
 	return retval;
-}
-void irt_wi_destroy(irt_work_item* wi) {
-	_irt_wi_recycle(wi);
 }
 
 irt_work_item* irt_wi_run_optional(irt_work_item_range range, irt_wi_implementation_id impl_id, irt_lw_data_item* params) {
@@ -161,6 +195,7 @@ void irt_wi_join(irt_work_item* wi) {
 	irt_wi_event_lambda lambda = { &_irt_wi_join_event, &clo, NULL };
 	uint32 occ = irt_wi_event_check_and_register(wi->id, IRT_WI_EV_COMPLETED, &lambda);
 	if(occ==0) { // if not completed, suspend this wi
+		irt_wi_instrumentation_event(swi, WORK_ITEM_SUSPENDED_JOIN);
 		self->cur_wi = NULL;
 		lwt_continue(&self->basestack, &swi->stack_ptr);
 	}
@@ -175,8 +210,11 @@ void irt_wi_join(irt_work_item* wi) {
 //}
 
 void irt_wi_end(irt_work_item* wi) {
+	irt_wi_instrumentation_event(wi, WORK_ITEM_FINISHED);
+	
 	IRT_DEBUG("Wi %p / Worker %p irt_wi_end.", wi, irt_worker_get_current());
 	irt_worker *worker = irt_worker_get_current();
+
 	if(worker->lazy_count>0) {
 		// ending wi was lazily executed
 		worker->lazy_count--;
@@ -195,6 +233,7 @@ void irt_wi_end(irt_work_item* wi) {
 	for(uint32 g=0; g<wi->num_groups; ++g) {
 		_irt_wg_end_member(wi->wg_memberships[g].wg_id.cached); // TODO
 	}
+	_irt_wi_recycle(wi, worker);
 	lwt_end(&worker->basestack);
 	IRT_ASSERT(false, IRT_ERR_INTERNAL, "NEVERMORE");
 }
@@ -214,6 +253,11 @@ void irt_wi_split_binary(irt_work_item* wi, irt_work_item* out_wis[2]) {
 	irt_wi_split(wi, 2, offsets, out_wis);
 }
 void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_item** out_wis) {
+	if(elements == 1) {
+		out_wis[0] = wi;
+		return;
+	}
+	irt_worker *self = irt_worker_get_current();
 	irt_work_item_range range = wi->range;
 	for(uint32 i=0; i<elements; ++i) {
 		range.begin = offsets[i];
@@ -228,7 +272,7 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 			irt_atomic_fetch_and_add(&(source->wg_memberships[i].wg_id.cached->local_member_count), elements - 1); // TODO
 		}
 		// splitting fragment wi, can safely delete
-		_irt_wi_recycle(wi);
+		_irt_wi_recycle(wi, self);
 	} else {
 		irt_atomic_fetch_and_add(&wi->num_fragments, elements); // This needs to be atomic even if it may not look like it		
 		for(uint32 i=0; i<wi->num_groups; ++i) {

@@ -200,7 +200,7 @@ namespace c_ast {
 
 	inline NodePtr parenthese(NodePtr node) {
 		// only expressions need to be encapsulated using parentheses
-		if (ExpressionPtr expr = dynamic_pointer_cast<const Expression>(node)) {
+		if (ExpressionPtr expr = dynamic_pointer_cast<Expression>(node)) {
 			return parenthese(expr);
 		}
 		// no parentheses required for the rest

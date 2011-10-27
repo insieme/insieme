@@ -40,18 +40,105 @@
 #include "work_item.h"
 #include "wi_implementation.h"
 #include "impl/error_handling.impl.h"
+#include "irt_atomic.h"
 
 #include "sys/mman.h"
+
+struct _lwt_g_stack_reuse {
+	lwt_reused_stack* stacks[IRT_MAX_WORKERS];
+} lwt_g_stack_reuse;
+
+lwt_reused_stack* _lwt_get_stack(int w_id) {
+	lwt_reused_stack* ret = lwt_g_stack_reuse.stacks[w_id];
+#ifdef LWT_STACK_STEALING_ENABLED
+	if(ret) {
+		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[w_id], ret, ret->next)) {
+			IRT_DEBUG("LWT_RE\n");
+			return ret;
+		} else {
+			return _lwt_get_stack(w_id);
+		}
+	} else {
+		for(int i=0; i<irt_g_worker_count; ++i) {
+			ret = lwt_g_stack_reuse.stacks[i];
+			if(ret && irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[i], ret, ret->next)) {
+				IRT_DEBUG("LWT_ST\n");
+				return ret;
+			}
+		}
+	}
+#else
+	if(ret) {
+		IRT_DEBUG("LWT_RE\n");
+		IRT_VERBOSE_ONLY(
+		{
+			int num_stacks=1;
+			lwt_reused_stack* cur = ret;
+			while(cur = cur->next) num_stacks++;
+			printf("-- %d, Reusing stack %x, %d stack(s) available:\n", w_id, ret, num_stacks);
+			cur = ret;
+			printf("---- ");
+			do { printf("%x, ", cur);  } while(cur = cur->next);
+			printf("\n");
+		});
+		lwt_g_stack_reuse.stacks[w_id] = ret->next;
+		return ret;
+	}
+#endif
+	
+	// create new
+	IRT_DEBUG("LWT_FU\n");
+	ret = malloc(sizeof(lwt_reused_stack) + IRT_WI_STACK_SIZE);
+	ret->next = NULL;
+	return ret;
+}
+
+static inline void lwt_recycle(int tid, irt_work_item *wi) {
+	if(!wi->stack_storage) return;
+#ifdef LWT_STACK_STEALING_ENABLED
+	for(;;) {
+		lwt_reused_stack* top = lwt_g_stack_reuse.stacks[tid];
+		wi->stack_storage->next = top;
+		if(irt_atomic_bool_compare_and_swap(&lwt_g_stack_reuse.stacks[tid], top, wi->stack_storage)) {
+			IRT_DEBUG("LWT_CYC\n");
+			return;
+		} else {
+			IRT_DEBUG("LWT_FCY\n");
+		}
+	}
+#else
+	IRT_VERBOSE_ONLY(
+	{
+		int num_stacks=0;
+		if(lwt_g_stack_reuse.stacks[tid]) {
+			num_stacks=1;
+			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
+			while(cur = cur->next) num_stacks++;
+		}
+		printf("-- %d, Recycling stack %x, %d stack(s) available:\n", tid, wi->stack_storage, num_stacks);
+		if(lwt_g_stack_reuse.stacks[tid]) {
+			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
+			printf("---- ");
+			do { printf("%x, ", cur);  } while(cur = cur->next);
+			printf("\n");
+		}
+	});
+	wi->stack_storage->next = lwt_g_stack_reuse.stacks[tid];
+	lwt_g_stack_reuse.stacks[tid] = wi->stack_storage;
+	wi->stack_storage = NULL;
+	IRT_DEBUG("LWT_CYC\n");
+#endif
+}
 
 #ifdef USING_MINLWT
 
 // ----------------------------------------------------------------------------
 // x86-64 implementation
 
-static inline void lwt_prepare(irt_work_item *wi, intptr_t *basestack) {
+static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) {
 	// heap allocated thread memory
-	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
-	wi->stack_ptr = wi->stack_start + IRT_WI_STACK_SIZE;
+	wi->stack_storage = _lwt_get_stack(tid);
+	wi->stack_ptr = (intptr_t)(&wi->stack_storage->stack) + IRT_WI_STACK_SIZE;
 
 	// let stack be allocated by the OS kernel
 	// see http://www.evanjones.ca/software/threading.html
@@ -97,13 +184,11 @@ void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestac
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
 	lwt_continue_impl(wi, &wi->stack_ptr, basestack, func);
 }
-//__attribute__ ((noinline))
 void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 	//IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
 	lwt_continue_impl(NULL, newstack, basestack, NULL);
 	//IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 }
-
 void lwt_end(intptr_t *basestack) {
 	intptr_t dummy;
 	lwt_continue_impl(NULL, basestack, &dummy, NULL);

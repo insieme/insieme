@@ -41,7 +41,9 @@
 namespace insieme {
 namespace transform {
 namespace pattern {
+namespace irp {
 
+} // end namespace irp
 } // end namespace pattern
 } // end namespace transform
 } // end namespace insieme

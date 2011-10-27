@@ -123,7 +123,8 @@ namespace simple_backend {
 		// add basic includes
 		res.push_back("#include <alloca.h>");
 		res.push_back("#include <stddef.h>");
-		// res.push_back("#include <stdlib.h>");
+		res.push_back("#include <stdio.h>");
+		res.push_back("#include <stdlib.h>");
 
 		// including this header will result into problems on a 32 bit system
 		//  - reason: memset / memcpy uses size_t, which is fixed to 64 bit within insieme
@@ -175,17 +176,17 @@ namespace simple_backend {
 			ExpressionPtr value = cur.second;
 
 			// remove leading var calls
-			if (core::analysis::isCallOf(value, cc.getLangBasic().getRefVar())) {
-				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
-				if (core::analysis::isCallOf(value, cc.getLangBasic().getRefDeref())) {
-					value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
-				}
-			}
+//			if (core::analysis::isCallOf(value, cc.getLangBasic().getRefVar())) {
+//				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
+//				if (core::analysis::isCallOf(value, cc.getLangBasic().getRefDeref())) {
+//					value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
+//				}
+//			}
 
 			// remove leading var/new calls
-			if (analysis::isCallOf(value, basic.getRefNew()) || analysis::isCallOf(value, basic.getRefVar())) {
-				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
-			}
+//			if (analysis::isCallOf(value, basic.getRefNew()) || analysis::isCallOf(value, basic.getRefVar())) {
+//				value = static_pointer_cast<const CallExpr>(value)->getArgument(0);
+//			}
 
 			// skip vector initialization
 			if (analysis::isCallOf(value, basic.getVectorInitUniform()) || analysis::isCallOf(value, basic.getVectorInitUndefined())) {

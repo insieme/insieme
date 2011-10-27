@@ -125,8 +125,11 @@ struct ScopRegion: public core::NodeAnnotation {
 		AccessInfo(const core::ExpressionAddress	expr, 
 				   const Ref::RefType& 				type, 
 				   const Ref::UseType& 				usage, 
-				   const poly::AffineSystemPtr& 	index) :
-			expr(expr), type(type), usage(usage), index(index) { }
+				   const poly::AffineSystemPtr& 	index) 
+			: expr(expr), 
+			  type(type), 
+			  usage(usage), 
+			  index(index) { }
 	};
 
 	// This is the list of accesses associated to a Statement in a SCoP
@@ -145,29 +148,45 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * 				of this entry point (iterVec).
 	 *********************************************************************************************/
 	struct StmtScattering {
-		const core::StatementAddress 			addr;
-		const poly::IterationDomain				iterDom;
-		const poly::ScatteringFunctionPtr		scattering;
-		const AccessInfoList					accessList;
+		const size_t						id;
+		const core::StatementAddress 		addr;
+		const poly::IterationDomain			iterDom;
+		const poly::AffineSystemPtr			scattering;
+		const AccessInfoList				accessList;
 
-		StmtScattering(const core::StatementAddress& 		addr, 
-					   const poly::IterationDomain&  		iterDom, 
-					   const poly::ScatteringFunctionPtr&	scattering, 
-					   const AccessInfoList& 				accessList) : 
-			addr(addr), iterDom(iterDom), scattering(scattering), accessList(accessList) { }
+		StmtScattering(size_t id, 
+					   const core::StatementAddress& 	addr, 
+					   const poly::IterationDomain&  	iterDom, 
+					   const poly::AffineSystemPtr&		scattering, 
+					   const AccessInfoList& 			accessList) 
+			: id(id), 
+			  addr(addr), 
+			  iterDom(iterDom), 
+			  scattering(scattering), 
+			  accessList(accessList) { }
+
+		
 	};
 
 	// This is the list of statements associated to a SCoP region
 	typedef std::list<StmtScattering> 				ScatteringMatrix;
 	typedef std::pair<size_t, ScatteringMatrix> 	ScatteringPair;
+
+	typedef ScatteringMatrix::iterator				StatementIterator;
 	
 	typedef std::vector<poly::Iterator> 			IteratorOrder;
 
-	ScopRegion( const poly::IterationVector& 		iv, 
-				const poly::IterationDomain& 		comb,
-				const ScopStmtList& 				stmts = ScopStmtList(),
-				const SubScopList& 					subScops_ = SubScopList() ) 
+
+	/**
+	 * Constructor 
+	 */
+	ScopRegion( const core::NodePtr& 			annNode,
+				const poly::IterationVector& 	iv, 
+				const poly::IterationDomain& 	comb,
+				const ScopStmtList& 			stmts = ScopStmtList(),
+				const SubScopList& 				subScops_ = SubScopList() ) 
 	:
+		annNode(annNode),
 		iterVec(iv), 
 		stmts(stmts),
 		domain( iterVec, comb ), // Switch the base to the this->iterVec 
@@ -186,34 +205,63 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	inline const utils::AnnotationKey* getKey() const { return &KEY; }
 
-	inline bool isResolved() const { return static_cast<bool>(scattering); }
-
 	inline bool migrate(const core::NodeAnnotationPtr& ptr, 
 						const core::NodePtr& before, 
-						const core::NodePtr& after) const 
-	{ 
-		return false; 
-	}
+						const core::NodePtr& after) const { return false; }
 	
+	
+	inline bool isResolved() const { return static_cast<bool>(scattering); }
+
 	/**
 	 * Return the iteration vector which is spawned by this region, and on which the associated
 	 * constraints are based on.
 	 */
-	inline const poly::IterationVector& getIterationVector() const { return iterVec; }
+	inline const poly::IterationVector& getIterationVector() const { 
+		// assert(isValid() && "This is not a valid SCoP");
+		return iterVec; 
+	}
 	
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::IterationDomain& getDomainConstraints() const { return domain; }
+	inline const poly::IterationDomain& getDomainConstraints() const { 
+		// assert(isValid() && "This is not a valid SCoP");
+		return domain; 
+	}
 
 	inline const ScopStmtList& getDirectRegionStmts() const { return stmts; }
+
+	/**
+	 * Returns the iterator through the statements and sub statements on this SCoP. 
+	 * For each statements the infromation of its iteration domain, scattering matrix 
+	 * and access functions are listed. 
+	 */
+	inline StatementIterator stmts_begin() { 
+		assert(isValid() && isResolved() && "SCoP is not resovled"); 
+		return scattering->second.begin(); 
+	}
+
+	inline StatementIterator stmts_end() { 
+		assert(isValid() && isResolved() && "SCoP is not resovled"); 
+		return scattering->second.end(); 
+	}
+
+	/** 
+	 * Resolve the SCoP, this means adapt all the access expressions on nested SCoPs to this level
+	 * and cache all the scattering info at this level
+	 */
+	void resolve();
 
 	/** 
 	 * Returns the set of ref accesses which are within this region (eventual access which are in
 	 * sub regions are not returned by this function). Use listAccesses() to retrieve the complete
 	 * list of accesses existing within this SCoP. 
 	 */
-	const ScatteringPair getScatteringInfo();
+	inline const ScatteringPair getScatteringInfo() { 
+		if (!isResolved()) { resolve();	}
+		assert(scattering && "Failed to resolve SCoP");
+		return *scattering; 
+	}
 
 	/** 
 	 * Returns the list of sub SCoPs which are inside this SCoP and introduce modification to the
@@ -223,12 +271,13 @@ struct ScopRegion: public core::NodeAnnotation {
 
 	bool containsLoopNest() const;
 
-	bool isValid() const { return valid; }
+	inline bool isValid() const { return valid; }
+	inline void setValid(bool value) { valid = value; }
 
-	void setValid(bool value) { valid = value; }
+	bool isParallel();
 
 private:
-	friend void resolveFrom(const core::NodePtr& root);
+	const core::NodePtr annNode;
 
 	// Iteration Vector on which constraints of this region are defined 
 	poly::IterationVector iterVec;
@@ -302,16 +351,6 @@ AddressList mark(const core::NodePtr& root);
  * function.
  *************************************************************************************************/
 void printSCoP(std::ostream& out, const core::NodePtr& scop);
-
-/**************************************************************************************************
- * Adds a SCoP to the list of entry SCoPs. This function also check whether inside this SCoP
- * there are operations which invalidates this SCoP, for example the following properties are
- * checked: 
- *   * Assignments to iterators or parameters within the outerscop iteration vector should be
- *     avoided
- *   * ...
- **************************************************************************************************/
-void resolveFrom(const core::NodePtr& root);
 
 void computeDataDependence(const core::NodePtr& root);
 

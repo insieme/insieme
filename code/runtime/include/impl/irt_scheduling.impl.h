@@ -71,13 +71,17 @@ void irt_scheduling_loop(irt_worker* self) {
 		wait_time.tv_nsec += 1000;
 		if(wait_time.tv_nsec > sched_max_nsecs) wait_time.tv_nsec = sched_max_nsecs;
 		if(wait_time.tv_nsec <= sched_threshold_nsecs) { // short wait, busy
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_START);
 			unsigned long long end = irt_cur_ticks() + wait_time.tv_nsec;
 			while(irt_cur_ticks() < end);
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_END);
 		} else {										// long wait, sleep
 			self->state = IRT_WORKER_STATE_WAITING;
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_START);
 			if(nanosleep(&wait_time, NULL) != 0) {
 				wait_time.tv_nsec = sched_start_nsecs;
 			}
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_END);
 			self->state = IRT_WORKER_STATE_RUNNING;
 		}
 	}

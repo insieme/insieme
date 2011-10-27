@@ -68,6 +68,7 @@ DEFINE_TYPE(For);
 DEFINE_TYPE(Single);
 DEFINE_TYPE(Parallel);
 DEFINE_TYPE(Barrier);
+DEFINE_TYPE(Critical);
 
 /**
  * It implements the annotation node which is attached to the insieme IR for OpenMP directives
@@ -513,13 +514,13 @@ public:
  * OpenMP 'critical' clause
  */
 class Critical: public Annotation {
-	core::VariablePtr name;
+	std::string name;
 
 public:
-	Critical(const core::VariablePtr& name): name(name) { }
+	Critical(const std::string& name): name(name) { }
 
-	bool hasName() const { return static_cast<bool>(name); }
-	const core::Variable& getName() const { assert(hasName()); return *name; }
+	bool hasName() const { return !name.empty(); }
+	const std::string& getName() const { assert(hasName()); return name; }
 
 	std::ostream& dump(std::ostream& out) const;
 };

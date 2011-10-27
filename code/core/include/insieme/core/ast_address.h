@@ -284,8 +284,11 @@ public:
 	/**
 	 * A constructor creating an address for the given root node.
 	 */
-	template<typename B>
-	explicit Address(const Pointer<B>& root, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
+	template<
+		typename B,
+		typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0
+	>
+	explicit Address(const Pointer<B>& root)
 		: utils::HashableImmutableData<Address<T>>(Path::hashSingleStepPath(root)), path(root) {}
 
 	/**
@@ -302,8 +305,11 @@ public:
 	 *
 	 * @param from the element to be copied
 	 */
-	template<typename B>
-	Address(const Address<B>& from, typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0)
+	template<
+		typename B,
+		typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0
+	>
+	Address(const Address<B>& from)
 		: utils::HashableImmutableData<Address<T>>(from.hash()), path(from.getPath()) {}
 
 	/**
@@ -319,7 +325,7 @@ public:
 	static Address<T> find(const Pointer<T>& target, const NodePtr& root) {
 		bool visitTypes = target->getNodeCategory() == NC_Type;
 		Address<T> ret;
-		visitDepthFirstOnceInterruptable(Address(root), [&](const Address<T>& addr) -> bool {
+		visitDepthFirstOnceInterruptible(Address(root), [&](const Address<T>& addr) -> bool {
 			if(*addr.getAddressedNode() == *target) { 
 				ret = addr;
 				return true;
@@ -532,13 +538,15 @@ protected:
  * @return the down-casted address pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>&>::type static_address_cast(Address<T>& src) {
-	return reinterpret_cast<Address<B>&>(src);
+inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type static_address_cast(Address<T>& src) {
+	assert(src && dynamic_cast<B*>(&(*src)) && "Invalid static cast!");
+	return Address<B>(src.getPath());
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const Address<B>&>::type static_address_cast(const Address<T>& src) {
-	return reinterpret_cast<const Address<B>&>(src);
+inline typename boost::enable_if<boost::is_base_of<T,B>, const Address<B>>::type static_address_cast(const Address<T>& src) {
+	assert(src && dynamic_cast<B*>(&(*src)) && "Invalid static cast!");
+	return Address<B>(src.getPath());
 }
 
 /**
@@ -565,7 +573,7 @@ inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type dynam
  */
 struct StaticAddressCast {
 	template<typename Target, typename Source>
-	const Address<const Target>& operator()(const Address<const Source>& value) const {
+	const Address<const Target> operator()(const Address<const Source>& value) const {
 		return static_address_cast<const Target>(value);
 	}
 };
@@ -605,6 +613,43 @@ Address<const T> concat(const Address<const T>& head, const Address<const T>& ta
 	}
 	return Address<const T>(newPath);
 }
+
+
+
+template<typename Visitor, typename T>
+void visitPathBottomUp(const Address<const T>& addr, Visitor& visitor) {
+	visitor.visit(addr);
+	if (addr.getDepth() != 1) {
+		visitPathBottomUp(addr.getParentAddress(), visitor);
+	}
+}
+
+template<typename Visitor, typename T>
+void visitPathTopDown(const Address<const T>& addr, Visitor& visitor) {
+	if (addr.getDepth() != 1) {
+		visitPathTopDown(addr.getParentAddress(), visitor);
+	}
+	visitor.visit(addr);
+}
+
+template<typename Visitor, typename T>
+bool visitPathBottomUpInterruptible(const Address<const T>& addr, Visitor& visitor) {
+	bool res = visitor.visit(addr);
+	if (!res && addr.getDepth() != 1) {
+		return visitPathBottomUpInterruptible(addr.getParentAddress(), visitor);
+	}
+	return res;
+}
+
+template<typename Visitor, typename T>
+bool visitPathTopDownInterruptible(const Address<const T>& addr, Visitor& visitor) {
+	bool res = false;
+	if (addr.getDepth() != 1) {
+		res = visitPathTopDownInterruptible(addr.getParentAddress(), visitor);
+	}
+	return res || visitor.visit(addr);
+}
+
 
 } // end namespace core
 } // end namespace insieme

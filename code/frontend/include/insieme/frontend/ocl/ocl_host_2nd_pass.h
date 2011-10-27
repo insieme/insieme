@@ -55,10 +55,10 @@ class Host2ndPass {
 	KernelLambdas kernelLambdas;
 
 public:
-	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, EquivalenceMap& equivalenceMap, core::ASTBuilder& build) :
+	Host2ndPass(KernelNames& oclKernelNames, ClmemTable& clMemTable, EquivalenceMap& equivalenceMap, const core::ProgramPtr& program, core::ASTBuilder& build) :
 		kernelNames(oclKernelNames), cl_mems(clMemTable), builder(build), /*eqMap(equivalenceMap),*/ kernelLambdas(
 				boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
-				hash_target_specialized(build, equivalenceMap),	equal_variables(build, equivalenceMap)) {}
+				hash_target_specialized(build, equivalenceMap), equal_variables(build, program)) {}
 
 	void mapNamesToLambdas(const vector<core::ExpressionPtr>& kernelEntries);
 

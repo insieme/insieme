@@ -58,7 +58,8 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	KernelLambdas& kernelLambdas;
 	EquivalenceMap& eqMap;
 	insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& replacements;
-	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> varReplacements;
+
+	const core::ProgramPtr program;
 
 	// Generates a function which, taking the kernel name as a string as argument, returns the corresponding lambda
 	const core::ExpressionPtr genGetKernelLambda();
@@ -83,16 +84,18 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	// callExpr is the original call to the NDRangeKernle function, newCall is the substituted one
 	const core::NodePtr handleNDRangeKernel(const core::CallExprPtr& callExpr, const core::CallExprPtr&  newCall, const size_t offset);
 
+	void addTupletoStruct(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
+			core::NamedCompositeType::Entries& newMembers, const core::VariablePtr& var, const size_t i);
+
+
 public:
 	HostMapper3rdPass(const core::ASTBuilder build, ClmemTable& clMemTable, KernelArgs& oclKernelArgs, LocalMemDecls& oclLocalMemDecls,
 			KernelNames& oclKernelNames, KernelLambdas& oclKernelLambdas, EquivalenceMap& equivalenceMap,
-			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& oclReplacements) :
+			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr>& oclReplacements, const core::ProgramPtr mProgram) :
 		builder(build), cl_mems(clMemTable), kernelArgs(oclKernelArgs),	localMemDecls(oclLocalMemDecls), kernelNames(oclKernelNames),
-			kernelLambdas(oclKernelLambdas), eqMap(equivalenceMap), replacements(oclReplacements) { }
+			kernelLambdas(oclKernelLambdas), eqMap(equivalenceMap), replacements(oclReplacements), program(mProgram) { }
 
 	const core::NodePtr resolveElement(const core::NodePtr& element);
-
-	insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr>& getVarReplacements(){ return varReplacements; }
 
 };
 

@@ -224,11 +224,12 @@ CallExprPtr ASTBuilder::assign(const ExpressionPtr& target, const ExpressionPtr&
 ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
     // add a vector init expression if subExpr is of vector type
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
-            manager.basic.scalarToVector(subExpr->getType(), literal("0", manager.basic.getInt4())) :
-            castExpr(subExpr->getType(), literal("0", manager.basic.getInt4()));
+	    manager.basic.scalarToVector(subExpr->getType(), intLit(0)) : castExpr(subExpr->getType(), intLit(0));
 
-	return callExpr(subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
-			elem, subExpr);
+	return callExpr(
+			subExpr->getType(), manager.basic.getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
+			elem, subExpr
+		);
 }
 
 ExpressionPtr ASTBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
@@ -246,6 +247,15 @@ CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const Expressi
 //	auto lit = uintLit(index);
 //	vectorSubscript(vec, lit);
 //}
+
+CallExprPtr ASTBuilder::aquireLock(const ExpressionPtr& lock) const {
+	assert(manager.basic.isLock(lock->getType()) && "Cannot lock a non-lock type.");
+	return callExpr(manager.basic.getUnit(), manager.basic.getLockAquire(), lock);
+}
+CallExprPtr ASTBuilder::releaseLock(const ExpressionPtr& lock) const {
+	assert(manager.basic.isLock(lock->getType()) && "Cannot unlock a non-lock type.");
+	return callExpr(manager.basic.getUnit(), manager.basic.getLockRelease(), lock);
+}
 
 CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const {
 	return compoundStmt(toVector(s1, s2));
@@ -577,7 +587,7 @@ unsigned ASTBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 		return false;
 	});
 
-	if(!visitDepthFirstInterruptable(expr, lambdaVisitor)){
+	if(!visitDepthFirstInterruptible(expr, lambdaVisitor)){
 		LOG(ERROR) << expr;
 		assert(false && "Expression does not contain a literal a number");
 	}

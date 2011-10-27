@@ -267,7 +267,7 @@ class ClastDump: public RecClastVisitor<void> {
 
 	std::ostream& out;
 
-
+	// Utility object used to manage indentation of the pretty printer for the cloog ast (clast)
 	class Indent : public utils::Printable {
 		size_t spaces;
 		const char indent_symbol;
@@ -443,7 +443,8 @@ public:
 	ClastToIR(core::NodeManager& mgr, const StmtMap& stmtMap, const IterationVector& iterVec) : 
 		mgr(mgr), stmtMap(stmtMap), iterVec(iterVec)
 	{
-
+		// Builds a map which associates variables in the cloog AST to IR node. This kind of
+		// handling has to be done to be able to remap parameters to correct IR nodes 
 		std::for_each(iterVec.begin(), iterVec.end(), 
 			[&] (const Element& cur) { 
 				if ( cur.getType() == Element::ITER || cur.getType() == Element::PARAM ) {
@@ -460,6 +461,8 @@ public:
 	}
 
 	core::ExpressionPtr visitClastTerm(const clast_term* termExpr) {
+		STACK_SIZE_GUARD;
+
 		core::ASTBuilder builder(mgr);
 		
 		std::ostringstream ss;
@@ -476,6 +479,8 @@ public:
 	}
 
 	core::ExpressionPtr visitClastName(const clast_name* nameExpr) {
+		STACK_SIZE_GUARD;
+
 		core::ASTBuilder builder(mgr);
 
 		auto&& fit = varMap.find(nameExpr->name);
@@ -489,6 +494,8 @@ public:
 	}
 
 	core::ExpressionPtr visitClastReduction(const clast_reduction* redExpr) {
+		STACK_SIZE_GUARD;
+
 		core::ASTBuilder builder(mgr);
 		if (redExpr->n == 1) { return visit( redExpr->elts[0] ); }
 
@@ -515,7 +522,6 @@ public:
 		}
 
 		assert(redExpr->n >= 1);
-
 		
 		return builder.callExpr( op, args );
 	}
@@ -582,11 +588,14 @@ public:
 
 		size_t pos=0;
 		for(const clast_stmt* ptr = userStmt->substitutions; ptr; ptr=ptr->next,pos++) {
-			assert(CLAST_STMT_IS_A(ptr, stmt_ass));
+			assert(CLAST_STMT_IS_A(ptr, stmt_ass) && "Expected assignment statement");
 			const clast_assignment* assignment = reinterpret_cast<const clast_assignment*>( ptr );
 			assert(assignment->LHS == NULL);
 			const core::ExpressionPtr& targetVar = visit(assignment->RHS);
-			const core::VariablePtr& sourceVar = core::static_pointer_cast<const core::Variable>(static_cast<const Expr&>(iterVec[pos]).getExpr());
+			const core::VariablePtr& sourceVar = 
+				core::static_pointer_cast<const core::Variable>(
+						static_cast<const Expr&>(iterVec[pos]).getExpr()
+					);
 
 			assert(sourceVar->getType()->getNodeType() != core::NT_RefType);
 			replacements.insert( std::make_pair(sourceVar, targetVar) );
@@ -594,7 +603,9 @@ public:
 		
 		core::StatementPtr stmt = stmtStack.top().front();
 		
-		stmt = core::static_pointer_cast<const core::Statement>( core::transform::replaceAll(mgr, stmt, replacements) );	
+		stmt = core::static_pointer_cast<const core::Statement>( 
+					core::transform::replaceAll(mgr, stmt, replacements) 
+				);	
 
 		stmtStack.pop();
 		stmtStack.top().push_back(stmt);
@@ -614,6 +625,8 @@ public:
 	}
 
 	core::ExpressionPtr visitClastEquation(const clast_equation* equation) {
+		STACK_SIZE_GUARD;
+
 		core::ASTBuilder builder(mgr);
 
 		core::LiteralPtr op;
@@ -627,6 +640,38 @@ public:
 		}
 
 		return builder.callExpr( op, visit(equation->LHS), visit(equation->RHS) );
+	}
+
+	core::ExpressionPtr visitClastBinary(const clast_binary* binExpr) {
+		STACK_SIZE_GUARD;
+		core::ASTBuilder builder(mgr);
+
+		core::ExpressionPtr op;
+		switch (binExpr->type) {
+		case clast_bin_fdiv:
+			op = builder.literal( 
+				builder.functionType(mgr.basic.getReal8(), mgr.basic.getReal8()), "floor" );
+			break;
+		case clast_bin_cdiv:
+			op = builder.literal( 
+				builder.functionType(mgr.basic.getReal8(), mgr.basic.getReal8()), "floor" );
+			break;
+		case clast_bin_div: 
+			op = mgr.basic.getSignedIntAdd();
+			break;
+		case clast_bin_mod:
+			op = mgr.basic.getSignedIntMod();
+			break;
+		default: 
+			assert(false && "Binary operator not defined");
+		}
+
+		core::ExpressionPtr&& lhs = visit(binExpr->LHS);
+		std::ostringstream ss;
+		PRINT_CLOOG_INT(ss, binExpr->RHS);
+		core::LiteralPtr&& rhs = builder.literal( mgr.basic.getInt4(), ss.str() );
+
+		return builder.callExpr(op, lhs, rhs);
 	}
 
 	core::ExpressionPtr visitClastGuard(const clast_guard* guardStmt) {
@@ -645,12 +690,14 @@ public:
 						true 
 					) 
 				);
+
 		}
 		
 		stmtStack.push( StatementList() );
 		visit( guardStmt->then );
 
-		core::StatementPtr&& irIfStmt = builder.ifStmt( condExpr, builder.compoundStmt(stmtStack.top()) );
+		core::StatementPtr&& irIfStmt = 
+				builder.ifStmt( condExpr, builder.compoundStmt(stmtStack.top()) );
 		stmtStack.pop();
 
 		stmtStack.top().push_back( irIfStmt );
@@ -698,15 +745,18 @@ core::NodePtr toIR(core::NodeManager& mgr,
 
 	MapPtr<IslContext>&& schedDom = map_intersect_domain(ctx, schedule, domain);
 
-	CloogUnionDomain* unionDomain = cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
+	CloogUnionDomain* unionDomain = 
+		cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
+
 	isl_dim* dim = isl_union_map_get_dim( schedDom->getAsIslMap() );
+
 	CloogDomain* context = cloog_domain_from_isl_set( isl_set_universe(dim) );
 
 	input = cloog_input_alloc(context, unionDomain);
 
 	options->block = 1;
 	root = cloog_clast_create_from_input(input, options);
-
+	assert( root && "Generation of Cloog AST failed" );
 	// clast_pprint(stdout, root, 0, options);
 	
 	if (VLOG_IS_ON(1) ) {
@@ -718,7 +768,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	converter.visit(root);
 	
 	core::StatementPtr&& retIR = converter.getIR();
-	assert(retIR);
+	assert(retIR && "Conversion of Cloog AST to Insieme IR failed");
 
 	VLOG(1) << core::printer::PrettyPrinter(retIR, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 	
@@ -732,3 +782,4 @@ core::NodePtr toIR(core::NodeManager& mgr,
 } // end poly namespace 
 } // end analysis namespace 
 } // end insieme namespace 
+

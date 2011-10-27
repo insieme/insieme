@@ -77,6 +77,8 @@ struct Constraint : public utils::Printable,
 
 	inline const AffineFunction& getAffineFunction() const { return af; }
 
+	inline const IterationVector& getIterationVector() const { return af.getIterationVector(); }
+
 	std::ostream& printTo(std::ostream& out) const; 
 
 	bool operator==(const Constraint& other) const {
@@ -92,6 +94,7 @@ private:
 	const AffineFunction af;
 	const Type type;
 };
+
 
 /******************************************************************************************************
  * ConstraintCombiner: The constraint combiner has the task to combine multiple constraints into 
@@ -156,8 +159,11 @@ struct BinaryConstraintCombiner : public ConstraintCombiner {
 	
 	enum Type { AND, OR };
 
-	BinaryConstraintCombiner(const Type& type, const ConstraintCombinerPtr& lhs, 
-			const ConstraintCombinerPtr& rhs) : 
+	BinaryConstraintCombiner(
+			const Type& type, 
+			const ConstraintCombinerPtr& lhs, 
+			const ConstraintCombinerPtr& rhs
+	) : 
 		ConstraintCombiner(), type(type), lhs(lhs), rhs(rhs) { }
 
 	void accept(ConstraintVisitor& v) const;
@@ -211,11 +217,14 @@ class Combiner;
  *************************************************************************************************/
 template <class Head, class... Tail>
 struct Combiner<Head, Tail...> {
+
 	static ConstraintCombinerPtr 
 	make(const BinaryConstraintCombiner::Type& type, const Head& head, const Tail&... args) {
+
 		return std::make_shared<BinaryConstraintCombiner>( 
 				type, head, Combiner<Tail...>::make(type, args...) 
 			);
+
 	}
 };
 
@@ -252,6 +261,14 @@ ConstraintCombinerPtr cloneConstraint(const IterationVector& trgVec, const Const
 ConstraintCombinerPtr normalize(const Constraint& c);
 
 const IterationVector& extractIterationVector(const ConstraintCombinerPtr& constraint);
+
+// Converts a constraint, or a combination of constraints into an IR expression which can be 
+// used in the code 
+core::ExpressionPtr toIR(core::NodeManager& mgr, const ConstraintCombinerPtr& c);
+
+inline core::ExpressionPtr toIR(core::NodeManager& mgr, const Constraint& c) {
+	return toIR(mgr, makeCombiner(c));
+}
 
 //==== Operator definitions for Constraint =========================================================
 

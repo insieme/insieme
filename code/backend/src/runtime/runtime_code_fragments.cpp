@@ -75,7 +75,7 @@ namespace runtime {
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
 		}
-		return static_pointer_cast<const ContextHandlingFragment>(res);
+		return static_pointer_cast<ContextHandlingFragment>(res);
 	}
 
 	const c_ast::IdentifierPtr ContextHandlingFragment::getInitFunctionName() {
@@ -268,7 +268,7 @@ namespace runtime {
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
 		}
-		return static_pointer_cast<const TypeTable>(res);
+		return static_pointer_cast<TypeTable>(res);
 	}
 
 	const c_ast::ExpressionPtr TypeTable::getTypeTable() {
@@ -351,7 +351,7 @@ namespace runtime {
 			manager->bindFragment(ENTRY_NAME, table);
 			res = table;
 		}
-		return static_pointer_cast<const ImplementationTable>(res);
+		return static_pointer_cast<ImplementationTable>(res);
 	}
 
 	unsigned ImplementationTable::registerWorkItemImpl(const core::ExpressionPtr& implementation) {

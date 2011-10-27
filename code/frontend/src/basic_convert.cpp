@@ -46,6 +46,8 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/map_utils.h"
 
+#include "insieme/utils/timer.h"
+
 #include "insieme/core/program.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -128,19 +130,25 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 
 	// Extract globals starting from this entry point
 	mFact.ctx.globalFuncMap.clear();
-	analysis::GlobalVarCollector globColl(clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+	analysis::GlobalVarCollector globColl(mFact, clangTU, mFact.program.getClangIndexer(), mFact.ctx.globalFuncMap);
+
+	insieme::utils::Timer t("Globals.collect");
 	globColl(def);
 
 	VLOG(1) << globColl;
 	VLOG(2) << mFact.ctx.globalStruct.first;
 
-	mFact.ctx.globalStruct = globColl.createGlobalStruct(mFact);
+	mFact.ctx.globalStruct = globColl.createGlobalStruct();
 	if (mFact.ctx.globalStruct.first) {
 		mFact.ctx.globalVar = mFact.builder.variable( mFact.builder.refType(mFact.ctx.globalStruct.first) );
 	}
+	mFact.ctx.globalIdentMap = globColl.getIdentifierMap();
+
+	t.stop();
+	LOG(INFO) << t;
 
 	const core::ExpressionPtr& expr =
-			core::static_pointer_cast<const core::Expression>(mFact.convertFunctionDecl(def, true));
+			core::static_pointer_cast<const core::Expression>( mFact.convertFunctionDecl(def, true) );
 	
 	core::ExpressionPtr&& lambdaExpr = core::dynamic_pointer_cast<const core::LambdaExpr>(expr);
 
@@ -282,7 +290,6 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	ConversionContext::VarDeclMap::const_iterator fit = ctx.varDeclMap.find(valDecl);
 	if ( fit != ctx.varDeclMap.end() ) {
 		// variable found in the map
-		VLOG(2)<<fit->first << " " << fit->second;
 		return fit->second;
 	}
 
@@ -314,20 +321,21 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
-		core::IdentifierPtr&& ident = builder.identifier(varDecl->getNameAsString());
-		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(ident);
+		
+		auto&& fit = ctx.globalIdentMap.find(varDecl); 
+		assert(fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
+		
+		const core::TypePtr& memberTy = ctx.globalStruct.first->getTypeOfMember(fit->second);
+		assert(memberTy && "Member not found within global struct");
 
 		assert(ctx.globalVar->getType()->getNodeType() == core::NT_RefType &&
 				"Global data structure passed as a non-ref");
-
-		// LOG(DEBUG) << *irType << " == " << 	*memberTy;
-		// assert(*irType == *builder.refType( memberTy ));
 
 		core::ExpressionPtr&& retExpr = builder.callExpr(
 				builder.refType( memberTy ),
 				gen.getCompositeRefElem(),
 				toVector<core::ExpressionPtr>(
-						ctx.globalVar, gen.getIdentifierLiteral(ident), gen.getTypeLiteral(memberTy)
+						ctx.globalVar, gen.getIdentifierLiteral(fit->second), gen.getTypeLiteral(memberTy)
 				)
 			);
 
@@ -388,14 +396,6 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	}
 
     	return builder.refVar(initValue);
-
-//        // initialize pointer/reference types with the null value
-//    	const core::NodeType& nodeTy = refTy->getElementType()->getNodeType();
-//
-//    	if(nodeTy == core::NT_ArrayType || nodeTy == core::NT_VectorType || nodeTy == core::NT_StructType)
-//    		return builder.refNew( defaultInitVal(refTy->getElementType()) );
-//
-//    	return builder.refVar( defaultInitVal(refTy->getElementType()) );
     }
     // handle strings initialization
     if ( mgr.basic.isString(type) ) {
@@ -409,14 +409,6 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
 
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
-//    	core::StructExpr::Members members;
-//    	const core::NamedCompositeType::Entries& entries = structTy->getEntries();
-//    	std::for_each(entries.begin(), entries.end(),
-//    		[ this, &members ](const core::NamedCompositeType::Entry& curr) {
-//    			members.push_back(core::StructExpr::Member(curr.first, this->defaultInitVal(curr.second)));
-//    		}
-//    	);
-    	//return builder.structExpr(structTy, members);
     	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
     }
 
@@ -443,11 +435,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     			return builder.callExpr(mgr.basic.getGetNull(), mgr.basic.getTypeLiteral(arrTy));
     		}
     	}
-		return castToType(arrTy, defaultInitVal(arrTy->getElementType()));
-
-		//return builder.callExpr(
-				//arrTy, mgr.basic.getArrayCreate1D(), initVal, builder.literal("1", mgr.basic.getUInt8())
-			//);
+		return builder.callExpr(arrTy, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(arrTy));
     }
 
     // handle any-ref initialization

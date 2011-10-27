@@ -177,6 +177,57 @@ TEST(NodeAddressTest, Find) {
 	EXPECT_EQ(Address<const Type>::find(typeC, root), addrRoot.getAddressOfChild(2));
 }
 
+TEST(NodeAddressTest, Visiting) {
+	ASTBuilder builder;
+
+	// test a diamond
+	TypePtr typeD = builder.genericType("D");
+	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
+	TypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeD));
+	TypePtr typeA = builder.genericType("A", toVector(typeB, typeC));
+
+	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
+
+	// start with root node R
+	NodeAddress ABD(Path(typeA).extendForChild(0).extendForChild(0));
+
+	vector<TypePtr> list;
+	auto collector = makeLambdaVisitor([&](const TypePtr& type) {
+		list.push_back(type);
+	}, true);
+
+	// bottom up visitor
+	list.clear();
+	visitPathBottomUp(ABD, collector);
+	EXPECT_EQ(toVector<TypePtr>(typeD, typeB, typeA), list);
+
+	// top down visitor
+	list.clear();
+	visitPathTopDown(ABD, collector);
+	EXPECT_EQ(toVector<TypePtr>(typeA, typeB, typeD), list);
+
+
+	auto interruptCollector = makeLambdaVisitor([&](const TypePtr& type) {
+		if (list.size() > static_cast<std::size_t>(1)) {
+			return true;
+		}
+		list.push_back(type);
+		return false;
+	});
+
+	// bottom up visitor
+	list.clear();
+	EXPECT_TRUE(visitPathBottomUpInterruptible(ABD, interruptCollector));
+	EXPECT_EQ(toVector<TypePtr>(typeD, typeB), list);
+
+	// top down visitor
+	list.clear();
+	EXPECT_TRUE(visitPathTopDownInterruptible(ABD, interruptCollector));
+	EXPECT_EQ(toVector<TypePtr>(typeA, typeB), list);
+
+
+}
+
 } // end namespace core
 } // end namespace insieme
 

@@ -169,8 +169,11 @@ struct DependenceInfo : public utils::Printable {
 	DependenceInfo( const MapPtr<Ctx>& mustDep, 
 					const MapPtr<Ctx>& mayDep, 
 					const MapPtr<Ctx>& mustNoSource, 
-					const MapPtr<Ctx>& mayNoSource ): 
-		mustDep(mustDep), mayDep(mayDep), mustNoSource(mustNoSource), mayNoSource(mayNoSource) { }
+					const MapPtr<Ctx>& mayNoSource 
+		) : mustDep(mustDep), 
+		    mayDep(mayDep), 
+		    mustNoSource(mustNoSource), 
+		    mayNoSource(mayNoSource) { }
 
 	bool isEmpty() const {
 		return mustDep->isEmpty() && mayDep->isEmpty();
@@ -192,12 +195,13 @@ DependenceInfo<Ctx> buildDependencies(
 typedef std::map<std::string, insieme::core::StatementPtr> StmtMap;
 
 template <class Ctx>
-core::NodePtr toIR(core::NodeManager& mgr, 
-		const StmtMap& stmtMap,
-		const IterationVector& iterVec, 
-		Ctx& ctx, 
-		const Set<Ctx>& domain, 
-		const Map<Ctx>& schedule
+core::NodePtr toIR(
+		core::NodeManager& 		mgr, 
+		const StmtMap& 			stmtMap,
+		const IterationVector& 	iterVec, 
+		Ctx& 					ctx, 
+		const Set<Ctx>& 		domain, 
+		const Map<Ctx>& 		schedule
 	);
 
 } // end poly namespace

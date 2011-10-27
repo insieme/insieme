@@ -46,6 +46,7 @@
 #include "utils/lookup_tables.h"
 
 #include "impl/irt_context.impl.h"
+#include "impl/instrumentation.impl.h"
 
 IRT_DEFINE_LOOKUP_TABLE(data_item, lookup_table_next, IRT_ID_HASH, IRT_DATA_ITEM_LT_BUCKETS);
 
@@ -55,6 +56,7 @@ static inline irt_data_item* _irt_di_new(uint16 dimensions) {
 	return (irt_data_item*)retval;
 }
 static inline void _irt_di_recycle(irt_data_item* di) {
+	irt_di_instrumentation_event(di, DATA_ITEM_RECYCLED);
 	irt_data_item_table_remove(di->id);
 	free(di);
 }
@@ -74,6 +76,12 @@ irt_data_item* irt_di_create(irt_type_id tid, uint32 dimensions, irt_data_range*
 	retval->parent_id = irt_data_item_null_id();
 	retval->lookup_table_next = NULL;
 	retval->data_block = NULL;
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	retval->performance_data = irt_create_performance_table(IRT_DI_PD_BLOCKSIZE);
+	irt_di_instrumentation_event(retval, DATA_ITEM_CREATED);
+#else
+	retval->performance_data = 0;
+#endif
 	irt_data_item_table_insert(retval);
 	return retval;
 }

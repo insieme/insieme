@@ -40,9 +40,11 @@
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/core/ast_check.h"
+#include "insieme/utils/logging.h"
 #include "insieme/core/checks/ir_checks.h"
+#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/ocl_host/host_extensions.h"
 #include "insieme/backend/ocl_host/host_preprocessor.h"
@@ -54,7 +56,7 @@ namespace insieme {
 namespace backend {
 namespace ocl_host {
 
-	class BufferReplacer : public core::transform::CachedNodeMapping {
+	/*class BufferReplacer : public core::transform::CachedNodeMapping {
 
 		core::NodeManager& manager;
 		const Extensions& extensions;
@@ -74,15 +76,25 @@ namespace ocl_host {
 			// perform conversion in post-order
 			core::NodePtr res = ptr->substitute(manager, *this);
 
+			// only interested in lambda expressions
+			if (res->getNodeType() != core::NT_LambdaExpr) {
+				return res;
+			}
+
+			//LOG(INFO) << "CODE: " << core::printer::PrettyPrinter(res);
+
 			return res;
 		}
-	};
+	};*/
 
 	core::NodePtr HostPreprocessor::process(core::NodeManager& manager, const core::NodePtr& code) {
 
 		// the converter does the magic
-		BufferReplacer replacer(manager);
-		return replacer.map(code);
+		//BufferReplacer replacer(manager);
+		//return replacer.map(code);
+
+		std::cout << core::printer::PrettyPrinter(code);
+		return code;
 	}
 
 } // end namespace ocl_host
