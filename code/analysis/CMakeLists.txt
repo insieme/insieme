@@ -49,7 +49,6 @@ foreach ( case_file ${test_cases})
 	target_link_libraries(${case_name} ${isl_LIB})
 	target_link_libraries(${case_name} ${gmp_LIB})
 	target_link_libraries(${case_name} ${cloog_LIB})
-	target_link_libraries(${case_name} ${barvinok_LIB})
 	target_link_libraries(${case_name} ${pthread_LIB})
 	
 	add_unit_test(${case_name})

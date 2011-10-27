@@ -441,16 +441,16 @@ std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const {
 //==== Compute the cardinality of Sets ============================================================
 
 core::ExpressionPtr Set<IslContext>::getCard() const {
-	isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
+	//isl_union_pw_qpolynomial* pw_qpoly = isl_union_set_card( isl_union_set_copy(set) );
 
-	isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
-	isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
+	//isl_printer* printer = isl_printer_to_str( ctx.getRawContext() );
+	//isl_printer_print_union_pw_qpolynomial(printer, pw_qpoly);
 
-	char* str = isl_printer_get_str(printer);
-	std::cout << str << std::endl << std::endl;
-	free(str); // free the allocated string by the library
-	isl_printer_free(printer);
-	isl_union_pw_qpolynomial_free(pw_qpoly);
+	//char* str = isl_printer_get_str(printer);
+	//std::cout << str << std::endl << std::endl;
+	//free(str); // free the allocated string by the library
+	//isl_printer_free(printer);
+	//isl_union_pw_qpolynomial_free(pw_qpoly);
 }
 
 } // end poly namespace 
