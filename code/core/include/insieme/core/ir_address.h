@@ -45,14 +45,11 @@
 
 #include "insieme/utils/hash_utils.h"
 
-#include "insieme/core/ir_node.h"
-#include "insieme/core/values.h"
-#include "insieme/core/ir_int_type_param.h"
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 /**
  * A forward declaration of the node type used for realizing paths.
@@ -716,7 +713,6 @@ bool visitPathTopDownInterruptable(const Address<const T>& addr, Visitor& visito
 	return res || visitor.visit(addr);
 }
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 
@@ -726,19 +722,19 @@ namespace std {
 	/**
 	 * Allows path elements to be printed to an output stream.
 	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::detail::PathElement& element);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element);
 
 	/**
 	 * Allows paths to be printed to a an output stream.
 	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::Path& path);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path);
 
 	/**
 	 * Allows node addresses to be printed to a stream (especially useful during debugging and
 	 * within test cases where equals expects values to be printable).
 	 */
 	template<typename T>
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::Address<T>& node) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Address<T>& node) {
 		return out << node.getPath();
 	}
 

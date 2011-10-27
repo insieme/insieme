@@ -41,13 +41,12 @@
 #include <limits>
 
 #include "insieme/core/ir_node.h"
-#include "insieme/core/values.h"
+#include "insieme/core/ir_values.h"
 
 // ---------------------------------------- Integer Type Parameters ------------------------------
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 	/**
 	 * Instances of this class represent the integer-type parameters.
@@ -234,7 +233,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to an int-type parameter list.
 	 */
-	IR_LIST_NODE_ACCESSOR(IntTypeParamList, Support, IntTypeParam)
+	IR_LIST_NODE_ACCESSOR(IntTypeParamList, Support, IntTypeParam, Parameters)
 	};
 
 	/**
@@ -266,6 +265,5 @@ namespace new_core {
 	};
 
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

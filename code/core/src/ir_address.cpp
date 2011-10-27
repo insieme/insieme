@@ -40,7 +40,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 namespace detail {
 
@@ -440,20 +439,19 @@ std::ostream& Path::printTo(std::ostream& out) const {
 	return out << " - empty path - ";
 }
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::detail::PathElement& element) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::detail::PathElement& element) {
 		if (element.parent) {
 			return out << *element.parent << "-" << element.index;
 		}
 		return out << element.index;
 	}
 
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::Path& path) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::Path& path) {
 		return path.printTo(out);
 	}
 

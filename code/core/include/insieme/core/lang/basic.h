@@ -117,7 +117,7 @@ public:
 	LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
 
 	// a factory method for a identifier literal
-	LiteralPtr getIdentifierLiteral(const core::IdentifierPtr& identifier) const;
+	LiteralPtr getIdentifierLiteral(const StringValuePtr& value) const;
 
 	// a method generating a vector init expression form a scalar
 	ExpressionPtr scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const;

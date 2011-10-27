@@ -318,6 +318,11 @@ class Annotatable {
 public:
 
 	/**
+	 * A type definition for key type used internally to handle attachements.
+	 */
+	typedef KeyType key_type;
+
+	/**
 	 * A type definition for the pointer type used to internally maintain annotation instances.
 	 */
 	typedef std::shared_ptr<AnnotationType> annotation_ptr_type;

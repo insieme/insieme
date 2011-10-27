@@ -267,8 +267,8 @@ LiteralPtr BasicGenerator::getTypeLiteral(const TypePtr& type) const {
 	return pimpl->build.literal(literalType, toString(*type));
 }
 
-LiteralPtr BasicGenerator::getIdentifierLiteral(const core::IdentifierPtr& identifier) const {
-	return pimpl->build.literal(getIdentifier(), identifier->getName());
+LiteralPtr BasicGenerator::getIdentifierLiteral(const core::StringValuePtr& value) const {
+	return pimpl->build.literal(getIdentifier(), value);
 }
 
 ExpressionPtr BasicGenerator::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {

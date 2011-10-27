@@ -37,14 +37,13 @@
 #pragma once
 
 #include "insieme/core/ir_node.h"
-#include "insieme/core/values.h"
+#include "insieme/core/ir_values.h"
 #include "insieme/core/ir_int_type_param.h"
 
 // ---------------------------------------------- IR Types -----------------------------------------------
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 
 	// ---------------------------------------- An abstract base type ------------------------------
@@ -92,7 +91,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to an type parameter list.
 	 */
-	IR_LIST_NODE_ACCESSOR(TypeParamList, Support, Type)
+	IR_LIST_NODE_ACCESSOR(TypeParamList, Support, Type, Parameters)
 	};
 
 	/**
@@ -287,11 +286,7 @@ namespace new_core {
 	 * The accessor associated to a tuple type. Each tuple type is consisting of a list
 	 * of type pointers.
 	 */
-	IR_LIST_NODE_ACCESSOR(TupleType, Type, Type)
-		/**
-		 * Obtains the list of all elements within this tuple type.
-		 */
-		const TypeList& getElementTypes() const { return ListNodeAccessor<Derived,Type,Ptr>::getElements(); }
+	IR_LIST_NODE_ACCESSOR(TupleType, Type, Type, ElementTypes)
 	};
 
 	/**
@@ -461,10 +456,7 @@ namespace new_core {
 	 * The accessor associated to a recursive type binding. Each binding maps a variable to
 	 * a type - potentially including a recursive usage of the bound variable.
 	 */
-	IR_LIST_NODE_ACCESSOR(RecTypeDefinition, Support, RecTypeBinding)
-		const vector<RecTypeBindingPtr>& getDefinitions() {
-			return convertList<RecTypeBinding>(NodeAccessor<Derived, Ptr>::getNode().getChildList());
-		}
+	IR_LIST_NODE_ACCESSOR(RecTypeDefinition, Support, RecTypeBinding, Definitions)
 
 		/**
 		 * Obtains a specific definition maintained within this node.
@@ -647,7 +639,7 @@ namespace new_core {
 	 * a type. Named types are the components named composite types (structs and unions)
 	 * are build form.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, NamedType)
+	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, NamedType, Members)
 		/**
 		 * Retrieves the type of a member of this composite type or a null pointer if there is no
 		 * such entry.
@@ -655,7 +647,7 @@ namespace new_core {
 		 * @param name the name to be searching for
 		 */
 		TypePtr getTypeOfMember(const StringValuePtr& name) const {
-			auto list = convertList<NamedType>(NodeAccessor<Derived, Ptr>::getNode().getChildList());
+			auto list = getMembers();
 			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
 				return *cur->getName() == *name;
 			});
@@ -721,6 +713,12 @@ namespace new_core {
 	// --------------------------------- Struct Type ----------------------------
 
 	/**
+	 * The accessor for instances of struct types.
+	 */
+	template<typename D,template<typename T> class P>
+	struct StructTypeAccessor : public NamedCompositeTypeAccessor<D,P> {};
+
+	/**
 	 * The type used to represent struct / records.
 	 */
 	IR_NAMED_COMPOSITE_TYPE(StructType)
@@ -754,6 +752,12 @@ namespace new_core {
 
 
 	// --------------------------------- Union Type ----------------------------
+
+	/**
+	 * The accessor for instances of union types.
+	 */
+	template<typename D,template<typename T> class P>
+	struct UnionTypeAccessor : public NamedCompositeTypeAccessor<D,P> {};
 
 	/**
 	 * The type used to represent unions.
@@ -1080,7 +1084,6 @@ namespace new_core {
 
 	#undef IR_SINGLE_ELEMENT_TYPE
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 

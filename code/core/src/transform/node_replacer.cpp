@@ -38,8 +38,8 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -263,7 +263,7 @@ private:
 class RecVariableMapReplacer : public CachedNodeMapping {
 
 	NodeManager& manager;
-	ASTBuilder builder;
+	IRBuilder builder;
 	const PointerMap<VariablePtr, VariablePtr>& replacements;
 	bool limitScope;
 	const std::function<NodePtr (const NodePtr&)>& functor;
@@ -712,7 +712,7 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 }
 
 // functor which updates the type literal inside a call to undefined in a declareation
-std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const ASTBuilder& builder){
+std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& builder){
 	return [&builder](const NodePtr& node)->NodePtr {
 		NodePtr res = node;
 		const lang::BasicGenerator& basic = builder.getBasicGenerator();

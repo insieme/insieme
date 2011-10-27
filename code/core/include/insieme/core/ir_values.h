@@ -40,20 +40,20 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 	template<typename D,template<typename T> class P>
 	struct ValueAccessor : public NodeAccessor<D,P> {
 
 		/**
 		 * Obtains a reference to the value represented by this node if
-		 * it is representing a value.
+		 * it is representing a value. This method is overloading the version
+		 * within the NodeAccessor - thereby increasing visibility.
 		 *
 		 * @return a reference to the internally maintained value
 		 */
-		const Node::Value& getValue() const {
+		const NodeValue& getValue() const {
 			// forward call to protected parent method
-			return NodeAccessor<D,P>::getNode().getValue();
+			return NodeAccessor<D,P>::getNodeValue();
 		}
 
 	};
@@ -71,7 +71,7 @@ namespace new_core {
 		 * @param type the type of the resulting node
 		 * @param value the value to be represented
 		 */
-		Value(const NodeType type, const Node::Value& value) : Node(type, value) {}
+		Value(const NodeType type, const NodeValue& value) : Node(type, value) {}
 
 	};
 
@@ -84,7 +84,7 @@ namespace new_core {
 		template<typename D,template<typename T> class P> \
 		struct NAME ## ValueAccessor : public ValueAccessor<D,P> { \
 			TYPE getValue() const { \
-				return NodeAccessor<D,P>::getNode().getValue(); \
+				return boost::get<TYPE>(ValueAccessor<D,P>::getValue()); \
 			} \
 		}; \
 		\
@@ -139,6 +139,5 @@ namespace new_core {
 
 	#undef VALUE_NODE
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

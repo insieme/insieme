@@ -172,18 +172,18 @@ AST_TERMINAL(TypeVariable, Type)
 AST_TERMINAL(FunctionType, Type)
 AST_TERMINAL(TupleType, Type)
 AST_TERMINAL(RecType, Type)
+AST_TERMINAL(RefType, Type)
 
 // + generic types
 AST_NODE(GenericType, Type)
 CONCRETE(GenericType)
 
 // + single element types
-AST_NODE(SingleElementType, GenericType)
+AST_NODE(SingleElementType, Type)
 ABSTRACT(SingleElementType)
 
 AST_TERMINAL(ArrayType, SingleElementType)
 AST_TERMINAL(VectorType, SingleElementType)
-AST_TERMINAL(RefType, SingleElementType)
 AST_TERMINAL(ChannelType, SingleElementType)
 
 // + named composite types

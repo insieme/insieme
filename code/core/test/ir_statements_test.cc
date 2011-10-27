@@ -188,7 +188,7 @@ TEST(StatementsTest, Continue) {
 	// check hash codes, children and cloning
 	basicNodeTests(stmt, NodeList());
 }
-
+//
 //TEST(StatementsTest, Return) {
 //	NodeManager manager;
 //
@@ -321,28 +321,28 @@ TEST(StatementsTest, Continue) {
 //	list.push_back(other);
 //	basicNodeTests(stmt, list);
 //}
-//
-//TEST(StatementsTest, MarkerStmt) {
-//	NodeManager manager;
-//
-//	TypePtr type = GenericType::get(manager, "A");
-//	LiteralPtr literal = Literal::get(manager, type, "1");
-//
-//	MarkerStmtPtr markerA = MarkerStmt::get(manager, literal);
-//	MarkerStmtPtr markerB = MarkerStmt::get(manager, literal);
-//
-//	EXPECT_NE(markerA, markerB);
-//	EXPECT_NE(*markerA, *markerB);
-//
-//	EXPECT_EQ(literal, markerA->getSubStatement());
-//	EXPECT_EQ(markerA->getSubStatement(), markerB->getSubStatement());
-//
-//	EXPECT_NE(markerA->getID(), markerB->getID());
-//
-//	// check hash codes, children and cloning
-//	basicNodeTests(markerA, toVector<NodePtr>(literal));
-//	basicNodeTests(markerB, toVector<NodePtr>(literal));
-//}
+
+TEST(StatementsTest, MarkerStmt) {
+	NodeManager manager;
+
+	TypePtr type = GenericType::get(manager, "A");
+	LiteralPtr literal = Literal::get(manager, type, "1");
+
+	MarkerStmtPtr markerA = MarkerStmt::get(manager, literal);
+	MarkerStmtPtr markerB = MarkerStmt::get(manager, literal);
+
+	EXPECT_NE(markerA, markerB);
+	EXPECT_NE(*markerA, *markerB);
+
+	EXPECT_EQ(literal, markerA->getSubStatement());
+	EXPECT_EQ(markerA->getSubStatement(), markerB->getSubStatement());
+
+	EXPECT_NE(markerA->getID(), markerB->getID());
+
+	// check hash codes, children and cloning
+	basicNodeTests(markerA, toList(markerA->getID(), literal));
+	basicNodeTests(markerB, toList(markerB->getID(), literal));
+}
 
 
 } // end namespace new_core

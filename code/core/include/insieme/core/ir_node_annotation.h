@@ -34,17 +34,46 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_expressions.h"
+#pragma once
+
+#include "insieme/utils/annotation.h"
 
 namespace insieme {
 namespace core {
 
-	std::ostream& JobExpr::printTo(std::ostream& out) const {
-		out << "job [" << join(", ", getLocalDecls()->getElements(), print<deref<NodePtr>>()) << "] ("
-			<< join(", ", getGuardedExprs()->getElements(), print<deref<NodePtr>>())
-			<< (getGuardedExprs()->empty()?"":", ") << "default: " << *getDefaultExpr() << ")";
-		return out;
-	}
+
+
+	// **********************************************************************************
+	// 									Node Annotations
+	// **********************************************************************************
+
+	// a forward declaration of the node annotation class and a pointer type referencing it
+	class NodeAnnotation;
+	typedef std::shared_ptr<NodeAnnotation> NodeAnnotationPtr;
+
+	/**
+	 * An abstract super type for all annotations being attached to nodes. In addition to the
+	 * usual annotation requirements, node annotations have to support the migration between
+	 * nodes during transformations.
+	 */
+	class NodeAnnotation : public utils::Annotation {
+	public:
+
+		/**
+		 * A method which will be invoked whenever a node with this annotation is
+		 * transformed. If the annotation should be preserved, this method has to migrate
+		 * itself to the given after node. During this migration, necessary modifications
+		 * on the annotations may as well be applied.
+		 *
+		 * @param ptr the shared annotation pointer referencing this annotation within the before node
+		 * @param before the node state before the transformation having this annotation attached to
+		 * @param after the node state after the transformation, which might have to be updated
+		 * @return true if a migration took place, false otherwise
+		 */
+		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const { return false; };
+	};
+
 
 } // end namespace core
 } // end namespace insieme
+

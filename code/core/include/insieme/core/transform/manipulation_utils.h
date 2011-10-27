@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace core {
@@ -54,7 +54,7 @@ template<
 	template<typename T> class Ptr
 >
 inline void migrateAnnotations(const Ptr<Node>& before, const Ptr<Node>& after) {
-	typedef typename Node::annotation_map_type AnnotationMap;
+	typedef typename Node::annotation_container::annotation_map_type AnnotationMap;
 
 	// check whether there is something to do
 	if (before == after || !before->hasAnnotations()) {

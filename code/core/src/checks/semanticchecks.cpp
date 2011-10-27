@@ -35,7 +35,7 @@
  */
 
 #include "insieme/core/checks/semanticchecks.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/container_utils.h"
@@ -65,7 +65,7 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 	OptionalMessageList res;
 	auto& mgr = curcall->getNodeManager();
 	auto& basic = mgr.basic;
-	ASTBuilder builder(mgr);
+	IRBuilder builder(mgr);
 
 	for(unsigned argIndex = 0; argIndex < curcall->getArguments().size(); ++argIndex) {
 		 // the potential outer call to scalar.to.array in one of curcall's parameters

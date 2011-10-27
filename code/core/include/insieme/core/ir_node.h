@@ -38,7 +38,6 @@
 
 #include <map>
 
-#include <boost/variant.hpp>
 #include <boost/mpl/or.hpp>
 
 #include "insieme/utils/annotation.h"
@@ -46,169 +45,16 @@
 #include "insieme/utils/id_generator.h"
 #include "insieme/utils/instance_manager.h"
 
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/lang/extension.h"
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/ir_pointer.h"
 #include "insieme/core/ir_mapper.h"
 #include "insieme/core/ir_node_traits.h"
+#include "insieme/core/ir_pointer.h"
+
+#include "insieme/core/lang/basic.h"
+#include "insieme/core/lang/extension.h"
 
 namespace insieme {
 namespace core {
-namespace new_core {
-
-
-
-	// **********************************************************************************
-	// 									Node Categories
-	// **********************************************************************************
-
-	/**
-	 * Defines a set of categories nodes might belong to. Every node has to belong to
-	 * exactly one of the enlisted categories.
-	 */
-	enum NodeCategory {
-		NC_Value,			// < a leaf node representing a value
-		NC_IntTypeParam,	// < a node representing an int-type-param
-		NC_Type,			// < a node representing a type
-		NC_Expression,		// < a node representing an expression
-		NC_Statement,		// < a node representing a statement
-		NC_Program,			// < a node representing a program
-		NC_Support			// < a utility used to realize a complex data structure
-	};
-
-
-
-
-	// **********************************************************************************
-	// 									Node Manager
-	// **********************************************************************************
-
-	/**
-	 * Instances of the NodeManager class can be used to control the life cycle
-	 * of IR nodes. The life cycle of every node is bound to a single manager and
-	 * all children of the node have to be bound to the same manager. This constraint
-	 * is automatically enforced by the node implementations.
-	 */
-	class NodeManager: public InstanceManager<Node, Pointer> {
-
-		/**
-		 * The data type used to maintain language extensions. Language extensions
-		 * are collections of additional types and literals to be integrated within
-		 * IR programs.
-		 *
-		 * Language extensions are handled via pointers. No smart pointer required here
-		 * since ownership is never leafing the object.
-		 */
-		typedef std::map<const char*, lang::Extension*> ExtensionMap;
-
-		/**
-		 * An instance of the basic generator offering access to essential INSPIRE
-		 * specific language constructs.
-		 */
-//		const lang::BasicGenerator basic;
-
-		/**
-		 * The store maintaining language extensions.
-		 */
-		ExtensionMap extensions;
-
-		/**
-		 * A static generator for generating IDs
-		 */
-		utils::SimpleIDGenerator<unsigned> idGenerator;
-
-
-	public:
-
-		/**
-		 * A default constructor creating a fresh, empty node manager instance.
-		 */
-		NodeManager() : /* basic(*this), */ extensions() { }
-
-		/**
-		 * The destructor cleaning up all language extensions.
-		 */
-		~NodeManager() {
-			// free all extensions
-			for_each(extensions, [](const ExtensionMap::value_type& cur) {
-				delete cur.second;
-			});
-		}
-
-//		/**
-//		 * Obtains access to the generator of the basic language constructs.
-//		 */
-//		const lang::BasicGenerator& getBasicGenerator() const {
-//			return basic;
-//		}
-
-		/**
-		 * Obtains access to a generic language extension to be offered by this
-		 * node manager. If the extension has not been loaded yet, it will be during
-		 * the execution of this method.
-		 *
-		 * @tparam E the extension to be obtained
-		 * @return a reference to the requested language extension
-		 */
-		template<
-			typename E,
-			typename boost::enable_if<boost::is_base_of<lang::Extension, E>, int>::type = 0
-		>
-		const E& getLangExtension() {
-			// look up type information within map
-			const char* key = typeid(E).name();
-			auto pos = extensions.find(key);
-			if (pos != extensions.end()) {
-				return static_cast<const E&>(*(pos->second));
-			}
-
-			// create a new instance
-			extensions[key] = new E(*this);
-			return getLangExtension<E>();
-		}
-
-		/**
-		 * Obtains a fresh ID to be used within a node.
-		 */
-		unsigned getFreshID() {
-			return idGenerator.getNext();
-		}
-
-	};
-
-
-
-	// **********************************************************************************
-	// 									Node Annotations
-	// **********************************************************************************
-
-	// a forward declaration of the node annotation class and a pointer type referencing it
-	class NodeAnnotation;
-	typedef std::shared_ptr<NodeAnnotation> NodeAnnotationPtr;
-
-	/**
-	 * An abstract super type for all annotations being attached to nodes. In addition to the
-	 * usual annotation requirements, node annotations have to support the migration between
-	 * nodes during transformations.
-	 */
-	class NodeAnnotation : public utils::Annotation {
-	public:
-
-		/**
-		 * A method which will be invoked whenever a node with this annotation is
-		 * transformed. If the annotation should be preserved, this method has to migrate
-		 * itself to the given after node. During this migration, necessary modifications
-		 * on the annotations may as well be applied.
-		 *
-		 * @param ptr the shared annotation pointer referencing this annotation within the before node
-		 * @param before the node state before the transformation having this annotation attached to
-		 * @param after the node state after the transformation, which might have to be updated
-		 * @return true if a migration took place, false otherwise
-		 */
-		virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const { return false; };
-	};
-
 
 
 	// **********************************************************************************
@@ -230,7 +76,6 @@ namespace new_core {
 	 */
 	class Node :
 			public utils::HashableImmutableData<Node>,			// Nodes are immutable data objects!
-			public utils::Annotatable<NodeAnnotation>, 			// Nodes can be annotated
 			public utils::Printable {							// Allows instances to be printed
 
 			/**
@@ -252,10 +97,9 @@ namespace new_core {
 			typedef NodeManager Manager;
 
 			/**
-			 * The union of all the values which can directly be represented using nodes. If
-			 * a node represents a value, it is representing a value of this type.
+			 * The container used to handle annotations.
 			 */
-			typedef boost::variant<bool,char,int,unsigned,string> Value;
+			typedef utils::Annotatable<NodeAnnotation> annotation_container;
 
 		private:
 
@@ -274,7 +118,7 @@ namespace new_core {
 			 * The value represented by this node (only valid if it
 			 * is in deed a value node).
 			 */
-			Value value;
+			NodeValue value;
 
 
 			// --------------------------------------------
@@ -307,6 +151,11 @@ namespace new_core {
 			 */
 			mutable EqualityID equalityID;
 
+			/**
+			 * The annotatable part of the node.
+			 */
+			const annotation_container annotations;
+
 		protected:
 
 			/**
@@ -334,7 +183,7 @@ namespace new_core {
 			 * @param nodeType the type of node to be represented
 			 * @param value the value to be represented
 			 */
-			Node(const NodeType nodeType, const Value& value);
+			Node(const NodeType nodeType, const NodeValue& value);
 
 			/**
 			 * Constructs a new node instance based on the given type, category and child list.
@@ -377,14 +226,14 @@ namespace new_core {
 			 */
 			void operator delete[](void*, size_t);
 
-		public:
+		private:
 
 			/**
 			 * Determines the type of this node.
 			 *
 			 * @return the node type of this instance
 			 */
-			NodeType getNodeType() const {
+			NodeType getNodeTypeInternal() const {
 				return nodeType;
 			}
 
@@ -393,7 +242,7 @@ namespace new_core {
 			 *
 			 * @return the node category of this instance
 			 */
-			NodeCategory getNodeCategory() const {
+			NodeCategory getNodeCategoryInternal() const {
 				return nodeCategory;
 			}
 
@@ -402,7 +251,7 @@ namespace new_core {
 			 *
 			 * @return true if it is a value type, false otherwise
 			 */
-			bool isValue() const {
+			bool isValueInternal() const {
 				return nodeCategory == NC_Value;
 			}
 
@@ -412,8 +261,8 @@ namespace new_core {
 			 * @param index the index of the child
 			 * @return a pointer to the requested child
 			 */
-			const NodePtr& getChild(std::size_t index) const {
-				assert(!isValue() && "Node represents a value!");
+			const NodePtr& getChildInternal(std::size_t index) const {
+				assert(!isValueInternal() && "Node represents a value!");
 				assert((index < children.size()) && "Index out of bound!");
 				return children[index];
 			}
@@ -423,8 +272,8 @@ namespace new_core {
 			 *
 			 * @return a reference to the internally maintained child list
 			 */
-			const NodeList& getChildList() const {
-				assert(!isValue() && "Node represents a value!");
+			const NodeList& getChildListInternal() const {
+				assert(!isValueInternal() && "Node represents a value!");
 				return children;
 			}
 
@@ -434,7 +283,7 @@ namespace new_core {
 			 *
 			 * @return a reference to the manager maintaining this node
 			 */
-			inline NodeManager& getNodeManager() const {
+			inline NodeManager& getNodeManagerInternal() const {
 				assert(manager && "NodeManager must not be null - unmanaged node detected!");
 				return *manager;
 			}
@@ -457,7 +306,26 @@ namespace new_core {
 			 * @param mapper the mapper used to translate child node references
 			 * @return a pointer to the modified node.
 			 */
-			NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
+			NodePtr substituteInternal(NodeManager& manager, NodeMapping& mapper) const;
+
+			/**
+			 * Obtains a reference to the associated annotation container.
+			 */
+			const annotation_container& getAnnotationContainer() const {
+				return annotations;
+			}
+
+		public:
+
+			/**
+			 * Obtains a reference to the entire list of children stored internally.
+			 *
+			 * @return a reference to the internally maintained child list
+			 */
+			const NodeList& getChildNodeList() const {
+				assert(!isValueInternal() && "Node represents a value!");
+				return children;
+			}
 
 			/**
 			 * A default implementation of the equals operator comparing the actual
@@ -487,16 +355,16 @@ namespace new_core {
 
 				// check whether values are represented
 				bool res = true;
-				res = res && isValue() == other.isValue();
+				res = res && isValueInternal() == other.isValueInternal();
 
 				// compare content ..
-				if (isValue()) {
+				if (isValueInternal()) {
 					// .. if it is a value
 					res = res && getNodeValue() == other.getNodeValue();
 				} else {
 					// .. if it is a inner node
-					res = res && getNodeType() == other.getNodeType();
-					res = res && ::equals(getChildList(), other.getChildList(), equal_target<NodePtr>());
+					res = res && getNodeTypeInternal() == other.getNodeTypeInternal();
+					res = res && ::equals(getChildListInternal(), other.getChildListInternal(), equal_target<NodePtr>());
 				}
 
 				// infect both nodes with a new ID
@@ -549,8 +417,8 @@ namespace new_core {
 			 *
 			 * @return a reference to the internally maintained value
 			 */
-			const Value& getNodeValue() const {
-				assert(isValue() && "Node does not represent a value!");
+			const NodeValue& getNodeValue() const {
+				assert(isValueInternal() && "Node does not represent a value!");
 				return value;
 			}
 
@@ -620,158 +488,105 @@ namespace new_core {
 
 
 
+
+
 	// **********************************************************************************
-	// 							      Node Accessor
+	// 									Node Manager
 	// **********************************************************************************
-
-	namespace detail {
-
-		/**
-		 * A general implementation of the node accessor helper which will be used in cases where
-		 * the accessor is inherited by a node directly.
-		 */
-		template<typename Derived>
-		struct node_access_helper {
-			/**
-			 * Obtains access to the accessed node.
-			 */
-			inline const Derived& getNode() const {
-				return *static_cast<const Derived*>(this);
-			}
-		};
-
-		/**
-		 * A specialization of the NodeAccessor template which will be used in cases where
-		 * the accessor is inherited by a pointer (to support access to the same elements
-		 * as for address and nodes directly).
-		 */
-		template<typename Derived>
-		struct node_access_helper<Pointer<const Derived>> {
-			/**
-			 * Obtains access to the accessed node.
-			 */
-			inline const Derived& getNode() const {
-				return **static_cast<const Pointer<const Derived>*>(this);
-			}
-		};
-
-		/**
-		 * A specialization of the NodeAccessor template which will be used in cases where
-		 * the accessor is inherited by an address (to support access to the same elements
-		 * as for pointers and nodes directly).
-		 */
-		template<typename Derived>
-		struct node_access_helper<Address<const Derived>> {
-			/**
-			 * Obtains access to the accessed node.
-			 */
-			inline const Derived& getNode() const {
-				return **static_cast<const Address<const Derived>*>(this);
-			}
-		};
-
-	}
 
 	/**
-	 * A default implementation for a node accessor to be used whenever the derived
-	 * type is a node itself. Derivations of this class should be used as the base type
-	 * for all node accessors.
-	 *
-	 * @tparam Derived the type which is extended by this accessor (static polymorthism)
-	 * @tparam Ptr the type of pointer to be obtained by
+	 * Instances of the NodeManager class can be used to control the life cycle
+	 * of IR nodes. The life cycle of every node is bound to a single manager and
+	 * all children of the node have to be bound to the same manager. This constraint
+	 * is automatically enforced by the node implementations.
 	 */
-	template<typename Derived,template<typename T> class Ptr>
-	struct NodeAccessor : public detail::node_access_helper<Derived> {
+	class NodeManager: public InstanceManager<Node, Pointer> {
 
-//		/**
-//		 * Determines the type of this node.
-//		 *
-//		 * @return the node type of this instance
-//		 */
-//		NodeType getNodeType() const {
-//			return getNode().nodeType;
-//		}
-//
-//		/**
-//		 * Determines the category of this node.
-//		 *
-//		 * @return the node category of this instance
-//		 */
-//		NodeCategory getNodeCategory() const {
-//			return getNode().nodeCategory;
-//		}
-//
-//		/**
-//		 * Determines whether this node is representing a value or not.
-//		 *
-//		 * @return true if it is a value type, false otherwise
-//		 */
-//		bool isValue() const {
-//			return getNode().nodeCategory == NC_Value;
-//		}
-//
-//		/**
-//		 * Obtains access to a concrete child of this node.
-//		 *
-//		 * @param index the index of the child
-//		 * @return a pointer to the requested child
-//		 */
-//		const NodePtr& getChild(std::size_t index) const {
-//			assert(!isValue() && "Node represents a value!");
-//			assert((index < getNode().children.size()) && "Index out of bound!");
-//			return getNode().children[index];
-//		}
-//
-//		/**
-//		 * Obtains a reference to the entire list of children stored internally.
-//		 *
-//		 * @return a reference to the internally maintained child list
-//		 */
-//		const NodeList& getChildList() const {
-//			assert(!isValue() && "Node represents a value!");
-//			return getNode().children;
-//		}
-//
-//		/**
-//		 * Obtains a reference to the manager maintaining this node instance. In case this
-//		 * node is not managed by any node manager (by any reason), an assertion will be violated.
-//		 *
-//		 * @return a reference to the manager maintaining this node
-//		 */
-//		inline NodeManager& getNodeManager() const {
-//			assert(getNode().manager && "NodeManager must not be null - unmanaged node detected!");
-//			return *getNode().manager;
-//		}
-//
-//		/**
-//		 * Obtains a pointer to the manager maintaining this node instance. In case this
-//		 * node is not managed by any node manager (by any reason), NULL will be returned.
-//		 *
-//		 * @return a pointer to the manager maintaining this node
-//		 */
-//		inline NodeManager* getNodeManagerPtr() const {
-//			return getNode().manager;
-//		}
-//
-//		/**
-//		 * Creates a new version of this node where every reference to a child node
-//		 * is replaced by a pointer to the node returned by the given mapper.
-//		 *
-//		 * @param manager the manager to be used to create the new node
-//		 * @param mapper the mapper used to translate child node references
-//		 * @return a pointer to the modified node.
-//		 */
-//		NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
-//
-//		/**
-//		 * Obtains a reference to the node accessed by this accessor.
-//		 *
-//		 * @return a reference to the accessed node.
-//		 */
-//		inline const Node& getNode() const {
-//			return detail::node_access_helper<Derived>::getNode();
-//		}
+		/**
+		 * The data type used to maintain language extensions. Language extensions
+		 * are collections of additional types and literals to be integrated within
+		 * IR programs.
+		 *
+		 * Language extensions are handled via pointers. No smart pointer required here
+		 * since ownership is never leafing the object.
+		 */
+		typedef std::map<const char*, lang::Extension*> ExtensionMap;
+
+		/**
+		 * An instance of the basic generator offering access to essential INSPIRE
+		 * specific language constructs.
+		 */
+		const lang::BasicGenerator basic;
+
+		/**
+		 * The store maintaining language extensions.
+		 */
+		ExtensionMap extensions;
+
+		/**
+		 * A static generator for generating IDs
+		 */
+		utils::SimpleIDGenerator<unsigned> idGenerator;
+
+
+	public:
+
+		/**
+		 * A default constructor creating a fresh, empty node manager instance.
+		 */
+		NodeManager() : basic(*this), extensions() { }
+
+		/**
+		 * The destructor cleaning up all language extensions.
+		 */
+		~NodeManager() {
+			// free all extensions
+			for_each(extensions, [](const ExtensionMap::value_type& cur) {
+				delete cur.second;
+			});
+		}
+
+		/**
+		 * Obtains access to the generator of the basic language constructs.
+		 */
+		const lang::BasicGenerator& getLangBasic() const {
+			return basic;
+		}
+
+		/**
+		 * Obtains access to a generic language extension to be offered by this
+		 * node manager. If the extension has not been loaded yet, it will be during
+		 * the execution of this method.
+		 *
+		 * @tparam E the extension to be obtained
+		 * @return a reference to the requested language extension
+		 */
+		template<
+			typename E,
+			typename boost::enable_if<boost::is_base_of<lang::Extension, E>, int>::type = 0
+		>
+		const E& getLangExtension() {
+			// look up type information within map
+			const char* key = typeid(E).name();
+			auto pos = extensions.find(key);
+			if (pos != extensions.end()) {
+				return static_cast<const E&>(*(pos->second));
+			}
+
+			// create a new instance
+			extensions[key] = new E(*this);
+			return getLangExtension<E>();
+		}
+
+		/**
+		 * Obtains a fresh ID to be used within a node.
+		 */
+		unsigned getFreshID() {
+			return idGenerator.getNext();
+		}
+
 	};
+
 
 
 	// **********************************************************************************
@@ -923,8 +738,20 @@ namespace new_core {
 
 
 
-	template<typename Derived, typename ElementType, template<typename T> class Ptr>
-	struct ListNodeAccessor {
+	template<
+		typename Derived,
+		typename ElementType,
+		template<typename T> class Ptr,
+		template<typename D,template<typename T> class P> class BaseAccessor
+	>
+	struct ListNodeAccessor : public BaseAccessor<Derived,Ptr> {
+
+		/**
+		 * A type definition for the type of iterator offered by this accessor.
+		 *
+		 * TODO: extend to support iteration over addresses
+		 */
+		typedef typename vector<Pointer<const ElementType>>::const_iterator const_iterator;
 
 		/**
 		 * Obtains access to an element within this list.
@@ -946,14 +773,14 @@ namespace new_core {
 		 * Obtains a reference to the list of internally maintained elements.
 		 */
 		const vector<Pointer<const ElementType>>& getElements() const {
-			return convertList<ElementType>(static_cast<const Derived*>(this)->getChildList());
+			return getList();
 		}
 
 		/**
 		 * Obtains the number of elements within this list.
 		 */
 		std::size_t size() const {
-			return static_cast<const Derived*>(this)->getNode().getChildList().size();
+			return getList().size();
 		}
 
 		/**
@@ -962,7 +789,34 @@ namespace new_core {
 		 * @return true if empty, false otherwise
 		 */
 		bool empty() const {
-			return static_cast<const Derived*>(this)->getChildList().empty();
+			return getList().empty();
+		}
+
+		/**
+		 * Obtains an iterator pointing to the first element of this list node.
+		 */
+		const_iterator begin() const {
+			return getList().begin();
+		}
+
+		/**
+		 * Obtains an iterator pointing to the end of the elements contained
+		 * within the list.
+		 */
+		const_iterator end() const {
+			return getList().end();
+		}
+
+	private:
+
+		/**
+		 * An internal utility obtaining the vector containing all elements
+		 * contained within this list node.
+		 *
+		 * @return a reference to the contained elements
+		 */
+		const vector<Pointer<const ElementType>>& getList() const {
+			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
 		}
 
 	};
@@ -1011,14 +865,20 @@ namespace new_core {
 	 * @param ... the types of the child nodes of the accociated node
 	 */
 	#define IR_NODE_ACCESSOR(NAME, BASE, ... ) \
-		template<typename Derived, template<typename T> class Ptr = Pointer> \
+		template<typename Derived, template<typename T> class Ptr> \
 		struct NAME ## Accessor : public BASE ## Accessor<Derived, Ptr> { \
 			typedef FixedSizeNodeHelper<Derived, ## __VA_ARGS__> node_format_helper;
 
-	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, ELEMENT) \
-		template<typename Derived, template<typename T> class Ptr = Pointer> \
-		struct NAME ## Accessor : public ListNodeAccessor<Derived,ELEMENT,Ptr>, public BASE ## Accessor<Derived, Ptr> { \
-			typedef ListNodeHelper<Derived, ELEMENT> node_format_helper;
+	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, ELEMENT, LIST_NAME) \
+		template<typename Derived, template<typename T> class Ptr> \
+		struct NAME ## Accessor : public ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor> { \
+			typedef ListNodeHelper<Derived, ELEMENT> node_format_helper; \
+		\
+			const vector<Pointer<const ELEMENT>>& get ## LIST_NAME () const { \
+				return ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor>::getElements(); \
+			} \
+
+
 
 	/**
 	 * A macro adding new properties to an accessor by linking a name to a
@@ -1069,7 +929,6 @@ namespace new_core {
 
 	};
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 
@@ -1078,6 +937,6 @@ namespace std {
 	/**
 	 * Allows node types to be printed using names.
 	 */
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::NodeType& type);
+	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type);
 
 } // end namespace std

@@ -119,12 +119,12 @@ std::ostream& operator<<(std::ostream& out, const Joinable<Container, Printer>& 
  **/
 template<typename Container, typename Printer>
 Joinable<typename Container::const_iterator, Printer> join(const string& separator, const Container& container, const Printer& printer) {
-	return Joinable<typename Container::const_iterator ,Printer>(separator, container.cbegin(), container.cend(), printer);
+	return Joinable<typename Container::const_iterator ,Printer>(separator, container.begin(), container.end(), printer);
 }
 
 template<typename Container>
 Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>> join(const string& separator, const Container& container) {
-	return Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>>(separator, container.cbegin(), container.cend(), print<id<const typename Container::value_type&>>());
+	return Joinable<typename Container::const_iterator, print<id<const typename Container::value_type&>>>(separator, container.begin(), container.end(), print<id<const typename Container::value_type&>>());
 }
 
 template<typename Iterator, typename Printer>

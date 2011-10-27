@@ -44,7 +44,7 @@
 #include <boost/utility/typed_in_place_factory.hpp>
 
 
-#include "insieme/core/types.h"
+#include "insieme/core/ir_types.h"
 
 #include "insieme/utils/printable.h"
 

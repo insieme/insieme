@@ -37,6 +37,7 @@
 #pragma once
 
 #include <vector>
+#include <boost/variant.hpp>
 
 #include "insieme/utils/set_utils.h"
 
@@ -46,8 +47,6 @@ namespace core {
 	using std::string;
 	using std::pair;
 	using std::vector;
-
-	// ---------------- Pointers and Addresses ----------------------
 
 	// forward declaration of pointer and address templates
 	template<typename T> class Pointer;
@@ -60,41 +59,27 @@ namespace core {
 	#define NODE(NAME) \
 		class NAME; \
 		typedef Pointer<const NAME> NAME ## Ptr; \
-		typedef Address<const NAME> NAME ## Address;
+		typedef Address<const NAME> NAME ## Address; \
+		template<typename D, template <typename P> class P> class NAME ## Accessor;
 
 		// take all nodes from within the definition file
-		#include "insieme/core/ast_nodes.def"
+		#include "insieme/core/ir_nodes.def"
 
 	#undef NODE
 
-	namespace new_core {
 
-		// forward declaration of pointer and address templates
-		template<typename T> class Pointer;
-		template<typename T> class Address;
-
-		/**
-		 * Adds forward declarations for all AST node types. Further, for each
-		 * type a type definition for a corresponding annotated pointer is added.
-		 */
-		#define NODE(NAME) \
-			class NAME; \
-			typedef Pointer<const NAME> NAME ## Ptr; \
-			typedef Address<const NAME> NAME ## Address; \
-			template<typename D, template <typename P> class P> class NAME ## Accessor;
-
-			// take all nodes from within the definition file
-			#include "insieme/core/ir_nodes.def"
-
-		#undef NODE
-	}
+	/**
+	 * The union of all the values which can directly be represented using nodes. If
+	 * a node represents a value, it is representing a value of this type.
+	 */
+	typedef boost::variant<bool,char,int,unsigned,string> NodeValue;
 
 
-	// ---------------- Supporting Utilities ----------------------
-
-	class ASTBuilder;
+	// Supporting Utilities
+	class IRBuilder;
 	class NodeManager;
 	class NodeMapping;
+	class NodeAnnotation;
 
 	namespace lang {
 		class BasicGenerator;
@@ -106,44 +91,17 @@ namespace core {
 	 */
 	typedef std::vector<NodePtr> NodeList;
 	typedef std::vector<TypePtr> TypeList;
+	typedef std::vector<IntTypeParamPtr> IntParamList;
 	typedef std::vector<StatementPtr> StatementList;
 	typedef std::vector<ExpressionPtr> ExpressionList;
+	typedef std::vector<VariablePtr> VariableList;
 
 	typedef utils::set::PointerSet<NodePtr> NodeSet;
 	typedef utils::set::PointerSet<TypePtr> TypeSet;
+	typedef utils::set::PointerSet<IntTypeParamPtr> IntParamSet;
 	typedef utils::set::PointerSet<StatementPtr> StatementSet;
 	typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
 	typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
 
-
-	namespace new_core {
-
-		class IRBuilder;
-		class NodeManager;
-		class NodeMapping;
-
-//		namespace lang {
-//			class BasicGenerator;
-//		} // end namespace lang
-
-
-		/**
-		 * Typedefs for some widely used base type collections.
-		 */
-		typedef std::vector<NodePtr> NodeList;
-		typedef std::vector<TypePtr> TypeList;
-		typedef std::vector<IntTypeParamPtr> IntParamList;
-		typedef std::vector<StatementPtr> StatementList;
-		typedef std::vector<ExpressionPtr> ExpressionList;
-		typedef std::vector<VariablePtr> VariableList;
-
-		typedef utils::set::PointerSet<NodePtr> NodeSet;
-		typedef utils::set::PointerSet<TypePtr> TypeSet;
-		typedef utils::set::PointerSet<IntTypeParamPtr> IntParamSet;
-		typedef utils::set::PointerSet<StatementPtr> StatementSet;
-		typedef utils::set::PointerSet<ExpressionPtr> ExpressionSet;
-		typedef utils::set::PointerSet<IntTypeParamPtr> IntTypeParamSet;
-
-	}
 } // end namespace core
 } // end namespace insieme

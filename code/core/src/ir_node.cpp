@@ -42,8 +42,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
-
 
 
 	// **********************************************************************************
@@ -102,13 +100,13 @@ namespace new_core {
 		 * is a value or not.
 		 */
 		struct IsValueVisitor : public boost::static_visitor<bool> {
-			bool operator()(const Node::Value& value) const { return true; }
+			bool operator()(const NodeValue& value) const { return true; }
 			template<typename T> bool operator()(const T& other) const { return false; }
 		};
 
 	}
 
-	Node::Node(const NodeType nodeType, const Value& value)
+	Node::Node(const NodeType nodeType, const NodeValue& value)
 		: HashableImmutableData(detail::hash(nodeType, value)),
 		  nodeType(nodeType), value(value), nodeCategory(NC_Value),
 		  manager(0), equalityID(0) { }
@@ -187,15 +185,14 @@ namespace new_core {
 //		return out << "(" << nodeType << "|" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
 //	}
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 
 namespace std {
 
-	std::ostream& operator<<(std::ostream& out, const insieme::core::new_core::NodeType& type) {
+	std::ostream& operator<<(std::ostream& out, const insieme::core::NodeType& type) {
 		switch(type) {
-			#define CONCRETE(NAME) case insieme::core::new_core::NT_ ## NAME : return out << #NAME;
+			#define CONCRETE(NAME) case insieme::core::NT_ ## NAME : return out << #NAME;
 				#include "insieme/core/ir_nodes.def"
 			#undef CONCRETE
 		}

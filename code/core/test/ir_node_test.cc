@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
-#include "insieme/core/values.h"
+#include "insieme/core/ir_values.h"
 #include "insieme/core/ir_int_type_param.h"
 
 namespace insieme {

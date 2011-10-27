@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/values.h"
+#include "insieme/core/ir_values.h"
 #include "insieme/core/ir_address.h"
 
 namespace insieme {

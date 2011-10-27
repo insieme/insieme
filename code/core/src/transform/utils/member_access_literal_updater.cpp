@@ -35,22 +35,20 @@
  */
 
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/transform/manipulation_utils.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/utils/logging.h"
 
 namespace insieme {
 namespace core {
 namespace transform {
-#define BASIC builder.getNodeManager().basic
 namespace utils {
 
-
-
+#define BASIC builder.getNodeManager().getLangBasic()
 
 /**
- * Visitor which checks if the type literal argument of compostite and tuple calls are aligned witht the actual type of the struct/tuple.
+ * Visitor which checks if the type literal argument of compostite and tuple calls are aligned with the actual type of the struct/tuple.
  * If not the type literal is replaced with the appropriate one
  */
 const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
@@ -69,7 +67,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 
 			const StructTypePtr& structTy = static_pointer_cast<const StructType>(call->getArgument(0)->getType());
 			// TODO find better way to extract Identifier from IdentifierLiteral
-			const IdentifierPtr& id = builder.identifier(static_pointer_cast<const Literal>(call->getArgument(1))->getValue());
+			const StringValuePtr& id = static_pointer_cast<const Literal>(call->getArgument(1))->getValue();
 			const TypePtr& type = structTy->getTypeOfMember(id);
 			if(call->getArgument(2)->getType() != type || call->getType() != type)
 				res = builder.callExpr(type, fun, call->getArgument(0), call->getArgument(1), BASIC.getTypeLiteral(type));
@@ -80,7 +78,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			const StructTypePtr& structTy = static_pointer_cast<const StructType>(
 					static_pointer_cast<const RefType>(call->getArgument(0)->getType())->getElementType());
 			// TODO find better way to extract Identifier from IdentifierLiteral
-			const IdentifierPtr& id = builder.identifier(static_pointer_cast<const Literal>(call->getArgument(1))->getValue());
+			const StringValuePtr& id = static_pointer_cast<const Literal>(call->getArgument(1))->getValue();
 			const RefTypePtr& refTy = builder.refType(structTy->getTypeOfMember(id));
 			if(call->getArgument(2)->getType() != refTy->getElementType() || call->getType() != refTy)
 				res = builder.callExpr(refTy, fun, call->getArgument(0), call->getArgument(1),
@@ -93,7 +91,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			const TypePtr& type = refTy ? builder.refType(seTy->getElementType()) : seTy->getElementType();
 
 			if(call->getType() != type)
-				res = builder.callExpr(type, fun, call->getArguments());
+				res = builder.callExpr(type, fun, call->getArgumentList());
 		}
 
 		if(BASIC.isTupleRefElem(fun) || BASIC.isTupleMemberAccess(fun)) {
@@ -106,7 +104,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 				// check for literal, assuming it will always be a valid integer
 				if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(node)) {
 					if(BASIC.isInt(lit->getType())) {
-						idx = atoi(lit->getValue().c_str());
+						idx = atoi(lit->getValue()->getValue().c_str());
 						return true;
 					}
 				}
@@ -150,7 +148,7 @@ if(!tupleTy) //TODO remove dirty workaround
 	return res;
 }
 
-}
-}
-}
-}
+} // end namespace utils
+} // end namespace transform
+} // end namespace core
+} // end namespace insieme

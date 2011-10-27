@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <boost/logic/tribool.hpp>
+
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_statements.h"
 
@@ -43,7 +45,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 
 	// ------------------------------------- Expressions -----------------------------------
@@ -51,7 +52,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to a list of expressions.
 	 */
-	IR_LIST_NODE_ACCESSOR(Expressions, Support, Expression)
+	IR_LIST_NODE_ACCESSOR(Expressions, Support, Expression, Expressions)
 	};
 
 	/**
@@ -142,6 +143,18 @@ namespace new_core {
 			return manager.get(Literal(type, value));
 		}
 
+		/**
+		 * This static factory method allows to obtain a literal instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the requested literal
+		 * @param value the value of the requested literal
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LiteralPtr get(NodeManager& manager, const TypePtr& type, const string& value) {
+			return get(manager, type, StringValue::get(manager, value));
+		}
 	};
 
 
@@ -245,7 +258,22 @@ namespace new_core {
 		/**
 		 * Obtains the list of argument expressions passed on to this call expression.
 		 */
-		IR_NODE_PROPERTY(Expressions, Arguments, 2);
+		IR_NODE_PROPERTY(Expressions, ArgumentList, 2);
+
+		/**
+		 * Obtains a reference to the requested argument.
+		 */
+		Ptr<const Expression> getArgument(unsigned index) const {
+			return getArgumentList()->getExpressions()[index];
+		}
+
+		/**
+		 * Obtains a reference to the list of expressions being passed as an argument
+		 * to this call expression.
+		 */
+		const ExpressionList& getArguments() const {
+			return getArgumentList()->getExpressions();
+		}
 	};
 
 	/**
@@ -258,7 +286,7 @@ namespace new_core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << *getFunctionExpr() << "(" << join(",", getArguments()->getElements(), print<deref<ExpressionPtr>>()) << ")";
+			return out << *getFunctionExpr() << "(" << join(",", getArguments(), print<deref<ExpressionPtr>>()) << ")";
 		}
 
 	public:
@@ -275,6 +303,20 @@ namespace new_core {
 		 */
 		static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& function, const ExpressionsPtr& arguments) {
 			return manager.get(CallExpr(type, function, arguments));
+		}
+
+		/**
+		 * This static factory method allows to obtain an instance of a call expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the call expression, hence the return type of the function
+		 * @param function the function to be called
+		 * @param arguments the arguments to be passed to the function call
+		 * @return the requested type instance managed by the given manager
+		 */
+		static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& function, const ExpressionList& arguments) {
+			return get(manager, type, function, Expressions::get(manager, arguments));
 		}
 
 		/**
@@ -361,7 +403,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to the parameter node.
 	 */
-	IR_LIST_NODE_ACCESSOR(Parameters, Support, Variable)
+	IR_LIST_NODE_ACCESSOR(Parameters, Support, Variable, Parameters)
 	};
 
 	/**
@@ -410,7 +452,7 @@ namespace new_core {
 		/**
 		 * Obtains a reference to the parameters accepted by this lambda.
 		 */
-		IR_NODE_PROPERTY(Parameters, Parameter, 1);
+		IR_NODE_PROPERTY(Parameters, Parameters, 1);
 
 		/**
 		 * Obtains a reference to the body of this lambda.
@@ -428,7 +470,7 @@ namespace new_core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "fun(" << join(", ", getParameter()->getElements(), print<deref<NodePtr>>()) << ") " << *getBody();
+			return out << "fun(" << join(", ", getParameters(), print<deref<NodePtr>>()) << ") " << *getBody();
 		}
 
 	public:
@@ -510,14 +552,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to a lambda definition
 	 */
-	IR_LIST_NODE_ACCESSOR(LambdaDefinition, Support, LambdaBinding)
-
-		/**
-		 * Retrieves the definitions of the recursive functions represented by this instance.
-		 */
-		const vector<LambdaBindingPtr>& getDefinitions() const {
-			return ListNodeAccessor<Derived,LambdaBinding,Ptr>::getElements();
-		}
+	IR_LIST_NODE_ACCESSOR(LambdaDefinition, Support, LambdaBinding, Definitions)
 
 		/**
 		 * Obtains a pointer to the function body defining the recursive function represented
@@ -597,12 +632,39 @@ namespace new_core {
 		 */
 		IR_NODE_PROPERTY(LambdaDefinition, Definition, 2);
 
+		/**
+		 * Obtains a reference to the lambda defining this lambda expression.
+		 */
+		Ptr<const Lambda> getLambda() const {
+			return getDefinition()->getDefinitionOf(getVariable());
+		}
+
+		/**
+		 * Obtains a reference to the parameters of the lambda defining this expression.
+		 */
+		Ptr<const Parameters> getParameterList() const {
+			return getLambda()->getParameters();
+		}
+
+		/**
+		 * Determines whether this function is recursively defined or not.
+		 */
+		bool isRecursive() const {
+			return ExpressionAccessor<Derived, Ptr>::getNode().isRecursiveInternal();
+		}
+
 	};
 
 	/**
 	 * The entity used to represent lambda expressions.
 	 */
-	IR_NODE(LambdaExpr, Support)
+	IR_NODE(LambdaExpr, Expression)
+
+		/**
+		 * A flag indicating whether this lambda is representing a recursive function.
+		 */
+		mutable boost::logic::tribool recursive;
+
 	protected:
 
 		/**
@@ -656,7 +718,18 @@ namespace new_core {
 			LambdaPtr lambda = Lambda::get(manager, type, params, body);
 			LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
 			LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
-			return manager.get(LambdaExpr(var, def));
+			return get(manager, type, var, def);
+		}
+
+		/**
+		 * Determines whether this function is recursively defined or not.
+		 */
+		bool isRecursiveInternal() const {
+			// evaluate lazily
+			if (boost::logic::indeterminate(recursive)) {
+				recursive = getDefinition()->isRecursive(getVariable());
+			}
+			return recursive;
 		}
 
 	};
@@ -700,7 +773,7 @@ namespace new_core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "bind(" << join(",", getParameters()->getElements(), print<deref<VariablePtr>>()) << "){" << *getCall() << "}";
+			return out << "bind(" << join(",", getParameters(), print<deref<VariablePtr>>()) << "){" << *getCall() << "}";
 		}
 
 	public:
@@ -980,12 +1053,12 @@ namespace new_core {
 
 
 
-	// ------------------------------------- Parameters -----------------------------------
+	// ------------------------------------- Guarded Expressions -----------------------------------
 
 	/**
 	 * The accessor associated to a list of guarded expressions.
 	 */
-	IR_LIST_NODE_ACCESSOR(GuardedExprs, Support, GuardedExpr)
+	IR_LIST_NODE_ACCESSOR(GuardedExprs, Support, GuardedExpr, GuardedExpressions)
 	};
 
 	/**
@@ -1155,7 +1228,6 @@ namespace new_core {
 	};
 
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 

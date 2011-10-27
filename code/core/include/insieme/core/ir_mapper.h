@@ -37,10 +37,10 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_pointer.h"
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 	/**
 	 * This class constitutes an interface for utility class required for transforming IR nodes.
@@ -136,6 +136,5 @@ namespace new_core {
 		return LambdaNodeMapper<Lambda> (lambda);
 	}
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

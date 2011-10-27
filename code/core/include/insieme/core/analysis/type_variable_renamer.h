@@ -36,10 +36,10 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/type_utils.h"
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/printable.h"
 

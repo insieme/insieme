@@ -40,7 +40,8 @@
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/core/type_utils.h"
 
@@ -99,7 +100,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 		return insert(manager, compoundParent, statement, target.getIndex());
 	}
 
-	ASTBuilder build(manager);
+	IRBuilder build(manager);
 	auto newCompound = build.compoundStmt(statement, target.getAddressedNode());
 	return replaceNode(manager, target, newCompound);
 }
@@ -111,7 +112,7 @@ NodePtr insertBefore(NodeManager& manager, const StatementAddress& target, const
 		return insert(manager, compoundParent, statements, target.getIndex());
 	}
 
-	ASTBuilder build(manager);
+	IRBuilder build(manager);
 	StatementList allStatements;
 	allStatements.insert(allStatements.begin(), statements.cbegin(), statements.cend());
 	allStatements.push_back(target.getAddressedNode());
@@ -124,7 +125,7 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 	if(compoundParent) {
 		return insert(manager, compoundParent, statement, target.getIndex()+1);
 	} else {
-		ASTBuilder build(manager);
+		IRBuilder build(manager);
 		auto newCompound = build.compoundStmt(target.getAddressedNode(), statement);
 		return replaceNode(manager, target, newCompound);
 	}
@@ -135,7 +136,7 @@ NodePtr insertAfter(NodeManager& manager, const StatementAddress& target, const 
 	if(compoundParent) {
 		return insert(manager, compoundParent, statements, target.getIndex()+1);
 	} else {
-		ASTBuilder build(manager);
+		IRBuilder build(manager);
 		StatementList allStatements;
 		allStatements.push_back(target.getAddressedNode());
 		allStatements.insert(allStatements.end(), statements.cbegin(), statements.cend());
@@ -336,7 +337,7 @@ namespace {
 		}
 
 		// Step 3 - collect variables replacements
-		const Lambda::ParamList& paramList = lambda->getParameterList();
+		const ParametersPtr& paramList = lambda->getParameterList();
 
 		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
 
@@ -517,12 +518,12 @@ namespace {
 	/**
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
-	struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
+	struct LambdaDeltaVisitor : public IRVisitor<bool, Address> {
 		utils::set::PointerSet<VariablePtr> declared;
 		utils::set::PointerSet<VariablePtr> undeclared;
 
 		// do not visit types
-		LambdaDeltaVisitor() : ASTVisitor<bool, Address>(false) {}
+		LambdaDeltaVisitor() : IRVisitor<bool, Address>(false) {}
 
 		bool visitNode(const NodeAddress& node) { return false; } // default behaviour: continue visiting
 
@@ -544,7 +545,7 @@ namespace {
 		}
 	};
 
-	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, ASTBuilder::CaptureInits& captures,
+	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, IRBuilder::CaptureInits& captures,
 			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
 		visitDepthFirstPrunable(StatementAddress(root), ldv);
@@ -553,7 +554,7 @@ namespace {
 		std::vector<VariablePtr> undeclared(ldv.undeclared.cbegin(), ldv.undeclared.cend());
 		std::sort(undeclared.begin(), undeclared.end(), [](const VariablePtr& p1, const VariablePtr& p2) { return p1->getId() > p2->getId(); });
 
-		ASTBuilder build(manager);
+		IRBuilder build(manager);
 		for_each(undeclared, [&](VariablePtr p) {
 			auto var = build.variable(p->getType());
 			if(std::find(passAsArguments.cbegin(), passAsArguments.cend(), p) == passAsArguments.end()) 
@@ -573,16 +574,16 @@ namespace {
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments) {
-	ASTBuilder build(manager);
-	ASTBuilder::CaptureInits captures;
+	IRBuilder build(manager);
+	IRBuilder::CaptureInits captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments) {
-	ASTBuilder build(manager);
-	ASTBuilder::CaptureInits captures;
+	IRBuilder build(manager);
+	IRBuilder::CaptureInits captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
@@ -593,7 +594,7 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 	
 	auto body = root->getBody();
 
-	ASTBuilder build(manager);
+	IRBuilder build(manager);
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 	for_each(varsToPrivatize, [&](VariablePtr p) {
 		auto var = build.variable(p->getType());

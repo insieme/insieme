@@ -36,40 +36,57 @@
 
 #pragma once
 
-#include "insieme/core/ir_check.h"
-
-/**
- * This header file represents a facade header for checks to be applied on IR ASTs
- */
+#include "insieme/core/forward_decls.h"
 
 namespace insieme {
 namespace core {
-namespace checks {
+
+
+	// **********************************************************************************
+	// 									Node Types
+	// **********************************************************************************
 
 	/**
-	 * Defines a list of Error Code classes
+	 * Defines an enumeration containing an entry for every node type. This
+	 * enumeration can than be used to identify the actual type of AST nodes
+	 * in case the exact type cannot be determined statically.
 	 */
-	enum {
-		EC_GROUP_TYPE       = 1000,	/* < type based problems */
-		EC_GROUP_IMPERATIVE = 2000,	/* < imperative program constructs based problems */
-		EC_GROUP_SEMANTIC   = 3000	/* < imperative program constructs based problems */
+	#define CONCRETE(name) NT_ ## name,
+	enum NodeType {
+		// the necessary information is obtained from the node-definition file
+		#include "insieme/core/ir_nodes.def"
+	};
+	#undef CONCRETE
+
+	/**
+	 * A constant defining the number of node types.
+	 */
+	#define CONCRETE(name) +1
+	enum { NUM_CONCRETE_NODE_TYPES = 0
+		// the necessary information is obtained from the node-definition file
+		#include "insieme/core/ir_nodes.def"
+	};
+	#undef CONCRETE
+
+
+
+	// **********************************************************************************
+	// 									Node Categories
+	// **********************************************************************************
+
+	/**
+	 * Defines a set of categories nodes might belong to. Every node has to belong to
+	 * exactly one of the enlisted categories.
+	 */
+	enum NodeCategory {
+		NC_Value,			// < a leaf node representing a value
+		NC_IntTypeParam,	// < a node representing an int-type-param
+		NC_Type,			// < a node representing a type
+		NC_Expression,		// < a node representing an expression
+		NC_Statement,		// < a node representing a statement
+		NC_Program,			// < a node representing a program
+		NC_Support			// < a utility used to realize a complex data structure
 	};
 
-	/**
-	 * Obtains a combined check case containing all the checks defined within this header file.
-	 */
-	CheckPtr getFullCheck();
-
-	/**
-	 * Allies all known semantic checks on the given node and returns the obtained message list.
-	 */
-	inline MessageList check(const NodePtr& node) {
-		return check(node, getFullCheck());
-	}
-
-} // end namespace check
 } // end namespace core
 } // end namespace insieme
-
-
-

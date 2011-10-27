@@ -36,10 +36,10 @@
 
 #pragma once
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace core {
@@ -52,9 +52,9 @@ namespace utils {
  * If not the type literal is replaced with the appropriate one
  */
 class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	ASTBuilder builder;
+	IRBuilder builder;
 public:
-	MemberAccessLiteralUpdater(ASTBuilder& build) : builder(build) {}
+	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
 	const core::NodePtr resolveElement(const core::NodePtr& element);
 
 };

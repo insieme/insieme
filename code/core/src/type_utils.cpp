@@ -41,8 +41,8 @@
 
 #include "insieme/core/analysis/type_variable_deduction.h"
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/map_utils.h"

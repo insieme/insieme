@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_mapper.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_mapper.h"
 
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -116,7 +116,7 @@ public:
 	 * The represented list of replaced child nodes will be computed using the given list and mapping.
 	 */
 	ChildListMapping(const NodeList& list, NodeMapping& mapping)
-		: NodeMapping(), children(mapping.map(0, list)), different(!equals(children, list)) {}
+		: NodeMapping(), children(mapping.map(list)), different(!equals(children, list)) {}
 
 	/**
 	 * Create a new child list mapping based on the given list of children. The optional boolean

@@ -37,12 +37,11 @@
 #pragma once
 
 #include "insieme/core/ir_node.h"
-#include "insieme/core/values.h"
+#include "insieme/core/ir_values.h"
 #include "insieme/core/ir_types.h"
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 
 	// ------------------------------------- Statements ---------------------------------
@@ -121,7 +120,7 @@ namespace new_core {
 		 * Obtains the type of this expression. The first child node
 		 * of every expression has to be its type.
 		 */
-//		IR_NODE_PROPERTY(Type, Type, 0);
+		IR_NODE_PROPERTY(Type, Type, 0);
 	};
 
 	/**
@@ -151,15 +150,6 @@ namespace new_core {
 		Expression(const NodeType nodeType, const NodeList& children)
 			: Statement(nodeType, NC_Expression, children) { }
 
-	public:
-
-		/**
-		 * Obtains the type of this expression. The first child node
-		 * of every expression has to be its type.
-		 */
-		TypePtr getType() const {
-			return static_pointer_cast<TypePtr>(getChild(0));
-		}
 	};
 
 
@@ -337,7 +327,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to a list of declaration statements.
 	 */
-	IR_LIST_NODE_ACCESSOR(DeclarationStmts, Support, DeclarationStmt)
+	IR_LIST_NODE_ACCESSOR(DeclarationStmts, Support, DeclarationStmt, Declarations)
 	};
 
 	/**
@@ -376,13 +366,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to the compound statement.
 	 */
-	IR_LIST_NODE_ACCESSOR(CompoundStmt, Statement, Statement)
-		/**
-		 * Obtains a list of all statements within this compound statement.
-		 */
-		const vector<StatementPtr>& getStatements() const {
-			return convertList<Statement>(NodeAccessor<Derived,Ptr>::getNode().getChildList());
-		}
+	IR_LIST_NODE_ACCESSOR(CompoundStmt, Statement, Statement, Statements)
 	};
 
 	/**
@@ -650,7 +634,7 @@ namespace new_core {
 	/**
 	 * The accessor associated to a list of switch cases.
 	 */
-	IR_LIST_NODE_ACCESSOR(SwitchCases, Support, SwitchCase)
+	IR_LIST_NODE_ACCESSOR(SwitchCases, Support, SwitchCase, Cases)
 	};
 
 	/**
@@ -801,6 +785,5 @@ namespace new_core {
 
 	};
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

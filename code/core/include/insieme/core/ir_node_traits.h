@@ -37,38 +37,10 @@
 #pragma once
 
 #include "insieme/core/forward_decls.h"
+#include "insieme/core/ir_node_types.h"
 
 namespace insieme {
 namespace core {
-namespace new_core {
-
-
-	// **********************************************************************************
-	// 									Node Types
-	// **********************************************************************************
-
-	/**
-	 * Defines an enumeration containing an entry for every node type. This
-	 * enumeration can than be used to identify the actual type of AST nodes
-	 * in case the exact type cannot be determined statically.
-	 */
-	#define CONCRETE(name) NT_ ## name,
-	enum NodeType {
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/core/ir_nodes.def"
-	};
-	#undef CONCRETE
-
-	/**
-	 * A constant defining the number of node types.
-	 */
-	#define CONCRETE(name) +1
-	enum { NUM_CONCRETE_NODE_TYPES = 0
-		// the necessary information is obtained from the node-definition file
-		#include "insieme/core/ir_nodes.def"
-	};
-	#undef CONCRETE
-
 
 
 	// **********************************************************************************
@@ -130,18 +102,52 @@ namespace new_core {
 	#undef NODE
 
 
+
+
+	// **********************************************************************************
+	// 									Node Child Type
+	// **********************************************************************************
+
+
+	namespace detail {
+
+		/**
+		 * A small helper struct used for defining the node_child_type type trait.
+		 */
+		template<typename T>
+		struct node_child_type_helper {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
+
+		template<typename T>
+		struct node_child_type_helper<Pointer<const T>> {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
+	}
+
 	/**
-	 * A type trait determining the type of a node child.
+	 * A type trait determining the type of a node child. This is the
+	 * version which can handle all concrete cases. For member types of
+	 * abstract IR nodes specialized template specializations are provided
+	 * below.
 	 *
 	 * @tparam Node the node type to be queried
 	 * @tparam index the index of the child node to be queried
 	 */
 	template<typename Node, unsigned index>
-	struct node_child_type {
-		typedef decltype(((Node*)0)->template getChildNodeReference<index>()) ptr_type;
-		typedef typename ptr_type::element_type type;
-	};
+	struct node_child_type : public detail::node_child_type_helper<decltype(((Node*)0)->template getChildNodeReference<index>())> {};
 
-} // end namespace new_core
+	// some special case for fixed child nodes of abstract inner nodes
+	#define SET_CHILD_TYPE(CLASS,INDEX,TYPE) \
+	template<> struct node_child_type<CLASS,INDEX> : public detail::node_child_type_helper<TYPE> {}
+
+	SET_CHILD_TYPE(Expression, 0, Type);
+	SET_CHILD_TYPE(SingleElementType, 0, Type);
+	SET_CHILD_TYPE(SingleElementType, 1, IntTypeParam);
+
+	#undef SET_CHILD_TYPE
+
 } // end namespace core
 } // end namespace insieme
