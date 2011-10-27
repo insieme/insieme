@@ -1233,9 +1233,8 @@ AddressList mark(const core::NodePtr& root) {
 	return ret;
 }
 
-
-
 core::NodePtr toIR(const core::NodePtr& root) {
+
 	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
 		LOG(WARNING) << "Not possible to compute dependence information from a non static control region.";
 		return core::NodePtr();
@@ -1254,17 +1253,14 @@ core::NodePtr toIR(const core::NodePtr& root) {
 	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
 	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 	
-	poly::StmtMap stmtMap;
-	size_t stmtID = 0;
 	std::for_each(scat.second.begin(), scat.second.end(), 
 		[ & ] (const ScopRegion::StmtScattering& cur) { 
-			std::string&& stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
 
-			// Build the map which associates stmt ids to IR statements, this is important in order
-			// to rebuild the IR from the polyhedral representation 
-			stmtMap.insert( std::make_pair(stmtid, cur.addr.getAddressedNode()) ); 
+			// Creates a name mapping which maps an entity of the IR (StmtAddress) 
+			// to a name utilied by the framework as a placeholder 
+			TupleName tn(cur.addr, "S" + utils::numeric_cast<std::string>(cur.id));
 
-			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, stmtid);
+			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, tn);
 			domain = set_union(ctx, *domain, *domainSet);
 
 			AffineSystemPtr sf = cur.scattering;
@@ -1274,12 +1270,12 @@ core::NodePtr toIR(const core::NodePtr& root) {
 			for ( size_t s = sf->size(); s < scat.first; ++s ) {
 				sf->append( AffineFunction(iterVec) );
 			}
-			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
+			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
 			schedule = map_union(ctx, *schedule, *scattering);
 		}
 	);
 
-	return poly::toIR(root->getNodeManager(), stmtMap, ann.getIterationVector(), ctx, *domain, *schedule);
+	return poly::toIR(root->getNodeManager(), ann.getIterationVector(), ctx, *domain, *schedule);
 }
 
 void computeDataDependence(const NodePtr& root) {
@@ -1304,12 +1300,11 @@ void computeDataDependence(const NodePtr& root) {
 	auto&& reads = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 	auto&& writes = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 
-	size_t stmtID = 0;
 	std::for_each(scat.second.begin(), scat.second.end(), 
 		[ & ] (const ScopRegion::StmtScattering& cur) { 
-			std::string&& stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
+			TupleName tn(cur.addr, "S"+utils::numeric_cast<std::string>(cur.id));
 
-			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, stmtid);
+			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, tn);
 			domain = set_union(ctx, *domain, *domainSet);
 
 			AffineSystemPtr sf = cur.scattering;
@@ -1319,7 +1314,7 @@ void computeDataDependence(const NodePtr& root) {
 			for ( size_t s = sf->size(); s < scat.first; ++s ) {
 				sf->append( AffineFunction(iterVec) );
 			}
-			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
+			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
 			schedule = map_union(ctx, *schedule, *scattering);
 				
 			// Access Functions 
@@ -1328,7 +1323,7 @@ void computeDataDependence(const NodePtr& root) {
 				const AffineSystemPtr& accessInfo = cur.index;
 
 				if (accessInfo) {
-					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, stmtid, cur.expr->toString());
+					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, TupleName(cur.expr, cur.expr->toString()));
 
 					switch ( cur.usage ) {
 					case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
@@ -1391,18 +1386,18 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
 		
 	out << "IV: " << ann.getIterationVector() << std::endl;
-	size_t stmtID = 0;
 	std::for_each(scat.begin(), scat.end(), 
-		[ &ann, &stmtID, &out, &ctx ] (const ScopRegion::StmtScattering& cur) { 
+		[ &ann, &out, &ctx ] (const ScopRegion::StmtScattering& cur) { 
 			out << std::setfill('~') << std::setw(80) << "" << std::endl;
-			std::string stmtid = "S" + utils::numeric_cast<std::string>(stmtID++);
-			out << "@ " << stmtid << ": " << std::endl 
+
+			out << "@ S" << cur.id << ": " << std::endl 
 				<< " -> " << printer::PrettyPrinter( cur.addr.getAddressedNode() ) << std::endl;
 	
 		 	const IterationDomain& id = cur.iterDom;
 			out << " -> ID ";
-			
-			auto&& ids = makeSet<POLY_BACKEND>(ctx, id, stmtid);
+
+			TupleName tn(cur.addr, "S"+utils::numeric_cast<std::string>(cur.id));
+			auto&& ids = makeSet<POLY_BACKEND>(ctx, id, tn);
 
 			out << id << std::endl; 
 			out << " => ISL: ";
@@ -1411,7 +1406,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 			out << std::endl;
 			AffineSystemPtr sf = cur.scattering;
 			out << *sf;
-			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), stmtid);
+			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
 			out << " => ISL: ";
 			scattering->printTo(out);
 			out << std::endl;
@@ -1426,7 +1421,8 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 					[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
 				out << std::endl;
 				if (accessInfo) {
-					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, stmtid, cur.expr->toString());
+					
+					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, TupleName(cur.expr, cur.expr->toString()));
 					// map.intersect(ids);
 					out << " => ISL: "; 
 					access->printTo(out);

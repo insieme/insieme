@@ -68,13 +68,6 @@ struct VariableNotFound : public std::logic_error {
 	~VariableNotFound() throw () { }
 };
 
-// Forward Declarations for Constraints 
-class Constraint;
-
-class ConstraintCombiner;
-
-typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
-
 /**************************************************************************************************
  * AffineFunction represents an affine function based on an iteration vector. An
  * affine linear function is a function in the form:

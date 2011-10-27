@@ -36,7 +36,10 @@
 
 #pragma once 
 
+#include "insieme/core/ast_address.h"
 #include "insieme/analysis/polyhedral/backend.h"
+
+#include <string>
 
 #include "isl/ctx.h"
 #include "isl/dim.h"
@@ -58,16 +61,43 @@ namespace poly {
  *************************************************************************************************/
 class IslContext : public boost::noncopyable {
 	isl_ctx* ctx;
-
+	
 public:
+	/** 
+	 * TupleMap stores the mapping IR Address <-> String which is utilizied during the conversion of
+	 * IR to polyhedral sets and relationships. This is usefull in order to reconstruct IR code from
+	 * the result of polyhedral analsyis and transformations
+	 */
+	typedef std::map<std::string, core::NodeAddress> TupleMap;
+
 	// Build an ISL context and allocate the underlying isl_ctx object
 	explicit IslContext() : ctx( isl_ctx_alloc() ) { }
 
 	isl_ctx* getRawContext() { return ctx; }
 
+	TupleMap::iterator insertTuple( const TupleName& mapping ) { 
+		auto&& fit = tupleMap.find( mapping.second );
+		// If the mapping is already in the map, we make sure that we don't rename a mapping with a
+		// new one invalidating the one already in the map
+		if ( fit != tupleMap.end() ) {
+			assert( mapping.second == fit->first );
+			return fit;
+		}
+		return tupleMap.insert( std::make_pair(mapping.second, mapping.first) ).first;
+	}
+
+	const core::NodeAddress& get(const std::string& name) const {
+		auto&& fit = tupleMap.find(name);
+		assert( fit != tupleMap.end() && "Name not in found" );
+		return fit->second;
+	}
+
 	// because we do not allows copy of this class, we can safely remove the context once this
 	// IslContext goes out of scope 
 	~IslContext() { isl_ctx_free(ctx); }
+
+private:
+	TupleMap tupleMap;
 };
 
 /** Define the type traits for ISL based data structures */
@@ -92,7 +122,7 @@ public:
 	Set (	
 			IslContext& ctx, 
 			const IterationDomain& domain,
-			const std::string& tuple_name = std::string()
+			const TupleName& tuple = TupleName()
 		);
 
 	Set( IslContext& ctx, isl_dim* dim, isl_union_set* rawSet ) : ctx(ctx), dim(dim), set(rawSet) { }
@@ -126,8 +156,8 @@ public:
 	Map (
 			IslContext& ctx, 
 			const AffineSystem& affSys,
-			const std::string& in_tuple_name = std::string(), 
-			const std::string& out_tuple_name = std::string()
+			const TupleName& in_tuple = TupleName(), 
+			const TupleName& out_tuple = TupleName()
 		);
 	
 	Map( IslContext& ctx, isl_dim* dim, isl_union_map* rawMap ) : ctx(ctx), dim(dim), map(rawMap) { }
@@ -184,7 +214,6 @@ std::ostream& DependenceInfo<IslContext>::printTo(std::ostream& out) const;
  *************************************************************************************************/
 template <>
 core::NodePtr toIR(core::NodeManager& mgr,
-		const StmtMap& stmtMap,		
 		const IterationVector& iterVec,
 		IslContext&	ctx,
 		const Set<IslContext>& 	domain, 

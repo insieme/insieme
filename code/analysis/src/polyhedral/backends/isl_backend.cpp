@@ -193,8 +193,8 @@ void setVariableName(isl_dim* dim, const isl_dim_type& type, IterT const& begin,
 Set<IslContext>::Set(
 		IslContext& 			ctx, 
 		const IterationDomain& 	domain,
-		const std::string& 		tuple_name 
-		) : ctx(ctx)
+		const TupleName&		tuple 
+	) : ctx(ctx)
 {
 	const IterationVector& iterVec = domain.getIterationVector();
 	// Build the dim object
@@ -205,9 +205,12 @@ Set<IslContext>::Set(
 
 	// Set the names for the parameters of this dim
 	setVariableName(dim, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
-
-	// Set the name of the tuple 
-	dim = isl_dim_set_tuple_name(dim, isl_dim_set, tuple_name.c_str());
+	
+	if (tuple.first) {
+		ctx.insertTuple( tuple );
+		// Set the name of the tuple 
+		dim = isl_dim_set_tuple_name(dim, isl_dim_set, tuple.second.c_str());
+	}
 
 	if ( domain.isEmpty() ) {
 		set = isl_union_set_empty( isl_dim_copy(dim) );
@@ -256,8 +259,8 @@ std::ostream& Set<IslContext>::printTo(std::ostream& out) const {
 
 Map<IslContext>::Map(IslContext& 			ctx, 
 					 const AffineSystem& 	affSys, 
-					 const std::string& 	in_tuple_name, 
-					 const std::string& 	out_tuple_name 
+					 const TupleName&	 	in_tuple, 
+					 const TupleName& 		out_tuple 
 					) : ctx(ctx)
 {
 	const IterationVector& iterVec = affSys.getIterationVector();
@@ -272,11 +275,15 @@ Map<IslContext>::Map(IslContext& 			ctx,
 	setVariableName(dim, isl_dim_param, iterVec.param_begin(), iterVec.param_end());
 
 	// Set the input tuple name if specified
-	if ( !in_tuple_name.empty() )
-		dim = isl_dim_set_tuple_name(dim, isl_dim_in, in_tuple_name.c_str());
+	if ( in_tuple.first ) {
+		ctx.insertTuple( in_tuple );
+		dim = isl_dim_set_tuple_name(dim, isl_dim_in, in_tuple.second.c_str());
+	}
 
-	if ( !out_tuple_name.empty() )
-		dim = isl_dim_set_tuple_name(dim, isl_dim_out, out_tuple_name.c_str());
+	if ( out_tuple.first ) {
+		ctx.insertTuple( out_tuple ); 
+		dim = isl_dim_set_tuple_name(dim, isl_dim_out, out_tuple.second.c_str());
+	}
 	
 	// creates an universe set containing the dimensionatility of the iteration vector
 	size_t idx=0;

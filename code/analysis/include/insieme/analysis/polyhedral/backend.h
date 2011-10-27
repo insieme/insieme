@@ -43,6 +43,8 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
+typedef std::pair<core::NodeAddress, std::string> TupleName;
+
 /**************************************************************************************************
  * Generic implementation of a the concept of a set which is natively supported by polyhedral
  * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
@@ -135,19 +137,19 @@ template <Backend B>
 SetPtr<typename BackendTraits<B>::ctx_type>
 makeSet( typename BackendTraits<B>::ctx_type& ctx, 
 		 const IterationDomain& domain,
-		 const std::string& tuple_name = std::string())
+		 const TupleName& tuple = TupleName())
 {
-	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, domain, tuple_name);
+	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, domain, tuple);
 }
 
 template <Backend B>
 MapPtr<typename BackendTraits<B>::ctx_type>
 makeMap( typename BackendTraits<B>::ctx_type& ctx,  
 		 const AffineSystem& affSys,
-		 const std::string& in_tuple_name = std::string(),
-		 const std::string& out_tuple_name = std::string())
+		 const TupleName& in_tuple = TupleName(),
+		 const TupleName& out_tuple = TupleName())
 {
-	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, affSys, in_tuple_name, out_tuple_name);
+	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, affSys, in_tuple, out_tuple);
 }
 
 template <Backend B>
@@ -192,12 +194,9 @@ DependenceInfo<Ctx> buildDependencies(
 		const Map<Ctx>& 	may_sourcs
 );
 
-typedef std::map<std::string, insieme::core::StatementPtr> StmtMap;
-
 template <class Ctx>
 core::NodePtr toIR(
 		core::NodeManager& 		mgr, 
-		const StmtMap& 			stmtMap,
 		const IterationVector& 	iterVec, 
 		Ctx& 					ctx, 
 		const Set<Ctx>& 		domain, 
