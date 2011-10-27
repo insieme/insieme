@@ -37,20 +37,13 @@
 #pragma once
 
 #include <locale.h>
+#include "utils/timing.h"
 #include "instrumentation.h"
 
 #define IRT_WI_PD_BLOCKSIZE	8
 #define IRT_WG_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
 #define IRT_WORKER_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
 #define IRT_DI_PD_BLOCKSIZE	IRT_WI_PD_BLOCKSIZE
-
-//used for getting clock cycles
-unsigned long long get_ticks(void) {
-	//volatile unsigned long long a, d;
-	//__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
-	//return (a | (d << 32));
-	return 0;
-}
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 
@@ -78,14 +71,14 @@ void irt_destroy_performance_table(irt_pd_table* table) {
 
 // commonly used internal function to record events and timestamps
 void _irt_instrumentation_event_insert(irt_pd_table* table, int event) {
-	uint64 time = get_ticks();
+	uint64 time = irt_time_ticks();
 
 	if(table->number_of_elements >= table->size)
 		_irt_performance_table_resize(table);
 
 	_irt_performance_data* pd = &(table->data[table->number_of_elements++]);
 
-	pd->timestamp = get_ticks();
+	pd->timestamp = time; //get_ticks();
 	pd->event = event;
 }
 
