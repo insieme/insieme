@@ -65,14 +65,14 @@ namespace poly {
 class IterationDomain : public utils::Printable {
 
 	const IterationVector& iterVec;
-	ConstraintCombinerPtr  constraint;
+	ConstraintCombinerPtr<AffineFunction>  constraint;
 	bool empty;
 
 public:
 	IterationDomain( const IterationVector& iterVec, bool empty=false) : 
 		iterVec(iterVec), empty(empty) { }
 
-	explicit IterationDomain( const ConstraintCombinerPtr& constraint ) : 
+	explicit IterationDomain( const ConstraintCombinerPtr<AffineFunction>& constraint ) : 
 		iterVec( extractIterationVector(constraint) ), constraint(constraint), empty(false) { }
 
 	IterationDomain( const IterationVector& iv, const IterationDomain& otherDom) : 
@@ -80,7 +80,7 @@ public:
 	
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
-	inline const ConstraintCombinerPtr& getConstraint() const { return constraint; }
+	inline const ConstraintCombinerPtr<AffineFunction>& getConstraint() const { return constraint; }
 
 	inline bool isUniverse() const { return !empty && !static_cast<bool>(constraint); }
 

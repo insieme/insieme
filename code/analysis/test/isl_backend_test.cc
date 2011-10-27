@@ -80,7 +80,7 @@ TEST(IslBackend, SetConstraint) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,3,10} );
-	poly::Constraint c(af, poly::Constraint::LT);
+	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::LT);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c)));
@@ -107,7 +107,7 @@ TEST(IslBackend, SetConstraintNormalized) {
 	poly::AffineFunction af(iterVec, {1,0,10});
 	
 	// 1*v1 + 0*v2  + 10 != 0
-	poly::Constraint c(af, poly::Constraint::NE);
+	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::NE);
 
 	// 1*v1 + 10 > 0 && 1*v1 +10 < 0
 	// 1*v1 + 9 >= 0 & -1*v1 -11 >= 0
@@ -138,16 +138,16 @@ TEST(IslBackend, FromCombiner) {
 	poly::AffineFunction af(iterVec, {0,2,10});
 
 	// 0*v1 + 2*v3 + 10 == 0
-	poly::Constraint c1(af, poly::Constraint::EQ);
+	poly::Constraint<poly::AffineFunction> c1(af, poly::Constraint<poly::AffineFunction>::EQ);
 
 	// 2*v1 + 3*v3 +10 
 	poly::AffineFunction af2(iterVec, {2,3,10});
 	
 	// 2*v1 + 3*v3 +10 < 0
-	poly::Constraint c2(af2, poly::Constraint::LT);
+	poly::Constraint<poly::AffineFunction> c2(af2, poly::Constraint<poly::AffineFunction>::LT);
 
 	// 2v3+10 == 0 OR !(2v1 + 3v3 +10 < 0)
-	poly::ConstraintCombinerPtr ptr =  c1 or (not_(c2));
+	poly::ConstraintCombinerPtr<poly::AffineFunction> ptr =  c1 or (not_(c2));
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(ptr));
@@ -171,8 +171,8 @@ TEST(IslBackend, FromCombiner) {
 TEST(IslBackend, SetUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
-	poly::Constraint c1(poly::AffineFunction(iterVec, {0,3,10}), poly::Constraint::LT);
-	poly::Constraint c2(poly::AffineFunction(iterVec, {1,-1,0}), poly::Constraint::EQ);
+	poly::Constraint<poly::AffineFunction> c1(poly::AffineFunction(iterVec, {0,3,10}), poly::Constraint<poly::AffineFunction>::LT);
+	poly::Constraint<poly::AffineFunction> c2(poly::AffineFunction(iterVec, {1,-1,0}), poly::Constraint<poly::AffineFunction>::EQ);
 
 	auto&& ctx = poly::createContext<poly::ISL>();
 	auto&& set1 = poly::makeSet<poly::ISL>(*ctx, poly::IterationDomain(makeCombiner(c1)) );

@@ -60,7 +60,7 @@ IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rh
 }
 
 IterationDomain operator!(const IterationDomain& other) {
-	return IterationDomain( not_(other.getConstraint()) ); 
+	return IterationDomain( not_( other.getConstraint() ) ); 
 }
 
 std::ostream& IterationDomain::printTo(std::ostream& out) const { 

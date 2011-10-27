@@ -365,7 +365,7 @@ TEST(Constraint, Creation) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,1,2,10});
-	poly::Constraint c(af, poly::Constraint::EQ);
+	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::EQ);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
@@ -378,13 +378,13 @@ TEST(Constraint, Normalization) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,1,2,10});
-	poly::Constraint c(af, poly::Constraint::LT);
+	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::LT);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
 		EXPECT_EQ("1*v2 + 2*v3 + 10*1 < 0", ss.str());
 	}
-	poly::ConstraintCombinerPtr nc = normalize(c);
+	poly::ConstraintCombinerPtr<poly::AffineFunction> nc = normalize(c);
 	{
 		std::ostringstream ss;
 		nc->printTo(ss);
@@ -397,18 +397,18 @@ TEST(Constraint, Combiner) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,1,2,10});
-	poly::Constraint c1(af, poly::Constraint::EQ);
+	poly::Constraint<poly::AffineFunction> c1(af, poly::Constraint<poly::AffineFunction>::EQ);
 	EXPECT_EQ(toIR(mgr,c1)->toString(), 
 			"int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)"
 		);
 
 	poly::AffineFunction af2(iterVec, {2,3,0,10});
-	poly::Constraint c2(af2, poly::Constraint::LT);
+	poly::Constraint<poly::AffineFunction> c2(af2, poly::Constraint<poly::AffineFunction>::LT);
 	EXPECT_EQ(toIR(mgr,c2)->toString(), 
 			"int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0)"
 		);
 
-	poly::ConstraintCombinerPtr ptr = c1 or not_(c2);
+	poly::ConstraintCombinerPtr<poly::AffineFunction> ptr = c1 or not_(c2);
 
 	ExpressionPtr expr = toIR(mgr, ptr);
 	EXPECT_EQ(expr->toString(), 
@@ -424,10 +424,10 @@ TEST(IterationDomain, Creation) {
 	poly::AffineFunction af2(iterVec, {1,1,0,7});
 	poly::AffineFunction af3(iterVec, {1,0,1,0});
 
-	poly::ConstraintCombinerPtr cl = 
-		poly::Constraint(af, poly::Constraint::LT) and 
-		poly::Constraint(af2, poly::Constraint::LT) and 
-		poly::Constraint(af3, poly::Constraint::NE);
+	poly::ConstraintCombinerPtr<poly::AffineFunction> cl = 
+		poly::Constraint<poly::AffineFunction>(af, poly::Constraint<poly::AffineFunction>::LT) and 
+		poly::Constraint<poly::AffineFunction>(af2, poly::Constraint<poly::AffineFunction>::LT) and 
+		poly::Constraint<poly::AffineFunction>(af3, poly::Constraint<poly::AffineFunction>::NE);
 
 	{
 		std::ostringstream ss;

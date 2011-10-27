@@ -163,18 +163,18 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 				);
 			AffineFunction af(iv, expr);
 			// Determine the type of this constraint
-			Constraint::Type type;
+			Constraint<AffineFunction>::Type type;
 			switch (op) {
-				case BasicGenerator::Eq: type = Constraint::EQ; break;
-				case BasicGenerator::Ne: type = Constraint::NE; break;
-				case BasicGenerator::Lt: type = Constraint::LT; break;
-				case BasicGenerator::Le: type = Constraint::LE; break;
-				case BasicGenerator::Gt: type = Constraint::GT; break;
-				case BasicGenerator::Ge: type = Constraint::GE; break;
+				case BasicGenerator::Eq: type = Constraint<AffineFunction>::EQ; break;
+				case BasicGenerator::Ne: type = Constraint<AffineFunction>::NE; break;
+				case BasicGenerator::Lt: type = Constraint<AffineFunction>::LT; break;
+				case BasicGenerator::Le: type = Constraint<AffineFunction>::LE; break;
+				case BasicGenerator::Gt: type = Constraint<AffineFunction>::GT; break;
+				case BasicGenerator::Ge: type = Constraint<AffineFunction>::GE; break;
 				default:
 					assert(false && "Operation not supported!");
 			}
-			return IterationDomain( makeCombiner( Constraint(af, type) ) );
+			return IterationDomain( makeCombiner( Constraint<AffineFunction>(af, type) ) );
 		} catch (arithmetic::NotAFormulaException&& e) { 
 			throw NotASCoP(e.getExpr()); 
 		} catch (NotAffineExpr&& e) { 
@@ -472,7 +472,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// resolution of the SCoP when the analysis is invoked 
 				assert (stmtAddr->hasAnnotation(ScopRegion::KEY)); 
 
-				IterationDomain caseCons( makeCombiner(Constraint(AffineFunction(ret, expr), Constraint::EQ)) );
+				IterationDomain caseCons( 
+						makeCombiner(Constraint<AffineFunction>(AffineFunction(ret, expr), Constraint<AffineFunction>::EQ)) 
+					);
 				defaultCons &= !caseCons;
 
 				// Add this statement to the subScops
@@ -582,8 +584,10 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 						);
 				// set the constraint: iter >= lb && iter < ub
 
-				poly::ConstraintCombinerPtr&& loopBounds = 
-					Constraint(lb, Constraint::GE) and Constraint(ub, Constraint::LT);
+				poly::ConstraintCombinerPtr<AffineFunction>&& loopBounds = 
+					Constraint<AffineFunction>(lb, Constraint<AffineFunction>::GE) and 
+					Constraint<AffineFunction>(ub, Constraint<AffineFunction>::LT);
+
 				// extract the Formula object 
 				const ExpressionPtr& step = forStmt.getAddressedNode()->getStep();
 				arithmetic::Formula&& formula = arithmetic::toFormula( step );
@@ -614,7 +618,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 						);
 
 					loopBounds = loopBounds and 
-						(Constraint(lowerBound, Constraint::EQ) or Constraint( existenceCons, Constraint::EQ ) );
+						(Constraint<AffineFunction>(lowerBound, Constraint<AffineFunction>::EQ) or 
+						 Constraint<AffineFunction>( existenceCons, Constraint<AffineFunction>::EQ ) );
 				}
 
 				IterationDomain cons( loopBounds );
@@ -1141,7 +1146,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			);
 			
 		// save the domain 
-		ConstraintCombinerPtr saveDomain = currDomain.getConstraint();
+		ConstraintCombinerPtr<AffineFunction> saveDomain = currDomain.getConstraint();
 
 		// set to zero all the not used iterators 
 		std::for_each(notUsed.begin(), notUsed.end(), 
@@ -1151,7 +1156,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 					AffineFunction af(iterVec);
 					af.setCoeff(curIt, 1);
 					af.setCoeff(poly::Constant(), 0);
-					saveDomain = saveDomain and Constraint(af, Constraint::EQ);
+					saveDomain = saveDomain and Constraint<AffineFunction>(af, Constraint<AffineFunction>::EQ);
 				}
 			);
 
@@ -1340,7 +1345,7 @@ void computeDataDependence(const NodePtr& root) {
 	);
 
 	LOG(DEBUG) << "Computing RAW dependencies: ";
-	DependenceInfo<IslContext> depInfo = 
+	DependenceInfo<IslCtx> depInfo = 
 		buildDependencies(ctx, *domain, *schedule, *reads, *writes, *makeEmptyMap<POLY_BACKEND>(ctx, iterVec));
 	LOG(DEBUG) << depInfo;
 	LOG(DEBUG) << "Empty?: " << depInfo.isEmpty();

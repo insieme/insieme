@@ -57,8 +57,6 @@ struct Set : public utils::Printable {
 
 	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	bool isEmpty() const = 0;
-
 	~Set() { }
 private:
 	Set();
@@ -71,10 +69,7 @@ struct Map : public utils::Printable {
 
 	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	bool isEmpty() const = 0;
-
 	~Map() { }
-
 private:
 	Map();
 };
