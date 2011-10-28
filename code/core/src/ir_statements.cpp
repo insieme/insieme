@@ -40,7 +40,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 
 	std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
@@ -59,6 +58,5 @@ namespace new_core {
 		return out << "switch(" << *getSwitchExpr() << ") {" << *getCases() << " default: " << *getDefaultCase() << "}";
 	}
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

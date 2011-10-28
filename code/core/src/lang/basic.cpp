@@ -39,7 +39,7 @@
 #include <map>
 
 #include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/map_utils.h"
@@ -72,7 +72,7 @@ struct GroupChecker<> {
 struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	NodeManager &nm;
 	parse::IRParser parser;
-	ASTBuilder build;
+	IRBuilder build;
 
 	typedef LiteralPtr (BasicGenerator::*litFunPtr)() const;
 	typedef bool (BasicGenerator::*groupCheckFuncPtr)(const NodePtr&) const;
@@ -104,7 +104,7 @@ struct BasicGenerator::BasicGeneratorImpl : boost::noncopyable {
 	}
 	
 	#define GROUP(_id, ...) \
-	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.basic, p); };
+	bool is##_id(const NodePtr& p) { return GroupChecker<__VA_ARGS__>()(nm.getLangBasic(), p); };
 	#include "insieme/core/lang/lang.def"
 
 	// ----- extra material ---
@@ -163,14 +163,14 @@ bool BasicGenerator::is##_id(const NodePtr& p) const { \
 
 #define LITERAL(_id, _name, _spec) \
 LiteralPtr BasicGenerator::get##_id() const { \
-	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(_name, pimpl->parser.parseType(_spec)); \
+	if(!pimpl->ptr##_id) pimpl->ptr##_id = pimpl->build.literal(pimpl->parser.parseType(_spec), _name); \
 	return pimpl->ptr##_id; }; \
 bool BasicGenerator::is##_id(const NodePtr& p) const { \
 	return *p == *get##_id(); };
 
 #define OPERATION(_type, _op, _name, _spec) \
 LiteralPtr BasicGenerator::get##_type##_op() const { \
-	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(_name, pimpl->parser.parseType(_spec)); \
+	if(!pimpl->ptr##_type##_op) pimpl->ptr##_type##_op = pimpl->build.literal(pimpl->parser.parseType(_spec), _name); \
 	return pimpl->ptr##_type##_op; }; \
 bool BasicGenerator::is##_type##_op(const NodePtr& p) const { \
 	return *p == *get##_type##_op(); };
@@ -195,7 +195,7 @@ bool BasicGenerator::isBuiltIn(const NodePtr& node) const {
 		if(node == get##_type##_op()) return true;
 		#include "insieme/core/lang/lang.def"
 	}
-	return node == getNoOp();
+	return false;
 }
 
 LiteralPtr BasicGenerator::getLiteral(const string& name) const {

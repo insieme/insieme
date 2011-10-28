@@ -646,7 +646,7 @@ namespace core {
 	 * a type. Named types are the components named composite types (structs and unions)
 	 * are build form.
 	 */
-	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, NamedType, Members)
+	IR_LIST_NODE_ACCESSOR(NamedCompositeType, Type, NamedType, Entries)
 		/**
 		 * Retrieves the type of a member of this composite type or a null pointer if there is no
 		 * such entry.
@@ -654,7 +654,7 @@ namespace core {
 		 * @param name the name to be searching for
 		 */
 		TypePtr getTypeOfMember(const StringValuePtr& name) const {
-			auto list = getMembers();
+			auto list = getEntries();
 			auto pos = std::find_if(list.begin(), list.end(), [&](const NamedTypePtr& cur) {
 				return *cur->getName() == *name;
 			});

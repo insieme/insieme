@@ -45,7 +45,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/logging.h"
 
@@ -256,14 +256,14 @@ namespace analysis {
 						// ensure identifiers are identical (those cannot be variable)
 						auto entryA = (*it).first;
 						auto entryB = (*it).second;
-						if (*entryA.first != *entryB.first) {
+						if (*entryA->getName() != *entryB->getName()) {
 							// unsatisfiable
 							constraints.makeUnsatisfiable();
 							return;
 						}
 
 						// add equality constraints recursively
-						addEqualityConstraints(constraints, entryA.second, entryB.second);
+						addEqualityConstraints(constraints, entryA->getType(), entryB->getType());
 					}
 
 
@@ -374,8 +374,8 @@ namespace analysis {
 				}
 
 				// check number of arguments
-				const TypeList& paramParams = funParamType->getParameterTypes();
-				const TypeList& argParams = funArgType->getParameterTypes();
+				const TypeList& paramParams = funParamType->getParameterTypes()->getTypes();
+				const TypeList& argParams = funArgType->getParameterTypes()->getTypes();
 				if (paramParams.size() != argParams.size()) {
 					// different number of arguments => unsatisfiable
 					constraints.makeUnsatisfiable();
@@ -438,7 +438,7 @@ namespace analysis {
 			TypeMapping argumentMapping;
 
 			// realized using a recursive lambda visitor
-			ASTVisitor<>* rec;
+			IRVisitor<>* rec;
 			auto collector = makeLambdaVisitor([&](const NodePtr& cur){
 				NodeType kind = cur->getNodeType();
 				switch(kind) {
@@ -742,7 +742,7 @@ namespace analysis {
 		}
 
 		// use deduction mechanism
-		SubstitutionOpt res = getTypeVariableInstantiation(manager, function->getParameterTypes(), arguments);
+		SubstitutionOpt res = getTypeVariableInstantiation(manager, function->getParameterTypes()->getTypes(), arguments);
 
 		// attack substitution
 		VariableInstantionInfo::addToAnnotation(function, localArgs, copyTo(function->getNodeManager(), res));

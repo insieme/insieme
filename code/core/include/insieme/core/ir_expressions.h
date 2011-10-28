@@ -1054,7 +1054,7 @@ namespace core {
 		 * Obtains a reference to the list of named values aggregated to a struct by
 		 * the represented node.
 		 */
-		IR_NODE_PROPERTY(NamedValues, Values, 1);
+		IR_NODE_PROPERTY(NamedValues, Members, 1);
 	};
 
 	/**

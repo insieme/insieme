@@ -427,12 +427,12 @@ namespace core {
 		/**
 		 * Obtains a reference to the then-statement evaluated in case the condition evaluates to true.
 		 */
-		IR_NODE_PROPERTY(CompoundStmt, ThenStatement,  1);
+		IR_NODE_PROPERTY(CompoundStmt, ThenBody,  1);
 
 		/**
 		 * Obtains a reference to the else-statement evaluated in case the condition evaluates to false.
 		 */
-		IR_NODE_PROPERTY(CompoundStmt, ElseStatement,    2);
+		IR_NODE_PROPERTY(CompoundStmt, ElseBody,    2);
 
 	};
 
@@ -446,7 +446,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "if(" << *getCondition() << ") " << *getThenStatement() << " else " << *getElseStatement();
+			return out << "if(" << *getCondition() << ") " << *getThenBody() << " else " << *getElseBody();
 		}
 
 	public:

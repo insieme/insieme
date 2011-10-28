@@ -325,7 +325,7 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 	core::StructTypePtr structType = static_pointer_cast<const StructType>(address.getAddressedNode()->getType());
 
 	// check type of values within struct expression
-	for_each(address.getAddressedNode()->getValues()->getNamedValues(), [&](const NamedValuePtr& cur) {
+	for_each(address.getAddressedNode()->getMembers()->getNamedValues(), [&](const NamedValuePtr& cur) {
 		core::TypePtr requiredType = structType->getTypeOfMember(cur->getName());
 		core::TypePtr isType = cur->getValue()->getType();
 

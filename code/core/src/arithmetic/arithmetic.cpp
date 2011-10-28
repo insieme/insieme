@@ -178,10 +178,10 @@ namespace arithmetic {
 			}
 
 			// special handling for identifiers
-			if (typeA == core::NT_Identifier) {
-				const IdentifierPtr& identA = static_pointer_cast<const Identifier>(a);
-				const IdentifierPtr& identB = static_pointer_cast<const Identifier>(b);
-				return identA->getName() < identB->getName();
+			if (typeA == core::NT_StringValue) {
+				const StringValuePtr& identA = static_pointer_cast<StringValuePtr>(a);
+				const StringValuePtr& identB = static_pointer_cast<StringValuePtr>(b);
+				return identA->getValue() < identB->getValue();
 			}
 
 			// handle remaining expressions => lexicographically
@@ -219,7 +219,7 @@ namespace arithmetic {
 			return false;
 		}
 
-		const lang::BasicGenerator& basic = expr->getNodeManager().getBasicGenerator();
+		const lang::BasicGenerator& basic = expr->getNodeManager().getLangBasic();
 		const CallExprPtr& call = static_pointer_cast<const CallExpr>(expr);
 		const ExpressionPtr& fun = call->getFunctionExpr();
 		const ExpressionList& args = call->getArguments();

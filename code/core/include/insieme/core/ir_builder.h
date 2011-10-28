@@ -122,7 +122,7 @@ namespace core {
 
 		// --- Convenience Utilities ---
 
-		GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intTypeParams);
+		GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intTypeParams) const;
 
 		StructTypePtr structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 		UnionTypePtr unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
@@ -132,7 +132,7 @@ namespace core {
 		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
 
 		// creates a program - empty or based on the given entry points
-		ProgramPtr createProgram(const ExpressionList& entryPoints = ExpressionList());
+		ProgramPtr createProgram(const ExpressionList& entryPoints = ExpressionList()) const;
 
 		// Function Types
 		FunctionTypePtr toPlainFunctionType(const FunctionTypePtr& funType) const;

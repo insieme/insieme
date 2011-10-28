@@ -314,9 +314,9 @@ namespace analysis {
 				} else if (type == NT_RecType) {
 					// the type variables for the recursive definition have to be ignored
 					const RecTypePtr recType = static_pointer_cast<const RecType>(node);
-					for_each(recType->getDefinition()->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+					for_each(recType->getDefinition()->getDefinitions(), [&](const RecTypeBindingPtr& cur) {
 						// fix mapping for the used type variable
-						res.addMapping(cur.first, cur.first);
+						res.addMapping(cur->getVariable(), cur->getVariable());
 					});
 				}
 			}, true);

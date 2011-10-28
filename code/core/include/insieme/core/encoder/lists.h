@@ -160,7 +160,7 @@ namespace encoder {
 				CallExprPtr call = static_pointer_cast<const core::CallExpr>(expr);
 
 				// lists can only be composed using cons and empty
-				auto& fun = call->getFunctionExpr();
+				const auto& fun = call->getFunctionExpr();
 				if (*fun == *ext.empty) {
 					return true;
 				}

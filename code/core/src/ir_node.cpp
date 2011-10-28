@@ -72,7 +72,7 @@ namespace core {
 		 * @param value the value to be hashed
 		 * @return the hash code for the given value object
 		 */
-		inline std::size_t hash(const NodeType type, const Node::Value& value) {
+		inline std::size_t hash(const NodeType type, const NodeValue& value) {
 			std::size_t seed = 0;
 			boost::hash_combine(seed, type);
 			boost::hash_combine(seed, boost::apply_visitor(HashVisitor(), value));
@@ -129,9 +129,9 @@ namespace core {
 		}
 
 		// trigger the create a clone using children within the new manager
-		Node* res = (isValue())?
+		Node* res = (isValueInternal())?
 				createInstanceUsing(emptyList) :
-				createInstanceUsing(manager.getAll(getChildList()));
+				createInstanceUsing(manager.getAll(getChildListInternal()));
 
 		// update manager
 		res->manager = &manager;
@@ -140,22 +140,22 @@ namespace core {
 		res->equalityID = equalityID;
 
 		// copy annotations
-		res->setAnnotations(getAnnotations());
+		res->annotations.setAnnotations(annotations.getAnnotations());
 
 		// done
 		return res;
 	}
 
-	NodePtr Node::substitute(NodeManager& manager, NodeMapping& mapper) const {
+	NodePtr Node::substituteInternal(NodeManager& manager, NodeMapping& mapper) const {
 
 		// skip operation if it is a value node
-		if (isValue()) {
+		if (isValueInternal()) {
 			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
 		}
 
 		// compute new child node list
-		NodeList children = mapper.map(getChildList());
-		if (::equals(children, getChildList(), equal_target<NodePtr>())) {
+		NodeList children = mapper.map(getChildListInternal());
+		if (::equals(children, getChildListInternal(), equal_target<NodePtr>())) {
 			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
 		}
 
