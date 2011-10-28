@@ -48,7 +48,7 @@ typedef int64_t int64;
 #ifdef WIN32
 	typedef u_int64_t uint64;
 #else
-	typedef u_int64_t uint64;
+	typedef uint64_t uint64;
 #endif
 
 //#ifndef __cplusplus
