@@ -86,3 +86,18 @@ uint64 irt_time_ticks(void) {
 
 #endif // architecture branch
 
+#ifdef WIN32
+struct timespec {
+        long  tv_sec;         /* seconds */
+	long    tv_nsec;        /* nanoseconds */
+};
+
+int irt_nanosleep(const struct timespec* wait_time) {
+	Sleep(wait_time->tv_sec*1000 + wait_time->tv_nsec/1000);
+	return 0; // it seems that Sleep always succeedes
+}
+#else
+int irt_nanosleep(const struct timespec* wait_time) {
+	return nanosleep(wait_time, NULL);
+}
+#endif

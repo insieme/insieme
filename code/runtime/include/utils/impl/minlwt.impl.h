@@ -151,7 +151,9 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 //	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
+#ifdef __GNUC__
 __attribute__ ((noinline))
+#endif
 void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestack, wi_implementation_func* func) {
 	__asm__ (
 		/* save registers on stack */

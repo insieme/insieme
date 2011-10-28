@@ -43,9 +43,13 @@
 
 //#define IRT_VERBOSE 1
 
+#ifdef WIN32 
+#define IRT_SIG_ERR SIG_ERR
+#define IRT_SIG_INTERRUPT SIGINT
+#else
 #define IRT_SIG_ERR SIGUSR1
 #define IRT_SIG_INTERRUPT SIGUSR2
-
+#endif
 /* ------------------------------ data structures ----- */
 
 typedef enum _irt_errcode {

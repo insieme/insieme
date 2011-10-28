@@ -35,7 +35,6 @@
  */
 
 #pragma once
-
 #include "irt_scheduling.h"
 #include "utils/timing.h"
 #include "impl/instrumentation.impl.h"
@@ -56,7 +55,6 @@
 	//return (a | (d << 32));
 	return 0;
 }*/
-
 void irt_scheduling_loop(irt_worker* self) {
 	static const long sched_start_nsecs = 1000l; // 1 nanos 
 	static const long sched_threshold_nsecs = 5l * 1000l * 1000l; // 5 millis 
@@ -81,7 +79,7 @@ void irt_scheduling_loop(irt_worker* self) {
 		} else {										// long wait, sleep
 			self->state = IRT_WORKER_STATE_WAITING;
 			irt_worker_instrumentation_event(self, WORKER_SLEEP_START);
-			if(nanosleep(&wait_time, NULL) != 0) {
+			if(irt_nanosleep(&wait_time) != 0) {
 				wait_time.tv_nsec = sched_start_nsecs;
 			}
 			irt_worker_instrumentation_event(self, WORKER_SLEEP_END);

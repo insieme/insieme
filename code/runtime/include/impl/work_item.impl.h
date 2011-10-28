@@ -39,8 +39,9 @@
 #include "work_item.h"
 
 #include <stdlib.h>
+#ifndef WIN32
 #include <alloca.h>
-
+#endif
 #include "impl/worker.impl.h"
 #include "utils/impl/minlwt.impl.h"
 #include "irt_atomic.h"

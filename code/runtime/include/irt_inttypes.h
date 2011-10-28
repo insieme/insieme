@@ -45,7 +45,11 @@ typedef uint16_t uint16;
 typedef int32_t int32;
 typedef uint32_t uint32;
 typedef int64_t int64;
-typedef uint64_t uint64;
+#ifdef WIN32
+	typedef u_int64_t uint64;
+#else
+	typedef u_int64_t uint64;
+#endif
 
 //#ifndef __cplusplus
 //typedef int32 bool;
