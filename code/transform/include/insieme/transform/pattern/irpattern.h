@@ -44,6 +44,7 @@
 #include "insieme/core/forward_decls.h"
 #include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/pattern.h"
+#include "insieme/transform/pattern/irconvert.h"
 #include "insieme/core/parser/ir_parse.h"
 
 #include "insieme/utils/logging.h"

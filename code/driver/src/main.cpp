@@ -327,7 +327,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
 		// resolveFrom(cur);
-		// printSCoP(LOG_STREAM(INFO), cur); 
+		printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
 		// computeDataDependence(cur);
 
@@ -337,10 +337,10 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
-		std::for_each(reg.stmts_begin(), reg.stmts_end(), 
-			[] (const ScopRegion::StmtScattering& cur) { 
+
+		for_each(reg.getScop(),[] (const insieme::analysis::poly::Stmt& cur) { 
 				insieme::analysis::poly::IslCtx ctx;
-				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur.iterDom);
+				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur.getDomain());
 				set.getCard();
 			}
 		);
