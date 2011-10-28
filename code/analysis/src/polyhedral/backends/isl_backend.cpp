@@ -467,6 +467,7 @@ core::ExpressionPtr Set<IslCtx>::getCard() const {
 	//free(str); // free the allocated string by the library
 	//isl_printer_free(printer);
 	//isl_union_pw_qpolynomial_free(pw_qpoly);
+	return core::ExpressionPtr();
 }
 
 } // end poly namespace 

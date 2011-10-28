@@ -222,7 +222,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	// Stack utilized to keep track of statements which are inside a SCoP.
 	// because not all the compound statements of the IR are annotated by a SCoPRegion annotation,
 	// we need to have a way to collect statements which can be inside nested scopes.
-	typedef std::stack<ScopStmtList> RegionStmtStack;
+	typedef std::stack<ScopRegion::StmtVect> RegionStmtStack;
 	RegionStmtStack regionStmts;
 
 	ScopVisitor(AddressList& scopList) : 
@@ -289,10 +289,10 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// this is a single stmt, therefore we can collect the references inside
 			RefList&& refs = collectRefs(ret, AS_STMT_ADDR(addr));
 			// Add this statement to the scope for the parent node 
-			regionStmts.top().push_back( ScopStmt(AS_STMT_ADDR(addr), refs) );
+			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), refs) );
 		} else {
 			// the substatement is a 
-			regionStmts.top().push_back( ScopStmt(AS_STMT_ADDR(addr), RefList()) );
+			regionStmts.top().push_back( ScopRegion::Stmt(AS_STMT_ADDR(addr), RefList()) );
 		}
 		return ret;
 	}
@@ -370,7 +370,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		// this If statement is also an affine linear function. 
 		ret = merge(ret, merge(saveThen, saveElse));
 	
-		ScopStmtList ifScopStmts;
+		ScopRegion::StmtVect ifScopStmts;
 
 		assert(regionStmts.top().size() == 1);
 		ifScopStmts.push_back( regionStmts.top().front() );
@@ -391,7 +391,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				ifStmt.getAddressedNode(), 
 				ret, 
 				IterationDomain(ret), 
-				ScopStmtList(ifScopStmts.rbegin(),ifScopStmts.rend()), 
+				ScopRegion::StmtVect( ifScopStmts.rbegin(),ifScopStmts.rend() ), 
 				SubScopList( { SubScop(thenAddr, cond), SubScop(elseAddr, !cond) } )
 			)
 		);
@@ -843,7 +843,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			throw NotASCoP( callExpr.getAddressedNode() ); // FIXME:
 
 			const ScopRegion& lambda = *lambdaScop->getAnnotation(ScopRegion::KEY);
-			const ScopStmtList& stmts = lambda.getDirectRegionStmts();
+			const ScopRegion::StmtVect& stmts = lambda.getDirectRegionStmts();
 
 			std::copy( stmts.begin(), stmts.end(), std::back_inserter(regionStmts.top()) );
 			
@@ -898,18 +898,20 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 };
 
-// After the entry level of a SCoP has been found (using the bottom-up technique) we start the
-// top-down pass to detect conditions which would invalidate the SCoP. For example assignment to
-// parameters of the iteration vector is invalid, in order to detect this we have to consider the
-// top-level iteration vector and visit all the statements inside the scop looking for assignment
-// statements where the left side is one of the parameters of iter vec. 
+/**************************************************************************************************
+ * After the entry level of a SCoP has been found (using the bottom-up technique) we start the
+ * top-down pass to detect conditions which would invalidate the SCoP. For example assignment to
+ * parameters of the iteration vector is invalid, in order to detect this we have to consider the
+ * top-level iteration vector and visit all the statements inside the scop looking for assignment
+ * statements where the left side is one of the parameters of iter vec. 
+ **************************************************************************************************/ 
 void detectInvalidSCoPs(const IterationVector& iterVec, const NodeAddress& scop) {
 	assert ( scop->hasAnnotation(ScopRegion::KEY) );
 
 	ScopRegion& region = *scop->getAnnotation( ScopRegion::KEY );
-	const ScopStmtList& stmts = region.getDirectRegionStmts();
+	const ScopRegion::StmtVect& stmts = region.getDirectRegionStmts();
 
-	std::for_each(stmts.begin(), stmts.end(), [&](const ScopStmt& curStmt) {
+	std::for_each(stmts.begin(), stmts.end(), [&](const ScopRegion::Stmt& curStmt) {
 		const RefAccessList& ail = curStmt.getRefAccesses();
 
 		std::for_each(ail.begin(), ail.end(), 
@@ -1017,16 +1019,16 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 				 size_t&						id,
  				 const AffineSystem&	 		curScat,
 				 ScopRegion::IteratorOrder&		iterators,
-				 ScopRegion::ScatteringMatrix& 	scat,
+				 poly::Scop& 					scat,
 				 size_t&						sched_dim) 
 {
 	typedef std::set<Iterator> IteratorSet;
 	// assert( parentDomain->getIterationVector() == iterVec );
 	IterationDomain currDomain = parentDomain && IterationDomain(iterVec, region.getDomainConstraints());
-	const ScopStmtList& scopStmts = region.getDirectRegionStmts();
+	const ScopRegion::StmtVect& scopStmts = region.getDirectRegionStmts();
 	
 	// for every access in this region, convert the affine constraint to the new iteration vector 
-	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const ScopStmt& cur) { 
+	std::for_each(scopStmts.begin(), scopStmts.end(), [&] (const ScopRegion::Stmt& cur) { 
 			
 		StatementPtr&& curPtr = cur.getAddr().getAddressedNode();
 		assert(curPtr->getNodeType() != core::NT_MarkerExpr && curPtr->getNodeType() != core::NT_MarkerStmt);
@@ -1035,6 +1037,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 
 		AffineSystem newScat(curScat);
 		const IterationVector& iterVec = curScat.getIterationVector();
+		assert(&newScat.getIterationVector() == &iterVec); 
 		AffineFunction af( iterVec );
 
 		// check wheather the statement is a SCoP
@@ -1103,7 +1106,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 
 		// Access expressions 
 		const RefAccessList& refs = cur.getRefAccesses();
-		ScopRegion::AccessInfoList accInfo;
+		poly::AccessList accInfo;
 		std::for_each(refs.begin(), refs.end(), [&] (const RefPtr& curRef) {
 				poly::AffineSystemPtr idx = std::make_shared<poly::AffineSystem>(iterVec);
 				switch(curRef->getType()) {
@@ -1129,9 +1132,12 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 				}
 
 				accInfo.push_back( 
-					ScopRegion::AccessInfo( 
+					poly::AccessInfo( 
 							AS_EXPR_ADDR( concat<Node>(cur.getAddr(), curRef->getBaseExpression() ) ), 
-							curRef->getType(), curRef->getUsage(), idx)
+							curRef->getType(), 
+							curRef->getUsage(), 
+							idx
+						)
 					);
 		});
 
@@ -1161,15 +1167,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
-		scat.push_back( 
-			ScopRegion::StmtScattering(
-				id++, 
-				cur.getAddr(), 
-				iterDom, 
-				std::make_shared<poly::AffineSystem>(newScat), 
-				accInfo
-			) 
-		);
+		scat.push_back( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
 	
 		// keep track of the max dimension of the scheduling matrix 
 		if (newScat.size() > sched_dim) {
@@ -1187,7 +1185,7 @@ void ScopRegion::resolve() {
 
 	// we compute the full scattering information for this domain and we cache the result for
 	// later use. 
-	scattering = std::make_shared<ScopRegion::ScatteringPair>();
+	scattering = std::make_shared<ScopRegion::ScatteringPair>( 0, iterVec );
 
 	AffineSystem sf( getIterationVector() );
 	ScopRegion::IteratorOrder iterOrder;
@@ -1238,6 +1236,40 @@ AddressList mark(const core::NodePtr& root) {
 	return ret;
 }
 
+namespace {
+
+// Creates the scattering map for a statement inside the SCoP. This is done by building the domain
+// for such statement (adding it to the outer domain). Then the scattering map which maps this
+// statement to a logical execution date is transformed into a corresponding Map 
+poly::MapPtr<BackendTraits<POLY_BACKEND>::ctx_type> 
+createScatteringMap(
+		BackendTraits<POLY_BACKEND>::ctx_type& 					ctx, 
+		const poly::IterationVector&							iterVec,
+		poly::SetPtr<BackendTraits<POLY_BACKEND>::ctx_type>& 	outer_domain, 
+		const poly::Stmt& 										cur, 
+		size_t 													scat_size ) 
+{
+	// Creates a name mapping which maps an entity of the IR (StmtAddress) 
+	// to a name utilied by the framework as a placeholder 
+	TupleName tn(cur.getAddr(), "S" + utils::numeric_cast<std::string>(cur.getId()));
+
+	auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.getDomain(), tn);
+	assert( domainSet && "Invalid domain" );
+	outer_domain = set_union(ctx, *outer_domain, *domainSet);
+
+	AffineSystem sf = cur.getSchedule();
+	// Because the scheduling of every statement has to have the same number of elements
+	// (same dimensions) we append zeros until the size of the affine system is equal to 
+	// the number of dimensions used inside this SCoP for the scheduling functions 
+	for ( size_t s = sf.size(); s < scat_size; ++s ) {
+		sf.append( AffineFunction(iterVec) );
+	}
+
+	return makeMap<POLY_BACKEND>(ctx, sf, tn);
+}
+
+} // end anonymous namespace 
+
 core::NodePtr toIR(const core::NodePtr& root) {
 
 	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
@@ -1259,24 +1291,8 @@ core::NodePtr toIR(const core::NodePtr& root) {
 	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 	
 	std::for_each(scat.second.begin(), scat.second.end(), 
-		[ & ] (const ScopRegion::StmtScattering& cur) { 
-
-			// Creates a name mapping which maps an entity of the IR (StmtAddress) 
-			// to a name utilied by the framework as a placeholder 
-			TupleName tn(cur.addr, "S" + utils::numeric_cast<std::string>(cur.id));
-
-			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, tn);
-			domain = set_union(ctx, *domain, *domainSet);
-
-			AffineSystemPtr sf = cur.scattering;
-			// Because the scheduling of every statement has to have the same number of elements
-			// (same dimensions) we append zeros until the size of the affine system is equal to 
-			// the number of dimensions used inside this SCoP for the scheduling functions 
-			for ( size_t s = sf->size(); s < scat.first; ++s ) {
-				sf->append( AffineFunction(iterVec) );
-			}
-			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
-			schedule = map_union(ctx, *schedule, *scattering);
+		[ & ] (const poly::Stmt& cur) { 
+			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, cur, scat.first));
 		}
 	);
 
@@ -1306,31 +1322,18 @@ void computeDataDependence(const NodePtr& root) {
 	auto&& writes = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 
 	std::for_each(scat.second.begin(), scat.second.end(), 
-		[ & ] (const ScopRegion::StmtScattering& cur) { 
-			TupleName tn(cur.addr, "S"+utils::numeric_cast<std::string>(cur.id));
-
-			auto&& domainSet = makeSet<POLY_BACKEND>(ctx, cur.iterDom, tn);
-			domain = set_union(ctx, *domain, *domainSet);
-
-			AffineSystemPtr sf = cur.scattering;
-			// Because the scheduling of every statement has to have the same number of elements
-			// (same dimensions) we append zeros until the size of the affine system is equal to 
-			// the number of dimensions used inside this SCoP for the scheduling functions 
-			for ( size_t s = sf->size(); s < scat.first; ++s ) {
-				sf->append( AffineFunction(iterVec) );
-			}
-			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
-			schedule = map_union(ctx, *schedule, *scattering);
+		[ & ] (const poly::Stmt& cur) { 
+			TupleName tn(cur.getAddr(), "S"+utils::numeric_cast<std::string>(cur.getId()));
+			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, cur, scat.first));
 				
 			// Access Functions 
-			const ScopRegion::AccessInfoList& ail = cur.accessList;
-			std::for_each(ail.begin(), ail.end(), [&](const ScopRegion::AccessInfo& cur){
-				const AffineSystemPtr& accessInfo = cur.index;
+			std::for_each(cur.access_begin(), cur.access_end(), [&](const poly::AccessInfo& cur){
+				const AffineSystemPtr& accessInfo = cur.getAccess();
 
 				if (accessInfo) {
-					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, TupleName(cur.expr, cur.expr->toString()));
+					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, TupleName(cur.getExpr(), cur.getExpr()->toString()));
 
-					switch ( cur.usage ) {
+					switch ( cur.getUsage() ) {
 					case Ref::USE: 		reads  = map_union(ctx, *reads, *access); 	break;
 					case Ref::DEF: 		writes = map_union(ctx, *writes, *access);	break;
 					case Ref::UNKNOWN:	reads  = map_union(ctx, *reads, *access);
@@ -1343,6 +1346,9 @@ void computeDataDependence(const NodePtr& root) {
 			});
 		}
 	);
+
+	LOG(DEBUG) << "Print Scattering";
+	map_intersect_domain(ctx, *schedule, *domain)->printTo(std::cout);
 
 	LOG(DEBUG) << "Computing RAW dependencies: ";
 	DependenceInfo<IslCtx> depInfo = 
@@ -1370,12 +1376,13 @@ void computeDataDependence(const NodePtr& root) {
 }
 
 bool ScopRegion::isParallel() {
-	return false;
+	assert(false && "Not yet implemented!");
 }
 
+#define MSG_WIDTH 100
 //===== printSCoP ===================================================================
 void printSCoP(std::ostream& out, const core::NodePtr& scop) {
-	out << std::endl << std::setfill('=') << std::setw(80) << std::left << "@ SCoP PRINT";	
+	out << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << std::left << "@ SCoP PRINT";	
 	// out << *scop;
 	// check whether the IR node has a SCoP annotation
 	if( !scop->hasAnnotation( ScopRegion::KEY ) ) {
@@ -1383,72 +1390,29 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 		return ;
 	}
 	
-	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
-
+	// auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
 	ScopRegion& ann = *scop->getAnnotation( ScopRegion::KEY );
 	ann.resolve();
-	const ScopRegion::ScatteringMatrix&& scat = ann.getScatteringInfo().second;
+	const poly::Scop& scat = ann.getScop();
 	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
 		
 	out << "IV: " << ann.getIterationVector() << std::endl;
-	std::for_each(scat.begin(), scat.end(), 
-		[ &ann, &out, &ctx ] (const ScopRegion::StmtScattering& cur) { 
-			out << std::setfill('~') << std::setw(80) << "" << std::endl;
+	for_each(scat, [&](const poly::Stmt& cur) {
+		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << cur; 
+	} );
 
-			out << "@ S" << cur.id << ": " << std::endl 
-				<< " -> " << printer::PrettyPrinter( cur.addr.getAddressedNode() ) << std::endl;
-	
-		 	const IterationDomain& id = cur.iterDom;
-			out << " -> ID ";
-
-			TupleName tn(cur.addr, "S"+utils::numeric_cast<std::string>(cur.id));
-			auto&& ids = makeSet<POLY_BACKEND>(ctx, id, tn);
-
-			out << id << std::endl; 
-			out << " => ISL: ";
-			ids->printTo(out);
-			
-			out << std::endl;
-			AffineSystemPtr sf = cur.scattering;
-			out << *sf;
-			auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
-			out << " => ISL: ";
-			scattering->printTo(out);
-			out << std::endl;
-			const ScopRegion::AccessInfoList& ail = cur.accessList;
-			std::for_each(ail.begin(), ail.end(), [&](const ScopRegion::AccessInfo& cur){
-
-				out << " -> REF ACCESS: [" << Ref::useTypeToStr(cur.usage) << "] "
-					<< " -> VAR: " << printer::PrettyPrinter(cur.expr.getAddressedNode()) ; 
-
-				const AffineSystemPtr& accessInfo = cur.index;
-				out << " IDX: " << join("", accessInfo->begin(), accessInfo->end(), 
-					[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
-				out << std::endl;
-				if (accessInfo) {
-					
-					auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, TupleName(cur.expr, cur.expr->toString()));
-					// map.intersect(ids);
-					out << " => ISL: "; 
-					access->printTo(out);
-					out << std::endl;
-				}
-			});
-		}
-	);
-	
-	LOG(DEBUG) << std::endl << std::setfill('=') << std::setw(80) << "";
+	LOG(DEBUG) << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
 }
 
 // This function determines the maximum number of loop nests within this region 
 // The analysis should be improved in a way that also the loopnest size is weighted with the number
 // of statements present at each loop level.
-size_t calcLoopNest(const IterationVector& iterVec, const ScopRegion::ScatteringMatrix& scat) {
+size_t calcLoopNest(const IterationVector& iterVec, const poly::Scop& scat) {
 	size_t max_loopnest=0;
 	for_each(scat.begin(), scat.end(), 
-		[&](const ScopRegion::StmtScattering& scopStmt) { 
+		[&](const poly::Stmt& scopStmt) { 
 			size_t cur_loopnest=0;
-			for_each(scopStmt.scattering->begin(), scopStmt.scattering->end(), 
+			for_each(scopStmt.getSchedule().begin(), scopStmt.getSchedule().end(), 
 				[&](const AffineFunction& cur) { 
 					for(auto&& it=cur.begin(), end=cur.end(); it!=end; ++it) {
 						if((*it).second != 0 && (*it).first.getType() == Element::ITER) { 

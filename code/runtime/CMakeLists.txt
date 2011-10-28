@@ -11,7 +11,7 @@ set (GTEST_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest.lib")
 set (GTEST_MAIN_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest_main.lib")
 endif()
 # enable C99 support within gcc
-if (CMAKE_COMPILER_IS_GNUC)
+if (CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
 
 	# add flags for debug mode
@@ -22,12 +22,14 @@ if (CMAKE_COMPILER_IS_GNUC)
 
 	include(CheckCCompilerFlag)
 	check_c_compiler_flag( -std=c99 C99_Support )
+
 	if(C99_Support)
-		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+	       	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 	else()
 		message( "WARNING: --std=c99 not supported by your compiler!" )
 	endif()
-else()
+endif()
+if(CMAKE_COMPILER_IS_ICC)
 	#enable c99 for icc
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qstd=c99")
 endif()
@@ -42,9 +44,12 @@ if (WIN32)
 	else()
 		message( "ERRROR: Utilities and SDK for Subsystem for UNIX-based Applications NOT found")
 	endif()
+else()
+	# add c99 for gcc
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC -std=c99")
 endif()
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=700")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
