@@ -53,22 +53,6 @@ namespace insieme {
 namespace core {
 
 
-namespace detail {
-
-//	/**
-//	 * A utility function wrapping a given statement into a compound statement (if necessary).
-//	 */
-//	CompoundStmtPtr wrapBody(const StatementPtr& stmt) {
-//		if (stmt->getNodeType() == NT_CompoundStmt) {
-//			return static_pointer_cast<CompoundStmtPtr>(stmt);
-//		}
-//		return CompoundStmt::get(stmt->getNodeManager(), stmt);
-//	}
-
-} // end namespace detail
-
-
-
 	class IRBuilder {
 
 		/**
@@ -77,6 +61,11 @@ namespace detail {
 		NodeManager& manager;
 
 	public:
+
+		/**
+		 * A type used within some signatures mapping variables to values.
+		 */
+		typedef utils::map::PointerMap<VariablePtr, ExpressionPtr> VarValueMapping;
 
 		/**
 		 * Creates a new IR builder working with the given node manager.
@@ -93,7 +82,7 @@ namespace detail {
 		/**
 		 * Obtains a reference to the basic generator within the node manager.
 		 */
-		const lang::BasicGenerator& getBasicGenerator() const;
+		const lang::BasicGenerator& getLangBasic() const;
 
 		template<typename T, typename ... Children>
 		Pointer<const T> get(Children ... child) const {
@@ -121,7 +110,26 @@ namespace detail {
 
 		#include "ir_builder.inl"
 
+		// --- Handle value clases ---
+
+		StringValuePtr stringValue(const char* str) const;
+		StringValuePtr stringValue(const string& str) const;
+
+		BoolValuePtr boolValue(bool value) const;
+		CharValuePtr charValue(char value) const;
+		IntValuePtr intValue(int value) const;
+		UIntValuePtr uintValue(unsigned value) const;
+
 		// --- Convenience Utilities ---
+
+		GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intTypeParams);
+
+		StructTypePtr structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
+		UnionTypePtr unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
+
+		TupleExprPtr tupleExpr(const ExpressionList& values) const;
+		VectorExprPtr vectorExpr(const VectorTypePtr& type, const ExpressionList& values) const;
+		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
 
 		// creates a program - empty or based on the given entry points
 		ProgramPtr createProgram(const ExpressionList& entryPoints = ExpressionList());
@@ -134,6 +142,27 @@ namespace detail {
 		LiteralPtr stringLit(const std::string& str) const;
 		LiteralPtr intLit(const int val) const;
 		LiteralPtr uintLit(const unsigned int val) const;
+
+
+		/**
+		 * A factory method for intTypeParam literals.
+		 */
+		LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
+
+		/**
+		 * A factory method for a identifier literal.
+		 */
+		LiteralPtr getIdentifierLiteral(const StringValuePtr& value) const;
+
+		/**
+		 * A factory method for a type literals.
+		 */
+		LiteralPtr getTypeLiteral(const TypePtr& type) const;
+
+		/**
+		 * A method generating a vector init expression form a scalar.
+		 */
+		ExpressionPtr scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const;
 
 		// Values
 		// obtains a zero value - recursively resolved for the given type
@@ -163,15 +192,30 @@ namespace detail {
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
+
 		// For the methods below, the return type is deduced from the functionExpr's function type
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments = vector<ExpressionPtr>()) const;
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const;
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const;
 		CallExprPtr callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const;
 
+
+		// Lambda Nodes
+		LambdaPtr lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const;
+		LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
+
 		// Lambda Expressions
 		LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const;
+
+		// Direct creation of lambda and bind with capture initialization
+		BindExprPtr lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params = VariableList()) const;
+		BindExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const;
+
+		BindExprPtr bindExpr(const VariableList& params, const CallExprPtr& call) const;
+
+		// Create a job expression
+		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const;
 
 		// Creation of thread number ranges
 		CallExprPtr getThreadNumRange(unsigned min) const;
@@ -227,8 +271,29 @@ namespace detail {
 		ExpressionPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
 		ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
+
+		/**
+		 * A function obtaining a reference to a NoOp instance.
+		 */
+		StatementPtr getNoOp() const;
+
+		/**
+		 * Tests whether the given node is a no-op.
+		 *
+		 * @param node the node to be tested
+		 * @return true if it is a no-op, false otherwise
+		 */
+		bool isNoOp(const NodePtr& node) const;
+
+		IfStmtPtr ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody = StatementPtr()) const;
+		WhileStmtPtr whileStmt(const ExpressionPtr& condition, const StatementPtr& body) const;
+		ForStmtPtr forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
+
+		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
+
 		// Utilities
 	private:
+		static TypeList extractTypes(const ExpressionList& expressions);
 		static TypeList extractParamTypes(const ParametersPtr& params);
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
 	};

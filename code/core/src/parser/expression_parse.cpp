@@ -39,9 +39,9 @@
 #include "insieme/core/parser/statement_parse.h"
 #include "insieme/core/parser/operator_parse.h"
 #include "insieme/core/parser/type_parse.h"
-#include "insieme/core/expressions.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -73,34 +73,34 @@ namespace ph = boost::phoenix;
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
         doubleLiteralHelp(const int integer, const vector<char>& fraction) {
-    ASTBuilder build(nodeMan);
+    IRBuilder build(nodeMan);
 
-    return build.literal(nodeMan.basic.getDouble(), toString(integer) + "." + toString(join("", fraction)));
+    return build.literal(nodeMan.getLangBasic().getDouble(), build.stringValue(toString(integer) + "." + toString(join("", fraction))));
 }
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
         intLiteralHelp(const int val) {
-    ASTBuilder build(nodeMan);
+    IRBuilder build(nodeMan);
     return build.intLit(val);
 }
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
         boolLiteralHelp(const bool flag) {
-    ASTBuilder build(nodeMan);
+    IRBuilder build(nodeMan);
 
     if(flag)
-        return build.literal("true", nodeMan.basic.getBool());
+        return build.literal(nodeMan.getLangBasic().getBool(), "true");
 
-    return build.literal("false", nodeMan.basic.getBool());
+    return build.literal(nodeMan.getLangBasic().getBool(), "false");
 }
 
 template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
 ExpressionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
         callExprHelp(const ExpressionPtr& callee, vector<ExpressionPtr>& arguments) {
     //TODO determine return type by inference (arguments may be empty!)
-    ASTBuilder build(nodeMan);
+    IRBuilder build(nodeMan);
     return build.callExpr(callee, arguments);
 }
 
@@ -108,7 +108,7 @@ template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypePa
 LambdaPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
         lambdaHelp(const TypePtr& retType, const vector<ExpressionPtr>& paramsExpr, const StatementPtr& body) {
     // build a stmtExpr bc the builder cannot at the moment
-    ASTBuilder build(nodeMan);
+    IRBuilder build(nodeMan);
     vector<VariablePtr> params;
     vector<TypePtr> paramTypes;
 
@@ -130,7 +130,7 @@ template<class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypePa
 LambdaDefinitionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
         lambdaDefHelp(const vector<ExpressionPtr>& funVarExpr, const vector<LambdaPtr>& lambdaExpr ) {
     //TODO make conversion faster
-    std::map<VariablePtr, LambdaPtr, compare_target<VariablePtr> > defs;
+	vector<LambdaBindingPtr> defs;
 
     if(funVarExpr.size() != lambdaExpr.size())
         throw ParseException("LambdaDefinition has illegal form\n");
@@ -138,7 +138,7 @@ LambdaDefinitionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntT
     auto J = lambdaExpr.begin();
     for(auto I = funVarExpr.begin(); I != funVarExpr.end(); ++I, ++J) {
         if(VariablePtr def = dynamic_pointer_cast<const Variable>(*I) )
-            defs[def] = *J;
+        	defs.push_back(LambdaBinding::get(nodeMan, def, *J));
         else
             throw ParseException("LambdaDefinitions must be of form '{' funVarExpr '=' lambda '}'");
     }
@@ -178,14 +178,24 @@ ExpressionPtr ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypePar
 
     vector<DeclarationStmtPtr> localDecls;
     // TODO make cast more efficient
-    for_each(localDeclStmts, [&](StatementPtr decl) {
+    for_each(localDeclStmts, [&](const StatementPtr& decl) {
         if(DeclarationStmtPtr d = dynamic_pointer_cast<const DeclarationStmt>(decl))
             localDecls.push_back(d);
         else
             throw ParseException("JobExpr has illegal form");
     });
 
-    return JobExpr::get(nodeMan, threadNumRange, defaultStmt, guardedStmts, localDecls);
+    vector<GuardedExprPtr> guardedExprs;
+    IRBuilder builder(nodeMan);
+    for_each(guardedStmts, [&](const std::pair<ExpressionPtr, ExpressionPtr>& cur) {
+    	LambdaExprPtr guard = dynamic_pointer_cast<LambdaExprPtr>(cur.first);
+    	if (!guard) {
+    		throw ParseException("JobExpr has illegal guard format!");
+    	}
+    	guardedExprs.push_back(builder.guardedExpr(guard, cur.second));
+    });
+
+    return IRBuilder(nodeMan).jobExpr(threadNumRange, localDecls, guardedExprs, defaultStmt);
 }
 
 

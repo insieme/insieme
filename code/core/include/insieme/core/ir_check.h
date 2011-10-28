@@ -56,11 +56,12 @@ typedef boost::optional<MessageList> OptionalMessageList;
 void addAll(OptionalMessageList& target, const OptionalMessageList& list);
 void add(OptionalMessageList& target, const Message& msg);
 
-class ASTCheck : public ASTVisitor<OptionalMessageList, core::Address> {
-public: ASTCheck(bool visitTypes) : ASTVisitor<OptionalMessageList, core::Address>(visitTypes) {}
+class IRCheck : public IRVisitor<OptionalMessageList, core::Address> {
+	public:
+		IRCheck(bool visitTypes) : IRVisitor<OptionalMessageList, core::Address>(visitTypes) {}
 };
 
-typedef std::shared_ptr<ASTCheck> CheckPtr;
+typedef std::shared_ptr<IRCheck> CheckPtr;
 typedef std::vector<CheckPtr> CheckList;
 
 MessageList check(const NodePtr& node, const CheckPtr& check);

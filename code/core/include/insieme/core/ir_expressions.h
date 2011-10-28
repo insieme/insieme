@@ -264,7 +264,7 @@ namespace core {
 		 * Obtains a reference to the requested argument.
 		 */
 		Ptr<const Expression> getArgument(unsigned index) const {
-			return getArgumentList()->getExpressions()[index];
+			return getArgumentList()->getElement(index);
 		}
 
 		/**
@@ -458,6 +458,13 @@ namespace core {
 		 * Obtains a reference to the body of this lambda.
 		 */
 		IR_NODE_PROPERTY(CompoundStmt, Body, 2);
+
+		/**
+		 * Obtains a reference to the internally maintained parameter vector.
+		 */
+		const vector<Ptr<const Variable>>& getParameterList() const {
+			return getParameters()->getParameters();
+		}
 	};
 
 	/**
@@ -487,6 +494,20 @@ namespace core {
 		 */
 		static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
 			return manager.get(Lambda(type, params, body));
+		}
+
+		/**
+		 * This static factory method allows to obtain an instance of a lambda node
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the lambda expression
+		 * @param params the list of parameters accepted by the requested lambda
+		 * @param body the body defining the requested lambda
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariableList& params, const CompoundStmtPtr& body) {
+			return get(manager, type, Parameters::get(manager, params), body);
 		}
 
 	};
@@ -562,7 +583,7 @@ namespace core {
 		 * 				   this recursive function definition.
 		 * @return a copy of the internally maintained pointer to the actual function definition.
 		 */
-		const LambdaPtr& getDefinitionOf(const VariablePtr& variable) const;
+		const Ptr<const Lambda>& getDefinitionOf(const VariablePtr& variable) const;
 
 		/**
 		 * Determines whether the definition of the function referenced by the given variable within
@@ -647,6 +668,13 @@ namespace core {
 		}
 
 		/**
+		 * Obtains a reference to the body of the lambda defining this expression.
+		 */
+		Ptr<const CompoundStmt> getBody() const {
+			return getLambda()->getBody();
+		}
+
+		/**
 		 * Determines whether this function is recursively defined or not.
 		 */
 		bool isRecursive() const {
@@ -705,6 +733,20 @@ namespace core {
 		}
 
 		/**
+		 * Obtains a simple, non-recursive Lambda based on the given definition.
+		 *
+		 * @param manager the manager maintaining the resulting node instance
+		 * @param lambda the lambda to be referenced by the resulting expression
+		 * @return the requested lambda expression managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const LambdaPtr& lambda) {
+			VariablePtr var = Variable::get(manager, lambda->getType());
+			LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
+			LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
+			return get(manager, lambda->getType(), var, def);
+		}
+
+		/**
 		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
 		 *
 		 * @param manager the manager maintaining the resulting node instance
@@ -714,11 +756,20 @@ namespace core {
 		 * @return the requested lambda expression managed by the given manager
 		 */
 		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
-			VariablePtr var = Variable::get(manager, type);
-			LambdaPtr lambda = Lambda::get(manager, type, params, body);
-			LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
-			LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
-			return get(manager, type, var, def);
+			return get(manager, Lambda::get(manager, type, params, body));
+		}
+
+		/**
+		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
+		 *
+		 * @param manager the manager maintaining the resulting node instance
+		 * @param type the type of the resulting lambda expression
+		 * @param params the parameters accepted by the resulting lambda
+		 * @param body the body of the resulting function
+		 * @return the requested lambda expression managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariableList& params, const CompoundStmtPtr& body) {
+			return get(manager, type, Parameters::get(manager, params), body);
 		}
 
 		/**
@@ -792,6 +843,19 @@ namespace core {
 			return manager.get(BindExpr(type, parameters, call));
 		}
 
+		/**
+		 * A factory method for obtaining a bind expression node instance maintained by the given
+		 * node manager.
+		 *
+		 * @param manager the manager which should be maintaining the new instance
+		 * @param type the type of the resulting function (hence, of the resulting expression)
+		 * @param parameters the parameters of the resulting function
+		 * @param call the call including the bound and unbound parameters
+		 * @return the requested bind expression managed by the given manager
+		 */
+		static BindExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariableList& parameters, const CallExprPtr& call) {
+			return get(manager, type, Parameters::get(manager, parameters), call);
+		}
 	};
 
 
@@ -891,17 +955,106 @@ namespace core {
 
 
 
+	// ------------------------------------- Named Values -----------------------------------
+
+	/**
+	 * The accessor associated to a named value.
+	 */
+	IR_NODE_ACCESSOR(NamedValue, Support, StringValue, Expression)
+		/**
+		 * Obtains a reference to the bound name.
+		 */
+		IR_NODE_PROPERTY(StringValue, Name, 0);
+
+		/**
+		 * Obtains a reference to the bound value.
+		 */
+		IR_NODE_PROPERTY(Expression, Value, 1);
+	};
+
+	/**
+	 * This type of node is used within the struct expression to represent the
+	 * connection between a name (the name of a member) and a value.
+	 */
+	IR_NODE(NamedValue, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << *getName() << "=" << *getValue();
+		}
+
+	public:
+
+		/**
+		 * This static factory method constructing a new named value instance based
+		 * on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param name the name to be bound
+		 * @param value the value to be bound
+		 * @return the requested type instance managed by the given manager
+		 */
+		static NamedValuePtr get(NodeManager& manager, const StringValuePtr& name, const ExpressionsPtr& value) {
+			return manager.get(NamedValue(name, value));
+		}
+
+	};
+
+
+
+
+	// ------------------------------------ A class representing a list of named values------------------------------
+
+	/**
+	 * The accessor associated to a list of named values.
+	 */
+	IR_LIST_NODE_ACCESSOR(NamedValues, Support, NamedValue, NamedValues)
+	};
+
+	/**
+	 * A node type representing a list of named values.
+	 */
+	IR_NODE(NamedValues, Support)
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const {
+			return out << "[" << join(",", getChildList(), print<deref<NodePtr>>()) << "]";
+		}
+
+	public:
+
+		/**
+		 * This static factory method allows to construct a named value list based
+		 * on the given list.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param values the values to be included within the requested list
+		 * @return the requested type instance managed by the given manager
+		 */
+		static NamedValuesPtr get(NodeManager& manager, const NamedValueList& values) {
+			return manager.get(NamedValues(convertList(values)));
+		}
+	};
+
+
+
 	// ------------------------------------- Struct Expression -----------------------------------
 
 	/**
 	 * The accessor associated to a struct expression.
 	 */
-	IR_NODE_ACCESSOR(StructExpr, Expression, StructType, Expressions)
+	IR_NODE_ACCESSOR(StructExpr, Expression, StructType, NamedValues)
 		/**
-		 * Obtains a reference to the list of expressions aggregated to a struct by
+		 * Obtains a reference to the list of named values aggregated to a struct by
 		 * the represented node.
 		 */
-		IR_NODE_PROPERTY(Expressions, Expressions, 1);
+		IR_NODE_PROPERTY(NamedValues, Values, 1);
 	};
 
 	/**

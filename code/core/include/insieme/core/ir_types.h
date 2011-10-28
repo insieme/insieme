@@ -86,18 +86,18 @@ namespace core {
 
 
 
-	// ------------------------------------ A class representing type parameter lists  ------------------------------
+	// ------------------------------------ A class representing a list of types  ------------------------------
 
 	/**
 	 * The accessor associated to an type parameter list.
 	 */
-	IR_LIST_NODE_ACCESSOR(TypeParamList, Support, Type, Parameters)
+	IR_LIST_NODE_ACCESSOR(Types, Support, Type, Types)
 	};
 
 	/**
 	 * A node type representing a list of type parameters.
 	 */
-	IR_NODE(TypeParamList, Support)
+	IR_NODE(Types, Support)
 	protected:
 
 		/**
@@ -117,8 +117,8 @@ namespace core {
 		 * @param types the types to be included within the requested type parameter list
 		 * @return the requested type instance managed by the given manager
 		 */
-		static TypeParamListPtr get(NodeManager& manager, const TypeList& types) {
-			return manager.get(TypeParamList(convertList(types)));
+		static TypesPtr get(NodeManager& manager, const TypeList& types) {
+			return manager.get(Types(convertList(types)));
 		}
 	};
 
@@ -130,7 +130,7 @@ namespace core {
 	/**
 	 * The accessor associated to generic types.
 	 */
-	IR_NODE_ACCESSOR(GenericType, Type, StringValue, TypeParamList, IntTypeParamList)
+	IR_NODE_ACCESSOR(GenericType, Type, StringValue, Types, IntTypeParams)
 		/**
 		 * Obtains the name of this generic type.
 		 */
@@ -139,12 +139,19 @@ namespace core {
 		/**
 		 * Obtains the list of type parameters of this generic type.
 		 */
-		IR_NODE_PROPERTY(TypeParamList, TypeParameter, 1);
+		IR_NODE_PROPERTY(Types, TypeParameter, 1);
 
 		/**
 		 * Obtains the list of int-type parameters of this generic type.
 		 */
-		IR_NODE_PROPERTY(IntTypeParamList, IntTypeParameter, 2);
+		IR_NODE_PROPERTY(IntTypeParams, IntTypeParameter, 2);
+
+		/**
+		 * Obtains the name portion of this generic type.
+		 */
+		const string& getFamilyName() const {
+			return getName()->getValue();
+		}
 	};
 
 	/**
@@ -163,7 +170,7 @@ namespace core {
 		 * @param typeParams	the type parameters of this type, concrete or variable
 		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 		 */
-		GenericType(const NodeType type, const StringValuePtr& name, const TypeParamListPtr& typeParams, const IntTypeParamListPtr& intTypeParams)
+		GenericType(const NodeType type, const StringValuePtr& name, const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams)
 			: Type(type, name, typeParams, intTypeParams) {}
 
 		/**
@@ -194,7 +201,7 @@ namespace core {
 		 * @param intTypeParams	the integer-type parameters of this type, concrete or variable
 		 */
 		static GenericTypePtr get(NodeManager& manager, const StringValuePtr& name,
-				const TypeParamListPtr& typeParams, const IntTypeParamListPtr& intTypeParams) {
+				const TypesPtr& typeParams, const IntTypeParamsPtr& intTypeParams) {
 			return manager.get(GenericType(name, typeParams, intTypeParams));
 		}
 
@@ -213,7 +220,7 @@ namespace core {
 				const string& name,
 				const TypeList& typeParams = TypeList(),
 				const IntParamList& intTypeParams = IntParamList()) {
-			return get(manager, StringValue::get(manager, name),TypeParamList::get(manager, typeParams), IntTypeParamList::get(manager, intTypeParams));
+			return get(manager, StringValue::get(manager, name),Types::get(manager, typeParams), IntTypeParams::get(manager, intTypeParams));
 		}
 
 	};
@@ -329,11 +336,11 @@ namespace core {
 	 * The first is forming a list of parameters, the second the return type and the last marks
 	 * function types to be pure or closures.
 	 */
-	IR_NODE_ACCESSOR(FunctionType, Type, TypeParamList, Type, BoolValue)
+	IR_NODE_ACCESSOR(FunctionType, Type, Types, Type, BoolValue)
 		/**
 		 * Obtains the list of parameters required for invoking functions of this type.
 		 */
-		IR_NODE_PROPERTY(TypeParamList, ParameterTypes, 0);
+		IR_NODE_PROPERTY(Types, ParameterTypes, 0);
 
 		/**
 		 * Obtains the return type of the represented function type.
@@ -378,7 +385,7 @@ namespace core {
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType, bool plain = true) {
-			return manager.get(FunctionType(TypeParamList::get(manager, toVector(paramType)), returnType, BoolValue::get(manager, plain)));
+			return manager.get(FunctionType(Types::get(manager, toVector(paramType)), returnType, BoolValue::get(manager, plain)));
 		}
 
 		/**
@@ -393,7 +400,7 @@ namespace core {
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypeList& parameterTypes, const TypePtr& returnType, bool plain = true){
-			return manager.get(FunctionType(TypeParamList::get(manager, parameterTypes), returnType, BoolValue::get(manager, plain)));
+			return manager.get(FunctionType(Types::get(manager, parameterTypes), returnType, BoolValue::get(manager, plain)));
 		}
 
 	};
@@ -526,6 +533,20 @@ namespace core {
 		 * Obtains a reference the underlying recursive type definition.
 		 */
 		IR_NODE_PROPERTY(RecTypeDefinition, Definition, 1);
+
+		/**
+		 * Unrolls this recursive type.
+		 */
+		TypePtr unroll(NodeManager& manager) const {
+			return (*getDefinition()).unrollOnce(manager, getTypeVariable());
+		}
+
+		/**
+		 * Unrolls this recursive type once.
+		 */
+		TypePtr unroll() const {
+			return unroll(NodeAccessor<Derived,Ptr>::getNode().getNodeManager());
+		}
 	};
 
 	/**
@@ -560,20 +581,6 @@ namespace core {
 		 */
 		static RecTypePtr get(NodeManager& manager, const TypeVariablePtr& typeVariable, const RecTypeDefinitionPtr& definition) {
 			return manager.get(RecType(typeVariable, definition));
-		}
-
-		/**
-		 * Unrolls this recursive type once.
-		 */
-		TypePtr unroll() const {
-			return unroll(getNodeManager());
-		}
-
-		/**
-		 * Unrolls this recursive type.
-		 */
-		TypePtr unroll(NodeManager& manager) const {
-			return (*getDefinition()).unrollOnce(manager, getTypeVariable());
 		}
 
 	};

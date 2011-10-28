@@ -59,7 +59,7 @@ namespace {
 	/**
 	 * A use-once check for declared variables.
 	 */
-	class VarDeclarationCheck : public ASTVisitor<void, Address> {
+	class VarDeclarationCheck : public IRVisitor<void, Address> {
 
 		/**
 		 * The set of currently declared variables.
@@ -74,7 +74,7 @@ namespace {
 	public:
 
 		VarDeclarationCheck(VariableSet& predefined)
-			: ASTVisitor<void, Address>(false), declaredVariables(predefined), undeclaredVariableUsage() {}
+			: IRVisitor<void, Address>(false), declaredVariables(predefined), undeclaredVariableUsage() {}
 
 		std::vector<VariableAddress>& getUndeclaredVariableUsages() {
 			return undeclaredVariableUsage;
@@ -167,7 +167,7 @@ namespace {
 		 */
 		void visitBindExpr(const BindExprAddress& cur) {
 			// get list of parameters
-			const vector<VariablePtr>& params = cur->getParameters();
+			const vector<VariablePtr>& params = cur->getParameters()->getElements();
 
 			// check call expressions
 			const CallExprAddress call =
@@ -243,12 +243,12 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 	OptionalMessageList res;
 
 	VariableSet recFunctions;
-	for_each(lambdaDef->getDefinitions(), [&recFunctions](const std::pair<VariablePtr, LambdaPtr>& cur) {
-		recFunctions.insert(cur.first);
+	for_each(lambdaDef->getDefinitions(), [&recFunctions](const LambdaBindingPtr& cur) {
+		recFunctions.insert(cur->getVariable());
 	});
 
 	int offset = 0;
-	for_each(lambdaDef->getDefinitions(), [&](const std::pair<VariablePtr, LambdaPtr>& cur) {
+	for_each(lambdaDef->getDefinitions(), [&](const LambdaBindingPtr& cur) {
 
 		// assemble set of defined variables
 		VariableSet declared;
@@ -257,7 +257,7 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 		declared.insert(recFunctions.begin(), recFunctions.end());
 
 		// add parameters
-		auto paramList = cur.second->getParameterList();
+		auto paramList = cur->getLambda()->getParameterList();
 		declared.insert(paramList.begin(), paramList.end());
 
 		// run check on body ...
@@ -276,7 +276,7 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 
 namespace {
 
-	class SingleDeclarationCheck : public ASTCheck {
+	class SingleDeclarationCheck : public IRCheck {
 
 		/**
 		 * The type used to link variables to the node containing their declaration.
@@ -293,7 +293,7 @@ namespace {
 		/**
 		 * A simple constructor for this check.
 		 */
-		SingleDeclarationCheck() : ASTCheck(false) {}
+		SingleDeclarationCheck() : IRCheck(false) {}
 
 		/**
 		 * Visits a declaration - if the same variable has already been
@@ -339,7 +339,7 @@ namespace {
 			OptionalMessageList res;
 
 			// test local declarations
-			for_each(cur->getLocalDecls(), [&](const DeclarationStmtPtr& decl) {
+			for_each(cur.getAddressedNode()->getLocalDecls()->getElements(), [&](const DeclarationStmtPtr& decl) {
 				testVariable(res, decl->getVariable(), cur, cur.getAddressedNode());
 			});
 

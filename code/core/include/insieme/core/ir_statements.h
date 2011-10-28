@@ -461,7 +461,7 @@ namespace core {
 		 * @param elseStmt the statement evaluated if the condition evaluates to false
 		 * @return the requested type instance managed by the given manager
 		 */
-		static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& thenStmt, const StatementPtr& elseStmt) {
+		static IfStmtPtr get(NodeManager& manager, const ExpressionPtr& condition, const CompoundStmtPtr& thenStmt, const CompoundStmtPtr& elseStmt) {
 			return manager.get(IfStmt(condition, thenStmt, elseStmt));
 		}
 

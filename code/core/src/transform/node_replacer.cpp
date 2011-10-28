@@ -40,6 +40,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_address.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -409,7 +410,7 @@ private:
 		}
 
 /*		if(const LiteralPtr& literal = dynamic_pointer_cast<const Literal>(call->getFunctionExpr()))
-					if (manager.getBasicGenerator().isBuiltIn(literal))
+					if (manager.getLangBasic().isBuiltIn(literal))
 			std::cout << " -> " << literal << " " << call->getArguments() << std::endl;*/
 		if (fun->getNodeType() == NT_Literal) {
 			const CallExprPtr& newCall = handleCallToLiteral(call->getType(), static_pointer_cast<const Literal>(fun), newArgs);
@@ -426,7 +427,7 @@ private:
 
 	CallExprPtr handleCallToLamba(const TypePtr& resType, const LambdaExprPtr& lambda, const ExpressionList& args) {
 
-		const Lambda::ParamList& params = lambda->getParameterList();
+		const VariableList& params = lambda->getParameterList()->getParameters();
 		if (params.size() != args.size()) {
 			// wrong number of arguments => don't touch this!
 			return builder.callExpr(resType, lambda, args);
@@ -439,7 +440,7 @@ private:
 		}
 
 		// create replacement map
-		Lambda::ParamList newParams;
+		VariableList newParams;
 		insieme::utils::map::PointerMap<TypePtr, TypePtr> tyMap;
 		insieme::utils::map::PointerMap<VariablePtr, VariablePtr> map = replacements;
 		for_range(make_paired_range(params, args), [&](const std::pair<VariablePtr, ExpressionPtr>& cur) {
@@ -463,11 +464,10 @@ private:
 				map[cur.first] = param;
 			}
 
-
 			newParams.push_back(param);
 		});
 		// construct new body
-		StatementPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
+		CompoundStmtPtr newBody = replaceVarsRecursiveGen(manager, lambda->getBody(), map, limitScope, functor);
 
 		// obtain return type
 		TypeList typeList;
@@ -477,7 +477,7 @@ private:
 
 		TypePtr returnType = getSmallestCommonSuperType(typeList);
 		if (!returnType) {
-			returnType = builder.getBasicGenerator().getUnit();
+			returnType = builder.getLangBasic().getUnit();
 		}
 
 		// assemble new lambda
@@ -498,22 +498,22 @@ private:
 		// only supported for function types
 		assert(literal->getType()->getNodeType() == NT_FunctionType);
 		// do not touch build-in literals
-		if (manager.getBasicGenerator().isBuiltIn(literal)) {
+		if (manager.getLangBasic().isBuiltIn(literal)) {
 			// use type inference for the return type
 
-			if(manager.getBasicGenerator().isCompositeRefElem(literal)) {
+			if(manager.getLangBasic().isCompositeRefElem(literal)) {
 				return static_pointer_cast<const CallExpr>(builder.refMember(args.at(0),
 						static_pointer_cast<const Literal>(args.at(1))->getValue()));
 			}
-			if(manager.getBasicGenerator().isCompositeMemberAccess(literal)) {
+			if(manager.getLangBasic().isCompositeMemberAccess(literal)) {
 				return static_pointer_cast<const CallExpr>(builder.accessMember(args.at(0),
 						static_pointer_cast<const Literal>(args.at(1))->getValue()));
 			}
-			if(manager.getBasicGenerator().isTupleRefElem(literal)) {
+			if(manager.getLangBasic().isTupleRefElem(literal)) {
 //std::cout << "TRRRRRRRRR " << args.at(0)->getType() << " < " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.refComponent(args.at(0), args.at(1)));
 			}
-			if(manager.getBasicGenerator().isTupleMemberAccess(literal)) {
+			if(manager.getLangBasic().isTupleMemberAccess(literal)) {
 //std::cout << "BAMBAM " << args.at(0)->getType() << " > " << args << std::endl;
 				return static_pointer_cast<const CallExpr>(builder.accessComponent(args.at(0), args.at(1)));
 			}
@@ -584,7 +584,7 @@ private:
 				const TypePtr& type = analysis::getRepresentedType(literal->getType());
 
 				// update type
-				return manager.basic.getTypeLiteral(type);
+				return IRBuilder(manager).getTypeLiteral(type);
 			}
 		}
 
@@ -715,7 +715,7 @@ NodePtr replaceVars(NodeManager& mgr, const NodePtr& root, const insieme::utils:
 std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& builder){
 	return [&builder](const NodePtr& node)->NodePtr {
 		NodePtr res = node;
-		const lang::BasicGenerator& basic = builder.getBasicGenerator();
+		const lang::BasicGenerator& basic = builder.getLangBasic();
 
 		// update init undefined
 		if(const DeclarationStmtPtr& decl = dynamic_pointer_cast<const DeclarationStmt>(node)) {
@@ -728,13 +728,13 @@ std::function<NodePtr (const NodePtr&)> getVarInitUpdater(const IRBuilder& build
 					if(const CallExprPtr& undefined = dynamic_pointer_cast<const CallExpr>(init->getArgument(0))) {
 						if(basic.isUndefined(undefined->getFunctionExpr()))
 							res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.callExpr(varTy->getElementType(),
-									basic.getUndefined(), basic.getTypeLiteral(varTy->getElementType()))));
+									basic.getUndefined(), builder.getTypeLiteral(varTy->getElementType()))));
 					}
 				}
 				// handle non ref variables
 				if((init->getType() != var->getType()) && basic.isUndefined(fun)) {
 					const TypePtr varTy = var->getType();
-					res = builder.declarationStmt(var, builder.callExpr(varTy, fun, basic.getTypeLiteral(varTy)));
+					res = builder.declarationStmt(var, builder.callExpr(varTy, fun, builder.getTypeLiteral(varTy)));
 				}
 			}
 		}

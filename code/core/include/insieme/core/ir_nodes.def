@@ -245,8 +245,8 @@ AST_TERMINAL(Program, Node)
 
 
 AST_NODE(Support, Node)
-AST_TERMINAL(IntTypeParamList, Support)
-AST_TERMINAL(TypeParamList, Support)
+AST_TERMINAL(IntTypeParams, Support)
+AST_TERMINAL(Types, Support)
 
 AST_TERMINAL(RecTypeBinding, Support)
 AST_TERMINAL(RecTypeDefinition, Support)
@@ -256,6 +256,8 @@ AST_TERMINAL(LambdaBinding, Support)
 AST_TERMINAL(LambdaDefinition, Support)
 
 AST_TERMINAL(NamedType, Support)
+AST_TERMINAL(NamedValue, Support)
+AST_TERMINAL(NamedValues, Support)
 
 AST_TERMINAL(SwitchCase, Support)
 AST_TERMINAL(SwitchCases, Support)

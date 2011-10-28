@@ -42,6 +42,8 @@
 #include <boost/spirit/include/phoenix.hpp>
 #include <boost/spirit/include/phoenix_operator.hpp>
 
+#include "insieme/core/ir_builder.h"
+
 // ----------------------- SPIRIT QI/PHOENIX survival hints
 // What to do if
 // - error: invalid initialization ... --> check whether ph::ref is used to pass references
@@ -60,84 +62,84 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-IdentifierPtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::identifierHelp(char start, const vector<char>& tail) {
-    return Identifier::get(nodeMan, string(&start, &start+1) + string(tail.begin(), tail.end()));
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+StringValuePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::identifierHelp(char start, const vector<char>& tail) {
+    return StringValue::get(nodeMan, string(&start, &start+1) + string(tail.begin(), tail.end()));
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::typeVarLabelHelp(const IdentifierPtr& id) {
-    return TypeVariable::getFromId(nodeMan, id);
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::typeVarLabelHelp(const StringValuePtr& id) {
+    return TypeVariable::get(nodeMan, id);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-IntTypeParamPtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::intTypeParamLabelHelp(const char symbol) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+IntTypeParamPtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::intTypeParamLabelHelp(const char symbol) {
     return VariableIntTypeParam::get(nodeMan, symbol);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::typeVariableHelp(const TypePtr& type) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::typeVariableHelp(const TypePtr& type) {
     return TypePtr(type);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-IntTypeParamPtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::concreteTypeParamHelp(const size_t value) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+IntTypeParamPtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::concreteTypeParamHelp(const size_t value) {
     return ConcreteIntTypeParam::get(nodeMan, value);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-IntTypeParamPtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::infiniteTypeParamHelp() {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+IntTypeParamPtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::infiniteTypeParamHelp() {
     return InfiniteIntTypeParam::get(nodeMan);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::arrayTypeHelp(const TypePtr& type, const IntTypeParamPtr& nDims) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::arrayTypeHelp(const TypePtr& type, const IntTypeParamPtr& nDims) {
     return ArrayType::get(nodeMan, type, nDims);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::vectorTypeHelp(const TypePtr& type, const IntTypeParamPtr& nElems) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::vectorTypeHelp(const TypePtr& type, const IntTypeParamPtr& nElems) {
     return VectorType::get(nodeMan, type, nElems);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::refTypeHelp(const TypePtr& type) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::refTypeHelp(const TypePtr& type) {
     return RefType::get(nodeMan, type);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::channelTypeHelp(const TypePtr& type, const IntTypeParamPtr& size) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::channelTypeHelp(const TypePtr& type, const IntTypeParamPtr& size) {
     return ChannelType::get(nodeMan, type, size);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::genericTypeHelp(const IdentifierPtr& name, const vector<TypePtr>& typeParams,
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::genericTypeHelp(const StringValuePtr& name, const vector<TypePtr>& typeParams,
         const vector<IntTypeParamPtr>& intTypeParams, const TypePtr& baseType) {
-    return GenericType::getFromID(nodeMan, name, typeParams, intTypeParams, baseType);
+    return IRBuilder(nodeMan).genericType(name, typeParams, intTypeParams);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::tupleTypeHelp(const vector<TypePtr>& types) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::tupleTypeHelp(const vector<TypePtr>& types) {
     return TupleType::get(nodeMan, types);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::functionTypeHelp(const vector<TypePtr>& argTypes, const TypePtr& retType, bool plain) {
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::functionTypeHelp(const vector<TypePtr>& argTypes, const TypePtr& retType, bool plain) {
     return FunctionType::get(nodeMan, argTypes, retType, plain);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::structTypeHelp(const vector<std::pair<IdentifierPtr,TypePtr> >& entries) {
-    return StructType::get(nodeMan, entries);
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::structTypeHelp(const vector<std::pair<StringValuePtr,TypePtr> >& entries) {
+	return IRBuilder(nodeMan).structType(entries);
 }
 
-template<class TypePtr, class IntTypeParamPtr, class IdentifierPtr>
-TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>::unionTypeHelp(const vector<std::pair<IdentifierPtr,TypePtr> >& entries) {
-    return UnionType::get(nodeMan, entries);
+template<class TypePtr, class IntTypeParamPtr, class StringValuePtr>
+TypePtr TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>::unionTypeHelp(const vector<std::pair<StringValuePtr,TypePtr> >& entries) {
+	return IRBuilder(nodeMan).unionType(entries);
 }
 
 template<typename T, typename U, typename V>
-qi::rule<ParseIt, V()>  TypeGrammar<T, U, V>::getIdentifier() {
+qi::rule<ParseIt, V()>  TypeGrammar<T, U, V>::getStringValue() {
     return ( ascii::alpha >> *qi::char_("a-zA-Z_0-9") )             [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::identifierHelp, this, qi::_1, qi::_2) ];
 }
 
@@ -207,13 +209,13 @@ qi::rule<ParseIt, T(), qi::locals<vector<T>>, qi::space_type> TypeGrammar<T, U, 
 template<typename T, typename U, typename V>
 qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> TypeGrammar<T, U, V>::getStructType() {
     return ( qi::lit("struct<") >>
-        (( identifier >> ':' >> typeRule )                          [ ph::push_back(qi::_a, ph::construct<std::pair<IdentifierPtr,TypePtr>>(qi::_1, qi::_2)) ]
+        (( identifier >> ':' >> typeRule )                          [ ph::push_back(qi::_a, ph::construct<std::pair<StringValuePtr,TypePtr>>(qi::_1, qi::_2)) ]
         % ',' ) >> '>' )                                            [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::structTypeHelp, this, qi::_a) ];
 }
 
 template<typename T, typename U, typename V>
 qi::rule<ParseIt, T(), qi::locals<vector<std::pair<V, T> > >, qi::space_type> TypeGrammar<T, U, V>::getUnionType() {
-    return ( qi::lit("union<") >> (( identifier >> ':' >> typeRule )[ ph::push_back(qi::_a, ph::construct<std::pair<IdentifierPtr,TypePtr>>(qi::_1, qi::_2)) ]
+    return ( qi::lit("union<") >> (( identifier >> ':' >> typeRule )[ ph::push_back(qi::_a, ph::construct<std::pair<StringValuePtr,TypePtr>>(qi::_1, qi::_2)) ]
         % ',' ) >> '>' )                                            [ qi::_val = ph::bind(&TypeGrammar<T, U, V>::unionTypeHelp, this, qi::_a) ];
 }
 
@@ -252,7 +254,7 @@ TypeGrammar<T, U, V>::TypeGrammar(NodeManager& nMan) : TypeGrammar::base_type(ty
 
 	// terminals, no skip parser
 
-	identifier = getIdentifier();
+	identifier = getStringValue();
 	
 	typeVarLabel = getTypeVarLabel();
 
@@ -303,7 +305,7 @@ TypeGrammar<T, U, V>::TypeGrammar(NodeManager& nMan) : TypeGrammar::base_type(ty
 }
 
 // explicit template instantiation
-template struct TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr>;
+template struct TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr>;
 
 } // namespace parse 
 } // namespace core

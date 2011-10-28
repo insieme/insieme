@@ -49,7 +49,7 @@ namespace core {
 namespace parse {
 
 // variable table implementation, used by ExpressionGrammar and ExpressionGrammarPart
-VariablePtr VariableTable::get(const TypePtr& typ, const IdentifierPtr& id) {
+VariablePtr VariableTable::get(const TypePtr& typ, const StringValuePtr& id) {
     auto entry = table.find(id);
     if(entry != table.end()) {
         assert(entry->second->getType() == typ);
@@ -61,7 +61,7 @@ VariablePtr VariableTable::get(const TypePtr& typ, const IdentifierPtr& id) {
     return newVar;
 }
 
-VariablePtr VariableTable::lookup(const IdentifierPtr& id) {
+VariablePtr VariableTable::lookup(const StringValuePtr& id) {
     auto entry = table.find(id);
 
     if(entry == table.end()) {
@@ -83,7 +83,7 @@ IRParser::IRParser(NodeManager& nodeMan) : nodeMan(nodeMan) {
 
 TypePtr IRParser::parseType(const std::string& input) {
 	TypePtr result;
-	TypeGrammar<TypePtr, IntTypeParamPtr, IdentifierPtr> typeGrammar(nodeMan);
+	TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr> typeGrammar(nodeMan);
 	auto startIt = input.cbegin(), endIt = input.cend();
 	bool parse_result = qi::phrase_parse(startIt, endIt, typeGrammar, qi::space, result);
 	parse_result = parse_result && (startIt == endIt);
@@ -93,7 +93,7 @@ TypePtr IRParser::parseType(const std::string& input) {
 
 ExpressionPtr IRParser::parseExpression(const std::string& input) {
 	ExpressionPtr result;
-	ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr> exprGrammar(nodeMan);
+	ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr> exprGrammar(nodeMan);
 	auto startIt = input.cbegin(), endIt = input.cend();
 	bool parse_result = qi::phrase_parse(startIt, endIt, exprGrammar, qi::space, result);
 	parse_result = parse_result && (startIt == endIt);
@@ -103,7 +103,7 @@ ExpressionPtr IRParser::parseExpression(const std::string& input) {
 
 StatementPtr IRParser::parseStatement(const std::string& input) {
     StatementPtr result;
-    StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr> stmtGrammar(nodeMan);
+    StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr> stmtGrammar(nodeMan);
     auto startIt = input.cbegin(), endIt = input.cend();
     bool parse_result = qi::phrase_parse(startIt, endIt, stmtGrammar, qi::space, result);
     parse_result = parse_result && (startIt == endIt);

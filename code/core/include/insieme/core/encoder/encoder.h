@@ -42,7 +42,7 @@
 #include <boost/type_traits/is_same.hpp>
 
 #include "insieme/utils/numeric_cast.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/type_utils.h"
 
 namespace insieme {
@@ -282,7 +282,7 @@ namespace encoder {
 		template<> \
 		struct type_factory<type> { \
 			core::TypePtr operator()(core::NodeManager& manager) const { \
-				return manager.basic.get ## irtype(); \
+				return manager.getLangBasic().get ## irtype(); \
 			} \
 		}; \
 		\
@@ -394,7 +394,7 @@ namespace encoder {
 
 			// check type of literal
 			const core::GenericTypePtr& genType = static_pointer_cast<const GenericType>(type);
-			return genType->getFamilyName() == "type" &&
+			return genType->getName()->getValue() == "type" &&
 					genType->getTypeParameter().size() == static_cast<std::size_t>(1) &&
 					genType->getIntTypeParameter().empty();
 		}

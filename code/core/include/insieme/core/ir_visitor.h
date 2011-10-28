@@ -78,7 +78,7 @@ class IRVisitor {
 	 * by this visitor. Since a large portion of all nodes are types, pruning those
 	 * saves a considerable amount of time when iterating through a IR DAG.
 	 */
-	const bool visitTypes;
+	const bool visitTypeNodes;
 
 	/**
 	 * A functor used to perform static casts on the handled pointer type.
@@ -97,7 +97,7 @@ public:
 	 *
 	 * @param a flag determining whether the resulting visitor will visit types or not.
 	 */
-	IRVisitor(bool visitTypes) : visitTypes(visitTypes), cast() {}
+	IRVisitor(bool visitTypes) : visitTypeNodes(visitTypes), cast() {}
 
 	/**
 	 * A virtual destructor to support handling proper sub-types.
@@ -115,7 +115,7 @@ public:
 		assert ( element && "Cannot visit NULL element!");
 
 		// avoid visiting types if not necessary
-		if (!visitTypes && element->getNodeCategory() == NC_Type) {
+		if (!visitTypeNodes && element->getNodeCategory() == NC_Type) {
 			return ReturnType();
 		}
 
@@ -143,7 +143,7 @@ public:
 	 * Determines whether this visitor is visiting types or not.
 	 */
 	bool isVisitingTypes() const {
-		return visitTypes;
+		return visitTypeNodes;
 	}
 
 	// ------------------ protected visitor methods -----------------------

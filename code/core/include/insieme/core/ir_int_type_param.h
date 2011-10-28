@@ -233,13 +233,13 @@ namespace core {
 	/**
 	 * The accessor associated to an int-type parameter list.
 	 */
-	IR_LIST_NODE_ACCESSOR(IntTypeParamList, Support, IntTypeParam, Parameters)
+	IR_LIST_NODE_ACCESSOR(IntTypeParams, Support, IntTypeParam, Parameters)
 	};
 
 	/**
 	 * A node type representing a list of int-type parameters.
 	 */
-	IR_NODE(IntTypeParamList, Support)
+	IR_NODE(IntTypeParams, Support)
 	protected:
 
 		/**
@@ -259,8 +259,8 @@ namespace core {
 		 * @param params the list of parameters to be included
 		 * @return the requested instance managed by the given manager
 		 */
-		static IntTypeParamListPtr get(NodeManager& manager, const IntParamList& params) {
-			return manager.get(IntTypeParamList(convertList(params)));
+		static IntTypeParamsPtr get(NodeManager& manager, const IntParamList& params) {
+			return manager.get(IntTypeParams(convertList(params)));
 		}
 	};
 

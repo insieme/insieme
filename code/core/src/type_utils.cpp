@@ -357,7 +357,7 @@ namespace {
 				const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
 
 				// check family names
-				if (genericTypeA->getFamilyName() != genericTypeB->getFamilyName()) {
+				if (*genericTypeA->getName() != *genericTypeB->getName()) {
 					return unmatchable;
 				}
 
@@ -369,8 +369,8 @@ namespace {
 				// ---- unify int type parameter ---
 
 				// get lists
-				vector<IntTypeParamPtr> paramsA = genericTypeA->getIntTypeParameter();
-				vector<IntTypeParamPtr> paramsB = genericTypeB->getIntTypeParameter();
+				vector<IntTypeParamPtr> paramsA = genericTypeA->getIntTypeParameter()->getParameters();
+				vector<IntTypeParamPtr> paramsB = genericTypeB->getIntTypeParameter()->getParameters();
 
 				// check number of arguments ...
 				if (paramsA.size() != paramsB.size()) {
@@ -615,7 +615,7 @@ TypePtr tryDeduceReturnType(const FunctionTypePtr& funType, const TypeList& argu
 	NodeManager& manager = funType->getNodeManager();
 
 	// try deducing variable instantiations the argument types
-	auto varInstantiation = analysis::getTypeVariableInstantiation(manager, funType->getParameterTypes(), argumentTypes);
+	auto varInstantiation = analysis::getTypeVariableInstantiation(manager, funType->getParameterTypes()->getTypes(), argumentTypes);
 
 	// check whether derivation was successful
 	if (!varInstantiation) {
@@ -642,7 +642,7 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 
 	}
 	// return null ptr
-	return unitOnFail ? funType->getNodeManager().getBasicGenerator().getUnit() : TypePtr();
+	return unitOnFail ? funType->getNodeManager().getLangBasic().getUnit() : TypePtr();
 }
 
 
@@ -653,11 +653,11 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
 namespace {
 
 	const TypeSet getSuperTypes(const TypePtr& type) {
-		return type->getNodeManager().getBasicGenerator().getDirectSuperTypesOf(type);
+		return type->getNodeManager().getLangBasic().getDirectSuperTypesOf(type);
 	}
 
 	const TypeSet getSubTypes(const TypePtr& type) {
-		return type->getNodeManager().getBasicGenerator().getDirectSubTypesOf(type);
+		return type->getNodeManager().getLangBasic().getDirectSubTypesOf(type);
 	}
 
 	template<typename Extractor>
@@ -754,7 +754,7 @@ bool isSubTypeOf(const TypePtr& subType, const TypePtr& superType) {
 		VectorTypePtr vector = static_pointer_cast<const VectorType>(subType);
 
 		// the only potential super type is an array of the same element type
-		ASTBuilder builder(vector->getNodeManager());
+		IRBuilder builder(vector->getNodeManager());
 		return *superType == *builder.arrayType(vector->getElementType());
 	}
 
@@ -824,7 +824,7 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 		VectorTypePtr vector = static_pointer_cast<const VectorType>(typeA);
 
 		// the only potential super type is an array of the same element type
-		ASTBuilder builder(vector->getNodeManager());
+		IRBuilder builder(vector->getNodeManager());
 		ArrayTypePtr array = builder.arrayType(vector->getElementType());
 		if (isSubTypeOf(typeB, array)) {
 			return array;
@@ -872,7 +872,7 @@ TypePtr getJoinMeetType(const TypePtr& typeA, const TypePtr& typeB, bool join) {
 		}
 
 		// construct resulting type
-		ASTBuilder builder(funTypeA->getNodeManager());
+		IRBuilder builder(funTypeA->getNodeManager());
 		bool plane = funTypeA->isPlain() && funTypeB->isPlain();
 		return builder.functionType(args, resType, plane);
 	}

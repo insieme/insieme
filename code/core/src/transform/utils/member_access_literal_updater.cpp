@@ -70,7 +70,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			const StringValuePtr& id = static_pointer_cast<const Literal>(call->getArgument(1))->getValue();
 			const TypePtr& type = structTy->getTypeOfMember(id);
 			if(call->getArgument(2)->getType() != type || call->getType() != type)
-				res = builder.callExpr(type, fun, call->getArgument(0), call->getArgument(1), BASIC.getTypeLiteral(type));
+				res = builder.callExpr(type, fun, call->getArgument(0), call->getArgument(1), builder.getTypeLiteral(type));
 		}
 
 		if(BASIC.isCompositeRefElem(fun)) {
@@ -82,7 +82,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 			const RefTypePtr& refTy = builder.refType(structTy->getTypeOfMember(id));
 			if(call->getArgument(2)->getType() != refTy->getElementType() || call->getType() != refTy)
 				res = builder.callExpr(refTy, fun, call->getArgument(0), call->getArgument(1),
-					BASIC.getTypeLiteral(refTy->getElementType()));
+						builder.getTypeLiteral(refTy->getElementType()));
 		}
 
 		if(BASIC.isSubscriptOperator(fun)) {
@@ -125,7 +125,7 @@ if(!tupleTy) //TODO remove dirty workaround
 
 
 			const TypePtr& retTy = isRef ? builder.refType(elemTy) : elemTy;
-			const LiteralPtr& elemTyLit = BASIC.getTypeLiteral(elemTy);
+			const LiteralPtr& elemTyLit = builder.getTypeLiteral(elemTy);
 
 			if(*call->getType() != *retTy || *call->getArgument(2)->getType() != *elemTyLit->getType()) {
 				res = builder.callExpr(retTy, isRef ? BASIC.getTupleRefElem() : BASIC.getTupleMemberAccess(), call->getArgument(0), call->getArgument(1),

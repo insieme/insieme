@@ -53,10 +53,10 @@ OptionalMessageList KeywordCheck::visitGenericType(const GenericTypeAddress& add
 
 	OptionalMessageList res;
 
-	if ((address->getFamilyName() == "vector" && address->getNodeType()!=NT_VectorType) ||
-		(address->getFamilyName() == "array" && address->getNodeType()!=NT_ArrayType) ||
-		(address->getFamilyName() == "ref" && address->getNodeType()!=NT_RefType) ||
-		(address->getFamilyName() == "channel" && address->getNodeType()!=NT_ChannelType)) {
+	if ((address->getName()->getValue() == "vector" && address->getNodeType()!=NT_VectorType) ||
+		(address->getName()->getValue() == "array" && address->getNodeType()!=NT_ArrayType) ||
+		(address->getName()->getValue() == "ref" && address->getNodeType()!=NT_RefType) ||
+		(address->getName()->getValue() == "channel" && address->getNodeType()!=NT_ChannelType)) {
 
 		add(res, Message(address,
 				EC_TYPE_ILLEGAL_USE_OF_TYPE_KEYWORD,
@@ -76,7 +76,7 @@ OptionalMessageList CallExprTypeCheck::visitCallExpr(const CallExprAddress& addr
 	assert( address->getFunctionExpr()->getType()->getNodeType() == NT_FunctionType && "Illegal function expression!");
 
 	const FunctionTypePtr& functionType = CAST(FunctionType, funType);
-	const TypeList& parameterTypes = functionType->getParameterTypes();
+	const TypeList& parameterTypes = functionType->getParameterTypes()->getTypes();
 	const TypePtr& returnType = functionType->getReturnType();
 
 	// Obtain argument type
@@ -141,7 +141,7 @@ OptionalMessageList FunctionTypeCheck::visitLambdaExpr(const LambdaExprAddress& 
 	};
 
 	TypeList param;
-	transform(address->getParameterList(), back_inserter(param), extractType);
+	transform(address.getAddressedNode()->getParameterList()->getElements(), back_inserter(param), extractType);
 
 	FunctionTypePtr isType = address->getLambda()->getType();
 	TypePtr result = address->getLambda()->getType()->getReturnType();
@@ -169,7 +169,7 @@ OptionalMessageList BindExprTypeCheck::visitBindExpr(const BindExprAddress& addr
 	};
 
 	TypeList param;
-	transform(address->getParameters(), back_inserter(param), extractType);
+	transform(address.getAddressedNode()->getParameters()->getElements(), back_inserter(param), extractType);
 
 	TypePtr isType = address->getType();
 	TypePtr result = address->getCall()->getType();
@@ -272,11 +272,11 @@ OptionalMessageList IfConditionTypeCheck::visitIfStmt(const IfStmtAddress& addre
 
 	TypePtr conditionType = address->getCondition()->getType();
 
-	if (!manager.basic.isBool(conditionType)) {
+	if (!manager.getLangBasic().isBool(conditionType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
-								toString(*manager.basic.getBool()).c_str(),
+								toString(*manager.getLangBasic().getBool()).c_str(),
 								toString(*conditionType).c_str()),
 						Message::ERROR));
 	}
@@ -289,11 +289,11 @@ OptionalMessageList WhileConditionTypeCheck::visitWhileStmt(const WhileStmtAddre
 	OptionalMessageList res;
 
 	TypePtr conditionType = address->getCondition()->getType();
-	if (!manager.basic.isBool(conditionType)) {
+	if (!manager.getLangBasic().isBool(conditionType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_CONDITION_EXPR,
 						format("Invalid type of condition expression - expected: \n%s, actual: \n%s",
-								toString(*manager.basic.getBool()).c_str(),
+								toString(*manager.getLangBasic().getBool()).c_str(),
 								toString(*conditionType).c_str()),
 						Message::ERROR));
 	}
@@ -306,7 +306,7 @@ OptionalMessageList SwitchExpressionTypeCheck::visitSwitchStmt(const SwitchStmtA
 
 	OptionalMessageList res;
 	TypePtr switchType = address->getSwitchExpr()->getType();
-	if (!manager.basic.isInt(switchType)) {
+	if (!manager.getLangBasic().isInt(switchType)) {
 		add(res, Message(address,
 						EC_TYPE_INVALID_SWITCH_EXPR,
 						format("Invalid type of switch expression - expected: integral type, actual: \n%s",
@@ -322,12 +322,12 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 	OptionalMessageList res;
 
 	// extract type
-	core::StructTypePtr structType = static_pointer_cast<const StructType>(address->getType());
+	core::StructTypePtr structType = static_pointer_cast<const StructType>(address.getAddressedNode()->getType());
 
 	// check type of values within struct expression
-	for_each(address->getMembers(), [&](const core::StructExpr::Member& cur) {
-		core::TypePtr requiredType = structType->getTypeOfMember(cur.first);
-		core::TypePtr isType = cur.second->getType();
+	for_each(address.getAddressedNode()->getValues()->getNamedValues(), [&](const NamedValuePtr& cur) {
+		core::TypePtr requiredType = structType->getTypeOfMember(cur->getName());
+		core::TypePtr isType = cur->getValue()->getType();
 
 		if (*requiredType != *isType) {
 			add(res, Message(address,
@@ -346,7 +346,7 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 namespace {
 
 
-	OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const IdentifierPtr& identifier, const TypePtr& elementType, bool isRefVersion) {
+	OptionalMessageList checkMemberAccess(const NodeAddress& address, const ExpressionPtr& structExpr, const StringValuePtr& identifier, const TypePtr& elementType, bool isRefVersion) {
 
 		OptionalMessageList res;
 
@@ -415,8 +415,8 @@ OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAd
 	OptionalMessageList res;
 
 	// check whether it is a call to the member access expression
-	bool isMemberAccess = analysis::isCallOf(address.getAddressedNode(), manager.basic.getCompositeMemberAccess());
-	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.basic.getCompositeRefElem());
+	bool isMemberAccess = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getCompositeMemberAccess());
+	bool isMemberReferencing = analysis::isCallOf(address.getAddressedNode(), manager.getLangBasic().getCompositeRefElem());
 	if (!isMemberAccess && !isMemberReferencing) {
 		// no matching case
 		return res;
@@ -445,7 +445,7 @@ OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAd
 	// check type literal
 	TypePtr resultType;
 	if (GenericTypePtr genType = dynamic_pointer_cast<const GenericType>(elementType)) {
-		if (genType->getFamilyName() != "type" || genType->getTypeParameter().size() != 1) {
+		if (genType->getName()->getValue() != "type" || genType->getTypeParameter()->size() != 1) {
 			// invalid argument => leaf issues to argument type checker
 			return res;
 		}
@@ -460,7 +460,7 @@ OptionalMessageList MemberAccessElementTypeCheck::visitCallExpr(const CallExprAd
 
 	// extract the value of the literal
 	const LiteralPtr& identifierLiteral = static_pointer_cast<const Literal>(identifierExpr);
-	const IdentifierPtr memberName = Identifier::get(manager, identifierLiteral->getValue());
+	const StringValuePtr memberName = identifierLiteral->getValue();
 
 	// use common check routine
 	return checkMemberAccess(address, structExpr, memberName, resultType, isMemberReferencing);
@@ -477,14 +477,14 @@ OptionalMessageList BuiltInLiteralCheck::visitLiteral(const LiteralAddress& addr
 
 	// obtain literal
 	try {
-		LiteralPtr buildIn = manager.basic.getLiteral(address->getValue());
+		LiteralPtr buildIn = manager.getLangBasic().getLiteral(address->getValue()->getValue());
 
 		// check whether used one is special case of build-in version
 		if (*buildIn->getType() != *address->getType()) {
 			add(res, Message(address,
 					EC_TYPE_INVALID_TYPE_OF_LITERAL,
 					format("Deviating type of build in literal \n%s - expected: \n%s, actual: \n%s",
-							address->getValue().c_str(),
+							address->getValue()->getValue().c_str(),
 							toString(*buildIn->getType()).c_str(),
 							toString(*address->getType()).c_str()),
 					Message::WARNING));

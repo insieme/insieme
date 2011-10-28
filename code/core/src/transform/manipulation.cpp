@@ -479,7 +479,7 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 	// check parameters
 	const FunctionTypePtr& funType = static_pointer_cast<const FunctionType>(lambda->getType());
-	TypeList paramTypes = funType->getParameterTypes();
+	TypeList paramTypes = funType->getParameterTypes()->getTypes();
 	assert(index < paramTypes.size() && "Index out of bound - no such parameter!");
 
 	assert(isSubTypeOf(value->getType(), paramTypes[index]) && "Cannot substitute non-compatible value for specified parameter.");
@@ -488,22 +488,18 @@ LambdaExprPtr tryFixParameter(NodeManager& manager, const LambdaExprPtr& lambda,
 
 	const VariablePtr& param = lambda->getParameterList()[index];
 	ParameterFixer fixer(manager, param, value);
-	StatementPtr body = fixer.map(lambda->getBody());
+	CompoundStmtPtr body = fixer.map(lambda->getBody());
 
 	// create new function type
 	paramTypes.erase(paramTypes.begin() + index);
 	FunctionTypePtr newFunType = FunctionType::get(manager, paramTypes, funType->getReturnType(), true);
 
 	// create new parameter list
-	vector<VariablePtr> params = lambda->getParameterList();
+	vector<VariablePtr> params = lambda->getParameterList()->getParameters();
 	params.erase(params.begin() + index);
 
-	// build definitions
-	VariablePtr var = Variable::get(manager, newFunType, lambda->getVariable()->getId());
-	LambdaDefinition::Definitions defs;
-	defs.insert(std::make_pair(var, Lambda::get(manager, newFunType, params, body)));
-
-	return manager.get(LambdaExpr::get(manager, var, LambdaDefinition::get(manager, defs)));
+	// build resulting lambda
+	return LambdaExpr::get(manager, newFunType, params, body);
 }
 
 StatementPtr fixVariable(NodeManager& manager, const StatementPtr& statement, const VariablePtr& var, const ExpressionPtr& value) {
@@ -545,7 +541,7 @@ namespace {
 		}
 	};
 
-	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, IRBuilder::CaptureInits& captures,
+	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, IRBuilder::VarValueMapping& captures,
 			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
 		visitDepthFirstPrunable(StatementAddress(root), ldv);
@@ -575,7 +571,7 @@ namespace {
 
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments) {
 	IRBuilder build(manager);
-	IRBuilder::CaptureInits captures;
+	IRBuilder::VarValueMapping captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
@@ -583,7 +579,7 @@ BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::v
 
 BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments) {
 	IRBuilder build(manager);
-	IRBuilder::CaptureInits captures;
+	IRBuilder::VarValueMapping captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
 	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
@@ -615,14 +611,14 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 	assert(!lambda->isRecursive() && "I owe you the support for recursive functions!");
 
 	// update type
-	const FunctionTypePtr funType = static_pointer_cast<const FunctionType>(substitution->applyTo(lambda->getType()));
+	const FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(substitution->applyTo(lambda->getType()));
 
 	// update body
-	const StatementPtr body = static_pointer_cast<const Statement>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
+	const CompoundStmtPtr body = static_pointer_cast<CompoundStmtPtr>(transform::replaceTypeVars(manager, lambda->getBody(), substitution));
 
 	// update parameters
-	Lambda::ParamList params;
-	::transform(lambda->getParameterList(), std::back_inserter(params), [&](const VariablePtr& cur)->VariablePtr {
+	VariableList params;
+	::transform(lambda->getParameterList()->getParameters(), std::back_inserter(params), [&](const VariablePtr& cur)->VariablePtr {
 		TypePtr newType = substitution->applyTo(cur->getType());
 		if (newType == cur->getType()) {
 			return cur;

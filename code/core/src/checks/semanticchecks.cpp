@@ -64,15 +64,17 @@ namespace {
 OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddress& curcall) {
 	OptionalMessageList res;
 	auto& mgr = curcall->getNodeManager();
-	auto& basic = mgr.basic;
+	auto& basic = mgr.getLangBasic();
 	IRBuilder builder(mgr);
 
-	for(unsigned argIndex = 0; argIndex < curcall->getArguments().size(); ++argIndex) {
+	CallExprPtr curPtr = curcall.getAddressedNode();
+
+	for(unsigned argIndex = 0; argIndex < curPtr->getArguments().size(); ++argIndex) {
 		 // the potential outer call to scalar.to.array in one of curcall's parameters
-		CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curcall->getArgument(argIndex));
+		CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curPtr->getArgument(argIndex));
 		if(!convertcall) continue;
 		if(!basic.isScalarToArray(convertcall->getFunctionExpr())) continue;
-		LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curcall->getFunctionExpr());
+		LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curPtr->getFunctionExpr());
 		if(!called) continue;
 		VariablePtr param = called->getParameterList()[argIndex];
 		//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";

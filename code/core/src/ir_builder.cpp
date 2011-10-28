@@ -65,7 +65,7 @@ namespace {
 
 	typedef boost::tuple<vector<VariablePtr>, vector<ExpressionPtr>> InitDetails;
 
-	InitDetails splitUp(const ASTBuilder::CaptureInits& captureInits) {
+	InitDetails splitUp(const IRBuilder::VarValueMapping& captureInits) {
 
 		// prepare containers
 		InitDetails res;
@@ -73,7 +73,7 @@ namespace {
 		vector<ExpressionPtr>& inits = res.get<1>();
 
 		// process the given map
-		for_each(captureInits, [&](const ASTBuilder::CaptureInits::value_type& cur) {
+		for_each(captureInits, [&](const IRBuilder::CaptureInits::value_type& cur) {
 			vars.push_back(cur.first);
 			inits.push_back(cur.second);
 		});
@@ -119,15 +119,25 @@ namespace {
 		return nonDecls;
 	}
 
+	/**
+	 * A utility function wrapping a given statement into a compound statement (if necessary).
+	 */
+	CompoundStmtPtr wrapBody(const StatementPtr& stmt) {
+		if (stmt->getNodeType() == NT_CompoundStmt) {
+			return static_pointer_cast<CompoundStmtPtr>(stmt);
+		}
+		return CompoundStmt::get(stmt->getNodeManager(), stmt);
+	}
+
 }
 
 
-NodePtr ASTBuilder::get(NodeType type, const NodeList& children) const {
+NodePtr IRBuilder::get(NodeType type, const NodeList& children) const {
 
 	switch(type) {
 	#define CONCRETE(KIND) \
 		case NT_ ## KIND : return get< NT_## KIND >(children);
-	#include "insieme/core/ast_nodes.def"
+	#include "insieme/core/ir_nodes.def"
 	#undef CONCRETE
 	}
 
@@ -135,20 +145,111 @@ NodePtr ASTBuilder::get(NodeType type, const NodeList& children) const {
 	return NodePtr();
 }
 
-ProgramPtr ASTBuilder::createProgram(const Program::EntryPointList& entryPoints, bool main) {
+ProgramPtr IRBuilder::createProgram(const Program::EntryPointList& entryPoints, bool main) {
 	return Program::create(manager, entryPoints, main);
 }
 
+
+// ---------------------------- Standard Nodes -----------------------------------
+
+#include "ir_builder_impl.inl"
+
+StringValuePtr IRBuilder::stringValue(const char* str) const {
+	return stringValue(string(str));
+}
+
+StringValuePtr IRBuilder::stringValue(const string& str) const {
+	return StringValue::get(manager, str);
+}
+
+BoolValuePtr IRBuilder::boolValue(bool value) const {
+	return BoolValue::get(manager, value);
+}
+
+CharValuePtr IRBuilder::charValue(char value) const {
+	return CharValue::get(manager, value);
+}
+
+IntValuePtr IRBuilder::intValue(int value) const {
+	return IntValue::get(manager, value);
+}
+
+UIntValuePtr IRBuilder::uintValue(unsigned value) const {
+	return UIntValue::get(manager, value);
+}
+
+
 // ---------------------------- Convenience -------------------------------------
 
-FunctionTypePtr ASTBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
+GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intTypeParams) {
+	return genericType(name, types(typeParams), intTypeParams(intTypeParams));
+}
+
+StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
+	vector<NamedTypePtr> members;
+	::transform(entries, std::back_insert(members), fun(this, &namedType));
+	return structType(members);
+}
+
+UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
+	vector<NamedTypePtr> members;
+	::transform(entries, std::back_insert(members), fun(this, &namedType));
+	return unionType(members);
+}
+
+TupleExprPtr IRBuilder::tupleExpr(const vector<ExpressionPtr>& values) const {
+	TupleType type = tupleType(extractTypes(values));
+	return tupleExpr(type, values);
+}
+
+VectorExprPtr IRBuilder::vectorExpr(const VectorTypePtr& type, const ExpressionList& values) const {
+	return vectorExpr(type, expressions(values));
+}
+
+StructExprPtr IRBuilder::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const {
+	vector<NamedType> members;
+	vector<NamedValue> values;
+	for_each(values, [&](const pair<StringValuePtr, ExpressionPtr>& cur) {
+		members.push_back(namedType(cur.first, cur.second->getType()));
+		values.push_back(namedType(cur.first, cur.second));
+	});
+	return structExpr(structType(members), namedValues(values));
+}
+
+IfStmtPtr IRBuilder::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
+	if (!elseBody) {
+		return ifStmt(condition, wrapBody(thenBody), getNoOp());
+	}
+	return ifStmt(condition, wrapBody(thenBody), wrapBody(elseBody));
+}
+
+WhileStmtPtr IRBuilder::whileStmt(const ExpressionPtr& condition, const StatementPtr& body) const {
+	return whileStmt(condition, wrapBody(body));
+}
+
+ForStmtPtr IRBuilder::forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const {
+	return forStmt(var->getVariable(), var->getInitialValue(), end, step, wrapBody(body));
+}
+
+SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase) const {
+	CompoundStmtPtr defCase = (defaultCase)?wrapBody(defaultCase):getNoOp();
+
+	vector<SwitchCase> caseList;
+	::transform(cases, [&](const pair<ExpressionPtr, StatementPtr>& cur) {
+		return switchCase(static_pointer_cast<LiteralPtr>(cur.first), wrapBody(cur.second));
+	});
+
+	return switchStmt(switchExpr, switchCases(caseList), defCase);
+}
+
+FunctionTypePtr IRBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
 	if (funType->isPlain()) {
 		return funType;
 	}
 	return functionType(funType->getParameterTypes(), funType->getReturnType(), true);
 }
 
-FunctionTypePtr ASTBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
+FunctionTypePtr IRBuilder::toThickFunctionType(const FunctionTypePtr& funType) const {
 	if (!funType->isPlain()) {
 		return funType;
 	}
@@ -156,19 +257,19 @@ FunctionTypePtr ASTBuilder::toThickFunctionType(const FunctionTypePtr& funType) 
 }
 
 
-LiteralPtr ASTBuilder::stringLit(const string& str) const {
+LiteralPtr IRBuilder::stringLit(const string& str) const {
 	return literal(str, manager.basic.getString());
 }
 
-LiteralPtr ASTBuilder::intLit(const int val) const {
+LiteralPtr IRBuilder::intLit(const int val) const {
     return literal(manager.basic.getInt4(), toString(val));
 }
-LiteralPtr ASTBuilder::uintLit(const unsigned int val) const {
+LiteralPtr IRBuilder::uintLit(const unsigned int val) const {
     return literal(manager.basic.getUInt4(), toString(val));
 }
 
 
-core::ExpressionPtr ASTBuilder::getZero(const core::TypePtr& type) const {
+core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 
 	// if it is an integer ...
 	if (manager.basic.isInt(type)) {
@@ -210,25 +311,25 @@ core::ExpressionPtr ASTBuilder::getZero(const core::TypePtr& type) const {
 }
 
 
-CallExprPtr ASTBuilder::deref(const ExpressionPtr& subExpr) const {
+CallExprPtr IRBuilder::deref(const ExpressionPtr& subExpr) const {
 	RefTypePtr&& refTy = dynamic_pointer_cast<const RefType>(subExpr->getType());
 	assert(refTy && "Deref a non ref type.");
 	return callExpr(refTy->getElementType(), manager.basic.getRefDeref(), subExpr);
 }
 
-CallExprPtr ASTBuilder::refVar(const ExpressionPtr& subExpr) const {
+CallExprPtr IRBuilder::refVar(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.basic.getRefVar(), subExpr);
 }
 
-CallExprPtr ASTBuilder::refNew(const ExpressionPtr& subExpr) const {
+CallExprPtr IRBuilder::refNew(const ExpressionPtr& subExpr) const {
 	return callExpr(refType(subExpr->getType()), manager.basic.getRefNew(), subExpr);
 }
 
-CallExprPtr ASTBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
+CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& value) const {
 	return callExpr(manager.basic.getUnit(), manager.basic.getRefAssign(), target, value);
 }
 
-ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
+ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
     // add a vector init expression if subExpr is of vector type
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
 	    manager.basic.scalarToVector(subExpr->getType(), intLit(0)) : castExpr(subExpr->getType(), intLit(0));
@@ -239,26 +340,26 @@ ExpressionPtr ASTBuilder::invertSign(const ExpressionPtr& subExpr) const {
 		);
 }
 
-ExpressionPtr ASTBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
+ExpressionPtr IRBuilder::negateExpr(const ExpressionPtr& boolExpr) const {
 	assert( manager.basic.isBool(boolExpr->getType()) && "Cannot negate a non boolean expression.");
 	return callExpr(manager.basic.getBool(), manager.basic.getBoolLNot(), boolExpr);
 }
 
 
-CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
+CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, const ExpressionPtr& index) const {
 	auto vType = dynamic_pointer_cast<const VectorType>(vec->getType());
 	assert(vType && "Tried vector subscript operation on non-vector expression");
 	return callExpr(vType->getElementType(), manager.basic.getVectorSubscript(), vec, index);
 }
-//CallExprPtr ASTBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
+//CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, unsigned index) const {
 //	auto lit = uintLit(index);
 //	vectorSubscript(vec, lit);
 //}
 
-CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const {
+CompoundStmtPtr IRBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const {
 	return compoundStmt(toVector(s1, s2));
 }
-CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const {
+CompoundStmtPtr IRBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const {
 	return compoundStmt(toVector(s1, s2, s3));
 }
 
@@ -293,7 +394,7 @@ namespace {
 	}
 
 
-	CallExprPtr createCall(const ASTBuilder& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
+	CallExprPtr createCall(const IRBuilder& builder, const TypePtr& resultType, const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
 
 		// check user-specified return type - only when compiled in debug mode
 		// NOTE: the check returns true in any case, hence this assertion will never fail - its just a warning!
@@ -305,45 +406,53 @@ namespace {
 	}
 }
 
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
+CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) const {
 	// use deduced return type to construct call
 	return callExpr(deduceReturnTypeForCall(functionExpr, arguments), functionExpr, arguments);
 }
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
+CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
 	return callExpr(functionExpr, toVector(arg1));
 }
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
+CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
 	return callExpr(functionExpr, toVector(arg1, arg2));
 }
-CallExprPtr ASTBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
+CallExprPtr IRBuilder::callExpr(const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return callExpr(functionExpr, toVector(arg1, arg2, arg3));
 }
-CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
+CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const {
 	return createCall(*this, resultType, functionExpr, toVector<ExpressionPtr>());
 }
-CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
+CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1));
 }
-CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
+CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2));
 }
-CallExprPtr ASTBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
+CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr, const ExpressionPtr& arg1, const ExpressionPtr& arg2, const ExpressionPtr& arg3) const {
 	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2, arg3));
 }
 
-LambdaExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
+LambdaPtr lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
+	return lambda(type, params, wrapBody(body));
+}
+
+LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
+	return lambda(type, params, wrapBody(body));
+}
+
+LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
 	return lambdaExpr(functionType(extractParamTypes(params), manager.basic.getUnit(), true), params, body);
 }
-LambdaExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
+LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
 	return lambdaExpr(functionType(extractParamTypes(params), returnType, true), params, body);
 }
 
 
-BindExprPtr ASTBuilder::lambdaExpr(const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
+BindExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const ParameterList& params) const {
 	return lambdaExpr(manager.basic.getUnit(), body, captureMap, params);
 }
 
-BindExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const CaptureInits& captureMap, const ParamList& params) const {
+BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VarValueMapping& captureMap, const ParameterList& params) const {
 
 	// process capture map
 	InitDetails&& details = splitUp(captureMap);
@@ -373,33 +482,42 @@ BindExprPtr ASTBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr
 	return bindExpr(params, call);
 }
 
-CallExprPtr ASTBuilder::getThreadNumRange(unsigned min) const {
+BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& call) const {
+	FunctionTypePtr type = functionType(extractTypes(params), call, false);
+	return bindExpr(type, parameters(params), call);
+}
+
+JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const {
+	return jobExpr(manager.getLangBasic().getJobType(), threadNumRange, declarationStmts(localDecls), guardedExprs(guardedExprs), defaultExpr);
+}
+
+CallExprPtr IRBuilder::getThreadNumRange(unsigned min) const {
 	TypePtr type = manager.basic.getUInt8();
 	return callExpr(manager.basic.getCreateMinRange(), literal(type, toString(min)));
 }
 
-CallExprPtr ASTBuilder::getThreadNumRange(unsigned min, unsigned max) const {
+CallExprPtr IRBuilder::getThreadNumRange(unsigned min, unsigned max) const {
 	TypePtr type = manager.basic.getUInt8();
 	return callExpr(manager.basic.getCreateBoundRange(), literal(type, toString(min)), literal(type, toString(max)));
 }
 
 
 
-CallExprPtr ASTBuilder::getThreadGroup(ExpressionPtr level) const {
+CallExprPtr IRBuilder::getThreadGroup(ExpressionPtr level) const {
     if(!level) level = uintLit(0);
     return callExpr(manager.basic.getGetThreadGroup(), level);
 }
-CallExprPtr ASTBuilder::getThreadId(ExpressionPtr level) const {
+CallExprPtr IRBuilder::getThreadId(ExpressionPtr level) const {
 	if(!level) level = uintLit(0);
 	return callExpr(manager.basic.getGetThreadId(), level);
 }
 
-CallExprPtr ASTBuilder::barrier(ExpressionPtr threadgroup) const {
+CallExprPtr IRBuilder::barrier(ExpressionPtr threadgroup) const {
 	if(!threadgroup) threadgroup = getThreadGroup();
 	return callExpr(manager.basic.getBarrier(), threadgroup);
 }
 
-CallExprPtr ASTBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
+CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& start, const ExpressionPtr& end, ExpressionPtr step) const {
 	if(!step) step = uintLit(1);
 	assert(manager.basic.isInt(start->getType()));
 	assert(manager.basic.isInt(end->getType()));
@@ -407,7 +525,7 @@ CallExprPtr ASTBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& sta
 	return callExpr(manager.basic.getPFor(), toVector<ExpressionPtr>(getThreadGroup(), start, end, step, body));
 }
 
-CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
+CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 	auto decl = initialFor->getDeclaration();
 	auto forBody = initialFor->getBody();
 	auto loopvar = decl->getVariable();
@@ -441,7 +559,7 @@ CallExprPtr ASTBuilder::pfor(const ForStmtPtr& initialFor) const {
 	return pfor(lambda, initExp, initialFor->getEnd(), initialFor->getStep());
 }
 
-core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
+core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr retTy, bool lazy) const {
     // Find the variables which are used in the body and not declared
 	utils::set::PointerSet<VariablePtr>&& args = getRechingVariables(body);
 
@@ -483,11 +601,11 @@ core::ExpressionPtr ASTBuilder::createCallExprFromBody(StatementPtr body, TypePt
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
 
-ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, string member) const {
+ExpressionPtr IRBuilder::accessMember(ExpressionPtr structExpr, string member) const {
 	return accessMember(structExpr, identifier(member));
 }
 
-ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+ExpressionPtr IRBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
 
@@ -499,11 +617,11 @@ ExpressionPtr ASTBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr m
 	return callExpr(memberType, access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
 }
 
-ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, string member) const {
+ExpressionPtr IRBuilder::refMember(ExpressionPtr structExpr, string member) const {
 	return refMember(structExpr, identifier(member));
 }
 
-ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+ExpressionPtr IRBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
@@ -518,12 +636,12 @@ ExpressionPtr ASTBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr memb
 	return callExpr(refType(memberType), access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
 }
 
-ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 	unsigned idx = extractNumberFromExpression(component);
 	return accessComponent(tupleExpr, idx);
 }
 
-ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
+ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert(type->getNodeType() == core::NT_TupleType && "Cannot access non-tuple type!");
 
@@ -538,11 +656,11 @@ ExpressionPtr ASTBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned comp
 	return callExpr(componentType, access, tupleExpr, index, typeLiteral);
 }
 
-ExpressionPtr ASTBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
+ExpressionPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
 	unsigned idx = extractNumberFromExpression(component);
 	return refComponent(tupleExpr, idx);
 }
-ExpressionPtr ASTBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
+ExpressionPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned component) const {
 	core::TypePtr type = tupleExpr->getType();
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
@@ -561,16 +679,88 @@ ExpressionPtr ASTBuilder::refComponent(ExpressionPtr tupleExpr, unsigned compone
 }
 
 
+StatementPtr IRBuilder::getNoOp() const {
+	if (!pimpl->ptrNoOp) {
+		pimpl->ptrNoOp = pimpl->build.compoundStmt();
+	}
+	return pimpl->ptrNoOp;
+}
+
+bool IRBuilder::isNoOp(const NodePtr& p) const {
+	return *p == *getNoOp();
+}
+
+LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const {
+	auto type = pimpl->build.genericType("intTypeParam", TypeList(), toVector(param));
+	return pimpl->build.literal(type, toString(*param));
+}
+
+LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
+	auto literalType = pimpl->build.genericType("type", toVector(type));
+	return pimpl->build.literal(literalType, toString(*type));
+}
+
+LiteralPtr IRBuilder::getIdentifierLiteral(const core::StringValuePtr& value) const {
+	return pimpl->build.literal(getIdentifier(), value);
+}
+
+ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
+    // Convert casts form scalars to vectors to vector init exrpessions
+    if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
+        if(pimpl->nm.basic.isScalarType(subExpr->getType())) {
+            // get vector element type without ref
+            core::TypePtr elementType = vt->getElementType();
+            core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
+                    //dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
+
+            core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
+                pimpl->build.castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
+
+            core::ExpressionPtr&& retExpr = pimpl->build.callExpr(type, pimpl->nm.basic.getVectorInitUniform(),
+                (elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? pimpl->build.refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
+                pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
+
+            return retExpr;
+        }
+    }
+
+
+    // check for casts from salar pointers to vector pointers
+    if(core::ArrayTypePtr&& array = dynamic_pointer_cast<const core::ArrayType>(type)) {
+//        core::RefTypePtr&& refType = dynamic_pointer_cast<const core::RefType>(array->getElementType());
+        core::VectorTypePtr&& vt = dynamic_pointer_cast<const core::VectorType>(array->getElementType());
+        core::ArrayTypePtr&& castedArray = dynamic_pointer_cast<const core::ArrayType>(subExpr->getType());
+        if(castedArray && vt ){
+            core::TypePtr elemTy = /*castedArray->getElementType()->getNodeType() == core::NodeType::NT_RefType ?
+                    dynamic_pointer_cast<const core::RefType>(castedArray->getElementType())->getElementType() :*/ castedArray->getElementType();
+
+            if(elemTy) {
+                // check if they have the same type
+                assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
+
+                return  pimpl->build.callExpr(pimpl->nm.basic.getArrayElemToVec(), subExpr, pimpl->nm.basic.getIntTypeParamLiteral(vt->getSize()));
+            }
+        }
+    }
+
+    // expression is either already a vector/array type or the type is not a vector type
+    return subExpr;
+}
+
 // ---------------------------- Utilities ---------------------------------------
 
-ASTBuilder::TypeList ASTBuilder::extractParamTypes(const ParamList& params) {
+TypeList IRBuilder::extractTypes(const ExpressionList& expressions) {
 	TypeList paramTypes;
 	std::transform(params.cbegin(), params.cend(), std::back_inserter(paramTypes),
-		[](const VariablePtr& p) { return p->getType(); });
+		[](const ExpressionPtr& p) { return p->getType(); });
 	return paramTypes;
 }
 
-unsigned ASTBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
+TypeList IRBuilder::extractParamTypes(const ParamList& params) {
+	return extractTypes(convertList<Expression>(params));
+}
+
+unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 
 	unsigned idx = 0;
 	// search for the literal in the second argument
@@ -593,7 +783,6 @@ unsigned ASTBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 	return idx;
 }
 
-#include "ast_builder_impl.inl"
 
 } // namespace core
 } // namespace insieme
