@@ -22,12 +22,14 @@ if (CMAKE_COMPILER_IS_GNUCC)
 
 	include(CheckCCompilerFlag)
 	check_c_compiler_flag( -std=c99 C99_Support )
+
 	if(C99_Support)
-		set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+	       	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
 	else()
 		message( "WARNING: --std=c99 not supported by your compiler!" )
 	endif()
-else()
+endif()
+if(CMAKE_COMPILER_IS_ICC)
 	#enable c99 for icc
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Qstd=c99")
 endif()
@@ -42,6 +44,9 @@ if (WIN32)
 	else()
 		message( "ERRROR: Utilities and SDK for Subsystem for UNIX-based Applications NOT found")
 	endif()
+else()
+	# add c99 for gcc
+	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC -std=c99")
 endif()
 
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=700")
