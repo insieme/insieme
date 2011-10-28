@@ -107,7 +107,7 @@ using namespace core;
 			std::cout <<     "    Variables:\n";
 			for_each(match.getValueMap(), [](const std::pair<string, MatchValue>& cur){
 				std::cout << "          " << cur.first << " = ";
-				if (cur.second.getDepth() == 0) {
+				if (cur.second.getDepth() == 0 && cur.second.getTree()->hasAttachedValue<NodePtr>()) {
 					std::cout << printer::PrettyPrinter(cur.second.getTree()->getAttachedValue<NodePtr>());
 				} else {
 					std::cout << cur.second;
@@ -121,6 +121,8 @@ using namespace core;
 
 			// load program
 			core::ProgramPtr code = load(manager, testCase);
+
+			std::cout << "Program: " << *code << "\n";
 
 			std::cout << "-------------------------------------------------------------------------- \n";
 			std::cout << "Pattern: " << pattern << "\n";
@@ -138,23 +140,22 @@ using namespace core;
 
 	// -------- testing patterns -----------------
 
-	TEST(PatternTest, FindWithinCode) {
+	TEST(PatternTest, FindAllLiterals) {
 
-		// Example: find all variables within code
+		// Example: find all literals within code
 
 		// create pattern
-		TreePatternPtr pattern = irp::compoundStmt(anyList);
+		TreePatternPtr pattern = irp::literal(var("value"),var("type"));
 
 		// run checks
 		runCheck(pattern, "hello_world");
 
 	}
 
-	// -------- testing patterns -----------------
 
 	TEST(PatternTest, FindForLoops) {
 
-		// Example: find all variables within code
+		// Example: find all for loops within code and get iterator / start / end / step / body
 
 		// create pattern
 		TreePatternPtr decl = irp::declarationStmt(var("iterator"), var("begin"));
