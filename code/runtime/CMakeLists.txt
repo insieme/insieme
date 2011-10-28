@@ -11,7 +11,7 @@ set (GTEST_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest.lib")
 set (GTEST_MAIN_LIBRARY "$ENV{GTEST_ROOT}/bin/gtest_main.lib")
 endif()
 # enable C99 support within gcc
-if (CMAKE_COMPILER_IS_GNUC)
+if (CMAKE_COMPILER_IS_GNUCC)
 	set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -rdynamic -fPIC")
 
 	# add flags for debug mode
@@ -44,7 +44,7 @@ if (WIN32)
 	endif()
 endif()
 
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=700")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=700")
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
 file(GLOB_RECURSE insieme_runtime_srcs 	src/*.c )
