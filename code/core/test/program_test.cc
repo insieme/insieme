@@ -43,7 +43,7 @@
 
 #include "insieme/core/program.h"
 #include "insieme/core/types.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 // #include "insieme/core/lang_basic.h"
 
 #include "ast_node_test.inc"
@@ -56,7 +56,7 @@ using namespace insieme::utils::set;
 
 TEST(Program, HelloWorld) {
 
-	ASTBuilder build;
+	IRBuilder build;
 
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");

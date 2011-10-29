@@ -39,7 +39,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "insieme/core/ir_address.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/type_utils.h"
 
@@ -64,7 +64,7 @@ bool notUnifable(const TypePtr& typeA, const TypePtr& typeB) {
 }
 
 TEST(TypeUtils, Substitution) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	TypeVariablePtr varA = builder.typeVariable("A");
@@ -204,7 +204,7 @@ TEST(TypeUtils, Substitution) {
 }
 
 TEST(TypeUtils, Unification) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	TypeVariablePtr varA = builder.typeVariable("A");
@@ -281,7 +281,7 @@ TEST(TypeUtils, Unification) {
 
 
 TEST(TypeUtils, IntParamUnification) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	TypePtr typeAx = builder.genericType("a", toVector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'x')));
@@ -323,7 +323,7 @@ ParamSet getParamVariables(const TypePtr& ptr) {
 TEST(TypeUtils, ReturnTypeDeduction) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// some variables and types
 	TypePtr varA = TypeVariable::get(manager, "a");
@@ -381,7 +381,7 @@ TypeSet getSuperTypes(const TypePtr& type) {
 TEST(TypeUtils, IntUintSuperTypes) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr int1 = basic.getInt1();
@@ -418,7 +418,7 @@ TEST(TypeUtils, IntUintSuperTypes) {
 TEST(TypeUtils, RealSuperTypes) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr real4 = basic.getFloat();
@@ -441,7 +441,7 @@ bool isNotSubTypeOf(const TypePtr& a, const TypePtr& b) {
 TEST(TypeUtils, IsSubTypeOf) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr int2 = basic.getInt2();
@@ -494,7 +494,7 @@ TEST(TypeUtils, IsSubTypeOf) {
 //TEST(TypeUtils, IsSubTypeOfTypeVariable) {
 //
 //	NodeManager manager;
-//	ASTBuilder builder(manager);
+//	IRBuilder builder(manager);
 //	const lang::BasicGenerator& basic = manager.basic;
 //
 //	TypePtr typeA = builder.genericType("A");
@@ -521,7 +521,7 @@ TEST(TypeUtils, IsSubTypeOf) {
 TEST(TypeUtils, IsSubTypeOfFunctionType) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr int1 = basic.getInt1();
@@ -594,7 +594,7 @@ TEST(TypeUtils, IsSubTypeOfFunctionType) {
 TEST(TypeUtils, JoinMeetTypeComputation) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	// construct some types to test the mechanisms
@@ -660,7 +660,7 @@ TEST(TypeUtils, VariableSubstitutionBug) {
 
 	// reconstruct test case
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	TypePtr intType = manager.basic.getUInt4();
 	TypePtr vectorType = builder.vectorType(intType, builder.concreteIntTypeParam(8));
@@ -694,7 +694,7 @@ TEST(TypeUtils, ReturnTypeBug) {
 	// => occurs in conjunction with the vector.pointwise operator
 
 	// build a pointwise sum ...
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	TypePtr uint4 = manager.basic.getUInt4();
@@ -721,7 +721,7 @@ TEST(TypeUtils, AutoTypeInference_ArrayInitCall) {
 	//		before trying to match the given arguments to the function parameters
 	//		all type variables are replaced by fresh variables.
 
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 	const lang::BasicGenerator& basic = manager.basic;
 
@@ -742,7 +742,7 @@ TEST(TypeUtils, AutoTypeInference_ArrayInitCall) {
 
 TEST(TypeUtils, ListUnification) {
 
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	TypePtr typeA = builder.genericType("A");
@@ -788,7 +788,7 @@ TEST(TypeUtils, ListUnificationBug1) {
 	// Fix:
 	//		This is now down.
 
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 	const lang::BasicGenerator& basic = manager.basic;
 
@@ -818,7 +818,7 @@ TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
 	//
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	IntTypeParamPtr varA = builder.variableIntTypeParam('a');
 	TypePtr gen = builder.genericType("T", toVector<TypePtr>(), toVector(varA, varA));
@@ -844,7 +844,7 @@ TEST(TypeUtils, IdenticalIntTypeParameterVariables) {
 TEST(TypeUtils, isGeneric) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	TypePtr var = builder.typeVariable("a");
 	TypePtr constA = builder.genericType("type");

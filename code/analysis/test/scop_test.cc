@@ -40,7 +40,7 @@
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/core/program.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/statements.h"
 
 #include "insieme/core/parser/ir_parse.h"

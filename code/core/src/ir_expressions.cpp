@@ -36,6 +36,11 @@
 
 #include "insieme/core/ir_expressions.h"
 
+#include <algorithm>
+
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/transform/node_mapper_utils.h"
+
 namespace insieme {
 namespace core {
 
@@ -45,6 +50,109 @@ namespace core {
 			<< (getGuardedExprs()->empty()?"":", ") << "default: " << *getDefaultExpr() << ")";
 		return out;
 	}
+
+	bool Variable::operator<(const Variable& var) const {
+		VariablePtr other(&var);
+		if (getId() < other->getId()) {
+			return true;
+		}
+		return ::toString(*getType()) < ::toString(*other->getType());
+	}
+
+
+	bool LambdaDefinition::isRecursivelyDefined(const VariablePtr& variable) const {
+
+		// obtain lambda definition
+		const auto& lambda = getDefinitionOf(variable);
+
+		const auto& defs = getDefinitions();
+
+		// a detector which aborts a visiting in cased a recursive function invocation
+		// is detected
+		auto detector = makeLambdaVisitor([&](const NodePtr& node)->bool {
+			// check node type
+			if (node->getNodeType() != NT_Variable) {
+				return false;
+			}
+
+			// check whether the variable is a recursive function
+			return this->getDefinitionOf(static_pointer_cast<VariablePtr>(node));
+		}, false);
+
+		// run visitor => if interrupted, the definition is recursive
+		return visitDepthFirstOnceInterruptable(lambda, detector);
+	}
+
+
+	std::ostream& LambdaExpr::printTo(std::ostream& out) const {
+		return out << "rec " << *getVariable() << "." << *getDefinition();
+	}
+
+	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const LambdaPtr& lambda) {
+		VariablePtr var = Variable::get(manager, lambda->getType());
+		LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
+		LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
+		return get(manager, lambda->getType(), var, def);
+	}
+
+	LambdaExprPtr LambdaExpr::get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
+		return get(manager, Lambda::get(manager, type, params, body));
+	}
+
+	bool LambdaExpr::isRecursiveInternal() const {
+		// evaluate lazily
+		if (boost::logic::indeterminate(recursive)) {
+			recursive = getDefinition()->isRecursive(getVariable());
+		}
+		return recursive;
+	}
+
+	namespace {
+
+		class RecLambdaUnroller : public transform::CachedNodeMapping {
+
+			NodeManager& manager;
+			const LambdaDefinitionPtr& definition;
+
+
+		public:
+
+			RecLambdaUnroller(NodeManager& manager, const LambdaDefinitionPtr& definition)
+				: manager(manager), definition(definition) { }
+
+			virtual const NodePtr resolveElement(const NodePtr& ptr) {
+				// check whether it is a known variable
+				if (ptr->getNodeType() == NT_Variable) {
+					VariablePtr var = static_pointer_cast<const Variable>(ptr);
+
+					if (definition->getDefinitionOf(var)) {
+						return LambdaExpr::get(manager, var, definition);
+					}
+				}
+
+				// cut of types
+				if (ptr->getNodeCategory() == NC_Type) {
+					return ptr;
+				}
+
+				// replace recursively
+				return ptr->substitute(manager, *this);
+			}
+
+			LambdaPtr apply(const LambdaPtr& node) {
+				return static_pointer_cast<const Lambda>(node->substitute(manager, *this));
+			}
+
+		};
+
+	}
+
+	LambdaExprPtr LambdaDefinition::unrollDefinitionOnce(NodeManager& manager, const VariablePtr& variable) const {
+		// unroll recursive lambda
+		LambdaPtr lambda = RecLambdaUnroller(manager, LambdaDefinitionPtr(this)).apply(getDefinitionOf(variable));
+		return LambdaExpr::get(manager, lambda);
+	}
+
 
 } // end namespace core
 } // end namespace insieme

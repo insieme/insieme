@@ -1,5 +1,5 @@
 
-PREFIX=/tmp/
+PREFIX=~/libs/
 SLOTS=4
 
 ISL_VER=isl-0.07

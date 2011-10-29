@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/simple_backend/type_manager.h"
 #include "insieme/simple_backend/backend_convert.h"
 
@@ -66,7 +66,7 @@ bool notContainsSubString(const string& str, const string& substr) {
 
 TEST(TypeManager, Basic) {
 
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
 	Converter converter;
@@ -109,7 +109,7 @@ TEST(TypeManager, Basic) {
 
 TEST(TypeManager, StructTypes) {
 
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
 	Converter converter;
@@ -145,7 +145,7 @@ TEST(TypeManager, StructTypes) {
 
 TEST(TypeManager, RefTypes) {
 
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
 	Converter converter;
@@ -237,7 +237,7 @@ TEST(TypeManager, RefTypes) {
 
 TEST(TypeManager, ArrayTypes) {
 
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
 	Converter converter;
@@ -285,7 +285,7 @@ TEST(TypeManager, ArrayTypes) {
 
 TEST(TypeManager, VectorTypes) {
 
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
 	Converter converter;
@@ -344,7 +344,7 @@ TEST(TypeManager, VectorTypes) {
 
 TEST(TypeManager, FunctionTypes) {
 
-	core::ASTBuilder builder;
+	core::IRBuilder builder;
 	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
 	Converter converter;

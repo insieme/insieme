@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/checks/ir_checks.h"
 
@@ -61,7 +61,7 @@ bool isSubString(string subStr, string full) {
 
 TEST(Manipulation, Insert) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
@@ -116,7 +116,7 @@ TEST(Manipulation, Insert) {
 
 TEST(Manipulation, InsertList) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
@@ -152,7 +152,7 @@ TEST(Manipulation, InsertList) {
 
 TEST(Manipulation, InsertBefore) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	auto aLit = builder.literal(builder.genericType("X"), "A");
@@ -185,7 +185,7 @@ TEST(Manipulation, InsertBefore) {
 
 TEST(Manipulation, InsertAfter) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	auto aLit = builder.literal(builder.genericType("X"), "A");
@@ -217,7 +217,7 @@ TEST(Manipulation, InsertAfter) {
 
 TEST(Manipulation, ReplaceList) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
@@ -261,7 +261,7 @@ TEST(Manipulation, ReplaceList) {
 
 TEST(Manipulation, Replace) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
@@ -303,7 +303,7 @@ TEST(Manipulation, Replace) {
 
 TEST(Manipulation, Remove) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
@@ -343,7 +343,7 @@ TEST(Manipulation, Remove) {
 
 TEST(Manipulation, Move) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	vector<StatementPtr> stmts;
 	stmts.push_back(builder.literal(builder.genericType("X"), "A"));
@@ -435,7 +435,7 @@ TEST(Manipulation, Move) {
 TEST(Manipulation, TryFixingParameter_simple) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	TypePtr type = builder.genericType("T");
 	VariablePtr paramA = builder.variable(type, 1);

@@ -38,7 +38,7 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/function_manager.h"
@@ -77,7 +77,7 @@ bool notContainsSubString(const string& str, const string& substr) {
 TEST(FunctionManager, Literals) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
+	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	TestNameManager nameManager;
@@ -134,7 +134,7 @@ TEST(FunctionManager, Literals) {
 TEST(FunctionManager, Lambda) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
+	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	Converter converter;
@@ -208,7 +208,7 @@ TEST(FunctionManager, Lambda) {
 TEST(FunctionManager, MutualRecursiveLambda) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
+	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	Converter converter;
@@ -280,7 +280,7 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 TEST(FunctionManager, Bind) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
+	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	Converter converter;
@@ -374,7 +374,7 @@ TEST(FunctionManager, Bind) {
 TEST(FunctionManager, NestedBind) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
+	core::IRBuilder builder(nodeManager);
 	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
 
 	Converter converter;

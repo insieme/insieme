@@ -143,6 +143,9 @@ namespace core {
 		LiteralPtr intLit(const int val) const;
 		LiteralPtr uintLit(const unsigned int val) const;
 
+		// Support reverse literal construction
+		LiteralPtr literal(const std::string& value, const TypePtr& type) const { return literal(type, value); }
+		LiteralPtr literal(const StringValuePtr& value, const TypePtr& type) const  { return literal(type, value); }
 
 		/**
 		 * A factory method for intTypeParam literals.
@@ -242,22 +245,22 @@ namespace core {
 		/**
 		 * Creates an expression accessing the corresponding member of the given struct.
 		 */
-		ExpressionPtr accessMember(ExpressionPtr structExpr, string member) const;
+		ExpressionPtr accessMember(const ExpressionPtr& structExpr, const string& member) const;
 
 		/**
 		 * Creates an expression accessing the corresponding member of the given struct.
 		 */
-		ExpressionPtr accessMember(ExpressionPtr structExpr, StringValuePtr member) const;
+		ExpressionPtr accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const;
 
 		/**
 		 * Creates an expression obtaining a reference to a member of a struct.
 		 */
-		ExpressionPtr refMember(ExpressionPtr structExpr, StringValuePtr member) const;
+		ExpressionPtr refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const;
 
 		/**
 		 * Creates an expression obtaining a reference to a member of a struct.
 		 */
-		ExpressionPtr refMember(ExpressionPtr structExpr, string member) const;
+		ExpressionPtr refMember(const ExpressionPtr& structExpr, const string& member) const;
 
 		/**
 		 * Creates an expression accessing the given component of the given tuple value.
@@ -275,7 +278,7 @@ namespace core {
 		/**
 		 * A function obtaining a reference to a NoOp instance.
 		 */
-		StatementPtr getNoOp() const;
+		CompoundStmtPtr getNoOp() const;
 
 		/**
 		 * Tests whether the given node is a no-op.
@@ -292,9 +295,20 @@ namespace core {
 		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
 
 		// Utilities
+
+		template<
+			typename T,
+			typename boost::enable_if<boost::is_base_of<Expression, T>, int>::type = 0
+		>
+		static TypeList extractTypes(const vector<Pointer<const T>>& exprs) {
+			TypeList types;
+			std::transform(exprs.cbegin(), exprs.cend(), std::back_inserter(types),
+				[](const ExpressionPtr& p) { return p->getType(); });
+			return types;
+		}
+
 	private:
-		static TypeList extractTypes(const ExpressionList& expressions);
-		static TypeList extractParamTypes(const ParametersPtr& params);
+
 		unsigned extractNumberFromExpression(ExpressionPtr& expr) const;
 	};
 

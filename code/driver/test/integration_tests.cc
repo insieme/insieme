@@ -43,7 +43,7 @@
 #include "insieme/core/ast_visitor.h"
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/core/ast_check.h"
 
@@ -207,7 +207,7 @@ INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, :
 //
 //	// find array declarations
 //	auto& basic = mgr.basic;
-//	ASTBuilder builder(mgr);
+//	IRBuilder builder(mgr);
 //
 //	// search for array variable declarations
 //	//visitDepthFirstInterruptable(NodeAddress(code), [&](const DeclarationStmtAddress& curdecl) -> bool {

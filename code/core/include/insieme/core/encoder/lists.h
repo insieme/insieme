@@ -109,7 +109,7 @@ namespace encoder {
 	 * @param listType the type representing a list type from which the element type should be extracted
 	 * @return a reference to the contained element type
 	 */
-	const core::TypePtr& getElementType(const core::TypePtr& listType);
+	const core::TypePtr getElementType(const core::TypePtr& listType);
 
 	/**
 	 * Creates a list type maintaining elements of the given element type.

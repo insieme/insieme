@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/typechecks.h"
 
 namespace insieme {
@@ -49,7 +49,7 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 
 
 TEST(CallExprTypeCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 	const lang::BasicGenerator& basic = manager.basic;
 
@@ -157,7 +157,7 @@ TEST(CallExprTypeCheck, Basic) {
 }
 
 TEST(StructExprTypeCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// some preparations
 	core::IdentifierPtr name = builder.identifier("x");
@@ -191,7 +191,7 @@ TEST(StructExprTypeCheck, Basic) {
 }
 
 TEST(MemberAccessElementTypeCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	const lang::BasicGenerator& basic = builder.getBasicGenerator();
 
 	// get function to be tested
@@ -235,7 +235,7 @@ TEST(MemberAccessElementTypeCheck, Basic) {
 }
 
 TEST(MemberAccessElementTypeCheck, References) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	const lang::BasicGenerator& basic = builder.getBasicGenerator();
 
 	// get function to be tested
@@ -285,7 +285,7 @@ TEST(MemberAccessElementTypeCheck, References) {
 }
 
 TEST(ReturnTypeCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	const lang::BasicGenerator& basic = builder.getNodeManager().basic;
 
 	// create a function type (for all those functions)
@@ -315,7 +315,7 @@ TEST(ReturnTypeCheck, Basic) {
 }
 
 TEST(DeclarationStmtTypeCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 	TypePtr type = builder.genericType("int");
@@ -332,7 +332,7 @@ TEST(DeclarationStmtTypeCheck, Basic) {
 }
 
 TEST(IfCondition, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");
@@ -350,7 +350,7 @@ TEST(IfCondition, Basic) {
 }
 
 TEST(WhileCondition, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");
@@ -368,7 +368,7 @@ TEST(WhileCondition, Basic) {
 }
 
 TEST(Switch, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 	TypePtr intType = builder.getBasicGenerator().getInt1();
@@ -386,7 +386,7 @@ TEST(Switch, Basic) {
 }
 
 TEST(BuildInLiterals, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 
@@ -401,7 +401,7 @@ TEST(BuildInLiterals, Basic) {
 }
 
 TEST(RefCastExpr, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 
@@ -425,7 +425,7 @@ TEST(RefCastExpr, Basic) {
 }
 
 TEST(CastExpr, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 
@@ -450,7 +450,7 @@ TEST(CastExpr, Basic) {
 }
 
 TEST(KeywordCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create correct and wrong instances
 
@@ -511,7 +511,7 @@ TEST(KeywordCheck, Basic) {
 }
 
 TEST(ExternalFunctionType, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");

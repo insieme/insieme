@@ -44,7 +44,7 @@
 #include "insieme/core/identifier.h"
 #include "insieme/core/types.h"
 #include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/logging.h"
@@ -64,7 +64,7 @@ TEST(IRParser, TypeTests) {
 	string testStr("testGenType");
 	NodeManager manager;
 	IRParser parser(manager);
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	auto intType = builder.genericType("int", vector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
 	EXPECT_EQ(intType, parser.parseType("int<#a>"));
@@ -114,7 +114,7 @@ TEST(IRParser, ExpressionTests) {
 	string testStr("testGenType");
 	NodeManager manager;
 	IRParser parser(manager);
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// literal
     EXPECT_EQ(builder.literal("42.7", manager.basic.getDouble()), parser.parseExpression("42.7"));
@@ -212,7 +212,7 @@ TEST(IRParser, ExpressionTests) {
 TEST(IRParser, StatementTests) {
     NodeManager manager;
     IRParser parser(manager);
-    ASTBuilder builder(manager);
+    IRBuilder builder(manager);
 
     // break statement
     EXPECT_EQ(builder.breakStmt(), parser.parseStatement("break"));
@@ -362,7 +362,7 @@ try {
 TEST(IRParser, OperationTests) {
     NodeManager manager;
     IRParser parser(manager);
-    ASTBuilder builder(manager);
+    IRBuilder builder(manager);
 
     // binary operations
 
@@ -487,7 +487,7 @@ TEST(IRParser, OperationTests) {
 TEST(IRParser, ProgramTest) {
     NodeManager manager;
     IRParser parser(manager);
-    ASTBuilder builder(manager);
+    IRBuilder builder(manager);
 
     // program with main
     ProgramPtr mainProg = parser.parseProgram("main: fun ()->int<4>:\
@@ -524,7 +524,7 @@ TEST(IRParser, InteractiveTest) {
 TEST(IRParser, FunctionType) {
     NodeManager manager;
     IRParser parser(manager);
-    ASTBuilder builder(manager);
+    IRBuilder builder(manager);
 
     // parse a function plain and a closure type
     TypePtr a = builder.genericType("A");

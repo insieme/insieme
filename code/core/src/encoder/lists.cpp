@@ -98,9 +98,9 @@ namespace encoder {
 				genType->getIntTypeParameter().empty();
 	}
 
-	const core::TypePtr& getElementType(const core::TypePtr& listType) {
+	const core::TypePtr getElementType(const core::TypePtr& listType) {
 		assert(isListType(listType) && "Not applicable to non-list type!");
-		return static_pointer_cast<const core::GenericType>(listType)->getTypeParameter()[0];
+		return static_pointer_cast<const core::GenericType>(listType)->getTypeParameter()->getElement(0);
 	}
 
 	const core::TypePtr getListType(const core::TypePtr& elementType) {

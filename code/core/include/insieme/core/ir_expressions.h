@@ -436,6 +436,8 @@ namespace core {
 
 
 
+
+
 	// ------------------------------------- Lambda -----------------------------------
 
 
@@ -515,6 +517,143 @@ namespace core {
 
 
 
+	// ------------------------------------- Lambda Expression -----------------------------------
+
+	/**
+	 * The accessor associated to a lambda expression.
+	 */
+	IR_NODE_ACCESSOR(LambdaExpr, Expression, Type, Variable, LambdaDefinition)
+
+		/**
+		 * Obtains a reference to the variable identifying the represented lambda within the definition.
+		 */
+		IR_NODE_PROPERTY(Variable, Variable, 1);
+
+		/**
+		 * Obtains a reference to the definition of this lambda expression.
+		 */
+		IR_NODE_PROPERTY(LambdaDefinition, Definition, 2);
+
+		/**
+		 * Obtains a reference to the lambda defining this lambda expression.
+		 */
+		Pointer<const Lambda> getLambda() const {
+			return getDefinition()->getDefinitionOf(getVariable());
+		}
+
+		/**
+		 * Obtains a reference to the parameters of the lambda defining this expression.
+		 */
+		Ptr<const Parameters> getParameterList() const {
+			return getLambda()->getParameters();
+		}
+
+		/**
+		 * Obtains a reference to the body of the lambda defining this expression.
+		 */
+		Ptr<const CompoundStmt> getBody() const {
+			return getLambda()->getBody();
+		}
+
+		/**
+		 * Determines whether this function is recursively defined or not.
+		 */
+		bool isRecursive() const {
+			return ExpressionAccessor<Derived, Ptr>::getNode().isRecursiveInternal();
+		}
+
+	};
+
+	/**
+	 * The entity used to represent lambda expressions.
+	 */
+	IR_NODE(LambdaExpr, Expression)
+
+		/**
+		 * A flag indicating whether this lambda is representing a recursive function.
+		 */
+		mutable boost::logic::tribool recursive;
+
+	protected:
+
+		/**
+		 * Prints a string representation of this node to the given output stream.
+		 */
+		virtual std::ostream& printTo(std::ostream& out) const;
+
+	public:
+
+		/**
+		 * This static factory method allows to obtain an instance of a lambda expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param type the type of the requested lambda expression
+		 * @param var the variable identifying the lambda to be represented within the given definition
+		 * @param lambda the definition defining the lambda to be represented
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariablePtr& var, const LambdaDefinitionPtr& definition) {
+			return manager.get(LambdaExpr(type, var, definition));
+		}
+
+		/**
+		 * This static factory method allows to obtain an instance of a lambda expression
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
+		 * @param var the variable identifying the lambda to be represented within the given definition
+		 * @param lambda the definition defining the lambda to be represented
+		 * @return the requested type instance managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const VariablePtr& var, const LambdaDefinitionPtr& definition) {
+			assert(dynamic_pointer_cast<FunctionTypePtr>(var->getType()) && "Variable type has to be a function type!");
+			return get(manager, static_pointer_cast<FunctionTypePtr>(var->getType()), var, definition);
+		}
+
+		/**
+		 * Obtains a simple, non-recursive Lambda based on the given definition.
+		 *
+		 * @param manager the manager maintaining the resulting node instance
+		 * @param lambda the lambda to be referenced by the resulting expression
+		 * @return the requested lambda expression managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const LambdaPtr& lambda);
+
+		/**
+		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
+		 *
+		 * @param manager the manager maintaining the resulting node instance
+		 * @param type the type of the resulting lambda expression
+		 * @param params the parameters accepted by the resulting lambda
+		 * @param body the body of the resulting function
+		 * @return the requested lambda expression managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body);
+
+		/**
+		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
+		 *
+		 * @param manager the manager maintaining the resulting node instance
+		 * @param type the type of the resulting lambda expression
+		 * @param params the parameters accepted by the resulting lambda
+		 * @param body the body of the resulting function
+		 * @return the requested lambda expression managed by the given manager
+		 */
+		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariableList& params, const CompoundStmtPtr& body) {
+			return get(manager, type, Parameters::get(manager, params), body);
+		}
+
+		/**
+		 * Determines whether this function is recursively defined or not.
+		 */
+		bool isRecursiveInternal() const;
+
+	};
+
+
+
+
 	// ------------------------------------- Lambda Binding -----------------------------------
 
 	/**
@@ -583,7 +722,17 @@ namespace core {
 		 * 				   this recursive function definition.
 		 * @return a copy of the internally maintained pointer to the actual function definition.
 		 */
-		const Ptr<const Lambda>& getDefinitionOf(const VariablePtr& variable) const;
+		const Pointer<const Lambda>& getDefinitionOf(const VariablePtr& variable) const {
+			auto definitions = getDefinitions();
+			auto it = std::find_if(definitions.begin(), definitions.end(),
+					[&](const LambdaBindingPtr& cur) { return *cur->getVariable() == *variable; }
+			);
+
+			if (it == definitions.end()) {
+				return Pointer<const Lambda>();
+			}
+			return it->getLambda();
+		}
 
 		/**
 		 * Determines whether the definition of the function referenced by the given variable within
@@ -593,7 +742,10 @@ namespace core {
 		 * @param variable the variable identifying the function to be checked within this definition
 		 * @return true if recursive, false otherwise
 		 */
-		bool isRecursive(const VariablePtr& variable) const;
+		bool isRecursive(const VariablePtr& variable) const {
+			return SupportAccessor<Derived,Ptr>::getNode().isRecursivelyDefined(variable);
+		}
+
 
 		/**
 		 * Unrolls this definition once for the given variable.
@@ -602,7 +754,10 @@ namespace core {
 		 * @param variable the variable defining the definition to be unrolled once
 		 * @return the resulting, unrolled lambda expression
 		 */
-		LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const;
+		LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
+			return SupportAccessor<Derived,Ptr>::getNode().unrollDefinitionOnce(variable);
+		}
+
 	};
 
 	/**
@@ -631,159 +786,28 @@ namespace core {
 		static LambdaDefinitionPtr get(NodeManager& manager, const vector<LambdaBindingPtr>& bindings) {
 			return manager.get(LambdaDefinition(convertList(bindings)));
 		}
-	};
-
-
-
-
-	// ------------------------------------- Lambda Expression -----------------------------------
-
-	/**
-	 * The accessor associated to a lambda expression.
-	 */
-	IR_NODE_ACCESSOR(LambdaExpr, Expression, Type, Variable, LambdaDefinition)
 
 		/**
-		 * Obtains a reference to the variable identifying the represented lambda within the definition.
+		 * Determines whether the definition of the function referenced by the given variable within
+		 * this lambda definition is recursive - hence, whether it is invoking itself or one of the other
+		 * functions within this block.
+		 *
+		 * @param variable the variable identifying the function to be checked within this definition
+		 * @return true if recursive, false otherwise
 		 */
-		IR_NODE_PROPERTY(Variable, Variable, 1);
+		bool isRecursivelyDefined(const VariablePtr& variable) const;
 
 		/**
-		 * Obtains a reference to the definition of this lambda expression.
+		 * Unrolls this definition once for the given variable.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting reference
+		 * @param variable the variable defining the definition to be unrolled once
+		 * @return the resulting, unrolled lambda expression
 		 */
-		IR_NODE_PROPERTY(LambdaDefinition, Definition, 2);
-
-		/**
-		 * Obtains a reference to the lambda defining this lambda expression.
-		 */
-		Ptr<const Lambda> getLambda() const {
-			return getDefinition()->getDefinitionOf(getVariable());
-		}
-
-		/**
-		 * Obtains a reference to the parameters of the lambda defining this expression.
-		 */
-		Ptr<const Parameters> getParameterList() const {
-			return getLambda()->getParameters();
-		}
-
-		/**
-		 * Obtains a reference to the body of the lambda defining this expression.
-		 */
-		Ptr<const CompoundStmt> getBody() const {
-			return getLambda()->getBody();
-		}
-
-		/**
-		 * Determines whether this function is recursively defined or not.
-		 */
-		bool isRecursive() const {
-			return ExpressionAccessor<Derived, Ptr>::getNode().isRecursiveInternal();
-		}
+		LambdaExprPtr unrollDefinitionOnce(NodeManager& manager, const VariablePtr& variable) const;
 
 	};
 
-	/**
-	 * The entity used to represent lambda expressions.
-	 */
-	IR_NODE(LambdaExpr, Expression)
-
-		/**
-		 * A flag indicating whether this lambda is representing a recursive function.
-		 */
-		mutable boost::logic::tribool recursive;
-
-	protected:
-
-		/**
-		 * Prints a string representation of this node to the given output stream.
-		 */
-		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "rec " << *getVariable() << "." << *getDefinition();
-		}
-
-	public:
-
-		/**
-		 * This static factory method allows to obtain an instance of a lambda expression
-		 * within the given node manager based on the given parameters.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param type the type of the requested lambda expression
-		 * @param var the variable identifying the lambda to be represented within the given definition
-		 * @param lambda the definition defining the lambda to be represented
-		 * @return the requested type instance managed by the given manager
-		 */
-		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariablePtr& var, const LambdaDefinitionPtr& definition) {
-			return manager.get(LambdaExpr(type, var, definition));
-		}
-
-		/**
-		 * This static factory method allows to obtain an instance of a lambda expression
-		 * within the given node manager based on the given parameters.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param var the variable identifying the lambda to be represented within the given definition
-		 * @param lambda the definition defining the lambda to be represented
-		 * @return the requested type instance managed by the given manager
-		 */
-		static LambdaExprPtr get(NodeManager& manager, const VariablePtr& var, const LambdaDefinitionPtr& definition) {
-			assert(dynamic_pointer_cast<FunctionTypePtr>(var->getType()) && "Variable type has to be a function type!");
-			return get(manager, static_pointer_cast<FunctionTypePtr>(var->getType()), var, definition);
-		}
-
-		/**
-		 * Obtains a simple, non-recursive Lambda based on the given definition.
-		 *
-		 * @param manager the manager maintaining the resulting node instance
-		 * @param lambda the lambda to be referenced by the resulting expression
-		 * @return the requested lambda expression managed by the given manager
-		 */
-		static LambdaExprPtr get(NodeManager& manager, const LambdaPtr& lambda) {
-			VariablePtr var = Variable::get(manager, lambda->getType());
-			LambdaBindingPtr binding = LambdaBinding::get(manager, var, lambda);
-			LambdaDefinitionPtr def = LambdaDefinition::get(manager, toVector(binding));
-			return get(manager, lambda->getType(), var, def);
-		}
-
-		/**
-		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
-		 *
-		 * @param manager the manager maintaining the resulting node instance
-		 * @param type the type of the resulting lambda expression
-		 * @param params the parameters accepted by the resulting lambda
-		 * @param body the body of the resulting function
-		 * @return the requested lambda expression managed by the given manager
-		 */
-		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const ParametersPtr& params, const CompoundStmtPtr& body) {
-			return get(manager, Lambda::get(manager, type, params, body));
-		}
-
-		/**
-		 * Obtains a simple, non-recursive Lambda expression exposing the given type, parameters and body.
-		 *
-		 * @param manager the manager maintaining the resulting node instance
-		 * @param type the type of the resulting lambda expression
-		 * @param params the parameters accepted by the resulting lambda
-		 * @param body the body of the resulting function
-		 * @return the requested lambda expression managed by the given manager
-		 */
-		static LambdaExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariableList& params, const CompoundStmtPtr& body) {
-			return get(manager, type, Parameters::get(manager, params), body);
-		}
-
-		/**
-		 * Determines whether this function is recursively defined or not.
-		 */
-		bool isRecursiveInternal() const {
-			// evaluate lazily
-			if (boost::logic::indeterminate(recursive)) {
-				recursive = getDefinition()->isRecursive(getVariable());
-			}
-			return recursive;
-		}
-
-	};
 
 
 
@@ -997,7 +1021,7 @@ namespace core {
 		 * @param value the value to be bound
 		 * @return the requested type instance managed by the given manager
 		 */
-		static NamedValuePtr get(NodeManager& manager, const StringValuePtr& name, const ExpressionsPtr& value) {
+		static NamedValuePtr get(NodeManager& manager, const StringValuePtr& name, const ExpressionPtr& value) {
 			return manager.get(NamedValue(name, value));
 		}
 
@@ -1080,11 +1104,11 @@ namespace core {
 		 *
 		 * @param manager the manager used for maintaining instances of this class
 		 * @param type the type of the struct constructed by the resulting expression
-		 * @param expressions the expressions to be packed into a vector
+		 * @param values the values to be packed into a vector
 		 * @return the requested type instance managed by the given manager
 		 */
-		static StructExprPtr get(NodeManager& manager, const StructTypePtr& type, const ExpressionsPtr& expressions) {
-			return manager.get(StructExpr(type, expressions));
+		static StructExprPtr get(NodeManager& manager, const StructTypePtr& type, const NamedValuesPtr& values) {
+			return manager.get(StructExpr(type, values));
 		}
 
 	};

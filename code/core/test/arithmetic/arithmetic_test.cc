@@ -38,7 +38,7 @@
 
 #include "insieme/core/arithmetic/arithmetic.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
@@ -47,9 +47,9 @@ namespace arithmetic {
 TEST(ArithmeticTest, Values) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr varA = builder.variable(type, 1);
 	VariablePtr varB = builder.variable(type, 2);
 	VariablePtr varC = builder.variable(type, 3);
@@ -68,9 +68,9 @@ TEST(ArithmeticTest, Values) {
 TEST(ArithmeticTest, Products) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr varA = builder.variable(type, 1);
 	VariablePtr varB = builder.variable(type, 2);
 	VariablePtr varC = builder.variable(type, 3);
@@ -138,7 +138,7 @@ TEST(ArithmeticTest, Products) {
 
 TEST(ArithmeticTest, Formula) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	Formula f;
 	EXPECT_EQ("0", toString(f));
@@ -158,7 +158,7 @@ TEST(ArithmeticTest, Formula) {
 	EXPECT_EQ("3", toString(f));
 
 	// test variables
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr varA = builder.variable(type, 1);
 	VariablePtr varB = builder.variable(type, 2);
 	VariablePtr varC = builder.variable(type, 3);
@@ -211,9 +211,9 @@ TEST(ArithmeticTest, Formula) {
 TEST(ArithmeticTest, ProductProperties) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr varA = builder.variable(type, 1);
 	VariablePtr varB = builder.variable(type, 2);
 
@@ -258,9 +258,9 @@ TEST(ArithmeticTest, ProductProperties) {
 TEST(ArithmeticTest, FormulaProperties) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr varA = builder.variable(type, 1);
 	VariablePtr varB = builder.variable(type, 2);
 
@@ -351,9 +351,9 @@ TEST(ArithmeticTest, TicketRequirement) {
 
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr i = builder.variable(type, 1);
 	VariablePtr j = builder.variable(type, 2);
 
@@ -369,9 +369,9 @@ TEST(ArithmeticTest, TicketRequirement) {
 TEST(ArithmeticTest, Division) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr i = builder.variable(type, 1);
 	VariablePtr j = builder.variable(type, 2);
 
@@ -410,9 +410,9 @@ TEST(ArithmeticTest, ProductSubscriptOperator) {
 
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr i = builder.variable(type, 1);
 	VariablePtr j = builder.variable(type, 2);
 
@@ -449,9 +449,9 @@ TEST(ArithmeticTest, ProductSubscriptOperator) {
 TEST(ArithmeticTest, FormulaSubscriptOperator) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr i = builder.variable(type, 1);
 	VariablePtr j = builder.variable(type, 2);
 
@@ -480,10 +480,10 @@ TEST(ArithmeticTest, FormulaSubscriptOperator) {
 
 TEST(ArithmeticTest, NastyExample) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// from expr: int.add(int.add(int.mul(int.mul(0, 4), 4), int.mul(0, 4)), v112)
-	TypePtr type = builder.getBasicGenerator().getInt4();
+	TypePtr type = builder.getLangBasic().getInt4();
 	VariablePtr var = builder.variable(type, 1);
 
 	auto f = (((0*4)*4) + (0*4)) + var;

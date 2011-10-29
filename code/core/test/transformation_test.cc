@@ -38,7 +38,7 @@
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/core/transform/node_replacer.h"
 
@@ -48,7 +48,7 @@ using namespace insieme::core::transform;
 TEST(ASTVisitor, NodeReplacementTest) {
 
 	// copy and clone the type
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	GenericTypePtr type = builder.genericType("int");
 

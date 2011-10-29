@@ -384,8 +384,23 @@ namespace core {
 		 * @param plain determining whether the resulting type covers closures or not
 		 * @return a pointer to a instance of the required type maintained by the given manager
 		 */
+		static FunctionTypePtr get(NodeManager& manager, const TypesPtr& paramType, const TypePtr& returnType, bool plain = true) {
+			return manager.get(FunctionType(paramType, returnType, BoolValue::get(manager, plain)));
+		}
+
+		/**
+		 * This method provides a static factory method for function types. It will return a pointer to
+		 * a function type instance representing the requested function type and being maintained
+		 * within the given manager.
+		 *
+		 * @param manager the manager to be used for handling the obtained type pointer
+		 * @param paramTypes the type of the single parameter accepted by the resulting function
+		 * @param returnType the type of value to be returned by the obtained function type
+		 * @param plain determining whether the resulting type covers closures or not
+		 * @return a pointer to a instance of the required type maintained by the given manager
+		 */
 		static FunctionTypePtr get(NodeManager& manager, const TypePtr& paramType, const TypePtr& returnType, bool plain = true) {
-			return manager.get(FunctionType(Types::get(manager, toVector(paramType)), returnType, BoolValue::get(manager, plain)));
+			return get(manager, Types::get(manager, toVector(paramType)), returnType, plain);
 		}
 
 		/**

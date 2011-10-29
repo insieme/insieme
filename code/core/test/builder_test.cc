@@ -38,16 +38,16 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
 
-TEST(ASTBuilder, Basic) {
+TEST(IRBuilder, Basic) {
 
 
 	// With Builder
-	ASTBuilder build;
+	IRBuilder build;
 	VariablePtr var1 = build.variable(build.getBasicGenerator().getBool(), 1);
 	std::vector<StatementPtr> statements;
 	statements.push_back(build.breakStmt());

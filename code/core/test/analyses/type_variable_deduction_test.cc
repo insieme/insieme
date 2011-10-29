@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/core/analysis/type_variable_deduction.h"
 #include "insieme/core/analysis/subtype_constraints.h"
@@ -54,7 +54,7 @@ using namespace utils::set;
 TEST(TypeVariableConstraints, Solving) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypeVariablePtr var = builder.typeVariable("a");
@@ -165,7 +165,7 @@ TEST(TypeVariableConstraints, Solving) {
 TEST(TypeVariableConstraints, ConstraintCombinations) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr uint2 = basic.getUInt2();
@@ -218,7 +218,7 @@ TEST(TypeVariableConstraints, EqualSuperSubTypeConstraintsBug) {
 
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypeVariablePtr var = builder.typeVariable("x");
@@ -247,7 +247,7 @@ TEST(TypeVariableConstraints, EqualSuperSubTypeConstraintsBug) {
 TEST(TypeVariableDeduction, getTypeVariableInstantiation) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	// create some types
@@ -315,7 +315,7 @@ TEST(TypeVariableDeduction, getTypeVariableInstantiation) {
 TEST(TypeVariableDeduction, vectorsAndArrays) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	// create some types
@@ -412,7 +412,7 @@ TEST(TypeVariableDeduction, vectorsAndArrays) {
 TEST(TypeVariableDeduction, intTypeParams) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	IntTypeParamPtr varA = builder.variableIntTypeParam('a');
 	IntTypeParamPtr varB = builder.variableIntTypeParam('b');
@@ -481,7 +481,7 @@ TEST(TypeVariableDeduction, intTypeParams) {
 TEST(TypeVariableDeduction, FunctionTypes) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr int4 = basic.getInt4();
@@ -543,7 +543,7 @@ TEST(TypeVariableDeduction, FunctionTypes) {
 TEST(TypeVariableDeduction, VectorFunctionTypes) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	// test a function accepting an arbitrary array being an argument of another call
@@ -574,7 +574,7 @@ TEST(TypeVariableDeduction, ReductionBug) {
 	//
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr uint4 = basic.getUInt4();
@@ -599,7 +599,7 @@ TEST(TypeVariableDeduction, ArrayRefElementBug) {
 
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr uint4 = basic.getUInt4();
@@ -621,7 +621,7 @@ TEST(TypeVariableDeduction, ArgumentBasedTypeConstraints) {
 	//		parameter: uint<4> and uint<#a> -> uint<#a>
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr alpha = builder.typeVariable("a");
@@ -646,7 +646,7 @@ TEST(TypeVariableDeduction, PureIntTypeVariableConstraintsBug) {
 
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = manager.basic;
 
 	TypePtr int2 = basic.getInt2();
@@ -686,7 +686,7 @@ bool notMatchable(const TypePtr& pattern, const TypePtr& type) {
 }
 
 TEST(TypeVariableDeduction, Matching) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	// create some types to "play"
@@ -747,7 +747,7 @@ TEST(TypeVariableDeduction, Matching) {
 
 
 TEST(TypeVariableDeduction, SubTyping) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	// check sub-type relation between int and uint
@@ -854,7 +854,7 @@ TEST(TypeVariableDeduction, VectorMatchingBug) {
 	//		The check for generic types is no longer conducted via the node type token. It is now using a dynamic cast.
 	//
 
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	TypePtr alpha = builder.typeVariable("a");
@@ -898,7 +898,7 @@ TEST(TypeVariableDeduction, IntTypeParamVariableNameBug) {
 	//		This is now done.
 	//
 
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 	const lang::BasicGenerator& basic = manager.basic;
 
@@ -923,7 +923,7 @@ TEST(TypeVariableDeduction, PassingVectorToArrayBug) {
 	//		variables within the first or second type parameter are now treated equally
 	//
 
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 	const lang::BasicGenerator& basic = manager.basic;
 
@@ -961,7 +961,7 @@ TEST(TypeVariableDeduction, PlainFunctionTest) {
 	//		On the other hand, passing y : A => B to q : A -> B is
 	//			not allowed.
 
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager& manager = builder.getNodeManager();
 
 	TypePtr A = builder.genericType("A");

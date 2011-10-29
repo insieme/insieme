@@ -38,7 +38,7 @@
 
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_expressions.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "ir_node_test.inc"
 
@@ -116,7 +116,7 @@ TEST(StatementsTest, CompoundStmt) {
 }
 
 //TEST(StatementsTest, IntLiterals) {
-//	ASTBuilder builder;
+//	IRBuilder builder;
 //
 //	{
 //		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "-10");
@@ -141,7 +141,7 @@ TEST(StatementsTest, CompoundStmt) {
 //}
 //
 //TEST(StatementsTest, RealLiterals) {
-//	ASTBuilder builder;
+//	IRBuilder builder;
 //
 //	{
 //		LiteralPtr floatLit = builder.literal(builder.getNodeManager().basic.getFloat(), "0.4");
@@ -156,7 +156,7 @@ TEST(StatementsTest, CompoundStmt) {
 //}
 //
 //TEST(StatementsTest, DefaultParams) {
-//	ASTBuilder builder;
+//	IRBuilder builder;
 //
 //	LiteralPtr one = builder.literal(builder.getNodeManager().basic.getIntGen(), "1");
 //	DeclarationStmtPtr decl = builder.declarationStmt(builder.getNodeManager().basic.getIntGen(), one);

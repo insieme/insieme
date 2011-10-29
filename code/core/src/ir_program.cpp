@@ -34,54 +34,53 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ir_node_tryout.h"
+#include "insieme/core/ir_program.h"
+
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace core {
 
-	namespace detail {
 
-		struct HashVisitor : public boost::static_visitor<std::size_t> {
-			template<typename T>
-			std::size_t operator()(const T& value) const {
-				return boost::hash<T>()(value);
+	ProgramPtr Program::get(NodeManager& manager, const ExpressionList& entryPoints) {
+		return manager.get(Program(entryPoints));
+	}
+
+	ProgramPtr Program::addEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
+		return addEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
+	}
+
+	ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& entryPoints) {
+		ExpressionList list(program->getEntryPoints());
+		list.insert(list.end(), entryPoints.begin(), entryPoints.end());
+		return manager.get(Program(list));
+	}
+
+	ProgramPtr Program::remEntryPoint(NodeManager& manager, const ProgramPtr& program, const ExpressionPtr& entryPoint) {
+		return remEntryPoints(manager, program, toVector<ExpressionPtr>(entryPoint));
+	}
+
+	ProgramPtr Program::remEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& entryPoints) {
+		ExpressionList list;
+		for_each(program->getEntryPoints(), [&list, &entryPoints](const ExpressionPtr& cur) {
+			if (!contains(entryPoints, cur, equal_target<ExpressionPtr>())) {
+				list.push_back(cur);
 			}
-		};
-
-		std::size_t hash(const Node::Value& value) {
-			return boost::apply_visitor(HashVisitor(), value);
-		}
-
-		std::size_t hash(NodeType type, const NodeList& children) {
-			std::size_t seed;
-			boost::hash_combine(seed, type);
-			insieme::utils::hashList(seed, children, deref<NodePtr>());
-			return seed;
-		}
-
-
-		struct IsValueVisitor : public boost::static_visitor<bool> {
-			bool operator()(const Node::Value& value) const { return true; }
-			template<typename T> bool operator()(const T& other) const { return false; }
-		};
-
-	}
-
-	Node::Node(const Value& value)
-		: HashableImmutableData<Node>(detail::hash(value)), data(value) {}
-
-	Node::Node(NodeType type, const NodeList& children)
-		: HashableImmutableData<Node>(detail::hash(type, children)), data(std::make_pair(type, children)) {}
-
-
-	bool Node::isValue() const {
-		return boost::apply_visitor(detail::IsValueVisitor(), data);
+		});
+		return manager.get(Program(list));
 	}
 
 
-	std::ostream& Node::printTo(std::ostream& out) const {
-		return out << "node";
-	}
+	std::ostream& Program::printTo(std::ostream& out) const {
 
+		out << "PROGRAM { \n";
+
+		// print entry points
+		out << "// Entry Points: \n\t";
+		out << join("\n\t", getEntryPoints(), print<deref<NodePtr>>());
+		out << "\n";
+
+		return out;
+	}
 } // end namespace core
 } // end namespace insieme

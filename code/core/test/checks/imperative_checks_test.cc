@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/imperativechecks.h"
 
 namespace insieme {
@@ -48,7 +48,7 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 }
 
 TEST(UndeclaredVariableCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a function literal
 	TypePtr type = builder.genericType("int");
@@ -81,7 +81,7 @@ namespace {
 
 	LambdaDefinitionPtr wrap(StatementPtr body) {
 		NodeManager& manager = body->getNodeManager();
-		ASTBuilder builder(manager);
+		IRBuilder builder(manager);
 
 		// construct lambda
 		FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.basic.getUnit());
@@ -115,7 +115,7 @@ namespace {
 }
 
 TEST(UndeclaredVariableCheck, CompoundStmt) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	TypePtr type = builder.genericType("A");
 	VariablePtr varA = builder.variable(type, 1);
@@ -166,7 +166,7 @@ TEST(UndeclaredVariableCheck, CompoundStmt) {
 }
 
 TEST(UndeclaredVariableCheck, BindExpr) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	TypePtr type = builder.genericType("A");
 	VariablePtr varA = builder.variable(type, 1);

@@ -40,7 +40,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/program.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"

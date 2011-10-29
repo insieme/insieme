@@ -185,6 +185,37 @@ namespace core {
 //		return out << "(" << nodeType << "|" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
 //	}
 
+	bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB) {
+
+		// check identity (under-approximation)
+		if (nodeA == nodeB) {
+			return true;
+		}
+
+		// check structure (over-approximation)
+		if (*nodeA!=*nodeB) {
+			return false;
+		}
+
+		// check annotations of pointer and nodes ...
+		if (!hasSameAnnotations((*nodeA).getAnnotationContainer(), (*nodeB).getAnnotationContainer())) {
+			return false;
+		}
+
+		// check annotations of references
+		auto listA = nodeA->getChildList();
+		auto listB = nodeB->getChildList();
+		return all(
+				make_paired_iterator(listA.begin(), listB.begin()),
+				make_paired_iterator(listA.end(), listB.end()),
+
+				[](const std::pair<NodePtr, NodePtr>& cur) {
+
+			// make a recursive call
+			return equalsWithAnnotations(cur.first, cur.second);
+		});
+	}
+
 } // end namespace core
 } // end namespace insieme
 

@@ -211,7 +211,9 @@ namespace core {
 		 * @param mapper the mapper used to translate child node references
 		 * @return a pointer to the modified node.
 		 */
-		NodePtr substitute(NodeManager& manager, NodeMapping& mapper) const;
+		Ptr<const Node> substitute(NodeManager& manager, NodeMapping& mapper) const {
+			return getNode().substituteInternal(manager, mapper);
+		}
 
 	protected:
 

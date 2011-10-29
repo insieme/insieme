@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/lang/extension.h"
@@ -51,7 +51,7 @@ namespace runtime {
 namespace enc = insieme::core::encoder;
 
 core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
-	core::ASTBuilder builder(manager);
+	core::IRBuilder builder(manager);
 	const auto& basic = manager.getBasicGenerator();
 	const auto& ext = manager.getLangExtension<Extensions>();
 
@@ -64,7 +64,7 @@ core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 TEST(RuntimeExtensions, WorkItemVariant) {
 
 	core::NodeManager manager;
-	core::ASTBuilder builder(manager);
+	core::IRBuilder builder(manager);
 	const Extensions& ext = manager.getLangExtension<Extensions>();
 
 	// test type
@@ -92,7 +92,7 @@ TEST(RuntimeExtensions, WorkItemVariant) {
 TEST(RuntimeExtensions, WorkItemImpl) {
 
 	core::NodeManager manager;
-	core::ASTBuilder builder(manager);
+	core::IRBuilder builder(manager);
 	const Extensions& ext = manager.getLangExtension<Extensions>();
 
 	// test type
@@ -119,7 +119,7 @@ TEST(RuntimeExtensions, WorkItemImpl) {
 TEST(RuntimeExtensions, DataItem) {
 
 	core::NodeManager manager;
-	core::ASTBuilder builder(manager);
+	core::IRBuilder builder(manager);
 
 	core::TypeList list;
 	core::TupleTypePtr tupleType = builder.tupleType(list);

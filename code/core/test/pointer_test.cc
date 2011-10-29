@@ -39,7 +39,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_pointer.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "dummy_annotations.inc"
 

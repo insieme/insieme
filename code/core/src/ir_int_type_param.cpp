@@ -42,7 +42,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 
 	// ----------------------- Concrete Integer Type Parameter ------------------------
@@ -51,16 +50,18 @@ namespace new_core {
 		return manager.get(ConcreteIntTypeParam(UIntValue::get(manager, value)));
 	}
 
-	bool ConcreteIntTypeParam::operator<(const IntTypeParam& other) const {
+	bool ConcreteIntTypeParam::operator<(const IntTypeParam& param) const {
+		NodePtr other(&param);
+
 		// variable int type parameters are smaller than all other parameters
-		if (other.getNodeType() != NT_ConcreteIntTypeParam) {
-			if (other.getNodeType() == NT_InfiniteIntTypeParam) {
+		if (other->getNodeType() != NT_ConcreteIntTypeParam) {
+			if (other->getNodeType() == NT_InfiniteIntTypeParam) {
 				// it is smaller than an infinite int type param ...
 				return true;
 			}
 
 			// compare based on parameters type
-			return getNodeType() < other.getNodeType();
+			return getNodeTypeInternal() < other->getNodeType();
 		}
 
 		// compare the symbol
@@ -75,9 +76,11 @@ namespace new_core {
 		return manager.get(VariableIntTypeParam(CharValue::get(manager, symbol)));
 	}
 
-	bool VariableIntTypeParam::operator<(const IntTypeParam& other) const {
+	bool VariableIntTypeParam::operator<(const IntTypeParam& param) const {
+		NodePtr other(&param);
+
 		// variable int type parameters are smaller than all other parameters
-		if (other.getNodeType() != NT_VariableIntTypeParam) {
+		if (other->getNodeType() != NT_VariableIntTypeParam) {
 			return false;
 		}
 
@@ -99,6 +102,5 @@ namespace new_core {
 	}
 
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme

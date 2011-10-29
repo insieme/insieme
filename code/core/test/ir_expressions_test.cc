@@ -38,7 +38,7 @@
 
 #include "insieme/core/statements.h"
 #include "insieme/core/expressions.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -50,7 +50,7 @@ namespace new_core {
 
 
 //TEST(ExpressionsTest, IntLiterals) {
-//	ASTBuilder builder;
+//	IRBuilder builder;
 //
 //	LiteralPtr i5 = builder.literal(builder.getBasicGenerator().getIntGen(), "5");
 //	LiteralPtr i7 = builder.literal(builder.getBasicGenerator().getIntGen(), "7");
@@ -67,7 +67,7 @@ namespace new_core {
 //}
 //
 //TEST(ExpressionsTest, FloatLiterals) {
-//	ASTBuilder builder;
+//	IRBuilder builder;
 //
 //	LiteralPtr f5_s = builder.literal(builder.getBasicGenerator().getFloat(), "5.0");
 //
@@ -162,7 +162,7 @@ namespace new_core {
 //}
 //
 //TEST(ExpressionsTest, LambdaExpr) {
-//	ASTBuilder builder;
+//	IRBuilder builder;
 //	const lang::BasicGenerator& gen = builder.getBasicGenerator();
 //
 //	// create a recursive even/odd example
@@ -229,7 +229,7 @@ namespace new_core {
 //TEST(ExpressionsTest, BindExpr) {
 //
 //	NodeManager manager;
-//	ASTBuilder builder(manager);
+//	IRBuilder builder(manager);
 //
 //	TypePtr typeA = builder.genericType("A");
 //	TypePtr typeRes = builder.genericType("R");
@@ -407,7 +407,7 @@ namespace new_core {
 //
 //TEST(ExpressionsTest, JobExpr) {
 //	NodeManager manager;
-//	ASTBuilder builder(manager);
+//	IRBuilder builder(manager);
 //
 //	TypePtr intType = manager.basic.getUIntGen();
 //	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.basic.getUnit());

@@ -83,7 +83,7 @@ namespace core {
 		\
 		template<typename D,template<typename T> class P> \
 		struct NAME ## ValueAccessor : public ValueAccessor<D,P> { \
-			TYPE getValue() const { \
+			const TYPE& getValue() const { \
 				return boost::get<TYPE>(ValueAccessor<D,P>::getValue()); \
 			} \
 		}; \
@@ -93,6 +93,10 @@ namespace core {
 		public: \
 			static NAME ## ValuePtr get(NodeManager& manager, const TYPE value) { \
 				return manager.get(NAME ## Value(value)); \
+			} \
+			static NAME ## ValuePtr get(NodeManager& manager, const NodeList& children) { \
+				assert(false && "Value nodes must not be constructed via their child node list!"); \
+				return NAME ## ValuePtr(); \
 			} \
 			operator const TYPE&() const { \
 				return boost::get<TYPE>(Node::getNodeValue()); \

@@ -226,7 +226,7 @@ namespace core {
 			 */
 			void operator delete[](void*, size_t);
 
-		private:
+		protected:
 
 			/**
 			 * Determines the type of this node.
@@ -308,14 +308,14 @@ namespace core {
 			 */
 			NodePtr substituteInternal(NodeManager& manager, NodeMapping& mapper) const;
 
+		public:
+
 			/**
 			 * Obtains a reference to the associated annotation container.
 			 */
 			const annotation_container& getAnnotationContainer() const {
 				return annotations;
 			}
-
-		public:
 
 			/**
 			 * Obtains a reference to the entire list of children stored internally.
@@ -928,6 +928,17 @@ namespace core {
 				: Node(nodeType, NC_Support, children) { }
 
 	};
+
+	/**
+	 * Checks whether the given two node pointer are the root of the same AST tree
+	 * containing the same set of annotations on the nodes and the pointer between
+	 * nodes.
+	 *
+	 * @param nodeA the root of the first tree
+	 * @param nodeB the root of the second tree
+	 * @return true if they are equivalent, false otherwiser
+	 */
+	bool equalsWithAnnotations(const NodePtr& nodeA, const NodePtr& nodeB);
 
 } // end namespace core
 } // end namespace insieme

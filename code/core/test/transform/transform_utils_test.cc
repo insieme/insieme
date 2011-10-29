@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/statements.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/utils/logging.h"
@@ -48,7 +48,7 @@ namespace transform {
 
 TEST(TransformUtils, MemberAccessLiteralUpdater) {
 	NodeManager mgr;
-	ASTBuilder builder(mgr);
+	IRBuilder builder(mgr);
 
 	CompoundStmt::StatementList saStmts;
 	// construct a struct variable

@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/semanticchecks.h"
 #include "insieme/core/parser/ir_parse.h"
 #include "insieme/utils/logging.h"
@@ -50,7 +50,7 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 }
 
 TEST(ScalarArrayIndexRangeCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 	NodeManager manager;
 
 	{

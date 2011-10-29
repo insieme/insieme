@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_check.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -67,7 +67,7 @@ public:
 };
 
 TEST(ASTCheck, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a simple node
 	TypePtr type = builder.genericType("A");
@@ -97,7 +97,7 @@ TEST(ASTCheck, Basic) {
 }
 
 TEST(ASTCheck, Decorators) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// build diamond - again ...
 	TypePtr typeD = builder.genericType("D");

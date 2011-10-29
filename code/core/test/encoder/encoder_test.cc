@@ -43,7 +43,7 @@
 #include "insieme/utils/container_utils.h"
 
 #include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
@@ -53,7 +53,7 @@ namespace encoder {
 TEST(Lists, TestBaseTypes) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const auto& basic = manager.basic;
 
 	core::ExpressionPtr expr = toIR(manager, 12);
@@ -105,7 +105,7 @@ TEST(Lists, TestBaseTypes) {
 TEST(Lists, SubTypeSupport) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const auto& basic = manager.basic;
 
 	core::TypePtr uint4 = basic.getUInt4();

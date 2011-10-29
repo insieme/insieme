@@ -56,6 +56,7 @@
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
+#include "insieme/utils/functional_utils.h"
 
 namespace insieme {
 namespace core {
@@ -184,39 +185,43 @@ UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 
 // ---------------------------- Convenience -------------------------------------
 
-GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intTypeParams) const {
-	return genericType(name, types(typeParams), intTypeParams(intTypeParams));
+GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intParams) const {
+	return genericType(name, types(typeParams), intTypeParams(intParams));
 }
 
 StructTypePtr IRBuilder::structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
 	vector<NamedTypePtr> members;
-	::transform(entries, std::back_insert(members), fun(this, &namedType));
+	::transform(entries, std::back_inserter(members), [&](const std::pair<StringValuePtr,TypePtr>& cur) {
+		return namedType(cur.first, cur.second);
+	});
 	return structType(members);
 }
 
 UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const {
 	vector<NamedTypePtr> members;
-	::transform(entries, std::back_insert(members), fun(this, &namedType));
+	::transform(entries, std::back_inserter(members), [&](const std::pair<StringValuePtr,TypePtr>& cur) {
+		return namedType(cur.first, cur.second);
+	});
 	return unionType(members);
 }
 
 TupleExprPtr IRBuilder::tupleExpr(const vector<ExpressionPtr>& values) const {
-	TupleType type = tupleType(extractTypes(values));
-	return tupleExpr(type, values);
+	TupleTypePtr type = tupleType(extractTypes(values));
+	return tupleExpr(type, Expressions::get(manager, values));
 }
 
 VectorExprPtr IRBuilder::vectorExpr(const VectorTypePtr& type, const ExpressionList& values) const {
 	return vectorExpr(type, expressions(values));
 }
 
-StructExprPtr IRBuilder::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const {
-	vector<NamedType> members;
-	vector<NamedValue> values;
-	for_each(values, [&](const pair<StringValuePtr, ExpressionPtr>& cur) {
-		members.push_back(namedType(cur.first, cur.second->getType()));
-		values.push_back(namedType(cur.first, cur.second));
+StructExprPtr IRBuilder::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
+	vector<NamedTypePtr> types;
+	vector<NamedValuePtr> values;
+	for_each(members, [&](const pair<StringValuePtr, ExpressionPtr>& cur) {
+		types.push_back(namedType(cur.first, cur.second->getType()));
+		values.push_back(namedValue(cur.first, cur.second));
 	});
-	return structExpr(structType(members), namedValues(values));
+	return structExpr(structType(types), namedValues(values));
 }
 
 IfStmtPtr IRBuilder::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
@@ -231,13 +236,13 @@ WhileStmtPtr IRBuilder::whileStmt(const ExpressionPtr& condition, const Statemen
 }
 
 ForStmtPtr IRBuilder::forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const {
-	return forStmt(var->getVariable(), var->getInitialValue(), end, step, wrapBody(body));
+	return forStmt(var->getVariable(), var->getInitialization(), end, step, wrapBody(body));
 }
 
 SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase) const {
 	CompoundStmtPtr defCase = (defaultCase)?wrapBody(defaultCase):getNoOp();
 
-	vector<SwitchCase> caseList;
+	vector<SwitchCasePtr> caseList;
 	::transform(cases, [&](const pair<ExpressionPtr, StatementPtr>& cur) {
 		return switchCase(static_pointer_cast<LiteralPtr>(cur.first), wrapBody(cur.second));
 	});
@@ -290,19 +295,19 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 		// extract type and resolve members recursively
 		core::StructTypePtr structType = static_pointer_cast<const core::StructType>(type);
 
-		core::StructExpr::Members members;
-		for_each(structType->getEntries(), [&](const core::StructType::Entry& cur) {
-			members.push_back(std::make_pair(cur.first, getZero(cur.second)));
+		vector<NamedValuePtr> members;
+		for_each(structType->getEntries(), [&](const NamedTypePtr& cur) {
+			members.push_back(namedValue(cur->getName(), getZero(cur->getType())));
 		});
 
-		return core::StructExpr::get(manager, members);
+		return core::StructExpr::get(manager, structType, namedValues(members));
 	}
 
 	// if it is a ref type ...
 	if (type->getNodeType() == core::NT_RefType) {
 		// return the corresponding flavor of NULL
 		core::TypePtr elementType = core::analysis::getReferencedType(type);
-		return callExpr(type, manager.getLangBasic().getAnyRefToRef(), manager.getLangBasic().getNull(), manager.getLangBasic().getTypeLiteral(elementType));
+		return callExpr(type, manager.getLangBasic().getAnyRefToRef(), manager.getLangBasic().getNull(), getTypeLiteral(elementType));
 	}
 
 	// TODO: extend for more types
@@ -310,7 +315,7 @@ core::ExpressionPtr IRBuilder::getZero(const core::TypePtr& type) const {
 	assert(false && "Given type not supported yet!");
 
 	// fall-back => no default initialization possible
-	return callExpr(type, manager.getLangBasic().getInitZero(), manager.getLangBasic().getTypeLiteral(type));
+	return callExpr(type, manager.getLangBasic().getInitZero(), getTypeLiteral(type));
 }
 
 
@@ -335,7 +340,7 @@ CallExprPtr IRBuilder::assign(const ExpressionPtr& target, const ExpressionPtr& 
 ExpressionPtr IRBuilder::invertSign(const ExpressionPtr& subExpr) const {
     // add a vector init expression if subExpr is of vector type
     ExpressionPtr&& elem = dynamic_pointer_cast<const VectorType>(subExpr->getType()) ?
-	    manager.getLangBasic().scalarToVector(subExpr->getType(), intLit(0)) : castExpr(subExpr->getType(), intLit(0));
+	    scalarToVector(subExpr->getType(), intLit(0)) : castExpr(subExpr->getType(), intLit(0));
 
 	return callExpr(
 			subExpr->getType(), manager.getLangBasic().getOperator(subExpr->getType(), lang::BasicGenerator::Sub),
@@ -435,27 +440,27 @@ CallExprPtr IRBuilder::callExpr(const TypePtr& resultType, const ExpressionPtr& 
 	return createCall(*this, resultType, functionExpr, toVector(arg1, arg2, arg3));
 }
 
-LambdaPtr lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
+LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const ParametersPtr& params, const StatementPtr& body) const {
 	return lambda(type, params, wrapBody(body));
 }
 
-LambdaPtr lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
+LambdaPtr IRBuilder::lambda(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
 	return lambda(type, params, wrapBody(body));
 }
 
-LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), manager.getLangBasic().getUnit(), true), params, body);
+LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const {
+	return lambdaExpr(functionType(extractTypes(params->getParameters()), manager.getLangBasic().getUnit(), true), params, wrapBody(body));
 }
-LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParamList& params) const {
-	return lambdaExpr(functionType(extractParamTypes(params), returnType, true), params, body);
+LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
+	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, true), params, wrapBody(body));
 }
 
 
-BindExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const ParameterList& params) const {
+BindExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const {
 	return lambdaExpr(manager.getLangBasic().getUnit(), body, captureMap, params);
 }
 
-BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VarValueMapping& captureMap, const ParameterList& params) const {
+BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const {
 
 	// process capture map
 	InitDetails&& details = splitUp(captureMap);
@@ -464,15 +469,15 @@ BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr&
 	vector<ExpressionPtr>& values = details.get<1>();
 
 	// get list of parameters within inner function
-	ParamList parameter;
+	VariableList parameter;
 	parameter.insert(parameter.end(), captureVars.begin(), captureVars.end());
 	parameter.insert(parameter.end(), params.begin(), params.end());
 
 	// build function type
-	FunctionTypePtr funType = functionType(extractParamTypes(parameter), returnType, true);
+	FunctionTypePtr funType = functionType(extractTypes(convertList<Expression>(parameter)), returnType, true);
 
 	// build inner function
-	LambdaExprPtr lambda = lambdaExpr(funType, parameter, body);
+	LambdaExprPtr lambda = lambdaExpr(funType, parameter, wrapBody(body));
 
 
 	// construct argument list for call expression within bind
@@ -486,12 +491,13 @@ BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr&
 }
 
 BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& call) const {
-	FunctionTypePtr type = functionType(extractTypes(params), call, false);
+	FunctionTypePtr type = functionType(extractTypes(params), call->getType(), false);
 	return bindExpr(type, parameters(params), call);
 }
 
-JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const {
-	return jobExpr(manager.getLangBasic().getJobType(), threadNumRange, declarationStmts(localDecls), guardedExprs(guardedExprs), defaultExpr);
+JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& branches, const ExpressionPtr& defaultExpr) const {
+	GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
+	return jobExpr(type, threadNumRange, declarationStmts(localDecls), guardedExprs(branches), defaultExpr);
 }
 
 CallExprPtr IRBuilder::getThreadNumRange(unsigned min) const {
@@ -529,13 +535,13 @@ CallExprPtr IRBuilder::pfor(const ExpressionPtr& body, const ExpressionPtr& star
 }
 
 CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
-	auto decl = initialFor->getDeclaration();
-	auto forBody = initialFor->getBody();
-	auto loopvar = decl->getVariable();
-
+	auto loopvar = initialFor->getIterator();
 	auto loopVarType = loopvar->getType();
+
+	auto forBody = initialFor->getBody();
+
 	while (loopVarType->getNodeType() == NT_RefType) {
-		loopVarType = static_pointer_cast<const RefType>(loopVarType)->getElementType();
+		loopVarType = analysis::getReferencedType(loopVarType);
 	}
 
 	// modify body to take iteration variable
@@ -543,13 +549,12 @@ CallExprPtr IRBuilder::pfor(const ForStmtPtr& initialFor) const {
 
 	insieme::utils::map::PointerMap<NodePtr, NodePtr> modifications;
 	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
-//	modifications.insert(std::make_pair(loopvar, pforLambdaParam));
 	auto adaptedBody = static_pointer_cast<const Statement>(transform::replaceAll(manager, forBody, modifications));
 
 	BindExprPtr lambda = transform::extractLambda(manager, adaptedBody, toVector(pforLambdaParam));
 	//LOG(INFO) << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << lambda->getValues() 
 	//	<< "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n" << pforLambdaParam << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
-	auto initExp = decl->getInitialization();
+	auto initExp = initialFor->getStart();
 
 	while (analysis::isCallOf(initExp, manager.getLangBasic().getRefVar()) || analysis::isCallOf(initExp, manager.getLangBasic().getRefNew())) {
 		initExp = static_pointer_cast<const CallExpr>(initExp)->getArguments()[0];
@@ -567,7 +572,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
 	utils::set::PointerSet<VariablePtr>&& args = getRechingVariables(body);
 
     core::TypeList argsType;
-    core::Lambda::ParamList params;
+    VariableList params;
     vector<ExpressionPtr> callArgs;
 
     utils::map::PointerMap<VariablePtr, VariablePtr> replVariableMap;
@@ -595,7 +600,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     		);
     }
 
-    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, true), params, body );
+    core::LambdaExprPtr&& lambdaExpr = this->lambdaExpr(functionType( argsType, retTy, true), params, wrapBody(body) );
     core::CallExprPtr&& callExpr = this->callExpr(retTy, lambdaExpr, callArgs);
 
     if ( !lazy ) 	return callExpr;
@@ -604,11 +609,11 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
     return bindExpr(std::vector<VariablePtr>(), callExpr);
 }
 
-ExpressionPtr IRBuilder::accessMember(ExpressionPtr structExpr, string member) const {
-	return accessMember(structExpr, identifier(member));
+ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const string& member) const {
+	return accessMember(structExpr, stringValue(member));
 }
 
-ExpressionPtr IRBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+ExpressionPtr IRBuilder::accessMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_StructType && "Cannot access non-struct type!");
 
@@ -616,15 +621,15 @@ ExpressionPtr IRBuilder::accessMember(ExpressionPtr structExpr, IdentifierPtr me
 	core::TypePtr memberType = structType->getTypeOfMember(member);
 
 	// create access instruction
-	core::ExpressionPtr access = getBasicGenerator().getCompositeMemberAccess();
-	return callExpr(memberType, access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+	core::ExpressionPtr access = getLangBasic().getCompositeMemberAccess();
+	return callExpr(memberType, access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
-ExpressionPtr IRBuilder::refMember(ExpressionPtr structExpr, string member) const {
-	return refMember(structExpr, identifier(member));
+ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const string& member) const {
+	return refMember(structExpr, stringValue(member));
 }
 
-ExpressionPtr IRBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr member) const {
+ExpressionPtr IRBuilder::refMember(const ExpressionPtr& structExpr, const StringValuePtr& member) const {
 	core::TypePtr type = structExpr->getType();
 	assert(type->getNodeType() == core::NT_RefType && "Cannot deref non ref type");
 
@@ -635,8 +640,8 @@ ExpressionPtr IRBuilder::refMember(ExpressionPtr structExpr, IdentifierPtr membe
 	core::TypePtr memberType = structType->getTypeOfMember(member);
 
 	// create access instruction
-	core::ExpressionPtr access = getBasicGenerator().getCompositeRefElem();
-	return callExpr(refType(memberType), access, structExpr, getBasicGenerator().getIdentifierLiteral(member), getBasicGenerator().getTypeLiteral(memberType));
+	core::ExpressionPtr access = getLangBasic().getCompositeRefElem();
+	return callExpr(refType(memberType), access, structExpr, getIdentifierLiteral(member), getTypeLiteral(memberType));
 }
 
 ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const {
@@ -653,9 +658,9 @@ ExpressionPtr IRBuilder::accessComponent(ExpressionPtr tupleExpr, unsigned compo
 	core::TypePtr componentType = tupleType->getElementTypes()[component];
 
 	// create access instruction
-	core::ExpressionPtr access = getBasicGenerator().getTupleMemberAccess();
-	core::ExpressionPtr index = literal(getBasicGenerator().getUInt8(), utils::numeric_cast<string>(component));
-	core::ExpressionPtr typeLiteral = getBasicGenerator().getTypeLiteral(componentType);
+	core::ExpressionPtr access = getLangBasic().getTupleMemberAccess();
+	core::ExpressionPtr index = literal(getLangBasic().getUInt8(), utils::numeric_cast<string>(component));
+	core::ExpressionPtr typeLiteral = getTypeLiteral(componentType);
 	return callExpr(componentType, access, tupleExpr, index, typeLiteral);
 }
 
@@ -675,18 +680,15 @@ ExpressionPtr IRBuilder::refComponent(ExpressionPtr tupleExpr, unsigned componen
 	core::TypePtr componentType = tupleType->getElementTypes()[component];
 
 	// create access instruction
-	core::ExpressionPtr access = getBasicGenerator().getTupleRefElem();
-	core::ExpressionPtr index = literal(getBasicGenerator().getUInt8(), utils::numeric_cast<string>(component));
-	core::ExpressionPtr typeLiteral = getBasicGenerator().getTypeLiteral(componentType);
+	core::ExpressionPtr access = getLangBasic().getTupleRefElem();
+	core::ExpressionPtr index = literal(getLangBasic().getUInt8(), utils::numeric_cast<string>(component));
+	core::ExpressionPtr typeLiteral = getTypeLiteral(componentType);
 	return callExpr(refType(componentType), access, tupleExpr, index, typeLiteral);
 }
 
 
-StatementPtr IRBuilder::getNoOp() const {
-	if (!pimpl->ptrNoOp) {
-		pimpl->ptrNoOp = pimpl->build.compoundStmt();
-	}
-	return pimpl->ptrNoOp;
+CompoundStmtPtr IRBuilder::getNoOp() const {
+	return compoundStmt();
 }
 
 bool IRBuilder::isNoOp(const NodePtr& p) const {
@@ -694,34 +696,34 @@ bool IRBuilder::isNoOp(const NodePtr& p) const {
 }
 
 LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const {
-	auto type = pimpl->build.genericType("intTypeParam", TypeList(), toVector(param));
-	return pimpl->build.literal(type, toString(*param));
+	auto type = genericType("intTypeParam", TypeList(), toVector(param));
+	return literal(type, toString(*param));
 }
 
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
-	auto literalType = pimpl->build.genericType("type", toVector(type));
-	return pimpl->build.literal(literalType, toString(*type));
+	auto literalType = genericType("type", toVector(type));
+	return literal(literalType, toString(*type));
 }
 
 LiteralPtr IRBuilder::getIdentifierLiteral(const core::StringValuePtr& value) const {
-	return pimpl->build.literal(getIdentifier(), value);
+	return literal(getLangBasic().getIdentifier(), value);
 }
 
 ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPtr& subExpr) const {
     // Convert casts form scalars to vectors to vector init exrpessions
     if(core::VectorTypePtr vt = dynamic_pointer_cast<const core::VectorType>(type)) {
-        if(pimpl->nm.getLangBasic().isScalarType(subExpr->getType())) {
+        if(getLangBasic().isScalarType(subExpr->getType())) {
             // get vector element type without ref
             core::TypePtr elementType = vt->getElementType();
             core::TypePtr targetType = elementType;// refs in arrays have been removed! (elementType->getNodeType() != core::NT_RefType) ?  vt->getElementType() :
                     //dynamic_pointer_cast<const core::RefType>(elementType)->getElementType();
 
             core::ExpressionPtr arg = (subExpr->getType() == targetType) ? subExpr :
-                pimpl->build.castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
+                castExpr(targetType, subExpr); // if the type of the sub expression is not equal the target type we need to cast it
 
-            core::ExpressionPtr&& retExpr = pimpl->build.callExpr(type, pimpl->nm.getLangBasic().getVectorInitUniform(),
-                (elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? pimpl->build.refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
-                pimpl->nm.getLangBasic().getIntTypeParamLiteral(vt->getSize()));
+            core::ExpressionPtr&& retExpr = callExpr(type, getLangBasic().getVectorInitUniform(),
+                (elementType->getNodeType() == core::NT_RefType && arg->getNodeType() != core::NT_RefType)  ? refVar( arg ) : arg,// if we need a ref type and arg is no ref: add ref
+                getIntTypeParamLiteral(vt->getSize()));
 
             return retExpr;
         }
@@ -741,7 +743,7 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
                 // check if they have the same type
                 assert(elemTy == vt->getElementType() && "cast from array to array of vectors only allowed within the same type");
 
-                return  pimpl->build.callExpr(pimpl->nm.getLangBasic().getArrayElemToVec(), subExpr, pimpl->nm.getLangBasic().getIntTypeParamLiteral(vt->getSize()));
+                return  callExpr(getLangBasic().getArrayElemToVec(), subExpr, getIntTypeParamLiteral(vt->getSize()));
             }
         }
     }
@@ -752,16 +754,6 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
 
 // ---------------------------- Utilities ---------------------------------------
 
-TypeList IRBuilder::extractTypes(const ExpressionList& expressions) {
-	TypeList paramTypes;
-	std::transform(params.cbegin(), params.cend(), std::back_inserter(paramTypes),
-		[](const ExpressionPtr& p) { return p->getType(); });
-	return paramTypes;
-}
-
-TypeList IRBuilder::extractParamTypes(const ParamList& params) {
-	return extractTypes(convertList<Expression>(params));
-}
 
 unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 
@@ -770,8 +762,8 @@ unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 	auto lambdaVisitor = makeLambdaVisitor([&idx, this](const NodePtr& node)->bool {
 		// check for literal, assuming it will always be a valid integer
 		if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(node)) {
-			if(getBasicGenerator().isInt(lit->getType())) {
-				idx = atoi(lit->getValue().c_str());
+			if(getLangBasic().isInt(lit->getType())) {
+				idx = atoi(lit->getValue()->getValue().c_str());
 				return true;
 			}
 		}

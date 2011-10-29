@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -55,7 +55,7 @@ namespace core {
 
 TEST(NodeReplacer, Basic) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// OK ... create a simple AST construct
 	TypePtr typeA = builder.genericType("A");
@@ -81,7 +81,7 @@ TEST(NodeReplacer, Basic) {
 
 TEST(NodeReplacer, AnnotationPreservation) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// OK ... create a simple AST construct
 	TypePtr typeA = builder.genericType("A");
@@ -130,7 +130,7 @@ TEST(NodeReplacer, AnnotationPreservation) {
 }
 
 TEST(NodeReplacer, ReplaceByAddress) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// OK ... create a simple AST construct
 	TypePtr typeA = builder.genericType("A");
@@ -171,7 +171,7 @@ TEST(NodeReplacer, ReplaceByAddress) {
 TEST(NodeReplacer, ReplaceVariable) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = builder.getBasicGenerator();
 
 	TypePtr uint4 = basic.getUInt4();
@@ -216,7 +216,7 @@ TEST(NodeReplacer, ReplaceVariable) {
 
 TEST(NodeReplacer, RecVarsReplacement) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 	const lang::BasicGenerator& basic = builder.getBasicGenerator();
 
 	TypePtr kernelType = builder.refType(builder.arrayType(builder.genericType("_cl_kernel")));

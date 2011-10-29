@@ -36,14 +36,14 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/ast_statistic.h"
 
 namespace insieme {
 namespace core {
 
 TEST(ASTStatistic, Basic) {
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// test a diamond
 	TypePtr typeD = builder.genericType("D");

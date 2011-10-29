@@ -43,7 +43,7 @@
 #include "insieme/simple_backend/backend_convert.h"
 
 #include "insieme/core/program.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -55,7 +55,7 @@ using namespace insieme::annotations::c;
 using namespace insieme::utils::set;
 using namespace insieme::simple_backend;
 
-ProgramPtr setupSampleProgram(ASTBuilder& build) {
+ProgramPtr setupSampleProgram(IRBuilder& build) {
 
 	BasicGenerator typeGen(build.getNodeManager());
 
@@ -79,7 +79,7 @@ ProgramPtr setupSampleProgram(ASTBuilder& build) {
 
 TEST(SimpleBackend, Basic) {
 
-	ASTBuilder build;
+	IRBuilder build;
 	ProgramPtr prog = setupSampleProgram(build);
 
 

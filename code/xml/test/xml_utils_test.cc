@@ -37,7 +37,7 @@
 #include <gtest/gtest.h>
 #include <xercesc/util/XercesDefs.hpp>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/xml/xml_utils.h"
@@ -1003,7 +1003,7 @@ TEST(XmlTest, VariableTest) {
 
 TEST(XmlTest, JobExprTest) {
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	TypePtr intType = manager.basic.getUIntGen();
 	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.basic.getUnit());

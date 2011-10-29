@@ -38,8 +38,8 @@
 
 #include "insieme/utils/annotation.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_types.h"
 
 #include "dummy_annotations.inc"
 
