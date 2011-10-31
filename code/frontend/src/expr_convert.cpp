@@ -307,11 +307,7 @@ convertExprTo(const core::ASTBuilder& builder, const core::TypePtr& trgTy, 	cons
 	if ( gen.isBool(trgTy) && argTy->getNodeType() == core::NT_RefType && 
 			GET_REF_ELEM_TYPE(argTy)->getNodeType() == core::NT_ArrayType ) 
 	{
-		//const core::TypePtr& subTy = core::static_pointer_cast<const core::RefType>(argTy)->getElementType();
 		// convert NULL (of type AnyRef) to the same ref type as the LHS expression
-		//core::ExpressionPtr&& nullRef = builder.callExpr(argTy, gen.getAnyRefToRef(), 
-				//toVector<core::ExpressionPtr>(gen.getNull(), gen.getTypeLiteral(subTy) ) );
-
 		return builder.callExpr(gen.getBoolLNot(), builder.callExpr( gen.getBool(), gen.getIsNull(), expr ) );
 	}
 
@@ -1096,6 +1092,24 @@ private:
 	}
 
 	ExpressionList getFunctionArguments(const core::ASTBuilder& builder,
+			clang::CXXNewExpr* callExpr, const core::FunctionTypePtr& funcTy)
+	{
+		ExpressionList args;
+		for ( size_t argId = 0, end = callExpr->getNumConstructorArgs(); argId < end; ++argId ) {
+			core::ExpressionPtr&& arg = Visit( callExpr->getConstructorArg(argId) );
+			// core::TypePtr&& argTy = arg->getType();
+			if ( argId < funcTy->getParameterTypes().size() ) {
+				const core::TypePtr& funcArgTy = funcTy->getParameterTypes()[argId];
+				arg = convFact.castToType(funcArgTy, arg);
+			} else {
+				arg = convFact.castToType(builder.getNodeManager().basic.getVarList(), arg);
+			}
+			args.push_back( arg );
+		}
+		return args;
+	}
+
+	ExpressionList getFunctionArguments(const core::ASTBuilder& builder,
 			clang::CXXConstructExpr* callExpr, const core::FunctionTypePtr& funcTy)
 	{
 		ExpressionList args;
@@ -1483,7 +1497,6 @@ public:
 		return retExpr;
 	}
 
-
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX CONSTRUCTOR CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1493,8 +1506,8 @@ public:
 		core::ExpressionPtr retExpr;
 
 		CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor());
-		VLOG(2)<<constructorDecl << " number of initializers "<<constructorDecl->getNumCtorInitializers();
 		assert(constructorDecl);
+		VLOG(2)<<constructorDecl << " number of initializers "<<constructorDecl->getNumCtorInitializers();
 
 		FunctionDecl* funcDecl = constructorDecl;
 		core::FunctionTypePtr funcTy =
@@ -1502,6 +1515,9 @@ public:
 
 		// collects the type of each argument of the expression
 		ExpressionList&& args = getFunctionArguments(convFact.builder, callExpr, funcTy);
+
+		// convert the function declaration and add THIS as last parameter
+		ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
 
 		assert( convFact.currTU && "Translation unit not set.");
 
@@ -1531,16 +1547,15 @@ public:
 		// preserve THIS
 		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
 
-		// convert the function declaration and add THIS as last parameter
-		ExpressionList&& packedArgs = tryPack(convFact.builder, funcTy, args);
-		core::ExpressionPtr lambdaExpr =
+		core::ExpressionPtr ctorExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
 		packedArgs.push_back(ctx.thisStack2);
-		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), lambdaExpr, packedArgs);
 
 		// rescue THIS and parent ctor initializers
 		convFact.ctx.thisStack2 = parentThisStack;
 		convFact.ctx.ctorInitializerMap = parentCtorInitializerMap;
+
+		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), ctorExpr, packedArgs);
 
 		// get class declaration
 		CXXRecordDecl * callingClass = constructorDecl->getParent();
@@ -1556,35 +1571,47 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXNewExpr(clang::CXXNewExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
-		CXXConstructorDecl* constructorDecl = callExpr->getConstructor();
-		assert(constructorDecl);
 
-		FunctionDecl* funcDecl = constructorDecl;
-
-		// find the function in cache
-		ConversionContext::LambdaExprMap::const_iterator fit = convFact.ctx.lambdaExprCacheNewObject.find( funcDecl );
-		if ( fit != convFact.ctx.lambdaExprCacheNewObject.end() ) {
-			return fit->second;
-		}
-
-		core::FunctionTypePtr funcTy =
-			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
-		CXXRecordDecl * baseClassDecl = constructorDecl->getParent();
-
-		// class to generate
-		core::TypePtr classType;
-		ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(baseClassDecl);
-		if(cit != convFact.ctx.classDeclMap.end()){
-			classType = cit->second;
-		}
 		const core::ASTBuilder& builder = convFact.getASTBuilder();
 		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+		bool isBuiltinType = callExpr->getAllocatedType().getTypePtr()->isBuiltinType();
+
+		core::ExpressionPtr retExpr;
+		core::TypePtr type;
+		FunctionDecl* funcDecl;
+		CXXConstructorDecl* constructorDecl;
+		core::FunctionTypePtr funcTy;
+
+		if(isBuiltinType) {
+			type = convFact.convertType(callExpr->getAllocatedType().getTypePtr());
+		} else {
+			constructorDecl = callExpr->getConstructor();
+			assert(constructorDecl);
+
+			funcDecl = constructorDecl;
+
+			// find the function in cache
+			ConversionContext::LambdaExprMap::const_iterator fit = convFact.ctx.lambdaExprCacheNewObject.find( funcDecl );
+			if ( fit != convFact.ctx.lambdaExprCacheNewObject.end() ) {
+				VLOG(2) << "Already cached";
+				return fit->second;
+			}
+
+			funcTy =
+				core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
+
+			// class to generate
+			CXXRecordDecl * baseClassDecl = constructorDecl->getParent();
+			ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(baseClassDecl);
+			if(cit != convFact.ctx.classDeclMap.end()){
+				type = cit->second;
+			}
+		}
 
 		// build the malloc
-		const core::RefTypePtr& refType = builder.refType(builder.arrayType(classType));
-
-		const core::ArrayTypePtr& arrayType = 
-			core::static_pointer_cast<const core::ArrayType>(refType->getElementType());
+		const core::RefTypePtr& refType = builder.refType(builder.arrayType(type));
+		const core::ArrayTypePtr& arrayType =
+				core::static_pointer_cast<const core::ArrayType>(refType->getElementType());
 
 		const core::TypePtr& elemType = arrayType->getElementType();
 		core::ExpressionPtr&& malloced = builder.refNew(
@@ -1599,61 +1626,108 @@ public:
 		// create new Variable
 		core::VariablePtr&& var = builder.variable( refType );
 		core::StatementPtr assign = builder.declarationStmt(var, malloced);
-		VLOG(2)<<var << " with assignment "<<assign;
+		VLOG(2)<< var << " with assignment " << assign;
 
-		// convert the constructor
-		ExpressionList args;
-		// initializers ?
-		// convert the function declaration and add THIS as last parameter
-		ExpressionList packedArgs = tryPack(builder, funcTy, args);
-		core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
-		convFact.ctx.thisStack2 = var;
-		core::ExpressionPtr constructorExpr =
-				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+		if(isBuiltinType) {
+			// build new Function
+			core::CompoundStmtPtr&& body = builder.compoundStmt(
+					assign,
+					builder.returnStmt(var)
+				);
+			retExpr = builder.createCallExprFromBody(body, refType);
+		} else {
+			// convert the constructor
+			ExpressionList args = getFunctionArguments(convFact.builder, callExpr, funcTy);
 
-		// prepare THIS (deref and array subscript and ref again) to match the constructor call
-		core::ExpressionPtr&& thisPtr =	builder.callExpr(
-				classType,
-				gen.getArraySubscript1D(),
-				builder.deref(ctx.thisStack2),
-				builder.literal("0", gen.getUInt4())
-			);
-		packedArgs.push_back( builder.refVar(thisPtr) );
-		convFact.ctx.thisStack2 = parentThisStack;
-		constructorExpr = builder.callExpr(funcTy->getReturnType(), constructorExpr, packedArgs);
-		VLOG(2) << constructorExpr;
+			// convert the function declaration and add THIS as last parameter
+			ExpressionList packedArgs = tryPack(builder, funcTy, args);
 
-		// build new Function
-		core::CompoundStmtPtr&& body = builder.compoundStmt(
-				assign,
-				constructorExpr,
-				builder.returnStmt(var)
-			);
+			ConversionContext::CtorInitializerMap parentCtorInitializerMap = convFact.ctx.ctorInitializerMap;
+			convFact.ctx.ctorInitializerMap.clear();
 
-		core::ExpressionPtr retExpr = builder.createCallExprFromBody(body, refType);
-		convFact.ctx.lambdaExprCacheNewObject.insert( std::make_pair(funcDecl, retExpr) );
+			// handle initializers
+			for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
+					iend = constructorDecl->init_end(); iit!=iend; iit++){
+				clang::CXXCtorInitializer * initializer = *iit;
+
+				if(initializer->isMemberInitializer()){
+					FieldDecl *fieldDecl = initializer->getMember();
+					RecordDecl *recordDecl = fieldDecl->getParent();
+
+					core::TypePtr recordTypePtr ;
+					ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+					if(cit != convFact.ctx.classDeclMap.end()){
+						recordTypePtr = cit->second;
+					}
+
+					VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = "<< Visit(initializer->getInit()) ;
+					convFact.ctx.ctorInitializerMap.insert( std::make_pair(fieldDecl, Visit(initializer->getInit())) );
+				}
+			}
+
+			// preserve THIS
+			core::ExpressionPtr parentThisStack = convFact.ctx.thisStack2;
+
+			convFact.ctx.thisStack2 = var;
+			core::ExpressionPtr ctorExpr =
+					core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
+
+			// prepare THIS (deref and array subscript and ref again) to match the constructor call
+			core::ExpressionPtr&& thisPtr =	builder.callExpr(
+					type,
+					gen.getArraySubscript1D(),
+					builder.deref(ctx.thisStack2),
+					builder.literal("0", gen.getUInt4())
+				);
+			packedArgs.push_back( builder.refVar(thisPtr) );
+
+			convFact.ctx.thisStack2 = parentThisStack;
+			convFact.ctx.ctorInitializerMap = parentCtorInitializerMap;
+
+			ctorExpr = builder.callExpr(funcTy->getReturnType(), ctorExpr, packedArgs);
+			VLOG(2) << ctorExpr;
+
+			// build new Function
+			core::CompoundStmtPtr&& body = builder.compoundStmt(
+					assign,
+					ctorExpr,
+					builder.returnStmt(var)
+				);
+			retExpr = builder.createCallExprFromBody(body, refType);
+			convFact.ctx.lambdaExprCacheNewObject.insert( std::make_pair(funcDecl, retExpr) );
+		}
 
 		VLOG(2) << "End of expression CXXNewExpr \n";
 		return retExpr;
 	}
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//						CXX DELETE CALL EXPRESSION
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::ExpressionPtr VisitCXXDeleteExpr(clang::CXXDeleteExpr* callExpr) {
 		START_LOG_EXPR_CONVERSION(callExpr);
 
+		core::ExpressionPtr retExpr;
 		const core::ASTBuilder& builder = convFact.builder;
 		const FunctionDecl * funcDecl = callExpr->getOperatorDelete();
 		core::FunctionTypePtr funcTy =
 			core::static_pointer_cast<const core::FunctionType>( convFact.convertType( GET_TYPE_PTR(funcDecl) ) );
 
-		VLOG(2) << "End of expression CXXDeleteExpr \n";
+		//check if argument is class/struct, otherwise just call "free" for builtin types
+		if(callExpr->getDestroyedType().getTypePtr()->isStructureOrClassType()) {
+			//TODO: add destructor call of class/struct before free-call
+			assert(false && "CXXDeleteExpr not yet handled completly for struct/class types");
+		}
 
 		// build the free statement with the correct variable
-		return builder.callExpr(
+		retExpr = builder.callExpr(
 				builder.getBasicGenerator().getRefDelete(),
 				builder.deref( Visit(callExpr->getArgument()) )
 			);
+
+
+		VLOG(2) << "End of expression CXXDeleteExpr \n";
+		return retExpr;
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1706,7 +1780,6 @@ public:
 
 		return Visit(defaultArgExpr->getExpr());
 	}
-
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							MEMBER EXPRESSION
@@ -1978,7 +2051,7 @@ public:
 
 			} else if (lhsTy->getNodeType() == core::NT_RefType && rhsTy->getNodeType() != core::NT_RefType) {
 				// Capture pointer arithmetics 
-				// Base op must be either a + or a -
+				// 	Base op must be either a + or a -
 				assert( (baseOp == BO_Add || baseOp == BO_Sub) && 
 						"Operators allowed in pointer arithmetic are + and - only");
 
@@ -1993,8 +2066,8 @@ public:
 						"LHS operator must be of type ref<array<'a,#l>>");
 
 				// check whether the RHS is of integer type
-				assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
-
+				// assert( gen.isUnsignedInt(rhsTy) && "Array displacement is of non type uint");
+				
 				return (retIr = builder.callExpr(gen.getArrayView(), lhs, rhs));
 
 			} else {

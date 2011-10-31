@@ -37,6 +37,7 @@
 #pragma once
 
 #include "declarations.h"
+#include "instrumentation.h"
 
 /* ------------------------------ data structures ----- */
 
@@ -73,6 +74,7 @@ struct _irt_data_item {
 	irt_data_range* ranges;
 	// can be NULL if data item is abstract
 	irt_data_block* data_block;
+	irt_pd_table* performance_data;
 // private implementation detail
 	struct _irt_data_item* lookup_table_next;
  };

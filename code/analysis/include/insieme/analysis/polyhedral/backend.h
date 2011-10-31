@@ -43,6 +43,8 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
+typedef std::pair<core::NodeAddress, std::string> TupleName;
+
 /**************************************************************************************************
  * Generic implementation of a the concept of a set which is natively supported by polyhedral
  * libraries. The class presents a set of operations which are possible on sets (i.e. intersect,
@@ -54,8 +56,6 @@ struct Set : public utils::Printable {
 	typedef Ctx ctx_type;
 
 	std::ostream& printTo(std::ostream& out) const = 0; 
-
-	bool isEmpty() const = 0;
 
 	~Set() { }
 private:
@@ -69,10 +69,7 @@ struct Map : public utils::Printable {
 
 	std::ostream& printTo(std::ostream& out) const = 0; 
 
-	bool isEmpty() const = 0;
-
 	~Map() { }
-
 private:
 	Map();
 };
@@ -135,19 +132,19 @@ template <Backend B>
 SetPtr<typename BackendTraits<B>::ctx_type>
 makeSet( typename BackendTraits<B>::ctx_type& ctx, 
 		 const IterationDomain& domain,
-		 const std::string& tuple_name = std::string())
+		 const TupleName& tuple = TupleName())
 {
-	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, domain, tuple_name);
+	return SetPtr<typename BackendTraits<B>::ctx_type>(ctx, domain, tuple);
 }
 
 template <Backend B>
 MapPtr<typename BackendTraits<B>::ctx_type>
 makeMap( typename BackendTraits<B>::ctx_type& ctx,  
 		 const AffineSystem& affSys,
-		 const std::string& in_tuple_name = std::string(),
-		 const std::string& out_tuple_name = std::string())
+		 const TupleName& in_tuple = TupleName(),
+		 const TupleName& out_tuple = TupleName())
 {
-	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, affSys, in_tuple_name, out_tuple_name);
+	return MapPtr<typename BackendTraits<B>::ctx_type>(ctx, affSys, in_tuple, out_tuple);
 }
 
 template <Backend B>
@@ -169,8 +166,11 @@ struct DependenceInfo : public utils::Printable {
 	DependenceInfo( const MapPtr<Ctx>& mustDep, 
 					const MapPtr<Ctx>& mayDep, 
 					const MapPtr<Ctx>& mustNoSource, 
-					const MapPtr<Ctx>& mayNoSource ): 
-		mustDep(mustDep), mayDep(mayDep), mustNoSource(mustNoSource), mayNoSource(mayNoSource) { }
+					const MapPtr<Ctx>& mayNoSource 
+		) : mustDep(mustDep), 
+		    mayDep(mayDep), 
+		    mustNoSource(mustNoSource), 
+		    mayNoSource(mayNoSource) { }
 
 	bool isEmpty() const {
 		return mustDep->isEmpty() && mayDep->isEmpty();
@@ -189,15 +189,13 @@ DependenceInfo<Ctx> buildDependencies(
 		const Map<Ctx>& 	may_sourcs
 );
 
-typedef std::map<std::string, insieme::core::StatementPtr> StmtMap;
-
 template <class Ctx>
-core::NodePtr toIR(core::NodeManager& mgr, 
-		const StmtMap& stmtMap,
-		const IterationVector& iterVec, 
-		Ctx& ctx, 
-		const Set<Ctx>& domain, 
-		const Map<Ctx>& schedule
+core::NodePtr toIR(
+		core::NodeManager& 		mgr, 
+		const IterationVector& 	iterVec, 
+		Ctx& 					ctx, 
+		const Set<Ctx>& 		domain, 
+		const Map<Ctx>& 		schedule
 	);
 
 } // end poly namespace

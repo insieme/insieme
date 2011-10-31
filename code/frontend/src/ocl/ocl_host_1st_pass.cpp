@@ -236,20 +236,6 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 
 		o2i.extractSizeFromSizeof(sizeArg, size, type);
 		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
-/*		const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(index);
-		const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index);
-std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << !!idx << std::endl;
-		assert(!!idx && BASIC.isInt(idx->getType()) && "Unable to determine position of local memory argument from clSetkernelArg call");
-		// use the literal as index for the argument
-		unsigned int pos = atoi(idx->getValue().c_str());
-
-		// declare a new variable to be used as argument
-		VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
-		DeclarationStmtPtr localDecl = builder.declarationStmt(localMem, builder.callExpr(BASIC.getRefVar(),
-						builder.callExpr(BASIC.getArrayCreate1D(), BASIC.getTypeLiteral(type), size)));
-		// should I really have access to private members or HostMapper here or is this a compiler bug?
-		localMemDecls[kernel][pos] = localDecl;
-		arg = localMem;*/
 
 		FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4()); //!
 		body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
@@ -268,46 +254,6 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 
 	arg = getVarOutOfCrazyInspireConstruct(arg, builder);
 
-	// if the argument is a scalar, we have to deref it
-	// TODO test properly
-/*			if(const CallExprPtr& sizeof_ = dynamic_pointer_cast<const CallExpr>(node->getArgument(2))) {
-		if(sizeof_->getFunctionExpr() == BASIC.getSizeof()) {
-			if(sizeof_->getArgument(0)->getType() != BASIC.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem")))->getType()) {
-				arg = tryDeref(getVarOutOfCrazyInspireConstruct(arg, builder), builder);
-			}
-		}
-	}*/
-
-	// check if the index argument is a (casted) integer literal
-/*	const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(index);
-	const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index);
-	if(!!idx && BASIC.isInt(idx)) {
-		// use the literal as index for the argument
-		unsigned int pos = atoi(idx->getValue().c_str());
-		if(kernelArgs[kernel].size() <= pos)
-			kernelArgs[kernel].resize(pos+1);
-
-		kernelArgs[kernel].at(pos) = arg;
-	} else {
-		// use one argument after another
-		kernelArgs[kernel].push_back(arg);
-	}*/
-
-//	TypeList argTypes = kernelArgs.find(kernel) == kernelArgs.end() ? TypeList() :
-//			static_pointer_cast<const TupleType>(kernelArgs[kernel]->getType())->getElementTypes();
-	// add the new argument to the tuple type
-/*	if(!!idx && BASIC.isInt(idx)) {
-		// use the literal as index for the argument
-		unsigned int pos = atoi(idx->getValue().c_str());
-		if(argTypes.size() <= pos)
-			argTypes.resize(pos+1);
-
-		argTypes.at(pos) = arg->getType();
-	} else {
-		// use one argument after another
-		argTypes.push_back(arg->getType());
-	}*/
-
 //	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
 //std::cout << "ARGUMENT: \t" << kernel->getType() << std::endl;
 
@@ -321,10 +267,6 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 
 //	std::cout << "SET PARAM: \n" << function << std::endl;
 	// store argument in a tuple
-	// TODO remove quickfix
-//	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
-//			builder.castExpr(BASIC.getUInt8(), idx)), BASIC.getTypeLiteral(arg->getType())), builder.callExpr(BASIC.getRefDeref(), arg));
-
 	return builder.callExpr(BASIC.getInt4(), function, kernel, builder.callExpr(BASIC.getRefDeref(), arg));
 }
 
@@ -488,7 +430,6 @@ HostMapper::HostMapper(ASTBuilder& build, ProgramPtr& program) :
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build, eqMap), equal_variables(build, program)) {
 	eqIdx = 1;
-//		eqMap[builder.stringLit("fucking placeholder")] = 0;
 
 	// TODO at the moment there will always be one platform and one device, change that!
 	ADD_Handler(builder, o2i, "clGetDeviceIDs",

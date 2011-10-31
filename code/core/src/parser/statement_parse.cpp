@@ -78,7 +78,8 @@ StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParam
     if(VariablePtr var = dynamic_pointer_cast<const Variable>(varExpr))
         return DeclarationStmt::get(nodeMan, var, initExpr);
 
-    throw ParseException();
+	string err = varExpr->toString() + " must be a Variable in Declaration 'decl " + varExpr->toString() + " = " + initExpr->toString() + "'";
+	throw ParseException(err);
 }
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>
@@ -100,7 +101,8 @@ StatementPtr StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParam
     if(DeclarationStmtPtr loopVar = dynamic_pointer_cast<const DeclarationStmt>(loopVarStmt))
         return ForStmt::get(nodeMan, loopVar, body, end, step);
 
-    throw ParseException();
+	string err = "Invalid loop header in 'for (" + loopVarStmt->toString() + " .. " + end->toString() + " : " + step->toString() + "(...)The loop Variable must be declared in loop header";
+	throw ParseException(err);
 }
 
 template<class StatementPtr, class ExpressionPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr, class LambdaDefinitionPtr>

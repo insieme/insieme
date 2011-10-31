@@ -34,26 +34,28 @@
  * regarding third party software licenses.
  */
 
-#pragma once
+#ifndef _DLFCN_H
+#define _DLFCN_H 1
 
-//#define IRT_ENABLE_INSTRUMENTATION
+#include <sys/cdefs.h>
 
-typedef struct _irt_wi_performance_data {
-	uint64 start;
-	uint64 end;
-} _irt_wi_performance_data;
+#define RTLD_LAZY	0x00000
+#define RTLD_NOW	0x00001
 
-typedef struct irt_wi_pd_table {
-	uint32 size;
-	uint32 number_of_elements;
-	uint32 blocksize;
-	_irt_wi_performance_data* data;
-} irt_wi_pd_table;
+#define RTLD_LOCAL	0x00000
+#define RTLD_GLOBAL	0x10000
 
-irt_wi_pd_table* irt_wi_create_performance_table(unsigned blocksize);
-void irt_wi_destroy_performance_table(irt_wi_pd_table* table);
+#define RTLD_DEFAULT	((void*)1)
+#define RTLD_NEXT	((void*)2)
 
-void irt_wi_insert_performance_start(irt_wi_pd_table* table); 
-void irt_wi_insert_performance_end(irt_wi_pd_table* table);
+__BEGIN_DECLS
 
+void *dlopen (const char *filename, int flag);
+const char *dlerror(void);
+void *dlsym(void *handle, char *symbol);
+int dlclose (void *handle);
+
+__END_DECLS
+
+#endif
 

@@ -47,3 +47,57 @@ uint64 irt_time_ms() {
 	time = tv.tv_sec * 1000 + tv.tv_usec/1000;
 	return time;
 }
+
+// ====== clock cycle measurements ======================================
+//
+// supporting x86_64 and ppc
+//
+// no general variant by design to raise 
+// compiler errors in case of a new architecture
+
+// ====== AMD64 (X86_64) machines ===========================
+
+#if defined __x86_64__
+
+uint64 irt_time_ticks(void) {
+	volatile uint64 a, d;
+	__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+	return (a | (d << 32));
+}
+
+// ====== PowerPC ===========================
+
+#else
+
+uint64 irt_time_ticks(void) {
+	int64 upper0, upper1, lower;
+
+	__asm__ volatile("\
+	mfspr %[upper0], 269 \n\
+	mfspr %[lower] , 268 \n\
+	mfspr %[upper1], 269 "
+	: [lower] "=r" (lower), 
+	[upper0] "=r" (upper0),
+	[upper1] "=r" (upper1)
+	);  
+
+	return (uint64)(((upper1 ^ ((upper0 ^ upper1) & (lower>>31)))<<32) | lower);
+}
+
+#endif // architecture branch
+
+#ifdef WIN32
+struct timespec {
+        long  tv_sec;         /* seconds */
+	long    tv_nsec;        /* nanoseconds */
+};
+
+int irt_nanosleep(const struct timespec* wait_time) {
+	Sleep(wait_time->tv_sec*1000 + wait_time->tv_nsec/1000);
+	return 0; // it seems that Sleep always succeedes
+}
+#else
+int irt_nanosleep(const struct timespec* wait_time) {
+	return nanosleep(wait_time, NULL);
+}
+#endif

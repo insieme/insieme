@@ -39,6 +39,7 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
+#include "insieme/analysis/polyhedral/polyhedral.h"
 
 #include "insieme/core/program.h"
 #include "insieme/core/ast_builder.h"
@@ -225,6 +226,10 @@ TEST(AffineFunction, Creation) {
 		af.printTo(ss);
 		EXPECT_EQ("1*v2 + 2*v3 + 10*1", ss.str());
 	}
+
+	// convertion to IR 
+	ExpressionPtr expr = poly::toIR(mgr, af);
+	EXPECT_EQ(expr->toString(), "int.add(int.add(v2, int.mul(2, v3)), 10)");
 }
 
 TEST(AffineFunction, CreationFromExpr) {
@@ -268,6 +273,29 @@ TEST(AffineFunction, CreationFromExpr) {
 		af.printTo(ss);
 		EXPECT_EQ("1*v1 + 1*v3", ss.str());
 	}
+}
+
+TEST(AffineFunction, ToExpr) {
+	NodeManager mgr;
+   
+   	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1);
+	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2);
+	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3);
+
+	CallExprPtr sum = CallExpr::get(mgr, mgr.basic.getInt4(), mgr.basic.getSignedIntAdd(), 
+			toVector<ExpressionPtr>(iter1, param) 
+		);
+			
+	poly::IterationVector iterVec; 
+	iterVec.add( poly::Iterator(iter1) );
+	poly::AffineFunction af(iterVec, sum);
+
+	ExpressionPtr expr = poly::toIR(mgr, af);
+
+	EXPECT_EQ(expr->toString(), "int.add(v1, v3)");
+
+	poly::AffineFunction af2(iterVec, expr);
+	EXPECT_EQ(*expr, *toIR(mgr,af2));
 }
 
 TEST(AffineFunction, Equality) {
@@ -337,7 +365,7 @@ TEST(Constraint, Creation) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,1,2,10});
-	poly::Constraint c(af, poly::Constraint::EQ);
+	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::EQ);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
@@ -350,13 +378,13 @@ TEST(Constraint, Normalization) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,1,2,10});
-	poly::Constraint c(af, poly::Constraint::LT);
+	poly::Constraint<poly::AffineFunction> c(af, poly::Constraint<poly::AffineFunction>::LT);
 	{
 		std::ostringstream ss;
 		c.printTo(ss);
 		EXPECT_EQ("1*v2 + 2*v3 + 10*1 < 0", ss.str());
 	}
-	poly::ConstraintCombinerPtr nc = normalize(c);
+	poly::ConstraintCombinerPtr<poly::AffineFunction> nc = normalize(c);
 	{
 		std::ostringstream ss;
 		nc->printTo(ss);
@@ -369,15 +397,23 @@ TEST(Constraint, Combiner) {
 	CREATE_ITER_VECTOR;
 
 	poly::AffineFunction af(iterVec, {0,1,2,10});
-	poly::Constraint c1(af, poly::Constraint::EQ);
+	poly::Constraint<poly::AffineFunction> c1(af, poly::Constraint<poly::AffineFunction>::EQ);
+	EXPECT_EQ(toIR(mgr,c1)->toString(), 
+			"int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0)"
+		);
 
 	poly::AffineFunction af2(iterVec, {2,3,0,10});
-	poly::Constraint c2(af2, poly::Constraint::LT);
+	poly::Constraint<poly::AffineFunction> c2(af2, poly::Constraint<poly::AffineFunction>::LT);
+	EXPECT_EQ(toIR(mgr,c2)->toString(), 
+			"int.le(int.add(int.add(int.mul(2, v1), int.mul(3, v2)), 10), 0)"
+		);
 
-	poly::ConstraintCombinerPtr ptr = c1 or not_(c2);
+	poly::ConstraintCombinerPtr<poly::AffineFunction> ptr = c1 or not_(c2);
 
-	std::cout << *ptr << std::endl;
-
+	ExpressionPtr expr = toIR(mgr, ptr);
+	EXPECT_EQ(expr->toString(), 
+		"bool.or(int.le(int.add(int.add(v2, int.mul(2, v3)), 10), 0), bind(){rec v3.{v3=fun(int<4> v1, int<4> v2) {return bool.not(int.le(int.add(int.add(int.mul(2, v2), int.mul(3, v1)), 10), 0));}}(v2, v1)})");
+	
 }
 
 TEST(IterationDomain, Creation) {
@@ -388,39 +424,31 @@ TEST(IterationDomain, Creation) {
 	poly::AffineFunction af2(iterVec, {1,1,0,7});
 	poly::AffineFunction af3(iterVec, {1,0,1,0});
 
-	poly::ConstraintList cl = {
-		poly::Constraint(af, poly::Constraint::LT),
-		poly::Constraint(af2, poly::Constraint::LT), 
-		poly::Constraint(af3, poly::Constraint::NE)
-	};
-
-	EXPECT_EQ(static_cast<size_t>(3), cl.size());
+	poly::ConstraintCombinerPtr<poly::AffineFunction> cl = 
+		poly::Constraint<poly::AffineFunction>(af, poly::Constraint<poly::AffineFunction>::LT) and 
+		poly::Constraint<poly::AffineFunction>(af2, poly::Constraint<poly::AffineFunction>::LT) and 
+		poly::Constraint<poly::AffineFunction>(af3, poly::Constraint<poly::AffineFunction>::NE);
 
 	{
 		std::ostringstream ss;
-		iterVec.printTo(ss);
+		ss << iterVec;
 		EXPECT_EQ("(v1,v2|v3|1)", ss.str());
 	}
 
-	//poly::IterationDomain it(iterVec, cl);
-	//VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
-	//iterVec.add(poly::Parameter(param2));
-	//EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
+	poly::IterationDomain it(cl);
+	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
+	iterVec.add(poly::Parameter(param2));
+	EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
 
-	//{
-	//	std::ostringstream ss;
-	//	iterVec.printTo(ss);
-	//	EXPECT_EQ("(v1,v2|v3,v4|1)", ss.str());
-	//}
+	{
+		std::ostringstream ss;
+		ss << iterVec;
+		EXPECT_EQ("(v1,v2|v3,v4|1)", ss.str());
+	}
 
-	//{
-	//	std::ostringstream ss;
-	//	it.getIterationVector().printTo(ss);
-	//	EXPECT_EQ("(v1,v2|v3|1)", ss.str());
-	//}
 	// check weather these 2 affine functions are the same... even thought the
 	// underlying iteration vector has been changed
-	//EXPECT_EQ(af, (*it.begin()).getAffineFunction());
+	// EXPECT_EQ(af, (*it.begin()).getAffineFunction());
 }
 
 
