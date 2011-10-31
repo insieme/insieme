@@ -38,6 +38,7 @@
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
+#include "insieme/core/ast_builder.h"
 
 namespace {
 
@@ -140,6 +141,56 @@ int AffineFunction::idxConv(size_t idx) const {
 	
 	return -1;
 }
+
+// Converts an AffineFunction to an IR expression
+insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& af) {
+
+	auto&& filtered = filterIterator<
+					AffineFunction::iterator, 
+					AffineFunction::Term, 
+					AffineFunction::Term*, 
+					AffineFunction::Term
+		>(af.begin(), af.end(), [](const AffineFunction::Term& cur) -> bool { return cur.second == 0; }
+	);
+
+	insieme::core::ASTBuilder builder(mgr);
+
+	core::ExpressionPtr ret;
+	for_each(filtered.first, filtered.second, [&] (const AffineFunction::Term& t) {
+		core::ExpressionPtr currExpr;
+		assert(t.second != 0 && "0 coefficient not filtered out correctly");
+
+		if (t.first.getType() != Element::CONST) {
+			core::ExpressionPtr expr = static_cast<const Expr&>(t.first).getExpr();
+			// Check whether the expression is of Ref Type
+			if (expr->getType()->getNodeType() == core::NT_RefType) {
+				expr = builder.deref( expr );
+			}
+			assert(expr->getType()->getNodeType() != core::NT_RefType && "Operand cannot be of Ref Type");
+
+			// Check whether the expression is of type signed int
+			if ( !mgr.basic.isInt4( expr->getType() ) ) {
+				expr = builder.castExpr( mgr.basic.getInt4(), expr );
+			}
+			currExpr = t.second == 1 ? expr : 
+						builder.callExpr( mgr.basic.getSignedIntMul(), builder.intLit(t.second), expr );
+		} else {
+			// This is the constant part, therefore there are no variables to consider, just the
+			// integer value 
+			currExpr = builder.intLit(t.second);
+		}
+
+		if (!ret) {
+			ret = currExpr;
+			return;
+		}
+
+		ret = builder.callExpr( mgr.basic.getSignedIntAdd(), ret, currExpr );
+	});
+
+	return ret;
+}
+
 
 namespace {
 /**

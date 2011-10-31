@@ -1,6 +1,6 @@
 
 PREFIX=/tmp/
-SLOTS=4
+SLOTS=8
 
 ISL_VER=isl-0.07
 BARVINOK_VER=barvinok-0.34
@@ -36,7 +36,7 @@ tar -xf $NTL_VER.tar.gz
 cd $NTL_VER/src
 
 echo "#### Installing NTL library ####"
-./configure PREFIX=$PREFIX/$NTL_VER NTL_GMP_LIP=on
+./configure PREFIX=$PREFIX/$NTL_VER NTL_GMP_LIP=on SHARED=on
 make -j $SLOTS
 make install
 
@@ -78,7 +78,7 @@ cd $BARVINOK_VER
 echo "#### Installing barvinok library ####"
 ./configure --prefix=$PREFIX/$BARVINOK_VER --with-ntl=$PREFIX/ntl-latest \
 			--with-isl=system --with-isl-prefix=$PREFIX/isl-latest \
-			--with-cloog=no 
+			--with-cloog=no --enable-shared-barvinok
 make -j $SLOTS
 make install
 

@@ -143,7 +143,7 @@ TEST(Annotation, EqualsTest) {
 	EXPECT_FALSE(equalsWithAnnotations(type1->getTypeParameter()[0], type2->getTypeParameter()[0]));
 }
 
-TEST(Annotation, ValueAnnotaitons) {
+TEST(Annotation, ValueAnnotations) {
 
 	NodeManager manager;
 	TypePtr ptr = GenericType::get(manager, "A");
@@ -160,6 +160,25 @@ TEST(Annotation, ValueAnnotaitons) {
 	EXPECT_FALSE(ptr->hasAttachedValue<int>());
 
 }
+
+TEST(Annotation, ValueAnnotations2) {
+
+	NodeManager manager;
+	TypePtr ptr = GenericType::get(manager, "A");
+
+	EXPECT_FALSE(ptr->hasAttachedValue<TypePtr>());
+
+	ptr->attachValue<TypePtr>(ptr);
+
+	EXPECT_TRUE(ptr->hasAttachedValue<TypePtr>());
+	EXPECT_EQ(ptr,ptr->getAttachedValue<TypePtr>());
+
+	ptr->detachValue<TypePtr>();
+
+	EXPECT_FALSE(ptr->hasAttachedValue<TypePtr>());
+
+}
+
 
 } // end namespace core
 } // end namespace insieme

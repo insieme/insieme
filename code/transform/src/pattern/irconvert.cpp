@@ -65,7 +65,9 @@ namespace {
 	public:
 
 		IRTree(const core::NodePtr& node, const EvalFunctor& evalFunctor = &convertChildren)
-			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {}
+			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {
+			attachValue<NodePtr>(node);
+		}
 
 		const core::NodePtr& getNode() const {
 			return node;
@@ -161,7 +163,9 @@ namespace {
 }
 
 TreePtr toTree(const core::NodePtr& node) {
-	return TreeConverter().visit(node);
+	auto res = TreeConverter().visit(node);
+	res->attachValue<NodePtr>(node);
+	return res;
 }
 
 
