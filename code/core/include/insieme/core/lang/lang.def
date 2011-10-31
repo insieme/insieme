@@ -471,6 +471,7 @@ TYPE(Lock, "lock")
 
 LITERAL(LockAquire,  "lock.aquire", "(lock)->unit")
 LITERAL(LockRelease, "lock.release", "(lock)->unit")
+LITERAL(LockCreate,  "lock.create", "()->lock")
 
 // --------------------------------------------------------------------------------------------------------------------
 

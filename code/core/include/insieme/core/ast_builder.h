@@ -164,6 +164,7 @@ public:
 	// Locks
 	CallExprPtr aquireLock(const ExpressionPtr& lock) const;
 	CallExprPtr releaseLock(const ExpressionPtr& lock) const;
+	CallExprPtr createLock() const;
 
 	// Compound Statements
 	CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const;

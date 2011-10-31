@@ -256,6 +256,9 @@ CallExprPtr ASTBuilder::releaseLock(const ExpressionPtr& lock) const {
 	assert(manager.basic.isLock(lock->getType()) && "Cannot unlock a non-lock type.");
 	return callExpr(manager.basic.getUnit(), manager.basic.getLockRelease(), lock);
 }
+CallExprPtr ASTBuilder::createLock() const {
+	return callExpr(manager.basic.getLock(), manager.basic.getLockCreate());
+}
 
 CompoundStmtPtr ASTBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const {
 	return compoundStmt(toVector(s1, s2));

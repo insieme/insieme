@@ -61,8 +61,9 @@ struct PrettyPrinter {
 		PRINT_BRACKETS  		= 1<<2,
 		PRINT_SINGLE_LINE		= 1<<3,
 		PRINT_MARKERS			= 1<<4,
-		NO_EXPAND_LAMBDAS       = 1<<5,
-		NO_LIST_SUGAR			= 1<<6
+		PRINT_ANNOTATIONS		= 1<<5,
+		NO_EXPAND_LAMBDAS       = 1<<6,
+		NO_LIST_SUGAR			= 1<<7
 
 	};
 

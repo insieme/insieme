@@ -8,7 +8,7 @@ int main() {
 	#pragma omp parallel num_threads(NUM_PARA)
 	{
 		for(int i=0; i<NUM_ITER; ++i) {
-			#pragma omp critical (bla)
+			#pragma omp critical
 			m++;
 		}
 	}

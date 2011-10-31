@@ -39,6 +39,7 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
+#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/ast_builder.h"
 
@@ -51,6 +52,9 @@ namespace core {
 namespace transform {
 
 using namespace std;
+
+namespace us = insieme::utils::set;
+namespace um = insieme::utils::map;
 
 /**
  * A utility function to apply an arbitrary manipulation to the statements within a compound statement.
@@ -203,12 +207,12 @@ namespace {
 
 		bool successful;
 
-		utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements;
-		utils::set::PointerSet<VariablePtr> replacedOnce;
+		um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
+		us::PointerSet<VariablePtr> replacedOnce;
 
 	public:
 
-		InlineSubstituter(utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements)
+		InlineSubstituter(um::PointerMap<VariablePtr, ExpressionPtr>& replacements)
 			: successful(true), replacements(replacements) { }
 
 		const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
@@ -275,7 +279,7 @@ namespace {
 		}
 
 		// substituted call arguments with bind parameters
-		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
+		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
 
 		replacements.insert(
 				make_paired_iterator(parameter.begin(), arguments.begin()),
@@ -340,7 +344,7 @@ namespace {
 		// Step 3 - collect variables replacements
 		const Lambda::ParamList& paramList = lambda->getParameterList();
 
-		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
+		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
 
 		// add call parameters
 		int index = 0;
@@ -520,8 +524,8 @@ namespace {
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
 	struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
-		utils::set::PointerSet<VariablePtr> declared;
-		utils::set::PointerSet<VariablePtr> undeclared;
+		us::PointerSet<VariablePtr> declared;
+		us::PointerSet<VariablePtr> undeclared;
 
 		// do not visit types
 		LambdaDeltaVisitor() : ASTVisitor<bool, Address>(false) {}
@@ -547,7 +551,7 @@ namespace {
 	};
 
 	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, ASTBuilder::CaptureInits& captures,
-			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
+			um::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
 		visitDepthFirstPrunable(StatementAddress(root), ldv);
 
@@ -577,7 +581,7 @@ namespace {
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	um::PointerMap<NodePtr, NodePtr> replacements;
 	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
@@ -585,7 +589,7 @@ BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::v
 BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments) {
 	ASTBuilder build(manager);
 	ASTBuilder::CaptureInits captures;
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	um::PointerMap<NodePtr, NodePtr> replacements;
 	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
 	return build.lambdaExpr(root->getType(), body, captures, passAsArguments);
@@ -596,7 +600,7 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 	auto body = root->getBody();
 
 	ASTBuilder build(manager);
-	utils::map::PointerMap<NodePtr, NodePtr> replacements;
+	um::PointerMap<NodePtr, NodePtr> replacements;
 	for_each(varsToPrivatize, [&](VariablePtr p) {
 		auto var = build.variable(p->getType());
 		replacements[p] = var;
@@ -635,7 +639,7 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 	return LambdaExpr::get(manager, funType, params, body);
 }
 
-DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog) {
+DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const StructExpr::Members& globals) {
 	//if(!prog->isMain()) {
 	//	LOG(WARNING) << "createGlobalStruct called on non-main program.";
 	//}
@@ -643,9 +647,16 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog) {
 	auto compound = lambda->getBody();
 	auto addr = CompoundStmtAddress::find(compound, prog);
 	ASTBuilder build(manager);
-	auto structType = build.structType(ASTBuilder::Entries());
-	auto declStmt = build.declarationStmt(structType, build.structExpr(ASTBuilder::Members()));
-	prog = static_pointer_cast<const Program>(insert(manager, addr, declStmt, 0));
+	StructType::Entries entries = ::transform(globals, [](const StructExpr::Member& mem) { return StructType::Entry(mem.first, mem.second->getType()); });
+	auto structType = build.structType(entries);
+	auto declStmt = build.declarationStmt(structType, build.structExpr(globals));
+	auto newProg = static_pointer_cast<const Program>(insert(manager, addr, declStmt, 0));
+	utils::migrateAnnotations(prog, newProg);
+	prog = newProg;
+	// migrate annotations on body
+	lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
+	compound = lambda->getBody();
+	utils::migrateAnnotations(addr.getAddressedNode(), compound);
 	return declStmt;
 }
 
