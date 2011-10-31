@@ -299,7 +299,7 @@ Map<IslCtx>::Map(IslCtx& 			ctx,
 		return;
 	}
 	isl_basic_map* bmap = isl_basic_map_universe( isl_dim_copy(dim) );
-	for(AffineSystem::AffineList::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
+	for(AffineSystem::const_iterator it=affSys.begin(), end=affSys.end(); it!=end; ++it, ++idx) {
 		isl_constraint* cons = convertConstraint(ctx.getRawContext(), 
 									dim, 
 									Constraint<AffineFunction>(*it, Constraint<AffineFunction>::EQ), 
