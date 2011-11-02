@@ -70,12 +70,12 @@ class KernelCodeRetriver: public core::ASTVisitor<bool> {
 	bool visitCallExpr(const core::CallExprPtr& callExpr);
 	bool visitDeclarationStmt(const core::DeclarationStmtPtr& decl);
 
+	bool getString(const core::CallExprPtr& call);
 public:
 	KernelCodeRetriver(const core::VariablePtr lookFor,
 			const core::NodePtr& stopAt, core::ASTBuilder build) :
 		ASTVisitor<bool> (false), pathToKernelFile(lookFor),
-				breakingStmt(stopAt), builder(build) {
-	}
+				breakingStmt(stopAt), builder(build) { }
 	string getKernelFilePath() {
 		return path;
 	}

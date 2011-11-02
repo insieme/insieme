@@ -39,7 +39,7 @@
 const unsigned int MAX_GPU_COUNT = 8;
 
 // Globals for size of matrices
-unsigned int uiWA, uiHA, uiWB, uiHB, uiWC, uiHC;
+int uiWA, uiHA, uiWB, uiHB, uiWC, uiHC;
 int iSizeMultiple = 1;
 
 // global variables
@@ -391,15 +391,16 @@ int runTest(int argc, const char** argv)
 
     // Program Setup
     size_t program_length;
+    /* header must be inserted into the kernel file
     const char* header_path = shrFindFilePath("matrixMul.h", argv[0]);
     char* header = oclLoadProgSource(header_path, "", &program_length);
     if(!header)
     {
         shrLog("Error: Failed to load the header %s!\n", header_path);
         return -1000;
-    }
-    const char* source_path = "matrixMul.cl";
-    char *source = oclLoadProgSource(source_path, header, &program_length);
+    }*/
+    const char* source_path = shrFindFilePath("matrixMul.cl", argv[0]);
+    char *source = oclLoadProgSource(source_path, /*header*/"", &program_length);
     if(!source)
     {
         shrLog("Error: Failed to load compute program %s!\n", source_path);
@@ -414,7 +415,7 @@ int runTest(int argc, const char** argv)
         shrLog("Error: Failed to create program\n");
         return ciErrNum;
     }
-    free(header);
+    // free(header); header must be inserted into the kernel file
     free(source);
     
     // build the program

@@ -120,52 +120,53 @@ bool isNullPtr(const ExpressionPtr& expr, const ASTBuilder& builder) {
 	return false;
 }
 
+bool KernelCodeRetriver::getString(const core::CallExprPtr& call) {
+	if (const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
+		if (lit->getValue() == "string.as.char.pointer") {
+			if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(call->getArgument(0))) {
+				path = pl->getValue();
+				return true;
+			}
+		}
+
+		if(lit->getValue() == "shrFindFilePath") {
+			if(const CallExprPtr& arg = dynamic_pointer_cast<const CallExpr>(call->getArgument(0)))
+				return getString(arg);
+		}
+	}
+	return false;
+}
+
 bool KernelCodeRetriver::visitNode(const core::NodePtr& node) {
 	if (node == breakingStmt) {
-		return false; // stop recursion
+		return true; // stop recursion
 	}
-	return true; // go on with search
+	return false; // go on with search
 }
 
 bool KernelCodeRetriver::visitCallExpr(const core::CallExprPtr& callExpr) {
 	if (callExpr->getFunctionExpr() != BASIC.getRefAssign())
-		return true;
+		return false;
 	// check if it is the variable we are looking for
 	if (const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
 		if (lhs->getId() != pathToKernelFile->getId())
-			return true;
-	} else {
-		return true;
+			return false;
 	}
 
-	if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
-		if (const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-			if (stringAsChar->getValue() == "string.as.char.pointer") {
-				if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-					path = pl->getValue();
-					return false;
-				}
-			}
-		}
+	if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+		return getString(rhs);
 	}
-	return true;
+	return false;
 }
 
 bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& decl) {
 	if (decl->getVariable()->getId() != pathToKernelFile->getId())
-		return true;
+		return false;
 
-	if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(decl->getInitialization(), builder))) {
-		if (const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-			if (stringAsChar->getValue() == "string.as.char.pointer") {
-				if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-					path = pl->getValue();
-					return false;
-				}
-			}
-		}
+	if (const CallExprPtr& initCall = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(decl->getInitialization(), builder))) {
+		return getString(initCall);
 	}
-	return true;
+	return false;
 }
 
 void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
