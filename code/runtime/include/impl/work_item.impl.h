@@ -110,6 +110,7 @@ static inline void _irt_wi_init(irt_context_id context, irt_work_item* wi, irt_w
 	wi->ready_check = irt_g_null_readiness_check;
 	wi->source_id = irt_work_item_null_id();
 	wi->num_fragments = 0;
+	wi->stack_storage = NULL;
 #ifdef IRT_ENABLE_INSTRUMENTATION
 	wi->performance_data = irt_create_performance_table(IRT_WI_PD_BLOCKSIZE);
 #else
