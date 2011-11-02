@@ -266,6 +266,8 @@ void irt_wi_split(irt_work_item* wi, uint32 elements, uint64* offsets, irt_work_
 		out_wis[i] = _irt_wi_create_fragment(wi, range);
 	}
 	
+	irt_wi_instrumentation_event(wi, WORK_ITEM_SPLITTED);
+	
 	if(irt_wi_is_fragment(wi)) {
 		irt_work_item* source = wi->source_id.cached; // TODO
 		irt_atomic_fetch_and_add(&source->num_fragments, elements - 1); // This needs to be atomic even if it may not look like it
