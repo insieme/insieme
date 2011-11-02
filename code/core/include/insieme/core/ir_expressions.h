@@ -100,7 +100,7 @@ namespace core {
 		/**
 		 * Obtains the string version of this literal.
 		 */
-		string& getStringValue() const { return getValue()->getValue(); }
+		const string& getStringValue() const { return getValue()->getValue(); }
 
 		/**
 		 * A function extracting the value of this type by interpreting it

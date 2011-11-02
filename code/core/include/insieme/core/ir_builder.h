@@ -110,7 +110,7 @@ namespace core {
 
 		#include "ir_builder.inl"
 
-		// --- Handle value clases ---
+		// --- Handle value classes ---
 
 		StringValuePtr stringValue(const char* str) const;
 		StringValuePtr stringValue(const string& str) const;
@@ -128,8 +128,11 @@ namespace core {
 		UnionTypePtr unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 
 		TupleExprPtr tupleExpr(const ExpressionList& values) const;
-		VectorExprPtr vectorExpr(const VectorTypePtr& type, const ExpressionList& values) const;
 		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
+		StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
+
+		VectorExprPtr vectorExpr(const VectorTypePtr& type, const ExpressionList& values) const;
+		VectorExprPtr vectorExpr(const ExpressionList& values) const;
 
 		// creates a program - empty or based on the given entry points
 		ProgramPtr createProgram(const ExpressionList& entryPoints = ExpressionList()) const;

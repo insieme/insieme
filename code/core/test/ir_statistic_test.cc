@@ -37,13 +37,14 @@
 #include <gtest/gtest.h>
 
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/ast_statistic.h"
+#include "insieme/core/ir_statistic.h"
 
 namespace insieme {
 namespace core {
 
-TEST(ASTStatistic, Basic) {
-	IRBuilder builder;
+TEST(IRStatistic, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// test a diamond
 	TypePtr typeD = builder.genericType("D");
@@ -53,7 +54,7 @@ TEST(ASTStatistic, Basic) {
 
 	EXPECT_EQ("A<B<D>,C<D>>", toString(*typeA));
 
-	ASTStatistic stat = ASTStatistic::evaluate(typeA);
+	IRStatistic stat = IRStatistic::evaluate(typeA);
 
 	EXPECT_EQ(static_cast<unsigned>(5), stat.getNumAddressableNodes());
 	EXPECT_EQ(static_cast<unsigned>(4), stat.getNumSharedNodes());

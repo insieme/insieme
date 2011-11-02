@@ -214,6 +214,10 @@ VectorExprPtr IRBuilder::vectorExpr(const VectorTypePtr& type, const ExpressionL
 	return vectorExpr(type, expressions(values));
 }
 
+VectorExprPtr IRBuilder::vectorExpr(const ExpressionList& values) const {
+	return vectorExpr(vectorType(values.front()->getType(), concreteIntTypeParam(values.size())), values);
+}
+
 StructExprPtr IRBuilder::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
 	vector<NamedTypePtr> types;
 	vector<NamedValuePtr> values;
@@ -223,6 +227,15 @@ StructExprPtr IRBuilder::structExpr(const vector<std::pair<StringValuePtr, Expre
 	});
 	return structExpr(structType(types), namedValues(values));
 }
+
+StructExprPtr IRBuilder::structExpr(const vector<NamedValuePtr>& values) const {
+	vector<NamedTypePtr> types;
+	for_each(values, [&](const NamedValuePtr& cur) {
+		types.push_back(namedType(cur->getName(), cur->getValue()->getType()));
+	});
+	return structExpr(structType(types), values);
+}
+
 
 IfStmtPtr IRBuilder::ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody) const {
 	if (!elseBody) {

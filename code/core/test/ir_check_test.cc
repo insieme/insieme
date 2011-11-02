@@ -45,29 +45,30 @@ namespace insieme {
 namespace core {
 
 
-class AllFine : public ASTCheck {
+class AllFine : public IRCheck {
 public:
-	AllFine() : ASTCheck(true) {}
+	AllFine() : IRCheck(true) {}
 };
 
-class IDontLikeAnythingCheck : public ASTCheck {
+class IDontLikeAnythingCheck : public IRCheck {
 public:
-	IDontLikeAnythingCheck() : ASTCheck(true) {}
+	IDontLikeAnythingCheck() : IRCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
 		return MessageList(Message(node, 1, "I hate it!"));
 	}
 };
 
-class IAmScaredCheck : public ASTCheck {
+class IAmScaredCheck : public IRCheck {
 public:
-	IAmScaredCheck() : ASTCheck(true) {}
+	IAmScaredCheck() : IRCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
 		return MessageList(Message(node, 2, "Don't know - I'm scared!", Message::WARNING));
 	}
 };
 
-TEST(ASTCheck, Basic) {
-	IRBuilder builder;
+TEST(IRCheck, Basic) {
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a simple node
 	TypePtr type = builder.genericType("A");
@@ -96,8 +97,9 @@ TEST(ASTCheck, Basic) {
 
 }
 
-TEST(ASTCheck, Decorators) {
-	IRBuilder builder;
+TEST(IRCheck, Decorators) {
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// build diamond - again ...
 	TypePtr typeD = builder.genericType("D");

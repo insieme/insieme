@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/statements.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/set_utils.h"
@@ -50,33 +50,35 @@ namespace core {
 using namespace insieme::core::lang;
 using namespace insieme::utils::set;
 
-//template<typename PT>
-//void basicExprTests(PT expression, const TypePtr& type, const Node::ChildList& children);
+template<typename PT>
+void basicExprTests(PT expression, const TypePtr& type, const NodeList& children);
 
 
 TEST(ExpressionsTest, IntLiterals) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
-	LiteralPtr i5 = builder.literal(builder.getBasicGenerator().getIntGen(), "5");
-	LiteralPtr i7 = builder.literal(builder.getBasicGenerator().getIntGen(), "7");
-	LiteralPtr i5long = builder.literal(builder.getBasicGenerator().getInt8(), "5");
+	LiteralPtr i5 = builder.literal(builder.getLangBasic().getIntGen(), "5");
+	LiteralPtr i7 = builder.literal(builder.getLangBasic().getIntGen(), "7");
+	LiteralPtr i5long = builder.literal(builder.getLangBasic().getInt8(), "5");
 	
-	EXPECT_EQ( *i5, *builder.literal(builder.getBasicGenerator().getIntGen(), "5") );
+	EXPECT_EQ( *i5, *builder.literal(builder.getLangBasic().getIntGen(), "5") );
 	EXPECT_NE( *i5, *i5long );
 	EXPECT_NE( *i5, *i7 );
 	EXPECT_EQ( i5->getValueAs<int>(), 5 );
 
-	basicExprTests(i5, builder.getBasicGenerator().getIntGen(), toList(toVector<NodePtr>(builder.getBasicGenerator().getIntGen())));
-	basicExprTests(i7, builder.getBasicGenerator().getIntGen(), toList(toVector<NodePtr>(builder.getBasicGenerator().getIntGen())));
-	basicExprTests(i5long, builder.getBasicGenerator().getInt8(), toList(toVector<NodePtr>(builder.getBasicGenerator().getInt8())));
+	basicExprTests(i5, builder.getLangBasic().getIntGen(), toList(toVector<NodePtr>(builder.getLangBasic().getIntGen())));
+	basicExprTests(i7, builder.getLangBasic().getIntGen(), toList(toVector<NodePtr>(builder.getLangBasic().getIntGen())));
+	basicExprTests(i5long, builder.getLangBasic().getInt8(), toList(toVector<NodePtr>(builder.getLangBasic().getInt8())));
 }
 
 TEST(ExpressionsTest, FloatLiterals) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
-	LiteralPtr f5_s = builder.literal(builder.getBasicGenerator().getFloat(), "5.0");
+	LiteralPtr f5_s = builder.literal(builder.getLangBasic().getFloat(), "5.0");
 	
-	basicExprTests(f5_s, builder.getBasicGenerator().getFloat(), toList(toVector<NodePtr>(builder.getBasicGenerator().getFloat())));
+	basicExprTests(f5_s, builder.getLangBasic().getFloat(), toList(toVector<NodePtr>(builder.getLangBasic().getFloat())));
 
 	// EXPECT_EQ( *f5, *f5_s ); //-- this is not necessarily true
 	std::stringstream ss;
@@ -88,30 +90,31 @@ TEST(ExpressionsTest, FloatLiterals) {
 TEST(ExpressionsTest, Variable) {
 	NodeManager manager;
 
-	VariablePtr var = Variable::get(manager, manager.basic.getBool());
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool());
 	EXPECT_EQ (format("v%d", var->getId()), toString(*var));
 
-	VariablePtr var2 = Variable::get(manager, manager.basic.getBool());
+	VariablePtr var2 = Variable::get(manager, manager.getLangBasic().getBool());
 	EXPECT_NE(*var, *var2);
 	EXPECT_LT(var->getId(), var2->getId());
 
-	VariablePtr var3 = Variable::get(manager, manager.basic.getBool(), var->getId());
+	VariablePtr var3 = Variable::get(manager, manager.getLangBasic().getBool(), var->getId());
 	EXPECT_EQ(var, var3);
 
 	// check hash codes, children and cloning
-	basicExprTests(var, manager.basic.getBool(), toVector<NodePtr>(manager.basic.getBool()));
-	basicExprTests(var2, manager.basic.getBool(), toVector<NodePtr>(manager.basic.getBool()));
+	basicExprTests(var, manager.getLangBasic().getBool(), toVector<NodePtr>(manager.getLangBasic().getBool()));
+	basicExprTests(var2, manager.getLangBasic().getBool(), toVector<NodePtr>(manager.getLangBasic().getBool()));
 }
 
 TEST(ExpressionsTest, TupleExpr) {
 	NodeManager manager;
+	IRBuilder builder(manager);
 
-	LiteralPtr one = Literal::get(manager, manager.basic.getUInt1(), "1");
-	TupleExprPtr empty = TupleExpr::get(manager, toVector<ExpressionPtr>());
-	TupleExprPtr more = TupleExpr::get(manager, toVector<ExpressionPtr>(manager.basic.getTrue(), one));
+	LiteralPtr one = Literal::get(manager, manager.getLangBasic().getUInt1(), "1");
+	TupleExprPtr empty = builder.tupleExpr(toVector<ExpressionPtr>());
+	TupleExprPtr more = builder.tupleExpr(toVector<ExpressionPtr>(manager.getLangBasic().getTrue(), one));
 
 	TypePtr first = TupleType::get(manager, TypeList());
-	TypePtr second = TupleType::get(manager, toVector<TypePtr>(manager.basic.getBool(), manager.basic.getUInt1()));
+	TypePtr second = TupleType::get(manager, toVector<TypePtr>(manager.getLangBasic().getBool(), manager.getLangBasic().getUInt1()));
 	EXPECT_EQ ( *first , *empty->getType() );
 	EXPECT_EQ ( *second, *more->getType() );
 
@@ -121,17 +124,18 @@ TEST(ExpressionsTest, TupleExpr) {
 
 	// check hash codes, children and cloning
 	basicExprTests(empty, first, toVector<NodePtr>(first));
-	basicExprTests(more, second, toVector<NodePtr>(second, manager.basic.getTrue(), one));
+	basicExprTests(more, second, toVector<NodePtr>(second, manager.getLangBasic().getTrue(), one));
 }
 
 TEST(ExpressionsTest, VectorExpr) {
 	NodeManager manager;
+	IRBuilder builder(manager);
 
-	VectorExprPtr empty = VectorExpr::get(manager, toVector<ExpressionPtr>());
-	VectorExprPtr more = VectorExpr::get(manager, toVector<ExpressionPtr>(manager.basic.getTrue(), manager.basic.getFalse()));
+	VectorExprPtr empty = builder.vectorExpr(toVector<ExpressionPtr>());
+	VectorExprPtr more = builder.vectorExpr(toVector<ExpressionPtr>(manager.getLangBasic().getTrue(), manager.getLangBasic().getFalse()));
 
 	TypePtr first = VectorType::get(manager, TypeVariable::get(manager, "a"), ConcreteIntTypeParam::get(manager, 0));
-	TypePtr second = VectorType::get(manager, manager.basic.getBool(), ConcreteIntTypeParam::get(manager, 2));
+	TypePtr second = VectorType::get(manager, manager.getLangBasic().getBool(), ConcreteIntTypeParam::get(manager, 2));
 	EXPECT_EQ ( *first , *empty->getType() );
 	EXPECT_EQ ( *second, *more->getType() );
 
@@ -141,18 +145,19 @@ TEST(ExpressionsTest, VectorExpr) {
 
 	// check hash codes, children and cloning
 	basicExprTests(empty, first, toVector<NodePtr>(first));
-	basicExprTests(more, second, toVector<NodePtr>(second, manager.basic.getTrue(), manager.basic.getFalse()));
+	basicExprTests(more, second, toVector<NodePtr>(second, manager.getLangBasic().getTrue(), manager.getLangBasic().getFalse()));
 }
 
 TEST(ExpressionsTest, Lambda) {
 	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr type = GenericType::get(manager, "A");
 	CompoundStmtPtr body = CompoundStmt::get(manager, Literal::get(manager, type, "a"));
 	VariablePtr varA = Variable::get(manager, type, 1);
 	VariablePtr varB = Variable::get(manager, type, 2);
 	FunctionTypePtr funType = FunctionType::get(manager, TypeList(), type, true);
-	LambdaPtr empty = Lambda::get(manager, funType, Lambda::ParamList(), body);
+	LambdaPtr empty = Lambda::get(manager, funType, VariableList(), body);
 	LambdaPtr little = Lambda::get(manager, funType, toVector(varA), body);
 	LambdaPtr more = Lambda::get(manager, funType, toVector(varA, varB), body);
 
@@ -167,8 +172,9 @@ TEST(ExpressionsTest, Lambda) {
 }
 
 TEST(ExpressionsTest, LambdaExpr) {
-	IRBuilder builder;
-	const lang::BasicGenerator& gen = builder.getBasicGenerator();
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& gen = builder.getLangBasic();
 
 	// create a recursive even/odd example
 	FunctionTypePtr functionType = builder.functionType(toVector<TypePtr>(gen.getUInt4()), gen.getBool());
@@ -176,7 +182,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 	VariablePtr oddVar = builder.variable(functionType, 2);
 
 
-	Lambda::ParamList param;
+	VariableList param;
 	param.push_back(builder.variable(gen.getUInt4(), 3));
 
 	LiteralPtr zero = builder.literal(gen.getUInt4(), "0");
@@ -202,10 +208,10 @@ TEST(ExpressionsTest, LambdaExpr) {
 	LambdaPtr oddLambda = builder.lambda(functionType, param, oddBody);
 
 	// finish definition
-	LambdaDefinition::Definitions definitions;
-	definitions.insert(std::make_pair(evenVar, evenLambda));
-	definitions.insert(std::make_pair(oddVar, oddLambda));
-	LambdaDefinitionPtr definition = builder.lambdaDefinition(definitions);
+	vector<LambdaBindingPtr> bindings;
+	bindings.push_back(builder.lambdaBinding(evenVar, evenLambda));
+	bindings.push_back(builder.lambdaBinding(oddVar, oddLambda));
+	LambdaDefinitionPtr definition = builder.lambdaDefinition(bindings);
 
 	// test definition node
 	EXPECT_TRUE( equals(toVector<NodePtr>(evenVar, evenLambda, oddVar, oddLambda), definition->getChildList()) );
@@ -222,7 +228,7 @@ TEST(ExpressionsTest, LambdaExpr) {
 	EXPECT_NE ( odd , even);
 	EXPECT_EQ ( odd , odd);
 
-	EXPECT_NE ( even->hash(), odd->hash());
+	EXPECT_NE ( (*even).hash(), (*odd).hash());
 
 	EXPECT_TRUE(even->isRecursive());
 	EXPECT_TRUE(odd->isRecursive());
@@ -318,16 +324,17 @@ TEST(ExpressionsTest, BindExpr) {
 
 TEST(ExpressionsTest, MemberAccessExpr) {
 	NodeManager manager;
+	IRBuilder builder(manager);
 
-	StructExpr::Members members;
+	vector<NamedValuePtr> members;
 
-	IdentifierPtr idA = Identifier::get(manager,"a");
-	IdentifierPtr idB = Identifier::get(manager,"b");
+	StringValuePtr idA = StringValue::get(manager,"a");
+	StringValuePtr idB = StringValue::get(manager,"b");
 	TypePtr typeA = GenericType::get(manager, "typeA");
 	TypePtr typeB = GenericType::get(manager, "typeB");
-	members.push_back(StructExpr::Member(idA, Literal::get(manager, typeA, "1")));
-	members.push_back(StructExpr::Member(idB, Literal::get(manager, typeB, "2")));
-	StructExprPtr data = StructExpr::get(manager, members);
+	members.push_back(NamedValue::get(manager, idA, Literal::get(manager, typeA, "1")));
+	members.push_back(NamedValue::get(manager, idB, Literal::get(manager, typeB, "2")));
+	StructExprPtr data = builder.structExpr(manager, members);
 
 	MemberAccessExprPtr access = MemberAccessExpr::get(manager, data, idA);
 	EXPECT_EQ(*typeA, *access->getType());
@@ -414,9 +421,9 @@ TEST(ExpressionsTest, JobExpr) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	TypePtr intType = manager.basic.getUIntGen();
-	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.basic.getUnit());
-	FunctionTypePtr guardType = FunctionType::get(manager, toVector<TypePtr>(intType, intType), manager.basic.getBool());
+	TypePtr intType = manager.getLangBasic().getUIntGen();
+	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.getLangBasic().getUnit());
+	FunctionTypePtr guardType = FunctionType::get(manager, toVector<TypePtr>(intType, intType), manager.getLangBasic().getBool());
 
 	ExpressionPtr handlerA = Variable::get(manager, funType);
 	ExpressionPtr handlerB = Variable::get(manager, funType);
@@ -440,7 +447,7 @@ TEST(ExpressionsTest, JobExpr) {
 	JobExprPtr job = JobExpr::get(manager, range, defaultHandler, stmts, localDeclarations);
 
 	// check hash codes, children and cloning
-	TypePtr type = manager.basic.getJob();
+	TypePtr type = manager.getLangBasic().getJob();
 	vector<NodePtr> childList;
 	childList.push_back(range);
 	childList.push_back(localDeclarations[0]);

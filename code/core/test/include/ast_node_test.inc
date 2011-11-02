@@ -38,8 +38,8 @@
 
 #include "insieme/utils/annotation.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/program.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_program.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -78,14 +78,11 @@ void hash_node(hash_t& seed, const NodePtr& cur) {
 		case insieme::core::NT_FunctionType: { hash_combine(seed, static_pointer_cast<const FunctionType>(cur)->isPlain()); break; }
 		case insieme::core::NT_StructType:   { hash_combine(seed, "struct"); break; }
 		case insieme::core::NT_UnionType:    { hash_combine(seed, "union"); break; }
-		case insieme::core::NT_Identifier:   { hash_combine(seed, static_pointer_cast<const Identifier>(cur)->getName()); break; }
 		case insieme::core::NT_Variable:     { hash_combine(seed, static_pointer_cast<const Variable>(cur)->getId()); break; }
 		case insieme::core::NT_TypeVariable: { hash_combine(seed, static_pointer_cast<const TypeVariable>(cur)->getVarName()); break; }
 		case insieme::core::NT_Literal:      { hash_combine(seed, static_pointer_cast<const Literal>(cur)->getValue()); break; }
-		case insieme::core::NT_TupleProjectionExpr:   { hash_combine(seed, static_pointer_cast<const TupleProjectionExpr>(cur)->getIndex()); break; }
 		case insieme::core::NT_MarkerExpr:   { hash_combine(seed, static_pointer_cast<const MarkerExpr>(cur)->getID()); break; }
 		case insieme::core::NT_MarkerStmt:   { hash_combine(seed, static_pointer_cast<const MarkerStmt>(cur)->getID()); break; }
-		case insieme::core::NT_Program:      { boost::hash_combine(seed, static_pointer_cast<const Program>(cur)->isMain()); break; };
 		case insieme::core::NT_VariableIntTypeParam: { boost::hash_combine(seed, static_pointer_cast<const VariableIntTypeParam>(cur)->getSymbol()); break; };
 		case insieme::core::NT_ConcreteIntTypeParam: { boost::hash_combine(seed, static_pointer_cast<const ConcreteIntTypeParam>(cur)->getValue()); break; };
 		default: {}
@@ -283,7 +280,7 @@ void basicNodeTests(NP node, const NodeList& children = NodeList()) {
 			return ptr;
 		});
 
-		cur->substitute(manager, mapper, false);
+		cur->substitute(manager, mapper);
 
 		// check number of visited children
 		EXPECT_EQ(cur->getChildList().size(), static_cast<size_t>(count));

@@ -37,6 +37,7 @@
 #pragma once
 
 #include "insieme/utils/annotation.h"
+#include "insieme/utils/string_utils.h"
 
 #include "insieme/core/forward_decls.h"
 #include "insieme/core/ir_node_annotation.h"
@@ -211,8 +212,15 @@ namespace core {
 		 * @param mapper the mapper used to translate child node references
 		 * @return a pointer to the modified node.
 		 */
-		Ptr<const Node> substitute(NodeManager& manager, NodeMapping& mapper) const {
-			return getNode().substituteInternal(manager, mapper);
+		Ptr<const node_type> substitute(NodeManager& manager, NodeMapping& mapper) const {
+			return static_pointer_cast<Ptr<const node_type>>(getNode().substituteInternal(manager, mapper));
+		}
+
+		/**
+		 * Obtains a string-representation of the accessed node.
+		 */
+		string toString() const {
+			return ::toString(getNode());
 		}
 
 	protected:
