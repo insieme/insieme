@@ -94,6 +94,19 @@ enum { NUM_CONCRETE_NODE_TYPES = 0
 };
 #undef CONCRETE
 
+/**
+ * Returns a name string for each node id.
+ */
+#define CONCRETE(name) case NT_ ## name: return "NT_" #name;
+inline const char* getNodeTypeName(NodeType t) {
+    switch(t) {
+        // the necessary information is obtained from the node-definition file
+        #include "insieme/core/ast_nodes.def"
+    }
+    assert(false && "Unknown node type");
+    return "unknown node type";
+}
+#undef CONCRETE
 
 namespace detail {
 

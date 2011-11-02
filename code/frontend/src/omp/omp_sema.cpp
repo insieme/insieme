@@ -111,17 +111,21 @@ namespace {
 	class GlobalMapper : public NodeMapping {
 		NodeManager& nodeMan;
 		ASTBuilder build;
-		std::stack<VariablePtr> curVar;
+		VariablePtr curVar;
+		bool startedMapping;
 
 	public:
-		GlobalMapper(NodeManager& nodeMan, const VariablePtr& global) : nodeMan(nodeMan), build(nodeMan) { 
-			curVar.push(global);
+		GlobalMapper(NodeManager& nodeMan, const VariablePtr& global) 
+				: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false) {
 		}
 
 	protected:
 		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
+			// only start mapping once global is encountered
+			if(*ptr == *curVar) startedMapping = true;
+			if(!startedMapping) return ptr->substitute(nodeMan, *this);
 			if(ptr->hasAnnotation(GlobalRequiredAnnotation::key)) {
-				//LOG(INFO) << "?????? Mapping 1 " << ptr;
+				//LOG(INFO) << "?????? Mapping 1 T: " << getNodeTypeName(ptr->getNodeType()) << " -- N: " << *ptr;
 				// recursively forward the variable
 				switch(ptr->getNodeType()) {
 				case NT_CallExpr:
@@ -129,6 +133,12 @@ namespace {
 					break;
 				case NT_BindExpr:
 					return mapBind(static_pointer_cast<const BindExpr>(ptr));
+					break;
+				case NT_LambdaExpr:
+					return mapLambdaExpr(static_pointer_cast<const LambdaExpr>(ptr));
+					break;
+				case NT_Literal:
+					return mapLiteral(static_pointer_cast<const Literal>(ptr));
 					break;
 				default:
 					// no changes at this node, but at child nodes
@@ -142,42 +152,62 @@ namespace {
 		}
 		
 		const NodePtr mapCall(const CallExprPtr& call) {
-			LOG(INFO) << "?????? Mapping call " << call;
+			//LOG(INFO) << "?????? Mapping call " << call;
 			auto func = call->getFunctionExpr();
-			if(func && func->hasAnnotation(GlobalRequiredAnnotation::key)) {				
-				LOG(INFO) << "!!!!!! Mapping call " << call;
+			if(func && func->hasAnnotation(GlobalRequiredAnnotation::key)) {
 				vector<ExpressionPtr> newCallArgs = call->getArguments();
-				newCallArgs.push_back(curVar.top());
-				// build function body
-				curVar.push(build.variable(curVar.top()->getType()));
-				LOG(INFO) << func->getNodeType();
-				LOG(INFO) << func;
-				curVar.pop();
+				newCallArgs.push_back(curVar);
 				// complete call
 				return build.callExpr(call->getType(), static_pointer_cast<const Expression>(func->substitute(nodeMan, *this)), newCallArgs);
 			}
 			return call->substitute(nodeMan, *this);
 		}
 		const NodePtr mapBind(const BindExprPtr& bind) {
-			LOG(INFO) << "?????? Mapping bind " << bind;
+			//LOG(INFO) << "?????? Mapping bind " << bind;
 			auto boundCall = bind->getCall();
 			auto boundCallFunc = boundCall->getFunctionExpr();
 			if(boundCallFunc && boundCallFunc->hasAnnotation(GlobalRequiredAnnotation::key)) {
-				LOG(INFO) << "!!!!!! Mapping bind " << bind;
-				LOG(INFO) << bind->getBoundExpressions();
-				LOG(INFO) << bind->getCall();
-				LOG(INFO) << bind->getParameters();
 				vector<ExpressionPtr> newBoundCallArguments = boundCall->getArguments();
-				newBoundCallArguments.push_back(curVar.top());
-				auto newFunctionExpr = static_pointer_cast<const Expression>(boundCall->getFunctionExpr()->substitute(nodeMan, *this));
-				LOG(INFO) << newFunctionExpr->getNodeType();
+				newBoundCallArguments.push_back(curVar);
+				auto newFunctionExpr = this->map(boundCall->getFunctionExpr());
 				auto newCall = build.callExpr(boundCall->getType(), newFunctionExpr, newBoundCallArguments);
 				return build.bindExpr(bind->getParameters(), newCall);
 			}
 			return bind->substitute(nodeMan, *this);
 		}
-
-
+		const NodePtr mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
+			LambdaExprPtr ret;
+			//LOG(INFO) << "?????? Mapping lambda expr " << lambdaExpr;
+			auto lambdaDef = lambdaExpr->getDefinition();
+			auto lambda = lambdaExpr->getLambda();
+			// create new var for global struct
+			VariablePtr innerVar = build.variable(curVar->getType());
+			VariablePtr outerVar = curVar;
+			curVar = innerVar;
+			// map body
+			auto newBody = static_pointer_cast<const CompoundStmt>(lambda->getBody()->substitute(nodeMan, *this));
+			// add param
+			Lambda::ParamList newParams = lambda->getParameterList();
+			newParams.push_back(curVar);
+			// build replacement lambda
+			TypePtr retType = lambda->getType()->getReturnType();
+			//TypeList paramTypes = ::transform(newParams, [&](const VariablePtr& v){ return v->getType(); });
+			//FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
+			//auto newLambda = build.lambda(lambdaType, newParams, newBody);
+			// restore previous global variable
+			curVar = outerVar;
+			// build replacement lambda expression
+			ret = build.lambdaExpr(retType, newBody, newParams);
+			//LOG(INFO) << "!!!!!!! Mapped lambda expr " << ret;
+			return ret;
+		}
+		const NodePtr mapLiteral(const LiteralPtr& literal) {
+			const string& gname = literal->getValue();
+			if(gname.find("global_omp") == 0) {
+				return build.accessMember(curVar, gname);
+			}
+			return literal;
+		}
 	};
 }
 
