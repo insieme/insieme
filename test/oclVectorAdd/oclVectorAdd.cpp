@@ -1,16 +1,12 @@
 /*
  * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual property and 
- * proprietary rights in and to this software and related documentation. 
- * Any use, reproduction, disclosure, or distribution of this software 
- * and related documentation without an express license agreement from
- * NVIDIA Corporation is strictly prohibited.
+ * Please refer to the NVIDIA end user license agreement (EULA) associated
+ * with this source code for terms and conditions that govern your use of
+ * this software. Any use, reproduction, disclosure, or distribution of
+ * this software and related documentation outside the terms of the EULA
+ * is strictly prohibited.
  *
- * Please refer to the applicable NVIDIA end user license agreement (EULA) 
- * associated with this source code for terms and conditions that govern 
- * your use of this NVIDIA software.
- * 
  */
 
 // *********************************************************************
@@ -28,10 +24,7 @@
 
 // common SDK header for standard utilities and system libs 
 #include <oclUtils.h>
-
-// Name of the file with the source code for the computation kernel
-// *********************************************************************
-const char* cSourceFile = "VectorAdd.cl";
+#include <shrQATest.h>
 
 // Host buffers for demo
 // *********************************************************************
@@ -39,22 +32,23 @@ float *srcA, *srcB, *dst;        // Host buffers for OpenCL test
 float* Golden;                   // Host buffer for host golden processing cross check
 
 // OpenCL Vars
-cl_context cxGPUContext = NULL;        // OpenCL context
-cl_command_queue cqCommandQueue = NULL;// OpenCL command que
-cl_platform_id cpPlatform = NULL;      // OpenCL platform
-cl_device_id cdDevice = NULL;          // OpenCL device
-cl_program cpProgram = NULL;           // OpenCL program
-cl_kernel ckKernel = NULL;             // OpenCL kernel
-cl_mem cmDevSrcA = NULL;               // OpenCL device source buffer A
-cl_mem cmDevSrcB = NULL;               // OpenCL device source buffer B 
-cl_mem cmDevDst = NULL;                // OpenCL device destination buffer 
+cl_context cxGPUContext;        // OpenCL context
+cl_command_queue cqCommandQueue;// OpenCL command que
+cl_platform_id cpPlatform;      // OpenCL platform
+cl_device_id cdDevice;          // OpenCL device
+cl_program cpProgram;           // OpenCL program
+cl_kernel ckKernel;             // OpenCL kernel
+cl_mem cmDevSrcA;               // OpenCL device source buffer A
+cl_mem cmDevSrcB;               // OpenCL device source buffer B 
+cl_mem cmDevDst;                // OpenCL device destination buffer 
 size_t szGlobalWorkSize;        // 1D var for Total # of work items
 size_t szLocalWorkSize;		    // 1D var for # of work items in the work group	
 size_t szParmDataBytes;			// Byte size of context information
 size_t szKernelLength;			// Byte size of kernel code
 cl_int ciErr1, ciErr2;			// Error code var
 char* cPathAndName = NULL;      // var for full paths to data, src, etc.
-char* cSourceCL = NULL;         // Buffer to hold source for compilation 
+char* cSourceCL = NULL;         // Buffer to hold source for compilation
+const char* cExecutableName = NULL;
 
 // demo config vars
 int iNumElements = 11444777;	// Length of float arrays to process (odd # for illustration)
@@ -63,18 +57,25 @@ shrBOOL bNoPrompt = shrFALSE;
 // Forward Declarations
 // *********************************************************************
 void VectorAddHost(const float* pfData1, const float* pfData2, float* pfResult, int iNumElements);
-void Cleanup (int iExitCode);
+void Cleanup (int argc, char **argv, int iExitCode);
 
 // Main function 
 // *********************************************************************
 int main(int argc, char **argv)
 {
+// Name of the file with the source code for the computation kernel
+// *********************************************************************
+const char* cSourceFile = "VectorAdd.cl";
+
+    shrQAStart(argc, argv);
+
     // get command line arg for quick test, if provided
     bNoPrompt = shrCheckCmdLineFlag(argc, (const char**)argv, "noprompt");
     
     // start logs 
+	cExecutableName = argv[0];
     shrSetLogFileName ("oclVectorAdd.txt");
- //   shrLog("%s Starting...\n\n# of float elements per Array \t= %i\n", argv[0], iNumElements); 
+    shrLog("%s Starting...\n\n# of float elements per Array \t= %i\n", argv[0], iNumElements); 
 
     // set and log Global and Local work size dimensions
     szLocalWorkSize = 256;
@@ -98,7 +99,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clGetPlatformID, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     //Get the devices
@@ -107,7 +108,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clGetDeviceIDs, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     //Create the context
@@ -116,7 +117,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clCreateContext, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // Create a command-queue
@@ -125,7 +126,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clCreateCommandQueue, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // Allocate the OpenCL buffer memory objects for source and result on the device GMEM
@@ -138,36 +139,36 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clCreateBuffer, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
     
     // Read the OpenCL kernel in from source file
     shrLog("oclLoadProgSource (%s)...\n", cSourceFile); 
     cPathAndName = shrFindFilePath(cSourceFile, argv[0]);
+    #pragma insieme kernelFile "vectorAdd.cl"
     cSourceCL = oclLoadProgSource(cPathAndName, "", &szKernelLength);
 
     // Create the program
-    #pragma insieme kernelFile "VectorAdd.cl"
     cpProgram = clCreateProgramWithSource(cxGPUContext, 1, (const char **)&cSourceCL, &szKernelLength, &ciErr1);
     shrLog("clCreateProgramWithSource...\n"); 
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clCreateProgramWithSource, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // Build the program with 'mad' Optimization option
-/*    #ifdef MAC
+    #ifdef MAC
         char* flags = "-cl-fast-relaxed-math -DMAC";
     #else
         char* flags = "-cl-fast-relaxed-math";
-    #endif*/
+    #endif
     ciErr1 = clBuildProgram(cpProgram, 0, NULL, NULL, NULL, NULL);
     shrLog("clBuildProgram...\n"); 
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clBuildProgram, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // Create the kernel
@@ -176,7 +177,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clCreateKernel, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // Set the Argument values
@@ -188,7 +189,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clSetKernelArg, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // --------------------------------------------------------
@@ -201,7 +202,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clEnqueueWriteBuffer, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // Launch kernel
@@ -210,7 +211,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clEnqueueNDRangeKernel, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
 
     // Synchronous/blocking read of results, and check accumulated errors
@@ -219,7 +220,7 @@ int main(int argc, char **argv)
     if (ciErr1 != CL_SUCCESS)
     {
         shrLog("Error in clEnqueueReadBuffer, Line %u in file %s !!!\n\n", __LINE__, __FILE__);
-        Cleanup(EXIT_FAILURE);
+        Cleanup(argc, argv, EXIT_FAILURE);
     }
     //--------------------------------------------------------
 
@@ -227,13 +228,12 @@ int main(int argc, char **argv)
     shrLog("Comparing against Host/C++ computation...\n\n"); 
     VectorAddHost ((const float*)srcA, (const float*)srcB, (float*)Golden, iNumElements);
     shrBOOL bMatch = shrComparefet((const float*)Golden, (const float*)dst, (unsigned int)iNumElements, 0.0f, 0);
-    shrLog("%s\n\n", (bMatch == shrTRUE) ? "PASSED" : "FAILED");
 
     // Cleanup and leave
-    Cleanup (EXIT_SUCCESS);
+    Cleanup (argc, argv, (bMatch == shrTRUE) ? EXIT_SUCCESS : EXIT_FAILURE);
 }
 
-void Cleanup (int iExitCode)
+void Cleanup (int argc, char **argv, int iExitCode)
 {
     // Cleanup allocated objects
     shrLog("Starting Cleanup...\n\n");
@@ -254,16 +254,8 @@ void Cleanup (int iExitCode)
     free(Golden);
 
     // finalize logs and leave
-    if (bNoPrompt)
-    {
-        shrLogEx(LOGBOTH | CLOSELOG, 0, "oclVectorAdd.exe Exiting...\n");
-    }
-    else 
-    {
-        shrLogEx(LOGBOTH | CLOSELOG, 0, "oclVectorAdd.exe Exiting...\nPress <Enter> to Quit\n");
-        getchar();
-    }
-    exit (iExitCode);
+// FIXME causes segfault in frontend
+//    shrQAFinishExit(argc, (const char **)argv, (iExitCode == EXIT_SUCCESS) ? QA_PASSED : QA_FAILED);
 }
 
 // "Golden" Host processing vector addition function for comparison purposes

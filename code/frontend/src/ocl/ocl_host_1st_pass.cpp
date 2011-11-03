@@ -120,18 +120,36 @@ bool isNullPtr(const ExpressionPtr& expr, const ASTBuilder& builder) {
 	return false;
 }
 
-bool KernelCodeRetriver::getString(const core::CallExprPtr& call) {
+bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
+	path = lit->getValue();
+	return true;
+}
+
+bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
 	if (const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
 		if (lit->getValue() == "string.as.char.pointer") {
-			if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(call->getArgument(0))) {
+			if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(tryRemove(BASIC.getRefDeref(), call->getArgument(0), builder))) {
 				path = pl->getValue();
 				return true;
 			}
 		}
 
 		if(lit->getValue() == "shrFindFilePath") {
-			if(const CallExprPtr& arg = dynamic_pointer_cast<const CallExpr>(call->getArgument(0)))
-				return getString(arg);
+
+			const ExpressionPtr arg = tryRemove(BASIC.getRefDeref(), call->getArgument(0), builder);
+			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(arg))
+				return saveString(call);
+			if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(arg))
+				return saveString(lit);
+			if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(arg)){
+				KernelCodeRetriver nkcr(var, builder.literal("42", BASIC.getInt4()), program, builder);
+				visitDepthFirstInterruptible(program, nkcr);
+				string pathFound = nkcr.getKernelFilePath();
+				if(pathFound.size() > 0) {
+					path = pathFound;
+					return true;
+				}
+			}
 		}
 	}
 	return false;
@@ -148,23 +166,35 @@ bool KernelCodeRetriver::visitCallExpr(const core::CallExprPtr& callExpr) {
 	if (callExpr->getFunctionExpr() != BASIC.getRefAssign())
 		return false;
 	// check if it is the variable we are looking for
-	if (const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
-		if (lhs->getId() != pathToKernelFile->getId())
-			return false;
+	if (const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(pathToKernelFile)) {
+		if (const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
+			if (lhs->getId() != pathVar->getId())
+				return false;
+		}
+
+		if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+			return saveString(rhs);
+		}
 	}
 
-	if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
-		return getString(rhs);
+	if(callExpr->getArgument(0) == pathToKernelFile) {
+		if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+			return saveString(rhs);
+		}
+
 	}
+
 	return false;
 }
 
 bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& decl) {
-	if (decl->getVariable()->getId() != pathToKernelFile->getId())
-		return false;
+	if (const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(pathToKernelFile)) {
+		if (decl->getVariable()->getId() != pathVar->getId())
+			return false;
 
-	if (const CallExprPtr& initCall = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(decl->getInitialization(), builder))) {
-		return getString(initCall);
+		if (const CallExprPtr& initCall = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(decl->getInitialization(), builder))) {
+			return saveString(initCall);
+		}
 	}
 	return false;
 }
@@ -182,14 +212,23 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 			}
 		}
 	}
+
+	string kernelFilePath;
 	if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(tryRemove(BASIC.getRefDeref(), path, builder))) {
-		//            std::cout << "PathVariable: " << pathVar << std::endl;
-		KernelCodeRetriver kcr(pathVar, root, builder);
+		KernelCodeRetriver kcr(pathVar, root, mProgram, builder);
 		visitDepthFirst(mProgram, kcr);
-		string kernelFilePath = kcr.getKernelFilePath();
-		if(kernelFilePath.size() > 0)
-			kernels = loadKernelsFromFile(kernelFilePath, builder);
+		kernelFilePath = kcr.getKernelFilePath();
 	}
+
+	if(const CallExprPtr& pathCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefDeref(), path, builder))) {
+		if(BASIC.isCompositeRefElem(pathCall->getFunctionExpr())) {
+			KernelCodeRetriver kcr(pathCall, root, mProgram, builder);
+			visitDepthFirst(mProgram, kcr);
+			kernelFilePath = kcr.getKernelFilePath();
+		}
+	}
+	if(kernelFilePath.size() > 0)
+		kernels = loadKernelsFromFile(kernelFilePath, builder);
 }
 
 const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, const ExpressionPtr& sizeArg, const bool copyPtr,
