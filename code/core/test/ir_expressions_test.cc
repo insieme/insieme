@@ -67,9 +67,9 @@ TEST(ExpressionsTest, IntLiterals) {
 	EXPECT_NE( *i5, *i7 );
 	EXPECT_EQ( i5->getValueAs<int>(), 5 );
 
-	basicExprTests(i5, builder.getLangBasic().getIntGen(), toVector<NodePtr>(builder.getLangBasic().getIntGen()));
-	basicExprTests(i7, builder.getLangBasic().getIntGen(), toVector<NodePtr>(builder.getLangBasic().getIntGen()));
-	basicExprTests(i5long, builder.getLangBasic().getInt8(), toVector<NodePtr>(builder.getLangBasic().getInt8()));
+	basicExprTests(i5, builder.getLangBasic().getIntGen(), toVector<NodePtr>(builder.getLangBasic().getIntGen(), i5->getValue()));
+	basicExprTests(i7, builder.getLangBasic().getIntGen(), toVector<NodePtr>(builder.getLangBasic().getIntGen(), i7->getValue()));
+	basicExprTests(i5long, builder.getLangBasic().getInt8(), toVector<NodePtr>(builder.getLangBasic().getInt8(), i5long->getValue()));
 }
 
 TEST(ExpressionsTest, FloatLiterals) {
@@ -78,7 +78,7 @@ TEST(ExpressionsTest, FloatLiterals) {
 
 	LiteralPtr f5_s = builder.literal(builder.getLangBasic().getFloat(), "5.0");
 	
-	basicExprTests(f5_s, builder.getLangBasic().getFloat(), toVector<NodePtr>(builder.getLangBasic().getFloat()));
+	basicExprTests(f5_s, builder.getLangBasic().getFloat(), toVector<NodePtr>(builder.getLangBasic().getFloat(), f5_s->getValue()));
 
 	// EXPECT_EQ( *f5, *f5_s ); //-- this is not necessarily true
 	std::stringstream ss;
@@ -101,8 +101,8 @@ TEST(ExpressionsTest, Variable) {
 	EXPECT_EQ(var, var3);
 
 	// check hash codes, children and cloning
-	basicExprTests(var, manager.getLangBasic().getBool(), toVector<NodePtr>(manager.getLangBasic().getBool()));
-	basicExprTests(var2, manager.getLangBasic().getBool(), toVector<NodePtr>(manager.getLangBasic().getBool()));
+	basicExprTests(var, manager.getLangBasic().getBool(), toVector<NodePtr>(manager.getLangBasic().getBool(), var->getID()));
+	basicExprTests(var2, manager.getLangBasic().getBool(), toVector<NodePtr>(manager.getLangBasic().getBool(), var2->getID()));
 }
 
 TEST(ExpressionsTest, TupleExpr) {
@@ -123,18 +123,19 @@ TEST(ExpressionsTest, TupleExpr) {
 
 
 	// check hash codes, children and cloning
-	basicExprTests(empty, first, toVector<NodePtr>(first));
-	basicExprTests(more, second, toVector<NodePtr>(second, manager.getLangBasic().getTrue(), one));
+	basicExprTests(empty, first, toVector<NodePtr>(first, empty->getExpressions()));
+	basicExprTests(more, second, toVector<NodePtr>(second, more->getExpressions()));
 }
 
 TEST(ExpressionsTest, VectorExpr) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	VectorExprPtr empty = builder.vectorExpr(toVector<ExpressionPtr>());
+	VectorTypePtr vectorType = builder.vectorType(manager.getLangBasic().getBool(), builder.concreteIntTypeParam(0));
+	VectorExprPtr empty = builder.vectorExpr(vectorType, toVector<ExpressionPtr>());
 	VectorExprPtr more = builder.vectorExpr(toVector<ExpressionPtr>(manager.getLangBasic().getTrue(), manager.getLangBasic().getFalse()));
 
-	TypePtr first = VectorType::get(manager, TypeVariable::get(manager, "a"), ConcreteIntTypeParam::get(manager, 0));
+	TypePtr first = vectorType;
 	TypePtr second = VectorType::get(manager, manager.getLangBasic().getBool(), ConcreteIntTypeParam::get(manager, 2));
 	EXPECT_EQ ( *first , *empty->getType() );
 	EXPECT_EQ ( *second, *more->getType() );
@@ -144,8 +145,8 @@ TEST(ExpressionsTest, VectorExpr) {
 
 
 	// check hash codes, children and cloning
-	basicExprTests(empty, first, toVector<NodePtr>(first));
-	basicExprTests(more, second, toVector<NodePtr>(second, manager.getLangBasic().getTrue(), manager.getLangBasic().getFalse()));
+	basicExprTests(empty, first, toVector<NodePtr>(first, empty->getExpressions()));
+	basicExprTests(more, second, toVector<NodePtr>(second, more->getExpressions()));
 }
 
 TEST(ExpressionsTest, Lambda) {
@@ -166,9 +167,9 @@ TEST(ExpressionsTest, Lambda) {
 	EXPECT_EQ ("fun(A v1, A v2) {a;}", toString(*more));
 
 	// conduct basic node checks
-	basicNodeTests(empty, toVector<NodePtr>(funType, body));
-	basicNodeTests(little, toVector<NodePtr>(funType, varA, body));
-	basicNodeTests(more, toVector<NodePtr>(funType, varA, varB, body));
+	basicNodeTests(empty, toVector<NodePtr>(funType, empty->getParameters(), body));
+	basicNodeTests(little, toVector<NodePtr>(funType, little->getParameters(), body));
+	basicNodeTests(more, toVector<NodePtr>(funType, more->getParameters(), body));
 }
 
 TEST(ExpressionsTest, LambdaExpr) {
@@ -214,14 +215,14 @@ TEST(ExpressionsTest, LambdaExpr) {
 	LambdaDefinitionPtr definition = builder.lambdaDefinition(bindings);
 
 	// test definition node
-	EXPECT_TRUE( equals(toVector<NodePtr>(evenVar, evenLambda, oddVar, oddLambda), definition->getChildList()) );
+	EXPECT_TRUE( equals(convertList(bindings), definition->getChildList()) );
 
 	// create recursive lambda nodes
 	LambdaExprPtr even = builder.lambdaExpr(evenVar, definition);
 	LambdaExprPtr odd  = builder.lambdaExpr(oddVar,  definition);
 
-	basicExprTests(even, functionType, toList(toVector<NodePtr>(evenVar, definition)));
-	basicExprTests(odd, functionType, toList(toVector<NodePtr>(oddVar, definition)));
+	basicExprTests(even, functionType, toList(toVector<NodePtr>(functionType, evenVar, definition)));
+	basicExprTests(odd, functionType, toList(toVector<NodePtr>(functionType, oddVar, definition)));
 
 	EXPECT_EQ ( even , even);
 	EXPECT_NE ( even , odd);
@@ -230,8 +231,12 @@ TEST(ExpressionsTest, LambdaExpr) {
 
 	EXPECT_NE ( (*even).hash(), (*odd).hash());
 
+	// test is recursive
 	EXPECT_TRUE(even->isRecursive());
 	EXPECT_TRUE(odd->isRecursive());
+
+	LambdaExprPtr simple = builder.lambdaExpr(functionType, toVector(x), builder.returnStmt(builder.boolLit("true")));
+	EXPECT_FALSE(simple->isRecursive());
 
 	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*even));
 	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*odd));
@@ -301,25 +306,25 @@ TEST(ExpressionsTest, BindExpr) {
 
 	// check hash codes, children and cloning
 	FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), typeRes, false);
-	basicExprTests(empty, funType, toVector<NodePtr>(callA));
+	basicExprTests(empty, funType, toVector<NodePtr>(funType, builder.parameters(), callA));
 
 	funType = builder.functionType(toVector<TypePtr>(), typeRes, false);
-	basicExprTests(B1, funType, toVector<NodePtr>(callB1));
+	basicExprTests(B1, funType, toVector<NodePtr>(funType, builder.parameters(), callB1));
 
 	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, false);
-	basicExprTests(B2, funType, toVector<NodePtr>(captureVar1, callB2));
+	basicExprTests(B2, funType, toVector<NodePtr>(funType, builder.parameters(captureVar1), callB2));
 
 	funType = builder.functionType(toVector<TypePtr>(), typeRes, false);
-	basicExprTests(C1, funType, toVector<NodePtr>(callC1));
+	basicExprTests(C1, funType, toVector<NodePtr>(funType, builder.parameters(), callC1));
 
 	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, false);
-	basicExprTests(C2, funType, toVector<NodePtr>(captureVar1, callC2));
+	basicExprTests(C2, funType, toVector<NodePtr>(funType, builder.parameters(captureVar1), callC2));
 
 	funType = builder.functionType(toVector<TypePtr>(typeA), typeRes, false);
-	basicExprTests(C3, funType, toVector<NodePtr>(captureVar2, callC3));
+	basicExprTests(C3, funType, toVector<NodePtr>(funType, builder.parameters(captureVar2), callC3));
 
 	funType = builder.functionType(toVector<TypePtr>(typeA, typeA), typeRes, false);
-	basicExprTests(C4, funType, toVector<NodePtr>(captureVar1, captureVar2, callC4));
+	basicExprTests(C4, funType, toVector<NodePtr>(funType, builder.parameters(captureVar1, captureVar2), callC4));
 }
 
 TEST(ExpressionsTest, MemberAccessExpr) {
@@ -349,8 +354,8 @@ TEST(ExpressionsTest, MemberAccessExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("(struct{a=1, b=2}.a)", toString(*access));
-	EXPECT_EQ ("(struct{a=1, b=2}.b)", toString(*access2));
+	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, a, typeA)", toString(*access));
+	EXPECT_EQ ("composite.member.access(struct{a=1, b=2}, b, typeB)", toString(*access2));
 }
 
 TEST(ExpressionsTest, TupleProjectionExpr) {
@@ -379,8 +384,8 @@ TEST(ExpressionsTest, TupleProjectionExpr) {
 	EXPECT_NE(access2, access3);
 	EXPECT_EQ(access, access3);
 
-	EXPECT_EQ ("(tuple(1,2)[0])", toString(*access));
-	EXPECT_EQ ("(tuple(1,2)[1])", toString(*access2));
+	EXPECT_EQ ("tuple.member.access(tuple(1,2), 0, typeA)", toString(*access));
+	EXPECT_EQ ("tuple.member.access(tuple(1,2), 1, typeB)", toString(*access2));
 }
 
 
@@ -405,8 +410,8 @@ TEST(ExpressionsTest, MarkerExpr) {
 	EXPECT_NE(markerA->getID(), markerB->getID());
 
 	// check hash codes, children and cloning
-	basicExprTests(markerA, type, toVector<NodePtr>(literal));
-	basicExprTests(markerB, type, toVector<NodePtr>(literal));
+	basicExprTests(markerA, type, toVector<NodePtr>(type, markerA->getID(), literal));
+	basicExprTests(markerB, type, toVector<NodePtr>(type, markerB->getID(), literal));
 }
 
 TEST(ExpressionsTest, JobExpr) {
@@ -445,16 +450,11 @@ TEST(ExpressionsTest, JobExpr) {
 	// check hash codes, children and cloning
 	TypePtr type = manager.getLangBasic().getJob();
 	vector<NodePtr> childList;
+	childList.push_back(job->getType());
 	childList.push_back(range);
-	childList.push_back(localDeclarations[0]);
-	childList.push_back(localDeclarations[1]);
-	childList.push_back(guardA);
-	childList.push_back(handlerA);
-	childList.push_back(guardB);
-	childList.push_back(handlerB);
-	childList.push_back(guardC);
-	childList.push_back(handlerC);
-	childList.push_back(defaultHandler);
+	childList.push_back(job->getLocalDecls());
+	childList.push_back(job->getGuardedExprs());
+	childList.push_back(job->getDefaultExpr());
 
 	basicExprTests(job, type, childList);
 }

@@ -185,7 +185,7 @@ UIntValuePtr IRBuilder::uintValue(unsigned value) const {
 
 // ---------------------------- Convenience -------------------------------------
 
-GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intParams) const {
+GenericTypePtr IRBuilder::genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intParams) const {
 	return genericType(name, types(typeParams), intTypeParams(intParams));
 }
 
@@ -205,6 +205,15 @@ UnionTypePtr IRBuilder::unionType(const vector<std::pair<StringValuePtr,TypePtr>
 	return unionType(members);
 }
 
+NamedTypePtr IRBuilder::namedType(const string& name, const TypePtr& type) const {
+	return namedType(stringValue(name), type);
+}
+
+NamedValuePtr IRBuilder::namedValue(const string& name, const ExpressionPtr& value) const {
+	return namedValue(stringValue(name), value);
+}
+
+
 TupleExprPtr IRBuilder::tupleExpr(const vector<ExpressionPtr>& values) const {
 	TupleTypePtr type = tupleType(extractTypes(values));
 	return tupleExpr(type, Expressions::get(manager, values));
@@ -215,7 +224,12 @@ VectorExprPtr IRBuilder::vectorExpr(const VectorTypePtr& type, const ExpressionL
 }
 
 VectorExprPtr IRBuilder::vectorExpr(const ExpressionList& values) const {
+	assert(!values.empty() && "Cannot infere vector type using empty value vector.");
 	return vectorExpr(vectorType(values.front()->getType(), concreteIntTypeParam(values.size())), values);
+}
+
+StructExprPtr IRBuilder::structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const {
+	return structExpr(structType, namedValues(values));
 }
 
 StructExprPtr IRBuilder::structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& members) const {
@@ -252,6 +266,10 @@ ForStmtPtr IRBuilder::forStmt(const DeclarationStmtPtr& var, const ExpressionPtr
 	return forStmt(var->getVariable(), var->getInitialization(), end, step, wrapBody(body));
 }
 
+ForStmtPtr IRBuilder::forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const {
+	return forStmt(var, start, end, step, wrapBody(body));
+}
+
 SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase) const {
 	CompoundStmtPtr defCase = (defaultCase)?wrapBody(defaultCase):getNoOp();
 
@@ -261,6 +279,10 @@ SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vecto
 	});
 
 	return switchStmt(switchExpr, switchCases(caseList), defCase);
+}
+
+SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<SwitchCasePtr>& cases, const StatementPtr& defaultCase) const {
+	return switchStmt(switchExpr, switchCases(cases), wrapBody(defaultCase));
 }
 
 FunctionTypePtr IRBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {
@@ -380,11 +402,8 @@ CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, const Expressio
 //	vectorSubscript(vec, lit);
 //}
 
-CompoundStmtPtr IRBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const {
-	return compoundStmt(toVector(s1, s2));
-}
-CompoundStmtPtr IRBuilder::compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const {
-	return compoundStmt(toVector(s1, s2, s3));
+DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
+	return declarationStmt(variable(type), value);
 }
 
 namespace {
@@ -518,6 +537,22 @@ BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& c
 JobExprPtr IRBuilder::jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& branches, const ExpressionPtr& defaultExpr) const {
 	GenericTypePtr type = static_pointer_cast<GenericTypePtr>(manager.getLangBasic().getJob());
 	return jobExpr(type, threadNumRange, declarationStmts(localDecls), guardedExprs(branches), defaultExpr);
+}
+
+MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, unsigned id) const {
+	return markerExpr(subExpr, uintValue(id));
+}
+
+MarkerExprPtr IRBuilder::markerExpr(const ExpressionPtr& subExpr, const UIntValuePtr& id) const {
+	return markerExpr(id, subExpr);
+}
+
+MarkerStmtPtr IRBuilder::markerStmt(const StatementPtr& subStmt, unsigned id) const {
+	return markerStmt(subStmt, uintValue(id));
+}
+
+MarkerStmtPtr IRBuilder::markerStmt(const StatementPtr& subStmt, const UIntValuePtr& id) const {
+	return markerStmt(id, subStmt);
 }
 
 CallExprPtr IRBuilder::getThreadNumRange(unsigned min) const {
@@ -723,6 +758,10 @@ LiteralPtr IRBuilder::getIntTypeParamLiteral(const IntTypeParamPtr& param) const
 LiteralPtr IRBuilder::getTypeLiteral(const TypePtr& type) const {
 	auto literalType = genericType("type", toVector(type));
 	return literal(literalType, toString(*type));
+}
+
+LiteralPtr IRBuilder::getIdentifierLiteral(const string& value) const {
+	return getIdentifierLiteral(stringValue(value));
 }
 
 LiteralPtr IRBuilder::getIdentifierLiteral(const core::StringValuePtr& value) const {

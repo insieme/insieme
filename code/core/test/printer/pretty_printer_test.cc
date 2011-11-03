@@ -36,9 +36,10 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
+#include "insieme/core/ir_builder.h"
 
 using namespace insieme::core;
 using namespace insieme::core::printer;
@@ -84,12 +85,12 @@ TEST(PrettyPrinter, Basic) {
 TEST(PrettyPrinter, Wrapper) {
 
 	NodeManager mgr;
+	IRBuilder builder(mgr);
 
-	LiteralPtr lit = Literal::get(mgr, "\"this is a string literal\"", mgr.basic.getString());	
-	LiteralPtr one = Literal::get(mgr, "1", mgr.basic.getInt4());
-	VariablePtr val = Variable::get(mgr, mgr.basic.getInt4());
-	DeclarationStmtPtr declStmt = DeclarationStmt::get(mgr, mgr.basic.getInt4(), one);
-	ForStmtPtr forStmt = ForStmt::get(mgr, declStmt, lit, val, one);
+	LiteralPtr lit = Literal::get(mgr, mgr.getLangBasic().getString(), "\"this is a string literal\"");
+	LiteralPtr one = Literal::get(mgr, mgr.getLangBasic().getInt4(), "1");
+	VariablePtr iter = Variable::get(mgr, mgr.getLangBasic().getInt4());
+	ForStmtPtr forStmt = builder.forStmt(iter, one, one, one, lit);
 
 	PrettyPrinter printerA(forStmt, PrettyPrinter::OPTIONS_DEFAULT);
 
@@ -113,29 +114,22 @@ TEST(PrettyPrinter, Wrapper) {
 	
 	++it;
 
-	// DeclStmt loc
-	EXPECT_EQ(declStmt, it->second);
+	// variable loc
+	EXPECT_EQ(iter, it->second);
 	EXPECT_EQ(SourceLocation(0,4), it->first.first );
 	EXPECT_EQ(SourceLocation(0,22), it->first.second );
 
 	++it;
 
 	// int<4> type loc
-	EXPECT_EQ(mgr.basic.getInt4(), it->second);
+	EXPECT_EQ(mgr.getLangBasic().getInt4(), it->second);
 	EXPECT_EQ(SourceLocation(0,9), it->first.first );
 	EXPECT_EQ(SourceLocation(0,15), it->first.second );
 	
 	++it;
 
-	// var v2 loc
-	EXPECT_EQ(declStmt->getVariable(), it->second);
-	EXPECT_EQ(SourceLocation(0,16), it->first.first );
-	EXPECT_EQ(SourceLocation(0,18), it->first.second );
-
-	++it;
-
 	// init value (1) loc
-	EXPECT_EQ(declStmt->getInitialization(), it->second);
+	EXPECT_EQ(forStmt->getStart(), it->second);
 	EXPECT_EQ(SourceLocation(0,21), it->first.first );
 	EXPECT_EQ(SourceLocation(0,22), it->first.second );
 

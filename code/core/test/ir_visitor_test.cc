@@ -36,12 +36,14 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
 
 using namespace insieme::core;
 
-class SimpleVisitor : public ASTVisitor<void> {
+class SimpleVisitor : public IRVisitor<void> {
 
 public:
 	int countGenericTypes;
@@ -49,7 +51,7 @@ public:
 	int countExpressions;
 	int countRefTypes;
 
-	SimpleVisitor() : ASTVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
+	SimpleVisitor() : IRVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
 
 public:
 	void visitGenericType(const GenericTypePtr& cur) {
@@ -66,18 +68,16 @@ public:
 
 	void visitRefType(const RefTypePtr& cur) {
 		countRefTypes++;
-
-		// forward processing
-		visitGenericType(cur);
 	}
 };
 
-TEST(ASTVisitor, DispatcherTest) {
+TEST(IRVisitor, DispatcherTest) {
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 	SimpleVisitor visitor;
 
-	ProgramPtr program = Program::create(manager);
+	ProgramPtr program = Program::get(manager);
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );
 	EXPECT_EQ ( 0, visitor.countExpressions );
@@ -100,7 +100,7 @@ TEST(ASTVisitor, DispatcherTest) {
 	EXPECT_EQ ( 1, visitor.countGenericTypes );
 	EXPECT_EQ ( 0, visitor.countRefTypes );
 
-	auto intType = manager.basic.getInt16();
+	auto intType = manager.getLangBasic().getInt16();
 	visitor.visit(intType);
 
 	EXPECT_EQ ( 0, visitor.countArrayTypes );
@@ -134,13 +134,13 @@ TEST(ASTVisitor, DispatcherTest) {
 }
 
 
-class CountingVisitor : public ASTVisitor<int> {
+class CountingVisitor : public IRVisitor<int> {
 public:
 
 	int counter;
 
 	CountingVisitor(bool countTypes=true)
-		: ASTVisitor<int>(countTypes), counter(0) {};
+		: IRVisitor<int>(countTypes), counter(0) {};
 
 	int visitNode(const NodePtr& node) {
 		// std::cout << *node << std::endl;
@@ -153,13 +153,13 @@ public:
 
 };
 
-class CountingAddressVisitor : public ASTVisitor<int, Address> {
+class CountingAddressVisitor : public IRVisitor<int, Address> {
 public:
 
 	int counter;
 
 	CountingAddressVisitor(bool countTypes=true)
-		: ASTVisitor<int, Address>(countTypes), counter(0) {};
+		: IRVisitor<int, Address>(countTypes), counter(0) {};
 
 	int visitNode(const NodeAddress& address) {
 		return ++counter;
@@ -172,15 +172,17 @@ public:
 };
 
 
-TEST(ASTVisitor, RecursiveVisitorTest) {
+TEST(IRVisitor, RecursiveVisitorTest) {
 
 	// TODO: run recursive visitor test
 
 	NodeManager manager;
+	IRBuilder builder(manager);
+
 	CountingVisitor visitor(true);
 	auto recVisitor = makeDepthFirstVisitor(visitor);
 
-	ProgramPtr program = Program::create(manager);
+	ProgramPtr program = Program::get(manager);
 
 	visitor.reset();
 	visitor.visit(program);
@@ -202,7 +204,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	recVisitor.visit(program);
 	EXPECT_EQ ( 1, visitor.counter );
 
-	GenericTypePtr type2 = GenericType::get(manager, "int", toVector<TypePtr>(type, type), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')), type);
+	GenericTypePtr type2 = builder.genericType("int", toVector<TypePtr>(type, type), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'p')));
 
 	visitor.reset();
 	visitor.visit(type2);
@@ -212,7 +214,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 	recVisitor.visit(type2);
 	EXPECT_EQ ( 5, visitor.counter );
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
@@ -266,7 +268,7 @@ TEST(ASTVisitor, RecursiveVisitorTest) {
 
 }
 
-TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
+TEST(IRVisitor, BreadthFirstIRVisitorTest) {
 
 	// TODO: run recursive visitor test
 
@@ -321,7 +323,7 @@ TEST(ASTVisitor, BreadthFirstASTVisitorTest) {
 }
 
 
-TEST(ASTVisitor, VisitOnceASTVisitorTest) {
+TEST(IRVisitor, VisitOnceIRVisitorTest) {
 
 	NodeManager manager;
 
@@ -359,7 +361,7 @@ TEST(ASTVisitor, VisitOnceASTVisitorTest) {
 
 }
 
-TEST(ASTVisitor, UtilitiesTest) {
+TEST(IRVisitor, UtilitiesTest) {
 
 	NodeManager manager;
 
@@ -424,13 +426,13 @@ TEST(ASTVisitor, UtilitiesTest) {
 }
 
 template<template<class Target> class Ptr>
-class InterruptingVisitor : public ASTVisitor<bool,Ptr> {
+class InterruptingVisitor : public IRVisitor<bool,Ptr> {
 public:
 
 	int counter;
 	int limit;
 
-	InterruptingVisitor(int limit) : ASTVisitor<bool,Ptr>(true), counter(0), limit(limit) {};
+	InterruptingVisitor(int limit) : IRVisitor<bool,Ptr>(true), counter(0), limit(limit) {};
 
 	bool visitNode(const Ptr<const Node>& node) {
 		return !(++counter < limit);
@@ -442,17 +444,18 @@ public:
 
 };
 
-TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
+TEST(IRVisitor, RecursiveInterruptableVisitorTest) {
 
 	// TODO: run recursive visitor test
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 	InterruptingVisitor<Pointer> limit3(3);
 	InterruptingVisitor<Pointer> limit10(10);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
@@ -481,17 +484,18 @@ TEST(ASTVisitor, RecursiveInterruptableVisitorTest) {
 }
 
 
-TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
+TEST(IRVisitor, VisitOnceInterruptableVisitorTest) {
 
 	// TODO: run recursive visitor test
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 	InterruptingVisitor<Pointer> limit3(3);
 	InterruptingVisitor<Pointer> limit10(10);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
@@ -529,13 +533,13 @@ TEST(ASTVisitor, VisitOnceInterruptableVisitorTest) {
 }
 
 
-class PruningVisitor : public ASTVisitor<bool,Address> {
+class PruningVisitor : public IRVisitor<bool,Address> {
 public:
 
 	int counter;
 	int depthLimit;
 
-	PruningVisitor(int depthLimit) : ASTVisitor<bool,Address>(true), counter(0), depthLimit(depthLimit) {};
+	PruningVisitor(int depthLimit) : IRVisitor<bool,Address>(true), counter(0), depthLimit(depthLimit) {};
 
 	bool visitNode(const NodeAddress& node) {
 		counter++;
@@ -548,12 +552,13 @@ public:
 
 };
 
-TEST(ASTVisitor, RecursivePrunableVisitorTest) {
+TEST(IRVisitor, RecursivePrunableVisitorTest) {
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 	GenericTypePtr type = GenericType::get(manager, "int");
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
@@ -573,13 +578,14 @@ TEST(ASTVisitor, RecursivePrunableVisitorTest) {
 }
 
 
-TEST(ASTVisitor, VisitOncePrunableVisitorTest) {
+TEST(IRVisitor, VisitOncePrunableVisitorTest) {
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
@@ -604,13 +610,14 @@ TEST(ASTVisitor, VisitOncePrunableVisitorTest) {
 }
 
 
-TEST(ASTVisitor, SingleTypeLambdaVisitor) {
+TEST(IRVisitor, SingleTypeLambdaVisitor) {
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
@@ -640,16 +647,17 @@ TEST(ASTVisitor, SingleTypeLambdaVisitor) {
 
 
 bool filterLiteral(const LiteralPtr& cur) {
-	return cur->getValue() == "14";
+	return cur->getValue()->getValue() == "14";
 }
 
-TEST(ASTVisitor, FilteredLambdaVisitor) {
+TEST(IRVisitor, FilteredLambdaVisitor) {
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)
@@ -658,7 +666,7 @@ TEST(ASTVisitor, FilteredLambdaVisitor) {
 	// ------ test for addresses ----
 
 	auto filter =[](const LiteralPtr& cur) {
-		return cur->getValue() == "12";
+		return cur->getValue()->getValue() == "12";
 	};
 
 	{
@@ -692,13 +700,14 @@ TEST(ASTVisitor, FilteredLambdaVisitor) {
 }
 
 
-TEST(ASTVisitor, ParameterTest) {
+TEST(IRVisitor, ParameterTest) {
 
 	NodeManager manager;
+	IRBuilder builder(manager);
 
 	GenericTypePtr type = GenericType::get(manager, "int");
 
-	IfStmtPtr ifStmt = IfStmt::get(manager,
+	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
 		Literal::get(manager, type, "14"),
 		CompoundStmt::get(manager)

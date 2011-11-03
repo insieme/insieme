@@ -665,6 +665,10 @@ struct AddressChildFactory {
 
 template <class T>
 Address<const T> concat(const Address<const T>& head, const Address<const T>& tail) {
+
+	// NOTE: this is O(n^2) for the n = length of path
+	// TODO: write recursive version which is O(n)
+
 	assert(head.getAddressedNode() == tail.getRootNode() && "Impossible to merge addresses");
 	const Path& tailPath = tail.getPath(); 
 	// If try to merge a path with another path containing only 1 node we return the head path

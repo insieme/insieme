@@ -61,7 +61,7 @@ namespace core {
 	/**
 	 * A node forming a common base type for all value nodes.
 	 */
-	class Value : public Node, public ValueAccessor<Value, Pointer> {
+	class Value : public Node {
 
 	protected:
 

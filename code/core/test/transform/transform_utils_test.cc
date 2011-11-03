@@ -38,7 +38,7 @@
 
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/statements.h"
+#include "insieme/core/ir_statements.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/utils/logging.h"
 
@@ -49,25 +49,29 @@ namespace transform {
 TEST(TransformUtils, MemberAccessLiteralUpdater) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
+	const auto& basic = mgr.getLangBasic();
 
-	CompoundStmt::StatementList saStmts;
+	StatementList saStmts;
 	// construct a struct variable
 	{
-		StructType::Entries fields;
-		fields.push_back(std::make_pair(builder.identifier("first"), mgr.basic.getInt4()));
-		fields.push_back(std::make_pair(builder.identifier("second"), mgr.basic.getReal8()));
+		vector<NamedTypePtr> fields;
+		fields.push_back(builder.namedType("first", basic.getInt4()));
+		fields.push_back(builder.namedType("second", basic.getReal8()));
 		const VariablePtr& structVar = builder.variable(builder.refType(builder.structType(fields)));
-		StructExpr::Members init;
-		init.push_back(std::make_pair(builder.identifier("first"), builder.intLit(1)));
-		init.push_back(std::make_pair(builder.identifier("second"), builder.literal(mgr.basic.getReal8(), "0.0")));
-		saStmts.push_back(builder.declarationStmt(structVar, builder.callExpr(structVar->getType(), mgr.basic.getRefVar(), builder.structExpr(init))));
+
+		vector<NamedValuePtr> init;
+		init.push_back(builder.namedValue("first", builder.intLit(1)));
+		init.push_back(builder.namedValue("second", builder.literal(basic.getReal8(), "0.0")));
+
+		saStmts.push_back(builder.declarationStmt(structVar, builder.callExpr(structVar->getType(), basic.getRefVar(), builder.structExpr(init))));
+
 		// CompositeMemberAccess
-		saStmts.push_back(builder.callExpr(mgr.basic.getInt8(), mgr.basic.getCompositeMemberAccess(),
-				builder.callExpr(builder.structType(fields), mgr.basic.getRefDeref(), structVar),
-				mgr.basic.getIdentifierLiteral(builder.identifier("first")), mgr.basic.getTypeLiteral(mgr.basic.getUInt2())));
+		saStmts.push_back(builder.callExpr(basic.getInt8(), basic.getCompositeMemberAccess(),
+				builder.callExpr(builder.structType(fields), basic.getRefDeref(), structVar),
+				builder.getIdentifierLiteral("first"), builder.getTypeLiteral(basic.getUInt2())));
 		// CompositeRefElem
-		saStmts.push_back(builder.callExpr(builder.refType(mgr.basic.getReal8()), mgr.basic.getCompositeRefElem(), structVar,
-				mgr.basic.getIdentifierLiteral(builder.identifier("second")), mgr.basic.getTypeLiteral(mgr.basic.getReal4())));
+		saStmts.push_back(builder.callExpr(builder.refType(basic.getReal8()), basic.getCompositeRefElem(), structVar,
+				builder.getIdentifierLiteral("second"), builder.getTypeLiteral(basic.getReal4())));
 		const StatementPtr& structAccess = builder.compoundStmt(saStmts);
 
 		// test for errors
@@ -90,18 +94,18 @@ TEST(TransformUtils, MemberAccessLiteralUpdater) {
 	saStmts.clear();
 	{
 		// construct a tuple variable
-		const TupleTypePtr& tupleTy = builder.tupleType(toVector(mgr.basic.getInt4(), mgr.basic.getChar()));
+		const TupleTypePtr& tupleTy = builder.tupleType(toVector(basic.getInt4(), basic.getChar()));
 		const VariablePtr& tupleVar = builder.variable(builder.refType(tupleTy));
 		std::vector<ExpressionPtr> init;
 		init.push_back(builder.intLit(1));
-		init.push_back(builder.literal(mgr.basic.getChar(), "a"));
-		saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), mgr.basic.getRefVar(), builder.tupleExpr(init))));
+		init.push_back(builder.literal(basic.getChar(), "a"));
+		saStmts.push_back(builder.declarationStmt(tupleVar, builder.callExpr(tupleVar->getType(), basic.getRefVar(), builder.tupleExpr(init))));
 		// TupleMemberAcces
-		saStmts.push_back(builder.callExpr(mgr.basic.getUInt2(), mgr.basic.getTupleMemberAccess(), builder.callExpr(tupleTy, mgr.basic.getRefDeref(), tupleVar),
-				builder.literal(mgr.basic.getUInt8(), "0"), mgr.basic.getTypeLiteral(mgr.basic.getInt4())));
+		saStmts.push_back(builder.callExpr(basic.getUInt2(), basic.getTupleMemberAccess(), builder.callExpr(tupleTy, basic.getRefDeref(), tupleVar),
+				builder.literal(basic.getUInt8(), "0"), builder.getTypeLiteral(basic.getInt4())));
 		// TupleRefElem
-		saStmts.push_back(builder.callExpr(mgr.basic.getChar(), mgr.basic.getTupleRefElem(), tupleVar, builder.castExpr(mgr.basic.getUInt8(), builder.intLit(1)),
-				mgr.basic.getTypeLiteral(mgr.basic.getWChar())));
+		saStmts.push_back(builder.callExpr(basic.getChar(), basic.getTupleRefElem(), tupleVar, builder.castExpr(basic.getUInt8(), builder.intLit(1)),
+				builder.getTypeLiteral(basic.getWChar())));
 		const StatementPtr& tupleAccess = builder.compoundStmt(saStmts);
 
 		// test for errors

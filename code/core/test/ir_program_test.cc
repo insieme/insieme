@@ -41,12 +41,12 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/set_utils.h"
 
-#include "insieme/core/program.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_types.h"
 #include "insieme/core/ir_builder.h"
 // #include "insieme/core/lang_basic.h"
 
-#include "ast_node_test.inc"
+#include "ir_node_test.inc"
 
 using namespace std;
 using namespace insieme::core;
@@ -56,35 +56,39 @@ using namespace insieme::utils::set;
 
 TEST(Program, HelloWorld) {
 
-	IRBuilder build;
+	NodeManager manager;
+	IRBuilder build(manager);
 
 	TypePtr stringType = build.genericType("string");
 	TypePtr varArgType = build.genericType("var_list");
-	TypePtr unitType = build.getNodeManager().basic.getUnit();
+	TypePtr unitType = build.getLangBasic().getUnit();
 	TypePtr printfType = build.functionType(toVector(stringType, varArgType), unitType);
 
 	auto printfDefinition = build.literal(printfType, "printf");
 
 	FunctionTypePtr voidNullaryFunctionType = build.functionType(TypeList(), unitType);
 
-	ExpressionPtr intLiteral = build.literal(build.getNodeManager().basic.getIntGen(), "4");
+	ExpressionPtr intLiteral = build.literal(build.getLangBasic().getIntGen(), "4");
 	auto invocation = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral));
-	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), invocation);
-
-	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
+	auto mainBody = build.lambdaExpr(voidNullaryFunctionType, VariableList(), invocation);
+	auto mainDefinition = build.lambdaExpr(voidNullaryFunctionType, VariableList(), mainBody);
 	
-	LiteralPtr main = build.literal(voidNullaryFunctionType, "main");
-	ProgramPtr pro = build.createProgram(toVector<ExpressionPtr>(main));
-	ProgramPtr pro2 = build.createProgram(toVector<ExpressionPtr>(main), true);
+	ExpressionPtr intLiteral2 = build.literal(build.getLangBasic().getIntGen(), "8");
+	auto invocation2 = build.callExpr(unitType, build.literal(printfType, "printf"), toVector(intLiteral2));
+	auto mainBody2 = build.lambdaExpr(voidNullaryFunctionType, VariableList(), invocation2);
+	auto mainDefinition2 = build.lambdaExpr(voidNullaryFunctionType, VariableList(), mainBody2);
+
+	ProgramPtr pro = build.program(toVector<ExpressionPtr>(mainDefinition));
+	ProgramPtr pro2 = build.program(toVector<ExpressionPtr>(mainDefinition2));
 
 	EXPECT_NE(pro, pro2);
 	EXPECT_NE(*pro, *pro2);
-	EXPECT_NE(pro->hash(), pro2->hash());
+	EXPECT_NE((*pro).hash(), (*pro2).hash());
 
 	cout << pro;
 
-	basicNodeTests(pro, toVector<NodePtr>(main));
-	basicNodeTests(pro2, toVector<NodePtr>(main));
+	basicNodeTests(pro, toVector<NodePtr>(mainDefinition));
+	basicNodeTests(pro2, toVector<NodePtr>(mainDefinition2));
 }
 
 TEST(Program, ProgramData) {
@@ -94,7 +98,7 @@ TEST(Program, ProgramData) {
 
 	// start with empty program
 	NodeManager programManager;
-	ProgramPtr program = Program::create(programManager);
+	ProgramPtr program = Program::get(programManager);
 
 	// check some basic properties
 	EXPECT_EQ ( 0, manager.size() );
@@ -114,7 +118,7 @@ TEST(Program, ProgramData) {
 	EXPECT_NE (entryA , *program->getEntryPoints().begin());
 	EXPECT_EQ (toVector<ExpressionPtr>(programManager.get(entryA)), program->getEntryPoints());
 
-	Program::EntryPointList entrySet;
+	ExpressionList entrySet;
 	entrySet.push_back(entryA);
 	entrySet.push_back(entryB);
 	entrySet.push_back(entryC);
@@ -122,7 +126,7 @@ TEST(Program, ProgramData) {
 	program = Program::addEntryPoints(programManager, program, entrySet);
 	EXPECT_EQ( (std::size_t)3, program->getEntryPoints().size());
 
-	const Program::EntryPointList& points = program->getEntryPoints();
+	const ExpressionList& points = program->getEntryPoints();
 	std::for_each(points.cbegin(), points.cend(),
 		[&manager, &programManager](const ExpressionPtr& cur) {
 			EXPECT_FALSE( manager.addressesLocal(cur) );

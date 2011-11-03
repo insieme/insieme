@@ -43,11 +43,11 @@ namespace core {
 
 
 	std::ostream& DeclarationStmt::printTo(std::ostream& out) const {
-		return out << "decl " << *getVariable() << " = " << *getInitialization();
+		return out << *getVariable()->getType() << " " << *getVariable() << " = " << *getInitialization();
 	}
 
 	std::ostream& ForStmt::printTo(std::ostream& out) const {
-		return out << "for(" << *getIterator() << " = " << *getStart() << " .. " << *getEnd() << ":" << *getStep() << ") " << *getBody();
+		return out << "for(" << *getIterator()->getType() << " " << *getIterator() << " = " << *getStart() << " .. " << *getEnd() << " : " << *getStep() << ") " << *getBody();
 	}
 
 	std::ostream& SwitchCase::printTo(std::ostream& out) const {
@@ -55,7 +55,7 @@ namespace core {
 	}
 
 	std::ostream& SwitchStmt::printTo(std::ostream& out) const {
-		return out << "switch(" << *getSwitchExpr() << ") {" << *getCases() << " default: " << *getDefaultCase() << "}";
+		return out << "switch(" << *getSwitchExpr() << ") [ " << *getCases() << ((getCases()->empty())?" ":" | ") << "default: " << *getDefaultCase() << " ]";
 	}
 
 } // end namespace core

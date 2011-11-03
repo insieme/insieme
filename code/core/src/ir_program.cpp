@@ -52,7 +52,11 @@ namespace core {
 
 	ProgramPtr Program::addEntryPoints(NodeManager& manager, const ProgramPtr& program, const ExpressionList& entryPoints) {
 		ExpressionList list(program->getEntryPoints());
-		list.insert(list.end(), entryPoints.begin(), entryPoints.end());
+		for_each(entryPoints, [&](const ExpressionPtr& cur) {
+			if (!contains(list, cur, equal_target<ExpressionPtr>())) {
+				list.push_back(cur);
+			}
+		});
 		return manager.get(Program(list));
 	}
 

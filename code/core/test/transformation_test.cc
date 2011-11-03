@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
 
 #include "insieme/core/transform/node_replacer.h"
@@ -48,7 +48,8 @@ using namespace insieme::core::transform;
 TEST(ASTVisitor, NodeReplacementTest) {
 
 	// copy and clone the type
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	GenericTypePtr type = builder.genericType("int");
 

@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace core {
@@ -69,102 +70,64 @@ TEST(Node, Basic) {
 	LiteralPtr lit = builder.literal(manager.getLangBasic().getBool(), "true");
 	EXPECT_EQ(NT_Literal, lit->getNodeType());
 
-	IfStmtPtr ifStmt = builder.ifStmt(lit, lit, lit);
-	EXPECT_EQ(NT_IfStmt, ifStmt->getNodeType());
-	EXPECT_EQ(3, ifStmt->getChildList().size());
+	IfStmtPtr stmt = builder.ifStmt(lit, lit, lit);
+	EXPECT_EQ(NT_IfStmt, stmt->getNodeType());
+	EXPECT_EQ(3, stmt->getChildList().size());
 
-	EXPECT_EQ(lit, ifStmt->getChildList()[0]);
-	EXPECT_EQ(lit, ifStmt->getChildList()[1]);
-	EXPECT_EQ(lit, ifStmt->getChildList()[2]);
+	EXPECT_EQ(lit, stmt->getChildList()[0]);
+	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildList()[1]);
+	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildList()[2]);
 
-	EXPECT_EQ(lit, ifStmt->getChildNodeReference<0>());
-	EXPECT_EQ(lit, ifStmt->getChildNodeReference<1>());
-	EXPECT_EQ(lit, ifStmt->getChildNodeReference<2>());
+	EXPECT_EQ(lit, stmt->getChildNodeReference<0>());
+	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildNodeReference<1>());
+	EXPECT_EQ(builder.compoundStmt(lit), stmt->getChildNodeReference<2>());
 
-	EXPECT_TRUE(typeid(ifStmt->getChildNodeReference<0>()) == typeid(ExpressionPtr));
-	EXPECT_TRUE(typeid(ifStmt->getChildNodeReference<1>()) == typeid(CompoundStmtPtr));
-	EXPECT_TRUE(typeid(ifStmt->getChildNodeReference<2>()) == typeid(CompoundStmtPtr));
+	EXPECT_TRUE(typeid(stmt->getChildNodeReference<0>()) == typeid(ExpressionPtr));
+	EXPECT_TRUE(typeid(stmt->getChildNodeReference<1>()) == typeid(CompoundStmtPtr));
+	EXPECT_TRUE(typeid(stmt->getChildNodeReference<2>()) == typeid(CompoundStmtPtr));
 
-	EXPECT_TRUE(typeid(&*ifStmt->getChildNodeReference<0>()) == typeid(Expression*));
-	EXPECT_TRUE(typeid(&*ifStmt->getChildNodeReference<1>()) == typeid(CompoundStmt*));
-	EXPECT_TRUE(typeid(&*ifStmt->getChildNodeReference<2>()) == typeid(CompoundStmt*));
+	EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<0>()) == typeid(const Expression*));
+	EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<1>()) == typeid(const CompoundStmt*));
+	EXPECT_TRUE(typeid(&*stmt->getChildNodeReference<2>()) == typeid(const CompoundStmt*));
 
-	EXPECT_EQ(&*lit, &*ifStmt->getChildNodeReference<0>());
-	EXPECT_EQ(&*lit, &*ifStmt->getChildNodeReference<1>());
-	EXPECT_EQ(&*lit, &*ifStmt->getChildNodeReference<2>());
+	EXPECT_EQ(&*lit, &*stmt->getChildNodeReference<0>());
+	EXPECT_EQ(&*builder.compoundStmt(lit), &*stmt->getChildNodeReference<1>());
+	EXPECT_EQ(&*builder.compoundStmt(lit), &*stmt->getChildNodeReference<2>());
 }
 
 TEST(Node, MemberTypeTraits) {
 
-	EXPECT_TRUE(typeid(node_child_type<If,0>::type) == typeid(Expression));
-	EXPECT_TRUE(typeid(node_child_type<If,1>::type) == typeid(Statement));
+	EXPECT_TRUE(typeid(node_child_type<IfStmt,0>::type) == typeid(Expression));
+	EXPECT_TRUE(typeid(node_child_type<IfStmt,1>::type) == typeid(CompoundStmt));
 
 	EXPECT_TRUE(typeid(node_child_type<TupleType,1>::type) == typeid(Type));
 	EXPECT_TRUE(typeid(node_child_type<TupleType,100>::type) == typeid(Type));
 }
 
-TEST(Node, PointerTest) {
-
-	Literal literal;
-
-	// with real pointers
-
-	Literal* p1 = &literal;
-	Node* p2 = p1;
-
-	EXPECT_EQ(*p1, *p2);
-	EXPECT_EQ(&*p1, &*p2);
-
-	p2 = p1;
-
-	EXPECT_EQ(*p1, *p2);
-	EXPECT_EQ(&*p1, &*p2);
-
-	// with own pointers
-
-	Ptr<Literal> q1(&literal);
-	Ptr<Node> q2(&literal);
-
-	EXPECT_EQ(*q1, *q2);
-	EXPECT_EQ(&*q1, &*q2);
-
-	q2 = q1;
-
-	EXPECT_EQ(&*q1, &*q2);
-	EXPECT_TRUE(&*q1 == &*q2);
-	EXPECT_EQ(*q1, *q2);
-
-//	EXPECT_EQ("", toString(*q1));
-//	EXPECT_EQ("", toString(*q2));
-
-}
 
 TEST(Node, MemberAccess) {
+	NodeManager manager;
+	IRBuilder builder(manager);
 
-	Literal literal;
-	ExpressionPtr lit(&literal);
+	LiteralPtr literal = builder.intLit(1);
+	ExpressionPtr lit(literal);
 
-	If ifStmt(lit, lit, lit);
+	IfStmtPtr stmt = builder.ifStmt(lit, lit, lit);
 
-	NodePtr node(&ifStmt);
+	IfStmtPtr ptr(stmt);
+	IfStmtAddress adr(stmt);
 
-	IfPtr ptr(&ifStmt);
-	IfAdr adr(ptr);
-
-//	StatementPtr stmtPtr = If::getCondition(ptr);
-//	StatementAdr stmtAdr = If::getCondition(adr);
-
-	ptr->get<0>();
-	adr.get<0>();
+	ptr->getChildNodeReference<0>();
+	adr->getChildNodeReference<0>();
 
 	ExpressionPtr stmtPtr = ptr->getCondition();
-	ExpressionAdr stmtAdr = adr->getCondition();
+	ExpressionAddress stmtAdr = adr->getCondition();
 
-	ptr->getThenStatement();
-	ptr->getElseStatement();
+	ptr->getThenBody();
+	ptr->getElseBody();
 
-	adr->getThenStatement();
-	adr->getElseStatement();
+	adr->getThenBody();
+	adr->getElseBody();
 
 }
 

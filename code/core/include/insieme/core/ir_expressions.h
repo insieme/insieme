@@ -36,8 +36,6 @@
 
 #pragma once
 
-#include <boost/logic/tribool.hpp>
-
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_statements.h"
 
@@ -187,7 +185,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "var" << getId();
+			return out << "v" << getId();
 		}
 
 	public:
@@ -286,7 +284,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << *getFunctionExpr() << "(" << join(",", getArguments(), print<deref<ExpressionPtr>>()) << ")";
+			return out << *getFunctionExpr() << "(" << join(", ", getArguments(), print<deref<ExpressionPtr>>()) << ")";
 		}
 
 	public:
@@ -479,7 +477,8 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "fun(" << join(", ", getParameters(), print<deref<NodePtr>>()) << ") " << *getBody();
+			static auto paramPrinter = [](std::ostream& out, const VariablePtr& cur){ out << *cur->getType() << " " << *cur; };
+			return out << "fun(" << join(", ", getParameters(), paramPrinter) << ") " << *getBody();
 		}
 
 	public:
@@ -572,7 +571,13 @@ namespace core {
 		/**
 		 * A flag indicating whether this lambda is representing a recursive function.
 		 */
-		mutable boost::logic::tribool recursive;
+		mutable bool recursive;
+
+		/**
+		 * A flag indicating whether the test whether this is a recursive lambda has alread
+		 * been conducted or not.
+		 */
+		mutable bool testedForRecursive;
 
 	protected:
 
@@ -770,7 +775,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "{" << join(",", getChildList(), print<deref<NodePtr>>()) << "}";
+			return out << "{" << join(", ", getChildList(), print<deref<NodePtr>>()) << "}";
 		}
 
 	public:
@@ -909,7 +914,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "tuple(" << join(",", getChildList(), print<deref<NodePtr>>()) << ")";
+			return out << "tuple(" << join(",", getExpressions()->getExpressions(), print<deref<NodePtr>>()) << ")";
 		}
 
 	public:
@@ -956,7 +961,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "{" << join(",", getChildList(), print<deref<NodePtr>>()) << "}";
+			return out << "{" << join(",", getExpressions(), print<deref<NodePtr>>()) << "}";
 		}
 
 	public:
@@ -1092,8 +1097,8 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			// print struct using member - value pairs
-			return out << "struct{" << join(",", getChildList(), print<deref<NodePtr>>()) << "}";
+			static auto entryPrinter = [](std::ostream& out, const NamedValuePtr& cur) { out << *cur->getName() << "=" << *cur->getValue(); };
+			return out << "struct{" << join(", ", getMembers()->getElements(), entryPrinter) << "}";
 		}
 
 	public:

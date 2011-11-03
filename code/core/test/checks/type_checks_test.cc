@@ -49,9 +49,9 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 
 
 TEST(CallExprTypeCheck, Basic) {
-	IRBuilder builder;
-	NodeManager& manager = builder.getNodeManager();
-	const lang::BasicGenerator& basic = manager.basic;
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 
 	// OK ... create some types
 	TypePtr int2 = basic.getInt2();
@@ -157,28 +157,29 @@ TEST(CallExprTypeCheck, Basic) {
 }
 
 TEST(StructExprTypeCheck, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// some preparations
-	core::IdentifierPtr name = builder.identifier("x");
+	core::StringValuePtr name = builder.stringValue("x");
 	core::TypePtr typeA = builder.genericType("A");
 	core::TypePtr typeB = builder.genericType("B");
 
 	core::ExpressionPtr valueA = builder.literal(typeA, "a");
 	core::ExpressionPtr valueB = builder.literal(typeB, "b");
 
-	core::StructType::Entries entries;
-	entries.push_back(core::StructType::Entry(name, typeA));
+	NamedTypeList entries;
+	entries.push_back(builder.namedType(name, typeA));
 	core::StructTypePtr structType = builder.structType(entries);
 
 
 	// create struct expression
-	core::StructExpr::Members members;
-	members.push_back(core::StructExpr::Member(name, valueA));
+	NamedValueList members;
+	members.push_back(builder.namedValue(name, valueA));
 	core::StructExprPtr ok = builder.structExpr(structType, members);
 
 	members.clear();
-	members.push_back(core::StructExpr::Member(name, valueB));
+	members.push_back(builder.namedValue(name, valueB));
 	core::StructExprPtr err = builder.structExpr(structType, members);
 
 	// conduct checks
@@ -191,8 +192,9 @@ TEST(StructExprTypeCheck, Basic) {
 }
 
 TEST(MemberAccessElementTypeCheck, Basic) {
-	IRBuilder builder;
-	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	// get function to be tested
 	LiteralPtr fun = basic.getCompositeMemberAccess();
@@ -202,23 +204,23 @@ TEST(MemberAccessElementTypeCheck, Basic) {
 	TypePtr typeB = builder.genericType("typeB");
 	TypePtr typeC = builder.genericType("typeC");
 
-	IdentifierPtr identA = builder.identifier("a");
-	IdentifierPtr identB = builder.identifier("b");
-	IdentifierPtr identC = builder.identifier("c");
+	StringValuePtr identA = builder.stringValue("a");
+	StringValuePtr identB = builder.stringValue("b");
+	StringValuePtr identC = builder.stringValue("c");
 
-	NamedCompositeType::Entries entries;
-	entries.push_back(NamedCompositeType::Entry(identA, typeA));
-	entries.push_back(NamedCompositeType::Entry(identB, typeB));
+	NamedTypeList entries;
+	entries.push_back(builder.namedType(identA, typeA));
+	entries.push_back(builder.namedType(identB, typeB));
 
 	TypePtr structType = builder.structType(entries);
 	VariablePtr var = builder.variable(structType);
 	VariablePtr var2 = builder.variable(typeA);
 
-	ExpressionPtr ok = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
-	ExpressionPtr err1 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeB));
-	ExpressionPtr err2 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identC), basic.getTypeLiteral(typeB));
-	ExpressionPtr err3 = builder.callExpr(fun, var2, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
-	ExpressionPtr err4 = builder.callExpr(fun, var2, var, basic.getTypeLiteral(typeA));
+	ExpressionPtr ok = builder.callExpr(fun, var, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeA));
+	ExpressionPtr err1 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeB));
+	ExpressionPtr err2 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identC), builder.getTypeLiteral(typeB));
+	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
 
 
 	CheckPtr typeCheck = make_check<MemberAccessElementTypeCheck>();
@@ -235,8 +237,9 @@ TEST(MemberAccessElementTypeCheck, Basic) {
 }
 
 TEST(MemberAccessElementTypeCheck, References) {
-	IRBuilder builder;
-	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	// get function to be tested
 	LiteralPtr fun = basic.getCompositeRefElem();
@@ -250,13 +253,13 @@ TEST(MemberAccessElementTypeCheck, References) {
 	TypePtr typeRefB = builder.refType(typeB);
 	TypePtr typeRefC = builder.refType(typeC);
 
-	IdentifierPtr identA = builder.identifier("a");
-	IdentifierPtr identB = builder.identifier("b");
-	IdentifierPtr identC = builder.identifier("c");
+	StringValuePtr identA = builder.stringValue("a");
+	StringValuePtr identB = builder.stringValue("b");
+	StringValuePtr identC = builder.stringValue("c");
 
 	NamedCompositeType::Entries entries;
-	entries.push_back(NamedCompositeType::Entry(identA, typeA));
-	entries.push_back(NamedCompositeType::Entry(identB, typeB));
+	entries.push_back(builder.namedType(identA, typeA));
+	entries.push_back(builder.namedType(identB, typeB));
 
 	TypePtr structType = builder.structType(entries);
 	TypePtr structRefType = builder.refType(structType);
@@ -264,11 +267,11 @@ TEST(MemberAccessElementTypeCheck, References) {
 	VariablePtr var = builder.variable(structRefType);
 	VariablePtr var2 = builder.variable(typeRefA);
 
-	ExpressionPtr ok = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
-	ExpressionPtr err1 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeB));
-	ExpressionPtr err2 = builder.callExpr(fun, var, basic.getIdentifierLiteral(identC), basic.getTypeLiteral(typeB));
-	ExpressionPtr err3 = builder.callExpr(fun, var2, basic.getIdentifierLiteral(identA), basic.getTypeLiteral(typeA));
-	ExpressionPtr err4 = builder.callExpr(fun, var2, var, basic.getTypeLiteral(typeA));
+	ExpressionPtr ok = builder.callExpr(fun, var, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeA));
+	ExpressionPtr err1 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeB));
+	ExpressionPtr err2 = builder.callExpr(fun, var, builder.getIdentifierLiteral(identC), builder.getTypeLiteral(typeB));
+	ExpressionPtr err3 = builder.callExpr(fun, var2, builder.getIdentifierLiteral(identA), builder.getTypeLiteral(typeA));
+	ExpressionPtr err4 = builder.callExpr(fun, var2, var, builder.getTypeLiteral(typeA));
 
 
 	CheckPtr typeCheck = make_check<MemberAccessElementTypeCheck>();
@@ -285,8 +288,9 @@ TEST(MemberAccessElementTypeCheck, References) {
 }
 
 TEST(ReturnTypeCheck, Basic) {
-	IRBuilder builder;
-	const lang::BasicGenerator& basic = builder.getNodeManager().basic;
+	NodeManager manager;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 
 	// create a function type (for all those functions)
 	TypePtr resultType = basic.getInt4();
@@ -294,16 +298,16 @@ TEST(ReturnTypeCheck, Basic) {
 
 	// create a function where everything is correct
 	StatementPtr body = builder.returnStmt(builder.literal(resultType, "1"));
-	LambdaPtr ok = builder.lambda(funType, Lambda::ParamList(), body);
+	LambdaPtr ok = builder.lambda(funType, VariableList(), body);
 
 	// create a function where return type is wrong
 	body = builder.returnStmt(builder.literal(basic.getInt2(), "1"));
-	LambdaPtr err = builder.lambda(funType, Lambda::ParamList(), body);
+	LambdaPtr err = builder.lambda(funType, VariableList(), body);
 
 	// create a function where return type is wrong - and nested
 	body = builder.returnStmt(builder.literal(basic.getInt2(), "1"));
 	body = builder.compoundStmt(body);
-	LambdaPtr err2 = builder.lambda(funType, Lambda::ParamList(), body);
+	LambdaPtr err2 = builder.lambda(funType, VariableList(), body);
 
 
 	CheckPtr returnTypeCheck = make_check<ReturnTypeCheck>();
@@ -315,7 +319,8 @@ TEST(ReturnTypeCheck, Basic) {
 }
 
 TEST(DeclarationStmtTypeCheck, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 	TypePtr type = builder.genericType("int");
@@ -332,15 +337,16 @@ TEST(DeclarationStmtTypeCheck, Basic) {
 }
 
 TEST(IfCondition, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");
 	TypePtr boolType = builder.genericType("bool");
 	ExpressionPtr intLit = builder.literal(intType, "4");
 	ExpressionPtr boolLit = builder.literal(boolType, "true");
-	NodePtr ok = builder.ifStmt(boolLit, builder.getBasicGenerator().getNoOp());
-	NodePtr err = builder.ifStmt(intLit, builder.getBasicGenerator().getNoOp());
+	NodePtr ok = builder.ifStmt(boolLit, builder.getNoOp());
+	NodePtr err = builder.ifStmt(intLit, builder.getNoOp());
 
 	CheckPtr typeCheck = make_check<IfConditionTypeCheck>();
 	EXPECT_TRUE(check(ok, typeCheck).empty());
@@ -350,15 +356,16 @@ TEST(IfCondition, Basic) {
 }
 
 TEST(WhileCondition, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");
 	TypePtr boolType = builder.genericType("bool");
 	ExpressionPtr intLit = builder.literal(intType, "4");
 	ExpressionPtr boolLit = builder.literal(boolType, "true");
-	NodePtr ok = builder.whileStmt(boolLit, builder.getBasicGenerator().getNoOp());
-	NodePtr err = builder.whileStmt(intLit, builder.getBasicGenerator().getNoOp());
+	NodePtr ok = builder.whileStmt(boolLit, builder.getNoOp());
+	NodePtr err = builder.whileStmt(intLit, builder.getNoOp());
 
 	CheckPtr typeCheck = make_check<WhileConditionTypeCheck>();
 	EXPECT_TRUE(check(ok, typeCheck).empty());
@@ -368,15 +375,16 @@ TEST(WhileCondition, Basic) {
 }
 
 TEST(Switch, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
-	TypePtr intType = builder.getBasicGenerator().getInt1();
+	TypePtr intType = builder.getLangBasic().getInt1();
 	TypePtr boolType = builder.genericType("bool");
 	ExpressionPtr intLit = builder.literal(intType, "4");
 	ExpressionPtr boolLit = builder.literal(boolType, "true");
-	SwitchStmtPtr ok = builder.switchStmt(intLit, vector<SwitchStmt::Case>());
-	SwitchStmtPtr err = builder.switchStmt(boolLit, vector<SwitchStmt::Case>());
+	SwitchStmtPtr ok = builder.switchStmt(intLit, vector<SwitchCasePtr>());
+	SwitchStmtPtr err = builder.switchStmt(boolLit, vector<SwitchCasePtr>());
 
 	CheckPtr typeCheck = make_check<SwitchExpressionTypeCheck>();
 	EXPECT_TRUE(check(ok, typeCheck).empty());
@@ -386,11 +394,12 @@ TEST(Switch, Basic) {
 }
 
 TEST(BuildInLiterals, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 
-	LiteralPtr ok = builder.getBasicGenerator().getFalse();
+	LiteralPtr ok = builder.getLangBasic().getFalse();
 	LiteralPtr err = builder.literal(builder.genericType("strangeType"), ok->getValue());
 
 	CheckPtr typeCheck = make_check<BuiltInLiteralCheck>();
@@ -401,7 +410,8 @@ TEST(BuildInLiterals, Basic) {
 }
 
 TEST(RefCastExpr, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 
@@ -425,7 +435,8 @@ TEST(RefCastExpr, Basic) {
 }
 
 TEST(CastExpr, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 
@@ -450,7 +461,8 @@ TEST(CastExpr, Basic) {
 }
 
 TEST(KeywordCheck, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create correct and wrong instances
 
@@ -511,7 +523,8 @@ TEST(KeywordCheck, Basic) {
 }
 
 TEST(ExternalFunctionType, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 	TypePtr intType = builder.genericType("int");

@@ -179,7 +179,6 @@ namespace core {
 		 * @return a reference to the internally maintained child list
 		 */
 		const NodeList& getChildList() const {
-			assert(!isValue() && "Node represents a value!");
 			return getNode().children;
 		}
 

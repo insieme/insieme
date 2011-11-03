@@ -47,7 +47,6 @@ using std::vector;
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 template<typename PT>
 void basicTypeTests(PT type, bool concrete, const NodeList& children = NodeList());
@@ -274,22 +273,22 @@ TEST(TypeTest, FunctionType) {
 	EXPECT_NE ( funTypeA, funTypeD );
 
 	vector<NodePtr> subNodesA;
-	subNodesA.push_back(TypeParamList::get(manager, toVector(dummyA)));
+	subNodesA.push_back(Types::get(manager, toVector(dummyA)));
 	subNodesA.push_back(resultA);
 	subNodesA.push_back(BoolValue::get(manager, true));
 
 	vector<NodePtr> subNodesB;
-	subNodesB.push_back(TypeParamList::get(manager, toVector(alpha)));
+	subNodesB.push_back(Types::get(manager, toVector(alpha)));
 	subNodesB.push_back(resultB);
 	subNodesB.push_back(BoolValue::get(manager, true));
 
 	vector<NodePtr> subNodesC;
-	subNodesC.push_back(TypeParamList::get(manager, toVector(alpha, dummyA)));
+	subNodesC.push_back(Types::get(manager, toVector(alpha, dummyA)));
 	subNodesC.push_back(resultB);
 	subNodesC.push_back(BoolValue::get(manager, true));
 
 	vector<NodePtr> subNodesD;
-	subNodesD.push_back(TypeParamList::get(manager, toVector(dummyA)));
+	subNodesD.push_back(Types::get(manager, toVector(dummyA)));
 	subNodesD.push_back(resultA);
 	subNodesD.push_back(BoolValue::get(manager, false));
 
@@ -569,16 +568,6 @@ TEST(TypeTest, RefType) {
 }
 
 
-
-//TEST(TypeTest, BuiltInCheck) {
-//
-//	// create type manager and element types
-//	NodeManager manager;
-//
-//	EXPECT_EQ("(('a)->ref<'a>)", toString(*manager.basic.getRefVar()->getType()));
-//
-//}
-
 TEST(TypeTest, IntTypeParam) {
 
 	NodeManager manager;
@@ -668,7 +657,6 @@ void basicTypeTests(PT type, bool concrete, const NodeList& children) {
 	}
 }
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 

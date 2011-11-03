@@ -681,8 +681,7 @@ namespace core {
 	 * A node type used to represent a named type within a struct or an union.
 	 */
 	class NamedCompositeType : public Type,
-		public NamedCompositeTypeAccessor<NamedCompositeType, Pointer>,
-		public NamedCompositeTypeAccessor<NamedCompositeType, Pointer>::node_format_helper {
+		public NamedCompositeTypeAccessor<NamedCompositeType, Pointer> {
 	public:
 
 		/**
@@ -915,7 +914,7 @@ namespace core {
 	 * A macro creating single element nodes.
 	 */
 	#define IR_SINGLE_ELEMENT_TYPE(NAME) \
-		class NAME : public SingleElementType, public NAME ## Accessor<NAME, Pointer>, public NAME ## Accessor<NAME, Pointer>::node_format_helper { \
+		class NAME : public SingleElementType, public NAME ## Accessor<NAME, Pointer> { \
 			NAME(const NodeList& children) : SingleElementType(NT_ ## NAME, children) { \
 				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
 			} \

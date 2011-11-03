@@ -41,6 +41,8 @@
 
 #include "insieme/utils/container_utils.h"
 
+#include "ir_node_test.inc"
+
 namespace insieme {
 namespace core {
 namespace new_core {
@@ -163,13 +165,13 @@ namespace new_core {
 
 		// check names
 		StringValuePtr identA = StringValue::get(manager, "A");
-		EXPECT_EQ ("A" , identA->getName());
+		EXPECT_EQ ("A" , identA->getValue());
 
 		StringValuePtr identB = StringValue::get(manager, "B");
-		EXPECT_EQ ("B" , identB->getName());
+		EXPECT_EQ ("B" , identB->getValue());
 
 		StringValuePtr identA2 = StringValue::get(manager, "A");
-		EXPECT_EQ ("A" , identA2->getName());
+		EXPECT_EQ ("A" , identA2->getValue());
 
 		// check equality operator
 		EXPECT_NE ( identA, identB );

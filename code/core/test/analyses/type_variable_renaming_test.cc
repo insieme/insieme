@@ -152,8 +152,8 @@ TEST(TypeVariableRenamer, RecTypeRenaming) {
 	TypeVariablePtr var = builder.typeVariable("X");
 	TypePtr type = builder.refType(var);
 
-	RecTypeDefinition::RecTypeDefs defs;
-	defs.insert(std::make_pair(var, type));
+	vector<RecTypeBindingPtr> defs;
+	defs.push_back(builder.recTypeBinding(var, type));
 
 	RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
 	RecTypePtr recType = builder.recType(var, def);

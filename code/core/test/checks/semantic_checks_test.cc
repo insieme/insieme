@@ -50,8 +50,8 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 }
 
 TEST(ScalarArrayIndexRangeCheck, Basic) {
-	IRBuilder builder;
 	NodeManager manager;
+	IRBuilder builder(manager);
 
 	{
 		StatementPtr stmt_err = parse::parseStatement(manager, 

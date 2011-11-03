@@ -99,8 +99,9 @@ namespace core {
 
 	bool LambdaExpr::isRecursiveInternal() const {
 		// evaluate lazily
-		if (boost::logic::indeterminate(recursive)) {
+		if (!testedForRecursive) {
 			recursive = getDefinition()->isRecursive(getVariable());
+			testedForRecursive = true;
 		}
 		return recursive;
 	}

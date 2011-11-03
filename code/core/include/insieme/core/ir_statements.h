@@ -379,7 +379,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << "{" << join("; ", getChildList(), print<deref<NodePtr>>()) << ";}";
+			return out << "{" << join("; ", getChildList(), print<deref<NodePtr>>()) << ((!getChildList().empty())?";":"") << "}";
 		}
 
 	public:
@@ -647,7 +647,7 @@ namespace core {
 		 * Prints a string representation of this node to the given output stream.
 		 */
 		virtual std::ostream& printTo(std::ostream& out) const {
-			return out << join("; ", getChildList(), print<deref<NodePtr>>());
+			return out << join(" | ", getChildList(), print<deref<NodePtr>>());
 		}
 
 	public:

@@ -122,14 +122,19 @@ namespace core {
 
 		// --- Convenience Utilities ---
 
-		GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const vector<IntTypeParamPtr>& intTypeParams) const;
+		GenericTypePtr genericType(const StringValuePtr& name, const TypeList& typeParams, const IntParamList& intTypeParams) const;
 
 		StructTypePtr structType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 		UnionTypePtr unionType(const vector<std::pair<StringValuePtr,TypePtr>>& entries) const;
 
+		NamedTypePtr namedType(const string& name, const TypePtr& type) const;
+		NamedValuePtr namedValue(const string& name, const ExpressionPtr& value) const;
+
 		TupleExprPtr tupleExpr(const ExpressionList& values) const;
+		StructExprPtr structExpr(const StructTypePtr& structType, const vector<NamedValuePtr>& values) const;
 		StructExprPtr structExpr(const vector<std::pair<StringValuePtr, ExpressionPtr>>& values) const;
 		StructExprPtr structExpr(const vector<NamedValuePtr>& values) const;
+
 
 		VectorExprPtr vectorExpr(const VectorTypePtr& type, const ExpressionList& values) const;
 		VectorExprPtr vectorExpr(const ExpressionList& values) const;
@@ -159,6 +164,7 @@ namespace core {
 		/**
 		 * A factory method for a identifier literal.
 		 */
+		LiteralPtr getIdentifierLiteral(const string& value) const;
 		LiteralPtr getIdentifierLiteral(const StringValuePtr& value) const;
 
 		/**
@@ -191,8 +197,13 @@ namespace core {
 		//CallExprPtr vectorSubscript(const ExpressionPtr& vec, unsigned index) const;
 
 		// Compound Statements
-		CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2) const;
-		CompoundStmtPtr compoundStmt(const StatementPtr& s1, const StatementPtr& s2, const StatementPtr& s3) const;
+		template<typename ... Nodes>
+		CompoundStmtPtr compoundStmt(const Pointer<const Nodes>& ... nodes) const {
+			return compoundStmt(toVector<StatementPtr>(nodes...));
+		}
+
+		// Declaration Statements
+		DeclarationStmtPtr declarationStmt(const TypePtr& type, const ExpressionPtr& value) const;
 
 		// Call Expressions
 		CallExprPtr callExpr(const TypePtr& resultType, const ExpressionPtr& functionExpr) const;
@@ -222,8 +233,19 @@ namespace core {
 
 		BindExprPtr bindExpr(const VariableList& params, const CallExprPtr& call) const;
 
+		template<typename ... Vars>
+		ParametersPtr parameters(const Vars& ... vars) const {
+			return Parameters::get(manager, toVector<VariablePtr>(vars...));
+		}
+
 		// Create a job expression
 		JobExprPtr jobExpr(const ExpressionPtr& threadNumRange, const vector<DeclarationStmtPtr>& localDecls, const vector<GuardedExprPtr>& guardedExprs, const ExpressionPtr& defaultExpr) const;
+
+		// Create a marker expression
+		MarkerExprPtr markerExpr(const ExpressionPtr& subExpr, unsigned id) const;
+		MarkerExprPtr markerExpr(const ExpressionPtr& subExpr, const UIntValuePtr& id) const;
+		MarkerStmtPtr markerStmt(const StatementPtr& subExpr, unsigned id) const;
+		MarkerStmtPtr markerStmt(const StatementPtr& subExpr, const UIntValuePtr& id) const;
 
 		// Creation of thread number ranges
 		CallExprPtr getThreadNumRange(unsigned min) const;
@@ -296,8 +318,10 @@ namespace core {
 		IfStmtPtr ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody = StatementPtr()) const;
 		WhileStmtPtr whileStmt(const ExpressionPtr& condition, const StatementPtr& body) const;
 		ForStmtPtr forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
+		ForStmtPtr forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
 
 		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
+		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<SwitchCasePtr>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
 
 
 

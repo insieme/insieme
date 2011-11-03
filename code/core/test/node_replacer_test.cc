@@ -44,7 +44,7 @@
 
 #include "insieme/utils/test/test_utils.h"
 
-#include "dummy_annotations.inc"
+#include "ir_dummy_annotations.inc"
 
 
 #include "insieme/utils/logging.h"
@@ -130,7 +130,8 @@ TEST(NodeReplacer, AnnotationPreservation) {
 }
 
 TEST(NodeReplacer, ReplaceByAddress) {
-	IRBuilder builder;
+	NodeManager nm;
+	IRBuilder builder(nm);
 
 	// OK ... create a simple AST construct
 	TypePtr typeA = builder.genericType("A");
@@ -172,7 +173,7 @@ TEST(NodeReplacer, ReplaceVariable) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	TypePtr uint4 = basic.getUInt4();
 	TypePtr boolType  = basic.getBool();
@@ -217,11 +218,11 @@ TEST(NodeReplacer, ReplaceVariable) {
 TEST(NodeReplacer, RecVarsReplacement) {
 	NodeManager manager;
 	IRBuilder builder(manager);
-	const lang::BasicGenerator& basic = builder.getBasicGenerator();
+	const lang::BasicGenerator& basic = builder.getLangBasic();
 
 	TypePtr kernelType = builder.refType(builder.arrayType(builder.genericType("_cl_kernel")));
-	VariablePtr kernel = builder.variable(builder.refType(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(
-			builder.identifier("kernel"), builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))))));
+	VariablePtr kernel = builder.variable(builder.refType(builder.structType(toVector(std::make_pair<StringValuePtr, TypePtr>(
+			builder.stringValue("kernel"), builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))))));
 	TypePtr clMemType = builder.refType(builder.arrayType(builder.genericType("_cl_mem")));
 	VariablePtr arg = builder.variable(builder.refType(clMemType));
 
@@ -230,25 +231,25 @@ TEST(NodeReplacer, RecVarsReplacement) {
 	VariablePtr tuple = builder.variable(kernelType);
 
 	VariablePtr src = builder.variable(clMemType);
-	Lambda::ParamList params = toVector(tuple, src);
-	CompoundStmt::StatementList body;
+	VariableList params = toVector(tuple, src);
+	StatementList body;
 	body.push_back(builder.callExpr(basic.getUnit(), basic.getRefAssign(), builder.callExpr(basic.getTupleRefElem(), tuple,
 			builder.literal(basic.getUInt8(), "0"),
-			basic.getTypeLiteral(src->getType())), src));
+			builder.getTypeLiteral(src->getType())), src));
 	body.push_back(builder.returnStmt(builder.intLit(0)));
 	LambdaExprPtr function = builder.lambdaExpr(fTy, params, builder.compoundStmt(body));
 
 	ExpressionPtr accessStruct = builder.callExpr(basic.getVectorRefElem(),
 			builder.callExpr( basic.getCompositeRefElem(),
-			kernel, basic.getIdentifierLiteral(builder.identifier("kernel")), basic.getTypeLiteral(
+			kernel, builder.getIdentifierLiteral(builder.stringValue("kernel")), builder.getTypeLiteral(
 					builder.vectorType(kernelType, builder.concreteIntTypeParam(2)))), builder.literal(basic.getUInt8(), "0"));
 
 	StatementList stmts;
 	ExpressionPtr kernelInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
-			basic.getTypeLiteral(builder.structType(toVector(std::make_pair<IdentifierPtr, TypePtr>(builder.identifier("kernel"),
+			builder.getTypeLiteral(builder.structType(toVector(std::make_pair<StringValuePtr, TypePtr>(builder.stringValue("kernel"),
 				builder.vectorType(kernelType, builder.concreteIntTypeParam(2))))))));
 	ExpressionPtr argInit = builder.callExpr(basic.getRefVar(), builder.callExpr(basic.getUndefined(),
-			basic.getTypeLiteral(clMemType)));
+			builder.getTypeLiteral(clMemType)));
 	stmts.push_back(builder.declarationStmt(kernel, kernelInit));
 	stmts.push_back(builder.declarationStmt(arg, argInit));
 	stmts.push_back(builder.callExpr(basic.getInt4(), function,

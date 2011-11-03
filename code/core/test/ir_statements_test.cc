@@ -44,7 +44,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 TEST(StatementsTest, Management) {
 	NodeManager manager;
@@ -110,63 +109,65 @@ TEST(StatementsTest, CompoundStmt) {
 	stmtVec.push_back(cS);
 	CompoundStmtPtr bScSCVec = CompoundStmt::get(stmtMan, stmtVec);
 	EXPECT_NE(bSC , bScSCVec);
-	EXPECT_NE(bSC->hash() , bScSCVec->hash());
+	EXPECT_NE((*bSC).hash() , (*bScSCVec).hash());
 	EXPECT_EQ((*bSC)[0], (*bScSCVec)[0]);
 	EXPECT_EQ("{break; continue;}", toString(*bScSCVec));
 }
 
-//TEST(StatementsTest, IntLiterals) {
-//	IRBuilder builder;
-//
-//	{
-//		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "-10");
-//		int val = intLit->getValueAs<int>();
-//		EXPECT_EQ(val, -10);
-//	}
-//	{
-//		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "0x10");
-//		unsigned long val = intLit->getValueAs<unsigned long>();
-//		EXPECT_EQ(static_cast<unsigned>(16), val);
-//	}
-//	{
-//		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "-0x10");
-//		short val = intLit->getValueAs<short>();
-//		EXPECT_EQ(-16, val);
-//	}
-//	{
-//		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getInt2(), "010");
-//		unsigned short val = intLit->getValueAs<unsigned short>();
-//		EXPECT_EQ(static_cast<unsigned>(8), val);
-//	}
-//}
-//
-//TEST(StatementsTest, RealLiterals) {
-//	IRBuilder builder;
-//
-//	{
-//		LiteralPtr floatLit = builder.literal(builder.getNodeManager().basic.getFloat(), "0.4");
-//		float val = floatLit->getValueAs<float>();
-//		EXPECT_FLOAT_EQ (val, 0.4);
-//	}
-//	{
-//		LiteralPtr intLit = builder.literal(builder.getNodeManager().basic.getDouble(), "0.00001");
-//		double val = intLit->getValueAs<double>();
-//		EXPECT_DOUBLE_EQ (val, 0.00001);
-//	}
-//}
-//
-//TEST(StatementsTest, DefaultParams) {
-//	IRBuilder builder;
-//
-//	LiteralPtr one = builder.literal(builder.getNodeManager().basic.getIntGen(), "1");
-//	DeclarationStmtPtr decl = builder.declarationStmt(builder.getNodeManager().basic.getIntGen(), one);
-//	ForStmtPtr forStmt = builder.forStmt(decl, decl, one, one);
-//
-//	EXPECT_EQ(one, forStmt->getStep());
-//}
-//
-//
-//
+TEST(StatementsTest, IntLiterals) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	{
+		LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "-10");
+		int val = intLit->getValueAs<int>();
+		EXPECT_EQ(val, -10);
+	}
+	{
+		LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "0x10");
+		unsigned long val = intLit->getValueAs<unsigned long>();
+		EXPECT_EQ(static_cast<unsigned>(16), val);
+	}
+	{
+		LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "-0x10");
+		short val = intLit->getValueAs<short>();
+		EXPECT_EQ(-16, val);
+	}
+	{
+		LiteralPtr intLit = builder.literal(builder.getLangBasic().getInt2(), "010");
+		unsigned short val = intLit->getValueAs<unsigned short>();
+		EXPECT_EQ(static_cast<unsigned>(8), val);
+	}
+}
+
+TEST(StatementsTest, RealLiterals) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	{
+		LiteralPtr floatLit = builder.literal(builder.getLangBasic().getFloat(), "0.4");
+		float val = floatLit->getValueAs<float>();
+		EXPECT_FLOAT_EQ (val, 0.4);
+	}
+	{
+		LiteralPtr intLit = builder.literal(builder.getLangBasic().getDouble(), "0.00001");
+		double val = intLit->getValueAs<double>();
+		EXPECT_DOUBLE_EQ (val, 0.00001);
+	}
+}
+
+TEST(StatementsTest, DefaultParams) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	LiteralPtr one = builder.literal(builder.getLangBasic().getIntGen(), "1");
+	DeclarationStmtPtr decl = builder.declarationStmt(builder.getLangBasic().getIntGen(), one);
+	ForStmtPtr forStmt = builder.forStmt(decl, one, one, decl);
+
+	EXPECT_EQ(one, forStmt->getStep());
+}
+
+
 TEST(StatementsTest, Break) {
 	NodeManager manager;
 
@@ -188,139 +189,139 @@ TEST(StatementsTest, Continue) {
 	// check hash codes, children and cloning
 	basicNodeTests(stmt, NodeList());
 }
-//
-//TEST(StatementsTest, Return) {
-//	NodeManager manager;
-//
-//	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-//	ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
-//
-//	EXPECT_EQ ("return 12", toString(*stmt));
-//
-//	// check hash codes, children and cloning
-//	basicNodeTests(stmt, toVector<NodePtr>(literal));
-//}
-//
-//TEST(StatementsTest, Declaration) {
-//	NodeManager manager;
-//
-//	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-//	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-//
-//	EXPECT_EQ ("int<4> v1 = 12", toString(*stmt));
-//
-//	// check hash codes, children and cloning
-//	VariablePtr varExpr = Variable::get(manager, manager.basic.getInt4(), 1);
-//	basicNodeTests(stmt, toVector<NodePtr>(varExpr, literal));
-//}
-//
-//TEST(StatementsTest, Compound) {
-//	NodeManager manager;
-//
-//	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-//	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-//	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 2), literal);
-//	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 3), literal);
-//
-//	CompoundStmtPtr cs0 = CompoundStmt::get(manager);
-//	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1));
-//	CompoundStmtPtr cs2 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2));
-//	CompoundStmtPtr cs3 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2, stmt3));
-//
-//	CompoundStmtPtr all[] = {cs0, cs1, cs2, cs3 };
-//	for (int i=0; i<4; i++) {
-//		for (int j=0; j<4; j++) {
-//			EXPECT_EQ ( i==j, *all[i] == *all[j]);
-//			EXPECT_EQ ( i==j, all[i]->hash() == all[j]->hash());
-//		}
-//	}
-//
-//	EXPECT_EQ ("{}", toString(*cs0));
-//	EXPECT_EQ ("{int<4> v1 = 12;}", toString(*cs1));
-//	EXPECT_EQ ("{int<4> v1 = 12; int<4> v2 = 12;}", toString(*cs2));
-//	EXPECT_EQ ("{int<4> v1 = 12; int<4> v2 = 12; int<4> v3 = 12;}", toString(*cs3));
-//
-//	// check hash codes, children and cloning
-//	basicNodeTests(cs0, toVector<NodePtr>());
-//	basicNodeTests(cs1, toVector<NodePtr>(stmt1));
-//	basicNodeTests(cs2, toVector<NodePtr>(stmt1,stmt2));
-//	basicNodeTests(cs3, toVector<NodePtr>(stmt1,stmt2,stmt3));
-//}
-//
-//TEST(StatementsTest, For) {
-//	NodeManager manager;
-//
-//	LiteralPtr start = Literal::get(manager, manager.basic.getInt4(), "1");
-//	LiteralPtr end   = Literal::get(manager, manager.basic.getInt4(), "9");
-//	LiteralPtr step  = Literal::get(manager, manager.basic.getInt4(), "2");
-//
-//	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), start);
-//	StatementPtr body = manager.basic.getNoOp();
-//
-//	ForStmtPtr stmt = ForStmt::get(manager, decl, body, end, step);
-//
-//	EXPECT_EQ ("for(int<4> v1 = 1 .. 9 : 2) {}", toString(*stmt));
-//
-//	// check hash codes, children and cloning
-//	basicNodeTests(stmt, toVector<NodePtr>(decl, end, step, body));
-//}
-//
-//TEST(StatementsTest, While) {
-//	NodeManager manager;
-//
-//	LiteralPtr condition = Literal::get(manager, manager.basic.getBool(), "true");
-//	StatementPtr body = manager.basic.getNoOp();
-//
-//	WhileStmtPtr stmt = WhileStmt::get(manager, condition, body);
-//
-//	EXPECT_EQ ("while(true) {}", toString(*stmt));
-//
-//	// check hash codes, children and cloning
-//	basicNodeTests(stmt, toVector<NodePtr>(condition, body));
-//}
-//
-//
-//TEST(StatementsTest, If) {
-//	NodeManager manager;
-//
-//	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-//	StatementPtr then = manager.basic.getNoOp();
-//	StatementPtr other = manager.basic.getNoOp();
-//
-//	IfStmtPtr stmt = IfStmt::get(manager, var, then, other);
-//
-//	EXPECT_EQ ("if(v1) {} else {}", toString(*stmt));
-//
-//	// check hash codes, children and cloning
-//	basicNodeTests(stmt, toVector<NodePtr>(var, then, other));
-//}
-//
-//TEST(StatementsTest, Switch) {
-//	NodeManager manager;
-//
-//	VariablePtr var = Variable::get(manager, manager.basic.getInt4(), 1);
-//
-//	LiteralPtr literalA = Literal::get(manager, manager.basic.getInt4(), "1");
-//	LiteralPtr literalB = Literal::get(manager, manager.basic.getInt4(), "2");
-//
-//	StatementPtr caseA = manager.basic.getNoOp();
-//	StatementPtr caseB = ContinueStmt::get(manager);
-//
-//
-//	std::vector<SwitchStmt::Case> cases;
-//	cases.push_back(SwitchStmt::Case(literalA, caseA));
-//	cases.push_back(SwitchStmt::Case(literalB, caseB));
-//	StatementPtr other = BreakStmt::get(manager);
-//
-//	SwitchStmtPtr stmt = SwitchStmt::get(manager, var, cases, other);
-//
-//	EXPECT_EQ ("switch(v1) [ case 1: {} | case 2: continue | default: break ]", toString(*stmt));
-//
-//	// check hash codes, children and cloning
-//	auto list = toVector<NodePtr>(var, literalA, caseA, literalB, caseB);
-//	list.push_back(other);
-//	basicNodeTests(stmt, list);
-//}
+
+TEST(StatementsTest, Return) {
+	NodeManager manager;
+
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	ReturnStmtPtr stmt = ReturnStmt::get(manager, literal);
+
+	EXPECT_EQ ("return 12", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(literal));
+}
+
+TEST(StatementsTest, Declaration) {
+	NodeManager manager;
+
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	DeclarationStmtPtr stmt = DeclarationStmt::get(manager, Variable::get(manager, manager.getLangBasic().getInt4(), 1), literal);
+
+	EXPECT_EQ ("int<4> v1 = 12", toString(*stmt));
+
+	// check hash codes, children and cloning
+	VariablePtr varExpr = Variable::get(manager, manager.getLangBasic().getInt4(), 1);
+	basicNodeTests(stmt, toVector<NodePtr>(varExpr, literal));
+}
+
+TEST(StatementsTest, Compound) {
+	NodeManager manager;
+
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	DeclarationStmtPtr stmt1 = DeclarationStmt::get(manager, Variable::get(manager, manager.getLangBasic().getInt4(), 1), literal);
+	DeclarationStmtPtr stmt2 = DeclarationStmt::get(manager, Variable::get(manager, manager.getLangBasic().getInt4(), 2), literal);
+	DeclarationStmtPtr stmt3 = DeclarationStmt::get(manager, Variable::get(manager, manager.getLangBasic().getInt4(), 3), literal);
+
+	CompoundStmtPtr cs0 = CompoundStmt::get(manager);
+	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1));
+	CompoundStmtPtr cs2 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2));
+	CompoundStmtPtr cs3 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2, stmt3));
+
+	CompoundStmtPtr all[] = {cs0, cs1, cs2, cs3 };
+	for (int i=0; i<4; i++) {
+		for (int j=0; j<4; j++) {
+			EXPECT_EQ ( i==j, *all[i] == *all[j]);
+			EXPECT_EQ ( i==j, (*all[i]).hash() == (*all[j]).hash());
+		}
+	}
+
+	EXPECT_EQ ("{}", toString(*cs0));
+	EXPECT_EQ ("{int<4> v1 = 12;}", toString(*cs1));
+	EXPECT_EQ ("{int<4> v1 = 12; int<4> v2 = 12;}", toString(*cs2));
+	EXPECT_EQ ("{int<4> v1 = 12; int<4> v2 = 12; int<4> v3 = 12;}", toString(*cs3));
+
+	// check hash codes, children and cloning
+	basicNodeTests(cs0, toVector<NodePtr>());
+	basicNodeTests(cs1, toVector<NodePtr>(stmt1));
+	basicNodeTests(cs2, toVector<NodePtr>(stmt1,stmt2));
+	basicNodeTests(cs3, toVector<NodePtr>(stmt1,stmt2,stmt3));
+}
+
+TEST(StatementsTest, For) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getInt4());
+	LiteralPtr start = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
+	LiteralPtr end   = Literal::get(manager, manager.getLangBasic().getInt4(), "9");
+	LiteralPtr step  = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
+
+	StatementPtr body = builder.getNoOp();
+
+	ForStmtPtr stmt = builder.forStmt(var, start, end, step, body);
+
+	EXPECT_EQ ("for(int<4> v1 = 1 .. 9 : 2) {}", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(var, start, end, step, body));
+}
+
+TEST(StatementsTest, While) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	LiteralPtr condition = Literal::get(manager, manager.getLangBasic().getBool(), "true");
+	StatementPtr body = builder.getNoOp();
+
+	WhileStmtPtr stmt = builder.whileStmt(condition, body);
+
+	EXPECT_EQ ("while(true) {}", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(condition, body));
+}
+
+
+TEST(StatementsTest, If) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool(), 1);
+	StatementPtr then = builder.getNoOp();
+	StatementPtr other = builder.getNoOp();
+
+	IfStmtPtr stmt = builder.ifStmt(var, then, other);
+
+	EXPECT_EQ ("if(v1) {} else {}", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(var, then, other));
+}
+
+TEST(StatementsTest, Switch) {
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getInt4(), 1);
+
+	LiteralPtr literalA = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
+	LiteralPtr literalB = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
+
+	std::vector<SwitchCasePtr> cases;
+	cases.push_back(builder.switchCase(literalA, builder.getNoOp()));
+	cases.push_back(builder.switchCase(literalB, builder.compoundStmt(builder.continueStmt())));
+
+	CompoundStmtPtr other = builder.compoundStmt(BreakStmt::get(manager));
+
+	auto switchCases = SwitchCases::get(manager, cases);
+	SwitchStmtPtr stmt = SwitchStmt::get(manager, var, switchCases, other);
+
+	EXPECT_EQ ("switch(v1) [ case 1: {} | case 2: {continue;} | default: {break;} ]", toString(*stmt));
+
+	// check hash codes, children and cloning
+	basicNodeTests(stmt, toVector<NodePtr>(var, switchCases, other));
+}
 
 TEST(StatementsTest, MarkerStmt) {
 	NodeManager manager;
@@ -345,6 +346,5 @@ TEST(StatementsTest, MarkerStmt) {
 }
 
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
