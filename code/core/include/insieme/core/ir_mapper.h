@@ -98,19 +98,18 @@ namespace core {
 		 * container of pointers. Thereby, annotations are properly preserved and isolated.
 		 *
 		 * @param container the container including the pointers to be cloned
-		 * @param offset the offset to be used when invoking the internal map operation
 		 * @return a new container including pointers referencing clones of the nodes referenced
 		 * 		   by the original container.
 		 */
-		template<typename Container>
-		Container map(const Container& container, unsigned offset = 0) {
-			Container res;
+		NodeList mapAll(const NodeList& container) {
+			NodeList res;
 
 			auto first = container.begin();
 			auto last = container.end();
 			auto out = inserter(res, res.end());
+			unsigned counter = 0;
 			for (auto it = first; it != last; ++it) {
-				*out = map(offset++, *it);
+				*out = map(counter++, *it);
 				out++;
 			}
 

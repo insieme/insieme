@@ -39,6 +39,8 @@
 #include "insieme/core/ir_values.h"
 #include "insieme/core/ir_address.h"
 
+#include "insieme/utils/container_utils.h"
+
 namespace insieme {
 namespace core {
 namespace new_core {
@@ -153,6 +155,55 @@ namespace new_core {
 
 		EXPECT_TRUE(value->getValue());
 		EXPECT_TRUE(adr->getValue());
+	}
+
+
+	TEST(Value, DuplicateTest) {
+		NodeManager manager;
+
+		// check names
+		StringValuePtr identA = StringValue::get(manager, "A");
+		EXPECT_EQ ("A" , identA->getName());
+
+		StringValuePtr identB = StringValue::get(manager, "B");
+		EXPECT_EQ ("B" , identB->getName());
+
+		StringValuePtr identA2 = StringValue::get(manager, "A");
+		EXPECT_EQ ("A" , identA2->getName());
+
+		// check equality operator
+		EXPECT_NE ( identA, identB );
+		EXPECT_EQ ( identA, identA2 );
+		EXPECT_NE ( identB, identA2 );
+
+		EXPECT_NE ( identB, identA );
+		EXPECT_EQ ( identA2, identA );
+		EXPECT_NE ( identA2, identB );
+
+		// check hash
+		boost::hash<StringValue> hasher;
+		StringValuePtr all[] = {identA, identB, identA2};
+		for (int i=0; i<3; i++) {
+			for (int j=0; j<3; j++) {
+				StringValuePtr a = all[i];
+				StringValuePtr b = all[j];
+				EXPECT_EQ ( *a == *b, hasher(*a) == hasher(*b));
+			}
+		}
+
+		// Tests whether hash function for identifiers is properly working
+
+		// create list of identifiers
+		vector<StringValuePtr> identifier;
+		identifier.push_back(StringValue::get(manager, "A"));
+		identifier.push_back(StringValue::get(manager, "B"));
+		EXPECT_FALSE ( hasDuplicates(identifier) );
+
+		identifier.push_back(StringValue::get(manager, "A"));
+		EXPECT_TRUE ( hasDuplicates(identifier) );
+
+		basicNodeTests(identA);
+		basicNodeTests(identB);
 	}
 
 

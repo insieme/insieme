@@ -233,7 +233,7 @@ StructExprPtr IRBuilder::structExpr(const vector<NamedValuePtr>& values) const {
 	for_each(values, [&](const NamedValuePtr& cur) {
 		types.push_back(namedType(cur->getName(), cur->getValue()->getType()));
 	});
-	return structExpr(structType(types), values);
+	return structExpr(structType(types), namedValues(values));
 }
 
 
@@ -279,14 +279,17 @@ FunctionTypePtr IRBuilder::toThickFunctionType(const FunctionTypePtr& funType) c
 
 
 LiteralPtr IRBuilder::stringLit(const string& str) const {
-	return literal(str, manager.getLangBasic().getString());
+	return literal(str, getLangBasic().getString());
 }
 
 LiteralPtr IRBuilder::intLit(const int val) const {
-    return literal(manager.getLangBasic().getInt4(), toString(val));
+    return literal(getLangBasic().getInt4(), toString(val));
 }
 LiteralPtr IRBuilder::uintLit(const unsigned int val) const {
-    return literal(manager.getLangBasic().getUInt4(), toString(val));
+    return literal(getLangBasic().getUInt4(), toString(val));
+}
+LiteralPtr IRBuilder::boolLit(bool value) const {
+	return literal(getLangBasic().getBool(), (value)?"true":"false");
 }
 
 
@@ -501,6 +504,10 @@ BindExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr&
 	// construct bind expression around lambda
 	CallExprPtr call = callExpr(returnType, lambda, args);
 	return bindExpr(params, call);
+}
+
+LambdaExprPtr IRBuilder::lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const {
+	return lambdaExpr(lambda(type, params, body));
 }
 
 BindExprPtr IRBuilder::bindExpr(const VariableList& params, const CallExprPtr& call) const {
@@ -764,6 +771,38 @@ ExpressionPtr IRBuilder::scalarToVector( const TypePtr& type, const ExpressionPt
     // expression is either already a vector/array type or the type is not a vector type
     return subExpr;
 }
+
+
+// ------------------------ Operators ---------------------------
+
+namespace {
+
+	TypePtr infereResType(const FunctionTypePtr& fun, const vector<TypePtr>& types) {
+		// get unifier
+		SubstitutionOpt sub = unifyAll(fun->getNodeManager(), fun->getParameterTypes()->getTypes(), types);
+		assert(sub && "Invalid arguments passed to operator!");
+
+		// apply unifier
+		return sub->applyTo(fun->getReturnType());
+	}
+
+}
+
+
+TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const {
+	assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
+	FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
+	return infereResType(funType, extractTypes(toVector(a)));
+}
+
+
+TypePtr IRBuilder::infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const {
+	assert(op->getType()->getNodeType() == NT_FunctionType && "Operation is not a function!");
+	FunctionTypePtr funType = static_pointer_cast<FunctionTypePtr>(op->getType());
+	return infereResType(funType, extractTypes(toVector(a,b)));
+}
+
+
 
 // ---------------------------- Utilities ---------------------------------------
 

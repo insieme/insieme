@@ -44,7 +44,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 bool hasHash(const Node& a, std::size_t hash) {
 	return a.hash() == hash;
@@ -56,7 +55,7 @@ std::size_t computeHash(const NodePtr& cur) {
 	
 	if (cur->isValue()) {
 		// just believe the hash
-		return cur->hash();
+		return (*cur).hash();
 	}
 	
 	for_each(cur->getChildList(), [&](const NodePtr& cur) {
@@ -146,7 +145,7 @@ void basicNodeTests(NP node, const NodeList& children = NodeList()) {
 
 			EXPECT_EQ ( *a , *b );
 			EXPECT_EQ ( a->hash(), b->hash() );
-			EXPECT_EQ ( toString(*a), toString(*b) );
+			EXPECT_EQ ( a->toString(), b->toString() );
 
 		}
 	}
@@ -273,7 +272,6 @@ void basicNodeTests(NP node, const NodeList& children = NodeList()) {
 	node->remAnnotation(DummyAnnotation::DummyKey);
 }
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
 

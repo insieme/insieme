@@ -116,7 +116,7 @@ public:
 	 * The represented list of replaced child nodes will be computed using the given list and mapping.
 	 */
 	ChildListMapping(const NodeList& list, NodeMapping& mapping)
-		: NodeMapping(), children(mapping.map(list)), different(!equals(children, list)) {}
+		: NodeMapping(), children(mapping.mapAll(list)), different(!equals(children, list)) {}
 
 	/**
 	 * Create a new child list mapping based on the given list of children. The optional boolean

@@ -36,7 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ir_node_tryout.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace core {
@@ -44,17 +45,20 @@ namespace core {
 
 TEST(Node, Basic) {
 
-	Node node(14);
+	NodeManager manager;
+	IRBuilder builder(manager);
 
-	EXPECT_TRUE(node.isValue());
+	IntValuePtr node = builder.intValue(14);
+
+	EXPECT_TRUE(node->isValue());
 
 
 	TypeList list;
 
-	TupleType tuple1(list);
+	TupleTypePtr tuple1 = builder.tupleType(list);
 
-	list.push_back(Ptr<Type>(&tuple1));
-	TupleType tuple2(list);
+	list.push_back(tuple1);
+	TupleTypePtr tuple2 = builder.tupleType(list);
 
 	EXPECT_EQ(0, tuple1.getChildList().size());
 	EXPECT_EQ(1, tuple2.getChildList().size());
@@ -62,34 +66,32 @@ TEST(Node, Basic) {
 	EXPECT_EQ(NT_TupleType, tuple1.getNodeType());
 
 
-	Literal literal;
-	EXPECT_EQ(NT_Literal, literal.getNodeType());
+	LiteralPtr lit = builder.literal(manager.getLangBasic().getBool(), "true");
+	EXPECT_EQ(NT_Literal, lit->getNodeType());
 
-	Ptr<Literal> lit(&literal);
+	IfStmtPtr ifStmt = builder.ifStmt(lit, lit, lit);
+	EXPECT_EQ(NT_IfStmt, ifStmt->getNodeType());
+	EXPECT_EQ(3, ifStmt->getChildList().size());
 
-	If ifStmt(lit, lit, lit);
-	EXPECT_EQ(NT_If, ifStmt.getNodeType());
-	EXPECT_EQ(3, ifStmt.getChildList().size());
+	EXPECT_EQ(lit, ifStmt->getChildList()[0]);
+	EXPECT_EQ(lit, ifStmt->getChildList()[1]);
+	EXPECT_EQ(lit, ifStmt->getChildList()[2]);
 
-	EXPECT_EQ(lit, ifStmt.getChildList()[0]);
-	EXPECT_EQ(lit, ifStmt.getChildList()[1]);
-	EXPECT_EQ(lit, ifStmt.getChildList()[2]);
+	EXPECT_EQ(lit, ifStmt->getChildNodeReference<0>());
+	EXPECT_EQ(lit, ifStmt->getChildNodeReference<1>());
+	EXPECT_EQ(lit, ifStmt->getChildNodeReference<2>());
 
-	EXPECT_EQ(lit, ifStmt.get<0>());
-	EXPECT_EQ(lit, ifStmt.get<1>());
-	EXPECT_EQ(lit, ifStmt.get<2>());
+	EXPECT_TRUE(typeid(ifStmt->getChildNodeReference<0>()) == typeid(ExpressionPtr));
+	EXPECT_TRUE(typeid(ifStmt->getChildNodeReference<1>()) == typeid(CompoundStmtPtr));
+	EXPECT_TRUE(typeid(ifStmt->getChildNodeReference<2>()) == typeid(CompoundStmtPtr));
 
-	EXPECT_TRUE(typeid(ifStmt.get<0>()) == typeid(ExpressionPtr));
-	EXPECT_TRUE(typeid(ifStmt.get<1>()) == typeid(StatementPtr));
-	EXPECT_TRUE(typeid(ifStmt.get<2>()) == typeid(StatementPtr));
+	EXPECT_TRUE(typeid(&*ifStmt->getChildNodeReference<0>()) == typeid(Expression*));
+	EXPECT_TRUE(typeid(&*ifStmt->getChildNodeReference<1>()) == typeid(CompoundStmt*));
+	EXPECT_TRUE(typeid(&*ifStmt->getChildNodeReference<2>()) == typeid(CompoundStmt*));
 
-	EXPECT_TRUE(typeid(&*ifStmt.get<0>()) == typeid(Expression*));
-	EXPECT_TRUE(typeid(&*ifStmt.get<1>()) == typeid(Statement*));
-	EXPECT_TRUE(typeid(&*ifStmt.get<2>()) == typeid(Statement*));
-
-	EXPECT_EQ(&*lit, &*ifStmt.get<0>());
-	EXPECT_EQ(&*lit, &*ifStmt.get<1>());
-	EXPECT_EQ(&*lit, &*ifStmt.get<2>());
+	EXPECT_EQ(&*lit, &*ifStmt->getChildNodeReference<0>());
+	EXPECT_EQ(&*lit, &*ifStmt->getChildNodeReference<1>());
+	EXPECT_EQ(&*lit, &*ifStmt->getChildNodeReference<2>());
 }
 
 TEST(Node, MemberTypeTraits) {

@@ -108,8 +108,8 @@ namespace new_core {
 		IntTypeParamPtr paramA = ConcreteIntTypeParam::get(manager, 12);
 		IntTypeParamPtr paramB = VariableIntTypeParam::get(manager, 'a');
 
-		IntTypeParamListPtr empty = IntTypeParamList::get(manager, toList());
-		IntTypeParamListPtr list = IntTypeParamList::get(manager, toList(paramA, paramB));
+		IntTypeParamsPtr empty = IntTypeParams::get(manager, toList());
+		IntTypeParamsPtr list = IntTypeParams::get(manager, toList(paramA, paramB));
 
 
 		EXPECT_EQ(static_cast<std::size_t>(0), empty->size());
@@ -124,8 +124,8 @@ namespace new_core {
 
 
 		// test access using addresses
-		IntTypeParamListAddress adr1(empty);
-		IntTypeParamListAddress adr2(list);
+		IntTypeParamsAddress adr1(empty);
+		IntTypeParamsAddress adr2(list);
 
 
 		EXPECT_EQ(static_cast<std::size_t>(0), adr1->size());

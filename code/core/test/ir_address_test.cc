@@ -38,12 +38,14 @@
 
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace core {
 
 TEST(NodeAddressTest, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr typeA = builder.genericType("A",toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
 	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(builder.genericType("3")));
@@ -104,7 +106,8 @@ TEST(NodeAddressTest, Basic) {
 
 TEST(NodeAddressTest, HashSinglePath) {
 
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr type = builder.genericType("A");
 
@@ -116,7 +119,8 @@ TEST(NodeAddressTest, HashSinglePath) {
 
 
 TEST(NodeAddressTest, EqualityTest) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// test a diamond
 	TypePtr typeD = builder.genericType("D");
@@ -140,7 +144,8 @@ TEST(NodeAddressTest, EqualityTest) {
 }
 
 TEST(NodeAddressTest, MergePaths) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// test a diamond
 	TypePtr typeD = builder.genericType("D");
@@ -162,7 +167,8 @@ TEST(NodeAddressTest, MergePaths) {
 }
 
 TEST(NodeAddressTest, Find) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr typeA = builder.genericType("A",toVector<TypePtr>(builder.genericType("1"), builder.genericType("2")));
 	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(builder.genericType("3")));
@@ -178,7 +184,8 @@ TEST(NodeAddressTest, Find) {
 }
 
 TEST(NodeAddressTest, Visiting) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// test a diamond
 	TypePtr typeD = builder.genericType("D");

@@ -41,7 +41,7 @@
 #include "insieme/core/ir_node.h"
 #include "insieme/core/ir_types.h"
 
-#include "dummy_annotations.inc"
+#include "ir_dummy_annotations.inc"
 
 using std::shared_ptr;
 

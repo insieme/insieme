@@ -145,6 +145,7 @@ namespace core {
 		LiteralPtr stringLit(const std::string& str) const;
 		LiteralPtr intLit(const int val) const;
 		LiteralPtr uintLit(const unsigned int val) const;
+		LiteralPtr boolLit(bool value) const;
 
 		// Support reverse literal construction
 		LiteralPtr literal(const std::string& value, const TypePtr& type) const { return literal(type, value); }
@@ -213,6 +214,7 @@ namespace core {
 		// Lambda Expressions
 		LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const;
+		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Direct creation of lambda and bind with capture initialization
 		BindExprPtr lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params = VariableList()) const;
@@ -296,6 +298,136 @@ namespace core {
 		ForStmtPtr forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
 
 		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
+
+
+
+		// ------------------------ Operators ---------------------------
+
+		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a) const;
+		TypePtr infereExprType(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const;
+
+		inline CallExprPtr unaryOp(const ExpressionPtr& op, const ExpressionPtr& a) const {
+			return callExpr(infereExprType(op, a), op, a);
+		}
+
+		inline CallExprPtr binaryOp(const ExpressionPtr& op, const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return callExpr(infereExprType(op, a, b), op, a, b);
+		}
+
+		inline ExpressionPtr getOperator(lang::BasicGenerator::Operator op, const TypePtr& a) const {
+			return getLangBasic().getOperator(a, op);
+		}
+
+		inline ExpressionPtr getOperator(lang::BasicGenerator::Operator op, const TypePtr& a, const TypePtr& b) const {
+			// TODO: pick operator based on both operands types!!
+			return getLangBasic().getOperator(a, op);
+		}
+
+		// unary operators
+
+		inline CallExprPtr bitwiseNeg(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::Not, a->getType()), a);
+		}
+
+		inline CallExprPtr logicNeg(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::LNot, a->getType(), b->getType()), a, b);
+		}
+
+		inline ExpressionPtr plus(const ExpressionPtr& a) const {
+			return a; // this operator can be skipped
+		}
+
+		inline CallExprPtr minus(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::Minus, a->getType()), a);
+		}
+
+
+		inline CallExprPtr preInc(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::PreInc, a->getType()), a);
+		}
+
+		inline CallExprPtr postInc(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::PostInc, a->getType()), a);
+		}
+
+		inline CallExprPtr preDec(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::PreDec, a->getType()), a);
+		}
+
+		inline CallExprPtr postDec(const ExpressionPtr& a) const {
+			return unaryOp(getOperator(lang::BasicGenerator::PostDec, a->getType()), a);
+		}
+
+
+		// binary operators
+
+		inline CallExprPtr add(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Add, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr sub(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Sub, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr mul(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Mul, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr div(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Div, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr mod(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Mod, a->getType(), b->getType()), a, b);
+		}
+
+
+		inline CallExprPtr bitwiseAnd(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::And, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr bitwiseOr(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Or, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr bitwiseXor(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Xor, a->getType(), b->getType()), a, b);
+		}
+
+
+		inline CallExprPtr logicAnd(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::LAnd, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr logicOr(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::LOr, a->getType(), b->getType()), a, b);
+		}
+
+
+		inline CallExprPtr eq(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Eq, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr ne(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Ne, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr lt(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Lt, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr le(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Le, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr gt(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Gt, a->getType(), b->getType()), a, b);
+		}
+
+		inline CallExprPtr ge(const ExpressionPtr& a, const ExpressionPtr& b) const {
+			return binaryOp(getOperator(lang::BasicGenerator::Ge, a->getType(), b->getType()), a, b);
+		}
+
 
 		// Utilities
 

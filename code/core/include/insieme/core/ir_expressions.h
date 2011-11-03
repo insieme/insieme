@@ -722,7 +722,7 @@ namespace core {
 		 * 				   this recursive function definition.
 		 * @return a copy of the internally maintained pointer to the actual function definition.
 		 */
-		const Pointer<const Lambda>& getDefinitionOf(const VariablePtr& variable) const {
+		Pointer<const Lambda> getDefinitionOf(const VariablePtr& variable) const {
 			auto definitions = getDefinitions();
 			auto it = std::find_if(definitions.begin(), definitions.end(),
 					[&](const LambdaBindingPtr& cur) { return *cur->getVariable() == *variable; }

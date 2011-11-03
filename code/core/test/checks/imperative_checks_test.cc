@@ -48,7 +48,8 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 }
 
 TEST(UndeclaredVariableCheck, Basic) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 	TypePtr type = builder.genericType("int");
@@ -84,16 +85,12 @@ namespace {
 		IRBuilder builder(manager);
 
 		// construct lambda
-		FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.basic.getUnit());
+		FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.getLangBasic().getUnit());
 		VariablePtr var = builder.variable(funType);
 		LambdaPtr lambda = builder.lambda(funType, toVector<VariablePtr>(), body);
 
-		// create lambda definitions
-		LambdaDefinition::Definitions definitions;
-		definitions.insert(std::make_pair(var, lambda));
-
-		// return lambda definition
-		return LambdaDefinition::get(manager, definitions);
+		// create and lambda definitions
+		return LambdaDefinition::get(manager, toVector(LambdaBinding::get(manager, var, lambda)));
 	}
 
 	bool isUndeclaredVariableError(const MessageList& msgs, const NodePtr& target) {
@@ -115,7 +112,8 @@ namespace {
 }
 
 TEST(UndeclaredVariableCheck, CompoundStmt) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr type = builder.genericType("A");
 	VariablePtr varA = builder.variable(type, 1);
@@ -166,7 +164,8 @@ TEST(UndeclaredVariableCheck, CompoundStmt) {
 }
 
 TEST(UndeclaredVariableCheck, BindExpr) {
-	IRBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr type = builder.genericType("A");
 	VariablePtr varA = builder.variable(type, 1);

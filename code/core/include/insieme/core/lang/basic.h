@@ -103,11 +103,15 @@ public:
 	bool isBuiltIn(const NodePtr& node) const;
 	LiteralPtr getLiteral(const std::string& name) const;
 
+	/**
+	 * Obtains an expression representing the the requested operator for the
+	 * given data type.
+	 */
 	ExpressionPtr getOperator(const TypePtr& type, const Operator& op) const;
 
 	/**
-	 * Obtains the operator (as defined in the lang.def class) from a literal
-	 * expression obtained thorugh the previous metod (inverse procedure)
+	 * Obtains the operator (as defined in the lang.def file) from a literal
+	 * expression obtained through the previous method (inverse procedure)
 	 */
 	Operator getOperator(const LiteralPtr& lit) const;
 

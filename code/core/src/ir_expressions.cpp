@@ -65,8 +65,6 @@ namespace core {
 		// obtain lambda definition
 		const auto& lambda = getDefinitionOf(variable);
 
-		const auto& defs = getDefinitions();
-
 		// a detector which aborts a visiting in cased a recursive function invocation
 		// is detected
 		auto detector = makeLambdaVisitor([&](const NodePtr& node)->bool {

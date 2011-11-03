@@ -154,7 +154,7 @@ namespace core {
 		}
 
 		// compute new child node list
-		NodeList children = mapper.map(getChildListInternal());
+		NodeList children = mapper.mapAll(getChildListInternal());
 		if (::equals(children, getChildListInternal(), equal_target<NodePtr>())) {
 			return (&manager != getNodeManagerPtr())?manager.get(*this):NodePtr(this);
 		}

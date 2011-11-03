@@ -38,7 +38,6 @@
 
 namespace insieme {
 namespace core {
-namespace new_core {
 
 	class DummyAnnotation : public NodeAnnotation {
 	public:
@@ -88,6 +87,5 @@ namespace new_core {
 	const string DummyAnnotation2::NAME = "DummyAnnotation2";
 	const utils::StringKey<DummyAnnotation2> DummyAnnotation2::DummyKey("DummyKey2");
 
-} // end namespace new_core
 } // end namespace core
 } // end namespace insieme
