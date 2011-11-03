@@ -782,25 +782,26 @@ void irt_ocl_rt_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));
 }
 
-void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint g_kernel_code_table_size) {
+void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint num_kernels) {
 	cl_uint num_devices = irt_ocl_get_num_devices();
 
-	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel)*num_devices*g_kernel_code_table_size);
-	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*)*num_devices);
+	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel) * num_devices * num_kernels);
+	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*) * num_devices);
 
 	for (cl_uint i = 0; i < num_devices; ++i) {
-		context->kernel_binary_table[i] = &(tmp[i*g_kernel_code_table_size]);
 		irt_ocl_device* dev = irt_ocl_get_device(i);
 		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
 
-		for (cl_uint j = 0; j < g_kernel_code_table_size; ++j)
+		context->kernel_binary_table[i] = &(tmp[i*num_kernels]);
+		for (cl_uint j = 0; j < num_kernels; ++j) {
 			irt_ocl_rt_create_kernel(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
+		}
 	}
 
 	context->kernel_code_table = g_kernel_code_table;
 }
 
-void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_table_size) {
+void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_table_size) { // FIXME... is not called in the runtime
 	printf("Releasing kernels\n");
 	cl_uint num_devices = irt_ocl_get_num_devices();
 	for (cl_uint i = 0; i < num_devices; ++i) {
