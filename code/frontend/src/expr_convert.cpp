@@ -1182,12 +1182,15 @@ public:
 				if ( funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1 ) {
 					// in the case the free uses an input parameter
 					if ( args.front()->getType()->getNodeType() == core::NT_RefType ) {
-						return (irNode = builder.callExpr( builder.getBasicGenerator().getRefDelete(), args.front() ));
+						return (irNode = builder.callExpr(builder.getBasicGenerator().getUnit(), builder.getBasicGenerator().getRefDelete(), args.front() ));
 					}
+std::cout << "\nfound free " << (*args.front()->getType() == *builder.getBasicGenerator().getAnyRef()) << std::endl;
+					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+					core::ExpressionPtr delOp = *args.front()->getType() == *builder.getBasicGenerator().getAnyRef() ?
+							builder.getBasicGenerator().getAnyRefDelete() : builder.getBasicGenerator().getRefDelete();
+std::cout << delOp << std::endl;
 					// otherwise this is not a L-Value so it needs to be wrapped into a variable
-					return (irNode = builder.callExpr( builder.getBasicGenerator().getRefDelete(),
-							wrapVariable(callExpr->getArg(0))
-						));
+					return (irNode = builder.callExpr(builder.getBasicGenerator().getUnit(), delOp, wrapVariable(callExpr->getArg(0)) ));
 				}
 			}
 
