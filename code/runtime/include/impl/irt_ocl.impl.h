@@ -195,10 +195,18 @@ void irt_ocl_release_devices() {
 		// release the context
 		err_code = clReleaseContext(dev->context);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context: \"%s\"", _irt_error_string(err_code));
+
+		// release the info
+		free(dev->name);
+		free(dev->vendor);
+		free(dev->version);
+		free(dev->driver_version);
+		free(dev->profile);
+		free(dev->extensions);
+		free(dev->max_work_item_sizes);
 	}
 	free(devices);
 }
-
 
 inline cl_uint irt_ocl_get_num_devices() {
 	return num_devices;
