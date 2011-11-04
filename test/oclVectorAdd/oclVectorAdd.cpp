@@ -28,8 +28,8 @@
 
 // Host buffers for demo
 // *********************************************************************
-float *srcA, *srcB, *dst;        // Host buffers for OpenCL test
-float* Golden;                   // Host buffer for host golden processing cross check
+void *srcA, *srcB, *dst;        // Host buffers for OpenCL test
+void* Golden;                   // Host buffer for host golden processing cross check
 
 // OpenCL Vars
 cl_context cxGPUContext;        // OpenCL context
@@ -85,10 +85,10 @@ const char* cSourceFile = "VectorAdd.cl";
 
     // Allocate and initialize host arrays 
     shrLog( "Allocate and Init Host Mem...\n"); 
-    srcA = (float *)malloc(sizeof(cl_float) * szGlobalWorkSize);
-    srcB = (float *)malloc(sizeof(cl_float) * szGlobalWorkSize);
-    dst = (float *)malloc(sizeof(cl_float) * szGlobalWorkSize);
-    Golden = (float *)malloc(sizeof(cl_float) * iNumElements);
+    srcA = (void *)malloc(sizeof(cl_float) * szGlobalWorkSize);
+    srcB = (void *)malloc(sizeof(cl_float) * szGlobalWorkSize);
+    dst = (void *)malloc(sizeof(cl_float) * szGlobalWorkSize);
+    Golden = (void *)malloc(sizeof(cl_float) * iNumElements);
     shrFillArray((float*)srcA, iNumElements);
     shrFillArray((float*)srcB, iNumElements);
 
