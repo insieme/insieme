@@ -255,7 +255,7 @@ TEST(TypeUtils, Unification) {
 		ASSERT_PRED2(unifyable, termA, termB);
 
 		auto unifyingMap = *unify(manager, termA, termB);
-		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termA)));
+		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termA))) << unifyingMap;
 		EXPECT_EQ("f<h<'u>,g<'u>,h<'u>>", toString(*unifyingMap.applyTo(manager, termB)));
 		EXPECT_EQ(unifyingMap.applyTo(manager, termA), unifyingMap.applyTo(manager, termB));
 	}
@@ -855,6 +855,26 @@ TEST(TypeUtils, isGeneric) {
 	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), var)));
 	EXPECT_TRUE(isGeneric(builder.functionType(toVector(var), constA)));
 	EXPECT_FALSE(isGeneric(builder.functionType(toVector(constA), constA)));
+}
+
+TEST(TypeUtils, getElementTypes) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr A = builder.genericType("A");
+	TypePtr B = builder.genericType("B");
+	TypePtr C = builder.genericType("C");
+	EXPECT_EQ(toVector<TypePtr>(), getElementTypes(A));
+
+	TypePtr D = builder.genericType("D", toVector(A,B));
+	EXPECT_EQ(toVector(A,B), getElementTypes(D));
+
+	TypePtr fun = builder.functionType(toVector(A,B), C);
+	EXPECT_EQ(toVector(A,B,C), getElementTypes(fun));
+
+	TypePtr structType = builder.structType(toVector(builder.namedType("a", A), builder.namedType("d",D)));
+	EXPECT_EQ(toVector(A,D), getElementTypes(structType));
 }
 
 

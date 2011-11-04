@@ -275,6 +275,21 @@ namespace {
 		return param->getNodeType() == NT_VariableIntTypeParam;
 	}
 
+
+	/**
+	 * Applies the given substitution to all types within the given list.
+	 *
+	 * @param manager the node manager to be used for creating new type instances if required
+	 * @param mapping the substitution to be applied to the types within the list
+	 * @param list the list to be updated by the substituted elements
+	 */
+	void applySubstitutionToList(NodeManager& manager, const Substitution& mapping, std::list<std::pair<TypePtr, TypePtr>>& list) {
+		for_each(list, [&mapping, &manager](std::pair<TypePtr, TypePtr>& cur) {
+			cur.first = mapping.applyTo(manager, cur.first);
+			cur.second = mapping.applyTo(manager, cur.second);
+		});
+	};
+
 	/**
 	 * This method implements the actual algorithm for unifying a list of types.
 	 *
@@ -329,10 +344,7 @@ namespace {
 				);
 
 				// apply substitution to remaining pairs
-				for_each(list, [&mapping, &manager](Pair& cur) {
-					cur.first = mapping.applyTo(manager, cur.first);
-					cur.second = mapping.applyTo(manager, cur.second);
-				});
+				applySubstitutionToList(manager, mapping, list);
 
 				// combine current mapping with overall result
 				res = Substitution::compose(manager, res, mapping);
@@ -351,8 +363,61 @@ namespace {
 				assert ("RECURSIVE TYPE SUPPORT NOT IMPLEMENTED!");
 			}
 
+
+			// => check ref type
+			if (typeOfA == NT_RefType) {
+				const RefTypePtr& refTypeA = static_pointer_cast<RefTypePtr>(a);
+				const RefTypePtr& refTypeB = static_pointer_cast<RefTypePtr>(b);
+
+				// unify element type
+				list.push_back(std::make_pair(refTypeA->getElementType(), refTypeB->getElementType()));
+				continue;
+			}
+
+			// => handle single-element type cases
+			if (dynamic_pointer_cast<SingleElementTypePtr>(a)) {
+				const SingleElementTypePtr& typeA = static_pointer_cast<const SingleElementTypePtr>(a);
+				const SingleElementTypePtr& typeB = static_pointer_cast<const SingleElementTypePtr>(b);
+
+				// make sure element type is checked
+				list.push_back(std::make_pair(typeA->getElementType(), typeB->getElementType()));
+
+				// check int-type parameter
+				IntTypeParamPtr paramA = typeA->getIntTypeParameter();
+				IntTypeParamPtr paramB = typeB->getIntTypeParameter();
+
+				// equivalent pairs can be ignored ...
+				if (paramA == paramB) {
+					continue;
+				}
+
+				// check for variables
+				if (!isVariable(paramA) && !isVariable(paramB)) {
+					// different constants => not matchable / unifyable!
+					return unmatchable;
+				}
+
+				// move variable to first place
+				if (!isVariable(paramA) && isVariable(paramB)) {
+					// switch sides
+					IntTypeParamPtr tmp = paramA;
+					paramA = paramB;
+					paramB = tmp;
+				}
+
+				// add mapping
+				Substitution mapping(static_pointer_cast<const VariableIntTypeParam>(paramA),paramB);
+
+				// apply substitution to remaining pairs
+				applySubstitutionToList(manager, mapping, list);
+
+				// combine current mapping with overall result
+				res = Substitution::compose(manager, res, mapping);
+				continue;
+			}
+
 			// => check family of generic type
-			if (dynamic_pointer_cast<const GenericType>(a)) {
+			if (typeOfA == NT_GenericType) {
 				const GenericTypePtr& genericTypeA = static_pointer_cast<const GenericType>(a);
 				const GenericTypePtr& genericTypeB = static_pointer_cast<const GenericType>(b);
 
@@ -405,10 +470,7 @@ namespace {
 					Substitution mapping(static_pointer_cast<const VariableIntTypeParam>(paramA),paramB);
 
 					// apply substitution to remaining pairs
-					for_each(list, [&mapping, &manager](Pair& cur) {
-						cur.first = mapping.applyTo(manager, cur.first);
-						cur.second = mapping.applyTo(manager, cur.second);
-					});
+					applySubstitutionToList(manager, mapping, list);
 
 					// also to remaining parameter within current pair
 					for (std::size_t j=i+1; j < paramsA.size(); j++) {
@@ -422,29 +484,18 @@ namespace {
 			}
 
 			// => check all child nodes
-			auto childrenA = a->getChildList();
-			auto childrenB = b->getChildList();
-			if (childrenA.size() != childrenB.size()) {
+			auto typeParamsA = getElementTypes(a);
+			auto typeParamsB = getElementTypes(b);
+			if (typeParamsA.size() != typeParamsB.size()) {
 				// => not matchable / unifyable
 				return unmatchable;
 			}
 
 			// add pairs of children to list to be processed
-			std::for_each(
-					make_paired_iterator(childrenA.begin(), childrenB.begin()),
-					make_paired_iterator(childrenA.end(), childrenB.end()),
-
-					[&list](const std::pair<NodePtr, NodePtr>& cur) {
-						if (cur.first->getNodeCategory() == NC_Type) {
-							list.push_back(std::make_pair(
-									static_pointer_cast<const Type>(cur.first),
-									static_pointer_cast<const Type>(cur.second)
-							));
-						} else {
-							assert(cur.second->getNodeCategory() == cur.first->getNodeCategory()
-									&& "Unexpected incompatible node pair!");
-						}
-			});
+			list.insert(list.end(),
+					make_paired_iterator(typeParamsA.begin(), typeParamsB.begin()),
+					make_paired_iterator(typeParamsA.end(), typeParamsB.end())
+			);
 		}
 
 		// done
@@ -899,6 +950,22 @@ bool isGeneric(const TypePtr& type) {
 		// return true when a generic type has been found => interrupts the visiting process
 		return (cur->getNodeType() == core::NT_TypeVariable || cur->getNodeType() == core::NT_VariableIntTypeParam);
 	}, true));
+}
+
+
+
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Utilities
+// -------------------------------------------------------------------------------------------------------------------------
+
+TypeList getElementTypes(const TypePtr& type) {
+	TypeList res;
+	visitDepthFirstPrunable(type, [&](const TypePtr& cur)->bool {
+		if (cur == type) { return false; } // exclude root
+		res.push_back(cur);
+		return true;
+	}, true);
+	return res;
 }
 
 

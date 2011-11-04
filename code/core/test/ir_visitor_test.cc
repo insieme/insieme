@@ -129,7 +129,7 @@ TEST(IRVisitor, DispatcherTest) {
 
 	EXPECT_EQ ( 1, visitor.countArrayTypes );
 	EXPECT_EQ ( 1, visitor.countExpressions );
-	EXPECT_EQ ( 3, visitor.countGenericTypes );
+	EXPECT_EQ ( 2, visitor.countGenericTypes );
 	EXPECT_EQ ( 1, visitor.countRefTypes );
 }
 
@@ -212,7 +212,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	visitor.reset();
 	recVisitor.visit(type2);
-	EXPECT_EQ ( 5, visitor.counter );
+	EXPECT_EQ ( 14, visitor.counter );
 
 	IfStmtPtr ifStmt = builder.ifStmt(
 		Literal::get(manager, type, "12"),
@@ -226,7 +226,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	visitor.reset();
 	recVisitor.visit(ifStmt);
-	EXPECT_EQ ( 7, visitor.counter );
+	EXPECT_EQ ( 15, visitor.counter );
 
 
 	// ------ test for addresses ----
@@ -239,7 +239,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	adrVisitor.reset();
 	recAdrVisitor.visit(NodeAddress(ifStmt));
-	EXPECT_EQ ( 7, adrVisitor.counter );
+	EXPECT_EQ ( 15, adrVisitor.counter );
 
 
 	// test without types
@@ -252,7 +252,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	noTypePtrVisitor.reset();
 	recNoTypeVisitor.visit(ifStmt);
-	EXPECT_EQ ( 5, noTypePtrVisitor.counter );
+	EXPECT_EQ ( 7, noTypePtrVisitor.counter );
 
 	CountingAddressVisitor noTypeAdrVisitor(false);
 	auto recNoTypeAdrVisitor = makeDepthFirstVisitor(noTypeAdrVisitor);
@@ -263,7 +263,7 @@ TEST(IRVisitor, RecursiveVisitorTest) {
 
 	noTypeAdrVisitor.reset();
 	recNoTypeAdrVisitor.visit(NodeAddress(ifStmt));
-	EXPECT_EQ ( 5, noTypeAdrVisitor.counter );
+	EXPECT_EQ ( 7, noTypeAdrVisitor.counter );
 
 
 }
@@ -276,14 +276,14 @@ TEST(IRVisitor, BreadthFirstIRVisitorTest) {
 	CountingVisitor visitor;
 
 	// create a Test CASE
-	TypePtr typeD = GenericType::get(manager, "D");
-	TypePtr typeE = GenericType::get(manager, "E");
-	TypePtr typeF = GenericType::get(manager, "F");
+	GenericTypePtr typeD = GenericType::get(manager, "D");
+	GenericTypePtr typeE = GenericType::get(manager, "E");
+	GenericTypePtr typeF = GenericType::get(manager, "F");
 
-	TypePtr typeB = GenericType::get(manager, "B", toVector(typeD, typeE));
-	TypePtr typeC = GenericType::get(manager, "C", toVector(typeF));
+	GenericTypePtr typeB = GenericType::get(manager, "B", toVector<TypePtr>(typeD, typeE));
+	GenericTypePtr typeC = GenericType::get(manager, "C", toVector<TypePtr>(typeF));
 
-	TypePtr typeA = GenericType::get(manager, "A", toVector(typeB, typeC));
+	GenericTypePtr typeA = GenericType::get(manager, "A", toVector<TypePtr>(typeB, typeC));
 
 
 	// create a resulting list
@@ -299,11 +299,29 @@ TEST(IRVisitor, BreadthFirstIRVisitorTest) {
 	breadthVisitor.visit(typeA);
 	vector<NodePtr> expected;
 	expected.push_back(typeA);
+	expected.push_back(typeA->getName());
+	expected.push_back(typeA->getTypeParameter());
+	expected.push_back(typeA->getIntTypeParameter());
 	expected.push_back(typeB);
 	expected.push_back(typeC);
+	expected.push_back(typeB->getName());
+	expected.push_back(typeB->getTypeParameter());
+	expected.push_back(typeB->getIntTypeParameter());
+	expected.push_back(typeC->getName());
+	expected.push_back(typeC->getTypeParameter());
+	expected.push_back(typeC->getIntTypeParameter());
 	expected.push_back(typeD);
 	expected.push_back(typeE);
 	expected.push_back(typeF);
+	expected.push_back(typeD->getName());
+	expected.push_back(typeD->getTypeParameter());
+	expected.push_back(typeD->getIntTypeParameter());
+	expected.push_back(typeE->getName());
+	expected.push_back(typeE->getTypeParameter());
+	expected.push_back(typeE->getIntTypeParameter());
+	expected.push_back(typeF->getName());
+	expected.push_back(typeF->getTypeParameter());
+	expected.push_back(typeF->getIntTypeParameter());
 
 	EXPECT_EQ ( toString(expected), toString(res));
 	EXPECT_TRUE ( equals(expected, res));
@@ -336,7 +354,7 @@ TEST(IRVisitor, VisitOnceIRVisitorTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
+	auto collector = makeLambdaVisitor([&res](const TypePtr& cur) {
 		res.push_back(cur);
 	}, true);
 
@@ -345,7 +363,7 @@ TEST(IRVisitor, VisitOnceIRVisitorTest) {
 	auto recursive = makeDepthFirstVisitor(collector);
 	recursive.visit(type);
 
-	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
+	EXPECT_EQ(toVector<NodePtr>(type, shared, shared), res);
 
 	// visit all, only once
 	res.clear();
@@ -374,28 +392,26 @@ TEST(IRVisitor, UtilitiesTest) {
 	vector<NodePtr> res;
 
 	// create a visitor collecting all nodes
-	auto collector = makeLambdaVisitor([&res](const NodePtr& cur) {
+	auto fun = [&res](const TypePtr& cur) {
 		res.push_back(cur);
-	}, true);
+	};
+
+	auto collector = makeLambdaVisitor(fun, true);
 
 	// visit all recursively
 	res.clear();
 	visitDepthFirst(type, collector);
-	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared, shared), res));
+	EXPECT_EQ(toVector<NodePtr>(type, shared, shared), res);
 
 	// visit all, only once
 	res.clear();
 	visitDepthFirstOnce(type, collector);
-	EXPECT_TRUE ( equals(toVector<NodePtr>(type, shared), res));
+	EXPECT_EQ(toVector<NodePtr>(type, shared), res);
 
 	res.clear();
 	visitDepthFirstOnce(type, collector, false);
-	EXPECT_TRUE ( equals(toVector<NodePtr>(shared, type), res));
+	EXPECT_EQ(toVector<NodePtr>(shared, type), res);
 
-
-	auto fun = [&res](const NodePtr& cur) {
-		res.push_back(cur);
-	};
 
 	// visit all recursively
 	res.clear();
@@ -434,8 +450,16 @@ public:
 
 	InterruptingVisitor(int limit) : IRVisitor<bool,Ptr>(true), counter(0), limit(limit) {};
 
-	bool visitNode(const Ptr<const Node>& node) {
+	bool visitType(const Ptr<const Type>& node) {
 		return !(++counter < limit);
+	}
+
+	bool visitStatement(const Ptr<const Statement>& node) {
+		return !(++counter < limit);
+	}
+
+	bool visitNode(const Ptr<const Node>& node) {
+		return false;
 	};
 
 	void reset() {
@@ -606,7 +630,7 @@ TEST(IRVisitor, VisitOncePrunableVisitorTest) {
 	// check number of nodes when visiting all nodes
 	limitB.reset();
 	visitDepthFirstOnce(NodeAddress(ifStmt), limitB);
-	EXPECT_EQ( 6, limitB.counter);
+	EXPECT_EQ( 11, limitB.counter);
 }
 
 
@@ -729,8 +753,8 @@ TEST(IRVisitor, ParameterTest) {
 	m = 0;
 	auto recVisitor = makeDepthFirstVisitor(visitor);
 	recVisitor.visit(ifStmt, n, m);
-	EXPECT_EQ(7, n);
-	EXPECT_EQ(-7, m);
+	EXPECT_EQ(15, n);
+	EXPECT_EQ(-15, m);
 
 	// this should work - but it does not ...
 //	visitAllP(type, visitor, false, n, m);
