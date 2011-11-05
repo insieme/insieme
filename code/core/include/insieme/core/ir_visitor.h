@@ -140,6 +140,20 @@ public:
 	}
 
 	/**
+	 * Instructs this visitor to visit / process every element of the given list.
+	 *
+	 * @param list the list of elements to be visited / processed
+	 * @param p the context parameters for the visiting process
+	 * @return the result of the visiting process
+	 */
+	virtual void visitAll(const vector<Ptr<const Node>>& list, P... context) {
+		// just visit all nodes within the list
+		for(auto it = list.begin(); it != list.end(); ++it) {
+			visit(*it, context ...);
+		}
+	}
+
+	/**
 	 * Determines whether this visitor is visiting types or not.
 	 */
 	bool isVisitingTypes() const {
@@ -351,11 +365,6 @@ class DepthFirstIRVisitor : public IRVisitor<void, Ptr, P...> {
 	 */
 	bool preorder;
 
-	/**
-	 * The child factory to be used to create pointer to child nodes.
-	 */
-	typename Ptr<const Node>::ChildFactory childFactory;
-
 public:
 
 	/**
@@ -376,10 +385,7 @@ public:
 		}
 
 		// DepthFirstly visit all sub-nodes
-		auto size = node->getChildList().size();
-		for(std::size_t i=0; i<size; i++) {
-			this->visit(childFactory(node, i), context ...);
-		}
+		visitAll(node->getChildList(), context ...);
 
 		// visit current (in case of a post-order)
 		if (!preorder) {
@@ -410,11 +416,6 @@ class DepthFirstInterruptableIRVisitor : public IRVisitor<bool, Ptr, P...> {
 	 */
 	bool preorder;
 
-	/**
-	 * The child factory to be used to create pointer to child nodes.
-	 */
-	typename Ptr<const Node>::ChildFactory childFactory;
-
 public:
 
 	/**
@@ -441,9 +442,9 @@ public:
 			}
 
 			// DepthFirstly visit all sub-nodes
-			const NodeList& children = cur->getChildList();
-			for(std::size_t i=0; i<children.size(); i++) {
-				interrupted = interrupted || inner->visit(this->childFactory(cur, i));
+			const vector<Ptr<const Node>>& children = cur->getChildList();
+			for(auto it = children.begin(); it != children.end(); ++it) {
+				interrupted = interrupted || inner->visit(*it, context...);
 			}
 
 			// visit current (in case of a post-order)
@@ -483,11 +484,6 @@ class DepthFirstPrunableIRVisitor : public IRVisitor<void, Ptr, P...> {
 	 */
 	IRVisitor<bool, Ptr, P...>& subVisitor;
 
-	/**
-	 * The child factory to be used to create pointer to child nodes.
-	 */
-	typename Ptr<const Node>::ChildFactory childFactory;
-
 public:
 
 	/**
@@ -509,10 +505,7 @@ public:
 		}
 
 		// DepthFirstly visit all sub-nodes
-		const NodeList& children = node->getChildList();
-		for(std::size_t i=0; i<children.size(); i++) {
-			this->visit(childFactory(node, i), context...);
-		}
+		visitAll(node->getChildList(), context...);
 	}
 };
 
@@ -533,11 +526,6 @@ class BreadthFirstIRVisitor : public IRVisitor<void, Ptr, P...> {
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
 	IRVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
-
-	/**
-	 * The child factory to be used to create pointer to child nodes.
-	 */
-	typename Ptr<const Node>::ChildFactory childFactory;
 
 public:
 
@@ -562,10 +550,9 @@ public:
 			this->subVisitor.visit(node, context...);
 
 			// add children of current node to the queue
-			auto children = node->getChildList();
-			for(std::size_t i = 0; i<children.size(); i++) {
-				queue.push(this->childFactory(node, i));
-			}
+			for_each(node->getChildList(), [&](const Ptr<const Node>& cur) {
+				queue.push(cur);
+			});
 
 			// proceed with next node in the queue
 			if (!queue.empty()) {
@@ -604,11 +591,6 @@ class DepthFirstOnceIRVisitor : public IRVisitor<void, Ptr, P...> {
 	 */
 	bool preorder;
 
-	/**
-	 * The child factory to be used to create pointer to child nodes.
-	 */
-	typename Ptr<const Node>::ChildFactory childFactory;
-
 public:
 
 	/**
@@ -637,10 +619,7 @@ public:
 			}
 
 			// visit all child nodes DepthFirstly
-			const NodeList& children = node->getChildList();
-			for(std::size_t i = 0; i<children.size(); i++) {
-				visitor->visit(this->childFactory(node, i));
-			}
+			visitor->visitAll(node->getChildList(), context...);
 
 			if (!this->preorder) {
 				// visit current node
@@ -674,11 +653,6 @@ class DepthFirstOnceInterruptableIRVisitor : public IRVisitor<bool, Ptr, P...> {
 	 * The order in which nodes are processed.
 	 */
 	bool preorder;
-
-	/**
-	 * The child factory to be used to create pointer to child nodes.
-	 */
-	typename Ptr<const Node>::ChildFactory childFactory;
 
 public:
 
@@ -718,10 +692,7 @@ public:
 			}
 
 			// visit all child nodes DepthFirstly
-			const NodeList& children = node->getChildList();
-			for(std::size_t i = 0; i<children.size(); i++) {
-				visitor->visit(this->childFactory(node, i));
-			}
+			visitor->visitAll(node->getChildList(), context ...);
 
 			if (!this->preorder) {
 				// visit current node
@@ -755,11 +726,6 @@ class DepthFirstOncePrunableIRVisitor : public IRVisitor<void, Ptr, P...> {
 	 */
 	IRVisitor<bool, Ptr, P...>& subVisitor;
 
-	/**
-	 * The child factory to be used to create pointer to child nodes.
-	 */
-	typename Ptr<const Node>::ChildFactory childFactory;
-
 public:
 
 	/**
@@ -791,10 +757,7 @@ public:
 			}
 
 			// visit all child nodes DepthFirstly
-			const NodeList& children = node->getChildList();
-			for(std::size_t i = 0; i<children.size(); i++) {
-				visitor->visit(this->childFactory(node, i));
-			}
+			visitor->visitAll(node->getChildList());
 
 		}, this->isVisitingTypes());
 

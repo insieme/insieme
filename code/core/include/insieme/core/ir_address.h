@@ -237,7 +237,6 @@ public:
 // forward declaration
 struct StaticAddressCast;
 struct DynamicAddressCast;
-struct AddressChildFactory;
 
 /**
  * This immutable value class can be used to address nodes within the AST. Since nodes within the AST are shared,
@@ -259,7 +258,6 @@ public:
 	 */
 	typedef StaticAddressCast StaticCast;
 	typedef DynamicAddressCast DynamicCast;
-	typedef AddressChildFactory ChildFactory;
 
 	/**
 	 * Defines the type of the node this address is pointing to.
@@ -650,16 +648,6 @@ struct DynamicAddressCast {
 	template<typename Target, typename Source>
 	const Address<const Target> operator()(const Address<const Source>& value) const {
 		return dynamic_address_cast<const Target>(value);
-	}
-};
-
-/**
- * A static functor object creating child address based on a given address.
- */
-struct AddressChildFactory {
-	template<typename Source>
-	inline const Address<const Node> operator()(const Address<Source>& value, std::size_t childIndex) const {
-		return value.getAddressOfChild(childIndex);
 	}
 };
 

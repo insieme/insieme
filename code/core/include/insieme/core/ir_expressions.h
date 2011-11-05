@@ -269,7 +269,7 @@ namespace core {
 		 * Obtains a reference to the list of expressions being passed as an argument
 		 * to this call expression.
 		 */
-		const ExpressionList& getArguments() const {
+		const vector<Ptr<const Expression>>& getArguments() const {
 			return getArgumentList()->getExpressions();
 		}
 	};

@@ -52,7 +52,6 @@ namespace core {
 // Forward declaration of cast functor.
 struct StaticPointerCast;
 struct DynamicPointerCast;
-struct PointerChildFactory;
 
 template<typename T>
 class Pointer :
@@ -68,7 +67,6 @@ public:
 
 	typedef StaticPointerCast StaticCast;
 	typedef DynamicPointerCast DynamicCast;
-	typedef PointerChildFactory ChildFactory;
 
 	Pointer() : Ptr<T>(NULL) {}
 
@@ -178,20 +176,6 @@ struct DynamicPointerCast {
 	template<typename Target, typename Source>
 	const Pointer<Target> operator()(const Pointer<Source>& value) const {
 		return dynamic_pointer_cast<Target>(value);
-	}
-};
-
-
-// forward declaration of the node type
-class Node;
-
-/**
- * A static functor object extracting child node pointer from given pointer.
- */
-struct PointerChildFactory {
-	template<typename Source>
-	inline const Pointer<const Node> operator()(const Pointer<Source>& value, std::size_t childIndex) const {
-		return value->getChildList()[childIndex];
 	}
 };
 

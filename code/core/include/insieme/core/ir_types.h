@@ -152,6 +152,13 @@ namespace core {
 		const string& getFamilyName() const {
 			return getName()->getValue();
 		}
+
+		/**
+		 * Obtains a reference to the type parameter with the given index.
+		 */
+		Ptr<const Type> getTypeParameter(std::size_t index) const {
+			return getTypeParameter()->getElement(index);
+		}
 	};
 
 	/**

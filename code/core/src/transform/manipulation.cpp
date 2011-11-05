@@ -63,7 +63,7 @@ template<typename Manipulator>
 NodePtr manipulate(NodeManager& manager, const CompoundStmtAddress& target, Manipulator manipulator) {
 
 	// get and manipulate statement list
-	vector<StatementPtr> list = target->getStatements();
+	vector<StatementPtr> list = target.getAddressedNode()->getStatements();
 
 	// apply manipulation
 	manipulator(list);

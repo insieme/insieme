@@ -167,7 +167,7 @@ namespace {
 		 */
 		void visitBindExpr(const BindExprAddress& cur) {
 			// get list of parameters
-			const vector<VariablePtr>& params = cur->getParameters()->getElements();
+			const vector<VariablePtr>& params = cur.getAddressedNode()->getParameters()->getElements();
 
 			// check call expressions
 			const CallExprAddress call =
@@ -264,8 +264,8 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 		VarDeclarationCheck check(declared);
 
 		// trigger check
-		addAll(res, conductCheck(check, lambdaDef.getAddressOfChild(offset+1)));
-		offset += 2;
+		addAll(res, conductCheck(check, lambdaDef->getDefinitions()[offset]->getLambda()));
+		offset++;
 	});
 
 	return res;

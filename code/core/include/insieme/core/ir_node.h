@@ -262,7 +262,6 @@ namespace core {
 			 * @return a pointer to the requested child
 			 */
 			const NodePtr& getChildInternal(std::size_t index) const {
-				assert(!isValueInternal() && "Node represents a value!");
 				assert((index < children.size()) && "Index out of bound!");
 				return children[index];
 			}
@@ -273,7 +272,6 @@ namespace core {
 			 * @return a reference to the internally maintained child list
 			 */
 			const NodeList& getChildListInternal() const {
-				assert(!isValueInternal() && "Node represents a value!");
 				return children;
 			}
 
@@ -323,7 +321,6 @@ namespace core {
 			 * @return a reference to the internally maintained child list
 			 */
 			const NodeList& getChildNodeList() const {
-				assert(!isValueInternal() && "Node represents a value!");
 				return children;
 			}
 
@@ -602,13 +599,13 @@ namespace core {
 	 * @param list the list to be converted
 	 */
 	template<
-		typename B = Node, typename D,
+		typename B = Node, template<typename T> class Ptr, typename D,
 		typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,D>,boost::is_base_of<D,B>>,int>::type = 0
 	>
-	const vector<Pointer<const B>>& convertList(const vector<Pointer<const D>>& list) {
+	const vector<Ptr<const B>>& convertList(const vector<Ptr<const D>>& list) {
 		// use a C-like cast since structurally the data is correct
 		// if this ever causes troubles, replace it by copying the vector
-		return (const vector<Pointer<const B>>&)list;
+		return (const vector<Ptr<const B>>&)list;
 	}
 
 	/**
@@ -736,8 +733,6 @@ namespace core {
 	};
 
 
-
-
 	template<
 		typename Derived,
 		typename ElementType,
@@ -751,7 +746,7 @@ namespace core {
 		 *
 		 * TODO: extend to support iteration over addresses
 		 */
-		typedef typename vector<Pointer<const ElementType>>::const_iterator const_iterator;
+		typedef typename vector<Ptr<const ElementType>>::const_iterator const_iterator;
 
 		/**
 		 * Obtains access to an element within this list.
@@ -772,8 +767,8 @@ namespace core {
 		/**
 		 * Obtains a reference to the list of internally maintained elements.
 		 */
-		const vector<Pointer<const ElementType>>& getElements() const {
-			return getList();
+		const vector<Ptr<const ElementType>>& getElements() const {
+			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
 		}
 
 		/**
@@ -796,7 +791,7 @@ namespace core {
 		 * Obtains an iterator pointing to the first element of this list node.
 		 */
 		const_iterator begin() const {
-			return getList().begin();
+			return getElements().begin();
 		}
 
 		/**
@@ -804,7 +799,7 @@ namespace core {
 		 * within the list.
 		 */
 		const_iterator end() const {
-			return getList().end();
+			return getElements().end();
 		}
 
 	private:
@@ -816,7 +811,7 @@ namespace core {
 		 * @return a reference to the contained elements
 		 */
 		const vector<Pointer<const ElementType>>& getList() const {
-			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getChildList());
+			return convertList<ElementType>(BaseAccessor<Derived,Ptr>::getNode().getChildNodeList());
 		}
 
 	};
@@ -872,7 +867,7 @@ namespace core {
 		template<typename Derived, template<typename T> class Ptr> \
 		struct NAME ## Accessor : public ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor>, public ListNodeHelper<Derived, ELEMENT> { \
 			\
-			const vector<Pointer<const ELEMENT>>& get ## LIST_NAME () const { \
+			const vector<Ptr<const ELEMENT>>& get ## LIST_NAME () const { \
 				return ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor>::getElements(); \
 			} \
 

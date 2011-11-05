@@ -72,6 +72,15 @@ namespace core {
 			inline const Derived& getNode() const {
 				return *static_cast<const Derived*>(this);
 			}
+
+			/**
+			 * Obtains a reference to the entire list of children stored internally.
+			 *
+			 * @return a reference to the internally maintained child list
+			 */
+			const NodeList& getChildList() const {
+				return getNode().getChildNodeList();
+			}
 		};
 
 		/**
@@ -93,6 +102,16 @@ namespace core {
 			inline const Derived& getNode() const {
 				return **static_cast<const Pointer<const Derived>*>(this);
 			}
+
+			/**
+			 * Obtains a reference to the entire list of children stored internally.
+			 *
+			 * @return a reference to the internally maintained child list
+			 */
+			const NodeList& getChildList() const {
+				return getNode().getChildNodeList();
+			}
+
 		};
 
 		/**
@@ -101,7 +120,26 @@ namespace core {
 		 * as for pointers and nodes directly).
 		 */
 		template<typename Derived>
-		struct node_access_helper<Address<const Derived>> {
+		class node_access_helper<Address<const Derived>> {
+
+			/**
+			 * A flag determining whether the child list has already been
+			 * computed or not.
+			 */
+			mutable bool childListValid;
+
+			/**
+			 * The evaluated list of child-addresses. This child list is only valid
+			 * in case the childListValid flag is set.
+			 */
+			mutable vector<NodeAddress> childList;
+
+		public:
+
+			/**
+			 * A simple constructor for this type.
+			 */
+			node_access_helper() : childListValid(false), childList() {};
 
 			/**
 			 * The type of the handled node.
@@ -114,6 +152,24 @@ namespace core {
 			inline const Derived& getNode() const {
 				return **static_cast<const Address<const Derived>*>(this);
 			}
+
+			/**
+			 * Obtains a reference to the entire list of children stored internally.
+			 *
+			 * @return a reference to the internally maintained child list
+			 */
+			const vector<NodeAddress>& getChildList() const {
+				if (!childListValid) {
+					// produce child list
+					const NodeList& children = getNode().getChildNodeList();
+					for(unsigned i=0; i<children.size(); ++i) {
+						childList.push_back(static_cast<const Address<const Derived>*>(this)->getAddressOfChild(i));
+					}
+					childListValid = true;
+				}
+				return childList;
+			}
+
 		};
 
 	}
@@ -171,15 +227,6 @@ namespace core {
 			assert(!isValue() && "Node represents a value!");
 			assert((index < getNode().children.size()) && "Index out of bound!");
 			return getNode().children[index];
-		}
-
-		/**
-		 * Obtains a reference to the entire list of children stored internally.
-		 *
-		 * @return a reference to the internally maintained child list
-		 */
-		const NodeList& getChildList() const {
-			return getNode().children;
 		}
 
 		/**
