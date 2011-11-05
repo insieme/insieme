@@ -54,6 +54,7 @@ class IDontLikeAnythingCheck : public IRCheck {
 public:
 	IDontLikeAnythingCheck() : IRCheck(true) {}
 	OptionalMessageList visitNode(const NodeAddress& node) {
+		if (node->getNodeType() != NT_GenericType) return 0;
 		return MessageList(Message(node, 1, "I hate it!"));
 	}
 };
@@ -102,10 +103,10 @@ TEST(IRCheck, Decorators) {
 	IRBuilder builder(manager);
 
 	// build diamond - again ...
-	TypePtr typeD = builder.genericType("D");
-	TypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
-	TypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeD));
-	TypePtr typeA = builder.genericType("A", toVector(typeB, typeC));
+	GenericTypePtr typeD = builder.genericType("D");
+	GenericTypePtr typeB = builder.genericType("B",toVector<TypePtr>(typeD));
+	GenericTypePtr typeC = builder.genericType("C",toVector<TypePtr>(typeD));
+	GenericTypePtr typeA = builder.genericType("A", toVector<TypePtr>(typeB, typeC));
 
 	// check recursive
 	CheckPtr recCheck = makeRecursive(make_check<IDontLikeAnythingCheck>());
@@ -123,11 +124,11 @@ TEST(IRCheck, Decorators) {
 
 
 	// derive list of all addresses
-	NodeAddress adr1(typeA);
-	NodeAddress adr2 = adr1.getAddressOfChild(0);
-	NodeAddress adr3 = adr2.getAddressOfChild(0);
-	NodeAddress adr4 = adr1.getAddressOfChild(1);
-	NodeAddress adr5 = adr4.getAddressOfChild(0);
+	GenericTypeAddress adr1(typeA);
+	GenericTypeAddress adr2 = static_address_cast<GenericTypeAddress>(adr1->getTypeParameter(0));
+	GenericTypeAddress adr3 = static_address_cast<GenericTypeAddress>(adr2->getTypeParameter(0));
+	GenericTypeAddress adr4 = static_address_cast<GenericTypeAddress>(adr1->getTypeParameter(1));
+	GenericTypeAddress adr5 = static_address_cast<GenericTypeAddress>(adr4->getTypeParameter(0));
 
 	vector<Message> res = check(typeA, recCheck).getAll();
 	std::sort(res.begin(), res.end());
