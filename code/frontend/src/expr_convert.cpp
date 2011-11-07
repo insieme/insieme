@@ -1553,9 +1553,12 @@ public:
 
 		core::ExpressionPtr ctorExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
-		packedArgs.push_back(ctx.thisStack2);
 
-		// rescue THIS and parent ctor initializers
+		//VLOG(2) << "ParentThisStack "<< parentThisStack << " thisStack2 " << convFact.ctx.thisStack2 << " thisVar " << convFact.ctx.thisVar;
+		//use parentThisStack (not the changed thisStack2) as argument
+		packedArgs.push_back(parentThisStack);
+
+		// reset THIS and parent ctor initializers
 		convFact.ctx.thisStack2 = parentThisStack;
 		convFact.ctx.ctorInitializerMap = parentCtorInitializerMap;
 
@@ -2770,7 +2773,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	);
 
-
 	// we have a c++ method declaration and the special case constructor
 	bool isCXX  = false;
 	bool isCtor = false;
@@ -2911,7 +2913,15 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					funcDecl->getBody()->dump(); \
 	}
 
+
+	//Save thisStack2
+	core::ExpressionPtr thisStack2old = ctx.thisStack2;
+
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
+	//VLOG(2) << "convertFunctionDecl: thisStack2old " << thisStack2old << "thisStack2 " << ctx.thisStack2;
+	//reset thisStack2
+	ctx.thisStack2 = thisStack2old;
+
 	ctx.curParameter = oldList;
 
 	/*
