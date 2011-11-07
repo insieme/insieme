@@ -1,23 +1,18 @@
 /*
- * Copyright 1993-2009 NVIDIA Corporation.  All rights reserved.
+ * Copyright 1993-2010 NVIDIA Corporation.  All rights reserved.
  *
- * NVIDIA Corporation and its licensors retain all intellectual property and 
- * proprietary rights in and to this software and related documentation. 
- * Any use, reproduction, disclosure, or distribution of this software 
- * and related documentation without an express license agreement from
- * NVIDIA Corporation is strictly prohibited.
+ * Please refer to the NVIDIA end user license agreement (EULA) associated
+ * with this source code for terms and conditions that govern your use of
+ * this software. Any use, reproduction, disclosure, or distribution of
+ * this software and related documentation outside the terms of the EULA
+ * is strictly prohibited.
  *
- * Please refer to the applicable NVIDIA end user license agreement (EULA) 
- * associated with this source code for terms and conditions that govern 
- * your use of this NVIDIA software.
- * 
  */
 
 /* Matrix multiplication: C = A * B.
  * Device code.
  */
-#ifdef INSIEME
-#include "ocl_device.h"
+
 //TODO REMOVE!
 #define BLOCK_SIZE 16
 
@@ -28,11 +23,18 @@
 //! Matrix multiplication on the device: C = A * B
 //! uiWA is A's width and uiWB is B's width
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef INSIEME
+#include "ocl_device.h"
+
 #pragma insieme mark
+///////////////////////////////////////////////////////////////////////////////
+//! Matrix multiplication on the device: C = A * B
+//! uiWA is A's width and uiWB is B's width
+////////////////////////////////////////////////////////////////////////////////
 #endif
 __kernel void
 matrixMul( __global float* C, __global float* A, __global float* B, 
-	   __local float* As, __local float* Bs, unsigned int uiWA, unsigned int uiWB)
+	   __local float* As, __local float* Bs, int uiWA, int uiWB)
 {
     // Block index
     int bx = get_group_id(0);

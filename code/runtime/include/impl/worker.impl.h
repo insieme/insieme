@@ -51,9 +51,13 @@
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-	IRT_INFO("======== Worker %p debug info:\n", (void*)self);
-	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack);
-	IRT_INFO("== Current wi: %p\n", (void*)self->cur_wi);
+	IRT_INFO("======== Worker %p debug info:\n", self);
+#ifdef USING_MINLWT	
+	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
+#else
+	IRT_INFO("== Base ptr: %p\n", &(self->basestack)); // casting to void* would break 32 bit compatibility
+#endif
+	IRT_INFO("== Current wi: %p\n", self->cur_wi);
 	//IRT_INFO("==== Pool:\n");
 	//irt_work_item* next_wi = self->pool.start;
 	//while(next_wi != NULL) {
@@ -137,7 +141,11 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		lwt_prepare(self->id.value.components.thread, wi, &self->basestack);
 
 		self->cur_wi = wi;
+#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
+#else
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, &(wi->stack_ptr));
+#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_wi_instrumentation_event(wi, WORK_ITEM_STARTED);
 		lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
@@ -146,7 +154,11 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 	} else { 
 		// resume WI
 		self->cur_wi = wi;
+#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
+#else
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, &(wi->stack_ptr));
+#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 		irt_wi_instrumentation_event(wi, WORK_ITEM_RESUMED);
 		lwt_continue(&wi->stack_ptr, &self->basestack);

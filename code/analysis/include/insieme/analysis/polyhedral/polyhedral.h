@@ -119,15 +119,47 @@ IterationDomain operator!(const IterationDomain& other);
  * composing an affine system refers to the same iteration vector. Therefore changes to the
  * iteration vector owned by this affine system results in changes to all the affine functions. 
  *************************************************************************************************/
-struct AffineSystem : public utils::Printable, boost::noncopyable {
+class AffineSystem : public utils::Printable, boost::noncopyable {
 	
-	typedef std::list<AffineFunction> AffineList;
+	typedef std::unique_ptr<AffineFunction> AffineFunctionPtr;
+	typedef std::vector<AffineFunctionPtr> 	AffineList;
+
+	const IterationVector& iterVec; 
+	AffineList funcs;
+
+public:
+
+	template <class T, class IterT>
+	class Iterator : public boost::random_access_iterator_helper<Iterator<T, IterT>, T> {
+		IterT it, end;
+
+	public:
+		Iterator(const IterT& begin, const IterT& end): it(begin), end(end) { }
+
+        T& operator*() const { return **it; }
+
+        Iterator<T, IterT>& operator++() { ++it; return *this; }
+		Iterator<T, IterT>& operator+=(size_t val) { it+=val; return *this; }
+
+        bool operator==(const Iterator<T, IterT>& rhs) const { 
+			return it == rhs.it;
+		}
+
+		const IterT& get() const { return it; }
+	};
+
+	typedef Iterator<AffineFunction, AffineList::iterator> iterator;
+	typedef Iterator<const AffineFunction, AffineList::const_iterator> const_iterator;
 
 	AffineSystem(const IterationVector& iterVec) : 	
 		iterVec(iterVec) { }	
 
-	AffineSystem(const AffineSystem& other) :
-		iterVec(other.iterVec), funcs(other.funcs) {  }
+	AffineSystem(const AffineSystem& other) : iterVec(other.iterVec) { 
+		for_each(other.funcs, [&] (const AffineFunctionPtr& cur) { 
+				this->append(*cur); 
+			} );
+		assert( other.funcs.size() == funcs.size() );
+	}
 
 	inline const IterationVector& getIterationVector() const { 
 		return iterVec;
@@ -140,21 +172,28 @@ struct AffineSystem : public utils::Printable, boost::noncopyable {
 		return insert(end(), af);
 	}
 
-	void insert(const AffineList::iterator& pos, const AffineFunction& af);
+	void insert(const iterator& pos, const AffineFunction& af);
 
 	inline size_t size() const { return funcs.size(); }
 
-	inline AffineList::iterator begin() { return funcs.begin(); }
-	inline AffineList::iterator end() { return funcs.end(); }
+	inline iterator begin() { return iterator(funcs.begin(), funcs.end()); }
+	inline iterator end() { return iterator(funcs.end(), funcs.end()); }
 
-	inline AffineList::const_iterator begin() const { return funcs.cbegin(); }
-	inline AffineList::const_iterator end() const { return funcs.cend(); }
+	inline const_iterator begin() const { return const_iterator(funcs.cbegin(), funcs.cend()); }
+	inline const_iterator end() const { return const_iterator(funcs.cend(), funcs.cend()); }
+
+	// Return the Affine function at position N of this Affine system 
+	AffineFunction& operator[]( size_t n ) { 
+		assert( n < funcs.size() && "Index out of array bounds" );
+		return *funcs[n]; 
+	}
+	const AffineFunction& operator[]( size_t n ) const { 
+		assert( n < funcs.size() && "Index out of array bounds" );
+		return *funcs[n];
+	}
 
 	std::ostream& printTo(std::ostream& out) const;
 
-private:	
-	const IterationVector& iterVec; 
-	AffineList funcs;
 };
 
 typedef std::shared_ptr<AffineSystem> AffineSystemPtr;

@@ -78,18 +78,18 @@ std::ostream& IterationDomain::printTo(std::ostream& out) const {
 
 std::ostream& AffineSystem::printTo(std::ostream& out) const {
 	out << "{" << std::endl;
-	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunction& cur) { 
-			out << "\t" << cur.toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
+	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunctionPtr& cur) { 
+			out << "\t" << cur->toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
 		} ); 
 	return out << "}" << std::endl;
 }
 
-void AffineSystem::insert(const AffineList::iterator& pos, const AffineFunction& af) { 
+void AffineSystem::insert(const iterator& pos, const AffineFunction& af) { 
 	assert( iterVec == af.getIterationVector() && 
 			"Adding an affine function to a scattering matrix with a different base");
 
 	// adding a row to this matrix 
-	funcs.insert( pos, af.toBase(iterVec) );
+	funcs.insert( pos.get(), AffineFunctionPtr(new AffineFunction(af.toBase(iterVec))) );
 }
 
 //==== Stmt ==================================================================================
