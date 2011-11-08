@@ -856,8 +856,8 @@ namespace core {
 	 * a node can be accessed by linking names to child node IDs. Properties within
 	 * accessors can be defined easiest using the NODE_PROPERTY macro.
 	 *
-	 * @param NAME the name of the node type this accessor is accociated to
-	 * @param ... the types of the child nodes of the accociated node
+	 * @param NAME the name of the node type this accessor is associated to
+	 * @param ... the types of the child nodes of the associated node
 	 */
 	#define IR_NODE_ACCESSOR(NAME, BASE, ... ) \
 		template<typename Derived, template<typename T> class Ptr> \
