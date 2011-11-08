@@ -258,7 +258,7 @@ namespace {
 		});
 
 		PRINT(GenericType, {
-				out << node->getName();
+				out << *node->getName();
 				const TypesPtr& types = node->getTypeParameter();
 				const IntTypeParamsPtr& intTypes = node->getIntTypeParameter();
 				

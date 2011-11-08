@@ -260,7 +260,7 @@ namespace encoder {
 				assert(expr->getNodeType() == core::NT_Literal && "Simple conversion only works for literals!");
 
 				// convert
-				return utils::numeric_cast<T>(static_pointer_cast<const core::Literal>(expr)->getValue());
+				return utils::numeric_cast<T>(static_pointer_cast<const core::Literal>(expr)->getStringValue());
 			}
 		};
 

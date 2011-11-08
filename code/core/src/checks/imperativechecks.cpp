@@ -170,17 +170,15 @@ namespace {
 			const vector<VariablePtr>& params = cur.getAddressedNode()->getParameters()->getElements();
 
 			// check call expressions
-			const CallExprAddress call =
-					static_address_cast<const CallExpr>(cur.getAddressOfChild(params.size()));
+			const CallExprAddress call = cur->getCall();
 
 			// start with function
-			visit(call.getAddressOfChild(1));
+			visit(call->getFunctionExpr());
 
 			// check parameters
 			std::size_t numArgs = call->getArguments().size();
 			for (std::size_t i=0; i<numArgs; i++) {
-				const ExpressionAddress cur =
-						static_address_cast<const Expression>(call.getAddressOfChild(i+2));
+				const ExpressionAddress cur = call->getArgument(i);
 
 				// check whether variable is a bind-parameter
 				if (cur->getNodeType() == NT_Variable

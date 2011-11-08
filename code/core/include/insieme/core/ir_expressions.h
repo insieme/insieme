@@ -269,7 +269,7 @@ namespace core {
 		 * Obtains a reference to the list of expressions being passed as an argument
 		 * to this call expression.
 		 */
-		const vector<Ptr<const Expression>>& getArguments() const {
+		const vector<Ptr<const Expression>> getArguments() const {
 			return getArgumentList()->getExpressions();
 		}
 	};
@@ -536,7 +536,7 @@ namespace core {
 		/**
 		 * Obtains a reference to the lambda defining this lambda expression.
 		 */
-		Pointer<const Lambda> getLambda() const {
+		Ptr<const Lambda> getLambda() const {
 			return getDefinition()->getDefinitionOf(getVariable());
 		}
 
@@ -727,14 +727,14 @@ namespace core {
 		 * 				   this recursive function definition.
 		 * @return a copy of the internally maintained pointer to the actual function definition.
 		 */
-		Pointer<const Lambda> getDefinitionOf(const VariablePtr& variable) const {
+		Ptr<const Lambda> getDefinitionOf(const VariablePtr& variable) const {
 			auto definitions = getDefinitions();
 			auto it = std::find_if(definitions.begin(), definitions.end(),
 					[&](const LambdaBindingPtr& cur) { return *cur->getVariable() == *variable; }
 			);
 
 			if (it == definitions.end()) {
-				return Pointer<const Lambda>();
+				return Ptr<const Lambda>();
 			}
 			return it->getLambda();
 		}

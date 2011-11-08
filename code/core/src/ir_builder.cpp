@@ -282,7 +282,7 @@ SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vecto
 }
 
 SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<SwitchCasePtr>& cases, const StatementPtr& defaultCase) const {
-	return switchStmt(switchExpr, switchCases(cases), wrapBody(defaultCase));
+	return switchStmt(switchExpr, switchCases(cases), (defaultCase)?wrapBody(defaultCase):getNoOp());
 }
 
 FunctionTypePtr IRBuilder::toPlainFunctionType(const FunctionTypePtr& funType) const {

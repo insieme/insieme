@@ -244,7 +244,6 @@ TEST(IRParser, StatementTests) {
     EXPECT_EQ(builtForStmt->getStep(), parsedForStmt->getStep());
     EXPECT_EQ(builtForStmt->getStart(), parsedForStmt->getStart());
     EXPECT_EQ(builtForStmt->getEnd(), parsedForStmt->getEnd());
-    EXPECT_EQ(builtForStmt->getIterator(), parsedForStmt->getIterator());
     EXPECT_EQ(compoundStmt, parsedForStmt->getBody());
 
     // if statement

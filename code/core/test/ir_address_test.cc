@@ -111,6 +111,22 @@ TEST(NodeAddressTest, Basic) {
 	EXPECT_NE(addrA2, NodeAddress(Path(root).extendForChild(1).extendForChild(0).extendForChild(1).extendForChild(0)));
 }
 
+TEST(NodeAddressTest, NullTest) {
+
+	NodeAddress addr;
+	EXPECT_FALSE(addr);
+	EXPECT_EQ("NULL", toString(addr));
+
+}
+
+TEST(NodeAddressTest, SizeTest) {
+
+	NodeAddress addr;
+	EXPECT_EQ(sizeof(addr), 3*sizeof(int*));
+
+}
+
+
 TEST(NodeAddressTest, HashSinglePath) {
 
 	NodeManager manager;

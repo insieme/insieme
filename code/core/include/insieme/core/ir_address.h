@@ -248,7 +248,6 @@ struct DynamicAddressCast;
  */
 template<typename T>
 class Address :
-	public utils::HashableImmutableData<Address<T>>,
 	public node_type<typename boost::remove_const<T>::type>::adr_accessor_type {
 
 public:
@@ -286,16 +285,14 @@ public:
 		typename B,
 		typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0
 	>
-	explicit Address(const Pointer<B>& root)
-		: utils::HashableImmutableData<Address<T>>(Path::hashSingleStepPath(root)), path(root) {}
+	explicit Address(const Pointer<B>& root) : path(root) {}
 
 	/**
 	 * A constructor creating a node address based on a path through an AST.
 	 *
 	 * @param path the path to the node to be addressed.
 	 */
-	Address(const Path& path = Path())
-		: utils::HashableImmutableData<Address<T>>(path.hash()), path(path) {}
+	Address(const Path& path = Path()) : path(path) {}
 
 	/**
 	 * A extended version of the copy constructor allowing to copy from addresses pointing
@@ -307,8 +304,7 @@ public:
 		typename B,
 		typename boost::enable_if<boost::is_base_of<T,B>,int>::type = 0
 	>
-	Address(const Address<B>& from)
-		: utils::HashableImmutableData<Address<T>>(from.hash()), path(from.getPath()) {}
+	Address(const Address<B>& from) : path(from.getPath()) {}
 
 	/**
 	 * Finds *an* address with the given root and target.
@@ -413,6 +409,20 @@ public:
 		// extend path by child element
 		return NodeAddress(path.extendForChild(index));
 	}
+
+	/**
+	 * Obtains the address of a child node. It is extending the path represented by this address by
+	 * the given sequence of steps.
+	 *
+	 * @param index the first child to be resolved
+	 * @param rest the remaining steps
+	 * @return the address of the requested child node
+	 */
+	template<typename ... Indices>
+	NodeAddress getAddressOfChild(unsigned index, Indices ... rest) const {
+		return getAddressOfChild(index).getAddressOfChild(rest...);
+	}
+
 
 	/**
 	 * This generic method allows to access child nodes in a type-safe way. It is also used
@@ -544,18 +554,28 @@ public:
 		return path < other.path;
 	}
 
-protected:
+	/**
+	 * Obtains a hash value for this address.
+	 */
+	std::size_t hash() const {
+		// take hash of path
+		return path.hash();
+	}
 
 	/**
-	 * Compares this instance with the given instance. Of both addresses represent
-	 * the same path within an expression, both addresses will be considered equivalent.
-	 *
-	 * @param other The node address to be compared to.
-	 * @return true if equivalent, false otherwise.
+	 * Checks whether this address is referencing the same path as
+	 * the given address.
 	 */
-	virtual bool equals(const Address<T>& other) const {
-		// simply compare the paths
-		return path == other.path;
+	bool operator==(const Address<T>& other) const {
+		// test for identity or equal path
+		return this == &other || path == other.path;
+	}
+
+	/**
+	 * Implementing the not-equal operator addresses.
+	 */
+	bool operator!=(const Address<T>& other) const {
+		return !(*this == other);
 	}
 
 };
@@ -727,7 +747,7 @@ namespace std {
 	 */
 	template<typename T>
 	std::ostream& operator<<(std::ostream& out, const insieme::core::Address<T>& node) {
-		return out << node.getPath();
+		return (node) ? out << node.getPath() : out << "NULL";
 	}
 
 }

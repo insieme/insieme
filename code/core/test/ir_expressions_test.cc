@@ -39,6 +39,7 @@
 #include "insieme/core/ir_statements.h"
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
 
 #include "insieme/utils/set_utils.h"
 
@@ -240,6 +241,41 @@ TEST(ExpressionsTest, LambdaExpr) {
 
 	EXPECT_EQ("rec v1.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*even));
 	EXPECT_EQ("rec v2.{v1=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return true;} else {return bool.not(v2(v3));};}, v2=fun(uint<4> v3) {if(uint.eq(v3, 0)) {return false;} else {return bool.not(v1(v3));};}}", toString(*odd));
+}
+
+TEST(ExpressionsTest, CallExpr) {
+
+	NodeManager manager;
+	IRBuilder builder(manager);
+
+	TypePtr typeA = builder.genericType("A");
+	TypePtr typeRes = builder.genericType("R");
+
+	FunctionTypePtr funTypeA = builder.functionType(toVector<TypePtr>(), typeRes);
+	FunctionTypePtr funTypeB = builder.functionType(toVector(typeA), typeRes);
+	FunctionTypePtr funTypeC = builder.functionType(toVector(typeA, typeA), typeRes);
+
+	LiteralPtr funA = builder.literal(funTypeA, "f");
+	LiteralPtr funB = builder.literal(funTypeB, "g");
+	LiteralPtr funC = builder.literal(funTypeC, "h");
+
+	LiteralPtr constantA = builder.literal(typeA, "12");
+	LiteralPtr constantB = builder.literal(typeA, "14");
+
+	CallExprPtr callA = builder.callExpr(funA, toVector<ExpressionPtr>());
+	CallExprPtr callB = builder.callExpr(funB, toVector<ExpressionPtr>(constantA));
+	CallExprPtr callC = builder.callExpr(funC, toVector<ExpressionPtr>(constantA, constantB));
+
+	EXPECT_EQ(callA->getArguments(), toVector<ExpressionPtr>());
+	EXPECT_EQ(callB->getArguments(), toVector<ExpressionPtr>(constantA));
+	EXPECT_EQ(callC->getArguments(), toVector<ExpressionPtr>(constantA, constantB));
+
+	CallExprAddress callC2 = CallExprAddress(callC);
+	EXPECT_EQ(callC2->getArguments(), toVector(callC2->getArgument(0), callC2->getArgument(1)));
+
+	basicExprTests(callA, typeRes, toVector<NodePtr>(typeRes, funA, builder.expressions(toVector<ExpressionPtr>())));
+	basicExprTests(callB, typeRes, toVector<NodePtr>(typeRes, funB, builder.expressions(toVector<ExpressionPtr>(constantA))));
+	basicExprTests(callC, typeRes, toVector<NodePtr>(typeRes, funC, builder.expressions(toVector<ExpressionPtr>(constantA, constantB))));
 }
 
 TEST(ExpressionsTest, BindExpr) {

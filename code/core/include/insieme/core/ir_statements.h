@@ -367,6 +367,14 @@ namespace core {
 	 * The accessor associated to the compound statement.
 	 */
 	IR_LIST_NODE_ACCESSOR(CompoundStmt, Statement, Statement, Statements)
+
+		/**
+		 * Obtains a reference to the statement with the given index.
+		 */
+		Ptr<const Statement> getStatement(std::size_t index) const {
+			return CompoundStmtAccessor<Derived, Ptr>::getElement(index);
+		}
+
 	};
 
 	/**

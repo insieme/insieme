@@ -37,6 +37,7 @@
 #include "insieme/core/checks/semanticchecks.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
+#include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/container_utils.h"
 
@@ -71,16 +72,15 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 
 	for(unsigned argIndex = 0; argIndex < curPtr->getArguments().size(); ++argIndex) {
 		 // the potential outer call to scalar.to.array in one of curcall's parameters
-		CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curPtr->getArgument(argIndex));
-		if(!convertcall) continue;
-		if(!basic.isScalarToArray(convertcall->getFunctionExpr())) continue;
+		ExpressionPtr curArg = curPtr->getArgument(argIndex);
+		if (!core::analysis::isCallOf(curArg, basic.getScalarToArray())) continue;
 		LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curPtr->getFunctionExpr());
 		if(!called) continue;
 		VariablePtr param = called->getParameterList()[argIndex];
 		//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
 		visitDepthFirst(firstAddress(curcall, called->getBody()), [&](const VariableAddress& var) {
-			if(var.getAddressedNode() != param) return;
-			CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode());
+			if(*var.getAddressedNode() != *param) return;
+			CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode(2));
 			if(usecall) {
 				if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {
 					try {
@@ -88,14 +88,14 @@ OptionalMessageList ScalarArrayIndexRangeCheck::visitCallExpr(const CallExprAddr
 						if(formula.isZero()) {
 							// correct use
 						} else {
-							add(res, Message(var.getParentAddress(),
+							add(res, Message(var.getParentAddress(2),
 								EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 								format("Potentially unsafe indexing of single-element array %s using formula %s", 
 									toString(*(param)).c_str(), toString(formula).c_str()),
 								Message::WARNING));
 						}
 					} catch(arithmetic::NotAFormulaException e) {
-						add(res, Message(var.getParentAddress(),
+						add(res, Message(var.getParentAddress(2),
 							EC_SEMANTIC_ARRAY_INDEX_OUT_OF_RANGE,
 							format("Potentially unsafe indexing of single-element array %s using expression %s", 
 								toString(*(param)).c_str(), toString(*(usecall->getArgument(1))).c_str()),

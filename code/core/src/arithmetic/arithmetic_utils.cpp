@@ -75,7 +75,7 @@ namespace {
 
 		Formula visitLiteral(const LiteralPtr& cur) {
 			checkType(cur);
-			return utils::numeric_cast<int>(cur->getValue());
+			return utils::numeric_cast<int>(cur->getValue()->getValue());
 		}
 
 		Formula visitVariable(const VariablePtr& cur) {

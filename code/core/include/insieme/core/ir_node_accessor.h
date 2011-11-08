@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/string_utils.h"
 
@@ -123,23 +125,18 @@ namespace core {
 		class node_access_helper<Address<const Derived>> {
 
 			/**
-			 * A flag determining whether the child list has already been
-			 * computed or not.
+			 * The lazy-evaluated list of child-addresses. If the pointer is null, the
+			 * child list hasn't been evaluated yet. Using the shared pointer will handle
+			 * life cycles and it will reduce the amount of work when copying addresses.
 			 */
-			mutable bool childListValid;
-
-			/**
-			 * The evaluated list of child-addresses. This child list is only valid
-			 * in case the childListValid flag is set.
-			 */
-			mutable vector<NodeAddress> childList;
+			mutable std::shared_ptr<vector<NodeAddress>> childList;
 
 		public:
 
 			/**
 			 * A simple constructor for this type.
 			 */
-			node_access_helper() : childListValid(false), childList() {};
+			node_access_helper() : childList() {};
 
 			/**
 			 * The type of the handled node.
@@ -159,15 +156,16 @@ namespace core {
 			 * @return a reference to the internally maintained child list
 			 */
 			const vector<NodeAddress>& getChildList() const {
-				if (!childListValid) {
+				if (!childList) {
 					// produce child list
 					const NodeList& children = getNode().getChildNodeList();
+					childList = std::make_shared<vector<NodeAddress>>();
+					vector<NodeAddress>& list = *childList;
 					for(unsigned i=0; i<children.size(); ++i) {
-						childList.push_back(static_cast<const Address<const Derived>*>(this)->getAddressOfChild(i));
+						list.push_back(static_cast<const Address<const Derived>*>(this)->getAddressOfChild(i));
 					}
-					childListValid = true;
 				}
-				return childList;
+				return *childList;
 			}
 
 		};
