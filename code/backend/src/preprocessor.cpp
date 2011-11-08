@@ -38,8 +38,8 @@
 
 #include "insieme/backend/ir_extensions.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/core/type_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
@@ -103,7 +103,7 @@ namespace backend {
 	public:
 
 		ITEConverter(core::NodeManager& manager) :
-			ITE(manager.basic.getIfThenElse()),  extensions(manager.getLangExtension<IRExtensions>()) {};
+			ITE(manager.getLangBasic().getIfThenElse()),  extensions(manager.getLangExtension<IRExtensions>()) {};
 
 		/**
 		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
@@ -125,7 +125,7 @@ namespace backend {
 			}
 
 			// exchange ITE call
-			core::ASTBuilder builder(res->getNodeManager());
+			core::IRBuilder builder(res->getNodeManager());
 			core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
 			const vector<core::ExpressionPtr>& args = call->getArguments();
 			res = builder.callExpr(extensions.lazyITE, args[0], evalLazy(args[1]), evalLazy(args[2]));
@@ -173,13 +173,13 @@ namespace backend {
 
 		const core::LiteralPtr initZero;
 		core::NodeManager& manager;
-		core::ASTBuilder builder;
+		core::IRBuilder builder;
 		const core::lang::BasicGenerator& basic;
 
 	public:
 
 		InitZeroReplacer(core::NodeManager& manager) :
-			initZero(manager.basic.getInitZero()), manager(manager), builder(manager), basic(manager.getBasicGenerator()) {};
+			initZero(manager.getLangBasic().getInitZero()), manager(manager), builder(manager), basic(manager.getLangBasic()) {};
 
 		/**
 		 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
@@ -293,7 +293,7 @@ namespace backend {
 
 	public:
 
-		PointwiseReplacer(core::NodeManager& manager) : manager(manager), basic(manager.getBasicGenerator()) {};
+		PointwiseReplacer(core::NodeManager& manager) : manager(manager), basic(manager.getLangBasic()) {};
 
 		const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
@@ -328,7 +328,7 @@ namespace backend {
 					core::ExpressionPtr op = static_pointer_cast<const core::CallExpr>(call->getFunctionExpr())->getArgument(0);
 
 					// create new lambda, realizing the point-wise operation
-					core::ASTBuilder builder(manager);
+					core::IRBuilder builder(manager);
 
 					core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(argType, argType), resType);
 
@@ -380,7 +380,7 @@ namespace backend {
 
 	bool isZero(const core::ExpressionPtr& value) {
 
-		const core::lang::BasicGenerator& basic = value->getNodeManager().getBasicGenerator();
+		const core::lang::BasicGenerator& basic = value->getNodeManager().getLangBasic();
 
 		// if initialization is zero ...
 		if (core::analysis::isCallOf(value, basic.getInitZero())) {
@@ -473,7 +473,7 @@ namespace backend {
 		}
 
 		// check initialization
-		if (!core::analysis::isCallOf(globalDecl->getInitialization(), manager.basic.getRefNew())) {
+		if (!core::analysis::isCallOf(globalDecl->getInitialization(), manager.getLangBasic().getRefNew())) {
 			// this is not a global struct ...
 			return code;
 		}
@@ -482,12 +482,12 @@ namespace backend {
 
 		// replace global declaration statement with initalization block
 		const IRExtensions& extensions = manager.getLangExtension<IRExtensions>();
-		core::TypePtr unit = manager.getBasicGenerator().getUnit();
+		core::TypePtr unit = manager.getLangBasic().getUnit();
 		core::ExpressionPtr initValue = core::analysis::getArgument(globalDecl->getInitialization(), 0);
 		core::StatementPtr initGlobal = core::CallExpr::get(manager, unit, extensions.initGlobals, toVector(initValue));
 
 
-		core::ASTBuilder builder(manager);
+		core::IRBuilder builder(manager);
 		vector<core::StatementPtr> initExpressions;
 		{
 			// start with initGlobals call (initializes code fragment and adds dependencies)
@@ -499,8 +499,8 @@ namespace backend {
 			core::StructExprPtr initStruct = static_pointer_cast<const core::StructExpr>(initValue);
 
 			// get some functions used for the pattern matching
-			core::ExpressionPtr initUniform = manager.basic.getVectorInitUniform();
-			core::ExpressionPtr initZero = manager.basic.getInitZero();
+			core::ExpressionPtr initUniform = manager.getLangBasic().getVectorInitUniform();
+			core::ExpressionPtr initZero = manager.getLangBasic().getInitZero();
 
 			for_each(initStruct->getMembers(), [&](const core::StructExpr::Member& cur) {
 
@@ -573,8 +573,8 @@ namespace backend {
 		core::CallExprPtr handleCallExpr(core::CallExprPtr call) {
 
 			// extract node manager
-			core::ASTBuilder builder(manager);
-			const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
+			core::IRBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = builder.getLangBasic();
 
 
 			// check whether there is a argument which is a vector but the parameter is not
@@ -680,7 +680,7 @@ namespace backend {
 			const core::ExpressionPtr& oldInit = declaration->getInitialization();
 
 			// construct a new init statement
-			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.basic.getVectorToArray(), toVector(oldInit));
+			core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.getLangBasic().getVectorToArray(), toVector(oldInit));
 			return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
 		}
 	};

@@ -41,7 +41,7 @@
 #include "insieme/backend/c_ast/forward_decls.h"
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/map_utils.h"
 

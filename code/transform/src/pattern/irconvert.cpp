@@ -36,7 +36,7 @@
 
 #include "insieme/transform/pattern/irconvert.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/utils/container_utils.h"
 
 using std::make_shared;
@@ -99,11 +99,11 @@ namespace {
 	/**
 	 * Visitor that converts any IR address to the tree structure used by the pattern matcher.
 	 */
-	class TreeConverter : public core::ASTVisitor<TreePtr> {
+	class TreeConverter : public core::IRVisitor<TreePtr> {
 
 	public:
 
-		TreeConverter() : core::ASTVisitor<TreePtr>(true) { }
+		TreeConverter() : core::IRVisitor<TreePtr>(true) { }
 
 		// NODES REQUIERING SPECIAL TREATMENT
 

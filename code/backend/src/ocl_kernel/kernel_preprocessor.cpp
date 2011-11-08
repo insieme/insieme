@@ -40,14 +40,14 @@
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_check.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/annotations/c/naming.h"
@@ -156,7 +156,7 @@ namespace {
 
 
 		VariableMap& mapBodyVars(VariableMap& res, const core::CallExprPtr& call) {
-			auto& basic = call->getNodeManager().getBasicGenerator();
+			auto& basic = call->getNodeManager().getLangBasic();
 
 			core::LambdaExprPtr fun = static_pointer_cast<const core::LambdaExpr>(call->getFunctionExpr());
 			auto body = fun->getBody()->getStatements()[0];
@@ -208,7 +208,7 @@ namespace {
 
 
 		core::StatementPtr getKernelCore(const core::BindExprPtr& bind) {
-			auto& basic = bind->getNodeManager().getBasicGenerator();
+			auto& basic = bind->getNodeManager().getLangBasic();
 
 			core::StatementPtr body = static_pointer_cast<const core::LambdaExpr>(bind->getCall()->getFunctionExpr())->getBody();
 			if (body->getNodeType() == core::NT_CompoundStmt) {
@@ -284,8 +284,8 @@ namespace {
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
-				core::ASTBuilder builder(manager);
-				auto& basic = manager.getBasicGenerator();
+				core::IRBuilder builder(manager);
+				auto& basic = manager.getLangBasic();
 				auto& extensions = manager.getLangExtension<Extensions>();
 
 				// perform conversion in post-order
@@ -374,8 +374,8 @@ namespace {
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
-				core::ASTBuilder builder(manager);
-				auto& basic = manager.getBasicGenerator();
+				core::IRBuilder builder(manager);
+				auto& basic = manager.getLangBasic();
 				auto& hostExt = manager.getLangExtension<ocl_host::Extensions>();
 
 				// perform conversion in post-order

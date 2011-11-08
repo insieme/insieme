@@ -48,7 +48,7 @@ core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
 	const core::NodeManager& mgr = expr->getNodeManager();
 	
 	while (expr->getNodeType() == core::NT_CallExpr &&
-		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.basic.getRefDeref())) {
+		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.getLangBasic().getRefDeref())) {
 
 			expr = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);	
 	}

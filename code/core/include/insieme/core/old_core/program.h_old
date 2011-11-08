@@ -10,16 +10,16 @@
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/statements.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_types.h"
 
 namespace insieme {
 namespace core {
 
 
-class ASTBuilder;
+class IRBuilder;
 
 /**
  * This class implements an AST Node which can be used to represent entire programs. Unlike

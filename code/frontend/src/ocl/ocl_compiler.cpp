@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_node.h"
 
 #include "insieme/core/transform/node_mapper_utils.h"
 
@@ -91,7 +91,7 @@ void KernelData::appendArguments(std::pair<std::vector<core::VariablePtr>, std::
         ADD_ARG(arguments, localRange, aTypes);
 }
 
-void KernelData::appendShared(core::JobExpr::LocalDecls& sharedList, OCL_SCOPE scope) {
+void KernelData::appendShared(vector<core::DeclarationStmtPtr>& sharedList, OCL_SCOPE scope) {
 
     if(globalRangeUsed)
          SHARE(sharedList, globalRange);
@@ -164,11 +164,11 @@ core::CallExprPtr KernelData::accessId(OCL_PAR_LEVEL opl, core::ExpressionPtr id
     core::ReturnStmtPtr ret2 = builder.returnStmt(id2);
 
     // build switch
-    vector<core::SwitchStmt::Case> cases;
+    vector<core::SwitchCasePtr> cases;
 
-    cases.push_back(std::make_pair(builder.uintLit(0), ret0));
-    cases.push_back(std::make_pair(builder.uintLit(1), ret1));
-    cases.push_back(std::make_pair(builder.uintLit(2), ret2));
+    cases.push_back(builder.switchCase(builder.uintLit(0), ret0));
+    cases.push_back(builder.switchCase(builder.uintLit(1), ret1));
+    cases.push_back(builder.switchCase(builder.uintLit(2), ret2));
 
     core::SwitchStmtPtr swtch = builder.switchStmt(idxVar, cases);
 
@@ -213,13 +213,13 @@ core::CallExprPtr KernelData::callBarrier(const core::ExpressionPtr& memFence) {
     }
 
     if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(arg)){
-        if(lit->getValue() == "0") {
+        if(lit->getStringValue() == "0") {
             //if lit is 0 CLK_LOCAL_MEM_FENCE,
-            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
+            return builder.callExpr(builder.getNodeManager().getLangBasic().getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
         }
-        if(lit->getValue() == "1"){
+        if(lit->getStringValue() == "1"){
             //if lit is 1 CLK_GLOBAL_MEM_FENCE
-            return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
+            return builder.callExpr(builder.getNodeManager().getLangBasic().getBarrier(), builder.getThreadGroup(builder.uintLit(1)));
         }
     }
     // can also be barrier(CLK_LOCAL_MEM_FENCE | CLK_GLOBAL_MEM_FENCE)
@@ -231,29 +231,29 @@ core::CallExprPtr KernelData::callBarrier(const core::ExpressionPtr& memFence) {
             unsigned int b = 0x2;
             for(auto I = args.begin(), E = args.end(); I != E; ++I) {
                 if(core::LiteralPtr lit = core::dynamic_pointer_cast<const core::Literal>(*I)){
-                    if(lit->getValue() == "0") {
+                    if(lit->getStringValue() == "0") {
                         //if lit is 0 CLK_LOCAL_MEM_FENCE,
                         b &= 0x1; // set second last bit to 0 and preserve last bit
                     }
-                    if(lit->getValue() == "1"){
+                    if(lit->getStringValue() == "1"){
                         //if lit is 1 CLK_GLOBAL_MEM_FENCE
                         b = 0x1; // set second last bit to 0 and last bit to 1
                     }
                 }
             }
             if(b < 2) // if valid argument has been found
-                return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(b)));
+                return builder.callExpr(builder.getNodeManager().getLangBasic().getBarrier(), builder.getThreadGroup(builder.uintLit(b)));
         }
     }
 
     // TODO show warning
     assert(false && "OpenCL barrier has unexpected argument. Has to be 0 or 1");
-    return builder.callExpr(builder.getNodeManager().basic.getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
+    return builder.callExpr(builder.getNodeManager().getLangBasic().getBarrier(), builder.getThreadGroup(builder.uintLit(0)));
 }
 
 
 class KernelMapper : public core::transform::CachedNodeMapping {
-    const core::ASTBuilder& builder;
+    const core::IRBuilder& builder;
 
     // Vectors to store local variables
 
@@ -365,7 +365,7 @@ private:
 public:
 
 
-    KernelMapper(const core::ASTBuilder& astBuilder, KernelData& data)
+    KernelMapper(const core::IRBuilder& astBuilder, KernelData& data)
     : builder(astBuilder), kd(data) { };
 
     const core::NodePtr resolveElement(const core::NodePtr& element) {
@@ -384,68 +384,68 @@ public:
 
             if(core::LiteralPtr literal = core::dynamic_pointer_cast<const core::Literal>(fun)) {
                 // reading parallel loop boundaries
-                if(literal->getValue() == "get_global_size") {
+                if(literal->getStringValue() == "get_global_size") {
                     assert(args.size() == 1 && "Function get_global_size must have exactly 1 argument");
 
                     return kd.accessRange(OPL_GLOBAL, args.at(0));
                 }
-                if(literal->getValue() == "get_num_groups") {
+                if(literal->getStringValue() == "get_num_groups") {
                     assert(args.size() == 1 && "Function get_num_groups must have exactly 1 argument");
 
                     return kd.accessRange(OPL_GROUP, args.at(0));
                 }
-                if(literal->getValue() == "get_local_size") {
+                if(literal->getStringValue() == "get_local_size") {
                     assert(args.size() == 1 && "Function get_local_size must have exactly 1 argument");
 
                     return kd.accessRange(OPL_LOCAL, args.at(0));
                 }
 
                 // thread identification
-                if(literal->getValue() == "get_global_id") {
+                if(literal->getStringValue() == "get_global_id") {
                     assert(args.size() == 1 && "Function get_global_id must have exactly 1 argument");
 
                     return kd.accessId(OPL_GLOBAL, args.at(0));
                 }
-                if(literal->getValue() == "get_group_id") {
+                if(literal->getStringValue() == "get_group_id") {
                     assert(args.size() == 1 && "Function get_group_id must have exactly 1 argument");
 
                     return kd.accessId(OPL_GROUP, args.at(0));
                 }
 
 
-                if(literal->getValue() == "get_local_id") {
+                if(literal->getStringValue() == "get_local_id") {
                     assert(args.size() == 1 && "Function get_local_id must have exactly 1 argument");
 
                     return kd.accessId(OPL_LOCAL, args.at(0));
                 }
 
                 // synchronization
-                if(literal->getValue() == "ocl_barrier") {
+                if(literal->getStringValue() == "ocl_barrier") {
                     assert(args.size() == 1 && "Function barrier must have exactly 1 argument");
 
                     return kd.callBarrier(args.at(0));
                 }
 
                 // native math functions
-                if(literal->getValue().find("native_") != string::npos) {
+                if(literal->getStringValue().find("native_") != string::npos) {
                     assert(args.size() >= 1 && "Native mathematical operations must have at least 1 arguments");
 
-                    return resolveNative(literal->getValue(), 7, literal->getType(),
+                    return resolveNative(literal->getStringValue(), 7, literal->getType(),
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
-                if(literal->getValue().find("half_") != string::npos) { // since half is mapped to float we can use a low accuracy method
+                if(literal->getStringValue().find("half_") != string::npos) { // since half is mapped to float we can use a low accuracy method
                     assert(args.size() >= 1 && "Mathematical operations must have at least 1 arguments");
 
-                    return resolveNative(literal->getValue(), 5, literal->getType(),
+                    return resolveNative(literal->getStringValue(), 5, literal->getType(),
                             (args.size() == 1) ? BASIC.getAccuracyFastUnary() : BASIC.getAccuracyFastBinary(), args);
                 }
-                if(literal->getValue() == "mul24") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
+                if(literal->getStringValue() == "mul24") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
                     assert(args.size() == 2 && "mul24 must have 2 arguments");
 
-                    return resolveNative(literal->getValue(), 0, literal->getType(), BASIC.getAccuracyFastBinary(), args);
+                    return resolveNative(literal->getStringValue(), 0, literal->getType(), BASIC.getAccuracyFastBinary(), args);
                 }
 
-                if(literal->getValue() == "fma") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
+                if(literal->getStringValue() == "fma") { // since it has lower precision and should be faster than standard mul it is mapped to accuracy.fast(mul)
                     assert(args.size() == 3 && "fma must have 3 arguments");
 
                     // construct function type: all elements have the same (real) datatype, but only 2 instead of three arguments
@@ -455,10 +455,10 @@ public:
                 }
 
                 // vector conversion function
-                if(literal->getValue().find("convert_") != string::npos) {
+                if(literal->getStringValue().find("convert_") != string::npos) {
                     assert(args.size() == 1 && "Convert operations must have exactly 1 argument");
 
-                    return resolveConvert(call, literal->getValue(), literal->getType(), args);
+                    return resolveConvert(call, literal->getStringValue(), literal->getType(), args);
                 }
             }
 
@@ -476,18 +476,18 @@ public:
             KernelMapper lambdaMapper(builder, lambdaData);
 
             // transform body of lambda
-            core::StatementPtr newBody = core::dynamic_pointer_cast<const core::Statement>(fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper));
+            core::StatementPtr newBody = fun->getBody()->substitute(builder.getNodeManager(), lambdaMapper);
 
             // store capture list of function (if existent)
             ArgList args;
-            core::Lambda::ParamList bindArgs;;
+            core::VariableList bindArgs;;
 
             if(bind) {
-                args.first = fun->getParameterList();
+                args.first = fun->getParameterList()->getElements();
                 args.second = bind->getCall()->getArguments();
-                bindArgs = bind->getParameters();
+                bindArgs = bind->getParameters()->getElements();
             } else {
-            	for_each(fun->getParameterList(), [&](core::VariablePtr arg) {
+            	for_each(fun->getParameterList()->getElements(), [&](core::VariablePtr arg) {
             		core::VariablePtr tmpVar = builder.variable(arg->getType());
             		ADD_PARAM(args, arg, tmpVar);
             		bindArgs.push_back(tmpVar);
@@ -531,7 +531,7 @@ public:
                             core::NodeType derefType = tryDeref(decl->getVariable())->getType()->getNodeType();
 
                             if(derefType == core::NT_ArrayType || derefType == core::NT_VectorType)
-                                init = builder.refVar(builder.callExpr(BASIC.getUndefined(), BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
+                                init = builder.refVar(builder.callExpr(BASIC.getUndefined(), builder.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
                             else if (varType->getNodeType() == core::NT_RefType)
                                 init = builder.refVar(builder.castExpr(tryDeref(decl->getVariable())->getType(), builder.intLit(0)));
                             else {
@@ -542,7 +542,7 @@ public:
                             localVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
                             if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
-                                return BASIC.getNoOp();
+                                return builder.getNoOp();
                             // write the variable with it's initialization to the place the declaration was
                             // if it was a call to refVar, remove it and replace it by it's argument
                             return removeRefVar(decl);
@@ -554,12 +554,12 @@ public:
                         }
                         case annotations::ocl::AddressSpaceAnnotation::GLOBAL: {
                             core::CallExprPtr init = builder.refVar(builder.callExpr(BASIC.getUndefined(),
-                                 BASIC.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
+                                 builder.getTypeLiteral(tryDeref(decl->getVariable())->getType())));
                              // store the variable in list, initialized with zero, will be declared in global variable list
                              globalVars.push_back(builder.declarationStmt(decl->getVariable(), init));
 
                              if(init == decl->getInitialization()) // place a noop if variable is only initialized with zeros (already done above)
-                                 return BASIC.getNoOp();
+                                 return builder.getNoOp();
                              // write the variable with it's initialization to the place the declaration was
                              // if it was a call to refVar, remove it and replace it by it's argument
                              return removeRefVar(decl);
@@ -618,7 +618,7 @@ public:
 };
 
 class OclMapper : public core::transform::CachedNodeMapping {
-    const core::ASTBuilder& builder;
+    const core::IRBuilder& builder;
 
 private:
     template <typename T>
@@ -654,7 +654,7 @@ private:
         }
 
 
-        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getUnsignedIntMul(),
+        return builder.callExpr(builder.getNodeManager().getLangBasic().getUInt4(), builder.getNodeManager().getLangBasic().getUnsignedIntMul(),
             toVector<core::ExpressionPtr>( vecProduct(vec, n), SUBSCRIPT(vec, n, builder) ));
     }
 
@@ -665,13 +665,13 @@ private:
     // The last parameter contains a mapping of each variable to its original one (before chatching). This
     // will be automatically updated
 
-    void createDeclarations(core::JobExpr::LocalDecls& outVec, std::vector<core::VariablePtr>& inVec) {
+    void createDeclarations(vector<core::DeclarationStmtPtr>& outVec, std::vector<core::VariablePtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             SHARE(outVec, *I);
         }
     }
 
-    void createDeclarations(core::JobExpr::LocalDecls& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
+    void createDeclarations(vector<core::DeclarationStmtPtr>& outVec, std::vector<core::DeclarationStmtPtr>& inVec) {
         for(auto I = inVec.begin(), E = inVec.end(); I != E; I++) {
             const core::VariablePtr& initVal = builder.variable((*I)->getVariable()->getType());
 
@@ -754,7 +754,7 @@ private:
 
         kd.appendArguments(arguments, scope, argTypes);
 
-        core::FunctionTypePtr funType = builder.functionType(argTypes, builder.getNodeManager().basic.getUnit());
+        core::FunctionTypePtr funType = builder.functionType(argTypes, builder.getNodeManager().getLangBasic().getUnit());
 
 
         return builder.bindExpr(std::vector<core::VariablePtr>(), builder.callExpr(builder.lambdaExpr(funType, arguments.first, body), arguments.second));
@@ -762,7 +762,7 @@ private:
 
 public:
 
-    OclMapper(core::ASTBuilder& astBuilder)
+    OclMapper(core::IRBuilder& astBuilder)
         :  builder(astBuilder)
           { };
 
@@ -817,7 +817,7 @@ public:
                     return element->substitute(builder.getNodeManager(), *this);
                 }
 
-                core::Lambda::ParamList params = func->getParameterList();
+                core::VariableList params = func->getParameterList()->getElements();
 
                 std::vector<OCL_ADDRESS_SPACE> argsOrder;
 
@@ -828,7 +828,7 @@ public:
                 std::vector<core::VariablePtr> privateArgs;
 
                 // store memory spaces of arguments
-                for(core::Lambda::ParamList::iterator pi = params.begin(), pe = params.end(); pi != pe; pi++) {
+                for(auto pi = params.begin(), pe = params.end(); pi != pe; pi++) {
                     core::VariablePtr var = *pi;
                     if(var->hasAnnotation(annotations::ocl::BaseAnnotation::KEY)) {
                         annotations::ocl::BaseAnnotationPtr annot = var->getAnnotation(annotations::ocl::BaseAnnotation::KEY);
@@ -880,9 +880,9 @@ public:
                     core::TypePtr retTy = funcType->getReturnType();
 
                     //check return type
-                    assert(retTy->getNodeManager().basic.isUnit(retTy) && "Return type of kernel functions must be void.");
+                    assert(retTy->getNodeManager().getLangBasic().isUnit(retTy) && "Return type of kernel functions must be void.");
 
-                    core::TypeList args = funcType->getParameterTypes();
+                    core::TypeList args = funcType->getParameterTypes()->getElements();
                     args.push_back(kd.globalRange->getType());
                     args.push_back(kd.localRange->getType());
 
@@ -897,25 +897,25 @@ public:
                 if(core::StatementPtr newBody = dynamic_pointer_cast<const core::Statement>(oldBody->substitute(builder.getNodeManager(), kernelMapper))){
                     // parallel function's type, equal for all
                     core::TypeList parArgs;
-                    parArgs.push_back(builder.getNodeManager().basic.getUInt4());
-                    parArgs.push_back(builder.getNodeManager().basic.getUInt4());
-                    parArgs.push_back(builder.getNodeManager().basic.getJob());
+                    parArgs.push_back(builder.getNodeManager().getLangBasic().getUInt4());
+                    parArgs.push_back(builder.getNodeManager().getLangBasic().getUInt4());
+                    parArgs.push_back(builder.getNodeManager().getLangBasic().getJob());
 
                     // type of functions inside jobs
     //                core::FunctionTypePtr funType = builder.functionType(builder.tupleType(), builder.unitType());
 
-                   core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().basic.getUInt4());
+                   core::FunctionTypePtr parFuncType= builder.functionType(parArgs, builder.getNodeManager().getLangBasic().getUInt4());
 
                    std::vector<core::ExpressionPtr> expr;
 
-                   core::JobExpr::GuardedStmts noGuardedStatementsNeeded;
+                   vector<core::GuardedExprPtr> noGuardedStatementsNeeded;
 
     // generation/composition of constructs
 
                     // build expression to be used as body of local job
                     core::ExpressionPtr localParFct = genBindExpr(newBody, OCL_LOCAL_JOB, kernelMapper, kd, constantArgs, globalArgs, localArgs, privateArgs);
 
-                    core::JobExpr::LocalDecls localJobShared;
+                    vector<core::DeclarationStmtPtr> localJobShared;
 
                     createDeclarations(localJobShared, constantArgs);
                     createDeclarations(localJobShared, globalArgs);
@@ -932,7 +932,7 @@ public:
                     // min and max number of threads is equal
                     core::CallExprPtr localThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), localRangeProduct, localRangeProduct);
 
-                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localParFct, noGuardedStatementsNeeded, localJobShared);
+                    core::JobExprPtr localJob = builder.jobExpr(localThreadNum, localJobShared, noGuardedStatementsNeeded, localParFct);
 
                     expr.clear();
                     //construct vector of arguments for local parallel
@@ -942,8 +942,8 @@ public:
 
                     expr.push_back(localJob);
 
-                    core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(),
-                            builder.getNodeManager().basic.getParallel(), expr);
+                    core::CallExprPtr localPar = builder.callExpr(builder.getNodeManager().getLangBasic().getThreadGroup(),
+                            builder.getNodeManager().getLangBasic().getParallel(), expr);
 
                     std::vector<core::StatementPtr> gobalBodyStmts;
                     gobalBodyStmts.push_back(localPar);
@@ -958,7 +958,7 @@ public:
                             privateArgs);
 
                     // catch all arguments which are shared in global range
-                    core::JobExpr::LocalDecls globalJobShared;
+                    vector<core::DeclarationStmtPtr> globalJobShared;
 
                     createDeclarations(globalJobShared, constantArgs);
                     createDeclarations(globalJobShared, globalArgs);
@@ -972,17 +972,17 @@ public:
                     // min and max number of threads is equal
                     core::CallExprPtr globalThreadNum = builder.callExpr(BASIC.getCreateBoundRange(), globalRangeProduct, globalRangeProduct);
 
-                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalParFct, noGuardedStatementsNeeded, globalJobShared);
+                    core::JobExprPtr globalJob = builder.jobExpr(globalThreadNum, globalJobShared, noGuardedStatementsNeeded, globalParFct);
 
                     expr.clear();
                     //construct vector of arguments for local parallel
 
                     expr.push_back(globalJob);
 
-                    core::CallExprPtr globalPar = builder.callExpr(builder.getNodeManager().basic.getThreadGroup(), builder.getNodeManager().basic.getParallel(), expr);
+                    core::CallExprPtr globalPar = builder.callExpr(builder.getNodeManager().getLangBasic().getThreadGroup(), builder.getNodeManager().getLangBasic().getParallel(), expr);
 
                     // construct updated param list
-                    core::Lambda::ParamList newParams;
+                    core::VariableList newParams;
                     appendToVectorOrdered(newParams, constantArgs, globalArgs, localArgs, privateArgs, argsOrder);
 
                     newParams.push_back(kd.globalRange); // add global range to parameters
@@ -1056,7 +1056,7 @@ public:
 }
 
 core::ProgramPtr Compiler::lookForOclAnnotations() {
-//    core::RecursiveASTVisitor<OclVisitor> visitor(oclAnnotationExpander);
+//    core::RecursiveIRVisitor<OclVisitor> visitor(oclAnnotationExpander);
 //    core::visitAll(mProgram, oclAnnotationExpander);
 
 //    OclVisitor ov(builder, mProgram);

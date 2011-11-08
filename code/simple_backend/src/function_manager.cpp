@@ -142,7 +142,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	}
 
 	// do not create a wrapper if a variable argument list is included
-	if (contains(type->getParameterTypes(), cc.getNodeManager().basic.getVarList(), equal_target<TypePtr>())) {
+	if (contains(type->getParameterTypes(), cc.getNodeManager().getLangBasic().getVarList(), equal_target<TypePtr>())) {
 		return protoType;
 	}
 

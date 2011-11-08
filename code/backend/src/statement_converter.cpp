@@ -89,7 +89,7 @@ namespace backend {
 		}
 
 		// use default conversion
-		return ASTVisitor::visit(node, context);
+		return IRVisitor::visit(node, context);
 	}
 
 
@@ -197,7 +197,7 @@ namespace backend {
 		}
 
 		// handle null pointer
-		if (converter.getNodeManager().getBasicGenerator().isNull(ptr)) {
+		if (converter.getNodeManager().getLangBasic().isNull(ptr)) {
 			return converter.getCNodeManager()->create<c_ast::Literal>("0");
 		}
 
@@ -214,7 +214,7 @@ namespace backend {
 		c_ast::InitializerPtr init = c_ast::init(type);
 
 		// obtain some helper
-		auto& basic = converter.getNodeManager().getBasicGenerator();
+		auto& basic = converter.getNodeManager().getLangBasic();
 
 		// append initialization values
 		::transform(ptr->getMembers(), std::back_inserter(init->values),
@@ -322,7 +322,7 @@ namespace backend {
 
 		// goal: create a variable declaration and register new variable within variable manager
 
-		auto& basic = converter.getNodeManager().getBasicGenerator();
+		auto& basic = converter.getNodeManager().getLangBasic();
 		auto manager = converter.getCNodeManager();
 
 		core::VariablePtr var = ptr->getVariable();
@@ -350,7 +350,7 @@ namespace backend {
 	}
 
 	c_ast::ExpressionPtr StmtConverter::convertInitExpression(ConversionContext& context, const core::ExpressionPtr& init) {
-		auto& basic = converter.getNodeManager().getBasicGenerator();
+		auto& basic = converter.getNodeManager().getLangBasic();
 		auto manager = converter.getCNodeManager();
 
 		// test whether initialization is required ...
@@ -422,7 +422,7 @@ namespace backend {
 
 	c_ast::NodePtr StmtConverter::visitReturnStmt(const core::ReturnStmtPtr& ptr, ConversionContext& context) {
 		// wrap sub-expression into return expression
-		if (context.getConverter().getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
+		if (context.getConverter().getNodeManager().getLangBasic().isUnit(ptr->getReturnExpr()->getType())) {
 			// special handling for unit-return
 			return converter.getCNodeManager()->create<c_ast::Return>();
 		}

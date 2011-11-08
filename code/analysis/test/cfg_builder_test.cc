@@ -38,9 +38,9 @@
 
 #include "insieme/analysis/cmake_config.h"
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/statements.h"
+#include "insieme/core/ir_statements.h"
 #include "insieme/analysis/cfg.h"
 
 #include "insieme/frontend/program.h"
@@ -87,10 +87,10 @@ TEST(CFGBuilder, CompoundStmtMulti) {
 
 	NodeManager manager;
 
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-	LiteralPtr stmt1 = Literal::get(manager, manager.basic.getInt4(), "100");
-	LiteralPtr stmt2 = Literal::get(manager, manager.basic.getInt4(), "200");
-	LiteralPtr stmt3 = Literal::get(manager, manager.basic.getInt4(), "300");
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	LiteralPtr stmt1 = Literal::get(manager, manager.getLangBasic().getInt4(), "100");
+	LiteralPtr stmt2 = Literal::get(manager, manager.getLangBasic().getInt4(), "200");
+	LiteralPtr stmt3 = Literal::get(manager, manager.getLangBasic().getInt4(), "300");
 
 	CompoundStmtPtr cs0 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2, stmt3));
 	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(cs0, stmt1));
@@ -123,10 +123,10 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 
 	NodeManager manager;
 
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-	VariablePtr stmt1 = Variable::get(manager, manager.basic.getInt4(), 1);
-	VariablePtr stmt2 = Variable::get(manager, manager.basic.getInt4(), 2);
-	VariablePtr stmt3 = Variable::get(manager, manager.basic.getInt4(), 3);
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	VariablePtr stmt1 = Variable::get(manager, manager.getLangBasic().getInt4(), 1);
+	VariablePtr stmt2 = Variable::get(manager, manager.getLangBasic().getInt4(), 2);
+	VariablePtr stmt3 = Variable::get(manager, manager.getLangBasic().getInt4(), 3);
 
 	CompoundStmtPtr cs0 = CompoundStmt::get(manager, toVector<StatementPtr>(stmt1, stmt2, stmt3));
 	CompoundStmtPtr cs1 = CompoundStmt::get(manager, toVector<StatementPtr>(cs0, stmt1));
@@ -175,9 +175,9 @@ TEST(CFGBuilder, CompoundStmtSingle) {
 
 
 IfStmtPtr buildIfStmt1(NodeManager& mgr) {
-	LiteralPtr literal1 = Literal::get(mgr, mgr.basic.getInt4(), "12");
-	LiteralPtr literal2 = Literal::get(mgr, mgr.basic.getInt8(), "1222");
-	LiteralPtr boolVal = Literal::get(mgr, mgr.basic.getBool(), "true");
+	LiteralPtr literal1 = Literal::get(mgr, mgr.getLangBasic().getInt4(), "12");
+	LiteralPtr literal2 = Literal::get(mgr, mgr.getLangBasic().getInt8(), "1222");
+	LiteralPtr boolVal = Literal::get(mgr, mgr.getLangBasic().getBool(), "true");
 
 	return IfStmt::get(mgr, boolVal, literal1, literal2);
 }
@@ -246,10 +246,10 @@ TEST(CFGBuilder, IfStmt1) {
 TEST(CFGBuilder, IfStmt2) {
 
 	NodeManager manager;
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-	LiteralPtr stmt1 = Literal::get(manager, manager.basic.getInt4(), "10");
-	LiteralPtr stmt2 = Literal::get(manager, manager.basic.getInt4(), "20");
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool(), 1);
+	LiteralPtr stmt1 = Literal::get(manager, manager.getLangBasic().getInt4(), "10");
+	LiteralPtr stmt2 = Literal::get(manager, manager.getLangBasic().getInt4(), "20");
 
 	IfStmtPtr ifStmt = IfStmt::get(manager, var, stmt1);
 	CompoundStmtPtr stmt = CompoundStmt::get(manager, toVector<StatementPtr>(ifStmt, stmt2));
@@ -312,11 +312,11 @@ TEST(CFGBuilder, IfStmt2) {
 TEST(CFGBuilder, ForStmt) {
 
 	NodeManager manager;
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
-	LiteralPtr step = Literal::get(manager, manager.basic.getInt4(), "1");
-	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), literal);
-	LiteralPtr stmt = Literal::get(manager, manager.basic.getInt4(), "200");
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
+	LiteralPtr step = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool(), 1);
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.getLangBasic().getInt4(), 1), literal);
+	LiteralPtr stmt = Literal::get(manager, manager.getLangBasic().getInt4(), "200");
 
 	ForStmtPtr forStmt = ForStmt::get(manager, decl, stmt, literal, step);
 	CFGPtr cfg = CFG::buildCFG(forStmt);
@@ -386,9 +386,9 @@ TEST(CFGBuilder, ForStmt) {
 TEST(CFGBuilder, WhileStmt) {
 
 	NodeManager manager;
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "15");
-	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-	LiteralPtr stmt = Literal::get(manager, manager.basic.getInt4(), "100");
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "15");
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool(), 1);
+	LiteralPtr stmt = Literal::get(manager, manager.getLangBasic().getInt4(), "100");
 
 	WhileStmtPtr whileStmt = WhileStmt::get(manager, var, stmt);
 	CFGPtr cfg = CFG::buildCFG(whileStmt);
@@ -438,12 +438,12 @@ TEST(CFGBuilder, WhileStmt) {
 TEST(CFGBuilder, SwitchStmt) {
 
 	NodeManager manager;
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "15");
-	LiteralPtr literal1 = Literal::get(manager, manager.basic.getInt4(), "1");
-	LiteralPtr literal2 = Literal::get(manager, manager.basic.getInt4(), "2");
-	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
-	LiteralPtr stmt1 = Literal::get(manager, manager.basic.getInt4(), "200");
-	LiteralPtr stmt2 = Literal::get(manager, manager.basic.getInt4(), "300");
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "15");
+	LiteralPtr literal1 = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
+	LiteralPtr literal2 = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool(), 1);
+	LiteralPtr stmt1 = Literal::get(manager, manager.getLangBasic().getInt4(), "200");
+	LiteralPtr stmt2 = Literal::get(manager, manager.getLangBasic().getInt4(), "300");
 
 	SwitchStmtPtr switchStmt = SwitchStmt::get(manager, var, toVector(SwitchStmt::Case(literal1, stmt1), SwitchStmt::Case(literal2, stmt2)) );
 	CFGPtr cfg = CFG::buildCFG(switchStmt);
@@ -544,10 +544,10 @@ TEST(CFGBuilder, CallExprSimple) {
 
 	NodeManager manager;
 
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "1");
-	FunctionTypePtr exitFuncTy = FunctionType::get( manager, toVector<TypePtr>(manager.basic.getInt4()),  manager.basic.getInt4());
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
+	FunctionTypePtr exitFuncTy = FunctionType::get( manager, toVector<TypePtr>(manager.getLangBasic().getInt4()),  manager.getLangBasic().getInt4());
 
-	CallExprPtr callExpr = CallExpr::get(manager, manager.basic.getInt4(), Literal::get(manager, exitFuncTy, "exit"),
+	CallExprPtr callExpr = CallExpr::get(manager, manager.getLangBasic().getInt4(), Literal::get(manager, exitFuncTy, "exit"),
 			toVector<ExpressionPtr>(literal));
 
 	CompoundStmtPtr cs = CompoundStmt::get(manager, toVector<StatementPtr>(callExpr));

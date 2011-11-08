@@ -46,7 +46,7 @@
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/encoder.h"
 #include "insieme/core/transform/manipulation.h"
@@ -98,7 +98,7 @@ namespace backend {
 
 
 	OperatorConverterTable getBasicOperatorTable(core::NodeManager& manager) {
-		const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 		OperatorConverterTable res;
 
@@ -438,10 +438,10 @@ namespace backend {
 			// compose unfolded reduction expression
 			core::ExpressionPtr res = ARG(1);
 			core::ExpressionPtr op = ARG(2);
-			core::ExpressionPtr subscript = op->getNodeManager().getBasicGenerator().getVectorSubscript();
+			core::ExpressionPtr subscript = op->getNodeManager().getLangBasic().getVectorSubscript();
 			core::TypePtr elementType = vectorType->getElementType();
 
-			core::ASTBuilder builder(op->getNodeManager());
+			core::IRBuilder builder(op->getNodeManager());
 			for (std::size_t i = 0; i<size; i++) {
 				core::ExpressionPtr element;
 				if (vectorExpr) {

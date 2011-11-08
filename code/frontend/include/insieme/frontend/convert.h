@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/frontend/pragma_handler.h"
 #include "insieme/utils/map_utils.h"
@@ -155,7 +155,7 @@ class ConversionFactory : public boost::noncopyable {
 		typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 		UseGlobalFuncMap globalFuncMap;
 
-		typedef std::map<const clang::VarDecl*, core::IdentifierPtr> GlobalIdentMap;
+		typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 		GlobalIdentMap globalIdentMap;
 
 		/*
@@ -235,7 +235,7 @@ class ConversionFactory : public boost::noncopyable {
 	ClangExprConverter* exprConv; // PIMPL pattern
 
 	core::NodeManager& 			mgr;
-	const core::ASTBuilder  	builder;
+	const core::IRBuilder  	builder;
     Program& 					program;
 
     /**
@@ -276,7 +276,7 @@ public:
 	~ConversionFactory();
 
 	// Getters & Setters
-	const core::ASTBuilder& getASTBuilder() const { return builder; }
+	const core::IRBuilder& getIRBuilder() const { return builder; }
 	core::NodeManager& 	getNodeManager() const { return mgr; }
 	const Program& getProgram() const { return program; }
 

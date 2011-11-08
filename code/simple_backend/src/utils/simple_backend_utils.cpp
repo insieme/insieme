@@ -36,8 +36,8 @@
 
 #include "insieme/simple_backend/utils/simple_backend_utils.h"
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -55,8 +55,8 @@ namespace utils {
 		}
 
 		// construct the type of the main
-		core::ASTBuilder builder(program->getNodeManager());
-		const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
+		core::IRBuilder builder(program->getNodeManager());
+		const core::lang::BasicGenerator& basic = builder.getLangBasic();
 
 		// type:   (int<4>, ref<array<array<char,1>,1>>) -> int<4>
 		ConcreteIntTypeParamPtr one = builder.concreteIntTypeParam(1);

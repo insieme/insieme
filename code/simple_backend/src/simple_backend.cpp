@@ -36,8 +36,8 @@
 
 #include "insieme/simple_backend/simple_backend.h"
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_node.h"
 
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/variable_manager.h"

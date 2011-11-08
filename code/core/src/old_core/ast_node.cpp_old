@@ -1,5 +1,5 @@
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/transform/manipulation_utils.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 

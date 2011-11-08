@@ -186,7 +186,7 @@ void checkSemanticErrors(const MessageList& list, DotNode& currNode, const core:
 }
 
 ASTPrinter::ASTPrinter(const IRBuilderPtr& builder, const MessageList& errors): 
-	insieme::core::ASTVisitor<>(true), dummyNodeID(1), builder(builder), errors(errors) { }
+	insieme::core::IRVisitor<>(true), dummyNodeID(1), builder(builder), errors(errors) { }
 
 void ASTPrinter::visitTypeVariable(const TypeVariablePtr& typeVar) {
 	TypeNode varNode( NODE_ID(typeVar), "\"var\\n{" + typeVar->toString() + "}\"");

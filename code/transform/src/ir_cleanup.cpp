@@ -36,8 +36,8 @@
 
 #include "insieme/transform/ir_cleanup.h"
 
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/set_utils.h"
@@ -128,10 +128,10 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 	return node;
 }
 
-struct LoopCollector : public core::ASTVisitor<void> {
+struct LoopCollector : public core::IRVisitor<void> {
 	typedef std::vector<ForStmtPtr> LoopList;
 
-	LoopCollector() : core::ASTVisitor<void>(false) { }
+	LoopCollector() : core::IRVisitor<void>(false) { }
 
 	void visitForStmt( const ForStmtPtr& forStmt ) {
 		visit(forStmt->getBody());
@@ -199,7 +199,7 @@ public:
 core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 	auto& mgr = node->getNodeManager();
 	auto& basic = mgr.basic;
-	ASTBuilder builder(mgr);
+	IRBuilder builder(mgr);
 
 	// search for array variable declarations
 	visitDepthFirstInterruptable(NodeAddress(node), [&](const DeclarationStmtAddress& curdecl) -> bool {

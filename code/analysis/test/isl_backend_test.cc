@@ -40,7 +40,7 @@
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/backend.h"
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "isl/map.h"
 #include "isl/union_map.h"
@@ -50,8 +50,8 @@ using namespace insieme::analysis;
 using namespace insieme::core;
 
 #define CREATE_ITER_VECTOR \
-	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); \
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); \
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); \
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); \
 	\
 	poly::IterationVector iterVec; \
 	\

@@ -42,8 +42,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_check.h"
 #include "insieme/core/checks/typechecks.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -61,10 +61,6 @@ using namespace insieme::core;
 using namespace insieme::utils::log;
 namespace fe = insieme::frontend;
 using namespace clang;
-
-struct VariableResetHack {
-	static void reset() { Variable::counter = 0; }
-};
 
 void checkSemanticErrors(const NodePtr& node) {
 	auto msgList = check( node, checks::getFullCheck() ).getAll();
@@ -102,10 +98,10 @@ TEST(StmtConversion, FileTest) {
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);
-		// we reset the counter for variables so we can write independent tests
-		VariableResetHack::reset();
+		// we use an internal manager to have private counter for variables so we can write independent tests
+		NodeManager mgr;
 
-		fe::conversion::ConversionFactory convFactory( manager, prog );
+		fe::conversion::ConversionFactory convFactory( mgr, prog );
 		convFactory.setTranslationUnit(tu);
 
 		if(tp.isStatement()) {

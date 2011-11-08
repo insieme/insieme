@@ -694,7 +694,7 @@ namespace core {
 		/**
 		 * A type definition defining the type of entries this composed type is consisting of.
 		 */
-		typedef vector<NamedTypePtr> Entries;
+		typedef NamedTypeList Entries;
 
 	protected:
 

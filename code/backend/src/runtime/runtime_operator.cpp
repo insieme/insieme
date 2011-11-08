@@ -56,7 +56,7 @@ namespace runtime {
 	OperatorConverterTable& addRuntimeSpecificOps(core::NodeManager& manager, OperatorConverterTable& table) {
 
 		const Extensions& ext = manager.getLangExtension<Extensions>();
-		const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+		const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 		#include "insieme/backend/operator_converter_begin.inc"
 

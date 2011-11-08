@@ -48,7 +48,7 @@
 
 #include "insieme/utils/timer.h"
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/type_utils.h"
@@ -162,7 +162,7 @@ core::ProgramPtr ASTConverter::handleFunctionDecl(const clang::FunctionDecl* fun
 	   }
     }
 	assert(lambdaExpr && "Conversion of function did not return a lambda expression");
-	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr, isMain /* isMain */);
+	mProgram = core::Program::addEntryPoint(mFact.getNodeManager(), mProgram, lambdaExpr /*, isMain */);
 	mFact.currTU = oldTU;
 	return mProgram;
 }
@@ -192,7 +192,7 @@ ConversionFactory::~ConversionFactory() {
 core::ExpressionPtr ConversionFactory::tryDeref(const core::ExpressionPtr& expr) const {
 	// core::ExpressionPtr retExpr = expr;
 	if ( core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType()) ) {
-		return builder.callExpr( refTy->getElementType(), mgr.basic.getRefDeref(), expr );
+		return builder.callExpr( refTy->getElementType(), mgr.getLangBasic().getRefDeref(), expr );
 	}
 	return expr;
 }
@@ -320,7 +320,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 	if ( varDecl && varDecl->hasGlobalStorage() ) {
 		assert(ctx.globalVar && "Accessing global variable within a function not receiving the global struct");
 		// access the global data structure
-		const core::lang::BasicGenerator& gen = builder.getBasicGenerator();
+		const core::lang::BasicGenerator& gen = builder.getLangBasic();
 		
 		auto&& fit = ctx.globalIdentMap.find(varDecl); 
 		assert(fit != ctx.globalIdentMap.end() && "Variable not within global identifiers");
@@ -335,7 +335,7 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 				builder.refType( memberTy ),
 				gen.getCompositeRefElem(),
 				toVector<core::ExpressionPtr>(
-						ctx.globalVar, gen.getIdentifierLiteral(fit->second), gen.getTypeLiteral(memberTy)
+						ctx.globalVar, builder.getIdentifierLiteral(fit->second), builder.getTypeLiteral(memberTy)
 				)
 			);
 
@@ -365,20 +365,20 @@ core::ExpressionPtr ConversionFactory::lookUpVariable(const clang::ValueDecl* va
 //											CONVERT VARIABLE DECLARATION
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type ) const {
-	//if ( mgr.basic.isAnyRef(type) ) {
-		//return mgr.basic.getNull();
+	//if ( mgr.getLangBasic().isAnyRef(type) ) {
+		//return mgr.getLangBasic().getNull();
 	//}
 	// handle integers initialization
-    if ( mgr.basic.isInt(type) ) {
+    if ( mgr.getLangBasic().isInt(type) ) {
         // initialize integer value
         return builder.literal("0", type);
     }
-    if ( mgr.basic.isChar(type) ) {
+    if ( mgr.getLangBasic().isChar(type) ) {
 		// initialize integer value
 		return builder.literal("\'\\0\'", type);
 	}
     // handle reals initialization
-    if ( mgr.basic.isReal(type) ) {
+    if ( mgr.getLangBasic().isReal(type) ) {
         // in case of floating types we initialize with a zero value
         return builder.literal("0.0", type);
     }
@@ -390,7 +390,7 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	core::ExpressionPtr initValue;
     	if (elemType->getNodeType() == core::NT_RefType) {
     		// ref<ref<...>> => this is a pointer, init with 0 (null)
-    		initValue = builder.callExpr(elemType, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(elemType));
+    		initValue = builder.callExpr(elemType, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(elemType));
     	} else {
     		initValue = defaultInitVal(elemType);
     	}
@@ -398,18 +398,18 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	return builder.refVar(initValue);
     }
     // handle strings initialization
-    if ( mgr.basic.isString(type) ) {
+    if ( mgr.getLangBasic().isString(type) ) {
         return builder.literal("", type);
     }
     // handle booleans initialization
-    if ( mgr.basic.isBool(type) ) {
+    if ( mgr.getLangBasic().isBool(type) ) {
         // boolean values are initialized to false
-        return builder.literal("false", mgr.basic.getBool());
+        return builder.literal("false", mgr.getLangBasic().getBool());
     }
 
     // Handle structs initialization
     if ( core::StructTypePtr&& structTy = core::dynamic_pointer_cast<const core::StructType>(type) ) {
-    	return builder.callExpr(structTy, mgr.basic.getInitZero(), mgr.basic.getTypeLiteral(structTy));
+    	return builder.callExpr(structTy, mgr.getLangBasic().getInitZero(), builder.getTypeLiteral(structTy));
     }
 
     // Handle unions initialization
@@ -421,9 +421,9 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     if ( core::VectorTypePtr&& vecTy = core::dynamic_pointer_cast<const core::VectorType>(type) ) {
 		core::ExpressionPtr&& initVal = defaultInitVal(vecTy->getElementType());
 		return builder.callExpr(vecTy,
-				mgr.basic.getVectorInitUniform(),
+				mgr.getLangBasic().getVectorInitUniform(),
 				initVal,
-				mgr.basic.getIntTypeParamLiteral(vecTy->getSize())
+				builder.getIntTypeParamLiteral(vecTy->getSize())
 			);
     }
 
@@ -432,15 +432,15 @@ core::ExpressionPtr ConversionFactory::defaultInitVal( const core::TypePtr& type
     	if(arrTy->getElementType()->getNodeType() == core::NT_RefType) {
     		const core::RefTypePtr& ref = core::static_pointer_cast<const core::RefType>(arrTy->getElementType());
     		if(ref->getElementType()->getNodeType() != core::NT_VectorType) {
-    			return builder.callExpr(mgr.basic.getGetNull(), mgr.basic.getTypeLiteral(arrTy));
+    			return builder.callExpr(mgr.getLangBasic().getGetNull(), builder.getTypeLiteral(arrTy));
     		}
     	}
-		return builder.callExpr(arrTy, mgr.basic.getUndefined(), mgr.basic.getTypeLiteral(arrTy));
+		return builder.callExpr(arrTy, mgr.getLangBasic().getUndefined(), builder.getTypeLiteral(arrTy));
     }
 
     // handle any-ref initialization
-    if ( mgr.basic.isAnyRef(type) ) {
-    	return mgr.basic.getNull();
+    if ( mgr.getLangBasic().isAnyRef(type) ) {
+    	return mgr.getLangBasic().getNull();
     }
 
 	LOG(ERROR) << "Default initializer for type: '" << *type << "' not supported!"; 
@@ -598,7 +598,7 @@ ConversionFactory::attachFuncAnnotations(const core::ExpressionPtr& node, const 
 core::LambdaExprPtr ASTConverter::handleBody(const clang::Stmt* body, const TranslationUnit& tu) {
 	mFact.currTU = &tu;
 //	core::StatementPtr&& bodyStmt = mFact.convertStmt( body );
-//	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.basic.getUnit() );
+//	core::ExpressionPtr&& callExpr = mFact.createCallExpr( toVector<core::StatementPtr>(bodyStmt), mgr.getLangBasic().getUnit() );
 
 //	annotations::c::CLocAnnotation::ArgumentList args;
 //	if(core::CaptureInitExprPtr&& captureExpr = core::dynamic_pointer_cast<const core::CaptureInitExpr>(callExpr)) {

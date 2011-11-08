@@ -67,7 +67,7 @@ TEST(TypeManager, Basic) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -155,7 +155,7 @@ TEST(TypeManager, StructTypes) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -213,7 +213,7 @@ TEST(TypeManager, RefTypes) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -349,7 +349,7 @@ TEST(TypeManager, ArrayTypes) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -405,7 +405,7 @@ TEST(TypeManager, VectorTypes) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -488,7 +488,7 @@ TEST(TypeManager, FunctionTypes) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -578,7 +578,7 @@ TEST(TypeManager, RecursiveTypes) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	TestNameManager nameManager;
 	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
@@ -629,7 +629,7 @@ TEST(TypeManager, MutalRecursiveTypes) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	TestNameManager nameManager;
 	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
@@ -698,7 +698,7 @@ TEST(TypeManager, TupleType) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;

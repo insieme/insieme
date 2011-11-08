@@ -36,7 +36,7 @@
 
 #include "insieme/backend/variable_manager.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/converter.h"

@@ -307,7 +307,7 @@ namespace core {
 
 		template<typename Annotation, typename ... Params>
 		void addAnnotation(Params ... p) const {
-			getNode().getAnnotationContainer().addAnnotation(p...);
+			getNode().getAnnotationContainer().addAnnotation<Annotation>(p...);
 		}
 
 		template<typename Key>
@@ -357,7 +357,7 @@ namespace core {
 
 		template<typename V>
 		void attachValue(const V& value) const {
-			return getNode().getAnnotationContainer().attachValue(value);
+			return getNode().getAnnotationContainer().attachValue<V>(value);
 		}
 
 		template<typename V>

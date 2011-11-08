@@ -1,12 +1,12 @@
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/functional_utils.h"
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/map_utils.h"
 
-#include "insieme/core/statements.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 
 using namespace insieme::core;
@@ -386,18 +386,18 @@ namespace {
 }
 
 JobExpr::JobExpr(const ExpressionPtr& range, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls)
-	: Expression(NT_JobExpr, range->getNodeManager().basic.getJob(), ::hashJobExpr(range, defaultStmt, guardedStmts, localDecls)), threadNumRange(range),
+	: Expression(NT_JobExpr, range->getNodeManager().getLangBasic().getJob(), ::hashJobExpr(range, defaultStmt, guardedStmts, localDecls)), threadNumRange(range),
 	  localDecls(isolate(localDecls)), guardedStmts(isolateGuardedStmts(guardedStmts)), defaultStmt(isolate(defaultStmt)) {
 	// TODO: use ordinary type checks for this section ...
 	FunctionTypePtr defaultType = static_pointer_cast<const FunctionType>(defaultStmt->getType());
     assert(defaultType->getParameterTypes().empty() && "Default statement is not allowed to have any arguments");
 
-    TypePtr unitType = type->getNodeManager().basic.getUnit();
-    TypePtr boolType = type->getNodeManager().basic.getBool();
+    TypePtr unitType = type->getNodeManager().getLangBasic().getUnit();
+    TypePtr boolType = type->getNodeManager().getLangBasic().getBool();
 
     assert(*defaultType->getReturnType() == *unitType && "Return value of default statement must be unit.");
 
-    TypeList guardParams = TypeList(2, type->getNodeManager().basic.getUIntGen());
+    TypeList guardParams = TypeList(2, type->getNodeManager().getLangBasic().getUIntGen());
 
     std::for_each(guardedStmts.cbegin(), guardedStmts.cend(), [&](const JobExpr::GuardedStmt& s){
         //Check guards
@@ -456,8 +456,8 @@ std::ostream& JobExpr::printTo(std::ostream& out) const {
 }
 
 JobExprPtr JobExpr::get(NodeManager& manager, const ExpressionPtr& defaultStmt, const GuardedStmts& guardedStmts, const LocalDecls& localDecls) {
-	ExpressionPtr one = Literal::get(manager, manager.basic.getUInt8(), "1");
-	CallExprPtr range = CallExpr::get(manager, manager.basic.getJobRange(), manager.basic.getCreateMinRange(), toVector(one));
+	ExpressionPtr one = Literal::get(manager, manager.getLangBasic().getUInt8(), "1");
+	CallExprPtr range = CallExpr::get(manager, manager.getLangBasic().getJobRange(), manager.getLangBasic().getCreateMinRange(), toVector(one));
 	return get(manager, range, defaultStmt, guardedStmts, localDecls);
 }
 

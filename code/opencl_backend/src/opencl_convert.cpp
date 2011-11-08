@@ -39,7 +39,7 @@
 #include "insieme/utils/logging.h"
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -177,8 +177,8 @@ void moveQualifier(qualifierMapType& qualifierMap, unsigned oldName, unsigned ne
 	}
 }
 
-void addBuiltinAnnotation(ASTBuilder& builder, qualifierMapType& qualifierMap, VariablePtr var, string s){
-	TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+void addBuiltinAnnotation(IRBuilder& builder, qualifierMapType& qualifierMap, VariablePtr var, string s){
+	TypePtr t = (builder.getNodeManager()).getLangBasic().getUInt4();
 	core::TypeList tList;
 	tList.push_back(t);
 	LiteralPtr lit = builder.literal(builder.functionType(tList, t), s);
@@ -188,7 +188,7 @@ void addBuiltinAnnotation(ASTBuilder& builder, qualifierMapType& qualifierMap, V
 }
 
 void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
-	ASTBuilder builder(ptr->getNodeManager());
+	IRBuilder builder(ptr->getNodeManager());
 	if(ptr->hasAnnotation(BaseAnnotation::KEY)) {
 		LOG(INFO) << "Function with some Opencl Annotation...\n";
 		BaseAnnotationPtr&& annotations = ptr->getAnnotation(BaseAnnotation::KEY);
@@ -218,7 +218,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				//const core::TypePtr& retType = oldFuncType->getReturnType();
 				// set the return type of the kernel to void
-				const core::TypePtr& retType = (builder.getNodeManager()).basic.getUnit();
+				const core::TypePtr& retType = (builder.getNodeManager()).getLangBasic().getUnit();
 
 				TypeList newArgs;
 				for (uint i = 0; i < oldArgs.size()-2; i++){
@@ -385,7 +385,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 }
 
 void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
-	ASTBuilder builder(ptr->getNodeManager());
+	IRBuilder builder(ptr->getNodeManager());
 	if (ptr->getArguments().size()) {
 		// check for builtin literal (get_global_size, get_num_groups, ...)	
 		const VariablePtr& var = dynamic_pointer_cast<const Variable>(ptr->getArgument(0));
@@ -435,10 +435,10 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[2]);
 
 					if (dec1 && dec2 && swt &&
-						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId()) &&
-						analysis::isCallOf(dec2->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+						analysis::isCallOf(dec1->getInitialization(), builder.getLangBasic().getGetThreadId()) &&
+						analysis::isCallOf(dec2->getInitialization(), builder.getLangBasic().getGetThreadId())
 					) {
-						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+						TypePtr t = (builder.getNodeManager()).getLangBasic().getUInt4();
 						core::TypeList tList;
 						tList.push_back(t);
 						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_global_id");
@@ -452,9 +452,9 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 					const SwitchStmtPtr& swt = dynamic_pointer_cast<const SwitchStmt>((*comp)[1]);
 
 					if (dec1 && swt &&
-						analysis::isCallOf(dec1->getInitialization(), builder.getBasicGenerator().getGetThreadId())
+						analysis::isCallOf(dec1->getInitialization(), builder.getLangBasic().getGetThreadId())
 					) {
-						TypePtr t = (builder.getNodeManager()).basic.getUInt4();
+						TypePtr t = (builder.getNodeManager()).getLangBasic().getUInt4();
 						core::TypeList tList;
 						tList.push_back(t);
 						LiteralPtr lit = builder.literal(builder.functionType(tList, t), "get_local_id");
@@ -503,15 +503,15 @@ namespace detail {
 
 	// ... and add OCL operators ...
 	NodeManager& manager = basic.getNodeManager();
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	#include "insieme/simple_backend/formatting/formats_begin.inc"
 
 	{
-		TypePtr t = (manager).basic.getUInt4();
+		TypePtr t = (manager).getLangBasic().getUInt4();
 		core::TypeList tList;
 		tList.push_back(t);
-		TypePtr t1 = (manager).basic.getInt4();
+		TypePtr t1 = (manager).getLangBasic().getInt4();
 		core::TypeList tList1;
 		LiteralPtr lit1 = builder.literal(builder.functionType(tList, t), "get_global_id");
 		LiteralPtr lit2 = builder.literal(builder.functionType(tList, t), "get_local_id");

@@ -3,14 +3,14 @@
 #include <vector>
 #include <string>
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/program.h"
-#include "insieme/core/statements.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_types.h"
 #include "insieme/core/lang/basic.h"
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace core {
@@ -35,7 +35,7 @@ namespace detail {
 
 
 
-class ASTBuilder {
+class IRBuilder {
 
 	/**
 	 * This manager is only used in case the no manager reference is based
@@ -49,8 +49,8 @@ class ASTBuilder {
 	NodeManager& manager;
 
 public:
-	ASTBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager) { }
-	ASTBuilder(NodeManager& manager) : manager(manager) { }
+	IRBuilder() : internalManager(std::make_shared<NodeManager>()), manager(*internalManager) { }
+	IRBuilder(NodeManager& manager) : manager(manager) { }
 
 
 	typedef vector<TypePtr> TypeList;
@@ -83,7 +83,7 @@ public:
 	/**
 	 * Obtains a reference to the basic generator within the node manager.
 	 */
-	const lang::BasicGenerator& getBasicGenerator() const {
+	const lang::BasicGenerator& getLangBasic() const {
 		return manager.basic;
 	}
 

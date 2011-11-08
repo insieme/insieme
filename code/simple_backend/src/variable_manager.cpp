@@ -36,7 +36,7 @@
 
 #include "insieme/simple_backend/variable_manager.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/logging.h"
 

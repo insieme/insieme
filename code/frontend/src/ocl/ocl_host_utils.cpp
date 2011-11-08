@@ -41,9 +41,8 @@ namespace frontend {
 namespace ocl {
 
 // shortcut
-#define BASIC builder.getNodeManager().basic
 
-core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder) {
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::IRBuilder& builder) {
 	core::CallExprPtr&& stripped = dynamic_pointer_cast<const core::CallExpr>(arg);
 // remove stuff added by (void*)&
 	if(const core::CallExprPtr& refToAnyref = dynamic_pointer_cast<const core::CallExpr>(arg))
@@ -105,7 +104,7 @@ const core::TypePtr getNonRefType(const core::TypePtr& refType) {
 /*
  * Builds a ref.deref call around an expression if the it is of ref-type
  */
-core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBuilder& builder) {
+core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
 	// core::ExpressionPtr retExpr = expr;
 	if (core::RefTypePtr&& refTy = core::dynamic_pointer_cast<const core::RefType>(expr->getType())) {
 		return builder.callExpr(refTy->getElementType(), BASIC.getRefDeref(), expr);
@@ -116,7 +115,7 @@ core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBui
 /*
  * Returns either the expression itself or the first argument if expression was a call to function
  */
-core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::ASTBuilder& builder) {
+core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
 	core::ExpressionPtr e = expr;
 	while(const core::CallExprPtr& call = core::dynamic_pointer_cast<const core::CallExpr>(e)) {
 		if(call->getFunctionExpr() == function)
@@ -130,7 +129,7 @@ core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::E
 /*
  * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
  */
-core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::ASTBuilder& builder) {
+core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::IRBuilder& builder) {
 	if(const core::CallExprPtr& call = core::dynamic_pointer_cast<const core::CallExpr>(expr)) {
 		if(call->getFunctionExpr() == BASIC.getRefNew() || call->getFunctionExpr() == BASIC.getRefVar())
 			return tryRemoveAlloc(call->getArgument(0), builder);
@@ -143,7 +142,7 @@ core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::
  * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
  * Usefull to get variable out of nests of array and struct accesses
  */
-core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::ASTBuilder& builder) {
+core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::IRBuilder& builder) {
 	if(const core::CallExprPtr& call = dynamic_pointer_cast<const core::CallExpr>(function))
 		return getVariableArg(call->getArgument(0), builder);
 	return dynamic_pointer_cast<const core::Variable>(function);
@@ -165,12 +164,6 @@ bool NullLitSearcher::visitCallExpr(const core::CallExprPtr& call) {
 
 bool NullLitSearcher::visitLiteral(const core::LiteralPtr& literal) {
 	if(literal == builder.literal(literal->getType(), "0"))
-		return true;
-	return false;
-}
-
-bool IdSearcher::visitIdentifier(const core::IdentifierPtr& id) {
-	if(id == searchedId)
 		return true;
 	return false;
 }

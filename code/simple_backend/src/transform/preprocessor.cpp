@@ -38,8 +38,8 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/type_utils.h"
 
 #include "insieme/core/analysis/ir_utils.h"
@@ -152,7 +152,7 @@ namespace transform {
 
 		public:
 
-			PointwiseInstantiater(core::NodeManager& manager) : manager(manager), basic(manager.getBasicGenerator()) {};
+			PointwiseInstantiater(core::NodeManager& manager) : manager(manager), basic(manager.getLangBasic()) {};
 
 			const core::NodePtr resolveElement(const core::NodePtr& ptr) {
 
@@ -188,7 +188,7 @@ namespace transform {
 						core::ExpressionPtr op = static_pointer_cast<const core::CallExpr>(call->getFunctionExpr())->getArgument(0);
 
 						// create new lambda, realizing the point-wise operation
-						core::ASTBuilder builder(manager);
+						core::IRBuilder builder(manager);
 
 						core::FunctionTypePtr funType = builder.functionType(toVector<core::TypePtr>(argType, argType), resType);
 
@@ -310,7 +310,7 @@ namespace transform {
 		public:
 
 			ITEConverter(core::NodeManager& manager) :
-				ITE(manager.basic.getIfThenElse()),  extensions(manager) {};
+				ITE(manager.getLangBasic().getIfThenElse()),  extensions(manager) {};
 
 			/**
 			 * Searches all ITE calls and replaces them by lazyITE calls. It also is aiming on inlining
@@ -332,7 +332,7 @@ namespace transform {
 				}
 
 				// exchange ITE call
-				core::ASTBuilder builder(res->getNodeManager());
+				core::IRBuilder builder(res->getNodeManager());
 				core::CallExprPtr call = static_pointer_cast<const core::CallExpr>(res);
 				const vector<core::ExpressionPtr>& args = call->getArguments();
 				return builder.callExpr(extensions.lazyITE, args[0], evalLazy(args[1]), evalLazy(args[2]));
@@ -419,7 +419,7 @@ namespace transform {
 			}
 
 			// check initialization
-			if (!core::analysis::isCallOf(globalDecl->getInitialization(), manager.basic.getRefNew())) {
+			if (!core::analysis::isCallOf(globalDecl->getInitialization(), manager.getLangBasic().getRefNew())) {
 				// this is not a global struct ...
 				return code;
 			}
@@ -428,7 +428,7 @@ namespace transform {
 
 			// replace global declaration statement with initializer call
 			IRExtensions extensions(manager);
-			core::TypePtr unit = manager.getBasicGenerator().getUnit();
+			core::TypePtr unit = manager.getLangBasic().getUnit();
 			core::StatementPtr initGlobal = core::CallExpr::get(manager, unit, extensions.initGlobals, toVector(globalDecl->getInitialization()));
 
 			// replace declaration with init call
@@ -495,8 +495,8 @@ namespace transform {
 
 				// extract node manager
 				core::NodeManager& manager = call->getNodeManager();
-				core::ASTBuilder builder(manager);
-				const core::lang::BasicGenerator& basic = builder.getBasicGenerator();
+				core::IRBuilder builder(manager);
+				const core::lang::BasicGenerator& basic = builder.getLangBasic();
 
 
 				// check whether there is a argument which is a vector but the parameter is not
@@ -608,7 +608,7 @@ namespace transform {
 				const core::ExpressionPtr& oldInit = declaration->getInitialization();
 
 				// construct a new init statement
-				core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.basic.getVectorToArray(), toVector(oldInit));
+				core::ExpressionPtr newInit = core::CallExpr::get(manager, var->getType(), manager.getLangBasic().getVectorToArray(), toVector(oldInit));
 				return core::DeclarationStmt::get(manager, declaration->getVariable(), newInit);
 			}
 		};

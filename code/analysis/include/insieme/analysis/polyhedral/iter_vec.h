@@ -40,7 +40,7 @@
 #include <iterator>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/printable.h"
 

@@ -52,7 +52,7 @@ namespace enc = insieme::core::encoder;
 
 core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 	core::IRBuilder builder(manager);
-	const auto& basic = manager.getBasicGenerator();
+	const auto& basic = manager.getLangBasic();
 	const auto& ext = manager.getLangExtension<Extensions>();
 
 	core::VariablePtr param = builder.variable(builder.refType(ext.workItemType), 1);

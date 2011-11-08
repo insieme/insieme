@@ -55,7 +55,7 @@
 #define CONVERT_EXPR(Node) context.getConverter().getStmtConverter().convertExpression(context, Node)
 #define CONVERT_STMT(Node) context.getConverter().getStmtConverter().convertStatement(context, Node)
 
-#define LANG_BASIC context.getConverter().getNodeManager().getBasicGenerator()
+#define LANG_BASIC context.getConverter().getNodeManager().getLangBasic()
 
 #define GET_TYPE_INFO(Type) context.getConverter().getTypeManager().getTypeInfo(Type)
 #define GET_VAR_INFO(Var) context.getVariableManager().getInfo(Var)

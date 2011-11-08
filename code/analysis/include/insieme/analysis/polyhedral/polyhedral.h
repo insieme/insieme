@@ -45,7 +45,7 @@
 #include "insieme/analysis/polyhedral/iter_vec.h"
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/utils/printable.h"
 
 #include "boost/operators.hpp"

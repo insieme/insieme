@@ -38,7 +38,7 @@
 
 #include <vector>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/analysis/polyhedral/polyhedral.h"
 

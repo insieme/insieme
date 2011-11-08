@@ -36,9 +36,9 @@
 
 #include "insieme/simple_backend/type_manager.h"
 
-#include "insieme/core/types.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/statements.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_statements.h"
 
 #include "insieme/annotations/c/naming.h"
 

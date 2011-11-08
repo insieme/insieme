@@ -38,9 +38,9 @@
 
 #include "insieme/analysis/defuse_collect.h"
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/statements.h"
+#include "insieme/core/ir_statements.h"
 
 #include "insieme/core/parser/ir_parse.h"
 

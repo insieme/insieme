@@ -35,9 +35,9 @@
  */
 
 #include "insieme/analysis/cfg.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/printer/pretty_printer.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/utils/map_utils.h"
 #include "insieme/utils/logging.h"
@@ -125,10 +125,10 @@ private:
  * The visit is done in reverse order in a way the number of CFG nodes is minimized.
  */
 template < CreationPolicy CP >
-struct CFGBuilder: public ASTVisitor< void > {
+struct CFGBuilder: public IRVisitor< void > {
 
 	CFGPtr cfg;
-	ASTBuilder builder;
+	IRBuilder builder;
 
 	// A pointer to the block which is currently the head of graph which is built
 	// bottom-up visiting the statements in reverse order
@@ -146,7 +146,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 	size_t maxSpawnedArg;
 
-	CFGBuilder(CFGPtr cfg, const NodePtr& root) : ASTVisitor<>(false), cfg(cfg), builder(root->getNodeManager()), 
+	CFGBuilder(CFGPtr cfg, const NodePtr& root) : IRVisitor<>(false), cfg(cfg), builder(root->getNodeManager()), 
 		currBlock(NULL), spawnBlock(NULL), isPending(false), hasHead(false) {
 
 		assert( !cfg->hasSubGraph(root) && "CFG for this root node already being built");
@@ -282,7 +282,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		visit(ifStmt->getThenBody());
 		appendPendingBlock();
 
-		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
+		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
 
 		succ = sink; // reset the successor for the thenBody
 
@@ -290,7 +290,7 @@ struct CFGBuilder: public ASTVisitor< void > {
 		visit(ifStmt->getElseBody());
 		appendPendingBlock();
 	
-		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getFalse() ));
+		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getFalse() ));
 
 		succ = src; 		// succ now points to the head of the IF stmt
 		currBlock = ifBlock;
@@ -337,8 +337,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 
 		appendPendingBlock(false);
 
-		cfg->addEdge(forHead, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
-		cfg->addEdge(forHead, sink, cfg::Edge( builder.getBasicGenerator().getFalse() )); 
+		cfg->addEdge(forHead, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
+		cfg->addEdge(forHead, sink, cfg::Edge( builder.getLangBasic().getFalse() )); 
 
 		succ = src;
 		// decl stmt of the for loop needs to be part of the incoming block
@@ -363,8 +363,8 @@ struct CFGBuilder: public ASTVisitor< void > {
 		scopeStack.pop();
 
 		appendPendingBlock();
-		cfg->addEdge(src, succ, cfg::Edge( builder.getBasicGenerator().getTrue() )); 
-		cfg->addEdge(src, sink, cfg::Edge( builder.getBasicGenerator().getFalse() ));
+		cfg->addEdge(src, succ, cfg::Edge( builder.getLangBasic().getTrue() )); 
+		cfg->addEdge(src, sink, cfg::Edge( builder.getLangBasic().getFalse() ));
 
 		succ = src;
 		currBlock = whileBlock;
@@ -820,7 +820,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 							if(predIT != end) {
 								const cfg::Block& pred = *predIT;
 								const cfg::Edge& edge = cfg.getEdge(pred.blockId(), block.blockId());
-								ASTBuilder builder(curr->getNodeManager());
+								IRBuilder builder(curr->getNodeManager());
 								if(edge.getEdgeExpr() && edge.getEdgeExpr() == builder.intLit(argID)) {
 									out << "...";
 									++predIT;
@@ -843,7 +843,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 						if ( predIT != end) {
 							const cfg::Block& pred = *predIT;
 							const cfg::Edge& edge = cfg.getEdge(pred.blockId(), block.blockId());
-							ASTBuilder builder(curr->getNodeManager());
+							IRBuilder builder(curr->getNodeManager());
 							if ( edge.getEdgeExpr() && edge.getEdgeExpr() == builder.intLit(0) ) { 
 								out << "(...)";
 							}

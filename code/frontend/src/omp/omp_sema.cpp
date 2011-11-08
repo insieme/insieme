@@ -71,7 +71,7 @@ bool SemaVisitor::visitNode(const NodeAddress& node) {
 
 
 bool SemaVisitor::visitCallExpr(const core::CallExprAddress& callExp) {
-	if(auto litFunExp = dynamic_pointer_cast<const Literal>(callExp->getFunctionExpr())) {
+	if(auto litFunExp = dynamic_pointer_cast<const Literal>(callExp.getAddressedNode()->getFunctionExpr())) {
 		auto funName = litFunExp->getValueAs<string>();
 		if(funName == "omp_get_thread_num") {
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, callExp, build.getThreadId()));
@@ -122,7 +122,7 @@ bool SemaVisitor::visitMarkerExpr(const MarkerExprAddress& mark) {
 				assert(surroundingCompound && "OMP statement pragma not surrounded by compound statement");
 				StatementList replacements;
 				replacements.push_back(build.barrier());
-				replacements.push_back(mark->getSubExpression());
+				replacements.push_back(mark.getAddressedNode()->getSubExpression());
 				replacement = dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, mark.getIndex(), replacements));
 			} else if(auto singleAnn = std::dynamic_pointer_cast<Single>(subAnn)) {
 				replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, mark, handleSingle(expr, singleAnn)));
@@ -139,8 +139,8 @@ NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel
 
 	auto parLambda = transform::extractLambda(nodeMan, stmtNode);
 
-	auto& basic = nodeMan.basic;
-	auto jobExp = build.jobExpr(build.getThreadNumRange(1) , parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
+	auto& basic = nodeMan.getLangBasic();
+	auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 	auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 	auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 	//LOG(INFO) << "mergeCall:\n" << mergeCall;
@@ -167,7 +167,7 @@ NodePtr SemaVisitor::handleSingle(const core::StatementAddress& stmt, const Sing
 	auto stmtNode = stmt.getAddressedNode();
 	StatementList replacements;
 	// implement single as pfor with 1 item
-	auto pforLambdaParams = toVector(build.variable(nodeMan.basic.getInt4()));
+	auto pforLambdaParams = toVector(build.variable(nodeMan.getLangBasic().getInt4()));
 	auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
 	auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
 	replacements.push_back(pfor);

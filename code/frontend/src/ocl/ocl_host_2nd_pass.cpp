@@ -71,9 +71,9 @@ ClmemTable& Host2ndPass::getCleanedStructures() {
 				StructType::Entries entries = type->getEntries(); // actual fields of the struct
 				StructType::Entries newEntries;
 
-				for_each(entries, [&](std::pair<IdentifierPtr, TypePtr>& entry) {
+				for_each(entries, [&](const NamedTypePtr& entry) {
 					// todo remove kernel for irt_ version
-						if(entry.second->toString().find("_cl_") == string::npos || entry.second->toString().find("_cl_kernel") != string::npos) {
+						if(entry->getName()->getValue().find("_cl_") == string::npos || entry->getType()->toString().find("_cl_kernel") != string::npos) {
 							newEntries.push_back(entry);
 						}
 					});

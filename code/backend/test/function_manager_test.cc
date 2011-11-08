@@ -78,7 +78,7 @@ TEST(FunctionManager, Literals) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	TestNameManager nameManager;
 	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
@@ -135,7 +135,7 @@ TEST(FunctionManager, Lambda) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);
@@ -209,7 +209,7 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);
@@ -281,7 +281,7 @@ TEST(FunctionManager, Bind) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);
@@ -375,7 +375,7 @@ TEST(FunctionManager, NestedBind) {
 
 	core::NodeManager nodeManager;
 	core::IRBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	Converter converter;
 	converter.setNodeManager(&nodeManager);

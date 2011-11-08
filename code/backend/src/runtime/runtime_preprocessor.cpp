@@ -36,8 +36,8 @@
 
 #include "insieme/backend/runtime/runtime_preprocessor.h"
 
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -55,8 +55,8 @@ namespace runtime {
 
 
 		core::StatementPtr registerEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& workItemImpl) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.getBasicGenerator();
+			core::IRBuilder builder(manager);
+			auto& basic = manager.getLangBasic();
 			auto& extensions = manager.getLangExtension<Extensions>();
 
 			// create register call
@@ -64,8 +64,8 @@ namespace runtime {
 		}
 
 		WorkItemImpl wrapEntryPoint(core::NodeManager& manager, const core::ExpressionPtr& entry) {
-			core::ASTBuilder builder(manager);
-			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+			core::IRBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
 
 			// create new lambda expression wrapping the entry point
@@ -96,8 +96,8 @@ namespace runtime {
 
 
 		core::ProgramPtr replaceMain(core::NodeManager& manager, const core::ProgramPtr& program) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.getBasicGenerator();
+			core::IRBuilder builder(manager);
+			auto& basic = manager.getLangBasic();
 			auto& extensions = manager.getLangExtension<Extensions>();
 
 			core::TypePtr unit = basic.getUnit();
@@ -185,7 +185,7 @@ namespace runtime {
 		 * A small helper-visitor collecting all variables which should be automatically
 		 * captured by jobs for their branches.
 		 */
-		class VariableCollector : public core::ASTVisitor<> {
+		class VariableCollector : public core::IRVisitor<> {
 
 			/**
 			 * A set of variables to be excluded.
@@ -204,7 +204,7 @@ namespace runtime {
 			 * Creates a new instance of this visitor based on the given list of variables.
 			 * @param list the list to be filled by this collector.
 			 */
-			VariableCollector(const utils::set::PointerSet<core::VariablePtr>& excluded, vector<core::VariablePtr>& list) : core::ASTVisitor<>(false), excluded(excluded), list(list) {}
+			VariableCollector(const utils::set::PointerSet<core::VariablePtr>& excluded, vector<core::VariablePtr>& list) : core::IRVisitor<>(false), excluded(excluded), list(list) {}
 
 		protected:
 
@@ -278,8 +278,8 @@ namespace runtime {
 
 
 		std::pair<WorkItemImpl, core::ExpressionPtr> wrapJob(core::NodeManager& manager, const core::JobExprPtr& job) {
-			core::ASTBuilder builder(manager);
-			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+			core::IRBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 			const Extensions& extensions = manager.getLangExtension<Extensions>();
 
 			// define parameter of resulting lambda
@@ -365,12 +365,12 @@ namespace runtime {
 			core::NodeManager& manager;
 			const core::lang::BasicGenerator& basic;
 			const Extensions& ext;
-			core::ASTBuilder builder;
+			core::IRBuilder builder;
 
 		public:
 
 			WorkItemIntroducer(core::NodeManager& manager)
-				: manager(manager), basic(manager.getBasicGenerator()),
+				: manager(manager), basic(manager.getLangBasic()),
 				  ext(manager.getLangExtension<Extensions>()), builder(manager) {}
 
 			virtual const core::NodePtr resolveElement(const core::NodePtr& ptr) {

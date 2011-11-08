@@ -48,8 +48,8 @@
 #include "insieme/backend/c_ast/c_ast_utils.h"
 #include "insieme/backend/c_ast/c_ast_printer.h"
 
-#include "insieme/core/types.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/logging.h"
@@ -320,7 +320,7 @@ namespace backend {
 
 		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr)  {
 
-			auto& basic = converter.getNodeManager().getBasicGenerator();
+			auto& basic = converter.getNodeManager().getLangBasic();
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
 
 			// try find a match
@@ -496,7 +496,7 @@ namespace backend {
 		const TypeInfo* TypeInfoStore::resolveTupleType(const core::TupleTypePtr& ptr) {
 
 			// use struct conversion to resolve type => since tuple is represented using structs
-			core::ASTBuilder builder(ptr->getNodeManager());
+			core::IRBuilder builder(ptr->getNodeManager());
 			core::NamedCompositeType::Entries entries;
 			unsigned counter = 0;
 			transform(ptr->getElementTypes(), std::back_inserter(entries), [&](const core::TypePtr& cur) {

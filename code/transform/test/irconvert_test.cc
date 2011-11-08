@@ -128,7 +128,7 @@ TEST(IRPattern, Expressions) {
 	auto intSubTree = toTree(intSubExp);
 	auto nestedTree = toTree(nestedExp);
 
-	TreePatternPtr patternA = irp::call(manager.basic.getRealAdd(), *any);
+	TreePatternPtr patternA = irp::call(manager.getLangBasic().getRealAdd(), *any);
 	EXPECT_PRED2(match, patternA, realAddTree);
 	EXPECT_PRED2(notMatch, patternA, intSubTree);
 	EXPECT_PRED2(notMatch, patternA, nestedTree);

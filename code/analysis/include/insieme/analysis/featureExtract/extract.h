@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_visitor.h"
 
 
 namespace insieme {
@@ -44,7 +44,7 @@ namespace features {
 
 using namespace insieme::core;
 
-class TestVisitor : public ASTVisitor<void> {
+class TestVisitor : public IRVisitor<void> {
 
 public:
 	int countGenericTypes;
@@ -52,7 +52,7 @@ public:
 	int countExpressions;
 	int countRefTypes;
 
-	TestVisitor() : ASTVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
+	TestVisitor() : IRVisitor<void>(true), countGenericTypes(0), countArrayTypes(0), countExpressions(0), countRefTypes(0) {};
 
 public:
 	void visitGenericType(const GenericTypePtr& cur) {

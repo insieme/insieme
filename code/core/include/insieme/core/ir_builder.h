@@ -225,6 +225,7 @@ namespace core {
 		// Lambda Expressions
 		LambdaExprPtr lambdaExpr(const StatementPtr& body, const ParametersPtr& params) const;
 		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const;
+		LambdaExprPtr lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const;
 		LambdaExprPtr lambdaExpr(const FunctionTypePtr& type, const VariableList& params, const StatementPtr& body) const;
 
 		// Direct creation of lambda and bind with capture initialization
@@ -319,6 +320,8 @@ namespace core {
 		WhileStmtPtr whileStmt(const ExpressionPtr& condition, const StatementPtr& body) const;
 		ForStmtPtr forStmt(const DeclarationStmtPtr& var, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
 		ForStmtPtr forStmt(const VariablePtr& var, const ExpressionPtr& start, const ExpressionPtr& end, const ExpressionPtr& step, const StatementPtr& body) const;
+
+		SwitchCasePtr switchCase(const LiteralPtr& lit, const StatementPtr& stmt) const { return switchCase(lit, wrapBody(stmt)); };
 
 		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
 		SwitchStmtPtr switchStmt(const ExpressionPtr& switchStmt, const vector<SwitchCasePtr>& cases, const StatementPtr& defaultCase = StatementPtr()) const;
@@ -465,6 +468,11 @@ namespace core {
 				[](const ExpressionPtr& p) { return p->getType(); });
 			return types;
 		}
+
+		/**
+		 * Encapsulate the given statement inside a body.
+		 */
+		CompoundStmtPtr wrapBody(const StatementPtr& stmt) const;
 
 	private:
 

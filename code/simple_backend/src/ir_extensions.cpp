@@ -36,7 +36,7 @@
 
 #include "insieme/simple_backend/ir_extensions.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace simple_backend {
@@ -44,10 +44,10 @@ namespace simple_backend {
 	namespace {
 
 		core::LiteralPtr createLazyITE(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			// construct type
-			core::TypePtr boolean = builder.getBasicGenerator().getBool();
+			core::TypePtr boolean = builder.getLangBasic().getBool();
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::FunctionTypePtr funType = builder.functionType(toVector(boolean, alpha, alpha), alpha);
 
@@ -55,11 +55,11 @@ namespace simple_backend {
 		}
 
 		core::LiteralPtr createInitGlobals(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			// construct type ('a)->unit
 			core::TypePtr alpha = builder.typeVariable("a");
-			core::TypePtr unit = builder.getBasicGenerator().getUnit();
+			core::TypePtr unit = builder.getLangBasic().getUnit();
 			core::FunctionTypePtr funType = builder.functionType(toVector(alpha), unit);
 
 			return builder.literal(funType, "initGlobals");

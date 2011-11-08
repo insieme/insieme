@@ -13,11 +13,11 @@
 
 #include "insieme/core/ast_pointer.h"
 #include "insieme/core/ast_address.h"
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/program.h"
-#include "insieme/core/statements.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_types.h"
 
 // Once more, gcc sucks
 #if defined WIN32
@@ -34,7 +34,7 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class ASTVisitor {
+class IRVisitor {
 
 	/**
 	 * A flag allowing to prune all types from the tree going to be visited
@@ -60,12 +60,12 @@ public:
 	 *
 	 * @param a flag determining whether the resulting visitor will visit types or not.
 	 */
-	ASTVisitor(bool visitTypes) : visitTypes(visitTypes), cast() {}
+	IRVisitor(bool visitTypes) : visitTypes(visitTypes), cast() {}
 
 	/**
 	 * A virtual destructor to support handling proper sub-types.
 	 */
-	virtual ~ASTVisitor() {};
+	virtual ~IRVisitor() {};
 
 	/**
 	 * Instructs this visitor to visit / process the given element.
@@ -157,7 +157,7 @@ template<
 	typename Filter = AcceptAll<const Ptr<const Node>&>,
 	typename ... P
 >
-class LambdaVisitor : public ASTVisitor<ResultType, Ptr, P...> {
+class LambdaVisitor : public IRVisitor<ResultType, Ptr, P...> {
 
 	/**
 	 * A functor used to perform dynamic casts on the handled pointer type.
@@ -182,7 +182,7 @@ public:
 	 * @param lambda the labmda to be applied on all adequate and accepted nodes
 	 * @param visitTypes to determine whether types should be visited as well
 	 */
-	LambdaVisitor(Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), lambda(lambda) {};
+	LambdaVisitor(Lambda& lambda, bool visitTypes) : IRVisitor<ResultType, Ptr, P...>(visitTypes), lambda(lambda) {};
 
 	/**
 	 * Create a new visitor based on the given lambda.
@@ -190,7 +190,7 @@ public:
 	 * @param lambda the labmda to be applied on all adequate and accepted nodes
 	 * @param visitTypes to determine whether types should be visited as well
 	 */
-	LambdaVisitor(Filter& filter, Lambda& lambda, bool visitTypes) : ASTVisitor<ResultType, Ptr, P...>(visitTypes), filter(filter), lambda(lambda) {};
+	LambdaVisitor(Filter& filter, Lambda& lambda, bool visitTypes) : IRVisitor<ResultType, Ptr, P...>(visitTypes), filter(filter), lambda(lambda) {};
 
 	/**
 	 * This method is overwritten since no dispatching has to be applied to nodes
@@ -302,12 +302,12 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class DepthFirstASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstIRVisitor : public IRVisitor<void, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
-	ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
+	IRVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
 
 	/**
 	 * The order in which nodes are processed.
@@ -324,8 +324,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstASTVisitor(ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
-		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
+	DepthFirstIRVisitor(IRVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
+		: IRVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
 	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
@@ -361,12 +361,12 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class DepthFirstInterruptableASTVisitor : public ASTVisitor<bool, Ptr, P...> {
+class DepthFirstInterruptableIRVisitor : public IRVisitor<bool, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
-	ASTVisitor<bool, Ptr, P...>& subVisitor;
+	IRVisitor<bool, Ptr, P...>& subVisitor;
 
 	/**
 	 * The order in which nodes are processed.
@@ -383,8 +383,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstInterruptableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
-		: ASTVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
+	DepthFirstInterruptableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+		: IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
 	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
@@ -396,7 +396,7 @@ public:
 		bool interrupted = false;
 
 		// create and run the actual visitor visiting the node using a lambda
-		ASTVisitor<bool, Ptr>* inner;
+		IRVisitor<bool, Ptr>* inner;
 		auto innerVisitor = makeLambdaVisitor([&, this](const Ptr<const Node>& cur,P...context)->bool {
 			// visit current (in case of a pre-order)
 			if (this->preorder) {
@@ -430,7 +430,7 @@ public:
 };
 
 /**
- * The DepthFirstPrunableASTVisitor provides a wrapper around an ordinary visitor which
+ * The DepthFirstPrunableIRVisitor provides a wrapper around an ordinary visitor which
  * will be iterated depth first, pre-order through every visited node. 
  * Within every node, the sub-visitor's visit method will be invoked. The result of the
  * visit will be used to determine whether its child nodes should be visited.
@@ -439,12 +439,12 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class DepthFirstPrunableASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstPrunableIRVisitor : public IRVisitor<void, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
-	ASTVisitor<bool, Ptr, P...>& subVisitor;
+	IRVisitor<bool, Ptr, P...>& subVisitor;
 
 	/**
 	 * The child factory to be used to create pointer to child nodes.
@@ -456,8 +456,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstPrunableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor)
-		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
+	DepthFirstPrunableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor)
+		: IRVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
 
 	/**
 	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
@@ -482,7 +482,7 @@ public:
 
 
 /**
- * The BreadthFirstASTVisitor provides a wrapper around an ordinary visitor which
+ * The BreadthFirstIRVisitor provides a wrapper around an ordinary visitor which
  * will iterate breadth first, pre-order through every visited node.
  */
 template<
@@ -490,12 +490,12 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class BreadthFirstASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class BreadthFirstIRVisitor : public IRVisitor<void, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
-	ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
+	IRVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
 
 	/**
 	 * The child factory to be used to create pointer to child nodes.
@@ -507,8 +507,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	BreadthFirstASTVisitor(ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor)
-		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
+	BreadthFirstIRVisitor(IRVisitor<SubVisitorResultType, Ptr, P...>& subVisitor)
+		: IRVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
 
 	/**
 	 * Visits the given node by DepthFirstly, depth-first, pre-order visiting of the entire
@@ -518,7 +518,7 @@ public:
 
 		std::queue<Ptr<const Node>> queue;
 
-		ASTVisitor<void>* visitor;
+		IRVisitor<void>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
 			// visit the current node
@@ -555,12 +555,12 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ...P
 >
-class DepthFirstOnceASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstOnceIRVisitor : public IRVisitor<void, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
-	ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
+	IRVisitor<SubVisitorResultType, Ptr, P...>& subVisitor;
 
 	/**
 	 * The order in which nodes are processed.
@@ -577,8 +577,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstOnceASTVisitor(ASTVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
-			: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
+	DepthFirstOnceIRVisitor(IRVisitor<SubVisitorResultType, Ptr, P...>& subVisitor, bool preorder = true)
+			: IRVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
 	 * The entry point for the visiting process.
@@ -586,7 +586,7 @@ public:
 	virtual void visit(const Ptr<const Node>& node, P...context) {
 
 		utils::set::PointerSet<Ptr<const Node>> all;
-		ASTVisitor<void, Ptr>* visitor;
+		IRVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 			// add current node to set ..
 			bool isNew = all.insert(node).second;
@@ -626,12 +626,12 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class DepthFirstOnceInterruptableASTVisitor : public ASTVisitor<bool, Ptr, P...> {
+class DepthFirstOnceInterruptableIRVisitor : public IRVisitor<bool, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
-	ASTVisitor<bool, Ptr, P...>& subVisitor;
+	IRVisitor<bool, Ptr, P...>& subVisitor;
 
 	/**
 	 * The order in which nodes are processed.
@@ -648,8 +648,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstOnceInterruptableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
-		: ASTVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
+	DepthFirstOnceInterruptableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+		: IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 
 	/**
@@ -661,7 +661,7 @@ public:
 		bool interrupted = false;
 
 		utils::set::PointerSet<Ptr<const Node>> all;
-		ASTVisitor<void, Ptr>* visitor;
+		IRVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
 			// quick shortcut
@@ -711,12 +711,12 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class DepthFirstOncePrunableASTVisitor : public ASTVisitor<void, Ptr, P...> {
+class DepthFirstOncePrunableIRVisitor : public IRVisitor<void, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
 	 */
-	ASTVisitor<bool, Ptr, P...>& subVisitor;
+	IRVisitor<bool, Ptr, P...>& subVisitor;
 
 	/**
 	 * The child factory to be used to create pointer to child nodes.
@@ -728,8 +728,8 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstOncePrunableASTVisitor(ASTVisitor<bool, Ptr, P...>& subVisitor)
-		: ASTVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
+	DepthFirstOncePrunableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor)
+		: IRVisitor<void, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
 
 
 	/**
@@ -738,7 +738,7 @@ public:
 	virtual void visit(const Ptr<const Node>& node, P...context) {
 
 		utils::set::PointerSet<Ptr<const Node>> all;
-		ASTVisitor<void, Ptr>* visitor;
+		IRVisitor<void, Ptr>* visitor;
 		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) {
 
 			// add current node to set ..
@@ -778,8 +778,8 @@ public:
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<typename Result, template<class Target> class Ptr, typename ... P>
-DepthFirstASTVisitor<Result, Ptr, P...> makeDepthFirstVisitor(ASTVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
-	return DepthFirstASTVisitor<Result, Ptr, P...>(visitor, preorder);
+DepthFirstIRVisitor<Result, Ptr, P...> makeDepthFirstVisitor(IRVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstIRVisitor<Result, Ptr, P...>(visitor, preorder);
 }
 
 /**
@@ -789,8 +789,8 @@ DepthFirstASTVisitor<Result, Ptr, P...> makeDepthFirstVisitor(ASTVisitor<Result,
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-DepthFirstInterruptableASTVisitor<Ptr, P...> makeDepthFirstInterruptableVisitor(ASTVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
-	return DepthFirstInterruptableASTVisitor<Ptr, P...>(visitor, preorder);
+DepthFirstInterruptableIRVisitor<Ptr, P...> makeDepthFirstInterruptableVisitor(IRVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstInterruptableIRVisitor<Ptr, P...>(visitor, preorder);
 }
 
 /**
@@ -800,8 +800,8 @@ DepthFirstInterruptableASTVisitor<Ptr, P...> makeDepthFirstInterruptableVisitor(
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-DepthFirstPrunableASTVisitor<Ptr, P...> makeDepthFirstPrunableVisitor(ASTVisitor<bool,Ptr, P...>& visitor) {
-	return DepthFirstPrunableASTVisitor<Ptr, P...>(visitor);
+DepthFirstPrunableIRVisitor<Ptr, P...> makeDepthFirstPrunableVisitor(IRVisitor<bool,Ptr, P...>& visitor) {
+	return DepthFirstPrunableIRVisitor<Ptr, P...>(visitor);
 }
 
 /**
@@ -811,8 +811,8 @@ DepthFirstPrunableASTVisitor<Ptr, P...> makeDepthFirstPrunableVisitor(ASTVisitor
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<typename Result, template<class Target> class Ptr, typename ... P>
-BreadthFirstASTVisitor<Result, Ptr, P...> makeBreadthFirstVisitor(ASTVisitor<Result,Ptr, P...>& visitor) {
-	return BreadthFirstASTVisitor<Result, Ptr, P...>(visitor);
+BreadthFirstIRVisitor<Result, Ptr, P...> makeBreadthFirstVisitor(IRVisitor<Result,Ptr, P...>& visitor) {
+	return BreadthFirstIRVisitor<Result, Ptr, P...>(visitor);
 }
 
 /**
@@ -822,8 +822,8 @@ BreadthFirstASTVisitor<Result, Ptr, P...> makeBreadthFirstVisitor(ASTVisitor<Res
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<typename Result, template<class Target> class Ptr, typename ... P>
-DepthFirstOnceASTVisitor<Result, Ptr, P...> makeDepthFirstOnceVisitor(ASTVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
-	return DepthFirstOnceASTVisitor<Result, Ptr, P...>(visitor, preorder);
+DepthFirstOnceIRVisitor<Result, Ptr, P...> makeDepthFirstOnceVisitor(IRVisitor<Result,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstOnceIRVisitor<Result, Ptr, P...>(visitor, preorder);
 }
 
 /**
@@ -833,8 +833,8 @@ DepthFirstOnceASTVisitor<Result, Ptr, P...> makeDepthFirstOnceVisitor(ASTVisitor
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-DepthFirstOnceInterruptableASTVisitor<Ptr, P...> makeDepthFirstOnceInterruptableVisitor(ASTVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
-	return DepthFirstOnceInterruptableASTVisitor<Ptr, P...>(visitor, preorder);
+DepthFirstOnceInterruptableIRVisitor<Ptr, P...> makeDepthFirstOnceInterruptableVisitor(IRVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstOnceInterruptableIRVisitor<Ptr, P...>(visitor, preorder);
 }
 
 /**
@@ -844,8 +844,8 @@ DepthFirstOnceInterruptableASTVisitor<Ptr, P...> makeDepthFirstOnceInterruptable
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-DepthFirstOncePrunableASTVisitor<Ptr, P...> makeDepthFirstOncePrunableVisitor(ASTVisitor<bool,Ptr, P...>& visitor) {
-	return DepthFirstOncePrunableASTVisitor<Ptr, P...>(visitor);
+DepthFirstOncePrunableIRVisitor<Ptr, P...> makeDepthFirstOncePrunableVisitor(IRVisitor<bool,Ptr, P...>& visitor) {
+	return DepthFirstOncePrunableIRVisitor<Ptr, P...>(visitor);
 }
 
 
@@ -860,23 +860,23 @@ DepthFirstOncePrunableASTVisitor<Ptr, P...> makeDepthFirstOncePrunableVisitor(AS
  * 				   post order will be enforced.
  */
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>& visitor, bool preorder = true) {
+inline void visitDepthFirst(const Ptr<Node>& root, IRVisitor<Result, Ptr>& visitor, bool preorder = true) {
 	makeDepthFirstVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by r-value reference
 template<typename Node, typename Result, template<class Target> class Ptr>
-inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr>&& visitor, bool preorder = true) {
+inline void visitDepthFirst(const Ptr<Node>& root, IRVisitor<Result, Ptr>&& visitor, bool preorder = true) {
 	makeDepthFirstVisitor(visitor, preorder).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename H, typename ... P>
-inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, H, P...>& visitor, bool preorder, H first, P...rest) {
+inline void visitDepthFirst(const Ptr<Node>& root, IRVisitor<Result, Ptr, H, P...>& visitor, bool preorder, H first, P...rest) {
 	makeDepthFirstVisitor(visitor, preorder).visit(root, first, rest...);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename H, typename ... P>
-inline void visitDepthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, H, P...>&& visitor, bool preorder, H first, P...rest) {
+inline void visitDepthFirst(const Ptr<Node>& root, IRVisitor<Result, Ptr, H, P...>&& visitor, bool preorder, H first, P...rest) {
 	makeDepthFirstVisitor(visitor, preorder).visit(root, first, rest...);
 }
 
@@ -897,13 +897,13 @@ inline void visitDepthFirst(const Ptr<Node>& root, Lambda lambda, bool preorder 
  * @return returns true if interrupted, false otherwise
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
 	return makeDepthFirstInterruptableVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
 	return makeDepthFirstInterruptableVisitor(visitor, preorder).visit(root);
 }
 
@@ -923,13 +923,13 @@ inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, Lambda lambda, b
  * @param visitor the visitor to be visiting all the nodes
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitDepthFirstPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor) {
+inline void visitDepthFirstPrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor) {
 	makeDepthFirstPrunableVisitor(visitor).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitDepthFirstPrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor) {
+inline void visitDepthFirstPrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor) {
 	makeDepthFirstPrunableVisitor(visitor).visit(root);
 }
 
@@ -949,12 +949,12 @@ inline void visitDepthFirstPrunable(const Ptr<Node>& root, Lambda lambda, bool v
  * @param preorder a flag indicating whether nodes should be visited in pre or post order
  */
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitDepthFirstOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>&& visitor, bool preorder = true) {
+inline void visitDepthFirstOnce(const Ptr<Node>& root, IRVisitor<Result, Ptr, P...>&& visitor, bool preorder = true) {
 	makeDepthFirstOnceVisitor(visitor, preorder).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitDepthFirstOnce(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>& visitor, bool preorder = true) {
+inline void visitDepthFirstOnce(const Ptr<Node>& root, IRVisitor<Result, Ptr, P...>& visitor, bool preorder = true) {
 	makeDepthFirstOnceVisitor(visitor, preorder).visit(root);
 }
 
@@ -978,13 +978,13 @@ inline void visitDepthFirstOnce(const Ptr<Node>& root, Lambda lambda, bool preor
  * 				   post order will be enforced.
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
 	return makeDepthFirstOnceInterruptableVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
 	return makeDepthFirstOnceInterruptableVisitor(visitor, preorder).visit(root);
 }
 
@@ -1005,13 +1005,13 @@ inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, Lambda lambd
  * @param visitor the visitor to be visiting all the nodes
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>&& visitor) {
+inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor) {
 	makeDepthFirstOncePrunableVisitor(visitor).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, ASTVisitor<bool, Ptr, P...>& visitor) {
+inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor) {
 	makeDepthFirstOncePrunableVisitor(visitor).visit(root);
 }
 
@@ -1030,12 +1030,12 @@ inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, Lambda lambda, bo
  * @param visitor the visitor to be visiting all the nodes
  */
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>&& visitor) {
+inline void visitBreadthFirst(const Ptr<Node>& root, IRVisitor<Result, Ptr, P...>&& visitor) {
 	makeBreadthFirstVisitor(visitor).visit(root);
 }
 
 template<typename Node, typename Result, template<class Target> class Ptr, typename ... P>
-inline void visitBreadthFirst(const Ptr<Node>& root, ASTVisitor<Result, Ptr, P...>& visitor) {
+inline void visitBreadthFirst(const Ptr<Node>& root, IRVisitor<Result, Ptr, P...>& visitor) {
 	makeBreadthFirstVisitor(visitor).visit(root);
 }
 

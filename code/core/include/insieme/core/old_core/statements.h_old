@@ -11,8 +11,8 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/instance_manager.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_types.h"
 #include "insieme/core/identifier.h"
 
 using std::string;

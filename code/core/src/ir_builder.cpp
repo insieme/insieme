@@ -123,16 +123,6 @@ namespace {
 		return nonDecls;
 	}
 
-	/**
-	 * A utility function wrapping a given statement into a compound statement (if necessary).
-	 */
-	CompoundStmtPtr wrapBody(const StatementPtr& stmt) {
-		if (stmt->getNodeType() == NT_CompoundStmt) {
-			return static_pointer_cast<CompoundStmtPtr>(stmt);
-		}
-		return CompoundStmt::get(stmt->getNodeManager(), stmt);
-	}
-
 }
 
 
@@ -489,7 +479,9 @@ LambdaExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const ParametersPt
 LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const ParametersPtr& params) const {
 	return lambdaExpr(functionType(extractTypes(params->getParameters()), returnType, true), params, wrapBody(body));
 }
-
+LambdaExprPtr IRBuilder::lambdaExpr(const TypePtr& returnType, const StatementPtr& body, const VariableList& params) const {
+	return lambdaExpr(returnType, body, parameters(params));
+}
 
 BindExprPtr IRBuilder::lambdaExpr(const StatementPtr& body, const VarValueMapping& captureMap, const VariableList& params) const {
 	return lambdaExpr(manager.getLangBasic().getUnit(), body, captureMap, params);
@@ -867,6 +859,17 @@ unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 	}
 
 	return idx;
+}
+
+
+/**
+ * A utility function wrapping a given statement into a compound statement (if necessary).
+ */
+CompoundStmtPtr IRBuilder::wrapBody(const StatementPtr& stmt) const {
+	if (stmt->getNodeType() == NT_CompoundStmt) {
+		return static_pointer_cast<CompoundStmtPtr>(stmt);
+	}
+	return CompoundStmt::get(stmt->getNodeManager(), stmt);
 }
 
 

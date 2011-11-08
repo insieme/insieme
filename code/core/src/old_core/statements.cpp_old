@@ -1,6 +1,6 @@
 
-#include "insieme/core/statements.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/iterator_utils.h"
@@ -382,7 +382,7 @@ Node::NodeListOpt IfStmt::getChildNodes() const {
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body) {
 	// default to empty else block
-	return get(manager, condition, wrapInCompound(body), manager.basic.getNoOp());
+	return get(manager, condition, wrapInCompound(body), manager.getLangBasic().getNoOp());
 }
 
 IfStmtPtr IfStmt::get(NodeManager& manager, const ExpressionPtr& condition, const StatementPtr& body, const StatementPtr& elseBody) {
@@ -464,7 +464,7 @@ Node::NodeListOpt SwitchStmt::getChildNodes() const {
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases) {
-	return get(manager, switchExpr, cases, manager.basic.getNoOp());
+	return get(manager, switchExpr, cases, manager.getLangBasic().getNoOp());
 }
 
 SwitchStmtPtr SwitchStmt::get(NodeManager& manager, const ExpressionPtr& switchExpr, const vector<Case>& cases, const StatementPtr& defaultCase) {

@@ -112,7 +112,7 @@ core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy
 	// otherwise create a marker node and attach the annotation to the marker
 	typedef typename marker_type_trait<NodeTy>::marker_type MarkerTy;
 	// create an expression marker
-	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode, markerID++);
+	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), core::UIntValue::get(fact.getNodeManager(), markerID++), irNode);
 	// attach the annotation to the marker node
 	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 	return marker;

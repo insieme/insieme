@@ -45,7 +45,7 @@
 using namespace insieme::core;
 using namespace insieme::core::transform;
 
-TEST(ASTVisitor, NodeReplacementTest) {
+TEST(IRVisitor, NodeReplacementTest) {
 
 	// copy and clone the type
 	NodeManager manager;

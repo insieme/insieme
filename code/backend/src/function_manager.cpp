@@ -47,7 +47,7 @@
 
 #include "insieme/backend/c_ast/c_ast_utils.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/utils/map_utils.h"
@@ -154,7 +154,7 @@ namespace backend {
 			StmtConverter& stmtConverter = converter.getStmtConverter();
 			TypeManager& typeManager = converter.getTypeManager();
 
-			auto varlistPack = converter.getNodeManager().getBasicGenerator().getVarlistPack();
+			auto varlistPack = converter.getNodeManager().getLangBasic().getVarlistPack();
 
 			// create a recursive lambda appending arguments to the caller (descent into varlist-pack calls)
 			std::function<void(const core::ExpressionPtr& argument)> append;

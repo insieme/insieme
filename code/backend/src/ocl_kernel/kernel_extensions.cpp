@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/backend/ocl_kernel/kernel_extensions.h"
 
@@ -48,7 +48,7 @@ namespace ocl_kernel{
 		const string WRAP_TYPE_PREFIX = "_ocl_";
 
 		core::TypePtr getWrapperType(const string& name, const core::TypePtr& type) {
-			core::ASTBuilder builder(type->getNodeManager());
+			core::IRBuilder builder(type->getNodeManager());
 			return builder.genericType(WRAP_TYPE_PREFIX + name, toVector(type));
 		}
 
@@ -60,7 +60,7 @@ namespace ocl_kernel{
 		}
 
 		const core::LiteralPtr getWrapLiteral(core::NodeManager& manager, const string& name) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr wrapped = getWrapperType(name, alpha);
@@ -69,7 +69,7 @@ namespace ocl_kernel{
 		}
 
 		const core::LiteralPtr getUnwrapLiteral(core::NodeManager& manager, const string& name) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr wrapped = getWrapperType(name, alpha);
@@ -78,15 +78,15 @@ namespace ocl_kernel{
 		}
 
 		const core::LiteralPtr getGetter(core::NodeManager& manager, const string& name) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
-			core::TypePtr uint4 = manager.getBasicGenerator().getUInt4();
+			core::TypePtr uint4 = manager.getLangBasic().getUInt4();
 			core::TypePtr funType = builder.functionType(toVector(uint4), uint4, true);
 			return builder.literal(funType, name);
 		}
 
 		const core::LiteralPtr getKernelWrapper(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::TypePtr funType = builder.functionType(toVector(alpha), alpha, true);
@@ -199,7 +199,7 @@ namespace ocl_kernel{
 			return value;
 		}
 
-		core::ASTBuilder builder(value->getNodeManager());
+		core::IRBuilder builder(value->getNodeManager());
 
 		const core::TypePtr type = getType(addressSpace, value->getType());
 		const core::ExpressionPtr& wrapper = getWrapper(addressSpace);
@@ -214,7 +214,7 @@ namespace ocl_kernel{
 
 		assert(isWrapperType(addressSpace, value->getType()));
 
-		core::ASTBuilder builder(value->getNodeManager());
+		core::IRBuilder builder(value->getNodeManager());
 
 		const core::TypePtr type = static_pointer_cast<const core::GenericType>(value->getType())->getTypeParameter()[0];
 		const core::ExpressionPtr& wrapper = getUnWrapper(addressSpace);

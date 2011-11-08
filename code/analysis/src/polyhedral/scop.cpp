@@ -48,11 +48,11 @@
 
 /*************************************************************************************************/
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
@@ -127,15 +127,15 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 	assert (cond->getNodeType() == NT_CallExpr);
 
 	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
-	if ( mgr.basic.isIntCompOp(callExpr->getFunctionExpr()) || 
-		 mgr.basic.isUIntCompOp(callExpr->getFunctionExpr()) ) 
+	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
+		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
 	{
 		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
 		// First of all we check whether this condition is a composed by multiple conditions
 		// connected through || or && statements 
 		BasicGenerator::Operator&& op = 
-			mgr.basic.getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
+			mgr.getLangBasic().getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
 
 		switch (op) {
 		case BasicGenerator::LOr:
@@ -157,9 +157,9 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		//
 		// if (a<b) { }    ->    if( a-b<0 ) { }
 		try {
-			ASTBuilder builder(mgr);
+			IRBuilder builder(mgr);
 			ExpressionPtr&& expr = builder.callExpr( 
-					mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
+					mgr.getLangBasic().getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
 				);
 			AffineFunction af(iv, expr);
 			// Determine the type of this constraint
@@ -214,7 +214,7 @@ SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& sco
 
 //===== ScopVisitor ================================================================================
 
-struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
+struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	AddressList& scopList;
 	AddressList subScops;
@@ -226,7 +226,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	RegionStmtStack regionStmts;
 
 	ScopVisitor(AddressList& scopList) : 
-		ASTVisitor<IterationVector, Address>(false), scopList(scopList) 
+		IRVisitor<IterationVector, Address>(false), scopList(scopList) 
 	{
 		regionStmts.push( RegionStmtStack::value_type() );
 	}
@@ -439,7 +439,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		IterationVector ret;
 		
 		bool isSCoP = true;
-		ASTBuilder builder( switchStmt->getNodeManager() );
+		IRBuilder builder( switchStmt->getNodeManager() );
 			
 		SubScopList scops;
 		IterationDomain defaultCons(ret); // FIXME: replace with universe constraint
@@ -456,7 +456,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 			ExpressionPtr&& expr =
 				builder.callExpr(
-					builder.getBasicGenerator().getOperator( 
+					builder.getLangBasic().getOperator( 
 						switchStmt->getSwitchExpr()->getType(), BasicGenerator::Sub
 					),
 					switchStmt->getSwitchExpr() /* switchExpr*/, 
@@ -569,7 +569,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			ret.add( Iterator(decl->getVariable()) ); 
 			
 			NodeManager& mgr = forStmt->getNodeManager();
-			ASTBuilder builder(mgr);
+			IRBuilder builder(mgr);
 
 			try {
 				ret = merge(ret, bodyIV);	
@@ -579,12 +579,12 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
 				AffineFunction lb(ret, 
-						builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), 
+						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), decl->getVariable(), 
 							decl->getInitialization())	
 					);
 
 				// check the upper bound of the loop
-				AffineFunction ub(ret, builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), 
+				AffineFunction ub(ret, builder.callExpr(mgr.getLangBasic().getSignedIntSub(), decl->getVariable(), 
 							forStmt.getAddressedNode()->getEnd())
 						);
 				// set the constraint: iter >= lb && iter < ub
@@ -606,7 +606,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					
 					assert(formula.isConstant() && "Stride value of for loop is not constant.");
 
-					VariablePtr existenceVar = ASTBuilder(mgr).variable(mgr.basic.getInt4());
+					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 					ret.add( Iterator( existenceVar, true ) );
 
 					AffineFunction existenceCons( ret );
@@ -616,7 +616,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					// WE still have to make sure the loop iterator assume the value given by the
 					// loop lower bound, therefore i == lb
 					AffineFunction lowerBound( ret, 
-						builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), 
+						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), decl->getVariable(), 
 							decl->getInitialization()) 
 						);
 
@@ -790,7 +790,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		STACK_SIZE_GUARD;
 
 		const NodeAddress& func = callExpr.getAddressOfChild(1);
-		const BasicGenerator& gen = callExpr->getNodeManager().getBasicGenerator();
+		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 		
 		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
 

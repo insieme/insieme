@@ -440,7 +440,7 @@ TEST(XmlTest, RecTypeTest) {
 
 TEST(XmlTest, LiteralTest) {
 	NodeManager manager;
-	LiteralPtr lit1 = Literal::get(manager, manager.basic.getInt8(), "10");
+	LiteralPtr lit1 = Literal::get(manager, manager.getLangBasic().getInt8(), "10");
 	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lit1 n"));
 	lit1->addAnnotation(dummy_ln);
 	
@@ -462,7 +462,7 @@ TEST(XmlTest, LiteralTest) {
 TEST(XmlTest, ReturnStmtTest) {
 	NodeManager manager;
 	
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "12");
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
 	ReturnStmtPtr rstmt = ReturnStmt::get(manager, literal);
 	DummyAnnotationPtr dummy_rn(new DummyAnnotation("return n"));
 	rstmt->addAnnotation(dummy_rn);
@@ -485,23 +485,23 @@ TEST(XmlTest, ReturnStmtTest) {
 TEST(XmlTest, ForStmtTest) {
 	NodeManager manager;
 
-	LiteralPtr start = Literal::get(manager, manager.basic.getInt4(), "1");
+	LiteralPtr start = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
 	DummyAnnotationPtr dummy_sn(new DummyAnnotation("lit_start n"));
 	start->addAnnotation(dummy_sn);
 	
-	LiteralPtr end   = Literal::get(manager, manager.basic.getInt4(), "9");
+	LiteralPtr end   = Literal::get(manager, manager.getLangBasic().getInt4(), "9");
 	DummyAnnotationPtr dummy_en(new DummyAnnotation("end n"));
 	end->addAnnotation(dummy_en);
 	
-	LiteralPtr step  = Literal::get(manager, manager.basic.getInt4(), "2");
+	LiteralPtr step  = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
 	DummyAnnotationPtr dummy_tn(new DummyAnnotation("step n"));
 	step->addAnnotation(dummy_tn);
 
-	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.basic.getInt4(), 1), start);
+	DeclarationStmtPtr decl = DeclarationStmt::get(manager, Variable::get(manager, manager.getLangBasic().getInt4(), 1), start);
 	DummyAnnotationPtr dummy_dn(new DummyAnnotation("decl n"));
 	decl->addAnnotation(dummy_dn);
 	
-	StatementPtr body = manager.get(manager.basic.getNoOp());
+	StatementPtr body = manager.get(manager.getLangBasic().getNoOp());
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
 	body->addAnnotation(dummy_bn);
 
@@ -527,13 +527,13 @@ TEST(XmlTest, ForStmtTest) {
 TEST(XmlTest, IfStmtTest) {
 	NodeManager manager;
 
-	VariablePtr var = Variable::get(manager, manager.basic.getBool(), 1);
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getBool(), 1);
 	
-	LiteralPtr thenStmt  = Literal::get(manager, manager.basic.getInt4(), "7");
+	LiteralPtr thenStmt  = Literal::get(manager, manager.getLangBasic().getInt4(), "7");
 	DummyAnnotationPtr dummy_tn(new DummyAnnotation("then n"));
 	thenStmt->addAnnotation(dummy_tn);
 	
-	StatementPtr elseStmt = manager.get(manager.basic.getNoOp());
+	StatementPtr elseStmt = manager.get(manager.getLangBasic().getNoOp());
 	DummyAnnotationPtr dummy_en(new DummyAnnotation("else n"));
 	elseStmt->addAnnotation(dummy_en);
 
@@ -559,19 +559,19 @@ TEST(XmlTest, IfStmtTest) {
 TEST(XmlTest, SwitchStmtTest) {
 	NodeManager manager;
 
-	VariablePtr var = Variable::get(manager, manager.basic.getInt4());
+	VariablePtr var = Variable::get(manager, manager.getLangBasic().getInt4());
 	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var n"));
 	var->addAnnotation(dummy_vn);
 
-	LiteralPtr literalA = Literal::get(manager, manager.basic.getInt4(), "1");
+	LiteralPtr literalA = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
 	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
 	literalA->addAnnotation(dummy_lAn);
 	
-	LiteralPtr literalB = Literal::get(manager, manager.basic.getInt4(), "2");
+	LiteralPtr literalB = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
 	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("litB n"));
 	literalB->addAnnotation(dummy_lBn);
 	
-	StatementPtr caseA = manager.get(manager.basic.getNoOp());
+	StatementPtr caseA = manager.get(manager.getLangBasic().getNoOp());
 	DummyAnnotationPtr dummy_can(new DummyAnnotation("caseA n"));
 	caseA->addAnnotation(dummy_can);
 	
@@ -607,11 +607,11 @@ TEST(XmlTest, SwitchStmtTest) {
 TEST(XmlTest, WhileStmtTest) {
 	NodeManager manager;
 
-	LiteralPtr condition = Literal::get(manager, manager.get(manager.basic.getBool()), "true");
+	LiteralPtr condition = Literal::get(manager, manager.get(manager.getLangBasic().getBool()), "true");
 	DummyAnnotationPtr dummy_cn(new DummyAnnotation("cond n"));
 	condition->addAnnotation(dummy_cn);
 	
-	StatementPtr body = manager.get(manager.basic.getNoOp());
+	StatementPtr body = manager.get(manager.getLangBasic().getNoOp());
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
 	body->addAnnotation(dummy_bn);
 
@@ -714,11 +714,11 @@ TEST(XmlTest, CompoundStmtTest) {
 TEST(XmlTest, DeclarationStmtTest) {
 	NodeManager manager;
 
-	VariablePtr var1 = Variable::get(manager, manager.basic.getBool(), 1);
+	VariablePtr var1 = Variable::get(manager, manager.getLangBasic().getBool(), 1);
 	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var1 n"));
 	var1->addAnnotation(dummy_vn);
 
-	LiteralPtr literalA = Literal::get(manager, manager.basic.getInt4(), "1");
+	LiteralPtr literalA = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
 	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("litA n"));
 	literalA->addAnnotation(dummy_lAn);
 
@@ -749,11 +749,11 @@ TEST(XmlTest, StructExprTest) {
 	
 	vector<StructExpr::Member> vecA;
 	
-	LiteralPtr literal1 = Literal::get(manager, manager.basic.getInt4(), "111");
+	LiteralPtr literal1 = Literal::get(manager, manager.getLangBasic().getInt4(), "111");
 	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("lit1 n"));
 	literal1->addAnnotation(dummy_l1n);
 	
-	LiteralPtr literal2 = Literal::get(manager, manager.basic.getInt4(), "222");
+	LiteralPtr literal2 = Literal::get(manager, manager.getLangBasic().getInt4(), "222");
 	DummyAnnotationPtr dummy_l2n(new DummyAnnotation("lit2 n"));
 	literal2->addAnnotation(dummy_l2n);
 	
@@ -785,7 +785,7 @@ TEST(XmlTest, UnionExprTest) {
 	NodeManager manager;
 	
 	IdentifierPtr identC = Identifier::get(manager, "c");
-	LiteralPtr literalC = Literal::get(manager, manager.basic.getInt4(), "10");
+	LiteralPtr literalC = Literal::get(manager, manager.getLangBasic().getInt4(), "10");
 	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("litC n"));
 	literalC->addAnnotation(dummy_lCn);
 	
@@ -816,11 +816,11 @@ TEST(XmlTest, VectorExprTest) {
 	
 	vector<ExpressionPtr> vecA;
 	
-	LiteralPtr literalE = Literal::get(manager, manager.basic.getInt4(), "11");
+	LiteralPtr literalE = Literal::get(manager, manager.getLangBasic().getInt4(), "11");
 	DummyAnnotationPtr dummy_lEn(new DummyAnnotation("litE n"));
 	literalE->addAnnotation(dummy_lEn);
 	
-	LiteralPtr literalF = Literal::get(manager, manager.basic.getInt4(), "21");
+	LiteralPtr literalF = Literal::get(manager, manager.getLangBasic().getInt4(), "21");
 	DummyAnnotationPtr dummy_lFn(new DummyAnnotation("litF n"));
 	literalF->addAnnotation(dummy_lFn);
 	
@@ -851,11 +851,11 @@ TEST(XmlTest, TupleExprTest) {
 	
 	vector<ExpressionPtr> vecA;
 	
-	LiteralPtr literalG = Literal::get(manager, manager.basic.getInt4(), "12");
+	LiteralPtr literalG = Literal::get(manager, manager.getLangBasic().getInt4(), "12");
 	DummyAnnotationPtr dummy_lGn(new DummyAnnotation("litG n"));
 	literalG->addAnnotation(dummy_lGn);
 	
-	LiteralPtr literalH = Literal::get(manager, manager.basic.getInt4(), "22");
+	LiteralPtr literalH = Literal::get(manager, manager.getLangBasic().getInt4(), "22");
 	DummyAnnotationPtr dummy_lHn(new DummyAnnotation("litH n"));
 	literalH->addAnnotation(dummy_lHn);
 	
@@ -884,11 +884,11 @@ TEST(XmlTest, TupleExprTest) {
 TEST(XmlTest, CastExprTest) {
 	NodeManager manager;
 	
-	LiteralPtr literal = Literal::get(manager, manager.basic.getInt4(), "16");
+	LiteralPtr literal = Literal::get(manager, manager.getLangBasic().getInt4(), "16");
 	DummyAnnotationPtr dummy_ln(new DummyAnnotation("lit n"));
 	literal->addAnnotation(dummy_ln);
 	
-	CastExprPtr cast = CastExpr::get(manager, manager.basic.getInt8(), literal);
+	CastExprPtr cast = CastExpr::get(manager, manager.getLangBasic().getInt8(), literal);
 	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("castExpr n"));
 	cast->addAnnotation(dummy_Cn);
 	
@@ -912,22 +912,22 @@ TEST(XmlTest, CallExprTest) {
 	
 	vector<ExpressionPtr> vecA;
 	
-	LiteralPtr literal_A = Literal::get(manager, manager.basic.getInt4(), "1");
+	LiteralPtr literal_A = Literal::get(manager, manager.getLangBasic().getInt4(), "1");
 	DummyAnnotationPtr dummy_lAn(new DummyAnnotation("lit A n"));
 	literal_A->addAnnotation(dummy_lAn);
 	
-	LiteralPtr literal_B = Literal::get(manager, manager.basic.getInt4(), "2");
+	LiteralPtr literal_B = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
 	DummyAnnotationPtr dummy_lBn(new DummyAnnotation("lit B n"));
 	literal_B->addAnnotation(dummy_lBn);
 	
-	LiteralPtr literal_C = Literal::get(manager, manager.basic.getInt4(), "3");
+	LiteralPtr literal_C = Literal::get(manager, manager.getLangBasic().getInt4(), "3");
 	DummyAnnotationPtr dummy_lCn(new DummyAnnotation("lit C n"));
 	literal_C->addAnnotation(dummy_lCn);
 	
 	vecA.push_back(literal_A);
 	vecA.push_back(literal_B);
 	
-	CallExprPtr call = CallExpr::get(manager, manager.basic.getBool(), literal_C, vecA);
+	CallExprPtr call = CallExpr::get(manager, manager.getLangBasic().getBool(), literal_C, vecA);
 	DummyAnnotationPtr dummy_Cn(new DummyAnnotation("callExpr n"));
 	call->addAnnotation(dummy_Cn);
 	
@@ -958,7 +958,7 @@ TEST(XmlTest, BindExprTest) {
 	VariablePtr captureVar1 = Variable::get(manager, typeA, 1);
 	VariablePtr captureVar2 = Variable::get(manager, typeA, 2);
 
-	CallExprPtr callC4 = CallExpr::get(manager, manager.basic.getBool(), funC, toVector<ExpressionPtr>(captureVar2, captureVar1));	
+	CallExprPtr callC4 = CallExpr::get(manager, manager.getLangBasic().getBool(), funC, toVector<ExpressionPtr>(captureVar2, captureVar1));	
 	BindExprPtr bind = BindExpr::get(manager, toVector<VariablePtr>(captureVar1,captureVar2), callC4);
 		
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("bind n"));
@@ -982,7 +982,7 @@ TEST(XmlTest, BindExprTest) {
 
 TEST(XmlTest, VariableTest) {
 	NodeManager manager;
-	VariablePtr var1 = Variable::get(manager, manager.basic.getInt8());
+	VariablePtr var1 = Variable::get(manager, manager.getLangBasic().getInt8());
 	DummyAnnotationPtr dummy_vn(new DummyAnnotation("var1 n"));
 	var1->addAnnotation(dummy_vn);
 	
@@ -1005,9 +1005,9 @@ TEST(XmlTest, JobExprTest) {
 	NodeManager manager;
 	IRBuilder builder(manager);
 
-	TypePtr intType = manager.basic.getUIntGen();
-	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.basic.getUnit());
-	FunctionTypePtr guardType = FunctionType::get(manager, toVector<TypePtr>(intType, intType), manager.basic.getBool());
+	TypePtr intType = manager.getLangBasic().getUIntGen();
+	FunctionTypePtr funType = FunctionType::get(manager, toVector<TypePtr>(), manager.getLangBasic().getUnit());
+	FunctionTypePtr guardType = FunctionType::get(manager, toVector<TypePtr>(intType, intType), manager.getLangBasic().getBool());
 
 	ExpressionPtr handlerA = Variable::get(manager, funType);
 	ExpressionPtr handlerB = Variable::get(manager, funType);
@@ -1062,10 +1062,10 @@ TEST(XmlTest, LambdaTest) {
 	FunctionTypePtr funType = FunctionType::get(manager, list, type3);
 	
 	Lambda::ParamList paramList;
-	paramList.push_back(Variable::get(manager, manager.basic.getBool(), 1));
-	paramList.push_back(Variable::get(manager, manager.basic.getBool(), 2));	
+	paramList.push_back(Variable::get(manager, manager.getLangBasic().getBool(), 1));
+	paramList.push_back(Variable::get(manager, manager.getLangBasic().getBool(), 2));	
 	
-	StatementPtr body = ReturnStmt::get(manager, manager.basic.getTrue());
+	StatementPtr body = ReturnStmt::get(manager, manager.getLangBasic().getTrue());
 	DummyAnnotationPtr dummy_bn(new DummyAnnotation("body n"));
 	body->addAnnotation(dummy_bn);
 	
@@ -1093,7 +1093,7 @@ TEST(XmlTest, ProgramTest) {
 	
 	ProgramPtr program = Program::create(manager);
 
-	ExpressionPtr entryA = Variable::get(manager, manager.basic.getBool(), 1);
+	ExpressionPtr entryA = Variable::get(manager, manager.getLangBasic().getBool(), 1);
 	DummyAnnotationPtr dummy_an(new DummyAnnotation("entrya n"));
 	entryA->addAnnotation(dummy_an);
 
@@ -1126,7 +1126,7 @@ TEST(XmlTest, MemberAccessExprTest) {
 	
 	vector<StructExpr::Member> vecA;
 	
-	LiteralPtr literal1 = Literal::get(manager, manager.basic.getInt4(), "222");
+	LiteralPtr literal1 = Literal::get(manager, manager.getLangBasic().getInt4(), "222");
 	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("literal1 n"));
 	literal1->addAnnotation(dummy_l1n);
 	
@@ -1156,7 +1156,7 @@ TEST(XmlTest, TupleProjectionExprTest) {
 	
 	vector<ExpressionPtr> vecA;
 	
-	LiteralPtr literal1 = Literal::get(manager, manager.basic.getInt4(), "2");
+	LiteralPtr literal1 = Literal::get(manager, manager.getLangBasic().getInt4(), "2");
 	DummyAnnotationPtr dummy_l1n(new DummyAnnotation("literal1 n"));
 	literal1->addAnnotation(dummy_l1n);
 	

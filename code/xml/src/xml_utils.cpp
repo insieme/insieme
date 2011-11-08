@@ -41,7 +41,7 @@
 
 #include "insieme/utils/logging.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/xml/xml_utils.h"
 #include "insieme/xml/xsd_config.h"

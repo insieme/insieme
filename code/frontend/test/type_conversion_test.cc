@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 
 #include "insieme/frontend/program.h"
 #include "insieme/frontend/clang_config.h"
@@ -388,9 +388,6 @@ TEST(TypeConversion, HandleArrayType) {
 
 }
 
-struct VariableResetHack {
-	static void reset() { Variable::counter = 0; }
-};
 
 TEST(TypeConversion, FileTest) {
 	Logger::get(std::cerr, DEBUG, 2);
@@ -402,8 +399,10 @@ TEST(TypeConversion, FileTest) {
 	auto filter = [](const fe::Pragma& curr){ return curr.getType() == "test"; };
 
 	for(auto it = prog.pragmas_begin(filter), end = prog.pragmas_end(); it != end; ++it) {
-		VariableResetHack::reset();
-		ConversionFactory convFactory( manager, prog );
+		// we use an internal manager to have private counter for variables so we can write independent tests
+		NodeManager mgr;
+
+		ConversionFactory convFactory( mgr, prog );
 		convFactory.setTranslationUnit(tu);
 
 		const fe::TestPragma& tp = static_cast<const fe::TestPragma&>(*(*it).first);

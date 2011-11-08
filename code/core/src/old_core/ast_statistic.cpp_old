@@ -1,6 +1,6 @@
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/ast_statistic.h"
 
 #include "insieme/utils/string_utils.h"

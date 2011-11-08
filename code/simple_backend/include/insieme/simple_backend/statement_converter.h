@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/formatting/operator_formatting.h"
@@ -48,7 +48,7 @@ namespace simple_backend {
 	 * Central simple_backend statement and expression conversion class. It is recursively processing IR DAGs
 	 * and generates corresponding C code.
 	 */
-	class StmtConverter : private core::ASTVisitor<>, private boost::noncopyable {
+	class StmtConverter : private core::IRVisitor<>, private boost::noncopyable {
 
 		/**
 		 * A reference to the central container maintaining all the instances of the required manager.
@@ -74,7 +74,7 @@ namespace simple_backend {
 		 * @param formats the format table to be used to generate code for various operators
 		 */
 		StmtConverter(Converter& context, const formatting::FormatTable& formats)
-			: ASTVisitor<>(false), cc(context), formats(formats) { };
+			: IRVisitor<>(false), cc(context), formats(formats) { };
 
 		/**
 		 * Obtains a reference to the conversion context used by this converter.

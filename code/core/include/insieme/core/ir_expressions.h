@@ -1091,6 +1091,13 @@ namespace core {
 	 * a given list of values into a struct containing those values.
 	 */
 	IR_NODE(StructExpr, Expression)
+	public:
+
+		/**
+		 * A type definition defining the type of entries this composed type is consisting of.
+		 */
+		typedef NamedValueList Members;
+
 	protected:
 
 		/**

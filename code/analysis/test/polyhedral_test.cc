@@ -40,17 +40,17 @@
 #include "insieme/analysis/polyhedral/affine_func.h"
 #include "insieme/analysis/polyhedral/constraint.h"
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
-#include "insieme/core/statements.h"
+#include "insieme/core/ir_statements.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
 
 #define CREATE_ITER_VECTOR \
-	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); \
-	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); \
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); \
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); \
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); \
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); \
 	\
 	poly::IterationVector iterVec; \
 	\
@@ -105,9 +105,9 @@ TEST(IterationVector, Iterator) {
 TEST(IterationVector, MergeEmpty) {
 	NodeManager mgr;
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
 	
 	poly::IterationVector iterVec1; 
 	iterVec1.add( poly::Iterator(iter1) ); 
@@ -137,9 +137,9 @@ TEST(IterationVector, MergeEmpty) {
 TEST(IterationVector, MergeNotEmpty) {
 	NodeManager mgr;
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
 	
 	poly::IterationVector iterVec1; 
 	iterVec1.add( poly::Iterator(iter1) ); 
@@ -163,17 +163,17 @@ TEST(IterationVector, MergeNotEmpty) {
 TEST(IterVec, Transform) {
 	NodeManager mgr;
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
 	
 	poly::IterationVector iterVec1; 
 	iterVec1.add( poly::Iterator(iter1) ); 
 	iterVec1.add( poly::Parameter(param) ); 
 	// std::cout << iterVec1 << std::endl;
 	
-	VariablePtr iter3 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
-	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 5); 
+	VariablePtr iter3 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 5); 
 	
 	poly::IterationVector iterVec2; 
 	iterVec2.add( poly::Iterator(iter3) ); 
@@ -211,7 +211,7 @@ TEST(AffineFunction, Creation) {
 	EXPECT_EQ(1, af.getCoeff(iter2));
 	EXPECT_EQ(10, af.getCoeff(poly::Constant()));
 
-	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 4); 	
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 	
 	iterVec.add(poly::Parameter(param2));
 
 	EXPECT_EQ(0, af.getCoeff(param2));
@@ -230,11 +230,11 @@ TEST(AffineFunction, Creation) {
 TEST(AffineFunction, CreationFromExpr) {
 	NodeManager mgr;
    
-   	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1);
-	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2);
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3);
+   	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1);
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2);
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
 
-	CallExprPtr sum = CallExpr::get(mgr, mgr.basic.getInt4(), mgr.basic.getSignedIntAdd(), 
+	CallExprPtr sum = CallExpr::get(mgr, mgr.getLangBasic().getInt4(), mgr.getLangBasic().getSignedIntAdd(), 
 			toVector<ExpressionPtr>(iter1, param) 
 		);
 			
@@ -254,7 +254,7 @@ TEST(AffineFunction, CreationFromExpr) {
 	}
 
 	iterVec.add( poly::Iterator(iter2) );
-	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
 	iterVec.add(poly::Parameter(param2));
 
 	EXPECT_EQ(1, af.getCoeff(iter1));
@@ -273,9 +273,9 @@ TEST(AffineFunction, CreationFromExpr) {
 TEST(AffineFunction, Equality) {
 	NodeManager mgr;
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
 	
 	poly::IterationVector iterVec1; 
 	iterVec1.add( poly::Iterator(iter1) ); 
@@ -295,9 +295,9 @@ TEST(AffineFunction, Equality) {
 TEST(AffineFunction, AFChangeBase) {
 	NodeManager mgr;
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.basic.getInt4(), 1); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.basic.getInt4(), 2); 
-	VariablePtr param = Variable::get(mgr, mgr.basic.getInt4(), 3); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
 	
 	poly::IterationVector iterVec1; 
 	iterVec1.add( poly::Iterator(iter2) ); 
@@ -307,8 +307,8 @@ TEST(AffineFunction, AFChangeBase) {
 	
 	poly::AffineFunction af1(iterVec1, {0,1,1,9});
 	
-	VariablePtr iter3 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
-	VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 5); 
+	VariablePtr iter3 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 5); 
 	
 	poly::IterationVector iterVec2; 
 	iterVec2.add( poly::Iterator(iter3) ); 
@@ -403,7 +403,7 @@ TEST(IterationDomain, Creation) {
 	}
 
 	//poly::IterationDomain it(iterVec, cl);
-	//VariablePtr param2 = Variable::get(mgr, mgr.basic.getInt4(), 4); 
+	//VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 4); 
 	//iterVec.add(poly::Parameter(param2));
 	//EXPECT_EQ(static_cast<size_t>(5), iterVec.size());
 

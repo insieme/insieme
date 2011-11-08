@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -69,7 +69,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 
 	CommandLineOptions::Verbosity = 2;
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program = core::Program::get(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.c" << "' to IR...";
 	fe::Program prog(manager);
@@ -111,7 +111,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 
 	CommandLineOptions::Verbosity = 2;
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program = core::Program::get(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
 	fe::Program prog(manager);

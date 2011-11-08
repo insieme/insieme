@@ -36,7 +36,7 @@
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/logging.h"
 #include "isl/constraint.h"

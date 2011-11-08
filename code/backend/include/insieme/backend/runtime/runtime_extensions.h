@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/lang/extension.h"
 
 #include "insieme/core/analysis/ir_utils.h"

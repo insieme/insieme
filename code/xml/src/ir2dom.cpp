@@ -39,8 +39,8 @@
 #include "insieme/xml/xml_utils.h"
 #include "insieme/xml/xsd_config.h"
 
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 
 #include "insieme/utils/logging.h"
 
@@ -58,7 +58,7 @@ namespace {
 
 typedef typename Node::annotation_map_type AnnotationMap;
 
-class XmlVisitor : public ASTVisitor<void> {
+class XmlVisitor : public IRVisitor<void> {
 	DOMDocument* doc;
 	XmlElement rootElem;
 
@@ -80,7 +80,7 @@ class XmlVisitor : public ASTVisitor<void> {
 	}
 
 public:
-	XmlVisitor(DOMDocument* udoc): ASTVisitor<void>(true), doc(udoc), rootElem(doc->getDocumentElement()) { }
+	XmlVisitor(DOMDocument* udoc): IRVisitor<void>(true), doc(udoc), rootElem(doc->getDocumentElement()) { }
 
 	void visitAnnotations(const AnnotationMap& map, XmlElement& node) {
 		if (map.empty())

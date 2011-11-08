@@ -7,7 +7,7 @@
 #include "insieme/utils/enum.h"
 
 #include "insieme/core/ast_address.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace core {
@@ -20,8 +20,8 @@ typedef boost::optional<MessageList> OptionalMessageList;
 void addAll(OptionalMessageList& target, const OptionalMessageList& list);
 void add(OptionalMessageList& target, const Message& msg);
 
-class ASTCheck : public ASTVisitor<OptionalMessageList, core::Address> {
-public: ASTCheck(bool visitTypes) : ASTVisitor<OptionalMessageList, core::Address>(visitTypes) {}
+class ASTCheck : public IRVisitor<OptionalMessageList, core::Address> {
+public: ASTCheck(bool visitTypes) : IRVisitor<OptionalMessageList, core::Address>(visitTypes) {}
 };
 
 typedef std::shared_ptr<ASTCheck> CheckPtr;

@@ -34,7 +34,7 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/utils/member_access_literal_updater.h"
@@ -46,7 +46,7 @@
 
 namespace ba = boost::algorithm;
 
-//#include "insieme/core/ast_visitor.h"
+//#include "insieme/core/ir_visitor.h"
 #include "insieme/annotations/ocl/ocl_annotations.h"
 #include "insieme/annotations/c/naming.h"
 
@@ -56,7 +56,7 @@ namespace ocl {
 using namespace insieme::core;
 
 /*
-class fuVisitor: public core::ASTVisitor<void> {
+class fuVisitor: public core::IRVisitor<void> {
 	void visitNode(const NodePtr& node) {
 		if(insieme::annotations::ocl::KernelFileAnnotationPtr kfa =
 				dynamic_pointer_cast<insieme::annotations::ocl::KernelFileAnnotation>(node->getAnnotation(insieme::annotations::ocl::KernelFileAnnotation::KEY))) {
@@ -69,7 +69,7 @@ class fuVisitor: public core::ASTVisitor<void> {
 		}
 	}
 public:
-	fuVisitor(): ASTVisitor<void>(true) {}
+	fuVisitor(): IRVisitor<void>(true) {}
 };*/
 
 ProgramPtr HostCompiler::compile() {
@@ -90,7 +90,7 @@ ProgramPtr HostCompiler::compile() {
 
 	const vector<ExpressionPtr>& kernelEntries = oclHostMapper.getKernels();
 
-	const ProgramPtr& progWithEntries = interProg->addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
+	const ProgramPtr& progWithEntries = core::Program::addEntryPoints(builder.getNodeManager(), interProg, kernelEntries);
 	const ProgramPtr& progWithKernels = core::Program::remEntryPoints(builder.getNodeManager(), progWithEntries, kernelEntries);
 
 	Host2ndPass oh2nd(oclHostMapper.getKernelNames(), oclHostMapper.getClMemMapping(), oclHostMapper.getEquivalenceMap(), progWithKernels, builder);
@@ -130,14 +130,14 @@ ProgramPtr HostCompiler::compile() {
 		NodeMapping* h;
 		auto mapper = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
 			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
-				const vector<TypePtr>& params = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType())->getParameterTypes();
+				const vector<TypePtr>& params = static_pointer_cast<const FunctionType>(call->getFunctionExpr()->getType())->getParameterTypes()->getTypes();
 				ExpressionList newArgs;
 				bool update = false;
 				int cnt = 0;
 				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
 					const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
 
-					if( fArg &&	builder.getNodeManager().basic.isRefDeref(fArg->getFunctionExpr()) &&
+					if( fArg &&	builder.getNodeManager().getLangBasic().isRefDeref(fArg->getFunctionExpr()) &&
 							!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType &&
 							(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
 						update = true;

@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/types.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "clang/AST/RecursiveASTVisitor.h"
 
@@ -97,7 +97,7 @@ public:
 	typedef std::set<const clang::FunctionDecl*> UseGlobalFuncMap;
 
 	typedef std::pair<core::StructTypePtr, core::StructExprPtr> GlobalStructPair;
-	typedef std::map<const clang::VarDecl*, core::IdentifierPtr> GlobalIdentMap;
+	typedef std::map<const clang::VarDecl*, core::StringValuePtr> GlobalIdentMap;
 
 	GlobalVarCollector(
 		conversion::ConversionFactory& 		convFact,
@@ -138,7 +138,7 @@ public:
 
 private:
 
-	core::IdentifierPtr 
+	core::StringValuePtr
 	buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func = NULL ) const;
 
 	conversion::ConversionFactory& 		convFact;

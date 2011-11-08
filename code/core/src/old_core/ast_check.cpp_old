@@ -3,7 +3,7 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_check.h"
 
 namespace insieme {
 namespace core {
@@ -87,7 +87,7 @@ namespace {
 
 			// create internally maintained visitor performing the actual check
 			// NOTE: the visitor pointer is required to support recursion
-			ASTVisitor<void, Address>* visitor;
+			IRVisitor<void, Address>* visitor;
 			auto lambdaVisitor = makeLambdaVisitor([&res, &visitor, this](const NodeAddress& node) {
 
 				// check the current node and collect results
@@ -142,7 +142,7 @@ namespace {
 
 			// create internally maintained visitor performing the actual check
 			// NOTE: the visitor pointer is required to support recursion
-			ASTVisitor<void, Address>* visitor;
+			IRVisitor<void, Address>* visitor;
 			auto lambdaVisitor = makeLambdaVisitor([&res, &visitor, &all, this](const NodeAddress& node) {
 				// add current node to set ...
 				bool isNew = all.insert(node.getAddressedNode()).second;

@@ -37,8 +37,8 @@
 #include "insieme/simple_backend/formatting/operator_formatting.h"
 
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/manipulation.h"
@@ -109,7 +109,7 @@ namespace formatting {
 
 
 				// get some manager
-				const core::lang::BasicGenerator& basic = CONTEXT.getNodeManager().getBasicGenerator();
+				const core::lang::BasicGenerator& basic = CONTEXT.getNodeManager().getLangBasic();
 
 				// extract type
 				core::ExpressionPtr initValue = call->getArgument(0);
@@ -238,7 +238,7 @@ namespace formatting {
 //				TypeManager& typeManager = CONTEXT.getTypeManager();
 //
 //				core::NodeManager& manager = CALL->getNodeManager();
-//				core::ASTBuilder builder(manager);
+//				core::IRBuilder builder(manager);
 //
 //				const TypePtr array = call->getType();
 //				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
@@ -258,7 +258,7 @@ namespace formatting {
 				TypeManager& typeManager = CONTEXT.getTypeManager();
 
 				core::NodeManager& manager = CALL->getNodeManager();
-				core::ASTBuilder builder(manager);
+				core::IRBuilder builder(manager);
 
 				const TypePtr array = call->getType();
 				const string& name = typeManager.getTypeInfo(CODE, array).lValueName;
@@ -292,10 +292,10 @@ namespace formatting {
 				// compose unfolded reduction expression
 				core::ExpressionPtr res = ARG(1);
 				core::ExpressionPtr op = ARG(2);
-				core::ExpressionPtr subscript = op->getNodeManager().getBasicGenerator().getVectorSubscript();
+				core::ExpressionPtr subscript = op->getNodeManager().getLangBasic().getVectorSubscript();
 				core::TypePtr elementType = vectorType->getElementType();
 
-				core::ASTBuilder builder(op->getNodeManager());
+				core::IRBuilder builder(op->getNodeManager());
 				for (std::size_t i = 0; i<size; i++) {
 					ExpressionPtr element;
 					if (vectorExpr) {
@@ -497,7 +497,7 @@ namespace formatting {
 		// string conversion
 		ADD_FORMATTER_DETAIL(res, basic.getStringToCharPointer(), false, {
 
-//				core::ASTBuilder builder(CONTEXT.getNodeManager());
+//				core::IRBuilder builder(CONTEXT.getNodeManager());
 //				TypePtr array = builder.arrayType(CONTEXT.getLangBasic().getChar());
 //
 //				OUT("&((");

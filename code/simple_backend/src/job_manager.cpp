@@ -42,7 +42,7 @@
 #include "insieme/simple_backend/name_manager.h"
 #include "insieme/simple_backend/type_manager.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -85,16 +85,16 @@ void JobManager::createJob(const CodeFragmentPtr& code, const core::JobExprPtr& 
 	// construct job creation statement
 
 	NodeManager& manager = job->getNodeManager();
-	TypePtr uintType = manager.basic.getUInt8();
+	TypePtr uintType = manager.getLangBasic().getUInt8();
 	ExpressionPtr min = Literal::get(manager, "1", uintType);
 	ExpressionPtr max = Literal::get(manager, "isbr_getMaxThreads()", uintType);
 
 	// evaluate range - primitive variant
 	ExpressionPtr range = job->getThreadNumRange();
-	if (analysis::isCallOf(range, manager.basic.getCreateMinRange())) {
+	if (analysis::isCallOf(range, manager.getLangBasic().getCreateMinRange())) {
 		CallExprPtr call = static_pointer_cast<const CallExpr>(range);
 		min = call->getArguments()[0];
-	} else if (analysis::isCallOf(range, manager.basic.getCreateBoundRange())) {
+	} else if (analysis::isCallOf(range, manager.getLangBasic().getCreateBoundRange())) {
 		CallExprPtr call = static_pointer_cast<const CallExpr>(range);
 		min = call->getArguments()[0];
 		max = call->getArguments()[1];
@@ -198,7 +198,7 @@ namespace {
 	 * A small helper-visitor collecting all variables which should be automatically
 	 * captured by jobs for their branches.
 	 */
-	class VariableCollector : public core::ASTVisitor<> {
+	class VariableCollector : public core::IRVisitor<> {
 
 		/**
 		 * A set of variables to be excluded.
@@ -217,7 +217,7 @@ namespace {
 		 * Creates a new instance of this visitor based on the given list of variables.
 		 * @param list the list to be filled by this collector.
 		 */
-		VariableCollector(const utils::set::PointerSet<core::VariablePtr>& excluded, vector<core::VariablePtr>& list) : core::ASTVisitor<>(false), excluded(excluded), list(list) {}
+		VariableCollector(const utils::set::PointerSet<core::VariablePtr>& excluded, vector<core::VariablePtr>& list) : core::IRVisitor<>(false), excluded(excluded), list(list) {}
 
 	protected:
 
@@ -308,7 +308,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 	// Prepare some utilities
 	NodeManager& manager = job->getNodeManager();
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// get a name for the job
 	string name = cc.getNameManager().getName(job, "job");
@@ -429,7 +429,7 @@ namespace {
 	/**
 	 * Prepares the loop body of a pfor loop for being processed. If possible, the loop body will be in-lined.
 	 */
-	core::StatementPtr prepareLoopBody(ASTBuilder& builder, const core::ExpressionPtr& body, const core::VariablePtr& inductionVar) {
+	core::StatementPtr prepareLoopBody(IRBuilder& builder, const core::ExpressionPtr& body, const core::VariablePtr& inductionVar) {
 
 		// verify type of loop body
 		assert(body->getType()->getNodeType() == NT_FunctionType);
@@ -539,7 +539,7 @@ JobManager::PForBodyInfo JobManager::resolvePForBody(const core::ExpressionPtr& 
 	CodeFragmentPtr function = CodeFragment::createNew("function for pfor-body " + name);
 	function->addDependency(captureStruct);
 
-	ASTBuilder builder(body->getNodeManager());
+	IRBuilder builder(body->getNodeManager());
 
 	// create function realizing the pfor-loop body capable of iterating over a range
 	function << "void " << name << "(const isbr_PForRange range) {" << CodeBuffer::indR << "\n";

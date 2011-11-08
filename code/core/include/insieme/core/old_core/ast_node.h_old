@@ -125,7 +125,7 @@ public:
 		});
 	}
 
-	const lang::BasicGenerator& getBasicGenerator() const { return basic; }
+	const lang::BasicGenerator& getLangBasic() const { return basic; }
 
 	template<
 		typename E,

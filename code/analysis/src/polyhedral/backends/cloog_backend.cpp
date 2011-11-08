@@ -38,7 +38,7 @@
 
 #include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
 
@@ -68,12 +68,12 @@ namespace {
 core::ExpressionPtr buildMin(core::NodeManager& mgr, const core::ExpressionList& args) { 
 	
 	assert(args.size() == 2);
-	core::ASTBuilder builder(mgr);
+	core::IRBuilder builder(mgr);
 	return builder.callExpr(
-			mgr.basic.getIfThenElse(), 
-			builder.callExpr( mgr.basic.getSignedIntLt(), args[0], args[1] ),
-			builder.createCallExprFromBody( builder.returnStmt(args[0]), mgr.basic.getInt4(), true ),
-			builder.createCallExprFromBody( builder.returnStmt(args[1]), mgr.basic.getInt4(), true )
+			mgr.getLangBasic().getIfThenElse(), 
+			builder.callExpr( mgr.getLangBasic().getSignedIntLt(), args[0], args[1] ),
+			builder.createCallExprFromBody( builder.returnStmt(args[0]), mgr.getLangBasic().getInt4(), true ),
+			builder.createCallExprFromBody( builder.returnStmt(args[1]), mgr.getLangBasic().getInt4(), true )
 		);
 }
 
@@ -463,25 +463,25 @@ public:
 	core::ExpressionPtr visitClastTerm(const clast_term* termExpr) {
 		STACK_SIZE_GUARD;
 
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 		
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, termExpr->val);
 	
-		core::LiteralPtr&& lit = builder.literal( mgr.basic.getInt4(), ss.str() );
+		core::LiteralPtr&& lit = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
 		if (termExpr->var == NULL) 	{ return lit; }
 		
 		core::ExpressionPtr&& var = visit(termExpr->var);
 		// If the coefficient is 1 then omit it 
 		if (*lit == *builder.intLit(1) ) { return var; }
 
-		return builder.callExpr( mgr.basic.getSignedIntMul(), lit, var ); 
+		return builder.callExpr( mgr.getLangBasic().getSignedIntMul(), lit, var ); 
 	}
 
 	core::ExpressionPtr visitClastName(const clast_name* nameExpr) {
 		STACK_SIZE_GUARD;
 
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 
 		auto&& fit = varMap.find(nameExpr->name);
 		assert(fit != varMap.end() && "Variable not defined!");
@@ -496,7 +496,7 @@ public:
 	core::ExpressionPtr visitClastReduction(const clast_reduction* redExpr) {
 		STACK_SIZE_GUARD;
 
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 		if (redExpr->n == 1) { return visit( redExpr->elts[0] ); }
 
 		std::vector<core::ExpressionPtr> args;
@@ -506,9 +506,9 @@ public:
 		}
 
 		core::LiteralPtr op;
-		core::TypePtr&& intGen = mgr.basic.getIntGen();
+		core::TypePtr&& intGen = mgr.getLangBasic().getIntGen();
 		switch(redExpr->type) {
-		case clast_red_sum: op = mgr.basic.getSignedIntAdd();
+		case clast_red_sum: op = mgr.getLangBasic().getSignedIntAdd();
 							break;
 
 		case clast_red_min: return buildMin(mgr, args);
@@ -529,11 +529,11 @@ public:
 	core::ExpressionPtr visitClastFor(const clast_for* forStmt) {
 		STACK_SIZE_GUARD;
 
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 
 		auto&& fit = varMap.find(forStmt->iterator);
 		assert(fit == varMap.end() && "Induction variable being utilizied!");
-		core::VariablePtr&& inductionVar = builder.variable( mgr.basic.getInt4() );
+		core::VariablePtr&& inductionVar = builder.variable( mgr.getLangBasic().getInt4() );
 
 		auto&& indPtr = varMap.insert( std::make_pair(std::string(forStmt->iterator), inductionVar) );
 		
@@ -545,12 +545,12 @@ public:
 		core::ExpressionPtr&& upperBound = visit(forStmt->UB);
 		// because cloog assumes the upperbound to be <=, we have to add a 1 to make it consistent
 		// with the semantics of the IR 
-		upperBound = builder.callExpr( mgr.basic.getSignedIntAdd(), upperBound, builder.intLit(1) );
+		upperBound = builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), upperBound, builder.intLit(1) );
 		assert( upperBound && "Failed conversion of upper bound expression for loop!");
 
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, forStmt->stride);
-		core::LiteralPtr&& strideExpr = builder.literal( mgr.basic.getInt4(), ss.str() );
+		core::LiteralPtr&& strideExpr = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
 		
 		stmtStack.push( StatementList() );
 
@@ -627,15 +627,15 @@ public:
 	core::ExpressionPtr visitClastEquation(const clast_equation* equation) {
 		STACK_SIZE_GUARD;
 
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 
 		core::LiteralPtr op;
 		switch( equation->sign ) {
-			case -1: op = mgr.basic.getSignedIntLe();
+			case -1: op = mgr.getLangBasic().getSignedIntLe();
 					 break;
-			case 0:  op = mgr.basic.getSignedIntEq();
+			case 0:  op = mgr.getLangBasic().getSignedIntEq();
 					 break;
-			case 1: op = mgr.basic.getSignedIntGe();
+			case 1: op = mgr.getLangBasic().getSignedIntGe();
 					 break;
 		}
 
@@ -644,23 +644,23 @@ public:
 
 	core::ExpressionPtr visitClastBinary(const clast_binary* binExpr) {
 		STACK_SIZE_GUARD;
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 
 		core::ExpressionPtr op;
 		switch (binExpr->type) {
 		case clast_bin_fdiv:
 			op = builder.literal( 
-				builder.functionType(mgr.basic.getReal8(), mgr.basic.getReal8()), "floor" );
+				builder.functionType(mgr.getLangBasic().getReal8(), mgr.getLangBasic().getReal8()), "floor" );
 			break;
 		case clast_bin_cdiv:
 			op = builder.literal( 
-				builder.functionType(mgr.basic.getReal8(), mgr.basic.getReal8()), "floor" );
+				builder.functionType(mgr.getLangBasic().getReal8(), mgr.getLangBasic().getReal8()), "floor" );
 			break;
 		case clast_bin_div: 
-			op = mgr.basic.getSignedIntAdd();
+			op = mgr.getLangBasic().getSignedIntAdd();
 			break;
 		case clast_bin_mod:
-			op = mgr.basic.getSignedIntMod();
+			op = mgr.getLangBasic().getSignedIntMod();
 			break;
 		default: 
 			assert(false && "Binary operator not defined");
@@ -669,7 +669,7 @@ public:
 		core::ExpressionPtr&& lhs = visit(binExpr->LHS);
 		std::ostringstream ss;
 		PRINT_CLOOG_INT(ss, binExpr->RHS);
-		core::LiteralPtr&& rhs = builder.literal( mgr.basic.getInt4(), ss.str() );
+		core::LiteralPtr&& rhs = builder.literal( mgr.getLangBasic().getInt4(), ss.str() );
 
 		return builder.callExpr(op, lhs, rhs);
 	}
@@ -678,15 +678,15 @@ public:
 		STACK_SIZE_GUARD;
 
 		assert(guardStmt->n>0);
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 
 		core::ExpressionPtr&& condExpr = visitClastEquation(guardStmt->eq);
 		for(size_t i=1, e=guardStmt->n; i!=e; ++i) {
 			
-			condExpr = builder.callExpr( mgr.basic.getBoolLAnd(), condExpr, 
+			condExpr = builder.callExpr( mgr.getLangBasic().getBoolLAnd(), condExpr, 
 					builder.createCallExprFromBody( 
 						builder.returnStmt(visitClastEquation(&guardStmt->eq[i])), 
-						mgr.basic.getBool(), 
+						mgr.getLangBasic().getBool(), 
 						true 
 					) 
 				);
@@ -707,7 +707,7 @@ public:
 
 	core::StatementPtr getIR() const {
 		assert( stmtStack.size() == 1 );
-		core::ASTBuilder builder(mgr);
+		core::IRBuilder builder(mgr);
 
 		return builder.compoundStmt( stmtStack.top() );
 	}

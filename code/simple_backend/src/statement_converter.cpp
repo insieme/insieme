@@ -36,8 +36,8 @@
 
 #include "insieme/simple_backend/statement_converter.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/simple_backend/variable_manager.h"
@@ -85,7 +85,7 @@ namespace simple_backend {
 		string pattern = cc.getTypeManager().getTypeInfo(code, ep->getType()).externalizingPattern;
 
 		// special handling for any ref-casts
-		if (core::analysis::isCallOf(ep, ep->getNodeManager().basic.getAnyRefToRef())) {
+		if (core::analysis::isCallOf(ep, ep->getNodeManager().getLangBasic().getAnyRefToRef())) {
 			pattern = "%s";
 		}
 
@@ -148,7 +148,7 @@ namespace simple_backend {
 
 		// obtain reference to lang basic
 		const core::lang::BasicGenerator& basic = cc.getLangBasic();
-		core::ASTBuilder builder(cc.getNodeManager());
+		core::IRBuilder builder(cc.getNodeManager());
 
 		// check whether an initializing is required
 		if (analysis::isCallOf(init, basic.getUndefined())) {
@@ -299,10 +299,10 @@ namespace simple_backend {
 //			code << charArrayArrayName << " argv = (" << charArrayArrayName << "){alloca(sizeof(" << charArrayName << ") * argc)" << ((useSize)?", {argc}":"") << "};\n";
 //
 //			// create a literal for the strlen function
-//			ASTBuilder builder(cc.getNodeManager());
+//			IRBuilder builder(cc.getNodeManager());
 //			FunctionTypePtr strLenType = builder.functionType(
 //					toVector<TypePtr>(builder.refType(aCharType)),
-//					builder.getBasicGenerator().getUInt8());
+//					builder.getLangBasic().getUInt8());
 //
 //			if (useSize) {
 //				LiteralPtr strlen = builder.literal(strLenType, "strlen");
@@ -411,7 +411,7 @@ namespace simple_backend {
 		const RefTypePtr& refType = (isAllocatedOnHEAP)?static_pointer_cast<const RefType>(var->getType()):RefTypePtr(NULL);
 		if (refType && refType->getElementType()->getNodeType() == NT_StructType) {
 
-			ASTBuilder builder(cc.getNodeManager());
+			IRBuilder builder(cc.getNodeManager());
 			const lang::BasicGenerator& basic = cc.getNodeManager().basic;
 
 			// start by allocating the required memory
@@ -738,7 +738,7 @@ namespace simple_backend {
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {
-		if (cc.getNodeManager().basic.isUnit(ptr->getReturnExpr()->getType())) {
+		if (cc.getNodeManager().getLangBasic().isUnit(ptr->getReturnExpr()->getType())) {
 			currentCodeFragment << "return";
 			return;
 		}
