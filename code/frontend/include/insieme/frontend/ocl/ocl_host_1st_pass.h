@@ -61,8 +61,9 @@ enum CreateBufferFlags {
  * Class to visit the AST and return the value of a certain variable, holding the path to a OpenCL kernel, if it exists at all
  */
 class KernelCodeRetriver: public core::ASTVisitor<bool> {
-	const core::VariablePtr& pathToKernelFile; // Variable to look for
+	const core::ExpressionPtr& pathToKernelFile; // Variable to look for
 	const core::NodePtr& breakingStmt; // place where the path would be needed, can stop searching there
+	const core::ProgramPtr program;
 	const core::ASTBuilder builder;
 	string path;
 
@@ -70,12 +71,13 @@ class KernelCodeRetriver: public core::ASTVisitor<bool> {
 	bool visitCallExpr(const core::CallExprPtr& callExpr);
 	bool visitDeclarationStmt(const core::DeclarationStmtPtr& decl);
 
+	bool saveString(const core::LiteralPtr& lit);
+	bool saveString(const core::CallExprPtr& call);
 public:
-	KernelCodeRetriver(const core::VariablePtr lookFor,
-			const core::NodePtr& stopAt, core::ASTBuilder build) :
+	KernelCodeRetriver(const core::ExpressionPtr lookFor,
+			const core::NodePtr& stopAt, core::ProgramPtr prog, core::ASTBuilder build) :
 		ASTVisitor<bool> (false), pathToKernelFile(lookFor),
-				breakingStmt(stopAt), builder(build) {
-	}
+				breakingStmt(stopAt), program(prog), builder(build) { }
 	string getKernelFilePath() {
 		return path;
 	}

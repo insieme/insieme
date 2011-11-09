@@ -46,273 +46,46 @@
  * =====================================================================================
  */
 
-#define IRT_CL_NUM_PLATFORM_PARAMS	(sizeof(_irt_cl_platform_params)/sizeof(_irt_cl_platform_param))
-
-typedef struct __irt_cl_platform_param {
-	cl_platform_info name;
-	char* name_string;
-} _irt_cl_platform_param;
-
-/*static _irt_cl_platform_param _irt_cl_platform_params[] = {
-	{ CL_PLATFORM_NAME, "CL_PLATFORM_NAME" },
-	{ CL_PLATFORM_VERSION, "CL_PLATFORM_VERSION" },
-	{ CL_PLATFORM_VENDOR, "CL_PLATFORM_VENDOR" },
-	//{ CL_PLATFORM_PROFILE, "CL_PLATFORM_PROFILE" },
-	//{ CL_PLATFORM_EXTENSIONS, "CL_PLATFORM_EXTENSIONS" },
-};*/
-
-//static void _irt_cl_print_platform_info(cl_platform_id* id);
 static cl_uint _irt_cl_get_num_platforms();
 static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms);
 
-#define IRT_CL_NUM_DEVICE_PARAMS	(sizeof(_irt_cl_device_params)/sizeof(_irt_cl_device_param))
-
-typedef struct __irt_cl_device_param {
-	cl_device_info name;
-	char* name_string;
-} _irt_cl_device_param;
-
-static _irt_cl_device_param _irt_cl_device_params[] = {
-	{ CL_DEVICE_NAME, "CL_DEVICE_NAME" },
-	{ CL_DRIVER_VERSION, "CL_DRIVER_VERSION"},
-	{ CL_DEVICE_VENDOR, "CL_DEVICE_VENDOR" },
-};
-
 static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type);
 static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
-static void _irt_cl_print_device_infos(cl_device_id* device);
-static void _irt_cl_print_device_info(cl_device_id* device, char* prefix, cl_device_info param_name, char* suffix);
+
+static const char* _irt_cl_get_device_type_string(cl_device_type type);
+static char* _irt_cl_get_name(cl_device_id* device);
+static cl_device_type _irt_cl_get_type(cl_device_id* device);
+static char* _irt_cl_get_vendor(cl_device_id* device);
+static char* _irt_cl_get_version(cl_device_id* device);
+static char* _irt_cl_get_driver_version(cl_device_id* device);
+static char* _irt_cl_get_profile(cl_device_id* device);
+
+static cl_uint _irt_cl_get_max_compute_units(cl_device_id* device);
+static cl_uint _irt_cl_get_max_clock_frequency(cl_device_id* device);
+static cl_uint _irt_cl_get_max_work_item_dimensions(cl_device_id* device);
+static size_t* _irt_cl_get_max_work_item_sizes(cl_device_id* device);
+static size_t _irt_cl_get_max_work_group_size(cl_device_id* device);
+
+static cl_bool _irt_cl_has_image_support(cl_device_id* device);
+static cl_device_fp_config _irt_cl_get_single_fp_config(cl_device_id* device);
+static cl_bool _irt_cl_is_endian_little(cl_device_id* device);
+static char* _irt_cl_get_extensions(cl_device_id* device);
+
+static cl_ulong _irt_cl_get_global_mem_size(cl_device_id* device);
+static cl_ulong _irt_cl_get_max_mem_alloc_size(cl_device_id* device);
+static cl_device_mem_cache_type _irt_cl_get_global_mem_cache_type(cl_device_id* device);
+static cl_uint _irt_cl_get_global_mem_cacheline_size(cl_device_id* device);
+static cl_ulong _irt_cl_get_global_mem_cache_size(cl_device_id* device);
+
+static cl_ulong _irt_cl_get_max_constant_buffer_size(cl_device_id* device);
+
+static cl_device_local_mem_type _irt_cl_get_local_mem_type(cl_device_id* device);
+static cl_ulong _irt_cl_get_local_mem_size(cl_device_id* device);
 
 static char* _irt_load_program_source (const char* filename, size_t* filesize);
 static void _irt_save_program_binary (cl_program program, const char* binary_filename);
 static const char* _irt_error_string (cl_int err_code);
 
-/*
- * =====================================================================================
- *  OpenCL Internal Platform Functions
- * =====================================================================================
- */
-
-/*static void _irt_cl_print_platform_info(cl_platform_id* id) {
-	IRT_ASSERT(id != NULL, IRT_ERR_OCL, "Error: invalid platform");
-	for (cl_uint i = 0; i < IRT_CL_NUM_PLATFORM_PARAMS; i++) {
-		size_t cl_param_size;
-		char* cl_param_value;
-		cl_int err_code;
-		err_code = clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, 0, NULL, &cl_param_size);
-		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info: \"%s\"", _irt_error_string(err_code));
-		
-		cl_param_value = alloca (cl_param_size);
-		err_code = clGetPlatformInfo(*id, _irt_cl_platform_params[i].name, cl_param_size, cl_param_value, NULL);
-		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting platform info: \"%s\"", _irt_error_string(err_code));
-		IRT_INFO("%-25s = \"%s\"\n", _irt_cl_platform_params[i].name_string, cl_param_value);
-	}
-	IRT_INFO("\n");
-}*/
-
-inline static cl_uint _irt_cl_get_num_platforms() {
-	cl_uint cl_num_platforms;
-	if (clGetPlatformIDs(0, NULL, &cl_num_platforms) != CL_SUCCESS) return 0;
-	return cl_num_platforms;
-}
-
-inline static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms) {
-	cl_int err_code = clGetPlatformIDs(num_platforms, platforms, NULL);	
-	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting platforms: \"%s\"", _irt_error_string(err_code));
-}
-
-/* 
- * =====================================================================================
- *  OpenCL Internal Device Functions
- * =====================================================================================
- */
-
-inline static void _irt_cl_print_device_infos(cl_device_id* id) {
-	IRT_ASSERT(id != NULL, IRT_ERR_OCL, "Error: invalid device");
-	for (cl_uint i = 0; i < IRT_CL_NUM_DEVICE_PARAMS; i++) {
-		IRT_INFO("%-25s = \"", _irt_cl_device_params[i].name_string);
-		_irt_cl_print_device_info(id, "", _irt_cl_device_params[i].name, "");
-		IRT_INFO("\"\n");
-	}
-	IRT_INFO("\n");
-}
-
-inline static void _irt_cl_print_device_info(cl_device_id* id, char* prefix, cl_device_info param_name, char* suffix) {
-	size_t cl_param_size;
-	char* cl_param_value;
-	cl_int err_code;
-	err_code = clGetDeviceInfo(*id, param_name, 0, NULL, &cl_param_size);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting device info: \"%s\"", _irt_error_string(err_code));
-	cl_param_value = alloca (cl_param_size);
-	err_code = clGetDeviceInfo(*id, param_name, cl_param_size, cl_param_value, NULL);
-	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
-	IRT_INFO("%s%s%s", prefix, cl_param_value, suffix);
-}
-
-cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type) {
-	cl_uint cl_num_devices;
-	if (clGetDeviceIDs(*platform, device_type, 0, NULL, &cl_num_devices) != CL_SUCCESS) return 0;
-	return cl_num_devices;
-}
-
-inline static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices) {
-	cl_int err_code = clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL);
-	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices: \"%s\"", _irt_error_string(err_code)); 
-}
-
-
-/* 
-* =====================================================================================
-*  OpenCL Internal Load, Save, Error Functions
-* =====================================================================================
-*/
-
-static char* _irt_load_program_source (const char* filename, size_t* filesize) { // remember to free the returned source
-	IRT_ASSERT(filename != NULL && filesize != NULL, IRT_ERR_OCL, "Error input parameters");
-	FILE* fp = fopen(filename, "rb");
-	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening kernel file");
-	IRT_ASSERT(fseek(fp, 0, SEEK_END) == 0, IRT_ERR_OCL, "Error seeking to end of file");
-	int size = ftell(fp);
-	IRT_ASSERT(size >= 0, IRT_ERR_OCL, "Error getting file position");
-	IRT_ASSERT(fseek(fp, 0, SEEK_SET) == 0, IRT_ERR_OCL, "Error seeking to begin of file");
-	char* source = (char*)malloc(size+1);
-	IRT_ASSERT(source != NULL, IRT_ERR_OCL, "Error allocating space for program source");
-	IRT_ASSERT(fread(source, 1, size, fp) == size, IRT_ERR_OCL, "Error reading file");
-	source[size] = '\0';
-	*filesize = size; // this is the size useful for create program from binary
-	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
-	return source;
-}
-
-static void _irt_save_program_binary (cl_program program, const char* binary_filename) {
-	IRT_ASSERT(binary_filename != NULL && program != NULL, IRT_ERR_OCL, "Error input parameters");
-	size_t size_ret;
-	cl_int err_code;
-	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, 0, NULL, &size_ret);
-	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
-	size_t* binary_size = (size_t *) alloca (size_ret);
-	IRT_ASSERT(binary_size != NULL, IRT_ERR_OCL, "Error allocating binary_size");
-	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, size_ret, binary_size, NULL);
-	IRT_ASSERT(err_code == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
-    	unsigned char* binary = (unsigned char *) alloca (sizeof (unsigned char) * (*binary_size));
-	IRT_ASSERT(binary != NULL, IRT_ERR_OCL, "Error allocating binary");
-
-	// get the binary
-	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARIES, sizeof (unsigned char *), &binary, NULL);
-	IRT_ASSERT(err_code == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
-
-	FILE *fp = fopen (binary_filename, "w");
-	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening binary file");
-	IRT_ASSERT(fwrite (binary, 1, *binary_size, fp) ==  (size_t) *binary_size, IRT_ERR_OCL, "Error writing file");
-	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
-}
-
-static const char* _irt_error_string (cl_int errcode) {
-	switch (errcode) {
-		case CL_SUCCESS:
-			return "SUCCESS";
-		case CL_DEVICE_NOT_FOUND:
-			return "Device not found";
-		case CL_DEVICE_NOT_AVAILABLE:
-			return "Device not available";
-		case CL_COMPILER_NOT_AVAILABLE:
-			return "Compiler not available";
-		case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-			return "Memory Object allocation failure";
-		case CL_OUT_OF_RESOURCES:
-			return "Out of resources";
-		case CL_OUT_OF_HOST_MEMORY:
-			return "Out of host memory";
-		case CL_PROFILING_INFO_NOT_AVAILABLE:
-			return "Profiling info not available";
-		case CL_MEM_COPY_OVERLAP:
-			return "Mem copy overlap";
-		case CL_IMAGE_FORMAT_MISMATCH:
-			return "Image format mismatch";
-		case CL_IMAGE_FORMAT_NOT_SUPPORTED:
-			return "Image format not supported";
-		case CL_BUILD_PROGRAM_FAILURE:
-			return "Build program failure";
-		case CL_MAP_FAILURE:
-			return "Map failure";
-		case CL_MISALIGNED_SUB_BUFFER_OFFSET:
-			return "Misaligned sub buffer offset";
-		case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST:
-			return "Status Error for events in wait list";
-		case CL_INVALID_VALUE:
-			return "Invalid value";
-		case CL_INVALID_DEVICE_TYPE:
-			return "Invalid device type";
-		case CL_INVALID_PLATFORM:
-			return "Invalid platform";
-		case CL_INVALID_DEVICE:
-			return "Invalid device";
-		case CL_INVALID_CONTEXT:
-			return "Invalid context";
-		case CL_INVALID_QUEUE_PROPERTIES:
-			return "Invalid queue properties";
-		case CL_INVALID_COMMAND_QUEUE:
-			return "Invalid command queue";
-		case CL_INVALID_HOST_PTR:
-			return "Invalid host pointer";
-		case CL_INVALID_MEM_OBJECT:
-			return "Invalid memory object";
-		case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR:
-			return "Invalid image format descriptor";
-		case CL_INVALID_IMAGE_SIZE:
-			return "Invalid image size";
-		case CL_INVALID_SAMPLER:
-			return "Invalid sampler";
-		case CL_INVALID_BINARY:
-			return "Invalid Binary";
-		case CL_INVALID_BUILD_OPTIONS:
-			return "Invalid build options";
-		case CL_INVALID_PROGRAM:
-			return "Invalid program";
-		case CL_INVALID_PROGRAM_EXECUTABLE:
-			return "Invalid program executable";
-		case CL_INVALID_KERNEL_NAME:
-			return "Invalid kernel name";
-		case CL_INVALID_KERNEL_DEFINITION:
-			return "Invalid kernel definition";
-		case CL_INVALID_KERNEL:
-			return "Invalid kernel";
-		case CL_INVALID_ARG_INDEX:
-			return "Invalid arg index";
-		case CL_INVALID_ARG_VALUE:
-			return "Invalid arg value";
-		case CL_INVALID_ARG_SIZE:
-			return "Invalid arg size";
-		case CL_INVALID_KERNEL_ARGS:
-			return "Invalid kernel args";
-		case CL_INVALID_WORK_DIMENSION:
-			return "Invalid work dimension";
-		case CL_INVALID_WORK_GROUP_SIZE:
-			return "Invalid work group size";
-		case CL_INVALID_WORK_ITEM_SIZE:
-			return "Invalid work item size";
-		case CL_INVALID_GLOBAL_OFFSET:
-			return "Invalid global offset";
-		case CL_INVALID_EVENT_WAIT_LIST:
-			return "Invalid wait list";
-		case CL_INVALID_EVENT:
-			return "Invalid event";
-		case CL_INVALID_OPERATION:
-			return "Invalid operation";
-		case CL_INVALID_GL_OBJECT:
-			return "Invalid gl object";
-		case CL_INVALID_BUFFER_SIZE:
-			return "Invalid buffer size";
-		case CL_INVALID_MIP_LEVEL:
-			return "Invalid mip level";
-		case CL_INVALID_GLOBAL_WORK_SIZE:
-			return "Invalid global work size";
-		case CL_INVALID_PROPERTY:
-			return "Invalid property";
-		default:
-			return "Unknown";
-	};
-}
 
 /*
  * =====================================================================================
@@ -359,18 +132,39 @@ void irt_ocl_init_devices() {
 						IRT_ASSERT(err_code == CL_SUCCESS &&dev->context != NULL, IRT_ERR_OCL, "Error creating context: \"%s\"", _irt_error_string(err_code));
 						dev->queue = clCreateCommandQueue(dev->context, dev->device, 0, &err_code); //FIXME: CL_QUEUE_PROFILING_ENABLE, &err_code);
 						IRT_ASSERT(err_code == CL_SUCCESS && dev->queue != NULL, IRT_ERR_OCL, "Error creating queue: \"%s\"", _irt_error_string(err_code));
-						
-						cl_ulong cl_global_mem_size;
-						err_code = clGetDeviceInfo(dev->device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &cl_global_mem_size, NULL);
-						IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
 
-						cl_ulong max_buffer_size;
-						err_code = clGetDeviceInfo(dev->device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(cl_ulong), &max_buffer_size, NULL);
-						IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting device name: \"%s\"", _irt_error_string(err_code));
+						// Device Info
+						dev->name = _irt_cl_get_name(&dev->device);
+						dev->type = _irt_cl_get_type(&dev->device);
+						dev->vendor = _irt_cl_get_vendor(&dev->device);
+						dev->version = _irt_cl_get_version(&dev->device);
+						dev->driver_version = _irt_cl_get_driver_version(&dev->device);
+						dev->profile = _irt_cl_get_profile(&dev->device);
 
-						dev->mem_size = cl_global_mem_size;
-						dev->mem_available = cl_global_mem_size;
-						dev->max_buffer_size = max_buffer_size;
+						dev->max_compute_units = _irt_cl_get_max_compute_units(&dev->device);
+						dev->max_clock_frequency = _irt_cl_get_max_clock_frequency(&dev->device);
+						dev->max_work_item_dimensions = _irt_cl_get_max_work_item_dimensions(&dev->device);
+						dev->max_work_item_sizes = _irt_cl_get_max_work_item_sizes(&dev->device);
+						dev->max_work_group_size = _irt_cl_get_max_work_group_size(&dev->device);
+
+						dev->image_support = _irt_cl_has_image_support(&dev->device);
+						dev->single_fp_config = _irt_cl_get_single_fp_config(&dev->device);
+						dev->endian_little = _irt_cl_is_endian_little(&dev->device);
+						dev->extensions = _irt_cl_get_extensions(&dev->device);
+
+						dev->mem_cache_type = _irt_cl_get_global_mem_cache_type(&dev->device);
+						dev->global_mem_cacheline_size = _irt_cl_get_global_mem_cacheline_size(&dev->device);
+						dev->global_mem_cache_size = _irt_cl_get_global_mem_cache_size(&dev->device);
+
+						dev->max_constant_buffer_size = _irt_cl_get_max_constant_buffer_size(&dev->device);
+
+						dev->local_mem_type = _irt_cl_get_local_mem_type(&dev->device);
+						dev->local_mem_size = _irt_cl_get_local_mem_size(&dev->device);
+
+						// Buffer Info
+						dev->mem_size = _irt_cl_get_global_mem_size(&dev->device);
+						dev->mem_available = _irt_cl_get_global_mem_size(&dev->device);
+						dev->max_buffer_size = _irt_cl_get_max_mem_alloc_size(&dev->device);
 						dev->buffer = NULL;
 						pthread_spin_init(&(dev->buffer_lock), 0);
 					}
@@ -401,10 +195,18 @@ void irt_ocl_release_devices() {
 		// release the context
 		err_code = clReleaseContext(dev->context);
 		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing context: \"%s\"", _irt_error_string(err_code));
+
+		// release the info
+		free(dev->name);
+		free(dev->vendor);
+		free(dev->version);
+		free(dev->driver_version);
+		free(dev->profile);
+		free(dev->extensions);
+		free(dev->max_work_item_sizes);
 	}
 	free(devices);
 }
-
 
 inline cl_uint irt_ocl_get_num_devices() {
 	return num_devices;
@@ -535,13 +337,58 @@ inline void irt_ocl_copy_buffer(irt_ocl_buffer* src_buf, irt_ocl_buffer* dest_bu
  * =====================================================================================
  */
 
-inline void irt_ocl_print_device_infos(irt_ocl_device* dev) {
-	_irt_cl_print_device_infos(&(dev->device));
+void irt_ocl_print_device_infos(irt_ocl_device* dev) {
+		IRT_INFO("name:                   %s\n", dev->name);
+		IRT_INFO("type:                   %s\n", _irt_cl_get_device_type_string(dev->type));
+		IRT_INFO("vendor:                 %s\n", dev->vendor);
+		IRT_INFO("version:                %s\n", dev->version);
+		IRT_INFO("driver version:         %s\n", dev->driver_version);
+		IRT_INFO("profile:                %s\n", dev->profile);
+		IRT_INFO("\n");
+		IRT_INFO("max compute-units:      %u\n", dev->max_compute_units);
+		IRT_INFO("max clock frequency:    %u\n", dev->max_clock_frequency);
+		IRT_INFO("max work-item dims:     %u\n", dev->max_work_item_dimensions);
+		IRT_INFO("max work-item sizes:    [");
+		for (cl_uint i = 0; i < dev->max_work_item_dimensions; i++) {
+				IRT_INFO("%zu", dev->max_work_item_sizes[i]);
+				if(i < dev->max_work_item_dimensions - 1) IRT_INFO(", ");
+		}
+		IRT_INFO("]\n");
+		IRT_INFO("max work-group size:    %zu\n", dev->max_work_group_size);
+
+		IRT_INFO("image support:          %s", dev->image_support ? "yes\n" : "no\n");
+		IRT_INFO("single fp config:      ");
+		if(dev->single_fp_config & CL_FP_DENORM) IRT_INFO(" denorm");
+		if(dev->single_fp_config & CL_FP_INF_NAN) IRT_INFO(" inf_nan");
+		if(dev->single_fp_config & CL_FP_ROUND_TO_NEAREST) IRT_INFO(" round_to_nearest");
+		if(dev->single_fp_config & CL_FP_ROUND_TO_ZERO) IRT_INFO(" round_to_zero");
+		if(dev->single_fp_config & CL_FP_ROUND_TO_INF) IRT_INFO(" round_to_inf");
+		if(dev->single_fp_config & CL_FP_FMA) IRT_INFO(" fma");
+		IRT_INFO("\n");
+		IRT_INFO("endian little:          %s", dev->endian_little ? "yes\n" : "no\n");
+		IRT_INFO("extensions:             %s\n", dev->extensions);
+		IRT_INFO("\n");
+		IRT_INFO("global mem size:        %lu MB\n", dev->mem_size / 1024 /1024);
+		IRT_INFO("max mem alloc size:     %lu MB\n", dev->max_buffer_size / 1024 /1024);
+
+		if(dev->mem_cache_type == CL_NONE) {
+				IRT_INFO("global mem cache:      none\n");
+		} else {
+				IRT_INFO("global mem cache:     %s", dev->mem_cache_type == CL_READ_ONLY_CACHE ? "read only\n" : "write_only\n");
+				IRT_INFO("global mem cline size:  %lu byte\n", dev->global_mem_cacheline_size);
+				IRT_INFO("global mem cache size:  %lu kB\n", dev->global_mem_cache_size / 1024);
+		}
+		IRT_INFO("\n");
+		IRT_INFO("max const buffer size:  %lu kB\n", dev->max_constant_buffer_size / 1024);
+		IRT_INFO("dedicated local mem:    %s", dev->local_mem_type == CL_LOCAL ? "yes\n" : "no\n");
+		IRT_INFO("local mem size:         %lu kB\n", dev->local_mem_size / 1024);
 }
 
-inline void irt_ocl_print_device_info(irt_ocl_device* dev, char* prefix, cl_device_info param_name, char* suffix) {
-	_irt_cl_print_device_info(&(dev->device), prefix, param_name, suffix);
+
+void irt_ocl_print_device_short_info(irt_ocl_device* dev) {
+		IRT_INFO("%s: %s | %s | %s\n", _irt_cl_get_device_type_string(dev->type), dev->name, dev->vendor, dev->version);
 }
+
 
 inline float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag) {
 	return irt_ocl_profile_events(event, event_start, event, event_end, time_flag);
@@ -735,6 +582,7 @@ void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...) {
 	else IRT_ASSERT(false, IRT_ERR_OCL, "Kernel Type Not Valid");
 }
 
+
 /*
  * =====================================================================================
  *  Insieme Runtime OpenCL Functions
@@ -782,25 +630,26 @@ void irt_ocl_rt_create_kernel(irt_ocl_device* dev, irt_ocl_kernel* kernel, const
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error releasing compute program: \"%s\"", _irt_error_string(err_code));
 }
 
-void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint g_kernel_code_table_size) {
+void irt_ocl_rt_create_all_kernels(irt_context* context, irt_ocl_kernel_code* g_kernel_code_table, cl_uint num_kernels) {
 	cl_uint num_devices = irt_ocl_get_num_devices();
 
-	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel)*num_devices*g_kernel_code_table_size);
-	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*)*num_devices);
+	irt_ocl_kernel* tmp = (irt_ocl_kernel*)malloc(sizeof(irt_ocl_kernel) * num_devices * num_kernels);
+	context->kernel_binary_table = (irt_ocl_kernel**)malloc(sizeof(irt_ocl_kernel*) * num_devices);
 
 	for (cl_uint i = 0; i < num_devices; ++i) {
-		context->kernel_binary_table[i] = &(tmp[i*g_kernel_code_table_size]);
 		irt_ocl_device* dev = irt_ocl_get_device(i);
-		irt_ocl_print_device_info(dev, "Compiling OpenCL program in \"", CL_DEVICE_NAME, "\"\n");
+		IRT_INFO("Compiling OpenCL program in \"%s\"\n", dev->name);
 
-		for (cl_uint j = 0; j < g_kernel_code_table_size; ++j)
+		context->kernel_binary_table[i] = &(tmp[i*num_kernels]);
+		for (cl_uint j = 0; j < num_kernels; ++j) {
 			irt_ocl_rt_create_kernel(dev, &(context->kernel_binary_table[i][j]), g_kernel_code_table[j].code, g_kernel_code_table[j].kernel_name, "", IRT_OCL_STRING);
+		}
 	}
 
 	context->kernel_code_table = g_kernel_code_table;
 }
 
-void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_table_size) {
+void irt_ocl_rt_release_all_kernels(irt_context* context, cl_uint g_kernel_code_table_size) { // FIXME... is not called in the runtime
 	printf("Releasing kernels\n");
 	cl_uint num_devices = irt_ocl_get_num_devices();
 	for (cl_uint i = 0; i < num_devices; ++i) {
@@ -821,7 +670,7 @@ irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size){
 
 void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...){
 	irt_ocl_kernel* kernel = &irt_context_get_current()->kernel_binary_table[0][kernel_id];
-	irt_ocl_print_device_info(kernel->dev, "Running Opencl Kernel in \"", CL_DEVICE_NAME, "\"\n");
+	IRT_INFO("Running Opencl Kernel in \"%s\"\n", kernel->dev->name);
 
 	irt_ocl_set_kernel_ndrange(kernel, work_dim, global_work_size, local_work_size);
 
@@ -865,5 +714,382 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 }
 
 
+// ----------------------------------------------------------- OpenCL Internal Functions --------------------------------------------------
+
+/*
+ * =====================================================================================
+ *  OpenCL Internal Platform Functions
+ * =====================================================================================
+ */
+
+inline static cl_uint _irt_cl_get_num_platforms() {
+	cl_uint cl_num_platforms;
+	if (clGetPlatformIDs(0, NULL, &cl_num_platforms) != CL_SUCCESS) return 0;
+	return cl_num_platforms;
+}
+
+inline static void _irt_cl_get_platforms(cl_uint num_platforms, cl_platform_id* platforms) {
+	cl_int err_code = clGetPlatformIDs(num_platforms, platforms, NULL);
+	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting platforms: \"%s\"", _irt_error_string(err_code));
+}
+
+/*
+ * =====================================================================================
+ *  OpenCL Internal Device Functions
+ * =====================================================================================
+ */
+
+cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type device_type) {
+	cl_uint cl_num_devices;
+	if (clGetDeviceIDs(*platform, device_type, 0, NULL, &cl_num_devices) != CL_SUCCESS) return 0;
+	return cl_num_devices;
+}
+
+inline static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices) {
+	cl_int err_code = clGetDeviceIDs(*platform, device_type, num_devices, devices, NULL);
+	IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting devices: \"%s\"", _irt_error_string(err_code));
+}
 
 
+/*
+* =====================================================================================
+*  OpenCL Internal Load, Save, Error Functions
+* =====================================================================================
+*/
+
+static char* _irt_load_program_source (const char* filename, size_t* filesize) { // remember to free the returned source
+	IRT_ASSERT(filename != NULL && filesize != NULL, IRT_ERR_OCL, "Error input parameters");
+	FILE* fp = fopen(filename, "rb");
+	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening kernel file");
+	IRT_ASSERT(fseek(fp, 0, SEEK_END) == 0, IRT_ERR_OCL, "Error seeking to end of file");
+	int size = ftell(fp);
+	IRT_ASSERT(size >= 0, IRT_ERR_OCL, "Error getting file position");
+	IRT_ASSERT(fseek(fp, 0, SEEK_SET) == 0, IRT_ERR_OCL, "Error seeking to begin of file");
+	char* source = (char*)malloc(size+1);
+	IRT_ASSERT(source != NULL, IRT_ERR_OCL, "Error allocating space for program source");
+	IRT_ASSERT(fread(source, 1, size, fp) == size, IRT_ERR_OCL, "Error reading file");
+	source[size] = '\0';
+	*filesize = size; // this is the size useful for create program from binary
+	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
+	return source;
+}
+
+static void _irt_save_program_binary (cl_program program, const char* binary_filename) {
+	IRT_ASSERT(binary_filename != NULL && program != NULL, IRT_ERR_OCL, "Error input parameters");
+	size_t size_ret;
+	cl_int err_code;
+	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, 0, NULL, &size_ret);
+	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
+	size_t* binary_size = (size_t *) alloca (size_ret);
+	IRT_ASSERT(binary_size != NULL, IRT_ERR_OCL, "Error allocating binary_size");
+	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARY_SIZES, size_ret, binary_size, NULL);
+	IRT_ASSERT(err_code == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
+		unsigned char* binary = (unsigned char *) alloca (sizeof (unsigned char) * (*binary_size));
+	IRT_ASSERT(binary != NULL, IRT_ERR_OCL, "Error allocating binary");
+
+	// get the binary
+	err_code = clGetProgramInfo (program, CL_PROGRAM_BINARIES, sizeof (unsigned char *), &binary, NULL);
+	IRT_ASSERT(err_code == CL_SUCCESS,  IRT_ERR_OCL, "Error getting program info: \"%s\"", _irt_error_string(err_code));
+
+	FILE *fp = fopen (binary_filename, "w");
+	IRT_ASSERT(fp != NULL, IRT_ERR_OCL, "Error opening binary file");
+	IRT_ASSERT(fwrite (binary, 1, *binary_size, fp) ==  (size_t) *binary_size, IRT_ERR_OCL, "Error writing file");
+	IRT_ASSERT(fclose (fp) == 0, IRT_ERR_OCL, "Error closing the file");
+}
+
+static const char* _irt_error_string (cl_int errcode) {
+	switch (errcode) {
+		case CL_SUCCESS:
+			return "SUCCESS";
+		case CL_DEVICE_NOT_FOUND:
+			return "Device not found";
+		case CL_DEVICE_NOT_AVAILABLE:
+			return "Device not available";
+		case CL_COMPILER_NOT_AVAILABLE:
+			return "Compiler not available";
+		case CL_MEM_OBJECT_ALLOCATION_FAILURE:
+			return "Memory Object allocation failure";
+		case CL_OUT_OF_RESOURCES:
+			return "Out of resources";
+		case CL_OUT_OF_HOST_MEMORY:
+			return "Out of host memory";
+		case CL_PROFILING_INFO_NOT_AVAILABLE:
+			return "Profiling info not available";
+		case CL_MEM_COPY_OVERLAP:
+			return "Mem copy overlap";
+		case CL_IMAGE_FORMAT_MISMATCH:
+			return "Image format mismatch";
+		case CL_IMAGE_FORMAT_NOT_SUPPORTED:
+			return "Image format not supported";
+		case CL_BUILD_PROGRAM_FAILURE:
+			return "Build program failure";
+		case CL_MAP_FAILURE:
+			return "Map failure";
+		case CL_MISALIGNED_SUB_BUFFER_OFFSET:
+			return "Misaligned sub buffer offset";
+		case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST:
+			return "Status Error for events in wait list";
+		case CL_INVALID_VALUE:
+			return "Invalid value";
+		case CL_INVALID_DEVICE_TYPE:
+			return "Invalid device type";
+		case CL_INVALID_PLATFORM:
+			return "Invalid platform";
+		case CL_INVALID_DEVICE:
+			return "Invalid device";
+		case CL_INVALID_CONTEXT:
+			return "Invalid context";
+		case CL_INVALID_QUEUE_PROPERTIES:
+			return "Invalid queue properties";
+		case CL_INVALID_COMMAND_QUEUE:
+			return "Invalid command queue";
+		case CL_INVALID_HOST_PTR:
+			return "Invalid host pointer";
+		case CL_INVALID_MEM_OBJECT:
+			return "Invalid memory object";
+		case CL_INVALID_IMAGE_FORMAT_DESCRIPTOR:
+			return "Invalid image format descriptor";
+		case CL_INVALID_IMAGE_SIZE:
+			return "Invalid image size";
+		case CL_INVALID_SAMPLER:
+			return "Invalid sampler";
+		case CL_INVALID_BINARY:
+			return "Invalid Binary";
+		case CL_INVALID_BUILD_OPTIONS:
+			return "Invalid build options";
+		case CL_INVALID_PROGRAM:
+			return "Invalid program";
+		case CL_INVALID_PROGRAM_EXECUTABLE:
+			return "Invalid program executable";
+		case CL_INVALID_KERNEL_NAME:
+			return "Invalid kernel name";
+		case CL_INVALID_KERNEL_DEFINITION:
+			return "Invalid kernel definition";
+		case CL_INVALID_KERNEL:
+			return "Invalid kernel";
+		case CL_INVALID_ARG_INDEX:
+			return "Invalid arg index";
+		case CL_INVALID_ARG_VALUE:
+			return "Invalid arg value";
+		case CL_INVALID_ARG_SIZE:
+			return "Invalid arg size";
+		case CL_INVALID_KERNEL_ARGS:
+			return "Invalid kernel args";
+		case CL_INVALID_WORK_DIMENSION:
+			return "Invalid work dimension";
+		case CL_INVALID_WORK_GROUP_SIZE:
+			return "Invalid work group size";
+		case CL_INVALID_WORK_ITEM_SIZE:
+			return "Invalid work item size";
+		case CL_INVALID_GLOBAL_OFFSET:
+			return "Invalid global offset";
+		case CL_INVALID_EVENT_WAIT_LIST:
+			return "Invalid wait list";
+		case CL_INVALID_EVENT:
+			return "Invalid event";
+		case CL_INVALID_OPERATION:
+			return "Invalid operation";
+		case CL_INVALID_GL_OBJECT:
+			return "Invalid gl object";
+		case CL_INVALID_BUFFER_SIZE:
+			return "Invalid buffer size";
+		case CL_INVALID_MIP_LEVEL:
+			return "Invalid mip level";
+		case CL_INVALID_GLOBAL_WORK_SIZE:
+			return "Invalid global work size";
+		case CL_INVALID_PROPERTY:
+			return "Invalid property";
+		default:
+			return "Unknown";
+	};
+}
+
+/*
+ * =====================================================================================
+ *  OpenCL Internal Device Info Functions
+ * =====================================================================================
+ */
+
+const char* _irt_cl_get_device_type_string(cl_device_type type) {
+		switch(type){
+				case CL_DEVICE_TYPE_CPU: return "CPU"; break;
+				case CL_DEVICE_TYPE_GPU: return "GPU"; break;
+				case CL_DEVICE_TYPE_ACCELERATOR: return "ACL"; break;
+				default: return "Default";
+		}
+}
+
+char* _irt_cl_get_name(cl_device_id* device) {
+		size_t size = 0;
+		clGetDeviceInfo(*device, CL_DEVICE_NAME, size, NULL, &size);
+		char* retval = (char*) malloc(sizeof(char) * size);
+		cl_int err_code =  clGetDeviceInfo(*device, CL_DEVICE_NAME, size, retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL,"Error getting \"device name\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_device_type _irt_cl_get_type(cl_device_id* device) {
+		cl_device_type retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_TYPE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device type\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+char* _irt_cl_get_vendor(cl_device_id* device) {
+		size_t size = 0;
+		clGetDeviceInfo(*device, CL_DEVICE_VENDOR, size, NULL, &size);
+		char* retval = (char*) malloc(sizeof(char) * size);
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_VENDOR, size, retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device vendor\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+char* _irt_cl_get_version(cl_device_id* device) {
+		size_t size = 0;
+		clGetDeviceInfo(*device, CL_DEVICE_VERSION, size, NULL, &size);
+		char* retval = (char*) malloc(sizeof(char) * size);
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_VERSION, size, retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device version\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+char* _irt_cl_get_driver_version(cl_device_id* device) {
+		size_t size = 0;
+		clGetDeviceInfo(*device, CL_DRIVER_VERSION, size, NULL, &size);
+		char* retval = (char*) malloc(sizeof(char) * size);
+		cl_int err_code = clGetDeviceInfo(*device, CL_DRIVER_VERSION, size, retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device driver version\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+char* _irt_cl_get_profile(cl_device_id* device) {
+		size_t size = 0;
+		clGetDeviceInfo(*device, CL_DEVICE_PROFILE, size, NULL, &size);
+		char* retval = (char*) malloc(sizeof(char) * size);
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_PROFILE, size, retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device profile\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_uint _irt_cl_get_max_compute_units(cl_device_id* device) {
+		cl_uint retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device max compute units\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;  ;
+}
+
+cl_uint _irt_cl_get_max_clock_frequency(cl_device_id* device) {
+		cl_uint retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device max clock frequency\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_uint _irt_cl_get_max_work_item_dimensions(cl_device_id* device) {
+		cl_uint retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device max work item dimensions\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+size_t* _irt_cl_get_max_work_item_sizes(cl_device_id* device) {
+		cl_uint size = _irt_cl_get_max_work_item_dimensions(device);
+		size_t *retval = (size_t*) malloc(size * sizeof(size_t));
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * size, retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device max work item sizes\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+size_t _irt_cl_get_max_work_group_size(cl_device_id* device) {
+		size_t retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device max work group size\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;  ;
+}
+
+cl_bool _irt_cl_has_image_support(cl_device_id* device) {
+		cl_bool retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_IMAGE_SUPPORT, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device image support\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_device_fp_config _irt_cl_get_single_fp_config(cl_device_id* device) {
+		cl_device_fp_config retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_SINGLE_FP_CONFIG, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device single floating point configuration\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_bool _irt_cl_is_endian_little(cl_device_id* device)  {
+		cl_bool retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_ENDIAN_LITTLE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device endian little\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+char* _irt_cl_get_extensions(cl_device_id* device) {
+		size_t size = 0;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, size, NULL, &size);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device extensions\" info: \"%s\"", _irt_error_string(err_code));
+		char* retval = (char*) malloc(sizeof(char) * size);
+		err_code = clGetDeviceInfo(*device, CL_DEVICE_EXTENSIONS, size, retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device extensions\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_ulong _irt_cl_get_global_mem_size(cl_device_id* device) {
+		cl_ulong retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device global memory size\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_ulong _irt_cl_get_max_mem_alloc_size(cl_device_id* device) {
+		cl_ulong retval;
+		cl_int err_code =  clGetDeviceInfo(*device, CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device max memory alloc size\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_device_mem_cache_type _irt_cl_get_global_mem_cache_type(cl_device_id* device) {
+		cl_device_mem_cache_type retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_GLOBAL_MEM_CACHE_TYPE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device global mem cache type\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_uint _irt_cl_get_global_mem_cacheline_size(cl_device_id* device) {
+		cl_uint retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device global mem cache line size\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_ulong _irt_cl_get_global_mem_cache_size(cl_device_id* device) {
+		cl_ulong retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_GLOBAL_MEM_CACHE_SIZE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device global mem cache size\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_ulong _irt_cl_get_max_constant_buffer_size(cl_device_id* device) {
+		cl_ulong retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device max constant buffer size\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_device_local_mem_type _irt_cl_get_local_mem_type(cl_device_id* device) {
+		cl_device_local_mem_type retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_LOCAL_MEM_TYPE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device local memory type\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}
+
+cl_ulong _irt_cl_get_local_mem_size(cl_device_id* device) {
+		cl_ulong retval;
+		cl_int err_code = clGetDeviceInfo(*device, CL_DEVICE_LOCAL_MEM_SIZE, sizeof(retval), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL, "Error getting \"device local memory size\" info: \"%s\"", _irt_error_string(err_code));
+		return retval;
+}

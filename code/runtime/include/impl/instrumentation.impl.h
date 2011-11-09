@@ -47,12 +47,10 @@
 
 #ifdef IRT_ENABLE_INSTRUMENTATION
 
+// global function pointers to switch instrumentation on/off
 void (*irt_wi_instrumentation_event)(irt_work_item* wi, wi_instrumentation_event event) = &_irt_wi_instrumentation_event;
-
 void (*irt_wg_instrumentation_event)(irt_work_group* wg, wg_instrumentation_event event) = &_irt_wg_instrumentation_event;;
-
 void (*irt_di_instrumentation_event)(irt_data_item* di, di_instrumentation_event event) = &_irt_di_instrumentation_event;
-
 void (*irt_worker_instrumentation_event)(irt_worker* worker, worker_instrumentation_event event) = &_irt_worker_instrumentation_event;
 
 // resizes table according to blocksize
@@ -60,6 +58,8 @@ void _irt_performance_table_resize(irt_pd_table* table) {
 	table->size = table->size + (table->blocksize);
 	table->data = realloc(table->data, sizeof(_irt_performance_data)*table->size);
 }
+
+// =============== functions for creating and destroying performance tables ===============
 
 // allocates memory for performance data, sets all fields
 irt_pd_table* irt_create_performance_table(unsigned blocksize) {
@@ -86,18 +86,17 @@ void _irt_instrumentation_event_insert(irt_pd_table* table, int event) {
 
 	_irt_performance_data* pd = &(table->data[table->number_of_elements++]);
 
-	pd->timestamp = time; //get_ticks();
+	pd->timestamp = time;
 	pd->event = event;
 }
+
+// =========== private event handlers =================================
 
 void _irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) {
 
 	_irt_instrumentation_event_insert(wi->performance_data, event);
 
-
-	if(event == WORK_ITEM_FINISHED) {
-		IRT_DEBUG_ONLY(irt_wi_instrumentation_output(wi));
-	}
+	IRT_DEBUG_ONLY(if(event == WORK_ITEM_FINISHED) irt_wi_instrumentation_output(wi));
 }
 
 void _irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) {
@@ -111,6 +110,8 @@ void _irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentatio
 void _irt_di_instrumentation_event(irt_data_item* di, di_instrumentation_event event) {
 	_irt_instrumentation_event_insert(di->performance_data, event);
 }
+
+// ================= debug output functions ==================================
 
 void irt_wi_instrumentation_output(irt_work_item* wi) {
 
@@ -128,6 +129,9 @@ void irt_wi_instrumentation_output(irt_work_item* wi) {
 				break;
 			case WORK_ITEM_QUEUED:
 				printf("QUEUED");
+				break;
+			case WORK_ITEM_SPLITTED:
+				printf("SPLITTED");
 				break;
 			case WORK_ITEM_STARTED:
 				printf("STARTED");
@@ -239,13 +243,16 @@ void irt_di_instrumentation_output(irt_data_item* di) {
 	printf("\n");
 }
 
+// ============================ dummy functions ======================================
+// dummy functions to be used via function pointer to disable
+// instrumentation even if IRT_ENABLE_INSTRUMENTATION is set
+
 void _irt_wi_no_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) { }
-
 void _irt_wg_no_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) { }
-
 void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event) { }
-
 void _irt_di_no_instrumentation_event(irt_data_item* di, di_instrumentation_event event) { }
+
+// ================= instrumentation function pointer toggle functions =======================
 
 void irt_wi_toggle_instrumentation(bool enable) { 
 	if(enable)
@@ -282,28 +289,21 @@ void irt_all_toggle_instrumentation(bool enable) {
 	irt_di_toggle_instrumentation(enable);
 }
 
-#else
+#else // if not IRT_ENABLE_INSTRUMENTATION
 
-// to be used if IRT_ENABLE_INSTRUMENTATION is not set
+// ============ to be used if IRT_ENABLE_INSTRUMENTATION is not set ==============
 
 irt_pd_table* irt_wi_create_performance_table(unsigned blocksize) { return NULL; }
-
 void irt_destroy_performance_table(irt_pd_table* table) { }
 
 void irt_wi_instrumentation_event(irt_work_item* wi, wi_instrumentation_event event) { }
-
 void irt_wg_instrumentation_event(irt_work_group* wg, wg_instrumentation_event event) { }
-
 void irt_worker_instrumentation_event(irt_worker* worker, worker_instrumentation_event event) { }
-
 void irt_di_instrumentation_event(irt_data_item* di, di_instrumentation_event event) { }
 
 void irt_wi_instrumentation_output(irt_work_item* wi) { }
-
 void irt_wg_instrumentation_output(irt_work_group* wg) { }
-
 void irt_worker_instrumentation_output(irt_worker* worker) { }
-
 void irt_di_instrumentation_output(irt_data_item* di) { }
 
-#endif
+#endif // IRT_ENABLE_IRT_INSTRUMENTATION

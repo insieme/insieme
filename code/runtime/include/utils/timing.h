@@ -65,9 +65,19 @@ uint64 irt_time_ticks(void) {
 	return (a | (d << 32));
 }
 
-// ====== PowerPC ===========================
+// ====== i386 (x86_32) machines  ===========================
 
-#else
+#elif defined __i386__
+
+uint64 irt_time_ticks(void) {
+	volatile uint32 a;
+	asm volatile("rdtsc" : "=a" (a), "=d" (d));
+	return (a | (((uint64)d) << 32));
+}
+
+// ====== PowerPC machines ===========================
+
+#else // deliberately fails for new architectures
 
 uint64 irt_time_ticks(void) {
 	int64 upper0, upper1, lower;
