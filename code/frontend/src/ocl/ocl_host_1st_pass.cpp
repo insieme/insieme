@@ -198,7 +198,7 @@ const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, con
 	TypePtr type;
 	ExpressionPtr size;
 	o2i.extractSizeFromSizeof(sizeArg, size, type);
-	assert(size && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
+	assert(size && type && "Unable to deduce type from clCreateBuffer call: No sizeof call found, cannot translate to INSPIRE.");
 
 	vector<ExpressionPtr> args;
 	args.push_back(builder.getTypeLiteral(type));
@@ -332,7 +332,7 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 	// get rid of casts
 	NodePtr uncasted = arg;
 	while (uncasted->getNodeType() == core::NT_CastExpr) {
-		uncasted = uncasted->getChildList().at(1);
+		uncasted = static_pointer_cast<CastExprPtr>(uncasted)->getType();
 	}
 
 	if (const CallExprPtr& call = dynamic_pointer_cast<const CallExpr> (uncasted)) {
@@ -357,7 +357,8 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 		// check if we reached a sizeof call
 		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
 			// extract the type to be allocated
-			type = dynamic_pointer_cast<const Type> (call->getArgument(0)->getType()->getChildList().at(0));
+			type = static_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
+			assert(type && "Type could not be extracted!");
 			return true;
 		}
 	}

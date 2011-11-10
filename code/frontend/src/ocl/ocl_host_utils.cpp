@@ -162,11 +162,6 @@ bool NullLitSearcher::visitCallExpr(const core::CallExprPtr& call) {
 	return false;
 }
 
-bool NullLitSearcher::visitLiteral(const core::LiteralPtr& literal) {
-	if(literal == builder.literal(literal->getType(), "0"))
-		return true;
-	return false;
-}
 
 } //namespace ocl
 } //namespace frontend

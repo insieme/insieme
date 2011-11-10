@@ -79,11 +79,23 @@ struct StmtWrapper: public StatementList {
 	bool isSingleStmt() const { return size() == 1; }
 };
 
+
+// prototype for below ..
+core::StatementPtr tryAggregateStmt(const core::IRBuilder& builder, const core::StatementPtr& stmt);
+
 // Tried to aggregate statements into a compound statement (if more than 1 statement is present)
 core::StatementPtr tryAggregateStmts(const core::IRBuilder& builder, const StatementList& stmtVect) {
-	if ( stmtVect.size() == 1 )
-		return stmtVect.front();
+	if ( stmtVect.size() == 1 ) {
+		return tryAggregateStmt(builder, stmtVect.front());
+	}
 	return builder.compoundStmt(stmtVect);
+}
+
+core::StatementPtr tryAggregateStmt(const core::IRBuilder& builder, const core::StatementPtr& stmt) {
+	if (stmt->getNodeType() == core::NT_CompoundStmt) {
+		return tryAggregateStmts(builder, static_pointer_cast<core::CompoundStmtPtr>(stmt)->getStatements());
+	}
+	return stmt;
 }
 
 core::ExpressionPtr makeOperation(const core::IRBuilder& builder, const core::ExpressionPtr& lhs,
@@ -436,7 +448,7 @@ public:
 			declStmt = builder.declarationStmt(nonRefInductionVar, newInit);
 
 			// We finally create the IR ForStmt
-			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, condExpr, incExpr, body.getSingleStmt());
+			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, condExpr, incExpr, tryAggregateStmt(builder, body.getSingleStmt()));
 			assert(irFor && "Created for statement is not valid");
 
 			// handle eventual pragmas attached to the Clang node
@@ -713,7 +725,7 @@ public:
 		StmtWrapper retStmt;
 
 		VLOG(2) << "{ DoStmt }";
-		core::StatementPtr&& body = tryAggregateStmts( builder, Visit( doStmt->getBody() ) );
+		core::CompoundStmtPtr&& body = builder.wrapBody( tryAggregateStmts( builder, Visit( doStmt->getBody() ) ) );
 		assert(body && "Couldn't convert body of the WhileStmt");
 
 		const Expr* cond = doStmt->getCond();
@@ -728,9 +740,7 @@ public:
 		condExpr = convFact.tryDeref( condExpr );
 
 		StatementList stmts;
-		if ( core::CompoundStmtPtr&& compStmt = core::dynamic_pointer_cast<const core::CompoundStmt>(body) ) {
-			std::copy(compStmt->getStatements().begin(), compStmt->getStatements().end(), std::back_inserter(stmts));
-		}
+		std::copy(body->getStatements().begin(), body->getStatements().end(), std::back_inserter(stmts));
 		stmts.push_back(builder.whileStmt(condExpr, body));
 
 		core::StatementPtr&& irNode = builder.compoundStmt(stmts);

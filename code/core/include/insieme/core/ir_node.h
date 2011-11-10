@@ -756,16 +756,14 @@ namespace core {
 		/**
 		 * Obtains access to an element within this list.
 		 */
-		Ptr<const ElementType> getElement(std::size_t index) const {
-			typename Ptr<const ElementType>::StaticCast caster;
-			assert(index < static_cast<const Derived*>(this)->size() && "Accessing node out of range!");
-			return caster.template operator()<const ElementType>(static_cast<const Derived*>(this)->getChildNodeReference(index));
+		const Ptr<const ElementType>& getElement(std::size_t index) const {
+			return getElements()[index];
 		}
 
 		/**
 		 * Obtains access to a specific element within this list.
 		 */
-		Ptr<const ElementType> operator[](std::size_t index) const {
+		const Ptr<const ElementType>& operator[](std::size_t index) const {
 			return getElement(index);
 		}
 
@@ -836,7 +834,7 @@ namespace core {
 	 * A macro starting a node declaration with the given name and base type.
 	 */
 	#define IR_NODE(NAME, BASE) \
-		class NAME : public BASE, public NAME ## Accessor<NAME, Pointer> { \
+		class NAME : public BASE, public NAME ## Accessor<NAME, Pointer>, public NAME ## Accessor<NAME, Pointer>::node_helper { \
 			NAME(const NodeList& children) : BASE(NT_ ## NAME, children) { \
 				assert(checkChildList(children) && "Invalid composition of Child-Nodes discovered!"); \
 			} \
@@ -866,11 +864,15 @@ namespace core {
 	 */
 	#define IR_NODE_ACCESSOR(NAME, BASE, ... ) \
 		template<typename Derived, template<typename T> class Ptr> \
-		struct NAME ## Accessor : public BASE ## Accessor<Derived, Ptr>, public FixedSizeNodeHelper<Derived, ## __VA_ARGS__> { \
+		struct NAME ## Accessor : public BASE ## Accessor<Derived, Ptr> { \
+			\
+			typedef FixedSizeNodeHelper<Derived, ## __VA_ARGS__> node_helper; \
 
 	#define IR_LIST_NODE_ACCESSOR(NAME, BASE, ELEMENT, LIST_NAME) \
 		template<typename Derived, template<typename T> class Ptr> \
-		struct NAME ## Accessor : public ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor>, public ListNodeHelper<Derived, ELEMENT> { \
+		struct NAME ## Accessor : public ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor> { \
+			\
+			typedef ListNodeHelper<Derived, ELEMENT> node_helper; \
 			\
 			const vector<Ptr<const ELEMENT>>& get ## LIST_NAME () const { \
 				return ListNodeAccessor<Derived,ELEMENT,Ptr,BASE ## Accessor>::getElements(); \

@@ -75,12 +75,11 @@ public:
 		char* msg (XMLString::transcode(e.getMessage ()));
 	
 		stringstream ss;
-		ss << uri << ":" << loc->getLineNumber () << ":" << loc->getColumnNumber () << " " << msg;
+		ss << /* uri << */ ":" << loc->getLineNumber () << ":" << loc->getColumnNumber () << " " << msg;
 		if(warn)
 			LOG(log::WARNING) << ss.str();
 		else
 			LOG(log::ERROR) << ss.str();
-
 
 		XMLString::release (&uri);
 		XMLString::release (&msg);

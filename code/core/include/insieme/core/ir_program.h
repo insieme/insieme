@@ -59,7 +59,8 @@ namespace core {
 	 */
 	class Program :
 		public Node,
-		public ProgramAccessor<Program, Pointer> {
+		public ProgramAccessor<Program, Pointer>,
+		public ProgramAccessor<Program, Pointer>::node_helper {
 
 	private:
 

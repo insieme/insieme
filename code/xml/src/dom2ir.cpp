@@ -195,7 +195,7 @@ private:
 		NamedCompositeType::Entries entryVec;
 		XmlElementList&& entries = elem.getFirstChildByName("entries")->getChildrenByName("entry");
 		for(auto iter = entries.begin(), end = entries.end(); iter != end; ++iter) {
-			StringValuePtr&& ident = createIrNode<StringValue>(*iter, "identifierPtr");
+			StringValuePtr&& ident = createNode<StringValue>(*iter, "identifierPtr");
 			TypePtr&& el = createNode<Type>(*iter, "typePtr");
 			entryVec.push_back( builder.namedType(ident, el) );
 		}
@@ -454,6 +454,10 @@ public:
 		return createIrNode<MarkerExpr>(elem, builder.uintValue(numeric_cast<unsigned>(elem.getAttr("markId"))), subExpression);
 	}
 
+	NodePtr handle_identifier(const XmlElement& elem) {
+		return createIrNode<StringValue>(elem, elem.getAttr("name"));
+	}
+	
 	NodePtr handle_program(const XmlElement& elem) {
 		XmlElementList&& exprs = elem.getFirstChildByName("expressions")->getChildrenByName("expressionPtr");
 
@@ -503,7 +507,7 @@ public:
 		DISPATCH(vectorExpr)		DISPATCH(tupleExpr)			DISPATCH(castExpr) 			DISPATCH(callExpr)				DISPATCH(variable)
 		DISPATCH(jobExpr)			DISPATCH(lambdaExpr)		DISPATCH(program)			DISPATCH(lambdaDefinition)		DISPATCH(lambda)
 		DISPATCH(rootNode)			DISPATCH(bindExpr)			DISPATCH(markerStmt)		DISPATCH(returnStmt)			DISPATCH(breakStmt)
-		DISPATCH(markerExpr)		DISPATCH(tupleType)
+		DISPATCH(markerExpr)		DISPATCH(tupleType)			DISPATCH(identifier)
 		assert(false && "XML node not handled!");
 		return 0;
 	}

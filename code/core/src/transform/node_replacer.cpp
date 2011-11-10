@@ -433,7 +433,7 @@ private:
 			return builder.callExpr(resType, lambda, args);
 		}
 
-		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
+		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
 		TypePtr callTy = deduceReturnType(static_pointer_cast<const FunctionType>(lambda->getType()), newParamTypes, false);
 		if(callTy) {
 			return static_pointer_cast<const CallExpr>(builder.callExpr(callTy, lambda, args)->substitute(manager, *this));
@@ -524,7 +524,7 @@ private:
 		}
 
 		// assemble new argument types
-		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur) { return cur->getType(); });
+		TypeList newParamTypes = ::transform(args, [](const ExpressionPtr& cur)->TypePtr { return cur->getType(); });
 
 		FunctionTypePtr newType = builder.functionType(newParamTypes, resType);
 		return builder.callExpr(builder.literal(newType, literal->getValue()), args);

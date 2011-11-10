@@ -627,7 +627,7 @@ public:
 					convFact.ctx.isRecSubType = true;
 
 					std::for_each(components.begin(), components.end(),
-						[ this, &definitions, &convFact ] (std::set<const Type*>::value_type ty) {
+						[ this, &definitions, &convFact, &recTypeVar ] (std::set<const Type*>::value_type ty) {
 							const TagType* tagTy = dyn_cast<const TagType>(ty);
 							assert(tagTy && "Type is not of TagType type");
 
@@ -637,6 +637,9 @@ public:
 
 							assert(tit != this->convFact.ctx.recVarMap.end() && "Recursive type has no TypeVar associated");
 							core::TypeVariablePtr var = tit->second;
+
+							// test whether this variable has already been handled
+							if (*var == *recTypeVar) { return; }
 
 							// we remove the variable from the list in order to fool the solver,
 							// in this way it will create a descriptor for this type (and he will not return the TypeVar
@@ -651,6 +654,14 @@ public:
 							this->convFact.ctx.recVarMap.insert( std::make_pair(tagTy, var) );
 						}
 					);
+
+					// sort definitions - this will produce the same list of definitions for each of the related types => shared structure
+					if (definitions.size() > 1) {
+						std::sort(definitions.begin(), definitions.end(), [](const core::RecTypeBindingPtr& a, const core::RecTypeBindingPtr& b){
+							return a->getVariable()->getVarName()->getValue() < b->getVariable()->getVarName()->getValue();
+						});
+					}
+
 					// we reset the behavior of the solver
 					convFact.ctx.isRecSubType = false;
 					// the map is also erased so visiting a second type of the mutual cycle will yield a correct result

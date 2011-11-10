@@ -102,13 +102,15 @@ void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink);
  */
 class NullLitSearcher: public core::IRVisitor<bool> {
 private:
-	core::IRBuilder& builder;
+	core::IRBuilder builder;
 public:
 	NullLitSearcher(core::IRBuilder build) : core::IRVisitor<bool>(false), builder(build) {}
 
 	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
 	bool visitCallExpr(const core::CallExprPtr& call);
-	bool visitLiteral(const core::LiteralPtr& literal);
+	bool visitLiteral(const core::LiteralPtr& literal) {
+		return literal->getStringValue() == "0";
+	}
 };
 
 /*

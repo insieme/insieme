@@ -322,6 +322,9 @@ OptionalMessageList StructExprTypeCheck::visitStructExpr(const StructExprAddress
 	OptionalMessageList res;
 
 	// extract type
+std::cout << address << " - " << *address << "\n";
+std::cout << *address->getType() << "\n";
+std::cout << *address.getAddressedNode()->getType() << "\n";
 	core::StructTypePtr structType = static_pointer_cast<const StructType>(address.getAddressedNode()->getType());
 
 	// check type of values within struct expression

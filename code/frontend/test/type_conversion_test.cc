@@ -390,7 +390,7 @@ TEST(TypeConversion, HandleArrayType) {
 
 
 TEST(TypeConversion, FileTest) {
-	Logger::get(std::cerr, DEBUG, 2);
+	Logger::get(std::cerr, FATAL, 2);
 
 	NodeManager manager;
 	fe::Program prog(manager);

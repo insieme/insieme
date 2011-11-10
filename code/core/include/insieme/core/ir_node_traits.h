@@ -125,6 +125,18 @@ namespace core {
 			typedef T type;
 			typedef Pointer<const T> ptr_type;
 		};
+
+		template<typename T>
+		struct node_child_type_helper<const Pointer<const T>&> {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
+
+		template<typename T>
+		struct node_child_type_helper<const Pointer<const T>> {
+			typedef T type;
+			typedef Pointer<const T> ptr_type;
+		};
 	}
 
 	/**

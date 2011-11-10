@@ -69,13 +69,17 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 
 	CommandLineOptions::Verbosity = 2;
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::get(manager);
+	core::ProgramPtr program;
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.c" << "' to IR...";
 	fe::Program prog(manager);
 
 	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.c");
 	program = prog.convert();
+
+	EXPECT_EQ(&program->getNodeManager(), &manager);
+	EXPECT_TRUE(manager.contains(program));
+
 	LOG(INFO) << "Done.";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";

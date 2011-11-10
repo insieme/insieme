@@ -367,11 +367,11 @@ namespace {
 
 		PRINT(ForStmt, {
 				// variables can be directly printed
-				out << "for(";
+				out << "for(decl ";
 				this->visit(node->getIterator()->getType());
 				out << " ";
 				this->visit(node->getIterator());
-				out << "=";
+				out << " = ";
 				this->visit(node->getStart());
 				out << " .. ";
 				this->visit(node->getEnd());
@@ -641,14 +641,14 @@ namespace {
 
 		PRINT(MarkerExpr, {
 			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
-			if (showMarker) out << "<m id=" << node->getID() << ">";
+			if (showMarker) out << "<m id=" << node->getId() << ">";
 			visit(node->getSubExpression());
 			if (showMarker) out << "</m>";
 		});
 
 		PRINT(MarkerStmt, {
 			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
-			if (showMarker) out << "<m id=" << node->getID() << ">";
+			if (showMarker) out << "<m id=" << node->getId() << ">";
 			visit(node->getSubStatement());
 			if (showMarker) out << "</m>";
 		});

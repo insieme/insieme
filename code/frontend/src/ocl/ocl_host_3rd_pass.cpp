@@ -929,10 +929,14 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 
 			if(newCall->getType()->toString().find("array<_cl_") == string::npos) {
 				// remove remaining calls using cl_ objects, just return the zero-element
-				for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
+std::cout << "Call: " << newCall << "\n";
+std::cout << "Args: " << newCall->getArguments() << "\n";
+				const auto& list = newCall->getArguments();
+				for(auto I = list.begin(); I != list.end(); ++I) {
 					// extra check to not remove e.g. sizeof
 					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 						if(lit->getStringValue().find("sizeof") == string::npos && lit->getStringValue().find("composite.ref.elem") == string::npos ) {
+std::cout << "Current stuff: " << *I << "\n";
 							if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
 								return getZeroElem(newCall->getType());
 							}

@@ -129,10 +129,10 @@ namespace {
 			VariableSet localVars;
 			std::size_t numDecls = cur->getLocalDecls().size();
 			for (std::size_t i=0; i<numDecls; i++) {
-				DeclarationStmtAddress decl = static_address_cast<const DeclarationStmt>(cur.getAddressOfChild(i+1));
+				const DeclarationStmtAddress& decl = cur->getLocalDecls()->getElement(i);
 
 				// check variables within local variable initialization
-				visit(decl.getAddressOfChild(1));
+				visit(decl->getInitialization());
 
 				// ... and collect local variables
 				localVars.insert(decl->getVariable());
@@ -145,7 +145,7 @@ namespace {
 			std::size_t numChildren = cur->getChildList().size();
 			for (std::size_t i=1+numDecls; i<numChildren; i++) {
 				// check scopes within current child
-				visit(cur.getAddressOfChild(i));
+				visit(cur->getThreadNumRange());
 			}
 
 			// restore context scope

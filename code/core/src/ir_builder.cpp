@@ -628,7 +628,7 @@ core::ExpressionPtr IRBuilder::createCallExprFromBody(StatementPtr body, TypePtr
             assert(curr->getNodeType() == core::NT_Variable);
 
             const core::VariablePtr& bodyVar = core::static_pointer_cast<const core::Variable>(curr);
-            core::TypePtr&& varType = bodyVar->getType();
+            const core::TypePtr& varType = bodyVar->getType();
 
             // we create a new variable to replace the captured variable
             core::VariablePtr&& parmVar = this->variable( varType );

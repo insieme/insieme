@@ -116,42 +116,42 @@ TEST(PrettyPrinter, Wrapper) {
 
 	// int<4> type loc
 	EXPECT_EQ(mgr.getLangBasic().getInt4(), it->second);
-	EXPECT_EQ(SourceLocation(0,4), it->first.first );
-	EXPECT_EQ(SourceLocation(0,10), it->first.second );
+	EXPECT_EQ(SourceLocation(0,9), it->first.first );
+	EXPECT_EQ(SourceLocation(0,15), it->first.second );
 
 	++it;
 
 	// variable loc
 	EXPECT_EQ(iter, it->second);
-	EXPECT_EQ(SourceLocation(0,11), it->first.first );
-	EXPECT_EQ(SourceLocation(0,13), it->first.second );
+	EXPECT_EQ(SourceLocation(0,16), it->first.first );
+	EXPECT_EQ(SourceLocation(0,18), it->first.second );
 	
 	++it;
 
 	// init value (1) loc
 	EXPECT_EQ(forStmt->getStart(), it->second);
-	EXPECT_EQ(SourceLocation(0,14), it->first.first );
-	EXPECT_EQ(SourceLocation(0,15), it->first.second );
+	EXPECT_EQ(SourceLocation(0,21), it->first.first );
+	EXPECT_EQ(SourceLocation(0,22), it->first.second );
 
 	++it;
 
 	// for loop end condition (1) loc
 	EXPECT_EQ(forStmt->getEnd(), it->second);
-	EXPECT_EQ(SourceLocation(0,19), it->first.first );
-	EXPECT_EQ(SourceLocation(0,20), it->first.second );
+	EXPECT_EQ(SourceLocation(0,26), it->first.first );
+	EXPECT_EQ(SourceLocation(0,27), it->first.second );
 
 	++it;
 
 	// for loop step (1) loc
 	EXPECT_EQ(forStmt->getStep(), it->second);
-	EXPECT_EQ(SourceLocation(0,23), it->first.first );
-	EXPECT_EQ(SourceLocation(0,24), it->first.second );
+	EXPECT_EQ(SourceLocation(0,30), it->first.first );
+	EXPECT_EQ(SourceLocation(0,31), it->first.second );
 
 	++it;
 
 	// for loop body (compound) loc
 	EXPECT_EQ(forStmt->getBody(), it->second);
-	EXPECT_EQ(SourceLocation(0,26), it->first.first );
+	EXPECT_EQ(SourceLocation(0,33), it->first.first );
 	EXPECT_EQ(SourceLocation(2,1), it->first.second );
 
 	++it;

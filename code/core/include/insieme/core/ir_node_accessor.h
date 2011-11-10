@@ -83,6 +83,7 @@ namespace core {
 			const NodeList& getChildList() const {
 				return getNode().getChildNodeList();
 			}
+
 		};
 
 		/**
@@ -90,19 +91,19 @@ namespace core {
 		 * the accessor is inherited by a pointer (to support access to the same elements
 		 * as for address and nodes directly).
 		 */
-		template<typename Derived>
-		struct node_access_helper<Pointer<const Derived>> {
+		template<typename Node>
+		struct node_access_helper<Pointer<const Node>> {
 
 			/**
 			 * The type of the handled node.
 			 */
-			typedef Derived node_type;
+			typedef Node node_type;
 
 			/**
 			 * Obtains access to the accessed node.
 			 */
-			inline const Derived& getNode() const {
-				return **static_cast<const Pointer<const Derived>*>(this);
+			inline const Node& getNode() const {
+				return **static_cast<const Pointer<const Node>*>(this);
 			}
 
 			/**
@@ -114,6 +115,35 @@ namespace core {
 				return getNode().getChildNodeList();
 			}
 
+			/**
+			 * This generic method allows to access child nodes in a type-safe way. It is also used
+			 * by node accessors to obtain addresses of child nodes.
+			 *
+			 * Note: this function is required by the node accessors
+			 *
+			 * @tparam index the index of the child node to be obtained
+			 * @tparam Res the type of the child node
+			 * @return the address of the requested child node
+			 */
+			template<
+				unsigned index,
+				typename Res = typename node_child_type<node_type,index>::type
+			>
+			Pointer<const Res> getChildNodeReference() const {
+				// access the child via static polymorthism and cast result to known type
+				return static_pointer_cast<const Res>(getChildList()[index]);
+			}
+
+			/**
+			 * Obtains access to the child associated to the given index.
+			 *
+			 * Note: this function is required by the node accessors
+			 *
+			 * @param index the index of the child node to be accessed
+			 */
+			const NodePtr& getChildNodeReference(std::size_t index) const {
+				return getChildList()[index];
+			}
 		};
 
 		/**
@@ -121,8 +151,8 @@ namespace core {
 		 * the accessor is inherited by an address (to support access to the same elements
 		 * as for pointers and nodes directly).
 		 */
-		template<typename Derived>
-		class node_access_helper<Address<const Derived>> {
+		template<typename Node>
+		class node_access_helper<Address<const Node>> {
 
 			/**
 			 * The lazy-evaluated list of child-addresses. If the pointer is null, the
@@ -141,13 +171,13 @@ namespace core {
 			/**
 			 * The type of the handled node.
 			 */
-			typedef Derived node_type;
+			typedef Node node_type;
 
 			/**
 			 * Obtains access to the accessed node.
 			 */
-			inline const Derived& getNode() const {
-				return **static_cast<const Address<const Derived>*>(this);
+			inline const Node& getNode() const {
+				return **static_cast<const Address<const Node>*>(this);
 			}
 
 			/**
@@ -162,12 +192,41 @@ namespace core {
 					childList = std::make_shared<vector<NodeAddress>>();
 					vector<NodeAddress>& list = *childList;
 					for(unsigned i=0; i<children.size(); ++i) {
-						list.push_back(static_cast<const Address<const Derived>*>(this)->getAddressOfChild(i));
+						list.push_back(static_cast<const Address<const Node>*>(this)->getAddressOfChild(i));
 					}
 				}
 				return *childList;
 			}
 
+			/**
+			 * This generic method allows to access child nodes in a type-safe way. It is also used
+			 * by node accessors to obtain addresses of child nodes.
+			 *
+			 * Note: this function is required by the node accessors
+			 *
+			 * @tparam index the index of the child node to be obtained
+			 * @tparam Res the type of the child node
+			 * @return the address of the requested child node
+			 */
+			template<
+				unsigned index,
+				typename Res = typename node_child_type<node_type,index>::type
+			>
+			Address<const Res> getChildNodeReference() const {
+				// access the child via static polymorthism and cast result to known type
+				return Address<const Res>(getChildNodeReference(index).getPath());
+			}
+
+			/**
+			 * Obtains access to the child associated to the given index.
+			 *
+			 * Note: this function is required by the node accessors
+			 *
+			 * @param index the index of the child node to be accessed
+			 */
+			const NodeAddress& getChildNodeReference(std::size_t index) const {
+				return getChildList()[index];
+			}
 		};
 
 	}

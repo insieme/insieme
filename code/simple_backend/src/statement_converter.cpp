@@ -736,7 +736,7 @@ namespace simple_backend {
 		}
 
 		// just print the value represented by the literal
-		currentCodeFragment << ptr->getValue();
+		currentCodeFragment << ptr->getStringValue();
 	}
 
 	void StmtConverter::visitReturnStmt(const ReturnStmtPtr& ptr) {

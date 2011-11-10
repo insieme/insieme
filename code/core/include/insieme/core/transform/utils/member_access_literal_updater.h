@@ -52,7 +52,7 @@ namespace utils {
  * If not the type literal is replaced with the appropriate one
  */
 class MemberAccessLiteralUpdater : public insieme::core::transform::CachedNodeMapping {
-	IRBuilder builder;
+	IRBuilder& builder;
 public:
 	MemberAccessLiteralUpdater(IRBuilder& build) : builder(build) {}
 	const core::NodePtr resolveElement(const core::NodePtr& element);

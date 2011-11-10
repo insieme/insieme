@@ -119,6 +119,42 @@ public:
 		visitAnnotations(cur->getAnnotations(), genType);
 	}
 	
+	void visitSingleElementType(const SingleElementTypePtr& cur) {
+		XmlElement genType("genType", doc);
+		genType << XmlElement::Attribute("id", GET_ID(cur));
+		switch(cur->getNodeType()) {
+			case NT_ArrayType: genType << XmlElement::Attribute("familyName", "array"); break;
+			case NT_VectorType: genType << XmlElement::Attribute("familyName", "vector"); break;
+			case NT_ChannelType: genType << XmlElement::Attribute("familyName", "channel"); break;
+			default: assert(false && "Unsupported type encountered!");
+		}
+		rootElem << genType;
+
+		XmlElement typeParams("typeParams", doc);
+		genType << typeParams;
+		append(typeParams, cur->getElementType(), "typePtr");
+
+		XmlElement intTypeParams("intTypeParams", doc);
+		genType << intTypeParams;
+		append(intTypeParams, cur->getIntTypeParameter(), "intTypeParamPtr");
+
+		visitAnnotations(cur->getAnnotations(), genType);
+	}
+
+	void visitRefType(const RefTypePtr& cur) {
+		XmlElement genType("genType", doc);
+		genType << XmlElement::Attribute("id", GET_ID(cur))
+				<< XmlElement::Attribute("familyName", "ref");
+		rootElem << genType;
+
+		XmlElement typeParams("typeParams", doc);
+		genType << typeParams;
+		append(typeParams, cur->getElementType(), "typePtr");
+
+		visitAnnotations(cur->getAnnotations(), genType);
+	}
+
+
 	void visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& cur) {
 		XmlElement concreteIntTypeParam("concreteIntTypeParam", doc);
 		concreteIntTypeParam << XmlElement::Attribute("id", GET_ID(cur));
@@ -136,7 +172,7 @@ public:
 		rootElem << variableIntTypeParam;
 		
 		XmlElement variable("variable", doc);
-		variable << XmlElement::Attribute("value", numeric_cast<std::string>(cur->getSymbol()));
+		variable << XmlElement::Attribute("value", numeric_cast<std::string>(cur->getSymbol()->getValue()));
 		variableIntTypeParam << variable;
 		visitAnnotations(cur->getAnnotations(), variableIntTypeParam);
 	}
@@ -274,6 +310,8 @@ public:
 		DeclarationStmtPtr decl = DeclarationStmt::get(cur->getNodeManager(), cur->getIterator(), cur->getStart());
 		append(declaration, decl, "declarationStmtPtr");
 		forStmt << declaration;
+
+		visit(decl); // it is not in the IR Tree => visit explicitly
 
 		XmlElement body("body", doc);
 		append(body, cur->getBody(), "statementPtr");
@@ -548,7 +586,7 @@ public:
 	void visitProgram(const ProgramPtr& cur) {
 		XmlElement program("program", doc);
 		program << XmlElement::Attribute("id", GET_ID(cur))
-				<< XmlElement::Attribute("main", "false");
+				<< XmlElement::Attribute("main", "0");
 		rootElem << program;
 		
 		appendList(program,
@@ -597,7 +635,7 @@ public:
 	void visitMarkerStmt(const MarkerStmtPtr& cur) {
 		XmlElement markerStmt("markerStmt", doc);
 		markerStmt << XmlElement::Attribute("id", GET_ID(cur))
-				 << XmlElement::Attribute("markId", numeric_cast<std::string>(cur->getID()));
+				 << XmlElement::Attribute("markId", numeric_cast<std::string>(cur->getId()));
 		rootElem << markerStmt;
 
 		XmlElement subStatement("subStatement", doc);
@@ -610,7 +648,7 @@ public:
 	void visitMarkerExpr(const MarkerExprPtr& cur) {
 		XmlElement markerExpr("markerExpr", doc);
 		markerExpr << XmlElement::Attribute("id", GET_ID(cur))
-				 << XmlElement::Attribute("markId", numeric_cast<std::string>(cur->getID()));
+				 << XmlElement::Attribute("markId", numeric_cast<std::string>(cur->getId()));
 		rootElem << markerExpr;
 
 		XmlElement subExpression("subExpression", doc);
@@ -639,6 +677,13 @@ public:
 		bindExpr << call;
 
 		visitAnnotations(cur->getAnnotations(), bindExpr);
+	}
+
+	void visitNode(const NodePtr& cur) {
+		if (cur->getNodeCategory() != NC_Support && cur->getNodeCategory() != NC_Value) {
+			std::cerr << "Unsupported node type: " << cur->getNodeType() << "\n";
+			assert(false && "Encountered unsupported node!");
+		}
 	}
 };
 
