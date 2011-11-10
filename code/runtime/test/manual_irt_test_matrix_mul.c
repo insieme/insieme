@@ -226,6 +226,10 @@ void insieme_wi_startup_implementation(irt_work_item* wi) {
 	}
 	printf("= result check: %s\n======================\n", check ? "OK" : "FAIL");
 
+	#ifdef USE_OPENCL // remove this when cleanup context will work.
+	irt_ocl_print_events();
+	#endif
+
 	irt_di_free(blockR);
 	irt_di_destroy(itemR);
 
