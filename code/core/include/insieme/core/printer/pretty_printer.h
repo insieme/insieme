@@ -71,11 +71,16 @@ struct PrettyPrinter {
 	 * An default setup resulting in a readable print out.
 	 */
 	static const unsigned OPTIONS_DEFAULT;
+	
+	/**
+	 * An option to be used for more details.
+	 */
+	static const unsigned OPTIONS_DETAIL;
 
 	/**
 	 * An option to be used for a maximum of details.
 	 */
-	static const unsigned OPTIONS_DETAIL;
+	static const unsigned OPTIONS_MAX_DETAIL;
 
 	/**
 	 * An option to be used for a single-line print.
