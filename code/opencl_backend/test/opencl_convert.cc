@@ -67,7 +67,7 @@ using namespace insieme::utils::log;
 
 TEST(OpenCLBackend, baseTest) {
 	NodeManager manager;
-	ProgramPtr program = Program::create(manager);
+	ProgramPtr program = Program::get(manager);
 
 	std::cout << "Test Directory: " << std::string(OCL_BE_TEST_DIR) << std::endl;
 

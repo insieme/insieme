@@ -79,7 +79,7 @@ backend::TargetCodePtr OpenCLBackend::convert(const NodePtr& source) const {
 	NodeManager& nodeManager = source->getNodeManager();
 	converter.setNodeManager(&nodeManager);
 
-	OclStmtConvert stmtConverter(converter, detail::getOCLFormatTable(nodeManager.basic));
+	OclStmtConvert stmtConverter(converter, detail::getOCLFormatTable(nodeManager.getLangBasic()));
 	converter.setStmtConverter(&stmtConverter);
 
 	NameManager nameManager;
@@ -199,7 +199,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				LOG(INFO) << "Function with kernel annotation...\n";
 					
 				const LambdaPtr& oldLambda = ptr->getLambda();
-				const Lambda::ParamList& oldParams = oldLambda->getParameterList();
+				const VariableList& oldParams = oldLambda->getParameterList();
 				const CompoundStmtPtr& oldBody = dynamic_pointer_cast<const CompoundStmt>(oldLambda->getBody());
 				const FunctionTypePtr& oldFuncType = oldLambda->getType();
 				
@@ -214,7 +214,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				addBuiltinAnnotation(builder, qualifierMap, oldParams.at(oldParams.size()-1), "get_local_size");
 					
 				// new functionType
-				const core::TypeList& oldArgs = oldFuncType->getParameterTypes();
+				const core::TypeList& oldArgs = oldFuncType->getParameterTypeList();
 				
 				//const core::TypePtr& retType = oldFuncType->getReturnType();
 				// set the return type of the kernel to void
@@ -240,7 +240,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				const JobExprPtr& globalJob = dynamic_pointer_cast<const JobExpr>(globalExpr.back());
 				
 				// Check for global variables
-				const vector<DeclarationStmtPtr>& globalJobDecls = globalJob->getLocalDecls();
+				const vector<DeclarationStmtPtr>& globalJobDecls = globalJob->getLocalDecls()->getElements();
 				for_each(globalJobDecls, [&](const DeclarationStmtPtr& curDecl) {
 					unsigned newName = (curDecl->getVariable())->getId();
 					unsigned oldName = (dynamic_pointer_cast<const Variable>(curDecl->getInitialization()))->getId();
@@ -252,13 +252,13 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					addQualifier(qualifierMap, firstVal, AddressSpaceAnnotation::addressSpace::GLOBAL);
 				});
 
-				const BindExprPtr& globalBind =  dynamic_pointer_cast<const BindExpr>(globalJob->getDefaultStmt());
+				const BindExprPtr& globalBind =  dynamic_pointer_cast<const BindExpr>(globalJob->getDefaultExpr());
 				
 				const CallExprPtr& globalCall = globalBind->getCall();
 				const vector<ExpressionPtr> globalOldValues = globalCall->getArguments();
 				const LambdaExprPtr& globalParFct = dynamic_pointer_cast<const LambdaExpr>(globalCall->getFunctionExpr());
 				
-				const std::vector<VariablePtr>& globalNewValues = globalParFct->getParameterList();
+				const VariableList& globalNewValues = globalParFct->getParameterList()->getElements();
 
 				auto&& iter2 = globalOldValues.begin();
 				for (auto&& iter = globalNewValues.begin(); iter != globalNewValues.end(); ++iter, ++iter2){
@@ -279,7 +279,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 				
 				const JobExprPtr& localJob = dynamic_pointer_cast<const JobExpr>(localExpr.back());
 				
-				const vector<DeclarationStmtPtr>& localJobDecls = localJob->getLocalDecls();
+				const vector<DeclarationStmtPtr>& localJobDecls = localJob->getLocalDecls()->getElements();
 				
 				// declarations that we want to add to the body of the function
 				vector<DeclarationStmtPtr> newBodyDecls;
@@ -303,13 +303,13 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					}
 				});
 				
-				const BindExprPtr& localBind =  dynamic_pointer_cast<const BindExpr>(localJob->getDefaultStmt());
+				const BindExprPtr& localBind =  dynamic_pointer_cast<const BindExpr>(localJob->getDefaultExpr());
 
 				const CallExprPtr& localCall = localBind->getCall();
 				const vector<ExpressionPtr> localOldValues = localCall->getArguments();
 				const LambdaExprPtr& localParFct = dynamic_pointer_cast<const LambdaExpr>(localCall->getFunctionExpr());
 
-				const std::vector<VariablePtr>& localNewValues = localParFct->getParameterList();
+				const std::vector<VariablePtr>& localNewValues = localParFct->getParameterList()->getElements();
 
 				iter2 = localOldValues.begin();
 				for (auto&& iter = localNewValues.begin(); iter != localNewValues.end(); ++iter, ++iter2){
@@ -321,7 +321,7 @@ void OclStmtConvert::visitLambdaExpr(const core::LambdaExprPtr& ptr) {
 					qualifierMap.insert(std::make_pair(newName, *iter));
 				}
 				
-				Lambda::ParamList newParams;
+				VariableList newParams;
 				for (uint i = 0; i < oldParams.size()-2; i++){
 					unsigned oldName = (oldParams.at(i))->getId();
 					unsigned newName = getVarName(forwardVarNameMap, oldName);
@@ -407,14 +407,14 @@ void OclStmtConvert::visitCallExpr(const CallExprPtr& ptr) {
 		if (call) {
 			const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr());
 			if (lit) {
-				if (lit->getValue() == "getThreadGroup") {
+				if (lit->getStringValue() == "getThreadGroup") {
 					const LiteralPtr& num = dynamic_pointer_cast<const Literal>(call->getArgument(0));
 					const CodeFragmentPtr& code = getCurrentCodeFragment();
-					if (num->getValue() == "0") {
+					if (num->getStringValue() == "0") {
 						code << "barrier(CLK_LOCAL_MEM_FENCE)";
 						return;
 					}
-					else if (num->getValue() == "1") {
+					else if (num->getStringValue() == "1") {
 						code << "barrier(CLK_GLOBAL_MEM_FENCE)";
 						return;
 					}

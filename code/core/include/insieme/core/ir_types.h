@@ -364,6 +364,13 @@ namespace core {
 		 * is plain or not.
 		 */
 		bool isPlain() const { return FunctionTypeAccessor<Derived,Ptr>::getPlain()->getValue(); }
+
+		/**
+		 * Obtains a list of types forming the parameter types of this function type.
+		 */
+		vector<Ptr<const Type>> getParameterTypeList() const {
+			return getParameterTypes()->getElements();
+		}
 	};
 
 	/**
@@ -498,6 +505,17 @@ namespace core {
 			return (pos==list.end())?TypePtr():(*pos)->getType();
 		}
 
+		/**
+		 * Unrolls this definition once for the given variable.
+		 *
+		 * @param manager the manager to be used for maintaining the resulting type pointer
+		 * @param variable the variable defining the definition to be unrolled once
+		 * @return the resulting, unrolled type
+		 */
+		TypePtr unrollOnce(NodeManager& manager, const TypeVariablePtr& variable) const {
+			return RecTypeDefinitionAccessor<Derived,Ptr>::getNode().unrollDefinitionOnce(manager, variable);
+		}
+
 	};
 
 	/**
@@ -534,7 +552,7 @@ namespace core {
 		 * @param variable the variable defining the definition to be unrolled once
 		 * @return the resulting, unrolled type
 		 */
-		TypePtr unrollOnce(NodeManager& manager, const TypeVariablePtr& variable) const;
+		TypePtr unrollDefinitionOnce(NodeManager& manager, const TypeVariablePtr& variable) const;
 
 	};
 

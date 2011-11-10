@@ -36,6 +36,8 @@
 
 #pragma once
 
+#include <set>
+
 #include "insieme/annotations/c/location.h"
 
 #include "insieme/core/ir_program.h"

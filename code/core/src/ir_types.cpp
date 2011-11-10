@@ -110,7 +110,7 @@ namespace core {
 
 	}
 
-	TypePtr RecTypeDefinition::unrollOnce(NodeManager& manager, const TypeVariablePtr& variable) const {
+	TypePtr RecTypeDefinition::unrollDefinitionOnce(NodeManager& manager, const TypeVariablePtr& variable) const {
 		// unroll recursive type using helper
 		return RecTypeUnroller(manager, *this).apply(getDefinitionOf(variable));
 	}

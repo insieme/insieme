@@ -165,7 +165,7 @@ namespace backend {
 					// inline arguments of varlist-pack call => append arguments directly
 					const vector<core::ExpressionPtr>& packed = static_pointer_cast<const core::CallExpr>(cur)->getArguments();
 
-					for_each(static_pointer_cast<const core::TupleExpr>(packed[0])->getExpressions(),
+					for_each(static_pointer_cast<const core::TupleExpr>(packed[0])->getExpressions()->getElements(),
 							[&](const core::ExpressionPtr& cur) {
 								append(cur);
 					});
@@ -393,14 +393,14 @@ namespace backend {
 			// ------------------------ resolve function ---------------------
 
 			FunctionCodeInfo fun = resolveFunction(
-					manager->create(literal->getValue()),
+					manager->create(literal->getStringValue()),
 					funType, core::LambdaPtr(), true);
 
 			res->function = fun.function;
 
 			// ------------------------ add prototype -------------------------
 
-			auto header = converter.getFunctionManager().getHeaderFor(literal->getValue());
+			auto header = converter.getFunctionManager().getHeaderFor(literal->getStringValue());
 			if (header) {
 				// => use prototype of include file
 				res->prototype = c_ast::DummyFragment::createNew(converter.getFragmentManager());
@@ -448,7 +448,7 @@ namespace backend {
 
 			// add parameters
 			int paramCounter = 0;
-			const vector<core::VariablePtr>& parameter = bind->getParameters();
+			const vector<core::VariablePtr>& parameter = bind->getParameters()->getElements();
 			for_each(parameter, [&](const core::VariablePtr& cur) {
 				variableMap[cur] = var(typeManager.getTypeInfo(cur->getType()).rValueType, format("p%d", ++paramCounter));
 			});
@@ -512,7 +512,7 @@ namespace backend {
 
 				vector<c_ast::VariablePtr> params;
 				params.push_back(varClosure);
-				::transform(bind->getParameters(), std::back_inserter(params), [&](const core::VariablePtr& cur) {
+				::transform(bind->getParameters()->getElements(), std::back_inserter(params), [&](const core::VariablePtr& cur) {
 					return variableMap[cur];
 				});
 
@@ -615,8 +615,8 @@ namespace backend {
 			// A) get list of all lambdas within this recursive group
 			vector<std::pair<c_ast::IdentifierPtr,core::LambdaExprPtr>> lambdas;
 			::transform(lambdaDefinition->getDefinitions(), std::back_inserter(lambdas),
-					[&](const std::pair<core::VariablePtr, core::LambdaPtr>& cur)->std::pair<c_ast::IdentifierPtr,core::LambdaExprPtr> {
-						auto lambda = core::LambdaExpr::get(manager, cur.first, lambdaDefinition);
+					[&](const core::LambdaBindingPtr& cur)->std::pair<c_ast::IdentifierPtr,core::LambdaExprPtr> {
+						auto lambda = core::LambdaExpr::get(manager, cur->getVariable(), lambdaDefinition);
 						return std::make_pair(cManager->create(nameManager.getName(lambda)), lambda);
 			});
 
@@ -713,7 +713,7 @@ namespace backend {
 			// resolve parameters
 			int counter = 0;
 			vector<c_ast::VariablePtr> parameter;
-			for_each(funType->getParameterTypes(), [&](const core::TypePtr& cur) {
+			for_each(funType->getParameterTypes()->getElements(), [&](const core::TypePtr& cur) {
 
 				// skip type literals passed as arguments
 				if (core::analysis::isTypeLiteralType(cur)) {
@@ -785,7 +785,7 @@ namespace backend {
 
 			// resolve parameters
 			int counter = 1;
-			::transform(funType->getParameterTypes(), std::back_inserter(parameter),
+			::transform(funType->getParameterTypes()->getElements(), std::back_inserter(parameter),
 					[&](const core::TypePtr& cur) {
 						const TypeInfo& paramTypeInfo = typeManager.getTypeInfo(cur);
 						return c_ast::var(paramTypeInfo.rValueType, manager->create(format("p%d", counter++)));
@@ -799,7 +799,7 @@ namespace backend {
 
 			// filter out type literal parameters
 			vector<core::TypePtr> paramTypes;
-			for_each(funType->getParameterTypes(), [&](const core::TypePtr& cur) {
+			for_each(funType->getParameterTypes()->getElements(), [&](const core::TypePtr& cur) {
 				if (!core::analysis::isTypeLiteralType(cur)) {
 					paramTypes.push_back(cur);
 				}

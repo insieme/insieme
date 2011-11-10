@@ -69,9 +69,6 @@ public:
 
 	void visitRefType(const RefTypePtr& cur) {
 		countRefTypes++;
-
-		// forward processing
-		visitGenericType(cur);
 	}
 };
 

@@ -432,10 +432,10 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			return ann.getIterationVector();
 		}
 
-		typedef std::vector<SwitchStmt::Case> CaseList;
+		typedef std::vector<SwitchCasePtr> CaseList;
 		typedef std::vector<IterationVector> IterationVectorList;
 
-		const CaseList& cases = switchStmt->getCases();
+		const CaseList& cases = switchStmt.getAddressedNode()->getCases()->getElements();
 		IterationVector ret;
 		
 		bool isSCoP = true;
@@ -565,8 +565,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 			IterationVector&& bodyIV = visitStmt( forStmt.getAddressOfChild(3) ), ret;
 
-			const DeclarationStmtPtr& decl = forStmt.getAddressedNode()->getDeclaration();
-			ret.add( Iterator(decl->getVariable()) ); 
+			ForStmtPtr forPtr = forStmt.getAddressedNode();
+			ret.add( Iterator(forPtr->getIterator()) );
 			
 			NodeManager& mgr = forStmt->getNodeManager();
 			IRBuilder builder(mgr);
@@ -579,13 +579,13 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
 				AffineFunction lb(ret, 
-						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), decl->getVariable(), 
-							decl->getInitialization())	
+						builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+								forPtr->getIterator(), forPtr->getStart())
 					);
 
 				// check the upper bound of the loop
-				AffineFunction ub(ret, builder.callExpr(mgr.getLangBasic().getSignedIntSub(), decl->getVariable(), 
-							forStmt.getAddressedNode()->getEnd())
+				AffineFunction ub(ret, builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+							forPtr->getIterator(), forPtr->getEnd())
 						);
 				// set the constraint: iter >= lb && iter < ub
 
@@ -611,13 +611,13 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 					AffineFunction existenceCons( ret );
 					existenceCons.setCoeff( existenceVar, -formula.getTerms().front().second );
-					existenceCons.setCoeff( decl->getVariable(), 1 );
+					existenceCons.setCoeff( forPtr->getIterator(), 1 );
 
 					// WE still have to make sure the loop iterator assume the value given by the
 					// loop lower bound, therefore i == lb
 					AffineFunction lowerBound( ret, 
-						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), decl->getVariable(), 
-							decl->getInitialization()) 
+						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), forPtr->getIterator(),
+							forPtr->getStart())
 						);
 
 					loopBounds = loopBounds and 
@@ -795,7 +795,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
 
 			// Check whether the arguments of the functions are non-refs
-			const vector<ExpressionPtr>& args = callExpr->getArguments();
+			const vector<ExpressionPtr>& args = callExpr.getAddressedNode()->getArguments();
 			bool isPure=true;
 			std::for_each(args.begin(), args.end(), [&](const ExpressionPtr& cur) { 
 					if(cur->getType()->getNodeType() == NT_RefType) { isPure = false; }
@@ -1063,7 +1063,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 				// if the statement is a loop, then we append a dimension with the corresponding
 				// iterator variable and we go recursively to visit the body  
 				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curPtr);
-				const VariablePtr& iter = forStmt->getDeclaration()->getVariable();
+				const VariablePtr& iter = forStmt->getIterator();
 
 				AffineFunction newAf( iterVec );
 				newAf.setCoeff( poly::Iterator(iter), 1 );
@@ -1204,7 +1204,7 @@ void resolveFrom(const NodePtr& root) {
 	// using the loop iterator index 
 	if (root->getNodeType() == NT_ForStmt) {
 		AffineFunction af( region.getIterationVector() );
-		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(root)->getDeclaration()->getVariable());
+		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(root)->getIterator());
 		af.setCoeff( iter, 1 );
 		sf.appendRow( af );
 		iterOrder.push_back(iter);

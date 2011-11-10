@@ -403,13 +403,13 @@ struct CFGBuilder: public IRVisitor< void > {
 		CFG::VertexTy sink = succ;
 
 		scopeStack.push( Scope(switchStmt, src, sink) );
-		const std::vector<SwitchStmt::Case>& cases = switchStmt->getCases();
+		const std::vector<SwitchCasePtr>& cases = switchStmt->getCases()->getElements();
 		for ( auto it = cases.begin(), end = cases.end(); it != end; ++it ) {
-			const SwitchStmt::Case& curr = *it;
+			const SwitchCasePtr& curr = *it;
 			succ = sink;
 			createBlock();
 			// push scope into the stack for this compound statement
-			visit(curr.second);
+			visit(curr->getBody());
 
 			appendPendingBlock();
 			cfg->addEdge(src, succ);
@@ -563,7 +563,7 @@ struct CFGBuilder: public IRVisitor< void > {
 	}
 
 	void visitProgram(const ProgramPtr& program) {
-		const Program::EntryPointList& entryPoints = program->getEntryPoints();
+		const ExpressionList& entryPoints = program->getEntryPoints();
 		std::for_each(entryPoints.begin(), entryPoints.end(),
 			[ this ]( const ExpressionPtr& curr ) {
 				this->succ = this->exit;
@@ -862,12 +862,12 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Block&
 					out << getPrettyPrinted( curr ) << " <CTRL>";
 					break;
 				case cfg::Element::LoopInit: {
-					out << getPrettyPrinted( static_pointer_cast<const ForStmt>(curr)->getDeclaration() ) << " <LOOP_INIT>";
+					out << getPrettyPrinted( static_pointer_cast<const ForStmt>(curr)->getStart() ) << " <LOOP_INIT>";
 					break;
 				}
 				case cfg::Element::LoopIncrement: {
 					const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curr);
-					out << printer::PrettyPrinter(forStmt->getDeclaration()->getVariable()) << " += "
+					out << printer::PrettyPrinter(forStmt->getIterator()) << " += "
 						<< printer::PrettyPrinter( forStmt->getStep(), 10001 ) << " <LOOP_INC>";
 					break;
 				}
@@ -903,7 +903,7 @@ std::ostream& operator<<(std::ostream& out, const insieme::analysis::cfg::Termin
 	case NT_ForStmt: {
 		ForStmtPtr forStmt = static_pointer_cast<const ForStmt>(term);
 		return out << "FOR( " << "... ; "
-				<< printer::PrettyPrinter( forStmt->getDeclaration()->getVariable(), 10001 ) << " < "
+				<< printer::PrettyPrinter( forStmt->getIterator(), 10001 ) << " < "
 				<< printer::PrettyPrinter(forStmt->getEnd(), 10001 ) << "; ...)\\l";
 	}
 	case NT_WhileStmt:

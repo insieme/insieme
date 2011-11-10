@@ -102,7 +102,7 @@ namespace ocl_host {
 			core::VectorTypePtr vecType = static_pointer_cast<const core::VectorType>(ARG(2)->getType());
 
 			core::ExpressionPtr values = static_pointer_cast<const core::CallExpr>(ARG(3))->getArgument(0);
-			const vector<core::ExpressionPtr>& kernelArgs = static_pointer_cast<const core::TupleExpr>(values)->getExpressions();
+			const vector<core::ExpressionPtr>& kernelArgs = static_pointer_cast<const core::TupleExpr>(values)->getExpressions()->getElements();
 
 			vector<c_ast::ExpressionPtr> args;
 			args.push_back(c_ast::lit(sizeType, utils::numeric_cast<string>(kernelID)));

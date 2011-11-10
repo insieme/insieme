@@ -222,7 +222,7 @@ namespace transform {
 				}
 
 				// decent recursively
-				return ptr->substitute(manager, *this, true);
+				return ptr->substitute(manager, *this);
 			}
 
 		};
@@ -287,7 +287,7 @@ namespace transform {
 				}
 
 				// decent recursively
-				return ptr->substitute(manager, *this, true);
+				return ptr->substitute(manager, *this);
 			}
 
 		};
@@ -323,7 +323,7 @@ namespace transform {
 				}
 
 				// apply recursively - bottom up
-				core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+				core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
 
 				// check current node
 				if (!core::analysis::isCallOf(res, ITE)) {
@@ -469,7 +469,7 @@ namespace transform {
 				}
 
 				// apply recursively - bottom up
-				core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+				core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
 
 				// handle calls
 				if (ptr->getNodeType() == core::NT_CallExpr) {
@@ -504,7 +504,7 @@ namespace transform {
 				assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
 				const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
-				const core::TypeList& paramTypes = funType->getParameterTypes();
+				const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
 				const core::ExpressionList& args = call->getArguments();
 
 				if (paramTypes.size() != args.size()) {

@@ -65,7 +65,7 @@ TEST(OclDriverTest, KernelTest) {
 
 
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program = core::Program::get(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "ocl/test_kernels.cl" << "' to IR...";
 	fe::Program prog(manager);

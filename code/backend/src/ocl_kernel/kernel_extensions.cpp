@@ -186,7 +186,7 @@ namespace ocl_kernel{
 		return isWrapperTypeInternal("const", type);
 	}
 
-	const core::TypePtr& Extensions::getWrappedType(const core::TypePtr& type) const {
+	const core::TypePtr Extensions::getWrappedType(const core::TypePtr& type) const {
 		if (isConstType(type) || isGlobalType(type) || isLocalType(type)) {
 			return static_pointer_cast<const core::GenericType>(type)->getTypeParameter()[0];
 		}

@@ -103,7 +103,7 @@ namespace ocl_kernel {
 		bool isLocalType(const core::TypePtr& type) const;
 		bool isConstType(const core::TypePtr& type) const;
 
-		const core::TypePtr& getWrappedType(const core::TypePtr& type) const;
+		const core::TypePtr getWrappedType(const core::TypePtr& type) const;
 
 		core::ExpressionPtr wrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;
 		core::ExpressionPtr unWrapExpr(AddressSpace addressSpace, const core::ExpressionPtr& value) const;

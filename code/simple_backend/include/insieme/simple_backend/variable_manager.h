@@ -38,6 +38,7 @@
 
 
 #include "insieme/core/ir_pointer.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/map_utils.h"
 

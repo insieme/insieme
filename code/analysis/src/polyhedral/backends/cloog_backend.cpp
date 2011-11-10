@@ -558,10 +558,10 @@ public:
 	
 		core::ForStmtPtr&& irForStmt = 
 			builder.forStmt( 
-					builder.declarationStmt(inductionVar, lowerBound), 
-					builder.compoundStmt( stmtStack.top() ), 
+					inductionVar, lowerBound,
 					upperBound, 
-					strideExpr 
+					strideExpr,
+					builder.compoundStmt( stmtStack.top() )
 				);
 
 		stmtStack.pop();

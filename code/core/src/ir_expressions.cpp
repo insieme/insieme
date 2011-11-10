@@ -152,6 +152,5 @@ namespace core {
 		return LambdaExpr::get(manager, lambda);
 	}
 
-
 } // end namespace core
 } // end namespace insieme

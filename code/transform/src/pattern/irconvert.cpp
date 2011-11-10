@@ -120,7 +120,7 @@ namespace {
 		TreePtr visitLiteral(const LiteralPtr& node){
 			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
 				TreeList res;
-				res.push_back(makeValue(static_pointer_cast<const Literal>(node)->getValue()));
+				res.push_back(makeValue(static_pointer_cast<const Literal>(node)->getStringValue()));
 				copy(IRTree::convertChildren(node), back_inserter(res));
 				return res;
 			};
@@ -137,11 +137,11 @@ namespace {
 		}
 
 		TreePtr visitVariableIntTypeParam(const VariableIntTypeParamPtr& node){
-			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()));
+			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()->getValue()));
 		}
 
 		TreePtr visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& node){
-			return makeTree((int)node->getNodeType(), makeValue(node->getValue()));
+			return makeTree((int)node->getNodeType(), makeValue((int)node->getValue()));
 		}
 
 		// ALL REMAINING NODES
@@ -343,19 +343,20 @@ core::NodePtr toIR(core::NodeManager& manager, const TreePtr& tree) {
 		return irTree->getNode();
 	}
 
+	/*
 	// test node id
 	auto id = tree->getId();
 	assert( 0 <= id && id < core::NUM_CONCRETE_NODE_TYPES && "Invalid node type encountered!");
 
 	core::NodeType type = (core::NodeType)id;
 
-
 	switch(type) {
 	#define CONCRETE(KIND) \
 		case NT_ ## KIND : return convert ## KIND (manager, tree);
-	#include "insieme/core/ast_nodes.def"
+	// #include "insieme/core/ir_nodes.def"
 	#undef CONCRETE
 	}
+	*/
 
 	assert(false && "Some node type is missing ...");
 	return NodePtr();

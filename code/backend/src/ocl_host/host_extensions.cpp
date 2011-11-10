@@ -59,7 +59,7 @@ namespace ocl_host{
 
 		const core::LiteralPtr getCreateBuffer(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
-			auto& basic = manager.basic;
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr uint8Type = basic.getUInt8();
@@ -73,7 +73,7 @@ namespace ocl_host{
 
 		const core::LiteralPtr getReadBuffer(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
-			auto& basic = manager.basic;
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr boolType = basic.getBool();
@@ -87,7 +87,7 @@ namespace ocl_host{
 
 		const core::LiteralPtr getWriteBuffer(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
-			auto& basic = manager.basic;
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr boolType = basic.getBool();
@@ -101,7 +101,7 @@ namespace ocl_host{
 
 		const core::LiteralPtr getReleaseBuffer(core::NodeManager& manager) {
 			core::IRBuilder builder(manager);
-			auto& basic = manager.basic;
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 

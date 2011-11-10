@@ -46,9 +46,6 @@ namespace utils {
 	using namespace core;
 
 	bool isMainProgram(const ProgramPtr& program) {
-		if (program->isMain()) {
-			return true;
-		}
 
 		if (program->getEntryPoints().size() != static_cast<unsigned>(1)) {
 			return false;

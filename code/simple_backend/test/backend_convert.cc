@@ -70,7 +70,7 @@ ProgramPtr setupSampleProgram(IRBuilder& build) {
 	ExpressionPtr stringLiteral = build.literal("Hello World!", typeGen.getString());
 	auto invocation = build.callExpr(unitType, printfDefinition, toVector(stringLiteral));
 	auto mainBody = build.compoundStmt(invocation);
-	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, Lambda::ParamList(), mainBody);
+	auto mainLambda = build.lambdaExpr(voidNullaryFunctionType, VariableList(), mainBody);
 
 	mainLambda->addAnnotation(std::make_shared<CNameAnnotation>("main"));
 
@@ -78,8 +78,8 @@ ProgramPtr setupSampleProgram(IRBuilder& build) {
 }
 
 TEST(SimpleBackend, Basic) {
-
-	IRBuilder build;
+	NodeManager manager;
+	IRBuilder build(manager);
 	ProgramPtr prog = setupSampleProgram(build);
 
 

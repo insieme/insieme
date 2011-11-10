@@ -315,6 +315,7 @@ namespace core {
 		 * @return true if it is a no-op, false otherwise
 		 */
 		bool isNoOp(const NodePtr& node) const;
+		bool isNoOp(const CompoundStmtPtr& p) const { return p->empty(); }
 
 		IfStmtPtr ifStmt(const ExpressionPtr& condition, const StatementPtr& thenBody, const StatementPtr& elseBody = StatementPtr()) const;
 		WhileStmtPtr whileStmt(const ExpressionPtr& condition, const StatementPtr& body) const;

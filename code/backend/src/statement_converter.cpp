@@ -116,7 +116,7 @@ namespace backend {
 		for_each(node->getEntryPoints(), [&](const core::ExpressionPtr& entryPoint) {
 
 			// fix name of main entry
-			if (node->isMain() && node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
+			if (node->getEntryPoints().size() == static_cast<std::size_t>(1)) {
 				context.getConverter().getNameManager().setName(entryPoint, "main");
 			}
 
@@ -175,10 +175,10 @@ namespace backend {
 		}
 
 		// convert literal
-		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getValue());
+		c_ast::ExpressionPtr res = converter.getCNodeManager()->create<c_ast::Literal>(ptr->getStringValue());
 
 		// special handling for the global struct
-		if (ptr->getValue() == IRExtensions::GLOBAL_ID) {
+		if (ptr->getStringValue() == IRExtensions::GLOBAL_ID) {
 			if (ptr->getType()->getNodeType() == core::NT_RefType) {
 				res = c_ast::ref(res);
 			}
@@ -217,12 +217,12 @@ namespace backend {
 		auto& basic = converter.getNodeManager().getLangBasic();
 
 		// append initialization values
-		::transform(ptr->getMembers(), std::back_inserter(init->values),
-				[&](const core::StructExpr::Member& cur) {
-					core::ExpressionPtr arg = cur.second;
+		::transform(ptr->getMembers()->getElements(), std::back_inserter(init->values),
+				[&](const core::NamedValuePtr& cur) {
+					core::ExpressionPtr arg = cur->getValue();
 					// skip ref.var if present
-					if (core::analysis::isCallOf(cur.second, basic.getRefVar())) {
-						arg = static_pointer_cast<const core::CallExpr>(cur.second)->getArgument(0);
+					if (core::analysis::isCallOf(cur->getValue(), basic.getRefVar())) {
+						arg = static_pointer_cast<const core::CallExpr>(cur->getValue())->getArgument(0);
 						if (core::analysis::isCallOf(arg, basic.getRefDeref())) {
 							arg = static_pointer_cast<const core::CallExpr>(arg)->getArgument(0);
 						}
@@ -252,18 +252,13 @@ namespace backend {
 		c_ast::InitializerPtr init = c_ast::init(type);
 
 		// append initialization values
-		::transform(ptr->getExpressions(), std::back_inserter(init->values),
+		::transform(ptr->getExpressions()->getElements(), std::back_inserter(init->values),
 				[&](const core::ExpressionPtr& cur) {
 					return convert(context, cur);
 		});
 
 		// return completed
 		return init;
-	}
-
-	c_ast::NodePtr StmtConverter::visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr, ConversionContext& context) {
-		// simply return a C-AST structure accessing the requested member
-		return c_ast::access(convertExpression(context, ptr->getSubExpression()), ptr->getMemberName()->getName());
 	}
 
 	c_ast::NodePtr StmtConverter::visitVariable(const core::VariablePtr& ptr, ConversionContext& context) {
@@ -283,7 +278,7 @@ namespace backend {
 
 		// create inner vector init and append initialization values
 		c_ast::VectorInitPtr vectorInit = context.getConverter().getCNodeManager()->create<c_ast::VectorInit>();
-		::transform(ptr->getExpressions(), std::back_inserter(vectorInit->values),
+		::transform(ptr->getExpressions()->getElements(), std::back_inserter(vectorInit->values),
 				[&](const core::ExpressionPtr& cur) {
 					return convert(context, cur);
 		});
@@ -378,13 +373,13 @@ namespace backend {
 		auto manager = converter.getCNodeManager();
 
 		VariableManager& varManager = context.getVariableManager();
-		auto var = ptr->getDeclaration()->getVariable();
+		auto var = ptr->getIterator();
 
 		// get induction variable info
 		const VariableInfo& info = varManager.addInfo(converter, var, VariableInfo::NONE);
 
 		// create init, check, step and body
-		c_ast::VarDeclPtr init = manager->create<c_ast::VarDecl>(info.var, convertExpression(context, ptr->getDeclaration()->getInitialization()));
+		c_ast::VarDeclPtr init = manager->create<c_ast::VarDecl>(info.var, convertExpression(context, ptr->getStart()));
 		c_ast::ExpressionPtr check = c_ast::lt(info.var, convertExpression(context, ptr->getEnd()));
 		c_ast::ExpressionPtr step = c_ast::binaryOp(c_ast::BinaryOperation::AdditionAssign, info.var, convertExpression(context, ptr->getStep()));
 		c_ast::StatementPtr body = convertStmt(context, ptr->getBody());
@@ -437,8 +432,8 @@ namespace backend {
 		c_ast::SwitchPtr res = manager->create<c_ast::Switch>(convertExpression(context, ptr->getSwitchExpr()));
 
 		// add cases ..
-		::transform(ptr->getCases(), std::back_inserter(res->cases), [&](const core::SwitchStmt::Case& cur) {
-			return std::make_pair(convertExpression(context, cur.first), convertStmt(context, cur.second));
+		::transform(ptr->getCases()->getElements(), std::back_inserter(res->cases), [&](const core::SwitchCasePtr& cur) {
+			return std::make_pair(convertExpression(context, cur->getGuard()), convertStmt(context, cur->getBody()));
 		});
 
 		// add default ..

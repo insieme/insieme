@@ -140,7 +140,7 @@ void DOTGraphBuilder::addLink(const DOTGraphBuilder::Link& link) {
 size_t DOTGraphBuilder::getNodeId(const core::NodePtr& fromNode) { return (size_t) &*fromNode; }
 
 template <class BuilderTy>
-void visitAnnotationList(BuilderTy& builder, size_t parentId, const core::Node::annotation_map_type& map) {
+void visitAnnotationList(BuilderTy& builder, size_t parentId, const core::Node::annotation_container::annotation_map_type& map) {
 	for(core::Node::annotation_map_type::const_iterator it = map.begin(), end = map.end(); it != end; ++it) {
 		size_t annotationId = (size_t)&*it->second;
 		
@@ -211,7 +211,7 @@ void ASTPrinter::visitGenericType(const core::GenericTypePtr& genTy) {
 	builder->addNode(genNode);
 
 	visitAnnotationList(*builder, builder->getNodeId(genTy), genTy->getAnnotations());
-	visitChildList(*builder, genTy->getTypeParameter(), genTy, "typeVar");
+	visitChildList(*builder, genTy->getTypeParameter()->getElements(), genTy, "typeVar");
 }
 
 void ASTPrinter::visitFunctionType(const FunctionTypePtr& funcType) {
@@ -221,7 +221,7 @@ void ASTPrinter::visitFunctionType(const FunctionTypePtr& funcType) {
 
 	visitAnnotationList(*builder, builder->getNodeId(funcType), funcType->getAnnotations());
 	visitChildList(*builder, toVector(funcType->getReturnType()), funcType, "retTy");
-	visitChildList(*builder, funcType->getParameterTypes(), funcType, "argTy");
+	visitChildList(*builder, funcType->getParameterTypes()->getElements(), funcType, "argTy");
 }
 
 void ASTPrinter::visitTupleType(const TupleTypePtr& tupleTy) {
@@ -245,8 +245,8 @@ void ASTPrinter::visitNamedCompositeType(const NamedCompositeTypePtr& compTy) {
 	builder->addNode(structNode);
 
 	std::for_each(compTy->getEntries().begin(), compTy->getEntries().end(),
-		[ this, compTy ](const NamedCompositeType::Entry& cur){
-			this->builder->addLink( DotLink(NODE_ID(compTy), NODE_ID(cur.second), cur.first->getName()) );
+		[ this, compTy ](const NamedTypePtr& cur){
+			this->builder->addLink( DotLink(NODE_ID(compTy), NODE_ID(cur->getType()), cur->getName()->getValue()) );
 			// TODO: VISIT ANNOTATIONS IN THE POINTER
 	});
 	visitAnnotationList(*builder, NODE_ID(compTy), compTy->getAnnotations());
@@ -269,7 +269,7 @@ void ASTPrinter::visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy) {
 
 	unsigned num = 0;
 	std::for_each(recTy->getDefinitions().begin(), recTy->getDefinitions().end(),
-		[ this, recTy, &num ](const RecTypeDefinition::RecTypeDefs::value_type& cur){
+		[ this, recTy, &num ](const RecTypeBindingPtr& cur){
 			size_t interId = dummyNodeID++;
 
 			JunctionNode node(interId);
@@ -283,8 +283,8 @@ void ASTPrinter::visitRecTypeDefinition(const RecTypeDefinitionPtr& recTy) {
 
 			DotLink link(NODE_ID(recTy), interId, label);
 			this->builder->addLink( link );
-			this->builder->addLink( DotLink(interId, NODE_ID(cur.first), "") );
-			this->builder->addLink( DotLink(interId, NODE_ID(cur.second), "") );
+			this->builder->addLink( DotLink(interId, NODE_ID(cur->getVariable()), "") );
+			this->builder->addLink( DotLink(interId, NODE_ID(cur->getType()), "") );
 			// TODO: VISIT ANNOTATIONS IN THE POINTER
 	});
 
@@ -307,8 +307,9 @@ void ASTPrinter::visitForStmt(const ForStmtPtr& forStmt) {
 
 	visitAnnotationList(*builder, NODE_ID(forStmt), forStmt->getAnnotations());
 
-	visitChildList(*builder, toVector(forStmt->getDeclaration()), forStmt, "decl");
-	visitChildList(*builder, toVector(forStmt->getEnd()), forStmt, "cond");
+	visitChildList(*builder, toVector(forStmt->getIterator()), forStmt, "iterator");
+	visitChildList(*builder, toVector(forStmt->getStart()), forStmt, "start");
+	visitChildList(*builder, toVector(forStmt->getEnd()), forStmt, "end");
 	visitChildList(*builder, toVector(forStmt->getStep()), forStmt, "step");
 	visitChildList(*builder, toVector(forStmt->getBody()), forStmt, "body");
 }
@@ -391,7 +392,7 @@ void ASTPrinter::visitLambdaDefinition(const LambdaDefinitionPtr& lambdaDef) {
 
 	size_t num = 1;
 	for_each(lambdaDef->getDefinitions().begin(), lambdaDef->getDefinitions().end(),
-		[&num, &lambdaDef, this](const LambdaDefinition::Definitions::value_type& curr){
+		[&num, &lambdaDef, this](const LambdaBindingPtr& curr){
 			// this->builder->addLink( DotLink(NODE_ID(recTy), NODE_ID(cur.second), "\"\"") );
 			size_t interId =dummyNodeID++; 
 
@@ -406,8 +407,8 @@ void ASTPrinter::visitLambdaDefinition(const LambdaDefinitionPtr& lambdaDef) {
 
 			DotLink link(NODE_ID(lambdaDef), interId, label);
 			this->builder->addLink( link );
-			this->builder->addLink( DotLink(interId, NODE_ID(curr.first), "var") );
-			this->builder->addLink( DotLink(interId, NODE_ID(curr.second), "lambda") );
+			this->builder->addLink( DotLink(interId, NODE_ID(curr->getVariable()), "var") );
+			this->builder->addLink( DotLink(interId, NODE_ID(curr->getLambda()), "lambda") );
 		}
 	);
 }
@@ -447,7 +448,7 @@ void ASTPrinter::visitCastExpr(const CastExprPtr& castExpr) {
 }
 
 void ASTPrinter::visitLiteral(const LiteralPtr& lit) {
-	std::string label = lit->getValue();
+	std::string label = lit->getStringValue();
 	if(label.find('\"') == std::string::npos) {
 		label = "\"" + label +"\"";
 	}

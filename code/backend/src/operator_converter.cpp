@@ -471,7 +471,7 @@ namespace backend {
 
 			// create member access
 			assert(ARG(1)->getNodeType() == core::NT_Literal);
-			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getValue());
+			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
 
@@ -485,7 +485,7 @@ namespace backend {
 			context.getDependencies().insert(info.definition);
 
 			assert(ARG(1)->getNodeType() == core::NT_Literal);
-			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getValue());
+			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(static_pointer_cast<const core::Literal>(ARG(1))->getStringValue());
 
 			// access the type
 			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), field));
@@ -510,7 +510,7 @@ namespace backend {
 				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
 			}
 			assert(index->getNodeType() == core::NT_Literal);
-			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getValue());
+			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 			return c_ast::access(CONVERT_ARG(0), field);
 		});
 
@@ -528,7 +528,7 @@ namespace backend {
 				index = static_pointer_cast<const core::CastExpr>(index)->getSubExpression();
 			}
 			assert(index->getNodeType() == core::NT_Literal);
-			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getValue());
+			c_ast::IdentifierPtr field = C_NODE_MANAGER->create(string("c") + static_pointer_cast<const core::Literal>(index)->getStringValue());
 
 			// access the type
 			return c_ast::ref(c_ast::access(c_ast::deref(CONVERT_ARG(0)), field));

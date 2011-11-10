@@ -249,9 +249,9 @@ TEST(FunctionManager, MutualRecursiveLambda) {
 	core::StatementPtr bodyOdd = builder.returnStmt(builder.callExpr(varOdd, param));
 
 	// create the lambda
-	core::LambdaDefinition::Definitions definitions;
-	definitions.insert(std::make_pair(varEven, builder.lambda(funType, params, bodyEven)));
-	definitions.insert(std::make_pair(varOdd, builder.lambda(funType, params, bodyOdd)));
+	vector<core::LambdaBindingPtr> definitions;
+	definitions.push_back(builder.lambdaBinding(varEven, builder.lambda(funType, params, bodyEven)));
+	definitions.push_back(builder.lambdaBinding(varOdd, builder.lambda(funType, params, bodyOdd)));
 	core::LambdaDefinitionPtr lambdaDef = builder.lambdaDefinition(definitions);
 
 	core::LambdaExprPtr lambda = builder.lambdaExpr(varEven, lambdaDef);

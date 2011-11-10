@@ -203,7 +203,7 @@ namespace simple_backend {
 			// TODO: replace this with a C99 solution
 			const CodeFragmentPtr& code = getCurrentCodeFragment();
 			code << "std::make_tuple(";
-			auto exps = ptr->getExpressions();
+			auto exps = ptr->getExpressions()->getElements();
 			if(exps.size() > 0) {
 				visit(exps.front());
 				for_each(exps.cbegin()+1, exps.cend(), [&](const core::ExpressionPtr& cur) {
@@ -213,8 +213,6 @@ namespace simple_backend {
 			}
 			code << ")";
 		}
-
-		void visitMemberAccessExpr(const core::MemberAccessExprPtr& ptr);
 
 		void visitVariable(const core::VariablePtr& ptr);
 

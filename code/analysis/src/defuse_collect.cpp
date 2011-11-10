@@ -121,7 +121,7 @@ MemberRef::MemberRef(const core::ExpressionAddress& memberAcc, const UseType& us
 
 	// initialize the value of the literal
 	const core::CallExprAddress& callExpr = AS_CALLEXPR_ADDR(memberAcc);
-	identifier = core::static_pointer_cast<const core::Literal>(callExpr->getArgument(1));
+	identifier = core::static_pointer_cast<const core::Literal>(callExpr.getAddressedNode()->getArgument(1));
 
 	// initialize the value of the named composite type 
 	const core::TypePtr& refType = callExpr->getArgument(0)->getType();

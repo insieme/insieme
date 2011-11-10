@@ -663,7 +663,7 @@ namespace formatting {
 				if (core::analysis::isCallOf(param, basic.getRefVar()) || core::analysis::isCallOf(param, basic.getRefNew())) {
 					const NodePtr& refVar = static_pointer_cast<const CallExpr>(param)->getArguments()[0];
 					if (LiteralPtr literal = dynamic_pointer_cast<const Literal>(refVar)) {
-						string value = literal->getValue();
+						string value = literal->getStringValue();
 						if (basic.isInitZero(literal) || value == "0" || value == "0.0" || value == "\0") {
 							code << "calloc(sizeof(" << typeName << "), 1)";
 							return;

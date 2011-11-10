@@ -77,6 +77,7 @@ void JobManager::createJob(const CodeFragmentPtr& code, const core::JobExprPtr& 
 
 	// resolve job information
 	JobInfo info = resolveJob(job);
+	IRBuilder builder(cc.getNodeManager());
 
 	// add dependencies
 	code->addDependency(info.structDefinition);
@@ -86,8 +87,8 @@ void JobManager::createJob(const CodeFragmentPtr& code, const core::JobExprPtr& 
 
 	NodeManager& manager = job->getNodeManager();
 	TypePtr uintType = manager.getLangBasic().getUInt8();
-	ExpressionPtr min = Literal::get(manager, "1", uintType);
-	ExpressionPtr max = Literal::get(manager, "isbr_getMaxThreads()", uintType);
+	ExpressionPtr min = builder.literal("1", uintType);
+	ExpressionPtr max = builder.literal("isbr_getMaxThreads()", uintType);
 
 	// evaluate range - primitive variant
 	ExpressionPtr range = job->getThreadNumRange();
@@ -117,7 +118,7 @@ void JobManager::createJob(const CodeFragmentPtr& code, const core::JobExprPtr& 
 
 
 		// local shared variables
-		for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+		for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
 			ExpressionPtr init = cur->getInitialization();
 //			code << (isVectorOrArrayRef(init->getType())?",&":",");
 			code << ",";
@@ -317,7 +318,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 	// obtain list of local variable declarations (those must not be captured)
 	utils::set::PointerSet<VariablePtr> varsInJobScope;
-	for_each(job->getLocalDecls(), [&](const DeclarationStmtPtr& cur) {
+	for_each(job->getLocalDecls()->getElements(), [&](const DeclarationStmtPtr& cur) {
 		varsInJobScope.insert(cur->getVariable());
 	});
 
@@ -341,7 +342,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 		jobStruct << "void (*fun)(isbr_JobArgs*);";
 
 		Converter& converter = cc;
-		for_each(targetJob->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+		for_each(targetJob->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
 			VariablePtr var = cur->getVariable();
 			string varName = converter.getNameManager().getName(var);
 			jobStruct << "\n";
@@ -366,7 +367,7 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 
 		function << "// ----------- Unpacking local scope variables ----------\n";
 
-		for_each(targetJob->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+		for_each(targetJob->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
 
 			VariablePtr var = cur->getVariable();
 
@@ -398,18 +399,18 @@ JobManager::JobInfo JobManager::resolveJob(const core::JobExprPtr& job) {
 		function << "// ------------------ Processing Guards -----------------\n";
 
 		StmtConverter& stmtConverter = converter.getStmtConverter();
-		for_each(targetJob->getGuardedStmts(), [&](const core::JobExpr::GuardedStmt& cur) {
+		for_each(targetJob->getGuardedExprs()->getElements(), [&](const GuardedExprPtr& cur) {
 
 			// add condition
 			function << "if(" << ") {" << CodeBuffer::indR << "\n";
-			stmtConverter.convert(builder.callExpr(cur.second), function);
+			stmtConverter.convert(builder.callExpr(cur->getExpression()), function);
 			function << ";\nreturn;" << CodeBuffer::indL << "}";
 
 		});
 
 		function << "// ------------------ Default processing -----------------\n";
 
-		stmtConverter.convert(builder.callExpr(targetJob->getDefaultStmt()), function);
+		stmtConverter.convert(builder.callExpr(targetJob->getDefaultExpr()), function);
 		function << ";";
 
 

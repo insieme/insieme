@@ -101,6 +101,11 @@ namespace core {
 			 */
 			typedef utils::Annotatable<NodeAnnotation> annotation_container;
 
+			/**
+			 * The type of the map within the annotation container.
+			 */
+			typedef annotation_container::annotation_map_type annotation_map_type;
+
 		private:
 
 			/**

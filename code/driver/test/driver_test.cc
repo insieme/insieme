@@ -61,7 +61,7 @@ TEST(DriverTest, HelloWorldTest) {
 	Logger::get(std::cerr, INFO);
 
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program = core::Program::get(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "/hello_world.c" << "' to IR...";
 	fe::Program prog(manager);

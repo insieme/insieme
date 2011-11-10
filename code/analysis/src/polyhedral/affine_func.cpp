@@ -36,6 +36,8 @@
 
 #include "insieme/analysis/polyhedral/affine_func.h"
 
+#include <set>
+
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
 

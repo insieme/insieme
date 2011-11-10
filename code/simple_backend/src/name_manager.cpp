@@ -97,6 +97,8 @@ string NameManager::getName( const NodePtr& ptr, const string& fragment) {
 				name << "stat"; break;
 			case NC_Program:
 				name << "prog"; break;
+			case NC_Value:
+				name << "value"; break;
 			}
 		}
 	}

@@ -64,7 +64,7 @@ namespace simple_backend {
 		core::NodeManager& nodeManager = source->getNodeManager();
 		converter.setNodeManager(&nodeManager);
 
-		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.basic));
+		StmtConverter stmtConverter(converter, formatting::getBasicFormatTable(nodeManager.getLangBasic()));
 		converter.setStmtConverter(&stmtConverter);
 
 		NameManager nameManager;

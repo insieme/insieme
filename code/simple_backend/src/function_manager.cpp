@@ -36,6 +36,8 @@
 
 #include "insieme/simple_backend/function_manager.h"
 
+#include <set>
+
 #include "insieme/simple_backend/variable_manager.h"
 #include "insieme/simple_backend/backend_convert.h"
 #include "insieme/simple_backend/statement_converter.h"
@@ -101,7 +103,7 @@ string FunctionManager::getFunctionName(const CodeFragmentPtr& context, const co
 	context->addDependency(protoType);
 
 	// print function name (which then will be call-able)
-	return external->getValue();
+	return external->getStringValue();
 }
 
 CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
@@ -118,7 +120,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 
 	TypePtr returnType = type->getReturnType();
 
-	const string& name = literal->getValue();
+	const string& name = literal->getStringValue();
 	CodeFragmentPtr protoType = CodeFragment::createNew("Prototype for external function: " + name + " ... type: " + literal->getType()->toString());
 
 	// register code fragment to be able to call recursively (within the function wrapper)
@@ -142,7 +144,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	}
 
 	// do not create a wrapper if a variable argument list is included
-	if (contains(type->getParameterTypes(), cc.getNodeManager().getLangBasic().getVarList(), equal_target<TypePtr>())) {
+	if (contains(type->getParameterTypes()->getElements(), cc.getNodeManager().getLangBasic().getVarList(), equal_target<TypePtr>())) {
 		return protoType;
 	}
 
@@ -157,7 +159,7 @@ CodeFragmentPtr FunctionManager::resolve(const LiteralPtr& literal) {
 	// create a temporary-parameter list
 	NodeManager& manager = cc.getNodeManager();
 	vector<VariablePtr> params;
-	::transform(type->getParameterTypes(), std::back_inserter(params), [&](const TypePtr& type) {
+	::transform(type->getParameterTypes()->getElements(), std::back_inserter(params), [&](const TypePtr& type) {
 		return Variable::get(manager, type);
 	});
 
@@ -225,27 +227,27 @@ CodeFragmentPtr FunctionManager::resolve(const LambdaDefinitionPtr& definition) 
 
 
 	// A) create prototypes for lambdas
-	for_each(definition->getDefinitions(), [&, this](const std::pair<VariablePtr, LambdaPtr>& cur) {
+	for_each(definition->getDefinitions(), [&, this](const LambdaBindingPtr& cur) {
 
-		string name = nameManager.getName(cur.second);
+		string name = nameManager.getName(cur->getLambda());
 
-		const FunctionTypePtr& funType = cur.second->getType();
+		const FunctionTypePtr& funType = cur->getLambda()->getType();
 		CodeFragmentPtr prototype = CodeFragment::createNew("Prototype of " + name + " ... type: " + funType->toString());
 		prototype << getSignatureOf(prototype, funType, name, typeManager) << ";\n";
 
-		this->prototypes.insert(std::make_pair(cur.second, prototype));
+		this->prototypes.insert(std::make_pair(cur->getLambda(), prototype));
 
 		group->addDependency(prototype);
 	});
 
 	// B) create function definitions for all lambdas
-	for_each(definition->getDefinitions(), [&, this](const std::pair<VariablePtr, LambdaPtr>& cur) {
+	for_each(definition->getDefinitions(), [&, this](const LambdaBindingPtr& cur) {
 
 		// unroll recursive definition once
-		LambdaPtr unrolled = definition->unrollOnce(manager, cur.first)->getLambda();
+		LambdaPtr unrolled = definition->unrollOnce(manager, cur->getVariable())->getLambda();
 
 		// attack the same name to the unrolled version as to the original node
-		string name = nameManager.getName(cur.second);
+		string name = nameManager.getName(cur->getLambda());
 		nameManager.setName(unrolled, name);
 
 		// resolve recursive this function body once
@@ -397,7 +399,7 @@ CodeFragmentPtr FunctionManager::resolve(const BindExprPtr& bind) {
 
 	// add parameters
 	int paramCounter = 0;
-	const vector<VariablePtr>& params = bind->getParameters();
+	const vector<VariablePtr>& params = bind->getParameters()->getElements();
 	for_each(params, [&](const VariablePtr& cur) {
 		variableMap.insert(std::make_pair<ExpressionPtr, string>(cur, format("p%d", ++paramCounter)));
 	});

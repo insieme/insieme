@@ -333,12 +333,12 @@ namespace std {
 
 template <>
 struct hash<insieme::analysis::poly::Iterator> {
-	size_t operator()(const insieme::analysis::poly::Iterator& it) const { return it.getExpr()->hash(); }
+	size_t operator()(const insieme::analysis::poly::Iterator& it) const { return (*it.getExpr()).hash(); }
 };
 
 template <>
 struct hash<insieme::analysis::poly::Parameter> {
-	size_t operator()(const insieme::analysis::poly::Parameter& it) const { return it.getExpr()->hash(); }
+	size_t operator()(const insieme::analysis::poly::Parameter& it) const { return (*it.getExpr()).hash(); }
 };
 
 } // end std namespace 

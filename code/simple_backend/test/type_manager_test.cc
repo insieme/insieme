@@ -66,8 +66,9 @@ bool notContainsSubString(const string& str, const string& substr) {
 
 TEST(TypeManager, Basic) {
 
-	core::IRBuilder builder;
-	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 	Converter converter;
 	SimpleNameManager nameManager;
@@ -109,8 +110,9 @@ TEST(TypeManager, Basic) {
 
 TEST(TypeManager, StructTypes) {
 
-	core::IRBuilder builder;
-	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 	Converter converter;
 	SimpleNameManager nameManager;
@@ -130,7 +132,7 @@ TEST(TypeManager, StructTypes) {
 	EXPECT_TRUE(::contains(fragment->getDependencies(), info.definition));
 
 	// members should not have an effect on the types
-	type = builder.structType(toVector<core::NamedCompositeType::Entry>(std::make_pair(builder.identifier("a"), basic.getInt4())));
+	type = builder.structType(toVector(builder.namedType(builder.stringValue("a"), basic.getInt4())));
 	info = typeManager.getTypeInfo(fragment, type);
 	EXPECT_EQ("struct name", info.lValueName);
 	EXPECT_EQ("struct name", info.rValueName);
@@ -145,8 +147,9 @@ TEST(TypeManager, StructTypes) {
 
 TEST(TypeManager, RefTypes) {
 
-	core::IRBuilder builder;
-	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 	Converter converter;
 	SimpleNameManager nameManager;
@@ -237,8 +240,9 @@ TEST(TypeManager, RefTypes) {
 
 TEST(TypeManager, ArrayTypes) {
 
-	core::IRBuilder builder;
-	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 	Converter converter;
 	SimpleNameManager nameManager;
@@ -285,8 +289,9 @@ TEST(TypeManager, ArrayTypes) {
 
 TEST(TypeManager, VectorTypes) {
 
-	core::IRBuilder builder;
-	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 	Converter converter;
 	SimpleNameManager nameManager;
@@ -344,8 +349,9 @@ TEST(TypeManager, VectorTypes) {
 
 TEST(TypeManager, FunctionTypes) {
 
-	core::IRBuilder builder;
-	const core::lang::BasicGenerator& basic = builder.getNodeManager().basic;
+	core::NodeManager manager;
+	core::IRBuilder builder(manager);
+	const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 	Converter converter;
 	SimpleNameManager nameManager;

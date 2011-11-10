@@ -315,7 +315,7 @@ namespace backend {
 
 		const TypeInfo* TypeInfoStore::resolveTypeVariable(const core::TypeVariablePtr& ptr) {
 			c_ast::CNodeManager& manager = *converter.getCNodeManager();
-			return type_info_utils::createInfo(manager, "<" + ptr->getVarName() + ">");
+			return type_info_utils::createInfo(manager, "<" + ptr->getVarName()->getValue() + ">");
 		}
 
 		const TypeInfo* TypeInfoStore::resolveGenericType(const core::GenericTypePtr& ptr)  {
@@ -460,9 +460,9 @@ namespace backend {
 			std::set<c_ast::CodeFragmentPtr> definitions;
 
 			// add elements
-			for_each(ptr->getEntries(), [&](const core::NamedCompositeType::Entry& entry) {
-				c_ast::IdentifierPtr name = manager->create(entry.first->getName());
-				const TypeInfo* info = resolveType(entry.second);
+			for_each(ptr->getEntries(), [&](const core::NamedTypePtr& entry) {
+				c_ast::IdentifierPtr name = manager->create(entry->getName()->getValue());
+				const TypeInfo* info = resolveType(entry->getType());
 				c_ast::TypePtr elementType = info->rValueType;
 				type->elements.push_back(var(elementType, name));
 
@@ -500,7 +500,7 @@ namespace backend {
 			core::NamedCompositeType::Entries entries;
 			unsigned counter = 0;
 			transform(ptr->getElementTypes(), std::back_inserter(entries), [&](const core::TypePtr& cur) {
-				return core::NamedCompositeType::Entry(builder.identifier(format("c%d", counter++)), cur);
+				return builder.namedType(builder.stringValue(format("c%d", counter++)), cur);
 			});
 
 			return resolveStructType(builder.structType(entries));
@@ -781,7 +781,7 @@ namespace backend {
 			declDependencies.push_back(retTypeInfo->declaration);
 
 			// add remaining parameters
-			for_each(ptr->getParameterTypes(), [&](const core::TypePtr& cur) {
+			for_each(ptr->getParameterTypes()->getElements(), [&](const core::TypePtr& cur) {
 				const TypeInfo* info = resolveType(cur);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
@@ -850,7 +850,7 @@ namespace backend {
 			defDependencies.push_back(retTypeInfo->definition);
 
 			// add remaining parameters
-			for_each(ptr->getParameterTypes(), [&](const core::TypePtr& cur) {
+			for_each(ptr->getParameterTypes()->getElements(), [&](const core::TypePtr& cur) {
 				const TypeInfo* info = resolveType(cur);
 				functionType->parameterTypes.push_back(info->rValueType);
 				declDependencies.push_back(info->declaration);
@@ -968,10 +968,10 @@ namespace backend {
 			NameManager& nameManager = converter.getNameManager();
 
 			// A) create a type info instance for each defined type and add definition
-			for_each(ptr->getDefinitions(), [&](const std::pair<core::TypeVariablePtr, core::TypePtr>& cur) {
+			for_each(ptr->getDefinitions(), [&](const core::RecTypeBindingPtr& cur) {
 
 				// create recursive type represented by current type variable
-				core::RecTypePtr type = core::RecType::get(nodeManager, cur.first, ptr);
+				core::RecTypePtr type = core::RecType::get(nodeManager, cur->getVariable(), ptr);
 
 				// create prototype
 				c_ast::IdentifierPtr name = manager->create(nameManager.getName(type, "userdefined_rec_type"));
@@ -979,7 +979,7 @@ namespace backend {
 				// create declaration code
 				c_ast::TypePtr cType;
 
-				switch(cur.second->getNodeType()) {
+				switch(cur->getType()->getNodeType()) {
 				case core::NT_StructType:
 					cType = manager->create<c_ast::StructType>(name); break;
 				case core::NT_UnionType:
@@ -999,10 +999,10 @@ namespace backend {
 			});
 
 			// B) unroll types and add definitions
-			for_each(ptr->getDefinitions(), [&](const std::pair<core::TypeVariablePtr, core::TypePtr>& cur) {
+			for_each(ptr->getDefinitions(), [&](const core::RecTypeBindingPtr& cur) {
 				// obtain unrolled type
-				core::TypePtr recType = core::RecType::get(nodeManager, cur.first, ptr);
-				core::TypePtr unrolled = ptr->unrollOnce(nodeManager, cur.first);
+				core::TypePtr recType = core::RecType::get(nodeManager, cur->getVariable(), ptr);
+				core::TypePtr unrolled = ptr->unrollOnce(nodeManager, cur->getVariable());
 
 				// fix name of unrolled struct
 				nameManager.setName(unrolled, nameManager.getName(recType));

@@ -116,7 +116,7 @@ namespace backend {
 			}
 
 			// apply recursively - bottom up
-			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
 
 			// check current node
 			if (!core::analysis::isCallOf(res, ITE)) {
@@ -192,7 +192,7 @@ namespace backend {
 			}
 
 			// apply recursively - bottom up
-			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
 
 			// check current node
 			if (core::analysis::isCallOf(res, initZero)) {
@@ -270,7 +270,7 @@ namespace backend {
 			}
 
 			// decent recursively
-			return ptr->substitute(manager, *this, true);
+			return ptr->substitute(manager, *this);
 		}
 
 	};
@@ -362,7 +362,7 @@ namespace backend {
 			}
 
 			// decent recursively
-			return ptr->substitute(manager, *this, true);
+			return ptr->substitute(manager, *this);
 		}
 
 	};
@@ -390,7 +390,7 @@ namespace backend {
 
 		// ... or a zero literal ..
 		if (value->getNodeType() == core::NT_Literal) {
-			const string& strValue = static_pointer_cast<const core::Literal>(value)->getValue();
+			const string& strValue = static_pointer_cast<const core::Literal>(value)->getStringValue();
 			if (strValue == "0" || strValue == "0.0") {
 				return true;
 			}
@@ -429,7 +429,7 @@ namespace backend {
 
 		// check whether it is a main program ...
 		const core::ProgramPtr& program = static_pointer_cast<const core::Program>(code);
-		if (!(program->isMain() || program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
+		if (!(program->getEntryPoints().size() == static_cast<std::size_t>(1))) {
 			return code;
 		}
 
@@ -502,15 +502,15 @@ namespace backend {
 			core::ExpressionPtr initUniform = manager.getLangBasic().getVectorInitUniform();
 			core::ExpressionPtr initZero = manager.getLangBasic().getInitZero();
 
-			for_each(initStruct->getMembers(), [&](const core::StructExpr::Member& cur) {
+			for_each(initStruct->getMembers()->getElements(), [&](const core::NamedValuePtr& cur) {
 
 				// ignore zero values => default initialization
-				if (isZero(cur.second)) {
+				if (isZero(cur->getValue())) {
 					return;
 				}
 
-				core::ExpressionPtr access = builder.refMember(replacement, cur.first);
-				core::ExpressionPtr assign = builder.assign(access, cur.second);
+				core::ExpressionPtr access = builder.refMember(replacement, cur->getName());
+				core::ExpressionPtr assign = builder.assign(access, cur->getValue());
 				initExpressions.push_back(assign);
 			});
 		}
@@ -549,7 +549,7 @@ namespace backend {
 			}
 
 			// apply recursively - bottom up
-			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this, true);
+			core::NodePtr res = ptr->substitute(ptr->getNodeManager(), *this);
 
 			// handle calls
 			if (ptr->getNodeType() == core::NT_CallExpr) {
@@ -582,7 +582,7 @@ namespace backend {
 			assert(type->getNodeType() == core::NT_FunctionType && "Function should be of a function type!");
 			const core::FunctionTypePtr& funType = core::static_pointer_cast<const core::FunctionType>(type);
 
-			const core::TypeList& paramTypes = funType->getParameterTypes();
+			const core::TypeList& paramTypes = funType->getParameterTypes()->getElements();
 			const core::ExpressionList& args = call->getArguments();
 
 			// check number of arguments

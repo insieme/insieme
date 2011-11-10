@@ -97,6 +97,8 @@ namespace backend {
 					name << "stat"; break;
 				case NC_Program:
 					name << "prog"; break;
+				case NC_Value:
+					name << "value"; break;
 				}
 			}
 		}

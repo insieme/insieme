@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_expressions.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/transform/node_mapper_utils.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
@@ -76,14 +77,14 @@ namespace runtime {
 
 			// define parameter of resulting lambda
 			core::VariablePtr workItem = builder.variable(builder.refType(extensions.workItemType));
-			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()));
+			core::TypePtr tupleType = DataItem::toLWDataItemType(builder.tupleType(entryType->getParameterTypes()->getElements()));
 			core::ExpressionPtr paramTypes = core::encoder::toIR(manager, tupleType);
 
 			vector<core::ExpressionPtr> argList;
 			unsigned counter = 0;
-			transform(entryType->getParameterTypes(), std::back_inserter(argList), [&](const core::TypePtr& type) {
+			transform(entryType->getParameterTypes()->getElements(), std::back_inserter(argList), [&](const core::TypePtr& type) {
 				return builder.callExpr(type, extensions.getWorkItemArgument,
-						toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++), paramTypes, basic.getTypeLiteral(type)));
+						toVector<core::ExpressionPtr>(workItem, core::encoder::toIR(manager, counter++), paramTypes, builder.getTypeLiteral(type)));
 			});
 
 			// produce replacement
@@ -147,7 +148,7 @@ namespace runtime {
 			core::ExpressionPtr main = builder.lambdaExpr(mainType, params, body);
 
 			// return resulting program
-			return core::Program::create(manager, toVector(main), true);
+			return core::Program::get(manager, toVector(main));
 		}
 
 	}
@@ -165,7 +166,7 @@ namespace runtime {
 
 		// if it is a expression, wrap it within a program and resolve equally
 		if (core::ExpressionPtr expr = dynamic_pointer_cast<const core::Expression>(node)) {
-			return replaceMain(manager, core::Program::create(manager, toVector(expr)));
+			return replaceMain(manager, core::Program::get(manager, toVector(expr)));
 		}
 
 		// nothing to do otherwise
@@ -292,7 +293,7 @@ namespace runtime {
 			core::TypeList list;
 			core::ExpressionList capturedValues;
 			utils::map::PointerMap<core::VariablePtr, unsigned> varIndex;
-			for_each(job->getLocalDecls(), [&](const core::DeclarationStmtPtr& cur) {
+			for_each(job->getLocalDecls()->getElements(), [&](const core::DeclarationStmtPtr& cur) {
 				varIndex.insert(std::make_pair(cur->getVariable(), list.size()));
 				list.push_back(cur->getVariable()->getType());
 				capturedValues.push_back(cur->getInitialization());
@@ -331,15 +332,15 @@ namespace runtime {
 			// create function processing the job (forming the entry point)
 			core::StatementList body;
 			core::StatementPtr returnStmt = builder.returnStmt(basic.getUnitConstant());
-			for(auto it = job->getGuardedStmts().begin(); it != job->getGuardedStmts().end(); ++it) {
-				const core::JobExpr::GuardedStmt& cur = *it;
-				core::ExpressionPtr condition = fixVariables(cur.first);
-				core::ExpressionPtr branch = fixBranch(cur.second);
+			for(auto it = job->getGuardedExprs().begin(); it != job->getGuardedExprs().end(); ++it) {
+				const core::GuardedExprPtr& cur = *it;
+				core::ExpressionPtr condition = fixVariables(cur->getGuard());
+				core::ExpressionPtr branch = fixBranch(cur->getExpression());
 				body.push_back(builder.ifStmt(condition, builder.compoundStmt(branch, returnStmt)));
 			}
 
 			// add default branch
-			body.push_back(fixBranch(job->getDefaultStmt()));
+			body.push_back(fixBranch(job->getDefaultExpr()));
 
 			// add exit work-item call
 			body.push_back(builder.callExpr(unit, extensions.exitWorkItem, workItem));

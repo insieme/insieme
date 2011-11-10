@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_visitor.h"
 #include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
 #include "insieme/utils/set_utils.h"
@@ -84,45 +85,16 @@ core::NodePtr removePseudoArraysInStructs(const core::NodePtr& node) {
 		}
 
 		StructTypePtr type = static_pointer_cast<const StructType>(cur);
-		if (any(type->getEntries(), [](const StructType::Entry& cur)->bool { return isArrayType(cur.second); })) {
+		if (any(type->getEntries(), [](const core::NamedTypePtr& cur)->bool { return isArrayType(cur->getType()); })) {
 			structs.insert(type);
 			return;
 		}
 
 	}, true));
 
-	// Step 2) collect addresses of nodes accessing array types
-	utils::set::PointerSet<MemberAccessExprAddress> accesses;
-	{
-		visitDepthFirst(NodeAddress(node), [&](const NodeAddress& cur){
-			if (cur->getNodeType() != NT_MemberAccessExpr) {
-				return;
-			}
-
-			MemberAccessExprAddress access = static_address_cast<const MemberAccessExpr>(cur);
-
-			TypePtr type = access->getSubExpression()->getType();
-			if (type->getNodeType() != NT_StructType) {
-				return;
-			}
-
-			StructTypePtr structType = static_pointer_cast<const StructType>(type);
-			if (isArrayType(structType->getTypeOfMember(access->getMemberName()))) {
-				accesses.insert(access);
-			}
-
-		}, false);
-	}
-
-	//
-
 	// print list of structs
 	for_each(structs, [](const StructTypePtr& cur) {
 		std::cout << "Current struct: " << *cur << std::endl;
-	});
-
-	for_each(accesses, [](const MemberAccessExprAddress& cur) {
-		std::cout << "Access: " << *cur << " @ " << cur << std::endl;
 	});
 
 	return node;
@@ -198,14 +170,14 @@ public:
 
 core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 	auto& mgr = node->getNodeManager();
-	auto& basic = mgr.basic;
+	auto& basic = mgr.getLangBasic();
 	IRBuilder builder(mgr);
 
 	// search for array variable declarations
 	visitDepthFirstInterruptable(NodeAddress(node), [&](const DeclarationStmtAddress& curdecl) -> bool {
-		auto var = curdecl->getVariable();
+		auto var = curdecl.getAddressedNode()->getVariable();
 		auto type = var->getType();
-		auto init = curdecl->getInitialization();
+		auto init = curdecl.getAddressedNode()->getInitialization();
 
 		unsigned numRefs = 0;
 		while(auto refType = dynamic_pointer_cast<const RefType>(type)) {

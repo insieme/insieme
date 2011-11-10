@@ -213,7 +213,7 @@ TEST(Preprocessor, LazyITE) {
 
 	NodeManager manager;
 	IRBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.basic;
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 
 	// create a lazy call
 	const TypePtr& boolean = basic.getBool();

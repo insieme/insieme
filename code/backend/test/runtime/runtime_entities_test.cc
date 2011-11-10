@@ -56,7 +56,7 @@ core::LambdaExprPtr getDummyImpl(core::NodeManager& manager) {
 	const auto& ext = manager.getLangExtension<Extensions>();
 
 	core::VariablePtr param = builder.variable(builder.refType(ext.workItemType), 1);
-	core::StatementPtr body = basic.getNoOp();
+	core::StatementPtr body = builder.getNoOp();
 	return builder.lambdaExpr(basic.getUnit(), body, toVector(param));
 }
 

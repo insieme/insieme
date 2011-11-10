@@ -760,7 +760,7 @@ namespace core {
 		 * @return the resulting, unrolled lambda expression
 		 */
 		LambdaExprPtr unrollOnce(NodeManager& manager, const VariablePtr& variable) const {
-			return SupportAccessor<Derived,Ptr>::getNode().unrollDefinitionOnce(variable);
+			return SupportAccessor<Derived,Ptr>::getNode().unrollDefinitionOnce(manager, variable);
 		}
 
 	};
@@ -838,7 +838,24 @@ namespace core {
 		/**
 		 * Obtains a list of all expressions which's resulting value is bound by this expression.
 		 */
-		vector<ExpressionPtr> getBoundExpressions() const;
+		vector<Ptr<const Expression>> getBoundExpressions() const {
+			typename Ptr<const Expression>::StaticCast caster;
+			vector<Ptr<const Expression>> res;
+
+			auto& parameters = getParameters()->getElements();
+			for_each(getCall()->getArguments(), [&](const Ptr<const Expression>& cur) {
+				if (cur->getNodeType() == NT_Variable) {
+					const Ptr<const Variable>& var = caster.template operator()<const Variable>(cur);
+					if (contains(parameters, var)) {
+						return;
+					}
+				}
+				// add to bind expressions
+				res.push_back(cur);
+			});
+
+			return res;
+		}
 	};
 
 	/**
@@ -885,6 +902,7 @@ namespace core {
 		static BindExprPtr get(NodeManager& manager, const FunctionTypePtr& type, const VariableList& parameters, const CallExprPtr& call) {
 			return get(manager, type, Parameters::get(manager, parameters), call);
 		}
+
 	};
 
 
