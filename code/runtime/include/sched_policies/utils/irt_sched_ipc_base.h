@@ -38,4 +38,4 @@
 
 #include "declarations.h"
 
-static inline void _irt_sched_check_ipc_queue(irt_worker* self);
+static inline int _irt_sched_check_ipc_queue(irt_worker* self);

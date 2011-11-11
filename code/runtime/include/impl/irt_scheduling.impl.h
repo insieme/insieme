@@ -49,19 +49,13 @@
 
 #include <time.h>
 
-/*static inline unsigned long long irt_cur_ticks() {
-	//volatile unsigned long long a, d;
-	//__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
-	//return (a | (d << 32));
-	return 0;
-}*/
 void irt_scheduling_loop(irt_worker* self) {
 	static const long sched_start_nsecs = 1000l; // 1 nanos 
 	static const long sched_threshold_nsecs = 5l * 1000l * 1000l; // 5 millis 
 	static const long sched_max_nsecs = 100l * 1000l * 1000l; // 100 millis 
 	struct timespec wait_time;
 	wait_time.tv_sec = 0;
-	wait_time.tv_nsec = sched_max_nsecs;
+	wait_time.tv_nsec = sched_start_nsecs;
 	while(self->state != IRT_WORKER_STATE_STOP) {
 		if(irt_scheduling_iteration(self)) {
 			wait_time.tv_nsec = sched_start_nsecs;
@@ -72,17 +66,17 @@ void irt_scheduling_loop(irt_worker* self) {
 		wait_time.tv_nsec += 1000;
 		if(wait_time.tv_nsec > sched_max_nsecs) wait_time.tv_nsec = sched_max_nsecs;
 		if(wait_time.tv_nsec <= sched_threshold_nsecs) { // short wait, busy
-			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_START);
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_START, self->id);
 			unsigned long long end = irt_time_ticks() + wait_time.tv_nsec;
 			while(irt_time_ticks() < end);
-			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_END);
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_END, self->id);
 		} else {										// long wait, sleep
 			self->state = IRT_WORKER_STATE_WAITING;
-			irt_worker_instrumentation_event(self, WORKER_SLEEP_START);
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_START, self->id);
 			if(irt_nanosleep(&wait_time) != 0) {
 				wait_time.tv_nsec = sched_start_nsecs;
 			}
-			irt_worker_instrumentation_event(self, WORKER_SLEEP_END);
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_END, self->id);
 			self->state = IRT_WORKER_STATE_RUNNING;
 		}
 	}

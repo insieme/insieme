@@ -36,25 +36,51 @@
 
 #pragma once
 
-#include "sched_policies/utils/irt_sched_ipc_base.h"
-#include "impl/worker.impl.h"
+#include "declarations.h"
 
-static inline int _irt_sched_check_ipc_queue(irt_worker* self) {
-	int retval = 0;
-	if(irt_g_runtime_behaviour & IRT_RT_MQUEUE) {
-		irt_mqueue_msg* received = irt_mqueue_receive();
-		if(received) {
-			if(received->type == IRT_MQ_NEW_APP) {
-				irt_mqueue_msg_new_app* appmsg = (irt_mqueue_msg_new_app*)received;
-				irt_client_app* client_app = irt_client_app_create(appmsg->app_name);
-				irt_context* prog_context = irt_context_create(client_app);
-				self->cur_context = prog_context->id;
-				irt_context_table_insert(prog_context);
-				_irt_worker_switch_to_wi(self, irt_wi_create(irt_g_wi_range_one_elem, 0, NULL));
-				retval = 1;
-			}
-			free(received);
-		}
-	}
-	return retval;
-}
+typedef enum {
+	WORK_ITEM_CREATED = 1000,
+	WORK_ITEM_QUEUED = 1100,
+	WORK_ITEM_SPLITTED = 1200,
+	WORK_ITEM_STARTED = 1300,
+	WORK_ITEM_SUSPENDED_IO = 1500,
+	WORK_ITEM_SUSPENDED_BARRIER = 1501,
+	WORK_ITEM_SUSPENDED_JOIN = 1502,
+	WORK_ITEM_SUSPENDED_GROUPJOIN = 1503,
+	WORK_ITEM_SUSPENDED_UNKOWN = 1599,
+	WORK_ITEM_RESUMED = 1600,
+	WORK_ITEM_FINISHED = 1900,
+} wi_instrumentation_event;
+
+typedef enum {
+	WORK_GROUP_CREATED = 2000,
+} wg_instrumentation_event;
+
+typedef enum {
+	WORKER_CREATED = 3000,
+	WORKER_RUNNING = 3100,
+	WORKER_SLEEP_START = 3200,
+	WORKER_SLEEP_END = 3300,
+	WORKER_SLEEP_BUSY_START = 3400,
+	WORKER_SLEEP_BUSY_END = 3500,
+	WORKER_STOP = 3800,
+} worker_instrumentation_event;
+
+typedef enum {
+	DATA_ITEM_CREATED = 4000,
+	DATA_ITEM_RECYCLED = 4500,
+} di_instrumentation_event;
+
+typedef struct _irt_performance_data {
+	uint64 timestamp;
+	wi_instrumentation_event event;
+	uint64 subject_id;
+} _irt_performance_data;
+
+typedef struct _irt_pd_table {
+	uint32 size;
+	uint32 number_of_elements;
+	uint32 blocksize;
+	_irt_performance_data* data;
+} _irt_pd_table;
+

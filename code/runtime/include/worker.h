@@ -43,7 +43,6 @@
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
-#include "instrumentation.h"
 
 /* ------------------------------ data structures ----- */
 

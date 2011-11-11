@@ -40,6 +40,7 @@
 
 #include "client_app.h"
 #include "irt_mqueue.h"
+#include "instrumentation.h"
 
 /** Starts the runtime in standalone mode and executes work item impl_id.
   * Returns once that wi has finished.
@@ -101,6 +102,9 @@ void irt_exit_handler() {
 	irt_ocl_release_devices();	
 #endif
 	irt_cleanup_globals();
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	IRT_DEBUG_ONLY(for(int i = 0; i < irt_g_worker_count; ++i) { irt_instrumentation_output(irt_g_workers[i]); });
+#endif
 	free(irt_g_workers);
 	//IRT_INFO("\nInsieme runtime exiting.\n");
 }

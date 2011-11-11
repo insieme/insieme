@@ -63,7 +63,8 @@ int irt_scheduling_iteration(irt_worker* self) {
 		return 1;
 	}
 	// if that failed as well, look in the IPC message queue
-	_irt_sched_check_ipc_queue(self);
+	if(_irt_sched_check_ipc_queue(self))
+		return 1;
 	return 0;
 }
 
