@@ -230,9 +230,9 @@ public:
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefAssign())) {
 			assert( usage != Ref::DEF && "Nested assignment operations" );
 			usage = Ref::DEF;
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+			visit( callExpr->getArgument(0) ); // arg(0)
 			usage = Ref::USE;
-			visit( callExpr.getAddressOfChild(3) ); // arg(1)
+			visit( callExpr->getArgument(1) ); // arg(1)
 			usage = saveUsage; // restore the previous usage
 			return;
 		}
@@ -243,7 +243,7 @@ public:
 			addVariable(callExpr, Ref::MEMBER);
 
 			// recur in the case the accessed member is an array (or struct)
-			visit(callExpr.getAddressOfChild(2)); // arg(0)
+			visit(callExpr->getArgument(0)); // arg(0)
 			return;
 		}
 
@@ -257,7 +257,7 @@ public:
 			
 			// Visit the index expression
 			idxStack.push( SubscriptContext() );
-			visit( callExpr.getAddressOfChild(3) ); // arg(1)
+			visit( callExpr->getArgument(1) ); // arg(1)
 			idxStack.pop();
 	
 			usage = saveUsage; // restore the previous usage 
@@ -265,14 +265,14 @@ public:
 			SubscriptContext& subCtx = idxStack.top();
 			// if the start of the subscript expression is not set, this is the start
 			if (!subCtx.first) { subCtx.first = callExpr; }
-			subCtx.second.push_back( AS_EXPR_ADDR(callExpr.getAddressOfChild(3)) ); // arg(1)
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+			subCtx.second.push_back( AS_EXPR_ADDR(callExpr->getArgument(1)) ); // arg(1)
+			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
 
 		// List the IR literals which do not alterate the usage of a variable  
 		if (core::analysis::isCallOf(callExpr, mgr.getLangBasic().getRefDeref())) {
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
 
@@ -281,7 +281,7 @@ public:
 		if (core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getRefVectorToRefArray()) ||
 			core::analysis::isCallOf(callExpr.getAddressedNode(), mgr.getLangBasic().getStringToCharPointer()) ) 
 		{
-			visit( callExpr.getAddressOfChild(2) ); // arg(0)
+			visit( callExpr->getArgument(0) ); // arg(0)
 			return;
 		}
 
@@ -301,14 +301,14 @@ public:
 
 		Ref::UseType saveUsage = usage;
 
-		size_t it, end;
 		// the parameters has to be treated as definitions for the variable
-		for(it=1, end=it+lambda->getParameterList().size(); it != end; ++it) {
+		const vector<core::VariableAddress>& params = lambda->getParameterList();
+		for(auto it = params.begin(); it!=params.end(); ++it) {
 			usage = Ref::DEF;	
-			addVariable( AS_VAR_ADDR(lambda.getAddressOfChild(it)) ); 
+			addVariable( AS_VAR_ADDR(*it) );
 		}
 		usage = Ref::USE;
-		visit( lambda.getAddressOfChild(it) );
+		visit( lambda->getBody() );
 		usage = saveUsage;
 	}
 

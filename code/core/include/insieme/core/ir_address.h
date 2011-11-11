@@ -566,14 +566,14 @@ public:
  * @return the down-casted address pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Address<B>>::type
 static_address_cast(Address<T>& src) {
 	assert(src && dynamic_cast<B*>(&(*src)) && "Invalid static cast!");
 	return Address<B>(src.getPath());
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const Address<B>>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, const Address<B>>::type
 static_address_cast(const Address<T>& src) {
 	assert(src && dynamic_cast<B*>(&(*src)) && "Invalid static cast!");
 	return Address<B>(src.getPath());
@@ -584,7 +584,7 @@ static_address_cast(const Address<T>& src) {
  * as a template argument.
  */
 template<typename B, typename T, typename E = typename B::element_type>
-inline typename boost::enable_if<boost::is_base_of<T,E>, B>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 static_address_cast(const Address<T>& src) {
 	assert((!src || dynamic_cast<E*>(&(*src))) && "Invalid static cast!");
 	return B(src.getPath());
@@ -599,7 +599,7 @@ static_address_cast(const Address<T>& src) {
  * @return the down-casted address pointing to the same location
  */
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Address<B>>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Address<B>>::type
 dynamic_address_cast(const Address<T>& src) {
 	if (src && dynamic_cast<B*>(&(*src))) {
 		return Address<B>(static_address_cast<B>(src));
@@ -613,7 +613,7 @@ dynamic_address_cast(const Address<T>& src) {
  * as a template argument.
  */
 template<typename B, typename T, typename E = typename B::element_type>
-inline typename boost::enable_if<boost::is_base_of<T,E>, B>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 dynamic_address_cast(const Address<T>& src) {
 	if (src && dynamic_cast<E*>(&(*src))) {
 		return static_address_cast<B>(src);

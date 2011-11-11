@@ -97,9 +97,9 @@ ProgramPtr HostCompiler::compile() {
 	oh2nd.mapNamesToLambdas(kernelEntries);
 
 	ClmemTable cl_mems = oh2nd.getCleanedStructures();
-/*	for_each(cl_mems, [](std::pair<VariablePtr, VariablePtr> a) {
-		std::cout << "\nHate " << *a.first << " " << a.second->getType();
-	});*/
+//	for_each(cl_mems, [](std::pair<VariablePtr, VariablePtr> a) {
+//		std::cout << "\nHate " << *a.first << " : " << *a.first->getType() << " " << *a.second << " : " << *a.second->getType();
+//	});
 
 	HostMapper3rdPass ohm3rd(builder, cl_mems, oclHostMapper.getKernelArgs(), oclHostMapper.getLocalMemDecls(), oh2nd.getKernelNames(),
 		oh2nd.getKernelLambdas(), oclHostMapper.getEquivalenceMap(), oclHostMapper.getReplacements(), progWithKernels);
@@ -160,6 +160,9 @@ ProgramPtr HostCompiler::compile() {
 //		transform::utils::MemberAccessLiteralUpdater malu(builder);
 //		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 
+std::cout << "\nReplacements: \n\t" << join("\n\t", cl_mems, [](std::ostream& out, const std::pair<VariablePtr, VariablePtr>& cur) {
+	out << *cur.first->getType() << " " << *cur.first << " => " << *cur.second->getType() << " " << *cur.second;
+}) << "\n\n";
 		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), mProgram, cl_mems, false);
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");

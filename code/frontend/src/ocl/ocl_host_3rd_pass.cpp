@@ -351,7 +351,7 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
     k = tryRemove(BASIC.getRefDeref(), k, builder);
 
     // get corresponding lambda expression
-/*equal_target<ExpressionPtr> cmp;
+equal_target<ExpressionPtr> cmp;
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
@@ -594,7 +594,9 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 											});
 
 
+std::cout << "Here " << kl.first << std::endl;
 											if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptable(lAddr, visitor)) {
+std::cout << "Done\n";
 												IdSearcher ids(oldInitMember->getName());
 												// check identifier
 												if(visitDepthFirstInterruptable(kl.first, ids)) {
@@ -647,7 +649,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					if(undefined->getFunctionExpr() == BASIC.getUndefined()) {
 						typeLiteral = dynamic_pointer_cast<const Literal>(undefined->getArgument(0));
 						assert(typeLiteral && "Unexpected argument when initializing variable with undefined");
-						oldType = static_pointer_cast<const Type>(typeLiteral->getType()->getChildList().at(0));
+						oldType = static_pointer_cast<GenericTypePtr>(typeLiteral->getType())->getTypeParameter(0);
 					}
 				}
 
@@ -929,14 +931,11 @@ assert(false && "A ref deref can be the substituion of a refAssign");
 
 			if(newCall->getType()->toString().find("array<_cl_") == string::npos) {
 				// remove remaining calls using cl_ objects, just return the zero-element
-std::cout << "Call: " << newCall << "\n";
-std::cout << "Args: " << newCall->getArguments() << "\n";
 				const auto& list = newCall->getArguments();
 				for(auto I = list.begin(); I != list.end(); ++I) {
 					// extra check to not remove e.g. sizeof
 					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
 						if(lit->getStringValue().find("sizeof") == string::npos && lit->getStringValue().find("composite.ref.elem") == string::npos ) {
-std::cout << "Current stuff: " << *I << "\n";
 							if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
 								return getZeroElem(newCall->getType());
 							}

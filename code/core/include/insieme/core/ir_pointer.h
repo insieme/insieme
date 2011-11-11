@@ -101,33 +101,33 @@ public:
 };
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Pointer<B>>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Pointer<B>>::type
 dynamic_pointer_cast(const Pointer<T>& src) {
 	return Pointer<B>((src)?dynamic_cast<B*>(&(*src)):NULL);
 }
 
 template<typename B, typename T, typename E = typename B::element_type>
-inline typename boost::enable_if<boost::is_base_of<T,E>, B>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 dynamic_pointer_cast(const Pointer<T>& src) {
 	return B((src)?dynamic_cast<E*>(&(*src)):NULL);
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, Pointer<B>>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, Pointer<B>>::type
 static_pointer_cast(Pointer<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 
 template<typename B, typename T>
-inline typename boost::enable_if<boost::is_base_of<T,B>, const Pointer<B>>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<B,T>,boost::is_base_of<T,B>>, const Pointer<B>>::type
 static_pointer_cast(const Pointer<T>& src) {
 	assert((!src || dynamic_cast<B*>(&(*src))) && "Invalid static cast!");
 	return Pointer<B>(static_cast<B*>(src.ptr));
 }
 
 template<typename B, typename T, typename E = typename B::element_type>
-inline typename boost::enable_if<boost::is_base_of<T,E>, B>::type
+inline typename boost::enable_if<boost::mpl::or_<boost::is_base_of<E,T>,boost::is_base_of<T,E>>, B>::type
 static_pointer_cast(const Pointer<T>& src) {
 	assert((!src || dynamic_cast<E*>(&(*src))) && "Invalid static cast!");
 	return B(static_cast<E*>(src.ptr));

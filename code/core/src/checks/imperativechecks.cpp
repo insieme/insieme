@@ -129,7 +129,7 @@ namespace {
 			VariableSet localVars;
 			std::size_t numDecls = cur->getLocalDecls().size();
 			for (std::size_t i=0; i<numDecls; i++) {
-				const DeclarationStmtAddress& decl = cur->getLocalDecls()->getElement(i);
+				const DeclarationStmtAddress decl = cur->getLocalDecls()->getElement(i);
 
 				// check variables within local variable initialization
 				visit(decl->getInitialization());
@@ -202,7 +202,7 @@ namespace {
 		 */
 		void visitNode(const NodeAddress& node) {
 			// progress recursively by default
-			for (int i=0, e=node->getChildList().size(); i<e; i++) {
+			for (int i=0, e=node.getAddressedNode()->getChildList().size(); i<e; i++) {
 				visit(node.getAddressOfChild(i));
 			}
 		}
@@ -210,6 +210,7 @@ namespace {
 	};
 
 	OptionalMessageList conductCheck(VarDeclarationCheck& check, const NodeAddress& root) {
+
 		// run check
 		check.visit(root);
 
@@ -241,12 +242,11 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 	OptionalMessageList res;
 
 	VariableSet recFunctions;
-	for_each(lambdaDef->getDefinitions(), [&recFunctions](const LambdaBindingPtr& cur) {
+	for_each(lambdaDef.getAddressedNode()->getDefinitions(), [&recFunctions](const LambdaBindingPtr& cur) {
 		recFunctions.insert(cur->getVariable());
 	});
 
-	int offset = 0;
-	for_each(lambdaDef->getDefinitions(), [&](const LambdaBindingPtr& cur) {
+	for_each(lambdaDef->getDefinitions(), [&](const LambdaBindingAddress& cur) {
 
 		// assemble set of defined variables
 		VariableSet declared;
@@ -255,15 +255,14 @@ OptionalMessageList UndeclaredVariableCheck::visitLambdaDefinition(const LambdaD
 		declared.insert(recFunctions.begin(), recFunctions.end());
 
 		// add parameters
-		auto paramList = cur->getLambda()->getParameterList();
+		auto paramList = cur.getAddressedNode()->getLambda()->getParameterList();
 		declared.insert(paramList.begin(), paramList.end());
 
 		// run check on body ...
 		VarDeclarationCheck check(declared);
 
 		// trigger check
-		addAll(res, conductCheck(check, lambdaDef->getDefinitions()[offset]->getLambda()));
-		offset++;
+		addAll(res, conductCheck(check, cur->getLambda()));
 	});
 
 	return res;

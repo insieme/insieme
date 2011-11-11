@@ -274,7 +274,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		assert(subScops.empty());
 
 		while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-			addr = addr.getAddressOfChild(0);
+			addr = addr.getAddressOfChild(1); // sub-statement or expression
 		}
 		IterationVector&& ret = visit(addr);
 
@@ -322,9 +322,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			return ann.getIterationVector();
 		}
 
-		ExpressionAddress condAddr = AS_EXPR_ADDR(ifStmt.getAddressOfChild(0));
-		StatementAddress  thenAddr = AS_STMT_ADDR(ifStmt.getAddressOfChild(1));
-		StatementAddress  elseAddr = AS_STMT_ADDR(ifStmt.getAddressOfChild(2));
+		ExpressionAddress condAddr = ifStmt->getCondition();
+		StatementAddress  thenAddr = ifStmt->getThenBody();
+		StatementAddress  elseAddr = ifStmt->getElseBody();
 
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions faThen( [&] () -> void { regionStmts.pop(); } );
@@ -435,7 +435,6 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		typedef std::vector<SwitchCasePtr> CaseList;
 		typedef std::vector<IterationVector> IterationVectorList;
 
-		const CaseList& cases = switchStmt.getAddressedNode()->getCases()->getElements();
 		IterationVector ret;
 		
 		bool isSCoP = true;
@@ -447,12 +446,12 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
 
-		for(size_t caseID = 0; caseID < cases.size(); ++caseID) {
+		SwitchCasesAddress cases = switchStmt->getCases();
+		for(auto it = cases.begin(); it != cases.end(); ++it) {
+			SwitchCaseAddress curCase = *it;
+
 			// get the addess of the expression of this case stmt 
-			ExpressionAddress exprAddr = 
-				AS_EXPR_ADDR(switchStmt.getAddressOfChild( 
-					1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 0 )
-				);
+			ExpressionAddress exprAddr = curCase->getGuard();
 
 			ExpressionPtr&& expr =
 				builder.callExpr(
@@ -466,10 +465,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			try {
 				IterationVector iv;
 
-				StatementAddress stmtAddr = 
-					AS_STMT_ADDR(switchStmt.getAddressOfChild
-						( 1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 1 )
-					);
+				StatementAddress stmtAddr = curCase->getBody();
+
 				subScops.clear();
 					// build an address for the expression and the statement 
 				ret = merge(iv, visitStmt(stmtAddr));
@@ -493,10 +490,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 		if (switchStmt->getDefaultCase()) {
 			try {
-				StatementAddress defAddr = 
-					AS_STMT_ADDR(switchStmt.getAddressOfChild
-						( 1 /* switchExpr */ + cases.size()*2 /* each case 2 pointers */ + 0 )
-					);
+				StatementAddress defAddr = switchStmt->getDefaultCase();
 				subScops.clear();
 
 				IterationVector&& iv = visitStmt(defAddr);
@@ -518,10 +512,8 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			// Add the entry points to the ScopList 
 			for(size_t caseID = 0; caseID < cases.size(); ++caseID) {
 				// get the addess of the expression of this case stmt 
-				StatementAddress caseStmtAddr = 
-					AS_EXPR_ADDR(switchStmt.getAddressOfChild( 
-						1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 1 )
-					);
+				StatementAddress caseStmtAddr = cases[caseID]->getBody();
+
 				if( caseStmtAddr->hasAnnotation(ScopRegion::KEY) ) {
 					postProcessSCoP(caseStmtAddr, scopList) ;
 
@@ -563,7 +555,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
 
-			IterationVector&& bodyIV = visitStmt( forStmt.getAddressOfChild(3) ), ret;
+			IterationVector&& bodyIV = visitStmt( forStmt->getBody() ), ret;
 
 			ForStmtPtr forPtr = forStmt.getAddressedNode();
 			ret.add( Iterator(forPtr->getIterator()) );
@@ -711,7 +703,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 				
 				// Get rid of marker statements 
 				while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-					addr = AS_STMT_ADDR(addr.getAddressOfChild(0));
+					addr = AS_STMT_ADDR(addr.getAddressOfChild(1));
 				}
 
 				if (addr->hasAnnotation(ScopRegion::KEY)) { 
@@ -735,11 +727,11 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitMarkerStmt(const MarkerStmtAddress& mark) {
-		return visit( mark.getAddressOfChild(0) );
+		return visit( mark->getSubStatement() );
 	}
 
 	IterationVector visitMarkerExpr(const MarkerExprAddress& mark) {
-		return visit( mark.getAddressOfChild(0) );
+		return visit( mark->getSubExpression() );
 	}
 
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
@@ -760,7 +752,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
 		
-			StatementAddress addr = AS_STMT_ADDR(lambda.getAddressOfChild(lambda->getChildList().size()-1));  /*getBody()*/
+			StatementAddress addr = AS_STMT_ADDR(lambda->getBody() );  /*getBody()*/
 			bodyIV = visitStmt( addr );
 
 			if (!addr->hasAnnotation(ScopRegion::KEY)) {
@@ -789,7 +781,7 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	IterationVector visitCallExpr(const CallExprAddress& callExpr) {
 		STACK_SIZE_GUARD;
 
-		const NodeAddress& func = callExpr.getAddressOfChild(1);
+		const NodeAddress& func = callExpr->getFunctionExpr();
 		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 		
 		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
@@ -809,8 +801,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 		// Visit the arguments of this call expression using the evaluation order of C
 		// (right-to-left). This will make the ordering of the statements inside the SCoP
 		// consistent.
-		for(size_t idx = 2+callExpr->getArguments().size()-1; idx >=2; --idx) {
-			iterVec = merge( iterVec, visit(callExpr.getAddressOfChild(idx)) );
+		const vector<ExpressionAddress>&& arguments = callExpr->getArguments();
+		for(auto it = arguments.rbegin(); it != arguments.rend(); ++it) {
+			iterVec = merge( iterVec, visit(*it) );
 		}
 
 		AddressList scops(subScops);
@@ -881,9 +874,9 @@ struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 	// iteration vectors 
 	IterationVector visitNode(const NodeAddress& node) {
  		IterationVector ret;
-		for(size_t i=0, end=node->getChildList().size(); i!=end; ++i) {
-			ret = merge(ret, visit(node.getAddressOfChild(i))); 
-		} 
+ 		for_each(node->getChildList(), [&](const NodeAddress& cur){
+			ret = merge(ret, this->visit(cur));
+		});
 		return ret;
 	}
 };

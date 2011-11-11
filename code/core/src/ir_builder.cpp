@@ -263,8 +263,7 @@ ForStmtPtr IRBuilder::forStmt(const VariablePtr& var, const ExpressionPtr& start
 SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase) const {
 	CompoundStmtPtr defCase = (defaultCase)?wrapBody(defaultCase):getNoOp();
 
-	vector<SwitchCasePtr> caseList;
-	::transform(cases, [&](const pair<ExpressionPtr, StatementPtr>& cur) {
+	vector<SwitchCasePtr> caseList = ::transform(cases, [&](const pair<ExpressionPtr, StatementPtr>& cur) {
 		return switchCase(static_pointer_cast<LiteralPtr>(cur.first), wrapBody(cur.second));
 	});
 

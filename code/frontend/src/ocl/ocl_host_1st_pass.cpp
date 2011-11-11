@@ -357,7 +357,7 @@ bool Ocl2Inspire::extractSizeFromSizeof(const core::ExpressionPtr& arg, core::Ex
 		// check if we reached a sizeof call
 		if (call->toString().substr(0, 6).find("sizeof") != string::npos) {
 			// extract the type to be allocated
-			type = static_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
+			type = dynamic_pointer_cast<GenericTypePtr>(call->getArgument(0)->getType())->getTypeParameter(0);
 			assert(type && "Type could not be extracted!");
 			return true;
 		}
