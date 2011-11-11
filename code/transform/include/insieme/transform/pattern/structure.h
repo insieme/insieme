@@ -62,7 +62,7 @@ namespace pattern {
 
 		static const int VALUE_ID;
 
-		typedef boost::variant<bool,int,std::size_t,string> Value;
+		typedef boost::variant<bool,int,unsigned,string> Value;
 
 	protected:
 

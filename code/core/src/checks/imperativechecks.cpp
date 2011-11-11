@@ -95,10 +95,30 @@ namespace {
 		 */
 		void visitDeclarationStmt(const DeclarationStmtAddress& cur) {
 			// first => recursive check of initialization expression.
-			visit(cur.getAddressOfChild(1));
+			visit(cur->getInitialization());
 
 			// second: add newly declared variable to set of declared variables
 			declaredVariables.insert(cur->getVariable());
+		}
+
+		/**
+		 * A special handling of for loops, which are introducing a iterator variable.
+		 */
+		void visitForStmt(const ForStmtAddress& cur) {
+			// first => recursive check of boundaries
+			visit(cur->getStart());
+			visit(cur->getEnd());
+			visit(cur->getStep());
+
+			// add iterator variable to set of declared variables
+			VariablePtr iterator = cur->getIterator();
+			declaredVariables.insert(iterator);
+
+			// check body
+			visit(cur->getBody());
+
+			// remove iterator again
+			declaredVariables.erase(iterator);
 		}
 
 		/**

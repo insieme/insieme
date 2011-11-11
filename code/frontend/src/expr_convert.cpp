@@ -2937,11 +2937,16 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	ctx.isRecSubFunc = true;
 
 	std::for_each(components.begin(), components.end(),
-		[ this, &definitions, &builder ] (std::set<const FunctionDecl*>::value_type fd) {
+		[ this, &definitions, &builder, &recVarRef ] (std::set<const FunctionDecl*>::value_type fd) {
 
 			ConversionContext::RecVarExprMap::const_iterator tit = this->ctx.recVarExprMap.find(fd);
 			assert(tit != this->ctx.recVarExprMap.end() && "Recursive function has no TypeVar associated");
 			this->ctx.currVar = tit->second;
+
+			// test whether function has already been resolved
+			if (*tit->second == *recVarRef) {
+				return;
+			}
 
 			/*
 			 * we remove the variable from the list in order to fool the solver, in this way it will create a descriptor

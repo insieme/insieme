@@ -107,25 +107,20 @@ namespace {
 
 		// NODES REQUIERING SPECIAL TREATMENT
 
-		TreePtr visitGenericType(const GenericTypePtr& node){
-			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
-				TreeList children;
-				children.push_back(makeValue(static_pointer_cast<const GenericType>(node)->getFamilyName()));
-				copy(IRTree::convertChildren(node), back_inserter(children));
-				return children;
-			};
-			return std::make_shared<IRTree>(node, eval);
-		}
+		#define CONVERT_VALUE(TYPE) \
+			TreePtr visit ## TYPE ## Value(const TYPE ## ValuePtr& node) { \
+				return makeValue(node->getValue()); \
+			}
 
-		TreePtr visitLiteral(const LiteralPtr& node){
-			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
-				TreeList res;
-				res.push_back(makeValue(static_pointer_cast<const Literal>(node)->getStringValue()));
-				copy(IRTree::convertChildren(node), back_inserter(res));
-				return res;
-			};
-			return make_shared<IRTree>(node, eval);
-		}
+			CONVERT_VALUE(Bool);
+			CONVERT_VALUE(Char);
+			CONVERT_VALUE(Int);
+			CONVERT_VALUE(UInt);
+			CONVERT_VALUE(String);
+
+		#undef CONVERT_VALUE
+
+
 		TreePtr visitCallExpr(const CallExprPtr& node){
 			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
 				auto children = node->getChildList();

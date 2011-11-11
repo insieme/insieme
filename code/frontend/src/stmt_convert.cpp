@@ -849,7 +849,18 @@ public:
 			// we encounter a case statement
 			caseStart=true;
 			while ( CaseStmt* caseStmt = dyn_cast<CaseStmt>(curr) ) {
-				core::LiteralPtr caseLiteral = static_pointer_cast<core::LiteralPtr>(this->convFact.convertExpr( caseStmt->getLHS() ));
+
+				// make sure case expression is a literal
+				core::ExpressionPtr caseExpr = this->convFact.convertExpr( caseStmt->getLHS() );
+				if (caseExpr->getNodeType() == core::NT_CastExpr) {
+					core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
+					if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
+						core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
+						caseExpr = builder.literal(cast->getType(), literal->getValue());
+					}
+				}
+
+				core::LiteralPtr caseLiteral = static_pointer_cast<core::LiteralPtr>(caseExpr);
 				caseExprs.push_back(
 						std::make_pair(caseLiteral, caseStmts.size())
 					);

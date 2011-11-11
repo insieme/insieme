@@ -100,9 +100,11 @@ TEST(IRPattern, Types) {
 	
 	TypePtr int8Type = t("int<8>");
 	TypePtr genericA = t("megatype<ultratype<int<8>,666>>");
+	TypePtr genericB = t("megatype<ultratype<int<8>,B>>");
 	
 	auto int8TypeTree = toTree(int8Type);
 	auto genericATypeTree = toTree(genericA);
+	auto genericBTypeTree = toTree(genericB);
 
 	TreePatternPtr patternA = irp::genericType("megatype", single(any));
 	EXPECT_PRED2(notMatch, patternA, int8TypeTree); 
@@ -112,7 +114,15 @@ TEST(IRPattern, Types) {
 	EXPECT_PRED2(notMatch, patternB, int8TypeTree);
 	EXPECT_PRED2(notMatch, patternB, genericATypeTree);
 	EXPECT_PRED2(notMatch, aT(patternB), int8TypeTree);
-	EXPECT_PRED2(match, aT(patternB), genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternB), genericATypeTree);
+	EXPECT_PRED2(match, aT(patternB), genericBTypeTree);
+
+	TreePatternPtr patternC = irp::genericType("ultratype", single(any), single(any));
+	EXPECT_PRED2(notMatch, patternC, int8TypeTree);
+	EXPECT_PRED2(notMatch, patternC, genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternC), int8TypeTree);
+	EXPECT_PRED2(match, aT(patternC), genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternC), genericBTypeTree);
 }
 
 
