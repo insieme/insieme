@@ -568,7 +568,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 												builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
 										newInitMembers.push_back(newInitMember);
 //std::cout << "\nMembers: " << newMembers.at(i) << " \n" << kernelLambdas.begin()->first << std::endl;
-									} else if(newMembers.at(i)->getName()->getValue().find("array<_cl_kernel,1>") != string::npos /*&&
+									} else if(newMembers.at(i)->getType()->toString().find("array<_cl_kernel,1>") != string::npos /*&&
 											kernelLambdas.find(var) != kernelLambdas.end()*/) {
 										for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
 											// check if the variable is right

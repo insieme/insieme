@@ -91,7 +91,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	LOG(INFO) << "Printing the IR: " << pp;
 	//    LOG(INFO) << pp;
 
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
@@ -133,7 +133,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	LOG(INFO) << "Printing the IR: " << pp;
 	//    LOG(INFO) << pp;
 
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {

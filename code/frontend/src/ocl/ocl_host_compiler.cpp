@@ -160,9 +160,9 @@ ProgramPtr HostCompiler::compile() {
 //		transform::utils::MemberAccessLiteralUpdater malu(builder);
 //		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
 
-std::cout << "\nReplacements: \n\t" << join("\n\t", cl_mems, [](std::ostream& out, const std::pair<VariablePtr, VariablePtr>& cur) {
-	out << *cur.first->getType() << " " << *cur.first << " => " << *cur.second->getType() << " " << *cur.second;
-}) << "\n\n";
+//std::cout << "\nReplacements: \n\t" << join("\n\t", cl_mems, [](std::ostream& out, const std::pair<VariablePtr, VariablePtr>& cur) {
+//	out << *cur.first->getType() << " " << *cur.first << " => " << *cur.second->getType() << " " << *cur.second;
+//}) << "\n\n";
 		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), mProgram, cl_mems, false);
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");

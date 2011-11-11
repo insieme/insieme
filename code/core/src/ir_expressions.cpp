@@ -99,11 +99,10 @@ namespace core {
 
 	bool LambdaExpr::isRecursiveInternal() const {
 		// evaluate lazily
-		if (!testedForRecursive) {
-			recursive = getDefinition()->isRecursive(getVariable());
-			testedForRecursive = true;
+		if (!recursive.isEvaluated()) {
+			recursive.setValue(getDefinition()->isRecursive(getVariable()));
 		}
-		return recursive;
+		return recursive.getValue();
 	}
 
 	namespace {

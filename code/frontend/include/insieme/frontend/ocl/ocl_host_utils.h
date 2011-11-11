@@ -123,7 +123,7 @@ public:
 	IdSearcher(const core::StringValuePtr& lookFor) : core::IRVisitor<bool>(false), searchedId(lookFor) {}
 
 	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
-	bool visitIdentifier(const core::StringValuePtr& id) { return *id == *searchedId; }
+	bool visitStringValue(const core::StringValuePtr& id) { return *id == *searchedId; }
 };
 
 
