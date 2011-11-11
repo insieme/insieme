@@ -111,7 +111,7 @@ ProgramPtr HostCompiler::compile() {
 	 assert(newProg && "Second pass of OclHostCompiler corrupted the program");
 	 */
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
-	assert(progWithKernels->toString().find("v134") == string::npos);
+
 	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
 /*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 //		tmp[t.first] = t.second;

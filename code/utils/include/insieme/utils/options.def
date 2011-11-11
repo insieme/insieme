@@ -76,3 +76,5 @@ OPTION("dump-cfg",			"dump-cfg", 			CFG,    		std::string,				"Print dot graph o
 //INT_OPTION(opt_name, opt_id, var_name, def_value, var_help)
 INT_OPTION("verbose,v", "verbosity", Verbosity, 0, "Set verbosity level")
 INT_OPTION("col-wrap", "column-wrap", ColumnWrap, -1, "Wrap the output of the pretty printer up to specified size")
+
+INT_OPTION("max-region-size", "max-region-size", MaxRegionSize, 5000, "Set the maximum size of identified code regions")

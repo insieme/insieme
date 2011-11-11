@@ -1182,12 +1182,16 @@ public:
 				if ( funcDecl->getNameAsString() == "free" && callExpr->getNumArgs() == 1 ) {
 					// in the case the free uses an input parameter
 					if ( args.front()->getType()->getNodeType() == core::NT_RefType ) {
-						return (irNode = builder.callExpr( builder.getBasicGenerator().getRefDelete(), args.front() ));
+						return (irNode = builder.callExpr(builder.getBasicGenerator().getUnit(), builder.getBasicGenerator().getRefDelete(), args.front() ));
 					}
+
+					// select appropriate deref operation: AnyRefDeref for void*, RefDeref for anything else
+					core::ExpressionPtr arg = wrapVariable(callExpr->getArg(0));
+					core::ExpressionPtr delOp = *arg->getType() == *builder.getBasicGenerator().getAnyRef() ?
+							builder.getBasicGenerator().getAnyRefDelete() : builder.getBasicGenerator().getRefDelete();
+
 					// otherwise this is not a L-Value so it needs to be wrapped into a variable
-					return (irNode = builder.callExpr( builder.getBasicGenerator().getRefDelete(),
-							wrapVariable(callExpr->getArg(0))
-						));
+					return (irNode = builder.callExpr(builder.getBasicGenerator().getUnit(), delOp, arg ));
 				}
 			}
 
@@ -1549,9 +1553,12 @@ public:
 
 		core::ExpressionPtr ctorExpr =
 				core::static_pointer_cast<const core::LambdaExpr>( convFact.convertFunctionDecl(funcDecl) );
-		packedArgs.push_back(ctx.thisStack2);
 
-		// rescue THIS and parent ctor initializers
+		//VLOG(2) << "ParentThisStack "<< parentThisStack << " thisStack2 " << convFact.ctx.thisStack2 << " thisVar " << convFact.ctx.thisVar;
+		//use parentThisStack (not the changed thisStack2) as argument
+		packedArgs.push_back(parentThisStack);
+
+		// reset THIS and parent ctor initializers
 		convFact.ctx.thisStack2 = parentThisStack;
 		convFact.ctx.ctorInitializerMap = parentCtorInitializerMap;
 
@@ -2766,7 +2773,6 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 		}
 	);
 
-
 	// we have a c++ method declaration and the special case constructor
 	bool isCXX  = false;
 	bool isCtor = false;
@@ -2907,7 +2913,15 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 					funcDecl->getBody()->dump(); \
 	}
 
+
+	//Save thisStack2
+	core::ExpressionPtr thisStack2old = ctx.thisStack2;
+
 	core::StatementPtr&& body = convertStmt( funcDecl->getBody() );
+	//VLOG(2) << "convertFunctionDecl: thisStack2old " << thisStack2old << "thisStack2 " << ctx.thisStack2;
+	//reset thisStack2
+	ctx.thisStack2 = thisStack2old;
+
 	ctx.curParameter = oldList;
 
 	/*

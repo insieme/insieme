@@ -38,19 +38,26 @@
 
 #include "CL/cl.h"
 #include "impl/error_handling.impl.h"
+//#define IRT_OCL_INSTR 0
 
 #define DEVICE_TYPE (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_CPU)
 
-typedef struct _irt_ocl_buffer {
+struct _irt_ocl_buffer;
+struct _irt_ocl_device;
+typedef struct _irt_ocl_buffer irt_ocl_buffer;
+typedef struct _irt_ocl_device irt_ocl_device;
+
+struct _irt_ocl_buffer {
 	cl_mem mem;
 	bool used;
 	size_t size;
 	struct _irt_ocl_buffer* next;
-	cl_command_queue queue; // derive the queue directly from the buffer
-} irt_ocl_buffer;
+	irt_ocl_device* dev; // derive the device directly from the buffer
+};
 
-typedef struct _irt_ocl_device {
-	// generic info
+
+struct _irt_ocl_device {
+	// internal info
 	cl_device_id device;
 	cl_context context;
 	cl_command_queue queue;
@@ -61,7 +68,44 @@ typedef struct _irt_ocl_device {
 	cl_ulong max_buffer_size; // max size of a buffer
 	pthread_spinlock_t buffer_lock;
 	irt_ocl_buffer* buffer;
-} irt_ocl_device;
+
+	// device info
+	char *name;
+	cl_device_type type;
+	char *vendor;
+	char *version;
+	char *driver_version;
+	char *profile;
+
+	cl_uint max_compute_units;
+	cl_uint max_clock_frequency;
+	cl_uint max_work_item_dimensions;
+	size_t* max_work_item_sizes;
+	size_t max_work_group_size;
+
+
+	cl_bool image_support;
+	cl_device_fp_config single_fp_config;
+	cl_bool endian_little;
+	char *extensions;
+
+	cl_device_mem_cache_type mem_cache_type;
+	cl_ulong global_mem_cacheline_size;
+	cl_ulong global_mem_cache_size;
+
+	cl_ulong max_constant_buffer_size;
+
+	cl_device_local_mem_type local_mem_type;
+	cl_ulong local_mem_size;
+
+	#ifdef IRT_OCL_INSTR
+	//events
+	cl_event events[40];
+	cl_uint last_event;
+	pthread_spinlock_t event_lock;
+	#endif
+};
+
 
 typedef enum {IRT_OCL_NDRANGE, IRT_OCL_TASK} irt_ocl_kernel_type;
 typedef enum {IRT_OCL_SOURCE, IRT_OCL_BINARY, IRT_OCL_STRING, IRT_OCL_NO_CACHE} irt_ocl_create_kernel_flag;
@@ -73,6 +117,7 @@ typedef struct _irt_ocl_kernel {
 	size_t* global_work_size;
 	size_t* local_work_size;
 
+	pthread_spinlock_t kernel_lock;
 	irt_ocl_device* dev;
 } irt_ocl_kernel;
 
@@ -93,17 +138,11 @@ void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map
 void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
 void irt_ocl_release_buffer(irt_ocl_buffer* buf);
 
-irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
 void irt_ocl_set_kernel_ndrange(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size);
-void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint num_args, ...);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 
-void irt_ocl_print_device_info(irt_ocl_device* dev, char* prefix, cl_device_info param_name, char* suffix);
+void irt_ocl_print_device_short_info(irt_ocl_device* dev);
 void irt_ocl_print_device_infos(irt_ocl_device* dev);
-
-typedef enum {IRT_OCL_SEC, IRT_OCL_MILLI, IRT_OCL_NANO} irt_ocl_profile_event_flag;
-float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag);
-float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag);
 
 // ------- Runtime Functions
 
@@ -121,4 +160,4 @@ irt_ocl_buffer* irt_ocl_rt_create_buffer(cl_mem_flags flags, size_t size);
 
 void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_work_size, size_t* local_work_siz, cl_uint num_args, ...);
 
-
+void irt_ocl_print_events();
