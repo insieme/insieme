@@ -53,8 +53,8 @@ static cl_uint _irt_cl_get_num_devices(cl_platform_id* platform, cl_device_type 
 static void _irt_cl_get_devices(cl_platform_id* platform, cl_device_type device_type, cl_uint num_devices, cl_device_id* devices);
 
 typedef enum {IRT_OCL_SEC, IRT_OCL_MILLI, IRT_OCL_NANO} irt_ocl_profile_event_flag;
-static float _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag);
-static float _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag);
+static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag);
+static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag);
 
 static const char* _irt_cl_get_device_type_string(cl_device_type type);
 static char* _irt_cl_get_name(cl_device_id* device);
@@ -178,12 +178,6 @@ void irt_ocl_init_devices() {
 						dev->local_mem_type = _irt_cl_get_local_mem_type(&dev->device);
 						dev->local_mem_size = _irt_cl_get_local_mem_size(&dev->device);
 
-						#ifdef IRT_OCL_INSTR
-						//events
-						dev->last_event = 0;
-						pthread_spin_init(&(dev->event_lock), 0);
-						#endif
-
 						// Buffer Info
 						dev->mem_size = _irt_cl_get_global_mem_size(&dev->device);
 						dev->mem_available = _irt_cl_get_global_mem_size(&dev->device);
@@ -201,11 +195,6 @@ void irt_ocl_release_devices() {
 	cl_int err_code;
 	for (int i = 0; i < num_devices; ++i) {
 		irt_ocl_device* dev = &devices[i];
-
-		#ifdef IRT_OCL_INSTR
-		// release the event_lock
-		pthread_spin_destroy(&(dev->event_lock));
-		#endif
 
 		// release the buffer_lock
 		pthread_spin_destroy(&(dev->buffer_lock));
@@ -335,13 +324,8 @@ inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
 inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t offset, size_t size, const void* source_ptr) {
 	irt_ocl_device* dev = buf->dev;
 #ifdef IRT_OCL_INSTR
-	// locked session
-	pthread_spin_lock(&(dev->event_lock));
-	cl_uint cur_event = dev->last_event++;
-	pthread_spin_unlock(&(dev->event_lock));
-	// end locked session
-
-	cl_int err_code = clEnqueueWriteBuffer(dev->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, &(dev->events[cur_event]));
+	irt_ocl_event* rt_event = irt_ocl_get_new_event();
+	cl_int err_code = clEnqueueWriteBuffer(dev->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, &(rt_event->event));
 #else
 	cl_int err_code = clEnqueueWriteBuffer(dev->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, NULL);
 #endif
@@ -352,13 +336,8 @@ inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t o
 inline void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t offset, size_t size, void* source_ptr) {
 	irt_ocl_device* dev = buf->dev;
 #ifdef IRT_OCL_INSTR
-	// locked session
-	pthread_spin_lock(&(dev->event_lock));
-	cl_uint cur_event = dev->last_event++;
-	pthread_spin_unlock(&(dev->event_lock));
-	// end locked session
-
-	cl_int err_code = clEnqueueReadBuffer(dev->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, &(dev->events[cur_event]));
+	irt_ocl_event* rt_event = irt_ocl_get_new_event();
+	cl_int err_code = clEnqueueReadBuffer(dev->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, &(rt_event->event));
 #else
 	cl_int err_code = clEnqueueReadBuffer(dev->queue, buf->mem, blocking, offset, size, source_ptr, 0, NULL, NULL);
 #endif
@@ -370,13 +349,8 @@ inline void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_fl
 	irt_ocl_device* dev = buf->dev;
 	cl_int err_code;
 #ifdef IRT_OCL_INSTR
-	// locked session
-	pthread_spin_lock(&(dev->event_lock));
-	cl_uint cur_event = dev->last_event++;
-	pthread_spin_unlock(&(dev->event_lock));
-	// end locked session
-
-	void* ptr = clEnqueueMapBuffer(dev->queue, buf->mem, blocking, map_flags, 0, size, 0, NULL, &(dev->events[cur_event]), &err_code);
+	irt_ocl_event* rt_event = irt_ocl_get_new_event();
+	void* ptr = clEnqueueMapBuffer(dev->queue, buf->mem, blocking, map_flags, 0, size, 0, NULL, &(rt_event->event), &err_code);
 #else
 	void* ptr = clEnqueueMapBuffer(dev->queue, buf->mem, blocking, map_flags, 0, size, 0, NULL, NULL, &err_code);
 #endif
@@ -387,13 +361,8 @@ inline void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_fl
 inline void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr) {
 	irt_ocl_device* dev = buf->dev;
 #ifdef IRT_OCL_INSTR
-	// locked session
-	pthread_spin_lock(&(dev->event_lock));
-	cl_uint cur_event = dev->last_event++;
-	pthread_spin_unlock(&(dev->event_lock));
-	// end locked session
-
-	cl_int err_code = clEnqueueUnmapMemObject(dev->queue, buf->mem, mapped_ptr, 0, NULL, &(dev->events[cur_event]));
+	irt_ocl_event* rt_event = irt_ocl_get_new_event();
+	cl_int err_code = clEnqueueUnmapMemObject(dev->queue, buf->mem, mapped_ptr, 0, NULL, &(rt_event->event));
 #else
 	cl_int err_code = clEnqueueUnmapMemObject(dev->queue, buf->mem, mapped_ptr, 0, NULL, NULL);
 #endif
@@ -404,13 +373,8 @@ inline void irt_ocl_copy_buffer(irt_ocl_buffer* src_buf, irt_ocl_buffer* dest_bu
 	irt_ocl_device* dev = src_buf->dev;
 	IRT_ASSERT(dev->queue  == dest_buf->dev->queue, IRT_ERR_OCL, "Error: source and destination buffer have a different queue");
 #ifdef IRT_OCL_INSTR
-	// locked session
-	pthread_spin_lock(&(dev->event_lock));
-	cl_uint cur_event = dev->last_event++;
-	pthread_spin_unlock(&(dev->event_lock));
-	// end locked session
-
-	cl_int err_code = clEnqueueCopyBuffer(dev->queue, src_buf->mem, dest_buf->mem, 0, 0, size, 0, NULL, &(dev->events[cur_event]));
+	irt_ocl_event* rt_event = irt_ocl_get_new_event();
+	cl_int err_code = clEnqueueCopyBuffer(dev->queue, src_buf->mem, dest_buf->mem, 0, 0, size, 0, NULL, &(rt_event->event));
 #else
 	cl_int err_code = clEnqueueCopyBuffer(dev->queue, src_buf->mem, dest_buf->mem, 0, 0, size, 0, NULL, NULL);
 #endif
@@ -613,19 +577,14 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 
 	if (kernel->type == IRT_OCL_NDRANGE) {
 		#ifdef IRT_OCL_INSTR
-			// locked session
-			pthread_spin_lock(&(dev->event_lock));
-			cl_uint cur_event = dev->last_event++;
-			pthread_spin_unlock(&(dev->event_lock));
-			// end locked session
-
+		irt_ocl_event* rt_event = irt_ocl_get_new_event();
 			err_code = clEnqueueNDRangeKernel((dev)->queue,
 					kernel->kernel,
 					kernel->work_dim,
 					NULL,
 					kernel->global_work_size,
 					kernel->local_work_size,
-					0, NULL, &(dev->events[cur_event]));
+					0, NULL, &(rt_event->event));
 		#else
 			err_code = clEnqueueNDRangeKernel((dev)->queue,
 						kernel->kernel,
@@ -645,6 +604,47 @@ void irt_ocl_rt_run_kernel(cl_uint kernel_id, cl_uint work_dim, size_t* global_w
 	else IRT_ASSERT(false, IRT_ERR_OCL, "Kernel Type Not Valid");
 	pthread_spin_unlock(&(kernel->kernel_lock));
 }
+
+/*
+ * =====================================================================================
+ *  Insieme Instrumentation OpenCL Functions
+ * =====================================================================================
+ */
+
+#ifdef IRT_OCL_INSTR
+static void _irt_cl_event_table_resize(irt_ocl_event_table* table) {
+	table->size = table->size + table->blocksize;
+	table->event_array = realloc(table->event_array, sizeof(irt_ocl_event)*table->size);
+}
+
+// allocates memory for event data and sets all fields
+irt_ocl_event_table* irt_ocl_create_event_table() {
+	irt_ocl_event_table* table = malloc(sizeof(irt_ocl_event_table));
+	table->blocksize = IRT_OCL_EVENT_TABLE_BLOCKSIZE;
+	table->size = table->blocksize * 2;
+	table->num_events = 0;
+	table->event_array = malloc(sizeof(irt_ocl_event) * table->size);
+	return table;
+}
+
+irt_ocl_event* irt_ocl_get_new_event() {//irt_worker* worker, const int event, const uint64 id, const uint64 time) {
+	irt_worker* worker = irt_worker_get_current();
+	irt_ocl_event_table* table = worker->event_data;
+
+	if(table->num_events >= table->size)
+		_irt_cl_event_table_resize(table);
+
+	irt_ocl_event* rt_event = &(table->event_array[table->num_events++]);
+	rt_event->workitem_id = worker->cur_wi->id.value.components.index; // FIXME MAYBE??
+	return rt_event;
+}
+
+void irt_ocl_release_event_table(irt_ocl_event_table* table) {
+	free(table->event_array);
+	free(table);
+}
+#endif
+
 
 
 // ----------------------------------------------------------- OpenCL Internal Functions --------------------------------------------------
@@ -706,31 +706,30 @@ static const char* _irt_cl_get_event_command_string(cl_command_type type) {
 
 static void _irt_cl_print_events_info() {
 	printf("Printing devices events infos\n");
-	cl_uint num_devices = irt_ocl_get_num_devices();
-	for (cl_uint i = 0; i < num_devices; ++i) {
-		irt_ocl_device* dev = irt_ocl_get_device(i);
-		for(cl_uint e = 0; e < dev->last_event; ++e){
-			cl_command_type retval;
-			cl_int err_code = clGetEventInfo(dev->events[e], CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
-			IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL,"Error getting \"event command type\" info: \"%s\"", _irt_error_string(err_code));
+	irt_worker* worker = irt_worker_get_current();
+	irt_ocl_event_table* table = worker->event_data;
+	for(cl_uint e = 0; e < table->num_events; ++e) {
+		cl_command_type retval;
+		cl_int err_code = clGetEventInfo(table->event_array[e].event, CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &retval, NULL);
+		IRT_ASSERT(err_code  == CL_SUCCESS, IRT_ERR_OCL,"Error getting \"event command type\" info: \"%s\"", _irt_error_string(err_code));
 
-			cl_ulong event_queued, event_submit, event_start, event_end;
-			err_code = clGetEventProfilingInfo(dev->events[e], CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &event_queued, NULL);
-			err_code |= clGetEventProfilingInfo(dev->events[e], CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &event_submit, NULL);
-			err_code |= clGetEventProfilingInfo(dev->events[e], CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &event_start, NULL);
-			err_code |= clGetEventProfilingInfo(dev->events[e], CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &event_end, NULL);
-			IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
+		cl_ulong event_queued, event_submit, event_start, event_end;
+		err_code = clGetEventProfilingInfo(table->event_array[e].event, CL_PROFILING_COMMAND_QUEUED, sizeof(cl_ulong), &event_queued, NULL);
+		err_code |= clGetEventProfilingInfo(table->event_array[e].event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &event_submit, NULL);
+		err_code |= clGetEventProfilingInfo(table->event_array[e].event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &event_start, NULL);
+		err_code |= clGetEventProfilingInfo(table->event_array[e].event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &event_end, NULL);
+		IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
 
-			IRT_INFO("%i %f %s \t QU: %lu SU: %lu ST: %lu EN: %lu \n",
-					 e,
-					 _irt_cl_profile_event(dev->events[e], CL_PROFILING_COMMAND_START,CL_PROFILING_COMMAND_END, IRT_OCL_SEC),
-					 _irt_cl_get_event_command_string(retval),
-					 event_queued,
-					 event_submit,
-					 event_start,
-					 event_end
-					 );
-		}
+		IRT_INFO("WI %lu -> %i %f %s \t QU: %lu SU: %lu ST: %lu EN: %lu \n",
+				 table->event_array[e].workitem_id,
+				 e,
+				 _irt_cl_profile_event(table->event_array[e].event, CL_PROFILING_COMMAND_START,CL_PROFILING_COMMAND_END, IRT_OCL_SEC),
+				 _irt_cl_get_event_command_string(retval),
+				 event_queued,
+				 event_submit,
+				 event_start,
+				 event_end
+				 );
 	}
 }
 #endif
@@ -742,27 +741,27 @@ static void _irt_cl_print_events_info() {
 * =====================================================================================
 */
 
-static float _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag) {
+static double _irt_cl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_profile_event_flag time_flag) {
 	return _irt_cl_profile_events(event, event_start, event, event_end, time_flag);
 }
 
-static float _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag) {
+static double _irt_cl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_profile_event_flag time_flag) {
 	cl_ulong event_one_start, event_two_end;
 	cl_int err_code;
 	err_code = clGetEventProfilingInfo(event_two, event_two_command, sizeof(cl_ulong), &event_two_end, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
 	err_code = clGetEventProfilingInfo(event_one, event_one_command, sizeof(cl_ulong), &event_one_start, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, IRT_ERR_OCL, "Error getting profiling info: \"%s\"", _irt_error_string(err_code));
-	float time = 0.0;
+	double time = 0.0;
 	switch(time_flag) {
 		case IRT_OCL_NANO:
-			time = (event_two_end - event_one_start);
+			time = (double)(event_two_end - event_one_start);
 			break;
 		case IRT_OCL_MILLI:
-			time = (event_two_end - event_one_start) * 1.0e-6f;
+			time = (double)(event_two_end - event_one_start) * 1.0e-6f;
 			break;
 		case IRT_OCL_SEC:
-			time = (event_two_end - event_one_start) * 1.0e-9f;
+			time = (double)(event_two_end - event_one_start) * 1.0e-9f;
 			break;
 	}
 	return time;

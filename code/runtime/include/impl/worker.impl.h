@@ -104,6 +104,9 @@ void* _irt_worker_func(void *argvp) {
 #else
 	self->performance_data = 0;
 #endif
+#ifdef IRT_OCL_INSTR
+	self->event_data = irt_ocl_create_event_table();
+#endif
 	self->state = IRT_WORKER_STATE_CREATED;
 	irt_worker_instrumentation_event(self, WORKER_CREATED, self->id);
 	irt_scheduling_init_worker(self);

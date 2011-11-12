@@ -38,7 +38,7 @@
 
 #include "CL/cl.h"
 #include "impl/error_handling.impl.h"
-//#define IRT_OCL_INSTR 0
+#define IRT_OCL_INSTR 0
 
 #define DEVICE_TYPE (CL_DEVICE_TYPE_GPU | CL_DEVICE_TYPE_ACCELERATOR | CL_DEVICE_TYPE_CPU)
 
@@ -97,13 +97,6 @@ struct _irt_ocl_device {
 
 	cl_device_local_mem_type local_mem_type;
 	cl_ulong local_mem_size;
-
-	#ifdef IRT_OCL_INSTR
-	//events
-	cl_event events[40];
-	cl_uint last_event;
-	pthread_spinlock_t event_lock;
-	#endif
 };
 
 
@@ -120,7 +113,6 @@ typedef struct _irt_ocl_kernel {
 	pthread_spinlock_t kernel_lock;
 	irt_ocl_device* dev;
 } irt_ocl_kernel;
-
 
 irt_ocl_device* devices;
 cl_uint num_devices;
@@ -144,8 +136,30 @@ void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 void irt_ocl_print_device_short_info(irt_ocl_device* dev);
 void irt_ocl_print_device_infos(irt_ocl_device* dev);
 
-// ------- Runtime Functions
+// ------ Event Functions
 
+#ifdef IRT_OCL_INSTR
+#define IRT_OCL_EVENT_TABLE_BLOCKSIZE	5
+typedef struct _irt_ocl_event {
+	cl_event event;
+	uint64 workitem_id;
+} irt_ocl_event;
+
+typedef struct _irt_ocl_event_table {
+	uint32 size;
+	uint32 num_events;
+	uint32 blocksize;
+	irt_ocl_event* event_array;
+} irt_ocl_event_table;
+
+irt_ocl_event_table* irt_ocl_create_event_table();
+irt_ocl_event* irt_ocl_get_new_event();
+void irt_ocl_release_event_table(irt_ocl_event_table* table);
+#endif
+
+
+
+// ------- Runtime Functions
 typedef struct _irt_ocl_kernel_code {
 	const char* kernel_name;
 	const char* code;

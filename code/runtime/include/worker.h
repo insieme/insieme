@@ -43,6 +43,9 @@
 #include "work_item.h"
 #include "irt_scheduling.h"
 #include "utils/minlwt.h"
+#ifdef USE_OPENCL
+#include "irt_ocl.h"
+#endif
 
 /* ------------------------------ data structures ----- */
 
@@ -65,6 +68,9 @@ struct _irt_worker {
 	irt_work_item lazy_wi;
 	uint64 lazy_count;
 	irt_pd_table* performance_data;
+#ifdef IRT_OCL_INSTR
+	irt_ocl_event_table* event_data;
+#endif
 	// memory reuse stuff
 	irt_wi_event_register *wi_ev_register_list;
 	irt_wg_event_register *wg_ev_register_list;
