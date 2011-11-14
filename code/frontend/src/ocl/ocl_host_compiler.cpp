@@ -111,7 +111,7 @@ ProgramPtr HostCompiler::compile() {
 	 assert(newProg && "Second pass of OclHostCompiler corrupted the program");
 	 */
 	NodePtr transformedProg = ohm3rd.mapElement(0, progWithKernels);
-	assert(progWithKernels->toString().find("v134") == string::npos);
+
 	utils::map::PointerMap<NodePtr, NodePtr>& tmp = oclHostMapper.getReplacements();
 /*	for_each(cl_mems, [&](std::pair<const VariablePtr, VariablePtr> t){
 //		tmp[t.first] = t.second;
@@ -134,28 +134,31 @@ ProgramPtr HostCompiler::compile() {
 				ExpressionList newArgs;
 				bool update = false;
 				int cnt = 0;
-				for_each(call->getArguments(), [&](const ExpressionPtr& arg){
-					const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
 
-					if( fArg &&	builder.getNodeManager().getLangBasic().isRefDeref(fArg->getFunctionExpr()) &&
-							!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType &&
-							(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
-						update = true;
-						newArgs.push_back(fArg->getArgument(0));
-					} else {
-						newArgs.push_back(arg);
+				if(params.size() == call->getArguments().size()) { // undefined functions have an empty parameter list
+					for_each(call->getArguments(), [&](const ExpressionPtr& arg){
+						const CallExprPtr& fArg = dynamic_pointer_cast<const CallExpr>(arg);
+
+						if( fArg &&	builder.getNodeManager().getLangBasic().isRefDeref(fArg->getFunctionExpr()) &&
+								(!dynamic_pointer_cast<const RefType>(arg->getType()) && arg->getType()->getNodeType() != core::NT_GenericType ) &&
+								(!!dynamic_pointer_cast<const RefType>(params.at(cnt)))) {
+							update = true;
+							newArgs.push_back(fArg->getArgument(0));
+						} else {
+							newArgs.push_back(arg);
+						}
+						++cnt;
+					});
+					if(update) {
+						return builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs)->substitute(builder.getNodeManager(), *h);
 					}
-					++cnt;
-				});
-				if(update) {
-					return builder.callExpr(call->getType(), call->getFunctionExpr(), newArgs)->substitute(builder.getNodeManager(), *h);
 				}
 			}
 
 			return element->substitute(builder.getNodeManager(), *h);
 		});
 		h = &mapper;
-		mProgram = (h->map(0, newProg));
+		mProgram = h->map(0, newProg);
 //std::cout << "Replacements: \n" << cl_mems.begin()->first->getType() << " " << cl_mems.begin()->second->getType() << std::endl;
 //		transform::utils::MemberAccessLiteralUpdater malu(builder);
 //		mProgram = dynamic_pointer_cast<const core::Program>(malu.mapElement(0, newProg));
@@ -164,6 +167,42 @@ ProgramPtr HostCompiler::compile() {
 //	out << *cur.first->getType() << " " << *cur.first << " => " << *cur.second->getType() << " " << *cur.second;
 //}) << "\n\n";
 		mProgram = core::transform::replaceVarsRecursiveGen(builder.getNodeManager(), mProgram, cl_mems, false);
+
+		// removes cl_* variables from argument lists of lambdas
+		auto cleaner = makeLambdaMapper([&builder, &h](unsigned index, const NodePtr& element)->NodePtr{
+			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(element)) {
+				if(const LambdaExprPtr& lambda = dynamic_pointer_cast<const LambdaExpr>(call->getFunctionExpr())) {
+					ExpressionList newArgs;
+					core::VariableList newParams;
+					const core::VariableList& oldParams = lambda->getParameterList()->getElements();
+					TypeList paramTypes;
+					bool update = false;
+					int cnt = 0;
+
+					for_each(call->getArguments(), [&](const ExpressionPtr& arg){
+						// do nothing if the argument type is not a cl_* type
+						if(arg->getType()->toString().find("array<_cl_") == string::npos) {
+							newArgs.push_back(arg);
+							newParams.push_back(oldParams.at(cnt));
+							paramTypes.push_back(oldParams.at(cnt)->getType());
+						} else {
+							// do not port cl_* types to the new type
+							update = true;
+						}
+						++cnt;
+					});
+					if(update) {
+						const LambdaExprPtr newLambda = builder.lambdaExpr(builder.functionType(paramTypes, call->getType()), newParams, lambda->getBody());
+						return builder.callExpr(call->getType(), newLambda, newArgs)->substitute(builder.getNodeManager(), *h);
+					}
+				}
+			}
+
+			return element->substitute(builder.getNodeManager(), *h);
+		});
+
+		h = &cleaner;
+		mProgram = h->map(0, mProgram);
 	} else
 		assert(newProg && "Third pass of OclHostCompiler corrupted the program");
 

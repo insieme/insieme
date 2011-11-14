@@ -65,7 +65,9 @@ namespace {
 	public:
 
 		IRTree(const core::NodePtr& node, const EvalFunctor& evalFunctor = &convertChildren)
-			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {}
+			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {
+			attachValue<NodePtr>(node);
+		}
 
 		const core::NodePtr& getNode() const {
 			return node;
@@ -74,8 +76,10 @@ namespace {
 		std::ostream& printTo(std::ostream& out) const {
 			if(!evaluated) {
 				return out << "irtree[lazy](" << getId() << "," << *node << ")";
+				//return out << "irtree[lazy](" << core::getNodeTypeName((core::NodeType)getId()) << "," << *node << ")";
 			}
 			return out << "irtree[evaled](" << getId() << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
+			//return out << "irtree[evaled](" << core::getNodeTypeName((core::NodeType)getId()) << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
 		}
 
 		virtual const TreeList& getSubTrees() const {
@@ -135,6 +139,10 @@ namespace {
 			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()->getValue()));
 		}
 
+		TreePtr visitVariable(const VariablePtr& node){
+			return makeTree((int)node->getNodeType(), toTree(node->getType()), makeValue((int)node->getId()));
+		}
+
 		TreePtr visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& node){
 			return makeTree((int)node->getNodeType(), makeValue((int)node->getValue()));
 		}
@@ -150,7 +158,9 @@ namespace {
 }
 
 TreePtr toTree(const core::NodePtr& node) {
-	return TreeConverter().visit(node);
+	auto res = TreeConverter().visit(node);
+	res->attachValue<NodePtr>(node);
+	return res;
 }
 
 

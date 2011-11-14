@@ -210,7 +210,7 @@ INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, :
 //	IRBuilder builder(mgr);
 //
 //	// search for array variable declarations
-//	//visitDepthFirstInterruptable(NodeAddress(code), [&](const DeclarationStmtAddress& curdecl) -> bool {
+//	//visitDepthFirstInterruptible(NodeAddress(code), [&](const DeclarationStmtAddress& curdecl) -> bool {
 //	//	auto var = curdecl->getVariable();
 //	//	auto type = var->getType();
 //	//	auto init = curdecl->getInitialization();
@@ -230,14 +230,14 @@ INSTANTIATE_TEST_CASE_P(TypeVariableDeductionCheck, TypeVariableDeductionTest, :
 //	//});
 //
 //	// search for calls to scalar.to.array
-//	visitDepthFirstInterruptable(NodeAddress(code), [&](const CallExprAddress& curcall) -> bool {
+//	visitDepthFirstInterruptible(NodeAddress(code), [&](const CallExprAddress& curcall) -> bool {
 //		for(int argIndex = 0; argIndex < curcall->getArguments().size(); ++argIndex) {
 //			if(CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curcall->getArgument(argIndex))) {
 //				if(basic.isScalarToArray(convertcall->getFunctionExpr())) {
 //					if(LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curcall->getFunctionExpr())) {
 //						VariablePtr param = called->getParameterList()[argIndex];
 //						LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
-//						visitDepthFirstInterruptable(NodeAddress(called->getBody()), [&](const VariableAddress& var) {
+//						visitDepthFirstInterruptible(NodeAddress(called->getBody()), [&](const VariableAddress& var) {
 //							if(var.getAddressedNode() == param) {
 //								if(CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode())) {
 //									if(basic.isArrayRefElem1D(usecall->getFunctionExpr())) {

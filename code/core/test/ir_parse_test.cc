@@ -128,7 +128,7 @@ TEST(IRParser, ExpressionTests) {
 	// merge all
 	auto mergeAll = manager.getLangBasic().getLiteral("mergeAll");
 	EXPECT_EQ(mergeAll, parser.parseExpression("op<mergeAll>"));
-    EXPECT_EQ(builder.callExpr(mergeAll), parser.parseExpression("(op<mergeAll>())"));
+    EXPECT_EQ(builder.callExpr(mergeAll), parser.parseIR("(op<mergeAll>())"));
 
     // lambda using definition
 // TODO add statement to test once it is there
@@ -138,6 +138,7 @@ TEST(IRParser, ExpressionTests) {
     EXPECT_TRUE(lambda != 0);
     EXPECT_EQ(1u, lambda->getParameterList().size());
     EXPECT_FALSE( lambda->isRecursive() );
+
 //    EXPECT_TRUE( lambda->getLambda()->isCapturing() );
     EXPECT_EQ( lambda->getLambda()->getType(), builder.functionType(//toVector(manager.getLangBasic().getUInt2(), manager.getLangBasic().getFloat()),
             toVector(manager.getLangBasic().getDouble()), manager.getLangBasic().getInt4()) );
@@ -489,6 +490,39 @@ TEST(IRParser, ProgramTest) {
     EXPECT_FALSE(mep->hasAnnotations());
     EXPECT_EQ(2u, mep->getEntryPoints().size());
 }
+
+TEST(IRParser, IRTest) {
+    NodeManager manager;
+    IRParser parser(manager);
+    IRBuilder builder(manager);
+
+    // program with main
+    ProgramPtr mainProg = static_pointer_cast<const Program>(parser.parseIR("main: fun ()->int<4>:\
+         mainfct in { ()->int<4>:mainfct = ()->int<4>{ continue } }"));
+
+
+    EXPECT_FALSE(mainProg->hasAnnotations());
+    EXPECT_EQ(1u, mainProg->getEntryPoints().size());
+
+    // expression
+    auto assignment = static_pointer_cast<const CallExpr>(parser.parseIR("( ref<uint<4>>:a = 7)"));
+    EXPECT_EQ(manager.getLangBasic().getRefAssign(), assignment->getFunctionExpr());
+    EXPECT_EQ(builder.refType(manager.getLangBasic().getUInt4()), assignment->getArgument(0)->getType());
+    EXPECT_EQ(builder.castExpr(manager.getLangBasic().getUInt4(), builder.intLit(7)), assignment->getArgument(1));
+
+    // type
+	auto intType = builder.genericType("int", vector<TypePtr>(), toVector<IntTypeParamPtr>(VariableIntTypeParam::get(manager, 'a')));
+	EXPECT_EQ(intType, static_pointer_cast<const Type>(parser.parseIR("int<#a>")));
+	EXPECT_EQ(intType, static_pointer_cast<const Type>(parser.parseIR("(|int<#a>|)")));
+
+	// lambda
+	LambdaPtr lambda = dynamic_pointer_cast<const Lambda>(parser.parseIR("(real<8>:p)->int<4> {\
+            { break; } }"));
+	EXPECT_FALSE(!lambda);
+	EXPECT_EQ(builder.functionType(toVector(manager.getLangBasic().getReal8()), manager.getLangBasic().getInt4()), lambda->getType());
+	EXPECT_EQ(1u, lambda->getBody()->getChildList().size());
+}
+
 
 TEST(IRParser, InteractiveTest) {
 

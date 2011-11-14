@@ -395,6 +395,16 @@ DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const Express
 	return declarationStmt(variable(type), value);
 }
 
+CallExprPtr IRBuilder::aquireLock(const ExpressionPtr& lock) const {
+	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAquire(), lock);
+}
+CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
+	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
+}
+
+
 namespace {
 
 	TypePtr deduceReturnTypeForCall(const ExpressionPtr& functionExpr, const vector<ExpressionPtr>& arguments) {
@@ -852,7 +862,7 @@ unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 		return false;
 	});
 
-	if(!visitDepthFirstInterruptable(expr, lambdaVisitor)){
+	if(!visitDepthFirstInterruptible(expr, lambdaVisitor)){
 		LOG(ERROR) << expr;
 		assert(false && "Expression does not contain a literal a number");
 	}

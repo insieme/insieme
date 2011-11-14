@@ -34,12 +34,17 @@
  * regarding third party software licenses.
  */
 
+#include <iomanip>
+
+#include "insieme/core/printer/pretty_printer.h"
+
 #include "insieme/analysis/polyhedral/polyhedral.h"
 
 namespace insieme {
 namespace analysis {
 namespace poly {
 
+using namespace insieme::core;
 
 //==== IterationDomain ==============================================================================
 
@@ -60,7 +65,7 @@ IterationDomain operator||(const IterationDomain& lhs, const IterationDomain& rh
 }
 
 IterationDomain operator!(const IterationDomain& other) {
-	return IterationDomain( not_(other.getConstraint()) ); 
+	return IterationDomain( not_( other.getConstraint() ) ); 
 }
 
 std::ostream& IterationDomain::printTo(std::ostream& out) const { 
@@ -69,28 +74,75 @@ std::ostream& IterationDomain::printTo(std::ostream& out) const {
 	return out << *constraint; 
 }
 
-//==== ScatteringFunction ==============================================================================
+//==== AffineSystem ==============================================================================
 
 std::ostream& AffineSystem::printTo(std::ostream& out) const {
 	out << "{" << std::endl;
-	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunction& cur) { 
-			out << "\t" << cur.toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
+	std::for_each(funcs.begin(), funcs.end(), [&](const AffineFunctionPtr& cur) { 
+			out << "\t" << cur->toStr(AffineFunction::PRINT_ZEROS) <<  std::endl; 
 		} ); 
 	return out << "}" << std::endl;
 }
 
-void AffineSystem::appendRow(const AffineFunction& af) { 
+void AffineSystem::insert(const iterator& pos, const AffineFunction& af) { 
 	assert( iterVec == af.getIterationVector() && 
 			"Adding an affine function to a scattering matrix with a different base");
 
 	// adding a row to this matrix 
-	funcs.push_back( af.toBase(iterVec) );
+	funcs.insert( pos.get(), AffineFunctionPtr(new AffineFunction(af.toBase(iterVec))) );
 }
 
-void AffineSystem::cloneRows(const AffineList& src) { 
-	std::for_each(src.begin(), src.end(), 
-			[&] (const AffineFunction& cur) { funcs.push_back( cur.toBase(iterVec) ); } 
-		);
+//==== Stmt ==================================================================================
+
+std::ostream& Stmt::printTo(std::ostream& out) const {
+
+	out << "@ S" << id << ": " << std::endl 
+		<< " -> " << printer::PrettyPrinter( addr.getAddressedNode() ) << std::endl;
+	
+	// Print the iteration domain for this statement 
+
+	out << " -> ID " << dom << std::endl; 
+
+	// TupleName tn(cur.addr, "S"+utils::numeric_cast<std::string>( id ));
+	// auto&& ids = makeSet<POLY_BACKEND>(ctx, dom, tn);	
+	// out << " => ISL: " << ids;
+	// out << std::endl;
+
+	// Prints the Scheduling for this statement 
+	out << " -> Schedule: " << std::endl << schedule;
+
+	// auto&& scattering = makeMap<POLY_BACKEND>(ctx, *static_pointer_cast<AffineSystem>(sf), tn);
+	// out << " => ISL: ";
+	// scattering->printTo(out);
+	// out << std::endl;
+	
+	// Prints the list of accesses for this statement 
+	for_each(access_begin(), access_end(), [&](const poly::AccessInfo& cur){ out << cur; });
+	return out;
+}
+
+//==== AccessInfo ==============================================================================
+
+std::ostream& AccessInfo::printTo(std::ostream& out) const {
+	out << " -> REF ACCESS: [" << Ref::useTypeToStr( getUsage() ) << "] "
+		<< " -> VAR: " << printer::PrettyPrinter( getExpr().getAddressedNode() ) ; 
+
+	const AffineSystemPtr& accessInfo = getAccess();
+	out << " INDEX: " << join("", accessInfo->begin(), accessInfo->end(), 
+			[&](std::ostream& jout, const poly::AffineFunction& cur){ jout << "[" << cur << "]"; } );
+	out << std::endl;
+
+	if (accessInfo) {	
+		out << *accessInfo;
+		//auto&& access = makeMap<POLY_BACKEND>(ctx, *accessInfo, tn, 
+			//TupleName(cur.getExpr(), cur.getExpr()->toString())
+		//);
+		//// map.intersect(ids);
+		//out << " => ISL: "; 
+		//access->printTo(out);
+		//out << std::endl;
+	}
+	return out;
 }
 
 } // end poly namesapce 

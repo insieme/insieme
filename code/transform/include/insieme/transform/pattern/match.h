@@ -187,7 +187,11 @@ namespace pattern {
 
 	class Match : public utils::Printable {
 
+	public:
+
 		typedef std::unordered_map<string, MatchValue> ValueMap;
+
+	private:
 
 		TreePtr root;
 
@@ -201,6 +205,10 @@ namespace pattern {
 
 		void setRoot(const TreePtr& tree) {
 			root = tree;
+		}
+
+		const ValueMap& getValueMap() const {
+			return map;
 		}
 
 		bool isVarBound(const std::string& var) const {

@@ -68,13 +68,6 @@ struct VariableNotFound : public std::logic_error {
 	~VariableNotFound() throw () { }
 };
 
-// Forward Declarations for Constraints 
-class Constraint;
-
-class ConstraintCombiner;
-
-typedef std::shared_ptr<ConstraintCombiner> ConstraintCombinerPtr; 
-
 /**************************************************************************************************
  * AffineFunction represents an affine function based on an iteration vector. An
  * affine linear function is a function in the form:
@@ -201,7 +194,11 @@ public:
 	 */
 	AffineFunction 
 	toBase(const IterationVector& iterVec, const IndexTransMap& idxMap = IndexTransMap()) const; 
+
 };
+
+// Converts an affine expression to an IR expression
+insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineFunction& aff); 
 
 } // end poly namespace
 } // end analysis namespace 

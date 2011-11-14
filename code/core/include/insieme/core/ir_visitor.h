@@ -404,7 +404,7 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class DepthFirstInterruptableIRVisitor : public IRVisitor<bool, Ptr, P...> {
+class DepthFirstInterruptibleIRVisitor : public IRVisitor<bool, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
@@ -421,7 +421,7 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstInterruptableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+	DepthFirstInterruptibleIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
 		: IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 	/**
@@ -571,6 +571,70 @@ public:
 };
 
 /**
+ * The BreadthFirstInterruptibleIRVisitor provides a wrapper around an ordinary visitor which
+ * will iterate breadth first, pre-order through every visited node and can be interrupted at 
+ * any point by the sub-visitor.
+ */
+template<
+	template<class Target> class Ptr = Pointer,
+	typename ... P
+>
+class BreadthFirstInterruptibleIRVisitor : public IRVisitor<bool, Ptr, P...> {
+
+	/**
+	 * The sub-visitor visiting all nodes DepthFirstly.
+	 */
+	IRVisitor<bool, Ptr, P...>& subVisitor;
+
+public:
+
+	/**
+	 * Create a new visitor based on the given sub-visitor.
+	 */
+	BreadthFirstInterruptibleIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor)
+		: IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor) {};
+
+	bool visitNode(const Ptr<const Node>& node, P...context) {
+		
+		// init interrupt flag
+		bool interrupted = false;
+		std::queue<Ptr<const Node>> queue;
+
+		IRVisitor<bool, Ptr>* visitor;
+		auto lambdaVisitor = makeLambdaVisitor([&](const Ptr<const Node>& node, P...context) -> bool {
+
+			// visit the current node
+			interrupted = interrupted || this->subVisitor.visit(node, context...);
+
+			if(!interrupted) {
+				// add children of current node to the queue
+				for_each(node->getChildList(), [&](const Ptr<const Node>& cur) {
+					queue.push(cur);
+				});
+
+				// proceed with next node in the queue
+				if (!queue.empty()) {
+					Ptr<const Node> next = queue.front();
+					queue.pop();
+					visitor->visit(next);
+				}
+			}
+			return interrupted;
+		}, this->isVisitingTypes());
+
+		// update pointer ..
+		visitor = &lambdaVisitor;
+
+		// trigger the visit (only once)
+		visitor->visit(node);
+
+		return interrupted;
+	}
+};
+
+
+
+/**
  * This visitor is visiting all nodes within the IR in a DepthFirst manner. Thereby,
  * the
  */
@@ -642,7 +706,7 @@ template<
 	template<class Target> class Ptr = Pointer,
 	typename ... P
 >
-class DepthFirstOnceInterruptableIRVisitor : public IRVisitor<bool, Ptr, P...> {
+class DepthFirstOnceInterruptibleIRVisitor : public IRVisitor<bool, Ptr, P...> {
 
 	/**
 	 * The sub-visitor visiting all nodes DepthFirstly.
@@ -659,7 +723,7 @@ public:
 	/**
 	 * Create a new visitor based on the given sub-visitor.
 	 */
-	DepthFirstOnceInterruptableIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
+	DepthFirstOnceInterruptibleIRVisitor(IRVisitor<bool, Ptr, P...>& subVisitor, bool preorder = true)
 		: IRVisitor<bool, Ptr, P...>(subVisitor.isVisitingTypes()), subVisitor(subVisitor), preorder(preorder) {};
 
 
@@ -789,8 +853,8 @@ DepthFirstIRVisitor<Result, Ptr, P...> makeDepthFirstVisitor(IRVisitor<Result,Pt
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-DepthFirstInterruptableIRVisitor<Ptr, P...> makeDepthFirstInterruptableVisitor(IRVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
-	return DepthFirstInterruptableIRVisitor<Ptr, P...>(visitor, preorder);
+DepthFirstInterruptibleIRVisitor<Ptr, P...> makeDepthFirstInterruptibleVisitor(IRVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstInterruptibleIRVisitor<Ptr, P...>(visitor, preorder);
 }
 
 /**
@@ -808,11 +872,22 @@ DepthFirstPrunableIRVisitor<Ptr, P...> makeDepthFirstPrunableVisitor(IRVisitor<b
  * A factory method creating breadth first visitor visitors based on a predefined visitor.
  *
  * @param visitor the visitor to be based on
- * @return a DepthFirst visitor encapsulating the given visitor
+ * @return a BreadthFirst visitor encapsulating the given visitor
  */
 template<typename Result, template<class Target> class Ptr, typename ... P>
 BreadthFirstIRVisitor<Result, Ptr, P...> makeBreadthFirstVisitor(IRVisitor<Result,Ptr, P...>& visitor) {
 	return BreadthFirstIRVisitor<Result, Ptr, P...>(visitor);
+}
+
+/**
+ * A factory method creating breadth first interruptible visitor visitors based on a predefined visitor.
+ *
+ * @param visitor the visitor to be based on
+ * @return a BreadthFirstInterruptible visitor encapsulating the given visitor
+ */
+template<template<class Target> class Ptr, typename ... P>
+BreadthFirstInterruptibleIRVisitor<Ptr, P...> makeBreadthFirstInterruptibleVisitor(IRVisitor<bool,Ptr, P...>& visitor) {
+	return BreadthFirstInterruptibleIRVisitor<Ptr, P...>(visitor);
 }
 
 /**
@@ -833,8 +908,8 @@ DepthFirstOnceIRVisitor<Result, Ptr, P...> makeDepthFirstOnceVisitor(IRVisitor<R
  * @return a DepthFirst visitor encapsulating the given visitor
  */
 template<template<class Target> class Ptr, typename ... P>
-DepthFirstOnceInterruptableIRVisitor<Ptr, P...> makeDepthFirstOnceInterruptableVisitor(IRVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
-	return DepthFirstOnceInterruptableIRVisitor<Ptr, P...>(visitor, preorder);
+DepthFirstOnceInterruptibleIRVisitor<Ptr, P...> makeDepthFirstOnceInterruptibleVisitor(IRVisitor<bool,Ptr, P...>& visitor, bool preorder=true) {
+	return DepthFirstOnceInterruptibleIRVisitor<Ptr, P...>(visitor, preorder);
 }
 
 /**
@@ -897,21 +972,21 @@ inline void visitDepthFirst(const Ptr<Node>& root, Lambda lambda, bool preorder 
  * @return returns true if interrupted, false otherwise
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
-	return makeDepthFirstInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+	return makeDepthFirstInterruptibleVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
-	return makeDepthFirstInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+	return makeDepthFirstInterruptibleVisitor(visitor, preorder).visit(root);
 }
 
 
 template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-inline bool visitDepthFirstInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
-	return visitDepthFirstInterruptable(root, makeLambdaVisitor(lambda, visitTypes), preorder);
+inline bool visitDepthFirstInterruptible(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+	return visitDepthFirstInterruptible(root, makeLambdaVisitor(lambda, visitTypes), preorder);
 }
 
 
@@ -978,20 +1053,20 @@ inline void visitDepthFirstOnce(const Ptr<Node>& root, Lambda lambda, bool preor
  * 				   post order will be enforced.
  */
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
-	return makeDepthFirstOnceInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor, bool preorder = true) {
+	return makeDepthFirstOnceInterruptibleVisitor(visitor, preorder).visit(root);
 }
 
 // same as above, however it is accepting visitors by reference
 template<typename Node, template<class Target> class Ptr, typename ... P>
-inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
-	return makeDepthFirstOnceInterruptableVisitor(visitor, preorder).visit(root);
+inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor, bool preorder = true) {
+	return makeDepthFirstOnceInterruptibleVisitor(visitor, preorder).visit(root);
 }
 
 template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
-inline bool visitDepthFirstOnceInterruptable(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
-	return visitDepthFirstOnceInterruptable(root, makeLambdaVisitor(lambda, visitTypes), preorder);
+inline bool visitDepthFirstOnceInterruptible(const Ptr<Node>& root, Lambda lambda, bool preorder = true, bool visitTypes = false) {
+	return visitDepthFirstOnceInterruptible(root, makeLambdaVisitor(lambda, visitTypes), preorder);
 }
 
 /**
@@ -1022,8 +1097,8 @@ inline void visitDepthFirstOncePrunable(const Ptr<Node>& root, Lambda lambda, bo
 }
 
 /**
- * The given visitor is DepthFirstly applied to all nodes reachable starting from the
- * given root node. If nodes are shared within the IR, those nodes will be visited
+ * The given visitor is BreadthFirstly applied to all nodes reachable starting from the
+ * given root node. If nodes are shared within the AST, those nodes will be visited
  * multiple times.
  *
  * @param root the root not to start the visiting from
@@ -1043,6 +1118,22 @@ template<template<class Target> class Ptr, typename Node, typename Lambda,
 	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
 inline void visitBreadthFirst(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
 	return visitBreadthFirst(root, makeLambdaVisitor(lambda, visitTypes));
+}
+
+template<typename Node, template<class Target> class Ptr, typename ... P>
+inline void visitBreadthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>&& visitor) {
+	makeBreadthFirstInterruptibleVisitor(visitor).visit(root);
+}
+
+template<typename Node, template<class Target> class Ptr, typename ... P>
+inline void visitBreadthFirstInterruptible(const Ptr<Node>& root, IRVisitor<bool, Ptr, P...>& visitor) {
+	makeBreadthFirstInterruptibleVisitor(visitor).visit(root);
+}
+
+template<template<class Target> class Ptr, typename Node, typename Lambda,
+	typename Enable = typename boost::disable_if<boost::is_polymorphic<Lambda>, void>::type>
+inline void visitBreadthFirstInterruptible(const Ptr<Node>& root, Lambda lambda, bool visitTypes = false) {
+	return visitBreadthFirstInterruptible(root, makeLambdaVisitor(lambda, visitTypes));
 }
 
 } // end namespace core

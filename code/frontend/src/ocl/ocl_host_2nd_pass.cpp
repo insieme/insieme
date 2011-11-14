@@ -72,8 +72,9 @@ ClmemTable& Host2ndPass::getCleanedStructures() {
 				StructType::Entries newEntries;
 
 				for_each(entries, [&](const NamedTypePtr& entry) {
-					// todo remove kernel for irt_ version
-						if(entry->getType()->toString().find("_cl_") == string::npos || entry->getType()->toString().find("_cl_kernel") != string::npos) {
+					// todo removing kernel for irt_ version is untested
+						if((entry->getType()->toString().find("_cl_") == string::npos && entry->getType()->toString().find("irt_ocl"))
+								|| entry->getType()->toString().find("_cl_kernel") != string::npos) {
 							newEntries.push_back(entry);
 						}
 					});

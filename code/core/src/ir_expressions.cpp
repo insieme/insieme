@@ -78,7 +78,7 @@ namespace core {
 		}, false);
 
 		// run visitor => if interrupted, the definition is recursive
-		return visitDepthFirstOnceInterruptable(lambda, detector);
+		return visitDepthFirstOnceInterruptible(lambda, detector);
 	}
 
 

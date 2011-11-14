@@ -511,7 +511,11 @@ core::DeclarationStmtPtr ConversionFactory::convertVarDecl(const clang::VarDecl*
 		core::ExpressionPtr&& initExpr = convertInitExpr(definition->getInit(), var->getType(), false);
 		assert(initExpr && "not correct initialization of the variable");
 
-		ctx.thisStack2 = var;
+		//change thisstack2 only if we have a CXX object
+		if(clangType.getTypePtr()->isStructureOrClassType()) {
+			//VLOG(2) << "VarDecl: " << ctx.thisStack2 << "var " << var;
+			ctx.thisStack2 = var;
+		}
 
 		retStmt = builder.declarationStmt( var, initExpr );
 	} else {

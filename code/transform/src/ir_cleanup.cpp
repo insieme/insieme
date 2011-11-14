@@ -174,7 +174,7 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 	IRBuilder builder(mgr);
 
 	// search for array variable declarations
-	visitDepthFirstInterruptable(NodeAddress(node), [&](const DeclarationStmtAddress& curdecl) -> bool {
+	visitDepthFirstInterruptible(NodeAddress(node), [&](const DeclarationStmtAddress& curdecl) -> bool {
 		auto var = curdecl.getAddressedNode()->getVariable();
 		auto type = var->getType();
 		auto init = curdecl.getAddressedNode()->getInitialization();
@@ -224,14 +224,14 @@ core::NodePtr eliminatePseudoArrays(const core::NodePtr& node) {
 		return false;
 	});
 
-	//visitDepthFirstInterruptable(NodeAddress(node), [&](const CallExprAddress& curcall) -> bool {
+	//visitDepthFirstInterruptible(NodeAddress(node), [&](const CallExprAddress& curcall) -> bool {
 	//	for(int argIndex = 0; argIndex < curcall->getArguments().size(); ++argIndex) {
 	//		if(CallExprPtr convertcall = dynamic_pointer_cast<const CallExpr>(curcall->getArgument(argIndex))) {
 	//			if(basic.isScalarToArray(convertcall->getFunctionExpr())) {
 	//				//LOG(INFO) << "**************************************\n====\nparam:\n " << printer::PrettyPrinter(param) << "\n*********************\n";
 	//				if(LambdaExprPtr called = dynamic_pointer_cast<const LambdaExpr>(curcall->getFunctionExpr())) {
 	//					VariablePtr param = called->getParameterList()[argIndex];
-	//					visitDepthFirstInterruptable(NodeAddress(called), [&](const VariableAddress& var) {
+	//					visitDepthFirstInterruptible(NodeAddress(called), [&](const VariableAddress& var) {
 	//						if(var.getAddressedNode() == param) {
 	//							//LOG(INFO) << "****\n- used:\n " << printer::PrettyPrinter(var.getParentNode()) << "\n";
 	//							if(CallExprPtr usecall = dynamic_pointer_cast<const CallExpr>(var.getParentNode())) {

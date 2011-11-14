@@ -38,6 +38,7 @@
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace frontend {
@@ -126,6 +127,22 @@ public:
 	bool visitStringValue(const core::StringValuePtr& id) { return *id == *searchedId; }
 };
 
+/*
+ * Visitor return true if the lambda associated with the kernel variable is found in the ast
+ */
+class LambdaSearcher: public core::IRVisitor<bool, core::Address> {
+private:
+	const core::IRBuilder& builder;
+	const core::NodeAddress vAddr;
+	core::NodeAddress lAddr;
+	const core::ProgramPtr& root;
+public:
+	LambdaSearcher(const core::IRBuilder& build, const core::VariablePtr& var, const core::ProgramPtr& searchRoot) :
+		core::IRVisitor<bool, core::Address>(false), builder(build), vAddr(core::Address<const core::Variable>::find(var, searchRoot)), root(searchRoot) {}
+
+	void setLambdaVariable(const core::VariablePtr& lambda) { lAddr = core::Address<const core::Variable>::find(lambda, root); }
+	bool visitCallExpr(const core::CallExprAddress& call);
+};
 
 } //namespace ocl
 } //namespace frontend

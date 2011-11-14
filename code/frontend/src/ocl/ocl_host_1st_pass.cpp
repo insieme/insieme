@@ -120,52 +120,83 @@ bool isNullPtr(const ExpressionPtr& expr, const IRBuilder& builder) {
 	return false;
 }
 
+bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
+	path = lit->getValue();
+	return true;
+}
+
+bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
+	if (const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
+		if (lit->getStringValue() == "string.as.char.pointer") {
+			if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(tryRemove(BASIC.getRefDeref(), call->getArgument(0), builder))) {
+				path = pl->getValue();
+				return true;
+			}
+		}
+
+		if(lit->getStringValue() == "shrFindFilePath") {
+
+			const ExpressionPtr arg = tryRemove(BASIC.getRefDeref(), call->getArgument(0), builder);
+			if(const CallExprPtr& call = dynamic_pointer_cast<const CallExpr>(arg))
+				return saveString(call);
+			if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(arg))
+				return saveString(lit);
+			if(const VariablePtr& var = dynamic_pointer_cast<const Variable>(arg)){
+				KernelCodeRetriver nkcr(var, builder.literal("42", BASIC.getInt4()), program, builder);
+				visitDepthFirstInterruptible(program, nkcr);
+				string pathFound = nkcr.getKernelFilePath();
+				if(pathFound.size() > 0) {
+					path = pathFound;
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 bool KernelCodeRetriver::visitNode(const core::NodePtr& node) {
 	if (node == breakingStmt) {
-		return false; // stop recursion
+		return true; // stop recursion
 	}
-	return true; // go on with search
+	return false; // go on with search
 }
 
 bool KernelCodeRetriver::visitCallExpr(const core::CallExprPtr& callExpr) {
 	if (callExpr->getFunctionExpr() != BASIC.getRefAssign())
-		return true;
+		return false;
 	// check if it is the variable we are looking for
-	if (const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
-		if (lhs->getId() != pathToKernelFile->getId())
-			return true;
-	} else {
-		return true;
-	}
+	if (const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(pathToKernelFile)) {
+		if (const VariablePtr& lhs = dynamic_pointer_cast<const Variable>(callExpr->getArgument(0))) {
+			if (lhs->getId() != pathVar->getId())
+				return false;
+		}
 
-	if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
-		if (const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-			if (stringAsChar->getStringValue() == "string.as.char.pointer") {
-				if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-					path = pl->getValue();
-					return false;
-				}
-			}
+		if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+			return saveString(rhs);
 		}
 	}
-	return true;
+
+	if(callExpr->getArgument(0) == pathToKernelFile) {
+		if (const CallExprPtr& rhs = dynamic_pointer_cast<const CallExpr>(callExpr->getArgument(1))) {
+			return saveString(rhs);
+		}
+
+	}
+
+	return false;
 }
 
 bool KernelCodeRetriver::visitDeclarationStmt(const core::DeclarationStmtPtr& decl) {
-	if (decl->getVariable()->getId() != pathToKernelFile->getId())
-		return true;
+	if (const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(pathToKernelFile)) {
+		if (decl->getVariable()->getId() != pathVar->getId())
+			return false;
 
-	if (const CallExprPtr& callSaC = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(decl->getInitialization(), builder))) {
-		if (const LiteralPtr& stringAsChar = dynamic_pointer_cast<const Literal>(callSaC->getFunctionExpr())) {
-			if (stringAsChar->getStringValue() == "string.as.char.pointer") {
-				if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
-					path = pl->getValue();
-					return false;
-				}
-			}
+		if (const CallExprPtr& initCall = dynamic_pointer_cast<const CallExpr>(tryRemoveAlloc(decl->getInitialization(), builder))) {
+			return saveString(initCall);
 		}
 	}
-	return true;
+	return false;
 }
 
 void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const ExpressionPtr& root, const ProgramPtr& mProgram) {
@@ -181,14 +212,23 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 			}
 		}
 	}
+
+	string kernelFilePath;
 	if(const VariablePtr& pathVar = dynamic_pointer_cast<const Variable>(tryRemove(BASIC.getRefDeref(), path, builder))) {
-		//            std::cout << "PathVariable: " << pathVar << std::endl;
-		KernelCodeRetriver kcr(pathVar, root, builder);
+		KernelCodeRetriver kcr(pathVar, root, mProgram, builder);
 		visitDepthFirst(mProgram, kcr);
-		string kernelFilePath = kcr.getKernelFilePath();
-		if(kernelFilePath.size() > 0)
-			kernels = loadKernelsFromFile(kernelFilePath, builder);
+		kernelFilePath = kcr.getKernelFilePath();
 	}
+
+	if(const CallExprPtr& pathCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefDeref(), path, builder))) {
+		if(BASIC.isCompositeRefElem(pathCall->getFunctionExpr())) {
+			KernelCodeRetriver kcr(pathCall, root, mProgram, builder);
+			visitDepthFirst(mProgram, kcr);
+			kernelFilePath = kcr.getKernelFilePath();
+		}
+	}
+	if(kernelFilePath.size() > 0)
+		kernels = loadKernelsFromFile(kernelFilePath, builder);
 }
 
 const ExpressionPtr Handler::getCreateBuffer(const ExpressionPtr& devicePtr, const ExpressionPtr& sizeArg, const bool copyPtr,
@@ -236,20 +276,6 @@ const ExpressionPtr Handler::collectArgument(const ExpressionPtr& kernelArg, con
 
 		o2i.extractSizeFromSizeof(sizeArg, size, type);
 		assert(size && "Unable to deduce type from clSetKernelArg call when allocating local memory: No sizeof call found, cannot translate to INSPIRE.");
-/*		const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(index);
-		const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index);
-std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << !!idx << std::endl;
-		assert(!!idx && BASIC.isInt(idx->getType()) && "Unable to determine position of local memory argument from clSetkernelArg call");
-		// use the literal as index for the argument
-		unsigned int pos = atoi(idx->getValue().c_str());
-
-		// declare a new variable to be used as argument
-		VariablePtr localMem = builder.variable(builder.refType(builder.arrayType(type)));
-		DeclarationStmtPtr localDecl = builder.declarationStmt(localMem, builder.callExpr(BASIC.getRefVar(),
-						builder.callExpr(BASIC.getArrayCreate1D(), builder.getTypeLiteral(type), size)));
-		// should I really have access to private members or HostMapper here or is this a compiler bug?
-		localMemDecls[kernel][pos] = localDecl;
-		arg = localMem;*/
 
 		FunctionTypePtr fTy = builder.functionType(kernel->getType(), BASIC.getInt4()); //!
 		body.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), tuple,
@@ -268,46 +294,6 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 
 	arg = getVarOutOfCrazyInspireConstruct(arg, builder);
 
-	// if the argument is a scalar, we have to deref it
-	// TODO test properly
-/*			if(const CallExprPtr& sizeof_ = dynamic_pointer_cast<const CallExpr>(node->getArgument(2))) {
-		if(sizeof_->getFunctionExpr() == BASIC.getSizeof()) {
-			if(sizeof_->getArgument(0)->getType() != builder.getTypeLiteral(builder.arrayType(builder.genericType("_cl_mem")))->getType()) {
-				arg = tryDeref(getVarOutOfCrazyInspireConstruct(arg, builder), builder);
-			}
-		}
-	}*/
-
-	// check if the index argument is a (casted) integer literal
-/*	const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(index);
-	const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(cast ? cast->getSubExpression() : index);
-	if(!!idx && BASIC.isInt(idx)) {
-		// use the literal as index for the argument
-		unsigned int pos = atoi(idx->getValue().c_str());
-		if(kernelArgs[kernel].size() <= pos)
-			kernelArgs[kernel].resize(pos+1);
-
-		kernelArgs[kernel].at(pos) = arg;
-	} else {
-		// use one argument after another
-		kernelArgs[kernel].push_back(arg);
-	}*/
-
-//	TypeList argTypes = kernelArgs.find(kernel) == kernelArgs.end() ? TypeList() :
-//			static_pointer_cast<const TupleType>(kernelArgs[kernel]->getType())->getElementTypes();
-	// add the new argument to the tuple type
-/*	if(!!idx && BASIC.isInt(idx)) {
-		// use the literal as index for the argument
-		unsigned int pos = atoi(idx->getValue().c_str());
-		if(argTypes.size() <= pos)
-			argTypes.resize(pos+1);
-
-		argTypes.at(pos) = arg->getType();
-	} else {
-		// use one argument after another
-		argTypes.push_back(arg->getType());
-	}*/
-
 //	kernelArgs[kernel] = builder.variable(builder.tupleType(argTypes));
 //std::cout << "ARGUMENT: \t" << kernel->getType() << std::endl;
 
@@ -321,10 +307,6 @@ std::cout << "Index: " << index << " " << BASIC.isInt(idx->getType()) << " " << 
 
 //	std::cout << "SET PARAM: \n" << function << std::endl;
 	// store argument in a tuple
-	// TODO remove quickfix
-//	return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(BASIC.getTupleRefElem(), kernel, (BASIC.isUInt8(idx) ? idxExpr :
-//			builder.castExpr(BASIC.getUInt8(), idx)), builder.getTypeLiteral(arg->getType())), builder.callExpr(BASIC.getRefDeref(), arg));
-
 	return builder.callExpr(BASIC.getInt4(), function, kernel, builder.callExpr(BASIC.getRefDeref(), arg));
 }
 
@@ -489,13 +471,12 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 		boost::unordered_map<core::ExpressionPtr, std::vector<core::ExpressionPtr>, hash_target<core::ExpressionPtr>, equal_variables>::size_type(),
 		hash_target_specialized(build, eqMap), equal_variables(build, program)) {
 	eqIdx = 1;
-//		eqMap[builder.stringLit("fucking placeholder")] = 0;
 
 	// TODO at the moment there will always be one platform and one device, change that!
 	ADD_Handler(builder, o2i, "clGetDeviceIDs",
 			NullLitSearcher nls(builder);
 			ExpressionPtr ret;
-			if(visitDepthFirstInterruptable(node->getArgument(4), nls))
+			if(visitDepthFirstInterruptible(node->getArgument(4), nls))
 				ret = builder.intLit(0);
 			else
 				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(4));
@@ -506,7 +487,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			NullLitSearcher nls(builder);
 			ExpressionPtr ret;
 
-			if(visitDepthFirstInterruptable(node->getArgument(2), nls))
+			if(visitDepthFirstInterruptible(node->getArgument(2), nls))
 				ret = builder.intLit(0);
 			else
 				ret = builder.callExpr(o2i.getClGetIDs(), node->getArgument(2));

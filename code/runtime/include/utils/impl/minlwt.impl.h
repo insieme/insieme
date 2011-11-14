@@ -70,6 +70,17 @@ lwt_reused_stack* _lwt_get_stack(int w_id) {
 #else
 	if(ret) {
 		IRT_DEBUG("LWT_RE\n");
+		IRT_VERBOSE_ONLY(
+		{
+			int num_stacks=1;
+			lwt_reused_stack* cur = ret;
+			while(cur = cur->next) num_stacks++;
+			printf("-- %d, Reusing stack %p, %d stack(s) available:\n", w_id, ret, num_stacks);
+			cur = ret;
+			printf("---- ");
+			do { printf("%p, ", cur);  } while(cur = cur->next);
+			printf("\n");
+		});
 		lwt_g_stack_reuse.stacks[w_id] = ret->next;
 		return ret;
 	}
@@ -96,8 +107,25 @@ static inline void lwt_recycle(int tid, irt_work_item *wi) {
 		}
 	}
 #else
+	IRT_VERBOSE_ONLY(
+	{
+		int num_stacks=0;
+		if(lwt_g_stack_reuse.stacks[tid]) {
+			num_stacks=1;
+			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
+			while(cur = cur->next) num_stacks++;
+		}
+		printf("-- %d, Recycling stack %p, %d stack(s) available:\n", tid, wi->stack_storage, num_stacks);
+		if(lwt_g_stack_reuse.stacks[tid]) {
+			lwt_reused_stack* cur = lwt_g_stack_reuse.stacks[tid];
+			printf("---- ");
+			do { printf("%p, ", cur);  } while(cur = cur->next);
+			printf("\n");
+		}
+	});
 	wi->stack_storage->next = lwt_g_stack_reuse.stacks[tid];
 	lwt_g_stack_reuse.stacks[tid] = wi->stack_storage;
+	wi->stack_storage = NULL;
 	IRT_DEBUG("LWT_CYC\n");
 #endif
 }
@@ -123,7 +151,9 @@ static inline void lwt_prepare(int tid, irt_work_item *wi, intptr_t *basestack) 
 //	wi->stack_start = wi->stack_ptr - IRT_WI_STACK_SIZE;
 }
 
+#ifdef __GNUC__
 __attribute__ ((noinline))
+#endif
 void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestack, wi_implementation_func* func) {
 	__asm__ (
 		/* save registers on stack */
@@ -156,13 +186,11 @@ void lwt_continue_impl(irt_work_item *wi, intptr_t *newstack, intptr_t *basestac
 void lwt_start(irt_work_item *wi, intptr_t *basestack, wi_implementation_func* func) {
 	lwt_continue_impl(wi, &wi->stack_ptr, basestack, func);
 }
-//__attribute__ ((noinline))
 void lwt_continue(intptr_t *newstack, intptr_t *basestack) {
 	//IRT_DEBUG("CONTINUE Newstack before: %p, Basestack before: %p", *newstack, *basestack);
 	lwt_continue_impl(NULL, newstack, basestack, NULL);
 	//IRT_DEBUG("CONTINUE Newstack after: %p, Basestack after: %p", *newstack, *basestack);
 }
-
 void lwt_end(intptr_t *basestack) {
 	intptr_t dummy;
 	lwt_continue_impl(NULL, basestack, &dummy, NULL);
@@ -202,24 +230,30 @@ void lwt_end(intptr_t *basestack) {
 // ----------------------------------------------------------------------------
 // Fallback ucontext implementation
 
-static inline void lwt_prepare(irt_work_item *wi, ucontext_t *basestack) {
-	wi->stack_start = (intptr_t)malloc(IRT_WI_STACK_SIZE);
+static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack) {
+	wi->stack_storage =  _lwt_get_stack(tid);
 	wi->stack_ptr.uc_link          = basestack;
-	wi->stack_ptr.uc_stack.ss_sp   = (char*)wi->stack_start;
+	wi->stack_ptr.uc_stack.ss_sp   = (char*)wi->stack_storage->stack;
 	wi->stack_ptr.uc_stack.ss_size = IRT_WI_STACK_SIZE;
 	getcontext(&wi->stack_ptr);
 }
 
-void lwt_start(irt_work_item *wi, ucontext_t *basestack, wi_implementation_func* func) {
+void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func) {
 	makecontext(&wi->stack_ptr, (void(*)(void))func, 1, wi);
 	swapcontext(basestack, &wi->stack_ptr);
 }
-void lwt_continue(ucontext_t *newstack, ucontext_t *basestack) {
+void lwt_continue(lwt_context *newstack, lwt_context *basestack) {
 	swapcontext(basestack, newstack);
 }
-void lwt_end(ucontext_t *basestack) {
+void lwt_end(lwt_context *basestack) {
 	setcontext(basestack);
 }
+
+//static inline void lwt_prepare(int tid, irt_work_item *wi, lwt_context *basestack);
+//static inline void lwt_recycle(int tid, irt_work_item *wi);
+//void lwt_start(irt_work_item *wi, lwt_context *basestack, wi_implementation_func* func);
+//void lwt_continue(lwt_context *newstack, lwt_context *basestack);
+//void lwt_end(lwt_context *basestack);
 
 //#endif
 #endif

@@ -468,7 +468,7 @@ public:
 
 };
 
-TEST(IRVisitor, RecursiveInterruptableVisitorTest) {
+TEST(IRVisitor, RecursiveInterruptibleVisitorTest) {
 
 	// TODO: run recursive visitor test
 
@@ -486,11 +486,11 @@ TEST(IRVisitor, RecursiveInterruptableVisitorTest) {
 	);
 
 	limit3.reset();
-	EXPECT_TRUE(visitDepthFirstInterruptable(ifStmt, limit3));
+	EXPECT_TRUE(visitDepthFirstInterruptible(ifStmt, limit3));
 	EXPECT_EQ ( 3, limit3.counter );
 
 	limit10.reset();
-	EXPECT_FALSE(visitDepthFirstInterruptable(ifStmt, limit10));
+	EXPECT_FALSE(visitDepthFirstInterruptible(ifStmt, limit10));
 	EXPECT_EQ ( 7, limit10.counter );
 
 	// ------ test for addresses ----
@@ -498,17 +498,17 @@ TEST(IRVisitor, RecursiveInterruptableVisitorTest) {
 	InterruptingVisitor<Address> limitA10(10);
 
 	limitA3.reset();
-	EXPECT_TRUE(visitDepthFirstInterruptable(NodeAddress(ifStmt), limitA3));
+	EXPECT_TRUE(visitDepthFirstInterruptible(NodeAddress(ifStmt), limitA3));
 	EXPECT_EQ ( 3, limitA3.counter );
 
 	limitA10.reset();
-	visitDepthFirstInterruptable(ifStmt, limit10);
-	EXPECT_FALSE(visitDepthFirstInterruptable(NodeAddress(ifStmt), limitA10));
+	visitDepthFirstInterruptible(ifStmt, limit10);
+	EXPECT_FALSE(visitDepthFirstInterruptible(NodeAddress(ifStmt), limitA10));
 	EXPECT_EQ ( 7, limitA10.counter );
 }
 
 
-TEST(IRVisitor, VisitOnceInterruptableVisitorTest) {
+TEST(IRVisitor, VisitOnceInterruptibleVisitorTest) {
 
 	// TODO: run recursive visitor test
 
@@ -526,11 +526,11 @@ TEST(IRVisitor, VisitOnceInterruptableVisitorTest) {
 	);
 
 	limit3.reset();
-	EXPECT_TRUE(visitDepthFirstOnceInterruptable(ifStmt, limit3));
+	EXPECT_TRUE(visitDepthFirstOnceInterruptible(ifStmt, limit3));
 	EXPECT_EQ ( 3, limit3.counter );
 
 	limit10.reset();
-	EXPECT_FALSE(visitDepthFirstOnceInterruptable(ifStmt, limit10));
+	EXPECT_FALSE(visitDepthFirstOnceInterruptible(ifStmt, limit10));
 	EXPECT_EQ ( 6, limit10.counter );
 
 	// check number of nodes when visiting all nodes
@@ -543,11 +543,11 @@ TEST(IRVisitor, VisitOnceInterruptableVisitorTest) {
 	InterruptingVisitor<Address> limitA10(10);
 
 	limitA3.reset();
-	EXPECT_TRUE(visitDepthFirstOnceInterruptable(NodeAddress(ifStmt), limitA3));
+	EXPECT_TRUE(visitDepthFirstOnceInterruptible(NodeAddress(ifStmt), limitA3));
 	EXPECT_EQ ( 3, limitA3.counter );
 
 	limitA10.reset();
-	EXPECT_FALSE(visitDepthFirstOnceInterruptable(NodeAddress(ifStmt), limitA10));
+	EXPECT_FALSE(visitDepthFirstOnceInterruptible(NodeAddress(ifStmt), limitA10));
 	EXPECT_EQ ( 6, limitA10.counter );
 
 	// check number of nodes when visiting all nodes

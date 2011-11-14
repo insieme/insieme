@@ -47,13 +47,17 @@
 #include "utils/impl/minlwt.impl.h"
 #include "utils/affinity.h"
 #include "impl/error_handling.impl.h"
-#include "impl/wi_performance.impl.h"
+#include "impl/instrumentation.impl.h"
 
 #ifdef IRT_VERBOSE
 void _irt_worker_print_debug_info(irt_worker* self) {
-	IRT_INFO("======== Worker %p debug info:\n", (void*)self);
-	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack);
-	IRT_INFO("== Current wi: %p\n", (void*)self->cur_wi);
+	IRT_INFO("======== Worker %p debug info:\n", self);
+#ifdef USING_MINLWT	
+	IRT_INFO("== Base ptr: %p\n", (void*)self->basestack); // casting to void* would break 32 bit compatibility
+#else
+	IRT_INFO("== Base ptr: %p\n", &(self->basestack)); // casting to void* would break 32 bit compatibility
+#endif
+	IRT_INFO("== Current wi: %p\n", self->cur_wi);
 	//IRT_INFO("==== Pool:\n");
 	//irt_work_item* next_wi = self->pool.start;
 	//while(next_wi != NULL) {
@@ -95,7 +99,13 @@ void* _irt_worker_func(void *argvp) {
 	self->affinity = arg->affinity;
 	self->cur_context = irt_context_null_id();
 	self->cur_wi = NULL;
+#ifdef IRT_ENABLE_INSTRUMENTATION
+	self->performance_data = irt_create_performance_table(IRT_WORKER_PD_BLOCKSIZE);
+#else
+	self->performance_data = 0;
+#endif
 	self->state = IRT_WORKER_STATE_CREATED;
+	irt_worker_instrumentation_event(self, WORKER_CREATED);
 	irt_scheduling_init_worker(self);
 	IRT_ASSERT(pthread_setspecific(irt_g_worker_key, arg->generated) == 0, IRT_ERR_INTERNAL, "Could not set worker threadprivate data");
 	// init lazy wi
@@ -111,6 +121,7 @@ void* _irt_worker_func(void *argvp) {
 	arg->ready = true;
 
 	while(!self->state == IRT_WORKER_STATE_START) { pthread_yield(); } // MARK busy wait
+	irt_worker_instrumentation_event(self, WORKER_RUNNING);
 	self->state = IRT_WORKER_STATE_RUNNING;
 	irt_scheduling_loop(self);
 
@@ -130,17 +141,26 @@ void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi) {
 		lwt_prepare(self->id.value.components.thread, wi, &self->basestack);
 
 		self->cur_wi = wi;
+#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
+#else
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1A, new stack ptr: %p.", self, &(wi->stack_ptr));
+#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
-		irt_wi_insert_performance_start(wi->performance_data);
+		irt_wi_instrumentation_event(wi, WORK_ITEM_STARTED);
 		lwt_start(wi, &self->basestack, (irt_context_table_lookup(self->cur_context)->impl_table[wi->impl_id].variants[0].implementation));
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 1B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
 	} else { 
 		// resume WI
 		self->cur_wi = wi;
+#ifdef USING_MINLWT
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, (void*)wi->stack_ptr);
+#else
+		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2A, new stack ptr: %p.", self, &(wi->stack_ptr));
+#endif
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
+		irt_wi_instrumentation_event(wi, WORK_ITEM_RESUMED);
 		lwt_continue(&wi->stack_ptr, &self->basestack);
 		IRT_DEBUG("Worker %p _irt_worker_switch_to_wi - 2B.", self);
 		IRT_VERBOSE_ONLY(_irt_worker_print_debug_info(self));
@@ -187,6 +207,7 @@ void _irt_worker_cancel_all_others() {
 		cur = irt_g_workers[i];
 		if(cur != self && cur->state == IRT_WORKER_STATE_RUNNING) {
 			cur->state = IRT_WORKER_STATE_STOP;
+			irt_worker_instrumentation_event(cur, WORKER_STOP);
 			pthread_cancel(cur->pthread);
 		}
 	}

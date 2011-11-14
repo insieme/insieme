@@ -65,8 +65,8 @@ VariablePtr VariableTable::lookup(const StringValuePtr& id) {
     auto entry = table.find(id);
 
     if(entry == table.end()) {
-        std::cerr << "Variable '" << id << "' not defined.\n";
-        throw ParseException();
+		const string err = "FAIL at '" + id->toString() + "'\n";
+        throw ParseException(err);
     }
 
     return entry->second;
@@ -85,9 +85,16 @@ TypePtr IRParser::parseType(const std::string& input) {
 	TypePtr result;
 	TypeGrammar<TypePtr, IntTypeParamPtr, StringValuePtr> typeGrammar(nodeMan);
 	auto startIt = input.cbegin(), endIt = input.cend();
-	bool parse_result = qi::phrase_parse(startIt, endIt, typeGrammar, qi::space, result);
-	parse_result = parse_result && (startIt == endIt);
-	if(!parse_result) throw ParseException();
+	bool parse_result = false;
+	try {
+		parse_result = qi::phrase_parse(startIt, endIt, typeGrammar, qi::space, result);
+		parse_result = parse_result && (startIt == endIt);
+	} catch(ParseException& pe) {
+		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
+	}
+	if(!parse_result) throw ParseException("Parsing of Type FAILED");
 	return result;
 }
 
@@ -95,9 +102,16 @@ ExpressionPtr IRParser::parseExpression(const std::string& input) {
 	ExpressionPtr result;
 	ExpressionGrammar<ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr> exprGrammar(nodeMan);
 	auto startIt = input.cbegin(), endIt = input.cend();
-	bool parse_result = qi::phrase_parse(startIt, endIt, exprGrammar, qi::space, result);
-	parse_result = parse_result && (startIt == endIt);
-	if(!parse_result) throw ParseException();
+	bool parse_result = false;
+	try {
+		parse_result = qi::phrase_parse(startIt, endIt, exprGrammar, qi::space, result);
+		parse_result = parse_result && (startIt == endIt);
+	} catch(ParseException& pe) {
+		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
+	}
+	if(!parse_result) throw ParseException("Parsing of Expression FAILED");
 	return result;
 }
 
@@ -105,9 +119,16 @@ StatementPtr IRParser::parseStatement(const std::string& input) {
     StatementPtr result;
     StatementGrammar<StatementPtr, ExpressionPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr> stmtGrammar(nodeMan);
     auto startIt = input.cbegin(), endIt = input.cend();
-    bool parse_result = qi::phrase_parse(startIt, endIt, stmtGrammar, qi::space, result);
-    parse_result = parse_result && (startIt == endIt);
-    if(!parse_result) throw ParseException();
+	bool parse_result = false;
+	try {
+		parse_result = qi::phrase_parse(startIt, endIt, stmtGrammar, qi::space, result);
+		parse_result = parse_result && (startIt == endIt);
+	} catch(ParseException& pe) {
+		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
+	}
+	if(!parse_result) throw ParseException("Parsing of Statement FAILED");
     return result;
 }
 
@@ -115,9 +136,33 @@ ProgramPtr IRParser::parseProgram(const std::string& input) {
     ProgramPtr result;
     ProgramGrammar<ProgramPtr, ExpressionPtr> progGrammar(nodeMan);
     auto startIt = input.cbegin(), endIt = input.cend();
-    bool parse_result = qi::phrase_parse(startIt, endIt, progGrammar, qi::space, result);
-    parse_result = parse_result && (startIt == endIt);
-    if(!parse_result) throw ParseException();
+	bool parse_result = false;
+	try {
+		parse_result = qi::phrase_parse(startIt, endIt, progGrammar, qi::space, result);
+		parse_result = parse_result && (startIt == endIt);
+	} catch(ParseException& pe) {
+		std::cerr << "Parsing ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
+	}
+	if(!parse_result) throw ParseException("Parsing of Program FAILED");
+    return result;
+}
+
+NodePtr IRParser::parseIR(const std::string& input) {
+    NodePtr result;
+    IRGrammar<ProgramPtr, ExpressionPtr> irGrammar(nodeMan);
+    auto startIt = input.cbegin(), endIt = input.cend();
+	bool parse_result = false;
+	try {
+		parse_result = qi::phrase_parse(startIt, endIt, irGrammar, qi::space, result);
+		parse_result = parse_result && (startIt == endIt);
+	} catch(insieme::core::parse::ParseException& pe) {
+		std::cerr << "ERROR: " << pe.what() << std::endl;
+	} catch(SemanticException& se) {
+		std::cerr << "Semantic ERROR: " << se.what() << std::endl;
+	}
+	if(!parse_result) throw ParseException("Parsing of IR Code FAILED");
     return result;
 }
 
@@ -137,6 +182,11 @@ StatementPtr parseStatement(NodeManager& nodeMan, const string& input) {
 ProgramPtr parseProgram(NodeManager& nodeMan, const string& input) {
     IRParser parser(nodeMan);
     return parser.parseProgram(input);
+}
+
+NodePtr parseIR(NodeManager& nodeMan, const string& input) {
+    IRParser parser(nodeMan);
+    return parser.parseIR(input);
 }
 
 
