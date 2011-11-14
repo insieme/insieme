@@ -37,22 +37,16 @@
 #include "insieme/frontend/omp/omp_sema.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/manipulation.h"
-#include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_mapper.h"
-#include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/utils/set_utils.h"
 #include "insieme/utils/logging.h"
-#include "insieme/utils/annotation.h"
 
-#include <stack>
-
+#include "insieme/core/lang/basic.h"
 
 namespace insieme {
 namespace frontend {
 namespace omp {
-	
-using namespace std;
+
 using namespace core;
 using namespace utils::log;
 
@@ -60,173 +54,16 @@ namespace cl = lang;
 namespace us = utils::set;
 namespace um = utils::map;
 
-struct GlobalRequiredAnnotation : public NodeAnnotation { 
-	const static string name;
-	const static utils::StringKey<GlobalRequiredAnnotation> key; 
-	virtual const utils::AnnotationKey* getKey() const {
-		return &key;
-	}
-	virtual const std::string& getAnnotationName() const {
-		return name;
-	}
-	virtual bool migrate(const NodeAnnotationPtr& ptr, const NodePtr& before, const NodePtr& after) const {
-		after->addAnnotation(ptr);
-		return true; 
-	};
-};
-const string GlobalRequiredAnnotation::name = "GlobalRequiredAnnotation";
-const utils::StringKey<GlobalRequiredAnnotation> GlobalRequiredAnnotation::key("GlobalRequiredAnnotation");
-
-// Utilities for marking paths that require OMP globals and gathering the required globals
-namespace {
-	StructExpr::Members markGlobalUsers(const core::ProgramPtr& prog) {
-		NodeManager& nodeMan = prog->getNodeManager();
-		ASTBuilder builder(nodeMan);
-		boost::unordered_set<std::string> handledGlobals;
-		StructExpr::Members retval;
-		auto anno = std::make_shared<GlobalRequiredAnnotation>();
-		visitDepthFirst(ProgramAddress(prog), [&](const LiteralAddress& lit) {
-			const string& gname = lit->getValue();
-			if(gname.find("global_omp") == 0) {
-				// add global to set if required
-				if(handledGlobals.count(gname) == 0) {
-					ExpressionPtr initializer;
-					if(nodeMan.basic.isLock(lit->getType())) {
-						initializer = builder.createLock();
-					} else assert(false && "Unsupported OMP global type");
-					retval.push_back(StructExpr::Member(builder.identifier(gname), initializer));
-					handledGlobals.insert(gname);
-				}
-				// mark upward path from global
-				auto pathMarker = makeLambdaVisitor([&](const NodeAddress& node) { node->addAnnotation(anno); });
-				visitPathBottomUp(lit, pathMarker);
-			}
-		});
-		return retval;
-	}
-}
-
-// Utilities for passing global to functions that require it, and replacing literals with global accesses
-namespace {
-	class GlobalMapper : public NodeMapping {
-		NodeManager& nodeMan;
-		ASTBuilder build;
-		VariablePtr curVar;
-		bool startedMapping;
-
-	public:
-		GlobalMapper(NodeManager& nodeMan, const VariablePtr& global) 
-				: nodeMan(nodeMan), build(nodeMan), curVar(global), startedMapping(false) {
-		}
-
-	protected:
-		virtual const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
-			// only start mapping once global is encountered
-			if(*ptr == *curVar) startedMapping = true;
-			if(!startedMapping) return ptr->substitute(nodeMan, *this);
-			if(ptr->hasAnnotation(GlobalRequiredAnnotation::key)) {
-				//LOG(INFO) << "?????? Mapping 1 T: " << getNodeTypeName(ptr->getNodeType()) << " -- N: " << *ptr;
-				// recursively forward the variable
-				switch(ptr->getNodeType()) {
-				case NT_CallExpr:
-					return mapCall(static_pointer_cast<const CallExpr>(ptr));
-					break;
-				case NT_BindExpr:
-					return mapBind(static_pointer_cast<const BindExpr>(ptr));
-					break;
-				case NT_LambdaExpr:
-					return mapLambdaExpr(static_pointer_cast<const LambdaExpr>(ptr));
-					break;
-				case NT_Literal:
-					return mapLiteral(static_pointer_cast<const Literal>(ptr));
-					break;
-				default:
-					// no changes at this node, but at child nodes
-					return ptr->substitute(nodeMan, *this);
-				}
-			} else {
-				//LOG(INFO) << "?????? Mapping 2 " << ptr;
-				// no changes required
-				return ptr;
-			}
-		}
-		
-		const NodePtr mapCall(const CallExprPtr& call) {
-			//LOG(INFO) << "?????? Mapping call " << call;
-			auto func = call->getFunctionExpr();
-			if(func && func->hasAnnotation(GlobalRequiredAnnotation::key)) {
-				vector<ExpressionPtr> newCallArgs = call->getArguments();
-				newCallArgs.push_back(curVar);
-				// complete call
-				return build.callExpr(call->getType(), static_pointer_cast<const Expression>(func->substitute(nodeMan, *this)), newCallArgs);
-			}
-			return call->substitute(nodeMan, *this);
-		}
-		const NodePtr mapBind(const BindExprPtr& bind) {
-			//LOG(INFO) << "?????? Mapping bind " << bind;
-			auto boundCall = bind->getCall();
-			auto boundCallFunc = boundCall->getFunctionExpr();
-			if(boundCallFunc && boundCallFunc->hasAnnotation(GlobalRequiredAnnotation::key)) {
-				vector<ExpressionPtr> newBoundCallArguments = boundCall->getArguments();
-				newBoundCallArguments.push_back(curVar);
-				auto newFunctionExpr = this->map(boundCall->getFunctionExpr());
-				auto newCall = build.callExpr(boundCall->getType(), newFunctionExpr, newBoundCallArguments);
-				return build.bindExpr(bind->getParameters(), newCall);
-			}
-			return bind->substitute(nodeMan, *this);
-		}
-		const NodePtr mapLambdaExpr(const LambdaExprPtr& lambdaExpr) {
-			LambdaExprPtr ret;
-			//LOG(INFO) << "?????? Mapping lambda expr " << lambdaExpr;
-			auto lambdaDef = lambdaExpr->getDefinition();
-			auto lambda = lambdaExpr->getLambda();
-			// create new var for global struct
-			VariablePtr innerVar = build.variable(curVar->getType());
-			VariablePtr outerVar = curVar;
-			curVar = innerVar;
-			// map body
-			auto newBody = static_pointer_cast<const CompoundStmt>(lambda->getBody()->substitute(nodeMan, *this));
-			// add param
-			Lambda::ParamList newParams = lambda->getParameterList();
-			newParams.push_back(curVar);
-			// build replacement lambda
-			TypePtr retType = lambda->getType()->getReturnType();
-			//TypeList paramTypes = ::transform(newParams, [&](const VariablePtr& v){ return v->getType(); });
-			//FunctionTypePtr lambdaType = build.functionType(paramTypes, retType);
-			//auto newLambda = build.lambda(lambdaType, newParams, newBody);
-			// restore previous global variable
-			curVar = outerVar;
-			// build replacement lambda expression
-			ret = build.lambdaExpr(retType, newBody, newParams);
-			//LOG(INFO) << "!!!!!!! Mapped lambda expr " << ret;
-			return ret;
-		}
-		const NodePtr mapLiteral(const LiteralPtr& literal) {
-			const string& gname = literal->getValue();
-			if(gname.find("global_omp") == 0) {
-				return build.accessMember(curVar, gname);
-			}
-			return literal;
-		}
-	};
-}
-
-
 const core::ProgramPtr applySema(const core::ProgramPtr& prog, core::NodeManager& resultStorage) {
 	ProgramPtr result = prog;
+	auto globalDecl = transform::createGlobalStruct(resultStorage, result);
 	for(;;) {
-		SemaVisitor v(resultStorage, prog);
+		SemaVisitor v(resultStorage, prog, globalDecl);
 		core::visitDepthFirstInterruptible(core::ProgramAddress(result), v);
 		if(v.getReplacement()) result = v.getReplacement();
 		else break;	
 	}
-	// fix globals
-	auto collectedGlobals = markGlobalUsers(result);
-	//LOG(INFO) << "[[[[[[[[[[[[[[[[[ PRE\n" << core::printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-	auto globalDecl = transform::createGlobalStruct(resultStorage, result, collectedGlobals);
-	//LOG(INFO) << "[[[[[[[[[[[[[[[[[ POST\n" << core::printer::PrettyPrinter(result, core::printer::PrettyPrinter::OPTIONS_DETAIL);
-	GlobalMapper mapper(resultStorage, globalDecl->getVariable());
-	return mapper.map(result);
+	return result;
 }
 
 bool SemaVisitor::visitNode(const NodeAddress& node) {
