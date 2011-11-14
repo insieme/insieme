@@ -131,8 +131,8 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr, irt_ocl_event* wait_event, irt_ocl_event* event);
 void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr, irt_ocl_event* event_wait, irt_ocl_event* event);
 void irt_ocl_copy_buffer(irt_ocl_buffer* src_buf, irt_ocl_buffer* dest_buf, size_t size);
-void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size);
-void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
+void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size, irt_ocl_event* wait_event, irt_ocl_event* event);
+void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr, irt_ocl_event* wait_event, irt_ocl_event* event);
 void irt_ocl_release_buffer(irt_ocl_buffer* buf);
 void irt_ocl_release_buffers(cl_uint num, ...);
 

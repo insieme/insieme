@@ -275,15 +275,21 @@ inline void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t si
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error reading buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
-inline void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size) {
+inline void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size, irt_ocl_event* wait_event, irt_ocl_event* event) {
+	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
+	_irt_cl_set_event(wait_event, event, &wait_ev, &ev, &num);
+	
 	cl_int err_code;
-	void* ptr = clEnqueueMapBuffer(buf->dev->queue, buf->mem, blocking, map_flags, 0, size, 0, NULL, NULL, &err_code); 
+	void* ptr = clEnqueueMapBuffer(buf->dev->queue, buf->mem, blocking, map_flags, 0, size, num, wait_ev, ev, &err_code); 
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error mapping buffer: \"%s\"",  _irt_error_string(err_code));
 	return ptr;
 }
 
-inline void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr) {
-	cl_int err_code = clEnqueueUnmapMemObject(buf->dev->queue, buf->mem, mapped_ptr, 0, NULL, NULL);
+inline void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr, irt_ocl_event* wait_event, irt_ocl_event* event) {
+	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
+	_irt_cl_set_event(wait_event, event, &wait_ev, &ev, &num);
+
+	cl_int err_code = clEnqueueUnmapMemObject(buf->dev->queue, buf->mem, mapped_ptr, num, wait_ev, ev);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error unmapping buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
