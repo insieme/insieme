@@ -52,50 +52,58 @@ int main(int argc, char* argv[]) {
 		input2[i] = i*2;
 	}
 
-	//irt_ocl_timer* time1 = irt_ocl_init_timer(IRT_OCL_SEC);
-	//irt_ocl_start_timer(time1);
+	irt_ocl_timer* time1 = irt_ocl_init_timer(IRT_OCL_SEC);
+	irt_ocl_start_timer(time1);
 	irt_ocl_init_devices(IRT_OCL_CPU);
-	//printf("%f\n", irt_ocl_stop_timer(time1));
+	printf("TIME for initialization: %f\n", irt_ocl_stop_timer(time1));
 	
 	if (irt_ocl_get_num_devices() != 0) {
 		irt_ocl_device* dev = irt_ocl_get_device(0);
 
-		//irt_ocl_print_device_infos(dev);
-		//irt_ocl_print_device_short_info(dev);
+		irt_ocl_print_device_short_info(dev);
 		irt_ocl_kernel* kernel = irt_ocl_create_kernel(dev, "vec_add.cl", "vec_add", "", IRT_OCL_SOURCE);
 		
-		irt_ocl_buffer* buf_input1;
-		buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
+		irt_ocl_buffer* buf_input1 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
 		irt_ocl_buffer* buf_input2 = irt_ocl_create_buffer(dev, CL_MEM_READ_ONLY, sizeof(int) * SIZE);
 		irt_ocl_buffer* buf_output = irt_ocl_create_buffer(dev, CL_MEM_WRITE_ONLY, sizeof(int) * SIZE);
 
-		irt_ocl_write_buffer(buf_input1, CL_FALSE, sizeof(int) * SIZE, &input1[0]);
-		irt_ocl_write_buffer(buf_input2, CL_FALSE, sizeof(int) * SIZE, &input2[0]);
+		irt_ocl_event* wb1 = irt_ocl_create_event();
+		irt_ocl_event* wb2 = irt_ocl_create_event();
+		irt_ocl_event* rb = irt_ocl_create_event();
 
+		irt_ocl_write_buffer(buf_input1, CL_FALSE, sizeof(int) * SIZE, &input1[0], NULL, wb1);
+		irt_ocl_write_buffer(buf_input2, CL_FALSE, sizeof(int) * SIZE, &input2[0], NULL, wb2);
+		
 		size_t szLocalWorkSize = 256;
 		float multiplier = SIZE/(float)szLocalWorkSize;
 		if(multiplier > (int)multiplier)
 			multiplier += 1;
 		size_t szGlobalWorkSize = (int)multiplier * szLocalWorkSize;
-	
-		irt_ocl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, 4,   (size_t)0, (void *)buf_input1,
+
+		irt_ocl_event* rk = irt_ocl_create_event();
+		irt_ocl_event* wb_all = irt_ocl_create_event_list(2, wb1, wb2);	
+		irt_ocl_run_kernel(kernel, 1, &szGlobalWorkSize, &szLocalWorkSize, wb_all, rk, 4,
+											(size_t)0, (void *)buf_input1,
 											(size_t)0, (void *)buf_input2,
 											(size_t)0, (void *)buf_output,
 											sizeof(cl_int), (void *)&size);
-
-		irt_ocl_read_buffer(buf_output, CL_TRUE, sizeof(int) * SIZE, &output[0]);
+		
+		irt_ocl_read_buffer(buf_output, CL_TRUE, sizeof(int) * SIZE, &output[0], rk, rb);
+		
+		printf("Time wb1 %f\n", irt_ocl_profile_event(wb1, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));		
+		printf("Time wb2 %f\n", irt_ocl_profile_event(wb2, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));
+		printf("Time rk %f\n", irt_ocl_profile_event(rk, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));
+		printf("Time rb %f\n", irt_ocl_profile_event(rb, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));
 	
-		irt_ocl_release_buffer(buf_input1);
-		irt_ocl_release_buffer(buf_input2);
-		irt_ocl_release_buffer(buf_output);
+		irt_ocl_release_events(5, wb1, wb2, wb_all, rk, rb);
+		irt_ocl_release_buffers(3, buf_input1, buf_input2, buf_output);
 		irt_ocl_release_kernel(kernel);
 	}
-	//irt_ocl_restart_timer(time1);
+	irt_ocl_restart_timer(time1);
 	irt_ocl_release_devices();
-	//printf("%f\n", irt_ocl_stop_timer(time1));
-	//irt_ocl_release_timer(time1);
+	printf("TIME for releasing the devices: %f\n", irt_ocl_stop_timer(time1));
+	irt_ocl_release_timer(time1);
 	
-
 	// CHECK for output
 	printf("======================\n= Vector Addition Done\n");
 	unsigned int check = 1;

@@ -113,6 +113,11 @@ typedef struct _irt_ocl_kernel {
 	irt_ocl_device* dev;
 } irt_ocl_kernel;
 
+typedef struct _irt_ocl_event {
+	cl_event* event;
+	cl_uint num_event;
+} irt_ocl_event;
+
 
 irt_ocl_device* devices;
 cl_uint num_devices;
@@ -123,15 +128,16 @@ irt_ocl_device* irt_ocl_get_device(cl_uint id);
 void irt_ocl_release_devices();
 
 irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, size_t size);
-void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr);
-void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr);
+void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr, irt_ocl_event* wait_event, irt_ocl_event* event);
+void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr, irt_ocl_event* event_wait, irt_ocl_event* event);
 void irt_ocl_copy_buffer(irt_ocl_buffer* src_buf, irt_ocl_buffer* dest_buf, size_t size);
 void* irt_ocl_map_buffer(irt_ocl_buffer* buf, cl_bool blocking, cl_map_flags map_flags, size_t size);
 void irt_ocl_unmap_buffer(irt_ocl_buffer* buf, void* mapped_ptr);
 void irt_ocl_release_buffer(irt_ocl_buffer* buf);
+void irt_ocl_release_buffers(cl_uint num, ...);
 
 irt_ocl_kernel* irt_ocl_create_kernel(irt_ocl_device* dev, const char* file_name, const char* kernel_name, const char* build_options, irt_ocl_create_kernel_flag flag);
-void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...);
+void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, irt_ocl_event* wait_event, irt_ocl_event* event, cl_uint num_args, ...);
 void irt_ocl_release_kernel(irt_ocl_kernel* kernel);
 
 void irt_ocl_print_device_short_info(irt_ocl_device* dev);
@@ -151,5 +157,9 @@ void irt_ocl_restart_timer(irt_ocl_timer* timer);
 float irt_ocl_stop_timer(irt_ocl_timer* timer);
 void irt_ocl_release_timer(irt_ocl_timer* timer);
 
-float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag);
-float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag);
+irt_ocl_event* irt_ocl_create_event();
+irt_ocl_event* irt_ocl_create_event_list(cl_uint num_event, ...);
+void irt_ocl_release_event(irt_ocl_event* event);
+void irt_ocl_release_events(cl_uint num, ...);
+double irt_ocl_profile_event(irt_ocl_event* event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag);
+double irt_ocl_profile_events(irt_ocl_event* event_one, cl_profiling_info event_one_command, irt_ocl_event* event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag);

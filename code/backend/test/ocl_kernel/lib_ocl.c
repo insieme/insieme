@@ -128,7 +128,7 @@ void irt_ocl_init_devices(cl_device_type device_type) {
 						dev->device = cl_devices[i];
 						dev->context = clCreateContext(NULL, 1, &dev->device, NULL, NULL, &err_code);
 						IRT_ASSERT(err_code == CL_SUCCESS &&dev->context != NULL, "Error creating context: \"%s\"", _irt_error_string(err_code));
-						dev->queue = clCreateCommandQueue(dev->context, dev->device, 0, &err_code); //FIXME: CL_QUEUE_PROFILING_ENABLE, &err_code);
+						dev->queue = clCreateCommandQueue(dev->context, dev->device, CL_QUEUE_PROFILING_ENABLE, &err_code);
 						IRT_ASSERT(err_code == CL_SUCCESS && dev->queue != NULL, "Error creating queue: \"%s\"", _irt_error_string(err_code));
 						
 						// Device Info
@@ -229,7 +229,6 @@ irt_ocl_buffer* irt_ocl_create_buffer(irt_ocl_device* dev, cl_mem_flags flags, s
 
 inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
 	IRT_ASSERT(buf != NULL, "Error releasing buffer");
-	
 	// free the buffer
 	cl_int err_code = clReleaseMemObject(buf->mem);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error releasing cl_mem: \"%s\"", _irt_error_string(err_code));
@@ -239,13 +238,40 @@ inline void irt_ocl_release_buffer(irt_ocl_buffer* buf) {
 	buf = NULL;
 }
 
-inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr) {
-	cl_int err_code = clEnqueueWriteBuffer(buf->dev->queue, buf->mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
+void irt_ocl_release_buffers(cl_uint num, ...){
+	va_list arg_list;
+	va_start(arg_list, num);
+	for (cl_uint i = 0; i < num; i++){
+		irt_ocl_release_buffer(va_arg(arg_list, irt_ocl_buffer*));
+	}
+	va_end(arg_list);
+}
+
+static void _irt_cl_set_event(irt_ocl_event* wait_event, irt_ocl_event* event, cl_event** wait_ev, cl_event** ev, cl_uint* num){ // pay attention they are pointer to pointer
+	if (event != NULL) {
+		IRT_ASSERT(event->num_event == 1, "Error in events handler: Expected one single event");
+		*ev = event->event;
+	}
+
+	if (wait_event != NULL) {
+		*num = wait_event->num_event;
+		*wait_ev = wait_event->event;
+	}	
+}
+
+inline void irt_ocl_write_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, const void* source_ptr, irt_ocl_event* wait_event, irt_ocl_event* event) {
+	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
+	_irt_cl_set_event(wait_event, event, &wait_ev, &ev, &num);	
+
+	cl_int err_code = clEnqueueWriteBuffer(buf->dev->queue, buf->mem, blocking, 0, size, source_ptr, num, wait_ev, ev);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error writing buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
-inline void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr) {
-	cl_int err_code = clEnqueueReadBuffer(buf->dev->queue, buf->mem, blocking, 0, size, source_ptr, 0, NULL, NULL);
+inline void irt_ocl_read_buffer(irt_ocl_buffer* buf, cl_bool blocking, size_t size, void* source_ptr, irt_ocl_event* wait_event, irt_ocl_event* event) {
+	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
+	_irt_cl_set_event(wait_event, event, &wait_ev, &ev, &num);
+
+	cl_int err_code = clEnqueueReadBuffer(buf->dev->queue, buf->mem, blocking, 0, size, source_ptr, num, wait_ev, ev);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error reading buffer: \"%s\"",  _irt_error_string(err_code));
 }
 
@@ -325,27 +351,66 @@ void irt_ocl_print_device_short_info(irt_ocl_device* dev) {
 	IRT_INFO("%s: %s | %s | %s\n", _irt_cl_get_device_type_string(dev->type), dev->name, dev->vendor, dev->version);
 }
 
-inline float irt_ocl_profile_event(cl_event event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag) {
+irt_ocl_event* irt_ocl_create_event() {
+	irt_ocl_event* ocl_event =  (irt_ocl_event*)malloc(sizeof(irt_ocl_event));
+	ocl_event->event = (cl_event*)malloc(sizeof(cl_event));
+	ocl_event->num_event = 1;
+	return ocl_event;
+}
+
+irt_ocl_event* irt_ocl_create_event_list(cl_uint num_event, ...){
+	irt_ocl_event* ocl_event =  (irt_ocl_event*)malloc(sizeof(irt_ocl_event));
+	irt_ocl_event* arg_event;
+	va_list arg_list;
+	va_start(arg_list, num_event);
+	cl_event* array = (cl_event*)malloc(sizeof(cl_event) * num_event);
+	for (cl_uint i = 0; i < num_event; i++){
+		arg_event = va_arg (arg_list, irt_ocl_event*);
+		array[i] = *(arg_event->event);
+	}
+	va_end(arg_list);
+	ocl_event->event = array;
+	ocl_event->num_event = num_event;
+	return ocl_event;
+}
+
+void irt_ocl_release_event(irt_ocl_event* event){
+	if (event->num_event == 1)
+		clReleaseEvent(*(event->event));
+	free(event->event);
+	free(event);	
+}
+
+void irt_ocl_release_events(cl_uint num, ...){
+	va_list arg_list;
+	va_start(arg_list, num);
+	for (cl_uint i = 0; i < num; i++){
+		irt_ocl_release_event(va_arg(arg_list, irt_ocl_event*));
+	}
+	va_end(arg_list);
+}
+
+inline double irt_ocl_profile_event(irt_ocl_event* event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag) {
 	return irt_ocl_profile_events(event, event_start, event, event_end, time_flag);
 }
 
-float irt_ocl_profile_events(cl_event event_one, cl_profiling_info event_one_command, cl_event event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag) {
+double irt_ocl_profile_events(irt_ocl_event* event_one, cl_profiling_info event_one_command, irt_ocl_event* event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag) {
 	cl_ulong event_one_start, event_two_end;
 	cl_int err_code;
-	err_code = clGetEventProfilingInfo(event_two, event_two_command, sizeof(cl_ulong), &event_two_end, NULL);
+	err_code = clGetEventProfilingInfo(*(event_two->event), event_two_command, sizeof(cl_ulong), &event_two_end, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
-	err_code = clGetEventProfilingInfo(event_one, event_one_command, sizeof(cl_ulong), &event_one_start, NULL);
+	err_code = clGetEventProfilingInfo(*(event_one->event), event_one_command, sizeof(cl_ulong), &event_one_start, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error getting profiling info: \"%s\"", _irt_error_string(err_code));
-	float time = 0.0;
+	double time = 0.0;
 	switch(time_flag) {
 		case IRT_OCL_NANO:
-			time = (event_two_end - event_one_start);
+			time = (double)(event_two_end - event_one_start);
 			break;
 		case IRT_OCL_MILLI:
-			time = (event_two_end - event_one_start) * 1.0e-6f;
+			time = (double)(event_two_end - event_one_start) * 1.0e-6f;
 			break;
 		case IRT_OCL_SEC:
-			time = (event_two_end - event_one_start) * 1.0e-9f;
+			time = (double)(event_two_end - event_one_start) * 1.0e-9f;
 		 	break;
 	}
 	return time;
@@ -505,7 +570,9 @@ inline void irt_ocl_release_kernel(irt_ocl_kernel* kernel) {
 	free(kernel);
 }
 
-void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, cl_uint num_args, ...) {
+void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global_work_size, size_t* local_work_size, irt_ocl_event* wait_event, irt_ocl_event* event, cl_uint num_args, ...) {
+	cl_event* ev = NULL; cl_event* wait_ev = NULL; cl_uint num = 0;
+	_irt_cl_set_event(wait_event, event, &wait_ev, &ev, &num);
 	
 	//loop through the arguments and call clSetKernelArg for each argument
 	cl_uint arg_index;
@@ -534,7 +601,7 @@ void irt_ocl_run_kernel(irt_ocl_kernel* kernel, cl_uint work_dim, size_t* global
 						NULL, 
 						global_work_size,
 						local_work_size,
-						0, NULL, NULL);
+						num, wait_ev, ev);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error enqueuing NDRange Kernel: \"%s\"", _irt_error_string(err_code));
 }
 
