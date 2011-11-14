@@ -38,7 +38,7 @@
 
 #include "insieme/simple_backend/transform/preprocessor.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/core/printer/pretty_printer.h"
@@ -58,7 +58,7 @@ TEST(Preprocessor, NodeManager) {
 	NodeManager managerA;
 	NodeManager managerB;
 
-	ASTBuilder builderA(managerA);
+	IRBuilder builderA(managerA);
 
 	TypePtr typeA = builderA.genericType("Test");
 	EXPECT_TRUE(managerA.addressesLocal(typeA));
@@ -83,7 +83,7 @@ TEST(Preprocessor, NodeManager) {
 TEST(Preprocessor, Vector2Array_Parameter) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// construct a function accepting an array
 	TypePtr element = builder.genericType("Test");
@@ -116,7 +116,7 @@ TEST(Preprocessor, Vector2Array_Parameter) {
 TEST(Preprocessor, Vector2Array_GenericParameter) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
+	IRBuilder builder(manager);
 
 	// construct a function accepting an array
 	TypePtr element = builder.genericType("Test");
@@ -180,7 +180,7 @@ TEST(Preprocessor, Vector2Array_GenericParameter) {
 //TEST(Preprocessor, RefVector2RefArray_Parameter) {
 //
 //	NodeManager manager;
-//	ASTBuilder builder(manager);
+//	IRBuilder builder(manager);
 //
 //	// construct a function accepting an array
 //	TypePtr element = builder.genericType("Test");
@@ -212,8 +212,8 @@ TEST(Preprocessor, Vector2Array_GenericParameter) {
 TEST(Preprocessor, LazyITE) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.basic;
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 
 	// create a lazy call
 	const TypePtr& boolean = basic.getBool();

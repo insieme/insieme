@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/transform/transformation.h"
 

@@ -36,9 +36,9 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/types.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_types.h"
 
 namespace insieme {
 namespace core {

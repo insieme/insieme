@@ -36,9 +36,11 @@
 
 #include "insieme/analysis/polyhedral/affine_func.h"
 
+#include <set>
+
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 #include "insieme/core/analysis/ir_utils.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 namespace {
 
@@ -49,7 +51,7 @@ core::ExpressionPtr removeSugar(core::ExpressionPtr expr) {
 	const core::NodeManager& mgr = expr->getNodeManager();
 	
 	while (expr->getNodeType() == core::NT_CallExpr &&
-		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.basic.getRefDeref())) {
+		   core::analysis::isCallOf(core::static_pointer_cast<const core::CallExpr>(expr), mgr.getLangBasic().getRefDeref())) {
 
 			expr = core::static_pointer_cast<const core::CallExpr>(expr)->getArgument(0);	
 	}
@@ -153,7 +155,7 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 		>(af.begin(), af.end(), [](const AffineFunction::Term& cur) -> bool { return cur.second == 0; }
 	);
 
-	insieme::core::ASTBuilder builder(mgr);
+	insieme::core::IRBuilder builder(mgr);
 
 	core::ExpressionPtr ret;
 	for_each(filtered.first, filtered.second, [&] (const AffineFunction::Term& t) {
@@ -169,11 +171,11 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 			assert(expr->getType()->getNodeType() != core::NT_RefType && "Operand cannot be of Ref Type");
 
 			// Check whether the expression is of type signed int
-			if ( !mgr.basic.isInt4( expr->getType() ) ) {
-				expr = builder.castExpr( mgr.basic.getInt4(), expr );
+			if ( !mgr.getLangBasic().isInt4( expr->getType() ) ) {
+				expr = builder.castExpr( mgr.getLangBasic().getInt4(), expr );
 			}
 			currExpr = t.second == 1 ? expr : 
-						builder.callExpr( mgr.basic.getSignedIntMul(), builder.intLit(t.second), expr );
+						builder.callExpr( mgr.getLangBasic().getSignedIntMul(), builder.intLit(t.second), expr );
 		} else {
 			// This is the constant part, therefore there are no variables to consider, just the
 			// integer value 
@@ -185,7 +187,7 @@ insieme::core::ExpressionPtr toIR(insieme::core::NodeManager& mgr, const AffineF
 			return;
 		}
 
-		ret = builder.callExpr( mgr.basic.getSignedIntAdd(), ret, currExpr );
+		ret = builder.callExpr( mgr.getLangBasic().getSignedIntAdd(), ret, currExpr );
 	});
 
 	return ret;

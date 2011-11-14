@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/simple_backend/code_management.h"
 

@@ -41,7 +41,7 @@
 #include <ostream>
 
 #include "insieme/core/forward_decls.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/transform/pattern/structure.h"
 #include "insieme/transform/pattern/pattern.h"
 

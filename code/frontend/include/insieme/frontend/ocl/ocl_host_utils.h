@@ -36,19 +36,21 @@
 
 #pragma once
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
 // shortcut
-#define BASIC builder.getNodeManager().basic
+#define BASIC builder.getLangBasic()
 
 /*
  *  get a VariablePtr which is hidden under the stuff added by the frontend if their is a cast to (void*) in the C input
  */
-core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::ASTBuilder& builder);
+core::ExpressionPtr getVarOutOfCrazyInspireConstruct(const core::ExpressionPtr& arg, const core::IRBuilder& builder);
 
 /*
  * Returns the very base type of the passed Expression
@@ -72,23 +74,23 @@ const core::TypePtr getNonRefType(const core::TypePtr& refType);
 /*
  * Builds a ref.deref call around an expression if the it is of ref-type
  */
-core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
+core::ExpressionPtr tryDeref(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
 
 /*
  * Returns either the expression itself or the first argument if expression was a call to function
  */
-core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
+core::ExpressionPtr tryRemove(const core::ExpressionPtr& function, const core::ExpressionPtr& expr, const core::IRBuilder& builder);
 
 /*
  * Returns either the expression itself or the expression inside a nest of ref.new/ref.var calls
  */
-core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::ASTBuilder& builder);
+core::ExpressionPtr tryRemoveAlloc(const core::ExpressionPtr& expr, const core::IRBuilder& builder);
 
 /*
  * 'follows' the first argument as long it is a call expression until it reaches a variable. If a variable is found it returns it, otherwise NULL is returned
  * Usefull to get variable out of nests of array and struct accesses
  */
-core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::ASTBuilder& builder);
+core::VariablePtr getVariableArg(const core::ExpressionPtr& function, const core::IRBuilder& builder);
 
 
 /*
@@ -99,43 +101,44 @@ void copyAnnotations(const core::NodePtr& source, core::NodePtr& sink);
 /*
  * Visitor returns true if the passed ast contains a zero literal
  */
-class NullLitSearcher: public core::ASTVisitor<bool> {
+class NullLitSearcher: public core::IRVisitor<bool> {
 private:
-	core::ASTBuilder& builder;
+	core::IRBuilder builder;
 public:
-	NullLitSearcher(core::ASTBuilder build) : core::ASTVisitor<bool>(false), builder(build) {}
+	NullLitSearcher(core::IRBuilder build) : core::IRVisitor<bool>(false), builder(build) {}
 
 	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
 	bool visitCallExpr(const core::CallExprPtr& call);
-	bool visitLiteral(const core::LiteralPtr& literal);
+	bool visitLiteral(const core::LiteralPtr& literal) {
+		return literal->getStringValue() == "0";
+	}
 };
 
 /*
  * Visitor returns true if the passed ast the identifier passed to the construtor
  */
-class IdSearcher: public core::ASTVisitor<bool> {
+class IdSearcher: public core::IRVisitor<bool> {
 private:
-	core::ASTBuilder& builder;
-	core::IdentifierPtr& searchedId;
+	const core::StringValuePtr& searchedId;
 public:
-	IdSearcher(core::ASTBuilder build, core::IdentifierPtr lookFor) : core::ASTVisitor<bool>(false), builder(build), searchedId(lookFor) {}
+	IdSearcher(const core::StringValuePtr& lookFor) : core::IRVisitor<bool>(false), searchedId(lookFor) {}
 
 	bool visitNode(const core::NodePtr& node) { return false; }// go on with search
-	bool visitIdentifier(const core::IdentifierPtr& id);
+	bool visitStringValue(const core::StringValuePtr& id) { return *id == *searchedId; }
 };
 
 /*
  * Visitor return true if the lambda associated with the kernel variable is found in the ast
  */
-class LambdaSearcher: public core::ASTVisitor<bool, core::Address> {
+class LambdaSearcher: public core::IRVisitor<bool, core::Address> {
 private:
-	const core::ASTBuilder& builder;
+	const core::IRBuilder& builder;
 	const core::NodeAddress vAddr;
 	core::NodeAddress lAddr;
 	const core::ProgramPtr& root;
 public:
-	LambdaSearcher(const core::ASTBuilder& build, const core::VariablePtr& var, const core::ProgramPtr& searchRoot) :
-		core::ASTVisitor<bool, core::Address>(false), builder(build), vAddr(core::Address<const core::Variable>::find(var, searchRoot)), root(searchRoot) {}
+	LambdaSearcher(const core::IRBuilder& build, const core::VariablePtr& var, const core::ProgramPtr& searchRoot) :
+		core::IRVisitor<bool, core::Address>(false), builder(build), vAddr(core::Address<const core::Variable>::find(var, searchRoot)), root(searchRoot) {}
 
 	void setLambdaVariable(const core::VariablePtr& lambda) { lAddr = core::Address<const core::Variable>::find(lambda, root); }
 	bool visitCallExpr(const core::CallExprAddress& call);

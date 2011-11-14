@@ -41,8 +41,8 @@
  * @param NodeType the type the check should be applied on
  */
 #define SIMPLE_CHECK(Name, NodeType, visitTypes) \
-	class Name ## Check : public ASTCheck { \
+	class Name ## Check : public IRCheck { \
 		public: \
-		Name ## Check() : ASTCheck(visitTypes) {}; \
+		Name ## Check() : IRCheck(visitTypes) {}; \
 		virtual OptionalMessageList visit ## NodeType (const NodeType ## Address& address); \
 	}

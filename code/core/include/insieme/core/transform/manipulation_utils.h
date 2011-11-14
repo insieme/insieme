@@ -36,8 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace core {
@@ -49,8 +49,12 @@ namespace utils {
  * transformations. It is invoking the migration handling routine of the node annotations
  * to determine whether and how the individual annotations should be migrated.
  */
-inline void migrateAnnotations(const NodePtr& before, const NodePtr& after) {
-	typedef typename Node::annotation_map_type AnnotationMap;
+template<
+	typename Node,
+	template<typename T> class Ptr
+>
+inline void migrateAnnotations(const Ptr<Node>& before, const Ptr<Node>& after) {
+	typedef typename Node::annotation_container::annotation_map_type AnnotationMap;
 
 	// check whether there is something to do
 	if (before == after || !before->hasAnnotations()) {
@@ -58,7 +62,7 @@ inline void migrateAnnotations(const NodePtr& before, const NodePtr& after) {
 	}
 
 	// migrate annotations individually
-	for_each(before->getAnnotations(), [&](const AnnotationMap::value_type& cur) {
+	for_each(before->getAnnotations(), [&](const typename AnnotationMap::value_type& cur) {
 		cur.second->migrate(cur.second, before, after);
 	});
 }

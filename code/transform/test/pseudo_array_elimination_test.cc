@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/statements.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_expressions.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/transform/ir_cleanup.h"
 #include "insieme/core/parser/ir_parse.h"

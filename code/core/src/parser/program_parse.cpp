@@ -39,7 +39,7 @@
 #include "insieme/core/parser/program_parse.h"
 #include "insieme/core/parser/type_parse.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -55,18 +55,18 @@ namespace qi = boost::spirit::qi;
 namespace ascii = boost::spirit::ascii;
 namespace ph = boost::phoenix;
 
-template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr,
 class LambdaDefinitionPtr>
-ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
 mainProgramHelp(const ExpressionPtr& mainProg) {
-    return Program::create(nodeMan, toVector(mainProg), true);
+    return Program::get(nodeMan, toVector(mainProg));
 }
 
-template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr,
 class LambdaDefinitionPtr>
-ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+ProgramPtr ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
 programHelp(const vector<ExpressionPtr>& progs) {
-    return Program::create(nodeMan, progs, false);
+    return Program::get(nodeMan, progs);
 }
 
 template <typename P, typename T, typename U, typename V, typename W, typename X, typename Y,  typename Z>
@@ -98,13 +98,13 @@ ProgramGrammar<P, T, U, V, W, X, Y, Z>::~ProgramGrammar() {
 }
 
 // explicit template instantiation
-template struct ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
+template struct ProgramGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>;
 
 
-template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr,
 class LambdaDefinitionPtr>
-ExpressionPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-optVarHelp(const TypePtr& type, const IdentifierPtr & id) {
+ExpressionPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+optVarHelp(const TypePtr& type, const StringValuePtr & id) {
 	try {
 		return stmtG->exprG->varTab.get(type, id);
 	}catch(ParseException& pe) {
@@ -112,10 +112,10 @@ optVarHelp(const TypePtr& type, const IdentifierPtr & id) {
 	}
 }
 
-template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr,
 class LambdaDefinitionPtr>
-ExpressionPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
-optVarHelp(const IdentifierPtr & id) {
+ExpressionPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
+optVarHelp(const StringValuePtr & id) {
 	try {
 		return stmtG->exprG->varTab.lookup(id);
 	} catch(ParseException& pe) {
@@ -123,12 +123,12 @@ optVarHelp(const IdentifierPtr & id) {
 	}
 }
 
-template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class IdentifierPtr, class LambdaPtr,
+template <typename ProgramPtr, class ExpressionPtr, class StatementPtr, class TypePtr, class IntTypeParamPtr, class StringValuePtr, class LambdaPtr,
 class LambdaDefinitionPtr>
-LambdaPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>::
+LambdaPtr IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>::
 lambdaHelp(const TypePtr& retType, const vector<ExpressionPtr>& paramsExpr, const StatementPtr& body) {
 	// build a stmtExpr bc the builder cannot at the moment
-	ASTBuilder build(nodeMan);
+	IRBuilder build(nodeMan);
 	vector<VariablePtr> params;
 	vector<TypePtr> paramTypes;
 
@@ -195,7 +195,7 @@ qi::rule<ParseIt, NodePtr(), qi::space_type> IRGrammar<P, T, U, V, W, X, Y, Z>::
 
 
 // explicit template instantiation
-template struct IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, IdentifierPtr, LambdaPtr, LambdaDefinitionPtr>;
+template struct IRGrammar<ProgramPtr, ExpressionPtr, StatementPtr, TypePtr, IntTypeParamPtr, StringValuePtr, LambdaPtr, LambdaDefinitionPtr>;
 
 }
 }

@@ -83,7 +83,7 @@ namespace transform {
 		// re-assemble transformed node from modified child list (if necessary)
 		if (!equals(children, res->getChildList(), equal_target<core::NodePtr>())) {
 			core::transform::ChildListMapping nodeMapper(children);
-			res = res->substitute(res->getNodeManager(), nodeMapper, false);
+			res = res->substitute(res->getNodeManager(), nodeMapper);
 		}
 
 		// conduct transformation in post-order if requested

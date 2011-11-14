@@ -44,8 +44,8 @@
 #include "insieme/frontend/frontend.h"
 #include "insieme/frontend/omp/omp_sema.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/program.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/printer/pretty_printer.h"
 
 #include "insieme/backend/runtime/runtime_backend.h"

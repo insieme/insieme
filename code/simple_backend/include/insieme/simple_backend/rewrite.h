@@ -36,9 +36,11 @@
 
 #pragma once
 
+#include <set>
+
 #include "insieme/annotations/c/location.h"
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/backend/backend.h"
 
 namespace insieme {

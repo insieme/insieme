@@ -45,7 +45,7 @@
 
 #include "insieme/core/transform/node_replacer.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 #include "insieme/utils/logging.h"
 
@@ -91,6 +91,34 @@ namespace analysis {
 
 		// -------------------------------------------------------- Implementation ----------------------------------------------
 
+		void addEqualityConstraints(SubTypeConstraints& constraints, const IntTypeParamPtr& paramA, const IntTypeParamPtr& paramB) {
+			if (paramA->getNodeType() == NT_VariableIntTypeParam) {
+				// obtain variable
+				VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(paramA);
+
+				// check if the parameter has already been set
+				if (IntTypeParamPtr value = constraints.getIntTypeParamValue(var)) {
+					if (*value == *paramB) {
+						// everything is fine
+						return;
+					}
+					// int type parameter needs to be instantiated twice, in different ways => unsatisfiable
+					constraints.makeUnsatisfiable();
+					return;
+				}
+
+				// fix a new value for the parameter
+				constraints.fixIntTypeParameter(var, paramB);
+			} else {
+				// the two parameters have to be the same!
+				if (*paramA != *paramB) {
+					// unable to satisfy constraints
+					constraints.makeUnsatisfiable();
+					return;
+				}
+			}
+		}
+
 
 		void addEqualityConstraints(SubTypeConstraints& constraints, const TypePtr& typeA, const TypePtr& typeB) {
 
@@ -129,12 +157,44 @@ namespace analysis {
 			// check node types
 			switch(nodeTypeA) {
 
-				// first handle those types equipped with int type parameters
-				case NT_GenericType:
 				case NT_RefType:
+				{
+					auto refParamType = static_pointer_cast<RefTypePtr>(typeA);
+					auto refArgType = static_pointer_cast<RefTypePtr>(typeB);
+
+					// add equality constraint for element type
+					addEqualityConstraints(constraints,
+							refParamType->getElementType(),
+							refArgType->getElementType()
+					);
+
+					break;
+				}
+
 				case NT_ArrayType:
 				case NT_VectorType:
 				case NT_ChannelType:
+				{
+					auto genParamType = static_pointer_cast<SingleElementTypePtr>(typeA);
+					auto genArgType = static_pointer_cast<SingleElementTypePtr>(typeB);
+
+					// add equality constraint for element type
+					addEqualityConstraints(constraints,
+							genParamType->getElementType(),
+							genArgType->getElementType()
+					);
+
+					// add constraint for int type parameter
+					addEqualityConstraints(constraints,
+							genParamType->getIntTypeParameter(),
+							genArgType->getIntTypeParameter()
+					);
+
+					break;
+			    }
+
+				// first handle those types equipped with int type parameters
+				case NT_GenericType:
 				{
 					// check name of generic type ... if not matching => wrong
 					auto genParamType = static_pointer_cast<const GenericType>(typeA);
@@ -163,32 +223,8 @@ namespace analysis {
 						}
 						auto paramA = (*it).first;
 						auto paramB = (*it).second;
-						if (paramA->getNodeType() == NT_VariableIntTypeParam) {
-							// obtain variable
-							VariableIntTypeParamPtr var = static_pointer_cast<const VariableIntTypeParam>(paramA);
 
-							// check if the parameter has already been set
-							if (IntTypeParamPtr value = constraints.getIntTypeParamValue(var)) {
-								if (*value == *paramB) {
-									// everything is fine
-									continue;
-								} else {
-									// int type parameter needs to be instantiated twice, in different ways => unsatisfiable
-									constraints.makeUnsatisfiable();
-									return;
-								}
-							}
-
-							// fix a new value for the parameter
-							constraints.fixIntTypeParameter(var, paramB);
-						} else {
-							// the two parameters have to be the same!
-							if (*paramA != *paramB) {
-								// unable to satisfy constraints
-								constraints.makeUnsatisfiable();
-								return;
-							}
-						}
+						addEqualityConstraints(constraints, paramA, paramB);
 					}
 
 					// ... and fall-through to check the child types
@@ -256,14 +292,14 @@ namespace analysis {
 						// ensure identifiers are identical (those cannot be variable)
 						auto entryA = (*it).first;
 						auto entryB = (*it).second;
-						if (*entryA.first != *entryB.first) {
+						if (*entryA->getName() != *entryB->getName()) {
 							// unsatisfiable
 							constraints.makeUnsatisfiable();
 							return;
 						}
 
 						// add equality constraints recursively
-						addEqualityConstraints(constraints, entryA.second, entryB.second);
+						addEqualityConstraints(constraints, entryA->getType(), entryB->getType());
 					}
 
 
@@ -374,8 +410,8 @@ namespace analysis {
 				}
 
 				// check number of arguments
-				const TypeList& paramParams = funParamType->getParameterTypes();
-				const TypeList& argParams = funArgType->getParameterTypes();
+				const TypeList& paramParams = funParamType->getParameterTypes()->getTypes();
+				const TypeList& argParams = funArgType->getParameterTypes()->getTypes();
 				if (paramParams.size() != argParams.size()) {
 					// different number of arguments => unsatisfiable
 					constraints.makeUnsatisfiable();
@@ -438,7 +474,7 @@ namespace analysis {
 			TypeMapping argumentMapping;
 
 			// realized using a recursive lambda visitor
-			ASTVisitor<>* rec;
+			IRVisitor<>* rec;
 			auto collector = makeLambdaVisitor([&](const NodePtr& cur){
 				NodeType kind = cur->getNodeType();
 				switch(kind) {
@@ -742,7 +778,7 @@ namespace analysis {
 		}
 
 		// use deduction mechanism
-		SubstitutionOpt res = getTypeVariableInstantiation(manager, function->getParameterTypes(), arguments);
+		SubstitutionOpt res = getTypeVariableInstantiation(manager, function->getParameterTypes()->getTypes(), arguments);
 
 		// attack substitution
 		VariableInstantionInfo::addToAnnotation(function, localArgs, copyTo(function->getNodeManager(), res));

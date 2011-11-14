@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 namespace insieme {
 namespace transform {

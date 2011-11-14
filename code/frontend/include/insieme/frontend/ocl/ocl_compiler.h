@@ -37,29 +37,29 @@
 #include <vector>
 
 #include "insieme/core/transform/node_replacer.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/program.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_program.h"
 
 namespace insieme {
 namespace frontend {
 namespace ocl {
 
-typedef std::pair<core::ASTBuilder::ParamList, std::vector<core::ExpressionPtr> > ArgList;
+typedef std::pair<core::VariableList, core::ExpressionList> ArgList;
 
 namespace {
 
 // shortcut
-#define BASIC builder.getNodeManager().basic
+#define BASIC builder.getNodeManager().getLangBasic()
 
 // uniform initialization of 3D vecotr of type uint<4>
 #define INT3DVECINIT(strVal)  builder.vectorExpr(toVector<core::ExpressionPtr>(builder.literal(BASIC.getInt4(), strVal), \
                               builder.literal(BASIC.getInt4(), strVal), builder.literal(BASIC.getInt4(), strVal)))
 
 // accesses array arr at index idx
-#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(), \
+#define SUBSCRIPT(arr, idx, builder) builder.callExpr(builder.getNodeManager().getLangBasic().getUInt4(), builder.getNodeManager().getLangBasic().getVectorSubscript(), \
                                      toVector<core::ExpressionPtr>(arr, builder.castExpr(BASIC.getUInt4(), \
-                                     builder.literal(toString(idx), builder.getNodeManager().basic.getUInt4() ))))
+                                     builder.literal(toString(idx), builder.getNodeManager().getLangBasic().getUInt4() ))))
 
 // adding arguments and their value to the ArgList
 #define ADD_PARAM(list, arg, val) { list.first.push_back(arg); \
@@ -85,23 +85,23 @@ enum OCL_ADDRESS_SPACE { CONSTANT, GLOBAL, LOCAL, PRIVATE };
 
 struct KernelData {
 public:
-    const core::ASTBuilder& builder;
+    const core::IRBuilder& builder;
     // loop bounds
     core::VariablePtr globalRange; bool globalRangeUsed;
     core::VariablePtr numGroups; bool numGroupsUsed;
     core::VariablePtr localRange; bool localRangeUsed;
 
     core::CallExprPtr vecAccess(core::VariablePtr& vec, core::ExpressionPtr& idx) {
-        return builder.callExpr(builder.getNodeManager().basic.getUInt4(), builder.getNodeManager().basic.getVectorSubscript(),
+        return builder.callExpr(builder.getNodeManager().getLangBasic().getUInt4(), builder.getNodeManager().getLangBasic().getVectorSubscript(),
                 toVector<core::ExpressionPtr>(vec, idx) );
     }
 
-    static core::VariablePtr get3DvecVar(const core::ASTBuilder& builder) {
-        return builder.variable(builder.vectorType(builder.getNodeManager().basic.getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
+    static core::VariablePtr get3DvecVar(const core::IRBuilder& builder) {
+        return builder.variable(builder.vectorType(builder.getNodeManager().getLangBasic().getUInt4(), builder.concreteIntTypeParam(static_cast<size_t>(3))));
     }
 
     //default constructor
-    KernelData(const core::ASTBuilder& astBuilder) :
+    KernelData(const core::IRBuilder& astBuilder) :
         builder(astBuilder), globalRange(get3DvecVar(astBuilder)), numGroups(get3DvecVar(astBuilder)), localRange(get3DvecVar(astBuilder)) {
         globalRangeUsed = false;
         numGroupsUsed = false;
@@ -139,8 +139,8 @@ private:
 //    class OclVisitor;
 
     core::ProgramPtr& mProgram;
-    core::ASTBuilder builder;
- //   core::ASTVisitor visitor;
+    core::IRBuilder builder;
+ //   core::IRVisitor visitor;
 
 
 public:

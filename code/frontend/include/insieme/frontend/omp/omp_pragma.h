@@ -37,7 +37,7 @@
 #pragma once
 
 #include "insieme/frontend/pragma_handler.h"
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 #include <memory>
 

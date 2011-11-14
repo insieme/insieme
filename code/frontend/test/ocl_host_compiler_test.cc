@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
+#include "insieme/core/ir_program.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/annotations/ocl/ocl_annotations.h"
@@ -69,13 +69,17 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 
 	CommandLineOptions::Verbosity = 2;
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program;
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello_host.c" << "' to IR...";
 	fe::Program prog(manager);
 
 	prog.addTranslationUnit(std::string(SRC_DIR) + "inputs/hello_host.c");
 	program = prog.convert();
+
+	EXPECT_EQ(&program->getNodeManager(), &manager);
+	EXPECT_TRUE(manager.contains(program));
+
 	LOG(INFO) << "Done.";
 
 	LOG(INFO) << "Starting OpenCL host code transformations";
@@ -87,7 +91,7 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	LOG(INFO) << "Printing the IR: " << pp;
 	//    LOG(INFO) << pp;
 
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
@@ -111,7 +115,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 
 	CommandLineOptions::Verbosity = 2;
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
+	core::ProgramPtr program = core::Program::get(manager);
 
 	LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "../../backend/test/ocl_kernel/vec_add.c" << "' to IR...";
 	fe::Program prog(manager);
@@ -129,7 +133,7 @@ TEST(OclHostCompilerTest, VecAddTest) {
 	LOG(INFO) << "Printing the IR: " << pp;
 	//    LOG(INFO) << pp;
 
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getAll();
+	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {

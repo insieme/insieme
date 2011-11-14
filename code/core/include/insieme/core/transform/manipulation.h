@@ -36,9 +36,14 @@
 
 #pragma once
 
+<<<<<<< HEAD
 #include "insieme/core/ast_node.h"
 #include "insieme/core/ast_address.h"
 #include "insieme/core/expressions.h"
+=======
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
+>>>>>>> new_core
 
 namespace insieme {
 namespace core {

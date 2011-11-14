@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/imperativechecks.h"
 
 namespace insieme {
@@ -48,7 +48,8 @@ bool containsMSG(const MessageList& list, const Message& msg) {
 }
 
 TEST(UndeclaredVariableCheck, Basic) {
-	ASTBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	// OK ... create a function literal
 	TypePtr type = builder.genericType("int");
@@ -67,12 +68,7 @@ TEST(UndeclaredVariableCheck, Basic) {
 	EXPECT_TRUE(check(ok, typeCheck).empty());
 	ASSERT_FALSE(check(err, typeCheck).empty());
 
-	NodeAddress errorAdr(err);
-	errorAdr = errorAdr.getAddressOfChild(1);
-	errorAdr = errorAdr.getAddressOfChild(1);
-	errorAdr = errorAdr.getAddressOfChild(1);
-	errorAdr = errorAdr.getAddressOfChild(0);
-	errorAdr = errorAdr.getAddressOfChild(1);
+	NodeAddress errorAdr = NodeAddress(err).getAddressOfChild(2,0,1,2,0,1);
 	EXPECT_PRED2(containsMSG, check(err,typeCheck), Message(errorAdr, EC_IMPERATIVE_UNDECLARED_VARIABLE_USAGE, "", Message::ERROR));
 }
 
@@ -81,19 +77,15 @@ namespace {
 
 	LambdaDefinitionPtr wrap(StatementPtr body) {
 		NodeManager& manager = body->getNodeManager();
-		ASTBuilder builder(manager);
+		IRBuilder builder(manager);
 
 		// construct lambda
-		FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.basic.getUnit());
+		FunctionTypePtr funType = builder.functionType(toVector<TypePtr>(), manager.getLangBasic().getUnit());
 		VariablePtr var = builder.variable(funType);
 		LambdaPtr lambda = builder.lambda(funType, toVector<VariablePtr>(), body);
 
-		// create lambda definitions
-		LambdaDefinition::Definitions definitions;
-		definitions.insert(std::make_pair(var, lambda));
-
-		// return lambda definition
-		return LambdaDefinition::get(manager, definitions);
+		// create and lambda definitions
+		return LambdaDefinition::get(manager, toVector(LambdaBinding::get(manager, var, lambda)));
 	}
 
 	bool isUndeclaredVariableError(const MessageList& msgs, const NodePtr& target) {
@@ -115,7 +107,8 @@ namespace {
 }
 
 TEST(UndeclaredVariableCheck, CompoundStmt) {
-	ASTBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr type = builder.genericType("A");
 	VariablePtr varA = builder.variable(type, 1);
@@ -155,7 +148,7 @@ TEST(UndeclaredVariableCheck, CompoundStmt) {
 	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varB);
 
 	err = builder.compoundStmt(builder.compoundStmt(declA, varB));
-	EXPECT_EQ("{A v1 = X; v2;}", toString(*err));
+	EXPECT_EQ("{{A v1 = X; v2;};}", toString(*err));
 	EXPECT_FALSE(check(wrap(err), scopeChecker).empty());
 	EXPECT_PRED2(isUndeclaredVariableError, check(wrap(err),scopeChecker), varB);
 
@@ -166,7 +159,8 @@ TEST(UndeclaredVariableCheck, CompoundStmt) {
 }
 
 TEST(UndeclaredVariableCheck, BindExpr) {
-	ASTBuilder builder;
+	NodeManager manager;
+	IRBuilder builder(manager);
 
 	TypePtr type = builder.genericType("A");
 	VariablePtr varA = builder.variable(type, 1);

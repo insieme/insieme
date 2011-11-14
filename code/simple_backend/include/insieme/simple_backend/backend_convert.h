@@ -178,7 +178,7 @@ namespace simple_backend {
 
 		const core::lang::BasicGenerator& getLangBasic() const {
 			assert(nodeManager);
-			return nodeManager->basic;
+			return nodeManager->getLangBasic();
 		}
 
 	};

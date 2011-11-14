@@ -140,15 +140,15 @@ namespace encoder {
 	template<>
 	struct type_factory<rbe::WorkItemRange> {
 		core::TypePtr operator()(core::NodeManager& manager) const {
-			return manager.getBasicGenerator().getJobRange();
+			return manager.getLangBasic().getJobRange();
 		}
 	};
 
 	template<>
 	struct value_to_ir_converter<rbe::WorkItemRange> {
 		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemRange& value) const {
-			ASTBuilder builder(manager);
-			const core::lang::BasicGenerator& basic = manager.getBasicGenerator();
+			IRBuilder builder(manager);
+			const core::lang::BasicGenerator& basic = manager.getLangBasic();
 
 			// create a call to the range constructor using the given values
 			return builder.callExpr(basic.getJobRange(), basic.getCreateBoundRangeMod(), toVector(value.min, value.max, value.mod));
@@ -159,7 +159,7 @@ namespace encoder {
 	struct ir_to_value_converter<rbe::WorkItemRange> {
 		rbe::WorkItemRange operator()(const core::ExpressionPtr& expr) const {
 			core::NodeManager& manager = expr->getNodeManager();
-			const lang::BasicGenerator& basic = manager.getBasicGenerator();
+			const lang::BasicGenerator& basic = manager.getLangBasic();
 
 			// check for call
 			if (expr->getNodeType() != core::NT_CallExpr) {
@@ -202,7 +202,7 @@ namespace encoder {
 
 			// check call target and arguments
 			const core::CallExprPtr& call = static_pointer_cast<const core::CallExpr>(expr);
-			const core::lang::BasicGenerator& basic = expr->getNodeManager().getBasicGenerator();
+			const core::lang::BasicGenerator& basic = expr->getNodeManager().getLangBasic();
 
 			const core::ExpressionPtr& fun = call->getFunctionExpr();
 
@@ -236,7 +236,7 @@ namespace encoder {
 	template<>
 	struct value_to_ir_converter<rbe::WorkItemVariant> {
 		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemVariant& value) const {
-			ASTBuilder builder(manager);
+			IRBuilder builder(manager);
 			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
 
 			// just call the variant constructor
@@ -302,7 +302,7 @@ namespace encoder {
 	template<>
 	struct value_to_ir_converter<rbe::WorkItemImpl> {
 		core::ExpressionPtr operator()(core::NodeManager& manager, const rbe::WorkItemImpl& value) const {
-			ASTBuilder builder(manager);
+			IRBuilder builder(manager);
 			const rbe::Extensions& ext = manager.getLangExtension<rbe::Extensions>();
 			return builder.callExpr(ext.workItemImplType, ext.workItemImplCtr, toVector(toIR(manager, value.getVariants())));
 		}

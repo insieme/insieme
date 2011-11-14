@@ -41,7 +41,7 @@
 
 #define MIN_CONTEXT 40
 
-#include "insieme/core/ast_statistic.h"
+#include "insieme/core/ir_statistic.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -416,7 +416,7 @@ void showStatistics(const core::ProgramPtr& program) {
 
 	LOG(INFO) << "============================ IR Statistics ======================================";
 	measureTimeFor<void>("ir.statistics ", [&]() {
-		LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
+		LOG(INFO) << "\n" << IRStatistic::evaluate(program);
 	});
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
@@ -506,8 +506,12 @@ int main(int argc, char** argv) {
 	LOG(INFO) << "Insieme compiler";
 
 	core::NodeManager manager;
+<<<<<<< HEAD
 	core::ProgramPtr program = core::Program::create(manager);
 	RegionList regions;
+=======
+	core::ProgramPtr program = core::Program::get(manager);
+>>>>>>> new_core
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
@@ -725,7 +729,7 @@ bool checkForHashCollisions(const ProgramPtr& program) {
 	int collisionCount = 0;
 	for_each(allNodes, [&](const NodePtr& cur) {
 		// try inserting node
-		std::size_t hash = cur->hash();
+		std::size_t hash = (*cur).hash();
 		//std::size_t hash = boost::hash_value(cur->toString());
 		//std::size_t hash = ::computeHash(cur);
 

@@ -39,7 +39,7 @@
 #include <set>
 #include <unordered_map>
 
-#include "insieme/core/ast_node.h"
+#include "insieme/core/ir_node.h"
 
 #include "insieme/utils/map_utils.h"
 

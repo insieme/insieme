@@ -36,8 +36,8 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/annotations/c/naming.h"
@@ -61,10 +61,10 @@ using namespace insieme::utils::set;
 using namespace insieme::utils::log;
 
 namespace {
-class OclTestVisitor : public core::ASTVisitor<void> {
+class OclTestVisitor : public core::IRVisitor<void> {
 public:
 
-	OclTestVisitor() : core::ASTVisitor<void>(false) {}
+	OclTestVisitor() : core::IRVisitor<void>(false) {}
 
     void visitLambdaExpr(const core::LambdaExprPtr& func) {
 //        core::AnnotationMap map = func.getAnnotations();
@@ -73,7 +73,7 @@ public:
 
         //check globalRange and localRange arguments
         if(core::FunctionTypePtr&& funcType = core::dynamic_pointer_cast<const core::FunctionType>(func->getType())){
-            const core::TypeList& args = funcType->getParameterTypes();
+            const core::TypeList& args = funcType->getParameterTypes()->getElements();
 
             if(func->hasAnnotation(insieme::annotations::ocl::BaseAnnotation::KEY)) {
 
@@ -136,7 +136,7 @@ TEST(OclCompilerTest, HelloCLTest) {
 	Logger::get(std::cerr, INFO);
     CommandLineOptions::Verbosity = 2;
     core::NodeManager manager;
-    core::ProgramPtr program = core::Program::create(manager);
+    core::ProgramPtr program = core::Program::get(manager);
 
 
     LOG(INFO) << "Converting input program '" << std::string(SRC_DIR) << "inputs/hello.cl" << "' to IR...";

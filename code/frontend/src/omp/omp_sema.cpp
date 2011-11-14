@@ -235,7 +235,7 @@ bool SemaVisitor::visitNode(const NodeAddress& node) {
 
 
 bool SemaVisitor::visitCallExpr(const core::CallExprAddress& callExp) {
-	if(auto litFunExp = dynamic_pointer_cast<const Literal>(callExp->getFunctionExpr())) {
+	if(auto litFunExp = dynamic_pointer_cast<const Literal>(callExp.getAddressedNode()->getFunctionExpr())) {
 		auto funName = litFunExp->getValueAs<string>();
 		if(funName == "omp_get_thread_num") {
 			replacement = dynamic_pointer_cast<const Program>(transform::replaceNode(nodeMan, callExp, build.getThreadId()));
@@ -307,17 +307,17 @@ ProgramPtr SemaVisitor::handleCritical(const NodeAddress& node, const CriticalPt
 		name = criticalP->getName();
 	}
 	name = prefix + name;
-	replacements.push_back(build.aquireLock(build.literal(nodeMan.basic.getLock(), name)));
+	replacements.push_back(build.aquireLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
 
 	// push original code fragment
 	if(auto expMarker = dynamic_address_cast<const MarkerExpr>(node))
-		replacements.push_back(expMarker->getSubExpression());
+		replacements.push_back(expMarker.getAddressedNode()->getSubExpression());
 	else if(auto stmtMarker = dynamic_address_cast<const MarkerStmt>(node)) {
 		replacements.push_back(stmtMarker->getSubStatement());
 	}
 
 	// push unlock
-	replacements.push_back(build.releaseLock(build.literal(nodeMan.basic.getLock(), name)));
+	replacements.push_back(build.releaseLock(build.literal(nodeMan.getLangBasic().getLock(), name)));
 
 	return dynamic_pointer_cast<const Program>(transform::replace(nodeMan, surroundingCompound, node.getIndex(), replacements));
 }
@@ -329,7 +329,7 @@ ProgramPtr SemaVisitor::handleBarrier(const NodeAddress& node, const BarrierPtr&
 	StatementList replacements;
 	replacements.push_back(build.barrier());
 	if(auto expMarker = dynamic_address_cast<const MarkerExpr>(node))
-		replacements.push_back(expMarker->getSubExpression());
+		replacements.push_back(expMarker.getAddressedNode()->getSubExpression());
 	else if(auto stmtMarker = dynamic_address_cast<const MarkerStmt>(node)) {
 		replacements.push_back(stmtMarker->getSubStatement());
 	}
@@ -341,8 +341,8 @@ NodePtr SemaVisitor::handleParallel(const StatementAddress& stmt, const Parallel
 
 	auto parLambda = transform::extractLambda(nodeMan, stmtNode);
 
-	auto& basic = nodeMan.basic;
-	auto jobExp = build.jobExpr(build.getThreadNumRange(1) , parLambda, JobExpr::GuardedStmts(), JobExpr::LocalDecls());
+	auto& basic = nodeMan.getLangBasic();
+	auto jobExp = build.jobExpr(build.getThreadNumRange(1) , vector<core::DeclarationStmtPtr>(), vector<core::GuardedExprPtr>(), parLambda);
 	auto parallelCall = build.callExpr(basic.getParallel(), jobExp);
 	auto mergeCall = build.callExpr(basic.getMerge(), parallelCall);
 	//LOG(INFO) << "mergeCall:\n" << mergeCall;
@@ -369,7 +369,7 @@ NodePtr SemaVisitor::handleSingle(const core::StatementAddress& stmt, const Sing
 	auto stmtNode = stmt.getAddressedNode();
 	StatementList replacements;
 	// implement single as pfor with 1 item
-	auto pforLambdaParams = toVector(build.variable(nodeMan.basic.getInt4()));
+	auto pforLambdaParams = toVector(build.variable(nodeMan.getLangBasic().getInt4()));
 	auto body = transform::extractLambda(nodeMan, stmtNode, pforLambdaParams);
 	auto pfor = build.pfor(body, build.intLit(0), build.intLit(1));
 	replacements.push_back(pfor);

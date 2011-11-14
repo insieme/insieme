@@ -43,7 +43,7 @@
 #include <boost/config/warning_disable.hpp>
 #include <boost/spirit/include/qi.hpp>
 
-#include "insieme/core/types.h"
+#include "insieme/core/ir_types.h"
 
 namespace insieme {
 namespace core {
@@ -52,13 +52,13 @@ namespace parse {
 // table holding all variables including their identifiers
 class VariableTable {
     NodeManager& nodeMan;
-    utils::map::PointerMap<IdentifierPtr, VariablePtr> table;
+    utils::map::PointerMap<StringValuePtr, VariablePtr> table;
 
 public:
     VariableTable(NodeManager& nodeMan) : nodeMan(nodeMan) { }
 
-    VariablePtr get(const TypePtr& typ, const IdentifierPtr& id);
-    VariablePtr lookup(const IdentifierPtr& id);
+    VariablePtr get(const TypePtr& typ, const StringValuePtr& id);
+    VariablePtr lookup(const StringValuePtr& id);
 };
 
 class ParseException : std::exception {

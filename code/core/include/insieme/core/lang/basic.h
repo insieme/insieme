@@ -102,32 +102,26 @@ public:
 
 	bool isBuiltIn(const NodePtr& node) const;
 	LiteralPtr getLiteral(const std::string& name) const;
-	// Obtains the LiteralPtr which implements the operator op for literals of
-	// type 'type'
+
+	/**
+	 * Obtains an expression representing the the requested operator for the
+	 * given data type.
+	 */
 	ExpressionPtr getOperator(const TypePtr& type, const Operator& op) const;
-	// Obtains the operator (as defined in the lang.def class) from a literal
-	// expression obtained thorugh the previous metod (inverse procedure)
+
+	/**
+	 * Obtains the operator (as defined in the lang.def file) from a literal
+	 * expression obtained through the previous method (inverse procedure)
+	 */
 	Operator getOperator(const LiteralPtr& lit) const;
-	// ----- extra material ---
 
-	StatementPtr getNoOp() const;
-	bool isNoOp(const NodePtr& p) const;
+	// ----- type hierarchy utilities ---
 
-	// a factory method for intTypeParam literals
-	LiteralPtr getIntTypeParamLiteral(const IntTypeParamPtr& param) const;
-
-	// a factory method for a identifier literal
-	LiteralPtr getIdentifierLiteral(const core::IdentifierPtr& identifier) const;
-
-	// a method generating a vector init expression form a scalar
-	ExpressionPtr scalarToVector(const TypePtr& type, const ExpressionPtr& subExpr) const;
-
-	// two methods obtaining all direct super / sub types of the given generic types
+	/**
+	 * Two methods obtaining all direct super / sub types of the given generic types
+	 */
 	TypeSet getDirectSuperTypesOf(const TypePtr& type) const;
 	TypeSet getDirectSubTypesOf(const TypePtr& type) const;
-
-	// a factory method for a type literal
-	LiteralPtr getTypeLiteral(const TypePtr& type) const;
 
 private:
 

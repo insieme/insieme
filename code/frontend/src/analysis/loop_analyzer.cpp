@@ -81,10 +81,10 @@ struct VarRefFinder: public StmtVisitor<VarRefFinder>, public insieme::frontend:
 	}
 };
 
-insieme::core::ExpressionPtr addOne(const insieme::core::ASTBuilder& builder, const insieme::core::ExpressionPtr& expr) {
+insieme::core::ExpressionPtr addOne(const insieme::core::IRBuilder& builder, const insieme::core::ExpressionPtr& expr) {
 
 	return builder.callExpr( expr->getType(), 
-			builder.getBasicGenerator().getOperator(expr->getType(), insieme::core::lang::BasicGenerator::Add),
+			builder.getLangBasic().getOperator(expr->getType(), insieme::core::lang::BasicGenerator::Add),
 			expr, 
 			builder.literal(expr->getType(), "1") 
 		);
@@ -144,7 +144,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 		case UO_PostInc:
 		case UO_PreDec:
 		case UO_PostDec:
-			loopHelper.incrExpr = convFact.getASTBuilder().literal("1", convFact.getNodeManager().basic.getInt4());
+			loopHelper.incrExpr = convFact.getIRBuilder().literal("1", convFact.getNodeManager().getLangBasic().getInt4());
 			return;
 		default:
 			assert(false && "UnaryOperator different from post/pre inc/dec (++/--) not supported in loop increment expression");
@@ -160,7 +160,7 @@ void LoopAnalyzer::handleIncrExpr(const clang::ForStmt* forStmt) {
 			assert(lhs->getDecl() == loopHelper.inductionVar);
 			loopHelper.incrExpr = convFact.convertExpr( binOp->getRHS() );
 			if (loopHelper.incrExpr->getType()->getNodeType() == core::NT_RefType) {
-				loopHelper.incrExpr = convFact.getASTBuilder().deref(loopHelper.incrExpr);
+				loopHelper.incrExpr = convFact.getIRBuilder().deref(loopHelper.incrExpr);
 			}
 			return;
 		}
@@ -188,14 +188,14 @@ void LoopAnalyzer::handleCondExpr(const clang::ForStmt* forStmt) {
 					break;
 				case BO_LE:
 					// return: condExpr + 1
-					loopHelper.condExpr = addOne(convFact.getASTBuilder(), condExpr);
+					loopHelper.condExpr = addOne(convFact.getIRBuilder(), condExpr);
 					break;
 				case BO_GT:
-					loopHelper.condExpr = convFact.getASTBuilder().invertSign(condExpr);
+					loopHelper.condExpr = convFact.getIRBuilder().invertSign(condExpr);
 					loopHelper.invert = true;
 					break;
 				case BO_GE:
-					loopHelper.condExpr = addOne(convFact.getASTBuilder(), convFact.getASTBuilder().invertSign(condExpr));
+					loopHelper.condExpr = addOne(convFact.getIRBuilder(), convFact.getIRBuilder().invertSign(condExpr));
 					loopHelper.invert = true;
 					break;
 				default:

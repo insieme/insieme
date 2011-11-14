@@ -44,12 +44,16 @@
 #include <boost/utility/typed_in_place_factory.hpp>
 
 
-#include "insieme/core/types.h"
+#include "insieme/core/ir_types.h"
 
 #include "insieme/utils/printable.h"
 
 namespace insieme {
 namespace core {
+
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Substitution
+// -------------------------------------------------------------------------------------------------------------------------
 
 /**
  * This class represents a substitution for type variables within types.
@@ -493,6 +497,20 @@ TypePtr deduceReturnType(const FunctionTypePtr& funType, const TypeList& argumen
  */
 bool isGeneric(const TypePtr& type);
 
-}
-}
+
+// -------------------------------------------------------------------------------------------------------------------------
+//                                                    Utilities
+// -------------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Obtains a list of types directly referenced by the given type.
+ *
+ * @param type the type which's direct sub-types should be determined.
+ * @return the list of identified sub-types
+ */
+TypeList getElementTypes(const TypePtr& type);
+
+
+} // end namespace core
+} // end namespace insieme
 
