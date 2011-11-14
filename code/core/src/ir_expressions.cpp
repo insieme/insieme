@@ -78,7 +78,7 @@ namespace core {
 		}, false);
 
 		// run visitor => if interrupted, the definition is recursive
-		return visitDepthFirstOnceInterruptable(lambda, detector);
+		return visitDepthFirstOnceInterruptible(lambda, detector);
 	}
 
 
@@ -99,11 +99,10 @@ namespace core {
 
 	bool LambdaExpr::isRecursiveInternal() const {
 		// evaluate lazily
-		if (!testedForRecursive) {
-			recursive = getDefinition()->isRecursive(getVariable());
-			testedForRecursive = true;
+		if (!recursive.isEvaluated()) {
+			recursive.setValue(getDefinition()->isRecursive(getVariable()));
 		}
-		return recursive;
+		return recursive.getValue();
 	}
 
 	namespace {

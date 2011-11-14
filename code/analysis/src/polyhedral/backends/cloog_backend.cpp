@@ -433,15 +433,15 @@ public:
  * ClastToIr: converts a clast into an IR which will be used to replace the SCoP region
  *************************************************************************************************/
 class ClastToIR : public RecClastVisitor< core::ExpressionPtr > {
-
+	
 public:
 	typedef std::vector<core::StatementPtr> StatementList;
 	typedef std::stack<StatementList> StatementStack;
 
 	typedef std::map<std::string, core::ExpressionPtr> IRVariableMap;
 
-	ClastToIR(core::NodeManager& mgr, const StmtMap& stmtMap, const IterationVector& iterVec) : 
-		mgr(mgr), stmtMap(stmtMap), iterVec(iterVec)
+	ClastToIR(const IslCtx& ctx, core::NodeManager& mgr, const IterationVector& iterVec) : 
+		ctx(ctx), mgr(mgr), iterVec(iterVec)
 	{
 		// Builds a map which associates variables in the cloog AST to IR node. This kind of
 		// handling has to be done to be able to remap parameters to correct IR nodes 
@@ -615,11 +615,8 @@ public:
 
 	core::ExpressionPtr visitCloogStmt(const CloogStatement* cloogStmt) {
 		STACK_SIZE_GUARD;
-
-		auto&& fit = stmtMap.find( cloogStmt->name );
-		assert(fit != stmtMap.end() && "Cloog generated statement not found!");
-
-		stmtStack.top().push_back( fit->second ); //FIXME: index replacement
+	
+		stmtStack.top().push_back( core::static_address_cast<const core::Statement>(ctx.get( cloogStmt->name )) ); //FIXME: index replacement
 		
 		return core::ExpressionPtr();
 	}
@@ -713,8 +710,8 @@ public:
 	}
 
 private:
+	const IslCtx&		ctx;
 	core::NodeManager& 		mgr;
-	const StmtMap&			stmtMap;
 	const IterationVector& 	iterVec;
 	IRVariableMap  			varMap;
 	StatementStack 			stmtStack;
@@ -728,11 +725,10 @@ namespace poly {
 
 template <>
 core::NodePtr toIR(core::NodeManager& mgr, 
-		const StmtMap& stmtMap,		
 		const IterationVector& iterVec, 
-		IslContext& ctx, 
-		const Set<IslContext>& domain, 
-		const Map<IslContext>& schedule) 
+		IslCtx& ctx, 
+		const Set<IslCtx>& domain, 
+		const Map<IslCtx>& schedule) 
 {
 
 	CloogState *state;
@@ -743,7 +739,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 	state = cloog_state_malloc();
 	options = cloog_options_malloc(state);
 
-	MapPtr<IslContext>&& schedDom = map_intersect_domain(ctx, schedule, domain);
+	MapPtr<IslCtx>&& schedDom = map_intersect_domain(ctx, schedule, domain);
 
 	CloogUnionDomain* unionDomain = 
 		cloog_union_domain_from_isl_union_map( isl_union_map_copy( schedDom->getAsIslMap() ) );
@@ -764,7 +760,7 @@ core::NodePtr toIR(core::NodeManager& mgr,
 		dumper.visit(root);
 	}
 
-	ClastToIR converter(mgr, stmtMap, iterVec);
+	ClastToIR converter(ctx, mgr, iterVec);
 	converter.visit(root);
 	
 	core::StatementPtr&& retIR = converter.getIR();

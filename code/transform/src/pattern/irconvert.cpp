@@ -65,7 +65,9 @@ namespace {
 	public:
 
 		IRTree(const core::NodePtr& node, const EvalFunctor& evalFunctor = &convertChildren)
-			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {}
+			: Tree(node->getNodeType()), node(node), evaluated(false), evalFunctor(evalFunctor) {
+			attachValue<NodePtr>(node);
+		}
 
 		const core::NodePtr& getNode() const {
 			return node;
@@ -74,8 +76,10 @@ namespace {
 		std::ostream& printTo(std::ostream& out) const {
 			if(!evaluated) {
 				return out << "irtree[lazy](" << getId() << "," << *node << ")";
+				//return out << "irtree[lazy](" << core::getNodeTypeName((core::NodeType)getId()) << "," << *node << ")";
 			}
 			return out << "irtree[evaled](" << getId() << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
+			//return out << "irtree[evaled](" << core::getNodeTypeName((core::NodeType)getId()) << "," << join(",", subTrees, print<deref<TreePtr>>()) << ")";
 		}
 
 		virtual const TreeList& getSubTrees() const {
@@ -107,25 +111,20 @@ namespace {
 
 		// NODES REQUIERING SPECIAL TREATMENT
 
-		TreePtr visitGenericType(const GenericTypePtr& node){
-			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
-				TreeList children;
-				children.push_back(makeValue(static_pointer_cast<const GenericType>(node)->getFamilyName()));
-				copy(IRTree::convertChildren(node), back_inserter(children));
-				return children;
-			};
-			return std::make_shared<IRTree>(node, eval);
-		}
+		#define CONVERT_VALUE(TYPE) \
+			TreePtr visit ## TYPE ## Value(const TYPE ## ValuePtr& node) { \
+				return makeValue(node->getValue()); \
+			}
 
-		TreePtr visitLiteral(const LiteralPtr& node){
-			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
-				TreeList res;
-				res.push_back(makeValue(static_pointer_cast<const Literal>(node)->getStringValue()));
-				copy(IRTree::convertChildren(node), back_inserter(res));
-				return res;
-			};
-			return make_shared<IRTree>(node, eval);
-		}
+			CONVERT_VALUE(Bool);
+			CONVERT_VALUE(Char);
+			CONVERT_VALUE(Int);
+			CONVERT_VALUE(UInt);
+			CONVERT_VALUE(String);
+
+		#undef CONVERT_VALUE
+
+
 		TreePtr visitCallExpr(const CallExprPtr& node){
 			static IRTree::EvalFunctor eval = [](const NodePtr& node) {
 				auto children = node->getChildList();
@@ -138,6 +137,10 @@ namespace {
 
 		TreePtr visitVariableIntTypeParam(const VariableIntTypeParamPtr& node){
 			return makeTree((int)node->getNodeType(), makeValue(node->getSymbol()->getValue()));
+		}
+
+		TreePtr visitVariable(const VariablePtr& node){
+			return makeTree((int)node->getNodeType(), toTree(node->getType()), makeValue((int)node->getId()));
 		}
 
 		TreePtr visitConcreteIntTypeParam(const ConcreteIntTypeParamPtr& node){
@@ -155,7 +158,9 @@ namespace {
 }
 
 TreePtr toTree(const core::NodePtr& node) {
-	return TreeConverter().visit(node);
+	auto res = TreeConverter().visit(node);
+	res->attachValue<NodePtr>(node);
+	return res;
 }
 
 

@@ -280,7 +280,7 @@ public:
 	static Address<T> find(const Pointer<T>& target, const NodePtr& root) {
 		bool visitTypes = target->getNodeCategory() == NC_Type;
 		Address<T> ret;
-		visitDepthFirstOnceInterruptable(Address(root), [&](const Address<T>& addr) -> bool {
+		visitDepthFirstOnceInterruptible(Address(root), [&](const Address<T>& addr) -> bool {
 			if(*addr.getAddressedNode() == *target) { 
 				ret = addr;
 				return true;
@@ -617,19 +617,19 @@ void visitPathTopDown(const Address<const T>& addr, Visitor& visitor) {
 }
 
 template<typename Visitor, typename T>
-bool visitPathBottomUpInterruptable(const Address<const T>& addr, Visitor& visitor) {
+bool visitPathBottomUpInterruptible(const Address<const T>& addr, Visitor& visitor) {
 	bool res = visitor.visit(addr);
 	if (!res && addr.getDepth() != 1) {
-		return visitPathBottomUpInterruptable(addr.getParentAddress(), visitor);
+		return visitPathBottomUpInterruptible(addr.getParentAddress(), visitor);
 	}
 	return res;
 }
 
 template<typename Visitor, typename T>
-bool visitPathTopDownInterruptable(const Address<const T>& addr, Visitor& visitor) {
+bool visitPathTopDownInterruptible(const Address<const T>& addr, Visitor& visitor) {
 	bool res = false;
 	if (addr.getDepth() != 1) {
-		res = visitPathTopDownInterruptable(addr.getParentAddress(), visitor);
+		res = visitPathTopDownInterruptible(addr.getParentAddress(), visitor);
 	}
 	return res || visitor.visit(addr);
 }

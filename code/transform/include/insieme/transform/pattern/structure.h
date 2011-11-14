@@ -45,6 +45,7 @@
 #include "insieme/utils/container_utils.h"
 #include "insieme/utils/string_utils.h"
 #include "insieme/utils/printable.h"
+#include "insieme/utils/annotation.h"
 
 namespace insieme {
 namespace transform {
@@ -57,12 +58,12 @@ namespace pattern {
 	typedef vector<TreePtr> TreeList;
 	typedef TreeList::const_iterator TreeListIterator;
 
-	class Tree : public utils::Printable {
+	class Tree : public utils::Annotatable<>, public utils::Printable, boost::noncopyable {
 	public:
 
 		static const int VALUE_ID;
 
-		typedef boost::variant<bool,int,std::size_t,string> Value;
+		typedef boost::variant<bool,int,unsigned,string> Value;
 
 	protected:
 

@@ -40,6 +40,7 @@
 #include "insieme/core/ir_statements.h"
 
 #include "insieme/utils/numeric_cast.h"
+#include "insieme/utils/lazy.h"
 
 namespace insieme {
 namespace core {
@@ -571,13 +572,7 @@ namespace core {
 		/**
 		 * A flag indicating whether this lambda is representing a recursive function.
 		 */
-		mutable bool recursive;
-
-		/**
-		 * A flag indicating whether the test whether this is a recursive lambda has alread
-		 * been conducted or not.
-		 */
-		mutable bool testedForRecursive;
+		mutable utils::Lazy<bool> recursive;
 
 	protected:
 

@@ -36,51 +36,60 @@
 
 #pragma once
 
-#include "declarations.h"
+namespace insieme {
+namespace utils {
 
-#include <pthread.h>
+	/**
+	 * A small utility helper wrapping a value into a lazy closure.
+	 */
+	template<typename V>
+	class Lazy {
 
-#include "work_item.h"
-#include "irt_scheduling.h"
-#include "utils/minlwt.h"
-#include "instrumentation.h"
+		/**
+		 * The flag recording whether the value is valid or not.
+		 */
+		bool evaluated;
 
-/* ------------------------------ data structures ----- */
+		/**
+		 * The value to be represented.
+		 */
+		V value;
 
-IRT_MAKE_ID_TYPE(worker);
+	public:
 
-typedef enum _irt_worker_state {
-	IRT_WORKER_STATE_CREATED, IRT_WORKER_STATE_START, IRT_WORKER_STATE_RUNNING, IRT_WORKER_STATE_WAITING, IRT_WORKER_STATE_STOP
-} irt_worker_state;
+		/**
+		 * A simple constructor initializing the instance unevaluated.
+		 */
+		Lazy() : evaluated(false) {}
 
-struct _irt_worker {
-	irt_worker_id id;
-	uint64 generator_id;
-	irt_affinity_mask affinity;
-	pthread_t pthread;
-	lwt_context basestack;
-	irt_context_id cur_context;
-	irt_work_item* cur_wi;
-	irt_worker_state state;
-	irt_worker_scheduling_data sched_data;
-	irt_work_item lazy_wi;
-	uint64 lazy_count;
-	irt_pd_table* performance_data;
-	// memory reuse stuff
-	irt_wi_event_register *wi_ev_register_list;
-	irt_wg_event_register *wg_ev_register_list;
-	irt_work_item *wi_reuse_stack;
-	intptr_t *stack_reuse_stack;
-};
+		/**
+		 * Obtains a reference to represented value in case it has been evaluated.
+		 */
+		const V& getValue() const {
+			assert(evaluated && "Unsupported access to unevaluated value!");
+			return value;
+		}
 
-/* ------------------------------ operations ----- */
+		/**
+		 * Update the represented value. This method may only be called once.
+		 *
+		 * @param value the value to be represented.
+		 */
+		void setValue(const V& newValue) {
+			assert(!evaluated && "Cannot update value twice!");
+			value = newValue;
+			evaluated = true;
+		}
 
-static inline irt_worker* irt_worker_get_current() {
-	return (irt_worker*)pthread_getspecific(irt_g_worker_key);
-}
+		/**
+		 * Allows to determine whether the value has already been evaluated or not.
+		 */
+		bool isEvaluated() const {
+			return evaluated;
+		}
 
-irt_worker* irt_worker_create(uint16 index, irt_affinity_mask affinity);
-void _irt_worker_cancel_all_others();
+	};
+	
 
-void _irt_worker_switch_to_wi(irt_worker* self, irt_work_item *wi);
-void _irt_worker_run_optional_wi(irt_worker* self, irt_work_item *wi);
+} // end namespace utils
+} // end namespace insieme

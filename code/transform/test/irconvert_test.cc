@@ -96,13 +96,15 @@ TEST(IRConvert, Basic) {
 
 TEST(IRPattern, Types) {
 	NodeManager manager;
-	auto t = [&manager](string typespec) { return parse::parseType(manager, typespec); };
+	auto pt = [&manager](string str) { return parse::parseType(manager, str); };
 	
-	TypePtr int8Type = t("int<8>");
-	TypePtr genericA = t("megatype<ultratype<int<8>,666>>");
+	TypePtr int8Type = pt("int<8>");
+	TypePtr genericA = pt("megatype<ultratype<int<8>,666>>");
+	TypePtr genericB = pt("megatype<ultratype<int<8>,B>>");
 	
 	auto int8TypeTree = toTree(int8Type);
 	auto genericATypeTree = toTree(genericA);
+	auto genericBTypeTree = toTree(genericB);
 
 	TreePatternPtr patternA = irp::genericType("megatype", single(any));
 	EXPECT_PRED2(notMatch, patternA, int8TypeTree); 
@@ -112,40 +114,103 @@ TEST(IRPattern, Types) {
 	EXPECT_PRED2(notMatch, patternB, int8TypeTree);
 	EXPECT_PRED2(notMatch, patternB, genericATypeTree);
 	EXPECT_PRED2(notMatch, aT(patternB), int8TypeTree);
-	EXPECT_PRED2(match, aT(patternB), genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternB), genericATypeTree);
+	EXPECT_PRED2(match, aT(patternB), genericBTypeTree);
+
+	TreePatternPtr patternC = irp::genericType("ultratype", single(any), single(any));
+	EXPECT_PRED2(notMatch, patternC, int8TypeTree);
+	EXPECT_PRED2(notMatch, patternC, genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternC), int8TypeTree);
+	EXPECT_PRED2(match, aT(patternC), genericATypeTree);
+	EXPECT_PRED2(notMatch, aT(patternC), genericBTypeTree);
 }
 
 
-TEST(IRPattern, Expressions) {
+TEST(IRPattern, literal) {
 	NodeManager manager;
-	auto e = [&manager](string expressionSpec) { return parse::parseExpression(manager, expressionSpec); };
+	auto pe = [&manager](string str) { return parse::parseExpression(manager, str); };
+	ExpressionPtr exp1 = pe("(4.2 + 3.1)");
+	ExpressionPtr exp2 = pe("(4 - 2)");
+	ExpressionPtr exp3 = pe("((4.2 + 3.1) * (4 - 2))");
 	
-	ExpressionPtr realAddExp = e("(4.2 + 3.1)");
-	ExpressionPtr intSubExp = e("(4 - 2)");
-	ExpressionPtr nestedExp = e("((4.2 + 3.1) * (4 - 2))");
-	
-	auto realAddTree = toTree(realAddExp);
-	auto intSubTree = toTree(intSubExp);
-	auto nestedTree = toTree(nestedExp);
+	auto tree1 = toTree(exp1);
+	auto tree2 = toTree(exp2);
+	auto tree3 = toTree(exp3);
 
-	TreePatternPtr patternA = irp::call(manager.getLangBasic().getRealAdd(), *any);
-	EXPECT_PRED2(match, patternA, realAddTree);
-	EXPECT_PRED2(notMatch, patternA, intSubTree);
-	EXPECT_PRED2(notMatch, patternA, nestedTree);
+	TreePatternPtr patternA = irp::callExpr(manager.getLangBasic().getRealAdd(), *any);
+	EXPECT_PRED2(match, patternA, tree1);
+	EXPECT_PRED2(notMatch, patternA, tree2);
+	EXPECT_PRED2(notMatch, patternA, tree3);
 	
-	TreePatternPtr patternB = node(irp::lit("int.sub", any) << *any);
-	EXPECT_PRED2(notMatch, patternB, realAddTree);
-	EXPECT_PRED2(match, patternB, intSubTree);
-	EXPECT_PRED2(notMatch, patternB, nestedTree);
+	TreePatternPtr patternB = node(irp::literal("int.sub", any) << *any);
+	EXPECT_PRED2(notMatch, patternB, tree1);
+	EXPECT_PRED2(match, patternB, tree2);
+	EXPECT_PRED2(notMatch, patternB, tree3);
+}
+
+TEST(IRPattern, variable) {
+	NodeManager manager;
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+
+	StatementPtr var1 = parse::parseExpression(manager, "int<8>:x");
+	auto tree1 = toTree(var1);
+	TreePatternPtr pattern1 = irp::variable(at("int<8>"), any);
+	EXPECT_PRED2(match, pattern1, tree1);
+}
+
+TEST(IRPattern, lambdaExpr) {
+	NodeManager manager;
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+
+	ExpressionPtr exp1 = parse::parseExpression(manager, "fun (int<4>:i, int<8>:v) -> int<4> { return i }");
+
+	auto tree1 = toTree(exp1);
+	TreePatternPtr pattern1 = irp::lambdaExpr(any, irp::lambdaDefinition(*any));
+	EXPECT_PRED2(match, pattern1, tree1);
+}
+
+TEST(IRPattern, lambda) {
+	NodeManager manager;
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+
+	NodePtr node = parse::parseIR(manager, "(int<8>:i, int<8>:v) -> int<4> { return i }");
+
+	auto tree1 = toTree(node);
+	TreePatternPtr pattern1 = irp::lambda(any, irp::variable(var("x"), any) << irp::variable(var("x"), any), any);
+	EXPECT_PRED2(match, pattern1, tree1);
+}
+
+TEST(IRPattern, callExpr) {
+	NodeManager manager;
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+
+	ExpressionPtr exp1 = parse::parseExpression(manager, "( 4 + 5 )");
+
+	auto tree1 = toTree(exp1);
+	TreePatternPtr pattern1 = irp::callExpr(irp::literal(any, any) , *any);
+	EXPECT_PRED2(match, pattern1, tree1);
+}
+
+TEST(IRPattern, declarationStmt) {
+	NodeManager manager;
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+
+	StatementPtr stmt1 = parse::parseStatement(manager, "decl int<4>:i = 3");
+	auto tree1 = toTree(stmt1);
+	TreePatternPtr pattern1 = irp::declarationStmt(any, any);
+	TreePatternPtr pattern2 = irp::declarationStmt(irp::variable(at("int<4>"), any), at("3"));
+	EXPECT_PRED2(match, pattern1, tree1);
+	EXPECT_PRED2(match, pattern2, tree1);
 }
 
 TEST(IRPattern, ifStmt) {
 	NodeManager manager;
-	auto at = [&manager](string stmtString) { return irp::atom(manager, stmtString); };
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+	auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
 
-	StatementPtr stmt1 = parse::parseStatement(manager, "if(0) { return 0; } else { return (1+2); }");
-	StatementPtr stmt2 = parse::parseStatement(manager, "if(0) { return 0; }");
-	StatementPtr stmt3 = parse::parseStatement(manager, "if((1 != 0)) { return 0; }");
+	StatementPtr stmt1 = ps("if(0) { return 0; } else { return (1+2); }");
+	StatementPtr stmt2 = ps("if(0) { return 0; }");
+	StatementPtr stmt3 = ps("if((1 != 0)) { return 0; }");
 
 	auto tree1 = toTree(stmt1);
 	auto tree2 = toTree(stmt2);
@@ -179,6 +244,58 @@ TEST(IRPattern, ifStmt) {
 	EXPECT_PRED2(match, pattern5, tree3);
 	EXPECT_PRED2(match, pattern6, tree3);
 }
+
+TEST(IRPattern, forStmt) {
+	NodeManager manager;
+	auto at = [&manager](string str) { return irp::atom(manager, str); };
+	auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
+
+	StatementPtr stmt1 = ps("for(decl int<4>:i = 30 .. 5 : -5) { decl int<4>:i = 3;}");
+	StatementPtr stmt2 = ps("for(decl int<4>:i = 0 .. 10 : 2) { return 0; }");
+	StatementPtr stmt3 = ps("for(decl int<4>:i = 0 .. 5 : 1) { 7; 6; continue; 8; }");
+	StatementPtr stmt4 = ps("for(decl int<4>:i = 0 .. 2 : 1) { for(decl int<4>:i = 0 .. 2 : 1){ return 0; }; }");
+
+	auto tree1 = toTree(stmt1);
+	auto tree2 = toTree(stmt2);
+	auto tree3 = toTree(stmt3);
+	auto tree4 = toTree(stmt4);
+
+	TreePatternPtr pattern1 = irp::forStmt(var("x"), any, at("5"), at("-5"), irp::declarationStmt(var("x"), at("3")));
+	TreePatternPtr pattern2 = irp::forStmt(any, any, at("10"), at("2"), irp::returnStmt(at("0")));
+	TreePatternPtr pattern3 = irp::forStmt(any, any, at("5"), at("1"), irp::compoundStmt(*any << irp::continueStmt << any));
+	TreePatternPtr pattern4 = irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(irp::forStmt(var("i"), var("x"), var("y"), var("z"), irp::compoundStmt(*any)) << *any));
+
+	EXPECT_PRED2(match, pattern1, tree1);
+	EXPECT_PRED2(match, pattern2, tree2);
+	EXPECT_PRED2(match, pattern3, tree3);
+	EXPECT_PRED2(match, pattern4, tree4);
+}
+
+//TEST(IRPattern, whileStmt) {
+//	NodeManager manager;
+//	auto at = [&manager](string str) { return irp::atom(manager, str); };
+//	auto ps = [&manager](string str) { return parse::parseStatement(manager, str); };
+//
+//	StatementPtr stmt1 = ps(" { decl ref<int<4>>:i = 30; while((i < 40)){ (i++); }; }");
+//	StatementPtr stmt2 = ps(" while((ref<int<4>>:i < 40)){ { }; { decl int<4>:b = (i++);}; }");
+//
+//	auto tree1 = toTree(stmt1);
+//	auto tree2 = toTree(stmt2);
+//
+//	TreePatternPtr pattern1 = irp::compoundStmt(irp::declarationStmt(var("x"), at("30")) << irp::whileStmt(irp::callExpr(irp::literal("int.lt", any),
+//								irp::callExpr(irp::literal("ref.deref", any), var("x") << *any) << *any), irp::compoundStmt(*any << irp::callExpr(any, var("x") << *any))));
+//	TreePatternPtr pattern2 = irp::whileStmt(irp::callExpr(irp::literal("int.lt", any), irp::callExpr(irp::literal("ref.deref", any), var("x") << *any) << *any),
+//											 aT(irp::declarationStmt(any, aT(var("x")))));
+//
+//	/*MatchOpt mo = pattern1->match(tree1);
+//	if (mo){
+//		MatchValue mv = mo->getVarBinding("x");
+//		std::cout << mv.getTree()->getAttachedValue<NodePtr>();
+//	}*/
+//
+//	EXPECT_PRED2(match, pattern1, tree1) << *stmt1;
+//	EXPECT_PRED2(match, pattern2, tree2) << *stmt2;
+//}
 
 } // end namespace pattern
 } // end namespace transform

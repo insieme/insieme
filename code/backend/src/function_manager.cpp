@@ -614,6 +614,7 @@ namespace backend {
 
 			// A) get list of all lambdas within this recursive group
 			vector<std::pair<c_ast::IdentifierPtr,core::LambdaExprPtr>> lambdas;
+
 			::transform(lambdaDefinition->getDefinitions(), std::back_inserter(lambdas),
 					[&](const core::LambdaBindingPtr& cur)->std::pair<c_ast::IdentifierPtr,core::LambdaExprPtr> {
 						auto lambda = core::LambdaExpr::get(manager, cur->getVariable(), lambdaDefinition);

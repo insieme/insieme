@@ -81,6 +81,7 @@
 #include "insieme/analysis/polyhedral/scop.h"
 #include "insieme/analysis/defuse_collect.h"
 #include "insieme/analysis/features_collect.h"
+#include "insieme/analysis/polyhedral/backends/isl_backend.h"
 
 using namespace std;
 using namespace insieme::utils::log;
@@ -325,8 +326,8 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 
 	utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
 	std::for_each(sl.begin(), sl.end(),	[&](AddressList::value_type& cur){ 
-		resolveFrom(cur);
-		// printSCoP(LOG_STREAM(INFO), cur); 
+		// resolveFrom(cur);
+		printSCoP(LOG_STREAM(INFO), cur); 
 		// performing dependence analysis
 		// computeDataDependence(cur);
 
@@ -335,6 +336,15 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		replacements.insert( std::make_pair(cur.getAddressedNode(), ir) );
 
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
+		reg.resolve();
+
+		for_each(reg.getScop(),[] (const insieme::analysis::poly::Stmt& cur) { 
+				insieme::analysis::poly::IslCtx ctx;
+				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur.getDomain());
+				set.getCard();
+			}
+		);
+
 		numStmtsInScops += reg.getScatteringInfo().second.size();
 		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScatteringInfo().second);
 		

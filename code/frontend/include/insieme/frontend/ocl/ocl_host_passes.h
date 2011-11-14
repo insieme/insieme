@@ -94,7 +94,6 @@ struct hash_target_specialized : public hash_target<core::ExpressionPtr> {
 
 		if(builder.getNodeManager().getLangBasic().isMemberAccess(call->getFunctionExpr())) {
 			// the type argument can be ignored since it should always be related to the identifier/index
-//std::cout << "\nReturning " << call << " : " << this->operator()(call->getArgument(0)) << " + " << this->operator()(call->getArgument(1)) << std::endl;
 			return this->operator()(call->getArgument(0)) + this->operator()(call->getArgument(1));
 		}
 
@@ -126,10 +125,20 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 		core::CallExprPtr xCall = dynamic_pointer_cast<const core::CallExpr>(x);
 		core::CallExprPtr yCall = dynamic_pointer_cast<const core::CallExpr>(y);
 
-//std::cout << "\ncomparing " << x << " and\n          " << y << "\neqMap: " << eqMap << std::endl;
+		// remove deref operation
+		// TODO of questionable use, maybe remove?
+/*		if(!!xCall && builder.getNodeManager().getLangBasic().isRefDeref(xCall->getFunctionExpr())) {
+			return this->operator ()(xCall->getArgument(0), y);
+		}
+		if(!!yCall && builder.getNodeManager().getLangBasic().isRefDeref(yCall->getFunctionExpr())) {
+			return this->operator ()(x, yCall->getArgument(0));
+		}
+*/
 		if(!!xCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(xCall->getFunctionExpr()))
-			if(!!yCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(yCall->getFunctionExpr()))
-				return this->operator ()(xCall->getArgument(0), yCall->getArgument(0));
+			return this->operator ()(xCall->getArgument(0), y);
+
+		if(!!yCall && builder.getNodeManager().getLangBasic().isSubscriptOperator(yCall->getFunctionExpr()))
+			return this->operator ()(x, yCall->getArgument(0));
 
 		if(!!xCall && builder.getNodeManager().getLangBasic().isMemberAccess(xCall->getFunctionExpr()))
 			if(!!yCall && builder.getNodeManager().getLangBasic().isMemberAccess(yCall->getFunctionExpr())){
@@ -139,15 +148,17 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 
 		const core::VariablePtr& xVar = dynamic_pointer_cast<const core::Variable>(x);
 		const core::VariablePtr& yVar = dynamic_pointer_cast<const core::Variable>(y);
-
+/*
+		if(xVar->getId() == 3 || xVar->getId() == 9)
+			std::cout << std::endl  << " " << xVar << " vs "  << " " << yVar << std::endl;
+*/
 		if(!xVar || !yVar) {
 			return false;
 		}
 
-
 		core::NodeAddress xAddr = core::Address<const core::Variable>::find(xVar, root);
 		core::NodeAddress yAddr = core::Address<const core::Variable>::find(yVar, root);
-//std::cout << xAddr.getDepth() << "  " << yAddr.getDepth() << "\nasdfasdfasdfasdf\n\n";
+
 		bool reverse;
 		if(xAddr.getDepth() > yAddr.getDepth()) {
 			core::NodeAddress tmp = xAddr;
@@ -162,11 +173,22 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 				if(const core::LambdaExprPtr lambda = core::dynamic_pointer_cast<const core::LambdaExpr>(call.getAddressedNode()->getFunctionExpr())) {
 					for_range(make_paired_range(lambda->getParameterList(), call->getArguments()),
 							[&](const std::pair<core::VariablePtr, core::ExpressionPtr>& cur) {
+						// get rid of f**king deref and vectorToArray operations
+						core::ExpressionPtr arg = cur.second;
+						core::CallExprPtr unneccecaryFunction = dynamic_pointer_cast<const core::CallExpr>(cur.second);
+						if(unneccecaryFunction && (
+							builder.getNodeManager().getLangBasic().isRefDeref(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().getLangBasic().isRefVectorToRefArray(unneccecaryFunction->getFunctionExpr()) ||
+							builder.getNodeManager().getLangBasic().isVectorToArray(unneccecaryFunction->getFunctionExpr()) ))
+								arg = unneccecaryFunction->getArgument(0);
+
+//std::cout << "\n 1 " << *yAddr << " - " << *cur.first << std::endl;
 						if(*yAddr == *cur.first) {
-							if(*xAddr == *cur.second)
+//std::cout << " 2 " << *xAddr << " - " << *arg << std::endl;
+							if(*xAddr == *arg)
 								ret = true;
 							else
-								ret = this->operator ()(cur.second, reverse ? y : x);
+								ret = this->operator ()(arg, reverse ? y : x);
 						}
 					});
 				}
@@ -174,7 +196,7 @@ struct equal_variables {// : public std::binary_function<const core::ExpressionP
 			return ret;
 		});
 
-		return core::visitPathBottomUpInterruptable(yAddr, visitor);
+		return core::visitPathBottomUpInterruptible(yAddr, visitor);
 	}
 };
 typedef insieme::utils::map::PointerMap<core::VariablePtr, core::VariablePtr> ClmemTable;

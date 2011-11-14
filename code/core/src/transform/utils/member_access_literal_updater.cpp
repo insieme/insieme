@@ -111,7 +111,7 @@ const NodePtr MemberAccessLiteralUpdater::resolveElement(const NodePtr& ptr) {
 				return false;
 			});
 
-			if(!visitDepthFirstInterruptable(arg, lambdaVisitor) || idx == -1){
+			if(!visitDepthFirstInterruptible(arg, lambdaVisitor) || idx == -1){
 				LOG(ERROR) << fun;
 				assert(false && "Tuple access does not contain a literal as index");
 			}

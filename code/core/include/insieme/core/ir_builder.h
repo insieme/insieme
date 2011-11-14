@@ -302,6 +302,9 @@ namespace core {
 		ExpressionPtr refComponent(ExpressionPtr tupleExpr, unsigned component) const;
 		ExpressionPtr refComponent(ExpressionPtr tupleExpr, ExpressionPtr component) const;
 
+		// Locks
+		CallExprPtr aquireLock(const ExpressionPtr& lock) const;
+		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
 
 		/**
 		 * A function obtaining a reference to a NoOp instance.

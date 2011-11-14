@@ -35,8 +35,9 @@
  */
 
 #pragma once
-
 #include "irt_scheduling.h"
+#include "utils/timing.h"
+#include "impl/instrumentation.impl.h"
 
 #if IRT_SCHED_POLICY == IRT_SCHED_POLICY_STATIC
 #include "sched_policies/impl/irt_sched_static.impl.h"
@@ -48,12 +49,12 @@
 
 #include <time.h>
 
-static inline unsigned long long irt_cur_ticks() {
-	volatile unsigned long long a, d;
-	__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
-	return (a | (d << 32));
-}
-
+/*static inline unsigned long long irt_cur_ticks() {
+	//volatile unsigned long long a, d;
+	//__asm__ volatile("rdtsc" : "=a" (a), "=d" (d));
+	//return (a | (d << 32));
+	return 0;
+}*/
 void irt_scheduling_loop(irt_worker* self) {
 	static const long sched_start_nsecs = 1000l; // 1 nanos 
 	static const long sched_threshold_nsecs = 5l * 1000l * 1000l; // 5 millis 
@@ -71,13 +72,17 @@ void irt_scheduling_loop(irt_worker* self) {
 		wait_time.tv_nsec += 1000;
 		if(wait_time.tv_nsec > sched_max_nsecs) wait_time.tv_nsec = sched_max_nsecs;
 		if(wait_time.tv_nsec <= sched_threshold_nsecs) { // short wait, busy
-			unsigned long long end = irt_cur_ticks() + wait_time.tv_nsec;
-			while(irt_cur_ticks() < end);
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_START);
+			unsigned long long end = irt_time_ticks() + wait_time.tv_nsec;
+			while(irt_time_ticks() < end);
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_BUSY_END);
 		} else {										// long wait, sleep
 			self->state = IRT_WORKER_STATE_WAITING;
-			if(nanosleep(&wait_time, NULL) != 0) {
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_START);
+			if(irt_nanosleep(&wait_time) != 0) {
 				wait_time.tv_nsec = sched_start_nsecs;
 			}
+			irt_worker_instrumentation_event(self, WORKER_SLEEP_END);
 			self->state = IRT_WORKER_STATE_RUNNING;
 		}
 	}

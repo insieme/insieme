@@ -43,9 +43,13 @@
 
 //#define IRT_VERBOSE 1
 
+#ifdef WIN32 
+#define IRT_SIG_ERR SIG_ERR
+#define IRT_SIG_INTERRUPT SIGINT
+#else
 #define IRT_SIG_ERR SIGUSR1
 #define IRT_SIG_INTERRUPT SIGUSR2
-
+#endif
 /* ------------------------------ data structures ----- */
 
 typedef enum _irt_errcode {
@@ -79,13 +83,14 @@ if(!(__condition)) { \
 #define IRT_INFO(__message, ...) { \
 	printf(__message, ##__VA_ARGS__); \
 }
-#define IRT_DEBUG_ONLY(__code__) __code__
 #ifdef IRT_VERBOSE
+#define IRT_DEBUG_ONLY(__code__) __code__
 #define IRT_DEBUG(__message, ...) { \
 	printf("IRT Debug Info (%s#%d): ", __FILE__, __LINE__); \
 	printf(__message "\n", ##__VA_ARGS__); \
 }
 #else
+#define IRT_DEBUG_ONLY(__code__)
 #define IRT_DEBUG(__message, ...)
 #endif
 #else

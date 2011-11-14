@@ -119,6 +119,15 @@ if(MSVC)
 	set (kompex_LIB dummy)
 endif(MSVC)
 
+# lookup Barvinok library 
+if(NOT DEFINED BARVINOK_HOME)
+	set (BARVINOK_HOME $ENV{BARVINOK_HOME})
+endif()
+include_directories( ${BARVINOK_HOME}/include )
+find_library(barvinok_LIB NAMES barvinok PATHS ${BARVINOK_HOME}/lib)
+if(MSVC) 
+	set (barvinok_LIB dummy)
+endif(MSVC)
 
 FIND_LIBRARY(gmp_LIB NAMES gmp PATH /usr/lib)
 

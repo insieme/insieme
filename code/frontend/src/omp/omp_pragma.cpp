@@ -88,31 +88,30 @@ struct marker_type_trait<core::Expression> {
  * to the IR node
  */
 template <class NodeTy>
-core::Pointer<const NodeTy> attachOmpAnnotation(const core::Pointer<const NodeTy>& irNode,
-		const clang::Stmt* clangNode, conversion::ConversionFactory& fact)
-{
+core::Pointer<const NodeTy> attachOmpAnnotation(
+		const core::Pointer<const NodeTy>& irNode,
+		const clang::Stmt* clangNode, 
+		conversion::ConversionFactory& fact
+) {
 	const PragmaStmtMap::StmtMap& pragmaStmtMap = fact.getPragmaMap().getStatementMap();
 	std::pair<PragmaStmtMap::StmtMap::const_iterator, PragmaStmtMap::StmtMap::const_iterator> iter = pragmaStmtMap.equal_range(clangNode);
-
-	static size_t markerID=0;
 
 	omp::BaseAnnotation::AnnotationList anns;
 	std::for_each(iter.first, iter.second,
 		[ &fact, &anns ](const PragmaStmtMap::StmtMap::value_type& curr){
-			const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) );
-			if(ompPragma) {
+			if(const OmpPragma* ompPragma = dynamic_cast<const OmpPragma*>( &*(curr.second) )) {
 				VLOG(1) << "@ Statement has an OpenMP pragma attached";
 				anns.push_back( ompPragma->toAnnotation(fact) );
 			}
 	});
 	// If we didn't find OMP annotations, return the node
-	if(anns.empty())
-		return irNode;
+	if(anns.empty()) { return irNode; }
 
 	// otherwise create a marker node and attach the annotation to the marker
 	typedef typename marker_type_trait<NodeTy>::marker_type MarkerTy;
+
 	// create an expression marker
-	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), core::UIntValue::get(fact.getNodeManager(), markerID++), irNode);
+	core::Pointer<const NodeTy>&& marker = MarkerTy::get(fact.getNodeManager(), irNode);
 	// attach the annotation to the marker node
 	marker->addAnnotation( std::make_shared<omp::BaseAnnotation>( anns ) );
 	return marker;
@@ -152,16 +151,16 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 							  ( kwd("shared") | kwd("none") )["default"] >> r_paren;
 
 	// identifier *(, identifier)
-	auto identifier_list   	= identifier >> *(~comma >> identifier);
+	auto var_list   		= var >> *(~comma >> var);
 
 	// private(list)
-	auto private_clause    	=  kwd("private") >> l_paren >> identifier_list["private"] >> r_paren;
+	auto private_clause    	=  kwd("private") >> l_paren >> var_list["private"] >> r_paren;
 
 	// firstprivate(list)
-	auto firstprivate_clause = kwd("firstprivate") >> l_paren >> identifier_list["firstprivate"] >> r_paren;
+	auto firstprivate_clause = kwd("firstprivate") >> l_paren >> var_list["firstprivate"] >> r_paren;
 
 	// lastprivate(list)
-	auto lastprivate_clause = kwd("lastprivate") >> l_paren >> identifier_list["lastprivate"] >> r_paren;
+	auto lastprivate_clause = kwd("lastprivate") >> l_paren >> var_list["lastprivate"] >> r_paren;
 
 	// + or - or * or & or | or ^ or && or ||
 	auto op 			  	= tok::plus | tok::minus | tok::star | tok::amp |
@@ -169,7 +168,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// reduction(operator: list)
 	auto reduction_clause 	= kwd("reduction") >> l_paren >> op["reduction_op"] >> colon >>
-							  identifier_list["reduction"] >> r_paren;
+							  var_list["reduction"] >> r_paren;
 
 	auto parallel_clause =  ( 	// if(scalar-expression)
 								if_expr
@@ -182,9 +181,9 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 							|	// firstprivate(list)
 								firstprivate_clause
 							|	// shared(list)
-								(kwd("shared") >> l_paren >> identifier_list["shared"] >> r_paren)
+								(kwd("shared") >> l_paren >> var_list["shared"] >> r_paren)
 							|	// copyin(list)
-								(kwd("copyin") >> l_paren >> identifier_list["copyin"] >> r_paren)
+								(kwd("copyin") >> l_paren >> var_list["copyin"] >> r_paren)
 							|	// reduction(operator: list)
 								reduction_clause
 							);
@@ -236,7 +235,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 							|	// firstprivate(list)
 								firstprivate_clause
 							|	// copyprivate(list)
-							 	kwd("copyprivate") >> l_paren >> identifier_list["copyprivate"] >> r_paren
+							 	kwd("copyprivate") >> l_paren >> var_list["copyprivate"] >> r_paren
 							|	// nowait
 								kwd("nowait")
 							);
@@ -254,13 +253,13 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 							| 	// firstprivate(list)
 								firstprivate_clause
 							|	// shared(list)
-								kwd("shared") >> l_paren >> identifier_list["shared"] >> r_paren
+								kwd("shared") >> l_paren >> var_list["shared"] >> r_paren
 							);
 
 	auto task_clause_list = !(task_clause >> *( !comma >> task_clause ));
 
 	// threadprivate(list)
-	auto threadprivate_clause = l_paren >> identifier_list["thread_private"] >> r_paren;
+	auto threadprivate_clause = l_paren >> var_list["thread_private"] >> r_paren;
 
 	// define a PragmaNamespace for omp
 	clang::PragmaNamespace* omp = new clang::PragmaNamespace("omp");
@@ -303,7 +302,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// #pragma omp critical [(name)] new-line
 	omp->AddPragma( PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaCritical>(
-			pp.getIdentifierInfo("critical"), !(l_paren >> identifier >> r_paren) >> tok::eod, "omp")
+			pp.getIdentifierInfo("critical"), !(l_paren >> identifier["critical"] >> r_paren) >> tok::eod, "omp")
 		);
 
 	//#pragma omp barrier new-line
@@ -323,7 +322,7 @@ void registerPragmaHandlers(clang::Preprocessor& pp) {
 
 	// #pragma omp flush [(list)] new-line
 	omp->AddPragma(PragmaHandlerFactory::CreatePragmaHandler<OmpPragmaFlush>(
-			pp.getIdentifierInfo("flush"), !identifier_list["flush"] >> tok::eod, "omp")
+			pp.getIdentifierInfo("flush"), !var_list["flush"] >> tok::eod, "omp")
 		);
 
 	// #pragma omp ordered new-line
@@ -666,21 +665,17 @@ AnnotationPtr OmpPragmaMaster::toAnnotation(conversion::ConversionFactory& fact)
 AnnotationPtr OmpPragmaCritical::toAnnotation(conversion::ConversionFactory& fact) const {
 	const MatchMap& map = getMap();
 
+	std::string name;
 	// checking region name (if existing)
-	core::VariablePtr criticalName = NULL;
 	auto fit = map.find("critical");
 	if(fit != map.end()) {
 		const ValueList& vars = fit->second;
 		assert(vars.size() == 1 && "Critical region has multiple names");
-		clang::Stmt* name = vars.front()->get<clang::Stmt*>();
-		clang::DeclRefExpr* refName = dyn_cast<clang::DeclRefExpr>(name);
-		assert(refName && "Clause not containing an identifier");
-
-		criticalName = core::dynamic_pointer_cast<const core::Variable>( fact.convertExpr( refName ) );
-		assert(criticalName && "Conversion to Insieme node failed!");
+		LOG(INFO) << "()()()()()()() UIUIUIUIIUI -- " << *vars.front()->get<std::string*>();
+		name = *vars.front()->get<std::string*>();
 	}
 
-	return std::make_shared<Critical>( criticalName );
+	return std::make_shared<Critical>( name );
 }
 
 AnnotationPtr OmpPragmaBarrier::toAnnotation(conversion::ConversionFactory& fact) const {

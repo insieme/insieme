@@ -263,8 +263,7 @@ ForStmtPtr IRBuilder::forStmt(const VariablePtr& var, const ExpressionPtr& start
 SwitchStmtPtr IRBuilder::switchStmt(const ExpressionPtr& switchExpr, const vector<std::pair<ExpressionPtr, StatementPtr>>& cases, const StatementPtr& defaultCase) const {
 	CompoundStmtPtr defCase = (defaultCase)?wrapBody(defaultCase):getNoOp();
 
-	vector<SwitchCasePtr> caseList;
-	::transform(cases, [&](const pair<ExpressionPtr, StatementPtr>& cur) {
+	vector<SwitchCasePtr> caseList = ::transform(cases, [&](const pair<ExpressionPtr, StatementPtr>& cur) {
 		return switchCase(static_pointer_cast<LiteralPtr>(cur.first), wrapBody(cur.second));
 	});
 
@@ -395,6 +394,16 @@ CallExprPtr IRBuilder::vectorSubscript(const ExpressionPtr& vec, const Expressio
 DeclarationStmtPtr IRBuilder::declarationStmt(const TypePtr& type, const ExpressionPtr& value) const {
 	return declarationStmt(variable(type), value);
 }
+
+CallExprPtr IRBuilder::aquireLock(const ExpressionPtr& lock) const {
+	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot lock a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockAquire(), lock);
+}
+CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
+	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");
+	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
+}
+
 
 namespace {
 
@@ -853,7 +862,7 @@ unsigned IRBuilder::extractNumberFromExpression(ExpressionPtr& expr) const {
 		return false;
 	});
 
-	if(!visitDepthFirstInterruptable(expr, lambdaVisitor)){
+	if(!visitDepthFirstInterruptible(expr, lambdaVisitor)){
 		LOG(ERROR) << expr;
 		assert(false && "Expression does not contain a literal a number");
 	}

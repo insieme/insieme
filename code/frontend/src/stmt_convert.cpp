@@ -60,6 +60,9 @@ using namespace clang;
 using namespace insieme;
 namespace fe = insieme::frontend;
 
+#define LOG_CONVERSION(retIr) \
+	FinalActions attachLog( [&] () { END_LOG_STMT_CONVERSION(retIr); } )
+
 namespace {
 
 //-------------------------------------------- StmtWrapper ------------------------------------------------------------
@@ -69,7 +72,7 @@ namespace {
  */
 struct StmtWrapper: public StatementList {
 	StmtWrapper(): StatementList() { }
-	StmtWrapper(const core::StatementPtr& stmt): StatementList() { push_back(stmt); }
+	StmtWrapper(const core::StatementPtr& stmt): StatementList( { stmt } ) { }
 
 	core::StatementPtr getSingleStmt() const {
 		assert(size() == 1 && "More than 1 statement present");
@@ -155,21 +158,21 @@ public:
 
 	    if ( declStmt->isSingleDecl() && isa<clang::VarDecl>(declStmt->getSingleDecl()) ) {
 			StmtWrapper retList;
-			clang::VarDecl * varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
+			clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(declStmt->getSingleDecl());
 			try {
 				core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
 
                 // check if there is a kernelFile annotation
 				ocl::attatchOclAnnotation(retStmt->getInitialization(), declStmt, convFact);
 				// handle eventual OpenMP pragmas attached to the Clang node
-				core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-				retList.push_back(annotatedNode);
+				retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
 
 				// convert the constructor of a class
-				if(varDecl->getDefinition()->getInit()){
-					if(dyn_cast<clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())) {
-						core::ExpressionPtr ctor = convFact.convertExpr( (dyn_cast<clang::VarDecl>(declStmt->getSingleDecl()))->getDefinition()->getInit() );
-						retList.push_back(ctor);
+				if ( varDecl->getDefinition()->getInit() ) {
+					if(const clang::CXXConstructExpr* ctor = 
+							dyn_cast<const clang::CXXConstructExpr>(varDecl->getDefinition()->getInit())
+					) {
+						retList.push_back( convFact.convertExpr(ctor) );
 					}
 				}
 			} catch ( const GlobalVariableDeclarationException& err ) {
@@ -180,13 +183,14 @@ public:
 
 		// otherwise we create an an expression list which contains the multiple declaration inside the statement
 		StmtWrapper retList;
-		for ( clang::DeclStmt::decl_iterator it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
+		for ( auto&& it = declStmt->decl_begin(), e = declStmt->decl_end(); it != e; ++it )
 			if ( clang::VarDecl* varDecl = dyn_cast<clang::VarDecl>(*it) ) {
 				try {
+					
 					core::DeclarationStmtPtr&& retStmt = convFact.convertVarDecl(varDecl);
 					// handle eventual OpenMP pragmas attached to the Clang node
-					core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, declStmt, convFact);
-					retList.push_back( annotatedNode );
+					retList.push_back( omp::attachOmpAnnotation(retStmt, declStmt, convFact) );
+
 				} catch ( const GlobalVariableDeclarationException& err ) { }
 			}
 		return retList;
@@ -197,8 +201,10 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitReturnStmt(ReturnStmt* retStmt) {
 		START_LOG_STMT_CONVERSION(retStmt);
-		core::ExpressionPtr retExpr;
-
+		core::StatementPtr retIr;
+		LOG_CONVERSION(retIr);
+	
+		core::ExpressionPtr retExpr; 
 		core::TypePtr retTy;
 		if ( Expr* expr = retStmt->getRetValue() ) {
 			retExpr = convFact.convertExpr( expr );
@@ -209,19 +215,15 @@ public:
 		}
 
 		/*
-		 * arrays and vectors in C are always returned as reference, so the type of the return expression is of array
-		 * (or vector) type we are sure we have to return a reference, in the other case we can safely deref the retExpr
+		 * arrays and vectors in C are always returned as reference, so the type of the return
+		 * expression is of array (or vector) type we are sure we have to return a reference, in the
+		 * other case we can safely deref the retExpr
 		 */
 		if ( retTy->getNodeType() == core::NT_ArrayType || retTy->getNodeType() == core::NT_VectorType ) {
 			retTy = convFact.builder.refType(retTy);
 		}
 
-		core::StatementPtr&& ret = convFact.builder.returnStmt( convFact.castToType(retTy, retExpr) );
-		// handle eventual OpenMP pragmas attached to the Clang node
-		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(ret, retStmt, convFact);
-
-		END_LOG_STMT_CONVERSION( ret );
-		return StmtWrapper( annotatedNode );
+		return retIr = convFact.builder.returnStmt( convFact.castToType(retTy, retExpr) );
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -231,7 +233,7 @@ public:
 		START_LOG_STMT_CONVERSION(forStmt);
 		const core::IRBuilder& builder = convFact.builder;
 		VLOG(2) << "{ Visit ForStmt }";
-
+	
 		StmtWrapper retStmt;
 		StmtWrapper&& body = Visit(forStmt->getBody());
 
@@ -252,11 +254,15 @@ public:
 			// induction variable 
 			if ( isa<ParmVarDecl>(loopAnalysis.getInductionVar()) ) {
 				const core::VariablePtr& indVar = core::static_pointer_cast<const core::Variable>(inductionVar);
-				auto fit = convFact.ctx.wrapRefMap.find(indVar);
+				auto&& fit = convFact.ctx.wrapRefMap.find(indVar);
+
 				if ( fit == convFact.ctx.wrapRefMap.end() ) {
 					fit = convFact.ctx.wrapRefMap.insert(
-						std::make_pair(indVar, builder.variable( builder.refType(inductionVar->getType()) ))
-					).first;
+							std::make_pair(
+								indVar, 
+								builder.variable( builder.refType(inductionVar->getType()) )
+							)
+						).first;
 				}
 				oldInductionVar = indVar;
 				inductionVar = fit->second;
@@ -266,21 +272,22 @@ public:
 			if ( !initExpr.isSingleStmt() ) {
 				assert(core::dynamic_pointer_cast<const core::DeclarationStmt>(initExpr[0]) &&
 						"Not a declaration statement");
-				/*
-				 * We have a multiple declaration in the initialization part of the stmt, e.g.
-				 *
-				 * 		for(int a,b=0; ...)
-				 *
-				 * to handle this situation we have to create an outer block in order to declare
-				 * the variables which are not used as induction variable:
-				 *
-				 * 		{
-				 * 			int a=0;
-				 * 			for(int b=0;...) { }
-				 * 		}
-				 */
+				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				// We have a multiple declaration in the initialization part of the stmt, e.g.
+				//
+				// 		for(int a,b=0; ...)
+				//
+				// to handle this situation we have to create an outer block in order to declare
+				// the variables which are not used as induction variable:
+				//
+				// 		{
+				// 			int a=0;
+				// 			for(int b=0;...) { }
+				// 		}
+				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				typedef std::function<bool (const core::StatementPtr&)> InductionVarFilterFunc;
-				InductionVarFilterFunc inductionVarFilter =
+
+				auto&& inductionVarFilter =
 					[ this, inductionVar ](const core::StatementPtr& curr) -> bool {
 						core::DeclarationStmtPtr&& declStmt =
 								core::dynamic_pointer_cast<const core::DeclarationStmt>(curr);
@@ -288,7 +295,7 @@ public:
 						return declStmt->getVariable() == inductionVar;
 					};
 
-				std::function<bool (const InductionVarFilterFunc& functor, const core::StatementPtr& curr)> negation =
+				auto&& negation =
 					[] (const InductionVarFilterFunc& functor, const core::StatementPtr& curr) -> bool {
 						return !functor(curr);
 					};
@@ -301,12 +308,14 @@ public:
 						std::bind(negation, inductionVarFilter, std::placeholders::_1) );
 
 				// we now look for the declaration statement which contains the induction variable
-				std::vector<core::StatementPtr>::const_iterator fit =
+				std::vector<core::StatementPtr>::const_iterator&& fit =
 						std::find_if(initExpr.begin(), initExpr.end(),
 								std::bind( inductionVarFilter, std::placeholders::_1 )
 						);
 
-				assert(fit!=initExpr.end() && "Induction variable not declared in the loop initialization expression");
+				assert(fit!=initExpr.end() && 
+						"Induction variable not declared in the loop initialization expression"
+					);
 				// replace the initExpr with the declaration statement of the induction variable
 				initExpr = *fit;
 			}
@@ -320,24 +329,24 @@ public:
 			bool iteratorChanged = false;
 			core::VariablePtr newIndVar;
 			if ( !declStmt ) {
-				/*
-				 * the init expression is not a declaration stmt, it could be a situation where
-				 * it is an assignment operation, eg:
-				 *
-				 * 		for( i=exp; ...) { i... }
-				 *
-				 * or, it is missing, or is a reference to a global variable.
-				 *
-				 * In this case we have to replace the old induction variable with a new one and
-				 * replace every occurrence of the old variable with the new one. Furthermore,
-				 * to maintain the correct semantics of the code, the value of the old induction
-				 * variable has to be restored when exiting the loop.
-				 *
-				 * 		{
-				 * 			for(int _i = init; _i < cond; _i += step) { _i... }
-				 * 			i = ceil((cond-init)/step) * step + init;
-				 * 		}
-				 */
+				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				// the init expression is not a declaration stmt, it could be a situation where
+				// it is an assignment operation, eg:
+				//
+				// 		for( i=exp; ...) { i... }
+				//
+				// or, it is missing, or is a reference to a global variable.
+				//
+				// In this case we have to replace the old induction variable with a new one and
+				// replace every occurrence of the old variable with the new one. Furthermore,
+				// to maintain the correct semantics of the code, the value of the old induction
+				// variable has to be restored when exiting the loop.
+				//
+				// 		{
+				// 			for(int _i = init; _i < cond; _i += step) { _i... }
+				// 			i = ceil((cond-init)/step) * step + init;
+				// 		}
+				//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				core::ExpressionPtr&& init =
 						core::dynamic_pointer_cast<const core::Expression>( initExpr.getSingleStmt() );
 
@@ -353,8 +362,9 @@ public:
 
 				// we have to define a new induction variable for the loop and replace every
 				// instance in the loop with the new variable
-				VLOG(2) << "Substituting loop induction variable: " << loopAnalysis.getInductionVar()->getNameAsString()
-						<< " with variable: v" << newIndVar->getId();
+				VLOG(2) << "Replacing loop induction variable: '" 
+						<< loopAnalysis.getInductionVar()->getNameAsString()
+						<< "' with variable: v" << newIndVar->getId();
 
 				// Initialize the value of the new induction variable with the value of the old one
 				if ( core::analysis::isCallOf(init, convFact.mgr.getLangBasic().getRefAssign()) ) {
@@ -370,7 +380,10 @@ public:
 				// because the variable was coming from an input parameter, a deref of the new
 				// induction variable is necessary to maintain the correct semantics
 				core::ExpressionPtr&& replacement =
-						(oldInductionVar ? builder.deref(newIndVar) : static_cast<core::ExpressionPtr>(newIndVar));
+						(oldInductionVar ? 
+						 	builder.deref(newIndVar) : 
+							static_cast<core::ExpressionPtr>(newIndVar)
+						);
 
 				declStmt = builder.declarationStmt( newIndVar, builder.refVar(init) );
 				core::NodePtr&& ret = core::transform::replaceAll(
@@ -398,6 +411,7 @@ public:
 				init = callExpr->getArgument(0);
 				assert(init->getType()->getNodeType() != core::NT_RefType &&
 					"Initialization value of induction variable must be of non-ref type");
+
 			} else if (init->getType()->getNodeType() == core::NT_RefType) {
 				init = builder.deref(init);
 			}
@@ -429,16 +443,18 @@ public:
 			core::VariablePtr&& nonRefInductionVar = builder.variable(varTy->getElementType());
 			
 			insieme::utils::map::PointerMap<core::NodePtr, core::NodePtr> replacements;
-			replacements.insert( std::make_pair(builder.deref(declStmt->getVariable()),nonRefInductionVar) );
-			replacements.insert( std::make_pair(declStmt->getVariable(),builder.refVar(nonRefInductionVar))); 
-			core::NodePtr&& ret = core::transform::replaceAll(
-					builder.getNodeManager(), body.getSingleStmt(),  replacements);
+			replacements.insert( std::make_pair(builder.deref(declStmt->getVariable()), nonRefInductionVar) );
+			replacements.insert( std::make_pair(declStmt->getVariable(), builder.refVar(nonRefInductionVar))); 
+			
+			core::NodePtr&& ret = 
+				core::transform::replaceAll( builder.getNodeManager(), body.getSingleStmt(), replacements );
 
 			body = StmtWrapper( core::dynamic_pointer_cast<const core::Statement>(ret) );
 			core::ExpressionPtr newInit = declStmt->getInitialization();
 			if ( core::analysis::isCallOf(newInit, convFact.mgr.getLangBasic().getRefVar()) ) {
 				const core::CallExprPtr& callExpr = core::static_pointer_cast<const core::CallExpr>(newInit);
 				assert(callExpr->getArguments().size() == 1);
+
 				newInit = callExpr->getArgument(0);
 				assert(newInit->getType()->getNodeType() != core::NT_RefType &&
 					"Initialization value of induction variable must be of non-ref type");
@@ -448,12 +464,11 @@ public:
 			declStmt = builder.declarationStmt(nonRefInductionVar, newInit);
 
 			// We finally create the IR ForStmt
-			core::ForStmtPtr&& irFor = builder.forStmt(declStmt, condExpr, incExpr, tryAggregateStmt(builder, body.getSingleStmt()));
-			assert(irFor && "Created for statement is not valid");
+			core::ForStmtPtr&& forIr = builder.forStmt(declStmt, condExpr, incExpr, tryAggregateStmt(builder, body.getSingleStmt()));
+			assert(forIr && "Created for statement is not valid");
 
-			// handle eventual pragmas attached to the Clang node
-			core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irFor, forStmt, convFact);
-			retStmt.push_back( annotatedNode );
+			retStmt.push_back( omp::attachOmpAnnotation(forIr, forStmt, convFact) );
+			assert(retStmt.back() && "Created for statement is not valid");
 
 			if ( iteratorChanged ) {
 				/*
@@ -462,7 +477,8 @@ public:
 				 *
 				 * 		i.e: oldIter = ceil((cond-init)/step) * step + init;
 				 */
-				core::TypePtr iterType = (inductionVar->getType()->getNodeType() == core::NT_RefType) ?
+				core::TypePtr iterType = 
+					(inductionVar->getType()->getNodeType() == core::NT_RefType) ?
 						core::static_pointer_cast<const core::RefType>(inductionVar->getType())->getElementType() :
 						inductionVar->getType();
 
@@ -500,8 +516,13 @@ public:
 						core::lang::BasicGenerator::Add
 					);
 
-				retStmt.push_back( builder.callExpr( convFact.mgr.getLangBasic().getUnit(),
-						convFact.mgr.getLangBasic().getRefAssign(), inductionVar, finalVal )
+				retStmt.push_back( 
+						builder.callExpr( 
+							convFact.mgr.getLangBasic().getUnit(),
+							convFact.mgr.getLangBasic().getRefAssign(), 
+							inductionVar, 
+							finalVal 
+						)
 					);
 
 			}
@@ -535,21 +556,21 @@ public:
 				retStmt.push_back( declStmt );
 			}
 
-			/*
-			 * analysis of loop structure failed, we have to build a while statement:
-			 *
-			 * 		for(init; cond; step) { body }
-			 *
-			 * Will be translated in the following while statement structure:
-			 *
-			 * 		{
-			 * 			init;
-			 * 			while(cond) {
-			 * 				{ body }
-			 * 				step;
-			 * 			}
-			 * 		}
-			 */
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			// analysis of loop structure failed, we have to build a while statement:
+			//
+			// 		for(init; cond; step) { body }
+			//
+			// Will be translated in the following while statement structure:
+			//
+			// 		{
+			// 			init;
+			// 			while(cond) {
+			// 				{ body }
+			// 				step;
+			// 			}
+			// 		}
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 			core::StatementPtr&& whileStmt = builder.whileStmt(
 				convFact.castToType(builder.getLangBasic().getBool(), convFact.convertExpr( forStmt->getCond() )), 
 				forStmt->getInc() ?
@@ -560,8 +581,7 @@ public:
 				);
 
 			// handle eventual pragmas attached to the Clang node
-			core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(whileStmt, forStmt, convFact);
-			retStmt.push_back( annotatedNode );
+			retStmt.push_back( omp::attachOmpAnnotation(whileStmt, forStmt, convFact) );
 
 		    clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
 		    pp.Diag(forStmt->getLocStart(),
@@ -633,13 +653,8 @@ public:
 		}
 		assert(elseBody && "Couldn't convert 'else' body of the IfStmt");
 
-		core::StatementPtr&& irNode = builder.ifStmt(condExpr, thenBody, elseBody);
-
-		// handle eventual OpenMP pragmas attached to the Clang node
-		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, ifStmt, convFact);
-
 		// adding the ifstmt to the list of returned stmts
-		retStmt.push_back( annotatedNode );
+		retStmt.push_back( builder.ifStmt(condExpr, thenBody, elseBody) );
 
 		// try to aggregate statements into a CompoundStmt if more than 1 statement
 		// has been created from this IfStmt
@@ -699,17 +714,7 @@ public:
 			condExpr = convFact.castToType(convFact.mgr.getLangBasic().getBool(), condExpr);
 		}
 
-		condExpr = convFact.tryDeref(condExpr);
-
-
-		core::StatementPtr&& irNode = builder.whileStmt(condExpr, body);
-
-		// handle eventual OpenMP pragmas attached to the Clang node
-		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(irNode, whileStmt, convFact);
-
-		// adding the WhileStmt to the list of returned stmts
-		retStmt.push_back( annotatedNode );
-		retStmt = tryAggregateStmts(builder, retStmt);
+		retStmt = tryAggregateStmts(builder, { builder.whileStmt(convFact.tryDeref(condExpr), body) });
 
 		END_LOG_STMT_CONVERSION( retStmt.getSingleStmt() );
 		// otherwise we introduce an outer CompoundStmt
@@ -792,18 +797,15 @@ public:
 		}
 		assert(condExpr && "Couldn't convert 'condition' expression of the SwitchStmt");
 
-		/*
-		 * this Switch stamtement has a body, i.e.:
-		 *
-		 * 		switch(e) {
-		 * 			{ body }
-		 * 			case x:...
-		 * 		}
-		 *
-		 * As the IR doens't allow a body to be represented inside the switch stmt we bring this code outside after the
-		 * declaration of the eventual conditional variable.
-		 *
-		 */
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		// this Switch stamtement has a body, i.e.:
+		//
+		// 		switch(e) { { body } case x:...  }
+		//
+		// As the IR doens't allow a body to be represented inside the switch stmt we bring this
+		// code outside after the declaration of the eventual conditional variable.
+		//
+		//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		vector<core::SwitchCasePtr> cases;
 		// marks the beginning of a case expression
 		vector<std::pair<core::LiteralPtr,size_t>> caseExprs;
@@ -849,7 +851,18 @@ public:
 			// we encounter a case statement
 			caseStart=true;
 			while ( CaseStmt* caseStmt = dyn_cast<CaseStmt>(curr) ) {
-				core::LiteralPtr caseLiteral = static_pointer_cast<core::LiteralPtr>(this->convFact.convertExpr( caseStmt->getLHS() ));
+
+				// make sure case expression is a literal
+				core::ExpressionPtr caseExpr = this->convFact.convertExpr( caseStmt->getLHS() );
+				if (caseExpr->getNodeType() == core::NT_CastExpr) {
+					core::CastExprPtr cast = static_pointer_cast<core::CastExprPtr>(caseExpr);
+					if (cast->getSubExpression()->getNodeType() == core::NT_Literal) {
+						core::LiteralPtr literal = static_pointer_cast<core::LiteralPtr>(cast->getSubExpression());
+						caseExpr = builder.literal(cast->getType(), literal->getValue());
+					}
+				}
+
+				core::LiteralPtr caseLiteral = static_pointer_cast<core::LiteralPtr>(caseExpr);
 				caseExprs.push_back(
 						std::make_pair(caseLiteral, caseStmts.size())
 					);
@@ -901,8 +914,8 @@ public:
 				caseStmts.push_back(subStmt);
 			}
 			/*
-			 * if the current statement is a break, or we encountred a break in the current case we create a new case
-			 * and add to the list of cases for this switch statement
+			 * if the current statement is a break, or we encountred a break in the current case we
+			 * create a new case and add to the list of cases for this switch statement
 			 */
 			if ( breakEncountred || isa<const BreakStmt>(curr) ) 
 			{
@@ -918,9 +931,7 @@ public:
 			}
 		}
 		// we still have some statement pending
-		if ( !caseStmts.empty() ) {
-			addCase();
-		}
+		if ( !caseStmts.empty() ) { addCase(); }
 
 		// initialize the default case with an empty compoundstmt
 		core::StatementPtr&& irNode = builder.switchStmt(condExpr, cases, defStmt);
@@ -937,40 +948,44 @@ public:
 	}
 
 	/*
-	 * as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error in the case the
-	 * visitor visits one of these nodes, the VisitSwitchStmt has to make sure the visitor is not called on his subnodes
+	 * as a CaseStmt or DefaultStmt cannot be converted into any IR statements, we generate an error
+	 * in the case the visitor visits one of these nodes, the VisitSwitchStmt has to make sure the
+	 * visitor is not called on his subnodes
 	 */
 	StmtWrapper VisitSwitchCase(SwitchCase* caseStmt) { assert(false && "Visitor is visiting a 'case' stmt"); }
 
-	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) { return StmtWrapper( convFact.builder.breakStmt() ); }
-	StmtWrapper VisitContinueStmt(ContinueStmt* contStmt) { return StmtWrapper( convFact.builder.continueStmt() ); }
+	StmtWrapper VisitBreakStmt(BreakStmt* breakStmt) { 
+		return StmtWrapper( convFact.builder.breakStmt() );
+	}
+
+	StmtWrapper VisitContinueStmt(ContinueStmt* contStmt) { 
+		return StmtWrapper( convFact.builder.continueStmt() );
+	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//							COMPOUND STATEMENT
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	StmtWrapper VisitCompoundStmt(CompoundStmt* compStmt) {
 		START_LOG_STMT_CONVERSION(compStmt);
+		
+		core::StatementPtr retIr;
+		LOG_CONVERSION(retIr);
+
 		vector<core::StatementPtr> stmtList;
 		std::for_each( compStmt->body_begin(), compStmt->body_end(),
 			[ &stmtList, this ] (Stmt* stmt) {
-				/*
-				 * A compoundstmt can contain declaration statements.This means that a clang DeclStmt can be converted
-				 * in multiple  StatementPtr because an initialization list such as: int a,b=1; is converted into the
-				 * following sequence of statements:
-				 *
-				 * 		int<a> a = 0; int<4> b = 1;
-				 */
-				StmtWrapper&& convertedStmt = this->Visit(stmt);
-				std::copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			// A compoundstmt can contain declaration statements.This means that a clang
+			// DeclStmt can be converted in multiple  StatementPtr because an initialization
+			// list such as: int a,b=1; is converted into the following sequence of statements:
+			//
+			// 		int<a> a = 0; int<4> b = 1;
+			//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				StmtWrapper&& convertedStmt = Visit(stmt);
+				copy(convertedStmt.begin(), convertedStmt.end(), std::back_inserter(stmtList));
 			}
 		);
-		core::StatementPtr&& retStmt = convFact.builder.compoundStmt(stmtList);
-
-		// handle eventual OpenMP pragmas attached to the Clang node
-		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, compStmt, convFact);
-
-		END_LOG_STMT_CONVERSION(retStmt);
-		return StmtWrapper( annotatedNode );
+		return (retIr = convFact.builder.compoundStmt(stmtList));
 	}
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -979,11 +994,32 @@ public:
 	StmtWrapper VisitNullStmt(NullStmt* nullStmt) {
 		//TODO: Visual Studio 2010 fix: && removed
 		core::StatementPtr&& retStmt = convFact.builder.getNoOp();
+		return retStmt;
+	}
 
-		// handle eventual OpenMP pragmas attached to the Clang node
-		core::StatementPtr&& annotatedNode = omp::attachOmpAnnotation(retStmt, nullStmt, convFact);
+	StmtWrapper VisitGotoStmt(GotoStmt* gotoStmt) {
+		clang::Preprocessor& pp = convFact.currTU->getCompiler().getPreprocessor();
+		pp.Diag(gotoStmt->getLocStart(),
+		  		pp.getDiagnostics().getCustomDiagID(Diagnostic::Error, 
+					"Gotos are not handled by the Insieme compielr" 
+				)
+		   	);
+		assert(false);
+	}
 
-		return StmtWrapper( annotatedNode );
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Overwrite the basic visit method for expression in order to automatically 
+	// and transparently attach annotations to node which are annotated
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	StmtWrapper Visit(clang::Stmt* stmt) { 
+		StmtWrapper&& retStmt = StmtVisitor<ClangStmtConverter, StmtWrapper>::Visit(stmt);
+		
+		if ( retStmt.isSingleStmt() ) {
+			core::StatementPtr&& irStmt = retStmt.getSingleStmt();
+			if ( irStmt->getAnnotations().empty() )
+				return omp::attachOmpAnnotation(irStmt, stmt, convFact);
+		}
+		return retStmt;
 	}
 
 	FORWARD_VISITOR_CALL(IntegerLiteral)
