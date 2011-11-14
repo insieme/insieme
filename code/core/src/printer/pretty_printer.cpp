@@ -58,10 +58,7 @@ namespace printer {
 
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
-const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR;
-const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR;
+const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -130,7 +127,7 @@ namespace {
 	};
 
 	/**
-	 * Since formatter instances are polymorphic, they need to be handled via pointer or
+	 * Since formatter instances are polymorthic, they need to be handled via pointer or
 	 * references. Further, the memory management needs to be considered. Therefore, formatter
 	 * should be passed using this pointer type, which is based on a shared pointer.
 	 */
@@ -222,6 +219,7 @@ namespace {
 		 */
 		unsigned depth;
 
+
 	public:
 
 		/**
@@ -240,26 +238,19 @@ namespace {
 				: IRVisitor<>(true), formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
 
 		/**
-		 * Wrapper for general tasks
-		 */
-		virtual void visit(const NodePtr& element) {
-			if (depth > print.maxDepth) {
-				out << " ... ";
-				return;
-			}
-			depth++;
-			printAnnotations(element, true);
-			ASTVisitor<>::visit(element);
-			printAnnotations(element, false);
-			out.flush();
-			depth--; 
-		}
-
-		/**
 		 * A macro simplifying the definition for print routine of some node type.
 		 */
 		#define PRINT(NodeType, Print) \
-		virtual	void visit ## NodeType (const NodeType ## Ptr& node) { Print }
+		virtual	void visit ## NodeType (const NodeType ## Ptr& node) { \
+				if (depth > print.maxDepth) { \
+					out << " ... "; \
+					return;\
+				}\
+				depth++; \
+				Print \
+				out.flush(); \
+				depth--; \
+				} \
 
 		PRINT(Value, {
 				// identifiers can be directly printed
@@ -452,7 +443,7 @@ namespace {
 					visit(node->getLambda());
 					return;
 				}
-				
+
 				// general case: recursive function
 				out << "recFun ";
 				this->visit(node->getVariable());
@@ -465,18 +456,6 @@ namespace {
 				auto defs = node->getDefinitions();
 				if (defs.empty()) {
 					out << "{ }";
-<<<<<<< HEAD
-				} else {
-					out << "{"; increaseIndent(); newLine();
-					std::size_t count = 0;
-					for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaPtr>& cur) {
-						this->visit(cur.first);
-						out << " = ";
-						this->visit(cur.second);
-						out << ";";
-						if (count++ < defs.size() -1) this->newLine();
-					});
-=======
 					return;
 				}
 
@@ -489,12 +468,10 @@ namespace {
 					out << ";";
 					if (count++ < defs.size() -1) this->newLine();
 				});
->>>>>>> new_core
 
-					decreaseIndent();
-					newLine();
-					out << "}";
-				}
+				decreaseIndent();
+				newLine();
+				out << "}";
 		});
 
 
@@ -515,7 +492,7 @@ namespace {
 				// obtain flag indicating format
 				bool printBrackets = print.hasOption(PrettyPrinter::PRINT_BRACKETS);
 
-				// test whether for the current call a special format has been registered
+				// test whether for the current call a special format has been registerd
 				auto function = node->getFunctionExpr();
 				if (function->getNodeType() == NT_Literal) {
 					auto pos = formatTable.find(static_pointer_cast<const Literal>(function)->getValue()->getValue());
@@ -712,26 +689,6 @@ namespace {
 		 */
 		void decreaseIndent() {
 			indent--;
-		}
-
-		/**
-		 * If enabled, prints annotations on Node node.
-		 */
-		void printAnnotations(const NodePtr& node, bool start) {
-			if(print.hasOption(PrettyPrinter::PRINT_ANNOTATIONS) && node->hasAnnotations()) {
-				if(start) {
-					out << "$[";
-					auto iter = node->getAnnotations().begin(); 
-					while(true) {
-						out << *iter->second;
-						if(++iter != node->getAnnotations().end()) out << ", ";
-						else break;
-					}
-					out << ": ";
-				} else {
-					out << "]$";
-				}
-			}
 		}
 	};
 

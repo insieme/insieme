@@ -39,7 +39,6 @@
 #include "insieme/core/transform/manipulation.h"
 #include "insieme/core/transform/node_replacer.h"
 #include "insieme/core/transform/node_mapper_utils.h"
-#include "insieme/core/transform/manipulation_utils.h"
 
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_visitor.h"
@@ -54,9 +53,6 @@ namespace core {
 namespace transform {
 
 using namespace std;
-
-namespace us = insieme::utils::set;
-namespace um = insieme::utils::map;
 
 /**
  * A utility function to apply an arbitrary manipulation to the statements within a compound statement.
@@ -209,12 +205,12 @@ namespace {
 
 		bool successful;
 
-		um::PointerMap<VariablePtr, ExpressionPtr>& replacements;
-		us::PointerSet<VariablePtr> replacedOnce;
+		utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements;
+		utils::set::PointerSet<VariablePtr> replacedOnce;
 
 	public:
 
-		InlineSubstituter(um::PointerMap<VariablePtr, ExpressionPtr>& replacements)
+		InlineSubstituter(utils::map::PointerMap<VariablePtr, ExpressionPtr>& replacements)
 			: successful(true), replacements(replacements) { }
 
 		const NodePtr mapElement(unsigned index, const NodePtr& ptr) {
@@ -281,7 +277,7 @@ namespace {
 		}
 
 		// substituted call arguments with bind parameters
-		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
+		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
 
 		replacements.insert(
 				make_paired_iterator(parameter.begin(), arguments.begin()),
@@ -346,7 +342,7 @@ namespace {
 		// Step 3 - collect variables replacements
 		const ParametersPtr& paramList = lambda->getParameterList();
 
-		um::PointerMap<VariablePtr, ExpressionPtr> replacements;
+		utils::map::PointerMap<VariablePtr, ExpressionPtr> replacements;
 
 		// add call parameters
 		int index = 0;
@@ -521,15 +517,9 @@ namespace {
 	/**
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
-<<<<<<< HEAD
-	struct LambdaDeltaVisitor : public ASTVisitor<bool, Address> {
-		us::PointerSet<VariablePtr> declared;
-		us::PointerSet<VariablePtr> undeclared;
-=======
 	struct LambdaDeltaVisitor : public IRVisitor<bool, Address> {
 		utils::set::PointerSet<VariablePtr> declared;
 		utils::set::PointerSet<VariablePtr> undeclared;
->>>>>>> new_core
 
 		// do not visit types
 		LambdaDeltaVisitor() : IRVisitor<bool, Address>(false) {}
@@ -554,13 +544,8 @@ namespace {
 		}
 	};
 
-<<<<<<< HEAD
-	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, ASTBuilder::CaptureInits& captures,
-			um::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
-=======
 	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, IRBuilder::VarValueMapping& captures,
 			utils::map::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
->>>>>>> new_core
 		LambdaDeltaVisitor ldv;
 		visitDepthFirstPrunable(StatementAddress(root), ldv);
 
@@ -588,29 +573,17 @@ namespace {
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const StatementPtr& root, std::vector<VariablePtr> passAsArguments) {
-<<<<<<< HEAD
-	ASTBuilder build(manager);
-	ASTBuilder::CaptureInits captures;
-	um::PointerMap<NodePtr, NodePtr> replacements;
-=======
 	IRBuilder build(manager);
 	IRBuilder::VarValueMapping captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
->>>>>>> new_core
 	StatementPtr newStmt = static_pointer_cast<const Statement>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	return build.lambdaExpr(newStmt, captures, passAsArguments);
 }
 
 BindExprPtr extractLambda(NodeManager& manager, const ExpressionPtr& root, std::vector<VariablePtr> passAsArguments) {
-<<<<<<< HEAD
-	ASTBuilder build(manager);
-	ASTBuilder::CaptureInits captures;
-	um::PointerMap<NodePtr, NodePtr> replacements;
-=======
 	IRBuilder build(manager);
 	IRBuilder::VarValueMapping captures;
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
->>>>>>> new_core
 	ExpressionPtr newExpr = static_pointer_cast<const Expression>(extractLambdaImpl(manager, root, captures, replacements, passAsArguments));
 	auto body = build.returnStmt(newExpr);
 	return build.lambdaExpr(root->getType(), body, captures, passAsArguments);
@@ -620,13 +593,8 @@ LambdaExprPtr privatizeVariables(NodeManager& manager, const LambdaExprPtr& root
 	
 	auto body = root->getBody();
 
-<<<<<<< HEAD
-	ASTBuilder build(manager);
-	um::PointerMap<NodePtr, NodePtr> replacements;
-=======
 	IRBuilder build(manager);
 	utils::map::PointerMap<NodePtr, NodePtr> replacements;
->>>>>>> new_core
 	for_each(varsToPrivatize, [&](VariablePtr p) {
 		auto var = build.variable(p->getType());
 		replacements[p] = var;
@@ -665,31 +633,17 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 	return LambdaExpr::get(manager, funType, params, body);
 }
 
-DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const StructExpr::Members& globals) {
+DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog) {
 	//if(!prog->isMain()) {
 	//	LOG(WARNING) << "createGlobalStruct called on non-main program.";
 	//}
 	LambdaExprPtr lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
 	auto compound = lambda->getBody();
 	auto addr = CompoundStmtAddress::find(compound, prog);
-<<<<<<< HEAD
-	ASTBuilder build(manager);
-	StructType::Entries entries = ::transform(globals, [](const StructExpr::Member& mem) { return StructType::Entry(mem.first, mem.second->getType()); });
-	auto structType = build.structType(entries);
-	auto declStmt = build.declarationStmt(structType, build.structExpr(globals));
-	auto newProg = static_pointer_cast<const Program>(insert(manager, addr, declStmt, 0));
-	utils::migrateAnnotations(prog, newProg);
-	prog = newProg;
-	// migrate annotations on body
-	lambda = dynamic_pointer_cast<const LambdaExpr>(prog->getEntryPoints().front());
-	compound = lambda->getBody();
-	utils::migrateAnnotations(addr.getAddressedNode(), compound);
-=======
 	IRBuilder build(manager);
 	auto structType = build.structType(NamedTypeList());
 	auto declStmt = build.declarationStmt(structType, build.structExpr(NamedValueList()));
 	prog = static_pointer_cast<const Program>(insert(manager, addr, declStmt, 0));
->>>>>>> new_core
 	return declStmt;
 }
 
