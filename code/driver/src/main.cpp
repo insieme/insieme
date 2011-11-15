@@ -537,6 +537,15 @@ int main(int argc, char** argv) {
 		}
 		#endif
 
+//		{
+//			LOG(INFO) << "================================== Checking Hashes =====================================";
+//			insieme::utils::Timer timer("hashes");
+//			checkForHashCollisions(program);
+//			timer.stop();
+//			LOG(INFO) << timer;
+//			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
+//		}
+
 		{
 			string backendName = "";
 			be::BackendPtr backend;

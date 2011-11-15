@@ -62,6 +62,13 @@ namespace utils {
 		 */
 		friend std::ostream& std::operator<<(std::ostream& out, const Printable& printable);
 
+	public:
+
+		/**
+		 * A virtual constructor for this virtual base class.
+		 */
+		virtual ~Printable() {};
+
 	protected:
 
 		/**

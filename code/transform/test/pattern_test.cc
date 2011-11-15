@@ -342,7 +342,32 @@ namespace pattern {
 
 	}
 
-	TEST(Repedition, Basic) {
+	TEST(Empty, Basic) {
+
+		TreePtr a = makeTree('a');
+
+		EXPECT_EQ("a", toString(a));
+
+		ListPatternPtr pattern = empty;
+
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>());
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a));
+	}
+
+	TEST(Optional, Basic) {
+
+		TreePtr a = makeTree('a');
+
+		EXPECT_EQ("a", toString(a));
+
+		ListPatternPtr pattern = opt(a);
+
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>());
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a));
+	}
+
+	TEST(Repetition, Basic) {
 
 		TreePtr a = makeTree('a');
 		TreePtr b = makeTree('b');
@@ -371,6 +396,42 @@ namespace pattern {
 		// test pre-bined variable
 		pattern = single(x) << *single(x);
 		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(b,b));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a,a));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,a,a,b));
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a,b,a,b));
+	}
+
+	TEST(Repetition, MinRep) {
+
+		TreePtr a = makeTree('a');
+		TreePtr b = makeTree('b');
+
+		EXPECT_EQ("a", toString(a));
+		EXPECT_EQ("b", toString(b));
+
+		ListPatternPtr pattern = single(a);
+
+		EXPECT_PRED2(matchList, pattern, toVector(a));
+
+		pattern = +single(a);
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>());
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(notMatchList, pattern, toVector(a,b,a));
+
+		// test variable binding
+		TreePatternPtr x = var("x");
+		pattern = +single(x);
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,b));
+		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,b,a));
+
+		// test pre-bined variable
+		pattern = single(x) << +single(x);
+		EXPECT_PRED2(notMatchList, pattern, toVector<TreePtr>(a));
 		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a));
 		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(b,b));
 		EXPECT_PRED2(matchList, pattern, toVector<TreePtr>(a,a,a));

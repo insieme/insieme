@@ -206,6 +206,7 @@ void Handler::findKernelsUsingPathString(const ExpressionPtr& path, const Expres
 				if(const LiteralPtr& path = dynamic_pointer_cast<const Literal>(callSaC->getArgument(0))) {
 					kernels = loadKernelsFromFile(path->getStringValue(), builder);
 
+					//return;
 // set source string to an empty char array
 //					ret = builder.refVar(builder.literal("", builder.arrayType(BASIC.getChar())));
 				}
@@ -494,7 +495,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			return ret;
 	);
 
-	ADD_Handler(builder, o2i, "irt_ocl_get_num_devices",
+	ADD_Handler(builder, o2i, "icl_get_num_devices",
 			return builder.literal("1", BASIC.getUInt4());
 	);
 
@@ -523,9 +524,9 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			return getCreateBuffer("clCreateBuffer", node->getArgument(1), node->getArgument(2), copyPtr, hostPtr, node->getArgument(4));
 	);
 
-	ADD_Handler(builder, o2i, "irt_ocl_create_buffer",
+	ADD_Handler(builder, o2i, "icl_create_buffer",
 			// Flags can be ignored, INSPIRE is always blocking
-			return getCreateBuffer("irt_ocl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0),
+			return getCreateBuffer("icl_create_buffer", node->getArgument(1), node->getArgument(2), false, builder.intLit(0),
 					builder.callExpr(builder.refType(builder.arrayType(BASIC.getInt4())), BASIC.getGetNull(),
 					builder.getTypeLiteral(builder.arrayType(BASIC.getInt4())))); // errorcode_ret, never set
 	);
@@ -563,7 +564,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(size ? o2i.getClWriteBuffer() : o2i.getClWriteBufferFallback(), args);
 	);
 
-	ADD_Handler(builder, o2i, "irt_ocl_write_buffer",
+	ADD_Handler(builder, o2i, "icl_write_buffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
@@ -595,7 +596,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(size ? o2i.getClReadBuffer() : o2i.getClReadBufferFallback(), args);
 	);
 
-	ADD_Handler(builder, o2i, "irt_ocl_read_buffer",
+	ADD_Handler(builder, o2i, "icl_read_buffer",
 			// extract the size form argument size, relying on it using a multiple of sizeof(type)
 			ExpressionPtr size;
 			TypePtr type;
@@ -622,9 +623,9 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 	);
 
 	// TODO ignores 3rd argument (kernelName) and just adds all kernels to the program
-	ADD_Handler(builder, o2i, "irt_ocl_create_kernel",
+	ADD_Handler(builder, o2i, "icl_create_kernel",
 			// find kernel source code
-			this->findKernelsUsingPathString("irt_ocl_create_kernel", node->getArgument(1), node);
+			this->findKernelsUsingPathString("icl_create_kernel", node->getArgument(1), node);
 			return builder.uintLit(0);
 	);
 
@@ -645,11 +646,11 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			return node;
 	);
 
-	ADD_Handler(builder, o2i, "irt_ocl_run_kernel",
+	ADD_Handler(builder, o2i, "icl_run_kernel",
 			// construct argument vector
 			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder);
 			// get Varlist tuple
-			if(const CallExprPtr& varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(5))) {
+			if(const CallExprPtr& varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(7))) {
 				if(const TupleExprPtr& varlist = dynamic_pointer_cast<const TupleExpr>(varlistPack->getArgument(0))) {
 					size_t argCnt = 0;
 					for(auto I = varlist->getExpressions().begin(); I != varlist->getExpressions().end(); ++I) {
@@ -657,7 +658,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 						ExpressionPtr sizeArg = *I;
 						++I; // skip size argument
 						// some invalid stuff is passed as index argument to use simply one after another
-//						collectArgument("irt_ocl_run_kernel", k, BASIC.getNull(), size, *I);
+//						collectArgument("icl_run_kernel", k, BASIC.getNull(), size, *I);
 						ExpressionPtr arg = *I;
 						// check for local memory argument
 //std::cout << "\nArg: " << arg << " " <<  isNullPtr(arg, builder) << std::endl;
@@ -724,15 +725,28 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
 			// updating of the type to update the deref operation in the argument done in thrid pass
 	);
-	ADD_Handler(builder, o2i, "irt_ocl_release_buffer",
+	ADD_Handler(builder, o2i, "icl_release_buffer",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
-			// updating of the type to update the deref operation in the argument done in thrid pass
+			// updating of the type to update the deref operation in the argument done in third pass
+	);
+	ADD_Handler(builder, o2i, "icl_release_buffers",
+			// execute a ref.delete for each pointer in the argument list inside a compound statement
+			StatementList dels;
+
+			if(const CallExprPtr& varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(1))) {
+				if(const TupleExprPtr& varlist = dynamic_pointer_cast<const TupleExpr>(varlistPack->getArgument(0))) {
+					for(auto I = varlist->getExpressions().begin(); I != varlist->getExpressions().end(); ++I) {
+						dels.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), *I, builder)));
+					}
+				}
+			}
+			return builder.compoundStmt(dels);
 	);
 
 	// release of kernel will be used to free the tuple holding the kernel arguments
 	ADD_Handler(builder, o2i, "clReleaseKernel",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
-			// updating of the type to update the deref operation in the argument done in thrid pass
+			// updating of the type to update the deref operation in the argument done in third pass
 	);
 
 	// all other clRelease calls can be ignored since the variables are removed
@@ -788,14 +802,14 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 
 
 	// handlers for insieme opencl runtime stuff
-	ADD_Handler(builder, o2i, "irt_ocl_",
+	ADD_Handler(builder, o2i, "icl_",
 		return builder.uintLit(0); // default handling, remove it
 	);
 };
 
 HandlerPtr& HostMapper::findHandler(const string& fctName) {
 	// for performance reasons working with function prefixes is only enabled for funcitons containing cl
-	// needed for cl*, ocl* and irt_ocl_* functions
+	// needed for cl*, ocl* and icl_* functions
 	if (fctName.find("cl") == string::npos)
 		return handles[fctName];
 	// checking function names, starting from the full name
@@ -859,7 +873,7 @@ std::set<Enum> HostMapper::getFlags(const ExpressionPtr& flagExpr) {
 
 bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const ExpressionPtr& call, const ExpressionPtr& fieldName) {
 	if(call->getType()->toString().find("array<_cl_kernel,1>") == string::npos &&
-			call->getType()->toString().find("_irt_ocl_buffer=struct<kernel:array<_cl_kernel,1>>") == string::npos)
+			call->getType()->toString().find("_icl_buffer=struct<kernel:array<_cl_kernel,1>>") == string::npos)
 		return false; //TODO untested
 
 	TypePtr type = getNonRefType(expr);
@@ -909,7 +923,7 @@ bool HostMapper::handleClCreateKernel(const core::ExpressionPtr& expr, const Exp
 	if(type->toString().find("array<struct<kernel:ref<array<_cl_kernel,1>>") != string::npos) {
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), call, builder))) {//!
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
-				if(fun->getStringValue() == "irt_ocl_create_kernel" ) {
+				if(fun->getStringValue() == "icl_create_kernel" ) {
 					// call resolve element to load the kernel using the appropriate handler
 					resolveElement(newCall);
 					ExpressionPtr kn = newCall->getArgument(2);
@@ -1174,7 +1188,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 
 				// handling clCreateBuffer
 				if(lhsVar->getType()->toString().find("ref<ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
-					if(callExpr->getArgument(1)->toString().find("irt_ocl_create_buffer") != string::npos){
+					if(callExpr->getArgument(1)->toString().find("icl_create_buffer") != string::npos){
 						return handleCreateBufferAssignment(lhsVar, callExpr);
 					}
 				}
@@ -1220,7 +1234,7 @@ const NodePtr HostMapper::resolveElement(const NodePtr& element) {
 		if(var->getType()->toString().find("ref<ref<array<struct<mem:ref<array<_cl_mem,1>>,size:uint<8>") != string::npos){
 			if(const CallExprPtr& initFct = dynamic_pointer_cast<const CallExpr>(tryRemove(BASIC.getRefVar(), decl->getInitialization(), builder))) {
 				if(const LiteralPtr& literal = core::dynamic_pointer_cast<const core::Literal>(initFct->getFunctionExpr())) {
-					if(literal->getStringValue() == "irt_ocl_create_buffer") {
+					if(literal->getStringValue() == "icl_create_buffer") {
 						return handleCreateBufferDecl(var, initFct, decl);
 					}
 				}

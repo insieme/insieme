@@ -312,7 +312,7 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
     k = tryRemove(BASIC.getRefDeref(), k, builder);
 
     // get corresponding lambda expression
-equal_target<ExpressionPtr> cmp;
+/*equal_target<ExpressionPtr> cmp;
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
@@ -347,7 +347,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
 						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(interface.at(i)->getType())));
 			}
-		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // irt_ocl_run_kernel without local memory arguments
+		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // icl_run_kernel without local memory arguments
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
 		});
 
@@ -359,7 +359,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		copyAnnotations(callExpr, kernelCall);
 		return kernelCall;
 	}
-	// irt_ocl_run_kernel without local memory arguments
+	// icl_run_kernel without local memory arguments
 	// add declarations for argument local variables if any, warping a function around it
 
 	assert(kernelArgs.find(k) != kernelArgs.end() && "No kernel arguments for local variable declarations found");
@@ -683,7 +683,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				if(fun->getStringValue() == "clEnqueueNDRangeKernel") {
 					return handleNDRangeKernel(callExpr, newCall, 0);
 				}
-				if(fun->getStringValue() == "irt_ocl_run_kernel" ) {
+				if(fun->getStringValue() == "icl_run_kernel" ) {
 					return handleNDRangeKernel(callExpr, newCall, 1);
 				}
 			}
