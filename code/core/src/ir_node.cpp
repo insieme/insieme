@@ -64,6 +64,21 @@ namespace core {
 			std::size_t operator()(const T& value) const {
 				return boost::hash<T>()(value);
 			}
+
+			// hashing of integer values by according to http://www.concentric.net/~ttwang/tech/inthash.htm
+
+			std::size_t operator()(const char value) const {
+				return static_cast<std::size_t>(value * 2654435761);
+			}
+
+			std::size_t operator()(const int value) const {
+				return static_cast<std::size_t>(value * 2654435761);
+			}
+
+			std::size_t operator()(const unsigned value) const {
+				return static_cast<std::size_t>(value * 2654435761);
+			}
+
 		};
 
 		/**
