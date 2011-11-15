@@ -55,7 +55,6 @@ class SemaVisitor : public core::IRVisitor<bool, core::Address> {
 
 	core::ProgramPtr entryPoint;
 	core::ProgramPtr replacement;
-	core::DeclarationStmtPtr globalDecl;
 
 	bool visitNode(const core::NodeAddress& node);
 	bool visitCallExpr(const core::CallExprAddress& callExp);
@@ -70,8 +69,8 @@ class SemaVisitor : public core::IRVisitor<bool, core::Address> {
 	core::NodePtr handleSingle(const core::StatementAddress& stmt, const SinglePtr& singleP);
 
 public:
-	SemaVisitor(core::NodeManager& nm, const core::ProgramPtr& entryPoint, const core::DeclarationStmtPtr& globalDecl) : 
-	  core::IRVisitor<bool, core::Address>(false),	nodeMan(nm), build(nm), entryPoint(entryPoint), globalDecl(globalDecl) { }
+	SemaVisitor(core::NodeManager& nm, const core::ProgramPtr& entryPoint) : 
+	  core::IRVisitor<bool, core::Address>(false),	nodeMan(nm), build(nm), entryPoint(entryPoint) { }
 
 	core::ProgramPtr getReplacement() { return replacement; }
 };

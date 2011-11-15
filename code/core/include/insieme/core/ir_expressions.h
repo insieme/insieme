@@ -317,35 +317,6 @@ namespace core {
 		static CallExprPtr get(NodeManager& manager, const TypePtr& type, const ExpressionPtr& function, const ExpressionList& arguments) {
 			return get(manager, type, function, Expressions::get(manager, arguments));
 		}
-
-		/**
-		 * This static factory method allows to obtain an instance of a variable
-		 * within the given node manager based on the given parameters.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param type the type of the requested variable
-		 * @param id the value of the requested variable
-		 * @return the requested type instance managed by the given manager
-		 */
-		static CallExprPtr get(NodeManager& manager, const TypePtr& type, unsigned int id) {
-			return get(manager, type, UIntValue::get(manager, id));
-		}
-
-		/**
-		 * This static factory method allows to obtain an instance of a variable
-		 * within the given node manager based on the given parameters. The ID of
-		 * the resulting variable will be a fresh one which has not been used within
-		 * this node manager so far.
-		 *
-		 * @param manager the manager used for maintaining instances of this class
-		 * @param type the type of the requested variable
-		 * @param id the value of the requested variable
-		 * @return the requested type instance managed by the given manager
-		 */
-		static CallExprPtr get(NodeManager& manager, const TypePtr& type) {
-			return get(manager, type, manager.getFreshID());
-		}
-
 	};
 
 
