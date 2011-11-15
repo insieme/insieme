@@ -40,6 +40,9 @@
 #include "insieme/core/ir_address.h"
 #include "insieme/core/ir_values.h"
 #include "insieme/core/ir_int_type_param.h"
+#include "insieme/core/ir_builder.h"
+
+#include "insieme/utils/timer.h"
 
 namespace insieme {
 namespace core {
@@ -120,6 +123,68 @@ namespace new_core {
 		// death tests do not pass valgrind test
 //		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>()), ".*");
 //		EXPECT_DEATH(ConcreteIntTypeParam::get(manager, toVector<NodePtr>(BoolValue::get(manager, false))), ".*");
+	}
+
+
+	TEST(NodePtr, HashMapSpeed) {
+
+		NodeManager manager;
+		IRBuilder builder(manager);
+
+		int N = 100; //0000;
+		bool showTimes = false;
+
+		// create a million nodes
+		vector<IntValuePtr> list;
+		{
+			utils::Timer timer("create");
+			for (int i=0; i<N; i++) {
+				list.push_back(builder.intValue(i));
+			}
+			timer.stop();
+			EXPECT_FALSE(showTimes) << timer;
+		}
+
+		{
+			vector<IntValuePtr> list2;
+			utils::Timer timer("vector");
+			for_each(list, [&](const IntValuePtr& cur){
+				list2.push_back(cur);
+			});
+			timer.stop();
+			EXPECT_FALSE(showTimes) << timer;
+		}
+
+		{
+			boost::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> set;
+			utils::Timer timer("boost::unordered_set");
+			for_each(list, [&](const IntValuePtr& cur){
+				set.insert(cur);
+			});
+			timer.stop();
+			EXPECT_FALSE(showTimes) << timer;
+		}
+
+		{
+			std::unordered_set<NodePtr, hash_target<NodePtr>, equal_target<NodePtr>> set;
+			utils::Timer timer("std::unordered_set");
+			for_each(list, [&](const IntValuePtr& cur){
+				set.insert(cur);
+			});
+			timer.stop();
+			EXPECT_FALSE(showTimes) << timer;
+		}
+
+		{
+			std::set<IntValuePtr, compare_target<IntValuePtr>> set;
+			utils::Timer timer("std::set");
+			for_each(list, [&](const IntValuePtr& cur){
+				set.insert(cur);
+			});
+			timer.stop();
+			EXPECT_FALSE(showTimes) << timer;
+		}
+
 	}
 
 } // end namespace new_core

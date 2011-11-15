@@ -104,6 +104,9 @@ namespace core {
 			const TYPE& getValue() const { \
 				return boost::get<TYPE>(Node::getNodeValue()); \
 			} \
+			bool operator<(const NAME ## Value& other) const { \
+				return getValue() < other.getValue(); \
+			} \
 		protected: \
 			virtual Node* createInstanceUsing(const NodeList& children) const { \
 				assert(children.empty() && "Value nodes must no have children!"); \
