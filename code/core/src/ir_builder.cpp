@@ -403,7 +403,9 @@ CallExprPtr IRBuilder::releaseLock(const ExpressionPtr& lock) const {
 	assert(manager.getLangBasic().isLock(lock->getType()) && "Cannot unlock a non-lock type.");
 	return callExpr(manager.getLangBasic().getUnit(), manager.getLangBasic().getLockRelease(), lock);
 }
-
+CallExprPtr IRBuilder::createLock() const {
+	return callExpr(manager.getLangBasic().getLock(), manager.getLangBasic().getLockCreate());
+}
 
 namespace {
 
