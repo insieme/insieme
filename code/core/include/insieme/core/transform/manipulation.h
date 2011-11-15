@@ -236,7 +236,7 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 /**
  * Creates a top-level structure for the program prog.
  */
-DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog);
+DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const NamedValueList& globals);
 
 /**
  * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.

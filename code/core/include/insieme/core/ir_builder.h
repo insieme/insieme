@@ -305,6 +305,7 @@ namespace core {
 		// Locks
 		CallExprPtr aquireLock(const ExpressionPtr& lock) const;
 		CallExprPtr releaseLock(const ExpressionPtr& lock) const;
+		CallExprPtr createLock() const;
 
 		/**
 		 * A function obtaining a reference to a NoOp instance.
