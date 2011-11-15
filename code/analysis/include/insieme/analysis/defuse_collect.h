@@ -44,7 +44,8 @@
 #include <memory>
 
 #include "boost/operators.hpp"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_address.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 

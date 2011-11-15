@@ -46,7 +46,7 @@
 #include "insieme/backend/statement_converter.h"
 #include "insieme/backend/variable_manager.h"
 
-#include "insieme/core/ast_check.h"
+#include "insieme/core/ir_check.h"
 #include "insieme/core/checks/ir_checks.h"
 
 #include "insieme/core/printer/pretty_printer.h"

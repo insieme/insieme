@@ -48,11 +48,11 @@
 
 /*************************************************************************************************/
 
-#include "insieme/core/ast_visitor.h"
-#include "insieme/core/ast_address.h"
+#include "insieme/core/ir_visitor.h"
+#include "insieme/core/ir_address.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/lang/basic.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
@@ -127,15 +127,15 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 	assert (cond->getNodeType() == NT_CallExpr);
 
 	const CallExprPtr& callExpr = static_pointer_cast<const CallExpr>(cond);
-	if ( mgr.basic.isIntCompOp(callExpr->getFunctionExpr()) || 
-		 mgr.basic.isUIntCompOp(callExpr->getFunctionExpr()) ) 
+	if ( mgr.getLangBasic().isIntCompOp(callExpr->getFunctionExpr()) || 
+		 mgr.getLangBasic().isUIntCompOp(callExpr->getFunctionExpr()) ) 
 	{
 		assert(callExpr->getArguments().size() == 2 && "Malformed expression");
 
 		// First of all we check whether this condition is a composed by multiple conditions
 		// connected through || or && statements 
 		BasicGenerator::Operator&& op = 
-			mgr.basic.getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
+			mgr.getLangBasic().getOperator( static_pointer_cast<const Literal>(callExpr->getFunctionExpr()) ); 
 
 		switch (op) {
 		case BasicGenerator::LOr:
@@ -157,9 +157,9 @@ IterationDomain extractFromCondition(IterationVector& iv, const ExpressionPtr& c
 		//
 		// if (a<b) { }    ->    if( a-b<0 ) { }
 		try {
-			ASTBuilder builder(mgr);
+			IRBuilder builder(mgr);
 			ExpressionPtr&& expr = builder.callExpr( 
-					mgr.basic.getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
+					mgr.getLangBasic().getSignedIntSub(), callExpr->getArgument(0), callExpr->getArgument(1) 
 				);
 			AffineFunction af(iv, expr);
 			// Determine the type of this constraint
@@ -214,7 +214,7 @@ SubScopList toSubScopList(const IterationVector& iterVec, const AddressList& sco
 
 //===== ScopVisitor ================================================================================
 
-struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
+struct ScopVisitor : public IRVisitor<IterationVector, Address> {
 
 	AddressList& scopList;
 	AddressList subScops;
@@ -226,7 +226,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	RegionStmtStack regionStmts;
 
 	ScopVisitor(AddressList& scopList) : 
-		ASTVisitor<IterationVector, Address>(false), scopList(scopList) 
+		IRVisitor<IterationVector, Address>(false), scopList(scopList) 
 	{
 		regionStmts.push( RegionStmtStack::value_type() );
 	}
@@ -274,7 +274,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		assert(subScops.empty());
 
 		while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-			addr = addr.getAddressOfChild(0);
+			addr = addr.getAddressOfChild(1); // sub-statement or expression
 		}
 		IterationVector&& ret = visit(addr);
 
@@ -322,9 +322,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			return ann.getIterationVector();
 		}
 
-		ExpressionAddress condAddr = AS_EXPR_ADDR(ifStmt.getAddressOfChild(0));
-		StatementAddress  thenAddr = AS_STMT_ADDR(ifStmt.getAddressOfChild(1));
-		StatementAddress  elseAddr = AS_STMT_ADDR(ifStmt.getAddressOfChild(2));
+		ExpressionAddress condAddr = ifStmt->getCondition();
+		StatementAddress  thenAddr = ifStmt->getThenBody();
+		StatementAddress  elseAddr = ifStmt->getElseBody();
 
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions faThen( [&] () -> void { regionStmts.pop(); } );
@@ -425,14 +425,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			return ann.getIterationVector();
 		}
 
-		typedef std::vector<SwitchStmt::Case> CaseList;
+		typedef std::vector<SwitchCasePtr> CaseList;
 		typedef std::vector<IterationVector> IterationVectorList;
 
-		const CaseList& cases = switchStmt->getCases();
 		IterationVector ret;
 		
 		bool isSCoP = true;
-		ASTBuilder builder( switchStmt->getNodeManager() );
+		IRBuilder builder( switchStmt->getNodeManager() );
 			
 		SubScopList scops;
 		IterationDomain defaultCons(ret); // FIXME: replace with universe constraint
@@ -440,16 +439,16 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		regionStmts.push( RegionStmtStack::value_type() );
 		FinalActions fa( [&] () -> void { regionStmts.pop(); } );
 
-		for(size_t caseID = 0; caseID < cases.size(); ++caseID) {
+		SwitchCasesAddress cases = switchStmt->getCases();
+		for(auto it = cases.begin(); it != cases.end(); ++it) {
+			SwitchCaseAddress curCase = *it;
+
 			// get the addess of the expression of this case stmt 
-			ExpressionAddress exprAddr = 
-				AS_EXPR_ADDR(switchStmt.getAddressOfChild( 
-					1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 0 )
-				);
+			ExpressionAddress exprAddr = curCase->getGuard();
 
 			ExpressionPtr&& expr =
 				builder.callExpr(
-					builder.getBasicGenerator().getOperator( 
+					builder.getLangBasic().getOperator( 
 						switchStmt->getSwitchExpr()->getType(), BasicGenerator::Sub
 					),
 					switchStmt->getSwitchExpr() /* switchExpr*/, 
@@ -459,10 +458,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			try {
 				IterationVector iv;
 
-				StatementAddress stmtAddr = 
-					AS_STMT_ADDR(switchStmt.getAddressOfChild
-						( 1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 1 )
-					);
+				StatementAddress stmtAddr = curCase->getBody();
+
 				subScops.clear();
 					// build an address for the expression and the statement 
 				ret = merge(iv, visitStmt(stmtAddr));
@@ -485,10 +482,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 
 		if (switchStmt->getDefaultCase()) {
 			try {
-				StatementAddress defAddr = 
-					AS_STMT_ADDR(switchStmt.getAddressOfChild
-						( 1 /* switchExpr */ + cases.size()*2 /* each case 2 pointers */ + 0 )
-					);
+				StatementAddress defAddr = switchStmt->getDefaultCase();
 				subScops.clear();
 
 				IterationVector&& iv = visitStmt(defAddr);
@@ -507,10 +501,8 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// Add the entry points to the ScopList 
 			for(size_t caseID = 0; caseID < cases.size(); ++caseID) {
 				// get the addess of the expression of this case stmt 
-				StatementAddress caseStmtAddr = 
-					AS_EXPR_ADDR(switchStmt.getAddressOfChild( 
-						1 /* switchExpr */ + caseID*2 /* each case 2 pointers */ + 1 )
-					);
+				StatementAddress caseStmtAddr = cases[caseID]->getBody();
+
 				if( caseStmtAddr->hasAnnotation(ScopRegion::KEY) ) {
 					postProcessSCoP(caseStmtAddr, scopList) ;
 
@@ -558,13 +550,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
 
-			IterationVector&& bodyIV = visitStmt( forStmt.getAddressOfChild(3) ), ret;
+			IterationVector&& bodyIV = visitStmt( forStmt->getBody() ), ret;
 
-			const DeclarationStmtPtr& decl = forStmt.getAddressedNode()->getDeclaration();
-			ret.add( Iterator(decl->getVariable()) ); 
+			ForStmtPtr forPtr = forStmt.getAddressedNode();
+			ret.add( Iterator(forPtr->getIterator()) );
 			
 			NodeManager& mgr = forStmt->getNodeManager();
-			ASTBuilder builder(mgr);
+			IRBuilder builder(mgr);
 
 			try {
 				ret = merge(ret, bodyIV);	
@@ -574,13 +566,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				// which spawns a domain: lw <= i < ub exists x in Z : lb + x*s = i
 				// Check the lower bound of the loop
 				AffineFunction lb(ret, 
-						builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), 
-							decl->getInitialization())	
+						builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+								forPtr->getIterator(), forPtr->getStart())
 					);
 
 				// check the upper bound of the loop
-				AffineFunction ub(ret, builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), 
-							forStmt.getAddressedNode()->getEnd())
+				AffineFunction ub(ret, builder.callExpr(mgr.getLangBasic().getSignedIntSub(),
+							forPtr->getIterator(), forPtr->getEnd())
 						);
 				// set the constraint: iter >= lb && iter < ub
 
@@ -603,18 +595,18 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 					
 					assert(formula.isConstant() && "Stride value of for loop is not constant.");
 
-					VariablePtr existenceVar = ASTBuilder(mgr).variable(mgr.basic.getInt4());
+					VariablePtr existenceVar = IRBuilder(mgr).variable(mgr.getLangBasic().getInt4());
 					ret.add( Iterator( existenceVar, true ) );
 
 					AffineFunction existenceCons( ret );
 					existenceCons.setCoeff( existenceVar, -formula.getTerms().front().second );
-					existenceCons.setCoeff( decl->getVariable(), 1 );
+					existenceCons.setCoeff( forPtr->getIterator(), 1 );
 
 					// WE still have to make sure the loop iterator assume the value given by the
 					// loop lower bound, therefore i == lb
 					AffineFunction lowerBound( ret, 
-						builder.callExpr(mgr.basic.getSignedIntSub(), decl->getVariable(), 
-							decl->getInitialization()) 
+						builder.callExpr(mgr.getLangBasic().getSignedIntSub(), forPtr->getIterator(),
+							forPtr->getStart())
 						);
 
 					loopBounds = loopBounds and 
@@ -717,7 +709,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 				
 				// Get rid of marker statements 
 				while(addr->getNodeType() == NT_MarkerStmt || addr->getNodeType() == NT_MarkerExpr) {
-					addr = AS_STMT_ADDR(addr.getAddressOfChild(0));
+					addr = AS_STMT_ADDR(addr.getAddressOfChild(1));
 				}
 
 				if (addr->hasAnnotation(ScopRegion::KEY)) { 
@@ -745,11 +737,11 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	}
 
 	IterationVector visitMarkerStmt(const MarkerStmtAddress& mark) {
-		return visit( mark.getAddressOfChild(0) );
+		return visit( mark->getSubStatement() );
 	}
 
 	IterationVector visitMarkerExpr(const MarkerExprAddress& mark) {
-		return visit( mark.getAddressOfChild(0) );
+		return visit( mark->getSubExpression() );
 	}
 
 	IterationVector visitLambda(const LambdaAddress& lambda) {	
@@ -770,7 +762,7 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 			// remove element from the stack of statements from all the exit paths 
 			FinalActions fa( [&] () -> void { regionStmts.pop(); subScops.clear(); } );
 		
-			StatementAddress addr = AS_STMT_ADDR(lambda.getAddressOfChild(lambda->getChildList().size()-1));  /*getBody()*/
+			StatementAddress addr = AS_STMT_ADDR(lambda->getBody() );  /*getBody()*/
 			bodyIV = visitStmt( addr );
 
 			assert (addr->hasAnnotation(ScopRegion::KEY));
@@ -799,13 +791,13 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	IterationVector visitCallExpr(const CallExprAddress& callExpr) {
 		STACK_SIZE_GUARD;
 
-		const NodeAddress& func = callExpr.getAddressOfChild(1);
-		const BasicGenerator& gen = callExpr->getNodeManager().getBasicGenerator();
+		const NodeAddress& func = callExpr->getFunctionExpr();
+		const BasicGenerator& gen = callExpr->getNodeManager().getLangBasic();
 		
 		if ( func->getNodeType() != NT_LambdaExpr && !gen.isBuiltIn(func) ) {
 
 			// Check whether the arguments of the functions are non-refs
-			const vector<ExpressionPtr>& args = callExpr->getArguments();
+			const vector<ExpressionPtr>& args = callExpr.getAddressedNode()->getArguments();
 			bool isPure=true;
 			std::for_each(args.begin(), args.end(), [&](const ExpressionPtr& cur) { 
 					if(cur->getType()->getNodeType() == NT_RefType) { isPure = false; }
@@ -819,8 +811,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 		// Visit the arguments of this call expression using the evaluation order of C
 		// (right-to-left). This will make the ordering of the statements inside the SCoP
 		// consistent.
-		for(size_t idx = 2+callExpr->getArguments().size()-1; idx >=2; --idx) {
-			iterVec = merge( iterVec, visit(callExpr.getAddressOfChild(idx)) );
+		const vector<ExpressionAddress>&& arguments = callExpr->getArguments();
+		for(auto it = arguments.rbegin(); it != arguments.rend(); ++it) {
+			iterVec = merge( iterVec, visit(*it) );
 		}
 
 		AddressList scops(subScops);
@@ -891,9 +884,9 @@ struct ScopVisitor : public ASTVisitor<IterationVector, Address> {
 	// iteration vectors 
 	IterationVector visitNode(const NodeAddress& node) {
  		IterationVector ret;
-		for(size_t i=0, end=node->getChildList().size(); i!=end; ++i) {
-			ret = merge(ret, visit(node.getAddressOfChild(i))); 
-		} 
+ 		for_each(node->getChildList(), [&](const NodeAddress& cur){
+			ret = merge(ret, this->visit(cur));
+		});
 		return ret;
 	}
 };
@@ -1078,7 +1071,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 				// if the statement is a loop, then we append a dimension with the corresponding
 				// iterator variable and we go recursively to visit the body  
 				const ForStmtPtr& forStmt = static_pointer_cast<const ForStmt>(curPtr);
-				const VariablePtr& iter = forStmt->getDeclaration()->getVariable();
+				const VariablePtr& iter = forStmt->getIterator();
 
 				AffineFunction newAf( iterVec );
 				newAf.setCoeff( poly::Iterator(iter), 1 );
@@ -1194,7 +1187,7 @@ void ScopRegion::resolve() {
 	// using the loop iterator index 
 	if (annNode->getNodeType() == NT_ForStmt) {
 		AffineFunction af( getIterationVector() );
-		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(annNode)->getDeclaration()->getVariable());
+		poly::Iterator iter = poly::Iterator(core::static_pointer_cast<const ForStmt>(annNode)->getIterator());
 		af.setCoeff( iter, 1 );
 		sf.append( af );
 		iterOrder.push_back(iter);

@@ -44,7 +44,7 @@
 
 #include "insieme/utils/string_utils.h"
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/analysis/ir_utils.h"
 #include "insieme/core/encoder/lists.h"
 
@@ -58,10 +58,7 @@ namespace printer {
 
 // set up default formats for pretty printer
 const unsigned PrettyPrinter::OPTIONS_DEFAULT = 0;
-const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR;
-const unsigned PrettyPrinter::OPTIONS_MAX_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS 
-	| PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::PRINT_ANNOTATIONS | PrettyPrinter::NO_LIST_SUGAR;
+const unsigned PrettyPrinter::OPTIONS_DETAIL = PrettyPrinter::PRINT_BRACKETS | PrettyPrinter::PRINT_CASTS | PrettyPrinter::PRINT_DEREFS | PrettyPrinter::PRINT_MARKERS | PrettyPrinter::NO_LIST_SUGAR;
 const unsigned PrettyPrinter::OPTIONS_SINGLE_LINE = PrettyPrinter::OPTIONS_DETAIL | PrettyPrinter::PRINT_SINGLE_LINE;
 
 /**
@@ -130,7 +127,7 @@ namespace {
 	};
 
 	/**
-	 * Since formatter instances are polymorphic, they need to be handled via pointer or
+	 * Since formatter instances are polymorthic, they need to be handled via pointer or
 	 * references. Further, the memory management needs to be considered. Therefore, formatter
 	 * should be passed using this pointer type, which is based on a shared pointer.
 	 */
@@ -198,7 +195,7 @@ namespace {
 	/**
 	 * The main visitor used by the pretty printer process.
 	 */
-	class InspirePrinter : public ASTVisitor<> {
+	class InspirePrinter : public IRVisitor<> {
 
 		/**
 		 * A table containing special formatting rules for particular functions.
@@ -222,6 +219,7 @@ namespace {
 		 */
 		unsigned depth;
 
+
 	public:
 
 		/**
@@ -237,51 +235,44 @@ namespace {
 		 * @param print the setup of the pretty print
 		 */
 		InspirePrinter(std::ostream& out, const PrettyPrinter& print)
-				: ASTVisitor<>(true), formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
-
-		/**
-		 * Wrapper for general tasks
-		 */
-		virtual void visit(const NodePtr& element) {
-			if (depth > print.maxDepth) {
-				out << " ... ";
-				return;
-			}
-			depth++;
-			printAnnotations(element, true);
-			ASTVisitor<>::visit(element);
-			printAnnotations(element, false);
-			out.flush();
-			depth--; 
-		}
+				: IRVisitor<>(true), formatTable(initFormatTable(print)), indent(0), print(print), depth(0), out(out) { };
 
 		/**
 		 * A macro simplifying the definition for print routine of some node type.
 		 */
 		#define PRINT(NodeType, Print) \
-		virtual	void visit ## NodeType (const NodeType ## Ptr& node) { Print }
+		virtual	void visit ## NodeType (const NodeType ## Ptr& node) { \
+				if (depth > print.maxDepth) { \
+					out << " ... "; \
+					return;\
+				}\
+				depth++; \
+				Print \
+				out.flush(); \
+				depth--; \
+				} \
 
-		PRINT(Identifier, {
+		PRINT(Value, {
 				// identifiers can be directly printed
 				out << *node;
 		});
 
 		PRINT(GenericType, {
-				out << node->getFamilyName();
-				const std::vector<TypePtr>& types = node->getTypeParameter();
-				const std::vector<IntTypeParamPtr>& intTypes = node->getIntTypeParameter();
+				out << *node->getName();
+				const TypesPtr& types = node->getTypeParameter();
+				const IntTypeParamsPtr& intTypes = node->getIntTypeParameter();
 				
-				if( types.empty() && intTypes.empty() ) {
+				if( types->empty() && intTypes->empty() ) {
 					return;
 				}
 
 				out << "<" << join(",", types, [&](std::ostream&, const TypePtr& cur){ this->visit(cur); } );
 
-				if ( !types.empty() && !intTypes.empty() ) {
+				if ( !types->empty() && !intTypes->empty() ) {
 			   		out << ",";	
 				}
 
-				out << join(",", intTypes, 
+				out << join(",", intTypes,
 							[&](std::ostream& jout, const IntTypeParamPtr& cur){ jout << *cur; } ) << ">"; 
 		});
 
@@ -296,20 +287,20 @@ namespace {
 				out << "rec ";
 				visit(node->getTypeVariable());
 				out << "{" << join(", ", node->getDefinition()->getDefinitions(), 
-					[&](std::ostream& jout, const RecTypeDefinition::RecTypeDefs::value_type& cur) {
-						this->visit(cur.first);
+					[&](std::ostream& jout, const RecTypeBindingPtr& cur) {
+						this->visit(cur->getVariable());
 						jout << "=";
-						this->visit(cur.second);
+						this->visit(cur->getType());
 				}) << "}";
 		});
 
 		PRINT(NamedCompositeType, {		
 			out << ((node->getNodeType() == NT_UnionType)?"union<":"struct<");
 			out << join(",", node->getEntries(), 
-				[&](std::ostream& out, const NamedCompositeType::Entry& cur) {
-					this->visit(cur.first);
+				[&](std::ostream& out, const NamedTypePtr& cur) {
+					this->visit(cur->getName());
 					out << ":";
-				   this->visit(cur.second);
+				   this->visit(cur->getType());
 			    }) << ">";
 		});
 
@@ -376,8 +367,12 @@ namespace {
 
 		PRINT(ForStmt, {
 				// variables can be directly printed
-				out << "for(";
-				this->visit(node->getDeclaration());
+				out << "for(decl ";
+				this->visit(node->getIterator()->getType());
+				out << " ";
+				this->visit(node->getIterator());
+				out << " = ";
+				this->visit(node->getStart());
 				out << " .. ";
 				this->visit(node->getEnd());
 				out << " : ";
@@ -409,11 +404,11 @@ namespace {
 				out << "switch(";
 				this->visit(node->getSwitchExpr());
 				out << ") {"; increaseIndent(); this->newLine();
-				for_each(node->getCases(), [&](const SwitchStmt::Case& cur) {
+				for_each(node->getCases()->getCases(), [&](const SwitchCasePtr& cur) {
 					out << "case ";
-					this->visit(cur.first);
+					this->visit(cur->getGuard());
 					out << ": ";
-					this->visit(cur.second);
+					this->visit(cur->getBody());
 					this->newLine();
 				});
 				out << "default: ";
@@ -428,7 +423,7 @@ namespace {
 
 		PRINT(Literal, {
 				if (GenericTypePtr&& genTy = core::dynamic_pointer_cast<const GenericType>(node->getType()) ) {
-					if(genTy->getFamilyName() == "type") {
+					if(genTy->getName()->getValue() == "type") {
 						visit(genTy);
 						return;
 					}
@@ -448,7 +443,7 @@ namespace {
 					visit(node->getLambda());
 					return;
 				}
-				
+
 				// general case: recursive function
 				out << "recFun ";
 				this->visit(node->getVariable());
@@ -461,21 +456,22 @@ namespace {
 				auto defs = node->getDefinitions();
 				if (defs.empty()) {
 					out << "{ }";
-				} else {
-					out << "{"; increaseIndent(); newLine();
-					std::size_t count = 0;
-					for_each(defs.begin(), defs.end(), [&](const std::pair<const VariablePtr, LambdaPtr>& cur) {
-						this->visit(cur.first);
-						out << " = ";
-						this->visit(cur.second);
-						out << ";";
-						if (count++ < defs.size() -1) this->newLine();
-					});
-
-					decreaseIndent();
-					newLine();
-					out << "}";
+					return;
 				}
+
+				out << "{"; increaseIndent(); newLine();
+				std::size_t count = 0;
+				for_each(defs.begin(), defs.end(), [&](const LambdaBindingPtr& cur) {
+					this->visit(cur->getVariable());
+					out << " = ";
+					this->visit(cur->getLambda());
+					out << ";";
+					if (count++ < defs.size() -1) this->newLine();
+				});
+
+				decreaseIndent();
+				newLine();
+				out << "}";
 		});
 
 
@@ -496,10 +492,10 @@ namespace {
 				// obtain flag indicating format
 				bool printBrackets = print.hasOption(PrettyPrinter::PRINT_BRACKETS);
 
-				// test whether for the current call a special format has been registered
+				// test whether for the current call a special format has been registerd
 				auto function = node->getFunctionExpr();
 				if (function->getNodeType() == NT_Literal) {
-					auto pos = formatTable.find(static_pointer_cast<const Literal>(function)->getValue());
+					auto pos = formatTable.find(static_pointer_cast<const Literal>(function)->getValue()->getValue());
 					if (pos != formatTable.end()) {
 						FormatterPtr formatter = (*pos).second;
 						if (printBrackets) out << "(";
@@ -555,7 +551,7 @@ namespace {
 
 		PRINT(VectorExpr, {
 			const size_t limit = 5;	// TODO: parametrize this?
-			const std::vector<ExpressionPtr>& elements = node->getExpressions();
+			const std::vector<ExpressionPtr>& elements = node->getExpressions()->getElements();
 
 			bool cut = (elements.size() > limit);
 			
@@ -583,35 +579,23 @@ namespace {
 					}) << "]";
 				}
 				out << "{"; increaseIndent(); this->newLine();
-				for_each(node->getGuardedStmts(), [&](const JobExpr::GuardedStmt& cur) {
+				for_each(node->getGuardedExprs()->getElements(), [&](const GuardedExprPtr& cur) {
 					out << "if ";
-					this->visit(cur.first);
+					this->visit(cur->getGuard());
 					out << " do: ";
-					this->visit(cur.second);
+					this->visit(cur->getExpression());
 					this->newLine();
 				});
 				out << "default: ";
-				this->visit(node->getDefaultStmt());
+				this->visit(node->getDefaultExpr());
 				decreaseIndent(); this->newLine(); out << "}";
 		});
 
-		PRINT(MemberAccessExpr, {
-				// prints the access to a member variable
-				this->visit(node->getSubExpression());
-				out << "." << *node->getMemberName();
-		});
-
-		PRINT(TupleProjectionExpr, {
-				// prints the access to a member variable
-				this->visit(node->getSubExpression());
-				out << "#" << node->getIndex();
-		});
-
 		PRINT(StructExpr, {
-				out << "struct{" << ::join(", ", node->getMembers(), [&](std::ostream& out, const StructExpr::Member& cur) {
-					this->visit(cur.first);
+				out << "struct{" << ::join(", ", node->getMembers()->getElements(), [&](std::ostream& out, const NamedValuePtr& cur) {
+					this->visit(cur->getName());
 					out << ":=";
-					this->visit(cur.second);
+					this->visit(cur->getValue());
 				}) << "}";
 		});
 
@@ -630,10 +614,10 @@ namespace {
 
 				out << "{"; increaseIndent(); newLine();
 				std::size_t count = 0;
-				for_each(defs.begin(), defs.end(), [&](const std::pair<const TypeVariablePtr, TypePtr>& cur) {
-					this->visit(cur.first);
+				for_each(defs.begin(), defs.end(), [&](const RecTypeBindingPtr& cur) {
+					this->visit(cur->getVariable());
 					out << " = ";
-					this->visit(cur.second);
+					this->visit(cur->getType());
 					out << ";";
 					if (count++ < defs.size() -1) this->newLine();
 				});
@@ -657,14 +641,14 @@ namespace {
 
 		PRINT(MarkerExpr, {
 			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
-			if (showMarker) out << "<m id=" << node->getID() << ">";
+			if (showMarker) out << "<m id=" << node->getId() << ">";
 			visit(node->getSubExpression());
 			if (showMarker) out << "</m>";
 		});
 
 		PRINT(MarkerStmt, {
 			bool showMarker = print.hasOption(PrettyPrinter::Option::PRINT_MARKERS);
-			if (showMarker) out << "<m id=" << node->getID() << ">";
+			if (showMarker) out << "<m id=" << node->getId() << ">";
 			visit(node->getSubStatement());
 			if (showMarker) out << "</m>";
 		});
@@ -705,26 +689,6 @@ namespace {
 		 */
 		void decreaseIndent() {
 			indent--;
-		}
-
-		/**
-		 * If enabled, prints annotations on Node node.
-		 */
-		void printAnnotations(const NodePtr& node, bool start) {
-			if(print.hasOption(PrettyPrinter::PRINT_ANNOTATIONS) && node->hasAnnotations()) {
-				if(start) {
-					out << "$[";
-					auto iter = node->getAnnotations().begin(); 
-					while(true) {
-						out << *iter->second;
-						if(++iter != node->getAnnotations().end()) out << ", ";
-						else break;
-					}
-					out << ": ";
-				} else {
-					out << "]$";
-				}
-			}
 		}
 	};
 
@@ -846,13 +810,13 @@ namespace {
 		FormatTable res;
 
 		// get lang basic
-		const lang::BasicGenerator& basic = config.root->getNodeManager().basic;
+		const lang::BasicGenerator& basic = config.root->getNodeManager().getLangBasic();
 
 		#define OUT(Literal) printer.out << Literal
 		#define ARG(N) getArgument(call, N)
 		#define PRINT_ARG(N) printArgument(printer, call, N)
 		#define ADD_FORMATTER(Literal, FORMAT) \
-					res.insert(std::make_pair(Literal->getValue(), make_formatter(Literal, [](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
+					res.insert(std::make_pair(Literal->getValue()->getValue(), make_formatter(Literal, [](InspirePrinter& printer, const CallExprPtr& call) FORMAT ))).second;
 
 
 		if (config.hasOption(PrettyPrinter::PRINT_DEREFS)) {
@@ -997,7 +961,7 @@ std::ostream& operator<<(std::ostream& out, const  insieme::core::printer::Sourc
 	using namespace insieme::core::printer;
 
 	for(SourceLocationMap::const_iterator it = srcMap.begin(), end=srcMap.end(); it != end; ++it) {
-		std::string&& stmt = it->second->toString();
+		std::string&& stmt = toString(*it->second);
 		size_t length = stmt.length();
 		
 		std::cout << "@ RANGE: " << it->first << std::endl 

@@ -37,7 +37,7 @@
 #include "insieme/core/lang/extension.h"
 
 #include "insieme/core/parser/ir_parse.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 namespace insieme {
 namespace core {

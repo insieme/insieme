@@ -36,9 +36,8 @@
 
 #pragma once
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_address.h"
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_address.h"
 
 namespace insieme {
 namespace core {
@@ -237,7 +236,7 @@ LambdaExprPtr instantiate(NodeManager& manager, const LambdaExprPtr& lambda, con
 /**
  * Creates a top-level structure for the program prog.
  */
-DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, const StructExpr::Members& globals = StructExpr::Members());
+DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog);
 
 /**
  * Makes the Variable var available at the scope enclosing location. Accomplished by forwarding it through the call graph.

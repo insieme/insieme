@@ -36,9 +36,9 @@
 
 #include "insieme/core/arithmetic/arithmetic_utils.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
+#include "insieme/core/ir_visitor.h"
 #include "insieme/core/type_utils.h"
 
 #include "insieme/utils/numeric_cast.h"
@@ -61,7 +61,7 @@ const char* NotAFormulaException::what() const throw() {
 
 namespace {
 
-	class FormulaConverter : public ASTVisitor<Formula> {
+	class FormulaConverter : public IRVisitor<Formula> {
 
 		const lang::BasicGenerator& lang;
 
@@ -69,13 +69,13 @@ namespace {
 
 	public:
 
-		FormulaConverter(const lang::BasicGenerator& lang) : ASTVisitor(false), lang(lang) {}
+		FormulaConverter(const lang::BasicGenerator& lang) : IRVisitor(false), lang(lang) {}
 
 	protected:
 
 		Formula visitLiteral(const LiteralPtr& cur) {
 			checkType(cur);
-			return utils::numeric_cast<int>(cur->getValue());
+			return utils::numeric_cast<int>(cur->getValue()->getValue());
 		}
 
 		Formula visitVariable(const VariablePtr& cur) {
@@ -106,7 +106,7 @@ namespace {
 					throw NotAFormulaException(call);
 				}
 				LiteralPtr lit = static_pointer_cast<const Literal>(argA);
-				if (!lang.isInt(lit->getType()) || lit->getValue() != "1") {
+				if (!lang.isInt(lit->getType()) || lit->getValue()->getValue() != "1") {
 					throw NotAFormulaException(call);
 				}
 
@@ -163,15 +163,15 @@ namespace {
 
 Formula toFormula(const ExpressionPtr& expr) {
 	// the magic is done by the formula converter
-	return FormulaConverter(expr->getNodeManager().getBasicGenerator()).visit(expr);
+	return FormulaConverter(expr->getNodeManager().getLangBasic()).visit(expr);
 }
 
 
 namespace {
 
 	const TypePtr getBiggerType(const TypePtr& a, const TypePtr& b) {
-		assert(a->getNodeManager().getBasicGenerator().isInt(a) && "Has to be a IntegerType!");
-		assert(b->getNodeManager().getBasicGenerator().isInt(b) && "Has to be a IntegerType!");
+		assert(a->getNodeManager().getLangBasic().isInt(a) && "Has to be a IntegerType!");
+		assert(b->getNodeManager().getLangBasic().isInt(b) && "Has to be a IntegerType!");
 
 		// quick exit
 		if (*a == *b) {
@@ -192,7 +192,7 @@ namespace {
 		return getSmallestCommonSuperType(a, b);
 	}
 
-	ExpressionPtr createCall(ASTBuilder& builder, const ExpressionPtr& fun, const ExpressionPtr& a, const ExpressionPtr& b) {
+	ExpressionPtr createCall(IRBuilder& builder, const ExpressionPtr& fun, const ExpressionPtr& a, const ExpressionPtr& b) {
 		return builder.callExpr(getBiggerType(a->getType(), b->getType()), fun, a, b);
 	}
 
@@ -202,8 +202,8 @@ namespace {
 ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
 	assert(factor.second != 0 && "Factor's exponent must not be 0!");
 
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.getBasicGenerator();
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 	auto MulOp = basic.getSignedIntMul();
 
 	// determine absolute exponent
@@ -232,8 +232,8 @@ ExpressionPtr toIR(NodeManager& manager, const Product::Factor& factor) {
 
 ExpressionPtr toIR(NodeManager& manager, const Product& product) {
 
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.getBasicGenerator();
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 	auto MulOp = basic.getSignedIntMul();
 
 	if (product.isOne()) {
@@ -260,8 +260,8 @@ ExpressionPtr toIR(NodeManager& manager, const Product& product) {
 
 ExpressionPtr toIR(NodeManager& manager, const Formula& formula) {
 
-	ASTBuilder builder(manager);
-	const lang::BasicGenerator& basic = manager.getBasicGenerator();
+	IRBuilder builder(manager);
+	const lang::BasicGenerator& basic = manager.getLangBasic();
 
 	auto AddOp = basic.getSignedIntAdd();
 	auto SubOp = basic.getSignedIntSub();

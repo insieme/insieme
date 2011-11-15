@@ -39,7 +39,7 @@
 #include "insieme/utils/annotation.h"
 #include "insieme/utils/string_utils.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 // #include "boost/optional.hpp"
 

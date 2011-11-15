@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace frontend {
@@ -59,9 +59,9 @@ typedef std::set<core::VariablePtr, lt_ident> VarSet;
  * Returns the list of variables referenced within an expression.
  * This class is used when a code block needs to be transformed into a function
  */
-struct VarRefFinder: public core::ASTVisitor<void>, public VarSet {
+struct VarRefFinder: public core::IRVisitor<void>, public VarSet {
 
-	VarRefFinder(const core::NodePtr& node) : core::ASTVisitor<void>(false) {
+	VarRefFinder(const core::NodePtr& node) : core::IRVisitor<void>(false) {
 		visit(node);
 		// we have to remove eventual variables which are declared inside this block of code
 		VarSet nonDecls;

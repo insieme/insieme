@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/program.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_program.h"
+#include "insieme/core/ir_visitor.h"
 
 namespace insieme {
 namespace analysis {

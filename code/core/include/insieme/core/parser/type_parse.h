@@ -76,7 +76,7 @@ struct TypeGrammar : public qi::grammar<ParseIt, T(), qi::space_type> {
 
     // member functions applying the rules
     #define get(op) virtual Rule get##op ();
-	qi::rule<ParseIt, V()>  getIdentifier();
+	qi::rule<ParseIt, V()>  getStringValue();
 	qi::rule<ParseIt, T()> getTypeVarLabel();
 	qi::rule<ParseIt, U()> getIntTypeParamLabel();
 	qi::rule<ParseIt, U(), qi::space_type> getIntTypeParam();

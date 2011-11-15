@@ -7,8 +7,8 @@ cmake_minimum_required(VERSION 2.6)
 enable_testing()
 
 # include modules
-add_subdirectory( core )
 add_subdirectory( utils )
+add_subdirectory( core )
 add_subdirectory( annotations )
 add_subdirectory( frontend )
 add_subdirectory( backend )
@@ -19,6 +19,7 @@ add_subdirectory( simple_backend )
 add_subdirectory( opencl_backend )
 add_subdirectory( driver )
 add_subdirectory( runtime )
+add_subdirectory( machine_learning )
 
 #-- Add an Option to toggle the generation of the API documentation
 option(BUILD_DOCUMENTATION "Use Doxygen to create the HTML based API documentation" OFF)

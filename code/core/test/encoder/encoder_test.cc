@@ -42,8 +42,8 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 #include "insieme/core/checks/ir_checks.h"
 
 namespace insieme {
@@ -53,19 +53,19 @@ namespace encoder {
 TEST(Lists, TestBaseTypes) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
-	const auto& basic = manager.basic;
+	IRBuilder builder(manager);
+	const auto& basic = manager.getLangBasic();
 
 	core::ExpressionPtr expr = toIR(manager, 12);
 
-	EXPECT_EQ(manager.basic.getInt4(), expr->getType());
+	EXPECT_EQ(basic.getInt4(), expr->getType());
 	EXPECT_EQ("12", toString(*expr));
 	EXPECT_EQ(12, toValue<int>(expr));
 	EXPECT_TRUE(isEncodingOf<int>(expr));
 	EXPECT_FALSE(isEncodingOf<short>(expr));
 
 	expr = toIR(manager, false);
-	EXPECT_EQ(manager.basic.getBool(), expr->getType());
+	EXPECT_EQ(basic.getBool(), expr->getType());
 	EXPECT_EQ("0", toString(*expr));
 	EXPECT_FALSE(toValue<bool>(expr));
 
@@ -91,7 +91,7 @@ TEST(Lists, TestBaseTypes) {
 
 
 	// check exceptions
-	expr = builder.variable(manager.basic.getInt4());
+	expr = builder.variable(basic.getInt4());
 	EXPECT_THROW(toValue<double>(expr), InvalidExpression); // wrong type
 	EXPECT_THROW(toValue<int>(expr), InvalidExpression); // wrong node type
 
@@ -105,8 +105,8 @@ TEST(Lists, TestBaseTypes) {
 TEST(Lists, SubTypeSupport) {
 
 	NodeManager manager;
-	ASTBuilder builder(manager);
-	const auto& basic = manager.basic;
+	IRBuilder builder(manager);
+	const auto& basic = manager.getLangBasic();
 
 	core::TypePtr uint4 = basic.getUInt4();
 	core::TypePtr uint8 = basic.getUInt8();

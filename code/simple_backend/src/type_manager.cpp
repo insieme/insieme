@@ -38,7 +38,7 @@
 
 #include "insieme/simple_backend/backend_convert.h"
 
-#include "insieme/core/types.h"
+#include "insieme/core/ir_types.h"
 #include "insieme/core/analysis/ir_utils.h"
 
 #include "insieme/annotations/c/naming.h"
@@ -151,7 +151,7 @@ TypeManager::TypeInfo TypeManager::resolveType(const core::TypePtr& type) {
 }
 
 TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr) {
-	auto& basic = ptr->getNodeManager().basic;
+	auto& basic = ptr->getNodeManager().getLangBasic();
 
 	// TODO: handle basic types using a map
 
@@ -164,7 +164,7 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 	}
 	if(basic.isInt(ptr)) {
 		string qualifier = basic.isUnsignedInt(ptr) ? "unsigned " : "";
-		auto intParm = ptr->getIntTypeParameter().front();
+		auto intParm = ptr->getIntTypeParameter()->getElements().front();
 		if(intParm->getNodeType() == NT_ConcreteIntTypeParam) {
 			switch(static_pointer_cast<const ConcreteIntTypeParam>(intParm)->getValue()) {
 				case 1: return toTypeInfo(qualifier + "char");
@@ -181,7 +181,7 @@ TypeManager::TypeInfo TypeManager::resolveGenericType(const GenericTypePtr& ptr)
 		return toTypeInfo("bool");
 	}
 	if(basic.isReal(ptr)) {
-		auto intParm = ptr->getIntTypeParameter().front();
+		auto intParm = ptr->getIntTypeParameter()->getElements().front();
 		if(intParm->getNodeType() == NT_ConcreteIntTypeParam) {
 			switch(static_pointer_cast<const ConcreteIntTypeParam>(intParm)->getValue()) {
 				case 4: return toTypeInfo("float");
@@ -481,8 +481,8 @@ TypeManager::TypeInfo TypeManager::resolveNamedCompositType(const NamedComposite
 
 	// add struct definition
 	code << prefix << " " << name << " { \n";
-	for_each(ptr->getEntries(), [&, this](const NamedCompositeType::Entry& entry) {
-		code << "    " << formatParamter(code, entry.second, entry.first->getName(), false) << ";\n";
+	for_each(ptr->getEntries(), [&, this](const NamedTypePtr& entry) {
+		code << "    " << formatParamter(code, entry->getType(), entry->getName()->getValue(), false) << ";\n";
 	});
 	code << "};\n";
 
@@ -518,15 +518,15 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 	NameManager& nameManager = getNameManager();
 
 	// A) create prototype and add entry for each recursively defined type
-	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+	for_each(ptr->getDefinitions(), [&](const RecTypeBindingPtr& cur) {
 
 		// create recursive type using current type variable
-		RecTypePtr type = RecType::get(manager, cur.first, ptr);
+		RecTypePtr type = RecType::get(manager, cur->getVariable(), ptr);
 
 		// create prototype
 		string name = nameManager.getName(type, "userdefined_rec_type");
 
-		switch(cur.second->getNodeType()) {
+		switch(cur->getType()->getNodeType()) {
 		case NT_StructType:
 			name = "struct " + name; break;
 		case NT_UnionType:
@@ -545,13 +545,13 @@ void TypeManager::resolveRecTypeDefinition(const core::RecTypeDefinitionPtr& ptr
 
 
 	// A) unroll types and write definitions
-	for_each(ptr->getDefinitions(), [&](const std::pair<TypeVariablePtr, TypePtr>& cur) {
+	for_each(ptr->getDefinitions(), [&](const RecTypeBindingPtr& cur) {
 
 		// obtain unrolled type
-		TypePtr unrolled = ptr->unrollOnce(manager, cur.first);
+		TypePtr unrolled = ptr->unrollOnce(manager, cur->getVariable());
 
 		// fix name of unrolled struct
-		nameManager.setName(unrolled, nameManager.getName(RecType::get(manager, cur.first, ptr)));
+		nameManager.setName(unrolled, nameManager.getName(RecType::get(manager, cur->getVariable(), ptr)));
 
 		// resolve unrolled type and add dependency to group
 		group->addDependency(resolveType(unrolled).definition);

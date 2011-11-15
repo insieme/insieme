@@ -52,12 +52,12 @@ namespace {
 
 
 // visitor finds calls to array.create.1D to check if the type is still correct
-class ArrayCreat1DFinder: public ASTVisitor<bool> {
-	const ASTBuilder& builder;
+class ArrayCreat1DFinder: public IRVisitor<bool> {
+	const IRBuilder& builder;
 //	TypePtr match;
 
 public:
-	ArrayCreat1DFinder(const ASTBuilder& build): ASTVisitor<bool>(false), builder(build) {}
+	ArrayCreat1DFinder(const IRBuilder& build): IRVisitor<bool>(false), builder(build) {}
 
 	bool visitNode(const NodePtr& node) {
 		return false;
@@ -220,7 +220,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	// check work dimension
 	const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim);
 	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
-	wd = atoi(dim->getValue(). c_str());
+	wd = atoi(dim->getStringValue(). c_str());
 	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
 	assert(workDim < 3u && "Invalid work_dim. Should be 1 - 3!");
 
@@ -312,7 +312,7 @@ const NodePtr HostMapper3rdPass::handleNDRangeKernel(const CallExprPtr& callExpr
     k = tryRemove(BASIC.getRefDeref(), k, builder);
 
     // get corresponding lambda expression
-/*equal_target<ExpressionPtr> cmp;
+equal_target<ExpressionPtr> cmp;
 for_each(kernelLambdas, [](std::pair<ExpressionPtr, LambdaExprPtr> ka) {
 std::cout << "\nArguments: " << ka.first << "\n";
 //for_each(ka.second, [](ExpressionPtr a){std::cout << a->getType() << " " << a << std::endl;});
@@ -329,7 +329,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 /*    assert(kernelArgs.find(k) != kernelArgs.end() && "No arguments for call to kernel function found");
     const VariablePtr& args = kernelArgs[k];
     const TupleTypePtr& argTypes = dynamic_pointer_cast<const TupleType>(args->getType());*/
-    const Lambda::ParamList& interface = lambda->getParameterList();
+    const VariableList& interface = lambda->getParameterList()->getElements();
  //   assert(argTypes && "The kernel arguments have to be stored in a tuple");
 
 	// make a three element vector out of the global and local size
@@ -345,7 +345,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		if(kernelArgs.find(k) == kernelArgs.end()) {
 			for(size_t i = 0; i < interface.size() -2 /*argTypes->getElementTypes().size()*/; ++i) {
 				newArgs.push_back(builder.callExpr(interface.at(i)->getType(), BASIC.getTupleMemberAccess(), builder.callExpr(BASIC.getRefDeref(), k),
-						builder.literal(BASIC.getUInt8(), toString(i)), BASIC.getTypeLiteral(interface.at(i)->getType())));
+						builder.literal(BASIC.getUInt8(), toString(i)), builder.getTypeLiteral(interface.at(i)->getType())));
 			}
 		} else for_each(kernelArgs[k], [&](ExpressionPtr kArg) { // irt_ocl_run_kernel without local memory arguments
 			newArgs.push_back(builder.callExpr(BASIC.getRefDeref(), static_pointer_cast<const Expression>(this->resolveElement(kArg))));
@@ -371,7 +371,7 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 		declsAndKernelCall.push_back(decl);
 	});
 
-	Lambda::ParamList params;
+	VariableList params;
 	vector<ExpressionPtr> innerArgs;
 	vector<TypePtr> wrapperInterface;
 
@@ -430,11 +430,11 @@ std::cout << kernelLambdas.begin()->first << std::endl;//*/
 	return builder.callExpr(builder.lambdaExpr(builder.lambda(wrapperType, params, builder.compoundStmt(declsAndKernelCall))), newArgs);
 }
 
-void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInitMember, core::StructExpr::Members& newInitMembers,
-		NamedCompositeType::Entries& newMembers, const VariablePtr& var, const size_t i) {
+void HostMapper3rdPass::addTupletoStruct(const core::NamedValuePtr& oldInitMember, core::NamedValueList& newInitMembers,
+		core::NamedTypeList& newMembers, const VariablePtr& var, const size_t i) {
 
 	LambdaSearcher lambdaSearcher(builder, var, program);
-	IdSearcher ids(builder, oldInitMember.first);
+	IdSearcher ids(oldInitMember->getName());
 	for_each(kernelLambdas, [&](std::pair<core::ExpressionPtr, core::LambdaExprPtr> kl) {
 		const NodeAddress& lAddr = core::Address<const core::Variable>::find(getVariableArg(kl.first, builder), program);
 
@@ -444,7 +444,7 @@ void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInit
 			// check identifier
 			if(visitDepthFirstInterruptible(kl.first, ids)) {
 				// now we found the right kernelLambda
-				Lambda::ParamList pl = kl.second->getParameterList();
+				core::VariableList pl = kl.second->getParameterList()->getElements();
 				TypeList elementTypes;
 				for(size_t j = 0; j < pl.size()-2 /*global and local size not considered*/; ++j) {
 					elementTypes.push_back(pl.at(j)->getType());
@@ -452,7 +452,7 @@ void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInit
 
 				const TupleTypePtr& tty = builder.tupleType(elementTypes);
 				TypePtr newType = dynamic_pointer_cast<const Type>(transform::replaceAll(builder.getNodeManager(),
-						newMembers.at(i).second, builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
+						newMembers.at(i)->getType(), builder.refType(builder.arrayType(builder.genericType("_cl_kernel"))),
 						tty));
 
 				VariablePtr newVar = static_pointer_cast<const Variable>(transform::replaceAll(builder.getNodeManager(),
@@ -460,8 +460,8 @@ void HostMapper3rdPass::addTupletoStruct(const core::StructExpr::Member& oldInit
 
 				cl_mems[var] = newVar;
 
-				core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
-						builder.callExpr(newType, BASIC.getUndefined(), BASIC.getTypeLiteral(newType)));
+				core::NamedValuePtr newInitMember = builder.namedValue(oldInitMember->getName(),
+						builder.callExpr(newType, BASIC.getUndefined(), builder.getTypeLiteral(newType)));
 				newInitMembers.push_back(newInitMember);
 			}
 		}
@@ -499,22 +499,22 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				if(const CallExprPtr& refNew = dynamic_pointer_cast<const CallExpr>(decl->getInitialization())) {
 					if(refNew->getFunctionExpr() == BASIC.getRefNew() || refNew->getFunctionExpr() == BASIC.getRefVar()) {
 						if(const StructExprPtr& oldInit = dynamic_pointer_cast<const StructExpr>(refNew->getArgument(0))) {
-							core::StructExpr::Members newInitMembers;
+							core::NamedValueList newInitMembers;
 							core::NamedCompositeType::Entries newMembers = sType->getEntries();
 							size_t i = 0;
-							for_each(oldInit->getMembers(), [&](core::StructExpr::Member oldInitMember) {
-								// assuming that the order of the (existing) elements in newMembers and oldMember is the same,
+							for_each(oldInit->getMembers()->getElements(), [&](const core::NamedValuePtr& oldInitMember) {
+								// assuming that the order of the (exisiting) elements in newMembers and oldMember is the same,
 								// we always have to compare only one element
-								if(newMembers.size() > i && oldInitMember.first == newMembers.at(i).first) {
+								if(newMembers.size() > i && *oldInitMember->getName() == *newMembers.at(i)->getName()) {
 									// check if the type of the init expression is the same as the type of the field (type of field may changed)
-									if(newMembers.at(i).second != oldInitMember.second->getType()) {
+									if(*newMembers.at(i)->getType() != *oldInitMember->getValue()->getType()) {
 										// always init as undefined in this case
-										const TypePtr& initType = newMembers.at(i).second;
-										core::StructExpr::Member newInitMember = std::make_pair(oldInitMember.first,
-												builder.callExpr(initType, BASIC.getUndefined(), BASIC.getTypeLiteral(initType)));
+										const TypePtr& initType = newMembers.at(i)->getType();
+										NamedValuePtr newInitMember = builder.namedValue(oldInitMember->getName(),
+												builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType)));
 										newInitMembers.push_back(newInitMember);
 //std::cout << "\nMembers: " << newMembers.at(i) << " \n" << kernelLambdas.begin()->first << std::endl;
-									} else if(newMembers.at(i).second->toString().find("array<_cl_kernel,1>") != string::npos /*&&
+									} else if(newMembers.at(i)->getType()->toString().find("array<_cl_kernel,1>") != string::npos /*&&
 											kernelLambdas.find(var) != kernelLambdas.end()*/) {
 										addTupletoStruct(oldInitMember, newInitMembers, newMembers, var, i);
 									} else
@@ -541,7 +541,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					if(undefined->getFunctionExpr() == BASIC.getUndefined()) {
 						typeLiteral = dynamic_pointer_cast<const Literal>(undefined->getArgument(0));
 						assert(typeLiteral && "Unexpected argument when initializing variable with undefined");
-						oldType = static_pointer_cast<const Type>(typeLiteral->getType()->getChildList().at(0));
+						oldType = static_pointer_cast<GenericTypePtr>(typeLiteral->getType())->getTypeParameter(0);
 					}
 				}
 
@@ -569,7 +569,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						newType = cl_mems[var]->getType();
 
 					NodePtr ret = builder.declarationStmt(cl_mems[var], builder.refNew(builder.callExpr(newType, BASIC.getUndefined(),
-							BASIC.getTypeLiteral(newType))));
+							builder.getTypeLiteral(newType))));
 					copyAnnotations(decl, ret);
 					return ret;
 			//	}
@@ -585,7 +585,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					lambdaSearcher.setLambdaVariable(getVariableArg(kl.first, builder));
 					// check if the variable is right
 					if(var == getVariableArg(kl.first, builder) || visitPathBottomUpInterruptible(lAddr, lambdaSearcher)) {
-						Lambda::ParamList pl = kl.second->getParameterList();
+						core::VariableList pl = kl.second->getParameterList()->getElements();
 						TypeList elementTypes;
 						for(size_t i = 0; i < pl.size()-2 /*global and local size not considered*/; ++i) {
 							elementTypes.push_back(pl.at(i)->getType());
@@ -601,7 +601,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 						cl_mems[var] = newVar;
 
 						newDecl = builder.declarationStmt(newVar, builder.callExpr(newType, BASIC.getRefNew(),
-								builder.callExpr(initType, BASIC.getUndefined(), BASIC.getTypeLiteral(initType))));
+								builder.callExpr(initType, BASIC.getUndefined(), builder.getTypeLiteral(initType))));
 					}
 				});
 				if(newDecl) {
@@ -614,7 +614,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 			if(var->getType()->toString().find("array<_cl_") != string::npos
 					&& getNonRefType(var)->getNodeType() != NT_StructType) //TODO remove this line!
 			{
-				return BASIC.getNoOp();
+				return builder.getNoOp();
 			}
 		}
 
@@ -638,7 +638,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				if(BASIC.isTupleRefElem(lCall->getFunctionExpr())) {
 					const ExpressionPtr& rhs = static_pointer_cast<const Expression>(this->resolveElement(callExpr->getArgument(1)));
 					return builder.callExpr(BASIC.getUnit(), BASIC.getRefAssign(), builder.callExpr(builder.refType(rhs->getType()), BASIC.getTupleRefElem(),
-							lCall->getArgument(0), lCall->getArgument(1), BASIC.getTypeLiteral(rhs->getType())), rhs);
+							lCall->getArgument(0), lCall->getArgument(1), builder.getTypeLiteral(rhs->getType())), rhs);
 				}
 
 			}
@@ -653,9 +653,9 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					if(rhs->getFunctionExpr() == BASIC.getRefDeref())
 						rhs = deref;
 				if(rhs->getFunctionExpr()->toString() == "clCreateContext")
-					return BASIC.getNoOp();
+					return builder.getNoOp();
 				if(rhs->getFunctionExpr()->toString() == "clCreateCommandQueue")
-					return BASIC.getNoOp();
+					return builder.getNoOp();
 
 				// need to update array.create.1D type if type of variable did change or is still a cl_ type
 				ArrayCreat1DFinder ac1df(builder);
@@ -669,7 +669,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					} else {
 						// if there are cl_ types for which we have no replacement we remove them
 						if(oldType->toString().find("_cl_") != string::npos)
-							return BASIC.getNoOp();
+							return builder.getNoOp();
 						ret= callExpr;
 					}
 					copyAnnotations(callExpr, ret);
@@ -680,10 +680,10 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 		if(const CallExprPtr& newCall = dynamic_pointer_cast<const CallExpr>(callExpr->substitute(builder.getNodeManager(), *this))) {
 			if(const LiteralPtr& fun = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
-				if(fun->getValue() == "clEnqueueNDRangeKernel") {
+				if(fun->getStringValue() == "clEnqueueNDRangeKernel") {
 					return handleNDRangeKernel(callExpr, newCall, 0);
 				}
-				if(fun->getValue() == "irt_ocl_run_kernel" ) {
+				if(fun->getStringValue() == "irt_ocl_run_kernel" ) {
 					return handleNDRangeKernel(callExpr, newCall, 1);
 				}
 			}
@@ -707,8 +707,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 					// check if the field has been replaced with another field of the same struct with a different identifier
 					const LiteralPtr& newIdLit = replacements.find(oldIdLit) != replacements.end() ?
 							static_pointer_cast<const Literal>(replacements[oldIdLit]) : oldIdLit;
-					const IdentifierPtr& id = builder.identifier(newIdLit->getValue());
-					const TypePtr& oldType = dynamic_pointer_cast<const GenericType>(oldTypeLit->getType())->getTypeParameter().at(0);
+					const StringValuePtr& id = newIdLit->getValue();
+					const TypePtr& oldType = dynamic_pointer_cast<const GenericType>(oldTypeLit->getType())->getTypeParameter(0);
 //					for_each(replacements, [&](std::pair<const NodePtr, NodePtr> n) {
 //					});
 
@@ -720,7 +720,7 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 					if(memberTy != oldType) { // need to update the type argument of the call
 						NodePtr retExpr = builder.callExpr( builder.refType(memberTy), BASIC.getCompositeRefElem(),
-								toVector<ExpressionPtr>(newCall->getArgument(0), newIdLit, BASIC.getTypeLiteral(memberTy) ));
+								toVector<ExpressionPtr>(newCall->getArgument(0), newIdLit, builder.getTypeLiteral(memberTy) ));
 
 						copyAnnotations(newCall, retExpr);
 						return retExpr;
@@ -744,10 +744,11 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 
 			if(newCall->getType()->toString().find("array<_cl_") == string::npos) {
 				// remove remaining calls using cl_ objects, just return the zero-element
-				for(auto I = newCall->getArguments().begin(); I != newCall->getArguments().end(); ++I) {
+				const auto& list = newCall->getArguments();
+				for(auto I = list.begin(); I != list.end(); ++I) {
 					// extra check to not remove e.g. sizeof
 					if(const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(newCall->getFunctionExpr())) {
-						if(lit->getValue().find("sizeof") == string::npos && lit->getValue().find("composite.ref.elem") == string::npos ) {
+						if(lit->getStringValue().find("sizeof") == string::npos && lit->getStringValue().find("composite.ref.elem") == string::npos ) {
 							if((*I)->getType()->toString().find("array<_cl_") != string::npos) {
 								return getZeroElem(newCall->getType());
 							}

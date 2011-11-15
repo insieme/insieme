@@ -41,12 +41,12 @@
 
 #include "insieme/transform/pattern/irpattern.h"
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_visitor.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_visitor.h"
 
-#include "insieme/core/types.h"
-#include "insieme/core/expressions.h"
-#include "insieme/core/program.h"
+#include "insieme/core/ir_types.h"
+#include "insieme/core/ir_expressions.h"
+#include "insieme/core/ir_program.h"
 
 #include "insieme/core/printer/pretty_printer.h"
 
@@ -158,8 +158,7 @@ using namespace core;
 		// Example: find all for loops within code and get iterator / start / end / step / body
 
 		// create pattern
-		TreePatternPtr decl = irp::declarationStmt(var("iterator"), var("begin"));
-		TreePatternPtr pattern = irp::forStmt(decl, var("end"), var("step"), var("body"));
+		TreePatternPtr pattern = irp::forStmt(var("iterator"), var("begin"), var("end"), var("step"), var("body"));
 
 		// run checks
 		runCheck(pattern, "matrix_mul_static");

@@ -36,7 +36,7 @@
 
 #include "insieme/core/analysis/ir_utils.h"
 
-#include "insieme/core/expressions.h"
+#include "insieme/core/ir_expressions.h"
 
 // WARNING: this file is only preliminary and might be heavily modified or moved ...
 
@@ -123,7 +123,7 @@ bool isRefOf(const NodePtr& candidate, const NodeType kind) {
 
 bool isTypeLiteralType(const GenericTypePtr& type) {
 	// check family name as well as type and name of parameters
-	return type->getFamilyName() == "type"
+	return type->getName()->getValue() == "type"
 			&& type->getTypeParameter().size() == static_cast<std::size_t>(1)
 			&& type->getIntTypeParameter().empty();
 }

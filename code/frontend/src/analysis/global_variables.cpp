@@ -75,7 +75,7 @@ namespace insieme {
 namespace frontend {
 namespace analysis {
 
-core::IdentifierPtr 
+core::StringValuePtr
 GlobalVarCollector::buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const clang::FunctionDecl* func ) const {
 
 	const clang::SourceManager& srcMgr = 
@@ -101,7 +101,7 @@ GlobalVarCollector::buildIdentifierFromVarDecl( clang::VarDecl* varDecl, const c
 			*it = '_';
 		}
 	}
-	return convFact.getASTBuilder().identifier( str );
+	return convFact.getIRBuilder().stringValue( str );
 }
 
 void GlobalVarCollector::operator()(const clang::Decl* decl) {
@@ -144,7 +144,7 @@ bool GlobalVarCollector::VisitDeclRefExpr(clang::DeclRefExpr* declRef) {
 		assert(enclosingFunc);
 		usingGlobals.insert(enclosingFunc); // the enclosing function uses globals
 
-		core::IdentifierPtr&& ident = buildIdentifierFromVarDecl(varDecl);
+		core::StringValuePtr&& ident = buildIdentifierFromVarDecl(varDecl);
 
 		auto&& fit = std::find_if(globals.begin(), globals.end(), 
 				[&varDecl] (const VarDecl* cur) -> bool { return varDecl->getNameAsString() == cur->getNameAsString(); }  
@@ -233,7 +233,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		return std::make_pair(core::StructTypePtr(), core::StructExprPtr());
 	}
 
-	const core::ASTBuilder& builder = convFact.getASTBuilder();
+	const core::IRBuilder& builder = convFact.getIRBuilder();
 	core::StructType::Entries entries;
 	core::StructExpr::Members members;
 	for ( auto it = globals.begin(), end = globals.end(); it != end; ++it ) {
@@ -246,7 +246,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		 */
 		convFact.setTranslationUnit(convFact.getProgram().getTranslationUnit( fit->second ) );
 		
-		core::IdentifierPtr ident = varIdentMap.find( *it )->second;
+		core::StringValuePtr ident = varIdentMap.find( *it )->second;
 
 		core::TypePtr&& type = convFact.convertType((*it)->getType().getTypePtr());
 		if ( (*it)->hasExternalStorage() ) {
@@ -258,7 +258,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 		}
 
 		// add type to the global struct
-		entries.push_back( core::StructType::Entry( ident, type ) );
+		entries.push_back( builder.namedType( ident, type ) );
 		// add initialization
 		varIdentMap.insert( std::make_pair(*it, ident) ); 
 
@@ -279,7 +279,7 @@ GlobalVarCollector::GlobalStructPair GlobalVarCollector::createGlobalStruct()  {
 				convFact.defaultInitVal(type);
 		}
 		// default initialization
-		members.push_back( core::StructExpr::Member(ident, initExpr) );
+		members.push_back( builder.namedValue(ident, initExpr) );
 
 	}
 	VLOG(1) << "Building '__insieme_globals' data structure";

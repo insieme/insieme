@@ -38,29 +38,30 @@
 
 #include <gtest/gtest.h>
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 using namespace insieme::core;
 using namespace insieme::core::lang;
 
-TEST(ASTBuilder, Basic) {
+TEST(IRBuilder, Basic) {
 
 
 	// With Builder
-	ASTBuilder build;
-	VariablePtr var1 = build.variable(build.getBasicGenerator().getBool(), 1);
+	NodeManager manager;
+	IRBuilder build(manager);
+	VariablePtr var1 = build.variable(build.getLangBasic().getBool(), 1);
 	std::vector<StatementPtr> statements;
 	statements.push_back(build.breakStmt());
-	statements.push_back(build.declarationStmt(var1, build.getBasicGenerator().getTrue() ));
+	statements.push_back(build.declarationStmt(var1, build.getLangBasic().getTrue() ));
 	auto compound = build.compoundStmt(statements);
 
 	// Without Builder
-	NodeManager manager;
-	VariablePtr var2 = Variable::get(manager, build.getBasicGenerator().getBool(), 1);
+	NodeManager manager2;
+	VariablePtr var2 = Variable::get(manager2, build.getLangBasic().getBool(), 1);
 	std::vector<StatementPtr> statements2;
-	statements2.push_back(BreakStmt::get(manager));
-	statements2.push_back(DeclarationStmt::get(manager, var2, build.getBasicGenerator().getTrue() ));
-	auto compound2 = CompoundStmt::get(manager, statements2);
+	statements2.push_back(BreakStmt::get(manager2));
+	statements2.push_back(DeclarationStmt::get(manager2, var2, build.getLangBasic().getTrue() ));
+	auto compound2 = CompoundStmt::get(manager2, statements2);
 
 	EXPECT_EQ(*compound2, *compound);
 }

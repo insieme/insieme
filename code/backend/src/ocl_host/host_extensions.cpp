@@ -34,8 +34,8 @@
  * regarding third party software licenses.
  */
 
-#include "insieme/core/ast_node.h"
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_node.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/backend/ocl_host/host_extensions.h"
 
@@ -46,7 +46,7 @@ namespace ocl_host{
 	namespace {
 
 		const core::TypePtr getBufferType(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			// create the irt_ocl_buffer type as a generic type
 			return builder.genericType("irt_ocl_buffer");
@@ -58,8 +58,8 @@ namespace ocl_host{
 		}
 
 		const core::LiteralPtr getCreateBuffer(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
+			core::IRBuilder builder(manager);
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr uint8Type = basic.getUInt8();
@@ -72,8 +72,8 @@ namespace ocl_host{
 		}
 
 		const core::LiteralPtr getReadBuffer(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
+			core::IRBuilder builder(manager);
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr boolType = basic.getBool();
@@ -86,8 +86,8 @@ namespace ocl_host{
 		}
 
 		const core::LiteralPtr getWriteBuffer(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
+			core::IRBuilder builder(manager);
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 			core::TypePtr boolType = basic.getBool();
@@ -100,8 +100,8 @@ namespace ocl_host{
 		}
 
 		const core::LiteralPtr getReleaseBuffer(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
-			auto& basic = manager.basic;
+			core::IRBuilder builder(manager);
+			auto& basic = manager.getLangBasic();
 
 			core::TypePtr refBufferType = builder.refType(getBufferType(manager));
 

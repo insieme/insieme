@@ -92,7 +92,7 @@ namespace runtime {
 			}
 
 			// handle jobs
-			const core::lang::BasicGenerator& basic = converter.getNodeManager().getBasicGenerator();
+			const core::lang::BasicGenerator& basic = converter.getNodeManager().getLangBasic();
 
 			// check for job types ...
 			if(basic.isJob(type)) {

@@ -36,7 +36,7 @@
 
 #include "insieme/backend/ir_extensions.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 namespace insieme {
 namespace backend {
@@ -48,10 +48,10 @@ namespace backend {
 		 * is the internal counterpart to the ?: operator of C / C++.
 		 */
 		core::LiteralPtr createLazyITE(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			// construct type
-			core::TypePtr boolean = builder.getBasicGenerator().getBool();
+			core::TypePtr boolean = builder.getLangBasic().getBool();
 			core::TypePtr alpha = builder.typeVariable("a");
 			core::FunctionTypePtr funType = builder.functionType(toVector(boolean, alpha, alpha), alpha);
 
@@ -59,11 +59,11 @@ namespace backend {
 		}
 
 		core::LiteralPtr createInitGlobals(core::NodeManager& manager) {
-			core::ASTBuilder builder(manager);
+			core::IRBuilder builder(manager);
 
 			// construct type ()->unit
-			core::TypePtr unit = builder.getBasicGenerator().getUnit();
-			core::TypePtr alpha = builder.getBasicGenerator().getAlpha();
+			core::TypePtr unit = builder.getLangBasic().getUnit();
+			core::TypePtr alpha = builder.getLangBasic().getAlpha();
 			core::FunctionTypePtr funType = builder.functionType(toVector(alpha), unit);
 
 			return builder.literal(funType, "initGlobals");

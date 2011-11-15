@@ -41,7 +41,7 @@
 
 #define MIN_CONTEXT 40
 
-#include "insieme/core/ast_statistic.h"
+#include "insieme/core/ir_statistic.h"
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
@@ -416,7 +416,7 @@ void showStatistics(const core::ProgramPtr& program) {
 
 	LOG(INFO) << "============================ IR Statistics ======================================";
 	measureTimeFor<void>("ir.statistics ", [&]() {
-		LOG(INFO) << "\n" << ASTStatistic::evaluate(program);
+		LOG(INFO) << "\n" << IRStatistic::evaluate(program);
 	});
 	LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 }
@@ -444,56 +444,6 @@ void featureExtract(const core::ProgramPtr& program) {
 	return;
 }
 
-//***************************************************************************************
-// Region Extractor
-//***************************************************************************************
-struct RegionSizeAnnotation : public core::NodeAnnotation { 
-	const static string name;
-	const static utils::StringKey<RegionSizeAnnotation> key;
-	const unsigned size;
-	RegionSizeAnnotation(unsigned size) : size(size) { }
-	virtual const utils::AnnotationKey* getKey() const {
-		return &key;
-	}
-	virtual const std::string& getAnnotationName() const {
-		return name;
-	}
-};
-const string RegionSizeAnnotation::name = "RegionSizeAnnotation";
-const utils::StringKey<RegionSizeAnnotation> RegionSizeAnnotation::key("RegionSizeAnnotation");
-
-unsigned calcRegionSize(const core::NodePtr& node) {
-	if(node->hasAnnotation(RegionSizeAnnotation::key)) {
-		return node->getAnnotation(RegionSizeAnnotation::key)->size;
-	}
-	unsigned size = 1;
-	unsigned mul = 1;
-	auto t = node->getNodeType();
-	auto& b = node->getNodeManager().basic;
-	if(t == core::NT_ForStmt || t == core::NT_WhileStmt) mul = 2;
-	if(t == core::NT_CallExpr) {
-		auto funExp = static_pointer_cast<const CallExpr>(node)->getFunctionExpr();
-		if(b.isPFor(funExp)) mul = 2;
-	}
-	for_each(node->getChildList(), [&](const NodePtr& child) {
-		size += calcRegionSize(child)*mul;
-	});
-	node->addAnnotation(std::make_shared<RegionSizeAnnotation>(size));
-	return size;
-}
-typedef std::vector<CompoundStmtAddress> RegionList;
-RegionList findRegions(const core::ProgramPtr& program, unsigned maxSize) {
-	RegionList regions;
-	visitDepthFirstPrunable(core::ProgramAddress(program), [&](const CompoundStmtAddress &comp) {
-		if(calcRegionSize(comp.getAddressedNode()) < maxSize) {
-			regions.push_back(comp);
-			return true;
-		}
-		return false;
-	});
-	return regions;
-}
-
 } // end anonymous namespace 
 
 /** 
@@ -506,8 +456,7 @@ int main(int argc, char** argv) {
 	LOG(INFO) << "Insieme compiler";
 
 	core::NodeManager manager;
-	core::ProgramPtr program = core::Program::create(manager);
-	RegionList regions;
+	core::ProgramPtr program = core::Program::get(manager);
 	try {
 		if(!CommandLineOptions::InputFiles.empty()) {
 			auto inputFiles = CommandLineOptions::InputFiles;
@@ -534,15 +483,6 @@ int main(int argc, char** argv) {
 			applyOpenMPFrontend(program);
 			// check again if the OMP flag is on
 			if (CommandLineOptions::OpenMP && CommandLineOptions::CheckSema) { checkSema(program, errors, stmtMap); }
-
-			/**************######################################################################################################***/
-			regions = findRegions(program, CommandLineOptions::MaxRegionSize);
-			//cout << "\n\n******************************************************* REGIONS \n\n";
-			//for_each(regions, [](const NodeAddress& a) {
-			//	cout << "\n***** REGION \n";
-			//	cout << printer::PrettyPrinter(a.getAddressedNode());
-			//});
-			/**************######################################################################################################***/
 
 			// This function is a hook useful when some hack needs to be tested
 			testModule(program);
@@ -596,14 +536,6 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~";
 		}
 		#endif
-
-		/**************######################################################################################################***/
-		//for_each(regions, [&](const CompoundStmtAddress& region) {
-		//	program = static_pointer_cast<const Program>(transform::insertBefore(manager, Region, ));
-		//	program = static_pointer_cast<const Program>(transform::insertAfter(manager, Region, ));
-		//}
-		/**************######################################################################################################***/
-
 
 		{
 			string backendName = "";
@@ -725,7 +657,7 @@ bool checkForHashCollisions(const ProgramPtr& program) {
 	int collisionCount = 0;
 	for_each(allNodes, [&](const NodePtr& cur) {
 		// try inserting node
-		std::size_t hash = cur->hash();
+		std::size_t hash = (*cur).hash();
 		//std::size_t hash = boost::hash_value(cur->toString());
 		//std::size_t hash = ::computeHash(cur);
 

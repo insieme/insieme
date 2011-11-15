@@ -38,7 +38,7 @@
 
 #include "insieme/utils/container_utils.h"
 
-#include "insieme/core/ast_builder.h"
+#include "insieme/core/ir_builder.h"
 
 #include "insieme/backend/type_manager.h"
 #include "insieme/backend/name_manager.h"
@@ -66,8 +66,8 @@ namespace {
 TEST(TypeManager, Basic) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -154,8 +154,8 @@ TEST(TypeManager, Basic) {
 TEST(TypeManager, StructTypes) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -183,9 +183,9 @@ TEST(TypeManager, StructTypes) {
 	EXPECT_TRUE((bool)info.definition);
 
 	// members should not have an effect on the types
-	vector<core::NamedCompositeType::Entry> elements;
-	elements.push_back(std::make_pair(builder.identifier("a"), basic.getInt4()));
-	elements.push_back(std::make_pair(builder.identifier("b"), basic.getBool()));
+	vector<core::NamedTypePtr> elements;
+	elements.push_back(builder.namedType(builder.stringValue("a"), basic.getInt4()));
+	elements.push_back(builder.namedType(builder.stringValue("b"), basic.getBool()));
 	type = builder.structType(elements);
 	info = typeManager.getTypeInfo(type);
 	EXPECT_EQ("struct name", toC(info.lValueType));
@@ -212,8 +212,8 @@ TEST(TypeManager, StructTypes) {
 TEST(TypeManager, RefTypes) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -348,8 +348,8 @@ TEST(TypeManager, RefTypes) {
 TEST(TypeManager, ArrayTypes) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -404,8 +404,8 @@ TEST(TypeManager, ArrayTypes) {
 TEST(TypeManager, VectorTypes) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -487,8 +487,8 @@ TEST(TypeManager, VectorTypes) {
 TEST(TypeManager, FunctionTypes) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
@@ -577,8 +577,8 @@ TEST(TypeManager, FunctionTypes) {
 TEST(TypeManager, RecursiveTypes) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	TestNameManager nameManager;
 	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
@@ -598,13 +598,13 @@ TEST(TypeManager, RecursiveTypes) {
 
 	core::TypeVariablePtr A = builder.typeVariable("A");
 
-	core::StructType::Entries entriesA;
-	entriesA.push_back(std::make_pair(builder.identifier("value"), basic.getInt4()));
-	entriesA.push_back(std::make_pair(builder.identifier("next"), builder.refType(A)));
+	vector<core::NamedTypePtr> entriesA;
+	entriesA.push_back(builder.namedType(builder.stringValue("value"), basic.getInt4()));
+	entriesA.push_back(builder.namedType(builder.stringValue("next"), builder.refType(A)));
 	core::StructTypePtr structA = builder.structType(entriesA);
 
-	core::RecTypeDefinition::RecTypeDefs defs;
-	defs.insert(std::make_pair(A, structA));
+	vector<core::RecTypeBindingPtr> defs;
+	defs.push_back(builder.recTypeBinding(A, structA));
 	core::RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
 
 	core::RecTypePtr recTypeA = builder.recType(A, def);
@@ -628,8 +628,8 @@ TEST(TypeManager, RecursiveTypes) {
 TEST(TypeManager, MutalRecursiveTypes) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 	TestNameManager nameManager;
 	c_ast::SharedCodeFragmentManager fragmentManager = c_ast::CodeFragmentManager::createShared();
@@ -650,19 +650,19 @@ TEST(TypeManager, MutalRecursiveTypes) {
 	core::TypeVariablePtr A = builder.typeVariable("A");
 	core::TypeVariablePtr B = builder.typeVariable("B");
 
-	core::StructType::Entries entriesA;
-	entriesA.push_back(std::make_pair(builder.identifier("value"), basic.getInt4()));
-	entriesA.push_back(std::make_pair(builder.identifier("other"), builder.refType(B)));
+	vector<core::NamedTypePtr> entriesA;
+	entriesA.push_back(builder.namedType(builder.stringValue("value"), basic.getInt4()));
+	entriesA.push_back(builder.namedType(builder.stringValue("other"), builder.refType(B)));
 	core::StructTypePtr structA = builder.structType(entriesA);
 
-	core::StructType::Entries entriesB;
-	entriesB.push_back(std::make_pair(builder.identifier("value"), basic.getBool()));
-	entriesB.push_back(std::make_pair(builder.identifier("other"), builder.refType(A)));
+	vector<core::NamedTypePtr> entriesB;
+	entriesB.push_back(builder.namedType(builder.stringValue("value"), basic.getBool()));
+	entriesB.push_back(builder.namedType(builder.stringValue("other"), builder.refType(A)));
 	core::StructTypePtr structB = builder.structType(entriesB);
 
-	core::RecTypeDefinition::RecTypeDefs defs;
-	defs.insert(std::make_pair(A, structA));
-	defs.insert(std::make_pair(B, structB));
+	vector<core::RecTypeBindingPtr> defs;
+	defs.push_back(builder.recTypeBinding(A, structA));
+	defs.push_back(builder.recTypeBinding(B, structB));
 	core::RecTypeDefinitionPtr def = builder.recTypeDefinition(defs);
 
 	core::RecTypePtr recTypeA = builder.recType(A, def);
@@ -697,8 +697,8 @@ TEST(TypeManager, MutalRecursiveTypes) {
 TEST(TypeManager, TupleType) {
 
 	core::NodeManager nodeManager;
-	core::ASTBuilder builder(nodeManager);
-	const core::lang::BasicGenerator& basic = nodeManager.getBasicGenerator();
+	core::IRBuilder builder(nodeManager);
+	const core::lang::BasicGenerator& basic = nodeManager.getLangBasic();
 
 
 	TestNameManager nameManager;
