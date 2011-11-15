@@ -134,7 +134,7 @@ public:
 	// if yes, load and compile these kernels and add them to the appropriate fields
 	void findKernelsUsingPathString(const core::ExpressionPtr& path, const core::ExpressionPtr& root, const core::ProgramPtr& mProgram);
 
-	// return an INSPIRE equivalent of clCreateBuffer/irt_ocl_create_buffer
+	// return an INSPIRE equivalent of clCreateBuffer/icl_create_buffer
 	const core::ExpressionPtr getCreateBuffer(const core::ExpressionPtr& flags, const core::ExpressionPtr& sizeArg,
 			const bool copyPtr, const core::ExpressionPtr& hostPtr, const core::ExpressionPtr& errcode_ret);
 

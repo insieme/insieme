@@ -649,7 +649,7 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 			// construct argument vector
 			ExpressionPtr k = tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder);
 			// get Varlist tuple
-			if(const CallExprPtr& varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(5))) {
+			if(const CallExprPtr& varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(7))) {
 				if(const TupleExprPtr& varlist = dynamic_pointer_cast<const TupleExpr>(varlistPack->getArgument(0))) {
 					size_t argCnt = 0;
 					for(auto I = varlist->getExpressions().begin(); I != varlist->getExpressions().end(); ++I) {
@@ -726,13 +726,26 @@ HostMapper::HostMapper(IRBuilder& build, ProgramPtr& program) :
 	);
 	ADD_Handler(builder, o2i, "irt_ocl_release_buffer",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
-			// updating of the type to update the deref operation in the argument done in thrid pass
+			// updating of the type to update the deref operation in the argument done in third pass
+	);
+	ADD_Handler(builder, o2i, "irt_ocl_release_buffers",
+			// execute a ref.delete for each pointer in the argument list inside a compound statement
+			StatementList dels;
+
+			if(const CallExprPtr& varlistPack = dynamic_pointer_cast<const CallExpr>(node->getArgument(1))) {
+				if(const TupleExprPtr& varlist = dynamic_pointer_cast<const TupleExpr>(varlistPack->getArgument(0))) {
+					for(auto I = varlist->getExpressions().begin(); I != varlist->getExpressions().end(); ++I) {
+						dels.push_back(builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), *I, builder)));
+					}
+				}
+			}
+			return builder.compoundStmt(dels);
 	);
 
 	// release of kernel will be used to free the tuple holding the kernel arguments
 	ADD_Handler(builder, o2i, "clReleaseKernel",
 			return builder.callExpr(BASIC.getUnit(), BASIC.getRefDelete(), tryRemove(BASIC.getRefDeref(), node->getArgument(0), builder));
-			// updating of the type to update the deref operation in the argument done in thrid pass
+			// updating of the type to update the deref operation in the argument done in third pass
 	);
 
 	// all other clRelease calls can be ignored since the variables are removed
