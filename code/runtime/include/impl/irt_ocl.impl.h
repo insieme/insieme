@@ -137,7 +137,7 @@ void irt_ocl_init_devices() {
 				if (cl_num_devices != 0) {
 					cl_devices = (cl_device_id*)alloca(cl_num_devices * sizeof(cl_device_id));
 					_irt_cl_get_devices(&cl_platforms[i], device_type, cl_num_devices, cl_devices);
-					for (int i = 0; i < cl_num_devices; ++i, ++index) {
+					for (cl_uint i = 0; i < cl_num_devices; ++i, ++index) {
 						cl_int err_code;
 						irt_ocl_device* dev = &devices[index];
 						dev->device = cl_devices[i];
@@ -193,7 +193,7 @@ void irt_ocl_init_devices() {
 
 void irt_ocl_release_devices() {
 	cl_int err_code;
-	for (int i = 0; i < num_devices; ++i) {
+	for (cl_uint i = 0; i < num_devices; ++i) {
 		irt_ocl_device* dev = &devices[i];
 
 		// release the buffer_lock
@@ -231,7 +231,7 @@ inline cl_uint irt_ocl_get_num_devices() {
 }
 
 inline irt_ocl_device* irt_ocl_get_device(cl_uint id) {
-	IRT_ASSERT(id < num_devices && id >= 0, IRT_ERR_OCL, "Error accessing device with wrong ID");
+	IRT_ASSERT(id < num_devices, IRT_ERR_OCL, "Error accessing device with wrong ID");
 	return &devices[id];
 }
 
