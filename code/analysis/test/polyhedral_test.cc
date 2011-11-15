@@ -44,6 +44,7 @@
 #include "insieme/core/ir_program.h"
 #include "insieme/core/ir_builder.h"
 #include "insieme/core/ir_statements.h"
+#include "insieme/core/ir_builder.h"
 
 using namespace insieme::core;
 using namespace insieme::analysis;
@@ -482,4 +483,53 @@ TEST(AffineFunction, ChangeBase) {
 	poly::AffineFunction&& converted2 = af.toBase(iterVec1);
 	EXPECT_EQ(converted, converted2);
 
+}
+
+TEST(Transformations, Interchange) {
+	NodeManager mgr;
+	IRBuilder builder(mgr);
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	
+	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
+	StatementPtr stmt = builder.callExpr( 
+							mgr.getLangBasic().getRefAssign(), 
+							var, 
+							builder.callExpr( 
+								mgr.getLangBasic().getArrayRefElem1D(), 
+								builder.callExpr( 
+									mgr.getLangBasic().getArrayRefElem1D(), 
+									builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())), 4 ),
+									iter1
+								),
+								iter2
+							)
+						);
+	
+	std::cout << *stmt << std::endl;
+	poly::IterationVector iterVec;  // (i,j,1)
+	iterVec.add( poly::Iterator(iter1) ); 
+	iterVec.add( poly::Iterator(iter2) ); 
+
+	// DOMAIN
+	// v1 >= 0 && v1 <= 100
+	// v2 >= 0 && v2 <= 100
+	poly::IterationDomain domain(
+		poly::AffineConstraint(poly::AffineFunction(iterVec, {1, 0,   0} ), poly::AffineConstraint::GE) /* v1 >= 0 */ and 
+		poly::AffineConstraint(poly::AffineFunction(iterVec, {1, 0,-100} ), poly::AffineConstraint::LE) /* v1 - 100 <= 0 */ and 
+		poly::AffineConstraint(poly::AffineFunction(iterVec, {0, 1,   0} ), poly::AffineConstraint::GE) /* v2 >= 0 */ and
+		poly::AffineConstraint(poly::AffineFunction(iterVec, {0, 1,-100} ), poly::AffineConstraint::LE) /* v2 - 100 <= 0 */);
+
+	std::cout << "DOM: " << domain << std::endl;
+
+	poly::AffineSystem sched(iterVec);
+	sched.append( poly::AffineFunction(iterVec, {1, 0, 0}) );
+	sched.append( poly::AffineFunction(iterVec, {0, 1, 0}) );
+
+	std::cout << "SCHED: " << sched << std::endl;
+
+	poly::Stmt pstmt( 0, StatementAddress(stmt), domain, sched, poly::AccessList() );
+
+	
 }

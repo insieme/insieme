@@ -1160,7 +1160,7 @@ void resolveScop(const poly::IterationVector& 	iterVec,
 			);
 
 		IterationDomain iterDom = saveDomain ? IterationDomain(saveDomain) : IterationDomain(iterVec);
-		scat.push_back( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) );
+		scat.push_back( std::make_shared<Stmt>( poly::Stmt( id++, cur.getAddr(), iterDom, newScat, accInfo ) ) );
 	
 		// keep track of the max dimension of the scheduling matrix 
 		if (newScat.size() > sched_dim) {
@@ -1284,8 +1284,8 @@ core::NodePtr toIR(const core::NodePtr& root) {
 	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 	
 	std::for_each(scat.second.begin(), scat.second.end(), 
-		[ & ] (const poly::Stmt& cur) { 
-			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, cur, scat.first));
+		[ & ] (const poly::StmtPtr& cur) { 
+			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, scat.first));
 		}
 	);
 
@@ -1315,12 +1315,12 @@ void computeDataDependence(const NodePtr& root) {
 	auto&& writes = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
 
 	std::for_each(scat.second.begin(), scat.second.end(), 
-		[ & ] (const poly::Stmt& cur) { 
-			TupleName tn(cur.getAddr(), "S"+utils::numeric_cast<std::string>(cur.getId()));
-			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, cur, scat.first));
+		[ & ] (const poly::StmtPtr& cur) { 
+			TupleName tn(cur->getAddr(), "S"+utils::numeric_cast<std::string>(cur->getId()));
+			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, scat.first));
 				
 			// Access Functions 
-			std::for_each(cur.access_begin(), cur.access_end(), [&](const poly::AccessInfo& cur){
+			std::for_each(cur->access_begin(), cur->access_end(), [&](const poly::AccessInfo& cur){
 				const AffineSystemPtr& accessInfo = cur.getAccess();
 
 				if (accessInfo) {
@@ -1390,8 +1390,8 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	out << "\nNumber of sub-statements: " << scat.size() << std::endl;
 		
 	out << "IV: " << ann.getIterationVector() << std::endl;
-	for_each(scat, [&](const poly::Stmt& cur) {
-		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << cur; 
+	for_each(scat, [&](const poly::StmtPtr& cur) {
+		out << std::setfill('~') << std::setw(MSG_WIDTH) << "" << std::endl << *cur; 
 	} );
 
 	LOG(DEBUG) << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
@@ -1403,9 +1403,9 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 size_t calcLoopNest(const IterationVector& iterVec, const poly::Scop& scat) {
 	size_t max_loopnest=0;
 	for_each(scat.begin(), scat.end(), 
-		[&](const poly::Stmt& scopStmt) { 
+		[&](const poly::StmtPtr& scopStmt) { 
 			size_t cur_loopnest=0;
-			for_each(scopStmt.getSchedule().begin(), scopStmt.getSchedule().end(), 
+			for_each(scopStmt->getSchedule(), 
 				[&](const AffineFunction& cur) { 
 					for(auto&& it=cur.begin(), end=cur.end(); it!=end; ++it) {
 						if((*it).second != 0 && (*it).first.getType() == Element::ITER) { 
