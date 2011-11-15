@@ -113,7 +113,7 @@ bool isNullPtr(const ExpressionPtr& expr, const IRBuilder& builder) {
 	const CastExprPtr& cast = dynamic_pointer_cast<const CastExpr>(expr);
 	const ExpressionPtr& idxExpr = cast ? cast->getSubExpression() : expr;
 	const LiteralPtr& idx = dynamic_pointer_cast<const Literal>(idxExpr);
-	if(!!idx && atoi(idx->getStringValue().c_str()) == 0)
+	if(!!idx && idx->getValueAs<int>() == 0)
 		return true;
 
 
@@ -121,7 +121,7 @@ bool isNullPtr(const ExpressionPtr& expr, const IRBuilder& builder) {
 }
 
 bool KernelCodeRetriver::saveString(const core::LiteralPtr& lit) {
-	path = lit->getValue();
+	path = lit->getStringValue();
 	return true;
 }
 
@@ -129,7 +129,7 @@ bool KernelCodeRetriver::saveString(const core::CallExprPtr& call) {
 	if (const LiteralPtr& lit = dynamic_pointer_cast<const Literal>(call->getFunctionExpr())) {
 		if (lit->getStringValue() == "string.as.char.pointer") {
 			if (const LiteralPtr& pl = dynamic_pointer_cast<const Literal>(tryRemove(BASIC.getRefDeref(), call->getArgument(0), builder))) {
-				path = pl->getValue();
+				path = pl->getStringValue();
 				return true;
 			}
 		}
@@ -843,7 +843,7 @@ void HostMapper::recursiveFlagCheck(const ExpressionPtr& flagExpr, std::set<Enum
 		// check if there is an lshift -> flag reached
 		if (call->getFunctionExpr() == BASIC.getSignedIntLShift() || call->getFunctionExpr() == BASIC.getUnsignedIntLShift()) {
 			if (const LiteralPtr& flagLit = dynamic_pointer_cast<const Literal>(call->getArgument(1))) {
-				int flag = atoi(flagLit->getStringValue().c_str());
+				int flag = flagLit->getValueAs<int>();
 				if (flag < Enum::size) // last field of enum to be used must be size
 					flags.insert(Enum(flag));
 				else LOG(ERROR)

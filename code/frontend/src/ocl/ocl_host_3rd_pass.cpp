@@ -193,7 +193,7 @@ const ExpressionPtr HostMapper3rdPass::getZeroElem(const TypePtr& type) {
 
 // gets the innermost type out of an array/ref nest
 // TODO change to something that makes more sense
-const TypePtr& HostMapper3rdPass::getInnermostType(const TypePtr& type){
+const TypePtr HostMapper3rdPass::getInnermostType(const TypePtr& type){
 	if(const ArrayTypePtr& at = dynamic_pointer_cast<const ArrayType>(type))
 		return getInnermostType(at->getElementType());
 	if(const RefTypePtr& rt = dynamic_pointer_cast<const RefType>(type))
@@ -220,7 +220,7 @@ const ExpressionPtr HostMapper3rdPass::anythingToVec3(ExpressionPtr workDim, Exp
 	// check work dimension
 	const LiteralPtr& dim = dynamic_pointer_cast<const Literal>(workDim);
 	assert(dim && "Cannot determine work_dim of clEnqueueNDRangeKernel. Should be a literal!");
-	wd = atoi(dim->getStringValue(). c_str());
+	wd = dim->getValueAs<unsigned int>();
 	//    std::cout << "*****************WorkDim: " << dim->getValue() << std::endl;
 	assert(workDim < 3u && "Invalid work_dim. Should be 1 - 3!");
 
@@ -660,8 +660,8 @@ const NodePtr HostMapper3rdPass::resolveElement(const NodePtr& element) {
 				// need to update array.create.1D type if type of variable did change or is still a cl_ type
 				ArrayCreat1DFinder ac1df(builder);
 				if(visitDepthFirstInterruptible(newCall, ac1df)) {
-					const TypePtr& newType = getInnermostType(newCall->getArgument(0)->getType());
-					const TypePtr& oldType = getInnermostType(newCall->getArgument(1)->getType());
+					const TypePtr newType = getInnermostType(newCall->getArgument(0)->getType());
+					const TypePtr oldType = getInnermostType(newCall->getArgument(1)->getType());
 
 					NodePtr ret;
 					if(oldType != newType) {
