@@ -36,7 +36,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "lib_ocl.h"
+#include "lib_icl.h"
 
 #define SIZE 1000
 
