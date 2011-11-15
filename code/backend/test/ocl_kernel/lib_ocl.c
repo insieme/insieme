@@ -85,6 +85,7 @@ static cl_ulong _irt_cl_get_local_mem_size(cl_device_id* device);
 static char* _irt_load_program_source (const char* filename, size_t* filesize);
 static void _irt_save_program_binary (cl_program program, const char* binary_filename);
 static const char* _irt_error_string (cl_int err_code);
+static inline cl_profiling_info _irt_cl_flag_to_profile(irt_ocl_event_flag event_flag);
 
 
 /*
@@ -396,16 +397,28 @@ void irt_ocl_release_events(cl_uint num, ...){
 	va_end(arg_list);
 }
 
-inline double irt_ocl_profile_event(irt_ocl_event* event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag) {
+inline double irt_ocl_profile_event(irt_ocl_event* event, irt_ocl_event_flag event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag) {
 	return irt_ocl_profile_events(event, event_start, event, event_end, time_flag);
 }
 
-double irt_ocl_profile_events(irt_ocl_event* event_one, cl_profiling_info event_one_command, irt_ocl_event* event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag) {
+static inline cl_profiling_info _irt_cl_flag_to_profile(irt_ocl_event_flag event_flag){
+	switch(event_flag) {
+		case IRT_OCL_ENQUEUED: return CL_PROFILING_COMMAND_QUEUED;
+		case IRT_OCL_SUBMITTED: return CL_PROFILING_COMMAND_SUBMIT;
+		case IRT_OCL_STARTED: return CL_PROFILING_COMMAND_START;
+		case IRT_OCL_FINISHED: return CL_PROFILING_COMMAND_END;
+	}
+	IRT_ASSERT(false, "Error: this event flag is not present");
+	return 0;
+}
+
+double irt_ocl_profile_events(irt_ocl_event* event_one, irt_ocl_event_flag event_one_command, irt_ocl_event* event_two, irt_ocl_event_flag event_two_command, irt_ocl_time_flag time_flag) {
 	cl_ulong event_one_start, event_two_end;
 	cl_int err_code;
-	err_code = clGetEventProfilingInfo(*(event_two->event), event_two_command, sizeof(cl_ulong), &event_two_end, NULL);
+
+	err_code = clGetEventProfilingInfo(*(event_two->event), _irt_cl_flag_to_profile(event_two_command), sizeof(cl_ulong), &event_two_end, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error getting profiling info: \"%s\"",  _irt_error_string(err_code));
-	err_code = clGetEventProfilingInfo(*(event_one->event), event_one_command, sizeof(cl_ulong), &event_one_start, NULL);
+	err_code = clGetEventProfilingInfo(*(event_one->event), _irt_cl_flag_to_profile(event_one_command), sizeof(cl_ulong), &event_one_start, NULL);
 	IRT_ASSERT(err_code == CL_SUCCESS, "Error getting profiling info: \"%s\"", _irt_error_string(err_code));
 	double time = 0.0;
 	switch(time_flag) {

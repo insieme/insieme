@@ -90,10 +90,10 @@ int main(int argc, char* argv[]) {
 		
 		irt_ocl_read_buffer(buf_output, CL_TRUE, sizeof(int) * SIZE, &output[0], rk, rb);
 		
-		printf("Time wb1 %f\n", irt_ocl_profile_event(wb1, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));		
-		printf("Time wb2 %f\n", irt_ocl_profile_event(wb2, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));
-		printf("Time rk %f\n", irt_ocl_profile_event(rk, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));
-		printf("Time rb %f\n", irt_ocl_profile_event(rb, CL_PROFILING_COMMAND_START, CL_PROFILING_COMMAND_END, IRT_OCL_SEC));
+		printf("Time wb1 %f\n", irt_ocl_profile_event(wb1, IRT_OCL_STARTED, IRT_OCL_FINISHED, IRT_OCL_SEC));		
+		printf("Time wb2 %f\n", irt_ocl_profile_event(wb2, IRT_OCL_STARTED, IRT_OCL_FINISHED, IRT_OCL_SEC));
+		printf("Time rk %f\n", irt_ocl_profile_event(rk, IRT_OCL_STARTED, IRT_OCL_FINISHED, IRT_OCL_SEC));
+		printf("Time rb %f\n", irt_ocl_profile_event(rb, IRT_OCL_STARTED, IRT_OCL_FINISHED, IRT_OCL_SEC));
 	
 		irt_ocl_release_events(5, wb1, wb2, wb_all, rk, rb);
 		irt_ocl_release_buffers(3, buf_input1, buf_input2, buf_output);

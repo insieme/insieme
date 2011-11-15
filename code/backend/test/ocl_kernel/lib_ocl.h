@@ -157,9 +157,11 @@ void irt_ocl_restart_timer(irt_ocl_timer* timer);
 float irt_ocl_stop_timer(irt_ocl_timer* timer);
 void irt_ocl_release_timer(irt_ocl_timer* timer);
 
+typedef enum {IRT_OCL_ENQUEUED, IRT_OCL_SUBMITTED, IRT_OCL_STARTED, IRT_OCL_FINISHED} irt_ocl_event_flag;
+
 irt_ocl_event* irt_ocl_create_event();
 irt_ocl_event* irt_ocl_create_event_list(cl_uint num_event, ...);
 void irt_ocl_release_event(irt_ocl_event* event);
 void irt_ocl_release_events(cl_uint num, ...);
-double irt_ocl_profile_event(irt_ocl_event* event, cl_profiling_info event_start, cl_profiling_info event_end, irt_ocl_time_flag time_flag);
-double irt_ocl_profile_events(irt_ocl_event* event_one, cl_profiling_info event_one_command, irt_ocl_event* event_two, cl_profiling_info event_two_command, irt_ocl_time_flag time_flag);
+double irt_ocl_profile_event(irt_ocl_event* event, irt_ocl_event_flag event_start, irt_ocl_event_flag event_end, irt_ocl_time_flag time_flag);
+double irt_ocl_profile_events(irt_ocl_event* event_one, irt_ocl_event_flag event_one_command, irt_ocl_event* event_two, irt_ocl_event_flag event_two_command, irt_ocl_time_flag time_flag);
