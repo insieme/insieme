@@ -249,8 +249,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
   set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 	# ENABLE PROFILING
-	#add_definitions( -pg )
-	#SET(CMAKE_EXE_LINKER_FLAGS -pg)
+	# add_definitions( -pg )
+	# SET(CMAKE_EXE_LINKER_FLAGS -pg)
 
 
 	# check for -std=c++0x

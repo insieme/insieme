@@ -59,6 +59,7 @@ namespace insieme {
 namespace analysis {
 namespace poly {
 
+typedef Constraint<AffineFunction> AffineConstraint;
 typedef ConstraintCombinerPtr<AffineFunction> AffineConstraintPtr;
 
 /**************************************************************************************************
@@ -165,6 +166,8 @@ public:
 		return iterVec;
 	}
 
+	void insert(const iterator& pos, const AffineFunction& af);
+
 	inline void append(const AffineFunction& af) { 
 		assert( &iterVec == &af.getIterationVector() && 
 			"AffineFunction has to have the same iteration vector" );
@@ -172,7 +175,9 @@ public:
 		return insert(end(), af);
 	}
 
-	void insert(const iterator& pos, const AffineFunction& af);
+	// Removes rows from this affine system
+	inline void remove(const iterator& iter) { funcs.erase( iter.get() ); }
+	inline void remove(size_t pos) { funcs.erase( funcs.begin() + pos ); }
 
 	inline size_t size() const { return funcs.size(); }
 
@@ -193,7 +198,6 @@ public:
 	}
 
 	std::ostream& printTo(std::ostream& out) const;
-
 };
 
 typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
@@ -301,9 +305,12 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-struct Scop : public std::list<Stmt> {
+typedef std::shared_ptr<Stmt> StmtPtr;
+
+struct Scop : public std::vector<StmtPtr> {
 
 	Scop(const IterationVector& iterVec) : iterVec(iterVec) { }
+
 
 private:
 	IterationVector 	iterVec;
