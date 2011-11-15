@@ -52,10 +52,14 @@ int main(int argc, char* argv[]) {
 		input2[i] = i*2;
 	}
 
+#ifndef INSIEME
 	icl_timer* time1 = icl_init_timer(ICL_SEC);
 	icl_start_timer(time1);
+#endif
 	icl_init_devices(ICL_CPU);
+#ifndef INSIEME
 	printf("TIME for initialization: %f\n", icl_stop_timer(time1));
+#endif
 	
 	if (icl_get_num_devices() != 0) {
 		icl_device* dev = icl_get_device(0);
@@ -99,10 +103,14 @@ int main(int argc, char* argv[]) {
 		icl_release_buffers(3, buf_input1, buf_input2, buf_output);
 		icl_release_kernel(kernel);
 	}
+#ifndef INSIEME
 	icl_restart_timer(time1);
+#endif
 	icl_release_devices();
+#ifndef INSIEME
 	printf("TIME for releasing the devices: %f\n", icl_stop_timer(time1));
 	icl_release_timer(time1);
+#endif
 	
 	// CHECK for output
 	printf("======================\n= Vector Addition Done\n");
