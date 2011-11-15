@@ -376,6 +376,19 @@ namespace pattern {
 
 	namespace list {
 
+		class Empty : public ListPattern {
+		public:
+			Empty() {}
+			virtual std::ostream& printTo(std::ostream& out) const {
+				return out << "[]";
+			}
+		protected:
+			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
+				// only accepts empty list
+				return begin == end;
+			}
+		};
+
 		// The most simple node pattern covering a single tree
 		class Single : public ListPattern {
 			const TreePatternPtr element;
@@ -447,37 +460,44 @@ namespace pattern {
 		// Realizes the star operator for node patterns
 		class Repetition : public ListPattern {
 			const ListPatternPtr pattern;
+			const unsigned minRep;			// minimum number of repetitions
 		public:
-			Repetition(const ListPatternPtr& pattern) : pattern(pattern) {}
+			Repetition(const ListPatternPtr& pattern, unsigned minRep = 0) : pattern(pattern), minRep(minRep) {}
 
 			virtual std::ostream& printTo(std::ostream& out) const {
-				return out << "[" << *pattern << "]*";
+				if (minRep == 0) {
+					return out << "[" << *pattern << "]*";
+				}
+				if (minRep == 1) {
+					return out << "[" << *pattern << "]+";
+				}
+				return out << "[" << *pattern << "]*{" << minRep << "}";
 			}
 
 		protected:
 			virtual bool match(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
 				context.push();
-				bool res = matchInternal(context, begin, end);
+				bool res = matchInternal(context, begin, end, 0);
 				context.pop();
 				return res;
 			}
 
 		private:
 
-			bool matchInternal(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end) const {
+			bool matchInternal(MatchContext& context, const TreeListIterator& begin, const TreeListIterator& end, unsigned repetitions) const {
 				// empty is accepted (terminal case)
 				if (begin == end) {
-					return true;
+					return repetitions >= minRep;
 				}
 
 				// test special case of a single iteration
 				MatchContext copy = context;
-				if (pattern->match(copy, begin, end)) {
+				if (minRep <= 1 && pattern->match(copy, begin, end)) {
 					context = copy;
 					return true;
 				}
 
-				// try one pattern + a recursive repedition
+				// try one pattern + a recursive repetition
 				for (auto i=begin; i<end; ++i) {
 
 					// private copy for this try
@@ -488,10 +508,10 @@ namespace pattern {
 						continue;
 					}
 
-					// increment repedition counter
+					// increment repetition counter
 					copy.inc();
 
-					if (!matchInternal(copy, i, end)) {
+					if (!matchInternal(copy, i, end, repetitions + 1)) {
 						// does not fit any more ... try next!
 						continue;
 					}
@@ -553,6 +573,7 @@ namespace pattern {
 	extern const TreePatternPtr recurse;
 
 	extern const ListPatternPtr anyList;
+	extern const ListPatternPtr empty;
 
 	inline TreePatternPtr atom(const TreePtr& tree) {
 		return std::make_shared<tree::Atom>(tree);
@@ -606,7 +627,7 @@ namespace pattern {
 	inline ListPatternPtr single(const TreePtr& tree) {
 		return single(atom(tree));
 	}
-	
+
 	inline ListPatternPtr operator|(const ListPatternPtr& a, const ListPatternPtr& b) {
 		return std::make_shared<list::Alternative>(a,b);
 	}
@@ -617,11 +638,28 @@ namespace pattern {
 		return std::make_shared<list::Alternative>(a,single(b));
 	}
 
+	inline ListPatternPtr opt(const ListPatternPtr& pattern) {
+		return empty | pattern;
+	}
+	inline ListPatternPtr opt(const TreePatternPtr& pattern) {
+		return opt(single(pattern));
+	}
+	inline ListPatternPtr opt(const TreePtr& tree) {
+		return opt(atom(tree));
+	}
+
 	inline ListPatternPtr operator*(const ListPatternPtr& pattern) {
 		return std::make_shared<list::Repetition>(pattern);
 	}
 	inline ListPatternPtr operator*(const TreePatternPtr& pattern) {
 		return std::make_shared<list::Repetition>(single(pattern));
+	}
+
+	inline ListPatternPtr operator+(const ListPatternPtr& pattern) {
+		return std::make_shared<list::Repetition>(pattern, 1);
+	}
+	inline ListPatternPtr operator+(const TreePatternPtr& pattern) {
+		return std::make_shared<list::Repetition>(single(pattern), 1);
 	}
 
 	inline ListPatternPtr operator<<(const ListPatternPtr& a, const ListPatternPtr& b) {
