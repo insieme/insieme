@@ -149,6 +149,16 @@ find_library(pthread_LIB pthread)
 #target_link_libraries(test ${CMAKE_THREAD_LIBS_INIT})
 
 
+#profiling
+IF (DO_GOOGLE_PROFILING)
+	if(NOT DEFINED GPERFTOOLS_HOME)
+		set (GPERFTOOLS_HOME $ENV{GPERFTOOLS_HOME})
+	endif()
+	include_directories( ${GPERFTOOLS_HOME}/include )
+	message("Perftools: " ${GPERFTOOLS_HOME})
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${GPERFTOOLS_HOME}/lib -lprofiler")
+ENDIF ()
+
 # -------------------------------------------------------------- LLVM / CLANG 2.8 libraries
 
 #Fix LLVM path
