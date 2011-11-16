@@ -1252,7 +1252,7 @@ createScatteringMap(
 
 } // end anonymous namespace 
 
-core::NodePtr toIR(core::NodePtr& root) {
+core::NodePtr toIR(const core::NodePtr& root) {
 
 	if( !root->hasAnnotation( ScopRegion::KEY ) ) {
 		LOG(WARNING) << "Not possible to compute dependence information from a non static control region.";
@@ -1263,22 +1263,7 @@ core::NodePtr toIR(core::NodePtr& root) {
 	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
 	ann.resolve();
 
-	const poly::Scop& scopInfo = ann.getScop();
-	const IterationVector& iterVec = scopInfo.getIterationVector();
-
-	auto&& ctx = BackendTraits<POLY_BACKEND>::ctx_type();
-
-	// universe set 
-	auto&& domain = makeSet<POLY_BACKEND>(ctx, IterationDomain(iterVec));
-	auto&& schedule = makeEmptyMap<POLY_BACKEND>(ctx, iterVec);
-	
-	std::for_each(scopInfo.begin(), scopInfo.end(), 
-		[ & ] (const poly::StmtPtr& cur) { 
-			schedule = map_union(ctx, *schedule, *createScatteringMap(ctx, iterVec, domain, *cur, scopInfo.schedDim() ));
-		}
-	);
-
-	return poly::toIR(root->getNodeManager(), ann.getIterationVector(), ctx, *domain, *schedule);
+	return ann.getScop().toIR(root->getNodeManager());
 }
 
 void computeDataDependence(const NodePtr& root) {

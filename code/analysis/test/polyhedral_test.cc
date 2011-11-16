@@ -550,7 +550,7 @@ TEST(Transformations, Interchange) {
 					arrAcc
 				);
 	
-	std::cout << "STMT: " << *stmt << std::endl;
+	// std::cout << "STMT: " << *stmt << std::endl;
 
 	poly::IterationVector iterVec;  // (i,j,1)
 	iterVec.add( poly::Iterator(iter1) ); 
@@ -560,19 +560,17 @@ TEST(Transformations, Interchange) {
 	// v1 >= 0 && v1 <= 100
 	// v2 >= 0 && v2 <= 100
 	poly::IterationDomain domain(
-		poly::AffineConstraint(poly::AffineFunction(iterVec, {1, 0,   0} ), poly::AffineConstraint::GE) /* v1 >= 0 */ and 
-		poly::AffineConstraint(poly::AffineFunction(iterVec, {1, 0,-100} ), poly::AffineConstraint::LE) /* v1 - 100 <= 0 */ and 
-		poly::AffineConstraint(poly::AffineFunction(iterVec, {0, 1,   0} ), poly::AffineConstraint::GE) /* v2 >= 0 */ and
-		poly::AffineConstraint(poly::AffineFunction(iterVec, {0, 1,-100} ), poly::AffineConstraint::LE) /* v2 - 100 <= 0 */
+		poly::AffineConstraint(poly::AffineFunction(iterVec, { 1, 0,  0} ) ) /* v1 >= 0 */ and 
+		poly::AffineConstraint(poly::AffineFunction(iterVec, {-1, 0,100} ) ) /* v1 - 100 <= 0 */ and 
+		poly::AffineConstraint(poly::AffineFunction(iterVec, { 0, 1,  0} ) ) /* v2 >= 0 */ and
+		poly::AffineConstraint(poly::AffineFunction(iterVec, { 0,-1,100} )) /* v2 - 100 <= 0 */
 	);
 
-	std::cout << "DOM: " << domain << std::endl;
+	// std::cout << "DOM: " << domain << std::endl;
 
 	poly::AffineSystem sched(iterVec);
 	sched.append( poly::AffineFunction(iterVec, {1, 0, 0}) );
 	sched.append( poly::AffineFunction(iterVec, {0, 1, 0}) );
-
-	std::cout << "SCHED: " << sched << std::endl;
 
 	poly::Scop scop(iterVec);
 	scop.push_back( poly::Stmt( 0, StatementAddress(stmt), domain, sched, 

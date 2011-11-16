@@ -108,7 +108,6 @@ class AffineFunction : public boost::noncopyable, public utils::Printable,
 	int idxConv(size_t idx) const;
 
 	void setCoeff(size_t idx, int coeff);
-
 	int getCoeff(size_t idx) const;
 
 public:
