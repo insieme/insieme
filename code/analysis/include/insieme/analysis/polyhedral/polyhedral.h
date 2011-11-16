@@ -198,7 +198,7 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-typedef std::unique_ptr<AffineSystem> AffineSystemPtr;
+typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
 
 /********************************************************************************************** 
  * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
@@ -219,16 +219,16 @@ public:
 		const Ref::RefType& 			type, 
 		const Ref::UseType& 			usage, 
 		const poly::AffineSystem&		access 
-	) : expr(expr), type(type), usage(usage), access( new poly::AffineSystem(access) ) { }
+	) : expr(expr), type(type), usage(usage), access( std::make_shared<poly::AffineSystem>(access) ) { }
 
 	AccessInfo(const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
-		access( new AffineSystem(*other.access) ) { }
+		access( std::make_shared<AffineSystem>(*other.access) ) { }
 
 	// Copy constructor with base (iterator vector) change 
 	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
-		access( new AffineSystem(iterVec, *other.access) ) { } 
+		access( std::make_shared<AffineSystem>(iterVec, *other.access) ) { } 
 
 	// Getters for expr/type and usage
 	inline const core::ExpressionAddress& getExpr() const { return expr; }
