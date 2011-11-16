@@ -206,6 +206,7 @@ namespace {
 			if(gname.find("global_omp") == 0) {
 				return build.accessMember(curVar, gname);
 			}
+
 			return literal;
 		}
 	};
