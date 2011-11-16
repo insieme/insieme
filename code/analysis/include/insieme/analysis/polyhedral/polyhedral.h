@@ -166,11 +166,15 @@ public:
 
 	inline const IterationVector& getIterationVector() const { return iterVec; }
 
+	// Insert/appends a new AffineFunction to this system
 	void insert(const iterator& pos, const AffineFunction& af);
+	inline void append(const AffineFunction& af) { insert(end(), af); }
 
-	inline void append(const AffineFunction& af) { 
-		return insert(end(), af);
+	// Insert/Append a new affine function taking the coefficients 
+	void insert(const iterator& pos, const std::vector<int>& coeffs) {
+		insert(pos, AffineFunction(iterVec, coeffs) );
 	}
+	inline void append(const std::vector<int>& coeffs) { insert(end(), coeffs); }
 
 	// Removes rows from this affine system
 	inline void remove(const iterator& iter) { funcs.erase( iter.get() ); }
