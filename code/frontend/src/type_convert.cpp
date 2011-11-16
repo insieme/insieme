@@ -313,6 +313,8 @@ public:
 		const core::IRBuilder& builder = convFact.builder;
 		core::TypePtr&& retTy = Visit( funcTy->getResultType().getTypePtr() );
 
+		assert(retTy && "Function has no return type!");
+
 		// If the return type is of type vector or array we need to add a reference
 		// so that the semantics of C argument passing is mantained
 		if(retTy->getNodeType() == core::NT_VectorType || retTy->getNodeType() == core::NT_ArrayType)
@@ -469,13 +471,6 @@ public:
 				// Enums are converted into integers
 				return convFact.builder.getLangBasic().getInt4();
 			} else {
-
-
-
-
-
-
-
 				// TODO
 				// handle struct/union/class
 				const RecordDecl* recDecl = dyn_cast<const RecordDecl>(tagDecl);
@@ -551,7 +546,6 @@ public:
 
 					}
 
-
 //					for(CXXRecordDecl::ctor_iterator xit=recDeclCXX->ctor_begin(),
 //							xend=recDeclCXX->ctor_end(); xit != xend; ++xit) {
 //						CXXConstructorDecl * ctorDecl = *xit;
@@ -584,7 +578,6 @@ public:
 //					}
 
 				}  // end if recDeclCXX
-
 				
 				for(RecordDecl::field_iterator it=recDecl->field_begin(), end=recDecl->field_end(); it != end; ++it) {
 					RecordDecl::field_iterator::value_type curr = *it;
@@ -598,7 +591,6 @@ public:
 					structElements.push_back(convFact.builder.namedType(id, fieldType));
 				}
 				
-
 				// For debug only ...
 				// std::cerr << "\n***************Type graph\n";
 				// typeGraph.print(std::cerr);
@@ -674,8 +666,6 @@ public:
 					// so next time we encounter it, we don't need to compute the graph
 					convFact.ctx.recTypeCache.insert(std::make_pair(tagType, retTy));
 				}
-
-
 
 				// Adding the name of the C struct as annotation
 				retTy->addAnnotation( std::make_shared<annotations::c::CNameAnnotation>(recDecl->getName()) );
@@ -786,6 +776,84 @@ public:
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	core::TypePtr VisitReferenceType(const ReferenceType* refTy) {
 		return convFact.builder.refType( Visit( refTy->getPointeeType().getTypePtr()) );
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitTemplateSpecializationType(const TemplateSpecializationType* templTy) {
+		VLOG(2) << "TemplateName: " << templTy->getTemplateName().getAsTemplateDecl()->getNameAsString();
+		VLOG(2) << "numTemplateArg: " << templTy->getNumArgs();
+		for(size_t argId=0, end=templTy->getNumArgs(); argId < end; argId++) {
+			assert(templTy->getArg(argId).getAsType().getTypePtr());
+			VLOG(2) << "TemplateArguments: " << templTy->getArg(argId).getAsType().getTypePtr()->getTypeClassName();
+		}
+		VLOG(2) << "isSugared: " << templTy->isSugared();
+
+		START_LOG_TYPE_CONVERSION(templTy);
+		core::TypePtr retTy;
+		if(templTy->isSugared()) {
+			//convert Template arguments (template < ActualClass >) -> ActualClass has to be converted
+			for(TemplateSpecializationType::iterator ait=templTy->begin(), ait_end=templTy->end(); ait!=ait_end; ait++) {
+				VLOG(2) << "Converting TemplateArg";
+				convFact.convertType(ait->getAsType().getTypePtr());
+			}
+
+			retTy = convFact.convertType(templTy->desugar().getTypePtr());
+		}
+		//assert(false && "TemplateSpecializationType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitDependentTemplateSpecializationType(const DependentTemplateSpecializationType* tempTy) {
+		core::TypePtr retTy;
+
+		START_LOG_TYPE_CONVERSION(tempTy);
+		assert(false && "DependentTemplateSpecializationType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					DEPENDENT TEMPLATE SPECIALIZATION TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitInjectedClassNameType(const InjectedClassNameType* tempTy) {
+		core::TypePtr retTy;
+
+		START_LOG_TYPE_CONVERSION(tempTy);
+		assert(false && "InjectedClassNameType not yet handled!");
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
+	}
+
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	//					SUBSTITUTE TEMPLATE TYPE PARAMETER TYPE (TODO)
+	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	core::TypePtr VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType* substTy) {
+		core::TypePtr retTy;
+
+//		VLOG(2) << "resultType: " << funcTy->getResultType().getTypePtr()->getTypeClassName();
+//		std::for_each(funcTy->arg_type_begin(), funcTy->arg_type_end(),
+//			[ this ] (const QualType& currArgType) {
+//				VLOG(2) << "argType: " << currArgType.getTypePtr()->getTypeClassName();
+//			}
+//		);
+
+//		VLOG(2) << "CLANG Type Classname: " << substTy->getReplacedParameter()->getTypeClassName();
+		//TODO SHOULD WORK IN NEWER CLANG VERSION???
+		//VLOG(2) << "Replaced Template Name: " << substTy->getReplacedParameter()->getDecl()->getNameAsString();
+		//VLOG(2) << "Replacement Type: " << substTy->getReplacementType().getTypePtr();
+
+		START_LOG_TYPE_CONVERSION(substTy);
+		//assert(false && "SubstTemplateTypeParmType not yet handled!");
+		retTy = convFact.convertType( substTy->getReplacementType().getTypePtr() );
+
+		END_LOG_TYPE_CONVERSION( retTy );
+		return retTy;
 	}
 
 private:
