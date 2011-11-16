@@ -653,16 +653,22 @@ TEST(Transformations, Tiling) {
 
 	// Add an outer loop 
 	scop.getIterationVector().add( poly::Iterator(iterTile) );
-	
+
+	VariablePtr existenceVar = builder.variable( mgr.getLangBasic().getInt4() );
+	scop.getIterationVector().add( poly::Iterator( existenceVar, true ) );
+
 	// update the domain
 	scop[0].getDomain() &= poly::IterationDomain(
-		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), { 0, 0,  1,   0 } ) ) /* v1 >= 0 */ and 
-		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), { 0, 0, -1, 100 } ) ) /* v1 - 100 <= 0 */ and 
-		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), { 1, 0, -1,   0 } ) ) /* v1 - 100 <= 0 */ and 
-		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), {-1, 0,  1,  25 } ) ));
+		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), { 0, 0,  1, 0,   0 } ) ) /* v1 >= 0 */ and 
+		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), { 0, 0, -1, 0, 100 } ) ) /* v1 - 100 <= 0 */ and 
+		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), { 1, 0, -1, 0,   0 } ) ) /* v1 - 100 <= 0 */ and 
+		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), {-1, 0,  1, 0,  25 } ) ) and 
+		poly::AffineConstraint(poly::AffineFunction(scop.getIterationVector(), { 0, 0,  1, -25, 0 } ), poly::AffineConstraint::EQ ) );
+
+	std::cout << "DOM: " << scop[0].getDomain() << std::endl;
 
 	// add a new row to the scheduling matrix 
-	schedule.append( {0, 1, 0, 0} );
+	schedule.append( {0, 1, 0, 0, 0} );
 
 	// change the scheduling function by scheduling this loop as first 
 	schedule[0].setCoeff(iterTile, 1);
@@ -672,7 +678,7 @@ TEST(Transformations, Tiling) {
 
 	std::cout << schedule << std::endl;
 
-	ir = scop.toIR(mgr);
+	// ir = scop.toIR(mgr);
 	std::cout << *ir << std::endl;
 
 }
