@@ -651,7 +651,11 @@ DeclarationStmtPtr createGlobalStruct(NodeManager& manager, ProgramPtr& prog, co
 	NamedTypeList entries = ::transform(globals, [&](const NamedValuePtr& val) { return build.namedType(val->getName(), val->getValue()->getType()); });
 	auto structType = build.structType(entries);
 	auto declStmt = build.declarationStmt(structType, build.structExpr(globals));
-	auto newProg = static_pointer_cast<const Program>(insert(manager, addr, declStmt, 0));
+
+	// update program
+	int location = 0;
+	if(addr->getStatement(location)->getNodeType() == NT_DeclarationStmt) ++location;
+	auto newProg = static_pointer_cast<const Program>(insert(manager, addr, declStmt, location));
 	utils::migrateAnnotations(prog, newProg);
 	prog = newProg;
 
