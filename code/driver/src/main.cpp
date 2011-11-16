@@ -469,7 +469,7 @@ unsigned calcRegionSize(const core::NodePtr& node) {
 	unsigned size = 1;
 	unsigned mul = 1;
 	auto t = node->getNodeType();
-	auto& b = node->getNodeManager().basic;
+	auto& b = node->getNodeManager().getLangBasic();
 	if(t == core::NT_ForStmt || t == core::NT_WhileStmt) mul = 2;
 	if(t == core::NT_CallExpr) {
 		auto funExp = static_pointer_cast<const CallExpr>(node)->getFunctionExpr();
