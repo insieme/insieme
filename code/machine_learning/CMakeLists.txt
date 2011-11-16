@@ -12,6 +12,8 @@ cmake_minimum_required(VERSION 2.6)
 file(GLOB_RECURSE insieme_machine_learning_srcs 	src/*.cpp)
 file(GLOB_RECURSE insieme_machine_learning_incs	include/*.h)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/inputs.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/insieme/machine_learning/inputs.h)
+
 # add include directory
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -38,7 +40,8 @@ foreach ( case_file ${test_cases})
 	add_executable(${case_name} ${case_file})
 	include_directories(${case_name} ${insieme_utils_include_dir})
 	target_link_libraries(${case_name} ${GTEST_BOTH_LIBRARIES})
-	target_link_libraries(${case_name} machine_learning)
+	target_link_libraries(${case_name} insieme_machine_learning)
+	target_link_libraries(${case_name} dl)
 	target_link_libraries(${case_name} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 	target_link_libraries(${case_name} ${shark_LIB})
 	target_link_libraries(${case_name} ${kompex_LIB})

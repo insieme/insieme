@@ -93,8 +93,9 @@ namespace ml {
 		}
 		trainIndices.resize(nTrain);
 
-		double err = DBL_MAX;
-		size_t cnt, striplen = 5;
+//		double err = DBL_MAX;
+//		size_t cnt = 0;
+		size_t striplen = 5;
 //		Model* bestModel;
 		EarlyStopping estop(striplen);//, worsen(1);
 		size_t trainErr = 0, valErr = 0;
@@ -204,7 +205,7 @@ namespace ml {
 				}
 
 				// translate index to one-of-n coding
-				int theOne = pStmt->GetColumnInt(2+features.size());
+				size_t theOne = pStmt->GetColumnInt(2+features.size());
 
 				if(theOne >= nClasses){
 					std::stringstream err;
