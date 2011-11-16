@@ -49,6 +49,8 @@
 
 #include <boost/utility.hpp>
 
+#define POLY_BACKEND ISL
+
 namespace insieme {
 namespace analysis {
 namespace poly {

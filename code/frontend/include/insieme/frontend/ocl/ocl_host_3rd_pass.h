@@ -68,7 +68,7 @@ class HostMapper3rdPass: public core::transform::CachedNodeMapping {
 	const core::ExpressionPtr getZeroElem(const core::TypePtr& type);
 
 	// gets the innermost type out of an array/ref nest
-	const core::TypePtr& getInnermostType(const core::TypePtr& type);
+	const core::TypePtr getInnermostType(const core::TypePtr& type);
 
 	// takes the expression size which describes the work size for the clEnqueueNDRange and embed it in an IR function which returns a
 	// vector<uint<4>, 3>, always awaited by the kernel function. The elements with index greater or equal to workDim will always be set
