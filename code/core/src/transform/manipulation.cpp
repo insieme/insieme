@@ -521,29 +521,28 @@ namespace {
 	/**
 	 * Will certainly determine the declaration status of variables inside a block.
 	 */
-	struct LambdaDeltaVisitor : public IRVisitor<bool, Address> {
+	struct LambdaDeltaVisitor : public IRVisitor<bool> {
 		us::PointerSet<VariablePtr> declared;
 		us::PointerSet<VariablePtr> undeclared;
 
 		// do not visit types
-		LambdaDeltaVisitor() : IRVisitor<bool, Address>(false) {}
+		LambdaDeltaVisitor() : IRVisitor<bool>(false) {}
 
-		bool visitNode(const NodeAddress& node) { return false; } // default behaviour: continue visiting
-
-		bool visitDeclarationStmt(const DeclarationStmtAddress &decl) {
+		bool visitNode(const NodePtr& node) { return false; } // default behaviour: continue visiting
+		
+		bool visitDeclarationStmt(const DeclarationStmtPtr &decl) {
 			declared.insert(decl->getVariable());
 			return false;
 		}
 
-		bool visitVariable(const VariableAddress& var) {
-			auto vp = var.getAddressedNode();
-			if(declared.find(vp) == declared.end()) undeclared.insert(vp);
+		bool visitVariable(const VariablePtr& var) {
+			if(declared.find(var) == declared.end()) undeclared.insert(var);
 			return false;
 		}
 
 		// due to the structure of the IR, nested lambdas can never reuse outer variables
 		//  - also prevents variables in LamdaDefinition from being inadvertently captured
-		bool visitLambdaExpr(const LambdaExprAddress&) {
+		bool visitLambdaExpr(const LambdaExprPtr&) {
 			return true;
 		}
 	};
@@ -551,7 +550,7 @@ namespace {
 	NodePtr extractLambdaImpl(NodeManager& manager, const StatementPtr& root, IRBuilder::VarValueMapping& captures,
 			um::PointerMap<NodePtr, NodePtr>& replacements, std::vector<VariablePtr>& passAsArguments) {
 		LambdaDeltaVisitor ldv;
-		visitDepthFirstPrunable(StatementAddress(root), ldv);
+		visitDepthFirstPrunable(root, ldv);
 
 		// sort set to ensure code identity
 		std::vector<VariablePtr> undeclared(ldv.undeclared.cbegin(), ldv.undeclared.cend());
