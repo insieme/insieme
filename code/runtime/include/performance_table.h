@@ -71,6 +71,11 @@ typedef enum {
 	DATA_ITEM_RECYCLED = 4500,
 } di_instrumentation_event;
 
+typedef enum {
+	REGION_START = 5000,
+	REGION_END = 5100,
+} region_instrumentation_event;
+
 typedef struct _irt_performance_data {
 	uint64 timestamp;
 	wi_instrumentation_event event;
