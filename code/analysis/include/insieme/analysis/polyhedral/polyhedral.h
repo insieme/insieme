@@ -198,7 +198,7 @@ public:
 	std::ostream& printTo(std::ostream& out) const;
 };
 
-typedef std::unique_ptr<AffineSystem> AffineSystemPtr;
+typedef std::shared_ptr<AffineSystem> AffineSystemPtr;
 
 /********************************************************************************************** 
  * AccessInfo is a tuple which gives the list of information associated to a ref access: i.e.
@@ -219,16 +219,16 @@ public:
 		const Ref::RefType& 			type, 
 		const Ref::UseType& 			usage, 
 		const poly::AffineSystem&		access 
-	) : expr(expr), type(type), usage(usage), access( new poly::AffineSystem(access) ) { }
+	) : expr(expr), type(type), usage(usage), access( std::make_shared<poly::AffineSystem>(access) ) { }
 
 	AccessInfo(const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
-		access( new AffineSystem(*other.access) ) { }
+		access( std::make_shared<AffineSystem>(*other.access) ) { }
 
 	// Copy constructor with base (iterator vector) change 
 	AccessInfo( const IterationVector& iterVec, const AccessInfo& other) : 
 		expr(other.expr), type(other.type), usage(other.usage), 
-		access( new AffineSystem(iterVec, *other.access) ) { } 
+		access( std::make_shared<AffineSystem>(iterVec, *other.access) ) { } 
 
 	// Getters for expr/type and usage
 	inline const core::ExpressionAddress& getExpr() const { return expr; }
@@ -259,7 +259,7 @@ typedef std::vector<AccessInfo> AccessList;
  *********************************************************************************************/
 
 /**************************************************************************************************
- * PolyStmt: this class assembles together the informations which are utilized to represent a
+ * Stmt: this class assembles together the informations which are utilized to represent a
  * statement in the polyhedral mdoel. 
  *
  * A statement is represented by the following infomrations:
@@ -355,19 +355,25 @@ struct Scop {
 	const IterationVector& getIterationVector() const { return iterVec; }
 	IterationVector& getIterationVector() { return iterVec; }
 
+	// Get iterators thorugh the statements contained in this SCoP
 	iterator begin() { return stmts.begin(); }
 	iterator end() { return stmts.end(); }
 
 	const_iterator begin() const { return stmts.begin(); }
 	const_iterator end() const { return stmts.end(); }
 
+	// Access statements based on their ID
 	const Stmt& operator[](size_t pos) const { return *stmts[pos]; }
 	Stmt& operator[](size_t pos) { return *stmts[pos]; }
 
 	size_t size() const { return stmts.size(); }
-
 	const size_t& schedDim() const { return sched_dim; }
 
+	size_t nestingLevel() const;
+
+	/**
+	 * Produces IR code from this SCoP. 
+	 */
 	core::NodePtr toIR(core::NodeManager& mgr) const;
 
 private:

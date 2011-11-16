@@ -1261,6 +1261,7 @@ core::NodePtr toIR(const core::NodePtr& root) {
 	
 	// We are in a Scop 
 	ScopRegion& ann = *root->getAnnotation( ScopRegion::KEY );
+
 	ann.resolve();
 
 	return ann.getScop().toIR(root->getNodeManager());
@@ -1371,29 +1372,7 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop) {
 	LOG(DEBUG) << std::endl << std::setfill('=') << std::setw(MSG_WIDTH) << "";
 }
 
-// This function determines the maximum number of loop nests within this region 
-// The analysis should be improved in a way that also the loopnest size is weighted with the number
-// of statements present at each loop level.
-size_t calcLoopNest(const IterationVector& iterVec, const poly::Scop& scat) {
-	size_t max_loopnest=0;
-	for_each(scat.begin(), scat.end(), 
-		[&](const poly::StmtPtr& scopStmt) { 
-			size_t cur_loopnest=0;
-			for_each(scopStmt->getSchedule(), 
-				[&](const AffineFunction& cur) { 
-					for(auto&& it=cur.begin(), end=cur.end(); it!=end; ++it) {
-						if((*it).second != 0 && (*it).first.getType() == Element::ITER) { 
-							++cur_loopnest; 
-							break;
-						}
-					}
-				} );
-			if (cur_loopnest > max_loopnest) {
-				max_loopnest = cur_loopnest;
-			}
-		} );
-	return max_loopnest;
-}
+
 
 } // end namespace scop
 } // end namespace analysis

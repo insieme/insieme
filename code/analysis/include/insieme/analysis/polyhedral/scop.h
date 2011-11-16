@@ -146,18 +146,12 @@ struct ScopRegion: public core::NodeAnnotation {
 	 * Return the iteration vector which is spawned by this region, and on which the associated
 	 * constraints are based on.
 	 */
-	inline const poly::IterationVector& getIterationVector() const { 
-		// assert(isValid() && "This is not a valid SCoP");
-		return iterVec; 
-	}
+	inline const poly::IterationVector& getIterationVector() const {  return iterVec; }
 	
 	/** 
 	 * Retrieves the constraint combiner associated to this ScopRegion.
 	 */
-	inline const poly::IterationDomain& getDomainConstraints() const { 
-		// assert(isValid() && "This is not a valid SCoP");
-		return domain; 
-	}
+	inline const poly::IterationDomain& getDomainConstraints() const { return domain; }
 
 	inline const StmtVect& getDirectRegionStmts() const { return stmts; }
 
@@ -273,9 +267,10 @@ void printSCoP(std::ostream& out, const core::NodePtr& scop);
 
 void computeDataDependence(const core::NodePtr& root);
 
+/**
+ * Takes a SCoP region and produces the IR code from the polyhedral model representing this region
+ */
 core::NodePtr toIR(const core::NodePtr& root);
-
-size_t calcLoopNest(const poly::IterationVector& iterVec, const poly::Scop& scat);
 
 } // end namespace scop
 } // end namespace analysis

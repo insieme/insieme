@@ -174,6 +174,30 @@ void Scop::push_back( const Stmt& stmt ) {
 	}
 }
 
+// This function determines the maximum number of loop nests within this region 
+// The analysis should be improved in a way that also the loopnest size is weighted with the number
+// of statements present at each loop level.
+size_t Scop::nestingLevel() const {
+	size_t max_loopnest=0;
+	for_each(begin(), end(), 
+		[&](const poly::StmtPtr& scopStmt) { 
+			size_t cur_loopnest=0;
+			for_each(scopStmt->getSchedule(), 
+				[&](const AffineFunction& cur) { 
+					for(auto&& it=cur.begin(), end=cur.end(); it!=end; ++it) {
+						if((*it).second != 0 && (*it).first.getType() == Element::ITER) { 
+							++cur_loopnest; 
+							break;
+						}
+					}
+				} );
+			if (cur_loopnest > max_loopnest) {
+				max_loopnest = cur_loopnest;
+			}
+		} );
+	return max_loopnest;
+}
+
 namespace {
 
 // Creates the scattering map for a statement inside the SCoP. This is done by building the domain

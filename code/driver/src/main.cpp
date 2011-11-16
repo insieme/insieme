@@ -346,7 +346,7 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		);
 
 		numStmtsInScops += reg.getScop().size();
-		size_t loopNest = calcLoopNest(reg.getIterationVector(), reg.getScop());
+		size_t loopNest = reg.getScop().nestingLevel();
 		
 		if( loopNest > maxLoopNest) { maxLoopNest = loopNest; }
 		loopNests += loopNest;
