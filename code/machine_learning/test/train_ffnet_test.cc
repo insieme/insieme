@@ -34,6 +34,6 @@
  * regarding third party software licenses.
  */
 
-#pragma once
-#define IN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/inputs/"
+#include "insieme/machine_learning/cmd_line_utils.h"
+#include "insieme/machine_learning/train.h"
 
