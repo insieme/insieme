@@ -625,6 +625,7 @@ int main(int argc, char** argv) {
 				regionId++;
 			}
 
+			program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
 		}
 
 		{
