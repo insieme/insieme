@@ -45,6 +45,7 @@
 #include "insieme/core/checks/ir_checks.h"
 #include "insieme/core/printer/pretty_printer.h"
 #include "insieme/core/transform/node_replacer.h"
+#include "insieme/core/transform/manipulation.h"
 
 #include "insieme/backend/backend.h"
 
@@ -610,20 +611,21 @@ int main(int argc, char** argv) {
 			LOG(INFO) << "============================ Generating region instrumentation =========================";
 
 			IRBuilder build(manager);
-			auto basic = manager.getLangBasic();
+			auto& basic = manager.getLangBasic();
 			unsigned long regionId = 0;
 
 			std::map<NodeAddress, NodePtr> replacementMap;
+			auto regFunType = build.functionType(basic.getUInt8(), basic.getUnit());
 
 			for_each(regions, [&](const CompoundStmtAddress& region) {
-				auto region_inst_start_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_start"), build.intLit(regionId));
-				auto region_inst_end_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_end"), build.intLit(regionId));
+				auto region_inst_start_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_start", regFunType), build.intLit(regionId));
+				auto region_inst_end_call = build.callExpr(basic.getUnit(), build.literal("irt_instrumentation_region_end", regFunType), build.intLit(regionId));
 				StatementPtr replacementNode = region.getAddressedNode();
-				replacementNode = static_pointer_cast<StatementPtr>(transform::insertBefore(manager, StatementAddress(replacementNode), region_inst_start_call));
-				replacementNode = static_pointer_cast<StatementPtr>(transform::insertAfter(manager, StatementAddress(replacementNode), region_inst_end_call));
+				replacementNode = build.compoundStmt(region_inst_start_call, replacementNode, region_inst_end_call);
 				replacementMap.insert(std::make_pair(region, replacementNode));
+				LOG(INFO) << "# Region " << regionId << ":\nAdress: " << region << "\n Replacement:" << replacementNode << "\n";
 				regionId++;
-			}
+			});
 
 			program = static_pointer_cast<ProgramPtr>(transform::replaceAll(manager, replacementMap));
 		}
