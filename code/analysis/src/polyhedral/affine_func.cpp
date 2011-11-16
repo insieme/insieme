@@ -267,6 +267,49 @@ int AffineFunction::getCoeff(size_t idx) const {
 	return (index==-1)?0:coeffs[index];
 }
 
+void AffineFunction::setCoeff(size_t idx, int coeff) { 
+	int new_idx = idxConv(idx);
+
+	// We are trying to set an index for an element of the interation vector which was inserted
+	// after this affine function was constructed 
+	if (new_idx == -1) {
+		std::vector<int> new_coeffs;
+		std::copy( coeffs.begin(), coeffs.begin()+sep, std::back_inserter(new_coeffs) );
+
+		if( idx < iterVec.getIteratorNum() ) {
+			// if this is an iterator coeff, add elements to the coeffs vector before the sep
+			for(size_t i=sep; i<idx; i++) {
+				new_coeffs.push_back(0);
+			}
+			new_coeffs.push_back(coeff);
+		}
+		std::copy( coeffs.begin()+sep, coeffs.end()-1, std::back_inserter(new_coeffs) );
+
+		if( idx >= iterVec.getIteratorNum() ) {
+			// this is a parameter coeff
+			for(size_t i=coeffs.size()-1; i<idx; i++) {
+				new_coeffs.push_back(0);
+			}
+			new_coeffs.push_back(coeff);
+		}
+		// Add the constant part
+		new_coeffs.push_back(coeffs.back()); 
+
+		// Perform checks and update internal representation
+		if( idx < iterVec.getIteratorNum() ) {
+			assert(new_coeffs.size() == coeffs.size()+(idx-(sep-1)));
+			sep = idx+1;
+		} else {				
+			assert(new_coeffs.size() == coeffs.size()+(idx-(coeffs.size()-2)));
+		}
+
+		coeffs = new_coeffs;
+		return;
+	}
+	coeffs[new_idx] = coeff; 
+}
+
+
 void AffineFunction::setCoeff(const core::VariablePtr& var, int coeff) { 
 	int idx = iterVec.getIdx(var);
 	// In the case the variable is not in the iteration vector, throw an exception

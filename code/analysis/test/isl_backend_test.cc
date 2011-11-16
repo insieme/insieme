@@ -194,14 +194,14 @@ TEST(IslBackend, SimpleMap) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystemPtr affSys = std::make_shared<poly::AffineSystem>(iterVec);
+	poly::AffineSystem affSys(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys->append( poly::AffineFunction(iterVec, {0,2,10}) );
-	affSys->append( poly::AffineFunction(iterVec, {1,1,0}) );
-	affSys->append( poly::AffineFunction(iterVec, {1,-1,8}) );
+	affSys.append( poly::AffineFunction(iterVec, { 0, 2,10 }) );
+	affSys.append( poly::AffineFunction(iterVec, { 1, 1, 0 }) );
+	affSys.append( poly::AffineFunction(iterVec, { 1,-1, 8 }) );
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& map = poly::makeMap<poly::ISL>(*ctx, *affSys);
+	auto&& map = poly::makeMap<poly::ISL>(*ctx, affSys);
 
 	std::ostringstream ss;
 	map->printTo(ss);
@@ -220,26 +220,26 @@ TEST(IslBackend, MapUnion) {
 	NodeManager mgr;
 	CREATE_ITER_VECTOR;
 
-	poly::AffineSystemPtr affSys = std::make_shared<poly::AffineSystem>(iterVec);
+	poly::AffineSystem affSys(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys->append( poly::AffineFunction(iterVec, {0,2,10}) );
-	affSys->append( poly::AffineFunction(iterVec, {1,1,0}) );
-	affSys->append( poly::AffineFunction(iterVec, {1,-1,8}) );
+	affSys.append( poly::AffineFunction(iterVec, { 0, 2,10 }) );
+	affSys.append( poly::AffineFunction(iterVec, { 1, 1, 0 }) );
+	affSys.append( poly::AffineFunction(iterVec, { 1,-1, 8 }) );
 	
 	auto&& ctx = poly::createContext<poly::ISL>();
-	auto&& map = poly::makeMap<poly::ISL>(*ctx, *affSys);
+	auto&& map = poly::makeMap<poly::ISL>(*ctx, affSys);
 
 	std::ostringstream ss;
 	map->printTo(ss);
 	EXPECT_EQ("[v3] -> { [v1] -> [10 + 2v3, v3 + v1, 8 - v3 + v1] }", ss.str());
 	
-	poly::AffineSystemPtr affSys2 = std::make_shared<poly::AffineSystem>(iterVec);
+	poly::AffineSystem affSys2(iterVec);
 	// 0*v1 + 2*v2 + 10
-	affSys2->append( poly::AffineFunction(iterVec, {1,-2,0}) );
-	affSys2->append( poly::AffineFunction(iterVec, {1,8,4}) );
-	affSys2->append( poly::AffineFunction(iterVec, {-5,-1,4}) );
+	affSys2.append( poly::AffineFunction(iterVec, { 1,-2, 0 }) );
+	affSys2.append( poly::AffineFunction(iterVec, { 1, 8, 4 }) );
+	affSys2.append( poly::AffineFunction(iterVec, {-5,-1, 4 }) );
 
-	auto&& map2 = poly::makeMap<poly::ISL>(*ctx, *affSys2 );
+	auto&& map2 = poly::makeMap<poly::ISL>(*ctx, affSys2 );
 
 	std::ostringstream ss2;
 	map2->printTo(ss2);

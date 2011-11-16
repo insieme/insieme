@@ -321,6 +321,45 @@ TEST(AffineFunction, Equality) {
 	EXPECT_NE(af1, af2);
 }
 
+TEST(AffineFunction, AddIter) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Parameter(param) ); 
+	
+	poly::AffineFunction af1(iterVec1, {1,1,0});
+	iterVec1.add( poly::Iterator(iter2) );
+	
+	af1.setCoeff(iter2, 2);
+	
+	EXPECT_EQ( af1.getCoeff(iter2), 2 );
+}
+
+TEST(AffineFunction, AddParam) {
+	NodeManager mgr;
+
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
+	VariablePtr param1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr param2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3); 
+	
+	poly::IterationVector iterVec1; 
+	iterVec1.add( poly::Iterator(iter1) ); 
+	iterVec1.add( poly::Parameter(param1) ); 
+	
+	poly::AffineFunction af1(iterVec1, {1,1,0});
+	iterVec1.add( poly::Parameter(param2) );
+	
+	af1.setCoeff(param2, 2);
+	
+	EXPECT_EQ( af1.getCoeff(param2), 2 );
+}
+
+
 TEST(AffineFunction, AFChangeBase) {
 	NodeManager mgr;
 
@@ -360,6 +399,8 @@ TEST(AffineFunction, AFChangeBase) {
 	af2.setCoeff(poly::Iterator(iter3), 3);
 	EXPECT_NE(af2, aft);
 }
+
+// Constraints ======================================================================================
 
 TEST(Constraint, Creation) {
 	NodeManager mgr;
@@ -489,25 +530,28 @@ TEST(Transformations, Interchange) {
 	NodeManager mgr;
 	IRBuilder builder(mgr);
 
-	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 1); 
-	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4(), 2); 
+	VariablePtr iter1 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
+	VariablePtr iter2 = Variable::get(mgr, mgr.getLangBasic().getInt4()); 
 	
-	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4(), 3);
+	VariablePtr var = Variable::get(mgr, mgr.getLangBasic().getInt4());
+	ExpressionPtr arrAcc = builder.callExpr( 
+						mgr.getLangBasic().getArrayRefElem1D(), 
+						builder.callExpr( 
+							mgr.getLangBasic().getArrayRefElem1D(), 
+							builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())) ),
+							iter1
+						),
+						iter2
+					);
+
 	StatementPtr stmt = builder.callExpr( 
-							mgr.getLangBasic().getRefAssign(), 
-							var, 
-							builder.callExpr( 
-								mgr.getLangBasic().getArrayRefElem1D(), 
-								builder.callExpr( 
-									mgr.getLangBasic().getArrayRefElem1D(), 
-									builder.variable( builder.arrayType(builder.arrayType(mgr.getLangBasic().getInt4())), 4 ),
-									iter1
-								),
-								iter2
-							)
-						);
+					mgr.getLangBasic().getRefAssign(), 
+					var, 
+					arrAcc
+				);
 	
-	std::cout << *stmt << std::endl;
+	std::cout << "STMT: " << *stmt << std::endl;
+
 	poly::IterationVector iterVec;  // (i,j,1)
 	iterVec.add( poly::Iterator(iter1) ); 
 	iterVec.add( poly::Iterator(iter2) ); 
@@ -519,7 +563,8 @@ TEST(Transformations, Interchange) {
 		poly::AffineConstraint(poly::AffineFunction(iterVec, {1, 0,   0} ), poly::AffineConstraint::GE) /* v1 >= 0 */ and 
 		poly::AffineConstraint(poly::AffineFunction(iterVec, {1, 0,-100} ), poly::AffineConstraint::LE) /* v1 - 100 <= 0 */ and 
 		poly::AffineConstraint(poly::AffineFunction(iterVec, {0, 1,   0} ), poly::AffineConstraint::GE) /* v2 >= 0 */ and
-		poly::AffineConstraint(poly::AffineFunction(iterVec, {0, 1,-100} ), poly::AffineConstraint::LE) /* v2 - 100 <= 0 */);
+		poly::AffineConstraint(poly::AffineFunction(iterVec, {0, 1,-100} ), poly::AffineConstraint::LE) /* v2 - 100 <= 0 */
+	);
 
 	std::cout << "DOM: " << domain << std::endl;
 
@@ -529,7 +574,22 @@ TEST(Transformations, Interchange) {
 
 	std::cout << "SCHED: " << sched << std::endl;
 
-	poly::Stmt pstmt( 0, StatementAddress(stmt), domain, sched, poly::AccessList() );
+	poly::Scop scop(iterVec);
+	scop.push_back( poly::Stmt( 0, StatementAddress(stmt), domain, sched, 
+			{ poly::AccessInfo(ExpressionAddress(arrAcc), Ref::ARRAY, Ref::USE, sched) } 
+		) );
 
-	
+	NodePtr ir = scop.toIR(mgr);
+	std::cout << *ir << std::endl;
+
+	// perform interchange 
+	poly::AffineSystem& schedule = scop[0].getSchedule();
+	schedule[0].setCoeff(iter1, 0);
+	schedule[0].setCoeff(iter2, 1);
+	schedule[1].setCoeff(iter1, 1);
+	schedule[1].setCoeff(iter2, 0);
+
+	ir = scop.toIR(mgr);
+	std::cout << *ir << std::endl;
+
 }
