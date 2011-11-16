@@ -532,31 +532,42 @@ namespace core {
 	/**
 	 * The accessor associated to the for statement.
 	 */
-	IR_NODE_ACCESSOR(ForStmt, Statement, Variable, Expression, Expression, Expression, CompoundStmt)
-		/**
-		 * Obtains a reference to the variable used as an iterator for this loop.
-		 */
-		IR_NODE_PROPERTY(Variable, Iterator, 0);
+	IR_NODE_ACCESSOR(ForStmt, Statement, DeclarationStmt, Expression, Expression, CompoundStmt)
 
 		/**
-		 * Obtains a reference to the expression representing the start value of the iterator variable (inclusive)
+		 * Obtains a reference to the variable declaration within this for stmt.
 		 */
-		IR_NODE_PROPERTY(Expression, Start,  1);
+		IR_NODE_PROPERTY(DeclarationStmt, Declaration, 0);
 
 		/**
 		 * Obtains a reference to the expression representing the end value of the iterator variable (exclusive).
 		 */
-		IR_NODE_PROPERTY(Expression, End,    2);
+		IR_NODE_PROPERTY(Expression, End,    1);
 
 		/**
 		 * Obtains a reference to the expression representing the step-size value of the iterator variable.
 		 */
-		IR_NODE_PROPERTY(Expression, Step,   3);
+		IR_NODE_PROPERTY(Expression, Step,   2);
 
 		/**
 		 * Obtains a reference to the body of the loop.
 		 */
-		IR_NODE_PROPERTY(CompoundStmt, Body, 4);
+		IR_NODE_PROPERTY(CompoundStmt, Body, 3);
+
+		/**
+		 * Obtains a reference to the variable used as an iterator for this loop.
+		 */
+		Ptr<const Variable> getIterator() const {
+			return getDeclaration()->getVariable();
+		}
+
+		/**
+		 * Obtains a reference to the expression representing the start value of the iterator variable (inclusive)
+		 */
+		Ptr<const Expression> getStart() const {
+			return getDeclaration()->getInitialization();
+		}
+
 	};
 
 	/**
@@ -577,6 +588,22 @@ namespace core {
 		 * within the given node manager based on the given parameters.
 		 *
 		 * @param manager the manager used for maintaining instances of this class
+		 * @param varDecl the declaration of the iterator variable to be included in the resulting for
+		 * @param end the end value of the for loop
+		 * @param step the step size value of the for loop
+		 * @param body the body of the for loop
+		 * @return the requested type instance managed by the given manager
+		 */
+		static ForStmtPtr get(NodeManager& manager, const DeclarationStmtPtr& varDecl,
+				const ExpressionPtr& end, const ExpressionPtr& step, const CompoundStmtPtr& body) {
+			return manager.get(ForStmt(varDecl, end, step, body));
+		}
+
+		/**
+		 * This static factory method allows to obtain a for statement instance
+		 * within the given node manager based on the given parameters.
+		 *
+		 * @param manager the manager used for maintaining instances of this class
 		 * @param iterator the iterator to be used for the for loop
 		 * @param start the start value of the for loop
 		 * @param end the end value of the for loop
@@ -586,7 +613,7 @@ namespace core {
 		 */
 		static ForStmtPtr get(NodeManager& manager, const VariablePtr& iterator, const ExpressionPtr& start,
 				const ExpressionPtr& end, const ExpressionPtr& step, const CompoundStmtPtr& body) {
-			return manager.get(ForStmt(iterator, start, end, step, body));
+			return get(manager, DeclarationStmt::get(manager, iterator, start), end, step, body);
 		}
 
 	};

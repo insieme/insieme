@@ -39,7 +39,7 @@
 #include "declarations.h"
 #include "performance_table.h"
 
-#define IRT_ENABLE_INSTRUMENTATION
+//#define IRT_ENABLE_INSTRUMENTATION
 
 // functions for creating and destroying performance tables
 
@@ -64,6 +64,7 @@ void irt_wi_toggle_instrumentation(bool enable);
 void irt_wg_toggle_instrumentation(bool enable);
 void irt_worker_toggle_instrumentation(bool enable);
 void irt_di_toggle_instrumentation(bool enable);
+void irt_region_toggle_instrumentation(bool enable);
 void irt_all_toggle_instrumentation(bool enable);
 
 // dummy functions to be used via function pointer to disable 
@@ -73,4 +74,9 @@ void _irt_wi_no_instrumentation_event(irt_worker* worker, wi_instrumentation_eve
 void _irt_wg_no_instrumentation_event(irt_worker* worker, wg_instrumentation_event event, irt_work_group_id subject_id);
 void _irt_worker_no_instrumentation_event(irt_worker* worker, worker_instrumentation_event event, irt_worker_id subject_id);
 void _irt_di_no_instrumentation_event(irt_worker* worker, di_instrumentation_event event, irt_data_item_id subject_id);
+
+typedef uint64 region_id;
+
+void _irt_instrumentation_region_start(region_id id);
+void _irt_instrumentation_region_end(region_id id);
 

@@ -39,6 +39,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <irt_inttypes.h>
+#include <time.h>
+
+uint64 irt_g_time_ticks_per_sec = 0;
 
 uint64 irt_time_ms() {
 	struct timeval tv;
@@ -47,6 +50,24 @@ uint64 irt_time_ms() {
 	time = tv.tv_sec * 1000 + tv.tv_usec/1000;
 	return time;
 }
+
+// ====== sleep functions ======================================
+
+#ifdef WIN32
+struct timespec {
+        long  tv_sec;         /* seconds */
+	long    tv_nsec;        /* nanoseconds */
+};
+
+int irt_nanosleep(const struct timespec* wait_time) {
+	Sleep(wait_time->tv_sec*1000 + wait_time->tv_nsec/1000);
+	return 0; // it seems that Sleep always succeedes
+}
+#else
+int irt_nanosleep(const struct timespec* wait_time) {
+	return nanosleep(wait_time, NULL);
+}
+#endif
 
 // ====== clock cycle measurements ======================================
 //
@@ -96,18 +117,39 @@ uint64 irt_time_ticks(void) {
 
 #endif // architecture branch
 
-#ifdef WIN32
-struct timespec {
-        long  tv_sec;         /* seconds */
-	long    tv_nsec;        /* nanoseconds */
-};
+// checks if rdtsc instruction is available
+bool irt_time_ticks_available() {
+	volatile unsigned d;
+	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x00000001) : "ebx", "ecx");
+	if((d & 0x00000010) > 0)
+		return 1;
+	else
+		return 0;
+}
 
-int irt_nanosleep(const struct timespec* wait_time) {
-	Sleep(wait_time->tv_sec*1000 + wait_time->tv_nsec/1000);
-	return 0; // it seems that Sleep always succeedes
+// checks if rdtsc readings are constant over frequency changes
+bool irt_time_ticks_constant() {
+	volatile unsigned d;
+	__asm__ volatile("cpuid" : "=d" (d) : "a" (0x80000007) : "ebx", "ecx");
+	if((d & 0x00000100) > 0)
+		return 1;
+	else
+		return 0;
 }
-#else
-int irt_nanosleep(const struct timespec* wait_time) {
-	return nanosleep(wait_time, NULL);
+
+// measures number of clock ticks over 100 ms, sets irt_g_time_ticks_per_sec and returns the value
+uint64 irt_time_set_ticks_per_sec() {
+	struct timespec t = {0,1000*1000*100};
+	uint64 before = 0, after = 0;
+	before = irt_time_ticks();
+	irt_nanosleep(&t);
+	after = irt_time_ticks();
+	irt_g_time_ticks_per_sec = (after - before) * 10;
+	return irt_g_time_ticks_per_sec;
 }
-#endif
+
+// converts clock ticks to nanoseconds
+uint64 irt_time_convert_ticks_to_ns(uint64 ticks) {
+	return (uint64)(ticks/((double)irt_g_time_ticks_per_sec/1000000000));
+}
+
