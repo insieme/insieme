@@ -352,18 +352,6 @@ namespace {
 //			return res;
 //		}
 
-		OptionalMessageList visitJobExpr(const JobExprAddress& cur) {
-			OptionalMessageList res;
-
-			// test local declarations
-			for_each(cur.getAddressedNode()->getLocalDecls()->getElements(), [&](const DeclarationStmtPtr& decl) {
-				testVariable(res, decl->getVariable(), cur, cur.getAddressedNode());
-			});
-
-			return res;
-		}
-
-
 	private:
 
 		void testVariable(OptionalMessageList& res, const VariablePtr& var, const NodeAddress& current, const NodePtr& context) {

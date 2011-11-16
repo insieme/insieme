@@ -89,9 +89,15 @@ TEST(OclHostCompilerTest, HelloHostTest) {
 	core::printer::PrettyPrinter pp(program, core::printer::PrettyPrinter::OPTIONS_DETAIL);
 
 	LOG(INFO) << "Printing the IR: " << pp;
-	//    LOG(INFO) << pp;
 
-	auto errors = core::check(program, insieme::core::checks::getFullCheck()).getErrors();
+	auto semantic = core::check(program, insieme::core::checks::getFullCheck());
+	auto warnings = semantic.getWarnings();
+	std::sort(warnings.begin(), warnings.end());
+	for_each(warnings, [](const core::Message& cur) {
+		LOG(INFO) << cur << std::endl;
+	});
+
+	auto errors = semantic.getErrors();
 	EXPECT_EQ(0u, errors.size());
 	std::sort(errors.begin(), errors.end());
 	for_each(errors, [](const core::Message& cur) {
