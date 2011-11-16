@@ -338,9 +338,9 @@ void markSCoPs(ProgramPtr& program, MessageList& errors, const InverseStmtMap& s
 		ScopRegion& reg = *cur->getAnnotation(ScopRegion::KEY);
 		reg.resolve();
 
-		for_each(reg.getScop(),[] (const insieme::analysis::poly::Stmt& cur) { 
+		for_each(reg.getScop(),[] (const insieme::analysis::poly::StmtPtr& cur) { 
 				insieme::analysis::poly::IslCtx ctx;
-				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur.getDomain());
+				insieme::analysis::poly::Set<insieme::analysis::poly::IslCtx> set(ctx, cur->getDomain());
 				set.getCard();
 			}
 		);
