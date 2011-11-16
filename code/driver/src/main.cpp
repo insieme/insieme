@@ -624,6 +624,7 @@ int main(int argc, char** argv) {
 				replacementMap.insert(std::make_pair(region, replacementNode));
 				regionId++;
 			}
+
 		}
 
 		{
