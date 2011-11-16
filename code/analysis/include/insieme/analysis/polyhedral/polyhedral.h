@@ -259,7 +259,7 @@ typedef std::vector<AccessInfo> AccessList;
  *********************************************************************************************/
 
 /**************************************************************************************************
- * PolyStmt: this class assembles together the informations which are utilized to represent a
+ * Stmt: this class assembles together the informations which are utilized to represent a
  * statement in the polyhedral mdoel. 
  *
  * A statement is represented by the following infomrations:
@@ -355,19 +355,25 @@ struct Scop {
 	const IterationVector& getIterationVector() const { return iterVec; }
 	IterationVector& getIterationVector() { return iterVec; }
 
+	// Get iterators thorugh the statements contained in this SCoP
 	iterator begin() { return stmts.begin(); }
 	iterator end() { return stmts.end(); }
 
 	const_iterator begin() const { return stmts.begin(); }
 	const_iterator end() const { return stmts.end(); }
 
+	// Access statements based on their ID
 	const Stmt& operator[](size_t pos) const { return *stmts[pos]; }
 	Stmt& operator[](size_t pos) { return *stmts[pos]; }
 
 	size_t size() const { return stmts.size(); }
-
 	const size_t& schedDim() const { return sched_dim; }
 
+	size_t nestingLevel() const;
+
+	/**
+	 * Produces IR code from this SCoP. 
+	 */
 	core::NodePtr toIR(core::NodeManager& mgr) const;
 
 private:
