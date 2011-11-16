@@ -642,6 +642,17 @@ struct CallExprVisitor: public clang::StmtVisitor<CallExprVisitor> {
 		// connects the constructor expression to the function graph
 		addFunctionDecl(ctorExpr->getConstructor());
 		VisitStmt(ctorExpr);
+
+		//if there is an member with an initializer in the ctor we add it to the function graph
+		clang::CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(ctorExpr->getConstructor());
+		for (clang::CXXConstructorDecl::init_iterator iit = constructorDecl->init_begin(),
+						iend = constructorDecl->init_end(); iit!=iend; iit++){
+			clang::CXXCtorInitializer * initializer = *iit;
+
+			if(initializer->isMemberInitializer()){
+				Visit(initializer->getInit());
+			}
+		}
 	}
 
 	void VisitCXXNewExpr (clang::CXXNewExpr* callExpr) {
@@ -1510,7 +1521,7 @@ public:
 
 		CXXConstructorDecl* constructorDecl = dyn_cast<CXXConstructorDecl>(callExpr->getConstructor());
 		assert(constructorDecl);
-		VLOG(2)<<constructorDecl << " number of initializers "<<constructorDecl->getNumCtorInitializers();
+		VLOG(2) << constructorDecl << " number of initializers "<<constructorDecl->getNumCtorInitializers();
 
 		FunctionDecl* funcDecl = constructorDecl;
 		core::FunctionTypePtr funcTy =
@@ -1534,13 +1545,14 @@ public:
 
 			if(initializer->isMemberInitializer()){
 				FieldDecl *fieldDecl = initializer->getMember();
-				RecordDecl *recordDecl = fieldDecl->getParent();
-
-				core::TypePtr recordTypePtr ;
-				ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
-				if(cit != convFact.ctx.classDeclMap.end()){
-					recordTypePtr = cit->second;
-				}
+//				TODO: DeadCode???
+//				RecordDecl *recordDecl = fieldDecl->getParent();
+//
+//				core::TypePtr recordTypePtr ;
+//				ConversionContext::ClassDeclMap::const_iterator cit = convFact.ctx.classDeclMap.find(recordDecl);
+//				if(cit != convFact.ctx.classDeclMap.end()){
+//					recordTypePtr = cit->second;
+//				}
 
 				VLOG(2) << initializer << " -> " << fieldDecl->getNameAsString() << " = "<< Visit(initializer->getInit()) ;
 				convFact.ctx.ctorInitializerMap.insert( std::make_pair(fieldDecl, Visit(initializer->getInit())) );
@@ -1563,10 +1575,13 @@ public:
 
 		retExpr = convFact.builder.callExpr(funcTy->getReturnType(), ctorExpr, packedArgs);
 
-		// get class declaration
-		CXXRecordDecl * callingClass = constructorDecl->getParent();
-		assert(callingClass);
-		// callingClass->viewInheritance(callingClass->getASTContext());
+		//TODO: remove dead code?
+//		// get class declaration
+//		CXXRecordDecl * callingClass = constructorDecl->getParent();
+//		assert(callingClass);
+//		//callingClass->viewInheritance(callingClass->getASTContext());
+
+		END_LOG_EXPR_CONVERSION(retExpr);
 
 		VLOG(2) << "End of CXXConstructExpr \n";
 		return retExpr;
@@ -2762,7 +2777,7 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 				// already converted into an IR lambda expression.
 				ConversionContext::LambdaExprMap::const_iterator fit = ctx.lambdaExprCache.find(decl);
 				if ( fit == ctx.lambdaExprCache.end() ) {
-					// perfrom the conversion only if this is the first time this
+					// perform the conversion only if this is the first time this
 					// function is encountred
 
 					convertFunctionDecl(decl, false);
@@ -2777,17 +2792,13 @@ core::NodePtr ConversionFactory::convertFunctionDecl(const clang::FunctionDecl* 
 	bool isCtor = false;
 	 // bool isCXXOperator = false;
 	const CXXRecordDecl * baseClassDecl;
-	if (dyn_cast<CXXConstructorDecl>(funcDecl)){
-		const CXXConstructorDecl* cxxMethodDecl;
-		cxxMethodDecl = dyn_cast<CXXConstructorDecl>(funcDecl);
-		baseClassDecl = cxxMethodDecl->getParent();
+	if (const CXXConstructorDecl* cxxCtorDecl =dyn_cast<CXXConstructorDecl>(funcDecl)){
+		baseClassDecl = cxxCtorDecl->getParent();
 		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
-		assert(baseClassDecl->getNameAsString()==cxxMethodDecl->getNameAsString() && "wrong constructor");
+		assert(baseClassDecl->getNameAsString()==cxxCtorDecl->getNameAsString() && "wrong constructor");
 		isCtor = true;
 		isCXX  = true;
-	} else if (dyn_cast<CXXMethodDecl>(funcDecl)){
-		const CXXMethodDecl* cxxMethodDecl;
-		cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl);
+	} else if (const CXXMethodDecl* cxxMethodDecl = dyn_cast<CXXMethodDecl>(funcDecl)){
 		baseClassDecl = cxxMethodDecl->getParent();
 		VLOG(2) << "Name of the class: " << baseClassDecl->getNameAsString();
 
